@@ -30,7 +30,13 @@ DONE and tested (18 passing tests):
   **1721** docs, **84**-sign inventory, sign→sound map, tokenization.
   `.filter()`, `.word_frequencies()`, `.to_dict()`, `.to_dataframe(level=...)`.
 - `aegean.analysis` — ports w/ parity tests: `numerals` + KU-RO/PO-TO-KU-RO
-  `balance_check` (accounting reconciliation), wildcard sign-pattern matching.
+  `balance_check` (accounting reconciliation), wildcard sign-pattern matching,
+  weighted phonetic distance + configurable phonetic class schemes,
+  phoneme/word-level alignment, collocation statistics (Yates chi-squared, G²
+  log-likelihood, chi-squared p-value, two-sided Fisher's exact, Wilson/PMI
+  intervals; scipy lazy), and productive-suffix morphological clustering.
+  Golden fixtures in `tests/fixtures/golden/algorithms.json`; property tests
+  mirror the workbench `*.properties.test.ts`.
 - `aegean.data` — bundled-JSON access (≈590 KB in-wheel, **no images**) +
   `fetch()` download-to-cache (graceful `DataNotAvailableError`).
 
@@ -38,10 +44,11 @@ NOT done yet (next steps, priority order):
 1. **Greek start** (`aegean.greek` + `aegean.scripts.greek`): corpus loader
    (First1KGreek/Perseus subset) + first NLP stages — normalize/betacode,
    tokenize, syllabify, accentuation, baseline lemmatize (open-data seed).
-2. **Remaining Linear A analysis ports** with golden-fixture parity:
-   phonetic distance + alignment, morphology clustering, collocation (scipy),
-   query engine, structure detection. Source: workbench `src/lib/*.ts` + its
-   `*.test.ts` (extract golden JSON into `tests/fixtures/golden/`).
+2. **Remaining Linear A analysis ports** with golden-fixture parity: phonetic
+   distance + alignment, morphology clustering, and collocation (scipy) are
+   DONE; **query engine** (`queryEngine.ts`) and **structure detection** still
+   to port. Source: workbench `src/lib/*.ts` + its `*.test.ts` (extract golden
+   JSON into `tests/fixtures/golden/`).
 3. **Pin the `lineara-images` release URL** in `src/aegean/data/__init__.py`
    (currently empty → `fetch` reports "no pinned URL"). Pin a
    `ryanpavlicek/linearaworkbench` release tag for the ~500 MB facsimile mirror.
@@ -74,10 +81,10 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 18 passing
+pytest                                   # 82 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
-mypy                                     # not yet verified clean — expect to fix
+mypy                                     # clean (CI step still continue-on-error)
 python -m build && python -m twine check dist/*   # wheel must be < 3 MB
 ```
 

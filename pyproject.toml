@@ -22,9 +22,9 @@ classifiers = [
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
-# Core stays import-light: numpy/pandas are imported lazily, only inside
-# DataFrame interop. scipy is added when the collocation layer lands.
-dependencies = ["pandas>=2.0"]
+# Core stays import-light: numpy/pandas/scipy are imported lazily, only inside
+# DataFrame interop and the collocation statistics. `import aegean` stays instant.
+dependencies = ["pandas>=2.0", "scipy>=1.10"]
 
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.39"]

@@ -1,0 +1,124 @@
+{
+  "_source": "linearaworkbench src/lib/algorithms.test.ts + compareAlign.test.ts",
+  "_note": "Language-neutral expected values shared by the TS workbench and the Python port. Tolerances mirror the TS toBeCloseTo(value, digits): tol = 0.5 * 10**-digits.",
+
+  "word_to_phonetic": [
+    {"word": "KU-RO", "overrides": {}, "expected": "kuro"},
+    {"word": "PA-I-TO", "overrides": {}, "expected": "paito"},
+    {"word": "KU-RO", "overrides": {"KU": "gu"}, "expected": "guro"},
+    {"word": "KU-???", "overrides": {}, "expected": "ku???"},
+    {"word": "RA₂-RO", "overrides": {}, "expected": "raro"},
+    {"word": "A-DU", "overrides": {}, "expected": "adu"},
+    {"word": "ZZZ", "overrides": {}, "expected": "zzz"}
+  ],
+
+  "extract_root": [
+    {"word": "KU-RO", "expected": "kr"},
+    {"word": "PA-I-TO", "expected": "pt"}
+  ],
+
+  "reference_key": [
+    {"word": "*ǵʰésr̥", "strip": true, "expected": "ǵésr"},
+    {"word": "ka-ta", "strip": true, "expected": "kata"},
+    {"word": "kʰa-ta", "strip": false, "expected": "kʰata"}
+  ],
+
+  "describe_phonetic_scheme": {
+    "default": "interdentals=dental, ḥ=velar, ž=sibilant, strip-notation=on"
+  },
+
+  "phonetic_distance": [
+    {"a": "kuro", "b": "kuro", "expected": 0.0, "tol": 1e-12},
+    {"a": "kuro", "b": "karo", "expected": 0.075, "tol": 1e-12},
+    {"a": "kuro", "b": "kulo", "expected": 0.125, "tol": 1e-12},
+    {"a": "ab", "b": "abc", "expected": 0.3333333333333333, "tol": 1e-12},
+    {"a": "a", "b": "", "expected": 1.0, "tol": 1e-12},
+    {"a": "", "b": "", "expected": 0.0, "tol": 1e-12},
+    {"a": "abc", "b": "abx", "expected": 0.3333333333333333, "tol": 1e-12}
+  ],
+
+  "align_ops": [
+    {"a": "ka", "b": "ko", "expected": ["match", "sub-vowel"]},
+    {"a": "pa", "b": "ba", "expected": ["sub-class", "match"]},
+    {"a": "ka", "b": "ta", "expected": ["sub-far", "match"]},
+    {"a": "kuro", "b": "kuro", "expected": ["match", "match", "match", "match"]}
+  ],
+
+  "collocation": {
+    "chi_squared": [
+      {"joint": 5, "countA": 10, "countB": 10, "total": 100, "expected": 15.123, "tol": 0.005},
+      {"joint": 0, "countA": 0, "countB": 10, "total": 100, "expected": 0.0, "tol": 1e-12}
+    ],
+    "log_likelihood": [
+      {"joint": 5, "countA": 10, "countB": 10, "total": 100, "expected": 12.533, "tol": 0.005},
+      {"joint": 10, "countA": 10, "countB": 10, "total": 10, "expected": 0.0, "tol": 1e-12}
+    ],
+    "p_value": [
+      {"x": 3.841, "expected": 0.05, "tol": 0.005},
+      {"x": 0, "expected": 1.0, "tol": 1e-12}
+    ],
+    "fisher": [
+      {"joint": 5, "countA": 5, "countB": 5, "total": 10, "expected": 0.007937, "tol": 5e-6},
+      {"joint": 0, "countA": 0, "countB": 5, "total": 10, "expected": 1.0, "tol": 1e-12}
+    ]
+  },
+
+  "sequence": [
+    {"a": ["a", "b", "c"], "b": ["a", "b", "c"], "dist": 0, "sim": 1.0},
+    {"a": ["a", "b", "c"], "b": ["a", "x", "c"], "dist": 1, "sim": 0.6666666666666667},
+    {"a": ["a"], "b": [], "dist": 1, "sim": 0.0}
+  ],
+
+  "align_sequences": [
+    {
+      "_case": "identical",
+      "seqs": [["A-B", "C-D"], ["A-B", "C-D"]],
+      "expected": [["A-B", "A-B"], ["C-D", "C-D"]]
+    },
+    {
+      "_case": "substitution column",
+      "seqs": [["A-B", "X-Y", "C-D"], ["A-B", "Z-Z", "C-D"]],
+      "expected": [["A-B", "A-B"], ["X-Y", "Z-Z"], ["C-D", "C-D"]]
+    },
+    {
+      "_case": "three sequences",
+      "seqs": [["A-B", "C-D"], ["A-B", "C-D"], ["A-B", "C-D"]],
+      "expected": [["A-B", "A-B", "A-B"], ["C-D", "C-D", "C-D"]]
+    },
+    {
+      "_case": "empty",
+      "seqs": [],
+      "expected": []
+    }
+  ],
+
+  "morphology": [
+    {
+      "_case": "productive-suffix clustering",
+      "input": [
+        {"word": "po-ro", "count": 4},
+        {"word": "po-ro-na", "count": 2},
+        {"word": "po-ro-si", "count": 1},
+        {"word": "ki-ro", "count": 3},
+        {"word": "ki-ro-na", "count": 1}
+      ],
+      "opts": {"min_suffix_productivity": 2, "min_cluster_size": 2, "max_suffix_len": 1},
+      "expected": [
+        {"stem": "po-ro", "members": ["po-ro", "po-ro-na"], "suffixes": ["na"], "total_count": 6},
+        {"stem": "ki-ro", "members": ["ki-ro", "ki-ro-na"], "suffixes": ["na"], "total_count": 4}
+      ]
+    },
+    {
+      "_case": "threshold is >= not >",
+      "input": [
+        {"word": "po-ro", "count": 4},
+        {"word": "po-ro-na", "count": 2},
+        {"word": "po-ro-si", "count": 1},
+        {"word": "ki-ro", "count": 3},
+        {"word": "ki-ro-na", "count": 1}
+      ],
+      "opts": {"min_suffix_productivity": 3, "min_cluster_size": 2, "max_suffix_len": 1},
+      "expected": []
+    }
+  ]
+}
