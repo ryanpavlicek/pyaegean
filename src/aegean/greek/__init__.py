@@ -15,6 +15,7 @@ Every stage is a plain function so it can be used standalone::
 
 from __future__ import annotations
 
+from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
 from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
 from .normalize import (
@@ -44,4 +45,5 @@ __all__ = [
     "to_ipa",
     "lemmatize",
     "lemmatize_verbose",
+    "benchmark",
 ]

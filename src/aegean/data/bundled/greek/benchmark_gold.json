@@ -1,0 +1,27 @@
+{
+  "_about": "Small hand-authored gold set for scoring the Greek pipeline. Values are independently stated (correct linguistic answers), not copied from the pipeline's output. Used by aegean.greek.benchmark.",
+  "tokenize": [
+    {"text": "ἐν ἀρχῇ ἦν ὁ λόγος", "tokens": ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"]},
+    {"text": "πάντα ῥεῖ", "tokens": ["πάντα", "ῥεῖ"]},
+    {"text": "μῆνιν ἄειδε θεά", "tokens": ["μῆνιν", "ἄειδε", "θεά"]}
+  ],
+  "syllabify": [
+    {"word": "λόγος", "syllables": ["λό", "γος"]},
+    {"word": "ἄνθρωπος", "syllables": ["ἄν", "θρω", "πος"]},
+    {"word": "θάλασσα", "syllables": ["θά", "λασ", "σα"]},
+    {"word": "Μῆνιν", "syllables": ["Μῆ", "νιν"]}
+  ],
+  "accent": [
+    {"word": "λόγος", "classification": "paroxytone"},
+    {"word": "θεά", "classification": "oxytone"},
+    {"word": "ἄνθρωπος", "classification": "proparoxytone"},
+    {"word": "μῆνιν", "classification": "properispomenon"}
+  ],
+  "lemma": [
+    {"word": "λόγου", "lemma": "λόγος"},
+    {"word": "ἦν", "lemma": "εἰμί"},
+    {"word": "θεόν", "lemma": "θεός"},
+    {"word": "πάντα", "lemma": "πᾶς"},
+    {"word": "ἀνθρώπων", "lemma": "ἄνθρωπος"}
+  ]
+}

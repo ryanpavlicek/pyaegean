@@ -106,6 +106,39 @@ drops length and the breathings.
 **Reconstructed and approximate** — several values (ε/η quality, the long
 diphthongs, the date of iotacism) are scholarly judgement calls.
 
+## Benchmark harness
+
+`aegean.greek.benchmark` scores the pipeline against a small bundled gold set —
+operationalizing the project goal of matching or beating CLTK on Greek. CLTK
+stays a *benchmark target, never a dependency*: the comparison takes an injected
+lemmatize callable, so nothing imports CLTK.
+
+```python
+from aegean.greek import benchmark
+for stage, s in benchmark.run_benchmark().items():
+    print(s)
+# tokenize: 100% (3/3)
+# syllabify: 100% (4/4)
+# accent: 100% (4/4)
+# lemma: 80% (4/5)        ← baseline seed table; one form is out-of-vocabulary
+```
+
+Compare any candidate lemmatizer (here CLTK, only if it's installed):
+
+```python
+from cltk import NLP
+nlp = NLP(language="grc", suppress_banner=True)
+def cltk_lemma(w): return nlp.analyze(text=w).lemmata[0]
+
+benchmark.compare_lemmatizers(cltk_lemma)
+# {'pyaegean': Score(lemma 80%), 'candidate': Score(lemma …%)}
+```
+
+Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any of
+the scorers. The deterministic stages (tokenize/syllabify/accent) score against
+independently-authored gold; the lemma score honestly reflects the baseline seed
+table's coverage, which deeper lemmatizer work will raise.
+
 ## Lemmatization (baseline)
 
 A small bundled form→lemma seed table with an identity fallback. This is a
