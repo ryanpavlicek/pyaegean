@@ -43,8 +43,9 @@ DONE and tested (151 passing tests):
   tests.
 - `aegean.greek` — Greek NLP pipeline (v0.1 start): `normalize` (NFC/NFD +
   Beta Code ↔ Unicode), `tokenize`/`sentences`, `syllabify` (rule-based incl.
-  diphthongs + muta-cum-liquida), `accentuation` (oxytone/…/perispomenon), and
-  baseline `lemmatize` (bundled seed table). `aegean.scripts.greek` registers
+  diphthongs + muta-cum-liquida), `accentuation` (oxytone/…/perispomenon),
+  `prosody` (syllable quantity heavy/light/common), and baseline `lemmatize`
+  (bundled seed table). `aegean.scripts.greek` registers
   the Greek `Script` (+ `nlp` capability) and a bundled sample corpus →
   `aegean.load("greek")` (5 public-domain Archaic→Koine passages).
 - `aegean.data` — bundled-JSON access (Linear A + Greek seeds, **no images**) +
@@ -99,7 +100,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 168 passing
+pytest                                   # 178 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)

@@ -65,6 +65,26 @@ info.syllables            # ('λό', 'γος')
 Classifications: `oxytone` / `paroxytone` / `proparoxytone` (acute) ·
 `perispomenon` / `properispomenon` (circumflex) · `barytone` (grave).
 
+## Prosody (syllable quantity)
+
+Classifies each syllable as **heavy** / **light** / **common** — the metrical
+foundation of meter. A syllable is heavy if it's closed (long by position) or has
+a long nucleus (η, ω, a circumflex, an iota-subscript vowel, or a diphthong);
+light if open with a short nucleus (ε, ο); common if open with a *dichronon*
+(α, ι, υ), whose length isn't determinable from spelling.
+
+```python
+greek.syllable_quantities("λόγος")      # ['light', 'heavy']
+greek.syllable_quantities("ἄνθρωπος")   # ['heavy', 'heavy', 'heavy']
+greek.syllable_quantities("μῆνιν")      # ['heavy', 'heavy']
+greek.scan("θάλασσα")                   # [('θά','common'), ('λασ','heavy'), ('σα','common')]
+```
+
+Baseline scope: quantities are computed within a single word — *correptio Attica*
+(short vowel before mute+liquid) is always counted heavy-by-position, and
+word-final length in context isn't resolved. These are leads for full metrical
+scansion, not a finished scanner.
+
 ## Lemmatization (baseline)
 
 A small bundled form→lemma seed table with an identity fallback. This is a

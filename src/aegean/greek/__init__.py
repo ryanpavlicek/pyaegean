@@ -23,6 +23,7 @@ from .normalize import (
     strip_diacritics,
     unicode_to_betacode,
 )
+from .prosody import scan, syllable_quantities
 from .syllabify import syllabify
 from .tokenize import sentences, tokenize, tokenize_words
 
@@ -37,6 +38,8 @@ __all__ = [
     "syllabify",
     "accentuation",
     "AccentInfo",
+    "syllable_quantities",
+    "scan",
     "lemmatize",
     "lemmatize_verbose",
 ]
