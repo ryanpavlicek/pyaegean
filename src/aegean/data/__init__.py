@@ -4,10 +4,17 @@ Compact text data ships in the wheel (read via importlib.resources). Large or
 license-restricted assets — notably the 500 MB Linear A facsimile mirror — are
 NOT bundled; they are fetched on demand from upstream into a user cache. This
 is how the package stays small (the workbench's 500 MB problem can't recur).
+
+Downloads are sha256-verified (when a checksum is pinned), atomic (written to a
+``.part`` file then renamed), and idempotent (a present, valid cache file is a
+no-op). A dataset's URL can be overridden without a code change via
+``PYAEGEAN_<NAME>_URL`` (e.g. ``PYAEGEAN_LINEARA_IMAGES_URL``), so a researcher
+can point at their own mirror before an official release is pinned.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -52,43 +59,76 @@ class DataSpec:
 
 
 # Remote datasets. The Linear A facsimile imagery lives in the workbench repo;
-# we fetch (never re-host) it. The exact pinned release URL is wired in a
-# follow-up (see roadmap / open question #5); until then fetch() reports clearly.
+# we fetch (never re-host) it. No official release is pinned yet (the imagery is
+# © École Française d'Athènes and the owner must publish the mirror first); set
+# PYAEGEAN_LINEARA_IMAGES_URL to fetch from your own mirror in the meantime.
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",
-        url="",  # TODO: pin a ryanpavlicek/linearaworkbench release asset
+        url="",  # pin a ryanpavlicek/linearaworkbench release asset once published
         license="© École Française d'Athènes — academic reference only; not redistributed",
         note="~500 MB facsimile/photo mirror; download on demand from the workbench repo.",
     ),
 }
 
 
+def _env_url_var(name: str) -> str:
+    return "PYAEGEAN_" + name.upper().replace("-", "_") + "_URL"
+
+
+def _resolve_url(spec: DataSpec) -> str:
+    """The effective download URL: an env override wins over the pinned URL."""
+    return os.environ.get(_env_url_var(spec.name)) or spec.url
+
+
+def sha256_file(path: pathlib.Path, *, chunk: int = 1 << 20) -> str:
+    """Streaming sha256 of a file (won't load a 500 MB asset into memory)."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(chunk), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
 def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     """Download a registered remote dataset into the cache and return its path.
 
-    Raises :class:`DataNotAvailableError` for unknown datasets, un-pinned URLs,
-    or network failures — never silently, and never blocking ``import``.
+    Verifies the sha256 when one is pinned, downloads atomically, and is a
+    no-op when a valid cache file already exists. Raises
+    :class:`DataNotAvailableError` for unknown datasets, un-pinned URLs,
+    checksum mismatches, or network failures — never silently, and never
+    blocking ``import``.
     """
     spec = _REMOTE.get(name)
     if spec is None:
+        raise DataNotAvailableError(f"unknown dataset {name!r}; known: {sorted(_REMOTE)}")
+    url = _resolve_url(spec)
+    if not url:
         raise DataNotAvailableError(
-            f"unknown dataset {name!r}; known: {sorted(_REMOTE)}"
+            f"dataset {name!r} has no pinned download URL yet ({spec.note}). "
+            f"Set {_env_url_var(name)} to fetch from a mirror. License: {spec.license}"
         )
-    if not spec.url:
-        raise DataNotAvailableError(
-            f"dataset {name!r} has no pinned download URL yet "
-            f"({spec.note}). License: {spec.license}"
-        )
+
     dest = cache_dir() / name
     if dest.exists() and not force:
-        return dest
+        if not spec.sha256 or sha256_file(dest) == spec.sha256:
+            return dest  # present and valid → idempotent no-op
+
+    tmp = dest.with_name(dest.name + ".part")
     try:
         import urllib.request
 
-        urllib.request.urlretrieve(spec.url, dest)  # noqa: S310 (trusted url)
+        urllib.request.urlretrieve(url, tmp)  # noqa: S310 (registered/overridable url)
     except Exception as e:  # pragma: no cover - network
-        raise DataNotAvailableError(
-            f"could not fetch {name!r} from {spec.url}: {e}"
-        ) from e
+        tmp.unlink(missing_ok=True)
+        raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
+
+    if spec.sha256:
+        got = sha256_file(tmp)
+        if got != spec.sha256:
+            tmp.unlink(missing_ok=True)
+            raise DataNotAvailableError(
+                f"checksum mismatch for {name!r}: expected {spec.sha256}, got {got}"
+            )
+    tmp.replace(dest)  # atomic within the cache dir
     return dest
