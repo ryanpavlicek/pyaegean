@@ -24,6 +24,7 @@ from .normalize import (
     unicode_to_betacode,
 )
 from .prosody import scan, syllable_quantities
+from .phonology import to_ipa
 from .syllabify import syllabify
 from .tokenize import sentences, tokenize, tokenize_words
 
@@ -40,6 +41,7 @@ __all__ = [
     "AccentInfo",
     "syllable_quantities",
     "scan",
+    "to_ipa",
     "lemmatize",
     "lemmatize_verbose",
 ]

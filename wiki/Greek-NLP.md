@@ -85,6 +85,27 @@ Baseline scope: quantities are computed within a single word — *correptio Atti
 word-final length in context isn't resolved. These are leads for full metrical
 scansion, not a finished scanner.
 
+## Phonology (reconstructed IPA)
+
+Transcribe Greek to IPA for two periods — `"attic"` (Classical, default) and
+`"koine"` (Hellenistic/Imperial).
+
+```python
+greek.to_ipa("θεός")               # 'tʰeos'   (Attic: aspirated θ)
+greek.to_ipa("ὁ")                  # 'ho'      (rough breathing → /h/)
+greek.to_ipa("ἄγγελος")            # 'aŋɡelos' (γγ → velar nasal)
+greek.to_ipa("θεός", "koine")      # 'θeos'    (Koine: θ is a fricative)
+greek.to_ipa("καί", "koine")       # 'ke'      (iotacism: αι → /e/)
+```
+
+Attic uses aspirated φ θ χ = /pʰ tʰ kʰ/, voiced stops β γ δ = /b ɡ d/, ζ = /zd/,
+υ = /y/, distinctive vowel length, and rough breathing = /h/. Koine fricativizes
+(φ θ χ = /f θ x/; β γ δ = /v ɣ ð/), is mid-iotacism (η, ει → /i/; αι → /e/), and
+drops length and the breathings.
+
+**Reconstructed and approximate** — several values (ε/η quality, the long
+diphthongs, the date of iotacism) are scholarly judgement calls.
+
 ## Lemmatization (baseline)
 
 A small bundled form→lemma seed table with an identity fallback. This is a
