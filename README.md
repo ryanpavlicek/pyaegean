@@ -55,6 +55,12 @@ repo, cached locally — never re-hosted).
   and baseline lemmatization. `aegean.load("greek")` loads a small bundled
   sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
+- **`aegean.ai`** (v0.2) — multi-provider AI layer: a provider-agnostic
+  `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
+  response caching, corpus grounding, and capabilities (translate, gloss,
+  decipherment hypotheses, NLP-assist, ask/summarize). Every generative result is
+  labeled **exploratory** with provenance. `aegean.translate` is the hybrid
+  lexicon+LLM front end.
 
 ## Roadmap
 

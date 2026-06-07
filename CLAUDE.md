@@ -50,10 +50,19 @@ DONE and tested (151 passing tests):
 - `aegean.data` — bundled-JSON access (Linear A + Greek seeds, **no images**) +
   `fetch()` download-to-cache: sha256-verified, atomic, idempotent, with a
   `PYAEGEAN_<NAME>_URL` env override (graceful `DataNotAvailableError`).
+- `aegean.ai` — multi-provider AI layer (v0.2): `LLMClient` ABC + adapters
+  (Anthropic default, OpenAI, xAI Grok, Gemini; SDKs lazy/optional, keys from
+  env, never logged), `get_client()`, a sha256 `ResponseCache`, grounding +
+  prompt-injection wrapping, and capabilities (translate/gloss/decipher/
+  nlp_assist/ask/summarize) — every output an exploratory-labeled, provenanced
+  `ExploratoryResult`. Model is configurable (arg → `<PROVIDER>_MODEL` env →
+  default). `aegean.translate` is the hybrid lexicon+LLM front end.
 
 The Linear A analysis ports are **complete** (phonetic distance + alignment,
 morphology clustering, collocation, query engine, structure detection). The
-Greek track has its first vertical slice (corpus + NLP stages above).
+Greek track has its first vertical slice (corpus + NLP stages above). The v0.2
+AI layer + translation foundation is in (provider adapters, grounding, caching,
+exploratory labeling), unit-tested with a fake client (no live keys).
 
 NOT done yet (next steps, priority order):
 1. **Deepen Greek NLP** toward "beats CLTK": real lemmatizer/morphology (Morpheus
@@ -64,9 +73,9 @@ NOT done yet (next steps, priority order):
    (still empty — no workbench release exists yet; the imagery isn't
    redistributable, so the owner must publish a mirror first, then pin URL+sha).
    Until then `PYAEGEAN_LINEARA_IMAGES_URL` lets a user fetch from their own.
-3. **v0.2**: AI layer (`aegean.ai`, multi-provider: Anthropic default/latest
-   Claude, OpenAI, Grok, Gemini) — translate/gloss/decipher/nlp-assist/ask —
-   grounded, all output labeled exploratory; + `aegean.translate`.
+3. **Deepen the AI layer** (foundation DONE): wire real provider calls against
+   recorded/mocked HTTP for an integration test, a tiny live smoke gated behind
+   a secret, streaming, and richer grounding (RAG over the corpus/commentary).
 
 ## Conventions (do these)
 
@@ -90,7 +99,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 103 passing
+pytest                                   # 168 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)

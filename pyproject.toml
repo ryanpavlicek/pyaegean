@@ -65,5 +65,5 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "scipy.*"]
+module = ["pandas.*", "numpy.*", "scipy.*", "anthropic.*", "openai.*", "google.*"]
 ignore_missing_imports = true
