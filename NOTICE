@@ -1,0 +1,33 @@
+pyaegean
+Copyright 2026 Ryan Pavlicek
+
+This product includes software developed by Ryan Pavlicek, licensed under the
+Apache License, Version 2.0.
+
+================================================================================
+Third-party data and attributions
+================================================================================
+
+Linear A corpus (bundled text JSON: src/aegean/data/bundled/lineara/)
+  Derived from the GORILA edition — Godart, L. & Olivier, J.-P. (1976–1985),
+  "Recueil des inscriptions en linéaire A" (Études Crétoises) — via the
+  open dataset at https://github.com/mwenge/lineara.xyz.
+  Used as a scholarly reference corpus. Transliterations and structured
+  metadata only; no facsimile imagery is bundled or redistributed.
+
+Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
+  © École Française d'Athènes and respective rights holders. Downloaded by the
+  user on demand from the linearaworkbench repository for academic reference;
+  never re-hosted by this package.
+
+Planned (future versions; included here for forward attribution):
+  - DAMOS — Database of Mycenaean at Oslo (Linear B).
+  - LiBER — Linear B Electronic Resources.
+  - Perseus Digital Library / PROIEL treebanks (Ancient Greek) — CC BY-SA.
+  - First1KGreek / Open Greek and Latin — CC BY.
+  - Morpheus morphological data; LSJ lexicon (per applicable license).
+  Each will be attributed and license-gated as it is integrated.
+
+The structured-data layer of this package is licensed Apache-2.0; underlying
+scholarly editions and imagery remain under their respective rights. Cite the
+original editions in academic work (see Corpus.provenance.cite()).
