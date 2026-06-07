@@ -47,8 +47,13 @@ repo, cached locally — never re-hosted).
 - **`aegean.scripts.lineara`** — Linear A: bundled corpus + 84-sign inventory +
   sign→sound map + transliteration.
 - **`aegean.analysis`** — ported from the workbench: accounting reconciliation,
-  wildcard sign-pattern search (more landing: phonetic distance/alignment,
-  morphology clustering, collocation).
+  wildcard sign-pattern search, weighted phonetic distance + alignment,
+  morphology clustering, collocation statistics, a compound-query engine, and
+  heuristic tablet-structure classification (all with golden-fixture parity).
+- **`aegean.greek`** — the Greek NLP track (v0.1 start): Unicode/Beta Code
+  normalization, word/sentence tokenization, syllabification, accent analysis,
+  and baseline lemmatization. `aegean.load("greek")` loads a small bundled
+  sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 
 ## Roadmap

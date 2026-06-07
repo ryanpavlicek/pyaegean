@@ -1,0 +1,37 @@
+[
+  {
+    "id": "iliad-1.1",
+    "author": "Homer",
+    "work": "Iliad 1.1",
+    "period": "Archaic (epic)",
+    "text": "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
+  },
+  {
+    "id": "john-1.1",
+    "author": "Gospel of John",
+    "work": "John 1:1",
+    "period": "Koine",
+    "text": "ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος ἦν πρὸς τὸν θεόν"
+  },
+  {
+    "id": "heraclitus-panta-rhei",
+    "author": "Heraclitus",
+    "work": "Fragment (panta rhei)",
+    "period": "Archaic",
+    "text": "πάντα ῥεῖ"
+  },
+  {
+    "id": "herodotus-1.1",
+    "author": "Herodotus",
+    "work": "Histories 1.1",
+    "period": "Classical (Ionic)",
+    "text": "Ἡροδότου Ἁλικαρνησσέος ἱστορίης ἀπόδειξις ἥδε"
+  },
+  {
+    "id": "sappho-1.1",
+    "author": "Sappho",
+    "work": "Hymn to Aphrodite 1",
+    "period": "Archaic (Aeolic)",
+    "text": "ποικιλόθρον’ ἀθανάτ’ Ἀφρόδιτα"
+  }
+]

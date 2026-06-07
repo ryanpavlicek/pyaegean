@@ -23,7 +23,7 @@ avoid the managed signing server — leave it off unless signing works in your e
 
 ## Current state — v0.1 *foundation* (first vertical slice; NOT all of v0.1)
 
-DONE and tested (18 passing tests):
+DONE and tested (151 passing tests):
 - `aegean.core` — script-agnostic model: `Corpus`, `Document`, `Token`/`TokenKind`,
   `Sign`, `SignInventory`, numerals, `Script` plugin registry, `Provenance`.
 - `aegean.scripts.lineara` — Linear A fully wired: `aegean.load("lineara")` →
@@ -41,19 +41,29 @@ DONE and tested (18 passing tests):
   `eval_query`/`run_query`) and **structure detection** (`TabletStructure.tsx`
   `heuristicKey` → accounting/libation/list/text classifier), both with parity
   tests.
-- `aegean.data` — bundled-JSON access (≈590 KB in-wheel, **no images**) +
-  `fetch()` download-to-cache (graceful `DataNotAvailableError`).
+- `aegean.greek` — Greek NLP pipeline (v0.1 start): `normalize` (NFC/NFD +
+  Beta Code ↔ Unicode), `tokenize`/`sentences`, `syllabify` (rule-based incl.
+  diphthongs + muta-cum-liquida), `accentuation` (oxytone/…/perispomenon), and
+  baseline `lemmatize` (bundled seed table). `aegean.scripts.greek` registers
+  the Greek `Script` (+ `nlp` capability) and a bundled sample corpus →
+  `aegean.load("greek")` (5 public-domain Archaic→Koine passages).
+- `aegean.data` — bundled-JSON access (Linear A + Greek seeds, **no images**) +
+  `fetch()` download-to-cache: sha256-verified, atomic, idempotent, with a
+  `PYAEGEAN_<NAME>_URL` env override (graceful `DataNotAvailableError`).
 
 The Linear A analysis ports are **complete** (phonetic distance + alignment,
-morphology clustering, collocation, query engine, structure detection).
+morphology clustering, collocation, query engine, structure detection). The
+Greek track has its first vertical slice (corpus + NLP stages above).
 
 NOT done yet (next steps, priority order):
-1. **Greek start** (`aegean.greek` + `aegean.scripts.greek`): corpus loader
-   (First1KGreek/Perseus subset) + first NLP stages — normalize/betacode,
-   tokenize, syllabify, accentuation, baseline lemmatize (open-data seed).
+1. **Deepen Greek NLP** toward "beats CLTK": real lemmatizer/morphology (Morpheus
+   / treebank-derived), POS, dependency parse, prosody/meter, LSJ; download the
+   full First1KGreek/Perseus corpus; add the CLTK benchmark harness. (v0.1 start
+   — normalize/betacode, tokenize, syllabify, accent, baseline lemmatize — DONE.)
 2. **Pin the `lineara-images` release URL** in `src/aegean/data/__init__.py`
-   (currently empty → `fetch` reports "no pinned URL"). Pin a
-   `ryanpavlicek/linearaworkbench` release tag for the ~500 MB facsimile mirror.
+   (still empty — no workbench release exists yet; the imagery isn't
+   redistributable, so the owner must publish a mirror first, then pin URL+sha).
+   Until then `PYAEGEAN_LINEARA_IMAGES_URL` lets a user fetch from their own.
 3. **v0.2**: AI layer (`aegean.ai`, multi-provider: Anthropic default/latest
    Claude, OpenAI, Grok, Gemini) — translate/gloss/decipher/nlp-assist/ask —
    grounded, all output labeled exploratory; + `aegean.translate`.

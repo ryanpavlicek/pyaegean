@@ -8,7 +8,8 @@ analytical core ported from the Linear A Workbench) and the Greek track begun.
 from __future__ import annotations
 
 from . import analysis  # noqa: F401
-from . import scripts  # noqa: F401 — registers built-in scripts (Linear A)
+from . import greek  # noqa: F401 — Greek NLP pipeline
+from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from .core.corpus import Corpus
 from .core.script import get_script, register, registered_scripts
 
@@ -27,5 +28,6 @@ __all__ = [
     "register",
     "registered_scripts",
     "analysis",
+    "greek",
     "__version__",
 ]
