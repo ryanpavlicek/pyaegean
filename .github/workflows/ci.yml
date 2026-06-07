@@ -22,8 +22,6 @@ jobs:
       - name: Lint
         run: ruff check src tests
       - name: Type-check
-        # TODO: remove continue-on-error once mypy --strict is clean (see CLAUDE.md)
-        continue-on-error: true
         run: mypy
       - name: Tests
         run: pytest --cov=aegean --cov-report=term-missing

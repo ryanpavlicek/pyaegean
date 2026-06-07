@@ -54,10 +54,7 @@ NOT done yet (next steps, priority order):
 2. **Pin the `lineara-images` release URL** in `src/aegean/data/__init__.py`
    (currently empty → `fetch` reports "no pinned URL"). Pin a
    `ryanpavlicek/linearaworkbench` release tag for the ~500 MB facsimile mirror.
-3. **Make CI green**: `ruff` (clean), `mypy --strict` (now clean, but the CI
-   step is still `continue-on-error` — flip it once intentional),
-   `pytest`, build + wheel-size guard.
-4. **v0.2**: AI layer (`aegean.ai`, multi-provider: Anthropic default/latest
+3. **v0.2**: AI layer (`aegean.ai`, multi-provider: Anthropic default/latest
    Claude, OpenAI, Grok, Gemini) — translate/gloss/decipher/nlp-assist/ask —
    grounded, all output labeled exploratory; + `aegean.translate`.
 
@@ -86,7 +83,7 @@ pip install -e ".[dev]"
 pytest                                   # 103 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
-mypy                                     # clean (CI step still continue-on-error)
+mypy                                     # clean (enforced in CI)
 python -m build && python -m twine check dist/*   # wheel must be < 3 MB
 ```
 
