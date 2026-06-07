@@ -55,6 +55,28 @@ from .patterns import (
     normalize_sign_label,
     word_matches_sign_pattern,
 )
+from .query import (
+    FIELDS,
+    FieldDef,
+    FilterRow,
+    QueryResults,
+    WordEntry,
+    build_cooccurrence_map,
+    build_word_index,
+    default_value,
+    eval_query,
+    inscription_matches,
+    run_query,
+    summarize_filters,
+    word_matches,
+)
+from .structure import (
+    CATEGORIES,
+    LIBATION_WORDS,
+    StructureCategory,
+    classify_corpus,
+    classify_structure,
+)
 
 __all__ = [
     # accounting
@@ -101,4 +123,24 @@ __all__ = [
     "find_morphological_clusters",
     "MorphCluster",
     "ClusterMember",
+    # query engine
+    "FIELDS",
+    "FieldDef",
+    "FilterRow",
+    "QueryResults",
+    "WordEntry",
+    "default_value",
+    "inscription_matches",
+    "word_matches",
+    "eval_query",
+    "run_query",
+    "build_word_index",
+    "build_cooccurrence_map",
+    "summarize_filters",
+    # structure detection
+    "classify_structure",
+    "classify_corpus",
+    "CATEGORIES",
+    "StructureCategory",
+    "LIBATION_WORDS",
 ]
