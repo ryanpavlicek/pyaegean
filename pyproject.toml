@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyaegean"
+version = "0.1.0.dev0"
+description = "The definitive Python toolkit for Ancient Greek — alphabetic Greek and the Aegean syllabic scripts (Linear A/B)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ryan Pavlicek" }]
+keywords = [
+  "ancient greek", "linear a", "linear b", "mycenaean", "aegean",
+  "epigraphy", "philology", "corpus", "bronze age", "syllabary",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Text Processing :: Linguistic",
+  "Typing :: Typed",
+]
+# Core stays import-light: numpy/pandas are imported lazily, only inside
+# DataFrame interop. scipy is added when the collocation layer lands.
+dependencies = ["pandas>=2.0"]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.39"]
+openai = ["openai>=1.30"]
+gemini = ["google-genai>=0.3"]
+grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
+ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
+epidoc = ["lxml>=5.0"]
+geo = ["geopandas>=0.14", "shapely>=2.0"]
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine"]
+all = ["pyaegean[ai,epidoc,geo]"]
+
+[project.urls]
+Homepage = "https://github.com/ryanpavlicek/pyaegean"
+Source = "https://github.com/ryanpavlicek/pyaegean"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+aegean = ["py.typed", "data/bundled/**/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/aegean"]
