@@ -36,7 +36,7 @@ def test_account_roles():
     lines = parse_account_lines(
         [["GRA", "5"], ["KU-RO", "5"], ["KI-RO", "2"], ["PO-TO-KU-RO", "7"]]
     )
-    assert [l.role for l in lines] == ["item", "total", "deficit", "grand-total"]
+    assert [line.role for line in lines] == ["item", "total", "deficit", "grand-total"]
 
 
 def test_balance_balanced_and_discrepant():

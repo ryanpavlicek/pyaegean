@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 _SUPERSCRIPTS = {
     "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
@@ -182,7 +182,7 @@ def check_balances(lines: list[AccountLine]) -> list[BalanceCheck]:
         if line.role == "item" and line.has_number:
             running.append(line)
         elif line.role in ("total", "grand-total"):
-            computed = sum(l.value for l in running)
+            computed = sum(item.value for item in running)
             diff = computed - line.value
             marker = next(
                 t for t in line.terms
