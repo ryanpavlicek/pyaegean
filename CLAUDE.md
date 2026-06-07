@@ -23,7 +23,7 @@ avoid the managed signing server — leave it off unless signing works in your e
 
 ## Current state — v0.1 *foundation* (first vertical slice; NOT all of v0.1)
 
-DONE and tested (198 passing tests):
+DONE and tested (217 passing tests):
 - `aegean.core` — script-agnostic model: `Corpus`, `Document`, `Token`/`TokenKind`,
   `Sign`, `SignInventory`, numerals, `Script` plugin registry, `Provenance`.
 - `aegean.scripts.lineara` — Linear A fully wired: `aegean.load("lineara")` →
@@ -45,9 +45,10 @@ DONE and tested (198 passing tests):
   Beta Code ↔ Unicode), `tokenize`/`sentences`, `syllabify` (rule-based incl.
   diphthongs + muta-cum-liquida), `accentuation` (oxytone/…/perispomenon),
   `prosody` (syllable quantity heavy/light/common), `phonology` (reconstructed
-  IPA, Attic + Koine), baseline `lemmatize` (bundled seed table), and a
-  `benchmark` harness scoring the pipeline vs a bundled gold set (CLTK-agnostic
-  comparison hook). `aegean.scripts.greek` registers
+  IPA, Attic + Koine), baseline `lemmatize` (bundled seed table), baseline `pos`
+  (closed-class lexicon + suffix heuristic), and a `benchmark` harness scoring
+  the pipeline vs a bundled gold set (CLTK-agnostic comparison hook).
+  `aegean.scripts.greek` registers
   the Greek `Script` (+ `nlp` capability) and a bundled sample corpus →
   `aegean.load("greek")` (5 public-domain Archaic→Koine passages).
 - `aegean.data` — bundled-JSON access (Linear A + Greek seeds, **no images**) +
@@ -103,7 +104,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 198 passing
+pytest                                   # 217 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)

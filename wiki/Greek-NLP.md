@@ -106,6 +106,28 @@ drops length and the breathings.
 **Reconstructed and approximate** — several values (ε/η quality, the long
 diphthongs, the date of iotacism) are scholarly judgement calls.
 
+## POS tagging (baseline)
+
+Coarse part-of-speech tags (Universal Dependencies inventory). Closed classes —
+article, prepositions, conjunctions, particles, pronouns, and the εἰμί copula —
+are tagged reliably from a lexicon; open-class words get a light suffix heuristic
+(a few verb endings, else NOUN).
+
+```python
+greek.pos_tag("ὁ")          # 'DET'
+greek.pos_tag("πρὸς")       # 'ADP'   (grave folded to acute for lookup)
+greek.pos_tag("ἦν")         # 'VERB'  (copula)
+greek.pos_tag("λόγος")      # 'NOUN'
+
+greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός.")
+# [('ἐν','ADP'), ('ἀρχῇ','NOUN'), ('ἦν','VERB'), ('ὁ','DET'),
+#  ('λόγος','NOUN'), (',','PUNCT'), ('καὶ','CCONJ'), ('θεός','NOUN'), ('.','PUNCT')]
+```
+
+**Baseline scope:** closed classes are reliable; open-class precision is limited
+(an open-class verb like ἄειδε falls back to NOUN) until a treebank-trained tagger
+lands. Tags: `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`.
+
 ## Benchmark harness
 
 `aegean.greek.benchmark` scores the pipeline against a small bundled gold set —
@@ -121,6 +143,7 @@ for stage, s in benchmark.run_benchmark().items():
 # syllabify: 100% (4/4)
 # accent: 100% (4/4)
 # lemma: 80% (4/5)        ← baseline seed table; one form is out-of-vocabulary
+# pos: 91% (10/11)        ← closed classes reliable; one open-class verb missed
 ```
 
 Compare any candidate lemmatizer (here CLTK, only if it's installed):

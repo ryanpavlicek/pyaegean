@@ -23,5 +23,18 @@
     {"word": "θεόν", "lemma": "θεός"},
     {"word": "πάντα", "lemma": "πᾶς"},
     {"word": "ἀνθρώπων", "lemma": "ἄνθρωπος"}
+  ],
+  "pos": [
+    {"word": "ἐν", "pos": "ADP"},
+    {"word": "ἀρχῇ", "pos": "NOUN"},
+    {"word": "ἦν", "pos": "VERB"},
+    {"word": "ὁ", "pos": "DET"},
+    {"word": "λόγος", "pos": "NOUN"},
+    {"word": "καί", "pos": "CCONJ"},
+    {"word": "πρός", "pos": "ADP"},
+    {"word": "τόν", "pos": "DET"},
+    {"word": "θεόν", "pos": "NOUN"},
+    {"word": "ἄειδε", "pos": "VERB"},
+    {"word": "θεά", "pos": "NOUN"}
   ]
 }
