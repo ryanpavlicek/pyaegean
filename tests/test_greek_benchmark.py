@@ -10,7 +10,7 @@ from aegean.greek import benchmark
 
 def test_run_benchmark_returns_a_score_per_stage():
     scores = benchmark.run_benchmark()
-    assert set(scores) == {"tokenize", "syllabify", "accent", "lemma"}
+    assert set(scores) == {"tokenize", "syllabify", "accent", "lemma", "pos"}
     for s in scores.values():
         assert s.total > 0
         assert 0 <= s.correct <= s.total

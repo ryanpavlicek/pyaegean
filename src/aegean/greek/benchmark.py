@@ -30,6 +30,7 @@ from typing import Any
 from ..data import load_bundled_json
 from .accent import accentuation
 from .lemmatize import lemmatize
+from .pos import pos_tag
 from .syllabify import syllabify
 from .tokenize import tokenize_words
 
@@ -67,6 +68,7 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
     syl = g.get("syllabify", [])
     acc = g.get("accent", [])
     lem = g.get("lemma", [])
+    pos = g.get("pos", [])
     return {
         "tokenize": Score(
             "tokenize", len(tok),
@@ -83,6 +85,10 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
         "lemma": Score(
             "lemma", len(lem),
             _count(lem, lambda it: lemmatize(it["word"]) == it["lemma"]),
+        ),
+        "pos": Score(
+            "pos", len(pos),
+            _count(pos, lambda it: pos_tag(it["word"]) == it["pos"]),
         ),
     }
 

@@ -26,6 +26,7 @@ from .normalize import (
 )
 from .prosody import scan, syllable_quantities
 from .phonology import to_ipa
+from .pos import pos_tag, pos_tags
 from .syllabify import syllabify
 from .tokenize import sentences, tokenize, tokenize_words
 
@@ -43,6 +44,8 @@ __all__ = [
     "syllable_quantities",
     "scan",
     "to_ipa",
+    "pos_tag",
+    "pos_tags",
     "lemmatize",
     "lemmatize_verbose",
     "benchmark",
