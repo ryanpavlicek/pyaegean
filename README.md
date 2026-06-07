@@ -27,7 +27,7 @@ import aegean
 corpus = aegean.load("lineara")          # 1,721 inscriptions, bundled, offline
 print(len(corpus))                       # 1721
 
-ht = corpus.filter(site="HT")            # Haghia Triada only
+ht = corpus.filter(site="Haghia Triada") # filter by metadata (full site name)
 df = corpus.to_dataframe(level="word")   # pandas-native, one row per word
 
 from aegean.analysis import balance_check, word_matches_sign_pattern

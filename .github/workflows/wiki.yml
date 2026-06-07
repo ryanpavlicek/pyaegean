@@ -1,0 +1,55 @@
+name: Publish Wiki
+
+# Publishes the Markdown pages under wiki/ to the repository's built-in GitHub
+# wiki. Runs server-side, where the default GITHUB_TOKEN is authorized to push
+# to <repo>.wiki.git.
+#
+# One-time prerequisite: enable Wikis in Settings → General → Features, then
+# create a single page in the wiki UI so the wiki repo is initialized. After
+# that, this workflow keeps the wiki in sync on every push to wiki/.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync wiki/ to the GitHub wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          wiki_url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          tmp="$(mktemp -d)"
+          if ! git clone --depth 1 "$wiki_url" "$tmp" 2>/dev/null; then
+            echo "::warning::Could not clone ${GITHUB_REPOSITORY}.wiki.git — enable Wikis in Settings and create one initial page, then re-run."
+            exit 0
+          fi
+          # Replace the managed Markdown pages; preserve the wiki's .git.
+          find "$tmp" -maxdepth 1 -type f -name '*.md' -delete
+          cp wiki/*.md "$tmp"/
+          cd "$tmp"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+          else
+            git commit -m "Sync wiki from ${GITHUB_SHA}"
+            git push
+            echo "Wiki published."
+          fi
