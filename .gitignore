@@ -8,3 +8,6 @@ build/
 *.pyc
 .coverage
 htmlcov/
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
