@@ -76,6 +76,17 @@ package. Cite the AGDT in work that relies on it. Network is needed only on the
 first call; the build is idempotent thereafter. See
 [Greek NLP → Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in).
 
+### The Greek lexicon (LSJ, `use_lsj`)
+
+`aegean.greek.use_lsj()` downloads the **Perseus Liddell-Scott-Jones** lexicon (the
+TEI *A Greek-English Lexicon* — 27 files, ~270 MB, pinned to a fixed commit) into the
+cache and builds a derived, gzipped lemma→entry index there (`lsj-perseus-index.json.gz`,
+~15 MB). The LSJ is **CC BY-SA 4.0** (Perseus Digital Library, with NEH funding); it is
+fetched (never re-hosted) and the index stays in the local cache — pyaegean neither
+bundles nor redistributes it. Attribute Perseus per the statement in `NOTICE`. Network
+is needed only on the first call. See
+[Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
+
 ## Provenance & citation
 
 Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:
@@ -98,5 +109,7 @@ corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license,
 - **Greek sample corpus** — public-domain ancient texts (seed only).
 - **Greek treebank lexicon (opt-in)** — Perseus AGDT v2.1, CC BY-SA 3.0; fetched
   and built in the user cache, never bundled or redistributed.
+- **Greek lexicon / LSJ (opt-in)** — Perseus Liddell-Scott-Jones, CC BY-SA 4.0;
+  fetched and indexed in the user cache, never bundled or redistributed.
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.

@@ -52,9 +52,12 @@ present analysis as ground truth.
    the lift (`compare_modes`/`score_pos`/`compare_pos_taggers`): on the gold,
    treebank takes lemma 28%→100% and POS 50%→100% over the baseline. A live CLTK
    head-to-head is documented but pending — CLTK 2.x needs a stanza/torch (or LLM)
-   backend, so it wasn't installed here. Next: dependency parsing (the AGDT has
-   head/relation), LSJ glossing; pull the full First1KGreek/Perseus corpus and grow
-   the gold further. (Dactylic meter scansion — hexameter + pentameter — landed;
+   backend, so it wasn't installed here. **LSJ glossing landed**: opt-in
+   `greek.use_lsj()` fetches the full Perseus LSJ (CC BY-SA 4.0, ~270 MB, cache-only),
+   builds a gzipped lemma→entry index, and exposes `gloss`/`lookup` (composes with the
+   lemmatizer). Next: dependency parsing (the AGDT has head/relation); pull the full
+   First1KGreek/Perseus corpus and grow the gold further. (Dactylic meter scansion —
+   hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).

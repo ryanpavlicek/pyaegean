@@ -27,6 +27,15 @@ Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistri
   lemma/morphology lexicon in the local cache and neither bundles nor re-hosts the
   treebank itself. Attribute the AGDT in academic work that relies on it.
 
+Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistributed)
+  A Greek-English Lexicon (Liddell, Scott, Jones), digitized by the Perseus Digital
+  Library (https://github.com/PerseusDL/lexica), licensed CC BY-SA 4.0. Text provided
+  under a CC BY-SA license by Perseus Digital Library, http://www.perseus.tufts.edu,
+  with funding from The National Endowment for the Humanities. Data accessed from
+  https://github.com/PerseusDL/lexica/. Downloaded by the user on demand via
+  aegean.greek.use_lsj(); pyaegean builds a derived index in the local cache and
+  neither bundles nor re-hosts the lexicon.
+
 Planned (future versions; included here for forward attribution):
   - DAMOS — Database of Mycenaean at Oslo (Linear B).
   - LiBER — Linear B Electronic Resources.

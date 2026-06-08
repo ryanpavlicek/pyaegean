@@ -5,8 +5,9 @@ v0.1: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize`` (word/senten
 ``phonology`` (IPA), a seed ``lemmatize``, baseline ``pos``, and a rule-based
 ``morphology`` analyzer (``analyze``) — with an **opt-in** treebank backend
 (``use_treebank``; Perseus AGDT) that supplies attested, correctly-accented lemmas
-and full features for known forms. Deeper stages — dependency parsing and LSJ —
-land later (docs/PLAN.md).
+and full features for known forms, plus an **opt-in** LSJ lexicon (``use_lsj``;
+Perseus Liddell-Scott-Jones) for glossing (``gloss``/``lookup``). Deeper stages —
+dependency parsing — land later (docs/PLAN.md).
 
 Every stage is a plain function so it can be used standalone::
 
@@ -23,6 +24,7 @@ from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
+from .lexicon import LSJEntry, LSJLexicon, disable_lsj, gloss, lookup, use_lsj
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -77,4 +79,10 @@ __all__ = [
     "use_treebank",
     "disable_treebank",
     "TreebankLexicon",
+    "use_lsj",
+    "disable_lsj",
+    "gloss",
+    "lookup",
+    "LSJEntry",
+    "LSJLexicon",
 ]

@@ -365,6 +365,38 @@ greek.lemmatize("ἦν")             # 'εἰμί'
 greek.lemmatize_verbose("ξενικον")  # ('ξενικον', False)  ← not in the seed table
 ```
 
+## Lexicon (LSJ glossing, opt-in)
+
+What does a word *mean*? `use_lsj()` switches on the full **Perseus Liddell-Scott-Jones**
+lexicon — it fetches the LSJ (~270 MB, one-time) and builds a cached index, then
+`gloss`/`lookup` resolve a Greek word to its dictionary entry. Looking up an inflected
+form works: it tries the form, then lemmatizes (using the [treebank backend](#treebank-backed-mode-opt-in)
+if active) and retries — so it composes with everything above.
+
+```python
+greek.use_treebank()         # optional, but lets inflected/irregular forms resolve
+greek.use_lsj()              # one-time ~270 MB download + build, cached; then instant
+
+greek.gloss("ἀνδρός")         # 'ἀνήρ: man, opp. god, …'        (lemmatized ἀνδρός → ἀνήρ)
+greek.gloss("γυναικός")       # 'γυνή: wife, spouse, …'
+greek.gloss("βάλλω")          # 'βάλλω: Act., throw: …'
+
+entry = greek.lookup("λόγος")  # the full structured entry
+entry.headword               # 'λόγος'
+len(entry.senses)            # 64
+entry.senses[0].marker, entry.senses[0].text[:40]   # ('I', 'computation, reckoning …')
+```
+
+`lookup` returns an `LSJEntry` (`headword`, `senses` of `Sense(marker, level, text)`,
+`lead`, `short`); `gloss` is the concise one-liner (`headword: <first English sense>`).
+Beta Code in the source is converted to Unicode, and citations are compacted into the
+sense text. The short gloss is best-effort — for a few entries (e.g. cross-reference
+headwords) it can still lead with a variant; use `lookup` for the full picture.
+
+The LSJ is **CC BY-SA 4.0** (Perseus Digital Library), fetched to your cache and never
+bundled — see [Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-use_lsj).
+`greek.disable_lsj()` turns it back off.
+
 ## The sample corpus
 
 `aegean.load("greek")` loads a handful of public-domain Archaic→Koine passages
