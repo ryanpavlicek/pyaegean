@@ -3,8 +3,10 @@
 v0.1: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize`` (word/sentence),
 ``syllabify``, accent analysis (``accentuation``), ``prosody``/``meter`` scansion,
 ``phonology`` (IPA), a seed ``lemmatize``, baseline ``pos``, and a rule-based
-``morphology`` analyzer (``analyze``). Deeper stages — a treebank-derived
-lemmatizer/morphology, dependency parsing, LSJ — land later (docs/PLAN.md).
+``morphology`` analyzer (``analyze``) — with an **opt-in** treebank backend
+(``use_treebank``; Perseus AGDT) that supplies attested, correctly-accented lemmas
+and full features for known forms. Deeper stages — dependency parsing and LSJ —
+land later (docs/PLAN.md).
 
 Every stage is a plain function so it can be used standalone::
 
@@ -20,6 +22,7 @@ from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark,
 from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
+from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -71,4 +74,7 @@ __all__ = [
     "best_pos",
     "Analysis",
     "benchmark",
+    "use_treebank",
+    "disable_treebank",
+    "TreebankLexicon",
 ]

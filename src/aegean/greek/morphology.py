@@ -313,13 +313,8 @@ def _verbal(word: str) -> list[Analysis]:
 
 
 @lru_cache(maxsize=4096)
-def analyze(word: str) -> tuple[Analysis, ...]:
-    """All candidate morphological analyses of ``word`` (possibly several, given
-    Greek's ambiguity; empty only for unanalysable tokens).
-
-    Closed-class words (article, prepositions, conjunctions, particles, pronouns,
-    the copula) resolve to a single high-confidence analysis; open-class words
-    yield the readings their ending permits."""
+def _rule_analyze(word: str) -> tuple[Analysis, ...]:
+    """Rule-based candidate analyses — the baseline engine behind :func:`analyze`."""
     fixed = _LEXICON.get(_closed_key(word))
     if fixed is not None:
         lemma, _ = lemmatize_verbose(word)
@@ -332,6 +327,26 @@ def analyze(word: str) -> tuple[Analysis, ...]:
             seen.add(key)
             out.append(a)
     return tuple(out)
+
+
+def analyze(word: str) -> tuple[Analysis, ...]:
+    """All candidate morphological analyses of ``word`` (possibly several, given
+    Greek's ambiguity; empty only for unanalysable tokens).
+
+    Closed-class words (article, prepositions, conjunctions, particles, pronouns,
+    the copula) resolve to a single high-confidence analysis; open-class words
+    yield the readings their ending permits. When the AGDT treebank backend is
+    active (see :func:`aegean.greek.use_treebank`), an attested form's analyses —
+    correctly accented and covering irregular forms the rule engine can't — are
+    returned instead, with the rule engine as the fallback for unattested forms."""
+    from . import treebank
+
+    lex = treebank.active()
+    if lex is not None:
+        hit = lex.analyze(word)
+        if hit:
+            return hit
+    return _rule_analyze(word)
 
 
 def _closed_key(word: str) -> str:

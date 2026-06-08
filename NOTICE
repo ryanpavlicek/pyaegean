@@ -20,10 +20,17 @@ Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
   user on demand from the linearaworkbench repository for academic reference;
   never re-hosted by this package.
 
+Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistributed)
+  Perseus Ancient Greek Dependency Treebank, v2.1
+  (https://github.com/PerseusDL/treebank_data), licensed CC BY-SA 3.0. Downloaded
+  by the user on demand via aegean.greek.use_treebank(); pyaegean builds a derived
+  lemma/morphology lexicon in the local cache and neither bundles nor re-hosts the
+  treebank itself. Attribute the AGDT in academic work that relies on it.
+
 Planned (future versions; included here for forward attribution):
   - DAMOS — Database of Mycenaean at Oslo (Linear B).
   - LiBER — Linear B Electronic Resources.
-  - Perseus Digital Library / PROIEL treebanks (Ancient Greek) — CC BY-SA.
+  - PROIEL treebanks (Ancient Greek) — CC BY-NC-SA.
   - First1KGreek / Open Greek and Latin — CC BY.
   - Morpheus morphological data; LSJ lexicon (per applicable license).
   Each will be attributed and license-gated as it is integrated.

@@ -43,14 +43,13 @@ present analysis as ground truth.
 
 ## Next steps (priority order)
 
-1. **Deepen Greek NLP** (measured against the CLTK benchmark): treebank-derived lemmatizer/morphology
-   (the rule-based `morphology` engine is in; next is the Perseus AGDT lexicon via
-   `fetch()` to restore accented lemmas + cover irregular/contract/athematic forms
-   — network to raw.githubusercontent.com is confirmed available; AGDT is CC-BY-SA
-   so build the lexicon in the user cache, do **not** bundle it), POS, dependency
-   parse, LSJ; pull the full First1KGreek/Perseus corpus and grow the gold set.
-   (Dactylic meter scansion — hexameter + pentameter — landed; iambic/lyric meters
-   and synizesis still TODO.)
+1. **Deepen Greek NLP** (measured against the CLTK benchmark): the rule-based
+   `morphology` engine and the **Perseus AGDT v2.1 treebank lexicon** are in (opt-in
+   `greek.use_treebank()` — downloaded + built in the user cache, CC-BY-SA, **not**
+   bundled; gives attested, accented lemmas + full features, rule engine as fallback).
+   Next: a treebank-trained POS tagger, dependency parsing, LSJ; pull the full
+   First1KGreek/Perseus corpus and grow the gold set. (Dactylic meter scansion —
+   hexameter + pentameter — landed; iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).
 

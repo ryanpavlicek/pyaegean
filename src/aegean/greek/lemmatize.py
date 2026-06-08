@@ -26,8 +26,19 @@ def _lemma_table() -> dict[str, str]:
 
 
 def lemmatize_verbose(word: str) -> tuple[str, bool]:
-    """Return ``(lemma, known)``. ``known`` is False when the form wasn't in the
-    seed table and the (normalized) input is returned unchanged."""
+    """Return ``(lemma, known)``. ``known`` is False when the form wasn't found and
+    the (normalized) input is returned unchanged.
+
+    When the AGDT treebank backend is active (see :func:`aegean.greek.use_treebank`),
+    its attested, correctly-accented lemma is preferred; otherwise the bundled seed
+    table is consulted."""
+    from . import treebank
+
+    lex = treebank.active()
+    if lex is not None:
+        hit = lex.lemmatize(word)
+        if hit is not None:
+            return hit, True
     key = unicodedata.normalize("NFC", word.lower())
     table = _lemma_table()
     if key in table:

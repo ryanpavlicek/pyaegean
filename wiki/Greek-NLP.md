@@ -268,6 +268,30 @@ its iota subscript. Athematic, contract, irregular and suppletive forms (`εἶ�
 lexicon. For ambiguous forms the feature analyses are **exploratory**: trust the
 closed classes and the feature set; treat a single auto-picked reading with care.
 
+### Treebank-backed mode (opt-in)
+
+The baseline above is rule-based and fully offline. For *attested* forms you can
+switch on a **treebank-derived lexicon** built from the Perseus Ancient Greek
+Dependency Treebank (AGDT v2.1). It supplies correctly-**accented** lemmas and full
+features — including the irregular, contract, athematic and third-declension forms
+the rule engine can't reach:
+
+```python
+greek.use_treebank()         # one-time download (~75 MB) + build, cached; then instant
+
+greek.lemmatize("ἄνδρα")      # 'ἀνήρ'      (3rd declension; the rule engine gives a bare stem)
+greek.lemmatize("ἔφη")        # 'φημί'      (suppletive athematic verb)
+greek.lemmatize("γυναικός")   # 'γυνή'
+greek.lemmatize("πόλεως")     # 'πόλις'
+greek.analyze("ἀνθρώπων")[0]  # ἄνθρωπος [NOUN gen pl masc]   (lemma_certain=True)
+```
+
+Once active, `lemmatize`/`analyze` prefer the treebank for known forms and fall
+back to the rule/seed engine for the rest; `greek.disable_treebank()` restores the
+default. Network is needed only on the first call. The treebank is **CC BY-SA 3.0**,
+fetched to your cache and never bundled — see
+[Data & Provenance](Data-and-Provenance#the-greek-treebank-lexicon-use_treebank).
+
 ## Benchmark harness
 
 `aegean.greek.benchmark` scores the pipeline against a small bundled gold set, so

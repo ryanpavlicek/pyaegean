@@ -60,6 +60,18 @@ data.fetch("lineara-images")     # downloads from the override, sha-checked if p
 The override pattern is general: `PYAEGEAN_<NAME>_URL` (uppercased, `-`→`_`)
 overrides any dataset's URL.
 
+### The Greek treebank lexicon (`use_treebank`)
+
+`aegean.greek.use_treebank()` downloads the Perseus **Ancient Greek Dependency
+Treebank** (AGDT v2.1, Greek) — 33 `.tb.xml` files, ~75 MB, pinned to a fixed
+commit — into the cache, then builds a derived form→lemma/morphology lexicon there
+(`agdt-greek-lexicon.json`). The treebank is **CC BY-SA 3.0**; it is fetched (never
+re-hosted), and the derived lexicon stays in the local cache — pyaegean neither
+bundles nor redistributes it, so the ShareAlike terms don't reach the Apache-2.0
+package. Cite the AGDT in work that relies on it. Network is needed only on the
+first call; the build is idempotent thereafter. See
+[Greek NLP → Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in).
+
 ## Provenance & citation
 
 Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:
@@ -80,5 +92,7 @@ corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license,
 - **Linear A facsimile imagery** — © École Française d'Athènes; referenced, not
   redistributed.
 - **Greek sample corpus** — public-domain ancient texts (seed only).
+- **Greek treebank lexicon (opt-in)** — Perseus AGDT v2.1, CC BY-SA 3.0; fetched
+  and built in the user cache, never bundled or redistributed.
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.

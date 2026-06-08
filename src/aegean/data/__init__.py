@@ -120,6 +120,19 @@ def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
             )
 
 
+def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.Path:
+    """Download a single URL to ``dest`` atomically (a ``.part`` temp then rename),
+    optionally sha256-verified. Returns ``dest``; raises :class:`DataNotAvailableError`
+    on a network failure or checksum mismatch. Shared by :func:`fetch` and the
+    on-demand dataset downloaders (e.g. the Greek treebank)."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".part")
+    _download(url, tmp, dest.name)
+    _verify(tmp, sha256, dest.name)
+    tmp.replace(dest)  # atomic within the directory
+    return dest
+
+
 def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
     """Extract a tar archive, refusing any member that escapes ``dest``."""
     import tarfile

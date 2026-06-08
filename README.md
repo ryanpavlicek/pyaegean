@@ -79,8 +79,9 @@ repo, cached locally — never re-hosted).
 - **`aegean.greek`** — the Greek NLP track: Unicode/Beta Code normalization,
   word/sentence tokenization, syllabification, accent and prosody analysis,
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
-  POS tagging, a rule-based morphological analyzer, and baseline lemmatization.
-  `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
+  POS tagging, a rule-based morphological analyzer (with an optional
+  Perseus-treebank–backed lexicon for attested, accented lemmas), and baseline
+  lemmatization. `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 - **`aegean.ai`** (v0.2) — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
