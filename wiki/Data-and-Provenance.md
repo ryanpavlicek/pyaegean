@@ -36,9 +36,13 @@ Errors are explicit and never block `import`:
 
 ### The Linear A imagery (`lineara-images`)
 
-The ~500 MB facsimile/photo mirror is **© École Française d'Athènes** and is
-**not redistributed**. No official mirror is pinned yet. Until one is published,
-point the fetcher at your own mirror with an env override:
+The ~500 MB facsimile/photo set is **not redistributable** and is therefore
+**intentionally left unpinned**. Its copyright is a patchwork — most images are
+**© École Française d'Athènes** (the GORILA volumes), and others are held by
+named scholars, publications, and photographers (see the corpus's per-image
+`imageRights`). None carry a redistribution license, so pyaegean does not host or
+pin them. Point the fetcher at a copy **you are licensed to use** with an env
+override:
 
 ```bash
 export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar"
