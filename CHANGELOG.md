@@ -4,11 +4,14 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## 0.1.0
+## [Unreleased]
 
-First public release — an alpha foundation. A specialist Python toolkit for Ancient
-Greek and the Aegean syllabic scripts; analysis of the undeciphered Linear A
-material is always labeled exploratory, never presented as ground truth.
+The accumulating set for the first release (alpha). **Not yet published to PyPI** —
+the first PyPI release is planned for a later (1.0) milestone; until then, install
+from source: `pip install git+https://github.com/ryanpavlicek/pyaegean`. A
+specialist Python toolkit for Ancient Greek and the Aegean syllabic scripts;
+analysis of the undeciphered Linear A material is always labeled exploratory, never
+presented as ground truth.
 
 ### Added
 - **Core** (`aegean.core`): a script-agnostic model — `Corpus`, `Document`, `Token`,
