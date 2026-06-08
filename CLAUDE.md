@@ -10,7 +10,7 @@ Goal: **match-or-beat CLTK on Greek specifically** (CLTK is a benchmark target,
 **never a dependency**). The Linear A material is undeciphered — never present
 analysis as ground truth.
 
-## Current state — v0.1 foundation (247 tests passing)
+## Current state — v0.1 foundation (261 tests passing)
 
 - `aegean.core` — script-agnostic model: `Corpus`/`Document`/`Token`,
   `Sign`/`SignInventory`, numerals, `Script` plugin registry, `Provenance`.
@@ -24,8 +24,12 @@ analysis as ground truth.
   `tokenize`/`sentences`, `syllabify`, `accentuation`, `prosody`/quantity,
   `meter` scansion (`scan_hexameter`/`scan_pentameter`/`scan_line`: cross-word
   position, correptio, muta-cum-liquida, caesura; synizesis is *not* inferred),
-  `phonology` (IPA, Attic+Koine), baseline `lemmatize`+`pos`, CLTK-agnostic
-  `benchmark` harness (scores scansion too). `aegean.load("greek")` → 5 passages.
+  `phonology` (IPA, Attic+Koine), `lemmatize` (curated accented seed) + `pos`,
+  rule-based `morphology` (`analyze`→candidate `Analysis` with case/number/gender
+  + tense/voice/mood/person; 1st/2nd decl + common 3rd, thematic verbs; iota-
+  subscript dative detection; augment-gated past tenses; accent *not* restored on
+  reconstructed lemmas — treebank lexicon is the next step), CLTK-agnostic
+  `benchmark` harness (also scores scansion + morphology). `load("greek")` → 5 passages.
 - `aegean.ai` / `aegean.translate` — multi-provider LLM layer (Anthropic default,
   OpenAI, xAI, Gemini; SDKs lazy/optional, keys from env, never logged), response
   cache, grounding + prompt-injection wrapping; every output a provenanced,
@@ -39,10 +43,14 @@ analysis as ground truth.
 
 ## Next steps (priority order)
 
-1. **Deepen Greek NLP** toward beating CLTK: real lemmatizer/morphology (Morpheus
-   / treebank-derived), POS, dependency parse, LSJ; pull the full
-   First1KGreek/Perseus corpus and grow the gold set. (Dactylic meter scansion —
-   hexameter + pentameter — landed; iambic/lyric meters and synizesis still TODO.)
+1. **Deepen Greek NLP** toward beating CLTK: treebank-derived lemmatizer/morphology
+   (the rule-based `morphology` engine is in; next is the Perseus AGDT lexicon via
+   `fetch()` to restore accented lemmas + cover irregular/contract/athematic forms
+   — network to raw.githubusercontent.com is confirmed available; AGDT is CC-BY-SA
+   so build the lexicon in the user cache, do **not** bundle it), POS, dependency
+   parse, LSJ; pull the full First1KGreek/Perseus corpus and grow the gold set.
+   (Dactylic meter scansion — hexameter + pentameter — landed; iambic/lyric meters
+   and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).
 

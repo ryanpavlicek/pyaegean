@@ -31,6 +31,7 @@ from ..data import load_bundled_json
 from .accent import accentuation
 from .lemmatize import lemmatize
 from .meter import ScansionError, scan_line
+from .morphology import analyze
 from .pos import pos_tag
 from .syllabify import syllabify
 from .tokenize import tokenize_words
@@ -71,6 +72,7 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
     lem = g.get("lemma", [])
     pos = g.get("pos", [])
     sca = g.get("scansion", [])
+    mor = g.get("morphology", [])
     return {
         "tokenize": Score(
             "tokenize", len(tok),
@@ -96,6 +98,10 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
             "scansion", len(sca),
             _count(sca, lambda it: _scans_as(it["line"], it["meter"], it["pattern"])),
         ),
+        "morphology": Score(
+            "morphology", len(mor),
+            _count(mor, lambda it: _morph_recall(it["word"], it["pos"], it.get("features", {}))),
+        ),
     }
 
 
@@ -105,6 +111,15 @@ def _scans_as(line: str, meter: str, pattern: str) -> bool:
         return scan_line(line, meter).pattern == pattern
     except ScansionError:
         return False
+
+
+def _morph_recall(word: str, pos: str, features: dict[str, str]) -> bool:
+    """Whether the gold analysis (pos + features) is among the analyzer's
+    candidates — recall on an intentionally ambiguity-producing engine."""
+    return any(
+        a.pos == pos and all(a.features().get(k) == v for k, v in features.items())
+        for a in analyze(word)
+    )
 
 
 def score_lemmatizer(
