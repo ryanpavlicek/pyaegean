@@ -74,7 +74,7 @@ _REMOTE: dict[str, DataSpec] = {
             "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
             "lineara-images-v1/lineara-images.tar.gz"
         ),
-        sha256="d79e262857177bd22effba97baafdb4a31db06168f1ca1ce94b65266bcdf038d",
+        sha256="1afddcd0fc8ce4f3058e8f84d5589e7fb34f56ea615bf0c228d1b2c92722e396",
         license="© École Française d'Athènes and other rightsholders — academic reference only",
         note="3,368 facsimile/photo files (tar.gz) under images/; fetched from the linearaworkbench release.",
         extract=True,
