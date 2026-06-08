@@ -10,7 +10,7 @@ Goal: **match-or-beat CLTK on Greek specifically** (CLTK is a benchmark target,
 **never a dependency**). The Linear A material is undeciphered — never present
 analysis as ground truth.
 
-## Current state — v0.1 foundation (230 tests passing)
+## Current state — v0.1 foundation (247 tests passing)
 
 - `aegean.core` — script-agnostic model: `Corpus`/`Document`/`Token`,
   `Sign`/`SignInventory`, numerals, `Script` plugin registry, `Provenance`.
@@ -22,8 +22,10 @@ analysis as ground truth.
   query engine, tablet-structure detection. Golden fixtures in `tests/fixtures/golden/`.
 - `aegean.greek` — Greek NLP (v0.1 slice): `normalize` (NFC/NFD + Beta Code),
   `tokenize`/`sentences`, `syllabify`, `accentuation`, `prosody`/quantity,
+  `meter` scansion (`scan_hexameter`/`scan_pentameter`/`scan_line`: cross-word
+  position, correptio, muta-cum-liquida, caesura; synizesis is *not* inferred),
   `phonology` (IPA, Attic+Koine), baseline `lemmatize`+`pos`, CLTK-agnostic
-  `benchmark` harness. `aegean.load("greek")` → 5 public-domain passages.
+  `benchmark` harness (scores scansion too). `aegean.load("greek")` → 5 passages.
 - `aegean.ai` / `aegean.translate` — multi-provider LLM layer (Anthropic default,
   OpenAI, xAI, Gemini; SDKs lazy/optional, keys from env, never logged), response
   cache, grounding + prompt-injection wrapping; every output a provenanced,
@@ -38,8 +40,9 @@ analysis as ground truth.
 ## Next steps (priority order)
 
 1. **Deepen Greek NLP** toward beating CLTK: real lemmatizer/morphology (Morpheus
-   / treebank-derived), POS, dependency parse, full meter scansion, LSJ; pull the
-   full First1KGreek/Perseus corpus and grow the gold set.
+   / treebank-derived), POS, dependency parse, LSJ; pull the full
+   First1KGreek/Perseus corpus and grow the gold set. (Dactylic meter scansion —
+   hexameter + pentameter — landed; iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).
 
