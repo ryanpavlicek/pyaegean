@@ -172,6 +172,12 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.
+- **Koine / Biblical Greek** (low priority): NT corpus loader + Koine-tuned lemmatization/morphology
+  from an openly-licensed tagged Greek NT (MorphGNT/SBLGNT or the Nestle1904 trees), building on the
+  existing Koine phonology mode (`to_ipa(…, "koine")`) and the John 1:1 sample.
+- **Workbench bridge**: fetch the linearaworkbench static build (release asset, fetch-to-cache like
+  `lineara-images`) and serve it locally — e.g. an `aegean workbench` command — so the Python toolkit
+  and the visual workbench share corpus data.
 - **Side project** Claude Code plugin exposing pyaegean (translate/gloss/decipher/ask) as slash-commands/MCP.
 - **v1.0** Stable: alphabetic + all syllabic scripts uniform through one API; Greek NLP measured at
   least on par with CLTK; AI + translation integrated; full EpiDoc round-trip.
