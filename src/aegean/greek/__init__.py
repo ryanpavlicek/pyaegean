@@ -1,9 +1,10 @@
 """Greek NLP pipeline — composable, individually-callable stages.
 
-v0.1 start: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize``
-(word/sentence), ``syllabify``, accent analysis (``accentuation``), and a
-baseline ``lemmatize`` (open-data seed). Deeper stages — full morphology, POS,
-dependency parsing, prosody, LSJ — land across later versions (docs/PLAN.md).
+v0.1: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize`` (word/sentence),
+``syllabify``, accent analysis (``accentuation``), ``prosody``/``meter`` scansion,
+``phonology`` (IPA), a seed ``lemmatize``, baseline ``pos``, and a rule-based
+``morphology`` analyzer (``analyze``). Deeper stages — a treebank-derived
+lemmatizer/morphology, dependency parsing, LSJ — land later (docs/PLAN.md).
 
 Every stage is a plain function so it can be used standalone::
 
@@ -18,6 +19,7 @@ from __future__ import annotations
 from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
 from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
+from .morphology import Analysis, analyze, best_pos, lemmas
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -64,5 +66,9 @@ __all__ = [
     "pos_tags",
     "lemmatize",
     "lemmatize_verbose",
+    "analyze",
+    "lemmas",
+    "best_pos",
+    "Analysis",
     "benchmark",
 ]
