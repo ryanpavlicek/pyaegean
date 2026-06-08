@@ -43,5 +43,15 @@
     {"line": "οὐλομένην, ἣ μυρίʼ Ἀχαιοῖς ἄλγεʼ ἔθηκε,", "meter": "hexameter", "pattern": "—⏑⏑|——|—⏑⏑|——|—⏑⏑|—×"},
     {"line": "οἰωνοῖσί τε πᾶσι, Διὸς δʼ ἐτελείετο βουλή,", "meter": "hexameter", "pattern": "——|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×"},
     {"line": "κείμεθα τοῖς κείνων ῥήμασι πειθόμενοι.", "meter": "pentameter", "pattern": "—⏑⏑|——|—|—⏑⏑|—⏑⏑|×"}
+  ],
+  "morphology": [
+    {"word": "ἀνθρώπων", "pos": "NOUN", "features": {"case": "gen", "number": "pl"}},
+    {"word": "λόγον", "pos": "NOUN", "features": {"case": "acc", "number": "sg", "gender": "masc"}},
+    {"word": "ἀρχῇ", "pos": "NOUN", "features": {"case": "dat", "number": "sg", "gender": "fem"}},
+    {"word": "θεάν", "pos": "NOUN", "features": {"case": "acc", "number": "sg", "gender": "fem"}},
+    {"word": "λύομεν", "pos": "VERB", "features": {"tense": "pres", "voice": "act", "mood": "ind", "person": "1", "number": "pl"}},
+    {"word": "λύεις", "pos": "VERB", "features": {"tense": "pres", "voice": "act", "mood": "ind", "person": "2", "number": "sg"}},
+    {"word": "ἔλυσα", "pos": "VERB", "features": {"tense": "aor", "voice": "act", "mood": "ind", "person": "1", "number": "sg"}},
+    {"word": "λυόμενος", "pos": "VERB", "features": {"tense": "pres", "voice": "mp", "mood": "part", "gender": "masc"}}
   ]
 }
