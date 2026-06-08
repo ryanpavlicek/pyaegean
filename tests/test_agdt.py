@@ -83,6 +83,20 @@ def test_falls_back_to_rule_engine_for_unattested(
     assert greek.analyze("λύομεν")  # and the rule engine does analyse it
 
 
+def test_pos_tagger_uses_treebank(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Baseline mislabels the open-class aorist εἶπον as NOUN (suffix heuristic).
+    assert greek.pos_tag("εἶπον") == "NOUN"
+    _activate(tmp_path, monkeypatch)
+    # The treebank supplies the gold open-class tags the baseline misses.
+    assert greek.pos_tag("εἶπον") == "VERB"
+    assert greek.pos_tag("μένει") == "VERB"
+    assert greek.pos_tag("ὁ") == "DET"          # closed class still correct
+    # pos_tags over a phrase uses it too; punctuation stays PUNCT.
+    tags = dict(greek.pos_tags("εἶπον , ὁ"))
+    assert tags["εἶπον"] == "VERB"
+    assert tags[","] == "PUNCT"
+
+
 def test_disable_restores_default(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _activate(tmp_path, monkeypatch)
     assert greek.lemmatize("εἶπον") == "λέγω"

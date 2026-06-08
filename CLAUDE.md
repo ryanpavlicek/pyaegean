@@ -47,9 +47,11 @@ present analysis as ground truth.
    `morphology` engine and the **Perseus AGDT v2.1 treebank lexicon** are in (opt-in
    `greek.use_treebank()` — downloaded + built in the user cache, CC-BY-SA, **not**
    bundled; gives attested, accented lemmas + full features, rule engine as fallback).
-   Next: a treebank-trained POS tagger, dependency parsing, LSJ; pull the full
-   First1KGreek/Perseus corpus and grow the gold set. (Dactylic meter scansion —
-   hexameter + pentameter — landed; iambic/lyric meters and synizesis still TODO.)
+   `pos_tag`/`pos_tags` also use the treebank for attested forms (gold open-class
+   tags) when it's active. Next: dependency parsing (the AGDT has head/relation),
+   LSJ glossing; pull the full First1KGreek/Perseus corpus, grow the gold set, and
+   publish the CLTK comparison. (Dactylic meter scansion — hexameter + pentameter —
+   landed; iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).
 

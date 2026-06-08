@@ -197,8 +197,12 @@ greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός.")
 ```
 
 **Baseline scope:** closed classes are reliable; open-class precision is limited
-(an open-class verb like ἄειδε falls back to NOUN) until a treebank-trained tagger
-lands. Tags: `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`.
+(an open-class verb like ἄειδε falls back to NOUN). To fix this for attested forms,
+switch on the [treebank backend](#treebank-backed-mode-opt-in) — with
+`greek.use_treebank()` active, `pos_tag`/`pos_tags` return the gold AGDT tag for a
+known form (e.g. ἔφη → VERB) before falling back to the heuristic. Tags:
+`DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X` (treebank mode may
+also emit `INTJ`).
 
 ## Morphological analysis
 

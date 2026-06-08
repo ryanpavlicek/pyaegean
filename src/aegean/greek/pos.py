@@ -4,10 +4,13 @@ High-precision **closed-class** tagging from a lexicon (article, prepositions,
 conjunctions, particles, pronouns, and the εἰμί copula paradigm), with a light
 suffix heuristic for open classes (a few unambiguous verb endings, else NOUN).
 
-This is a **baseline**: closed classes are reliable; open-class precision is
-limited until a real morphological analyzer / treebank-trained tagger lands. Tags
-follow the Universal Dependencies inventory:
-``DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X``.
+Closed classes are reliable; open-class precision is limited by the suffix
+heuristic — but activating the **opt-in treebank backend**
+(:func:`aegean.greek.use_treebank`) yields gold, attested tags for known forms,
+covering the open-class words this baseline would mislabel. Tags follow the
+Universal Dependencies inventory:
+``DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`` (the treebank
+backend may additionally emit ``INTJ``).
 """
 
 from __future__ import annotations
@@ -76,9 +79,10 @@ def _strip(word: str) -> str:
 
 
 def pos_tag(word: str) -> str:
-    """Tag a single token. Closed classes come from the lexicon; open-class words
-    get a suffix heuristic (a few verb endings, else NOUN). Non-letter tokens are
-    NUM (numeric) or PUNCT."""
+    """Tag a single token. Closed classes come from the lexicon; when the treebank
+    backend is active (see :func:`aegean.greek.use_treebank`), an attested form's
+    gold tag is used next; otherwise open-class words get a suffix heuristic (a few
+    verb endings, else NOUN). Non-letter tokens are NUM (numeric) or PUNCT."""
     if not _GREEK_LETTER.search(word):
         if any(ch.isdigit() for ch in word):
             return "NUM"
@@ -86,6 +90,13 @@ def pos_tag(word: str) -> str:
     n = _norm(word)
     if n in _LEXICON:
         return _LEXICON[n]
+    from . import treebank
+
+    lex = treebank.active()
+    if lex is not None:
+        attested = lex.pos(word)
+        if attested is not None:
+            return attested
     bare = _strip(word)
     if bare.endswith(_VERB_SUFFIXES):
         return "VERB"

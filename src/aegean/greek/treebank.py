@@ -264,6 +264,11 @@ class TreebankLexicon:
         entries = self._entries(form)
         return entries[0]["lemma"] if entries else None
 
+    def pos(self, form: str) -> str | None:
+        """The most-attested part-of-speech tag for a form, or ``None`` if unknown."""
+        entries = self._entries(form)
+        return entries[0].get("pos") if entries else None
+
 
 _ACTIVE: TreebankLexicon | None = None
 

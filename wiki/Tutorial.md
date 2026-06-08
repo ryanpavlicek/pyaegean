@@ -158,8 +158,22 @@ greek.pos_tags(line)
 
 The closed-class word `ὃς` is correctly tagged **PRON**. But notice `ἔννεπε` (a
 verb) and `μάλα` (an adverb) both come back as **NOUN**. That's the v0.1 baseline
-being honest: closed classes are reliable, but open-class words fall back to NOUN
-until the treebank-trained tagger lands. Good to know before you trust a tag.
+being honest: closed classes are reliable, but open-class words fall back to NOUN.
+
+You can fix this for *attested* forms by switching on the
+[treebank backend](Greek-NLP#treebank-backed-mode-opt-in) — it uses gold tags from
+the Perseus treebank:
+
+```python
+greek.use_treebank()        # one-time download + build, then cached
+greek.pos_tags(line)
+# [('ἄνδρα','NOUN'), ('μοι','PRON'), ('ἔννεπε','VERB'), (',','PUNCT'),
+#  ('Μοῦσα','NOUN'), (',','PUNCT'), ('πολύτροπον','ADJ'), (',','PUNCT'),
+#  ('ὃς','PRON'), ('μάλα','ADV'), ('πολλὰ','ADJ')]
+```
+
+Now every word is tagged correctly. The treebank covers known forms; unattested
+ones still use the baseline, so it's always worth knowing which mode you're in.
 
 ### Analyse morphology
 
