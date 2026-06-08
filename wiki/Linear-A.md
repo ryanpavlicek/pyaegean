@@ -18,7 +18,7 @@ len(corpus)                       # 1721
 
 doc = corpus.get("HT13")                    # one Document by id
 ht = corpus.filter(site="Haghia Triada")    # AND-combine any DocumentMeta fields
-ht_lmib = corpus.filter(site="Haghia Triada", period="LM IB")
+ht_lmib = corpus.filter(site="Haghia Triada", period="LMIB")  # period codes are un-spaced (LMIA/LMIB/MMII…)
 ```
 
 `meta.site` holds the **full site name** (`"Haghia Triada"`, `"Khania"`, …); the

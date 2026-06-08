@@ -5,12 +5,12 @@ Auto-loaded at session start. Strategic design of record: `docs/PLAN.md`.
 ## What pyaegean is
 
 A *specialist* Python toolkit for **Ancient Greek** — alphabetic
-Greek (Archaic→Koine) and the Aegean syllabic scripts (Linear A/B, Cypriot).
-Goal: **deep, high-quality Greek coverage**, using CLTK as a friendly benchmark to
-measure against — never a dependency. The Linear A material is undeciphered — never
-present analysis as ground truth.
+Greek (Archaic→Koine) and the Aegean syllabic scripts (Linear A today; Linear B /
+Cypriot planned). Goal: **deep, high-quality Greek coverage**, using CLTK as a friendly
+benchmark to measure against — never a dependency. The Linear A material is
+undeciphered — never present analysis as ground truth.
 
-## Current state — v0.1 foundation (261 tests passing)
+## Current state — v0.2.0 (288 tests passing, 1 skipped)
 
 - `aegean.core` — script-agnostic model: `Corpus`/`Document`/`Token`,
   `Sign`/`SignInventory`, numerals, `Script` plugin registry, `Provenance`.
@@ -20,7 +20,7 @@ present analysis as ground truth.
   KU-RO/PO-TO-KU-RO `balance_check`, wildcard sign patterns, weighted phonetic
   distance, phoneme/word alignment, collocation stats, morphology clustering,
   query engine, tablet-structure detection. Golden fixtures in `tests/fixtures/golden/`.
-- `aegean.greek` — Greek NLP (v0.1 slice): `normalize` (NFC/NFD + Beta Code),
+- `aegean.greek` — Greek NLP: `normalize` (NFC/NFD + Beta Code),
   `tokenize`/`sentences`, `syllabify`, `accentuation`, `prosody`/quantity,
   `meter` scansion (`scan_hexameter`/`scan_pentameter`/`scan_line`: cross-word
   position, correptio, muta-cum-liquida, caesura; synizesis is *not* inferred),
@@ -89,7 +89,7 @@ present analysis as ground truth.
 
 ```bash
 pip install -e ".[dev]"
-pytest                 # 261 passing
+pytest                 # 288 passing (1 skipped)
 ruff check src tests
 mypy                   # clean (enforced in CI)
 python -m build && python -m twine check dist/*   # wheel must be < 3 MB

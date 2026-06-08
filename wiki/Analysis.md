@@ -106,7 +106,7 @@ words = run_query(corpus, [FilterRow("word-sign-pattern", "KU-*-RO")],
 ```
 
 Fields include `site-is`, `scribe-is`, `period-is`, `support-is`, `id-contains`,
-`has-image`, `ins-contains-word`, and word-scope `word-contains`/`-prefix`/
+`has-image`, `has-annotation`, `ins-contains-word`, and word-scope `word-contains`/`-prefix`/
 `-suffix`/`-min-syllables`/`-max-syllables`/`-contains-sign`/`-cooccurs-with`/
 `-sign-pattern`. `summarize_filters(...)` renders a one-line label.
 

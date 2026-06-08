@@ -15,6 +15,11 @@ L1  core                  Corpus · Document · Token · Sign · SignInventory �
                           Numeral · Script(ABC) · Registry · Provenance
 ```
 
+The Greek layer (L5) also hosts three **opt-in** backends — the AGDT treebank
+(`treebank.py`), LSJ glossing (`lexicon.py`), and the dependency parser (`syntax.py`) —
+which fetch and build their artifacts through the L4 **data/cache** layer (a
+`greek → data` edge); the strict downward-only layering still holds.
+
 ## The core model (`aegean.core`)
 
 Frozen `@dataclass(slots=True)` value objects; numpy/pandas lazy.

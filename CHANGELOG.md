@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.2.0 — 2026-06-08
+
+Deepens the Greek NLP track with two opt-in, gold-data backends and a revamped
+tutorial. All Linear A analysis remains exploratory.
+
+### Added
+- **LSJ glossing** (opt-in): `greek.use_lsj()` fetches the full Perseus
+  Liddell-Scott-Jones lexicon (CC BY-SA 4.0, ~270 MB) into the cache and builds a
+  derived gzipped index; `greek.gloss(word)` and `greek.lookup(word)` return a concise
+  gloss or the full `LSJEntry`. Composes with the lemmatizer — an inflected form
+  resolves via its lemma (e.g. `ἀνδρός` → `ἀνήρ`).
+- **Dependency parser** (opt-in, baseline): `greek.use_parser()` trains an arc-eager +
+  averaged-perceptron parser (pure Python, no heavy deps) on the AGDT; `greek.parse()`
+  returns a `DepTree` with native AGDT/Prague labels, and `greek.evaluate()` reports
+  held-out UAS/LAS (~0.67 / 0.57 on projective sentences, ~0.51 / 0.42 across all text).
+  An honest baseline: arc-eager builds only projective trees, which is a documented limit.
+- A revamped, end-to-end tutorial notebook (`notebooks/getting-started.ipynb`) that
+  walks one line of Homer down the full pipeline, then turns the toolkit on Linear A.
+
+### Changed
+- Documentation refreshed across the README and wiki to present the complete Greek NLP
+  track (treebank lemmas/POS, LSJ glossing, dependency parser, CLTK benchmark) for 0.2.0.
+
 ## 0.1.0 — 2026-06-08
 
 First public release (alpha). A specialist Python toolkit for Ancient Greek and the

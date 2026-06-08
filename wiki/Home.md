@@ -8,11 +8,12 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.1 → v0.2 (alpha).** The script-agnostic core and Linear A are
-> fully implemented; the Greek NLP track has its first vertical slice; the
-> multi-provider AI layer and hybrid translation are in foundation form.
-> Analytical and generative output on the undeciphered Linear A material is
-> **exploratory** — see [Data & Provenance](Data-and-Provenance).
+> **Status: v0.2.0 (alpha).** The script-agnostic core and Linear A are fully
+> implemented; the Greek NLP track is a full pipeline — including an opt-in Perseus
+> AGDT treebank backend (attested lemmas + gold POS/morphology), LSJ glossing, a
+> baseline dependency parser, and a CLTK benchmark harness — and the multi-provider AI
+> layer + hybrid translation are implemented. Analytical and generative output on the
+> undeciphered Linear A material is **exploratory** — see [Data & Provenance](Data-and-Provenance).
 
 ### New here?
 
@@ -54,7 +55,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, 84-sign inventory, sign→sound map, transliteration |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
-| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize + a sample corpus |
+| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), **LSJ glossing** (`use_lsj`), a baseline **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
@@ -71,9 +72,10 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-v0.1 core + Linear A + Greek start → **v0.2 AI layer + translation** → v0.3 deep
-Greek NLP (benchmarked against CLTK) → v0.4 Linear B (DAMOS/LiBER) → v0.5
-Cypriot/Cypro-Minoan → v1.0 stable.
+**Shipped:** v0.1 core + Linear A + Greek start. **v0.2 (current):** multi-provider AI
+layer + translation, *and* deep Greek NLP — treebank lemmas/POS, LSJ glossing, a baseline
+dependency parser, and a CLTK benchmark harness. **Next:** v0.3 grow the gold/corpus + a
+live CLTK head-to-head → v0.4 Linear B (DAMOS/LiBER) → v0.5 Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License
 

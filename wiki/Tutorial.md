@@ -54,7 +54,7 @@ artefact of how *we* drew the section boundary?
 
 > **This is exploratory.** Section boundaries are heuristic and Linear A
 > metrology is genuinely contested. `balance_check` is a tool for *finding* lines
-> worth a human's attention — not a verdict. See [Analysis](Analysis#accounting-reconciliation-ku-ro--po-to-ku-ro).
+> worth a human's attention — not a verdict. See [Linear A](Linear-A#accounting-reconciliation-ku-ro--po-to-ku-ro).
 
 ### How does the total-word behave elsewhere?
 
@@ -157,8 +157,8 @@ greek.pos_tags(line)
 ```
 
 The closed-class word `ὃς` is correctly tagged **PRON**. But notice `ἔννεπε` (a
-verb) and `μάλα` (an adverb) both come back as **NOUN**. That's the v0.1 baseline
-being honest: closed classes are reliable, but open-class words fall back to NOUN.
+verb) and `μάλα` (an adverb) both come back as **NOUN**. That's the baseline being
+honest: closed classes are reliable, but open-class words fall back to NOUN.
 
 You can fix this for *attested* forms by switching on the
 [treebank backend](Greek-NLP#treebank-backed-mode-opt-in) — it uses gold tags from
@@ -208,14 +208,17 @@ These are all *wrong*: `ἄνδρα` is the accusative singular of `ἀνήρ` (
 declension noun with an irregular stem). The lemma even comes back unaccented
 (`ανδρα`) — the engine's signal that it **reconstructed** the form rather than
 recognising it (`lemma_certain` is `False`). Irregular and third-declension forms
-are exactly what the rule-based baseline can't yet resolve; that's what the
-treebank lexicon on the [roadmap](Home#roadmap) is for. See
-[Morphological analysis](Greek-NLP#morphological-analysis) for the full scope.
+are exactly what the rule-based baseline can't resolve — but switch on the
+[treebank backend](Greek-NLP#treebank-backed-mode-opt-in) (`greek.use_treebank()`) and
+`analyze("ἄνδρα")` correctly returns `ἀνήρ [NOUN acc sg masc]` (`lemma_certain=True`).
+See [Morphological analysis](Greek-NLP#morphological-analysis) for the full scope.
 
 ### What you learned
 
 The Greek pipeline is a set of independent steps you can mix and match — and it
 tells you, by design, where it's confident and where it's guessing. **Where next:**
 the [Greek NLP](Greek-NLP) reference covers IPA phonology, prosody, the benchmark
-harness, and more; the [AI Layer](AI-Layer) adds (clearly-labeled, exploratory)
-translation and glossing on top.
+harness, the opt-in [treebank lemmas/morphology](Greek-NLP#treebank-backed-mode-opt-in),
+[LSJ glossing](Greek-NLP#lexicon-lsj-glossing-opt-in), and the baseline
+[dependency parser](Greek-NLP#dependency-parsing-opt-in-baseline); the
+[AI Layer](AI-Layer) adds (clearly-labeled, exploratory) translation on top.

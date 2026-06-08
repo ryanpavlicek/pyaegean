@@ -42,9 +42,12 @@ print(len(aegean.load("greek")))          # 5  (bundled sample corpus)
 ## Offline & data
 
 The compact text corpora (Linear A inscriptions/signs, Greek seeds) ship inside
-the wheel and work fully offline. Large assets — notably the ~116 MB Linear A
-facsimile imagery — are **not** bundled; they are fetched on demand into a user
-cache. See [Data & Provenance](Data-and-Provenance).
+the wheel and work fully offline. Large assets are **not** bundled — they are fetched
+on demand into a user cache on first use: the ~116 MB Linear A facsimile imagery, plus
+the opt-in Greek backends' data — the Perseus AGDT treebank (~75 MB,
+`greek.use_treebank()`) and the full Perseus LSJ (~270 MB, `greek.use_lsj()`);
+`greek.use_parser()` caches a small (~4 MB) trained model. All remain offline after the
+first fetch. See [Data & Provenance](Data-and-Provenance).
 
 ## From source
 

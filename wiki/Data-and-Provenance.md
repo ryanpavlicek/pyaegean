@@ -5,7 +5,7 @@
 Compact text data ships **inside the wheel** and works offline:
 
 - Linear A: `inscriptions.json`, `signs.json`, `phonetic_map.json`
-- Greek: `sample_texts.json`, `lemmata.json`
+- Greek: `sample_texts.json`, `lemmata.json`, `benchmark_gold.json`
 
 Large or license-restricted assets are **never bundled** — they are fetched on
 demand into a user cache. This keeps the wheel < 3 MB (CI guards it).

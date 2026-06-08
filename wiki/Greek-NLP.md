@@ -2,14 +2,19 @@
 
 `aegean.greek` is the Ancient Greek NLP pipeline. It's a set of small, independent
 steps: each one is a plain function you can call on its own, and you can chain
-them into your own pipeline. Nothing here requires an internet connection or an
-API key.
+them into your own pipeline. The core pipeline runs fully offline with no API key;
+the opt-in treebank, LSJ, and dependency-parser backends fetch their data over the
+network on first use, then cache it.
 
-v0.1 ships normalization, tokenization, syllabification, accent and prosody
+The core ships normalization, tokenization, syllabification, accent and prosody
 analysis, reconstructed IPA, **metrical scansion** (dactylic hexameter and elegiac
 pentameter), POS tagging, a baseline lemmatizer, and a rule-based **morphological
-analyzer**. Deeper stages — a treebank-derived lemmatizer/morphology, dependency
-parsing, and LSJ glossing — land in later versions (see the [roadmap](Home#roadmap)).
+analyzer**. On top, three **opt-in** backends (all built from Perseus gold data,
+documented below) add attested accented lemmas + gold POS/morphology
+([treebank](#treebank-backed-mode-opt-in)), dictionary glosses
+([LSJ](#lexicon-lsj-glossing-opt-in)), and dependency trees
+([parser](#dependency-parsing-opt-in-baseline)). Still genuinely future: iambic/lyric
+metres and automatic synizesis.
 
 Every example below is real, runnable output. Import the module once:
 
@@ -96,7 +101,7 @@ scansion](#metrical-scansion)** below, which builds on this word-level view.
 
 ## Metrical scansion
 
-Scan a line of verse into its feet. v0.1 covers the two dactylic meters of epic
+Scan a line of verse into its feet. It covers the two dactylic meters of epic
 and elegy: **dactylic hexameter** (the metre of Homer) and **elegiac pentameter**
 (the second line of an elegiac couplet). The scanner resolves each syllable's
 quantity *in context* — applying *correptio* (a long vowel shortened before
@@ -172,7 +177,7 @@ greek.to_ipa("καί", "koine")       # 'ke'      (iotacism: αι → /e/)
 
 Attic uses aspirated φ θ χ = /pʰ tʰ kʰ/, voiced stops β γ δ = /b ɡ d/, ζ = /zd/,
 υ = /y/, distinctive vowel length, and rough breathing = /h/. Koine fricativizes
-(φ θ χ = /f θ x/; β γ δ = /v ɣ ð/), is mid-iotacism (η, ει → /i/; αι → /e/), and
+(φ θ χ = /f θ x/; β γ δ = /v ɣ ð/), is mid-iotacism (η, ει → /i/; αι → /e/; οι → /y/), and
 drops length and the breathings.
 
 **Reconstructed and approximate** — several values (ε/η quality, the long
@@ -356,8 +361,10 @@ scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
 
 ## Lemmatization (baseline)
 
-A small bundled form→lemma seed table with an identity fallback. This is a
-**baseline** placeholder for v0.1; a real morphological analyzer lands later.
+A small bundled form→lemma seed table with an identity fallback. This is the
+always-offline **baseline**; for attested forms the
+[treebank backend](#treebank-backed-mode-opt-in) supplies real, accented lemmas, and
+the rule-based [morphological analyzer](#morphological-analysis) is documented above.
 
 ```python
 greek.lemmatize("λόγου")          # 'λόγος'

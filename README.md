@@ -8,9 +8,10 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.1 (alpha).** Script-agnostic core + Linear A fully implemented;
-> the Greek NLP track and the AI layer are landing across v0.1–v0.2. See the
-> roadmap. Analytical output on the undeciphered Linear A material is
+> **Status: v0.2.0 (alpha).** The script-agnostic core, Linear A, the full Greek NLP
+> track (incl. opt-in Perseus-treebank lemmas/POS, LSJ glossing, a baseline dependency
+> parser, and a CLTK benchmark harness), and the multi-provider AI layer are all
+> implemented. Analytical output on the undeciphered Linear A material is
 > **exploratory** — see the methodology/limitations.
 
 ## Install
@@ -61,9 +62,12 @@ greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 
 The full Linear A facsimile mirror (3,368 images, ~116 MB) is **not** bundled;
 fetch it on demand: `aegean.data.fetch("lineara-images")` (downloaded from the
-workbench repo, sha256-verified, cached locally — never re-hosted).
+workbench repo, sha256-verified, cached locally — never re-hosted). The opt-in Greek
+backends likewise fetch large CC BY-SA assets to cache on first use (never bundled):
+the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus LSJ
+(~270 MB, `greek.use_lsj()`).
 
-## What's here (v0.1)
+## What's here
 
 - **`aegean.core`** — script-agnostic model: `Corpus`, `Document`, `Token`,
   `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance.
@@ -78,11 +82,13 @@ workbench repo, sha256-verified, cached locally — never re-hosted).
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
   POS tagging, a rule-based morphological analyzer (with an optional
   Perseus-treebank–backed lexicon for attested, accented lemmas), baseline
-  lemmatization, opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), and an
-  opt-in baseline **dependency parser** (`use_parser` → `parse`). `aegean.load("greek")`
-  loads a small bundled sample corpus (Archaic→Koine).
+  lemmatization, opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), an opt-in
+  baseline **dependency parser** (`use_parser` → `parse`; ~0.67 UAS / 0.57 LAS on
+  projective AGDT), and a **CLTK benchmark harness** (the opt-in treebank lifts lemma
+  28%→100% and POS 50%→100% on the gold set). `aegean.load("greek")` loads a small
+  bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
-- **`aegean.ai`** (v0.2) — multi-provider AI layer: a provider-agnostic
+- **`aegean.ai`** — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
   response caching, corpus grounding, and capabilities (translate, gloss,
   decipherment hypotheses, NLP-assist, ask/summarize). Every generative result is
@@ -101,12 +107,15 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-v0.1 core + Linear A (+ Greek start) → v0.2 AI layer (multi-provider) +
-translation → v0.3 deep Greek NLP (benchmarked against CLTK) → v0.4 Linear B
-(DAMOS/LiBER) → v0.5 Cypriot/Cypro-Minoan → v1.0 stable.
+**Shipped:** v0.1 core + Linear A + Greek start. **v0.2 (current):** multi-provider AI
+layer + translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a
+baseline dependency parser, and a CLTK benchmark harness. **Next:** v0.3 grow the
+gold/corpus + a live CLTK head-to-head → v0.4 Linear B (DAMOS/LiBER) → v0.5
+Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License
 
-Apache-2.0. Corpus data is GORILA (Godart & Olivier 1976–1985) via
-mwenge/lineara.xyz; facsimile imagery © École Française d'Athènes (referenced,
-not redistributed). See `NOTICE`.
+Apache-2.0. Corpus data is GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz;
+facsimile imagery © École Française d'Athènes (referenced, not redistributed). The
+opt-in Greek backends fetch the Perseus AGDT treebank (CC BY-SA 3.0) and Perseus LSJ
+(CC BY-SA 4.0) to cache — built locally, never bundled or re-hosted. See `NOTICE`.

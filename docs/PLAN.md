@@ -65,9 +65,10 @@ Frozen `@dataclass(slots=True)` value objects; numpy/pandas lazy.
   `sign_inventory`, optional capabilities (`phonetic_map`, `numeral_system`, `nlp`). Greek's `nlp`
   capability returns the `aegean.greek` pipeline; Linear A's returns `None`.
 - **`Sign`** (syllabogram | letter | logogram), **`Token`** (`kind`: WORD/LOGOGRAM/NUMERAL/SEPARATOR/…
-  plus Greek adds PUNCT), **`Document`** (+ `DocumentMeta`), **`Corpus`** (the hub:
-  `load()/from_json()/from_epidoc()`, `.filter()`, `.query()`, **`.to_dataframe(level=…)`**,
-  `.word_frequencies()`, `.to_json/parquet/epidoc`, `.provenance`), **`NumeralSystem`**/`AegeanNumerals`.
+  plus Greek adds PUNCT), **`Document`** (+ `DocumentMeta`), **`Corpus`** (the hub — shipped:
+  `load()`, `.get()`, `.filter()`, `.word_frequencies()`, **`.to_dataframe(level=…)`**, `.to_dict()`,
+  `.provenance`; *planned*: `from_json`/`from_epidoc`, `.query()`, `.to_json`/`parquet`/`epidoc`),
+  **`NumeralSystem`**/`AegeanNumerals`.
 - Greek `Document`s carry token-level NLP annotations (lemma/POS/morph/IPA) when the pipeline has run,
   surfaced in `.to_dataframe(level="token")`.
 
@@ -109,10 +110,10 @@ src/aegean/
   **greek/   normalize tokenize syllabify accent phonology lemmatize morphology pos parse prosody lexicon .py**
   **translate/ __init__.py (hybrid lexicon+LLM)**
   **ai/      client.py (ABC) anthropic.py openai.py grok.py gemini.py prompts/ grounding.py cache.py**
-  io/        json_io epidoc tabular .py
+  io/        json_io epidoc tabular .py        (planned; currently an empty stub)
   data/      registry.py _cache.py  bundled/lineara/*.json  **bundled/greek/*.json (small seeds)**
-  adapters/  base.py  (damos liber lineara_xyz sigla perseus first1kgreek .py — phased)
-  integrations/ geo.py        # note: no cltk dependency — pyaegean implements its own Greek NLP
+  adapters/  base.py  (damos liber lineara_xyz sigla perseus first1kgreek .py — phased; stub)
+  integrations/ geo.py (planned; stub)  # no cltk dependency — pyaegean implements its own Greek NLP
 tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmark_greek.py
 ```
 
@@ -122,8 +123,8 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
   small Greek seeds (sample texts, betacode tables). Wheel **< ~3 MB**; CI guard fails otherwise.
 - **`aegean.data.fetch(name)`** → `platformdirs` user cache, sha256-verified, idempotent, graceful
   `DataNotAvailableError` (names the exact call + license). Registry `DataSpec(name, kind, url, sha256, license)`.
-  - `fetch("lineara")` / `fetch("lineara-images")` → **download from the `ryanpavlicek/linearaworkbench`
-    repo** (pinned release tag / raw URLs) — the 500 MB lives there; we never re-host it.
+  - The Linear A **text** JSON is bundled in the wheel; only `fetch("lineara-images")` is a remote
+    download — from the `ryanpavlicek/linearaworkbench` repo (pinned release tag) — never re-hosted.
   - **pyaegean repo release assets** host freely-licensable **Linear B** data and **Greek** resources
     (First1KGreek CC-BY, treebanks, LSJ where permitted) — this is what the freed repo space is for.
   - DAMOS/LiBER/Perseus → adapters fetch from **upstream**, cache, no re-host (licensing permitting).
