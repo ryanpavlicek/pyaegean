@@ -78,12 +78,12 @@ NOT done yet (next steps, priority order):
    normalize/betacode, tokenize, syllabify, accent, prosody/quantity, phonology/
    IPA, baseline lemmatize, and the CLTK benchmark harness.)
 2. **`lineara-images` URL+sha are pinned** to the `ryanpavlicek/linearaworkbench`
-   release `lineara-images-v1` (asset `lineara-images.tar.gz`, sha256 d79e2628…,
-   `extract=True` so `fetch()` unpacks the tar.gz to a cache dir). Fetched, never
-   re-hosted; attribution (© EFA + other rightsholders) is unaffected.
-   **Live once the owner uploads that exact asset to the release**;
-   `PYAEGEAN_LINEARA_IMAGES_URL` overrides for any licensed copy. (If the asset is
-   rebuilt, its sha changes — re-pin to match.)
+   release `lineara-images-v1` (asset `lineara-images.tar.gz`, sha256 1afddcd0…,
+   `extract=True` so `fetch()` unpacks the tar.gz to a cache dir). **Live** — the
+   asset is published (built/uploaded by the `release-images.yml` workflow in the
+   workbench repo). Fetched, never re-hosted; attribution (© EFA + other
+   rightsholders) is unaffected. `PYAEGEAN_LINEARA_IMAGES_URL` overrides for any
+   licensed copy. (If the asset is rebuilt, its sha changes — re-pin to match.)
 3. **Deepen the AI layer** (foundation + mocked-SDK adapter tests DONE): add a
    tiny live smoke gated behind a secret, streaming, and richer grounding (RAG
    over the corpus/commentary).
