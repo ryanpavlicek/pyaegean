@@ -81,10 +81,6 @@ With the environment active:
 pip install pyaegean
 ```
 
-> **Heads up:** pyaegean isn't on PyPI yet, so that exact command won't work until
-> the first release. Until then, install from GitHub instead — same result:
-> `pip install git+https://github.com/ryanpavlicek/pyaegean`
-
 That's it — you now have the core library, the full Linear A corpus, and the Greek
 NLP pipeline, all working **offline**. (The optional AI features need an extra
 install and an API key; see the [AI Layer](AI-Layer) page when you want them.)

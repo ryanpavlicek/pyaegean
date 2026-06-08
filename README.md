@@ -21,9 +21,6 @@ pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini clients
 pip install "pyaegean[all]"     # everything
 ```
 
-> **Not on PyPI yet.** Until the first release, install from source instead:
-> `pip install git+https://github.com/ryanpavlicek/pyaegean`
-
 > **New to Python, or not a programmer?** You're exactly who this tool is for.
 > The **[Getting Started guide](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)**
 > walks you from "I have nothing installed" to your first result — no prior coding
