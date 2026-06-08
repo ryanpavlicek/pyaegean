@@ -14,10 +14,15 @@ the Linear A Research Workbench, translation, and pluggable multi-provider AI.
 ## Install
 
 ```bash
-pip install pyaegean            # core + Linear A
+pip install pyaegean            # core + Linear A + Greek
 pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini clients
 pip install "pyaegean[all]"     # everything
 ```
+
+> **New to Python, or not a programmer?** You're exactly who this tool is for.
+> The **[Getting Started guide](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)**
+> walks you from "I have nothing installed" to your first result — no prior coding
+> assumed.
 
 ## Quick start
 
@@ -36,6 +41,19 @@ hits = [w for w, _ in corpus.word_frequencies()
         if word_matches_sign_pattern(w, "KU-*-RO")] # wildcard sign search
 ```
 
+And a taste of the Greek pipeline:
+
+```python
+from aegean import greek
+
+greek.betacode_to_unicode("mh=nin")     # 'μῆνιν'   (type Greek in plain ASCII)
+greek.syllabify("ἄνθρωπος")             # ['ἄν', 'θρω', 'πος']
+greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ").pattern
+# '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'             (Odyssey 1.1)
+[str(a) for a in greek.analyze("λόγον")][:2]
+# ['λόγος [NOUN acc sg masc]', 'λόγος [NOUN acc sg fem]']
+```
+
 The full Linear A facsimile mirror (~500 MB) is **not** bundled; fetch it on
 demand: `aegean.data.fetch("lineara-images")` (downloaded from the workbench
 repo, cached locally — never re-hosted).
@@ -50,10 +68,11 @@ repo, cached locally — never re-hosted).
   wildcard sign-pattern search, weighted phonetic distance + alignment,
   morphology clustering, collocation statistics, a compound-query engine, and
   heuristic tablet-structure classification (all with golden-fixture parity).
-- **`aegean.greek`** — the Greek NLP track (v0.1 start): Unicode/Beta Code
-  normalization, word/sentence tokenization, syllabification, accent analysis,
-  and baseline lemmatization. `aegean.load("greek")` loads a small bundled
-  sample corpus (Archaic→Koine).
+- **`aegean.greek`** — the Greek NLP track: Unicode/Beta Code normalization,
+  word/sentence tokenization, syllabification, accent and prosody analysis,
+  metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
+  POS tagging, a rule-based morphological analyzer, and baseline lemmatization.
+  `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 - **`aegean.ai`** (v0.2) — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
@@ -61,6 +80,15 @@ repo, cached locally — never re-hosted).
   decipherment hypotheses, NLP-assist, ask/summarize). Every generative result is
   labeled **exploratory** with provenance. `aegean.translate` is the hybrid
   lexicon+LLM front end.
+
+## Documentation
+
+Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**:
+
+- **[Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)** — for newcomers to Python
+- **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)** — two guided, end-to-end research walkthroughs
+- **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** — reference per domain
+- **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)** · **[FAQ](https://github.com/ryanpavlicek/pyaegean/wiki/FAQ)**
 
 ## Roadmap
 

@@ -12,6 +12,15 @@ the Linear A Research Workbench, translation, and pluggable multi-provider AI.
 > Analytical and generative output on the undeciphered Linear A material is
 > **exploratory** — see [Data & Provenance](Data-and-Provenance).
 
+### New here?
+
+- **Never used Python?** Start with **[Getting Started](Getting-Started)** — it
+  walks you from "I have nothing installed" to your first result, no prior
+  programming assumed.
+- **Want to learn by doing?** The **[Tutorial](Tutorial)** answers two real
+  research questions end to end — one in Linear A, one in Greek.
+- **Something not working?** See the **[FAQ & Troubleshooting](FAQ)**.
+
 ## Quick start
 
 ```python
@@ -43,7 +52,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, 84-sign inventory, sign→sound map, transliteration |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
-| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent analysis, baseline lemmatize + a sample corpus |
+| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize + a sample corpus |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 

@@ -1,8 +1,17 @@
 # Greek NLP
 
-`aegean.greek` is the Ancient Greek NLP pipeline — a set of composable,
-individually-callable stages. v0.1 ships the foundation; deeper stages (full
-morphology, POS, dependency parsing, prosody, LSJ) land across later versions.
+`aegean.greek` is the Ancient Greek NLP pipeline. It's a set of small, independent
+steps: each one is a plain function you can call on its own, and you can chain
+them into your own pipeline. Nothing here requires an internet connection or an
+API key.
+
+v0.1 ships normalization, tokenization, syllabification, accent and prosody
+analysis, reconstructed IPA, **metrical scansion** (dactylic hexameter and elegiac
+pentameter), POS tagging, a baseline lemmatizer, and a rule-based **morphological
+analyzer**. Deeper stages — a treebank-derived lemmatizer/morphology, dependency
+parsing, and LSJ glossing — land in later versions (see the [roadmap](Home#roadmap)).
+
+Every example below is real, runnable output. Import the module once:
 
 ```python
 from aegean import greek
@@ -80,10 +89,73 @@ greek.syllable_quantities("μῆνιν")      # ['heavy', 'heavy']
 greek.scan("θάλασσα")                   # [('θά','common'), ('λασ','heavy'), ('σα','common')]
 ```
 
-Baseline scope: quantities are computed within a single word — *correptio Attica*
-(short vowel before mute+liquid) is always counted heavy-by-position, and
-word-final length in context isn't resolved. These are leads for full metrical
-scansion, not a finished scanner.
+Baseline scope: these quantities are computed within a single word. To resolve a
+syllable's quantity *in metrical context* — across word boundaries, with the
+caesura and the ambiguities a verse line allows — use the **[metrical
+scansion](#metrical-scansion)** below, which builds on this word-level view.
+
+## Metrical scansion
+
+Scan a line of verse into its feet. v0.1 covers the two dactylic meters of epic
+and elegy: **dactylic hexameter** (the metre of Homer) and **elegiac pentameter**
+(the second line of an elegiac couplet). The scanner resolves each syllable's
+quantity *in context* — applying *correptio* (a long vowel shortened before
+another vowel), treating muta-cum-liquida clusters as the ambiguity they are, and
+counting position across word boundaries.
+
+The result is glyph notation you'll recognise from any commentary: **—** heavy
+(long), **⏑** light (short), **×** *anceps* (the "either" final syllable).
+
+```python
+sc = greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ")
+sc.pattern        # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'   (Odyssey 1.1 — five dactyls)
+sc.meter          # 'hexameter'
+[f.name for f in sc.feet]
+# ['dactyl', 'dactyl', 'dactyl', 'dactyl', 'dactyl', 'final']
+sc.caesura        # 'trochaic'   (the main word-break in the third foot)
+```
+
+A line with spondees, and its caesura located by syllable index:
+
+```python
+sc = greek.scan_hexameter("πλάγχθη, ἐπεὶ Τροίης ἱερὸν πτολίεθρον ἔπερσεν")
+sc.pattern                       # '—⏑⏑|——|—⏑⏑|—⏑⏑|—⏑⏑|—×'   (Odyssey 1.2)
+sc.caesura                       # 'penthemimeral'
+sc.syllables[sc.caesura_index]   # 'ἱ'   (the line breaks just before this syllable)
+```
+
+Elegiac pentameter (here Simonides' epitaph for the Spartan dead):
+
+```python
+sc = greek.scan_pentameter("κείμεθα τοῖς κείνων ῥήμασι πειθόμενοι.")
+sc.pattern        # '—⏑⏑|——|—|—⏑⏑|—⏑⏑|×'
+[f.name for f in sc.feet]
+# ['dactyl', 'spondee', 'longum', 'dactyl', 'dactyl', 'longum']
+```
+
+`scan_line(line, meter)` dispatches by name (`"hexameter"` / `"pentameter"`), and
+a `LineScansion` carries `.line`, `.meter`, `.feet`, `.syllables`, `.quantities`,
+`.caesura`, `.caesura_index`, and `.ambiguous` (whether more than one scansion fit).
+
+To inspect the *possible* quantities of each syllable before a metre is imposed —
+useful for seeing where a line is genuinely ambiguous — use `syllable_options`:
+
+```python
+greek.syllable_options("πατρός")
+# [('πα', ['heavy', 'light']), ('τρός', ['light'])]   ← πα is muta-cum-liquida: either
+```
+
+**An honest limitation: synizesis is not inferred.** When a line only scans if two
+written vowels are read as one syllable (e.g. *Iliad* 1.1, where `Πηληϊάδεω` must
+contract to `-δεω`), the scanner *declines* rather than guessing — it raises
+`ScansionError` instead of forcing a fit:
+
+```python
+greek.scan_hexameter("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος")
+# ScansionError: line does not scan as dactylic hexameter (17 syllables): ...
+```
+
+Iambic and lyric metres, and automatic synizesis, are planned for later versions.
 
 ## Phonology (reconstructed IPA)
 
@@ -127,6 +199,74 @@ greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος, καὶ θεός.")
 **Baseline scope:** closed classes are reliable; open-class precision is limited
 (an open-class verb like ἄειδε falls back to NOUN) until a treebank-trained tagger
 lands. Tags: `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`.
+
+## Morphological analysis
+
+Given an inflected form, `analyze` returns the morphological readings its ending
+implies — part of speech plus the relevant features (case/number/gender for
+nouns; tense/voice/mood/person/number for verbs) — each with a reconstructed
+lemma. Greek inflection is richly ambiguous, so a single form legitimately yields
+several candidate readings; you disambiguate with context.
+
+```python
+for a in greek.analyze("λόγον"):
+    print(a)
+# λόγος [NOUN acc sg masc]
+# λόγος [NOUN acc sg fem]
+# λόγος [NOUN nom sg neut]
+# λόγος [NOUN acc sg neut]
+# λόγος [NOUN voc sg neut]
+```
+
+Each reading is an `Analysis` with the lemma, the POS, and the individual feature
+fields; `.features()` gives just the ones that apply:
+
+```python
+a = greek.analyze("λύεις")[0]
+a.lemma, a.pos        # ('λυω', 'VERB')
+a.features()          # {'number': 'sg', 'tense': 'pres', 'voice': 'act', 'mood': 'ind', 'person': '2'}
+a.lemma_certain       # False  ← see "the lemma is honest about itself" below
+```
+
+Closed-class words (the article, prepositions, conjunctions, particles, pronouns)
+come back as a single, confident reading:
+
+```python
+greek.analyze("ὁ")       # (Analysis(lemma='ὁ', pos='DET'),)
+greek.analyze("καί")[0]  # κaí → CCONJ
+```
+
+Two convenience shortcuts when you don't need the full feature set:
+
+```python
+greek.lemmas("ἀνθρώπων")   # ['ἄνθρωπος']   (the distinct lemmas a form could belong to)
+greek.best_pos("λύεις")    # 'VERB'         (the single most likely part of speech)
+```
+
+### The lemma is honest about itself
+
+`Analysis.lemma_certain` tells you how much to trust the lemma. When the bundled
+seed lexicon knows the form, you get the correctly **accented** lemma and
+`lemma_certain=True`. When the form is regular but out-of-vocabulary, the lemma is
+*reconstructed* from the ending — **unaccented** (accent recession can't be
+derived from the ending alone) and flagged `lemma_certain=False`:
+
+```python
+[a for a in greek.analyze("ἀνθρώπων") if a.pos == "NOUN"][0].lemma   # 'ἄνθρωπος' (seed, certain)
+[a for a in greek.analyze("ἵππον")   if a.pos == "NOUN"][0].lemma    # 'ιππος'   (reconstructed, uncertain)
+```
+
+### Scope and caveats
+
+This is a **baseline** engine — high-precision on the *regular* paradigms it
+encodes (the article and pronouns, the first and second declensions and common
+third-declension endings, and **thematic** verbs in the present, imperfect, future
+and sigmatic aorist indicative, plus common infinitives and the mediopassive
+participle). Past tenses are augment-gated, and a dative singular is detected from
+its iota subscript. Athematic, contract, irregular and suppletive forms (`εἶπον` →
+`λέγω`) are beyond a purely rule-based reach and await the treebank-derived
+lexicon. For ambiguous forms the feature analyses are **exploratory**: trust the
+closed classes and the feature set; treat a single auto-picked reading with care.
 
 ## Benchmark harness
 
