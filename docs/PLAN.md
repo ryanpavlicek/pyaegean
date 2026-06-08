@@ -1,4 +1,4 @@
-# pyaegean — the definitive Python package for Ancient Greek (alphabetic + Aegean syllabic)
+# pyaegean — a specialist Python package for Ancient Greek (alphabetic + Aegean syllabic)
 
 ## Context
 
@@ -8,19 +8,21 @@ Cypriot), and the canonical corpora (DAMOS, LiBER, lineara.xyz, SigLA) are **web
 **CLTK** is the incumbent for Ancient Greek NLP — but it is a *generalist* across many ancient
 languages.
 
-**Strategic goal (revised, per user):** pyaegean is the **specialist** — the single most complete,
-deepest package for **Ancient Greek specifically**, spanning **alphabetic Greek (Archaic→Koine) AND
-the Aegean syllabic scripts (Linear A/B, Cypriot)** — built to **match-or-beat CLTK on Greek** on
-every axis, plus specialty tooling CLTK lacks: Linear A/B analysis, translation, and pluggable
-multi-provider AI. Where it helps the user, we reinvent the wheel; the bar is "no competing package
-has better Greek features." Standalone repo; does not modify the workbench.
+**Strategic goal (revised, per user):** pyaegean is a **Greek specialist** — a deep, focused package
+for **Ancient Greek specifically**, spanning **alphabetic Greek (Archaic→Koine) AND the Aegean
+syllabic scripts (Linear A/B, Cypriot)** — aiming over time for thorough, high-quality Greek coverage,
+measured against CLTK as a friendly benchmark, plus specialty tooling for the Aegean scripts: Linear
+A/B analysis, translation, and a pluggable multi-provider AI layer. CLTK is an excellent
+general-purpose library across many ancient languages; pyaegean is deliberately narrower and Greek-
+focused. Standalone repo; does not modify the workbench.
 
 ## Locked decisions
 
 - **Name** PyPI `pyaegean`, `import aegean` (verify availability; note branding tension below).
 - **Repo** new standalone; Apache-2.0; provenance/attribution first-class.
-- **Positioning** COMPETE WITH / SURPASS CLTK for Greek (do **not** depend on CLTK). May benchmark
-  against it and reuse the same **open data** (not its code).
+- **Positioning** a Greek specialist; aim to meet or exceed CLTK's Greek coverage over time, measured
+  by benchmark (do **not** depend on CLTK). May benchmark against it and reuse the same **open data**
+  (not its code).
 - **Coverage** alphabetic Ancient Greek (full NLP) + Aegean syllabic scripts; Greek is first-class.
 - **Center of gravity** corpus **data layer**, with Greek NLP + AI + translation as headline capabilities.
 - **AI** multi-provider (Anthropic *default/latest Claude*, OpenAI, xAI Grok, Google Gemini); all four
@@ -69,7 +71,7 @@ Frozen `@dataclass(slots=True)` value objects; numpy/pandas lazy.
 - Greek `Document`s carry token-level NLP annotations (lemma/POS/morph/IPA) when the pipeline has run,
   surfaced in `.to_dataframe(level="token")`.
 
-## Greek NLP track (`aegean.greek`) — the CLTK-beating core
+## Greek NLP track (`aegean.greek`) — the Greek-specialist core
 
 Pipeline of composable, individually-callable stages (each a function + a class for reuse):
 `normalize` (NFC/NFD, betacode↔unicode, diacritic handling) → `tokenize` (word/sentence) →
@@ -78,8 +80,8 @@ Pipeline of composable, individually-callable stages (each a function + a class 
 (dependency, trained on PROIEL/Perseus) → `prosody`/`meter` (hexameter/iambic scansion) →
 `lexicon` (LSJ lookup). Hybrid sourcing: ship/download open data (Morpheus tables, treebanks, LSJ),
 implement our own engine, and let `aegean.ai.nlp_assist` disambiguate/fill gaps. **Benchmark harness**
-(`tests/benchmark_greek/`) scores each stage against gold treebanks AND against CLTK, gating "are we
-at least as good" — this operationalizes the goal.
+(`tests/benchmark_greek/`) scores each stage against gold treebanks and, as a reference point, against
+CLTK — tracking "are we at least as good on Greek" as a measured metric.
 
 ## AI layer (`aegean.ai`) — v0.2, multi-provider
 
@@ -110,7 +112,7 @@ src/aegean/
   io/        json_io epidoc tabular .py
   data/      registry.py _cache.py  bundled/lineara/*.json  **bundled/greek/*.json (small seeds)**
   adapters/  base.py  (damos liber lineara_xyz sigla perseus first1kgreek .py — phased)
-  integrations/ geo.py        # note: NO cltk integration — we replace it
+  integrations/ geo.py        # note: no cltk dependency — pyaegean implements its own Greek NLP
 tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmark_greek.py
 ```
 
@@ -141,7 +143,8 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
    JSON; `test_parity_lineara.py` runs ported analysis over the real corpus (CI-blocking). scipy
    replaces the TS erf/lgamma approximations, validated against golden.
 2. **Greek benchmark** — `test_benchmark_greek.py` scores lemmatizer/POS/morph/parse against gold
-   treebanks **and against CLTK**; the goal "≥ CLTK on Greek" is a measured, tracked metric, not a vibe.
+   treebanks **and, as a reference point, against CLTK**; "at least as good as CLTK on Greek" is a
+   measured, tracked metric, not a vibe.
 3. **AI** — provider adapters tested with mocked HTTP (no live keys in CI); grounding/labeling/caching
    unit-tested; a tiny optional live smoke gated behind a secret.
 4. **Property tests** (`hypothesis`) mirror the TS `*.properties.test.ts` invariants.
@@ -161,14 +164,14 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   accentuation, baseline lemmatize via open data). Linear A parity suite. Offline basics.
 - **v0.2** **AI layer** (Anthropic default + OpenAI + Grok + Gemini) wired to all four jobs;
   **translation/glossing**; corpus Q&A; decipherment-hypothesis support; NLP-assist disambiguation.
-- **v0.3** Deepen Greek NLP toward "beats CLTK": full morphological analyzer, POS, dependency parsing
-  (PROIEL/Perseus-trained), prosody/meter, LSJ integration; publish the CLTK benchmark.
+- **v0.3** Deepen Greek NLP (measured against the CLTK benchmark): full morphological analyzer, POS,
+  dependency parsing (PROIEL/Perseus-trained), prosody/meter, LSJ integration; publish the benchmark.
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.
 - **Side project** Claude Code plugin exposing pyaegean (translate/gloss/decipher/ask) as slash-commands/MCP.
-- **v1.0** Definitive: alphabetic + all syllabic scripts uniform through one API; Greek NLP measured
-  ≥ CLTK; AI + translation integrated; full EpiDoc round-trip.
+- **v1.0** Stable: alphabetic + all syllabic scripts uniform through one API; Greek NLP measured at
+  least on par with CLTK; AI + translation integrated; full EpiDoc round-trip.
 
 ## Critical reference files (TS repo, to port from)
 
@@ -183,8 +186,8 @@ KU-RO accounting), `signPattern.ts`, `compareAlign.ts`, `queryEngine.ts`, `corpu
 1. **Name vs scope** — `pyaegean`/`aegean` reads "Bronze Age Aegean," but scope is *all* Ancient Greek
    incl. Classical/Koine. Keep the name (chosen) but consider tagline/branding that says "Ancient Greek";
    revisit before publish if desired.
-2. **"Beat CLTK on Greek" is a multi-year arc** — full morphology+parsing+meter is large. v0.1–0.2 will
-   *not* yet exceed CLTK; the benchmark harness makes progress honest and measurable. Set expectations.
+2. **Matching CLTK on Greek is a multi-year arc** — full morphology+parsing+meter is large. v0.1–0.2 will
+   *not* yet rival CLTK across the board; the benchmark harness makes progress honest and measurable. Set expectations.
 3. **AI**: provider SDK choices (Grok via OpenAI-compatible client; Gemini via `google-genai`); cost/rate
    limits; **prompt-injection** from untrusted corpus text; never log keys; default model id drifts —
    keep it configurable and current. All generative output must stay clearly labeled exploratory.

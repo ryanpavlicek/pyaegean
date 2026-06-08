@@ -270,10 +270,12 @@ closed classes and the feature set; treat a single auto-picked reading with care
 
 ## Benchmark harness
 
-`aegean.greek.benchmark` scores the pipeline against a small bundled gold set —
-operationalizing the project goal of matching or beating CLTK on Greek. CLTK
-stays a *benchmark target, never a dependency*: the comparison takes an injected
-lemmatize callable, so nothing imports CLTK.
+`aegean.greek.benchmark` scores the pipeline against a small bundled gold set, so
+you can track how its Greek coverage is doing over time. If you'd like a point of
+comparison, you can benchmark it against another tool such as the excellent
+[CLTK](https://cltk.org). pyaegean doesn't depend on CLTK, though: the comparison
+takes a lemmatize callable that *you* supply, so nothing imports CLTK unless you
+choose to.
 
 ```python
 from aegean.greek import benchmark
@@ -286,7 +288,7 @@ for stage, s in benchmark.run_benchmark().items():
 # pos: 91% (10/11)        ← closed classes reliable; one open-class verb missed
 ```
 
-Compare any candidate lemmatizer (here CLTK, only if it's installed):
+Compare against another lemmatizer (here CLTK, if you have it installed):
 
 ```python
 from cltk import NLP

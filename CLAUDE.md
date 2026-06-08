@@ -4,11 +4,11 @@ Auto-loaded at session start. Strategic design of record: `docs/PLAN.md`.
 
 ## What pyaegean is
 
-The *definitive, specialist* Python toolkit for **Ancient Greek** — alphabetic
+A *specialist* Python toolkit for **Ancient Greek** — alphabetic
 Greek (Archaic→Koine) and the Aegean syllabic scripts (Linear A/B, Cypriot).
-Goal: **match-or-beat CLTK on Greek specifically** (CLTK is a benchmark target,
-**never a dependency**). The Linear A material is undeciphered — never present
-analysis as ground truth.
+Goal: **deep, high-quality Greek coverage**, using CLTK as a friendly benchmark to
+measure against — never a dependency. The Linear A material is undeciphered — never
+present analysis as ground truth.
 
 ## Current state — v0.1 foundation (261 tests passing)
 
@@ -43,7 +43,7 @@ analysis as ground truth.
 
 ## Next steps (priority order)
 
-1. **Deepen Greek NLP** toward beating CLTK: treebank-derived lemmatizer/morphology
+1. **Deepen Greek NLP** (measured against the CLTK benchmark): treebank-derived lemmatizer/morphology
    (the rule-based `morphology` engine is in; next is the Perseus AGDT lexicon via
    `fetch()` to restore accented lemmas + cover irregular/contract/athematic forms
    — network to raw.githubusercontent.com is confirmed available; AGDT is CC-BY-SA
@@ -76,7 +76,7 @@ analysis as ground truth.
 
 ```bash
 pip install -e ".[dev]"
-pytest                 # 230 passing
+pytest                 # 261 passing
 ruff check src tests
 mypy                   # clean (enforced in CI)
 python -m build && python -m twine check dist/*   # wheel must be < 3 MB

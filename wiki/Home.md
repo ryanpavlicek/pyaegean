@@ -1,10 +1,12 @@
 # pyaegean
 
-**The definitive Python toolkit for Ancient Greek** — alphabetic Greek *and* the
-Aegean syllabic scripts (Linear A / Linear B). A specialist library: where
-generalist tools (CLTK) cover many ancient languages broadly, pyaegean goes deep
-on Greek, with a script-agnostic corpus data layer, the analytical methods from
-the Linear A Research Workbench, translation, and pluggable multi-provider AI.
+**A specialist Python toolkit for Ancient Greek** — alphabetic Greek *and* the
+Aegean syllabic scripts (Linear A / Linear B). pyaegean focuses narrowly and
+deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
+analytical methods from the Linear A Research Workbench, translation, and a
+pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) already
+serves many ancient languages broadly; pyaegean is intentionally narrower, and
+uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
 > **Status: v0.1 → v0.2 (alpha).** The script-agnostic core and Linear A are
 > fully implemented; the Greek NLP track has its first vertical slice; the
@@ -70,8 +72,8 @@ See [Installation](Installation) for the full extras matrix, and
 ## Roadmap
 
 v0.1 core + Linear A + Greek start → **v0.2 AI layer + translation** → v0.3 deep
-Greek NLP (benchmarked ≥ CLTK) → v0.4 Linear B (DAMOS/LiBER) → v0.5
-Cypriot/Cypro-Minoan → v1.0 definitive.
+Greek NLP (benchmarked against CLTK) → v0.4 Linear B (DAMOS/LiBER) → v0.5
+Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License
 
