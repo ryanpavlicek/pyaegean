@@ -25,6 +25,15 @@ from .normalize import (
     unicode_to_betacode,
 )
 from .prosody import scan, syllable_quantities
+from .meter import (
+    Foot,
+    LineScansion,
+    ScansionError,
+    scan_hexameter,
+    scan_line,
+    scan_pentameter,
+    syllable_options,
+)
 from .phonology import to_ipa
 from .pos import pos_tag, pos_tags
 from .syllabify import syllabify
@@ -43,6 +52,13 @@ __all__ = [
     "AccentInfo",
     "syllable_quantities",
     "scan",
+    "scan_line",
+    "scan_hexameter",
+    "scan_pentameter",
+    "syllable_options",
+    "LineScansion",
+    "Foot",
+    "ScansionError",
     "to_ipa",
     "pos_tag",
     "pos_tags",

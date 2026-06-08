@@ -30,6 +30,7 @@ from typing import Any
 from ..data import load_bundled_json
 from .accent import accentuation
 from .lemmatize import lemmatize
+from .meter import ScansionError, scan_line
 from .pos import pos_tag
 from .syllabify import syllabify
 from .tokenize import tokenize_words
@@ -69,6 +70,7 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
     acc = g.get("accent", [])
     lem = g.get("lemma", [])
     pos = g.get("pos", [])
+    sca = g.get("scansion", [])
     return {
         "tokenize": Score(
             "tokenize", len(tok),
@@ -90,7 +92,19 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
             "pos", len(pos),
             _count(pos, lambda it: pos_tag(it["word"]) == it["pos"]),
         ),
+        "scansion": Score(
+            "scansion", len(sca),
+            _count(sca, lambda it: _scans_as(it["line"], it["meter"], it["pattern"])),
+        ),
     }
+
+
+def _scans_as(line: str, meter: str, pattern: str) -> bool:
+    """Whether ``line`` scans under ``meter`` to the expected glyph pattern."""
+    try:
+        return scan_line(line, meter).pattern == pattern
+    except ScansionError:
+        return False
 
 
 def score_lemmatizer(
