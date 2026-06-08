@@ -78,8 +78,9 @@ workbench repo, sha256-verified, cached locally — never re-hosted).
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
   POS tagging, a rule-based morphological analyzer (with an optional
   Perseus-treebank–backed lexicon for attested, accented lemmas), baseline
-  lemmatization, and opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`).
-  `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
+  lemmatization, opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), and an
+  opt-in baseline **dependency parser** (`use_parser` → `parse`). `aegean.load("greek")`
+  loads a small bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 - **`aegean.ai`** (v0.2) — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),

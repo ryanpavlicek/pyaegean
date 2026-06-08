@@ -31,6 +31,7 @@ from .morphology import Analysis
 
 __all__ = [
     "TreebankLexicon",
+    "agdt_dir",
     "build_lexicon",
     "decode_postag",
     "disable_treebank",
@@ -164,6 +165,13 @@ def _agdt_dir(*, download: bool) -> Path:
             if not dest.exists():
                 download_file(_BASE_URL + name, dest)
     return d
+
+
+def agdt_dir(*, download: bool = True) -> Path:
+    """The cache directory holding the AGDT Greek ``.tb.xml`` files, fetching them on
+    first use. Shared by the lemmatizer and the dependency parser so the ~75 MB
+    treebank is downloaded only once."""
+    return _agdt_dir(download=download)
 
 
 def build_lexicon(*, source_dir: Path | str | None = None, force: bool = False) -> Path:

@@ -55,8 +55,13 @@ present analysis as ground truth.
    backend, so it wasn't installed here. **LSJ glossing landed**: opt-in
    `greek.use_lsj()` fetches the full Perseus LSJ (CC BY-SA 4.0, ~270 MB, cache-only),
    builds a gzipped lemma→entry index, and exposes `gloss`/`lookup` (composes with the
-   lemmatizer). Next: dependency parsing (the AGDT has head/relation); pull the full
-   First1KGreek/Perseus corpus and grow the gold further. (Dactylic meter scansion —
+   lemmatizer). **Dependency parsing landed** (baseline): opt-in `greek.use_parser()`
+   trains an arc-eager + averaged-perceptron parser (pure Python) on the AGDT and
+   exposes `greek.parse()` → `DepTree`; measured ~0.67 UAS / 0.57 LAS on projective
+   AGDT, ~0.51 / 0.42 all-text (`greek.evaluate()`); arc-eager is projective-only
+   (~31% of AGDT) — honest baseline. Next: pull the full First1KGreek/Perseus corpus
+   and grow the gold; live CLTK head-to-head when a stanza/LLM backend is set up.
+   (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,

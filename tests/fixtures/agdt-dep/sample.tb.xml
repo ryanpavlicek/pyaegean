@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic AGDT-format dependency fixture (authored for pyaegean's tests, NOT copied
+  from the Perseus treebank) — small *projective* sentences in the real
+  sentence/word(form, lemma, postag, relation, head) schema, so the transition
+  system/oracle/parser can be exercised offline.
+-->
+<treebank version="2.1" xml:lang="grc">
+  <sentence id="1">
+    <word id="1" form="ὁ" lemma="ὁ" postag="l-s---mn-" relation="ATR" head="2"/>
+    <word id="2" form="ἄνθρωπος" lemma="ἄνθρωπος" postag="n-s---mn-" relation="SBJ" head="4"/>
+    <word id="3" form="λόγον" lemma="λόγος" postag="n-s---ma-" relation="OBJ" head="4"/>
+    <word id="4" form="γράφει" lemma="γράφω" postag="v3spia---" relation="PRED" head="0"/>
+  </sentence>
+  <sentence id="2">
+    <word id="1" form="θεὸς" lemma="θεός" postag="n-s---mn-" relation="PNOM" head="2"/>
+    <word id="2" form="ἦν" lemma="εἰμί" postag="v3siia---" relation="PRED" head="0"/>
+    <word id="3" form="ὁ" lemma="ὁ" postag="l-s---mn-" relation="ATR" head="4"/>
+    <word id="4" form="λόγος" lemma="λόγος" postag="n-s---mn-" relation="SBJ" head="2"/>
+  </sentence>
+</treebank>

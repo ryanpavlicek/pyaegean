@@ -168,8 +168,9 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   dependency parsing (PROIEL/Perseus-trained), prosody/meter, LSJ integration; publish the benchmark.
   *(Landed: opt-in Perseus AGDT v2.1 treebank lemmatizer/morphology + POS via `greek.use_treebank()`;
   benchmark harness measures the lift — lemma 28%→100%, POS 50%→100% on the gold set; opt-in full
-  Perseus LSJ glossing via `greek.use_lsj()` (`gloss`/`lookup`). CLTK live head-to-head documented
-  but pending a stanza/LLM backend; dependency parsing still TODO.)*
+  Perseus LSJ glossing via `greek.use_lsj()` (`gloss`/`lookup`); opt-in baseline dependency parser
+  (arc-eager + averaged perceptron) via `greek.use_parser()` (`parse`→`DepTree`), ~0.67 UAS projective
+  / ~0.51 all-text on AGDT. CLTK live head-to-head documented but pending a stanza/LLM backend.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.

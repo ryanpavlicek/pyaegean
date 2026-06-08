@@ -397,6 +397,43 @@ The LSJ is **CC BY-SA 4.0** (Perseus Digital Library), fetched to your cache and
 bundled — see [Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-use_lsj).
 `greek.disable_lsj()` turns it back off.
 
+## Dependency parsing (opt-in, baseline)
+
+`use_parser()` trains (on first use, from the cached AGDT — a few minutes) a
+transition-based **arc-eager** parser with an **averaged-perceptron** classifier
+(pure Python, no heavy deps); then `parse()` turns a sentence into a dependency tree
+with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED, Aux*…).
+
+```python
+greek.use_treebank()     # optional — improves the POS/lemmas the parser feeds on
+greek.use_parser()       # one-time train (~2–3 min) from the cached AGDT, then cached
+
+tree = greek.parse("ἐν ἀρχῇ ἦν ὁ λόγος")
+print(tree)
+# 1  ἐν     ADP   AuxP  ->3(ἦν)
+# 2  ἀρχῇ   NOUN  ADV   ->1(ἐν)
+# 3  ἦν     VERB  PRED  ->0(ROOT)
+# 4  ὁ      DET   ATR   ->5(λόγος)
+# 5  λόγος  NOUN  SBJ   ->3(ἦν)
+
+tree.root().form                      # 'ἦν'
+[t.form for t in tree.children(3)]    # ['ἐν', 'λόγος']
+```
+
+A `DepTree` is a tuple of `DepToken(id, form, lemma, upos, head, relation)` with
+`root()`, `head_of(id)`, `children(id)`, and `is_projective()`. You can also read the
+treebank's **gold** trees directly: `from aegean.greek.syntax import load_gold_trees`.
+
+**This is an honest baseline.** Ancient Greek is richly **non-projective** (only ~31%
+of AGDT sentences are projective), and arc-eager can build only projective trees — so
+non-projective gold structures are out of reach and are skipped in training (a known
+limitation, not a bug). Measured on held-out AGDT with gold POS:
+**~0.67 UAS / 0.57 LAS on projective sentences, ~0.51 / 0.42 across all text**
+(`greek.evaluate()` reproduces these). It produces clean, correct trees for
+main-clause syntax (as above), but it is not a research-grade parser. The model is
+derived from the AGDT (CC BY-SA 3.0), cached locally (~4 MB), never bundled;
+`greek.disable_parser()` turns it off.
+
 ## The sample corpus
 
 `aegean.load("greek")` loads a handful of public-domain Archaic→Koine passages

@@ -5,9 +5,10 @@ v0.1: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize`` (word/senten
 ``phonology`` (IPA), a seed ``lemmatize``, baseline ``pos``, and a rule-based
 ``morphology`` analyzer (``analyze``) — with an **opt-in** treebank backend
 (``use_treebank``; Perseus AGDT) that supplies attested, correctly-accented lemmas
-and full features for known forms, plus an **opt-in** LSJ lexicon (``use_lsj``;
-Perseus Liddell-Scott-Jones) for glossing (``gloss``/``lookup``). Deeper stages —
-dependency parsing — land later (docs/PLAN.md).
+and full features for known forms, an **opt-in** LSJ lexicon (``use_lsj``; Perseus
+Liddell-Scott-Jones) for glossing (``gloss``/``lookup``), and an **opt-in** baseline
+**dependency parser** (``use_parser``/``parse``; arc-eager + averaged perceptron,
+trained on the AGDT) — see docs/PLAN.md.
 
 Every stage is a plain function so it can be used standalone::
 
@@ -25,6 +26,7 @@ from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .lexicon import LSJEntry, LSJLexicon, disable_lsj, gloss, lookup, use_lsj
+from .syntax import DepToken, DepTree, disable_parser, evaluate, parse, use_parser
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -85,4 +87,10 @@ __all__ = [
     "lookup",
     "LSJEntry",
     "LSJLexicon",
+    "parse",
+    "use_parser",
+    "disable_parser",
+    "evaluate",
+    "DepTree",
+    "DepToken",
 ]
