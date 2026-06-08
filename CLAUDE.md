@@ -76,10 +76,12 @@ NOT done yet (next steps, priority order):
    the full First1KGreek/Perseus corpus and grow the gold set. (DONE so far:
    normalize/betacode, tokenize, syllabify, accent, prosody/quantity, phonology/
    IPA, baseline lemmatize, and the CLTK benchmark harness.)
-2. **Pin the `lineara-images` release URL** in `src/aegean/data/__init__.py`
-   (still empty — no workbench release exists yet; the imagery isn't
-   redistributable, so the owner must publish a mirror first, then pin URL+sha).
-   Until then `PYAEGEAN_LINEARA_IMAGES_URL` lets a user fetch from their own.
+2. **`lineara-images` is intentionally unpinned (licensing — resolved).** The
+   facsimile imagery is © École Française d'Athènes plus other rightsholders
+   (per-image `imageRights` are a patchwork: GORILA/EFA, named scholars,
+   photographers) with no redistribution license, so pyaegean must not re-host
+   it. The supported path is the `PYAEGEAN_LINEARA_IMAGES_URL` override (fetch
+   your own licensed copy). Only revisit if per-holder permission is obtained.
 3. **Deepen the AI layer** (foundation + mocked-SDK adapter tests DONE): add a
    tiny live smoke gated behind a secret, streaming, and richer grounding (RAG
    over the corpus/commentary).

@@ -59,15 +59,18 @@ class DataSpec:
 
 
 # Remote datasets. The Linear A facsimile imagery lives in the workbench repo;
-# we fetch (never re-host) it. No official release is pinned yet (the imagery is
-# © École Française d'Athènes and the owner must publish the mirror first); set
-# PYAEGEAN_LINEARA_IMAGES_URL to fetch from your own mirror in the meantime.
+# we fetch (never re-host) it. The URL is intentionally left unpinned: the images
+# are © École Française d'Athènes plus several other rightsholders (the corpus's
+# per-image `imageRights` are a patchwork — GORILA/EFA, named scholars,
+# photographers) and carry no redistribution license, so pyaegean must not
+# re-host them. Set PYAEGEAN_LINEARA_IMAGES_URL to fetch from a copy you are
+# licensed to use.
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",
-        url="",  # pin a ryanpavlicek/linearaworkbench release asset once published
-        license="© École Française d'Athènes — academic reference only; not redistributed",
-        note="~500 MB facsimile/photo mirror; download on demand from the workbench repo.",
+        url="",  # intentionally unpinned — imagery is not redistributable (see above)
+        license="© École Française d'Athènes and other rightsholders — academic reference only; not redistributable",
+        note="~500 MB facsimile/photo set; fetch from your own licensed copy via PYAEGEAN_LINEARA_IMAGES_URL.",
     ),
 }
 
