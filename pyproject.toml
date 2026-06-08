@@ -34,7 +34,7 @@ grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
 ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine"]
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel"]
 all = ["pyaegean[ai,epidoc,geo]"]
 
 [project.urls]

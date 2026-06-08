@@ -102,6 +102,25 @@ class LineScansion:
     def __str__(self) -> str:
         return self.pattern
 
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""
+        from ..core._html import card, esc, table
+
+        sub = esc(self.meter)
+        if self.caesura:
+            sub += f" · {esc(self.caesura)} caesura"
+        if self.ambiguous:
+            sub += " · ambiguous"
+        foot_rows = [(f.name, str(f), " ".join(f.syllables)) for f in self.feet]
+        body = (
+            f"<div style='margin-bottom:4px'>{esc(self.line)}</div>"
+            f"<div style='font-size:1.4em;font-family:monospace;letter-spacing:2px'>"
+            f"{esc(self.pattern)}</div>"
+            f"<div style='color:#666;font-size:0.85em;margin:4px 0'>{sub}</div>"
+            + table(["foot", "metre", "syllables"], foot_rows)
+        )
+        return card("Scansion", body)
+
 
 # --- syllable analysis (line level) ------------------------------------------
 

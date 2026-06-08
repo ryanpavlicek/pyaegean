@@ -80,6 +80,25 @@ class Analysis:
         feats = " ".join(self.features().values())
         return f"{self.lemma} [{self.pos}{' ' + feats if feats else ''}]"
 
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""
+        from ..core._html import badge, card, esc
+
+        lemma = esc(self.lemma)
+        if not self.lemma_certain:
+            lemma += " " + badge("reconstructed", color="#b8860b")
+        feats = self.features()
+        feat_html = (
+            " ".join(
+                "<span style='background:#eef;border-radius:3px;padding:1px 5px;"
+                f"margin-right:3px'>{esc(k)}=<strong>{esc(v)}</strong></span>"
+                for k, v in feats.items()
+            )
+            or "<em>—</em>"
+        )
+        title = f"{lemma} <span style='color:#888;font-weight:400'>· {esc(self.pos)}</span>"
+        return card(title, feat_html)
+
 
 # --- helpers -----------------------------------------------------------------
 

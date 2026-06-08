@@ -28,6 +28,9 @@ pip install "pyaegean[all]"     # everything
 
 ## Quick start
 
+Prefer to learn by doing? Run the guided tour in your browser — nothing to install:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+
 ```python
 import aegean
 
@@ -88,6 +91,7 @@ repo, cached locally — never re-hosted).
 Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**:
 
 - **[Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)** — for newcomers to Python
+- **[Example notebook](notebooks/getting-started.ipynb)** — a runnable guided tour ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb))
 - **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)** — two guided, end-to-end research walkthroughs
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** — reference per domain
 - **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)** · **[FAQ](https://github.com/ryanpavlicek/pyaegean/wiki/FAQ)**

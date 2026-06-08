@@ -102,6 +102,26 @@ class Document:
     def __len__(self) -> int:
         return len(self.tokens)
 
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""
+        from ._html import card, esc, table
+
+        meta = self.meta
+        sub = " · ".join(
+            esc(b) for b in (meta.site, meta.period, meta.support, meta.scribe) if b
+        )
+        title = esc(self.id) + (
+            f" <span style='color:#888;font-weight:400'>{sub}</span>" if sub else ""
+        )
+        counts = f"{len(self.words)} words · {len(self.numerals)} numerals · {len(self.tokens)} tokens"
+        body = f"<div style='color:#666;font-size:0.85em;margin-bottom:6px'>{esc(counts)}</div>"
+        line_rows = [
+            (str(i + 1), " ".join(t.text for t in toks))
+            for i, toks in enumerate(self.line_tokens)
+        ]
+        body += table(["line", "tokens"], line_rows) if line_rows else "<em>no tokens</em>"
+        return card(title, body)
+
 
 class SignInventory:
     """The set of signs for a script, indexed by label / glyph / codepoint."""
@@ -141,3 +161,24 @@ class SignInventory:
             }
             for s in self.signs
         )
+
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""
+        from ._html import card, esc, table
+
+        cap = 200
+        shown = self.signs[:cap]
+        rows = [
+            (s.label, s.glyph or "", s.codepoint if s.codepoint is not None else "", s.phonetic or "")
+            for s in shown
+        ]
+        title = (
+            f"{esc(self.script_id or 'sign')} inventory "
+            f"<span style='color:#888;font-weight:400'>· {len(self.signs)} signs</span>"
+        )
+        body = table(["label", "glyph", "codepoint", "phonetic"], rows)
+        if len(self.signs) > cap:
+            body += (
+                f"<div style='color:#888;font-size:0.8em'>… {len(self.signs) - cap} more</div>"
+            )
+        return card(title, body)

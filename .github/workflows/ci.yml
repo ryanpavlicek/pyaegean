@@ -26,6 +26,20 @@ jobs:
       - name: Tests
         run: pytest --cov=aegean --cov-report=term-missing
 
+  notebooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Register the python3 kernel
+        run: python -m ipykernel install --user --name python3
+      - name: Execute example notebooks
+        run: pytest --nbmake notebooks/
+
   build:
     runs-on: ubuntu-latest
     steps:

@@ -59,6 +59,30 @@ class Corpus:
     def get(self, doc_id: str) -> Document | None:
         return self._by_id.get(doc_id)
 
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""
+        from ._html import card, esc, table
+
+        title = (
+            "Corpus <span style='color:#888;font-weight:400'>· "
+            f"{esc(self.script_id or '?')} · {len(self.documents)} documents</span>"
+        )
+        body = ""
+        if self.provenance is not None:
+            body += (
+                "<div style='color:#666;font-size:0.85em;margin-bottom:6px'>"
+                f"{esc(self.provenance.source)}</div>"
+            )
+        preview = self.documents[:8]
+        rows = [(d.id, d.meta.site, d.meta.period, len(d.words)) for d in preview]
+        body += table(["id", "site", "period", "words"], rows)
+        if len(self.documents) > len(preview):
+            body += (
+                "<div style='color:#888;font-size:0.8em'>… "
+                f"{len(self.documents) - len(preview)} more documents</div>"
+            )
+        return card(title, body)
+
     def filter(self, **meta: Any) -> "Corpus":
         """Return a new Corpus whose documents match all given metadata fields
         (AND-combination), e.g. ``corpus.filter(site="HT", period="LMIB")``."""

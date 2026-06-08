@@ -78,6 +78,25 @@ class ExploratoryResult:
             "grounding": list(self.grounding),
         }
 
+    def _repr_html_(self) -> str:
+        """Rich rendering in Jupyter/Colab — the exploratory tag is unmissable."""
+        from ..core._html import badge, card, esc
+
+        tag = badge(f"EXPLORATORY · {self.kind}", color="#b00")
+        body = (
+            f"<div style='margin:4px 0'>{tag} "
+            f"<span style='color:#888;font-size:0.85em'>{esc(self.provider)}/{esc(self.model)}"
+            "</span></div>"
+            f"<div style='white-space:pre-wrap'>{esc(self.text)}</div>"
+        )
+        if self.grounding:
+            items = "".join(f"<li>{esc(g)}</li>" for g in self.grounding)
+            body += (
+                "<div style='color:#666;font-size:0.85em;margin-top:6px'>grounding:"
+                f"<ul style='margin:2px 0'>{items}</ul></div>"
+            )
+        return card("AI result", body)
+
 
 class LLMClient(ABC):
     """Abstract provider client. Subclasses implement :meth:`_complete`."""
