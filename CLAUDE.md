@@ -23,7 +23,7 @@ avoid the managed signing server — leave it off unless signing works in your e
 
 ## Current state — v0.1 *foundation* (first vertical slice; NOT all of v0.1)
 
-DONE and tested (228 passing tests):
+DONE and tested (230 passing tests):
 - `aegean.core` — script-agnostic model: `Corpus`, `Document`, `Token`/`TokenKind`,
   `Sign`, `SignInventory`, numerals, `Script` plugin registry, `Provenance`.
 - `aegean.scripts.lineara` — Linear A fully wired: `aegean.load("lineara")` →
@@ -77,14 +77,13 @@ NOT done yet (next steps, priority order):
    the full First1KGreek/Perseus corpus and grow the gold set. (DONE so far:
    normalize/betacode, tokenize, syllabify, accent, prosody/quantity, phonology/
    IPA, baseline lemmatize, and the CLTK benchmark harness.)
-2. **Pin the `lineara-images` release URL+sha** in `src/aegean/data/__init__.py`.
-   Decision: fetch (never re-host) the imagery from a release on the
-   `ryanpavlicek/linearaworkbench` repo, where the owner already hosts it
-   (`spec.extract=True`, so `fetch()` unpacks the tar.gz to a cache dir).
-   Pending the owner uploading `lineara-images.tar.gz` to a release tagged
-   `lineara-images-v1` and providing the sha256; then set `url`+`sha256`.
-   `PYAEGEAN_LINEARA_IMAGES_URL` already works for any licensed copy. Attribution
-   (© EFA + other rightsholders) is unaffected by fetching.
+2. **`lineara-images` URL+sha are pinned** to the `ryanpavlicek/linearaworkbench`
+   release `lineara-images-v1` (asset `lineara-images.tar.gz`, sha256 d79e2628…,
+   `extract=True` so `fetch()` unpacks the tar.gz to a cache dir). Fetched, never
+   re-hosted; attribution (© EFA + other rightsholders) is unaffected.
+   **Live once the owner uploads that exact asset to the release**;
+   `PYAEGEAN_LINEARA_IMAGES_URL` overrides for any licensed copy. (If the asset is
+   rebuilt, its sha changes — re-pin to match.)
 3. **Deepen the AI layer** (foundation + mocked-SDK adapter tests DONE): add a
    tiny live smoke gated behind a secret, streaming, and richer grounding (RAG
    over the corpus/commentary).
@@ -111,7 +110,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 228 passing
+pytest                                   # 230 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)

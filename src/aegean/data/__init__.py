@@ -70,9 +70,13 @@ class DataSpec:
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",
-        url="",  # pinned to the linearaworkbench release tarball once published
+        url=(
+            "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
+            "lineara-images-v1/lineara-images.tar.gz"
+        ),
+        sha256="d79e262857177bd22effba97baafdb4a31db06168f1ca1ce94b65266bcdf038d",
         license="© École Française d'Athènes and other rightsholders — academic reference only",
-        note="~500 MB facsimile/photo set (tar.gz); fetched from the linearaworkbench release.",
+        note="3,368 facsimile/photo files (tar.gz) under images/; fetched from the linearaworkbench release.",
         extract=True,
     ),
 }
@@ -106,13 +110,13 @@ def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
         raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
 
 
-def _verify(path: pathlib.Path, spec: DataSpec, name: str) -> None:
-    if spec.sha256:
+def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
+    if sha256:
         got = sha256_file(path)
-        if got != spec.sha256:
+        if got != sha256:
             path.unlink(missing_ok=True)
             raise DataNotAvailableError(
-                f"checksum mismatch for {name!r}: expected {spec.sha256}, got {got}"
+                f"checksum mismatch for {name!r}: expected {sha256}, got {got}"
             )
 
 
@@ -151,23 +155,26 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
             f"dataset {name!r} has no pinned download URL yet ({spec.note}). "
             f"Set {_env_url_var(name)} to fetch from a mirror. License: {spec.license}"
         )
+    # The pinned sha256 describes the pinned URL only. When the URL is overridden
+    # via the env var (a user's own licensed copy), don't enforce it.
+    sha256 = "" if os.environ.get(_env_url_var(name)) else spec.sha256
 
     if spec.extract:
-        return _fetch_and_extract(spec, url, name, force)
+        return _fetch_and_extract(url, name, force, sha256)
 
     dest = cache_dir() / name
     if dest.exists() and not force:
-        if not spec.sha256 or sha256_file(dest) == spec.sha256:
+        if not sha256 or sha256_file(dest) == sha256:
             return dest  # present and valid → idempotent no-op
     tmp = dest.with_name(dest.name + ".part")
     _download(url, tmp, name)
-    _verify(tmp, spec, name)
+    _verify(tmp, sha256, name)
     tmp.replace(dest)  # atomic within the cache dir
     return dest
 
 
 def _fetch_and_extract(
-    spec: DataSpec, url: str, name: str, force: bool
+    url: str, name: str, force: bool, sha256: str
 ) -> pathlib.Path:
     import shutil
 
@@ -177,7 +184,7 @@ def _fetch_and_extract(
 
     archive = cache_dir() / (name + ".part")
     _download(url, archive, name)
-    _verify(archive, spec, name)  # removes the archive on mismatch + raises
+    _verify(archive, sha256, name)  # removes the archive on mismatch + raises
 
     staging = cache_dir() / (name + ".extract")
     if staging.exists():
