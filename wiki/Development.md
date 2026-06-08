@@ -54,7 +54,7 @@ src/aegean/
   core/      model corpus script provenance numerals
   scripts/   lineara/{loader,inventory,phonetic}  greek/{loader,inventory}
   analysis/  distance align collocation morphology patterns query accounting structure
-  greek/     normalize tokenize syllabify accent lemmatize
+  greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize benchmark
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
   data/      bundled/{lineara,greek}/*.json  + fetch()/cache

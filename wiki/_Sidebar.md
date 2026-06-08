@@ -1,8 +1,11 @@
 ### pyaegean
 
 - [Home](Home)
+
+**Start here**
+- [Getting Started](Getting-Started)
+- [Tutorial](Tutorial)
 - [Installation](Installation)
-- [Architecture](Architecture)
 
 **Aegean scripts**
 - [Linear A](Linear-A)
@@ -15,5 +18,7 @@
 - [AI Layer](AI-Layer)
 
 **Reference**
+- [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
+- [FAQ & Troubleshooting](FAQ)
 - [Development](Development)
