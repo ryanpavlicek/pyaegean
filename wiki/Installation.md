@@ -11,6 +11,9 @@ lazily inside their adapters — so `import aegean` is fast and dependency-light
 pip install pyaegean            # core + Linear A + Greek NLP
 ```
 
+> **Not on PyPI yet.** Until the first release, install from source instead:
+> `pip install git+https://github.com/ryanpavlicek/pyaegean`
+
 ### Optional extras
 
 | Extra | Pulls in | For |
