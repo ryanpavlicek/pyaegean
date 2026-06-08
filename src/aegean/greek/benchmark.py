@@ -142,3 +142,51 @@ def compare_lemmatizers(
         "pyaegean": score_lemmatizer(lemmatize, g),
         "candidate": score_lemmatizer(candidate, g),
     }
+
+
+def score_pos(
+    predict: Callable[[str], str],
+    gold: dict[str, list[dict[str, Any]]] | None = None,
+) -> Score:
+    """Score an arbitrary POS-tagging callable on the pos gold."""
+    pos = (gold or load_gold()).get("pos", [])
+    return Score("pos", len(pos), _count(pos, lambda it: predict(it["word"]) == it["pos"]))
+
+
+def compare_pos_taggers(
+    candidate: Callable[[str], str],
+    gold: dict[str, list[dict[str, Any]]] | None = None,
+) -> dict[str, Score]:
+    """Compare pyaegean's POS tagger against a ``candidate`` (e.g. CLTK's) on the
+    same pos gold. Returns ``{"pyaegean": Score, "candidate": Score}``."""
+    g = gold or load_gold()
+    return {
+        "pyaegean": score_pos(pos_tag, g),
+        "candidate": score_pos(candidate, g),
+    }
+
+
+def compare_modes(
+    gold: dict[str, list[dict[str, Any]]] | None = None,
+    *,
+    build: bool = True,
+) -> dict[str, dict[str, Score]]:
+    """Quantify the treebank backend's lift: score lemma + POS with it **off vs on**.
+
+    Returns ``{"baseline": {"lemma": Score, "pos": Score},
+    "treebank": {"lemma": Score, "pos": Score}}``. Activating the treebank needs the
+    AGDT lexicon — with ``build=True`` it is downloaded/built on first use (network);
+    with ``build=False`` it must already be built (see
+    :func:`aegean.greek.use_treebank`). The treebank backend is left disabled on exit.
+    """
+    from . import treebank
+
+    g = gold or load_gold()
+    try:
+        treebank.disable_treebank()
+        baseline = {"lemma": score_lemmatizer(lemmatize, g), "pos": score_pos(pos_tag, g)}
+        treebank.use_treebank(build=build)
+        backed = {"lemma": score_lemmatizer(lemmatize, g), "pos": score_pos(pos_tag, g)}
+    finally:
+        treebank.disable_treebank()
+    return {"baseline": baseline, "treebank": backed}

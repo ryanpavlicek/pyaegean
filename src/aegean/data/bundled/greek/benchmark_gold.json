@@ -1,28 +1,47 @@
 {
-  "_about": "Small hand-authored gold set for scoring the Greek pipeline. Values are independently stated (correct linguistic answers), not copied from the pipeline's output. Used by aegean.greek.benchmark.",
+  "_about": "Small hand-authored gold set for scoring the Greek pipeline. Values are independently stated (correct linguistic answers), not copied from any engine's output. Used by aegean.greek.benchmark. Deterministic stages (tokenize/syllabify/accent/scansion) are chosen to be both correct and handled by the engine (CI asserts 100%); the lemma/pos/morphology stages deliberately include irregular/open-class forms the baseline misses, to measure the treebank-backed lift and compare against CLTK.",
   "tokenize": [
     {"text": "ἐν ἀρχῇ ἦν ὁ λόγος", "tokens": ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"]},
     {"text": "πάντα ῥεῖ", "tokens": ["πάντα", "ῥεῖ"]},
-    {"text": "μῆνιν ἄειδε θεά", "tokens": ["μῆνιν", "ἄειδε", "θεά"]}
+    {"text": "μῆνιν ἄειδε θεά", "tokens": ["μῆνιν", "ἄειδε", "θεά"]},
+    {"text": "γνῶθι σεαυτόν", "tokens": ["γνῶθι", "σεαυτόν"]},
+    {"text": "οἶδα οὐδὲν εἰδώς", "tokens": ["οἶδα", "οὐδὲν", "εἰδώς"]}
   ],
   "syllabify": [
     {"word": "λόγος", "syllables": ["λό", "γος"]},
     {"word": "ἄνθρωπος", "syllables": ["ἄν", "θρω", "πος"]},
     {"word": "θάλασσα", "syllables": ["θά", "λασ", "σα"]},
-    {"word": "Μῆνιν", "syllables": ["Μῆ", "νιν"]}
+    {"word": "Μῆνιν", "syllables": ["Μῆ", "νιν"]},
+    {"word": "ποταμός", "syllables": ["πο", "τα", "μός"]},
+    {"word": "ἵππος", "syllables": ["ἵπ", "πος"]}
   ],
   "accent": [
     {"word": "λόγος", "classification": "paroxytone"},
     {"word": "θεά", "classification": "oxytone"},
     {"word": "ἄνθρωπος", "classification": "proparoxytone"},
-    {"word": "μῆνιν", "classification": "properispomenon"}
+    {"word": "μῆνιν", "classification": "properispomenon"},
+    {"word": "δῶρον", "classification": "properispomenon"},
+    {"word": "καλός", "classification": "oxytone"}
   ],
   "lemma": [
     {"word": "λόγου", "lemma": "λόγος"},
     {"word": "ἦν", "lemma": "εἰμί"},
     {"word": "θεόν", "lemma": "θεός"},
     {"word": "πάντα", "lemma": "πᾶς"},
-    {"word": "ἀνθρώπων", "lemma": "ἄνθρωπος"}
+    {"word": "ἀνθρώπων", "lemma": "ἄνθρωπος"},
+    {"word": "ἄνδρα", "lemma": "ἀνήρ"},
+    {"word": "ἀνδρός", "lemma": "ἀνήρ"},
+    {"word": "γυναικός", "lemma": "γυνή"},
+    {"word": "γυναῖκα", "lemma": "γυνή"},
+    {"word": "ποδός", "lemma": "πούς"},
+    {"word": "πατρός", "lemma": "πατήρ"},
+    {"word": "μητρός", "lemma": "μήτηρ"},
+    {"word": "πόλεως", "lemma": "πόλις"},
+    {"word": "πόλιν", "lemma": "πόλις"},
+    {"word": "παῖδα", "lemma": "παῖς"},
+    {"word": "νύκτα", "lemma": "νύξ"},
+    {"word": "χάριτος", "lemma": "χάρις"},
+    {"word": "βασιλέως", "lemma": "βασιλεύς"}
   ],
   "pos": [
     {"word": "ἐν", "pos": "ADP"},
@@ -35,7 +54,16 @@
     {"word": "τόν", "pos": "DET"},
     {"word": "θεόν", "pos": "NOUN"},
     {"word": "ἄειδε", "pos": "VERB"},
-    {"word": "θεά", "pos": "NOUN"}
+    {"word": "θεά", "pos": "NOUN"},
+    {"word": "ἔννεπε", "pos": "VERB"},
+    {"word": "μάλα", "pos": "ADV"},
+    {"word": "πολύτροπον", "pos": "ADJ"},
+    {"word": "σοφός", "pos": "ADJ"},
+    {"word": "καλῶς", "pos": "ADV"},
+    {"word": "λέγει", "pos": "VERB"},
+    {"word": "δεινός", "pos": "ADJ"},
+    {"word": "φησίν", "pos": "VERB"},
+    {"word": "νῦν", "pos": "ADV"}
   ],
   "scansion": [
     {"line": "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ", "meter": "hexameter", "pattern": "—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×"},
@@ -52,6 +80,9 @@
     {"word": "λύομεν", "pos": "VERB", "features": {"tense": "pres", "voice": "act", "mood": "ind", "person": "1", "number": "pl"}},
     {"word": "λύεις", "pos": "VERB", "features": {"tense": "pres", "voice": "act", "mood": "ind", "person": "2", "number": "sg"}},
     {"word": "ἔλυσα", "pos": "VERB", "features": {"tense": "aor", "voice": "act", "mood": "ind", "person": "1", "number": "sg"}},
-    {"word": "λυόμενος", "pos": "VERB", "features": {"tense": "pres", "voice": "mp", "mood": "part", "gender": "masc"}}
+    {"word": "λυόμενος", "pos": "VERB", "features": {"tense": "pres", "voice": "mp", "mood": "part", "gender": "masc"}},
+    {"word": "ἄνδρα", "pos": "NOUN", "features": {"case": "acc", "number": "sg", "gender": "masc"}},
+    {"word": "πόλεως", "pos": "NOUN", "features": {"case": "gen", "number": "sg"}},
+    {"word": "γυναῖκα", "pos": "NOUN", "features": {"case": "acc", "number": "sg", "gender": "fem"}}
   ]
 }

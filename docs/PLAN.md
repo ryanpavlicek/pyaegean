@@ -166,7 +166,9 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   **translation/glossing**; corpus Q&A; decipherment-hypothesis support; NLP-assist disambiguation.
 - **v0.3** Deepen Greek NLP (measured against the CLTK benchmark): full morphological analyzer, POS,
   dependency parsing (PROIEL/Perseus-trained), prosody/meter, LSJ integration; publish the benchmark.
-  *(Landed: opt-in Perseus AGDT v2.1 treebank lemmatizer/morphology lexicon via `greek.use_treebank()`.)*
+  *(Landed: opt-in Perseus AGDT v2.1 treebank lemmatizer/morphology + POS via `greek.use_treebank()`;
+  benchmark harness measures the lift — lemma 28%→100%, POS 50%→100% on the gold set. CLTK live
+  head-to-head documented but pending a stanza/LLM backend.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.

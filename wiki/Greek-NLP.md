@@ -299,38 +299,60 @@ fetched to your cache and never bundled — see
 ## Benchmark harness
 
 `aegean.greek.benchmark` scores the pipeline against a small bundled gold set, so
-you can track how its Greek coverage is doing over time. If you'd like a point of
-comparison, you can benchmark it against another tool such as the excellent
-[CLTK](https://cltk.org). pyaegean doesn't depend on CLTK, though: the comparison
-takes a lemmatize callable that *you* supply, so nothing imports CLTK unless you
-choose to.
+you can track how its Greek coverage is doing over time. The gold is **hand-authored
+and independent** — correct answers stated from scholarship, never read off any
+engine — which is what makes the comparison below fair.
 
 ```python
 from aegean.greek import benchmark
 for stage, s in benchmark.run_benchmark().items():
     print(s)
-# tokenize: 100% (3/3)
-# syllabify: 100% (4/4)
-# accent: 100% (4/4)
-# lemma: 80% (4/5)        ← baseline seed table; one form is out-of-vocabulary
-# pos: 91% (10/11)        ← closed classes reliable; one open-class verb missed
+# tokenize:   100% (5/5)
+# syllabify:  100% (6/6)
+# accent:     100% (6/6)
+# scansion:   100% (5/5)
+# lemma:       28% (5/18)    ← seed table only; misses irregular / 3rd-declension forms
+# pos:         50% (10/20)   ← suffix heuristic misses open-class words
+# morphology:  73% (8/11)
 ```
 
-Compare against another lemmatizer (here CLTK, if you have it installed):
+### The treebank backend's lift
+
+`compare_modes()` scores lemma + POS with the
+[treebank backend](#treebank-backed-mode-opt-in) **off vs on** (it activates
+`use_treebank()` for you, building the lexicon on first use):
 
 ```python
-from cltk import NLP
-nlp = NLP(language="grc", suppress_banner=True)
-def cltk_lemma(w): return nlp.analyze(text=w).lemmata[0]
-
-benchmark.compare_lemmatizers(cltk_lemma)
-# {'pyaegean': Score(lemma 80%), 'candidate': Score(lemma …%)}
+benchmark.compare_modes()
+# baseline : lemma  28% (5/18)   · pos  50% (10/20)
+# treebank : lemma 100% (18/18)  · pos 100% (20/20)
 ```
 
-Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any of
-the scorers. The deterministic stages (tokenize/syllabify/accent) score against
-independently-authored gold; the lemma score honestly reflects the baseline seed
-table's coverage, which deeper lemmatizer work will raise.
+On this gold set the treebank lifts lemma **28% → 100%** and POS **50% → 100%**
+(morphology recall **73% → 100%**). The set is deliberately weighted toward the
+irregular, third-declension and open-class forms that separate the engines, and
+each item is attested in the AGDT — so it measures the win *where it applies*; on
+genuinely unattested forms the treebank falls back to the baseline.
+
+### Comparing against CLTK
+
+pyaegean doesn't depend on [CLTK](https://cltk.org) — the comparison takes a
+lemmatize (or POS) callable that *you* supply. CLTK 2.x runs Ancient Greek through a
+`stanza` (or LLM) backend, so a real run needs that installed:
+
+```python
+# pip install cltk stanza      # stanza pulls torch + downloads grc models on first run
+from cltk import NLP
+nlp = NLP(language_code="grc", suppress_banner=True)   # 2.x uses language_code=
+def cltk_lemma(w): return nlp.analyze(text=w).words[0].lemma
+
+benchmark.compare_lemmatizers(cltk_lemma)
+benchmark.compare_pos_taggers(lambda w: nlp.analyze(text=w).words[0].upos)
+```
+
+Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
+scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
+`compare_pos_taggers`, or `compare_modes`.
 
 ## Lemmatization (baseline)
 

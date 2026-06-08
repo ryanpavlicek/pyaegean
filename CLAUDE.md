@@ -48,10 +48,14 @@ present analysis as ground truth.
    `greek.use_treebank()` — downloaded + built in the user cache, CC-BY-SA, **not**
    bundled; gives attested, accented lemmas + full features, rule engine as fallback).
    `pos_tag`/`pos_tags` also use the treebank for attested forms (gold open-class
-   tags) when it's active. Next: dependency parsing (the AGDT has head/relation),
-   LSJ glossing; pull the full First1KGreek/Perseus corpus, grow the gold set, and
-   publish the CLTK comparison. (Dactylic meter scansion — hexameter + pentameter —
-   landed; iambic/lyric meters and synizesis still TODO.)
+   tags) when it's active. The benchmark gold set is grown and the harness measures
+   the lift (`compare_modes`/`score_pos`/`compare_pos_taggers`): on the gold,
+   treebank takes lemma 28%→100% and POS 50%→100% over the baseline. A live CLTK
+   head-to-head is documented but pending — CLTK 2.x needs a stanza/torch (or LLM)
+   backend, so it wasn't installed here. Next: dependency parsing (the AGDT has
+   head/relation), LSJ glossing; pull the full First1KGreek/Perseus corpus and grow
+   the gold further. (Dactylic meter scansion — hexameter + pentameter — landed;
+   iambic/lyric meters and synizesis still TODO.)
 2. **Deepen the AI layer**: a live smoke test gated behind a secret, streaming,
    and richer grounding (RAG over the corpus/commentary).
 

@@ -29,12 +29,28 @@ def test_deterministic_stages_match_gold_exactly():
     assert scores["scansion"].accuracy == 1.0
 
 
-def test_seed_lemmatizer_covers_gold():
-    # The (hand-curated, correctly-accented) seed table covers the lemma gold;
-    # the seed is still a baseline, not a full lemmatizer (real coverage comes
-    # from the treebank-derived lexicon — see docs/PLAN.md).
-    s = benchmark.run_benchmark()["lemma"]
-    assert s.accuracy == 1.0
+def test_seed_lemmatizer_covers_its_easy_core():
+    # The hand-curated seed table is correct for the regular forms it covers.
+    from aegean.greek import lemmatize
+
+    core = {
+        "lemma": [
+            {"word": "λόγου", "lemma": "λόγος"},
+            {"word": "ἦν", "lemma": "εἰμί"},
+            {"word": "θεόν", "lemma": "θεός"},
+            {"word": "πάντα", "lemma": "πᾶς"},
+            {"word": "ἀνθρώπων", "lemma": "ἄνθρωπος"},
+        ]
+    }
+    assert benchmark.score_lemmatizer(lemmatize, core).accuracy == 1.0
+
+
+def test_baseline_has_headroom_on_full_gold():
+    # The grown gold includes irregular/open-class forms the seed/rule baseline
+    # misses — that gap (below 100%) is what the treebank backend closes.
+    s = benchmark.run_benchmark()
+    assert s["lemma"].accuracy < 1.0
+    assert s["pos"].accuracy < 1.0
 
 
 def test_compare_against_a_candidate_lemmatizer():
@@ -51,16 +67,52 @@ def test_custom_gold_is_honored():
     assert s.total == 1 and s.correct == 1
 
 
+def test_score_pos_and_compare_pos_taggers():
+    from aegean.greek import pos_tag
+
+    assert benchmark.score_pos(pos_tag).accuracy > 0.0
+    cmp = benchmark.compare_pos_taggers(lambda w: "X")  # a tagger that's never right
+    assert cmp["candidate"].accuracy == 0.0
+    assert cmp["pyaegean"].accuracy > cmp["candidate"].accuracy
+
+
+def test_compare_modes_shows_treebank_lift(tmp_path, monkeypatch):
+    # Offline: build a small lexicon from the synthetic AGDT fixture into a temp
+    # cache, then confirm the treebank backend scores at least as well as the
+    # baseline (strictly better on lemma, where the fixture covers ἄνδρα→ἀνήρ).
+    import pathlib
+
+    from aegean.greek import treebank
+    from aegean.greek.treebank import build_lexicon
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    fixture = pathlib.Path(__file__).parent / "fixtures" / "agdt"
+    build_lexicon(source_dir=fixture, force=True)
+    try:
+        res = benchmark.compare_modes(build=False)
+    finally:
+        treebank.disable_treebank()
+    assert res["treebank"]["lemma"].correct > res["baseline"]["lemma"].correct
+    assert res["treebank"]["pos"].correct >= res["baseline"]["pos"].correct
+
+
 def test_cltk_comparison_runs_if_installed():
-    """Documents the cross-tool comparison. Skipped unless CLTK is installed —
-    CLTK is a benchmark target, never a dependency."""
-    cltk = pytest.importorskip("cltk")
-    nlp = cltk.NLP(language="grc", suppress_banner=True)
+    """Documents the cross-tool comparison. CLTK is a benchmark target, never a
+    dependency. CLTK 2.x runs Ancient Greek through a stanza/LLM backend, so this
+    *skips* (rather than fails) whenever CLTK, that backend, or its models aren't
+    available — which is the common case in CI and most dev envs."""
+    pytest.importorskip("cltk")
+    from cltk import NLP
 
-    def cltk_lemma(word: str) -> str:
-        doc = nlp.analyze(text=word)
-        return doc.lemmata[0] if doc.lemmata else word
+    try:
+        nlp = NLP(language_code="grc", suppress_banner=True)
 
-    cmp = benchmark.compare_lemmatizers(cltk_lemma)
+        def cltk_lemma(word: str) -> str:
+            doc = nlp.analyze(text=word)
+            return doc.words[0].lemma if doc.words else word
+
+        cmp = benchmark.compare_lemmatizers(cltk_lemma)
+    except Exception as exc:
+        pytest.skip(f"CLTK grc backend unavailable: {type(exc).__name__}: {exc}")
     assert 0.0 <= cmp["candidate"].accuracy <= 1.0
     assert 0.0 <= cmp["pyaegean"].accuracy <= 1.0
