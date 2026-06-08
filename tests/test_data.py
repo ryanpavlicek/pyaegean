@@ -25,9 +25,16 @@ def test_unknown_dataset_raises():
         fetch("nope")
 
 
-def test_unpinned_url_reports_env_hint():
-    with pytest.raises(DataNotAvailableError, match="PYAEGEAN_LINEARA_IMAGES_URL"):
-        fetch("lineara-images")
+def test_unpinned_url_reports_env_hint(monkeypatch):
+    monkeypatch.setitem(data._REMOTE, "blob", DataSpec(name="blob", url="", license="x"))
+    with pytest.raises(DataNotAvailableError, match="PYAEGEAN_BLOB_URL"):
+        fetch("blob")
+
+
+def test_lineara_images_is_pinned():
+    spec = data._REMOTE["lineara-images"]
+    assert spec.url.endswith("lineara-images-v1/lineara-images.tar.gz")
+    assert len(spec.sha256) == 64 and spec.extract is True
 
 
 def test_single_file_download_and_idempotent(tmp_path, monkeypatch):
