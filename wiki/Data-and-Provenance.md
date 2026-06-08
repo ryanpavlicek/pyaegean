@@ -20,7 +20,9 @@ load_bundled_json("lineara", "signs.json")
 `fetch(name)` downloads a registered remote dataset into the cache and returns
 its path. Downloads are **sha256-verified** (when a checksum is pinned),
 **atomic** (written to a `.part` file then renamed), and **idempotent** (a
-present, valid cache file is a no-op).
+present, valid cache entry is a no-op). Archive datasets (`extract=True`, e.g.
+`lineara-images`) are **unpacked** into a cache directory — safely (members that
+escape the directory are rejected) — and `fetch()` returns that directory.
 
 ```python
 from aegean import data
@@ -36,13 +38,16 @@ Errors are explicit and never block `import`:
 
 ### The Linear A imagery (`lineara-images`)
 
-The ~500 MB facsimile/photo set is **not redistributable** and is therefore
-**intentionally left unpinned**. Its copyright is a patchwork — most images are
-**© École Française d'Athènes** (the GORILA volumes), and others are held by
-named scholars, publications, and photographers (see the corpus's per-image
-`imageRights`). None carry a redistribution license, so pyaegean does not host or
-pin them. Point the fetcher at a copy **you are licensed to use** with an env
-override:
+The ~500 MB facsimile/photo set is **fetched (never re-hosted)** from a release
+on the `ryanpavlicek/linearaworkbench` repo, where it is already hosted. `fetch`
+downloads the `tar.gz` and unpacks it into a cache directory of images. Its
+copyright is a patchwork — most images are **© École Française d'Athènes** (the
+GORILA volumes), others are held by named scholars, publications, and
+photographers (see the corpus's per-image `imageRights`); that attribution is
+unaffected by fetching, and pyaegean does not redistribute the images itself.
+
+Until the release asset's URL+sha256 are pinned, point the fetcher at a copy
+**you are licensed to use** with an env override:
 
 ```bash
 export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar"
