@@ -23,7 +23,7 @@ avoid the managed signing server — leave it off unless signing works in your e
 
 ## Current state — v0.1 *foundation* (first vertical slice; NOT all of v0.1)
 
-DONE and tested (217 passing tests):
+DONE and tested (223 passing tests):
 - `aegean.core` — script-agnostic model: `Corpus`, `Document`, `Token`/`TokenKind`,
   `Sign`, `SignInventory`, numerals, `Script` plugin registry, `Provenance`.
 - `aegean.scripts.lineara` — Linear A fully wired: `aegean.load("lineara")` →
@@ -66,7 +66,9 @@ The Linear A analysis ports are **complete** (phonetic distance + alignment,
 morphology clustering, collocation, query engine, structure detection). The
 Greek track has its first vertical slice (corpus + NLP stages above). The v0.2
 AI layer + translation foundation is in (provider adapters, grounding, caching,
-exploratory labeling), unit-tested with a fake client (no live keys).
+exploratory labeling), tested with a fake client plus mocked-SDK adapter
+integration tests that exercise each provider's real request/response path (no
+live keys).
 
 NOT done yet (next steps, priority order):
 1. **Deepen Greek NLP** toward "beats CLTK": real lemmatizer/morphology (Morpheus
@@ -78,9 +80,9 @@ NOT done yet (next steps, priority order):
    (still empty — no workbench release exists yet; the imagery isn't
    redistributable, so the owner must publish a mirror first, then pin URL+sha).
    Until then `PYAEGEAN_LINEARA_IMAGES_URL` lets a user fetch from their own.
-3. **Deepen the AI layer** (foundation DONE): wire real provider calls against
-   recorded/mocked HTTP for an integration test, a tiny live smoke gated behind
-   a secret, streaming, and richer grounding (RAG over the corpus/commentary).
+3. **Deepen the AI layer** (foundation + mocked-SDK adapter tests DONE): add a
+   tiny live smoke gated behind a secret, streaming, and richer grounding (RAG
+   over the corpus/commentary).
 
 ## Conventions (do these)
 
@@ -104,7 +106,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 217 passing
+pytest                                   # 223 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)
