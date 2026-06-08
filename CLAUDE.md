@@ -23,7 +23,7 @@ avoid the managed signing server — leave it off unless signing works in your e
 
 ## Current state — v0.1 *foundation* (first vertical slice; NOT all of v0.1)
 
-DONE and tested (223 passing tests):
+DONE and tested (228 passing tests):
 - `aegean.core` — script-agnostic model: `Corpus`, `Document`, `Token`/`TokenKind`,
   `Sign`, `SignInventory`, numerals, `Script` plugin registry, `Provenance`.
 - `aegean.scripts.lineara` — Linear A fully wired: `aegean.load("lineara")` →
@@ -52,8 +52,9 @@ DONE and tested (223 passing tests):
   the Greek `Script` (+ `nlp` capability) and a bundled sample corpus →
   `aegean.load("greek")` (5 public-domain Archaic→Koine passages).
 - `aegean.data` — bundled-JSON access (Linear A + Greek seeds, **no images**) +
-  `fetch()` download-to-cache: sha256-verified, atomic, idempotent, with a
-  `PYAEGEAN_<NAME>_URL` env override (graceful `DataNotAvailableError`).
+  `fetch()` download-to-cache: sha256-verified, atomic, idempotent, unpacks
+  `extract` (tar) datasets into a cache dir, with a `PYAEGEAN_<NAME>_URL` env
+  override (graceful `DataNotAvailableError`).
 - `aegean.ai` — multi-provider AI layer (v0.2): `LLMClient` ABC + adapters
   (Anthropic default, OpenAI, xAI Grok, Gemini; SDKs lazy/optional, keys from
   env, never logged), `get_client()`, a sha256 `ResponseCache`, grounding +
@@ -76,12 +77,14 @@ NOT done yet (next steps, priority order):
    the full First1KGreek/Perseus corpus and grow the gold set. (DONE so far:
    normalize/betacode, tokenize, syllabify, accent, prosody/quantity, phonology/
    IPA, baseline lemmatize, and the CLTK benchmark harness.)
-2. **`lineara-images` is intentionally unpinned (licensing — resolved).** The
-   facsimile imagery is © École Française d'Athènes plus other rightsholders
-   (per-image `imageRights` are a patchwork: GORILA/EFA, named scholars,
-   photographers) with no redistribution license, so pyaegean must not re-host
-   it. The supported path is the `PYAEGEAN_LINEARA_IMAGES_URL` override (fetch
-   your own licensed copy). Only revisit if per-holder permission is obtained.
+2. **Pin the `lineara-images` release URL+sha** in `src/aegean/data/__init__.py`.
+   Decision: fetch (never re-host) the imagery from a release on the
+   `ryanpavlicek/linearaworkbench` repo, where the owner already hosts it
+   (`spec.extract=True`, so `fetch()` unpacks the tar.gz to a cache dir).
+   Pending the owner uploading `lineara-images.tar.gz` to a release tagged
+   `lineara-images-v1` and providing the sha256; then set `url`+`sha256`.
+   `PYAEGEAN_LINEARA_IMAGES_URL` already works for any licensed copy. Attribution
+   (© EFA + other rightsholders) is unaffected by fetching.
 3. **Deepen the AI layer** (foundation + mocked-SDK adapter tests DONE): add a
    tiny live smoke gated behind a secret, streaming, and richer grounding (RAG
    over the corpus/commentary).
@@ -108,7 +111,7 @@ NOT done yet (next steps, priority order):
 
 ```bash
 pip install -e ".[dev]"
-pytest                                   # 223 passing
+pytest                                   # 228 passing
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests
 mypy                                     # clean (enforced in CI)

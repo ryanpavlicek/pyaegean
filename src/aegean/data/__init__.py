@@ -56,21 +56,24 @@ class DataSpec:
     license: str
     sha256: str = ""
     note: str = ""
+    extract: bool = False  # when True, the download is a tar archive to unpack
 
 
-# Remote datasets. The Linear A facsimile imagery lives in the workbench repo;
-# we fetch (never re-host) it. The URL is intentionally left unpinned: the images
-# are © École Française d'Athènes plus several other rightsholders (the corpus's
-# per-image `imageRights` are a patchwork — GORILA/EFA, named scholars,
-# photographers) and carry no redistribution license, so pyaegean must not
-# re-host them. Set PYAEGEAN_LINEARA_IMAGES_URL to fetch from a copy you are
-# licensed to use.
+# Remote datasets. pyaegean never re-hosts data; it fetches from the upstream
+# host. The Linear A facsimile imagery is fetched (not copied) from a release on
+# the ryanpavlicek/linearaworkbench repo, where the owner already hosts it. The
+# images remain © École Française d'Athènes plus other rightsholders (the
+# corpus's per-image `imageRights` are a patchwork — GORILA/EFA, named scholars,
+# photographers); that attribution is unaffected by fetching. The URL/sha256 are
+# pinned once the owner publishes the release asset; until then,
+# PYAEGEAN_LINEARA_IMAGES_URL points the fetcher at any licensed copy.
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",
-        url="",  # intentionally unpinned — imagery is not redistributable (see above)
-        license="© École Française d'Athènes and other rightsholders — academic reference only; not redistributable",
-        note="~500 MB facsimile/photo set; fetch from your own licensed copy via PYAEGEAN_LINEARA_IMAGES_URL.",
+        url="",  # pinned to the linearaworkbench release tarball once published
+        license="© École Française d'Athènes and other rightsholders — academic reference only",
+        note="~500 MB facsimile/photo set (tar.gz); fetched from the linearaworkbench release.",
+        extract=True,
     ),
 }
 
@@ -93,14 +96,51 @@ def sha256_file(path: pathlib.Path, *, chunk: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
+def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
+    try:
+        import urllib.request
+
+        urllib.request.urlretrieve(url, dest_part)  # noqa: S310 (registered/overridable url)
+    except Exception as e:  # pragma: no cover - network
+        dest_part.unlink(missing_ok=True)
+        raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
+
+
+def _verify(path: pathlib.Path, spec: DataSpec, name: str) -> None:
+    if spec.sha256:
+        got = sha256_file(path)
+        if got != spec.sha256:
+            path.unlink(missing_ok=True)
+            raise DataNotAvailableError(
+                f"checksum mismatch for {name!r}: expected {spec.sha256}, got {got}"
+            )
+
+
+def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
+    """Extract a tar archive, refusing any member that escapes ``dest``."""
+    import tarfile
+
+    root = dest.resolve()
+    with tarfile.open(archive) as tf:
+        for member in tf.getmembers():
+            target = (root / member.name).resolve()
+            if target != root and root not in target.parents:
+                raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
+        try:
+            tf.extractall(root, filter="data")  # py3.12+ hardening
+        except TypeError:  # pragma: no cover - older Python
+            tf.extractall(root)
+
+
 def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     """Download a registered remote dataset into the cache and return its path.
 
-    Verifies the sha256 when one is pinned, downloads atomically, and is a
-    no-op when a valid cache file already exists. Raises
-    :class:`DataNotAvailableError` for unknown datasets, un-pinned URLs,
-    checksum mismatches, or network failures — never silently, and never
-    blocking ``import``.
+    Verifies the sha256 when one is pinned, downloads atomically, and is a no-op
+    when the cache already holds it. For ``extract`` datasets the download is a
+    tar archive that is unpacked into a cache directory (returned); otherwise the
+    downloaded file path is returned. Raises :class:`DataNotAvailableError` for
+    unknown datasets, un-pinned URLs, checksum mismatches, unsafe archives, or
+    network failures — never silently, and never blocking ``import``.
     """
     spec = _REMOTE.get(name)
     if spec is None:
@@ -112,26 +152,42 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
             f"Set {_env_url_var(name)} to fetch from a mirror. License: {spec.license}"
         )
 
+    if spec.extract:
+        return _fetch_and_extract(spec, url, name, force)
+
     dest = cache_dir() / name
     if dest.exists() and not force:
         if not spec.sha256 or sha256_file(dest) == spec.sha256:
             return dest  # present and valid → idempotent no-op
-
     tmp = dest.with_name(dest.name + ".part")
-    try:
-        import urllib.request
-
-        urllib.request.urlretrieve(url, tmp)  # noqa: S310 (registered/overridable url)
-    except Exception as e:  # pragma: no cover - network
-        tmp.unlink(missing_ok=True)
-        raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
-
-    if spec.sha256:
-        got = sha256_file(tmp)
-        if got != spec.sha256:
-            tmp.unlink(missing_ok=True)
-            raise DataNotAvailableError(
-                f"checksum mismatch for {name!r}: expected {spec.sha256}, got {got}"
-            )
+    _download(url, tmp, name)
+    _verify(tmp, spec, name)
     tmp.replace(dest)  # atomic within the cache dir
     return dest
+
+
+def _fetch_and_extract(
+    spec: DataSpec, url: str, name: str, force: bool
+) -> pathlib.Path:
+    import shutil
+
+    target = cache_dir() / name  # a directory of unpacked files
+    if target.exists() and not force:
+        return target  # already unpacked → idempotent no-op
+
+    archive = cache_dir() / (name + ".part")
+    _download(url, archive, name)
+    _verify(archive, spec, name)  # removes the archive on mismatch + raises
+
+    staging = cache_dir() / (name + ".extract")
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True)
+    try:
+        _safe_extract_tar(archive, staging)
+    finally:
+        archive.unlink(missing_ok=True)
+    if target.exists():
+        shutil.rmtree(target)
+    staging.replace(target)  # atomic within the cache dir
+    return target
