@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek and the Aegean syllabic scripts (Linear A/B)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,6 +40,9 @@ all = ["pyaegean[ai,epidoc,geo]"]
 [project.urls]
 Homepage = "https://github.com/ryanpavlicek/pyaegean"
 Source = "https://github.com/ryanpavlicek/pyaegean"
+Documentation = "https://github.com/ryanpavlicek/pyaegean/wiki"
+Issues = "https://github.com/ryanpavlicek/pyaegean/issues"
+Changelog = "https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

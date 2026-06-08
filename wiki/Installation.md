@@ -45,7 +45,7 @@ print(len(aegean.load("greek")))          # 5  (bundled sample corpus)
 ## Offline & data
 
 The compact text corpora (Linear A inscriptions/signs, Greek seeds) ship inside
-the wheel and work fully offline. Large assets — notably the ~500 MB Linear A
+the wheel and work fully offline. Large assets — notably the ~116 MB Linear A
 facsimile imagery — are **not** bundled; they are fetched on demand into a user
 cache. See [Data & Provenance](Data-and-Provenance).
 

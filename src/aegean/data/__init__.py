@@ -1,9 +1,9 @@
 """Bundled-data access + a download-to-cache layer.
 
 Compact text data ships in the wheel (read via importlib.resources). Large or
-license-restricted assets — notably the 500 MB Linear A facsimile mirror — are
+license-restricted assets — notably the Linear A facsimile mirror (~116 MB) — are
 NOT bundled; they are fetched on demand from upstream into a user cache. This
-is how the package stays small (the workbench's 500 MB problem can't recur).
+is how the package stays small regardless of how large the source corpora are.
 
 Downloads are sha256-verified (when a checksum is pinned), atomic (written to a
 ``.part`` file then renamed), and idempotent (a present, valid cache file is a
@@ -64,9 +64,9 @@ class DataSpec:
 # the ryanpavlicek/linearaworkbench repo, where the owner already hosts it. The
 # images remain © École Française d'Athènes plus other rightsholders (the
 # corpus's per-image `imageRights` are a patchwork — GORILA/EFA, named scholars,
-# photographers); that attribution is unaffected by fetching. The URL/sha256 are
-# pinned once the owner publishes the release asset; until then,
-# PYAEGEAN_LINEARA_IMAGES_URL points the fetcher at any licensed copy.
+# photographers); that attribution is unaffected by fetching. The URL + sha256 are
+# pinned below (verified against the published release); set
+# PYAEGEAN_LINEARA_IMAGES_URL to override the source with your own licensed copy.
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",
@@ -76,7 +76,7 @@ _REMOTE: dict[str, DataSpec] = {
         ),
         sha256="1afddcd0fc8ce4f3058e8f84d5589e7fb34f56ea615bf0c228d1b2c92722e396",
         license="© École Française d'Athènes and other rightsholders — academic reference only",
-        note="3,368 facsimile/photo files (tar.gz) under images/; fetched from the linearaworkbench release.",
+        note="3,368 facsimile/photo files (~116 MB tar.gz, ~125 MB unpacked); fetched from the linearaworkbench release.",
         extract=True,
     ),
 }

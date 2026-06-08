@@ -38,23 +38,27 @@ Errors are explicit and never block `import`:
 
 ### The Linear A imagery (`lineara-images`)
 
-The ~500 MB facsimile/photo set is **fetched (never re-hosted)** from a release
-on the `ryanpavlicek/linearaworkbench` repo, where it is already hosted. `fetch`
-downloads the `tar.gz` and unpacks it into a cache directory of images. Its
-copyright is a patchwork — most images are **© École Française d'Athènes** (the
-GORILA volumes), others are held by named scholars, publications, and
-photographers (see the corpus's per-image `imageRights`); that attribution is
-unaffected by fetching, and pyaegean does not redistribute the images itself.
+The facsimile/photo set (3,368 files, ~116 MB download, ~125 MB unpacked) is
+**fetched (never re-hosted)** from a release on the `ryanpavlicek/linearaworkbench`
+repo, where it is already hosted. `fetch` downloads the `tar.gz` and unpacks it
+into a cache directory of images. Its copyright is a patchwork — most images are
+**© École Française d'Athènes** (the GORILA volumes), others are held by named
+scholars, publications, and photographers (see the corpus's per-image
+`imageRights`); that attribution is unaffected by fetching, and pyaegean does not
+redistribute the images itself.
 
-Until the release asset's URL+sha256 are pinned, point the fetcher at a copy
-**you are licensed to use** with an env override:
-
-```bash
-export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar"
-```
+The release asset's URL and sha256 are **pinned** (and verified), so a plain call
+just works and is integrity-checked:
 
 ```python
-data.fetch("lineara-images")     # downloads from the override, sha-checked if pinned
+data.fetch("lineara-images")     # downloads the pinned asset, sha256-verified, unpacks, caches
+```
+
+To fetch from your own mirror instead, set an env override (the pinned sha256 is
+not enforced against an override):
+
+```bash
+export PYAEGEAN_LINEARA_IMAGES_URL="https://example.org/lineara-images.tar.gz"
 ```
 
 The override pattern is general: `PYAEGEAN_<NAME>_URL` (uppercased, `-`→`_`)
