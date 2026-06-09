@@ -92,7 +92,7 @@ cells.append(md(
 cells.append(code(
     "def align(batch):\n"
     "    enc = tokenizer(batch['tokens'], is_split_into_words=True, truncation=True,\n"
-    "                    max_length=256)\n"
+    "                    max_length=512)\n"
     "    out = []\n"
     "    for i, tags in enumerate(batch['tags']):\n"
     "        word_ids = enc.word_ids(i)\n"
@@ -114,9 +114,12 @@ cells.append(code(
 ))
 
 cells.append(md(
-    "## 5 · Fine-tune (H100-tuned; keeps the best epoch by dev token-accuracy)\n"
-    "Watch `tok_acc` climb each epoch — if it stays near the identity rate, training didn't "
-    "take (check the GPU). On an H100 this is a few minutes."
+    "## 5 · Fine-tune (12 epochs; keeps the best epoch by dev token-accuracy)\n"
+    "A 9,069-class head needs a real schedule: the 4-epoch run topped out at ~77% label "
+    "accuracy (undertrained). 12 epochs ≈ 5.5k steps with cosine decay; best-checkpoint "
+    "selection means extra epochs can't overfit what ships. **Watch the per-epoch `tok_acc` "
+    "column** — if it has clearly plateaued by epoch ~8, the curve (not more epochs) is the "
+    "story; paste the table back."
 ))
 cells.append(code(
     "import numpy as np\n"
@@ -129,9 +132,9 @@ cells.append(code(
     "    m = gold != -100\n"
     "    return {'tok_acc': float((preds[m] == gold[m]).mean())}\n"
     "args = TrainingArguments(\n"
-    "    output_dir='out', learning_rate=3e-5,\n"
+    "    output_dir='out', learning_rate=5e-5, lr_scheduler_type='cosine',\n"
     "    per_device_train_batch_size=BS, per_device_eval_batch_size=BS * 2,\n"
-    "    num_train_epochs=4, weight_decay=0.01, warmup_ratio=0.06,\n"
+    "    num_train_epochs=12, weight_decay=0.01, warmup_ratio=0.06,\n"
     "    bf16=USE_BF16, fp16=not USE_BF16, tf32=USE_BF16,\n"
     "    optim='adamw_torch_fused', dataloader_num_workers=2,\n"
     "    eval_strategy='epoch', save_strategy='epoch', save_total_limit=1,\n"
