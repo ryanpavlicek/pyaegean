@@ -4,6 +4,7 @@ data/
 *.onnx
 tokenizer.json
 ship/
+model/
 onnx_fp32/
 onnx_int8/
 out/
