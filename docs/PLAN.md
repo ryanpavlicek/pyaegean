@@ -171,7 +171,9 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   benchmark harness measures the lift — lemma 28%→100%, POS 50%→100% on the gold set; opt-in full
   Perseus LSJ glossing via `greek.use_lsj()` (`gloss`/`lookup`); opt-in baseline dependency parser
   (arc-eager + averaged perceptron) via `greek.use_parser()` (`parse`→`DepTree`), ~0.67 UAS projective
-  / ~0.51 all-text on AGDT. CLTK live head-to-head documented but pending a stanza/LLM backend.)*
+  / ~0.51 all-text on AGDT. CLTK head-to-head run (CLTK 2.5.1 + stanza grc): on the gold set treebank
+  ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — small attested-weighted gold, so a larger
+  in-context held-out eval (and a generalizing model) is the fair next step.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.

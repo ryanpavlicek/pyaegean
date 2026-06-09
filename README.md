@@ -109,9 +109,10 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 **Shipped:** v0.1 core + Linear A + Greek start. **v0.2 (current):** multi-provider AI
 layer + translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a
-baseline dependency parser, and a CLTK benchmark harness. **Next:** v0.3 grow the
-gold/corpus + a live CLTK head-to-head → v0.4 Linear B (DAMOS/LiBER) → v0.5
-Cypriot/Cypro-Minoan → v1.0 stable.
+baseline dependency parser, and a CLTK benchmark harness (treebank mode ties CLTK on
+lemma and edges it on POS on the gold set). **Next:** v0.3 a larger, in-context CLTK
+evaluation (full First1KGreek/Perseus corpus + grown gold) → v0.4 Linear B (DAMOS/LiBER)
+→ v0.5 Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License
 

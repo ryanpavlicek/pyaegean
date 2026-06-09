@@ -350,10 +350,29 @@ lemmatize (or POS) callable that *you* supply. CLTK 2.x runs Ancient Greek throu
 from cltk import NLP
 nlp = NLP(language_code="grc", suppress_banner=True)   # 2.x uses language_code=
 def cltk_lemma(w): return nlp.analyze(text=w).words[0].lemma
+def cltk_pos(w):   return nlp.analyze(text=w).words[0].upos.tag   # upos is a tag object
 
 benchmark.compare_lemmatizers(cltk_lemma)
-benchmark.compare_pos_taggers(lambda w: nlp.analyze(text=w).words[0].upos)
+benchmark.compare_pos_taggers(cltk_pos)
 ```
+
+**Measured head-to-head** (CLTK 2.5.1 with the stanza `grc` Perseus models, on the
+bundled gold set; pyaegean with `use_treebank()` active):
+
+| | pyaegean (baseline) | pyaegean (treebank) | CLTK |
+| --- | --- | --- | --- |
+| lemma | 28% | **100%** | **100%** |
+| POS | 50% | **100%** | 90% |
+
+On this gold set the treebank backend **matches CLTK on lemmatization and edges it on
+POS** — but read it honestly. The gold is small (18 lemma / 20 POS items) and weighted
+toward *attested* forms, so it measures lexical coverage, **not** generalization to
+unseen text, where CLTK's neural models would likely lead. CLTK was also scored on
+isolated words with no sentence context (its two POS "misses" — `ἦν → AUX`, a UD
+convention difference vs our `VERB`, and `τόν → PRON`, ambiguous out of context — partly
+reflect that). A larger, in-context, held-out evaluation is the fair next step, and the
+signal that *truly* rivaling CLTK across the board needs a generalizing model, not just
+lookup.
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,

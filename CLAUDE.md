@@ -50,17 +50,20 @@ undeciphered — never present analysis as ground truth.
    `pos_tag`/`pos_tags` also use the treebank for attested forms (gold open-class
    tags) when it's active. The benchmark gold set is grown and the harness measures
    the lift (`compare_modes`/`score_pos`/`compare_pos_taggers`): on the gold,
-   treebank takes lemma 28%→100% and POS 50%→100% over the baseline. A live CLTK
-   head-to-head is documented but pending — CLTK 2.x needs a stanza/torch (or LLM)
-   backend, so it wasn't installed here. **LSJ glossing landed**: opt-in
+   treebank takes lemma 28%→100% and POS 50%→100% over the baseline. **CLTK
+   head-to-head run** (CLTK 2.5.1 + stanza grc Perseus models): on the gold set the
+   treebank ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — but the gold is
+   small + attested-weighted, so this is coverage, not generalization (a fair,
+   in-context, held-out eval would likely favor CLTK on unseen forms). **LSJ glossing landed**: opt-in
    `greek.use_lsj()` fetches the full Perseus LSJ (CC BY-SA 4.0, ~270 MB, cache-only),
    builds a gzipped lemma→entry index, and exposes `gloss`/`lookup` (composes with the
    lemmatizer). **Dependency parsing landed** (baseline): opt-in `greek.use_parser()`
    trains an arc-eager + averaged-perceptron parser (pure Python) on the AGDT and
    exposes `greek.parse()` → `DepTree`; measured ~0.67 UAS / 0.57 LAS on projective
    AGDT, ~0.51 / 0.42 all-text (`greek.evaluate()`); arc-eager is projective-only
-   (~31% of AGDT) — honest baseline. Next: pull the full First1KGreek/Perseus corpus
-   and grow the gold; live CLTK head-to-head when a stanza/LLM backend is set up.
+   (~31% of AGDT) — honest baseline. Next: a larger, in-context, held-out CLTK eval
+   (pull the full First1KGreek/Perseus corpus, grow the gold) and a *generalizing*
+   morphology/POS model — lookup alone won't beat CLTK on unseen forms.
    (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)
