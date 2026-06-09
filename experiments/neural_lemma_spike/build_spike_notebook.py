@@ -1,4 +1,12 @@
-"""Build spike_lemma_grebert.ipynb (run once: `python build_spike_notebook.py`)."""
+"""Build spike_lemma_grebert.ipynb (run once: `python build_spike_notebook.py`).
+
+H100-aware (auto-detects bf16/tf32 and scales batch size; falls back cleanly on a T4),
+and uses current, non-deprecated APIs:
+  - Trainer(processing_class=...)  not the deprecated tokenizer=
+  - eval_strategy=                 not the deprecated evaluation_strategy=
+  - optimum-cli export onnx + onnxruntime.quantization.quantize_dynamic
+    (not ORTModelForTokenClassification(export=True) + ORTQuantizer)
+"""
 from __future__ import annotations
 
 import pathlib
@@ -17,17 +25,29 @@ cells.append(md(
     "(pure-Python baseline 40.3%, stanza 62.8%) — by classifying the **same edit-tree label "
     "set** the pure-Python lemmatizer uses, but from a fine-tuned Ancient-Greek transformer.\n"
     "\n"
-    "**Loop:** set runtime to **GPU** (Runtime → Change runtime type → T4) → Run all → "
+    "**Loop:** set runtime to a **GPU** (an H100 is ideal; a T4 also works) → Run all → "
     "download `spike_model.zip` at the end → send it back for the torch-free local eval.\n"
     "\n"
-    "Encoder: `bowphs/GreBerta` (Apache-2.0, monolingual Ancient Greek RoBERTa). torch/transformers "
-    "are used **only here in Colab**; production inference is onnxruntime-only."
+    "Precision auto-detects: **bf16 + TF32 + fused AdamW + batch 64 on H100/A100**, "
+    "fp16 + batch 16 on a T4. Encoder: `bowphs/GreBerta` (Apache-2.0, Ancient-Greek RoBERTa). "
+    "torch/transformers are used **only here**; production inference is onnxruntime-only."
 ))
 
 cells.append(code(
-    "!nvidia-smi -L  # confirm a GPU is attached (T4 is plenty)\n"
-    "%pip -q install 'transformers>=4.40' 'datasets>=2.19' 'optimum[onnxruntime]>=1.20' "
+    "!nvidia-smi -L  # confirm the GPU (H100 ideal)\n"
+    "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'optimum[onnxruntime]>=1.20' "
     "'accelerate>=0.30' onnx onnxruntime"
+))
+
+cells.append(md("## 0 · Detect GPU + precision"))
+cells.append(code(
+    "import torch\n"
+    "gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'\n"
+    "USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()  # Ampere/Hopper+\n"
+    "BS = 64 if USE_BF16 else 16\n"
+    "print(f'torch {torch.__version__} | CUDA {torch.version.cuda} | GPU {gpu}')\n"
+    "print(f'bf16={USE_BF16}  ->  batch_size={BS}, '\n"
+    "      f'precision={\"bf16+tf32\" if USE_BF16 else \"fp16\"}')"
 ))
 
 cells.append(md(
@@ -69,8 +89,8 @@ cells.append(code(
 
 cells.append(md(
     "## 4 · Tokenize + align labels to the first sub-token of each word\n"
-    "Standard token-classification alignment: label only the first sub-token of each word, "
-    "`-100` (ignored by the loss) elsewhere — matching the local eval's first-subword pooling."
+    "Label only the first sub-token of each word, `-100` (ignored by the loss) elsewhere — "
+    "matching the local eval's first-subword pooling."
 ))
 cells.append(code(
     "def align(batch):\n"
@@ -92,27 +112,39 @@ cells.append(code(
     "    enc['labels'] = out\n"
     "    return enc\n"
     "tok_ds = ds.map(align, batched=True, remove_columns=ds.column_names)\n"
-    "tok_ds = tok_ds.train_test_split(test_size=0.02, seed=0)  # tiny in-notebook sanity split\n"
+    "tok_ds = tok_ds.train_test_split(test_size=0.02, seed=0)  # small dev for best-epoch selection\n"
     "print(tok_ds)"
 ))
 
-cells.append(md("## 5 · Fine-tune (≈3 epochs; a few GPU-minutes to ~1–2 h on T4)"))
+cells.append(md(
+    "## 5 · Fine-tune (H100-tuned; keeps the best epoch by dev token-accuracy)\n"
+    "On an H100 this is a few minutes for 4 epochs; on a T4, longer. `load_best_model_at_end` "
+    "uses the dev split so extra epochs can't overfit the kept checkpoint."
+))
 cells.append(code(
     "import numpy as np\n"
     "from transformers import TrainingArguments, Trainer, DataCollatorForTokenClassification\n"
     "collator = DataCollatorForTokenClassification(tokenizer)\n"
     "def metrics(p):\n"
-    "    preds = np.argmax(p.predictions, axis=-1)\n"
+    "    preds = p.predictions[0] if isinstance(p.predictions, tuple) else p.predictions\n"
+    "    preds = np.argmax(preds, axis=-1)\n"
     "    gold = p.label_ids\n"
     "    m = gold != -100\n"
     "    return {'tok_acc': float((preds[m] == gold[m]).mean())}\n"
     "args = TrainingArguments(\n"
-    "    output_dir='out', learning_rate=3e-5, per_device_train_batch_size=16,\n"
-    "    per_device_eval_batch_size=32, num_train_epochs=3, weight_decay=0.01,\n"
-    "    fp16=True, eval_strategy='epoch', save_strategy='no', logging_steps=100, report_to=[])\n"
+    "    output_dir='out', learning_rate=3e-5,\n"
+    "    per_device_train_batch_size=BS, per_device_eval_batch_size=BS * 2,\n"
+    "    num_train_epochs=4, weight_decay=0.01, warmup_ratio=0.06,\n"
+    "    bf16=USE_BF16, fp16=not USE_BF16,    # bf16 on H100/A100, fp16 on T4\n"
+    "    tf32=USE_BF16,                        # TF32 matmuls on Ampere+ (no-op on T4)\n"
+    "    optim='adamw_torch_fused',            # fused optimizer — faster on CUDA\n"
+    "    dataloader_num_workers=2,\n"
+    "    eval_strategy='epoch', save_strategy='epoch', save_total_limit=1,\n"
+    "    load_best_model_at_end=True, metric_for_best_model='tok_acc', greater_is_better=True,\n"
+    "    logging_steps=50, report_to='none')\n"
     "trainer = Trainer(model=model, args=args, train_dataset=tok_ds['train'],\n"
     "                  eval_dataset=tok_ds['test'], data_collator=collator,\n"
-    "                  tokenizer=tokenizer, compute_metrics=metrics)\n"
+    "                  processing_class=tokenizer, compute_metrics=metrics)  # processing_class, not tokenizer=\n"
     "trainer.train()\n"
     "trainer.save_model('out_model'); tokenizer.save_pretrained('out_model')\n"
     "print('in-notebook token-accuracy is a sanity check only; the real lemma number is the\\n'\n"
@@ -120,42 +152,34 @@ cells.append(code(
 ))
 
 cells.append(md(
-    "## 6 · Export to ONNX + int8 quantize\n"
-    "If quantization errors out on the Colab optimum version, skip it and ship the fp32 "
-    "`model.onnx` — `eval_spike.py` runs either."
+    "## 6 · Export to ONNX + int8 quantize (current optimum / onnxruntime APIs)\n"
+    "`optimum-cli export onnx` then `onnxruntime.quantization.quantize_dynamic`. If quantization "
+    "errors on this version, the fp32 export ships instead — `eval_spike.py` runs either."
 ))
 cells.append(code(
-    "from optimum.onnxruntime import ORTModelForTokenClassification\n"
-    "ort_model = ORTModelForTokenClassification.from_pretrained('out_model', export=True)\n"
-    "ort_model.save_pretrained('onnx_fp32')\n"
-    "tokenizer.save_pretrained('onnx_fp32')\n"
-    "out_dir = 'onnx_fp32'\n"
-    "try:\n"
-    "    from optimum.onnxruntime import ORTQuantizer\n"
-    "    from optimum.onnxruntime.configuration import AutoQuantizationConfig\n"
-    "    q = ORTQuantizer.from_pretrained('onnx_fp32')\n"
-    "    q.quantize(save_dir='onnx_int8',\n"
-    "               quantization_config=AutoQuantizationConfig.avx2(is_static=False, per_channel=False))\n"
-    "    tokenizer.save_pretrained('onnx_int8')\n"
-    "    out_dir = 'onnx_int8'\n"
-    "    print('int8 quantized ->', out_dir)\n"
-    "except Exception as e:\n"
-    "    print('quantization skipped (' + str(e)[:120] + '); shipping fp32')\n"
     "import os\n"
-    "for f in os.listdir(out_dir):\n"
-    "    print(f, os.path.getsize(os.path.join(out_dir, f)) // 1024, 'KB')"
+    "!optimum-cli export onnx --model out_model --task token-classification onnx_fp32\n"
+    "onnx_path = 'onnx_fp32/model.onnx'\n"
+    "try:\n"
+    "    from onnxruntime.quantization import quantize_dynamic, QuantType\n"
+    "    quantize_dynamic('onnx_fp32/model.onnx', 'onnx_fp32/model_int8.onnx', weight_type=QuantType.QInt8)\n"
+    "    onnx_path = 'onnx_fp32/model_int8.onnx'\n"
+    "    print('int8 quantized ->', onnx_path)\n"
+    "except Exception as e:\n"
+    "    print('quantization skipped (' + str(e)[:160] + '); shipping fp32')\n"
+    "for f in sorted(os.listdir('onnx_fp32')):\n"
+    "    print(f, os.path.getsize(os.path.join('onnx_fp32', f)) // 1024, 'KB')"
 ))
 
 cells.append(md("## 7 · Package + download `spike_model.zip`"))
 cells.append(code(
-    "import glob, shutil\n"
-    "onnx_file = sorted(glob.glob(out_dir + '/*.onnx'), key=os.path.getsize)[-1]\n"
+    "import shutil\n"
     "pathlib.Path('ship').mkdir(exist_ok=True)\n"
-    "shutil.copy(onnx_file, 'ship/model.onnx')\n"
-    "shutil.copy(out_dir + '/tokenizer.json', 'ship/tokenizer.json')\n"
+    "shutil.copy(onnx_path, 'ship/model.onnx')\n"
+    "shutil.copy('onnx_fp32/tokenizer.json', 'ship/tokenizer.json')\n"
     "shutil.copy(str(DATA / 'labels.json'), 'ship/labels.json')\n"
     "shutil.make_archive('spike_model', 'zip', 'ship')\n"
-    "print('model.onnx', os.path.getsize('ship/model.onnx') // (1024*1024), 'MB')\n"
+    "print('model.onnx', os.path.getsize('ship/model.onnx') // (1024 * 1024), 'MB')\n"
     "files.download('spike_model.zip')"
 ))
 
