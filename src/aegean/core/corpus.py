@@ -109,8 +109,15 @@ class Corpus:
 
     # ── interop ─────────────────────────────────────────────────────────
     def to_dataframe(self, level: str = "document"):  # type: ignore[no-untyped-def]
-        """A pandas DataFrame at ``document``, ``token``, or ``word`` level."""
-        import pandas as pd  # lazy
+        """A pandas DataFrame at ``document``, ``token``, or ``word`` level.
+
+        pandas is an optional dependency — install with ``pip install 'pyaegean[data]'``."""
+        try:
+            import pandas as pd  # lazy, optional [data] extra
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "to_dataframe() needs pandas; install it with: pip install 'pyaegean[data]'"
+            ) from exc
 
         if level == "document":
             rows = [

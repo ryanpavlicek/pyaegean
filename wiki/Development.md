@@ -17,12 +17,15 @@ pytest                                   # full test suite
 python -c "import aegean; print(len(aegean.load('lineara')))"   # 1721
 ruff check src tests                     # lint (clean)
 mypy                                     # type-check (clean; enforced in CI)
-python -m build && python -m twine check dist/*   # build; wheel must be < 3 MB
+python -m build && python -m twine check dist/*
+python scripts/check_footprint.py --wheel "dist/*.whl"   # wheel = code + JSON only
+python scripts/check_footprint.py                        # import-clean + import-fast
 ```
 
 CI (GitHub Actions) runs `ruff`, `mypy` (enforcing), the `pytest` matrix across
-Python 3.10–3.13, and a build job with a `twine check` and a < 3 MB wheel-size
-guard.
+Python 3.10–3.13, a build job with `twine check`, and a footprint job
+(`scripts/check_footprint.py`) that asserts `import aegean` loads no heavy deps,
+imports fast, and that the wheel ships only code + JSON.
 
 ## Conventions
 

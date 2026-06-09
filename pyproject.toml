@@ -22,11 +22,13 @@ classifiers = [
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
-# Core stays import-light: numpy/pandas/scipy are imported lazily, only inside
-# DataFrame interop and the collocation statistics. `import aegean` stays instant.
-dependencies = ["pandas>=2.0", "scipy>=1.10"]
+# Core has ZERO hard third-party dependencies: `import aegean` is instant and pulls
+# nothing heavy. pandas (DataFrame interop) is the optional [data] extra; collocation
+# statistics are pure stdlib. Corpora and trained models fetch to cache, never bundled.
+dependencies = []
 
 [project.optional-dependencies]
+data = ["pandas>=2.0"]             # DataFrame interop (to_dataframe); the core is pandas-free
 anthropic = ["anthropic>=0.39"]
 openai = ["openai>=1.30"]
 gemini = ["google-genai>=0.3"]
@@ -34,8 +36,8 @@ grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
 ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel"]
-all = ["pyaegean[ai,epidoc,geo]"]
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0"]
+all = ["pyaegean[ai,epidoc,geo,data]"]
 
 [project.urls]
 Homepage = "https://github.com/ryanpavlicek/pyaegean"
@@ -68,5 +70,5 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "scipy.*", "anthropic.*", "openai.*", "google.*"]
+module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*"]
 ignore_missing_imports = true

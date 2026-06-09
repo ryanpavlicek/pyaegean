@@ -33,11 +33,8 @@ jobs:
       - run: pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
-      - name: Wheel size guard (< 3 MB)
-        run: |
-          size=$(stat -c%s dist/*.whl)
-          echo "wheel size: $size bytes"
-          test "$size" -lt 3145728
+      - name: Footprint guard (wheel is code + JSON only, no heavy binaries)
+        run: python scripts/check_footprint.py --wheel "dist/*.whl"
       - uses: actions/upload-artifact@v4
         with:
           name: dist

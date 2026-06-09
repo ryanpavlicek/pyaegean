@@ -85,9 +85,13 @@ undeciphered — never present analysis as ground truth.
   messages, code comments, PR text, or any pushed artifact.
 - `commit.gpgsign` is `false` in this repo's git config (avoids the managed
   signing server) — leave it off unless signing works in your env.
-- Heavy deps (`numpy`/`pandas`/`scipy`) are **lazy-imported inside functions** so
-  `import aegean` stays instant. Wheel stays **< 3 MB** (CI guards it); never
-  bundle large/binary assets — use the `fetch()` layer.
+- **Core has zero hard third-party deps.** `import aegean` is instant and loads
+  nothing heavy; `pandas` is the optional `[data]` extra (lazy-imported only inside
+  `to_dataframe`), and collocation stats are pure stdlib. The guard is the invariant,
+  not a byte count: `scripts/check_footprint.py` enforces import-clean (no heavy
+  module in `sys.modules` after import), import-fast, and a code+JSON-only wheel.
+  Never bundle large/binary assets — corpora and trained models fetch to cache via
+  the `fetch()` layer.
 - Every **exploratory** method (cross-linguistic distance, morphology clustering,
   accounting reconciliation, decipherment, AI readings) carries its caveat in the
   docstring and is labeled unverified at point of use.
@@ -101,10 +105,12 @@ undeciphered — never present analysis as ground truth.
 
 ```bash
 pip install -e ".[dev]"
-pytest                 # 288 passing (1 skipped)
+pytest                 # 306 passing (1 skipped)
 ruff check src tests
 mypy                   # clean (enforced in CI)
-python -m build && python -m twine check dist/*   # wheel must be < 3 MB
+python -m build && python -m twine check dist/*
+python scripts/check_footprint.py --wheel "dist/*.whl"   # wheel = code + JSON only
+python scripts/check_footprint.py                        # import-clean + import-fast
 ```
 
 ## Layout

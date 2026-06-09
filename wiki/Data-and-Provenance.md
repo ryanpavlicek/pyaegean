@@ -8,7 +8,8 @@ Compact text data ships **inside the wheel** and works offline:
 - Greek: `sample_texts.json`, `lemmata.json`, `benchmark_gold.json`
 
 Large or license-restricted assets are **never bundled** — they are fetched on
-demand into a user cache. This keeps the wheel < 3 MB (CI guards it).
+demand into a user cache. The wheel ships only code + tiny JSON (CI's
+`scripts/check_footprint.py` enforces that, plus an instant, heavy-dep-free import).
 
 ```python
 from aegean.data import load_bundled_json

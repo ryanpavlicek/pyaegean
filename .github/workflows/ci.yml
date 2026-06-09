@@ -50,8 +50,17 @@ jobs:
       - run: pip install build twine
       - run: python -m build
       - run: python -m twine check dist/*
-      - name: Wheel size guard (< 3 MB)
-        run: |
-          size=$(stat -c%s dist/*.whl)
-          echo "wheel size: $size bytes"
-          test "$size" -lt 3145728
+      - name: Footprint guard (wheel is code + JSON only, no heavy binaries)
+        run: python scripts/check_footprint.py --wheel "dist/*.whl"
+
+  footprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install .          # core only — no extras, so heavy deps stay absent
+      - name: Import-clean + import-fast guard
+        run: python scripts/check_footprint.py

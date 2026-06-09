@@ -35,6 +35,16 @@ All notable changes to pyaegean are documented here. The format follows
   closed-class lexicon and treebank lookup don't cover, generalizing tags to unseen text.
 - `lemmatize`/`lemmatize_verbose` consult the trained lemmatizer (when active) after the
   treebank lookup, generalizing lemmas to unseen forms.
+- **Core now has zero hard third-party dependencies.** `pandas` moved to a new optional
+  `[data]` extra (lazy-imported only by `to_dataframe`, which raises a clear install hint if
+  it's missing); `scipy` was dropped entirely — the two collocation statistics (χ² p-value,
+  Fisher's exact) are now pure stdlib (`math.erfc`/`math.lgamma`). `pip install pyaegean` no
+  longer pulls pandas/numpy/scipy. *Breaking only if you called `to_dataframe()` without
+  installing `pyaegean[data]`.*
+- **Footprint policy replaces the wheel-size guard.** The `<3 MB` wheel check is gone (it was
+  a no-op beside the old hard deps); `scripts/check_footprint.py` now enforces the invariants
+  that matter — `import aegean` loads no heavy module, imports fast, and the wheel ships only
+  code + JSON.
 
 ## 0.2.0 — 2026-06-08
 
