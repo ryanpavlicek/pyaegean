@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **Generalizing POS tagger** (opt-in): `greek.use_tagger()` trains an averaged-perceptron
+  sequence tagger (pure Python, no heavy deps) on the AGDT that predicts part of speech for
+  **unseen** forms from suffix/prefix/shape/accent + left-to-right context features — where
+  the treebank lookup (attested forms only) and the suffix heuristic fail. `greek.pos_tags()`
+  uses it in context when active; `greek.evaluate_tagger()` reports leakage-free held-out
+  accuracy. Measured **84.4% POS overall / 83.6% on unseen forms** on a 90/10 AGDT split
+  (vs ~0% for the lookup and ~50% for the heuristic on unseen); on the same split stanza
+  (CLTK grc) scores 89.1% unseen, so pyaegean lands within ~5–6 points pure-Python — on a
+  split that is *in-training* for stanza. The ~2.2 MB model is built on first use, cached,
+  never bundled.
+- **Leakage-free held-out evaluation** (`aegean.greek.heldout`): splits the AGDT by
+  sentence, flags dev forms unseen in training, and scores any tagger (a pyaegean mode or a
+  CLTK pipeline) on the disjoint unseen subset — the honest generalization measure behind
+  the tagger numbers and the CLTK comparison.
+
+### Changed
+- `pos_tag`/`pos_tags` consult the trained tagger (when active) for the open-class forms the
+  closed-class lexicon and treebank lookup don't cover, generalizing tags to unseen text.
+
 ## 0.2.0 — 2026-06-08
 
 Deepens the Greek NLP track with two opt-in, gold-data backends and a revamped

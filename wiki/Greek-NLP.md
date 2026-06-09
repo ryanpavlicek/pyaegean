@@ -207,7 +207,50 @@ switch on the [treebank backend](#treebank-backed-mode-opt-in) — with
 `greek.use_treebank()` active, `pos_tag`/`pos_tags` return the gold AGDT tag for a
 known form (e.g. ἔφη → VERB) before falling back to the heuristic. Tags:
 `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X` (treebank mode may
-also emit `INTJ`).
+also emit `INTJ`). The treebank only covers *attested* forms, though — to tag an
+**unseen** form well, switch on the
+[generalizing tagger](#generalizing-pos-tagger-opt-in) below.
+
+## Generalizing POS tagger (opt-in)
+
+The baseline heuristic and the treebank lookup both fall down on an *unseen* open-class
+form — the heuristic just guesses NOUN, and the lookup has no entry for it. `use_tagger()`
+switches on a trained **averaged-perceptron** sequence tagger (pure Python, no heavy deps)
+that predicts a tag from suffix/prefix/shape/accent features plus left-to-right sentence
+context — so it **generalizes** to forms it has never seen.
+
+```python
+greek.use_tagger()        # one-time train (~2–3 min) from the cached AGDT, then cached
+greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος")   # every token tagged, in context
+greek.disable_tagger()    # back to the lookup/heuristic
+```
+
+It composes with the cascade: the closed-class lexicon and (when active) the treebank
+lookup still take precedence per token for the forms they cover; the tagger fills in
+everything else, including words neither has seen.
+
+**Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on
+the disjoint 10% (≈54k tokens, via `greek.evaluate_tagger()`), it reaches **84.4% POS
+overall and 83.6% on UNSEEN forms** — forms absent from the training split. For contrast,
+on the same tokens the lookup scores 0% on unseen (no entry) and the suffix heuristic only
+~50%. The cached model is ~2.2 MB and `import aegean` stays instant — the model is built on
+first `use_tagger()`, never bundled.
+
+```python
+greek.evaluate_tagger(holdout=0.1)
+# {'pos_all': 0.844, 'pos_unseen': 0.836, 'n_all': 54036, 'n_seen': 45138, 'n_unseen': 8898}
+```
+
+**How close is that to CLTK?** On the *same* held-out split, stanza (CLTK's grc engine)
+scores ~89% on unseen forms — about 5–6 points ahead. But read it honestly: that split is
+*in-training* for stanza (its Perseus models were trained on the AGDT), which inflates it
+on seen forms, while UD-vs-AGDT tagset conventions (stanza's PROPN/AUX/SCONJ) penalize it
+on those same seen words; both biases concentrate on seen forms, so the **unseen column is
+the clean comparison**. pyaegean lands within ~5–6 points of a neural tagger with **zero
+heavy dependencies, an instant import, and a ~2 MB model** (vs stanza's torch + ~500 MB) —
+see [Comparing against CLTK](#comparing-against-cltk). A fully neutral "beat CLTK" test
+needs a hand-checked, out-of-AGDT gold set; the AGDT can't settle it, since it trained
+stanza.
 
 ## Morphological analysis
 
@@ -373,6 +416,25 @@ convention difference vs our `VERB`, and `τόν → PRON`, ambiguous out of con
 reflect that). A larger, in-context, held-out evaluation is the fair next step, and the
 signal that *truly* rivaling CLTK across the board needs a generalizing model, not just
 lookup.
+
+**Held-out generalization (that fair next step, now taken).** The
+[generalizing tagger](#generalizing-pos-tagger-opt-in) was measured exactly that way — a
+leakage-free 90/10 AGDT sentence split, scored *in context* on ≈54k tokens, with the
+**unseen-form** subset (forms absent from training) called out separately:
+
+| POS — held-out AGDT | overall | unseen forms |
+| --- | --- | --- |
+| pyaegean tagger (pure Python) | 84.4% | 83.6% |
+| stanza / CLTK grc | 89.6%¹ | 89.1% |
+
+¹ Raw, in the AGDT tag scheme. Canonicalizing the UD-vs-AGDT differences stanza is
+penalized for on *seen* closed-class words (PROPN→NOUN, AUX→VERB, SCONJ→CCONJ) raises its
+overall to 92.0%; the unseen column is unchanged (those are all seen forms).
+
+stanza leads by ~5–6 points on unseen forms — but the AGDT is *in-training* for stanza (its
+models were trained on it), so this split flatters it. The unseen column is the cleanest
+comparison, and even there pyaegean closes most of the gap with no heavy deps. A fully
+neutral verdict needs an out-of-AGDT gold set neither system trained on.
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,

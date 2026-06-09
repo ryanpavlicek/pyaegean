@@ -82,11 +82,12 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
   POS tagging, a rule-based morphological analyzer (with an optional
   Perseus-treebank–backed lexicon for attested, accented lemmas), baseline
-  lemmatization, opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), an opt-in
-  baseline **dependency parser** (`use_parser` → `parse`; ~0.67 UAS / 0.57 LAS on
-  projective AGDT), and a **CLTK benchmark harness** (the opt-in treebank lifts lemma
-  28%→100% and POS 50%→100% on the gold set). `aegean.load("greek")` loads a small
-  bundled sample corpus (Archaic→Koine).
+  lemmatization, an opt-in **generalizing POS tagger** (`use_tagger`; an averaged
+  perceptron trained on the AGDT — ~84% on *unseen* forms, where the lookup can't help),
+  opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), an opt-in baseline **dependency
+  parser** (`use_parser` → `parse`; ~0.67 UAS / 0.57 LAS on projective AGDT), and a **CLTK
+  benchmark harness** (the opt-in treebank lifts lemma 28%→100% and POS 50%→100% on the
+  gold set). `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 - **`aegean.ai`** — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
@@ -107,12 +108,13 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-**Shipped:** v0.1 core + Linear A + Greek start. **v0.2 (current):** multi-provider AI
-layer + translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a
-baseline dependency parser, and a CLTK benchmark harness (treebank mode ties CLTK on
-lemma and edges it on POS on the gold set). **Next:** v0.3 a larger, in-context CLTK
-evaluation (full First1KGreek/Perseus corpus + grown gold) → v0.4 Linear B (DAMOS/LiBER)
-→ v0.5 Cypriot/Cypro-Minoan → v1.0 stable.
+**Shipped:** v0.1 core + Linear A + Greek start. **v0.2:** multi-provider AI layer +
+translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a baseline
+dependency parser, and a CLTK benchmark harness. **In progress (v0.3):** a *generalizing*
+POS tagger (`use_tagger`; an averaged perceptron, ~84% on unseen forms) measured against
+CLTK on a leakage-free held-out AGDT split — within ~5–6 points of stanza, pure-Python.
+**Next:** a hand-checked out-of-AGDT gold set (the neutral "beat CLTK" test) → v0.4 Linear
+B (DAMOS/LiBER) → v0.5 Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License
 

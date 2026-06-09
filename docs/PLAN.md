@@ -172,8 +172,12 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   Perseus LSJ glossing via `greek.use_lsj()` (`gloss`/`lookup`); opt-in baseline dependency parser
   (arc-eager + averaged perceptron) via `greek.use_parser()` (`parse`→`DepTree`), ~0.67 UAS projective
   / ~0.51 all-text on AGDT. CLTK head-to-head run (CLTK 2.5.1 + stanza grc): on the gold set treebank
-  ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — small attested-weighted gold, so a larger
-  in-context held-out eval (and a generalizing model) is the fair next step.)*
+  ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — small attested-weighted gold. That fair next
+  step is now taken: a **generalizing POS tagger** (`greek.use_tagger()`, averaged perceptron, pure
+  Python) measured on a leakage-free held-out AGDT split via `greek.evaluate_tagger()` (the new
+  `aegean.greek.heldout` module) — 84.4% all / 83.6% unseen, vs stanza 89.1% unseen (within ~5–6 pts, on
+  a split that is in-training for stanza). A neutral out-of-AGDT gold set is the remaining piece to truly
+  settle beat-CLTK.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.

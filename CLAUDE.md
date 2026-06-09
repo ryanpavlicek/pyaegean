@@ -61,9 +61,14 @@ undeciphered — never present analysis as ground truth.
    trains an arc-eager + averaged-perceptron parser (pure Python) on the AGDT and
    exposes `greek.parse()` → `DepTree`; measured ~0.67 UAS / 0.57 LAS on projective
    AGDT, ~0.51 / 0.42 all-text (`greek.evaluate()`); arc-eager is projective-only
-   (~31% of AGDT) — honest baseline. Next: a larger, in-context, held-out CLTK eval
-   (pull the full First1KGreek/Perseus corpus, grow the gold) and a *generalizing*
-   morphology/POS model — lookup alone won't beat CLTK on unseen forms.
+   (~31% of AGDT) — honest baseline. **Generalizing POS tagger landed**: opt-in
+   `greek.use_tagger()` trains an averaged-perceptron sequence tagger (pure Python) on the
+   AGDT that tags *unseen* forms from suffix/shape/accent + context; `greek.evaluate_tagger()`
+   reports leakage-free held-out accuracy via the new `aegean.greek.heldout` split/scorer
+   (84.4% all / 83.6% unseen on a 90/10 split, vs stanza's 89.1% unseen — within ~5–6 pts,
+   and the AGDT is in-training for stanza so it flatters stanza). Next: a hand-checked
+   out-of-AGDT gold set (the neutral beat-CLTK test the AGDT can't give) and a generalizing
+   *lemmatizer*/morphology model — lookup alone won't beat CLTK on unseen forms.
    (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)

@@ -97,6 +97,10 @@ def pos_tag(word: str) -> str:
         attested = lex.pos(word)
         if attested is not None:
             return attested
+    from . import tagger
+
+    if tagger.active() is not None:  # trained generalizer for unseen forms
+        return tagger.tag_pos([word])[0]
     bare = _strip(word)
     if bare.endswith(_VERB_SUFFIXES):
         return "VERB"
@@ -104,11 +108,31 @@ def pos_tag(word: str) -> str:
 
 
 def pos_tags(text: str) -> list[tuple[str, str]]:
-    """``(token, tag)`` pairs for a text, in order (punctuation tagged PUNCT)."""
+    """``(token, tag)`` pairs for a text, in order (punctuation tagged PUNCT). When the
+    trained tagger is active it tags the whole sentence **in context**, with the
+    closed-class lexicon and the treebank lookup still taking precedence per token."""
     from ..core.model import TokenKind
+    from . import tagger, treebank
 
+    toks = list(tokenize(text))
+    if tagger.active() is None:
+        return [
+            (t.text, "PUNCT" if t.kind is TokenKind.PUNCT else pos_tag(t.text))
+            for t in toks
+        ]
+
+    context_tags = tagger.tag_pos([t.text for t in toks])
+    lex = treebank.active()
     out: list[tuple[str, str]] = []
-    for tok in tokenize(text):
-        tag = "PUNCT" if tok.kind is TokenKind.PUNCT else pos_tag(tok.text)
+    for tok, ctx in zip(toks, context_tags):
+        looked_up = lex.pos(tok.text) if lex is not None else None
+        if tok.kind is TokenKind.PUNCT:
+            tag = "PUNCT"
+        elif _norm(tok.text) in _LEXICON:
+            tag = _LEXICON[_norm(tok.text)]
+        elif looked_up is not None:
+            tag = looked_up
+        else:
+            tag = ctx
         out.append((tok.text, tag))
     return out
