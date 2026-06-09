@@ -34,7 +34,7 @@ cells.append(md(
 
 cells.append(code(
     "!nvidia-smi -L  # MUST list a GPU\n"
-    "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'accelerate>=0.30' onnx onnxruntime"
+    "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'accelerate>=0.30' onnx onnxruntime onnxscript"
 ))
 
 cells.append(md("## 0 · Detect GPU + precision"))
@@ -158,14 +158,24 @@ cells.append(md(
 ))
 cells.append(code(
     "import os\n"
+    "os.makedirs('onnx', exist_ok=True)\n"
     "m = model.eval().float().cpu()\n"
     "dummy = (torch.tensor([[0, 1, 2, 3, 4]]), torch.ones(1, 5, dtype=torch.long))\n"
-    "os.makedirs('onnx', exist_ok=True)\n"
     "dyn = {'input_ids': {0: 'b', 1: 's'}, 'attention_mask': {0: 'b', 1: 's'}}\n"
     "dyn.update({f: {0: 'b', 1: 's'} for f in FIELDS})\n"
-    "torch.onnx.export(m, dummy, 'onnx/model.onnx',\n"
-    "    input_names=['input_ids', 'attention_mask'], output_names=FIELDS,\n"
-    "    dynamic_axes=dyn, opset_version=14)\n"
+    "try:  # torch>=2.9 defaults to the dynamo exporter (needs onnxscript); legacy is simpler here\n"
+    "    torch.onnx.export(m, dummy, 'onnx/model.onnx',\n"
+    "        input_names=['input_ids', 'attention_mask'], output_names=FIELDS,\n"
+    "        dynamic_axes=dyn, opset_version=14, dynamo=False)\n"
+    "    print('exported (legacy)')\n"
+    "except Exception as e:\n"
+    "    print('legacy failed:', str(e)[:150], '\\n-> retrying with the dynamo exporter...')\n"
+    "    import subprocess, sys\n"
+    "    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'onnxscript'])\n"
+    "    torch.onnx.export(m, dummy, 'onnx/model.onnx',\n"
+    "        input_names=['input_ids', 'attention_mask'], output_names=FIELDS,\n"
+    "        dynamic_axes=dyn, opset_version=14)\n"
+    "    print('exported (dynamo)')\n"
     "tokenizer.save_pretrained('onnx')\n"
     "print('exported', os.path.getsize('onnx/model.onnx') // (1024*1024), 'MB; outputs:', FIELDS)"
 ))
