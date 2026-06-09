@@ -1,11 +1,10 @@
 """Build spike_lemma_grebert.ipynb (run once: `python build_spike_notebook.py`).
 
 H100-aware (auto-detects bf16/tf32 and scales batch size; falls back cleanly on a T4),
-and uses current, non-deprecated APIs:
-  - Trainer(processing_class=...)  not the deprecated tokenizer=
-  - eval_strategy=                 not the deprecated evaluation_strategy=
-  - optimum-cli export onnx + onnxruntime.quantization.quantize_dynamic
-    (not ORTModelForTokenClassification(export=True) + ORTQuantizer)
+current non-deprecated APIs (Trainer(processing_class=...), eval_strategy=,
+optimum-cli export onnx), and — importantly — it SHIPS fp32 and self-validates on the dev
+set in Colab. (Per-tensor int8 dynamic quantization collapses the ~9k-class edit-tree head
+to the majority class; for production use per-channel quantization and validate.)
 """
 from __future__ import annotations
 
@@ -25,16 +24,16 @@ cells.append(md(
     "(pure-Python baseline 40.3%, stanza 62.8%) — by classifying the **same edit-tree label "
     "set** the pure-Python lemmatizer uses, but from a fine-tuned Ancient-Greek transformer.\n"
     "\n"
-    "**Loop:** set runtime to a **GPU** (an H100 is ideal; a T4 also works) → Run all → "
-    "download `spike_model.zip` at the end → send it back for the torch-free local eval.\n"
+    "**Loop:** set runtime to a **GPU** (H100 ideal; T4 fine) → Run all → it prints the dev "
+    "lemma score *in Colab* → download `spike_model.zip` → send it back for the local eval.\n"
     "\n"
-    "Precision auto-detects: **bf16 + TF32 + fused AdamW + batch 64 on H100/A100**, "
-    "fp16 + batch 16 on a T4. Encoder: `bowphs/GreBerta` (Apache-2.0, Ancient-Greek RoBERTa). "
-    "torch/transformers are used **only here**; production inference is onnxruntime-only."
+    "Precision auto-detects: **bf16 + TF32 + fused AdamW + batch 64 on H100/A100**, fp16 + batch "
+    "16 on a T4. Encoder: `bowphs/GreBerta` (Apache-2.0). torch/transformers are used **only "
+    "here**; production inference is onnxruntime-only. We ship **fp32** (see the export note)."
 ))
 
 cells.append(code(
-    "!nvidia-smi -L  # confirm the GPU (H100 ideal)\n"
+    "!nvidia-smi -L  # MUST list a GPU; if it says 'command not found' you're on CPU — fix the runtime\n"
     "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'optimum[onnxruntime]>=1.20' "
     "'accelerate>=0.30' onnx onnxruntime"
 ))
@@ -42,18 +41,17 @@ cells.append(code(
 cells.append(md("## 0 · Detect GPU + precision"))
 cells.append(code(
     "import torch\n"
-    "gpu = torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'\n"
-    "USE_BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()  # Ampere/Hopper+\n"
+    "assert torch.cuda.is_available(), 'No GPU! Runtime > Change runtime type > GPU, then reconnect.'\n"
+    "gpu = torch.cuda.get_device_name(0)\n"
+    "USE_BF16 = torch.cuda.is_bf16_supported()  # Ampere/Hopper+\n"
     "BS = 64 if USE_BF16 else 16\n"
     "print(f'torch {torch.__version__} | CUDA {torch.version.cuda} | GPU {gpu}')\n"
-    "print(f'bf16={USE_BF16}  ->  batch_size={BS}, '\n"
-    "      f'precision={\"bf16+tf32\" if USE_BF16 else \"fp16\"}')"
+    "print(f'bf16={USE_BF16} -> batch_size={BS}, precision={\"bf16+tf32\" if USE_BF16 else \"fp16\"}')"
 ))
 
 cells.append(md(
     "## 1 · Upload the data bundle\n"
-    "Upload **`spike_data.zip`** (zip of `experiments/neural_lemma_spike/data/`: "
-    "`train.jsonl`, `dev.jsonl`, `labels.json`)."
+    "Upload **`spike_data.zip`** (`train.jsonl`, `dev.jsonl`, `labels.json`)."
 ))
 cells.append(code(
     "import json, zipfile, pathlib\n"
@@ -89,8 +87,7 @@ cells.append(code(
 
 cells.append(md(
     "## 4 · Tokenize + align labels to the first sub-token of each word\n"
-    "Label only the first sub-token of each word, `-100` (ignored by the loss) elsewhere — "
-    "matching the local eval's first-subword pooling."
+    "Label only the first sub-token of each word, `-100` (ignored by the loss) elsewhere."
 ))
 cells.append(code(
     "def align(batch):\n"
@@ -104,7 +101,7 @@ cells.append(code(
     "            if wid is None:\n"
     "                row.append(-100)\n"
     "            elif wid != prev:\n"
-    "                row.append(tags[wid])      # already -100 for pruned tokens\n"
+    "                row.append(tags[wid])\n"
     "            else:\n"
     "                row.append(-100)\n"
     "            prev = wid\n"
@@ -112,14 +109,14 @@ cells.append(code(
     "    enc['labels'] = out\n"
     "    return enc\n"
     "tok_ds = ds.map(align, batched=True, remove_columns=ds.column_names)\n"
-    "tok_ds = tok_ds.train_test_split(test_size=0.02, seed=0)  # small dev for best-epoch selection\n"
+    "tok_ds = tok_ds.train_test_split(test_size=0.02, seed=0)\n"
     "print(tok_ds)"
 ))
 
 cells.append(md(
     "## 5 · Fine-tune (H100-tuned; keeps the best epoch by dev token-accuracy)\n"
-    "On an H100 this is a few minutes for 4 epochs; on a T4, longer. `load_best_model_at_end` "
-    "uses the dev split so extra epochs can't overfit the kept checkpoint."
+    "Watch `tok_acc` climb each epoch — if it stays near the identity rate, training didn't "
+    "take (check the GPU). On an H100 this is a few minutes."
 ))
 cells.append(code(
     "import numpy as np\n"
@@ -135,40 +132,77 @@ cells.append(code(
     "    output_dir='out', learning_rate=3e-5,\n"
     "    per_device_train_batch_size=BS, per_device_eval_batch_size=BS * 2,\n"
     "    num_train_epochs=4, weight_decay=0.01, warmup_ratio=0.06,\n"
-    "    bf16=USE_BF16, fp16=not USE_BF16,    # bf16 on H100/A100, fp16 on T4\n"
-    "    tf32=USE_BF16,                        # TF32 matmuls on Ampere+ (no-op on T4)\n"
-    "    optim='adamw_torch_fused',            # fused optimizer — faster on CUDA\n"
-    "    dataloader_num_workers=2,\n"
+    "    bf16=USE_BF16, fp16=not USE_BF16, tf32=USE_BF16,\n"
+    "    optim='adamw_torch_fused', dataloader_num_workers=2,\n"
     "    eval_strategy='epoch', save_strategy='epoch', save_total_limit=1,\n"
     "    load_best_model_at_end=True, metric_for_best_model='tok_acc', greater_is_better=True,\n"
     "    logging_steps=50, report_to='none')\n"
     "trainer = Trainer(model=model, args=args, train_dataset=tok_ds['train'],\n"
     "                  eval_dataset=tok_ds['test'], data_collator=collator,\n"
-    "                  processing_class=tokenizer, compute_metrics=metrics)  # processing_class, not tokenizer=\n"
+    "                  processing_class=tokenizer, compute_metrics=metrics)\n"
     "trainer.train()\n"
     "trainer.save_model('out_model'); tokenizer.save_pretrained('out_model')\n"
-    "print('in-notebook token-accuracy is a sanity check only; the real lemma number is the\\n'\n"
-    "      'local torch-free eval_spike.py on dev.jsonl')"
+    "print('final dev token-accuracy above is the sanity signal; the real lemma number is next.')"
 ))
 
 cells.append(md(
-    "## 6 · Export to ONNX + int8 quantize (current optimum / onnxruntime APIs)\n"
-    "`optimum-cli export onnx` then `onnxruntime.quantization.quantize_dynamic`. If quantization "
-    "errors on this version, the fp32 export ships instead — `eval_spike.py` runs either."
+    "## 6 · Export to ONNX (fp32)\n"
+    "We ship **fp32**. Per-tensor int8 *dynamic* quantization collapses this ~9k-class head to "
+    "the majority class (an outlier blows up the single weight scale). Production should use "
+    "**per-channel** quantization (`quantize_dynamic(..., per_channel=True)`) or exclude the "
+    "classifier MatMul, and validate against the dev score below before shipping."
 ))
 cells.append(code(
     "import os\n"
     "!optimum-cli export onnx --model out_model --task token-classification onnx_fp32\n"
     "onnx_path = 'onnx_fp32/model.onnx'\n"
-    "try:\n"
-    "    from onnxruntime.quantization import quantize_dynamic, QuantType\n"
-    "    quantize_dynamic('onnx_fp32/model.onnx', 'onnx_fp32/model_int8.onnx', weight_type=QuantType.QInt8)\n"
-    "    onnx_path = 'onnx_fp32/model_int8.onnx'\n"
-    "    print('int8 quantized ->', onnx_path)\n"
-    "except Exception as e:\n"
-    "    print('quantization skipped (' + str(e)[:160] + '); shipping fp32')\n"
     "for f in sorted(os.listdir('onnx_fp32')):\n"
     "    print(f, os.path.getsize(os.path.join('onnx_fp32', f)) // 1024, 'KB')"
+))
+
+cells.append(md(
+    "## 6b · In-Colab sanity — dev lemma accuracy (self-contained)\n"
+    "Decode the predicted edit-tree per token and score lemma vs gold on the dev split. This is "
+    "the number that matters — see it **before** downloading, so a broken/quantized head can't "
+    "slip through. (Mirrors the local torch-free eval exactly.)"
+))
+cells.append(code(
+    "import numpy as np, onnxruntime as ort, re, unicodedata\n"
+    "from tokenizers import Tokenizer\n"
+    "sess = ort.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])\n"
+    "tkf = Tokenizer.from_file('onnx_fp32/tokenizer.json')\n"
+    "inames = {i.name for i in sess.get_inputs()}\n"
+    "def _nrm(s): return unicodedata.normalize('NFC', s)\n"
+    "def _clean(s): return re.sub(r'\\d+$', '', unicodedata.normalize('NFC', s))\n"
+    "def apply_tree(t, w):\n"
+    "    if t[0] == 'keep': return w\n"
+    "    if t[0] == 'sub': return t[1]\n"
+    "    _, pl, sl, lf, rt = t\n"
+    "    if pl + sl > len(w): return None\n"
+    "    p = apply_tree(lf, w[:pl]); s = apply_tree(rt, w[len(w) - sl:] if sl else '')\n"
+    "    if p is None or s is None: return None\n"
+    "    return p + (w[pl:len(w) - sl] if sl else w[pl:]) + s\n"
+    "dev = read_jsonl(DATA / 'dev.jsonl')\n"
+    "na = nu = oa = ou = 0\n"
+    "for srow in dev:\n"
+    "    forms = srow['tokens']; enc = tkf.encode(forms, is_pretokenized=True)\n"
+    "    feed = {'input_ids': np.array([enc.ids], dtype=np.int64)}\n"
+    "    if 'attention_mask' in inames:\n"
+    "        feed['attention_mask'] = np.array([enc.attention_mask], dtype=np.int64)\n"
+    "    lg = sess.run(None, feed)[0][0]\n"
+    "    first = {}\n"
+    "    for pos, wid in enumerate(enc.word_ids):\n"
+    "        if wid is not None and wid not in first: first[wid] = pos\n"
+    "    for wi, form in enumerate(forms):\n"
+    "        if not srow['scored'][wi]: continue\n"
+    "        na += 1; un = not srow['seen'][wi]; nu += un\n"
+    "        pos = first.get(wi); pred = _nrm(form)\n"
+    "        if pos is not None:\n"
+    "            out = apply_tree(json.loads(labels[int(np.argmax(lg[pos]))]), _nrm(form))\n"
+    "            if out is not None: pred = out\n"
+    "        if _clean(pred) == srow['lemmas'][wi]: oa += 1; ou += un\n"
+    "print(f'DEV lemma — all {oa/na:.1%}  UNSEEN {ou/nu:.1%}   '\n"
+    "      f'(beat: stanza 62.8% unseen; pure-Python 40.3%)')"
 ))
 
 cells.append(md("## 7 · Package + download `spike_model.zip`"))
@@ -185,13 +219,13 @@ cells.append(code(
 
 cells.append(md(
     "## Next\n"
-    "Send back `spike_model.zip`. Local, torch-free:\n"
+    "The **DEV lemma** number from 6b is the answer (unseen > 62.8% = we beat stanza). Send back "
+    "`spike_model.zip` and I'll confirm it locally with the real pyaegean decode.\n"
     "```\n"
     "pip install onnxruntime tokenizers numpy\n"
     "python eval_spike.py --model model.onnx --tokenizer tokenizer.json \\\n"
     "                     --labels data/labels.json --dev data/dev.jsonl\n"
-    "```\n"
-    "Success = **unseen lemma > 62.8%** on our own split → green-light the full multi-task backend."
+    "```"
 ))
 
 nb["cells"] = cells
