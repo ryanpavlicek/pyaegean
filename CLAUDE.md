@@ -66,9 +66,13 @@ undeciphered — never present analysis as ground truth.
    AGDT that tags *unseen* forms from suffix/shape/accent + context; `greek.evaluate_tagger()`
    reports leakage-free held-out accuracy via the new `aegean.greek.heldout` split/scorer
    (84.4% all / 83.6% unseen on a 90/10 split, vs stanza's 89.1% unseen — within ~5–6 pts,
-   and the AGDT is in-training for stanza so it flatters stanza). Next: a hand-checked
-   out-of-AGDT gold set (the neutral beat-CLTK test the AGDT can't give) and a generalizing
-   *lemmatizer*/morphology model — lookup alone won't beat CLTK on unseen forms.
+   and the AGDT is in-training for stanza so it flatters stanza). **Generalizing lemmatizer
+   landed**: opt-in `greek.use_lemmatizer()` trains an edit-tree + averaged-perceptron model
+   (pure Python, POS-conditioned via the tagger) that lemmatizes *unseen* forms;
+   `greek.evaluate_lemmatizer()` reports 84.5% all / 40.3% unseen (vs stanza 62.8% unseen —
+   neural lemma still leads on unseen; pyaegean lifts it from the lookup's 0%). Both reuse
+   the leakage-free `aegean.greek.heldout` split/scorer. Next: a hand-checked out-of-AGDT
+   gold set (the neutral beat-CLTK test the AGDT can't give) and a stronger lemma model.
    (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)

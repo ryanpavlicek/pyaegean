@@ -176,8 +176,11 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   step is now taken: a **generalizing POS tagger** (`greek.use_tagger()`, averaged perceptron, pure
   Python) measured on a leakage-free held-out AGDT split via `greek.evaluate_tagger()` (the new
   `aegean.greek.heldout` module) — 84.4% all / 83.6% unseen, vs stanza 89.1% unseen (within ~5–6 pts, on
-  a split that is in-training for stanza). A neutral out-of-AGDT gold set is the remaining piece to truly
-  settle beat-CLTK.)*
+  a split that is in-training for stanza). A **generalizing lemmatizer** (`greek.use_lemmatizer()`,
+  edit-trees + averaged-perceptron reranker, POS-conditioned) lands the same way via
+  `greek.evaluate_lemmatizer()` — 84.5% all / 40.3% unseen, vs stanza 62.8% unseen (neural lemma still
+  leads on unseen; pyaegean lifts it from the lookup's 0%). A neutral out-of-AGDT gold set is the
+  remaining piece to truly settle beat-CLTK.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.

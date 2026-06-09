@@ -436,6 +436,21 @@ models were trained on it), so this split flatters it. The unseen column is the 
 comparison, and even there pyaegean closes most of the gap with no heavy deps. A fully
 neutral verdict needs an out-of-AGDT gold set neither system trained on.
 
+The same evaluation for **lemmatization** (the
+[generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
+
+| lemma — held-out AGDT | overall | unseen forms |
+| --- | --- | --- |
+| pyaegean lemmatizer (pure Python) | 84.5% | 40.3% |
+| stanza / CLTK grc | 87.3% | 62.8% |
+
+Lemmatization is competitive on overall accuracy, but stanza leads clearly on **unseen**
+forms — recovering an unseen lemma (often an accent/stem change, not just a suffix swap) is
+the hardest task here, and stanza's neural character model is genuinely strong at it. The
+pyaegean lemmatizer still lifts unseen-form lemma from **0%** (the lookup has no entry) to
+~40% with no heavy deps; closing the rest motivates the out-of-AGDT gold set and, longer
+term, a stronger lemma model.
+
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
 `compare_pos_taggers`, or `compare_modes`.
@@ -452,6 +467,41 @@ greek.lemmatize("λόγου")          # 'λόγος'
 greek.lemmatize("ἦν")             # 'εἰμί'
 greek.lemmatize_verbose("ξενικον")  # ('ξενικον', False)  ← not in the seed table
 ```
+
+To lemmatize **unseen** forms, switch on the
+[generalizing lemmatizer](#generalizing-lemmatizer-opt-in) below.
+
+## Generalizing lemmatizer (opt-in)
+
+The seed table and the treebank lookup only lemmatize *attested* forms; an unseen form comes
+back unchanged. `use_lemmatizer()` switches on a trained lemmatizer that **generalizes**: from
+each (form, lemma) pair it learns a Chrupała-style **edit tree** — a recursive transform that
+keeps the shared stem and rewrites the differing prefix/suffix — so a rule learned from one
+word (`-ου → -ος`) applies to unseen words (`νόμου → νόμος`), and edit trees capture accent
+shifts and capitalization too. An averaged-perceptron reranker, conditioned on POS, picks the
+right tree for each form.
+
+```python
+greek.use_tagger()        # recommended — the lemmatizer conditions on the tagger's POS
+greek.use_lemmatizer()    # one-time train (~5 min) from the cached AGDT, then cached
+greek.lemmatize("ἀνθρώπων")   # 'ἄνθρωπος', even if the form was never attested
+greek.disable_lemmatizer()
+```
+
+It slots into the cascade after the treebank lookup: an attested form still gets its gold
+lemma; everything else goes to the model.
+
+**Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on the
+disjoint 10% (via `greek.evaluate_lemmatizer()`, with *predicted* POS), it reaches **84.5%
+overall and 40.3% on unseen forms** — versus the lookup's 0% on unseen. The cached model is
+~7 MB (built on first use, never bundled).
+
+**Versus CLTK.** On the same split stanza scores 62.8% on unseen lemma — clearly ahead.
+Recovering an unseen Greek lemma often means an internal stem/accent change, not just a suffix
+swap, and stanza's neural character model is genuinely strong there (a pure-Python edit-tree
+reranker tops out near 45% even with gold POS). So this is honest, real generalization (0 →
+40% unseen, competitive on attested forms) but not yet a win on unseen lemma — see
+[Comparing against CLTK](#comparing-against-cltk).
 
 ## Lexicon (LSJ glossing, opt-in)
 

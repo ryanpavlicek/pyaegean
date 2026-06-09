@@ -70,8 +70,9 @@ overrides any dataset's URL.
 Treebank** (AGDT v2.1, Greek) — 33 `.tb.xml` files, ~75 MB, pinned to a fixed
 commit — into the cache, then builds a derived form→lemma/morphology lexicon there
 (`agdt-greek-lexicon.json`); `use_parser()` trains a dependency-parser model
-(`agdt-parser-model.json.gz`) and `use_tagger()` trains a generalizing POS-tagger model
-(`agdt-postagger.json.gz`) from the same files. The treebank is **CC BY-SA 3.0**; it is fetched (never
+(`agdt-parser-model.json.gz`), `use_tagger()` trains a POS-tagger model
+(`agdt-postagger.json.gz`), and `use_lemmatizer()` trains an edit-tree lemmatizer model
+(`agdt-lemmatizer.json.gz`) from the same files. The treebank is **CC BY-SA 3.0**; it is fetched (never
 re-hosted), and the derived lexicon stays in the local cache — pyaegean neither
 bundles nor redistributes it, so the ShareAlike terms don't reach the Apache-2.0
 package. Cite the AGDT in work that relies on it. Network is needed only on the

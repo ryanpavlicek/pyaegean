@@ -30,8 +30,10 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     the (normalized) input is returned unchanged.
 
     When the AGDT treebank backend is active (see :func:`aegean.greek.use_treebank`),
-    its attested, correctly-accented lemma is preferred; otherwise the bundled seed
-    table is consulted."""
+    its attested, correctly-accented lemma is preferred; next, when the trained
+    lemmatizer is active (see :func:`aegean.greek.use_lemmatizer`), its prediction is
+    used — this generalizes to unseen forms; otherwise the bundled seed table is
+    consulted."""
     from . import treebank
 
     lex = treebank.active()
@@ -39,6 +41,13 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
         hit = lex.lemmatize(word)
         if hit is not None:
             return hit, True
+    from . import lemmatizer
+
+    if lemmatizer.active() is not None:  # trained generalizer for unseen forms
+        pred = lemmatizer.predict(word)
+        # Honest knownness: a prediction identical to the (normalized) form is an identity
+        # fall-through — mirror the seed-table contract (known=False when returned unchanged).
+        return pred, pred != unicodedata.normalize("NFC", word)
     key = unicodedata.normalize("NFC", word.lower())
     table = _lemma_table()
     if key in table:

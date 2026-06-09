@@ -23,10 +23,11 @@ Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
 Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistributed)
   Perseus Ancient Greek Dependency Treebank, v2.1
   (https://github.com/PerseusDL/treebank_data), licensed CC BY-SA 3.0. Downloaded
-  by the user on demand via aegean.greek.use_treebank() / use_parser() / use_tagger();
-  pyaegean builds derived artifacts (a lemma/morphology lexicon, a dependency-parser
-  model, and a POS-tagger model) in the local cache and neither bundles nor re-hosts the
-  treebank itself. Attribute the AGDT in academic work that relies on it.
+  by the user on demand via aegean.greek.use_treebank() / use_parser() / use_tagger() /
+  use_lemmatizer(); pyaegean builds derived artifacts (a lemma/morphology lexicon, a
+  dependency-parser model, a POS-tagger model, and a lemmatizer model) in the local cache
+  and neither bundles nor re-hosts the treebank itself. Attribute the AGDT in academic
+  work that relies on it.
 
 Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistributed)
   A Greek-English Lexicon (Liddell, Scott, Jones), digitized by the Perseus Digital

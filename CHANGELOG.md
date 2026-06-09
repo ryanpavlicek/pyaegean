@@ -17,14 +17,24 @@ All notable changes to pyaegean are documented here. The format follows
   (CLTK grc) scores 89.1% unseen, so pyaegean lands within ~5–6 points pure-Python — on a
   split that is *in-training* for stanza. The ~2.2 MB model is built on first use, cached,
   never bundled.
+- **Generalizing lemmatizer** (opt-in): `greek.use_lemmatizer()` trains a Chrupała-style
+  **edit-tree** model with an averaged-perceptron reranker (pure Python) on the AGDT. It
+  learns inflection→lemma transforms (incl. accent shifts) that generalize to unseen forms,
+  conditioned on POS from the tagger. `greek.lemmatize` uses it (when active) for forms the
+  treebank lookup doesn't cover; `greek.evaluate_lemmatizer()` reports leakage-free held-out
+  accuracy. Measured **84.5% overall / 40.3% on unseen forms** on a 90/10 AGDT split (the
+  lookup is 0% on unseen); stanza (CLTK grc) scores 62.8% unseen — neural lemmatization of
+  unseen forms remains ahead, but pyaegean lifts it from nothing with no heavy deps.
 - **Leakage-free held-out evaluation** (`aegean.greek.heldout`): splits the AGDT by
-  sentence, flags dev forms unseen in training, and scores any tagger (a pyaegean mode or a
-  CLTK pipeline) on the disjoint unseen subset — the honest generalization measure behind
-  the tagger numbers and the CLTK comparison.
+  sentence, flags dev forms unseen in training, and scores any tagger/lemmatizer (a pyaegean
+  mode or a CLTK pipeline) on the disjoint unseen subset — the honest generalization measure
+  behind the model numbers and the CLTK comparison.
 
 ### Changed
 - `pos_tag`/`pos_tags` consult the trained tagger (when active) for the open-class forms the
   closed-class lexicon and treebank lookup don't cover, generalizing tags to unseen text.
+- `lemmatize`/`lemmatize_verbose` consult the trained lemmatizer (when active) after the
+  treebank lookup, generalizing lemmas to unseen forms.
 
 ## 0.2.0 — 2026-06-08
 

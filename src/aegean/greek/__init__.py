@@ -28,6 +28,7 @@ from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .lexicon import LSJEntry, LSJLexicon, disable_lsj, gloss, lookup, use_lsj
 from .syntax import DepToken, DepTree, disable_parser, evaluate, parse, use_parser
 from .tagger import disable_tagger, evaluate_tagger, use_tagger
+from .lemmatizer import disable_lemmatizer, evaluate_lemmatizer, use_lemmatizer
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -97,4 +98,7 @@ __all__ = [
     "use_tagger",
     "disable_tagger",
     "evaluate_tagger",
+    "use_lemmatizer",
+    "disable_lemmatizer",
+    "evaluate_lemmatizer",
 ]
