@@ -16,3 +16,7 @@ htmlcov/
 # Local-only — not part of the public package
 CLAUDE.md
 experiments/
+
+# training artifacts (datasets rebuild from cache; bake-off checkpoints are throwaway)
+training/data/
+training/out/
