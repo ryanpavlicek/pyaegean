@@ -30,10 +30,10 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     the (normalized) input is returned unchanged.
 
     When the AGDT treebank backend is active (see :func:`aegean.greek.use_treebank`),
-    its attested, correctly-accented lemma is preferred; next, when the trained
-    lemmatizer is active (see :func:`aegean.greek.use_lemmatizer`), its prediction is
-    used — this generalizes to unseen forms; otherwise the bundled seed table is
-    consulted."""
+    its attested, correctly-accented lemma is preferred; next, when the neural backend is
+    active (see :func:`aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
+    used — the strongest generalizer for unseen forms; next the trained edit-tree lemmatizer
+    (see :func:`aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted."""
     from . import treebank
 
     lex = treebank.active()
@@ -41,6 +41,11 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
         hit = lex.lemmatize(word)
         if hit is not None:
             return hit, True
+    from . import neural_lemmatizer
+
+    if neural_lemmatizer.active() is not None:  # GreTa seq2seq — best on unseen forms
+        pred = neural_lemmatizer.predict(word)
+        return pred, pred != unicodedata.normalize("NFC", word)
     from . import lemmatizer
 
     if lemmatizer.active() is not None:  # trained generalizer for unseen forms

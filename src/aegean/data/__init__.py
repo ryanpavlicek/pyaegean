@@ -79,6 +79,19 @@ _REMOTE: dict[str, DataSpec] = {
         note="3,368 facsimile/photo files (~116 MB tar.gz, ~125 MB unpacked); fetched from the linearaworkbench release.",
         extract=True,
     ),
+    # The opt-in [neural] Greek lemmatizer model: GreTa seq2seq exported to ONNX, plus its
+    # tokenizer and a gold form->lemma lookup, packed as a tar.gz. Derived from CC BY-SA
+    # corpora, so the *model* is CC BY-SA; it is fetched (never bundled), so the wheel stays
+    # Apache-2.0. URL is pinned to a release asset once published; until then set
+    # PYAEGEAN_GRC_LEMMA_NEURAL_URL to fetch from your own copy.
+    "grc-lemma-neural": DataSpec(
+        name="grc-lemma-neural",
+        url="",
+        sha256="",
+        license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), Gorman (CC0)",
+        note="GreTa seq2seq lemmatizer: ONNX encoder/decoder + tokenizer + gold lookup (tar.gz); needs the [neural] extra.",
+        extract=True,
+    ),
 }
 
 

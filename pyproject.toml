@@ -36,6 +36,7 @@ grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
 ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
+neural = ["onnxruntime>=1.17", "tokenizers>=0.15", "numpy>=1.24"]  # GreTa seq2seq lemmatizer (torch-free); model fetched to cache
 dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0"]
 all = ["pyaegean[ai,epidoc,geo,data]"]
 
@@ -70,5 +71,5 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*"]
+module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*"]
 ignore_missing_imports = true
