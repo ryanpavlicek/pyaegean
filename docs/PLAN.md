@@ -196,19 +196,12 @@ no pyaegean model trained on). **0.6.0** added the lossless `Corpus` JSON round-
 `aegean.io` export adapters (EpiDoc TEI write — completing the read+write round-trip — plus
 CSV/Parquet), filling the io package.
 
-Planned:
-
-- **Context-aware lemmatizer**: a sentence-context v2 of the `[neural]` backend, to push past the
-  76.3% isolated-form ceiling on unseen lemma (larger, uncertain payoff).
-- **Koine / Biblical Greek** (low priority): NT corpus loader + Koine-tuned lemmatization/morphology
-  from an openly-licensed tagged Greek NT (MorphGNT/SBLGNT or the Nestle1904 trees), building on the
-  existing Koine phonology mode (`to_ipa(…, "koine")`) and the John 1:1 sample.
-- **Workbench bridge**: fetch the linearaworkbench static build (release asset, fetch-to-cache like
-  `lineara-images`) and serve it locally — e.g. an `aegean workbench` command — so the Python toolkit
-  and the visual workbench share corpus data.
-- **Side project** Claude Code plugin exposing pyaegean (translate/gloss/decipher/ask) as slash-commands/MCP.
-- **1.0** Stable: alphabetic + all syllabic scripts uniform through one API; deep, well-measured Greek
-  NLP; AI + translation integrated; full EpiDoc round-trip.
+Planned: the living plan is **`docs/ROADMAP.md`** — the 0.8.0 program (CLI, the Greek NLP
+parity-or-better accuracy program, corpora fixes incl. the Linear A apparatus path, visualization +
+statistics, AI grounding traceability, data versioning) and the post-0.8.0 road to 1.0 (JOSS paper,
+workbench bridge, Koine/Biblical Greek track). The context-aware lemmatizer is now WP3 Stage D
+there; the workbench bridge and Koine track are post-0.8.0 items there. A side-project idea — a
+Claude Code plugin exposing pyaegean as slash-commands/MCP — stays parked here.
 
 ## Critical reference files (TS repo, to port from)
 
