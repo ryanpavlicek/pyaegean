@@ -62,7 +62,7 @@ src/aegean/
   analysis/  distance align collocation morphology patterns query accounting structure
   greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize
              treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser)
-             neural_lemmatizer (GreTa seq2seq) proiel (out-of-AGDT eval) benchmark (CLTK harness)
+             neural_lemmatizer (GreTa seq2seq) proiel (out-of-AGDT eval) benchmark (harness)
   io/        epidoc (TEI export) tabular (CSV/Parquet export)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
