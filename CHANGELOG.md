@@ -4,7 +4,11 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.3.0 — 2026-06-10
+
+Adds opt-in Greek tagging and lemmatization that generalize to unseen forms — including a
+neural lemmatizer backend that surpasses stanza/CLTK on unseen-form lemma — and makes the core
+dependency-free. All Linear A analysis remains exploratory.
 
 ### Added
 - **Generalizing POS tagger** (opt-in): `greek.use_tagger()` trains an averaged-perceptron
@@ -23,8 +27,16 @@ All notable changes to pyaegean are documented here. The format follows
   conditioned on POS from the tagger. `greek.lemmatize` uses it (when active) for forms the
   treebank lookup doesn't cover; `greek.evaluate_lemmatizer()` reports leakage-free held-out
   accuracy. Measured **84.5% overall / 40.3% on unseen forms** on a 90/10 AGDT split (the
-  lookup is 0% on unseen); stanza (CLTK grc) scores 62.8% unseen — neural lemmatization of
-  unseen forms remains ahead, but pyaegean lifts it from nothing with no heavy deps.
+  lookup is 0% on unseen); stanza (CLTK grc) scores 62.8% unseen; the opt-in **neural backend**
+  below passes that, while this pure-Python model lifts unseen lemma from the lookup's 0% with no
+  heavy deps.
+- **Neural lemmatizer backend** (opt-in `[neural]`): `greek.use_neural_lemmatizer()` activates a
+  fine-tuned **GreTa** (Ancient-Greek T5) seq2seq, exported to ONNX, that *generates* the lemma
+  of an unseen form — reaching **76.3% on unseen forms, past stanza/CLTK's 62.8%**. It ships as a
+  hybrid (a bundled gold lookup answers seen forms exactly; the seq2seq handles the rest, ~92%
+  overall). Inference is **torch-free** — a numpy greedy decode over int8 ONNX via onnxruntime,
+  imported only on activation, so `import aegean` stays instant. The model (~232 MB, CC BY-SA) is
+  fetched-to-cache, sha256-verified, never bundled; install with `pip install 'pyaegean[neural]'`.
 - **Leakage-free held-out evaluation** (`aegean.greek.heldout`): splits the AGDT by
   sentence, flags dev forms unseen in training, and scores any tagger/lemmatizer (a pyaegean
   mode or a CLTK pipeline) on the disjoint unseen subset — the honest generalization measure
@@ -33,8 +45,8 @@ All notable changes to pyaegean are documented here. The format follows
 ### Changed
 - `pos_tag`/`pos_tags` consult the trained tagger (when active) for the open-class forms the
   closed-class lexicon and treebank lookup don't cover, generalizing tags to unseen text.
-- `lemmatize`/`lemmatize_verbose` consult the trained lemmatizer (when active) after the
-  treebank lookup, generalizing lemmas to unseen forms.
+- `lemmatize`/`lemmatize_verbose` consult the neural backend, then the trained edit-tree
+  lemmatizer (whichever is active), after the treebank lookup — generalizing lemmas to unseen forms.
 - **Core now has zero hard third-party dependencies.** `pandas` moved to a new optional
   `[data]` extra (lazy-imported only by `to_dataframe`, which raises a clear install hint if
   it's missing); `scipy` was dropped entirely — the two collocation statistics (χ² p-value,

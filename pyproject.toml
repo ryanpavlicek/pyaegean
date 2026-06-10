@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.2.0"
+version = "0.3.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek and the Aegean syllabic scripts (Linear A/B)."
 readme = "README.md"
 requires-python = ">=3.10"
