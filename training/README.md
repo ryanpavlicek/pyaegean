@@ -1,5 +1,9 @@
 # training/ — model training for the WP3 accuracy program
 
+> **Stage A is decided: `bowphs/GreBerta`** (see `docs/benchmarks.md` for the table and
+> rationale; raw metrics in `training/results/stage-a/`). The protocol below is kept for
+> reproducibility.
+
 Training-side code for the Greek NLP accuracy program (`docs/ROADMAP.md` WP3,
 `docs/benchmarks.md` for the protocol + targets). Nothing in this directory ships in the
 wheel; trained artifacts are published as GitHub release assets and fetched to the user

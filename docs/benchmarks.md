@@ -128,6 +128,32 @@ A side discovery of this baseline run: the first PROIEL pass crashed on an
 out-of-vocabulary form and exposed (and fixed) an infinite-recursion bug in the
 `use_tagger()`+`use_lemmatizer()` combination — see the 0.8.0 changelog.
 
+## Stage A — encoder bake-off (decided: GreBerta)
+
+Identical fixed-budget UPOS fine-tune per candidate (2 epochs, lr 5e-5, effective batch
+32, max-len 256, seed 42, bf16) on the leakage-clean AGDT split (514,824 train tokens;
+dev = the 22,135 tokens behind the UD-Perseus dev fold, 2,614 of them unseen forms; zero
+truncation for any candidate). Run 2026-06-10 on an A100-80GB (the G4/A100 plan's
+backup); raw metrics in `training/results/stage-a/`.
+
+| Encoder | License | dev UPOS | unseen forms | params | wall |
+|---|---|---|---|---|---|
+| **bowphs/GreBerta** | Apache-2.0 | **97.85** | 98.01 | 125.4 M | 89 s |
+| bowphs/PhilBerta | Apache-2.0 | 97.83 | **98.20** | 134.6 M | 88 s |
+| pranaydeeps/Ancient-Greek-BERT *(reference)* | GPL-3.0 | 96.98 | 96.94 | 112.3 M | 88 s |
+
+**Decision (per the training/README.md rule): `bowphs/GreBerta` carries Stages B–E.**
+The two Apache candidates are statistically tied — 0.02 points overall (≈4 tokens) and
+0.19 on unseen forms, far under the 1-point override threshold — so the tie breaks on
+size: GreBerta is ~7% smaller (a smaller Stage E artifact) and monolingual Greek.
+PhilBerta is the named fallback (and the trilingual option if Latin ever matters).
+
+Calibration: both Apache candidates beat the odyCy backbone (Ancient-Greek-BERT) by
+~0.9 points overall and ~1.1–1.3 on unseen forms under the identical budget — the chosen
+backbone starts *ahead* of the published pipeline's starting point. Caveat for reading
+the numbers: this dev set is AGDT-native 13-label UPOS, not the UD test fold — it ranks
+encoders; absolute UD-fold claims start in Stage B.
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,
