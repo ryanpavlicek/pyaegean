@@ -100,10 +100,32 @@ def format_value(v: float) -> str:
 
 
 # Total-marker recognition — among the most secure lexical identifications in
-# Linear A scholarship.
+# Aegean accounting. Linear A: KU-RO (total), PO-TO-KU-RO (grand total), KI-RO (owed).
 TOTAL_MARKERS = {"KU-RO"}
 GRAND_TOTAL_MARKERS = {"PO-TO-KU-RO"}
 DEFICIT_MARKERS = {"KI-RO", "KU-RO₂"}
+
+
+@dataclass(frozen=True, slots=True)
+class Markers:
+    """The total / grand-total / deficit lexemes used on one script's accounting tablets."""
+
+    total: frozenset[str]
+    grand_total: frozenset[str]
+    deficit: frozenset[str]
+
+
+# Linear A is the default (and matches the bundled golden fixtures). Linear B is Mycenaean Greek:
+# to-so / to-sa = τόσος "so much/many" (the total), o-pe-ro = ὄφελος "what is owed" (the deficit).
+LINEAR_A_MARKERS = Markers(frozenset(TOTAL_MARKERS), frozenset(GRAND_TOTAL_MARKERS), frozenset(DEFICIT_MARKERS))
+LINEAR_B_MARKERS = Markers(frozenset({"TO-SO", "TO-SA"}), frozenset(), frozenset({"O-PE-RO", "O-PE-RO-SI"}))
+_MARKERS_BY_SCRIPT = {"lineara": LINEAR_A_MARKERS, "linearb": LINEAR_B_MARKERS}
+
+
+def markers_for(script_id: str) -> Markers:
+    """The accounting markers for a script (Linear A by default)."""
+    return _MARKERS_BY_SCRIPT.get(script_id, LINEAR_A_MARKERS)
+
 
 LineRole = str  # "header" | "item" | "total" | "grand-total" | "deficit"
 
@@ -139,19 +161,21 @@ def _classify_tokens(tokens: list[str]) -> tuple[list[str], list[str]]:
     return terms, ideograms
 
 
-def parse_account_lines(lines: list[list[str]]) -> list[AccountLine]:
-    """Tag each physical line with its accounting role."""
+def parse_account_lines(
+    lines: list[list[str]], markers: Markers = LINEAR_A_MARKERS
+) -> list[AccountLine]:
+    """Tag each physical line with its accounting role (Linear A markers by default)."""
     out: list[AccountLine] = []
     for index, tokens in enumerate(lines):
         value = line_value(tokens)
         has_number = has_value(tokens)
         terms, ideograms = _classify_tokens(tokens)
         role: LineRole = "item"
-        if any(t in GRAND_TOTAL_MARKERS for t in terms):
+        if any(t in markers.grand_total for t in terms):
             role = "grand-total"
-        elif any(t in TOTAL_MARKERS for t in terms):
+        elif any(t in markers.total for t in terms):
             role = "total"
-        elif any(t in DEFICIT_MARKERS for t in terms):
+        elif any(t in markers.deficit for t in terms):
             role = "deficit"
         elif not has_number:
             role = "header"
@@ -170,11 +194,13 @@ class BalanceCheck:
     total_line_index: int
 
 
-def check_balances(lines: list[AccountLine]) -> list[BalanceCheck]:
+def check_balances(
+    lines: list[AccountLine], markers: Markers = LINEAR_A_MARKERS
+) -> list[BalanceCheck]:
     """Verify each total line against the item lines feeding it.
 
-    Deficit (KI-RO) and header lines are excluded from the sum. Section
-    boundaries reset at each total — heuristic, mirroring the standard reading.
+    Deficit and header lines are excluded from the sum. Section boundaries reset at each
+    total — heuristic, mirroring the standard reading.
     """
     checks: list[BalanceCheck] = []
     running: list[AccountLine] = []
@@ -186,7 +212,7 @@ def check_balances(lines: list[AccountLine]) -> list[BalanceCheck]:
             diff = computed - line.value
             marker = next(
                 t for t in line.terms
-                if t in TOTAL_MARKERS or t in GRAND_TOTAL_MARKERS
+                if t in markers.total or t in markers.grand_total
             )
             checks.append(
                 BalanceCheck(

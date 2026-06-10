@@ -51,3 +51,22 @@ def test_corpus_loads_and_classifies() -> None:
     assert kinds["GRA"] == "LOGOGRAM"          # the grain ideogram
     assert kinds["30"] == "NUMERAL"
     assert kinds["WA-NA-KA-TE-RO"] == "WORD"
+
+
+def test_accounting_to_so_total() -> None:
+    from aegean.core.numerals import (
+        LINEAR_B_MARKERS,
+        check_balances,
+        markers_for,
+        parse_account_lines,
+    )
+
+    assert markers_for("linearb").total == frozenset({"TO-SO", "TO-SA"})
+    assert markers_for("lineara").total == frozenset({"KU-RO"})  # Linear A unchanged
+    rows = [["A-KO-SO-TA", "OVIS", "50"], ["TU-RI-SI-JO", "OVIS", "30"], ["TO-SO", "OVIS", "80"]]
+    lines = parse_account_lines(rows, LINEAR_B_MARKERS)
+    assert [li.role for li in lines] == ["item", "item", "total"]
+    checks = check_balances(lines, LINEAR_B_MARKERS)
+    assert len(checks) == 1
+    assert checks[0].marker == "TO-SO"
+    assert checks[0].balances  # 50 + 30 == 80

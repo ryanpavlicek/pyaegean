@@ -7,7 +7,7 @@ a "balance" is evidence to weigh, not ground truth.
 from __future__ import annotations
 
 from ..core.model import Document
-from ..core.numerals import BalanceCheck, check_balances, parse_account_lines
+from ..core.numerals import BalanceCheck, check_balances, markers_for, parse_account_lines
 
 
 def account_lines(document: Document) -> list[list[str]]:
@@ -16,5 +16,8 @@ def account_lines(document: Document) -> list[list[str]]:
 
 
 def balance_check(document: Document) -> list[BalanceCheck]:
-    """Verify every total line on a document against its summed item lines."""
-    return check_balances(parse_account_lines(account_lines(document)))
+    """Verify every total line on a document against its summed item lines.
+
+    Uses the script's total markers (Linear A's KU-RO, Linear B's TO-SO/TO-SA)."""
+    markers = markers_for(document.script_id)
+    return check_balances(parse_account_lines(account_lines(document), markers), markers)
