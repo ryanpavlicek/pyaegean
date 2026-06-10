@@ -116,8 +116,7 @@ one. But I live in the shadow of the University of Cincinnati's world-class Clas
 Bronze Age Archaeology department, and building serious, honest infrastructure for languages this
 hard — one of them undeciphered by definition — struck me as an unusually fun engineering problem.
 pyaegean is an outsider's library that the actual specialists are free to pick up, ignore, or
-correct. If something here is wrong, please open an issue — I'd rather ship something honest than
-something flattering.
+correct. If something here is wrong, please open an issue or contact me through the email listed on github.
 
 ## License
 
