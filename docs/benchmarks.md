@@ -154,6 +154,36 @@ backbone starts *ahead* of the published pipeline's starting point. Caveat for r
 the numbers: this dev set is AGDT-native 13-label UPOS, not the UD test fold — it ranks
 encoders; absolute UD-fold claims start in Stage B.
 
+## Stage B — joint neural tagger (targets met)
+
+GreBerta + 10 token-classification heads (UPOS + the 9 XPOS positions; UD FEATS rendered
+by the validated converter), trained on the **leakage-clean** AGDT split (the 2,443
+UD-Perseus dev/test sentences excluded) with UD-convention labels. 6 epochs, lr 3e-5,
+batch 32, bf16, 155 s on an RTX PRO 6000 Blackwell (peak 5.2 GB); best epoch selected on
+dev (97.68 UPOS / 96.53 FEATS). Run 2026-06-10; raw metrics in
+`training/results/stage-b/`. Gold-tokenization protocol, as throughout.
+
+| Test fold | Metric | pyaegean Stage B | best published | published Perseus-trained best |
+|---|---|---|---|---|
+| UD Perseus | UPOS | **96.18** | 95.39 (odyCy-joint) | — |
+| UD Perseus | UFeats | **95.32** | 92.56 (odyCy-joint) | — |
+| UD Perseus | XPOS (9-char) | 92.21 | — | — |
+| UD PROIEL | UPOS | **87.31** | 98.23 (greCy-proiel, in-domain) | 84.88 (odyCy-perseus) |
+| UD PROIEL | UFeats | **58.95** | 94.05 (greCy-proiel, in-domain) | 57.44 (odyCy-perseus) |
+
+**Both Stage B targets are met on UD Perseus test — above every published number**: UPOS
+96.18 vs the 95.39 best (+0.8) and UFeats 95.32 vs the 92.56 best (+2.8), from a model
+that never saw the test sentences in training. Out-of-domain (PROIEL), where the
+in-domain systems train on the fold itself, the honest comparison is against the
+*Perseus-trained* published systems — and Stage B beats all of them on both metrics
+(UPOS 87.31 vs 84.88/80.93/80.42; UFeats 58.95 vs 57.44/56.11/56.00). The low absolute
+PROIEL UFeats is convention-capped (PROIEL annotates five extra feature types the
+Perseus scheme lacks), and PROIEL XPOS is structurally 0 (a different tagset entirely) —
+both expected. Versus the Stage 0 baseline, PROIEL UPOS moved **75.03 → 87.31**.
+
+Scoreboard against the definition of done, after Stage B: UD-Perseus **POS ✓, morph ✓**;
+lemma 90.4 (Stage D to close); **UAS/LAS pending — Stage C, the biaffine parser.**
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,
