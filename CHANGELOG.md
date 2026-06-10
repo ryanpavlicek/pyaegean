@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## 0.4.0 — Unreleased
+## 0.4.0 — 2026-06-10
 
 Adds **Linear B** and the **Cypriot syllabary** — the two deciphered Aegean syllabaries that
 write Greek — through the same script-plugin model as Linear A. All Linear A analysis remains
