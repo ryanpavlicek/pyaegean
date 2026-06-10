@@ -95,6 +95,17 @@ _REMOTE: dict[str, DataSpec] = {
         note="GreTa seq2seq lemmatizer (int8 ONNX encoder/decoder + tokenizer + gold lookup), ~232 MB tar.gz; the [neural] extra.",
         extract=True,
     ),
+    # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is
+    # CC BY-NC-SA, LiBER all-rights-reserved), so there is no default URL. Set
+    # PYAEGEAN_LINEARB_CORPUS_URL to your own licensed export; pyaegean parses it locally.
+    "linearb-corpus": DataSpec(
+        name="linearb-corpus",
+        url="",
+        sha256="",
+        license="bring-your-own; DAMOS is CC BY-NC-SA 4.0 and LiBER all-rights-reserved — neither redistributed",
+        note="A user-supplied Linear B corpus export (e.g. a DAMOS EpiDoc download). No default source.",
+        extract=False,
+    ),
 }
 
 

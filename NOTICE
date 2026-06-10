@@ -47,9 +47,21 @@ Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   via aegean.greek.use_neural_lemmatizer() (the [neural] extra); fetched to the local cache,
   never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
+Linear B sign data — Unicode Character Database (bundled)
+  The Linear B sign inventory and phonetic map (src/aegean/data/bundled/linearb/) are derived
+  from the Unicode Character Database (UnicodeData.txt, the "Linear B Syllabary" and "Linear B
+  Ideograms" blocks), Copyright © 1991–present Unicode, Inc., distributed under the Unicode
+  License v3 (https://www.unicode.org/license.txt); the only obligation is to retain this
+  notice. The bundled illustrative sample of canonical tablet transliterations is scholarly
+  fact (after Ventris & Chadwick, Documents in Mycenaean Greek), included as excerpts, not a corpus.
+
+Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
+  No openly-licensed Linear B tablet corpus exists. DAMOS (Database of Mycenaean at Oslo) is
+  CC BY-NC-SA 4.0; LiBER (CNR) is all-rights-reserved. pyaegean bundles neither and fetches
+  neither by default; set PYAEGEAN_LINEARB_CORPUS_URL to load your own licensed copy, which
+  pyaegean parses locally and never re-hosts.
+
 Planned (future versions; included here for forward attribution):
-  - DAMOS — Database of Mycenaean at Oslo (Linear B).
-  - LiBER — Linear B Electronic Resources.
   - PROIEL treebanks (Ancient Greek) — CC BY-NC-SA.
   - First1KGreek / Open Greek and Latin — CC BY.
   - Morpheus morphological data; LSJ lexicon (per applicable license).
