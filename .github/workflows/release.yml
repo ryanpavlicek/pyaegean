@@ -24,6 +24,12 @@ on:
 
 jobs:
   build:
+    # Build/publish only for version-tagged releases (vX.Y.Z) or a manual dispatch. Asset-hosting
+    # releases (e.g. grc-lemma-neural-v1) must not trigger a publish — they carry no package version,
+    # so a build would re-attempt the current pyproject version and PyPI would reject the duplicate.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -35,7 +41,7 @@ jobs:
       - run: python -m twine check dist/*
       - name: Footprint guard (wheel is code + JSON only, no heavy binaries)
         run: python scripts/check_footprint.py --wheel "dist/*.whl"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: dist
           path: dist/
@@ -48,7 +54,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: dist
           path: dist/
@@ -59,14 +65,14 @@ jobs:
   pypi:
     needs: build
     if: >-
-      github.event_name == 'release' ||
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v')) ||
       (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: dist
           path: dist/
