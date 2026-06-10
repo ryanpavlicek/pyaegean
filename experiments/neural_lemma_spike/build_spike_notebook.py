@@ -1,6 +1,6 @@
 """Build spike_lemma_grebert.ipynb — GreTa SEQ2SEQ lemmatizer (run: `python build_spike_notebook.py`).
 
-Fine-tunes bowphs/GreTa (the pretrained SOTA Ancient Greek char-level T5, arXiv:2410.12055,
+Fine-tunes bowphs/GreTa (the pretrained SOTA Ancient Greek T5, arXiv:2410.12055,
 Apache-2.0) to GENERATE the lemma from the form. Generation is what beats edit-tree
 classification on unseen forms (which capped at ~58%). Standard HuggingFace Seq2SeqTrainer +
 optimum ONNX export — not a from-scratch build.
@@ -19,7 +19,7 @@ cells = []
 cells.append(md(
     "# pyaegean neural lemmatizer — GreTa seq2seq (SOTA route)\n"
     "\n"
-    "Fine-tune **`bowphs/GreTa`** (pretrained Ancient-Greek char-level T5, the SOTA lemmatizer) "
+    "Fine-tune **`bowphs/GreTa`** (pretrained Ancient-Greek T5, the SOTA lemmatizer) "
     "to **generate** the lemma from the form. Generation handles unseen forms where our "
     "edit-tree classifier capped at 58.2%; literature puts GreTa ~91% F1. Target: unseen > "
     "stanza's 62.8%.\n"
@@ -59,20 +59,38 @@ cells.append(code(
     "from transformers import AutoTokenizer, AutoModelForSeq2SeqLM\n"
     "MODEL = 'bowphs/GreTa'\n"
     "tokenizer = AutoTokenizer.from_pretrained(MODEL)\n"
-    "model = AutoModelForSeq2SeqLM.from_pretrained(MODEL)"
+    "model = AutoModelForSeq2SeqLM.from_pretrained(MODEL)\n"
+    "\n"
+    "# GreTa ships a bare fast tokenizer with no registered pad/eos, and loading nulls the\n"
+    "# model's pad/eos ids. config.json defines pad=0, eos=1 (standard T5) -- register them\n"
+    "# on the tokenizer and restore them on both configs so padding + generation work.\n"
+    "PAD_ID, EOS_ID = 0, 1\n"
+    "tokenizer.pad_token = tokenizer.convert_ids_to_tokens(PAD_ID)\n"
+    "tokenizer.eos_token = tokenizer.convert_ids_to_tokens(EOS_ID)\n"
+    "for cfg in (model.config, model.generation_config):\n"
+    "    cfg.pad_token_id = PAD_ID\n"
+    "    cfg.eos_token_id = EOS_ID\n"
+    "    cfg.decoder_start_token_id = PAD_ID\n"
+    "assert tokenizer.pad_token_id == PAD_ID and tokenizer.eos_token_id == EOS_ID\n"
+    "print('pad', repr(tokenizer.pad_token), tokenizer.pad_token_id,\n"
+    "      '| eos', repr(tokenizer.eos_token), tokenizer.eos_token_id)"
 ))
 
 cells.append(md("## 3 · Tokenize (form -> input_ids, lemma -> labels)"))
 cells.append(code(
     "from datasets import Dataset\n"
     "ML = 32\n"
+    "# Does the tokenizer auto-append eos? If not, force it on targets so the model learns to\n"
+    "# stop (inputs use the tokenizer's natural output, identical at train + inference time).\n"
+    "APPEND_EOS = tokenizer(text_target='abc')['input_ids'][-1] != EOS_ID\n"
     "def prep(b):\n"
     "    enc = tokenizer(b['form'], max_length=ML, truncation=True)\n"
-    "    enc['labels'] = tokenizer(text_target=b['lemma'], max_length=ML, truncation=True)['input_ids']\n"
+    "    lab = tokenizer(text_target=b['lemma'], max_length=ML - APPEND_EOS, truncation=True)['input_ids']\n"
+    "    enc['labels'] = [x + [EOS_ID] for x in lab] if APPEND_EOS else lab\n"
     "    return enc\n"
     "ds = Dataset.from_list(train_rows).map(prep, batched=True, remove_columns=['form', 'lemma'])\n"
     "ds = ds.train_test_split(test_size=0.02, seed=0)\n"
-    "print(ds)"
+    "print('APPEND_EOS', APPEND_EOS, '| sample label ids', ds['train'][0]['labels'][-6:])"
 ))
 
 cells.append(md(

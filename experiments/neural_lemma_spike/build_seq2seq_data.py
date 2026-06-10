@@ -1,6 +1,6 @@
 """Build the form->lemma data bundle for the GreTa seq2seq lemmatizer.
 
-The SOTA Ancient Greek lemmatizer (GreTa, arXiv:2410.12055) is a char-level T5 seq2seq that
+The SOTA Ancient Greek lemmatizer (GreTa, arXiv:2410.12055) is a T5 seq2seq that
 *generates* the lemma — which generalizes to unseen forms where edit-tree classification
 caps out (~58%). We fine-tune the pretrained bowphs/GreTa on plain form->lemma pairs.
 

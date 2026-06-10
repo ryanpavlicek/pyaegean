@@ -15,7 +15,7 @@ We already beat stanza on overall lemma accuracy (88.9% vs 87.3%). The remaining
 **unseen forms**, where edit-tree *classification* plateaued near 58%: it can only reuse
 edit-patterns it saw in training. The SOTA Ancient-Greek lemmatizer (GreTa,
 [arXiv:2410.12055](https://arxiv.org/abs/2410.12055), ~91% F1) instead **generates** the
-lemma character-by-character with a seq2seq T5, which composes novel transformations for
+lemma left-to-right with a seq2seq T5, which composes novel transformations for
 forms it never saw. This spike fine-tunes the pretrained, Apache-2.0 `bowphs/GreTa` on plain
 `form → lemma` pairs and measures the same unseen column on the same leakage-free split.
 
