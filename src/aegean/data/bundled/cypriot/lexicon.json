@@ -1,0 +1,15 @@
+{
+"PA-SI-LE-U-SE": {"lemma": "βασιλεύς", "gloss": "king"},
+"WA-NA-SA": {"lemma": "ἄνασσα", "gloss": "queen, lady (the Paphian goddess)"},
+"TO-I": {"lemma": "ὁ", "gloss": "the (dative τῷ)"},
+"KA-SE": {"lemma": "καί", "gloss": "and (Arcado-Cypriot κάς)"},
+"TE-O-SE": {"lemma": "θεός", "gloss": "god"},
+"A-PO-LO-NI": {"lemma": "Ἀπόλλων", "gloss": "to Apollo (dative)"},
+"O-NA-SI-LO-SE": {"lemma": "Ὀνάσιλος", "gloss": "Onasilos (personal name, Idalion tablet)"},
+"E-MI": {"lemma": "εἰμί", "gloss": "I am"},
+"A-TO-RO-PO-SE": {"lemma": "ἄνθρωπος", "gloss": "human, man"},
+"A-RA-KU-RO": {"lemma": "ἄργυρος", "gloss": "silver"},
+"TU-KA": {"lemma": "τύχη", "gloss": "fortune (Cypriot τύχα)"},
+"A-KA-TA": {"lemma": "ἀγαθός", "gloss": "good"},
+"PA-I-SE": {"lemma": "παῖς", "gloss": "child"}
+}

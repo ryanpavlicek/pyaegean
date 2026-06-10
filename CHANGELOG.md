@@ -6,8 +6,9 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## 0.4.0 — Unreleased
 
-Adds **Linear B** — the deciphered Aegean syllabary for Mycenaean Greek — through the same
-script-plugin model as Linear A. All Linear A analysis remains exploratory.
+Adds **Linear B** and the **Cypriot syllabary** — the two deciphered Aegean syllabaries that
+write Greek — through the same script-plugin model as Linear A. All Linear A analysis remains
+exploratory.
 
 ### Added
 - **Linear B script** (`aegean.scripts.linearb`): registered as a `Script` alongside Linear A.
@@ -25,9 +26,15 @@ script-plugin model as Linear A. All Linear A analysis remains exploratory.
   `PYAEGEAN_LINEARB_CORPUS`. No corpus is bundled or fetched by default — none is openly licensed
   (DAMOS is CC BY-NC-SA) — only a small illustrative sample of canonical tablets.
 
+- **Cypriot syllabary** (`aegean.scripts.cypriot`): the deciphered Aegean syllabary for the
+  Arcado-Cypriot dialect of Greek. A 55-sign inventory and phonetic map from the Unicode
+  Character Database, `word_to_phonetic` transliteration, a curated Cypriot→Greek bridge
+  (`greek_reading`, `gloss`; `PA-SI-LE-U-SE → βασιλεύς`), and `Corpus.load("cypriot")` with a
+  small illustrative sample.
+
 ### Changed
-- Linear B sign data is bundled from the Unicode Character Database (Unicode-3.0 license;
-  attribution added to NOTICE).
+- Linear B and Cypriot sign data are bundled from the Unicode Character Database (Unicode-3.0
+  license; attribution added to NOTICE).
 
 ## 0.3.0 — 2026-06-10
 

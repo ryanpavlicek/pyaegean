@@ -10,6 +10,7 @@
 **Aegean scripts**
 - [Linear A](Linear-A)
 - [Linear B](Linear-B)
+- [Cypriot](Cypriot)
 - [Analysis](Analysis)
 
 **Greek**

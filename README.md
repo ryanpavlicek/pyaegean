@@ -9,6 +9,7 @@ serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
 > **Status: v0.4.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
+> the Cypriot syllabary (Arcado-Cypriot Greek),
 > the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
 > lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
 > and a CLTK benchmark harness), and the multi-provider AI layer are all implemented.
@@ -77,6 +78,8 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   sign→sound map + transliteration.
 - **`aegean.scripts.linearb`** — Linear B (Mycenaean Greek): 211-sign Unicode inventory +
   transliteration + a Greek-reading bridge (`po-me → ποιμήν`) + accounting; bring-your-own corpus.
+- **`aegean.scripts.cypriot`** — Cypriot syllabary (Arcado-Cypriot Greek): 55-sign Unicode
+  inventory + transliteration + a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`).
 - **`aegean.analysis`** — ported from the workbench: accounting reconciliation,
   wildcard sign-pattern search, weighted phonetic distance + alignment,
   morphology clustering, collocation statistics, a compound-query engine, and
@@ -116,10 +119,10 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 **Shipped (through v0.3):** the script-agnostic core and Linear A; the multi-provider AI layer
 and translation; and the deep Greek NLP track — Perseus-treebank lemmas/POS, a generalizing
 tagger and lemmatizer, the neural lemmatizer, LSJ glossing, a baseline dependency parser, and a
-CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek): a Unicode-built sign
+CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a Unicode-built sign
 inventory, transliteration, a Greek-reading bridge, and accounting; the full corpus is
-bring-your-own (no openly-licensed corpus exists). **Next:** a hand-checked out-of-AGDT gold set,
-Cypriot / Cypro-Minoan, and a stable v1.0.
+bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **Next:** a hand-checked
+out-of-AGDT gold set, Cypro-Minoan, and a stable v1.0.
 
 ## License
 
