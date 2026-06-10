@@ -118,6 +118,32 @@ hard — one of them undeciphered by definition — struck me as an unusually fu
 pyaegean is an outsider's library that the actual specialists are free to pick up, ignore, or
 correct. If something here is wrong, please open an issue or contact me through the email listed on github.
 
+## Citation
+
+If pyaegean helped with work you publish, a citation is genuinely appreciated — it's how a small
+open project justifies the time. In the scholarly spirit, two layers:
+
+1. **Always cite the underlying scholarship** pyaegean stands on — GORILA (Godart & Olivier
+   1976–1985) for Linear A, the Perseus AGDT treebank and LSJ for Greek, the Unicode Character
+   Database for the Linear B / Cypriot / Cypro-Minoan sign data, and GreTa for the neural
+   lemmatizer. The editions are listed in [`NOTICE`](NOTICE), and every corpus emits its own source
+   citation via `corpus.provenance.cite()`.
+2. **Also cite pyaegean** if you used its analysis, methods, or outputs (pin the version you ran,
+   for reproducibility). GitHub's **"Cite this repository"** button — generated from
+   [`CITATION.cff`](CITATION.cff) — gives APA / BibTeX in one click, or use:
+
+```bibtex
+@software{pavlicek_pyaegean,
+  author  = {Pavlicek, Ryan},
+  title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
+  year    = {2026},
+  version = {0.7.0},
+  url     = {https://github.com/ryanpavlicek/pyaegean}
+}
+```
+
+No obligation for casual or exploratory use — but if it helped, I'd love to hear about it.
+
 ## License
 
 Apache-2.0. Linear A corpus data is GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz; the
