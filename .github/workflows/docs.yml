@@ -39,7 +39,7 @@ jobs:
       - name: Build API reference (pdoc)
         run: pdoc aegean -o ./_site --docformat markdown
       - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./_site
 
