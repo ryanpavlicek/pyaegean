@@ -18,6 +18,8 @@ __all__ = ["Greek"]
 
 
 class Greek(Script):
+    """Ancient Greek — the alphabetic script; the full NLP pipeline is on ``.nlp``."""
+
     id = "greek"
     name = "Ancient Greek"
 

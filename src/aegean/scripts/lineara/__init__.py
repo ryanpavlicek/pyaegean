@@ -17,6 +17,8 @@ __all__ = ["LinearA", "word_to_phonetic"]
 
 
 class LinearA(Script):
+    """Linear A — the undeciphered Minoan syllabary (all analysis is exploratory)."""
+
     id = "lineara"
     name = "Linear A"
 

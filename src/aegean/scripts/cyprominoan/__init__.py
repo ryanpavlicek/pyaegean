@@ -16,6 +16,8 @@ __all__ = ["CyproMinoan"]
 
 
 class CyproMinoan(Script):
+    """Cypro-Minoan — the undeciphered Bronze Age script of Cyprus (sign inventory only)."""
+
     id = "cyprominoan"
     name = "Cypro-Minoan"
 

@@ -3,7 +3,7 @@
 
 No openly-licensed Linear B tablet corpus exists — the most complete one, DAMOS, is CC BY-NC-SA —
 so only a small illustrative sample of canonical tablets is bundled. Point
-``PYAEGEAN_LINEARB_CORPUS_URL`` at your own licensed export (e.g. a DAMOS EpiDoc download) to work
+``PYAEGEAN_LINEARB_CORPUS`` at your own licensed export (e.g. a DAMOS EpiDoc download) to work
 with a full corpus; pyaegean never re-hosts it.
 """
 

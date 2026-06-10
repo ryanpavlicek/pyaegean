@@ -1,4 +1,4 @@
-"""The four AI jobs, grounded and exploratory-labeled.
+"""The AI jobs, grounded and exploratory-labeled.
 
 translate · gloss · decipher_hypotheses · nlp_assist · ask / summarize. Each
 builds a task-specific system prompt, wraps untrusted source text, feeds optional

@@ -50,7 +50,7 @@ ai.summarize(text, client=client)
 
 ```python
 r.text               # the model's output
-r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask'
+r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask' | 'summarize'
 r.exploratory        # True
 r.provider, r.model, r.prompt_version
 r.grounding          # the evidence that was fed in

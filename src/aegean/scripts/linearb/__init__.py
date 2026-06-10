@@ -22,6 +22,8 @@ __all__ = [
 
 
 class LinearB(Script):
+    """Linear B — the Mycenaean Greek syllabary."""
+
     id = "linearb"
     name = "Linear B"
 

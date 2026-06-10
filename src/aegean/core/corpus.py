@@ -23,6 +23,7 @@ _LOADERS: dict[str, Callable[[], "Corpus"]] = {}
 
 
 def register_loader(script_id: str, fn: Callable[[], "Corpus"]) -> None:
+    """Register a corpus loader so ``Corpus.load(script_id)`` / ``aegean.load(script_id)`` works."""
     _LOADERS[script_id] = fn
 
 
@@ -62,6 +63,7 @@ class Corpus:
         return iter(self.documents)
 
     def get(self, doc_id: str) -> Document | None:
+        """The document with id ``doc_id``, or ``None`` if there is no such document."""
         return self._by_id.get(doc_id)
 
     def _repr_html_(self) -> str:

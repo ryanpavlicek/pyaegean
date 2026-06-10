@@ -1,11 +1,11 @@
 """pyaegean — a specialist Python toolkit for Ancient Greek and the Aegean
-syllabic scripts (Linear A/B).
+syllabic scripts (Linear A, Linear B, Cypriot, and Cypro-Minoan).
 
-A script-agnostic corpus data layer with Linear A fully implemented, a Greek NLP
-track (opt-in Perseus-treebank lemmas/POS, LSJ glossing, a projective dependency
-parser, an unseen-POS tagger, edit-tree and neural lemmatizers, and a CLTK benchmark
-harness), and a multi-provider AI/translation layer. The core is dependency-free;
-the Greek backends are opt-in.
+A script-agnostic corpus data layer; a deep Greek NLP track (opt-in Perseus-treebank
+lemmas/POS, LSJ glossing, a dependency parser, an unseen-form POS tagger, edit-tree and
+neural lemmatizers, and a benchmark harness); a multi-provider AI/translation layer; and
+optional geographic mapping (``aegean.geo``, the ``[geo]`` extra). The core is dependency-free
+and imports instantly; the heavier backends are opt-in and fetched to cache.
 """
 
 from __future__ import annotations

@@ -97,7 +97,7 @@ _REMOTE: dict[str, DataSpec] = {
     ),
     # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is
     # CC BY-NC-SA, LiBER all-rights-reserved), so there is no default URL. Set
-    # PYAEGEAN_LINEARB_CORPUS_URL to your own licensed export; pyaegean parses it locally.
+    # PYAEGEAN_LINEARB_CORPUS to your own licensed export; pyaegean parses it locally.
     "linearb-corpus": DataSpec(
         name="linearb-corpus",
         url="",

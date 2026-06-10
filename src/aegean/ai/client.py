@@ -152,6 +152,7 @@ _PROVIDERS: dict[str, type[LLMClient]] = {}
 
 
 def register_provider(cls: type[LLMClient]) -> type[LLMClient]:
+    """Register an ``LLMClient`` subclass under its ``provider`` name (each adapter calls this)."""
     _PROVIDERS[cls.provider] = cls
     return cls
 
@@ -175,6 +176,7 @@ def get_client(
 
 
 def providers() -> list[str]:
+    """The sorted names of registered providers, e.g. ``['anthropic', 'gemini', 'grok', 'openai']``."""
     return sorted(_PROVIDERS)
 
 

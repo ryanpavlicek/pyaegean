@@ -76,7 +76,7 @@ Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.jso
 Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   No openly-licensed Linear B tablet corpus exists. DAMOS (Database of Mycenaean at Oslo) is
   CC BY-NC-SA 4.0; LiBER (CNR) is all-rights-reserved. pyaegean bundles neither and fetches
-  neither by default; set PYAEGEAN_LINEARB_CORPUS_URL to load your own licensed copy, which
+  neither by default; set PYAEGEAN_LINEARB_CORPUS to load your own licensed copy, which
   pyaegean parses locally and never re-hosts.
 
 Planned (future versions; included here for forward attribution):

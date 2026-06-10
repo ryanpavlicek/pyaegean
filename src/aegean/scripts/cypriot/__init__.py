@@ -14,6 +14,8 @@ __all__ = ["Cypriot", "gloss", "greek_reading", "word_to_phonetic"]
 
 
 class Cypriot(Script):
+    """The Cypriot syllabary — Arcado-Cypriot Greek."""
+
     id = "cypriot"
     name = "Cypriot syllabary"
 

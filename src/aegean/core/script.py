@@ -19,7 +19,8 @@ class Script(ABC):
 
     @property
     @abstractmethod
-    def sign_inventory(self) -> SignInventory: ...
+    def sign_inventory(self) -> SignInventory:
+        """The script's :class:`~aegean.core.model.SignInventory`."""
 
     @abstractmethod
     def tokenize(self, raw: str) -> list[Token]:
@@ -30,10 +31,12 @@ _REGISTRY: dict[str, Script] = {}
 
 
 def register(script: Script) -> None:
+    """Register a script plugin under its ``id`` (each built-in plugin calls this on import)."""
     _REGISTRY[script.id] = script
 
 
 def get_script(script_id: str) -> Script:
+    """Return the registered :class:`Script` for ``script_id`` (raises ``KeyError`` if unknown)."""
     try:
         return _REGISTRY[script_id]
     except KeyError:
@@ -43,4 +46,5 @@ def get_script(script_id: str) -> Script:
 
 
 def registered_scripts() -> list[str]:
+    """The sorted ids of all registered scripts, e.g. ``['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']``."""
     return sorted(_REGISTRY)
