@@ -12,8 +12,10 @@ the Python port can never silently diverge from the original.
   invariants in `tests/test_algorithms_properties.py` mirror the workbench
   `*.properties.test.ts`.
 
-The v0.1 numerals and sign-pattern ports are tested inline in
+The numerals and sign-pattern ports are tested inline in
 `tests/test_numerals.py` / `tests/test_patterns.py` against the hand-computed
-values from the workbench's `*.test.ts`. The query-engine and structure
-detection ports will add their golden values here as they land. See
-docs/PLAN.md §"Parity, benchmarking & correctness".
+values from the workbench's `*.test.ts`. The query-engine and
+structure-detection ports are likewise tested inline, in
+`tests/test_query.py` (mirroring `queryEngine.test.ts`) and
+`tests/test_structure.py` (asserting the documented precedence over the real
+corpus). See docs/PLAN.md §"Parity, benchmarking & correctness".

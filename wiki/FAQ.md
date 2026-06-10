@@ -32,12 +32,12 @@ Run this once, then activate again:
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-### `ImportError` mentioning pandas, numpy, or scipy
+### `ImportError` mentioning pandas
 
-These ship as dependencies and install automatically. If one is missing, your
-environment is incomplete — reinstall with `pip install --force-reinstall pyaegean`.
-(They're imported only when you call DataFrame or statistics features, which is why
-`import aegean` itself stays fast.)
+The core library has no hard third-party dependencies. pandas is an optional extra
+for DataFrame output — install it with `pip install "pyaegean[data]"`. It's imported
+only when you call a DataFrame feature, which is part of why `import aegean` stays
+fast.
 
 ### How do I update to a newer version?
 
@@ -89,8 +89,9 @@ No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends — `greek.use_treebank()` (~75 MB AGDT), `greek.use_lsj()`
-(~270 MB Perseus LSJ), and `greek.use_parser()` (downloads the AGDT if needed, then
-trains). Everything else, including the rule-based pipeline, works fully offline.
+(~270 MB Perseus LSJ), `greek.use_parser()` (downloads the AGDT if needed, then
+trains), and `greek.use_neural_lemmatizer()` (~232 MB ONNX model). Everything else,
+including the rule-based pipeline, works fully offline.
 
 ### Do I need an API key?
 
@@ -126,12 +127,18 @@ as fact. Always verify against primary scholarship.
 The default rule/seed engines are an offline **baseline**: high-precision on closed
 classes (article, prepositions, pronouns…) and regular paradigms, but they miss
 irregular, third-declension, contract, and most open-class forms — and they tell you
-when a result is reconstructed (`lemma_certain=False`). The treebank-trained upgrade
-has **shipped**: `greek.use_treebank()` supplies attested, correctly-accented lemmas +
-full morphology + gold POS for known forms, lifting the benchmark ~28%→100% (lemma) and
-~50%→100% (POS) — quantify it with `benchmark.compare_modes()`. For meaning, opt into
-`greek.use_lsj()` (LSJ glossing); for syntax, `greek.use_parser()` (a baseline
-dependency parser). See [Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in)
+when a result is reconstructed (`lemma_certain=False`).
+
+Several opt-in backends raise accuracy well past that baseline. `greek.use_treebank()`
+supplies attested, correctly-accented lemmas, full morphology, and gold POS for forms
+attested in the AGDT. For forms outside the treebank, `greek.use_tagger()` generalizes
+POS at ~84% on unseen forms, and lemmatization generalizes too:
+`greek.use_neural_lemmatizer()` (a GreTa seq2seq, the `[neural]` extra) reaches 76.3%
+on unseen forms, while the zero-dependency `greek.use_lemmatizer()` (edit-trees +
+perceptron) reaches ~40%. Quantify any combination on your own gold set with
+`benchmark.compare_modes()`. For meaning, opt into `greek.use_lsj()` (LSJ glossing);
+for syntax, `greek.use_parser()` (a dependency parser, ~0.67 UAS / 0.57 LAS on
+projective AGDT). See [Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in)
 and [Morphological analysis](Greek-NLP#morphological-analysis).
 
 ### How do I cite pyaegean and its data in a paper?

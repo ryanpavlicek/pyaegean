@@ -1,20 +1,20 @@
-"""Fair, leakage-free held-out evaluation of Greek lemma/POS against the AGDT.
+"""Leakage-free held-out evaluation of Greek lemma/POS against the AGDT.
 
 The treebank backend is a **lookup** — it memorizes attested forms, so any test set
 drawn from its own training text is trivially aced and tells you nothing about
-*generalization*. To measure real generalization (and to compare fairly against CLTK),
-this module splits the AGDT into train/dev **by sentence**, flags the dev forms that are
-**unseen** in train, and scores any tagger on the disjoint unseen subset — the honest
-number. Any callable (a pyaegean mode, or a CLTK pipeline) drops into the identical split.
+*generalization*. To measure real generalization, this module splits the AGDT into
+train/dev **by sentence**, flags the dev forms that are **unseen** in train, and scores
+any tagger on the disjoint unseen subset. Any callable — a pyaegean mode or a CLTK
+pipeline — drops into the identical split.
 
-**Honesty caveats (load-bearing):**
+**Load-bearing caveats:**
 - The treebank lookup must NOT be active when scoring "pyaegean" here — it is built from
   the *whole* AGDT (dev included), so it would leak. Score the generalizer/baseline with
   `disable_treebank()`, or use the train-only lookup this module builds.
 - stanza's grc models were trained on Perseus/PROIEL, which overlaps the AGDT, so an AGDT
   held-out split is genuinely held-out for pyaegean but likely **in-training for stanza** —
-  inflating stanza on *seen* forms. Separately, UD-vs-AGDT tagset differences (stanza emits
-  PROPN/AUX/SCONJ, absent from the AGDT scheme) bias *against* stanza on those same seen
+  raising stanza's score on *seen* forms. Separately, UD-vs-AGDT tagset differences (stanza
+  emits PROPN/AUX/SCONJ, absent from the AGDT scheme) cut the other way on those same seen
   closed-class words. Both effects concentrate on seen forms and largely cancel there, so the
   **unseen-form column is the clean comparison** — it isolates generalization and is
   uncontaminated by the tagset convention. A fully neutral test still needs a hand-checked

@@ -1,14 +1,23 @@
 """Greek NLP pipeline — composable, individually-callable stages.
 
-v0.1: ``normalize`` (NFC/NFD + Beta Code ↔ Unicode), ``tokenize`` (word/sentence),
-``syllabify``, accent analysis (``accentuation``), ``prosody``/``meter`` scansion,
-``phonology`` (IPA), a seed ``lemmatize``, baseline ``pos``, and a rule-based
-``morphology`` analyzer (``analyze``) — with an **opt-in** treebank backend
-(``use_treebank``; Perseus AGDT) that supplies attested, correctly-accented lemmas
-and full features for known forms, an **opt-in** LSJ lexicon (``use_lsj``; Perseus
-Liddell-Scott-Jones) for glossing (``gloss``/``lookup``), and an **opt-in** baseline
-**dependency parser** (``use_parser``/``parse``; arc-eager + averaged perceptron,
-trained on the AGDT) — see docs/PLAN.md.
+The dependency-free core covers ``normalize`` (NFC/NFD + Beta Code ↔ Unicode),
+``tokenize`` (word/sentence), ``syllabify``, accent analysis (``accentuation``),
+``prosody``/``meter`` scansion, ``phonology`` (IPA), a seed ``lemmatize``, baseline
+``pos``, and a rule-based ``morphology`` analyzer (``analyze``).
+
+Opt-in backends layer on richer data and models:
+
+- ``use_treebank`` (Perseus AGDT) supplies attested, correctly-accented lemmas and
+  full features for known forms.
+- ``use_lsj`` (Perseus Liddell-Scott-Jones) provides glossing (``gloss``/``lookup``).
+- ``use_parser`` (``parse``; arc-eager + averaged perceptron, trained on the AGDT) is
+  a projective dependency parser (~0.67 UAS / 0.57 LAS).
+- ``use_tagger`` is an averaged-perceptron POS tagger (~84% on unseen forms).
+- ``use_lemmatizer`` is an edit-tree lemmatizer (~40% on unseen forms).
+- ``use_neural_lemmatizer`` (the ``[neural]`` extra) is a GreTa T5 seq2seq model
+  served as int8 ONNX without torch; it pairs a gold lookup with seq2seq decoding and
+  reaches 76.3% on unseen forms. ``lemmatize`` cascades treebank -> neural ->
+  edit-tree -> seed.
 
 Every stage is a plain function so it can be used standalone::
 

@@ -73,8 +73,9 @@ c.stem, c.total_count, c.suffixes
 
 ## Collocation statistics
 
-For a word pair across N documents (joint, countA, countB, total). SciPy provides
-the exact special functions (lazy import).
+For a word pair across N documents (joint, countA, countB, total). The exact
+special functions come from the standard-library `math` module, so there are no
+third-party dependencies.
 
 ```python
 from aegean.analysis import (

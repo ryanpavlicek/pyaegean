@@ -2,13 +2,12 @@
 **averaged-perceptron** classifier (pure Python; no heavy ML deps), trained on the
 Perseus AGDT.
 
-**Opt-in + a baseline.** Call :func:`use_parser` to train (on first use, from the
-AGDT we already fetch for the treebank) or load the cached model, then :func:`parse`
-turns a Greek sentence into a :class:`DepTree` with the gold **AGDT/Prague** labels
-(SBJ, OBJ, ATR, ADV, PRED, COORD, Aux*…). It is a *baseline*: a pure-Python perceptron
-parser on a free-word-order, partly non-projective language lands well below neural
-SOTA — :func:`evaluate` reports the honest UAS/LAS on a held-out split. Default
-behaviour (without :func:`use_parser`) does nothing and needs no network.
+Opt-in. Call :func:`use_parser` to train (on first use, from the AGDT we already fetch
+for the treebank) or load the cached model, then :func:`parse` turns a Greek sentence
+into a :class:`DepTree` with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED,
+COORD, Aux*…). On a free-word-order, partly non-projective language it reaches about
+0.67 UAS / 0.57 LAS on projective AGDT; :func:`evaluate` reports UAS/LAS on a held-out
+split. Default behaviour (without :func:`use_parser`) does nothing and needs no network.
 
 Data: the same AGDT v2.1 Greek files used by :mod:`aegean.greek.treebank` (CC BY-SA
 3.0; fetched to cache, never bundled). The trained model is built in the cache.
@@ -523,7 +522,7 @@ def evaluate(
     *, source_dir: Path | str | None = None, holdout: float = 0.1, epochs: int = 5
 ) -> dict[str, Any]:
     """Train on a split and score the held-out trees → ``{"uas","las","sentences"}``
-    (gold POS/lemma; measures parsing in isolation). The honest baseline number."""
+    (gold POS/lemma; measures parsing in isolation)."""
     trees = load_gold_trees(source_dir=source_dir)
     cut = max(1, int(len(trees) * (1 - holdout)))
     train_trees, dev_trees = trees[:cut], trees[cut:]

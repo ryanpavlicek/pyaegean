@@ -1,10 +1,10 @@
 """Baseline Greek lemmatization (open-data seed).
 
 A small bundled form→lemma table (seeded from the sample corpus) plus an
-identity fallback. This is a **baseline** placeholder for v0.1: a real
-morphological analyzer / Morpheus-style engine and full treebank-derived tables
-land in the deeper Greek NLP track (see docs/PLAN.md). Unknown forms are
-returned normalized (NFC), unchanged — flagged via :func:`lemmatize_verbose`.
+identity fallback. This is the seed tier of the lemmatization cascade: the
+treebank, neural, and edit-tree backends (opt-in) handle the heavier work,
+and this table is the final fallback. Unknown forms are returned normalized
+(NFC), unchanged — flagged via :func:`lemmatize_verbose`.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     When the AGDT treebank backend is active (see :func:`aegean.greek.use_treebank`),
     its attested, correctly-accented lemma is preferred; next, when the neural backend is
     active (see :func:`aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
-    used — the strongest generalizer for unseen forms; next the trained edit-tree lemmatizer
+    used — it generalizes well to unseen forms (76.3%); next the trained edit-tree lemmatizer
     (see :func:`aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted."""
     from . import treebank
 
@@ -43,15 +43,15 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
             return hit, True
     from . import neural_lemmatizer
 
-    if neural_lemmatizer.active() is not None:  # GreTa seq2seq — best on unseen forms
+    if neural_lemmatizer.active() is not None:  # GreTa seq2seq — strong on unseen forms
         pred = neural_lemmatizer.predict(word)
         return pred, pred != unicodedata.normalize("NFC", word)
     from . import lemmatizer
 
     if lemmatizer.active() is not None:  # trained generalizer for unseen forms
         pred = lemmatizer.predict(word)
-        # Honest knownness: a prediction identical to the (normalized) form is an identity
-        # fall-through — mirror the seed-table contract (known=False when returned unchanged).
+        # A prediction identical to the (normalized) form is an identity fall-through, so
+        # mirror the seed-table contract: known=False when the form is returned unchanged.
         return pred, pred != unicodedata.normalize("NFC", word)
     key = unicodedata.normalize("NFC", word.lower())
     table = _lemma_table()

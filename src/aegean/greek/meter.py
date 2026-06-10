@@ -25,8 +25,8 @@ Method
    the open ambiguities (dichrona, muta-cum-liquida, correptio). The first valid
    scansion is returned; ``ambiguous`` flags when more than one fits.
 
-Limitations (honest baseline, not a finished scanner)
------------------------------------------------------
+Limitations
+-----------
 - **Synizesis** (two written vowels read as one syllable, e.g. ``Πηληϊάδεω``)
   is not inferred — it is lexical, not spelling-predictable — so a handful of
   Homeric lines that need it will not fit. ``scan_line`` raises

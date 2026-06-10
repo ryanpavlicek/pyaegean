@@ -4,16 +4,17 @@
 Aegean syllabic scripts (Linear A / Linear B). pyaegean focuses narrowly and
 deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
-pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) already
-serves many ancient languages broadly; pyaegean is intentionally narrower, and
-uses CLTK as a friendly benchmark to measure its Greek coverage against.
+pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) serves
+many ancient languages broadly; pyaegean is intentionally narrow and deep for Greek
+and the Aegean scripts.
 
-> **Status: v0.2.0 (alpha).** The script-agnostic core and Linear A are fully
+> **Status: v0.3.0 (alpha).** The script-agnostic core and Linear A are fully
 > implemented; the Greek NLP track is a full pipeline — including an opt-in Perseus
 > AGDT treebank backend (attested lemmas + gold POS/morphology), a generalizing
-> averaged-perceptron POS tagger (`use_tagger`; ~84% on unseen forms) and edit-tree
-> lemmatizer (`use_lemmatizer`), LSJ glossing, a baseline dependency parser, and a CLTK
-> benchmark harness — and the multi-provider AI
+> averaged-perceptron POS tagger (`use_tagger`; ~84% on unseen forms), a generalizing
+> lemmatizer (`use_lemmatizer`; edit-trees) plus a neural seq2seq lemmatizer
+> (`use_neural_lemmatizer`; 76.3% on unseen forms), LSJ glossing, a dependency parser,
+> and a CLTK benchmark harness — and the multi-provider AI
 > layer + hybrid translation are implemented. Analytical and generative output on the
 > undeciphered Linear A material is **exploratory** — see [Data & Provenance](Data-and-Provenance).
 
@@ -57,7 +58,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, 84-sign inventory, sign→sound map, transliteration |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
-| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **generalizing POS tagger** (`use_tagger`; ~84% on unseen forms) and **lemmatizer** (`use_lemmatizer`; edit-trees), **LSJ glossing** (`use_lsj`), a baseline **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
+| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **generalizing POS tagger** (`use_tagger`; ~84% on unseen forms) and **lemmatizer** (`use_lemmatizer`; edit-trees), a **neural seq2seq lemmatizer** (`use_neural_lemmatizer`; 76.3% on unseen forms), **LSJ glossing** (`use_lsj`), a **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
@@ -74,13 +75,11 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Shipped:** v0.1 core + Linear A + Greek start. **v0.2:** multi-provider AI layer +
-translation, *and* deep Greek NLP — treebank lemmas/POS, LSJ glossing, a baseline
-dependency parser, and a CLTK benchmark harness. **In progress (v0.3):** *generalizing*
-POS tagging and lemmatization (`use_tagger` / `use_lemmatizer`; perceptron + edit-trees)
-measured against CLTK on a leakage-free held-out AGDT split — POS within ~5–6 points of
-stanza on unseen forms, pure-Python. **Next:** a hand-checked
-out-of-AGDT gold set (the neutral "beat CLTK" test) → v0.4 Linear B (DAMOS/LiBER) → v0.5
+**Shipped (through v0.3):** the script-agnostic core and bundled Linear A corpus; the
+multi-provider AI layer and hybrid translation; and a deep Greek NLP pipeline — treebank
+lemmas/POS, LSJ glossing, a dependency parser, generalizing perceptron POS tagging
+(~84% on unseen forms), edit-tree and neural seq2seq lemmatization (76.3% on unseen
+forms), and a CLTK benchmark harness. **Next:** v0.4 Linear B (DAMOS/LiBER) → v0.5
 Cypriot/Cypro-Minoan → v1.0 stable.
 
 ## License

@@ -12,3 +12,7 @@ htmlcov/
 
 # Claude Code local (machine-specific) settings
 .claude/settings.local.json
+
+# Local-only — not part of the public package
+CLAUDE.md
+experiments/

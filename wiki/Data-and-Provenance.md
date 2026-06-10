@@ -41,7 +41,7 @@ Errors are explicit and never block `import`:
 
 The facsimile/photo set (3,368 files, ~116 MB download, ~125 MB unpacked) is
 **fetched (never re-hosted)** from a release on the `ryanpavlicek/linearaworkbench`
-repo, where it is already hosted. `fetch` downloads the `tar.gz` and unpacks it
+repo. `fetch` downloads the `tar.gz` and unpacks it
 into a cache directory of images. Its copyright is a patchwork — most images are
 **© École Française d'Athènes** (the GORILA volumes), others are held by named
 scholars, publications, and photographers (see the corpus's per-image
@@ -90,6 +90,21 @@ fetched (never re-hosted) and the index stays in the local cache — pyaegean ne
 bundles nor redistributes it. Attribute Perseus per the statement in `NOTICE`. Network
 is needed only on the first call. See
 [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
+
+### The Greek neural lemmatizer model (`use_neural_lemmatizer`, `[neural]`)
+
+`aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer that
+generates the lemma for a form, reaching 76.3% on unseen forms. It pairs a
+bundled gold lemma lookup (which answers attested forms) with the neural model
+(which handles the rest); the model is fetched to the cache (~232 MB), never
+bundled, and runs torch-free on numpy + onnxruntime, loaded only on activation.
+
+Model card: the base model is **bowphs/GreTa**, an Ancient-Greek T5 released under
+**Apache-2.0**. pyaegean fine-tunes it into a form→lemma seq2seq on the **AGDT**
+(CC BY-SA 3.0), **Pedalion** (CC BY-SA 4.0), and **Gorman** (CC0) treebanks, then
+exports the result to int8 ONNX. The released model is **CC BY-SA 4.0**,
+fetched to the user cache and never bundled, so the wheel stays Apache-2.0. See
+[Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 
 ## Provenance & citation
 

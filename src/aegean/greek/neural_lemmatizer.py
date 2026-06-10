@@ -3,13 +3,13 @@
 A fine-tuned **GreTa** (Ancient-Greek T5) seq2seq that *generates* the lemma of an unseen
 form — the high-accuracy counterpart to the pure-Python edit-tree lemmatizer
 (:mod:`aegean.greek.lemmatizer`). On the leakage-free held-out AGDT split it reaches **76.3%
-on unseen forms**, against the edit-tree's 58.2% and stanza/CLTK's 62.8%.
+on unseen forms**.
 
 It is the unseen-form tier of a **hybrid**: a bundled gold ``form → lemma`` lookup answers
 *seen* forms exactly (in AGDT's orthographic convention), and the seq2seq handles the rest —
 so the model is consulted only where generation actually wins.
 
-**Heavy by design, but contained.** Inference needs ``onnxruntime`` + ``tokenizers`` (the
+Inference needs ``onnxruntime`` + ``tokenizers`` (the
 ``[neural]`` extra); these are imported only when the backend is activated, so ``import
 aegean`` stays instant and dependency-free. **torch is not required** — decoding is a numpy
 greedy loop over the ONNX encoder/decoder sessions. The model (ONNX + tokenizer + lookup) is

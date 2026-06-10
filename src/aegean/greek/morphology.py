@@ -13,8 +13,7 @@ This is a **baseline** engine, high-precision on the *regular* paradigms it
 encodes — the article and pronouns (closed classes), the first/second
 declensions and common third-declension endings, and **thematic** verbs in the
 present, imperfect, future and (sigmatic) aorist indicative, plus the common
-infinitives and the mediopassive participle. It is deliberately honest about its
-limits:
+infinitives and the mediopassive participle. Its limits are well-defined:
 
 - **Accent is not restored** on a rule-reconstructed lemma (accent recession is
   not derivable from the ending alone); when the bundled seed lexicon knows the
@@ -22,7 +21,7 @@ limits:
   unaccented reconstructed stem and :attr:`Analysis.lemma_certain` is ``False``.
 - Athematic, contract, irregular and suppletive forms (``εἶπον`` → ``λέγω``) are
   outside a purely rule-based reach — those need the treebank-derived lexicon
-  (see ``docs/PLAN.md``).
+  (see :func:`aegean.greek.use_treebank`).
 
 Feature analyses are **exploratory** for ambiguous forms: trust the closed
 classes and the feature set, treat a single auto-picked reading with care.

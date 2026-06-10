@@ -1,11 +1,10 @@
 """Benchmark harness for the Greek pipeline.
 
 Scores each stage (tokenize, syllabify, accent classification, lemmatization)
-against a small hand-authored gold set, and compares any candidate lemmatizer —
-notably **CLTK** — on the same gold. This operationalizes the project's goal
-("match-or-beat CLTK on Greek") as a measured metric, while keeping CLTK a
-*benchmark target, never a dependency*: the comparison takes an injected
-lemmatize callable, so nothing here imports CLTK.
+against a small hand-authored gold set, and scores any candidate lemmatizer —
+notably a **CLTK** pipeline — on the same gold. CLTK stays a *comparison target,
+never a dependency*: the comparison takes an injected lemmatize callable, so
+nothing here imports CLTK.
 
 ```python
 from aegean.greek import benchmark
@@ -115,7 +114,8 @@ def _scans_as(line: str, meter: str, pattern: str) -> bool:
 
 def _morph_recall(word: str, pos: str, features: dict[str, str]) -> bool:
     """Whether the gold analysis (pos + features) is among the analyzer's
-    candidates — recall on an intentionally ambiguity-producing engine."""
+    candidates. The analyzer returns every reading it can support, so this
+    measures recall rather than exact match."""
     return any(
         a.pos == pos and all(a.features().get(k) == v for k, v in features.items())
         for a in analyze(word)

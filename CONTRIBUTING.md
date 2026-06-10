@@ -2,8 +2,7 @@
 
 Thanks for your interest! pyaegean is a specialist Python toolkit for Ancient
 Greek (alphabetic + Aegean syllabic), focused on deep, high-quality Greek coverage.
-See `docs/PLAN.md` for the architecture and roadmap, and `CLAUDE.md` for working
-conventions.
+See `docs/PLAN.md` for the architecture.
 
 ## Setup
 

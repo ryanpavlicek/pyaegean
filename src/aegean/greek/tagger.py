@@ -4,13 +4,12 @@ trained on the AGDT (pure Python, no heavy deps).
 **Opt-in, and the piece that generalizes.** The treebank backend is a *lookup* (attested
 forms only) and the rule baseline only knows regular paradigms; neither tags an *unseen*
 form well. This tagger predicts POS for any form from suffix/shape/accent + context
-features, so it generalizes — that's what closes the gap with CLTK on unseen text. It
-reuses the averaged-perceptron machinery built for the dependency parser
-(:mod:`aegean.greek.syntax`).
+features, reaching ~84% on unseen forms. It reuses the averaged-perceptron machinery from
+the dependency parser (:mod:`aegean.greek.syntax`).
 
 Trained on the AGDT we already fetch (CC BY-SA 3.0), built in the cache on first use,
-never bundled. POS only for now; lemma (edit-trees) and full morphology are separate
-steps. Default behaviour without :func:`use_tagger` is unchanged.
+never bundled. POS only; lemma (edit-trees) and full morphology are separate steps.
+Default behaviour without :func:`use_tagger` is unchanged.
 """
 
 from __future__ import annotations
@@ -52,9 +51,9 @@ class TaggerNotLoadedError(RuntimeError):
 def _form_features(form: str, bare: str) -> tuple[str, ...]:
     """Context-free features of a single token (cached across epochs)."""
     # Suffix/prefix n-grams are the generalizing signal (Greek inflection is suffixal,
-    # endings run to ~6 chars: -μενος, -σθαι). No lexicalized whole-form feature: it only
-    # memorizes seen forms (which the treebank lookup already covers) and never fires on the
-    # unseen forms this tagger exists to handle — it just bloats the cached model.
+    # endings run to ~6 chars: -μενος, -σθαι). There is deliberately no lexicalized
+    # whole-form feature: it would only memorize seen forms (which the treebank lookup
+    # already covers) and never fire on the unseen forms this tagger handles.
     feats = [
         f"suf1={bare[-1:]}", f"suf2={bare[-2:]}", f"suf3={bare[-3:]}",
         f"suf4={bare[-4:]}", f"suf5={bare[-5:]}", f"suf6={bare[-6:]}",

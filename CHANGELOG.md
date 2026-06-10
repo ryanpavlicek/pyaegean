@@ -7,8 +7,8 @@ All notable changes to pyaegean are documented here. The format follows
 ## 0.3.0 — 2026-06-10
 
 Adds opt-in Greek tagging and lemmatization that generalize to unseen forms — including a
-neural lemmatizer backend that surpasses stanza/CLTK on unseen-form lemma — and makes the core
-dependency-free. All Linear A analysis remains exploratory.
+neural lemmatizer backend for unseen-form lemma — and makes the core dependency-free. All
+Linear A analysis remains exploratory.
 
 ### Added
 - **Generalizing POS tagger** (opt-in): `greek.use_tagger()` trains an averaged-perceptron
@@ -17,30 +17,26 @@ dependency-free. All Linear A analysis remains exploratory.
   the treebank lookup (attested forms only) and the suffix heuristic fail. `greek.pos_tags()`
   uses it in context when active; `greek.evaluate_tagger()` reports leakage-free held-out
   accuracy. Measured **84.4% POS overall / 83.6% on unseen forms** on a 90/10 AGDT split
-  (vs ~0% for the lookup and ~50% for the heuristic on unseen); on the same split stanza
-  (CLTK grc) scores 89.1% unseen, so pyaegean lands within ~5–6 points pure-Python — on a
-  split that is *in-training* for stanza. The ~2.2 MB model is built on first use, cached,
-  never bundled.
+  (vs ~0% for the lookup and ~50% for the heuristic on unseen). The ~2.2 MB model is built on
+  first use, cached, never bundled.
 - **Generalizing lemmatizer** (opt-in): `greek.use_lemmatizer()` trains a Chrupała-style
   **edit-tree** model with an averaged-perceptron reranker (pure Python) on the AGDT. It
   learns inflection→lemma transforms (incl. accent shifts) that generalize to unseen forms,
   conditioned on POS from the tagger. `greek.lemmatize` uses it (when active) for forms the
   treebank lookup doesn't cover; `greek.evaluate_lemmatizer()` reports leakage-free held-out
   accuracy. Measured **84.5% overall / 40.3% on unseen forms** on a 90/10 AGDT split (the
-  lookup is 0% on unseen); stanza (CLTK grc) scores 62.8% unseen; the opt-in **neural backend**
-  below passes that, while this pure-Python model lifts unseen lemma from the lookup's 0% with no
-  heavy deps.
+  lookup is 0% on unseen). For unseen forms the opt-in **neural backend** below goes further;
+  this pure-Python model already lifts unseen lemma from the lookup's 0% with no heavy deps.
 - **Neural lemmatizer backend** (opt-in `[neural]`): `greek.use_neural_lemmatizer()` activates a
   fine-tuned **GreTa** (Ancient-Greek T5) seq2seq, exported to ONNX, that *generates* the lemma
-  of an unseen form — reaching **76.3% on unseen forms, past stanza/CLTK's 62.8%**. It ships as a
-  hybrid (a bundled gold lookup answers seen forms exactly; the seq2seq handles the rest, ~92%
-  overall). Inference is **torch-free** — a numpy greedy decode over int8 ONNX via onnxruntime,
+  of an unseen form — reaching **76.3% on unseen forms**. It ships as a hybrid (a bundled gold
+  lookup answers seen forms exactly; the seq2seq handles the rest, ~92% overall). Inference is **torch-free** — a numpy greedy decode over int8 ONNX via onnxruntime,
   imported only on activation, so `import aegean` stays instant. The model (~232 MB, CC BY-SA) is
   fetched-to-cache, sha256-verified, never bundled; install with `pip install 'pyaegean[neural]'`.
 - **Leakage-free held-out evaluation** (`aegean.greek.heldout`): splits the AGDT by
   sentence, flags dev forms unseen in training, and scores any tagger/lemmatizer (a pyaegean
   mode or a CLTK pipeline) on the disjoint unseen subset — the honest generalization measure
-  behind the model numbers and the CLTK comparison.
+  behind the model numbers.
 
 ### Changed
 - `pos_tag`/`pos_tags` consult the trained tagger (when active) for the open-class forms the

@@ -1,31 +1,35 @@
 # Installation
 
-pyaegean requires **Python ≥ 3.10**. The core stays import-light:
-`numpy`/`pandas`/`scipy` are imported lazily (only inside DataFrame interop and
-the collocation statistics), and provider AI SDKs are optional extras imported
-lazily inside their adapters — so `import aegean` is fast and dependency-light.
+pyaegean requires **Python ≥ 3.10**. The core has zero hard third-party
+dependencies — the wheel ships code and JSON only, so `import aegean` is
+instant. Everything heavier is an optional extra: `pandas` (DataFrame interop),
+the provider AI SDKs, and the Greek NLP backends are all imported lazily inside
+their adapters and pulled in only when you ask for them.
 
 ## From PyPI
 
 ```bash
-pip install pyaegean            # core + Linear A + Greek NLP
+pip install pyaegean            # core: Linear A + Greek, zero hard deps
 ```
 
 ### Optional extras
 
 | Extra | Pulls in | For |
 | --- | --- | --- |
+| `pyaegean[data]` | `pandas` | DataFrame interop (`to_dataframe`) |
+| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek lemmatizer (`use_neural_lemmatizer()`) |
 | `pyaegean[anthropic]` | `anthropic` | Anthropic (default) AI provider |
 | `pyaegean[openai]` | `openai` | OpenAI provider |
 | `pyaegean[grok]` | `openai` | xAI Grok (OpenAI-API-compatible) |
 | `pyaegean[gemini]` | `google-genai` | Google Gemini provider |
-| `pyaegean[ai]` | all of the above | the full AI layer |
+| `pyaegean[ai]` | all of the above providers | the full AI layer |
 | `pyaegean[epidoc]` | `lxml` | EpiDoc I/O |
 | `pyaegean[geo]` | `geopandas`, `shapely` | geographic analysis |
-| `pyaegean[all]` | everything | |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data` | everything except `neural` |
 
 ```bash
 pip install "pyaegean[ai]"
+pip install "pyaegean[neural]"
 pip install "pyaegean[all]"
 ```
 
@@ -45,9 +49,12 @@ The compact text corpora (Linear A inscriptions/signs, Greek seeds) ship inside
 the wheel and work fully offline. Large assets are **not** bundled — they are fetched
 on demand into a user cache on first use: the ~116 MB Linear A facsimile imagery, plus
 the opt-in Greek backends' data — the Perseus AGDT treebank (~75 MB,
-`greek.use_treebank()`) and the full Perseus LSJ (~270 MB, `greek.use_lsj()`);
-`greek.use_parser()` caches a small (~4 MB) trained model. All remain offline after the
-first fetch. See [Data & Provenance](Data-and-Provenance).
+`greek.use_treebank()`) and the full Perseus LSJ (~270 MB, `greek.use_lsj()`).
+The pure-Python backends each cache a small trained model: `greek.use_parser()`,
+`greek.use_tagger()`, and `greek.use_lemmatizer()`. The neural lemmatizer
+(`greek.use_neural_lemmatizer()`, the `[neural]` extra) fetches a ~232 MB int8 ONNX
+GreTa model. All remain offline after the first fetch. See
+[Data & Provenance](Data-and-Provenance).
 
 ## From source
 

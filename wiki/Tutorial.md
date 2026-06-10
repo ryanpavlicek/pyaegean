@@ -147,7 +147,7 @@ sc.caesura        # 'trochaic'
 [Metrical scansion](Greek-NLP#metrical-scansion) for spondees, the penthemimeral
 caesura, and the (deliberate) limits.
 
-### Tag parts of speech — and meet the baseline honestly
+### Tag parts of speech
 
 ```python
 greek.pos_tags(line)
@@ -157,8 +157,8 @@ greek.pos_tags(line)
 ```
 
 The closed-class word `ὃς` is correctly tagged **PRON**. But notice `ἔννεπε` (a
-verb) and `μάλα` (an adverb) both come back as **NOUN**. That's the baseline being
-honest: closed classes are reliable, but open-class words fall back to NOUN.
+verb) and `μάλα` (an adverb) both come back as **NOUN**. The baseline is reliable
+on closed classes; open-class words fall back to NOUN.
 
 You can fix this for *attested* forms by switching on the
 [treebank backend](Greek-NLP#treebank-backed-mode-opt-in) — it uses gold tags from
@@ -215,8 +215,9 @@ See [Morphological analysis](Greek-NLP#morphological-analysis) for the full scop
 
 ### What you learned
 
-The Greek pipeline is a set of independent steps you can mix and match — and it
-tells you, by design, where it's confident and where it's guessing. **Where next:**
+The Greek pipeline is a set of independent steps you can mix and match, each
+reporting where its answer is solid and where it has fallen back to a guess.
+**Where next:**
 the [Greek NLP](Greek-NLP) reference covers IPA phonology, prosody, the benchmark
 harness, the opt-in [treebank lemmas/morphology](Greek-NLP#treebank-backed-mode-opt-in),
 [LSJ glossing](Greek-NLP#lexicon-lsj-glossing-opt-in), and the baseline

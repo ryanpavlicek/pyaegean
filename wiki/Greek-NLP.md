@@ -13,7 +13,7 @@ analyzer**. On top, three **opt-in** backends (all built from Perseus gold data,
 documented below) add attested accented lemmas + gold POS/morphology
 ([treebank](#treebank-backed-mode-opt-in)), dictionary glosses
 ([LSJ](#lexicon-lsj-glossing-opt-in)), and dependency trees
-([parser](#dependency-parsing-opt-in-baseline)). Still genuinely future: iambic/lyric
+([parser](#dependency-parsing-opt-in-baseline)). Not yet covered: iambic/lyric
 metres and automatic synizesis.
 
 Every example below is real, runnable output. Import the module once:
@@ -231,7 +231,7 @@ everything else, including words neither has seen.
 
 **Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on
 the disjoint 10% (≈54k tokens, via `greek.evaluate_tagger()`), it reaches **84.4% POS
-overall and 83.6% on UNSEEN forms** — forms absent from the training split. For contrast,
+overall and 83.6% on unseen forms** — forms absent from the training split. For contrast,
 on the same tokens the lookup scores 0% on unseen (no entry) and the suffix heuristic only
 ~50%. The cached model is ~2.2 MB and `import aegean` stays instant — the model is built on
 first `use_tagger()`, never bundled.
@@ -241,16 +241,11 @@ greek.evaluate_tagger(holdout=0.1)
 # {'pos_all': 0.844, 'pos_unseen': 0.836, 'n_all': 54036, 'n_seen': 45138, 'n_unseen': 8898}
 ```
 
-**How close is that to CLTK?** On the *same* held-out split, stanza (CLTK's grc engine)
-scores ~89% on unseen forms — about 5–6 points ahead. But read it honestly: that split is
-*in-training* for stanza (its Perseus models were trained on the AGDT), which inflates it
-on seen forms, while UD-vs-AGDT tagset conventions (stanza's PROPN/AUX/SCONJ) penalize it
-on those same seen words; both biases concentrate on seen forms, so the **unseen column is
-the clean comparison**. pyaegean lands within ~5–6 points of a neural tagger with **zero
-heavy dependencies, an instant import, and a ~2 MB model** (vs stanza's torch + ~500 MB) —
-see [Comparing against CLTK](#comparing-against-cltk). A fully neutral "beat CLTK" test
-needs a hand-checked, out-of-AGDT gold set; the AGDT can't settle it, since it trained
-stanza.
+This is a generalizing tagger with **zero heavy dependencies, an instant import, and a
+~2 MB model** — a different point on the trade-off curve from a full neural pipeline like
+stanza (torch + ~500 MB), which reaches higher accuracy on the same data. The
+[CLTK benchmark harness](#comparing-against-cltk) lets you score the two side by side on a
+gold set of your choosing.
 
 ## Morphological analysis
 
@@ -277,7 +272,7 @@ fields; `.features()` gives just the ones that apply:
 a = greek.analyze("λύεις")[0]
 a.lemma, a.pos        # ('λυω', 'VERB')
 a.features()          # {'number': 'sg', 'tense': 'pres', 'voice': 'act', 'mood': 'ind', 'person': '2'}
-a.lemma_certain       # False  ← see "the lemma is honest about itself" below
+a.lemma_certain       # False  ← see "how far to trust the lemma" below
 ```
 
 Closed-class words (the article, prepositions, conjunctions, particles, pronouns)
@@ -295,7 +290,7 @@ greek.lemmas("ἀνθρώπων")   # ['ἄνθρωπος']   (the distinct lemm
 greek.best_pos("λύεις")    # 'VERB'         (the single most likely part of speech)
 ```
 
-### The lemma is honest about itself
+### How far to trust the lemma
 
 `Analysis.lemma_certain` tells you how much to trust the lemma. When the bundled
 seed lexicon knows the form, you get the correctly **accented** lemma and
@@ -316,8 +311,9 @@ third-declension endings, and **thematic** verbs in the present, imperfect, futu
 and sigmatic aorist indicative, plus common infinitives and the mediopassive
 participle). Past tenses are augment-gated, and a dative singular is detected from
 its iota subscript. Athematic, contract, irregular and suppletive forms (`εἶπον` →
-`λέγω`) are beyond a purely rule-based reach and await the treebank-derived
-lexicon. For ambiguous forms the feature analyses are **exploratory**: trust the
+`λέγω`) are beyond a purely rule-based reach; for those, switch on the
+[treebank-derived lexicon](#treebank-backed-mode-opt-in) below. For ambiguous forms the
+feature analyses are **exploratory**: trust the
 closed classes and the feature set; treat a single auto-picked reading with care.
 
 ### Treebank-backed mode (opt-in)
@@ -407,20 +403,18 @@ bundled gold set; pyaegean with `use_treebank()` active):
 | lemma | 28% | **100%** | **100%** |
 | POS | 50% | **100%** | 90% |
 
-On this gold set the treebank backend **matches CLTK on lemmatization and edges it on
-POS** — but read it honestly. The gold is small (18 lemma / 20 POS items) and weighted
-toward *attested* forms, so it measures lexical coverage, **not** generalization to
-unseen text, where CLTK's neural models would likely lead. CLTK was also scored on
-isolated words with no sentence context (its two POS "misses" — `ἦν → AUX`, a UD
-convention difference vs our `VERB`, and `τόν → PRON`, ambiguous out of context — partly
-reflect that). A larger, in-context, held-out evaluation is the fair next step, and the
-signal that *truly* rivaling CLTK across the board needs a generalizing model, not just
-lookup.
+On this gold set the treebank backend matches CLTK on lemmatization and scores higher on
+POS — but read the numbers for what they are. The gold is small (18 lemma / 20 POS items)
+and weighted toward *attested* forms, so it measures lexical coverage, **not**
+generalization to unseen text. CLTK was also scored on isolated words with no sentence
+context (its two POS "misses" — `ἦν → AUX`, a UD convention difference vs our `VERB`, and
+`τόν → PRON`, ambiguous out of context — partly reflect that). For generalization, the
+held-out evaluations below are the relevant measure.
 
-**Held-out generalization (that fair next step, now taken).** The
-[generalizing tagger](#generalizing-pos-tagger-opt-in) was measured exactly that way — a
-leakage-free 90/10 AGDT sentence split, scored *in context* on ≈54k tokens, with the
-**unseen-form** subset (forms absent from training) called out separately:
+**Held-out generalization.** The
+[generalizing tagger](#generalizing-pos-tagger-opt-in) is measured on a leakage-free 90/10
+AGDT sentence split, scored *in context* on ≈54k tokens, with the **unseen-form** subset
+(forms absent from training) called out separately:
 
 | POS — held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
@@ -431,10 +425,10 @@ leakage-free 90/10 AGDT sentence split, scored *in context* on ≈54k tokens, wi
 penalized for on *seen* closed-class words (PROPN→NOUN, AUX→VERB, SCONJ→CCONJ) raises its
 overall to 92.0%; the unseen column is unchanged (those are all seen forms).
 
-stanza leads by ~5–6 points on unseen forms — but the AGDT is *in-training* for stanza (its
-models were trained on it), so this split flatters it. The unseen column is the cleanest
-comparison, and even there pyaegean closes most of the gap with no heavy deps. A fully
-neutral verdict needs an out-of-AGDT gold set neither system trained on.
+stanza scores higher on unseen forms here — though the AGDT is *in-training* for stanza (its
+models were trained on it), which flatters this split. The unseen column is the cleanest
+comparison, and pyaegean reaches it with no heavy dependencies. A fully neutral verdict
+needs an out-of-AGDT gold set neither system trained on.
 
 The same evaluation for **lemmatization** (the
 [generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
@@ -447,12 +441,12 @@ The same evaluation for **lemmatization** (the
 
 The pure-Python lemmatizer is competitive overall but trails on **unseen** forms, where
 recovering a lemma (often an accent/stem change, not just a suffix swap) is hardest. The
-opt-in **[neural] backend** closes that gap and passes it: a GreTa seq2seq that *generates*
-the lemma reaches **76.3% on unseen forms — ahead of stanza's 62.8%** — and ships as a hybrid
-(the gold lookup answers seen forms, the seq2seq the rest), so overall lemma accuracy lands
-around **92%**, beating stanza on both columns. It is a fetched-to-cache ONNX model behind the
-`[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree stays the zero-dependency
-default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
+opt-in **[neural] backend** reaches **76.3% on unseen forms** with a GreTa seq2seq that
+*generates* the lemma, and ships as a hybrid (the gold lookup answers seen forms, the
+seq2seq the rest), so overall lemma accuracy lands around **92%**. It is a fetched-to-cache
+ONNX model behind the `[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree
+stays the zero-dependency default. See
+[Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
@@ -499,19 +493,17 @@ disjoint 10% (via `greek.evaluate_lemmatizer()`, with *predicted* POS), it reach
 overall and 40.3% on unseen forms** — versus the lookup's 0% on unseen. The cached model is
 ~7 MB (built on first use, never bundled).
 
-**Versus CLTK.** On the same split stanza scores 62.8% on unseen lemma — clearly ahead.
-Recovering an unseen Greek lemma often means an internal stem/accent change, not just a suffix
-swap, and stanza's neural character model is genuinely strong there (a pure-Python edit-tree
-reranker tops out near 45% even with gold POS). So this is honest, real generalization (0 →
-40% unseen, competitive on attested forms) but not a win on unseen lemma — for that, switch on
-the **[neural backend](#neural-lemmatizer-opt-in)** below, which beats stanza on unseen.
+This is real generalization from a zero-dependency model (0% → 40% on unseen, competitive
+on attested forms). Recovering an unseen Greek lemma often means an internal stem/accent
+change rather than a suffix swap, which is where a pure-Python edit-tree reranker reaches
+its limit. For higher unseen accuracy, switch on the
+**[neural backend](#neural-lemmatizer-opt-in)** below, which reaches 76.3% on unseen forms.
 
 ## Neural lemmatizer (opt-in)
 
-The edit-tree reranker generalizes by *classifying* a form into a known transformation, which
-caps out near the suffixes it has seen (~58% unseen at best). The `[neural]` backend instead
-**generates** the lemma with a fine-tuned **GreTa** (Ancient-Greek T5) seq2seq — composing
-novel stem/accent changes — and on unseen forms reaches **76.3%, past stanza/CLTK's 62.8%**.
+The `[neural]` backend **generates** the lemma with a fine-tuned **GreTa** (Ancient-Greek
+T5) seq2seq, composing novel stem and accent changes rather than classifying a form into a
+known transformation. On unseen forms it reaches **76.3%**.
 
 ```python
 pip install "pyaegean[neural]"      # onnxruntime + tokenizers; no torch

@@ -81,15 +81,17 @@ With the environment active:
 pip install pyaegean
 ```
 
-That's it — you now have the core library, the full Linear A corpus, and the Greek
-NLP pipeline, all working **offline**. (The optional AI features need an extra
-install and an API key; see the [AI Layer](AI-Layer) page when you want them.)
+That's it — you now have the core library and the full Linear A corpus, working
+**offline** with zero third-party dependencies. The Greek NLP backends (treebank
+lookup, glossing, tagging, parsing, lemmatizing) are opt-in: each is fetched to a
+local cache the first time you turn it on, never bundled. See the
+[Greek NLP](Greek-NLP) page when you want them.
 
 Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.1.0.dev0 ['greek', 'lineara']
+# 0.3.0 ['greek', 'lineara']
 ```
 
 ## Step 5 — Run your first code

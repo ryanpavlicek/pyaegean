@@ -8,9 +8,8 @@ tree** — a recursive transform (keep the shared stem, rewrite the differing pr
 that captures Greek inflection *and* accent shifts and generalizes to forms it has never
 seen (e.g. learning ``-ου → -ος`` applies it to an unseen ``νόμου → νόμος``).
 
-Why a reranker and not a flat classifier: there are thousands of distinct edit trees, and a
-pure-Python argmax over thousands of labels per token would be far too slow. Instead, the
-form's suffixes propose a handful of candidate trees and an **averaged perceptron**
+Decoding uses a reranker rather than a flat classifier over the thousands of distinct edit
+trees: the form's suffixes propose a handful of candidate trees and an **averaged perceptron**
 (:mod:`aegean.greek.syntax`) reranks just those — fast, learned, and still generalizing. The
 reranker conditions on **POS** (from the trained tagger when active) — the key signal for
 which inflectional rule applies (a noun ``-ων`` vs a participle ``-ων`` lemmatize differently).

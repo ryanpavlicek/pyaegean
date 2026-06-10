@@ -42,6 +42,10 @@ corpus.to_dataframe(level="word")          # one row per WORD token
 corpus.to_dataframe(level="token")         # every token (words, numerals, …)
 ```
 
+The `to_dataframe()` views need pandas, which ships as the optional `[data]`
+extra (`pip install 'pyaegean[data]'`); everything else here runs on the
+dependency-free core.
+
 A document's tokens carry their role:
 
 ```python

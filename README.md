@@ -8,18 +8,20 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.2.0 (alpha).** The script-agnostic core, Linear A, the full Greek NLP
-> track (incl. opt-in Perseus-treebank lemmas/POS, LSJ glossing, a baseline dependency
-> parser, and a CLTK benchmark harness), and the multi-provider AI layer are all
-> implemented. Analytical output on the undeciphered Linear A material is
-> **exploratory** — see the methodology/limitations.
+> **Status: v0.3.0 (alpha).** The script-agnostic core, Linear A, the full Greek NLP
+> track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and lemmatizer, a neural
+> lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser, and a CLTK
+> benchmark harness), and the multi-provider AI layer are all implemented.
+> Analytical output on the undeciphered Linear A material is **exploratory** — see the
+> methodology and limitations.
 
 ## Install
 
 ```bash
-pip install pyaegean            # core + Linear A + Greek
-pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini clients
-pip install "pyaegean[all]"     # everything
+pip install pyaegean              # core + Linear A + Greek (zero heavy dependencies)
+pip install "pyaegean[neural]"    # + the neural Greek lemmatizer (onnxruntime; no torch)
+pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini clients
+pip install "pyaegean[all]"       # the data, AI, EpiDoc, and geo extras
 ```
 
 > **New to Python, or not a programmer?** You're exactly who this tool is for.
@@ -81,14 +83,14 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   word/sentence tokenization, syllabification, accent and prosody analysis,
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
   POS tagging, a rule-based morphological analyzer (with an optional
-  Perseus-treebank–backed lexicon for attested, accented lemmas), baseline
-  lemmatization (plus an opt-in **generalizing lemmatizer**, `use_lemmatizer`; edit-trees
-  + perceptron), an opt-in **generalizing POS tagger** (`use_tagger`; an averaged
-  perceptron trained on the AGDT — ~84% on *unseen* forms, where the lookup can't help),
-  opt-in **LSJ glossing** (`use_lsj` → `gloss`/`lookup`), an opt-in baseline **dependency
-  parser** (`use_parser` → `parse`; ~0.67 UAS / 0.57 LAS on projective AGDT), and a **CLTK
-  benchmark harness** (the opt-in treebank lifts lemma 28%→100% and POS 50%→100% on the
-  gold set). `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
+  Perseus-treebank–backed lexicon for attested, accented lemmas), and lemmatization from a
+  rule-based baseline up to an opt-in **neural lemmatizer** (`use_neural_lemmatizer`; a GreTa
+  seq2seq that reaches 76.3% on *unseen* forms), with a pure-Python edit-tree generalizer
+  (`use_lemmatizer`) as the zero-dependency option. Also an opt-in
+  **generalizing POS tagger** (`use_tagger`; ~84% on *unseen* forms), **LSJ glossing**
+  (`use_lsj` → `gloss`/`lookup`), a baseline **dependency parser** (`use_parser` → `parse`;
+  ~0.67 UAS / 0.57 LAS on projective AGDT), and a **CLTK benchmark harness**.
+  `aegean.load("greek")` loads a small bundled sample corpus (Archaic→Koine).
 - **`aegean.data`** — bundled-data access + download-to-cache for large assets.
 - **`aegean.ai`** — multi-provider AI layer: a provider-agnostic
   `LLMClient` (Anthropic default, plus OpenAI, xAI Grok, Gemini — SDKs optional),
@@ -109,15 +111,12 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-**Shipped:** v0.1 core + Linear A + Greek start. **v0.2:** multi-provider AI layer +
-translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a baseline
-dependency parser, and a CLTK benchmark harness. **In progress (v0.3):** *generalizing* POS tagging and lemmatization (`use_tagger` /
-`use_lemmatizer`; averaged perceptron + edit-trees, pure-Python) measured against CLTK on a
-leakage-free held-out AGDT split — POS within ~5–6 points of stanza on unseen forms; the
-pure-Python lemmatizer competitive on attested forms, and the opt-in `[neural]` backend (GreTa
-seq2seq, `use_neural_lemmatizer`) at **76.3% on unseen forms, past stanza's 62.8%**. **Next:** a hand-checked out-of-AGDT gold
-set (the neutral "beat CLTK" test) → v0.4 Linear B (DAMOS/LiBER) → v0.5 Cypriot/Cypro-Minoan
-→ v1.0 stable.
+**Shipped (through v0.3):** the script-agnostic core and Linear A; the multi-provider AI layer
+and translation; and the deep Greek NLP track — Perseus-treebank lemmas/POS, a generalizing
+tagger and lemmatizer, the neural lemmatizer, LSJ glossing, a baseline dependency parser, and a
+CLTK benchmark harness. **Next:** a hand-checked out-of-AGDT gold set for broader evaluation,
+then Linear B (DAMOS / LiBER), Cypriot / Cypro-Minoan,
+and a stable v1.0.
 
 ## License
 

@@ -29,8 +29,8 @@ imports fast, and that the wheel ships only code + JSON.
 
 ## Conventions
 
-- **Lazy heavy imports.** `numpy`/`pandas`/`scipy` and provider SDKs are imported
-  inside the functions that need them. Keep `import aegean` instant.
+- **Lazy heavy imports.** `numpy`/`pandas`, `onnxruntime`, and provider SDKs are
+  imported inside the functions that need them. Keep `import aegean` instant.
 - **No bundled binaries.** Large assets go through the
   [download-to-cache](Data-and-Provenance) layer.
 - **Exploratory labeling.** Any cross-linguistic, accounting, decipherment, or
@@ -58,7 +58,8 @@ src/aegean/
   scripts/   lineara/{loader,inventory,phonetic}  greek/{loader,inventory}
   analysis/  distance align collocation morphology patterns query accounting structure
   greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize
-             treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser) benchmark
+             treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser)
+             neural_lemmatizer (GreTa seq2seq) benchmark (CLTK harness)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
   data/      bundled/{lineara,greek}/*.json  + fetch()/cache

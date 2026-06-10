@@ -1,6 +1,6 @@
 # AI Layer
 
-`aegean.ai` (v0.2) is a **multi-provider**, **optional**, **grounded** AI layer.
+`aegean.ai` (v0.3) is a **multi-provider**, **optional**, **grounded** AI layer.
 Every generative output is labeled **exploratory** with full provenance —
 readings of this material are hypotheses, never ground truth.
 
