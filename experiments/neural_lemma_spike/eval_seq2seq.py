@@ -42,6 +42,7 @@ def main() -> None:
     for i in range(0, len(forms), a.batch):
         b = forms[i:i + a.batch]
         enc = tok(b, return_tensors="pt", padding=True, truncation=True, max_length=ML)
+        enc.pop("token_type_ids", None)  # GreTa's tokenizer emits these; T5.generate rejects them
         gen = model.generate(**enc, max_length=ML, num_beams=1)
         for form, dec in zip(b, tok.batch_decode(gen, skip_special_tokens=True)):
             pred[form] = dec
