@@ -122,3 +122,39 @@ encoder, and Stage E exports it to ONNX.
 
 If UPOS lands short of target, the first lever is more epochs; the second is adding the
 Gorman (CC0) prose treebanks to the training data (same XML schema — extend the builder).
+
+## Stage C — the biaffine parser (joint with tagging, on GreBerta)
+
+**Targets (UD Perseus test):** UAS ≥ 78.8, LAS ≥ 73.1 — the best published numbers.
+
+**Trees.** The model trains on **UD-convention dependency trees** built by the authored,
+validated AGDT→UD converter (`agdt_ud_deps.py`): the structural Prague→UD transforms
+(coordination promotion, AuxP/AuxC demotion, copula promotion, punctuation re-attachment)
+plus a POS-sensitive label map. Agreement with the UD-Perseus conversion, measured on the
+train fold (`validate_agdt_ud_deps.py`): **96.5% heads, 94.5% head+label** — the residue
+is dominated by UD-Perseus's irregular comma attachment.
+
+**Model.** One shared encoder with the Stage B tagging heads **plus** biaffine arc and
+relation scorers (Dozat–Manning). Decoding is graph-based — greedy for dev selection,
+single-root Chu-Liu/Edmonds MST at evaluation — so non-projectivity (the arc-eager
+baseline's structural cap) is handled natively. The saved checkpoint serves the whole
+pipeline: UPOS, XPOS, FEATS, heads, relations — this is the artifact Stage E exports.
+
+**Run (same clone setup):**
+
+```bash
+python pyaegean_repo/training/build_parser_dataset.py
+python pyaegean_repo/training/train_parser.py --model bowphs/GreBerta
+python pyaegean_repo/training/eval_parser_ud.py \
+    --checkpoint pyaegean_repo/training/out/parser/model --treebank perseus --split test \
+    --out pyaegean_repo/training/out/parser/ud-perseus-test.json
+python pyaegean_repo/training/eval_parser_ud.py \
+    --checkpoint pyaegean_repo/training/out/parser/model --treebank proiel --split test \
+    --out pyaegean_repo/training/out/parser/ud-proiel-test.json
+```
+
+Defaults: 6 epochs, lr 3e-5, batch 32, bf16 auto; selection on dev LAS. Tune on dev
+(more epochs if still improving); test folds are measured once at the end. Bring back
+`metrics.json`, both `ud-*-test.json`, and **the checkpoint** (`out/parser/model/`,
+~520 MB → Drive) — it supersedes the Stage B artifact (same tagging heads included)
+and is what Stage E exports to ONNX.
