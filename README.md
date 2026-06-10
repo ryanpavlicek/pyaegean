@@ -126,8 +126,9 @@ CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a Unicode-b
 inventory, transliteration, a Greek-reading bridge, and accounting; the full corpus is
 bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **Cypro-Minoan** (the
 undeciphered Bronze Age script of Cyprus; sign inventory only) has since landed on `main`,
-completing the Aegean set. **Next:** a hand-checked out-of-AGDT gold set and the data-layer/IO work
-toward a stable v1.0.
+completing the Aegean set, and a neutral **out-of-AGDT evaluator** (`greek.evaluate_on_proiel`,
+scoring against the PROIEL treebank) now backs the Greek-NLP numbers. **Next:** the data-layer/IO
+work toward a stable v1.0.
 
 ## License
 

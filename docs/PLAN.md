@@ -190,12 +190,12 @@ write Greek — each with a Unicode-built sign inventory, transliteration, and a
 Linear B adds per-script accounting (`to-so`/`to-sa`) and a bring-your-own EpiDoc corpus reader.
 **Cypro-Minoan** (undeciphered; a 99-sign Unicode inventory and sign-sequence tokenization, no
 phonetics or bridge — modelled on Linear A) has since landed on `main`, completing the Aegean
-syllabic set; it releases in the next version.
+syllabic set; it releases in the next version. A neutral **out-of-AGDT evaluator**
+(`greek.evaluate_on_proiel`, scoring against the PROIEL treebank — a source no pyaegean model
+trained on) has also landed, giving an honest cross-source generalization number.
 
 Planned:
 
-- **Out-of-AGDT gold set**: a hand-checked, neutral evaluation set so the Greek-NLP numbers don't
-  lean on the AGDT (which is in-training for the systems compared against).
 - **Context-aware lemmatizer**: a sentence-context v2 of the `[neural]` backend, to push past the
   76.3% isolated-form ceiling on unseen lemma (larger, uncertain payoff).
 - **Data layer / IO**: the compound `query` engine, JSON round-trip (`to_json`/`from_json`), and

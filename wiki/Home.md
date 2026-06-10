@@ -89,8 +89,9 @@ lemmas/POS, LSJ glossing, a dependency parser, generalizing perceptron POS taggi
 forms), and a CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a
 Unicode-built sign inventory, transliteration, a Greek-reading bridge, and accounting) and the
 **Cypriot syllabary** (Arcado-Cypriot Greek). **Cypro-Minoan** (the undeciphered Bronze Age script
-of Cyprus; sign inventory only) has since landed on `main`, completing the Aegean set. **Next:** a
-hand-checked out-of-AGDT gold set and the data-layer/IO work toward **v1.0 stable**.
+of Cyprus; sign inventory only) has since landed on `main`, completing the Aegean set; and a neutral
+**out-of-AGDT evaluator** (the PROIEL treebank) now backs the Greek-NLP numbers. **Next:** the
+data-layer/IO work toward **v1.0 stable**.
 
 ## License
 

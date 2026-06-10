@@ -7,6 +7,11 @@ All notable changes to pyaegean are documented here. The format follows
 ## Unreleased
 
 ### Added
+- **Neutral out-of-AGDT evaluation** (`aegean.greek.evaluate_on_proiel`): scores the Greek
+  lemmatizer/tagger against the PROIEL treebank (Greek NT + Herodotus) — a source none of
+  pyaegean's models trained on — for an honest cross-source generalization number. PROIEL is
+  fetched to the cache for evaluation only (CC BY-NC-SA 3.0, never bundled); gold lemmas are
+  homograph-normalized and POS compared under a reconciled tagset (PROPN→NOUN, SCONJ→CCONJ).
 - **Cypro-Minoan** (`aegean.scripts.cyprominoan`): the undeciphered Bronze Age script of Cyprus,
   completing the Aegean syllabic set. A 99-sign inventory built from the Unicode Character Database
   (the "Cypro-Minoan" block), with conventional sign numbers (`CM001` …) and no phonetic values —

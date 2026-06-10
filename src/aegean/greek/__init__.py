@@ -39,6 +39,7 @@ from .syntax import DepToken, DepTree, disable_parser, evaluate, parse, use_pars
 from .tagger import disable_tagger, evaluate_tagger, use_tagger
 from .lemmatizer import disable_lemmatizer, evaluate_lemmatizer, use_lemmatizer
 from .neural_lemmatizer import disable_neural_lemmatizer, use_neural_lemmatizer
+from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -113,4 +114,7 @@ __all__ = [
     "evaluate_lemmatizer",
     "use_neural_lemmatizer",
     "disable_neural_lemmatizer",
+    "evaluate_on_proiel",
+    "load_proiel_gold",
+    "proiel_dir",
 ]

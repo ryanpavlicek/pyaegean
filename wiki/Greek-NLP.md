@@ -427,8 +427,9 @@ overall to 92.0%; the unseen column is unchanged (those are all seen forms).
 
 stanza scores higher on unseen forms here — though the AGDT is *in-training* for stanza (its
 models were trained on it), which flatters this split. The unseen column is the cleanest
-comparison, and pyaegean reaches it with no heavy dependencies. A fully neutral verdict
-needs an out-of-AGDT gold set neither system trained on.
+comparison, and pyaegean reaches it with no heavy dependencies. A fully neutral verdict for
+pyaegean needs a gold set it never trained on — see
+[Neutral evaluation (out-of-AGDT)](#neutral-evaluation-out-of-agdt) below.
 
 The same evaluation for **lemmatization** (the
 [generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
@@ -447,6 +448,28 @@ seq2seq the rest), so overall lemma accuracy lands around **92%**. It is a fetch
 ONNX model behind the `[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree
 stays the zero-dependency default. See
 [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
+
+### Neutral evaluation (out-of-AGDT)
+
+The held-out numbers above are leakage-free *within* the AGDT — but pyaegean's backends are
+all built from the AGDT, so they don't show how the system fares on text from a different
+source. `greek.evaluate_on_proiel()` scores the active pipeline (`lemmatize` + `pos_tag`)
+against the **PROIEL treebank** — the Greek New Testament and Herodotus — which none of
+pyaegean's models have ever seen, so every form is a genuine generalization test.
+
+```python
+from aegean import greek
+greek.use_treebank(); greek.use_neural_lemmatizer()   # measure the full pipeline
+greek.evaluate_on_proiel()        # {'lemma': …, 'pos': …, 'n': …} over the PROIEL gold
+```
+
+PROIEL is fetched to the cache on first use (CC BY-NC-SA 3.0 — **evaluation only, never
+bundled**, like the AGDT). Lemma accuracy is the clean metric (lemmas compared after Unicode
+normalization and dropping PROIEL's `#N` homograph suffix); POS is compared under a reconciled
+tagset (PROIEL's PROPN/SCONJ collapse to pyaegean's NOUN/CCONJ, so the figure reflects real
+errors, not convention gaps). This is a neutral test **for pyaegean specifically** — PROIEL is
+in-training for some other tools (e.g. stanza's `grc_proiel` model), so it is not a level field
+for cross-tool comparison; it answers "how well does pyaegean read Greek it never trained on."
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,

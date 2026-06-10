@@ -47,6 +47,14 @@ Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   via aegean.greek.use_neural_lemmatizer() (the [neural] extra); fetched to the local cache,
   never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
+PROIEL treebank — Ancient Greek (fetched on demand, NOT redistributed)
+  The PROIEL treebank (https://github.com/proiel/proiel-treebank) — the Greek New Testament
+  and Herodotus — licensed CC BY-NC-SA 3.0. Downloaded by the user on demand via
+  aegean.greek.evaluate_on_proiel() as a neutral, out-of-AGDT evaluation set; pyaegean reads it
+  locally in the cache and neither bundles nor re-hosts it (NonCommercial + ShareAlike). Cite:
+  Dag T. T. Haug and Marius L. Jøhndal (2008), "Creating a Parallel Treebank of the Old
+  Indo-European Bible Translations", Proc. LaTeCH 2008, pp. 27–34.
+
 Aegean syllabic sign data — Unicode Character Database (bundled)
   The Linear B (src/aegean/data/bundled/linearb/), Cypriot (.../cypriot/), and Cypro-Minoan
   (.../cyprominoan/) sign inventories — and the phonetic maps for the two deciphered scripts —
@@ -66,7 +74,6 @@ Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   pyaegean parses locally and never re-hosts.
 
 Planned (future versions; included here for forward attribution):
-  - PROIEL treebanks (Ancient Greek) — CC BY-NC-SA.
   - First1KGreek / Open Greek and Latin — CC BY.
   - Morpheus morphological data; LSJ lexicon (per applicable license).
   Each will be attributed and license-gated as it is integrated.

@@ -106,6 +106,15 @@ exports the result to int8 ONNX. The released model is **CC BY-SA 4.0**,
 fetched to the user cache and never bundled, so the wheel stays Apache-2.0. See
 [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 
+### The PROIEL evaluation set (`evaluate_on_proiel`)
+
+`aegean.greek.evaluate_on_proiel()` scores the Greek lemmatizer/tagger against the
+**PROIEL treebank** (Greek New Testament + Herodotus) — a source none of pyaegean's
+models trained on — for a neutral, out-of-AGDT generalization number. PROIEL is
+**CC BY-NC-SA 3.0**; it is fetched to the cache for **evaluation only**, read locally,
+and never bundled or re-hosted (NonCommercial + ShareAlike). Cite Haug & Jøhndal (2008).
+See [Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
+
 ## Provenance & citation
 
 Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:
@@ -134,5 +143,8 @@ corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license,
   fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC0) treebanks.
   The model — int8 ONNX weights plus a derived gold lemma lookup — is **CC BY-SA 4.0**, fetched
   to the user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
+- **PROIEL evaluation set (opt-in)** — the PROIEL treebank (Greek NT + Herodotus),
+  CC BY-NC-SA 3.0; fetched to the user cache for `evaluate_on_proiel` only, never bundled or
+  redistributed (NonCommercial + ShareAlike).
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.
