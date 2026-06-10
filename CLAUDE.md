@@ -69,10 +69,12 @@ undeciphered — never present analysis as ground truth.
    and the AGDT is in-training for stanza so it flatters stanza). **Generalizing lemmatizer
    landed**: opt-in `greek.use_lemmatizer()` trains an edit-tree + averaged-perceptron model
    (pure Python, POS-conditioned via the tagger) that lemmatizes *unseen* forms;
-   `greek.evaluate_lemmatizer()` reports 84.5% all / 40.3% unseen (vs stanza 62.8% unseen —
-   neural lemma still leads on unseen; pyaegean lifts it from the lookup's 0%). Both reuse
-   the leakage-free `aegean.greek.heldout` split/scorer. Next: a hand-checked out-of-AGDT
-   gold set (the neutral beat-CLTK test the AGDT can't give) and a stronger lemma model.
+   `greek.evaluate_lemmatizer()` reports 84.5% all / 40.3% unseen. Both reuse the leakage-free
+   `aegean.greek.heldout` split/scorer. **Neural lemmatizer landed**: opt-in
+   `greek.use_neural_lemmatizer()` (the `[neural]` extra) fetches a torch-free GreTa seq2seq
+   (int8 ONNX, ~232 MB) reaching **76.3% on unseen — past stanza's 62.8%**, shipped as a hybrid
+   (gold lookup for seen forms, seq2seq for unseen). Next: a hand-checked out-of-AGDT gold set
+   (the neutral beat-CLTK test the AGDT can't give).
    (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)

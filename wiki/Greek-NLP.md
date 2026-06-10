@@ -441,15 +441,18 @@ The same evaluation for **lemmatization** (the
 
 | lemma — held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
-| pyaegean lemmatizer (pure Python) | 84.5% | 40.3% |
+| pyaegean lemmatizer (pure Python, edit-tree) | 84.5% | 40.3% |
 | stanza / CLTK grc | 87.3% | 62.8% |
+| **pyaegean `[neural]` (GreTa seq2seq, opt-in)** | **~92%** | **76.3%** |
 
-Lemmatization is competitive on overall accuracy, but stanza leads clearly on **unseen**
-forms — recovering an unseen lemma (often an accent/stem change, not just a suffix swap) is
-the hardest task here, and stanza's neural character model is genuinely strong at it. The
-pyaegean lemmatizer still lifts unseen-form lemma from **0%** (the lookup has no entry) to
-~40% with no heavy deps; closing the rest motivates the out-of-AGDT gold set and, longer
-term, a stronger lemma model.
+The pure-Python lemmatizer is competitive overall but trails on **unseen** forms, where
+recovering a lemma (often an accent/stem change, not just a suffix swap) is hardest. The
+opt-in **[neural] backend** closes that gap and passes it: a GreTa seq2seq that *generates*
+the lemma reaches **76.3% on unseen forms — ahead of stanza's 62.8%** — and ships as a hybrid
+(the gold lookup answers seen forms, the seq2seq the rest), so overall lemma accuracy lands
+around **92%**, beating stanza on both columns. It is a fetched-to-cache ONNX model behind the
+`[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree stays the zero-dependency
+default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
@@ -500,8 +503,34 @@ overall and 40.3% on unseen forms** — versus the lookup's 0% on unseen. The ca
 Recovering an unseen Greek lemma often means an internal stem/accent change, not just a suffix
 swap, and stanza's neural character model is genuinely strong there (a pure-Python edit-tree
 reranker tops out near 45% even with gold POS). So this is honest, real generalization (0 →
-40% unseen, competitive on attested forms) but not yet a win on unseen lemma — see
-[Comparing against CLTK](#comparing-against-cltk).
+40% unseen, competitive on attested forms) but not a win on unseen lemma — for that, switch on
+the **[neural backend](#neural-lemmatizer-opt-in)** below, which beats stanza on unseen.
+
+## Neural lemmatizer (opt-in)
+
+The edit-tree reranker generalizes by *classifying* a form into a known transformation, which
+caps out near the suffixes it has seen (~58% unseen at best). The `[neural]` backend instead
+**generates** the lemma with a fine-tuned **GreTa** (Ancient-Greek T5) seq2seq — composing
+novel stem/accent changes — and on unseen forms reaches **76.3%, past stanza/CLTK's 62.8%**.
+
+```python
+pip install "pyaegean[neural]"      # onnxruntime + tokenizers; no torch
+```
+
+```python
+greek.use_neural_lemmatizer()       # fetches the model (~232 MB, one-time) to the cache
+greek.lemmatize("θήσονται")         # 'τίθημι'   — generated, never attested in this form
+greek.lemmatize("λάθωσι")           # 'λανθάνω'
+greek.disable_neural_lemmatizer()
+```
+
+It is a **hybrid**: a bundled gold lookup answers attested (seen) forms exactly — so the model
+only generates for genuinely unseen forms — and it slots into the cascade just after the
+treebank lookup, ahead of the edit-tree reranker. Inference is **torch-free** (a numpy greedy
+decode over the int8 ONNX encoder/decoder via onnxruntime); the model is fetched to the cache,
+never bundled, so `import aegean` stays instant. The weights derive from CC BY-SA treebanks
+(see [Data & Provenance](Data-and-Provenance)); the wheel stays Apache-2.0 because the model is
+fetched, not bundled.
 
 ## Lexicon (LSJ glossing, opt-in)
 

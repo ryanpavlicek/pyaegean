@@ -115,5 +115,9 @@ corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license,
   and built in the user cache, never bundled or redistributed.
 - **Greek lexicon / LSJ (opt-in)** — Perseus Liddell-Scott-Jones, CC BY-SA 4.0;
   fetched and indexed in the user cache, never bundled or redistributed.
+- **Greek neural lemmatizer (opt-in `[neural]`)** — a GreTa seq2seq (Apache-2.0 base)
+  fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC0) treebanks.
+  The model — int8 ONNX weights plus a derived gold lemma lookup — is **CC BY-SA 4.0**, fetched
+  to the user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.

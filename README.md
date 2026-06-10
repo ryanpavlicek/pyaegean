@@ -113,8 +113,9 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 translation *and* deep Greek NLP — Perseus-treebank lemmas/POS, LSJ glossing, a baseline
 dependency parser, and a CLTK benchmark harness. **In progress (v0.3):** *generalizing* POS tagging and lemmatization (`use_tagger` /
 `use_lemmatizer`; averaged perceptron + edit-trees, pure-Python) measured against CLTK on a
-leakage-free held-out AGDT split — POS within ~5–6 points of stanza on unseen forms; lemma
-competitive on attested forms, behind on unseen. **Next:** a hand-checked out-of-AGDT gold
+leakage-free held-out AGDT split — POS within ~5–6 points of stanza on unseen forms; the
+pure-Python lemmatizer competitive on attested forms, and the opt-in `[neural]` backend (GreTa
+seq2seq, `use_neural_lemmatizer`) at **76.3% on unseen forms, past stanza's 62.8%**. **Next:** a hand-checked out-of-AGDT gold
 set (the neutral "beat CLTK" test) → v0.4 Linear B (DAMOS/LiBER) → v0.5 Cypriot/Cypro-Minoan
 → v1.0 stable.
 
