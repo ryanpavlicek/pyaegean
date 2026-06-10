@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import aegean
 from aegean.core.script import get_script
-from aegean.scripts.linearb import word_to_phonetic
+from aegean.scripts.linearb import gloss, greek_reading, word_to_phonetic
 from aegean.scripts.linearb.inventory import linear_b_inventory
 
 
@@ -32,6 +32,15 @@ def test_word_to_phonetic() -> None:
     assert word_to_phonetic("PO-ME") == "pome"           # ποιμήν, "shepherd"
     assert word_to_phonetic("WA-NA-KA") == "wanaka"       # ϝάναξ, "king"
     assert word_to_phonetic("TI-RI-PO-DE") == "tiripode"  # τρίποδε, "two tripods"
+
+
+def test_greek_bridge() -> None:
+    assert greek_reading("PO-ME") == ("ποιμήν", "shepherd")
+    assert greek_reading("po-me") == ("ποιμήν", "shepherd")  # case-insensitive
+    lemma, _ = greek_reading("QA-SI-RE-U")  # gʷasileus → βασιλεύς
+    assert lemma == "βασιλεύς"
+    assert gloss("WO-NO") == "wine"  # οἶνος
+    assert greek_reading("XY-ZZ") is None
 
 
 def test_corpus_loads_and_classifies() -> None:

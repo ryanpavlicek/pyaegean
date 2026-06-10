@@ -6,10 +6,11 @@ from ...core.model import SignInventory, Token
 from ...core.script import Script, register
 from . import loader  # noqa: F401 — registers the Corpus loader on import
 from .inventory import linear_b_inventory
+from .lexicon import gloss, greek_reading
 from .loader import classify
 from .phonetic import word_to_phonetic
 
-__all__ = ["LinearB", "word_to_phonetic"]
+__all__ = ["LinearB", "gloss", "greek_reading", "word_to_phonetic"]
 
 
 class LinearB(Script):
