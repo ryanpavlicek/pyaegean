@@ -1,6 +1,7 @@
 # Regenerable / large / fetched artifacts — not committed
 data/
 *.zip
+*.tar.gz
 *.onnx
 tokenizer.json
 ship/
