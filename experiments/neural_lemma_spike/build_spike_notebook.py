@@ -39,7 +39,7 @@ cells.append(code(
     "import torch\n"
     "assert torch.cuda.is_available(), 'No GPU! Runtime > Change runtime type > GPU, reconnect.'\n"
     "USE_BF16 = torch.cuda.is_bf16_supported()\n"
-    "BS = 64 if USE_BF16 else 16\n"
+    "BS = 128 if USE_BF16 else 16\n"
     "print(f'torch {torch.__version__} | CUDA {torch.version.cuda} | GPU {torch.cuda.get_device_name(0)} | bf16={USE_BF16}')"
 ))
 
@@ -89,7 +89,7 @@ cells.append(code(
     "    enc['labels'] = [x + [EOS_ID] for x in lab] if APPEND_EOS else lab\n"
     "    return enc\n"
     "ds = Dataset.from_list(train_rows).map(prep, batched=True, remove_columns=['form', 'lemma'])\n"
-    "ds = ds.train_test_split(test_size=0.02, seed=0)\n"
+    "ds = ds.train_test_split(test_size=4000, seed=0)  # fixed eval slice — eval cost is dataset-size independent\n"
     "print('APPEND_EOS', APPEND_EOS, '| sample label ids', ds['train'][0]['labels'][-6:])"
 ))
 
