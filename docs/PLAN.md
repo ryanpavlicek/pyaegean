@@ -160,7 +160,7 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
 
 ## Roadmap (sequenced by value × feasibility)
 
-Shipped through **0.3.0**: core + Linear A (with the workbench-corpus downloader) and the Greek start
+Shipped through **0.4.0**: core + Linear A (with the workbench-corpus downloader) and the Greek start
 (corpus loader, normalize/betacode, tokenize, syllabify, accentuation, baseline lemmatize); the
 multi-provider **AI layer** (Anthropic default + OpenAI + Grok + Gemini) wired to all four jobs, with
 translation/glossing, corpus Q&A, decipherment-hypothesis support, and NLP-assist disambiguation; and
@@ -185,11 +185,21 @@ The `lemmatize()` cascade resolves a form via treebank lookup (seen) → neural 
 edit-tree → seed table. The benchmark harness can score these stages, or a CLTK pipeline, on a shared
 gold set.
 
+Linear B and the Cypriot syllabary shipped in **0.4.0** — the two deciphered Aegean syllabaries that
+write Greek — each with a Unicode-built sign inventory, transliteration, and a Greek-reading bridge;
+Linear B adds per-script accounting (`to-so`/`to-sa`) and a bring-your-own EpiDoc corpus reader.
+**Cypro-Minoan** (undeciphered; a 99-sign Unicode inventory and sign-sequence tokenization, no
+phonetics or bridge — modelled on Linear A) has since landed on `main`, completing the Aegean
+syllabic set; it releases in the next version.
+
 Planned:
 
-- **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
-  pyaegean repo (gated by licensing confirmation).
-- **Cypriot syllabary + Cypro-Minoan**.
+- **Out-of-AGDT gold set**: a hand-checked, neutral evaluation set so the Greek-NLP numbers don't
+  lean on the AGDT (which is in-training for the systems compared against).
+- **Context-aware lemmatizer**: a sentence-context v2 of the `[neural]` backend, to push past the
+  76.3% isolated-form ceiling on unseen lemma (larger, uncertain payoff).
+- **Data layer / IO**: the compound `query` engine, JSON round-trip (`to_json`/`from_json`), and
+  CSV/Parquet/EpiDoc write adapters — toward the v1.0 full EpiDoc round-trip.
 - **Koine / Biblical Greek** (low priority): NT corpus loader + Koine-tuned lemmatization/morphology
   from an openly-licensed tagged Greek NT (MorphGNT/SBLGNT or the Nestle1904 trees), building on the
   existing Koine phonology mode (`to_ipa(…, "koine")`) and the John 1:1 sample.

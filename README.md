@@ -1,7 +1,7 @@
 # pyaegean
 
 **A specialist Python toolkit for Ancient Greek** — alphabetic Greek *and* the
-Aegean syllabic scripts (Linear A / Linear B). pyaegean focuses narrowly and
+Aegean syllabic scripts (Linear A, Linear B, Cypriot, and Cypro-Minoan). pyaegean focuses narrowly and
 deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) already
@@ -9,7 +9,8 @@ serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
 > **Status: v0.4.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
-> the Cypriot syllabary (Arcado-Cypriot Greek),
+> the Cypriot syllabary (Arcado-Cypriot Greek), the undeciphered Cypro-Minoan script (sign
+> inventory only, newly landed on `main`),
 > the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
 > lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
 > and a CLTK benchmark harness), and the multi-provider AI layer are all implemented.
@@ -80,6 +81,8 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   transliteration + a Greek-reading bridge (`po-me → ποιμήν`) + accounting; bring-your-own corpus.
 - **`aegean.scripts.cypriot`** — Cypriot syllabary (Arcado-Cypriot Greek): 55-sign Unicode
   inventory + transliteration + a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`).
+- **`aegean.scripts.cyprominoan`** — Cypro-Minoan (undeciphered Bronze Age Cyprus): 99-sign Unicode
+  inventory + sign-sequence tokenization. No phonetics or Greek bridge — the script is undeciphered.
 - **`aegean.analysis`** — ported from the workbench: accounting reconciliation,
   wildcard sign-pattern search, weighted phonetic distance + alignment,
   morphology clustering, collocation statistics, a compound-query engine, and
@@ -121,8 +124,10 @@ and translation; and the deep Greek NLP track — Perseus-treebank lemmas/POS, a
 tagger and lemmatizer, the neural lemmatizer, LSJ glossing, a baseline dependency parser, and a
 CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a Unicode-built sign
 inventory, transliteration, a Greek-reading bridge, and accounting; the full corpus is
-bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **Next:** a hand-checked
-out-of-AGDT gold set, Cypro-Minoan, and a stable v1.0.
+bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **Cypro-Minoan** (the
+undeciphered Bronze Age script of Cyprus; sign inventory only) has since landed on `main`,
+completing the Aegean set. **Next:** a hand-checked out-of-AGDT gold set and the data-layer/IO work
+toward a stable v1.0.
 
 ## License
 

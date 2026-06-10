@@ -11,6 +11,7 @@
 - [Linear A](Linear-A)
 - [Linear B](Linear-B)
 - [Cypriot](Cypriot)
+- [Cypro-Minoan](Cypro-Minoan)
 - [Analysis](Analysis)
 
 **Greek**

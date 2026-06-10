@@ -10,7 +10,7 @@ L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/syllabify/…)
 L4  io · data · adapters  JSON/EpiDoc/CSV · bundled registry + downloader/cache
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure
-L2  scripts (plugins)     lineara · linearb · cypriot · greek  (cypro-minoan later)
+L2  scripts (plugins)     lineara · linearb · cypriot · cyprominoan · greek
 L1  core                  Corpus · Document · Token · Sign · SignInventory ·
                           Numeral · Script(ABC) · Registry · Provenance
 ```
@@ -68,7 +68,7 @@ Access registered scripts:
 
 ```python
 import aegean
-aegean.registered_scripts()        # ['cypriot', 'greek', 'lineara', 'linearb']
+aegean.registered_scripts()        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 script = aegean.get_script("greek")
 script.sign_inventory              # the Greek alphabet
 script.tokenize("ἐν ἀρχῇ")          # [Token(...), ...]

@@ -48,14 +48,16 @@ Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
 Aegean syllabic sign data — Unicode Character Database (bundled)
-  The Linear B (src/aegean/data/bundled/linearb/) and Cypriot (.../cypriot/) sign inventories
-  and phonetic maps are derived from the Unicode Character Database (UnicodeData.txt — the
-  "Linear B Syllabary", "Linear B Ideograms", and "Cypriot Syllabary" blocks), Copyright
+  The Linear B (src/aegean/data/bundled/linearb/), Cypriot (.../cypriot/), and Cypro-Minoan
+  (.../cyprominoan/) sign inventories — and the phonetic maps for the two deciphered scripts —
+  are derived from the Unicode Character Database (UnicodeData.txt — the "Linear B Syllabary",
+  "Linear B Ideograms", "Cypriot Syllabary", and "Cypro-Minoan" blocks), Copyright
   © 1991–present Unicode, Inc., distributed under the Unicode License v3
-  (https://www.unicode.org/license.txt); the only obligation is to retain this notice. The
-  bundled illustrative samples of transliterations are scholarly fact (after Ventris & Chadwick,
-  Documents in Mycenaean Greek; and Masson, Les inscriptions chypriotes syllabiques), included as
-  excerpts, not corpora.
+  (https://www.unicode.org/license.txt); the only obligation is to retain this notice. Cypro-Minoan
+  is undeciphered, so its signs carry conventional numbers (CM001 …) and no phonetic values. The
+  bundled illustrative samples of transliterations and sign sequences are scholarly fact (after
+  Ventris & Chadwick, Documents in Mycenaean Greek; Masson, Les inscriptions chypriotes syllabiques;
+  and Ferrara, Cypro-Minoan Inscriptions), included as excerpts, not corpora.
 
 Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   No openly-licensed Linear B tablet corpus exists. DAMOS (Database of Mycenaean at Oslo) is

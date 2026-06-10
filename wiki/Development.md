@@ -58,13 +58,14 @@ src/aegean/
   scripts/   lineara/{loader,inventory,phonetic}  greek/{loader,inventory}
              linearb/{loader,inventory,phonetic,lexicon,epidoc}
              cypriot/{loader,inventory,phonetic,lexicon}
+             cyprominoan/{loader,inventory}  (undeciphered — signs only)
   analysis/  distance align collocation morphology patterns query accounting structure
   greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize
              treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser)
              neural_lemmatizer (GreTa seq2seq) benchmark (CLTK harness)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
-  data/      bundled/{lineara,linearb,cypriot,greek}/*.json  + fetch()/cache
+  data/      bundled/{lineara,linearb,cypriot,cyprominoan,greek}/*.json  + fetch()/cache
 tests/       fixtures/golden/   (+ parity, property, and corpus tests)
 wiki/        this documentation (published to the GitHub wiki by CI)
 docs/        PLAN.md (approved design), methodology.md

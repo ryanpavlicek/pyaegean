@@ -4,6 +4,16 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **Cypro-Minoan** (`aegean.scripts.cyprominoan`): the undeciphered Bronze Age script of Cyprus,
+  completing the Aegean syllabic set. A 99-sign inventory built from the Unicode Character Database
+  (the "Cypro-Minoan" block), with conventional sign numbers (`CM001` …) and no phonetic values —
+  the script is undeciphered, so the plugin offers the sign inventory and sign-sequence tokenization
+  only, plus `Corpus.load("cyprominoan")` over a small illustrative sample. No transliteration,
+  lexicon, or Greek bridge, by design.
+
 ## 0.4.0 — 2026-06-10
 
 Adds **Linear B** and the **Cypriot syllabary** — the two deciphered Aegean syllabaries that
