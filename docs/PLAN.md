@@ -154,7 +154,7 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
 
 `hatchling`/PEP 621, `src/` layout, bundled data via `force-include`. `pytest`+`cov`+`hypothesis`;
 coverage gate; matrix Py 3.10–3.13 × {no-extras, [all]}. GitHub Actions: `ruff`, `mypy --strict`, tests,
-build, `twine check`, **footprint guard** (import-clean / import-fast / code+JSON wheel), OIDC publish on tag. Docs `mkdocs-material`+`mkdocstrings`;
+build, `twine check`, **footprint guard** (import-clean / import-fast / code+JSON wheel), OIDC publish on tag. API reference via `pdoc` → GitHub Pages;
 port methodology + limitations into docstrings. Provenance: per-dataset `DataSpec.license`/`citation`,
 `Corpus.provenance.cite()`, `CITATION.cff`, `NOTICE` (GORILA, DAMOS, LiBER, Perseus, First1KGreek).
 
@@ -246,5 +246,5 @@ KU-RO accounting), `signPattern.ts`, `compareAlign.ts`, `queryEngine.ts`, `corpu
   `test_parity_lineara.py` matches golden fixtures.
 - Greek start: load a First1KGreek/Perseus sample → `aegean.greek.tokenize/normalize/syllabify/accentuate`
   produce correct output on known lines; betacode↔unicode round-trips; baseline lemmatize runs.
-- Infra: `mypy --strict` clean; `python -m build`; footprint guard (`check_footprint.py`: import-clean, import-fast, code+JSON-only wheel); `twine check`; `mkdocs build`.
+- Infra: `mypy --strict` clean; `python -m build`; footprint guard (`check_footprint.py`: import-clean, import-fast, code+JSON-only wheel); `twine check`; `pdoc` API-reference build.
 - AI: adapters unit-test against mocked HTTP; grounding + exploratory-labeling asserted; no key ever logged.

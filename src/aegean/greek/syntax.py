@@ -2,14 +2,14 @@
 **averaged-perceptron** classifier (pure Python; no heavy ML deps), trained on the
 Perseus AGDT.
 
-Opt-in. Call :func:`use_parser` to train (on first use, from the AGDT we already fetch
-for the treebank) or load the cached model, then :func:`parse` turns a Greek sentence
-into a :class:`DepTree` with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED,
+Opt-in. Call `use_parser` to train (on first use, from the AGDT we already fetch
+for the treebank) or load the cached model, then `parse` turns a Greek sentence
+into a `DepTree` with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED,
 COORD, Aux*…). On a free-word-order, partly non-projective language it reaches about
-0.67 UAS / 0.57 LAS on projective AGDT; :func:`evaluate` reports UAS/LAS on a held-out
-split. Default behaviour (without :func:`use_parser`) does nothing and needs no network.
+0.67 UAS / 0.57 LAS on projective AGDT; `evaluate` reports UAS/LAS on a held-out
+split. Default behaviour (without `use_parser`) does nothing and needs no network.
 
-Data: the same AGDT v2.1 Greek files used by :mod:`aegean.greek.treebank` (CC BY-SA
+Data: the same AGDT v2.1 Greek files used by `aegean.greek.treebank` (CC BY-SA
 3.0; fetched to cache, never bundled). The trained model is built in the cache.
 """
 
@@ -42,7 +42,7 @@ _ROOT = 0  # the artificial root token id
 
 
 class ParserNotLoadedError(RuntimeError):
-    """Raised when :func:`parse` is called before :func:`use_parser`."""
+    """Raised when `parse` is called before `use_parser`."""
 
 
 # --- data model --------------------------------------------------------------
@@ -120,7 +120,7 @@ def _local(tag: str) -> str:
 
 
 def load_gold_trees(*, source_dir: Path | str | None = None) -> list[DepTree]:
-    """Load AGDT sentences as gold :class:`DepTree` objects (fetching the treebank on
+    """Load AGDT sentences as gold `DepTree` objects (fetching the treebank on
     first use, unless ``source_dir`` is given)."""
     if source_dir is not None:
         files = sorted(Path(source_dir).glob("*.xml"))
@@ -500,8 +500,8 @@ def active() -> dict[str, Any] | None:
 
 
 def parse(sentence: str | list[str]) -> DepTree:
-    """Parse a Greek sentence (a string or a list of tokens) into a :class:`DepTree`.
-    Requires :func:`use_parser`. POS/lemma come from the (treebank-aware) pipeline."""
+    """Parse a Greek sentence (a string or a list of tokens) into a `DepTree`.
+    Requires `use_parser`. POS/lemma come from the (treebank-aware) pipeline."""
     if _ACTIVE is None:
         raise ParserNotLoadedError("parser not loaded — call aegean.greek.use_parser() first")
     from .lemmatize import lemmatize

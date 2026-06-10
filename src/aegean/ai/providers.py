@@ -1,6 +1,6 @@
 """Built-in provider adapters: Anthropic (default), OpenAI, xAI Grok, Google
 Gemini. Each SDK is an optional extra, imported lazily inside ``_complete`` and
-surfaced as :class:`ProviderNotInstalled` if absent. API keys are read from the
+surfaced as `ProviderNotInstalled` if absent. API keys are read from the
 environment and never logged.
 
 Default models are configurable (model ids drift): set ``ANTHROPIC_MODEL`` /

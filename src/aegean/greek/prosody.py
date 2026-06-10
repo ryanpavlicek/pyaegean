@@ -2,7 +2,7 @@
 
 Classifies each syllable of a word as **heavy**, **light**, or **common**
 (undetermined) using the standard rules, building on
-:func:`aegean.greek.syllabify.syllabify`:
+`aegean.greek.syllabify.syllabify`:
 
 - a syllable is **heavy** if it is *closed* (ends in a consonant — "long by
   position") or its nucleus is long (η, ω, a circumflex, an iota-subscript

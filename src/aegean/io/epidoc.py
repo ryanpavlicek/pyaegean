@@ -1,10 +1,10 @@
 """Write the corpus model to EpiDoc TEI XML — the inverse of the EpiDoc reader.
 
-A :class:`~aegean.core.model.Document` becomes a TEI document: the header carries the id and
+A `Document` becomes a TEI document: the header carries the id and
 find-place, the body carries the transliteration as ``<w>``/``<num>``/``<g>``/``<seg>`` tokens with
 ``<lb/>`` line breaks. Built with the stdlib XML writer (lazy-imported), so **export needs no extra
 dependency** — reading EpiDoc still uses lxml via the ``[epidoc]`` extra (see
-:func:`aegean.scripts.linearb.parse_epidoc`).
+`aegean.scripts.linearb.parse_epidoc`).
 
 It round-trips through that reader for the content EpiDoc preserves — the document id, find-place,
 and the token/line stream. The reader re-derives token kinds from the text, so a written corpus
@@ -31,7 +31,7 @@ _TAG = {TokenKind.WORD: "w", TokenKind.NUMERAL: "num", TokenKind.LOGOGRAM: "g"}
 
 
 def to_epidoc(document: Document) -> str:
-    """Serialize a single :class:`~aegean.core.model.Document` to an EpiDoc TEI XML string."""
+    """Serialize a single `Document` to an EpiDoc TEI XML string."""
     import xml.etree.ElementTree as ET  # lazy: keep `import aegean` free of the XML parser
 
     def q(tag: str) -> str:
@@ -70,10 +70,10 @@ def _safe_name(doc_id: str) -> str:
 def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     """Write EpiDoc TEI XML to disk.
 
-    A single :class:`~aegean.core.model.Document` is written to the file ``path``; a
-    :class:`~aegean.core.corpus.Corpus` is written as one ``{id}.xml`` file per document into the
+    A single `Document` is written to the file ``path``; a
+    `Corpus` is written as one ``{id}.xml`` file per document into the
     directory ``path`` (created if needed) — the layout
-    :func:`aegean.scripts.linearb.parse_epidoc` reads back."""
+    `aegean.scripts.linearb.parse_epidoc` reads back."""
     if isinstance(obj, Document):
         Path(path).write_text(to_epidoc(obj), encoding="utf-8")
         return

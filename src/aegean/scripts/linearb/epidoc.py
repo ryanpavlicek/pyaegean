@@ -7,7 +7,7 @@ provenance from the header and the transliteration (words, numerals, ideograms) 
 splitting at ``<lb>`` markers.
 
 Set ``PYAEGEAN_LINEARB_CORPUS`` to a file or directory of EpiDoc XML and ``Corpus.load("linearb")``
-returns it instead of the bundled sample; or call :func:`load_epidoc_corpus` directly.
+returns it instead of the bundled sample; or call `load_epidoc_corpus` directly.
 """
 
 from __future__ import annotations
@@ -89,7 +89,7 @@ def parse_epidoc(source: str | pathlib.Path) -> list[Document]:
 
 
 def load_epidoc_corpus(source: str | pathlib.Path) -> Corpus:
-    """Load a user-supplied EpiDoc Linear B corpus into a :class:`Corpus`."""
+    """Load a user-supplied EpiDoc Linear B corpus into a `Corpus`."""
     from ...core.corpus import Corpus
     from ...core.provenance import Provenance
     from .inventory import linear_b_inventory

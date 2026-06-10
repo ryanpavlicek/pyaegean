@@ -3,7 +3,7 @@
 The AI layer is **multi-provider** (Anthropic default, plus OpenAI, xAI Grok,
 Google Gemini) and **optional**: provider SDKs are extras, imported lazily inside
 each adapter, so ``import aegean`` never requires them. Every generative output
-is wrapped in an :class:`ExploratoryResult` carrying provenance (provider, model,
+is wrapped in an `ExploratoryResult` carrying provenance (provider, model,
 prompt version) and an ``exploratory`` flag — generative readings of this
 material are hypotheses, never ground truth.
 
@@ -52,7 +52,7 @@ class ExploratoryResult:
     """A generative result, explicitly labeled exploratory and provenanced.
 
     ``grounding`` lists the corpus/lexicon evidence fed to the model. Use
-    :meth:`labeled` when surfacing to a user so the caveat travels with the text.
+    `labeled` when surfacing to a user so the caveat travels with the text.
     """
 
     text: str
@@ -99,7 +99,7 @@ class ExploratoryResult:
 
 
 class LLMClient(ABC):
-    """Abstract provider client. Subclasses implement :meth:`_complete`."""
+    """Abstract provider client. Subclasses implement `_complete`."""
 
     provider: str = ""
     env_key: str = ""        # API-key environment variable
@@ -165,7 +165,7 @@ def get_client(
     cache: ResponseCache | None = None,
 ) -> LLMClient:
     """Construct a client for ``provider`` (default Anthropic). Importing
-    :mod:`aegean.ai` registers all built-in providers."""
+    `aegean.ai` registers all built-in providers."""
     try:
         cls = _PROVIDERS[provider]
     except KeyError:

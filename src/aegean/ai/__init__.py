@@ -3,7 +3,7 @@
 Providers: Anthropic (default), OpenAI, xAI Grok, Google Gemini — each an
 optional extra, lazily imported. Capabilities: translate, gloss,
 decipher_hypotheses, nlp_assist, ask, summarize. Every generative output is an
-:class:`ExploratoryResult` with provenance and an unverified flag.
+`ExploratoryResult` with provenance and an unverified flag.
 
     from aegean import ai
     client = ai.get_client("anthropic")          # needs pyaegean[anthropic] + a key

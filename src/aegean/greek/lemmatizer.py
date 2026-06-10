@@ -10,12 +10,12 @@ seen (e.g. learning ``-ου → -ος`` applies it to an unseen ``νόμου →
 
 Decoding uses a reranker rather than a flat classifier over the thousands of distinct edit
 trees: the form's suffixes propose a handful of candidate trees and an **averaged perceptron**
-(:mod:`aegean.greek.syntax`) reranks just those — fast, learned, and still generalizing. The
+(`aegean.greek.syntax`) reranks just those — fast, learned, and still generalizing. The
 reranker conditions on **POS** (from the trained tagger when active) — the key signal for
 which inflectional rule applies (a noun ``-ων`` vs a participle ``-ων`` lemmatize differently).
 
 Trained on the AGDT we already fetch (CC BY-SA 3.0), built in the cache on first use, never
-bundled. Default behaviour without :func:`use_lemmatizer` is unchanged.
+bundled. Default behaviour without `use_lemmatizer` is unchanged.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ _BUCKET_CAP = 32     # max trees stored per suffix bucket (pre-sorted by count, 
 
 
 class LemmatizerNotLoadedError(RuntimeError):
-    """Raised when the trained lemmatizer is used before :func:`use_lemmatizer`."""
+    """Raised when the trained lemmatizer is used before `use_lemmatizer`."""
 
 
 # --- normalization -----------------------------------------------------------
@@ -293,7 +293,7 @@ def use_lemmatizer(*, train: bool = True, force: bool = False) -> None:
     """Activate the generalizing lemmatizer. With ``train=True`` (default) it trains on
     first use — from the cached AGDT, a few minutes — then caches the model; later calls
     load the cache. ``train=False`` loads an existing cached model (raises
-    :class:`LemmatizerNotLoadedError` if none exists). ``force=True`` retrains even if cached."""
+    `LemmatizerNotLoadedError` if none exists). ``force=True`` retrains even if cached."""
     global _ACTIVE
     if train and (force or not (cache_dir() / _MODEL_NAME).exists()):
         train_lemmatizer(force=force)
@@ -312,7 +312,7 @@ def active() -> dict[str, Any] | None:
 
 
 def _pos_for(form: str) -> str:
-    """Best available POS for a form, via :func:`aegean.greek.pos.pos_tag` — which itself
+    """Best available POS for a form, via `aegean.greek.pos.pos_tag` — which itself
     cascades closed-class lexicon → treebank lookup → trained tagger → suffix heuristic, and
     crucially never calls back into the lemmatizer (avoiding recursion)."""
     from .pos import pos_tag
@@ -322,7 +322,7 @@ def _pos_for(form: str) -> str:
 
 def predict(form: str) -> str:
     """Lemmatize a form with the active model (raises if none is active). Conditions on POS
-    from the trained tagger when active (see :func:`aegean.greek.use_tagger`) — best
+    from the trained tagger when active (see `aegean.greek.use_tagger`) — best
     results come from activating both; otherwise a rule-based POS guess is used."""
     if _ACTIVE is None:
         raise LemmatizerNotLoadedError("lemmatizer not loaded — call aegean.greek.use_lemmatizer() first")
@@ -333,7 +333,7 @@ def evaluate_lemmatizer(
     *, source_dir: str | None = None, holdout: float = 0.1, epochs: int = 8
 ) -> dict[str, float]:
     """Train on the train split and score lemma accuracy on the held-out split (overall +
-    unseen), via :mod:`aegean.greek.heldout` — the honest generalization number. A POS
+    unseen), via `aegean.greek.heldout` — the honest generalization number. A POS
     tagger is trained on the same split so the dev set is scored with *predicted* POS (the
     realistic pipeline), not gold. Returns ``lemma_all``/``lemma_unseen`` plus token counts
     (POS metrics are omitted)."""

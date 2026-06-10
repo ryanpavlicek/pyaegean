@@ -149,8 +149,8 @@ def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
 
 def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.Path:
     """Download a single URL to ``dest`` atomically (a ``.part`` temp then rename),
-    optionally sha256-verified. Returns ``dest``; raises :class:`DataNotAvailableError`
-    on a network failure or checksum mismatch. Shared by :func:`fetch` and the
+    optionally sha256-verified. Returns ``dest``; raises `DataNotAvailableError`
+    on a network failure or checksum mismatch. Shared by `fetch` and the
     on-demand dataset downloaders (e.g. the Greek treebank)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".part")
@@ -182,7 +182,7 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     Verifies the sha256 when one is pinned, downloads atomically, and is a no-op
     when the cache already holds it. For ``extract`` datasets the download is a
     tar archive that is unpacked into a cache directory (returned); otherwise the
-    downloaded file path is returned. Raises :class:`DataNotAvailableError` for
+    downloaded file path is returned. Raises `DataNotAvailableError` for
     unknown datasets, un-pinned URLs, checksum mismatches, unsafe archives, or
     network failures — never silently, and never blocking ``import``.
     """

@@ -20,7 +20,7 @@ class Script(ABC):
     @property
     @abstractmethod
     def sign_inventory(self) -> SignInventory:
-        """The script's :class:`~aegean.core.model.SignInventory`."""
+        """The script's `SignInventory`."""
 
     @abstractmethod
     def tokenize(self, raw: str) -> list[Token]:
@@ -36,7 +36,7 @@ def register(script: Script) -> None:
 
 
 def get_script(script_id: str) -> Script:
-    """Return the registered :class:`Script` for ``script_id`` (raises ``KeyError`` if unknown)."""
+    """Return the registered `Script` for ``script_id`` (raises ``KeyError`` if unknown)."""
     try:
         return _REGISTRY[script_id]
     except KeyError:

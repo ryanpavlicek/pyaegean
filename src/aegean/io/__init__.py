@@ -1,6 +1,6 @@
 """I/O adapters — export the corpus model to interchange formats.
 
-EpiDoc *reading* (bring-your-own Linear B corpora) lives in :mod:`aegean.scripts.linearb` and
+EpiDoc *reading* (bring-your-own Linear B corpora) lives in `aegean.scripts.linearb` and
 ``Corpus.load("linearb")``; this package provides the EpiDoc writer plus CSV/Parquet exporters.
 For pyaegean's own lossless archive format, use ``Corpus.to_json`` / ``Corpus.from_json``.
 """

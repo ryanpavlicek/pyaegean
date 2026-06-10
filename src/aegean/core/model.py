@@ -1,8 +1,8 @@
 """Script-agnostic core data model.
 
 These value objects describe *any* writing system the package supports — a
-Linear A syllabogram and a Greek letter are both :class:`Sign`, a ``KU-RO``
-word and a Greek word are both :class:`Token`. Nothing here depends on a
+Linear A syllabogram and a Greek letter are both `Sign`, a ``KU-RO``
+word and a Greek word are both `Token`. Nothing here depends on a
 particular script; per-script behaviour lives in ``aegean.scripts``.
 
 Numpy/pandas are imported lazily (only inside DataFrame helpers) so importing

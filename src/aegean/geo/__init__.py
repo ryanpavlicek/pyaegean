@@ -3,7 +3,7 @@
 Maps each inscription's find-site to coordinates from a bundled Aegean gazetteer and exposes the
 corpus as a GeoDataFrame for spatial analysis and plotting. The coordinates are **approximate**
 (site-level, ~1 km), drawn from standard archaeological references — fine for mapping, not survey
-work. Sites not in the gazetteer are dropped; see :func:`site_coordinates` for coverage.
+work. Sites not in the gazetteer are dropped; see `site_coordinates` for coverage.
 
 geopandas/shapely are imported lazily, so ``import aegean`` stays instant and dependency-free; the
 geo functions raise a clear error if the extra isn't installed.

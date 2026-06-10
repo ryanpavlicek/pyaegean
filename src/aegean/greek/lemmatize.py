@@ -4,7 +4,7 @@ A small bundled form→lemma table (seeded from the sample corpus) plus an
 identity fallback. This is the seed tier of the lemmatization cascade: the
 treebank, neural, and edit-tree backends (opt-in) handle the heavier work,
 and this table is the final fallback. Unknown forms are returned normalized
-(NFC), unchanged — flagged via :func:`lemmatize_verbose`.
+(NFC), unchanged — flagged via `lemmatize_verbose`.
 """
 
 from __future__ import annotations
@@ -29,11 +29,11 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     """Return ``(lemma, known)``. ``known`` is False when the form wasn't found and
     the (normalized) input is returned unchanged.
 
-    When the AGDT treebank backend is active (see :func:`aegean.greek.use_treebank`),
+    When the AGDT treebank backend is active (see `aegean.greek.use_treebank`),
     its attested, correctly-accented lemma is preferred; next, when the neural backend is
-    active (see :func:`aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
+    active (see `aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
     used — it generalizes well to unseen forms (76.3%); next the trained edit-tree lemmatizer
-    (see :func:`aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted."""
+    (see `aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted."""
     from . import treebank
 
     lex = treebank.active()

@@ -1,7 +1,7 @@
 """Greek script plugin.
 
-Registers Greek as a :class:`~aegean.core.script.Script` and its bundled sample
-corpus loader. The script's ``nlp`` capability exposes the :mod:`aegean.greek`
+Registers Greek as a `Script` and its bundled sample
+corpus loader. The script's ``nlp`` capability exposes the `aegean.greek`
 pipeline.
 """
 

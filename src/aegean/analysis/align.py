@@ -2,7 +2,7 @@
 multiple-sequence alignment of inscriptions.
 
 Faithful port of the alignment routines in the workbench ``src/lib/algorithms.ts``
-(:func:`align_phonetic`) and ``src/lib/compareAlign.ts`` (:func:`align_sequences`).
+(`align_phonetic`) and ``src/lib/compareAlign.ts`` (`align_sequences`).
 The HTML/Markdown report builder from ``compareAlign.ts`` is presentational and
 intentionally not ported.
 

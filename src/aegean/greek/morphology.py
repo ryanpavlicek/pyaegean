@@ -1,6 +1,6 @@
 """Rule-based Ancient Greek morphological analysis.
 
-Given an inflected form, :func:`analyze` returns the **candidate** morphological
+Given an inflected form, `analyze` returns the **candidate** morphological
 analyses implied by its ending — part of speech plus the relevant features
 (case, number, gender for nominals; tense, voice, mood, person, number for
 verbs) — together with a reconstructed lemma. Greek inflection is heavily
@@ -18,10 +18,10 @@ infinitives and the mediopassive participle. Its limits are well-defined:
 - **Accent is not restored** on a rule-reconstructed lemma (accent recession is
   not derivable from the ending alone); when the bundled seed lexicon knows the
   form, its correctly-accented lemma is used instead, otherwise the lemma is the
-  unaccented reconstructed stem and :attr:`Analysis.lemma_certain` is ``False``.
+  unaccented reconstructed stem and `Analysis.lemma_certain` is ``False``.
 - Athematic, contract, irregular and suppletive forms (``εἶπον`` → ``λέγω``) are
   outside a purely rule-based reach — those need the treebank-derived lexicon
-  (see :func:`aegean.greek.use_treebank`).
+  (see `aegean.greek.use_treebank`).
 
 Feature analyses are **exploratory** for ambiguous forms: trust the closed
 classes and the feature set, treat a single auto-picked reading with care.
@@ -313,7 +313,7 @@ def _verbal(word: str) -> list[Analysis]:
 
 @lru_cache(maxsize=4096)
 def _rule_analyze(word: str) -> tuple[Analysis, ...]:
-    """Rule-based candidate analyses — the baseline engine behind :func:`analyze`."""
+    """Rule-based candidate analyses — the baseline engine behind `analyze`."""
     fixed = _LEXICON.get(_closed_key(word))
     if fixed is not None:
         lemma, _ = lemmatize_verbose(word)
@@ -335,7 +335,7 @@ def analyze(word: str) -> tuple[Analysis, ...]:
     Closed-class words (article, prepositions, conjunctions, particles, pronouns,
     the copula) resolve to a single high-confidence analysis; open-class words
     yield the readings their ending permits. When the AGDT treebank backend is
-    active (see :func:`aegean.greek.use_treebank`), an attested form's analyses —
+    active (see `aegean.greek.use_treebank`), an attested form's analyses —
     correctly accented and covering irregular forms the rule engine can't — are
     returned instead, with the rule engine as the fallback for unattested forms."""
     from . import treebank
@@ -349,7 +349,7 @@ def analyze(word: str) -> tuple[Analysis, ...]:
 
 
 def _closed_key(word: str) -> str:
-    """Normalisation matching the closed-class lexicon keys in :mod:`.pos`."""
+    """Normalisation matching the closed-class lexicon keys in `.pos`."""
     grave, acute = "̀", "́"
     nfc = unicodedata.normalize("NFC", word).lower()
     nfd = unicodedata.normalize("NFD", nfc).replace(grave, acute)

@@ -31,7 +31,7 @@ def corpus_context(corpus: object, *, limit: int = 20) -> list[str]:
     """A small grounding context from a corpus: its most frequent words.
 
     Kept deliberately small — this is seed grounding, not retrieval. Accepts any
-    object exposing ``word_frequencies()`` (e.g. :class:`aegean.Corpus`).
+    object exposing ``word_frequencies()`` (e.g. `aegean.Corpus`).
     """
     freqs = getattr(corpus, "word_frequencies", None)
     if freqs is None:

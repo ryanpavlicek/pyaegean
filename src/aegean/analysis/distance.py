@@ -7,7 +7,7 @@ A faithful port of the distance / scheme / sequence parts of the workbench
 **Exploratory.** The cross-linguistic phonetic distance scores a substitution
 as cheap (vowel↔vowel or same articulatory class) or expensive ("far"); *which*
 phonemes count as same-class is a linguistic judgement, exposed to the
-researcher via :class:`PhoneticScheme`. A small distance between a Linear A word
+researcher via `PhoneticScheme`. A small distance between a Linear A word
 and a reconstructed form is a lead to weigh, never proof — the script is
 undeciphered.
 """
@@ -168,7 +168,7 @@ def phonetic_distance(
 ) -> float:
     """Weighted Levenshtein over phonetic strings, normalized to [0,1] by the
     longer length. Vowel↔vowel swaps cost 0.3, same-class consonants 0.5,
-    everything else 1 (see :class:`PhoneticWeights`)."""
+    everything else 1 (see `PhoneticWeights`)."""
     na, nb = len(a), len(b)
     m = [[0.0] * (nb + 1) for _ in range(na + 1)]
     for i in range(na + 1):

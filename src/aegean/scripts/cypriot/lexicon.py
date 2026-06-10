@@ -2,7 +2,7 @@
 
 The Cypriot syllabary writes Greek, so a transliterated word resolves to a Greek lemma —
 ``PA-SI-LE-U-SE`` is βασιλεύς ("king"). The bundled lexicon holds the well-established
-equations; pass a returned lemma to :func:`aegean.greek.gloss` / :func:`aegean.greek.lookup`
+equations; pass a returned lemma to `aegean.greek.gloss` / `aegean.greek.lookup`
 (with the LSJ backend active) for the full dictionary entry.
 """
 

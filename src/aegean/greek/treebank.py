@@ -1,12 +1,12 @@
 """Treebank-derived Greek lemmatizer + morphology (Perseus AGDT v2.1).
 
-**Opt-in.** Call :func:`use_treebank` to download the Ancient Greek Dependency
+**Opt-in.** Call `use_treebank` to download the Ancient Greek Dependency
 Treebank (Greek, v2.1) into the user cache, build a *form → analyses* lexicon
-(also cached), and have :func:`aegean.greek.lemmatize` / :func:`aegean.greek.analyze`
+(also cached), and have `aegean.greek.lemmatize` / `aegean.greek.analyze`
 prefer attested, **correctly-accented** lemmas and full morphological features for
 known forms — covering the irregular/contract/athematic/3rd-declension forms the
 rule-based engine can't (e.g. ``εἶπον → λέγω``). On a miss they fall back to the
-rule/seed engines. Default behaviour (without :func:`use_treebank`) is unchanged
+rule/seed engines. Default behaviour (without `use_treebank`) is unchanged
 and fully offline.
 
 Data: ``github.com/PerseusDL/treebank_data`` ``v2.1/Greek/texts/*.tb.xml``,
@@ -285,7 +285,7 @@ def use_treebank(*, build: bool = True, force: bool = False) -> TreebankLexicon:
     """Activate the AGDT lexicon for this session.
 
     Downloads + builds it on first use (``build=True``); pass ``force=True`` to
-    rebuild. Once active, :func:`aegean.greek.lemmatize` / :func:`analyze` prefer
+    rebuild. Once active, `aegean.greek.lemmatize` / `analyze` prefer
     its attested analyses and fall back to the rule/seed engines on a miss.
     """
     global _ACTIVE

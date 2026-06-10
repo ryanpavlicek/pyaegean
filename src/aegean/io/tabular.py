@@ -1,6 +1,6 @@
 """Export a corpus to tabular formats (CSV, Parquet) via its DataFrame view.
 
-Thin wrappers over :meth:`aegean.core.corpus.Corpus.to_dataframe`. pandas is the ``[data]`` extra;
+Thin wrappers over `aegean.core.corpus.Corpus.to_dataframe`. pandas is the ``[data]`` extra;
 Parquet additionally needs a parquet engine (the ``[parquet]`` extra — pyarrow).
 """
 

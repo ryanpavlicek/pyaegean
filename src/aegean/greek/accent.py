@@ -3,7 +3,7 @@
 Identifies the accented syllable and the accent type (acute / grave /
 circumflex), and classifies the word by the traditional scheme (oxytone,
 paroxytone, proparoxytone, perispomenon, properispomenon, barytone). Operates
-on the syllabification from :mod:`aegean.greek.syllabify`.
+on the syllabification from `aegean.greek.syllabify`.
 """
 
 from __future__ import annotations

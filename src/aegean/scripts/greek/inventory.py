@@ -1,4 +1,4 @@
-"""The Greek alphabet as a :class:`SignInventory`.
+"""The Greek alphabet as a `SignInventory`.
 
 The 24 letters (lowercase) plus final sigma, each with its Unicode glyph,
 codepoint, a transliteration, and an approximate (classical) phonetic value.

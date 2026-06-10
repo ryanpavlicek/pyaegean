@@ -43,12 +43,14 @@ parquet = ["pyarrow>=14"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
 neural = ["onnxruntime>=1.17", "tokenizers>=0.15", "numpy>=1.24"]  # GreTa seq2seq lemmatizer (torch-free); model fetched to cache
 dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0"]
+docs = ["pdoc>=14"]                # builds the API reference (pdoc → GitHub Pages); build-time only
 all = ["pyaegean[ai,epidoc,geo,data]"]
 
 [project.urls]
 Homepage = "https://github.com/ryanpavlicek/pyaegean"
 Source = "https://github.com/ryanpavlicek/pyaegean"
 Documentation = "https://github.com/ryanpavlicek/pyaegean/wiki"
+"API Reference" = "https://ryanpavlicek.github.io/pyaegean/"
 Issues = "https://github.com/ryanpavlicek/pyaegean/issues"
 Changelog = "https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md"
 

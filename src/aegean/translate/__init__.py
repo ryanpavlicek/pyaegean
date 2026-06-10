@@ -2,9 +2,9 @@
 
 Builds grounding evidence from the package's own tooling (Greek baseline
 lemmatizer, Linear A sign→sound transliteration), then hands the text plus that
-evidence to :func:`aegean.ai.translate`. The grounding step is deterministic and
+evidence to `aegean.ai.translate`. The grounding step is deterministic and
 local; the translation itself is generative and returned as an exploratory,
-provenanced :class:`~aegean.ai.ExploratoryResult`.
+provenanced `ExploratoryResult`.
 """
 
 from __future__ import annotations

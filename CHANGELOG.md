@@ -15,6 +15,9 @@ All notable changes to pyaegean are documented here. The format follows
   `aegean` namespace; `aegean.analysis` now exports `BalanceCheck`, `CompiledSignPattern`, and the
   `Output`/`Connector` query types; and `aegean.greek` exports the backend errors
   (`ParserNotLoadedError`, `LexiconNotLoadedError`, …) raised by its opt-in functions.
+- **Hosted API reference** ([ryanpavlicek.github.io/pyaegean](https://ryanpavlicek.github.io/pyaegean/)):
+  a browsable reference for every public module, class, and function, generated from the docstrings and
+  type hints with pdoc and published to GitHub Pages (the new `[docs]` extra).
 
 ### Changed
 - **`greek.evaluate` is renamed `greek.evaluate_parser`**, for consistency with `evaluate_tagger` /

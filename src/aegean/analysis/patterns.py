@@ -32,7 +32,7 @@ class CompiledSignPattern:
 
 
 def compile_sign_pattern(raw: str) -> CompiledSignPattern | None:
-    """Parse a wildcard sign pattern (``KU-*-RO``) into a :class:`CompiledSignPattern`, or ``None`` if empty."""
+    """Parse a wildcard sign pattern (``KU-*-RO``) into a `CompiledSignPattern`, or ``None`` if empty."""
     toks = [t.strip() for t in raw.split("-") if t.strip()]
     if not toks:
         return None

@@ -1,6 +1,6 @@
 """Neutral, out-of-AGDT evaluation against the PROIEL treebank (Ancient Greek).
 
-:mod:`aegean.greek.heldout` measures generalization *within* the AGDT — the treebank
+`aegean.greek.heldout` measures generalization *within* the AGDT — the treebank
 pyaegean's lemmatizer/tagger backends are built from. This module measures it against a
 *different*, independently annotated source: the PROIEL treebank's Greek New Testament
 and Herodotus, which none of pyaegean's models have ever seen. That is the genuinely

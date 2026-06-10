@@ -6,7 +6,7 @@ suffix heuristic for open classes (a few unambiguous verb endings, else NOUN).
 
 Closed classes are reliable; open-class precision is limited by the suffix
 heuristic — but activating the **opt-in treebank backend**
-(:func:`aegean.greek.use_treebank`) yields gold, attested tags for known forms,
+(`aegean.greek.use_treebank`) yields gold, attested tags for known forms,
 covering the open-class words this baseline would mislabel. Tags follow the
 Universal Dependencies inventory:
 ``DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X`` (the treebank
@@ -80,7 +80,7 @@ def _strip(word: str) -> str:
 
 def pos_tag(word: str) -> str:
     """Tag a single token. Closed classes come from the lexicon; when the treebank
-    backend is active (see :func:`aegean.greek.use_treebank`), an attested form's
+    backend is active (see `aegean.greek.use_treebank`), an attested form's
     gold tag is used next; otherwise open-class words get a suffix heuristic (a few
     verb endings, else NOUN). Non-letter tokens are NUM (numeric) or PUNCT."""
     if not _GREEK_LETTER.search(word):

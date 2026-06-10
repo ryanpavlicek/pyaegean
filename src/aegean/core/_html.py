@@ -7,7 +7,7 @@ dependency**. These helpers build the HTML from already-structured data and
 break the markup or inject script into a notebook.
 
 Callers that assemble HTML fragments by hand (titles, inline spans) must wrap
-any dynamic text in :func:`esc` themselves; :func:`table` escapes its cells.
+any dynamic text in `esc` themselves; `table` escapes its cells.
 """
 
 from __future__ import annotations

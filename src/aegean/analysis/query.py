@@ -2,12 +2,12 @@
 
 A faithful port of the workbench ``src/lib/queryEngine.ts`` — the field
 registry, per-document/per-word predicates, AND/OR/NOT combination, and the
-query evaluator — adapted to the script-agnostic :class:`Document` / :class:`Corpus`
+query evaluator — adapted to the script-agnostic `Document` / `Corpus`
 model. The presentational Query Builder UI is intentionally not ported.
 
 The predicates are deterministic corpus filters (not exploratory): they select
 documents and words by surface properties. Sign-pattern matching reuses
-:func:`aegean.analysis.patterns.word_matches_sign_pattern`.
+`aegean.analysis.patterns.word_matches_sign_pattern`.
 """
 
 from __future__ import annotations
@@ -285,9 +285,9 @@ def run_query(
     output: Output = "inscriptions",
     annotated_ids: set[str] | None = None,
 ) -> QueryResults:
-    """Build the indices from a :class:`Corpus` and evaluate ``filters``.
+    """Build the indices from a `Corpus` and evaluate ``filters``.
 
-    Convenience over :func:`eval_query` for the common whole-corpus case.
+    Convenience over `eval_query` for the common whole-corpus case.
     """
     documents = list(corpus)
     return eval_query(

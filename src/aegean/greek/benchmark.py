@@ -177,7 +177,7 @@ def compare_modes(
     "treebank": {"lemma": Score, "pos": Score}}``. Activating the treebank needs the
     AGDT lexicon — with ``build=True`` it is downloaded/built on first use (network);
     with ``build=False`` it must already be built (see
-    :func:`aegean.greek.use_treebank`). The treebank backend is left disabled on exit.
+    `aegean.greek.use_treebank`). The treebank backend is left disabled on exit.
     """
     from . import treebank
 

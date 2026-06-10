@@ -5,11 +5,11 @@ trained on the AGDT (pure Python, no heavy deps).
 forms only) and the rule baseline only knows regular paradigms; neither tags an *unseen*
 form well. This tagger predicts POS for any form from suffix/shape/accent + context
 features, reaching ~84% on unseen forms. It reuses the averaged-perceptron machinery from
-the dependency parser (:mod:`aegean.greek.syntax`).
+the dependency parser (`aegean.greek.syntax`).
 
 Trained on the AGDT we already fetch (CC BY-SA 3.0), built in the cache on first use,
 never bundled. POS only; lemma (edit-trees) and full morphology are separate steps.
-Default behaviour without :func:`use_tagger` is unchanged.
+Default behaviour without `use_tagger` is unchanged.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ _BOS, _EOS = "<s>", "</s>"
 
 
 class TaggerNotLoadedError(RuntimeError):
-    """Raised when :func:`tag_pos` is used before :func:`use_tagger`."""
+    """Raised when `tag_pos` is used before `use_tagger`."""
 
 
 # --- features ----------------------------------------------------------------
@@ -155,7 +155,7 @@ def use_tagger(*, train: bool = True, force: bool = False) -> None:
     """Activate the generalizing POS tagger. With ``train=True`` (default) it trains on
     first use — from the cached AGDT, a few minutes — then caches the model; later calls
     load the cache. ``train=False`` loads an existing cached model without training (raises
-    :class:`TaggerNotLoadedError` if none exists). ``force=True`` retrains even if cached."""
+    `TaggerNotLoadedError` if none exists). ``force=True`` retrains even if cached."""
     global _ACTIVE
     if train and (force or not (cache_dir() / _MODEL_NAME).exists()):
         train_tagger(force=force)
@@ -175,7 +175,7 @@ def active() -> dict[str, Any] | None:
 
 def tag_pos(forms: list[str]) -> list[str]:
     """Tag a whole sentence's forms with POS (uses left-to-right context). Requires an
-    active model (see :func:`use_tagger`)."""
+    active model (see `use_tagger`)."""
     if _ACTIVE is None:
         raise TaggerNotLoadedError("POS tagger not loaded — call aegean.greek.use_tagger() first")
     return _decode(forms, _ACTIVE["weights"], _ACTIVE["labels"])
@@ -185,7 +185,7 @@ def evaluate_tagger(
     *, source_dir: str | None = None, holdout: float = 0.1, epochs: int = 8
 ) -> dict[str, float]:
     """Train on the train split and score POS on the held-out split (overall + unseen),
-    via :mod:`aegean.greek.heldout` — the honest generalization number. Returns
+    via `aegean.greek.heldout` — the honest generalization number. Returns
     ``pos_all``/``pos_unseen`` plus the token counts (this tagger predicts POS only, so the
     lemma metrics are omitted)."""
     from . import heldout

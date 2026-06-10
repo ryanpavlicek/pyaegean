@@ -2,7 +2,7 @@
 
 A fine-tuned **GreTa** (Ancient-Greek T5) seq2seq that *generates* the lemma of an unseen
 form — the high-accuracy counterpart to the pure-Python edit-tree lemmatizer
-(:mod:`aegean.greek.lemmatizer`). On the leakage-free held-out AGDT split it reaches **76.3%
+(`aegean.greek.lemmatizer`). On the leakage-free held-out AGDT split it reaches **76.3%
 on unseen forms**.
 
 It is the unseen-form tier of a **hybrid**: a bundled gold ``form → lemma`` lookup answers
@@ -47,7 +47,7 @@ _PAD_ID, _EOS_ID = 0, 1  # GreTa/T5: decoder starts at pad, stops at eos
 
 
 class NeuralLemmatizerNotLoadedError(RuntimeError):
-    """Raised when the neural lemmatizer is used before :func:`use_neural_lemmatizer`,
+    """Raised when the neural lemmatizer is used before `use_neural_lemmatizer`,
     or when the ``[neural]`` extra (onnxruntime/tokenizers) is not installed."""
 
 
@@ -115,11 +115,11 @@ def use_neural_lemmatizer(*, force: bool = False) -> None:
     Fetches the model bundle (ONNX encoder/decoder + tokenizer + gold lookup) to the cache on
     first use — never bundled in the wheel — then loads it via onnxruntime. Requires the
     ``[neural]`` extra (``pip install 'pyaegean[neural]'``). Best paired with
-    :func:`aegean.greek.use_treebank`, whose attested lemmas take precedence for seen forms.
+    `aegean.greek.use_treebank`, whose attested lemmas take precedence for seen forms.
 
-    Raises :class:`aegean.data.DataNotAvailableError` if the model URL is not yet pinned (set
+    Raises `aegean.data.DataNotAvailableError` if the model URL is not yet pinned (set
     ``PYAEGEAN_GRC_LEMMA_NEURAL_URL`` to fetch from your own mirror) or the download fails, and
-    :class:`NeuralLemmatizerNotLoadedError` if the optional dependencies are missing.
+    `NeuralLemmatizerNotLoadedError` if the optional dependencies are missing.
     """
     global _ACTIVE
     model_dir = fetch(_DATASET, force=force)

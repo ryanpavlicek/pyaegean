@@ -105,7 +105,7 @@ def betacode_to_unicode(text: str) -> str:
 
 def unicode_to_betacode(text: str) -> str:
     """Convert polytonic Greek to Beta Code (capitals as ``*``; final sigma as
-    ``s``). Round-trips with :func:`betacode_to_unicode` for supported text."""
+    ``s``). Round-trips with `betacode_to_unicode` for supported text."""
     out: list[str] = []
     for ch in unicodedata.normalize("NFD", text):
         if ch in _MARK_TO_BETA:

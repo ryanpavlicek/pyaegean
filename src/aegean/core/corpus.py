@@ -1,4 +1,4 @@
-"""The :class:`Corpus` — the package's center of gravity.
+"""The `Corpus` — the package's center of gravity.
 
 Clean, typed, pandas-friendly access to a collection of documents. A loader
 registry lets each script provide its bundled corpus without the core
@@ -28,7 +28,7 @@ def register_loader(script_id: str, fn: Callable[[], "Corpus"]) -> None:
 
 
 class Corpus:
-    """A collection of :class:`Document` s plus shared inventory + provenance."""
+    """A collection of `Document` s plus shared inventory + provenance."""
 
     def __init__(
         self,
@@ -166,7 +166,7 @@ class Corpus:
 
     def to_dict(self) -> dict[str, Any]:
         """A compact, *lossy* export (``_meta`` + per-document words/metadata) for quick
-        interop. For a complete, reversible serialization use :meth:`to_json`/:meth:`from_json`."""
+        interop. For a complete, reversible serialization use `to_json`/`from_json`."""
         prov = self.provenance
         return {
             "_meta": {
@@ -203,10 +203,10 @@ class Corpus:
     def to_json(self, path: str | Path | None = None, *, indent: int | None = 2) -> str | None:
         """Serialize the whole corpus to JSON **losslessly** — every token (with its kind,
         signs, glyphs, line/position), the physical lines, full document metadata, the sign
-        inventory, and provenance all survive. :meth:`from_json` reverses it exactly.
+        inventory, and provenance all survive. `from_json` reverses it exactly.
 
         Returns the JSON string, or writes it to ``path`` and returns ``None`` when ``path``
-        is given. (Unlike :meth:`to_dict`, which is a compact lossy summary.)"""
+        is given. (Unlike `to_dict`, which is a compact lossy summary.)"""
         data: dict[str, Any] = {
             "_meta": {"tool": "pyaegean", "schemaVersion": SCHEMA_VERSION, "scriptId": self.script_id},
             "provenance": _provenance_to_dict(self.provenance),
@@ -221,7 +221,7 @@ class Corpus:
 
     @classmethod
     def from_json(cls, source: str | Path) -> "Corpus":
-        """Reconstruct a Corpus from :meth:`to_json` output: a JSON string, a ``Path`` to a
+        """Reconstruct a Corpus from `to_json` output: a JSON string, a ``Path`` to a
         ``.json`` file, or a path-like string (anything not beginning with ``{``)."""
         if isinstance(source, Path):
             text = source.read_text(encoding="utf-8")
@@ -233,7 +233,7 @@ class Corpus:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Corpus":
-        """Reconstruct a Corpus from the dict :meth:`to_json` serializes (its ``json.loads``)."""
+        """Reconstruct a Corpus from the dict `to_json` serializes (its ``json.loads``)."""
         meta = data.get("_meta") or {}
         return cls(
             [_document_from_dict(d) for d in data.get("documents", [])],
@@ -252,11 +252,11 @@ class Corpus:
     ) -> QueryResults:
         """Run the compound-query predicate engine over this corpus.
 
-        ``filters`` is a sequence of :class:`aegean.analysis.FilterRow` rows (a field id, a
+        ``filters`` is a sequence of `aegean.analysis.FilterRow` rows (a field id, a
         value, and optional ``connector``/``negate``); ``output`` selects ``"inscriptions"``
-        or ``"words"``. Returns :class:`aegean.analysis.QueryResults` (``.inscriptions`` and
-        ``.words``). The available fields are in :data:`aegean.analysis.FIELDS`. Unlike
-        :meth:`filter` (exact metadata match), this supports text/prefix/sign-pattern/
+        or ``"words"``. Returns `aegean.analysis.QueryResults` (``.inscriptions`` and
+        ``.words``). The available fields are in `aegean.analysis.FIELDS`. Unlike
+        `filter` (exact metadata match), this supports text/prefix/sign-pattern/
         co-occurrence predicates with AND/OR/NOT."""
         from ..analysis.query import run_query  # lazy: no import-time core→analysis edge
 

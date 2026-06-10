@@ -2,8 +2,8 @@
 
 Linear B writes Mycenaean Greek, so a transliterated word resolves to a Greek lemma — ``PO-ME``
 is ποιμήν ("shepherd"), ``WA-NA-KA`` is ϝάναξ/ἄναξ ("king"). The bundled lexicon holds the
-well-established equations; pass a returned lemma to :func:`aegean.greek.gloss` /
-:func:`aegean.greek.lookup` (with the LSJ backend active) for the full dictionary entry.
+well-established equations; pass a returned lemma to `aegean.greek.gloss` /
+`aegean.greek.lookup` (with the LSJ backend active) for the full dictionary entry.
 """
 
 from __future__ import annotations
@@ -29,8 +29,8 @@ def _norm(word: str) -> str:
 def greek_reading(word: str) -> tuple[str, str] | None:
     """The Classical Greek ``(lemma, gloss)`` for a transliterated Linear B word, or ``None``.
 
-    With the LSJ backend active (:func:`aegean.greek.use_lsj`), pass the returned lemma to
-    :func:`aegean.greek.lookup` for the full entry.
+    With the LSJ backend active (`aegean.greek.use_lsj`), pass the returned lemma to
+    `aegean.greek.lookup` for the full entry.
     """
     entry = _lexicon().get(_norm(word))
     return (entry["lemma"], entry["gloss"]) if entry else None

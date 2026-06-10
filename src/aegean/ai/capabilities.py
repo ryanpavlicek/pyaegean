@@ -2,8 +2,8 @@
 
 translate · gloss · decipher_hypotheses · nlp_assist · ask / summarize. Each
 builds a task-specific system prompt, wraps untrusted source text, feeds optional
-grounding evidence, calls the active :class:`LLMClient`, and returns an
-:class:`ExploratoryResult` — generative output is always labeled unverified with
+grounding evidence, calls the active `LLMClient`, and returns an
+`ExploratoryResult` — generative output is always labeled unverified with
 its provenance.
 """
 

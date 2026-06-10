@@ -1,6 +1,6 @@
 """Greek metrical scansion — fit a verse line to a quantitative template.
 
-This is the step beyond per-syllable :mod:`aegean.greek.prosody`: it resolves
+This is the step beyond per-syllable `aegean.greek.prosody`: it resolves
 syllable quantities **across word boundaries** and fits the whole line to a
 metrical pattern (dactylic hexameter, elegiac pentameter), recovering the feet,
 the resolved long/short sequence, and the main caesura.
@@ -30,7 +30,7 @@ Limitations
 - **Synizesis** (two written vowels read as one syllable, e.g. ``Πηληϊάδεω``)
   is not inferred — it is lexical, not spelling-predictable — so a handful of
   Homeric lines that need it will not fit. ``scan_line`` raises
-  :class:`ScansionError` rather than guessing.
+  `ScansionError` rather than guessing.
 - Diaeresis (e.g. ``ϊ``) correctly blocks diphthong formation.
 - Only dactylic meters are implemented here; lyric and iambic meters are future
   work (see ``docs/PLAN.md``).
@@ -293,7 +293,7 @@ def _partition_text(items: list[_Item], nuclei: list[int]) -> list[str]:
 
 def _onset_length(cluster: list[_Item]) -> int:
     """How many trailing consonants of an internal cluster open the next
-    syllable (mirrors :mod:`aegean.greek.syllabify`)."""
+    syllable (mirrors `aegean.greek.syllabify`)."""
     n = len(cluster)
     if n <= 1:
         return n
@@ -443,7 +443,7 @@ def scan_hexameter(line: str) -> LineScansion:
     """Scan a line of **dactylic hexameter** (six feet; feet 1–5 dactyl or
     spondee, foot 6 ``— ×``), resolving quantities and the main caesura.
 
-    Raises :class:`ScansionError` if the line does not fit (e.g. it needs
+    Raises `ScansionError` if the line does not fit (e.g. it needs
     synizesis, which is not inferred)."""
     syllables = _analyze(line)
     plan = _scan_dactylic(syllables, n_feet=5)
@@ -461,7 +461,7 @@ def scan_pentameter(line: str) -> LineScansion:
     the central diaeresis, then two obligatory dactyls and a final longum
     (``— ⏑⏑ — ⏑⏑ — ‖ — ⏑⏑ — ⏑⏑ —``).
 
-    Raises :class:`ScansionError` if the line does not fit."""
+    Raises `ScansionError` if the line does not fit."""
     syllables = _analyze(line)
     plan = _scan_pentameter(syllables)
     if plan is None:

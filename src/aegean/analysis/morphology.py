@@ -46,7 +46,7 @@ def find_morphological_clusters(
     """Cluster stems with their productive-suffix derivations.
 
     ``words`` is an iterable of ``{"word": str, "count": int}`` mappings or
-    ``(word, count)`` pairs (e.g. straight from :meth:`Corpus.word_frequencies`).
+    ``(word, count)`` pairs (e.g. straight from `Corpus.word_frequencies`).
     A suffix is *productive* when it ends at least ``min_suffix_productivity``
     distinct words; clusters smaller than ``min_cluster_size`` are dropped;
     suffixes are considered up to ``max_suffix_len`` signs long.
