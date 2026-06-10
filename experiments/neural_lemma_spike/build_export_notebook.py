@@ -144,8 +144,12 @@ cells.append(code(
 
 cells.append(md(
     "## Next\n"
-    "1. Upload `grc-lemma-neural.tar.gz` to a GitHub release on `ryanpavlicek/pyaegean`.\n"
-    "2. Report the **sha256** and the release asset URL — I pin them in `aegean.data._REMOTE`.\n"
+    "The bundle here is **fp32** (~960 MB). Quantize it to int8 before shipping — locally, no GPU:\n"
+    "`python quantize_bundle.py grc-lemma-neural.tar.gz` → ~232 MB, ~3x faster CPU decode, no\n"
+    "measured quality loss. Then:\n"
+    "1. Upload the **int8** `grc-lemma-neural.tar.gz` to a GitHub release on `ryanpavlicek/pyaegean`\n"
+    "   (tag `grc-lemma-neural-v1`, asset name `grc-lemma-neural.tar.gz` — matches the pinned URL).\n"
+    "2. The sha256 from `quantize_bundle.py` is pinned in `aegean.data._REMOTE`.\n"
     "3. Then `pip install 'pyaegean[neural]'` + `greek.use_neural_lemmatizer()` fetches and runs it."
 ))
 

@@ -86,10 +86,13 @@ _REMOTE: dict[str, DataSpec] = {
     # PYAEGEAN_GRC_LEMMA_NEURAL_URL to fetch from your own copy.
     "grc-lemma-neural": DataSpec(
         name="grc-lemma-neural",
-        url="",
-        sha256="",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-lemma-neural-v1/grc-lemma-neural.tar.gz"
+        ),
+        sha256="38126872e7a5be6389054062d4789ce5b6fc7e84327b07c2b93649a6f0f1a228",
         license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), Gorman (CC0)",
-        note="GreTa seq2seq lemmatizer: ONNX encoder/decoder + tokenizer + gold lookup (tar.gz); needs the [neural] extra.",
+        note="GreTa seq2seq lemmatizer (int8 ONNX encoder/decoder + tokenizer + gold lookup), ~232 MB tar.gz; the [neural] extra.",
         extract=True,
     ),
 }
