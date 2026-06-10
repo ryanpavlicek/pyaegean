@@ -22,6 +22,7 @@ from aegean.greek.morphology import _bare
 from aegean.greek.treebank import _clean_lemma
 
 HOLDOUT = 0.1
+GOLD_UPSAMPLE = 3  # repeat treebank (AGDT-convention) pairs so they stay the majority signal
 OUT = pathlib.Path(__file__).parent / "data"
 TMP = pathlib.Path(r"C:\Users\Ryan.Pavlicek\AppData\Local\Temp\multitreebank")
 EXTRA_DIRS = [TMP / "pedalion", TMP / "gorman"]
@@ -81,7 +82,7 @@ def _strip_len(s: str) -> str:
 _SKIP_FORM_TAGS = {"romanization", "transliteration", "inflection-template",
                    "table-tags", "class", "canonical"}
 _LATIN = re.compile(r"[A-Za-z]")
-_MAX_FORMS_PER_LEMMA = 60
+_MAX_FORMS_PER_LEMMA = 24  # principal paradigm cells; trims the rare/poetic long tail
 
 
 def _wikt_ok(form: str) -> bool:
@@ -151,13 +152,16 @@ def main() -> None:
                   for sent in sp.sentences for tk in sent
                   if tk.scored and not tk.seen}
 
-    pairs: set[tuple[str, str]] = set()
+    # Gold = treebank pairs (AGDT-train + AGDT-disjoint Pedalion/Gorman). These carry the
+    # AGDT lemma conventions the dev set is scored against, so they are upsampled to stay the
+    # majority of the training signal; Wiktionary supplies breadth, not the output convention.
+    gold: set[tuple[str, str]] = set()
     src: Counter[str] = Counter()
     for tr in trees[:cut]:
         for t in tr.tokens:
             f, lm = _nfc(t.form), _clean_lemma(t.lemma)
-            if _ok(f, lm):
-                pairs.add((f, lm))
+            if _ok(f, lm) and (f, lm) not in gold:
+                gold.add((f, lm))
                 src["AGDT"] += 1
     skipped = leaked = 0
     for d in EXTRA_DIRS:
@@ -171,22 +175,26 @@ def main() -> None:
                     if _bare(nf).lower() in dev_unseen:
                         leaked += 1
                         continue
-                    if _ok(nf, nl):
-                        pairs.add((nf, nl))
+                    if _ok(nf, nl) and (nf, nl) not in gold:
+                        gold.add((nf, nl))
                         src[path.parent.name] += 1
 
+    # Wiktionary = breadth source, deduped against gold (gold wins on overlap).
+    wikt: set[tuple[str, str]] = set()
     if WIKT.exists():
         for f, lm in wiktionary_pairs(WIKT, dev_unseen):
-            n0 = len(pairs)
-            pairs.add((f, lm))
-            if len(pairs) > n0:
+            if (f, lm) not in gold and (f, lm) not in wikt:
+                wikt.add((f, lm))
                 src["wiktionary"] += 1
     else:
         print(f"(no Wiktionary dump at {WIKT} — skipping that source)")
 
     with (OUT / "train.jsonl").open("w", encoding="utf-8") as fh:
-        for f, lm in sorted(pairs):
-            fh.write(json.dumps({"form": f, "lemma": lm}, ensure_ascii=False) + "\n")
+        for _ in range(GOLD_UPSAMPLE):
+            for f, lm in sorted(gold):
+                fh.write(json.dumps({"form": f, "lemma": lm, "src": "treebank"}, ensure_ascii=False) + "\n")
+        for f, lm in sorted(wikt):
+            fh.write(json.dumps({"form": f, "lemma": lm, "src": "wikt"}, ensure_ascii=False) + "\n")
 
     n_dev = n_un = 0
     with (OUT / "dev.jsonl").open("w", encoding="utf-8") as fh:
@@ -200,9 +208,11 @@ def main() -> None:
                     n_dev += 1
                     n_un += int(not tk.seen)
 
-    print(f"unique form->lemma training pairs: {len(pairs)}")
-    print(f"  contributions: {dict(src)}  "
-          f"(AGDT/pedalion/gorman = tokens pre-dedup; wiktionary = net-new pairs)")
+    g, w = len(gold), len(wikt)
+    rows = g * GOLD_UPSAMPLE + w
+    print(f"train rows: {rows}  =  gold {g} x{GOLD_UPSAMPLE} ({g * GOLD_UPSAMPLE}) + wiktionary {w}  "
+          f"(gold share {g * GOLD_UPSAMPLE / rows:.0%})")
+    print(f"  unique pairs by source: {dict(src)}")
     print(f"  dropped: {skipped} overlap sentences; {leaked} supplementary tokens hitting dev-unseen")
     print(f"dev tokens (per-token): scored {n_dev}, unseen {n_un}")
 
