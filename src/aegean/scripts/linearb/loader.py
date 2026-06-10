@@ -9,6 +9,7 @@ with a full corpus; pyaegean never re-hosts it.
 
 from __future__ import annotations
 
+import os
 import re
 from functools import lru_cache
 from typing import Any
@@ -71,6 +72,13 @@ _PROVENANCE = Provenance(
 
 @lru_cache(maxsize=1)
 def load_linearb() -> Corpus:
+    # Bring-your-own: PYAEGEAN_LINEARB_CORPUS points at a local EpiDoc file/directory; otherwise
+    # the bundled illustrative sample is used (no openly-licensed corpus exists to ship).
+    source = os.environ.get("PYAEGEAN_LINEARB_CORPUS")
+    if source:
+        from .epidoc import load_epidoc_corpus
+
+        return load_epidoc_corpus(source)
     recs = load_bundled_json("linearb", "sample_inscriptions.json")
     docs = [_build_document(r) for r in recs]
     return Corpus(docs, sign_inventory=linear_b_inventory(), provenance=_PROVENANCE, script_id="linearb")

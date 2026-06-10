@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import pathlib
+
+import pytest
+
 import aegean
 from aegean.core.script import get_script
 from aegean.scripts.linearb import gloss, greek_reading, word_to_phonetic
@@ -51,6 +55,27 @@ def test_corpus_loads_and_classifies() -> None:
     assert kinds["GRA"] == "LOGOGRAM"          # the grain ideogram
     assert kinds["30"] == "NUMERAL"
     assert kinds["WA-NA-KA-TE-RO"] == "WORD"
+
+
+def test_epidoc_parse() -> None:
+    pytest.importorskip("lxml")
+    from aegean.analysis import balance_check
+    from aegean.scripts.linearb import load_epidoc_corpus, parse_epidoc
+
+    fixture = pathlib.Path(__file__).parent / "fixtures" / "linearb-epidoc"
+    docs = parse_epidoc(fixture)
+    assert len(docs) == 1
+    doc = docs[0]
+    assert doc.id == "KN Sc 230"
+    assert doc.meta.site == "Knossos"
+    assert len(doc.lines) == 3
+    texts = [t.text for t in doc.tokens]
+    assert "A-NO-QO-TA" in texts  # lowercase EpiDoc normalized to uppercase
+    assert "OVIS" in texts and "30" in texts
+    # the to-so total reconciles (30 + 20 == 50) once parsed as a Linear B account
+    corpus = load_epidoc_corpus(fixture)
+    checks = balance_check(next(iter(corpus)))
+    assert checks and checks[0].marker == "TO-SO" and checks[0].balances
 
 
 def test_accounting_to_so_total() -> None:
