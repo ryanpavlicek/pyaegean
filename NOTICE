@@ -23,10 +23,11 @@ Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
 Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistributed)
   Perseus Ancient Greek Dependency Treebank, v2.1
   (https://github.com/PerseusDL/treebank_data), licensed CC BY-SA 3.0. Downloaded
-  by the user on demand via aegean.greek.use_treebank() / use_parser(); pyaegean
-  builds derived artifacts (a lemma/morphology lexicon and a dependency-parser model)
-  in the local cache and neither bundles nor re-hosts the treebank itself. Attribute
-  the AGDT in academic work that relies on it.
+  by the user on demand via aegean.greek.use_treebank() / use_parser() / use_tagger() /
+  use_lemmatizer(); pyaegean builds derived artifacts (a lemma/morphology lexicon, a
+  dependency-parser model, a POS-tagger model, and a lemmatizer model) in the local cache
+  and neither bundles nor re-hosts the treebank itself. Attribute the AGDT in academic
+  work that relies on it.
 
 Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistributed)
   A Greek-English Lexicon (Liddell, Scott, Jones), digitized by the Perseus Digital
@@ -36,6 +37,15 @@ Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistribute
   https://github.com/PerseusDL/lexica/. Downloaded by the user on demand via
   aegean.greek.use_lsj(); pyaegean builds a derived index in the local cache and
   neither bundles nor re-hosts the lexicon.
+
+Neural Greek lemmatizer model (fetched on demand, NOT bundled)
+  An ONNX seq2seq lemmatizer fine-tuned from bowphs/GreTa (Riemenschneider & Frank,
+  "Exploring Large Language Models for Ancient Greek and Latin", Apache-2.0;
+  arXiv:2410.12055) on the AGDT (CC BY-SA 3.0), the Pedalion treebanks (CC BY-SA 4.0),
+  and the Gorman Ancient Greek treebanks (CC0). The resulting model — ONNX weights plus a
+  derived gold lemma lookup — is licensed CC BY-SA 4.0. Downloaded by the user on demand
+  via aegean.greek.use_neural_lemmatizer() (the [neural] extra); fetched to the local cache,
+  never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
 Planned (future versions; included here for forward attribution):
   - DAMOS — Database of Mycenaean at Oslo (Linear B).

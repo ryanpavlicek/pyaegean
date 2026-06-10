@@ -33,7 +33,7 @@ focused. Standalone repo; does not modify the workbench.
 - **v0.1** core + Linear A (incl. downloader) + **Greek start** (corpus loader + first NLP components).
 - **Data** bundle only tiny JSON in the wheel; **download the 500 MB Linear A corpus from the
   linearaworkbench repo** (no re-host) into a user cache; host freely-licensable Linear B / Greek data
-  as pyaegean release assets; wrap DAMOS/LiBER/Perseus from upstream. No Git LFS; CI wheel-size guard.
+  as pyaegean release assets; wrap DAMOS/LiBER/Perseus from upstream. No Git LFS; CI footprint guard.
 - **Claude Code plugin** parked as a tracked side project.
 
 ## Architecture — strict downward-only layers
@@ -120,7 +120,8 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
 ## Data hosting (download-first; structurally avoids the 500 MB problem)
 
 - **Bundled in wheel** (offline-capable basics): compact Linear A text JSON (~hundreds KB),
-  small Greek seeds (sample texts, betacode tables). Wheel **< ~3 MB**; CI guard fails otherwise.
+  small Greek seeds (sample texts, betacode tables) — code + JSON only. The footprint guard
+  (`scripts/check_footprint.py`) fails if a heavy binary is bundled or `import aegean` loads heavy deps.
 - **`aegean.data.fetch(name)`** → `platformdirs` user cache, sha256-verified, idempotent, graceful
   `DataNotAvailableError` (names the exact call + license). Registry `DataSpec(name, kind, url, sha256, license)`.
   - The Linear A **text** JSON is bundled in the wheel; only `fetch("lineara-images")` is a remote
@@ -154,7 +155,7 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
 
 `hatchling`/PEP 621, `src/` layout, bundled data via `force-include`. `pytest`+`cov`+`hypothesis`;
 coverage gate; matrix Py 3.10–3.13 × {no-extras, [all]}. GitHub Actions: `ruff`, `mypy --strict`, tests,
-build, `twine check`, **wheel-size guard**, OIDC publish on tag. Docs `mkdocs-material`+`mkdocstrings`;
+build, `twine check`, **footprint guard** (import-clean / import-fast / code+JSON wheel), OIDC publish on tag. Docs `mkdocs-material`+`mkdocstrings`;
 port methodology + limitations into docstrings. Provenance: per-dataset `DataSpec.license`/`citation`,
 `Corpus.provenance.cite()`, `CITATION.cff`, `NOTICE` (GORILA, DAMOS, LiBER, Perseus, First1KGreek).
 
@@ -172,8 +173,15 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
   Perseus LSJ glossing via `greek.use_lsj()` (`gloss`/`lookup`); opt-in baseline dependency parser
   (arc-eager + averaged perceptron) via `greek.use_parser()` (`parse`→`DepTree`), ~0.67 UAS projective
   / ~0.51 all-text on AGDT. CLTK head-to-head run (CLTK 2.5.1 + stanza grc): on the gold set treebank
-  ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — small attested-weighted gold, so a larger
-  in-context held-out eval (and a generalizing model) is the fair next step.)*
+  ties CLTK on lemma (100%/100%) and edges POS (100%/90%) — small attested-weighted gold. That fair next
+  step is now taken: a **generalizing POS tagger** (`greek.use_tagger()`, averaged perceptron, pure
+  Python) measured on a leakage-free held-out AGDT split via `greek.evaluate_tagger()` (the new
+  `aegean.greek.heldout` module) — 84.4% all / 83.6% unseen, vs stanza 89.1% unseen (within ~5–6 pts, on
+  a split that is in-training for stanza). A **generalizing lemmatizer** (`greek.use_lemmatizer()`,
+  edit-trees + averaged-perceptron reranker, POS-conditioned) lands the same way via
+  `greek.evaluate_lemmatizer()` — 84.5% all / 40.3% unseen, vs stanza 62.8% unseen (neural lemma still
+  leads on unseen; pyaegean lifts it from the lookup's 0%). A neutral out-of-AGDT gold set is the
+  remaining piece to truly settle beat-CLTK.)*
 - **v0.4** **Linear B**: DAMOS/LiBER adapters + `LinearB` script + freely-licensed data hosted in the
   pyaegean repo (gated by licensing confirmation).
 - **v0.5** Cypriot syllabary + Cypro-Minoan.
@@ -222,5 +230,5 @@ KU-RO accounting), `signPattern.ts`, `compareAlign.ts`, `queryEngine.ts`, `corpu
   `test_parity_lineara.py` matches golden fixtures.
 - Greek start: load a First1KGreek/Perseus sample → `aegean.greek.tokenize/normalize/syllabify/accentuate`
   produce correct output on known lines; betacode↔unicode round-trips; baseline lemmatize runs.
-- Infra: `mypy --strict` clean; `python -m build` wheel **< ~3 MB** (size guard); `twine check`; `mkdocs build`.
+- Infra: `mypy --strict` clean; `python -m build`; footprint guard (`check_footprint.py`: import-clean, import-fast, code+JSON-only wheel); `twine check`; `mkdocs build`.
 - (v0.2 preview) AI adapters unit-test against mocked HTTP; grounding + exploratory-labeling asserted; no key ever logged.

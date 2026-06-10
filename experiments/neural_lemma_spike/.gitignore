@@ -1,0 +1,12 @@
+# Regenerable / large / fetched artifacts — not committed
+data/
+*.zip
+*.tar.gz
+*.onnx
+tokenizer.json
+ship/
+model/
+onnx_fp32/
+onnx_int8/
+out/
+out_model/

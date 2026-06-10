@@ -207,7 +207,50 @@ switch on the [treebank backend](#treebank-backed-mode-opt-in) — with
 `greek.use_treebank()` active, `pos_tag`/`pos_tags` return the gold AGDT tag for a
 known form (e.g. ἔφη → VERB) before falling back to the heuristic. Tags:
 `DET ADP CCONJ SCONJ PART PRON ADV NUM NOUN VERB ADJ PUNCT X` (treebank mode may
-also emit `INTJ`).
+also emit `INTJ`). The treebank only covers *attested* forms, though — to tag an
+**unseen** form well, switch on the
+[generalizing tagger](#generalizing-pos-tagger-opt-in) below.
+
+## Generalizing POS tagger (opt-in)
+
+The baseline heuristic and the treebank lookup both fall down on an *unseen* open-class
+form — the heuristic just guesses NOUN, and the lookup has no entry for it. `use_tagger()`
+switches on a trained **averaged-perceptron** sequence tagger (pure Python, no heavy deps)
+that predicts a tag from suffix/prefix/shape/accent features plus left-to-right sentence
+context — so it **generalizes** to forms it has never seen.
+
+```python
+greek.use_tagger()        # one-time train (~2–3 min) from the cached AGDT, then cached
+greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος")   # every token tagged, in context
+greek.disable_tagger()    # back to the lookup/heuristic
+```
+
+It composes with the cascade: the closed-class lexicon and (when active) the treebank
+lookup still take precedence per token for the forms they cover; the tagger fills in
+everything else, including words neither has seen.
+
+**Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on
+the disjoint 10% (≈54k tokens, via `greek.evaluate_tagger()`), it reaches **84.4% POS
+overall and 83.6% on UNSEEN forms** — forms absent from the training split. For contrast,
+on the same tokens the lookup scores 0% on unseen (no entry) and the suffix heuristic only
+~50%. The cached model is ~2.2 MB and `import aegean` stays instant — the model is built on
+first `use_tagger()`, never bundled.
+
+```python
+greek.evaluate_tagger(holdout=0.1)
+# {'pos_all': 0.844, 'pos_unseen': 0.836, 'n_all': 54036, 'n_seen': 45138, 'n_unseen': 8898}
+```
+
+**How close is that to CLTK?** On the *same* held-out split, stanza (CLTK's grc engine)
+scores ~89% on unseen forms — about 5–6 points ahead. But read it honestly: that split is
+*in-training* for stanza (its Perseus models were trained on the AGDT), which inflates it
+on seen forms, while UD-vs-AGDT tagset conventions (stanza's PROPN/AUX/SCONJ) penalize it
+on those same seen words; both biases concentrate on seen forms, so the **unseen column is
+the clean comparison**. pyaegean lands within ~5–6 points of a neural tagger with **zero
+heavy dependencies, an instant import, and a ~2 MB model** (vs stanza's torch + ~500 MB) —
+see [Comparing against CLTK](#comparing-against-cltk). A fully neutral "beat CLTK" test
+needs a hand-checked, out-of-AGDT gold set; the AGDT can't settle it, since it trained
+stanza.
 
 ## Morphological analysis
 
@@ -374,6 +417,43 @@ reflect that). A larger, in-context, held-out evaluation is the fair next step, 
 signal that *truly* rivaling CLTK across the board needs a generalizing model, not just
 lookup.
 
+**Held-out generalization (that fair next step, now taken).** The
+[generalizing tagger](#generalizing-pos-tagger-opt-in) was measured exactly that way — a
+leakage-free 90/10 AGDT sentence split, scored *in context* on ≈54k tokens, with the
+**unseen-form** subset (forms absent from training) called out separately:
+
+| POS — held-out AGDT | overall | unseen forms |
+| --- | --- | --- |
+| pyaegean tagger (pure Python) | 84.4% | 83.6% |
+| stanza / CLTK grc | 89.6%¹ | 89.1% |
+
+¹ Raw, in the AGDT tag scheme. Canonicalizing the UD-vs-AGDT differences stanza is
+penalized for on *seen* closed-class words (PROPN→NOUN, AUX→VERB, SCONJ→CCONJ) raises its
+overall to 92.0%; the unseen column is unchanged (those are all seen forms).
+
+stanza leads by ~5–6 points on unseen forms — but the AGDT is *in-training* for stanza (its
+models were trained on it), so this split flatters it. The unseen column is the cleanest
+comparison, and even there pyaegean closes most of the gap with no heavy deps. A fully
+neutral verdict needs an out-of-AGDT gold set neither system trained on.
+
+The same evaluation for **lemmatization** (the
+[generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
+
+| lemma — held-out AGDT | overall | unseen forms |
+| --- | --- | --- |
+| pyaegean lemmatizer (pure Python, edit-tree) | 84.5% | 40.3% |
+| stanza / CLTK grc | 87.3% | 62.8% |
+| **pyaegean `[neural]` (GreTa seq2seq, opt-in)** | **~92%** | **76.3%** |
+
+The pure-Python lemmatizer is competitive overall but trails on **unseen** forms, where
+recovering a lemma (often an accent/stem change, not just a suffix swap) is hardest. The
+opt-in **[neural] backend** closes that gap and passes it: a GreTa seq2seq that *generates*
+the lemma reaches **76.3% on unseen forms — ahead of stanza's 62.8%** — and ships as a hybrid
+(the gold lookup answers seen forms, the seq2seq the rest), so overall lemma accuracy lands
+around **92%**, beating stanza on both columns. It is a fetched-to-cache ONNX model behind the
+`[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree stays the zero-dependency
+default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
+
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
 `compare_pos_taggers`, or `compare_modes`.
@@ -390,6 +470,67 @@ greek.lemmatize("λόγου")          # 'λόγος'
 greek.lemmatize("ἦν")             # 'εἰμί'
 greek.lemmatize_verbose("ξενικον")  # ('ξενικον', False)  ← not in the seed table
 ```
+
+To lemmatize **unseen** forms, switch on the
+[generalizing lemmatizer](#generalizing-lemmatizer-opt-in) below.
+
+## Generalizing lemmatizer (opt-in)
+
+The seed table and the treebank lookup only lemmatize *attested* forms; an unseen form comes
+back unchanged. `use_lemmatizer()` switches on a trained lemmatizer that **generalizes**: from
+each (form, lemma) pair it learns a Chrupała-style **edit tree** — a recursive transform that
+keeps the shared stem and rewrites the differing prefix/suffix — so a rule learned from one
+word (`-ου → -ος`) applies to unseen words (`νόμου → νόμος`), and edit trees capture accent
+shifts and capitalization too. An averaged-perceptron reranker, conditioned on POS, picks the
+right tree for each form.
+
+```python
+greek.use_tagger()        # recommended — the lemmatizer conditions on the tagger's POS
+greek.use_lemmatizer()    # one-time train (~5 min) from the cached AGDT, then cached
+greek.lemmatize("ἀνθρώπων")   # 'ἄνθρωπος', even if the form was never attested
+greek.disable_lemmatizer()
+```
+
+It slots into the cascade after the treebank lookup: an attested form still gets its gold
+lemma; everything else goes to the model.
+
+**Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on the
+disjoint 10% (via `greek.evaluate_lemmatizer()`, with *predicted* POS), it reaches **84.5%
+overall and 40.3% on unseen forms** — versus the lookup's 0% on unseen. The cached model is
+~7 MB (built on first use, never bundled).
+
+**Versus CLTK.** On the same split stanza scores 62.8% on unseen lemma — clearly ahead.
+Recovering an unseen Greek lemma often means an internal stem/accent change, not just a suffix
+swap, and stanza's neural character model is genuinely strong there (a pure-Python edit-tree
+reranker tops out near 45% even with gold POS). So this is honest, real generalization (0 →
+40% unseen, competitive on attested forms) but not a win on unseen lemma — for that, switch on
+the **[neural backend](#neural-lemmatizer-opt-in)** below, which beats stanza on unseen.
+
+## Neural lemmatizer (opt-in)
+
+The edit-tree reranker generalizes by *classifying* a form into a known transformation, which
+caps out near the suffixes it has seen (~58% unseen at best). The `[neural]` backend instead
+**generates** the lemma with a fine-tuned **GreTa** (Ancient-Greek T5) seq2seq — composing
+novel stem/accent changes — and on unseen forms reaches **76.3%, past stanza/CLTK's 62.8%**.
+
+```python
+pip install "pyaegean[neural]"      # onnxruntime + tokenizers; no torch
+```
+
+```python
+greek.use_neural_lemmatizer()       # fetches the model (~232 MB, one-time) to the cache
+greek.lemmatize("θήσονται")         # 'τίθημι'   — generated, never attested in this form
+greek.lemmatize("λάθωσι")           # 'λανθάνω'
+greek.disable_neural_lemmatizer()
+```
+
+It is a **hybrid**: a bundled gold lookup answers attested (seen) forms exactly — so the model
+only generates for genuinely unseen forms — and it slots into the cascade just after the
+treebank lookup, ahead of the edit-tree reranker. Inference is **torch-free** (a numpy greedy
+decode over the int8 ONNX encoder/decoder via onnxruntime); the model is fetched to the cache,
+never bundled, so `import aegean` stays instant. The weights derive from CC BY-SA treebanks
+(see [Data & Provenance](Data-and-Provenance)); the wheel stays Apache-2.0 because the model is
+fetched, not bundled.
 
 ## Lexicon (LSJ glossing, opt-in)
 

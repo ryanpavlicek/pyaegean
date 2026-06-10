@@ -19,10 +19,12 @@ mypy
 - **Script-agnostic core.** New writing systems are plugins: subclass
   `aegean.core.Script`, `register()` it, and register a corpus loader. The core
   never imports a specific script.
-- **Lazy heavy deps.** Import `numpy`/`pandas`/`scipy` *inside* functions so
-  `import aegean` stays fast and lightweight.
+- **Zero hard third-party deps in the core.** `import aegean` is instant and loads
+  nothing heavy; `pandas` is the optional `[data]` extra (lazy-imported only inside
+  `to_dataframe`); collocation stats are pure stdlib. `scripts/check_footprint.py`
+  enforces this in CI: import-clean, import-fast, and a code+JSON-only wheel.
 - **No large/binary assets in the repo or wheel.** Use the `aegean.data.fetch()`
-  download-to-cache layer. The wheel is size-guarded in CI (< 3 MB).
+  download-to-cache layer for corpora and trained models.
 - **Faithful, parity-tested ports.** When porting analysis from the workbench,
   assert against shared golden values in `tests/fixtures/golden/`.
 - **Label exploratory output.** The Linear A material is undeciphered; any

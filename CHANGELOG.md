@@ -4,6 +4,48 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **Generalizing POS tagger** (opt-in): `greek.use_tagger()` trains an averaged-perceptron
+  sequence tagger (pure Python, no heavy deps) on the AGDT that predicts part of speech for
+  **unseen** forms from suffix/prefix/shape/accent + left-to-right context features — where
+  the treebank lookup (attested forms only) and the suffix heuristic fail. `greek.pos_tags()`
+  uses it in context when active; `greek.evaluate_tagger()` reports leakage-free held-out
+  accuracy. Measured **84.4% POS overall / 83.6% on unseen forms** on a 90/10 AGDT split
+  (vs ~0% for the lookup and ~50% for the heuristic on unseen); on the same split stanza
+  (CLTK grc) scores 89.1% unseen, so pyaegean lands within ~5–6 points pure-Python — on a
+  split that is *in-training* for stanza. The ~2.2 MB model is built on first use, cached,
+  never bundled.
+- **Generalizing lemmatizer** (opt-in): `greek.use_lemmatizer()` trains a Chrupała-style
+  **edit-tree** model with an averaged-perceptron reranker (pure Python) on the AGDT. It
+  learns inflection→lemma transforms (incl. accent shifts) that generalize to unseen forms,
+  conditioned on POS from the tagger. `greek.lemmatize` uses it (when active) for forms the
+  treebank lookup doesn't cover; `greek.evaluate_lemmatizer()` reports leakage-free held-out
+  accuracy. Measured **84.5% overall / 40.3% on unseen forms** on a 90/10 AGDT split (the
+  lookup is 0% on unseen); stanza (CLTK grc) scores 62.8% unseen — neural lemmatization of
+  unseen forms remains ahead, but pyaegean lifts it from nothing with no heavy deps.
+- **Leakage-free held-out evaluation** (`aegean.greek.heldout`): splits the AGDT by
+  sentence, flags dev forms unseen in training, and scores any tagger/lemmatizer (a pyaegean
+  mode or a CLTK pipeline) on the disjoint unseen subset — the honest generalization measure
+  behind the model numbers and the CLTK comparison.
+
+### Changed
+- `pos_tag`/`pos_tags` consult the trained tagger (when active) for the open-class forms the
+  closed-class lexicon and treebank lookup don't cover, generalizing tags to unseen text.
+- `lemmatize`/`lemmatize_verbose` consult the trained lemmatizer (when active) after the
+  treebank lookup, generalizing lemmas to unseen forms.
+- **Core now has zero hard third-party dependencies.** `pandas` moved to a new optional
+  `[data]` extra (lazy-imported only by `to_dataframe`, which raises a clear install hint if
+  it's missing); `scipy` was dropped entirely — the two collocation statistics (χ² p-value,
+  Fisher's exact) are now pure stdlib (`math.erfc`/`math.lgamma`). `pip install pyaegean` no
+  longer pulls pandas/numpy/scipy. *Breaking only if you called `to_dataframe()` without
+  installing `pyaegean[data]`.*
+- **Footprint policy replaces the wheel-size guard.** The `<3 MB` wheel check is gone (it was
+  a no-op beside the old hard deps); `scripts/check_footprint.py` now enforces the invariants
+  that matter — `import aegean` loads no heavy module, imports fast, and the wheel ships only
+  code + JSON.
+
 ## 0.2.0 — 2026-06-08
 
 Deepens the Greek NLP track with two opt-in, gold-data backends and a revamped

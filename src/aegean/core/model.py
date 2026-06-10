@@ -149,7 +149,12 @@ class SignInventory:
         return self._by_codepoint.get(codepoint)
 
     def to_dataframe(self):  # type: ignore[no-untyped-def]
-        import pandas as pd  # lazy
+        try:
+            import pandas as pd  # lazy, optional [data] extra
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "to_dataframe() needs pandas; install it with: pip install 'pyaegean[data]'"
+            ) from exc
 
         return pd.DataFrame(
             {

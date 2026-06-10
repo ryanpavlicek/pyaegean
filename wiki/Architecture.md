@@ -74,11 +74,13 @@ script.tokenize("ἐν ἀρχῇ")          # [Token(...), ...]
 
 ## Conventions
 
-- Heavy deps (`numpy`/`pandas`/`scipy`) and provider SDKs are **lazy-imported
-  inside functions**; `import aegean` stays instant.
+- **The core has zero hard third-party deps.** `pandas` (optional `[data]` extra)
+  and provider SDKs are **lazy-imported inside functions**; collocation stats are
+  pure stdlib, so `import aegean` is instant and loads nothing heavy.
 - **No large/binary assets** are bundled — that's what the
-  [download-to-cache](Data-and-Provenance) layer is for. The wheel stays < 3 MB
-  (CI guards it).
+  [download-to-cache](Data-and-Provenance) layer is for. CI's
+  `scripts/check_footprint.py` enforces import-clean, import-fast, and a
+  code+JSON-only wheel.
 - Every **exploratory** method (cross-linguistic distance, morphology
   clustering, accounting reconciliation, decipherment, AI readings) carries its
   caveat and is labeled unverified at point of use. The Linear A material is

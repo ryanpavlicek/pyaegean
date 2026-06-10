@@ -59,6 +59,7 @@ class DepToken:
     upos: str
     head: int
     relation: str
+    postag: str = ""  # raw Perseus 9-char tag (morphology features via treebank.decode_postag)
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +154,7 @@ def load_gold_trees(*, source_dir: Path | str | None = None) -> list[DepTree]:
                     DepToken(
                         id=tid, form=form, lemma=w.get("lemma") or form,
                         upos=feats.get("pos", "X"), head=thead, relation=rel,
+                        postag=w.get("postag") or "",
                     )
                 )
             elem.clear()

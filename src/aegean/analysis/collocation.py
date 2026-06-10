@@ -86,9 +86,8 @@ def chi_squared_p_value(x: float) -> float:
     and non-increasing in ``x``."""
     if x <= 0:
         return 1.0
-    from scipy.stats import chi2  # lazy heavy import
-
-    return float(chi2.sf(x, 1))
+    # 1-dof chi-squared survival function in pure stdlib: P(X² ≥ x) = erfc(√(x/2)).
+    return math.erfc(math.sqrt(x / 2.0))
 
 
 def fishers_exact(joint: int, count_a: int, count_b: int, total: int) -> float:
@@ -98,10 +97,9 @@ def fishers_exact(joint: int, count_a: int, count_b: int, total: int) -> float:
     expected counts but O(N) per pair. Returns 1 for a degenerate margin."""
     if joint < 0 or count_a <= 0 or count_b <= 0 or count_a > total or count_b > total:
         return 1.0
-    from scipy.special import gammaln  # lazy: exact lgamma (replaces the TS Lanczos)
 
     def ln_choose(n: int, k: int) -> float:
-        return float(gammaln(n + 1) - gammaln(k + 1) - gammaln(n - k + 1))
+        return math.lgamma(n + 1) - math.lgamma(k + 1) - math.lgamma(n - k + 1)
 
     def ln_p(k: int) -> float:
         return (

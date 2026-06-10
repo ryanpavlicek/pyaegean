@@ -61,9 +61,20 @@ undeciphered — never present analysis as ground truth.
    trains an arc-eager + averaged-perceptron parser (pure Python) on the AGDT and
    exposes `greek.parse()` → `DepTree`; measured ~0.67 UAS / 0.57 LAS on projective
    AGDT, ~0.51 / 0.42 all-text (`greek.evaluate()`); arc-eager is projective-only
-   (~31% of AGDT) — honest baseline. Next: a larger, in-context, held-out CLTK eval
-   (pull the full First1KGreek/Perseus corpus, grow the gold) and a *generalizing*
-   morphology/POS model — lookup alone won't beat CLTK on unseen forms.
+   (~31% of AGDT) — honest baseline. **Generalizing POS tagger landed**: opt-in
+   `greek.use_tagger()` trains an averaged-perceptron sequence tagger (pure Python) on the
+   AGDT that tags *unseen* forms from suffix/shape/accent + context; `greek.evaluate_tagger()`
+   reports leakage-free held-out accuracy via the new `aegean.greek.heldout` split/scorer
+   (84.4% all / 83.6% unseen on a 90/10 split, vs stanza's 89.1% unseen — within ~5–6 pts,
+   and the AGDT is in-training for stanza so it flatters stanza). **Generalizing lemmatizer
+   landed**: opt-in `greek.use_lemmatizer()` trains an edit-tree + averaged-perceptron model
+   (pure Python, POS-conditioned via the tagger) that lemmatizes *unseen* forms;
+   `greek.evaluate_lemmatizer()` reports 84.5% all / 40.3% unseen. Both reuse the leakage-free
+   `aegean.greek.heldout` split/scorer. **Neural lemmatizer landed**: opt-in
+   `greek.use_neural_lemmatizer()` (the `[neural]` extra) fetches a torch-free GreTa seq2seq
+   (int8 ONNX, ~232 MB) reaching **76.3% on unseen — past stanza's 62.8%**, shipped as a hybrid
+   (gold lookup for seen forms, seq2seq for unseen). Next: a hand-checked out-of-AGDT gold set
+   (the neutral beat-CLTK test the AGDT can't give).
    (Dactylic meter scansion —
    hexameter + pentameter — landed;
    iambic/lyric meters and synizesis still TODO.)
@@ -76,9 +87,13 @@ undeciphered — never present analysis as ground truth.
   messages, code comments, PR text, or any pushed artifact.
 - `commit.gpgsign` is `false` in this repo's git config (avoids the managed
   signing server) — leave it off unless signing works in your env.
-- Heavy deps (`numpy`/`pandas`/`scipy`) are **lazy-imported inside functions** so
-  `import aegean` stays instant. Wheel stays **< 3 MB** (CI guards it); never
-  bundle large/binary assets — use the `fetch()` layer.
+- **Core has zero hard third-party deps.** `import aegean` is instant and loads
+  nothing heavy; `pandas` is the optional `[data]` extra (lazy-imported only inside
+  `to_dataframe`), and collocation stats are pure stdlib. The guard is the invariant,
+  not a byte count: `scripts/check_footprint.py` enforces import-clean (no heavy
+  module in `sys.modules` after import), import-fast, and a code+JSON-only wheel.
+  Never bundle large/binary assets — corpora and trained models fetch to cache via
+  the `fetch()` layer.
 - Every **exploratory** method (cross-linguistic distance, morphology clustering,
   accounting reconciliation, decipherment, AI readings) carries its caveat in the
   docstring and is labeled unverified at point of use.
@@ -92,10 +107,12 @@ undeciphered — never present analysis as ground truth.
 
 ```bash
 pip install -e ".[dev]"
-pytest                 # 288 passing (1 skipped)
+pytest                 # 306 passing (1 skipped)
 ruff check src tests
 mypy                   # clean (enforced in CI)
-python -m build && python -m twine check dist/*   # wheel must be < 3 MB
+python -m build && python -m twine check dist/*
+python scripts/check_footprint.py --wheel "dist/*.whl"   # wheel = code + JSON only
+python scripts/check_footprint.py                        # import-clean + import-fast
 ```
 
 ## Layout

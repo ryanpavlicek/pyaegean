@@ -8,7 +8,8 @@ Compact text data ships **inside the wheel** and works offline:
 - Greek: `sample_texts.json`, `lemmata.json`, `benchmark_gold.json`
 
 Large or license-restricted assets are **never bundled** — they are fetched on
-demand into a user cache. This keeps the wheel < 3 MB (CI guards it).
+demand into a user cache. The wheel ships only code + tiny JSON (CI's
+`scripts/check_footprint.py` enforces that, plus an instant, heavy-dep-free import).
 
 ```python
 from aegean.data import load_bundled_json
@@ -69,8 +70,10 @@ overrides any dataset's URL.
 `aegean.greek.use_treebank()` downloads the Perseus **Ancient Greek Dependency
 Treebank** (AGDT v2.1, Greek) — 33 `.tb.xml` files, ~75 MB, pinned to a fixed
 commit — into the cache, then builds a derived form→lemma/morphology lexicon there
-(`agdt-greek-lexicon.json`); `use_parser()` trains a dependency-parser model from the
-same files (`agdt-parser-model.json.gz`). The treebank is **CC BY-SA 3.0**; it is fetched (never
+(`agdt-greek-lexicon.json`); `use_parser()` trains a dependency-parser model
+(`agdt-parser-model.json.gz`), `use_tagger()` trains a POS-tagger model
+(`agdt-postagger.json.gz`), and `use_lemmatizer()` trains an edit-tree lemmatizer model
+(`agdt-lemmatizer.json.gz`) from the same files. The treebank is **CC BY-SA 3.0**; it is fetched (never
 re-hosted), and the derived lexicon stays in the local cache — pyaegean neither
 bundles nor redistributes it, so the ShareAlike terms don't reach the Apache-2.0
 package. Cite the AGDT in work that relies on it. Network is needed only on the
@@ -112,5 +115,9 @@ corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license,
   and built in the user cache, never bundled or redistributed.
 - **Greek lexicon / LSJ (opt-in)** — Perseus Liddell-Scott-Jones, CC BY-SA 4.0;
   fetched and indexed in the user cache, never bundled or redistributed.
+- **Greek neural lemmatizer (opt-in `[neural]`)** — a GreTa seq2seq (Apache-2.0 base)
+  fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC0) treebanks.
+  The model — int8 ONNX weights plus a derived gold lemma lookup — is **CC BY-SA 4.0**, fetched
+  to the user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.
