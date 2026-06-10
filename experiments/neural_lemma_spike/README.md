@@ -36,9 +36,13 @@ definitionally "this form is in the training table", so the router is a trivial 
 
 ## Files
 - `build_seq2seq_data.py` — builds `data/{train.jsonl,dev.jsonl}`: **unique `form→lemma`
-  pairs** from AGDT-train + AGDT-disjoint treebanks (Pedalion + Gorman's non-AGDT authors),
-  deduped by sentence-fingerprint against *all* of AGDT so dev can't leak; dev is the
-  identical held-out AGDT tokens (so the number stays comparable to the edit-tree runs).
+  pairs** from AGDT-train + AGDT-disjoint treebanks (Pedalion + Gorman's non-AGDT authors)
+  + **Wiktionary Ancient-Greek inflection paradigms** (kaikki dump, CC BY-SA 4.0 — full
+  case/tense/voice coverage, the lever for unseen generalization; macron/breve length marks
+  stripped to match AGDT). Every *supplementary* token is dropped if its bare form hits a
+  dev-UNSEEN form, so the held-out unseen metric measures true generalization rather than
+  supplementary coverage; dev is the identical held-out AGDT tokens (comparable to the
+  edit-tree runs).
 - `spike_lemma_grebert.ipynb` — the Colab notebook (fine-tune GreTa → eval by generation →
   export ONNX → download). Regenerate with `build_spike_notebook.py`.
 - `eval_seq2seq.py` — local confirmation: loads the optimum-exported ONNX and reproduces the
@@ -49,8 +53,9 @@ definitionally "this form is in the training table", so the router is a trivial 
 
 ## How to run
 
-1. **Build the data** (already run): `python build_seq2seq_data.py` → re-zip `data/` as
-   `spike_data.zip` (~1 MB).
+1. **Build the data** (already run): fetch the kaikki Ancient-Greek dump to the `WIKT` path
+   in `build_seq2seq_data.py` (`curl -Lo … "https://kaikki.org/dictionary/Ancient%20Greek/kaikki.org-dictionary-AncientGreek.jsonl"`),
+   then `python build_seq2seq_data.py` → re-zip `data/` as `spike_data.zip` (~2.4 MB, 442k pairs).
 2. **Colab.** Upload `spike_lemma_grebert.ipynb` → **Runtime → Change runtime type → GPU** →
    **Run all** → upload `spike_data.zip` when prompted. It fine-tunes GreTa (~minutes on an
    H100), and **cell 6b prints `DEV lemma — all X% UNSEEN Y%`** — that is the answer.
@@ -76,5 +81,8 @@ swap would trade away the seen-form lookup advantage — 88.9% → 81.2% overall
   dev-time check. The *shipped* path needs a hand-rolled numpy greedy-decode loop over the
   encoder/decoder ONNX so torch never enters the dependency set — a production task, not this spike.
 - **Licensing (for a *shipped* model later, not this spike):** train only on the non-NC stack —
-  AGDT (CC BY-SA 3.0), Gorman (CC0), Pedalion (CC BY-SA 4.0). A shipped model would carry
-  CC BY-SA + attribution; the core wheel stays Apache-2.0 because the model is fetched, never bundled.
+  AGDT (CC BY-SA 3.0), Gorman (CC0), Pedalion (CC BY-SA 4.0), Wiktionary (CC BY-SA 4.0). NC
+  sources are disqualifying — notably PROIEL / UD-PROIEL / UD-Perseus (CC BY-NC-SA) and the
+  Diorisis Zenodo DuckDB (CC BY-NC-ND; the figshare CC BY 4.0 release is the safe one). A
+  shipped model carries CC BY-SA + attribution; the core wheel stays Apache-2.0 because the
+  model is fetched, never bundled.
