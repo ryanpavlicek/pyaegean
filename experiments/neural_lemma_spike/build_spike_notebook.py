@@ -142,7 +142,7 @@ cells.append(code(
     "    enc.pop('token_type_ids', None)  # GreTa's tokenizer emits these; T5.generate rejects them\n"
     "    enc = enc.to(model.device)\n"
     "    with torch.no_grad():\n"
-    "        g = model.generate(**enc, max_length=ML, num_beams=1)\n"
+    "        g = model.generate(**enc, max_length=ML, num_beams=5, early_stopping=True)\n"
     "    for f, d in zip(b, tokenizer.batch_decode(g, skip_special_tokens=True)):\n"
     "        pred[f] = d\n"
     "def _clean(s): return re.sub(r'\\d+$', '', unicodedata.normalize('NFC', s))\n"

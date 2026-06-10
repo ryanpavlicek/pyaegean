@@ -31,6 +31,7 @@ def main() -> None:
     ap.add_argument("--model", required=True, type=pathlib.Path, help="unzipped optimum onnx dir")
     ap.add_argument("--dev", required=True, type=pathlib.Path, help="dev.jsonl (per-token)")
     ap.add_argument("--batch", type=int, default=128)
+    ap.add_argument("--beams", type=int, default=5)
     a = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(str(a.model))
@@ -43,7 +44,7 @@ def main() -> None:
         b = forms[i:i + a.batch]
         enc = tok(b, return_tensors="pt", padding=True, truncation=True, max_length=ML)
         enc.pop("token_type_ids", None)  # GreTa's tokenizer emits these; T5.generate rejects them
-        gen = model.generate(**enc, max_length=ML, num_beams=1)
+        gen = model.generate(**enc, max_length=ML, num_beams=a.beams, early_stopping=True)
         for form, dec in zip(b, tok.batch_decode(gen, skip_special_tokens=True)):
             pred[form] = dec
 
