@@ -84,3 +84,39 @@ Smoke-test the plumbing before a GPU session: `--limit-train 500 --epochs 1` (ru
 `training/data/` and `training/out/` are gitignored — datasets rebuild deterministically
 from the cache, and bake-off checkpoints are throwaway (`--save-model` exists for
 debugging only). What comes back from a GPU session is the `metrics.json` files.
+
+## Stage B — the joint UPOS + morphology tagger (on GreBerta)
+
+**Targets (UD Perseus test):** UPOS ≥ 95.4, UFeats ≥ 92.6 — the best published numbers
+(see `docs/benchmarks.md`).
+
+**Labels.** The model trains on **UD-convention labels** built by the authored,
+validated AGDT→UD converter (`agdt_ud.py`): UPOS directly (15 labels — it learns the
+CCONJ/SCONJ lexical split and the copular AUX from context) plus the 9 XPOS positions,
+from which UD FEATS render deterministically. Converter agreement with the UD-Perseus
+conversion, measured on the train fold (`validate_agdt_ud.py`, evaluation-only use):
+**UPOS 99.94%, FEATS 100.00%** — label noise sits far below model error.
+
+**Run (same clone setup as Stage A):**
+
+```bash
+python pyaegean_repo/training/build_tagger_dataset.py
+python pyaegean_repo/training/train_tagger.py --model bowphs/GreBerta
+python pyaegean_repo/training/eval_tagger_ud.py \
+    --checkpoint pyaegean_repo/training/out/tagger/model --treebank perseus --split test \
+    --out pyaegean_repo/training/out/tagger/ud-perseus-test.json
+python pyaegean_repo/training/eval_tagger_ud.py \
+    --checkpoint pyaegean_repo/training/out/tagger/model --treebank proiel --split test \
+    --out pyaegean_repo/training/out/tagger/ud-proiel-test.json
+```
+
+Defaults: 4 epochs, lr 3e-5, batch 32, bf16 auto — per-epoch dev selection keeps the
+best checkpoint. This is the real model, not a bake-off: tuning on **dev** is fair game
+(epochs/lr; e.g. try 6 epochs if dev is still improving); the **test folds are
+measured once, at the end**. Bring back: `out/tagger/metrics.json`, the two
+`ud-*-test.json` files, and — unlike Stage A — **the checkpoint directory itself**
+(`out/tagger/model/`, ~500 MB; save it to Drive). Stage C trains the parser on the same
+encoder, and Stage E exports it to ONNX.
+
+If UPOS lands short of target, the first lever is more epochs; the second is adding the
+Gorman (CC0) prose treebanks to the training data (same XML schema — extend the builder).
