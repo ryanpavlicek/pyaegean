@@ -174,7 +174,7 @@ def summarize(
     instruction = "Summarize the following faithfully and concisely."
     return _run(
         client,
-        kind="ask",
+        kind="summarize",
         system=_BASE_SYSTEM,
         prompt=_compose(instruction, text, grounding),
         grounding=grounding,

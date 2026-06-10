@@ -111,7 +111,7 @@ src/aegean/
   io/        epidoc.py tabular.py              (EpiDoc TEI + CSV/Parquet export — aegean.io)
   data/      registry.py _cache.py  bundled/lineara/*.json  **bundled/greek/*.json (small seeds)**
   adapters/  base.py  (damos liber lineara_xyz sigla perseus first1kgreek .py — phased; stub)
-  integrations/ geo.py (planned; stub)  # no cltk dependency — pyaegean implements its own Greek NLP
+  geo/       __init__.py  (geographic analysis — site coordinates + GeoDataFrame; aegean.geo)
 tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmark_greek.py
 ```
 
@@ -135,8 +135,8 @@ tests/ fixtures/golden/  benchmark_greek/  test_parity_lineara.py  test_benchmar
 - **Core**: zero hard third-party dependencies — pure Python; `import aegean` is instant. Greek NLP
   engines are pure Python; treebank/lexicon data is downloaded to cache on activation.
 - **Extras**: `[data]`(pandas, DataFrame interop) · `[neural]`(onnxruntime/tokenizers/numpy, the GreTa
-  seq2seq lemmatizer) · `[anthropic]`,`[openai]`,`[grok]`,`[gemini]`,`[ai]`(all) · `[epidoc]`(lxml/PyEpiDoc) ·
-  `[geo]`(geopandas) · `[align]`(biopython, optional) · `[all]`. All AI/adapter/neural imports guarded.
+  seq2seq lemmatizer) · `[anthropic]`,`[openai]`,`[grok]`,`[gemini]`,`[ai]`(all) · `[epidoc]`(lxml) ·
+  `[geo]`(geopandas/shapely) · `[parquet]`(pyarrow) · `[all]`. All AI/optional imports are guarded.
 
 ## Parity, benchmarking & correctness
 

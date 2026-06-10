@@ -521,8 +521,8 @@ def parse(sentence: str | list[str]) -> DepTree:
 def evaluate(
     *, source_dir: Path | str | None = None, holdout: float = 0.1, epochs: int = 5
 ) -> dict[str, Any]:
-    """Train on a split and score the held-out trees → ``{"uas","las","sentences"}``
-    (gold POS/lemma; measures parsing in isolation)."""
+    """Train on a split and score the held-out trees → ``{"uas","las","tokens","sentences"}``
+    (gold POS/lemma; measures parsing in isolation). Exposed as ``greek.evaluate_parser``."""
     trees = load_gold_trees(source_dir=source_dir)
     cut = max(1, int(len(trees) * (1 - holdout)))
     train_trees, dev_trees = trees[:cut], trees[cut:]

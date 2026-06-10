@@ -579,7 +579,7 @@ of AGDT sentences are projective), and arc-eager can build only projective trees
 non-projective gold structures are out of reach and are skipped in training (a known
 limitation, not a bug). Measured on held-out AGDT with gold POS:
 **~0.67 UAS / 0.57 LAS on projective sentences, ~0.51 / 0.42 across all text**
-(`greek.evaluate()` reproduces these). It produces clean, correct trees for
+(`greek.evaluate_parser()` reproduces these). It produces clean, correct trees for
 main-clause syntax (as above), but it is not a research-grade parser. The model is
 derived from the AGDT (CC BY-SA 3.0), cached locally (~4 MB), never bundled;
 `greek.disable_parser()` turns it off.

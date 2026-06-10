@@ -93,6 +93,6 @@ def test_parse_requires_use_parser() -> None:
 
 def test_evaluate_returns_metrics(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
-    res = greek.evaluate(source_dir=FIXTURE_DIR, holdout=0.5, epochs=5)
+    res = greek.evaluate_parser(source_dir=FIXTURE_DIR, holdout=0.5, epochs=5)
     assert set(res) >= {"uas", "las", "tokens", "sentences"}
     assert 0.0 <= res["las"] <= res["uas"] <= 1.0

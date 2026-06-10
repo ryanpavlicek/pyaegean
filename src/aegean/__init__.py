@@ -14,12 +14,25 @@ from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
 from . import analysis  # noqa: F401
+from . import geo  # noqa: F401 — geographic analysis (geopandas/shapely lazy/optional)
 from . import greek  # noqa: F401 — Greek NLP pipeline
 from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
-from .core.corpus import Corpus
-from .core.script import get_script, register, registered_scripts
+from .core import (
+    Corpus,
+    Document,
+    DocumentMeta,
+    Provenance,
+    Script,
+    Sign,
+    SignInventory,
+    Token,
+    TokenKind,
+    get_script,
+    register,
+    registered_scripts,
+)
 
 try:
     __version__ = _pkg_version("pyaegean")
@@ -34,11 +47,20 @@ def load(script_id: str) -> Corpus:
 
 __all__ = [
     "Corpus",
+    "Document",
+    "DocumentMeta",
+    "Sign",
+    "SignInventory",
+    "Token",
+    "TokenKind",
+    "Provenance",
+    "Script",
     "load",
     "get_script",
     "register",
     "registered_scripts",
     "analysis",
+    "geo",
     "greek",
     "ai",
     "io",

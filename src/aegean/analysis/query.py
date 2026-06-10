@@ -30,6 +30,8 @@ Output = Literal["inscriptions", "words"]
 
 @dataclass(frozen=True, slots=True)
 class FieldDef:
+    """A queryable field: its display label, scope (inscription/word), and value kind."""
+
     label: str
     scope: Scope
     kind: FieldKind
@@ -68,6 +70,8 @@ class FilterRow:
 
 @dataclass(frozen=True, slots=True)
 class QueryResults:
+    """A query's result set: the matching inscriptions and/or ``(word, count)`` pairs."""
+
     inscriptions: list[Document]
     words: list[tuple[str, int]]
 
@@ -139,6 +143,7 @@ def _inscription_row_match(doc: Document, f: FilterRow, annotated_ids: set[str])
 def inscription_matches(
     doc: Document, filters: Iterable[FilterRow], annotated_ids: set[str]
 ) -> bool:
+    """True if a document satisfies the inscription-scope filter rows (AND/OR/NOT-combined)."""
     rows = [f for f in filters if FIELDS[f.field].scope == "inscription"]
     return _combine_rows(rows, lambda f: _inscription_row_match(doc, f, annotated_ids))
 
@@ -179,6 +184,7 @@ _SIGN_CLEAN = {ord(c): None for c in "₂₃₄*"}
 def word_matches(
     word: str, filters: Iterable[FilterRow], cooccur_map: dict[str, set[str]]
 ) -> bool:
+    """True if a word satisfies the word-scope filter rows (AND/OR/NOT-combined)."""
     rows = [f for f in filters if FIELDS[f.field].scope == "word"]
     return _combine_rows(rows, lambda f: _word_row_match(word, f, cooccur_map))
 

@@ -67,6 +67,12 @@ Aegean syllabic sign data — Unicode Character Database (bundled)
   Ventris & Chadwick, Documents in Mycenaean Greek; Masson, Les inscriptions chypriotes syllabiques;
   and Ferrara, Cypro-Minoan Inscriptions), included as excerpts, not corpora.
 
+Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.json)
+  Approximate site-level latitude/longitude for the find-sites attested in the corpora, compiled from
+  standard archaeological references (GORILA, Younger, and public gazetteers) via the Linear A Research
+  Workbench (https://github.com/ryanpavlicek/linearaworkbench, Apache-2.0). Rounded to ~1 km — for
+  mapping, not survey work.
+
 Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   No openly-licensed Linear B tablet corpus exists. DAMOS (Database of Mycenaean at Oslo) is
   CC BY-NC-SA 4.0; LiBER (CNR) is all-rights-reserved. pyaegean bundles neither and fetches

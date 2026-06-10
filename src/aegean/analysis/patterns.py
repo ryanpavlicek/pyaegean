@@ -24,11 +24,15 @@ def normalize_sign_label(label: str) -> str:
 
 @dataclass(frozen=True, slots=True)
 class CompiledSignPattern:
+    """A parsed sign-pattern query: the normalized sign tokens (with ``*`` = one sign and ``**`` =
+    zero-or-more wildcards) and whether the pattern contains a ``**``."""
+
     tokens: tuple[str, ...]
     has_double_star: bool
 
 
 def compile_sign_pattern(raw: str) -> CompiledSignPattern | None:
+    """Parse a wildcard sign pattern (``KU-*-RO``) into a :class:`CompiledSignPattern`, or ``None`` if empty."""
     toks = [t.strip() for t in raw.split("-") if t.strip()]
     if not toks:
         return None

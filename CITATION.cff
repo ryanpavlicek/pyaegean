@@ -5,6 +5,7 @@ abstract: "A specialist, dependency-light Python toolkit for Ancient Greek and t
 authors:
   - family-names: Pavlicek
     given-names: Ryan
+    orcid: "https://orcid.org/0009-0009-8303-3644"
 repository-code: "https://github.com/ryanpavlicek/pyaegean"
 license: Apache-2.0
 version: 0.7.0

@@ -56,7 +56,7 @@ class ExploratoryResult:
     """
 
     text: str
-    kind: str            # "translate" | "gloss" | "decipher" | "nlp_assist" | "ask"
+    kind: str            # "translate" | "gloss" | "decipher" | "nlp_assist" | "ask" | "summarize"
     provider: str
     model: str
     prompt_version: str

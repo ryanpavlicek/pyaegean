@@ -7,7 +7,7 @@ lower ones; the core never imports a script.
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
 L5  translate             hybrid: lexicon/morphology grounding → LLM
 L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/syllabify/…)
-L4  io · data            aegean.io: EpiDoc/CSV/Parquet export · bundled registry + downloader/cache
+L4  io · geo · data      aegean.io (EpiDoc/CSV/Parquet export) · aegean.geo (GeoDataFrame) · bundled registry + cache
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure
 L2  scripts (plugins)     lineara · linearb · cypriot · cyprominoan · greek

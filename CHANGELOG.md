@@ -4,6 +4,25 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **Geographic analysis** (`aegean.geo`, the `[geo]` extra): a bundled Aegean find-site gazetteer
+  plus `to_geodataframe(corpus, level="inscription"|"site")` and `word_distribution(corpus, word)` —
+  turning a corpus into a geopandas GeoDataFrame (EPSG:4326) for spatial analysis and mapping.
+- **Wider public API surface** (toward a stable 1.0): the core value types (`Document`, `Token`,
+  `Sign`, `SignInventory`, `DocumentMeta`, `Provenance`, `Script`) are re-exported from the top-level
+  `aegean` namespace; `aegean.analysis` now exports `BalanceCheck`, `CompiledSignPattern`, and the
+  `Output`/`Connector` query types; and `aegean.greek` exports the backend errors
+  (`ParserNotLoadedError`, `LexiconNotLoadedError`, …) raised by its opt-in functions.
+
+### Changed
+- **`greek.evaluate` is renamed `greek.evaluate_parser`**, for consistency with `evaluate_tagger` /
+  `evaluate_lemmatizer` (the one breaking rename, made ahead of the 1.0 API freeze).
+
+### Fixed
+- The AI `summarize` capability now labels its result `kind="summarize"` (previously mislabeled `"ask"`).
+
 ## 0.7.0 — 2026-06-10
 
 Fills the `aegean.io` package with export adapters, completing the EpiDoc read+write round-trip.

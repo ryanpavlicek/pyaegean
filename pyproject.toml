@@ -19,6 +19,10 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
@@ -72,5 +76,5 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*"]
+module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*"]
 ignore_missing_imports = true

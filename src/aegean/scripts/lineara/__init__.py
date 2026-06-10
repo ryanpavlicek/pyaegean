@@ -1,4 +1,8 @@
-"""Linear A script plugin."""
+"""Linear A script plugin (the undeciphered Minoan syllabary).
+
+Linear A is **undeciphered**: ``word_to_phonetic`` applies the conventional sign→sound values
+(shared with Linear B) as a working hypothesis, never an attested reading. All Linear A output is
+exploratory — see the analysis modules' caveats and [[Data-and-Provenance]]."""
 
 from __future__ import annotations
 

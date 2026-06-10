@@ -34,11 +34,28 @@ from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
-from .lexicon import LSJEntry, LSJLexicon, disable_lsj, gloss, lookup, use_lsj
-from .syntax import DepToken, DepTree, disable_parser, evaluate, parse, use_parser
-from .tagger import disable_tagger, evaluate_tagger, use_tagger
-from .lemmatizer import disable_lemmatizer, evaluate_lemmatizer, use_lemmatizer
-from .neural_lemmatizer import disable_neural_lemmatizer, use_neural_lemmatizer
+from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, gloss, lookup, use_lsj
+from .syntax import (
+    DepToken,
+    DepTree,
+    ParserNotLoadedError,
+    disable_parser,
+    evaluate as evaluate_parser,
+    parse,
+    use_parser,
+)
+from .tagger import TaggerNotLoadedError, disable_tagger, evaluate_tagger, use_tagger
+from .lemmatizer import (
+    LemmatizerNotLoadedError,
+    disable_lemmatizer,
+    evaluate_lemmatizer,
+    use_lemmatizer,
+)
+from .neural_lemmatizer import (
+    NeuralLemmatizerNotLoadedError,
+    disable_neural_lemmatizer,
+    use_neural_lemmatizer,
+)
 from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
 from .normalize import (
     betacode_to_unicode,
@@ -103,7 +120,7 @@ __all__ = [
     "parse",
     "use_parser",
     "disable_parser",
-    "evaluate",
+    "evaluate_parser",
     "DepTree",
     "DepToken",
     "use_tagger",
@@ -117,4 +134,9 @@ __all__ = [
     "evaluate_on_proiel",
     "load_proiel_gold",
     "proiel_dir",
+    "ParserNotLoadedError",
+    "TaggerNotLoadedError",
+    "LemmatizerNotLoadedError",
+    "NeuralLemmatizerNotLoadedError",
+    "LexiconNotLoadedError",
 ]

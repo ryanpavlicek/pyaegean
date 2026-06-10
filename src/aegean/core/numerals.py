@@ -185,6 +185,10 @@ def parse_account_lines(
 
 @dataclass(slots=True)
 class BalanceCheck:
+    """One total line reconciled against the item lines feeding it: the stated total, the computed
+    sum, their signed difference (computed − stated), whether they balance, the total marker
+    (e.g. ``KU-RO``), and the index of the total line."""
+
     stated_total: float
     computed_sum: float
     item_count: int

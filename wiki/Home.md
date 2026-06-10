@@ -67,6 +67,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **generalizing POS tagger** (`use_tagger`; ~84% on unseen forms) and **lemmatizer** (`use_lemmatizer`; edit-trees), a **neural seq2seq lemmatizer** (`use_neural_lemmatizer`; 76.3% on unseen forms), **LSJ glossing** (`use_lsj`), a **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
 | [`aegean.io`](Architecture) | Export adapters: EpiDoc (TEI) write — the inverse of the bring-your-own reader — plus CSV and Parquet |
+| [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled Aegean gazetteer, for mapping/spatial analysis |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 

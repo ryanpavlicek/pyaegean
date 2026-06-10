@@ -25,6 +25,8 @@ LIBATION_WORDS = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class StructureCategory:
+    """A heuristic tablet-structure category (e.g. accounting/libation/list): key, label, description."""
+
     key: str
     label: str
     description: str

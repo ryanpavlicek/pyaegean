@@ -8,6 +8,7 @@ see each function's docstring.
 
 from __future__ import annotations
 
+from ..core.numerals import BalanceCheck
 from .accounting import account_lines, balance_check
 from .align import (
     AlignCell,
@@ -50,6 +51,7 @@ from .morphology import (
 )
 from .patterns import (
     SIGN_PATTERN_HELP,
+    CompiledSignPattern,
     compile_sign_pattern,
     match_sign_pattern,
     normalize_sign_label,
@@ -57,8 +59,10 @@ from .patterns import (
 )
 from .query import (
     FIELDS,
+    Connector,
     FieldDef,
     FilterRow,
+    Output,
     QueryResults,
     WordEntry,
     build_cooccurrence_map,
@@ -82,12 +86,14 @@ __all__ = [
     # accounting
     "balance_check",
     "account_lines",
+    "BalanceCheck",
     # sign patterns
     "word_matches_sign_pattern",
     "compile_sign_pattern",
     "match_sign_pattern",
     "normalize_sign_label",
     "SIGN_PATTERN_HELP",
+    "CompiledSignPattern",
     # phonetic distance / schemes / sequence
     "phonetic_distance",
     "extract_root",
@@ -127,6 +133,8 @@ __all__ = [
     "FIELDS",
     "FieldDef",
     "FilterRow",
+    "Connector",
+    "Output",
     "QueryResults",
     "WordEntry",
     "default_value",
