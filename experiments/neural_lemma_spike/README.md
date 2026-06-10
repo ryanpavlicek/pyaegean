@@ -9,15 +9,30 @@ lemmatization?**
 | pure-Python lemmatizer (current default) | — | 40.3% |
 | edit-tree classifier on GreBERTa (multi-treebank) | 88.9% | 58.2% *(architectural cap)* |
 | stanza / CLTK grc | 87.3% | **62.8%** |
-| **seq2seq target** | — | **> 62.8%** |
+| **GreTa seq2seq (this spike)** | 81.2% | **76.3%** ✅ |
+| **→ hybrid (route seen→edit-tree, unseen→seq2seq)** | **~91.8%** | **76.3%** |
 
-We already beat stanza on overall lemma accuracy (88.9% vs 87.3%). The remaining gap is
+We already beat stanza on overall lemma accuracy (88.9% vs 87.3%). The remaining gap was
 **unseen forms**, where edit-tree *classification* plateaued near 58%: it can only reuse
 edit-patterns it saw in training. The SOTA Ancient-Greek lemmatizer (GreTa,
 [arXiv:2410.12055](https://arxiv.org/abs/2410.12055), ~91% F1) instead **generates** the
 lemma left-to-right with a seq2seq T5, which composes novel transformations for
-forms it never saw. This spike fine-tunes the pretrained, Apache-2.0 `bowphs/GreTa` on plain
-`form → lemma` pairs and measures the same unseen column on the same leakage-free split.
+forms it never saw. This spike fine-tuned the pretrained, Apache-2.0 `bowphs/GreTa` on plain
+`form → lemma` pairs and measured the same unseen column on the same leakage-free split.
+
+## Result
+
+**Unseen-form lemma accuracy: 76.3% — clears stanza/CLTK's 62.8% by +13.5 points.**
+
+The seq2seq's *overall* accuracy (81.2%) is lower than the edit-tree's (88.9%) because pure
+generation has no lookup advantage on **seen** forms. Backing out the disjoint subsets
+(seen = 45,138 dev tokens, unseen = 8,898): the edit-tree is ~94.9% on seen / 58.2% on unseen
+(memorizes, doesn't generalize); the seq2seq is ~82.2% on seen / **76.3% on unseen**
+(generalizes, weaker lookup). Neither pure approach is optimal — the production design is the
+**hybrid router**: lookup/edit-tree for seen forms, seq2seq for unseen. Since seen/unseen are
+disjoint and each model is measured per-subset, the hybrid is arithmetic: **~91.8% all + 76.3%
+unseen — beating stanza on *both* columns at once** (it scores 87.3% / 62.8%). "Seen" is
+definitionally "this form is in the training table", so the router is a trivial lookup.
 
 ## Files
 - `build_seq2seq_data.py` — builds `data/{train.jsonl,dev.jsonl}`: **unique `form→lemma`
@@ -45,12 +60,13 @@ forms it never saw. This spike fine-tunes the pretrained, Apache-2.0 `bowphs/Gre
    python eval_seq2seq.py --model <unzipped_onnx_dir> --dev data/dev.jsonl
    ```
 
-## Decision rule
-- **Unseen lemma clears 62.8%** → green-light the opt-in `[neural]` backend: GreTa as the
-  production lemmatizer (ONNX, fetched-to-cache, never bundled), with the pure-Python
-  rule/edit-tree lemmatizer staying the zero-dependency default.
-- **It doesn't** → the edit-tree backend (already beating stanza overall) stands; we reconsider
-  the unseen column separately.
+## Decision rule — cleared
+
+Unseen lemma reached **76.3% > 62.8%**, so the opt-in `[neural]` backend is green-lit: GreTa
+seq2seq as the **unseen-form** lemmatizer (ONNX, fetched-to-cache, never bundled), the
+pure-Python rule/edit-tree lemmatizer staying the zero-dependency default **and** the seen-form
+path. The production lemmatizer is the **hybrid router** of the two, not a wholesale swap (a
+swap would trade away the seen-form lookup advantage — 88.9% → 81.2% overall).
 
 ## Notes / risks
 - **Precision:** T5 trains in **bf16, not fp16** (fp16 overflows on T5); the notebook falls back
