@@ -8,13 +8,14 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.5.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
+> **Status: v0.6.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
 > the Cypriot syllabary (Arcado-Cypriot Greek), and the undeciphered Cypro-Minoan script (sign
 > inventory only) — the complete Aegean syllabic set —
 > plus the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
 > lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
 > a CLTK benchmark harness, and a neutral out-of-AGDT PROIEL evaluator), and the multi-provider AI
-> layer are all implemented.
+> layer are all implemented. The corpus data layer adds a lossless JSON round-trip
+> (`to_json`/`from_json`) and a compound `query()`.
 > Analytical output on the undeciphered Linear A material is **exploratory** — see the
 > methodology and limitations.
 
@@ -75,7 +76,8 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
 ## What's here
 
 - **`aegean.core`** — script-agnostic model: `Corpus`, `Document`, `Token`,
-  `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance.
+  `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance; a lossless JSON
+  round-trip (`to_json`/`from_json`) and a compound `query()`.
 - **`aegean.scripts.lineara`** — Linear A: bundled corpus + 84-sign inventory +
   sign→sound map + transliteration.
 - **`aegean.scripts.linearb`** — Linear B (Mycenaean Greek): 211-sign Unicode inventory +
@@ -128,7 +130,9 @@ inventory, transliteration, a Greek-reading bridge, and accounting; the full cor
 bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **v0.5** adds **Cypro-Minoan**
 (the undeciphered Bronze Age script of Cyprus; sign inventory only), completing the Aegean set, and a
 neutral **out-of-AGDT evaluator** (`greek.evaluate_on_proiel`, scoring against the PROIEL treebank)
-backing the Greek-NLP numbers. **Next:** the data-layer/IO work toward a stable v1.0.
+backing the Greek-NLP numbers. **v0.6** adds the corpus data layer's lossless JSON round-trip
+(`to_json`/`from_json`) and a compound `query()`. **Next:** IO adapters (EpiDoc export, CSV/Parquet)
+toward a stable v1.0.
 
 ## License
 

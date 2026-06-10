@@ -36,7 +36,8 @@ Frozen `@dataclass(slots=True)` value objects; numpy/pandas lazy.
   name/images). Properties: `.words`, `.numerals`, `.logograms`, `.line_tokens`.
 - **`Corpus`** — the hub: `Corpus.load(script_id)` / `aegean.load(...)`,
   `.filter(**meta)`, `.get(id)`, `.word_frequencies()`,
-  `.to_dataframe(level="document"|"token"|"word")`, `.to_dict()`, `.provenance`.
+  `.to_dataframe(level="document"|"token"|"word")`, `.to_dict()`, `.query(filters)`,
+  `.to_json()` / `.from_json()` (lossless round-trip), `.provenance`.
 - **`SignInventory`** — signs indexed by label / glyph / codepoint.
 - **`Provenance`** — source/license/citation that travels with every corpus and
   stamps exports; `.cite()` returns a one-line citation.

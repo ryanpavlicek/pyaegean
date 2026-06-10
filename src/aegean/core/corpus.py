@@ -7,12 +7,17 @@ importing the script (no cycles).
 
 from __future__ import annotations
 
+import json
 from collections import Counter
-from collections.abc import Callable, Iterator
-from typing import Any
+from collections.abc import Callable, Iterator, Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from .model import Document, SignInventory, TokenKind
+from .model import Document, DocumentMeta, Sign, SignInventory, Token, TokenKind
 from .provenance import SCHEMA_VERSION, Provenance
+
+if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependency on L3 analysis
+    from ..analysis.query import FilterRow, Output, QueryResults
 
 _LOADERS: dict[str, Callable[[], "Corpus"]] = {}
 
@@ -158,7 +163,8 @@ class Corpus:
         raise ValueError(f"level must be 'document', 'token', or 'word'; got {level!r}")
 
     def to_dict(self) -> dict[str, Any]:
-        """The canonical versioned export (``_meta`` + documents)."""
+        """A compact, *lossy* export (``_meta`` + per-document words/metadata) for quick
+        interop. For a complete, reversible serialization use :meth:`to_json`/:meth:`from_json`."""
         prov = self.provenance
         return {
             "_meta": {
@@ -190,3 +196,160 @@ class Corpus:
                 for d in self.documents
             ],
         }
+
+    # ── lossless round-trip ──────────────────────────────────────────────
+    def to_json(self, path: str | Path | None = None, *, indent: int | None = 2) -> str | None:
+        """Serialize the whole corpus to JSON **losslessly** — every token (with its kind,
+        signs, glyphs, line/position), the physical lines, full document metadata, the sign
+        inventory, and provenance all survive. :meth:`from_json` reverses it exactly.
+
+        Returns the JSON string, or writes it to ``path`` and returns ``None`` when ``path``
+        is given. (Unlike :meth:`to_dict`, which is a compact lossy summary.)"""
+        data: dict[str, Any] = {
+            "_meta": {"tool": "pyaegean", "schemaVersion": SCHEMA_VERSION, "scriptId": self.script_id},
+            "provenance": _provenance_to_dict(self.provenance),
+            "signInventory": _inventory_to_dict(self.sign_inventory),
+            "documents": [_document_to_dict(d) for d in self.documents],
+        }
+        text = json.dumps(data, ensure_ascii=False, indent=indent)
+        if path is None:
+            return text
+        Path(path).write_text(text, encoding="utf-8")
+        return None
+
+    @classmethod
+    def from_json(cls, source: str | Path) -> "Corpus":
+        """Reconstruct a Corpus from :meth:`to_json` output: a JSON string, a ``Path`` to a
+        ``.json`` file, or a path-like string (anything not beginning with ``{``)."""
+        if isinstance(source, Path):
+            text = source.read_text(encoding="utf-8")
+        elif source.lstrip().startswith("{"):
+            text = source
+        else:
+            text = Path(source).read_text(encoding="utf-8")
+        return cls.from_dict(json.loads(text))
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Corpus":
+        """Reconstruct a Corpus from the dict :meth:`to_json` serializes (its ``json.loads``)."""
+        meta = data.get("_meta") or {}
+        return cls(
+            [_document_from_dict(d) for d in data.get("documents", [])],
+            sign_inventory=_inventory_from_dict(data.get("signInventory")),
+            provenance=_provenance_from_dict(data.get("provenance")),
+            script_id=meta.get("scriptId", ""),
+        )
+
+    # ── compound query ───────────────────────────────────────────────────
+    def query(
+        self,
+        filters: Sequence[FilterRow],
+        output: Output = "inscriptions",
+        *,
+        annotated_ids: set[str] | None = None,
+    ) -> QueryResults:
+        """Run the compound-query predicate engine over this corpus.
+
+        ``filters`` is a sequence of :class:`aegean.analysis.FilterRow` rows (a field id, a
+        value, and optional ``connector``/``negate``); ``output`` selects ``"inscriptions"``
+        or ``"words"``. Returns :class:`aegean.analysis.QueryResults` (``.inscriptions`` and
+        ``.words``). The available fields are in :data:`aegean.analysis.FIELDS`. Unlike
+        :meth:`filter` (exact metadata match), this supports text/prefix/sign-pattern/
+        co-occurrence predicates with AND/OR/NOT."""
+        from ..analysis.query import run_query  # lazy: no import-time core→analysis edge
+
+        return run_query(self, list(filters), output, annotated_ids)
+
+
+# ── (de)serialization helpers for the lossless round-trip ──────────────────
+def _provenance_to_dict(p: Provenance | None) -> dict[str, Any] | None:
+    if p is None:
+        return None
+    return {
+        "source": p.source, "license": p.license, "citation": p.citation,
+        "url": p.url, "schema_version": p.schema_version, "notes": list(p.notes),
+    }
+
+
+def _provenance_from_dict(d: dict[str, Any] | None) -> Provenance | None:
+    if not d:
+        return None
+    return Provenance(
+        source=d.get("source", ""), license=d.get("license", ""),
+        citation=d.get("citation", ""), url=d.get("url", ""),
+        schema_version=d.get("schema_version", SCHEMA_VERSION),
+        notes=tuple(d.get("notes") or ()),
+    )
+
+
+def _inventory_to_dict(inv: SignInventory | None) -> dict[str, Any] | None:
+    if inv is None:
+        return None
+    return {
+        "script_id": inv.script_id,
+        "signs": [
+            {
+                "label": s.label, "glyph": s.glyph, "codepoint": s.codepoint,
+                "phonetic": s.phonetic, "script_id": s.script_id, "attrs": s.attrs,
+            }
+            for s in inv.signs
+        ],
+    }
+
+
+def _inventory_from_dict(d: dict[str, Any] | None) -> SignInventory | None:
+    if not d:
+        return None
+    signs = [
+        Sign(
+            label=s["label"], glyph=s.get("glyph"), codepoint=s.get("codepoint"),
+            phonetic=s.get("phonetic"), script_id=s.get("script_id", ""),
+            attrs=dict(s.get("attrs") or {}),
+        )
+        for s in d.get("signs", [])
+    ]
+    return SignInventory(signs, d.get("script_id", ""))
+
+
+def _token_to_dict(t: Token) -> dict[str, Any]:
+    return {
+        "text": t.text, "kind": t.kind.value, "signs": list(t.signs),
+        "glyphs": t.glyphs, "line_no": t.line_no, "position": t.position,
+    }
+
+
+def _token_from_dict(d: dict[str, Any]) -> Token:
+    return Token(
+        text=d["text"], kind=TokenKind(d["kind"]), signs=tuple(d.get("signs") or ()),
+        glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
+    )
+
+
+def _document_to_dict(d: Document) -> dict[str, Any]:
+    return {
+        "id": d.id, "script_id": d.script_id, "glyphs": d.glyphs,
+        "transcription": d.transcription, "translations": list(d.translations),
+        "meta": {
+            "site": d.meta.site, "support": d.meta.support, "scribe": d.meta.scribe,
+            "findspot": d.meta.findspot, "period": d.meta.period, "name": d.meta.name,
+            "images": list(d.meta.images),
+        },
+        "tokens": [_token_to_dict(t) for t in d.tokens],
+        "lines": [list(line) for line in d.lines],
+    }
+
+
+def _document_from_dict(d: dict[str, Any]) -> Document:
+    m = d.get("meta") or {}
+    meta = DocumentMeta(
+        site=m.get("site", ""), support=m.get("support", ""), scribe=m.get("scribe", ""),
+        findspot=m.get("findspot", ""), period=m.get("period", ""), name=m.get("name", ""),
+        images=tuple(m.get("images") or ()),
+    )
+    return Document(
+        id=d["id"], script_id=d.get("script_id", ""),
+        tokens=[_token_from_dict(t) for t in d.get("tokens", [])],
+        lines=[list(line) for line in d.get("lines", [])],
+        glyphs=d.get("glyphs", ""), transcription=d.get("transcription", ""),
+        translations=list(d.get("translations") or []), meta=meta,
+    )

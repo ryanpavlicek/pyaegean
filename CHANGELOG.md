@@ -4,6 +4,19 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.6.0 — 2026-06-10
+
+Rounds out the corpus data layer: a lossless JSON round-trip and a first-class compound query.
+
+### Added
+- **Lossless JSON round-trip** on `Corpus`: `to_json(path=None)` serializes the entire corpus —
+  every token (kind, signs, glyphs, line/position), the physical lines, full document metadata,
+  the sign inventory, and provenance — and `from_json` / `from_dict` reconstruct it exactly. The
+  existing `to_dict` stays as the compact, lossy summary.
+- **`Corpus.query(filters, output=...)`**: the compound-query predicate engine (field registry,
+  AND/OR/NOT, inscription/word output) is now a first-class corpus method, complementing the
+  exact-match `filter(**meta)`. Returns `QueryResults` (`.inscriptions` / `.words`).
+
 ## 0.5.0 — 2026-06-10
 
 Completes the Aegean syllabic set with **Cypro-Minoan**, and adds a neutral **out-of-AGDT

@@ -92,7 +92,8 @@ wilson_interval(5, 10)                    # (low, high) 95% CI
 ## Query engine
 
 A compound predicate engine over the corpus: an inscription/word field registry,
-AND/OR/NOT combination, and inscription- or word-output modes.
+AND/OR/NOT combination, and inscription- or word-output modes. Call it as the
+`corpus.query(filters, output=...)` method or the standalone `run_query(corpus, filters)`.
 
 ```python
 from aegean.analysis import FilterRow, run_query
