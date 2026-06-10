@@ -1,12 +1,9 @@
-"""Build spike_lemma_grebert.ipynb — MULTI-TASK version (run: `python build_spike_notebook.py`).
+"""Build spike_lemma_grebert.ipynb — GreTa SEQ2SEQ lemmatizer (run: `python build_spike_notebook.py`).
 
-Shared GreBERTa encoder + 9 token-classification heads (lemma edit-tree + UPOS + 7 morph
-dims). The morph/POS heads are auxiliary: they force the encoder to represent the morphology
-that determines the lemma, which is what helps UNSEEN forms. Lemma is head/output #0, so the
-eval (cell 6b / eval_spike.py) reads output 0 unchanged.
-
-H100-aware (bf16/tf32, batch 64); current APIs; ships fp32 via a manual torch.onnx.export of
-the multi-output model (optimum's one-liner can't export a custom multi-head module).
+Fine-tunes bowphs/GreTa (the pretrained SOTA Ancient Greek char-level T5, arXiv:2410.12055,
+Apache-2.0) to GENERATE the lemma from the form. Generation is what beats edit-tree
+classification on unseen forms (which capped at ~58%). Standard HuggingFace Seq2SeqTrainer +
+optimum ONNX export — not a from-scratch build.
 """
 from __future__ import annotations
 
@@ -20,224 +17,145 @@ code = nbf.v4.new_code_cell
 cells = []
 
 cells.append(md(
-    "# pyaegean neural-lemmatizer spike — multi-task GreBERTa\n"
+    "# pyaegean neural lemmatizer — GreTa seq2seq (SOTA route)\n"
     "\n"
-    "Shared `bowphs/GreBerta` encoder + **9 heads**: lemma edit-tree (the target) + UPOS + 7 "
-    "morph dimensions (case/number/gender/tense/mood/voice/person). The aux heads are trained "
-    "jointly so the encoder learns the morphology that *determines* the lemma — the lever for "
-    "**unseen** forms. Prior runs: 53.4% (AGDT-only) → 58.2% (multi-treebank) unseen; target > "
+    "Fine-tune **`bowphs/GreTa`** (pretrained Ancient-Greek char-level T5, the SOTA lemmatizer) "
+    "to **generate** the lemma from the form. Generation handles unseen forms where our "
+    "edit-tree classifier capped at 58.2%; literature puts GreTa ~91% F1. Target: unseen > "
     "stanza's 62.8%.\n"
     "\n"
-    "**Loop:** GPU runtime (H100 ideal) → Run all → cell 6b prints `DEV lemma all/UNSEEN` → "
-    "download `spike_model.zip`. torch/transformers used only here; inference is onnxruntime-only."
+    "**Loop:** GPU runtime → Run all → **cell 6b prints `DEV lemma all/UNSEEN`** → (optionally) "
+    "download `spike_model.zip`. torch/transformers used only here; inference is onnxruntime."
 ))
 
 cells.append(code(
     "!nvidia-smi -L  # MUST list a GPU\n"
-    "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'accelerate>=0.30' onnx onnxruntime onnxscript"
+    "%pip -q install 'transformers>=4.46' 'datasets>=2.19' 'optimum[onnxruntime]>=1.20' "
+    "accelerate sentencepiece protobuf onnx onnxruntime"
 ))
 
-cells.append(md("## 0 · Detect GPU + precision"))
+cells.append(md("## 0 · GPU + precision"))
 cells.append(code(
     "import torch\n"
-    "assert torch.cuda.is_available(), 'No GPU! Runtime > Change runtime type > GPU, then reconnect.'\n"
+    "assert torch.cuda.is_available(), 'No GPU! Runtime > Change runtime type > GPU, reconnect.'\n"
     "USE_BF16 = torch.cuda.is_bf16_supported()\n"
     "BS = 64 if USE_BF16 else 16\n"
-    "print(f'torch {torch.__version__} | CUDA {torch.version.cuda} | GPU {torch.cuda.get_device_name(0)}')\n"
-    "print(f'bf16={USE_BF16} -> batch_size={BS}')"
+    "print(f'torch {torch.__version__} | CUDA {torch.version.cuda} | GPU {torch.cuda.get_device_name(0)} | bf16={USE_BF16}')"
 ))
 
-cells.append(md("## 1 · Upload `spike_data.zip` + load the label vocabularies"))
+cells.append(md("## 1 · Upload `spike_data.zip`"))
 cells.append(code(
     "import json, zipfile, pathlib\n"
     "from google.colab import files\n"
     "up = files.upload()  # pick spike_data.zip\n"
     "zipfile.ZipFile(next(n for n in up if n.endswith('.zip'))).extractall('.')\n"
-    "DATA = pathlib.Path('data') if pathlib.Path('data/labels.json').exists() else pathlib.Path('.')\n"
-    "lj = json.loads((DATA / 'labels.json').read_text(encoding='utf-8'))\n"
-    "labels = lj['trees']                       # lemma edit-trees (head 0; used by the eval)\n"
-    "DIMS = ['upos','case','number','gender','tense','mood','voice','person']\n"
-    "FIELDS = ['lemma'] + DIMS                  # head/output order; lemma is 0\n"
-    "head_sizes = [len(labels)] + [len(lj[d]) for d in DIMS]\n"
-    "print('heads:', dict(zip(FIELDS, head_sizes)))"
+    "DATA = pathlib.Path('data') if pathlib.Path('data/train.jsonl').exists() else pathlib.Path('.')\n"
+    "train_rows = [json.loads(l) for l in open(DATA / 'train.jsonl', encoding='utf-8')]\n"
+    "print('form->lemma pairs:', len(train_rows), '| e.g.', train_rows[0])"
 ))
 
-cells.append(md("## 2 · Load training data"))
+cells.append(md("## 2 · Tokenizer + model (`bowphs/GreTa`, T5 encoder-decoder)"))
+cells.append(code(
+    "from transformers import AutoTokenizer, AutoModelForSeq2SeqLM\n"
+    "MODEL = 'bowphs/GreTa'\n"
+    "tokenizer = AutoTokenizer.from_pretrained(MODEL)\n"
+    "model = AutoModelForSeq2SeqLM.from_pretrained(MODEL)"
+))
+
+cells.append(md("## 3 · Tokenize (form -> input_ids, lemma -> labels)"))
 cells.append(code(
     "from datasets import Dataset\n"
-    "rows = [json.loads(l) for l in open(DATA / 'train.jsonl', encoding='utf-8')]\n"
-    "ds = Dataset.from_list(rows)\n"
+    "ML = 32\n"
+    "def prep(b):\n"
+    "    enc = tokenizer(b['form'], max_length=ML, truncation=True)\n"
+    "    enc['labels'] = tokenizer(text_target=b['lemma'], max_length=ML, truncation=True)['input_ids']\n"
+    "    return enc\n"
+    "ds = Dataset.from_list(train_rows).map(prep, batched=True, remove_columns=['form', 'lemma'])\n"
+    "ds = ds.train_test_split(test_size=0.02, seed=0)\n"
     "print(ds)"
 ))
 
-cells.append(md("## 3 · Tokenizer + tokenize, aligning ALL 9 label fields to first sub-tokens"))
-cells.append(code(
-    "from transformers import AutoTokenizer\n"
-    "MODEL = 'bowphs/GreBerta'\n"
-    "tokenizer = AutoTokenizer.from_pretrained(MODEL, add_prefix_space=True)\n"
-    "def align(batch):\n"
-    "    enc = tokenizer(batch['tokens'], is_split_into_words=True, truncation=True, max_length=512)\n"
-    "    out_labels = []\n"
-    "    for i in range(len(batch['tokens'])):\n"
-    "        word_ids = enc.word_ids(i); prev = None; rows_ = []\n"
-    "        for wid in word_ids:\n"
-    "            if wid is None or wid == prev:\n"
-    "                rows_.append([-100] * len(FIELDS))\n"
-    "            else:\n"
-    "                rows_.append([batch[f][i][wid] for f in FIELDS])\n"
-    "            prev = wid\n"
-    "        out_labels.append(rows_)\n"
-    "    enc['labels'] = out_labels\n"
-    "    return enc\n"
-    "tok_ds = ds.map(align, batched=True, remove_columns=ds.column_names)\n"
-    "tok_ds = tok_ds.train_test_split(test_size=0.02, seed=0)\n"
-    "print(tok_ds)"
-))
-
-cells.append(md("## 4 · Multi-head model (shared encoder + one linear head per field)"))
-cells.append(code(
-    "import torch.nn as nn\n"
-    "from transformers import AutoModel\n"
-    "class MultiHead(nn.Module):\n"
-    "    def __init__(self, name, sizes):\n"
-    "        super().__init__()\n"
-    "        self.encoder = AutoModel.from_pretrained(name)\n"
-    "        h = self.encoder.config.hidden_size\n"
-    "        self.dropout = nn.Dropout(0.1)\n"
-    "        self.heads = nn.ModuleList([nn.Linear(h, n) for n in sizes])\n"
-    "    def forward(self, input_ids, attention_mask=None):\n"
-    "        x = self.encoder(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state\n"
-    "        x = self.dropout(x)\n"
-    "        return tuple(head(x) for head in self.heads)\n"
-    "model = MultiHead(MODEL, head_sizes)"
-))
-
 cells.append(md(
-    "## 5 · Fine-tune (multi-task loss = sum of per-head cross-entropy; 12 epochs, best by val loss)\n"
-    "Watch `eval_loss` fall and plateau. The real lemma number is cell 6b."
+    "## 4 · Fine-tune (Seq2SeqTrainer; best epoch by exact-match)\n"
+    "T5 uses **bf16, not fp16** (fp16 overflows); falls back to fp32 on a T4. ~10 epochs, a few "
+    "minutes on an H100. Watch `exact` (exact-lemma match on the held-out slice) climb."
 ))
 cells.append(code(
-    "import torch\n"
-    "from transformers import TrainingArguments, Trainer\n"
-    "def collate(features):\n"
-    "    labs = [f['labels'] for f in features]\n"
-    "    batch = tokenizer.pad({'input_ids': [f['input_ids'] for f in features],\n"
-    "                           'attention_mask': [f['attention_mask'] for f in features]},\n"
-    "                          return_tensors='pt')\n"
-    "    maxlen = batch['input_ids'].size(1); H = len(labs[0][0])\n"
-    "    batch['labels'] = torch.tensor([la + [[-100]*H]*(maxlen-len(la)) for la in labs], dtype=torch.long)\n"
-    "    return batch\n"
-    "AUX_W = 0.1  # lemma (head 0) at full weight; POS/morph heads are auxiliary regularizers\n"
-    "class MultiTaskTrainer(Trainer):\n"
-    "    def compute_loss(self, model, inputs, return_outputs=False, **kw):\n"
-    "        labels = inputs.pop('labels')\n"
-    "        logits = model(inputs['input_ids'], inputs.get('attention_mask'))\n"
-    "        ce = [nn.functional.cross_entropy(lg.reshape(-1, lg.size(-1)),\n"
-    "              labels[..., h].reshape(-1), ignore_index=-100) for h, lg in enumerate(logits)]\n"
-    "        loss = ce[0] + AUX_W * sum(ce[1:])\n"
-    "        return (loss, logits) if return_outputs else loss\n"
-    "    def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):\n"
-    "        with torch.no_grad():\n"
-    "            loss = self.compute_loss(model, dict(inputs))\n"
-    "        return (loss.detach(), None, None)\n"
-    "args = TrainingArguments(\n"
-    "    output_dir='out', learning_rate=5e-5, lr_scheduler_type='cosine',\n"
+    "import numpy as np\n"
+    "from transformers import (Seq2SeqTrainer, Seq2SeqTrainingArguments,\n"
+    "                          DataCollatorForSeq2Seq)\n"
+    "collator = DataCollatorForSeq2Seq(tokenizer, model=model)\n"
+    "def compute_metrics(ep):\n"
+    "    preds, labels = ep\n"
+    "    preds = np.where(preds != -100, preds, tokenizer.pad_token_id)\n"
+    "    labels = np.where(labels != -100, labels, tokenizer.pad_token_id)\n"
+    "    dp = tokenizer.batch_decode(preds, skip_special_tokens=True)\n"
+    "    dl = tokenizer.batch_decode(labels, skip_special_tokens=True)\n"
+    "    return {'exact': float(np.mean([a.strip() == b.strip() for a, b in zip(dp, dl)]))}\n"
+    "args = Seq2SeqTrainingArguments(\n"
+    "    output_dir='out', learning_rate=3e-4, lr_scheduler_type='cosine',\n"
     "    per_device_train_batch_size=BS, per_device_eval_batch_size=BS*2,\n"
-    "    num_train_epochs=12, weight_decay=0.01, warmup_ratio=0.06,\n"
-    "    bf16=USE_BF16, fp16=not USE_BF16, tf32=USE_BF16, optim='adamw_torch_fused',\n"
-    "    dataloader_num_workers=2, eval_strategy='epoch', save_strategy='epoch', save_total_limit=1,\n"
-    "    load_best_model_at_end=True, metric_for_best_model='eval_loss', greater_is_better=False,\n"
-    "    remove_unused_columns=False, label_names=['labels'], logging_steps=50, report_to='none')\n"
-    "trainer = MultiTaskTrainer(model=model, args=args, train_dataset=tok_ds['train'],\n"
-    "                           eval_dataset=tok_ds['test'], data_collator=collate)\n"
-    "trainer.train()"
+    "    num_train_epochs=10, weight_decay=0.01, warmup_ratio=0.06,\n"
+    "    bf16=USE_BF16, fp16=False, tf32=USE_BF16, optim='adamw_torch_fused',\n"
+    "    dataloader_num_workers=2, predict_with_generate=True, generation_max_length=ML,\n"
+    "    eval_strategy='epoch', save_strategy='epoch', save_total_limit=1,\n"
+    "    load_best_model_at_end=True, metric_for_best_model='exact', greater_is_better=True,\n"
+    "    logging_steps=100, report_to='none')\n"
+    "trainer = Seq2SeqTrainer(model=model, args=args, train_dataset=ds['train'],\n"
+    "                         eval_dataset=ds['test'], data_collator=collator,\n"
+    "                         processing_class=tokenizer, compute_metrics=compute_metrics)\n"
+    "trainer.train()\n"
+    "trainer.save_model('out_model'); tokenizer.save_pretrained('out_model')"
 ))
 
 cells.append(md(
-    "## 6 · Export to ONNX (fp32) — manual export of the multi-output model\n"
-    "Outputs named per field, **`lemma` first**, so the eval reads output 0. Ship fp32 (int8 "
-    "per-tensor quant collapses the ~10k-class head; production = per-channel + validation)."
+    "## 6b · Dev lemma accuracy — GENERATE the lemma per form (the number that matters)"
 ))
 cells.append(code(
-    "import os\n"
-    "os.makedirs('onnx', exist_ok=True)\n"
-    "m = model.eval().float().cpu()\n"
-    "dummy = (torch.tensor([[0, 1, 2, 3, 4]]), torch.ones(1, 5, dtype=torch.long))\n"
-    "dyn = {'input_ids': {0: 'b', 1: 's'}, 'attention_mask': {0: 'b', 1: 's'}}\n"
-    "dyn.update({f: {0: 'b', 1: 's'} for f in FIELDS})\n"
-    "try:  # torch>=2.9 defaults to the dynamo exporter (needs onnxscript); legacy is simpler here\n"
-    "    torch.onnx.export(m, dummy, 'onnx/model.onnx',\n"
-    "        input_names=['input_ids', 'attention_mask'], output_names=FIELDS,\n"
-    "        dynamic_axes=dyn, opset_version=14, dynamo=False)\n"
-    "    print('exported (legacy)')\n"
-    "except Exception as e:\n"
-    "    print('legacy failed:', str(e)[:150], '\\n-> retrying with the dynamo exporter...')\n"
-    "    import subprocess, sys\n"
-    "    subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'onnxscript'])\n"
-    "    torch.onnx.export(m, dummy, 'onnx/model.onnx',\n"
-    "        input_names=['input_ids', 'attention_mask'], output_names=FIELDS,\n"
-    "        dynamic_axes=dyn, opset_version=14)\n"
-    "    print('exported (dynamo)')\n"
-    "tokenizer.save_pretrained('onnx')\n"
-    "print('exported', os.path.getsize('onnx/model.onnx') // (1024*1024), 'MB; outputs:', FIELDS)"
-))
-
-cells.append(md(
-    "## 6b · In-Colab dev lemma accuracy (reads lemma head = output 0)\n"
-    "The number that matters — see it before downloading."
-))
-cells.append(code(
-    "import numpy as np, onnxruntime as ort, re, unicodedata\n"
-    "from tokenizers import Tokenizer\n"
-    "sess = ort.InferenceSession('onnx/model.onnx', providers=['CPUExecutionProvider'])\n"
-    "tkf = Tokenizer.from_file('onnx/tokenizer.json')\n"
-    "inames = {i.name for i in sess.get_inputs()}\n"
-    "def _nrm(s): return unicodedata.normalize('NFC', s)\n"
-    "def _clean(s): return re.sub(r'\\d+$', '', unicodedata.normalize('NFC', s))\n"
-    "def apply_tree(t, w):\n"
-    "    if t[0] == 'keep': return w\n"
-    "    if t[0] == 'sub': return t[1]\n"
-    "    _, pl, sl, lf, rt = t\n"
-    "    if pl + sl > len(w): return None\n"
-    "    p = apply_tree(lf, w[:pl]); s = apply_tree(rt, w[len(w)-sl:] if sl else '')\n"
-    "    if p is None or s is None: return None\n"
-    "    return p + (w[pl:len(w)-sl] if sl else w[pl:]) + s\n"
+    "import re, unicodedata\n"
+    "model.eval()\n"
     "dev = [json.loads(l) for l in open(DATA / 'dev.jsonl', encoding='utf-8')]\n"
+    "forms = sorted({d['form'] for d in dev if d['scored']})\n"
+    "pred = {}\n"
+    "B = 256\n"
+    "for i in range(0, len(forms), B):\n"
+    "    b = forms[i:i+B]\n"
+    "    enc = tokenizer(b, return_tensors='pt', padding=True, truncation=True, max_length=ML).to(model.device)\n"
+    "    with torch.no_grad():\n"
+    "        g = model.generate(**enc, max_length=ML, num_beams=1)\n"
+    "    for f, d in zip(b, tokenizer.batch_decode(g, skip_special_tokens=True)):\n"
+    "        pred[f] = d\n"
+    "def _clean(s): return re.sub(r'\\d+$', '', unicodedata.normalize('NFC', s))\n"
     "na = nu = oa = ou = 0\n"
-    "for srow in dev:\n"
-    "    forms = srow['tokens']; enc = tkf.encode(forms, is_pretokenized=True)\n"
-    "    feed = {'input_ids': np.array([enc.ids], dtype=np.int64)}\n"
-    "    if 'attention_mask' in inames: feed['attention_mask'] = np.array([enc.attention_mask], dtype=np.int64)\n"
-    "    lg = sess.run(None, feed)[0][0]          # output 0 = lemma logits\n"
-    "    first = {}\n"
-    "    for pos, wid in enumerate(enc.word_ids):\n"
-    "        if wid is not None and wid not in first: first[wid] = pos\n"
-    "    for wi, form in enumerate(forms):\n"
-    "        if not srow['scored'][wi]: continue\n"
-    "        na += 1; un = not srow['seen'][wi]; nu += un\n"
-    "        pos = first.get(wi); pred = _nrm(form)\n"
-    "        if pos is not None:\n"
-    "            out = apply_tree(json.loads(labels[int(np.argmax(lg[pos]))]), _nrm(form))\n"
-    "            if out is not None: pred = out\n"
-    "        if _clean(pred) == srow['lemmas'][wi]: oa += 1; ou += un\n"
-    "print(f'DEV lemma — all {oa/na:.1%}  UNSEEN {ou/nu:.1%}   (beat: stanza 62.8% unseen; pure-Python 40.3%)')"
+    "for d in dev:\n"
+    "    if not d['scored']: continue\n"
+    "    na += 1; un = not d['seen']; nu += un\n"
+    "    if _clean(pred[d['form']]) == d['lemma']: oa += 1; ou += un\n"
+    "print(f'DEV lemma — all {oa/na:.1%}  UNSEEN {ou/nu:.1%}   '\n"
+    "      f'(beat: stanza 62.8% unseen; edit-tree 58.2%; pure-Python 40.3%)')"
 ))
 
-cells.append(md("## 7 · Package + download"))
+cells.append(md(
+    "## 7 · Export ONNX (seq2seq) + download\n"
+    "`optimum` exports encoder + decoder for torch-free `ORTModelForSeq2SeqLM.generate()`. The "
+    "zip is large (fp32 T5) — the **cell-6b number above is the answer**; the zip is only needed "
+    "for the local onnxruntime confirmation."
+))
 cells.append(code(
-    "import shutil\n"
-    "pathlib.Path('ship').mkdir(exist_ok=True)\n"
-    "shutil.copy('onnx/model.onnx', 'ship/model.onnx')\n"
-    "shutil.copy('onnx/tokenizer.json', 'ship/tokenizer.json')\n"
-    "shutil.copy(str(DATA / 'labels.json'), 'ship/labels.json')\n"
-    "shutil.make_archive('spike_model', 'zip', 'ship')\n"
+    "import os, shutil\n"
+    "!optimum-cli export onnx --model out_model --task text2text-generation onnx 2>/dev/null || \\\n"
+    " optimum-cli export onnx --model out_model --task text2text-generation onnx\n"
+    "sz = sum(os.path.getsize(os.path.join('onnx', f)) for f in os.listdir('onnx')) // (1024*1024)\n"
+    "print('onnx dir', sz, 'MB:', sorted(os.listdir('onnx')))\n"
+    "shutil.make_archive('spike_model', 'zip', 'onnx')\n"
     "files.download('spike_model.zip')"
 ))
 
 cells.append(md(
     "## Next\n"
-    "Report cell 6b's `DEV lemma` (unseen > 62.8% = we beat stanza). Send `spike_model.zip` and "
-    "I confirm locally with `eval_spike.py` (reads output 0 = lemma, unchanged)."
+    "Report cell 6b's `DEV lemma all/UNSEEN`. **Unseen > 62.8% = we beat stanza** on the clean "
+    "metric (we already beat it on overall). Send `spike_model.zip` for the local onnxruntime "
+    "confirmation: `python eval_seq2seq.py --model <unzipped> --dev data/dev.jsonl`."
 ))
 
 nb["cells"] = cells
