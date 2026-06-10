@@ -8,12 +8,13 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.4.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
-> the Cypriot syllabary (Arcado-Cypriot Greek), the undeciphered Cypro-Minoan script (sign
-> inventory only, newly landed on `main`),
-> the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
+> **Status: v0.5.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
+> the Cypriot syllabary (Arcado-Cypriot Greek), and the undeciphered Cypro-Minoan script (sign
+> inventory only) — the complete Aegean syllabic set —
+> plus the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
 > lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
-> and a CLTK benchmark harness), and the multi-provider AI layer are all implemented.
+> a CLTK benchmark harness, and a neutral out-of-AGDT PROIEL evaluator), and the multi-provider AI
+> layer are all implemented.
 > Analytical output on the undeciphered Linear A material is **exploratory** — see the
 > methodology and limitations.
 
@@ -124,11 +125,10 @@ and translation; and the deep Greek NLP track — Perseus-treebank lemmas/POS, a
 tagger and lemmatizer, the neural lemmatizer, LSJ glossing, a baseline dependency parser, and a
 CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a Unicode-built sign
 inventory, transliteration, a Greek-reading bridge, and accounting; the full corpus is
-bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **Cypro-Minoan** (the
-undeciphered Bronze Age script of Cyprus; sign inventory only) has since landed on `main`,
-completing the Aegean set, and a neutral **out-of-AGDT evaluator** (`greek.evaluate_on_proiel`,
-scoring against the PROIEL treebank) now backs the Greek-NLP numbers. **Next:** the data-layer/IO
-work toward a stable v1.0.
+bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **v0.5** adds **Cypro-Minoan**
+(the undeciphered Bronze Age script of Cyprus; sign inventory only), completing the Aegean set, and a
+neutral **out-of-AGDT evaluator** (`greek.evaluate_on_proiel`, scoring against the PROIEL treebank)
+backing the Greek-NLP numbers. **Next:** the data-layer/IO work toward a stable v1.0.
 
 ## License
 

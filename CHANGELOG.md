@@ -4,7 +4,10 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.5.0 — 2026-06-10
+
+Completes the Aegean syllabic set with **Cypro-Minoan**, and adds a neutral **out-of-AGDT
+evaluation** of the Greek NLP stack against the PROIEL treebank.
 
 ### Added
 - **Neutral out-of-AGDT evaluation** (`aegean.greek.evaluate_on_proiel`): scores the Greek
