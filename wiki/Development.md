@@ -56,13 +56,14 @@ the [Architecture](Architecture) page for the layering rules.
 src/aegean/
   core/      model corpus script provenance numerals
   scripts/   lineara/{loader,inventory,phonetic}  greek/{loader,inventory}
+             linearb/{loader,inventory,phonetic,lexicon,epidoc}
   analysis/  distance align collocation morphology patterns query accounting structure
   greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize
              treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser)
              neural_lemmatizer (GreTa seq2seq) benchmark (CLTK harness)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
-  data/      bundled/{lineara,greek}/*.json  + fetch()/cache
+  data/      bundled/{lineara,linearb,greek}/*.json  + fetch()/cache
 tests/       fixtures/golden/   (+ parity, property, and corpus tests)
 wiki/        this documentation (published to the GitHub wiki by CI)
 docs/        PLAN.md (approved design), methodology.md

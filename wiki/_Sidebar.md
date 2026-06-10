@@ -9,6 +9,7 @@
 
 **Aegean scripts**
 - [Linear A](Linear-A)
+- [Linear B](Linear-B)
 - [Analysis](Analysis)
 
 **Greek**

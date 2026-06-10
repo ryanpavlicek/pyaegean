@@ -8,7 +8,8 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) serves
 many ancient languages broadly; pyaegean is intentionally narrow and deep for Greek
 and the Aegean scripts.
 
-> **Status: v0.3.0 (alpha).** The script-agnostic core and Linear A are fully
+> **Status: v0.4.0 (alpha).** The script-agnostic core, Linear A, and **Linear B** (Mycenaean
+> Greek — sign inventory, transliteration, a Greek-reading bridge, and accounting) are
 > implemented; the Greek NLP track is a full pipeline — including an opt-in Perseus
 > AGDT treebank backend (attested lemmas + gold POS/morphology), a generalizing
 > averaged-perceptron POS tagger (`use_tagger`; ~84% on unseen forms), a generalizing
@@ -57,6 +58,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | --- | --- |
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, 84-sign inventory, sign→sound map, transliteration |
+| [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, bring-your-own EpiDoc corpus |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **generalizing POS tagger** (`use_tagger`; ~84% on unseen forms) and **lemmatizer** (`use_lemmatizer`; edit-trees), a **neural seq2seq lemmatizer** (`use_neural_lemmatizer`; 76.3% on unseen forms), **LSJ glossing** (`use_lsj`), a **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
@@ -79,8 +81,9 @@ See [Installation](Installation) for the full extras matrix, and
 multi-provider AI layer and hybrid translation; and a deep Greek NLP pipeline — treebank
 lemmas/POS, LSJ glossing, a dependency parser, generalizing perceptron POS tagging
 (~84% on unseen forms), edit-tree and neural seq2seq lemmatization (76.3% on unseen
-forms), and a CLTK benchmark harness. **Next:** v0.4 Linear B (DAMOS/LiBER) → v0.5
-Cypriot/Cypro-Minoan → v1.0 stable.
+forms), and a CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a
+Unicode-built sign inventory, transliteration, a Greek-reading bridge, and accounting; a
+full corpus is bring-your-own). **Next:** Cypriot / Cypro-Minoan → v1.0 stable.
 
 ## License
 

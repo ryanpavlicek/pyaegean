@@ -8,10 +8,10 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.3.0 (alpha).** The script-agnostic core, Linear A, the full Greek NLP
-> track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and lemmatizer, a neural
-> lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser, and a CLTK
-> benchmark harness), and the multi-provider AI layer are all implemented.
+> **Status: v0.4.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
+> the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
+> lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
+> and a CLTK benchmark harness), and the multi-provider AI layer are all implemented.
 > Analytical output on the undeciphered Linear A material is **exploratory** — see the
 > methodology and limitations.
 
@@ -75,6 +75,8 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance.
 - **`aegean.scripts.lineara`** — Linear A: bundled corpus + 84-sign inventory +
   sign→sound map + transliteration.
+- **`aegean.scripts.linearb`** — Linear B (Mycenaean Greek): 211-sign Unicode inventory +
+  transliteration + a Greek-reading bridge (`po-me → ποιμήν`) + accounting; bring-your-own corpus.
 - **`aegean.analysis`** — ported from the workbench: accounting reconciliation,
   wildcard sign-pattern search, weighted phonetic distance + alignment,
   morphology clustering, collocation statistics, a compound-query engine, and
@@ -114,9 +116,10 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 **Shipped (through v0.3):** the script-agnostic core and Linear A; the multi-provider AI layer
 and translation; and the deep Greek NLP track — Perseus-treebank lemmas/POS, a generalizing
 tagger and lemmatizer, the neural lemmatizer, LSJ glossing, a baseline dependency parser, and a
-CLTK benchmark harness. **Next:** a hand-checked out-of-AGDT gold set for broader evaluation,
-then Linear B (DAMOS / LiBER), Cypriot / Cypro-Minoan,
-and a stable v1.0.
+CLTK benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek): a Unicode-built sign
+inventory, transliteration, a Greek-reading bridge, and accounting; the full corpus is
+bring-your-own (no openly-licensed corpus exists). **Next:** a hand-checked out-of-AGDT gold set,
+Cypriot / Cypro-Minoan, and a stable v1.0.
 
 ## License
 

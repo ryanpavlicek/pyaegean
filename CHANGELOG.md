@@ -4,6 +4,31 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.4.0 — Unreleased
+
+Adds **Linear B** — the deciphered Aegean syllabary for Mycenaean Greek — through the same
+script-plugin model as Linear A. All Linear A analysis remains exploratory.
+
+### Added
+- **Linear B script** (`aegean.scripts.linearb`): registered as a `Script` alongside Linear A.
+  A 211-sign inventory and phonetic map built from the Unicode Character Database (74 syllabograms,
+  14 undeciphered symbols, 123 ideograms/monograms), `word_to_phonetic` transliteration with the
+  labiovelar and affricate values, and `Corpus.load("linearb")`.
+- **Linear B → Greek bridge** (`greek_reading`, `gloss`): a curated Mycenaean→Greek lexicon maps a
+  transliterated word to its Classical Greek lemma and gloss (`PO-ME → ποιμήν`, "shepherd"), to
+  compose with the LSJ backend for the full dictionary entry.
+- **Linear B accounting**: the numeral/accounting engine recognises Linear B's `to-so`/`to-sa`
+  totals (markers are now per-script; Linear A's `KU-RO` is unchanged), so `balance_check`
+  reconciles Mycenaean tablets.
+- **Bring-your-own Linear B corpus**: a DAMOS-style EpiDoc reader (`parse_epidoc`,
+  `load_epidoc_corpus`, the `[epidoc]` extra) parses a user-supplied corpus locally via
+  `PYAEGEAN_LINEARB_CORPUS`. No corpus is bundled or fetched by default — none is openly licensed
+  (DAMOS is CC BY-NC-SA) — only a small illustrative sample of canonical tablets.
+
+### Changed
+- Linear B sign data is bundled from the Unicode Character Database (Unicode-3.0 license;
+  attribution added to NOTICE).
+
 ## 0.3.0 — 2026-06-10
 
 Adds opt-in Greek tagging and lemmatization that generalize to unseen forms — including a
