@@ -4,6 +4,20 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.7.0 — 2026-06-10
+
+Fills the `aegean.io` package with export adapters, completing the EpiDoc read+write round-trip.
+
+### Added
+- **EpiDoc (TEI) export** (`aegean.io.to_epidoc`, `aegean.io.write_epidoc`): serialize a `Document`
+  or `Corpus` to EpiDoc TEI XML — the inverse of the bring-your-own reader, so a corpus written out
+  reloads through `parse_epidoc` with the same ids, find-places, tokens, and lines. Uses the stdlib
+  XML writer, so export needs no extra dependency.
+- **CSV / Parquet export** (`aegean.io.to_csv`, `aegean.io.to_parquet`): write a corpus's
+  document/token/word DataFrame to CSV or Parquet. CSV needs the `[data]` extra (pandas); Parquet
+  also needs the new `[parquet]` extra (pyarrow).
+- `aegean.io` is exposed as a top-level subpackage.
+
 ## 0.6.0 — 2026-06-10
 
 Rounds out the corpus data layer: a lossless JSON round-trip and a first-class compound query.

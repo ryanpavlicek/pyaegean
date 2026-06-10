@@ -8,14 +8,14 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) alread
 serves many ancient languages broadly; pyaegean is intentionally narrower, and
 uses CLTK as a friendly benchmark to measure its Greek coverage against.
 
-> **Status: v0.6.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
+> **Status: v0.7.0 (alpha).** The script-agnostic core, Linear A, Linear B (Mycenaean Greek),
 > the Cypriot syllabary (Arcado-Cypriot Greek), and the undeciphered Cypro-Minoan script (sign
 > inventory only) — the complete Aegean syllabic set —
 > plus the full Greek NLP track (opt-in Perseus-treebank lemmas/POS, a generalizing tagger and
 > lemmatizer, a neural lemmatizer for unseen forms, LSJ glossing, a baseline dependency parser,
 > a CLTK benchmark harness, and a neutral out-of-AGDT PROIEL evaluator), and the multi-provider AI
 > layer are all implemented. The corpus data layer adds a lossless JSON round-trip
-> (`to_json`/`from_json`) and a compound `query()`.
+> (`to_json`/`from_json`) and a compound `query()`, plus EpiDoc/CSV/Parquet export.
 > Analytical output on the undeciphered Linear A material is **exploratory** — see the
 > methodology and limitations.
 
@@ -90,6 +90,8 @@ the Perseus AGDT treebank (~75 MB, `greek.use_treebank()`) and the full Perseus 
   wildcard sign-pattern search, weighted phonetic distance + alignment,
   morphology clustering, collocation statistics, a compound-query engine, and
   heuristic tablet-structure classification (all with golden-fixture parity).
+- **`aegean.io`** — export adapters: EpiDoc (TEI) write (the inverse of the
+  bring-your-own reader, round-tripping ids/find-places/tokens/lines) plus CSV and Parquet.
 - **`aegean.greek`** — the Greek NLP track: Unicode/Beta Code normalization,
   word/sentence tokenization, syllabification, accent and prosody analysis,
   metrical scansion (dactylic hexameter + elegiac pentameter), reconstructed IPA,
@@ -131,8 +133,9 @@ bring-your-own) and the **Cypriot syllabary** (Arcado-Cypriot Greek). **v0.5** a
 (the undeciphered Bronze Age script of Cyprus; sign inventory only), completing the Aegean set, and a
 neutral **out-of-AGDT evaluator** (`greek.evaluate_on_proiel`, scoring against the PROIEL treebank)
 backing the Greek-NLP numbers. **v0.6** adds the corpus data layer's lossless JSON round-trip
-(`to_json`/`from_json`) and a compound `query()`. **Next:** IO adapters (EpiDoc export, CSV/Parquet)
-toward a stable v1.0.
+(`to_json`/`from_json`) and a compound `query()`; **v0.7** adds `aegean.io` export adapters — EpiDoc
+(TEI), CSV, and Parquet — completing the EpiDoc read+write round-trip. **Next:** a context-aware
+lemmatizer and the workbench bridge toward a stable v1.0.
 
 ## License
 

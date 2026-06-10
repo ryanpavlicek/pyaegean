@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.6.0"
+version = "0.7.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek and the Aegean syllabic scripts (Linear A/B)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,7 @@ gemini = ["google-genai>=0.3"]
 grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
 ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
+parquet = ["pyarrow>=14"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
 neural = ["onnxruntime>=1.17", "tokenizers>=0.15", "numpy>=1.24"]  # GreTa seq2seq lemmatizer (torch-free); model fetched to cache
 dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0"]

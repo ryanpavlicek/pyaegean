@@ -8,7 +8,7 @@ pluggable multi-provider AI layer. The excellent [CLTK](https://cltk.org) serves
 many ancient languages broadly; pyaegean is intentionally narrow and deep for Greek
 and the Aegean scripts.
 
-> **Status: v0.6.0 (alpha).** The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
+> **Status: v0.7.0 (alpha).** The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set — each deciphered script with a sign inventory, transliteration, and a
 > Greek-reading bridge; Cypro-Minoan, undeciphered, ships its sign inventory only. The Greek
@@ -19,7 +19,7 @@ and the Aegean scripts.
 > (`use_neural_lemmatizer`; 76.3% on unseen forms), LSJ glossing, a dependency parser,
 > a CLTK benchmark harness, and a neutral out-of-AGDT (PROIEL) evaluator — and the multi-provider AI
 > layer + hybrid translation are implemented, over a corpus data layer with a lossless JSON
-> round-trip (`to_json`/`from_json`) and a compound `query()`. Analytical and generative output on the
+> round-trip (`to_json`/`from_json`) and a compound `query()`, plus EpiDoc/CSV/Parquet export. Analytical and generative output on the
 > undeciphered Linear A material is **exploratory** — see [Data & Provenance](Data-and-Provenance).
 
 ### New here?
@@ -66,6 +66,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge — the script is undeciphered) |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **generalizing POS tagger** (`use_tagger`; ~84% on unseen forms) and **lemmatizer** (`use_lemmatizer`; edit-trees), a **neural seq2seq lemmatizer** (`use_neural_lemmatizer`; 76.3% on unseen forms), **LSJ glossing** (`use_lsj`), a **dependency parser** (`use_parser`), and a **CLTK benchmark** harness |
+| [`aegean.io`](Architecture) | Export adapters: EpiDoc (TEI) write — the inverse of the bring-your-own reader — plus CSV and Parquet |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
@@ -91,8 +92,10 @@ Unicode-built sign inventory, transliteration, a Greek-reading bridge, and accou
 **Cypriot syllabary** (Arcado-Cypriot Greek). **v0.5** adds **Cypro-Minoan** (the undeciphered
 Bronze Age script of Cyprus; sign inventory only), completing the Aegean set, and a neutral
 **out-of-AGDT evaluator** (the PROIEL treebank) backing the Greek-NLP numbers. **v0.6** adds the
-corpus data layer's lossless JSON round-trip (`to_json`/`from_json`) and a compound `query()`.
-**Next:** IO adapters — EpiDoc export, CSV/Parquet — toward **v1.0 stable**.
+corpus data layer's lossless JSON round-trip (`to_json`/`from_json`) and a compound `query()`;
+**v0.7** adds `aegean.io` export adapters — EpiDoc (TEI), CSV, and Parquet — completing the EpiDoc
+read+write round-trip. **Next:** a context-aware lemmatizer and the workbench bridge toward
+**v1.0 stable**.
 
 ## License
 

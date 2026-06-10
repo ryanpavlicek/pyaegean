@@ -15,6 +15,7 @@ from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
 from . import analysis  # noqa: F401
 from . import greek  # noqa: F401 — Greek NLP pipeline
+from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
 from .core.corpus import Corpus
@@ -40,6 +41,7 @@ __all__ = [
     "analysis",
     "greek",
     "ai",
+    "io",
     "translate",
     "__version__",
 ]
