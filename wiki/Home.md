@@ -6,7 +6,8 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.7.0 (alpha).** The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
+> **Status: v0.8.0 (beta).** A young, beta-stage project — the API is close to stable, but a 1.0
+> awaits external use and a methods write-up. The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set — each deciphered script with a sign inventory, transliteration, and a
 > Greek-reading bridge; Cypro-Minoan, undeciphered, ships its sign inventory only. The Greek
@@ -58,7 +59,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | Module | What it does |
 | --- | --- |
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()` |
-| [Linear A](Linear-A) | Bundled 1,721-inscription corpus, 84-sign inventory, sign→sound map, transliteration |
+| [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (~344 signs; 84 carry conventional sound values), sign→sound map, transliteration |
 | [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, bring-your-own EpiDoc corpus |
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge — the script is undeciphered) |
@@ -85,19 +86,15 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Shipped (through v0.3):** the script-agnostic core and bundled Linear A corpus; the
-multi-provider AI layer and hybrid translation; and a deep Greek NLP pipeline — treebank
-lemmas/POS, LSJ glossing, a dependency parser, generalizing perceptron POS tagging
-(~84% on unseen forms), edit-tree and neural seq2seq lemmatization (76.3% on unseen
-forms), and a benchmark harness. **v0.4** adds **Linear B** (Mycenaean Greek: a
-Unicode-built sign inventory, transliteration, a Greek-reading bridge, and accounting) and the
-**Cypriot syllabary** (Arcado-Cypriot Greek). **v0.5** adds **Cypro-Minoan** (the undeciphered
-Bronze Age script of Cyprus; sign inventory only), completing the Aegean set, and a neutral
-**out-of-AGDT evaluator** (the PROIEL treebank) backing the Greek-NLP numbers. **v0.6** adds the
-corpus data layer's lossless JSON round-trip (`to_json`/`from_json`) and a compound `query()`;
-**v0.7** adds `aegean.io` export adapters — EpiDoc (TEI), CSV, and Parquet — completing the EpiDoc
-read+write round-trip. **Next:** a context-aware lemmatizer and the workbench bridge toward
-**v1.0 stable**.
+**Shipped (through v0.8):** all four Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan);
+a deep Greek NLP track — treebank lemmas/POS, LSJ glossing, a dependency parser, generalizing
+perceptron POS tagging (~84% on unseen forms), edit-tree and neural seq2seq lemmatization
+(76.3% on unseen forms), and a benchmark harness; the multi-provider AI layer and hybrid
+translation; the corpus data layer with a lossless JSON round-trip (`to_json`/`from_json`),
+a compound `query()`, and schema-valid EpiDoc/CSV/Parquet export; geographic analysis with
+Pleiades alignment; editorial-status round-trip (`ReadingStatus` ↔ EpiDoc `<unclear>`/`<supplied>`/`<gap>`);
+and the full Unicode Linear A sign repertoire. **Next:** hardening toward a **1.0 stable** once
+there's external use and a methods write-up.
 
 ## License
 

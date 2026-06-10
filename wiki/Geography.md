@@ -36,6 +36,19 @@ geo.site_coordinates()["Haghia Triada"]
 The gazetteer covers the find-sites in all four corpora — the Cretan and Aegean Linear A sites, plus
 Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit.
 
+## Pleiades alignment
+
+26 of the 56 find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
+linked-open-data work. It's on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving
+the full `https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the
+GeoDataFrames from `to_geodataframe` / `word_distribution`. Minor findspots not in Pleiades are left
+null.
+
+```python
+geo.site_coordinates()["Haghia Triada"].pleiades_uri
+# 'https://pleiades.stoa.org/places/589672'
+```
+
 ## Plotting
 
 A GeoDataFrame plots in one line (with `matplotlib` installed):

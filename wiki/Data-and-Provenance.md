@@ -130,6 +130,14 @@ corpus.provenance.cite()      # one-line citation for papers/logs
 corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, documentCount, source, license, citation
 ```
 
+A note on the Linear A corpus: the bundled transcription is **normalized** — it
+does **not** carry the full Leiden apparatus (lacunae, restorations, uncertain
+readings), because the upstream digitization dropped it. For edition-grade
+readings, consult **GORILA** and **SigLA**. The data model can still record
+editorial status — `aegean.ReadingStatus` (CERTAIN / UNCLEAR / RESTORED / LOST),
+which the EpiDoc reader/writer round-trip as `<unclear>`/`<supplied>`/`<gap>` —
+so a bring-your-own EpiDoc corpus keeps its apparatus through a load/export cycle.
+
 ## Licensing summary
 
 - **Code** — Apache-2.0.

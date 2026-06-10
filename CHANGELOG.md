@@ -4,24 +4,49 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.8.0 — 2026-06-10
+
+A hardening pass for scholarly use: a complete Linear A sign repertoire, an editorial-status model
+with a schema-valid EpiDoc round-trip, Pleiades-aligned find-sites, geographic analysis, a wider
+public API, and a hosted API reference. Released as **beta** — the API is close to stable, but a 1.0
+waits on external use and a short methods write-up.
 
 ### Added
+- **Full Linear A sign repertoire.** The bundled inventory now covers the entire Unicode Linear A
+  block (~340 signs) instead of only the 84 transliteration-aligned signs; those 84 keep their
+  conventional sound values and confidence, the rest are carried from the Unicode Character Database
+  (`attrs["source"] == "ucd"`) with no assigned reading. Closes a gap where most *attested* glyphs
+  had no inventory entry.
+- **Editorial status on tokens** (`ReadingStatus`: `CERTAIN` / `UNCLEAR` / `RESTORED` / `LOST`). The
+  EpiDoc reader populates it from `<unclear>` / `<supplied>` / `<gap>` markup and the writer emits it
+  back, so editorial certainty round-trips (it survives the JSON round-trip too). The bundled Linear A
+  corpus is a normalized transcription with no full Leiden apparatus, so its tokens are `CERTAIN`;
+  the field is for bring-your-own EpiDoc corpora and future data.
 - **Geographic analysis** (`aegean.geo`, the `[geo]` extra): a bundled Aegean find-site gazetteer
   plus `to_geodataframe(corpus, level="inscription"|"site")` and `word_distribution(corpus, word)` —
   turning a corpus into a geopandas GeoDataFrame (EPSG:4326) for spatial analysis and mapping.
-- **Wider public API surface** (toward a stable 1.0): the core value types (`Document`, `Token`,
-  `Sign`, `SignInventory`, `DocumentMeta`, `Provenance`, `Script`) are re-exported from the top-level
-  `aegean` namespace; `aegean.analysis` now exports `BalanceCheck`, `CompiledSignPattern`, and the
-  `Output`/`Connector` query types; and `aegean.greek` exports the backend errors
-  (`ParserNotLoadedError`, `LexiconNotLoadedError`, …) raised by its opt-in functions.
+- **Pleiades alignment** for the gazetteer: 26 of the 56 find-sites carry a Pleiades place id
+  (`SiteCoord.pleiades` / `pleiades_uri`), surfaced as a `pleiades` column in the GeoDataFrames, for
+  linked-open-data work; minor findspots not in Pleiades are left null.
+- **Wider public API surface** (toward a stable API): the core value types (`Document`, `Token`,
+  `Sign`, `SignInventory`, `DocumentMeta`, `Provenance`, `Script`, `ReadingStatus`) are re-exported
+  from the top-level `aegean` namespace; `aegean.analysis` now exports `BalanceCheck`,
+  `CompiledSignPattern`, and the `Output`/`Connector` query types; and `aegean.greek` exports the
+  backend errors (`ParserNotLoadedError`, `LexiconNotLoadedError`, …) raised by its opt-in functions.
 - **Hosted API reference** ([ryanpavlicek.github.io/pyaegean](https://ryanpavlicek.github.io/pyaegean/)):
   a browsable reference for every public module, class, and function, generated from the docstrings and
   type hints with pdoc and published to GitHub Pages (the new `[docs]` extra).
 
 ### Changed
+- **EpiDoc export is now schema-valid.** Output is wrapped in the required `<div type="edition">`
+  (with a `publicationStmt`) and is validated in CI against the official EpiDoc RelaxNG schema
+  (fetched to cache; skipped offline). The reader/writer also carry editorial status (see above).
 - **`greek.evaluate` is renamed `greek.evaluate_parser`**, for consistency with `evaluate_tagger` /
-  `evaluate_lemmatizer` (the one breaking rename, made ahead of the 1.0 API freeze).
+  `evaluate_lemmatizer` (the one breaking rename, made ahead of an API freeze).
+- Documentation states scope honestly: the inventory's read-vs-unread split, that accounting
+  reconciliation applies to the ~40 Linear A tablets carrying a stated total, that the non-Linear-A
+  bundled corpora are illustrative samples (bring-your-own for a full Linear B corpus), and where the
+  Greek NLP stack sits (portability + transparent evaluation over peak neural accuracy).
 
 ### Fixed
 - The AI `summarize` capability now labels its result `kind="summarize"` (previously mislabeled `"ask"`).

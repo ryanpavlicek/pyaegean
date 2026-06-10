@@ -1,1 +1,3266 @@
-[{"label":"A","glyph":"𐘇","codepoint":67079,"phonetic":"a","sharedWithLinearB":true,"linearAOnly":false,"total":35,"confidence":1,"altGlyphs":[]},{"label":"I","glyph":"𐘚","codepoint":67098,"phonetic":"i","sharedWithLinearB":true,"linearAOnly":false,"total":29,"confidence":0.9655172413793104,"altGlyphs":[]},{"label":"KA","glyph":"𐘾","codepoint":67134,"phonetic":"ka","sharedWithLinearB":true,"linearAOnly":false,"total":27,"confidence":1,"altGlyphs":[]},{"label":"JA","glyph":"𐘱","codepoint":67121,"phonetic":"ja","sharedWithLinearB":true,"linearAOnly":false,"total":27,"confidence":1,"altGlyphs":[]},{"label":"SI","glyph":"𐘤","codepoint":67108,"phonetic":"si","sharedWithLinearB":true,"linearAOnly":false,"total":25,"confidence":1,"altGlyphs":[]},{"label":"TA","glyph":"𐘳","codepoint":67123,"phonetic":"ta","sharedWithLinearB":true,"linearAOnly":false,"total":25,"confidence":1,"altGlyphs":[]},{"label":"DA","glyph":"𐘀","codepoint":67072,"phonetic":"da","sharedWithLinearB":true,"linearAOnly":false,"total":23,"confidence":1,"altGlyphs":[]},{"label":"NA","glyph":"𐘅","codepoint":67077,"phonetic":"na","sharedWithLinearB":true,"linearAOnly":false,"total":21,"confidence":1,"altGlyphs":[]},{"label":"SA","glyph":"𐘞","codepoint":67102,"phonetic":"sa","sharedWithLinearB":true,"linearAOnly":false,"total":21,"confidence":1,"altGlyphs":[]},{"label":"MA","glyph":"𐙁","codepoint":67137,"phonetic":"ma","sharedWithLinearB":true,"linearAOnly":false,"total":20,"confidence":1,"altGlyphs":[]},{"label":"TI","glyph":"𐘠","codepoint":67104,"phonetic":"ti","sharedWithLinearB":true,"linearAOnly":false,"total":20,"confidence":1,"altGlyphs":[]},{"label":"RA","glyph":"𐘴","codepoint":67124,"phonetic":"ra","sharedWithLinearB":true,"linearAOnly":false,"total":17,"confidence":1,"altGlyphs":[]},{"label":"KU","glyph":"𐙂","codepoint":67138,"phonetic":"ku","sharedWithLinearB":true,"linearAOnly":false,"total":16,"confidence":1,"altGlyphs":[]},{"label":"TE","glyph":"𐘃","codepoint":67075,"phonetic":"te","sharedWithLinearB":true,"linearAOnly":false,"total":16,"confidence":1,"altGlyphs":[]},{"label":"MI","glyph":"𐘻","codepoint":67131,"phonetic":"mi","sharedWithLinearB":true,"linearAOnly":false,"total":16,"confidence":1,"altGlyphs":[]},{"label":"KI","glyph":"𐘸","codepoint":67128,"phonetic":"ki","sharedWithLinearB":true,"linearAOnly":false,"total":15,"confidence":1,"altGlyphs":[]},{"label":"RO","glyph":"𐘁","codepoint":67073,"phonetic":"ro","sharedWithLinearB":true,"linearAOnly":false,"total":15,"confidence":1,"altGlyphs":[]},{"label":"RA2","glyph":"𐘽","codepoint":67133,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":14,"confidence":1,"altGlyphs":[]},{"label":"DI","glyph":"𐘆","codepoint":67078,"phonetic":"di","sharedWithLinearB":true,"linearAOnly":false,"total":14,"confidence":1,"altGlyphs":[]},{"label":"RE","glyph":"𐘙","codepoint":67097,"phonetic":"re","sharedWithLinearB":true,"linearAOnly":false,"total":13,"confidence":1,"altGlyphs":[]},{"label":"RI","glyph":"𐘭","codepoint":67117,"phonetic":"ri","sharedWithLinearB":true,"linearAOnly":false,"total":13,"confidence":1,"altGlyphs":[]},{"label":"*301","glyph":"𐙕","codepoint":67157,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":12,"confidence":1,"altGlyphs":[]},{"label":"TU","glyph":"𐘹","codepoint":67129,"phonetic":"tu","sharedWithLinearB":true,"linearAOnly":false,"total":11,"confidence":1,"altGlyphs":[]},{"label":"NI","glyph":"𐘝","codepoint":67101,"phonetic":"ni","sharedWithLinearB":true,"linearAOnly":false,"total":11,"confidence":1,"altGlyphs":[]},{"label":"U","glyph":"𐘉","codepoint":67081,"phonetic":"u","sharedWithLinearB":true,"linearAOnly":false,"total":10,"confidence":1,"altGlyphs":[]},{"label":"RU","glyph":"𐘘","codepoint":67096,"phonetic":"ru","sharedWithLinearB":true,"linearAOnly":false,"total":10,"confidence":1,"altGlyphs":[]},{"label":"WA","glyph":"𐘮","codepoint":67118,"phonetic":"wa","sharedWithLinearB":true,"linearAOnly":false,"total":10,"confidence":1,"altGlyphs":[]},{"label":"NU","glyph":"𐘯","codepoint":67119,"phonetic":"nu","sharedWithLinearB":true,"linearAOnly":false,"total":9,"confidence":1,"altGlyphs":[]},{"label":"ZU","glyph":"𐙀","codepoint":67136,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":8,"confidence":1,"altGlyphs":[]},{"label":"SE","glyph":"𐘈","codepoint":67080,"phonetic":"se","sharedWithLinearB":true,"linearAOnly":false,"total":8,"confidence":1,"altGlyphs":[]},{"label":"PI","glyph":"𐘢","codepoint":67106,"phonetic":"pi","sharedWithLinearB":true,"linearAOnly":false,"total":8,"confidence":1,"altGlyphs":[]},{"label":"SU","glyph":"𐘲","codepoint":67122,"phonetic":"su","sharedWithLinearB":true,"linearAOnly":false,"total":7,"confidence":1,"altGlyphs":[]},{"label":"DU","glyph":"𐘬","codepoint":67116,"phonetic":"du","sharedWithLinearB":true,"linearAOnly":false,"total":7,"confidence":0.8571428571428571,"altGlyphs":[]},{"label":"PA","glyph":"𐘂","codepoint":67074,"phonetic":"pa","sharedWithLinearB":true,"linearAOnly":false,"total":7,"confidence":1,"altGlyphs":[]},{"label":"QE","glyph":"𐘿","codepoint":67135,"phonetic":"kwe","sharedWithLinearB":true,"linearAOnly":false,"total":5,"confidence":1,"altGlyphs":[]},{"label":"PA3","glyph":"𐘰","codepoint":67120,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":5,"confidence":1,"altGlyphs":[]},{"label":"NE","glyph":"𐘗","codepoint":67095,"phonetic":"ne","sharedWithLinearB":true,"linearAOnly":false,"total":5,"confidence":1,"altGlyphs":[]},{"label":"E","glyph":"𐘡","codepoint":67105,"phonetic":"e","sharedWithLinearB":true,"linearAOnly":false,"total":5,"confidence":0.8,"altGlyphs":[]},{"label":"JE","glyph":"𐘧","codepoint":67111,"phonetic":"je","sharedWithLinearB":true,"linearAOnly":false,"total":5,"confidence":1,"altGlyphs":[]},{"label":"ZA","glyph":"𐘍","codepoint":67085,"phonetic":"dza","sharedWithLinearB":true,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"VIN","glyph":"𐙍","codepoint":67149,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"JU","glyph":"𐘶","codepoint":67126,"phonetic":"ju","sharedWithLinearB":true,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"KO","glyph":"𐘺","codepoint":67130,"phonetic":"ko","sharedWithLinearB":true,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"*304+PA","glyph":"𐜝","codepoint":67357,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":4,"confidence":1,"altGlyphs":[]},{"label":"CYP+D","glyph":"𐜙","codepoint":67353,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"*86","glyph":"𐙅","codepoint":67141,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":4,"confidence":1,"altGlyphs":[]},{"label":"DE","glyph":"𐘦","codepoint":67110,"phonetic":"de","sharedWithLinearB":true,"linearAOnly":false,"total":4,"confidence":1,"altGlyphs":[]},{"label":"KE","glyph":"𐘥","codepoint":67109,"phonetic":"ke","sharedWithLinearB":true,"linearAOnly":false,"total":3,"confidence":1,"altGlyphs":[]},{"label":"MU","glyph":"𐘕","codepoint":67093,"phonetic":"mu","sharedWithLinearB":true,"linearAOnly":false,"total":3,"confidence":1,"altGlyphs":[]},{"label":"*314","glyph":"𐙦","codepoint":67174,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":3,"confidence":1,"altGlyphs":[]},{"label":"QA","glyph":"𐘌","codepoint":67084,"phonetic":"kwa","sharedWithLinearB":true,"linearAOnly":false,"total":3,"confidence":1,"altGlyphs":[]},{"label":"*306","glyph":"𐙚","codepoint":67162,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":3,"confidence":1,"altGlyphs":[]},{"label":"*805","glyph":"𐝥","codepoint":67429,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":3,"confidence":1,"altGlyphs":[]},{"label":"WI","glyph":"𐘣","codepoint":67107,"phonetic":"wi","sharedWithLinearB":true,"linearAOnly":false,"total":3,"confidence":0.6666666666666666,"altGlyphs":[]},{"label":"*21F","glyph":"𐘐","codepoint":67088,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":2,"confidence":1,"altGlyphs":[]},{"label":"*118","glyph":"𐙈","codepoint":67144,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":2,"confidence":1,"altGlyphs":[]},{"label":"*333","glyph":"𐙹","codepoint":67193,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":2,"confidence":1,"altGlyphs":[]},{"label":"ME","glyph":"𐘋","codepoint":67083,"phonetic":"me","sharedWithLinearB":true,"linearAOnly":false,"total":2,"confidence":1,"altGlyphs":[]},{"label":"VS","glyph":"𐝫","codepoint":67435,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":2,"confidence":1,"altGlyphs":[]},{"label":"VIR+[?]","glyph":"𐙇","codepoint":67143,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":2,"confidence":1,"altGlyphs":[]},{"label":"TO","glyph":"𐘄","codepoint":67076,"phonetic":"to","sharedWithLinearB":true,"linearAOnly":false,"total":2,"confidence":1,"altGlyphs":[]},{"label":"PO","glyph":"𐘊","codepoint":67082,"phonetic":"po","sharedWithLinearB":true,"linearAOnly":false,"total":2,"confidence":1,"altGlyphs":[]},{"label":"*329","glyph":"𐙵","codepoint":67189,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"SI+SE","glyph":"𐛉","codepoint":67273,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*905","glyph":"𐝆","codepoint":67398,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"O","glyph":"𐘵","codepoint":67125,"phonetic":"o","sharedWithLinearB":true,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*188","glyph":"𐙓","codepoint":67155,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*904","glyph":"𐙫","codepoint":67179,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*409","glyph":"𐚩","codepoint":67241,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*351","glyph":"𐚋","codepoint":67211,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*352","glyph":"𐚌","codepoint":67212,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*408","glyph":"𐚨","codepoint":67240,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*810","glyph":"𐝭","codepoint":67437,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"VIR+KA","glyph":"𐛧","codepoint":67303,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"AU","glyph":"𐙄","codepoint":67140,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*903","glyph":"𐘚","codepoint":67098,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"GRA","glyph":"𐙉","codepoint":67145,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"TA2","glyph":"𐘷","codepoint":67127,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*325","glyph":"𐙱","codepoint":67185,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*806","glyph":"𐝦","codepoint":67430,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]},{"label":"OLIV","glyph":"𐙋","codepoint":67147,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"OLE","glyph":"𐙖","codepoint":67158,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"NWA","glyph":"𐘩","codepoint":67113,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":false,"total":1,"confidence":1,"altGlyphs":[]},{"label":"*164","glyph":"𐙐","codepoint":67152,"phonetic":null,"sharedWithLinearB":false,"linearAOnly":true,"total":1,"confidence":1,"altGlyphs":[]}]
+[
+  {
+    "label": "A",
+    "glyph": "𐘇",
+    "codepoint": 67079,
+    "phonetic": "a",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 35,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "I",
+    "glyph": "𐘚",
+    "codepoint": 67098,
+    "phonetic": "i",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 29,
+    "confidence": 0.9655172413793104,
+    "altGlyphs": []
+  },
+  {
+    "label": "KA",
+    "glyph": "𐘾",
+    "codepoint": 67134,
+    "phonetic": "ka",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 27,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "JA",
+    "glyph": "𐘱",
+    "codepoint": 67121,
+    "phonetic": "ja",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 27,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "SI",
+    "glyph": "𐘤",
+    "codepoint": 67108,
+    "phonetic": "si",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 25,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TA",
+    "glyph": "𐘳",
+    "codepoint": 67123,
+    "phonetic": "ta",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 25,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "DA",
+    "glyph": "𐘀",
+    "codepoint": 67072,
+    "phonetic": "da",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 23,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "NA",
+    "glyph": "𐘅",
+    "codepoint": 67077,
+    "phonetic": "na",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 21,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "SA",
+    "glyph": "𐘞",
+    "codepoint": 67102,
+    "phonetic": "sa",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 21,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "MA",
+    "glyph": "𐙁",
+    "codepoint": 67137,
+    "phonetic": "ma",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 20,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TI",
+    "glyph": "𐘠",
+    "codepoint": 67104,
+    "phonetic": "ti",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 20,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RA",
+    "glyph": "𐘴",
+    "codepoint": 67124,
+    "phonetic": "ra",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 17,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "KU",
+    "glyph": "𐙂",
+    "codepoint": 67138,
+    "phonetic": "ku",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 16,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TE",
+    "glyph": "𐘃",
+    "codepoint": 67075,
+    "phonetic": "te",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 16,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "MI",
+    "glyph": "𐘻",
+    "codepoint": 67131,
+    "phonetic": "mi",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 16,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "KI",
+    "glyph": "𐘸",
+    "codepoint": 67128,
+    "phonetic": "ki",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 15,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RO",
+    "glyph": "𐘁",
+    "codepoint": 67073,
+    "phonetic": "ro",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 15,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RA2",
+    "glyph": "𐘽",
+    "codepoint": 67133,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 14,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "DI",
+    "glyph": "𐘆",
+    "codepoint": 67078,
+    "phonetic": "di",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 14,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RE",
+    "glyph": "𐘙",
+    "codepoint": 67097,
+    "phonetic": "re",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 13,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RI",
+    "glyph": "𐘭",
+    "codepoint": 67117,
+    "phonetic": "ri",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 13,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*301",
+    "glyph": "𐙕",
+    "codepoint": 67157,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 12,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TU",
+    "glyph": "𐘹",
+    "codepoint": 67129,
+    "phonetic": "tu",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 11,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "NI",
+    "glyph": "𐘝",
+    "codepoint": 67101,
+    "phonetic": "ni",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 11,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "U",
+    "glyph": "𐘉",
+    "codepoint": 67081,
+    "phonetic": "u",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 10,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "RU",
+    "glyph": "𐘘",
+    "codepoint": 67096,
+    "phonetic": "ru",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 10,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "WA",
+    "glyph": "𐘮",
+    "codepoint": 67118,
+    "phonetic": "wa",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 10,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "NU",
+    "glyph": "𐘯",
+    "codepoint": 67119,
+    "phonetic": "nu",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 9,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "ZU",
+    "glyph": "𐙀",
+    "codepoint": 67136,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 8,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "SE",
+    "glyph": "𐘈",
+    "codepoint": 67080,
+    "phonetic": "se",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 8,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "PI",
+    "glyph": "𐘢",
+    "codepoint": 67106,
+    "phonetic": "pi",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 8,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "SU",
+    "glyph": "𐘲",
+    "codepoint": 67122,
+    "phonetic": "su",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 7,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "DU",
+    "glyph": "𐘬",
+    "codepoint": 67116,
+    "phonetic": "du",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 7,
+    "confidence": 0.8571428571428571,
+    "altGlyphs": []
+  },
+  {
+    "label": "PA",
+    "glyph": "𐘂",
+    "codepoint": 67074,
+    "phonetic": "pa",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 7,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "QE",
+    "glyph": "𐘿",
+    "codepoint": 67135,
+    "phonetic": "kwe",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 5,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "PA3",
+    "glyph": "𐘰",
+    "codepoint": 67120,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 5,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "NE",
+    "glyph": "𐘗",
+    "codepoint": 67095,
+    "phonetic": "ne",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 5,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "E",
+    "glyph": "𐘡",
+    "codepoint": 67105,
+    "phonetic": "e",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 5,
+    "confidence": 0.8,
+    "altGlyphs": []
+  },
+  {
+    "label": "JE",
+    "glyph": "𐘧",
+    "codepoint": 67111,
+    "phonetic": "je",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 5,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "ZA",
+    "glyph": "𐘍",
+    "codepoint": 67085,
+    "phonetic": "dza",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "VIN",
+    "glyph": "𐙍",
+    "codepoint": 67149,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "JU",
+    "glyph": "𐘶",
+    "codepoint": 67126,
+    "phonetic": "ju",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "KO",
+    "glyph": "𐘺",
+    "codepoint": 67130,
+    "phonetic": "ko",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*304+PA",
+    "glyph": "𐜝",
+    "codepoint": 67357,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "CYP+D",
+    "glyph": "𐜙",
+    "codepoint": 67353,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*86",
+    "glyph": "𐙅",
+    "codepoint": 67141,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "DE",
+    "glyph": "𐘦",
+    "codepoint": 67110,
+    "phonetic": "de",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 4,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "KE",
+    "glyph": "𐘥",
+    "codepoint": 67109,
+    "phonetic": "ke",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "MU",
+    "glyph": "𐘕",
+    "codepoint": 67093,
+    "phonetic": "mu",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*314",
+    "glyph": "𐙦",
+    "codepoint": 67174,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "QA",
+    "glyph": "𐘌",
+    "codepoint": 67084,
+    "phonetic": "kwa",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*306",
+    "glyph": "𐙚",
+    "codepoint": 67162,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*805",
+    "glyph": "𐝥",
+    "codepoint": 67429,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 3,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "WI",
+    "glyph": "𐘣",
+    "codepoint": 67107,
+    "phonetic": "wi",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 3,
+    "confidence": 0.6666666666666666,
+    "altGlyphs": []
+  },
+  {
+    "label": "*21F",
+    "glyph": "𐘐",
+    "codepoint": 67088,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*118",
+    "glyph": "𐙈",
+    "codepoint": 67144,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*333",
+    "glyph": "𐙹",
+    "codepoint": 67193,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "ME",
+    "glyph": "𐘋",
+    "codepoint": 67083,
+    "phonetic": "me",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "VS",
+    "glyph": "𐝫",
+    "codepoint": 67435,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "VIR+[?]",
+    "glyph": "𐙇",
+    "codepoint": 67143,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TO",
+    "glyph": "𐘄",
+    "codepoint": 67076,
+    "phonetic": "to",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "PO",
+    "glyph": "𐘊",
+    "codepoint": 67082,
+    "phonetic": "po",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 2,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*329",
+    "glyph": "𐙵",
+    "codepoint": 67189,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "SI+SE",
+    "glyph": "𐛉",
+    "codepoint": 67273,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*905",
+    "glyph": "𐝆",
+    "codepoint": 67398,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "O",
+    "glyph": "𐘵",
+    "codepoint": 67125,
+    "phonetic": "o",
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*188",
+    "glyph": "𐙓",
+    "codepoint": 67155,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*904",
+    "glyph": "𐙫",
+    "codepoint": 67179,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*409",
+    "glyph": "𐚩",
+    "codepoint": 67241,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*351",
+    "glyph": "𐚋",
+    "codepoint": 67211,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*352",
+    "glyph": "𐚌",
+    "codepoint": 67212,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*408",
+    "glyph": "𐚨",
+    "codepoint": 67240,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*810",
+    "glyph": "𐝭",
+    "codepoint": 67437,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "VIR+KA",
+    "glyph": "𐛧",
+    "codepoint": 67303,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "AU",
+    "glyph": "𐙄",
+    "codepoint": 67140,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*903",
+    "glyph": "𐘚",
+    "codepoint": 67098,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "GRA",
+    "glyph": "𐙉",
+    "codepoint": 67145,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "TA2",
+    "glyph": "𐘷",
+    "codepoint": 67127,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*325",
+    "glyph": "𐙱",
+    "codepoint": 67185,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*806",
+    "glyph": "𐝦",
+    "codepoint": 67430,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "OLIV",
+    "glyph": "𐙋",
+    "codepoint": 67147,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "OLE",
+    "glyph": "𐙖",
+    "codepoint": 67158,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "NWA",
+    "glyph": "𐘩",
+    "codepoint": 67113,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": false,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "*164",
+    "glyph": "𐙐",
+    "codepoint": 67152,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "total": 1,
+    "confidence": 1,
+    "altGlyphs": []
+  },
+  {
+    "label": "AB020",
+    "glyph": "𐘎",
+    "codepoint": 67086,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB021",
+    "glyph": "𐘏",
+    "codepoint": 67087,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB021M",
+    "glyph": "𐘑",
+    "codepoint": 67089,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB022",
+    "glyph": "𐘒",
+    "codepoint": 67090,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB022F",
+    "glyph": "𐘓",
+    "codepoint": 67091,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB022M",
+    "glyph": "𐘔",
+    "codepoint": 67092,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB023M",
+    "glyph": "𐘖",
+    "codepoint": 67094,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "A028B",
+    "glyph": "𐘛",
+    "codepoint": 67099,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "AB029",
+    "glyph": "𐘜",
+    "codepoint": 67100,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB034",
+    "glyph": "𐘟",
+    "codepoint": 67103,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB047",
+    "glyph": "𐘨",
+    "codepoint": 67112,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB049",
+    "glyph": "𐘪",
+    "codepoint": 67114,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB050",
+    "glyph": "𐘫",
+    "codepoint": 67115,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB074",
+    "glyph": "𐘼",
+    "codepoint": 67132,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB082",
+    "glyph": "𐙃",
+    "codepoint": 67139,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB087",
+    "glyph": "𐙆",
+    "codepoint": 67142,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "A120B",
+    "glyph": "𐙊",
+    "codepoint": 67146,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "AB123",
+    "glyph": "𐙌",
+    "codepoint": 67148,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB131B",
+    "glyph": "𐙎",
+    "codepoint": 67150,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "A131C",
+    "glyph": "𐙏",
+    "codepoint": 67151,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "AB171",
+    "glyph": "𐙑",
+    "codepoint": 67153,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB180",
+    "glyph": "𐙒",
+    "codepoint": 67154,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "AB191",
+    "glyph": "𐙔",
+    "codepoint": 67156,
+    "phonetic": null,
+    "sharedWithLinearB": true,
+    "linearAOnly": false,
+    "source": "ucd"
+  },
+  {
+    "label": "A303",
+    "glyph": "𐙗",
+    "codepoint": 67159,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A304",
+    "glyph": "𐙘",
+    "codepoint": 67160,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A305",
+    "glyph": "𐙙",
+    "codepoint": 67161,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A307",
+    "glyph": "𐙛",
+    "codepoint": 67163,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A308",
+    "glyph": "𐙜",
+    "codepoint": 67164,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A309A",
+    "glyph": "𐙝",
+    "codepoint": 67165,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A309B",
+    "glyph": "𐙞",
+    "codepoint": 67166,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A309C",
+    "glyph": "𐙟",
+    "codepoint": 67167,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A310",
+    "glyph": "𐙠",
+    "codepoint": 67168,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A311",
+    "glyph": "𐙡",
+    "codepoint": 67169,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A312",
+    "glyph": "𐙢",
+    "codepoint": 67170,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A313A",
+    "glyph": "𐙣",
+    "codepoint": 67171,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A313B",
+    "glyph": "𐙤",
+    "codepoint": 67172,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A313C",
+    "glyph": "𐙥",
+    "codepoint": 67173,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A315",
+    "glyph": "𐙧",
+    "codepoint": 67175,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A316",
+    "glyph": "𐙨",
+    "codepoint": 67176,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A317",
+    "glyph": "𐙩",
+    "codepoint": 67177,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A318",
+    "glyph": "𐙪",
+    "codepoint": 67178,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A320",
+    "glyph": "𐙬",
+    "codepoint": 67180,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A321",
+    "glyph": "𐙭",
+    "codepoint": 67181,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A322",
+    "glyph": "𐙮",
+    "codepoint": 67182,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A323",
+    "glyph": "𐙯",
+    "codepoint": 67183,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A324",
+    "glyph": "𐙰",
+    "codepoint": 67184,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A326",
+    "glyph": "𐙲",
+    "codepoint": 67186,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A327",
+    "glyph": "𐙳",
+    "codepoint": 67187,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A328",
+    "glyph": "𐙴",
+    "codepoint": 67188,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A330",
+    "glyph": "𐙶",
+    "codepoint": 67190,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A331",
+    "glyph": "𐙷",
+    "codepoint": 67191,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A332",
+    "glyph": "𐙸",
+    "codepoint": 67192,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A334",
+    "glyph": "𐙺",
+    "codepoint": 67194,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A335",
+    "glyph": "𐙻",
+    "codepoint": 67195,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A336",
+    "glyph": "𐙼",
+    "codepoint": 67196,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A337",
+    "glyph": "𐙽",
+    "codepoint": 67197,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A338",
+    "glyph": "𐙾",
+    "codepoint": 67198,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A339",
+    "glyph": "𐙿",
+    "codepoint": 67199,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A340",
+    "glyph": "𐚀",
+    "codepoint": 67200,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A341",
+    "glyph": "𐚁",
+    "codepoint": 67201,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A342",
+    "glyph": "𐚂",
+    "codepoint": 67202,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A343",
+    "glyph": "𐚃",
+    "codepoint": 67203,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A344",
+    "glyph": "𐚄",
+    "codepoint": 67204,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A345",
+    "glyph": "𐚅",
+    "codepoint": 67205,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A346",
+    "glyph": "𐚆",
+    "codepoint": 67206,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A347",
+    "glyph": "𐚇",
+    "codepoint": 67207,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A348",
+    "glyph": "𐚈",
+    "codepoint": 67208,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A349",
+    "glyph": "𐚉",
+    "codepoint": 67209,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A350",
+    "glyph": "𐚊",
+    "codepoint": 67210,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A353",
+    "glyph": "𐚍",
+    "codepoint": 67213,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A354",
+    "glyph": "𐚎",
+    "codepoint": 67214,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A355",
+    "glyph": "𐚏",
+    "codepoint": 67215,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A356",
+    "glyph": "𐚐",
+    "codepoint": 67216,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A357",
+    "glyph": "𐚑",
+    "codepoint": 67217,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A358",
+    "glyph": "𐚒",
+    "codepoint": 67218,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A359",
+    "glyph": "𐚓",
+    "codepoint": 67219,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A360",
+    "glyph": "𐚔",
+    "codepoint": 67220,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A361",
+    "glyph": "𐚕",
+    "codepoint": 67221,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A362",
+    "glyph": "𐚖",
+    "codepoint": 67222,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A363",
+    "glyph": "𐚗",
+    "codepoint": 67223,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A364",
+    "glyph": "𐚘",
+    "codepoint": 67224,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A365",
+    "glyph": "𐚙",
+    "codepoint": 67225,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A366",
+    "glyph": "𐚚",
+    "codepoint": 67226,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A367",
+    "glyph": "𐚛",
+    "codepoint": 67227,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A368",
+    "glyph": "𐚜",
+    "codepoint": 67228,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A369",
+    "glyph": "𐚝",
+    "codepoint": 67229,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A370",
+    "glyph": "𐚞",
+    "codepoint": 67230,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A371",
+    "glyph": "𐚟",
+    "codepoint": 67231,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A400-VAS",
+    "glyph": "𐚠",
+    "codepoint": 67232,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A401-VAS",
+    "glyph": "𐚡",
+    "codepoint": 67233,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A402-VAS",
+    "glyph": "𐚢",
+    "codepoint": 67234,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A403-VAS",
+    "glyph": "𐚣",
+    "codepoint": 67235,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A404-VAS",
+    "glyph": "𐚤",
+    "codepoint": 67236,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A405-VAS",
+    "glyph": "𐚥",
+    "codepoint": 67237,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A406-VAS",
+    "glyph": "𐚦",
+    "codepoint": 67238,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A407-VAS",
+    "glyph": "𐚧",
+    "codepoint": 67239,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A410-VAS",
+    "glyph": "𐚪",
+    "codepoint": 67242,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A411-VAS",
+    "glyph": "𐚫",
+    "codepoint": 67243,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A412-VAS",
+    "glyph": "𐚬",
+    "codepoint": 67244,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A413-VAS",
+    "glyph": "𐚭",
+    "codepoint": 67245,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A414-VAS",
+    "glyph": "𐚮",
+    "codepoint": 67246,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A415-VAS",
+    "glyph": "𐚯",
+    "codepoint": 67247,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A416-VAS",
+    "glyph": "𐚰",
+    "codepoint": 67248,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A417-VAS",
+    "glyph": "𐚱",
+    "codepoint": 67249,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A418-VAS",
+    "glyph": "𐚲",
+    "codepoint": 67250,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A501",
+    "glyph": "𐚳",
+    "codepoint": 67251,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A502",
+    "glyph": "𐚴",
+    "codepoint": 67252,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A503",
+    "glyph": "𐚵",
+    "codepoint": 67253,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A504",
+    "glyph": "𐚶",
+    "codepoint": 67254,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A505",
+    "glyph": "𐚷",
+    "codepoint": 67255,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A506",
+    "glyph": "𐚸",
+    "codepoint": 67256,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A508",
+    "glyph": "𐚹",
+    "codepoint": 67257,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A509",
+    "glyph": "𐚺",
+    "codepoint": 67258,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A510",
+    "glyph": "𐚻",
+    "codepoint": 67259,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A511",
+    "glyph": "𐚼",
+    "codepoint": 67260,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A512",
+    "glyph": "𐚽",
+    "codepoint": 67261,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A513",
+    "glyph": "𐚾",
+    "codepoint": 67262,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A515",
+    "glyph": "𐚿",
+    "codepoint": 67263,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A516",
+    "glyph": "𐛀",
+    "codepoint": 67264,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A520",
+    "glyph": "𐛁",
+    "codepoint": 67265,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A521",
+    "glyph": "𐛂",
+    "codepoint": 67266,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A523",
+    "glyph": "𐛃",
+    "codepoint": 67267,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A524",
+    "glyph": "𐛄",
+    "codepoint": 67268,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A525",
+    "glyph": "𐛅",
+    "codepoint": 67269,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A526",
+    "glyph": "𐛆",
+    "codepoint": 67270,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A527",
+    "glyph": "𐛇",
+    "codepoint": 67271,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A528",
+    "glyph": "𐛈",
+    "codepoint": 67272,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A530",
+    "glyph": "𐛊",
+    "codepoint": 67274,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A531",
+    "glyph": "𐛋",
+    "codepoint": 67275,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A532",
+    "glyph": "𐛌",
+    "codepoint": 67276,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A534",
+    "glyph": "𐛍",
+    "codepoint": 67277,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A535",
+    "glyph": "𐛎",
+    "codepoint": 67278,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A536",
+    "glyph": "𐛏",
+    "codepoint": 67279,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A537",
+    "glyph": "𐛐",
+    "codepoint": 67280,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A538",
+    "glyph": "𐛑",
+    "codepoint": 67281,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A539",
+    "glyph": "𐛒",
+    "codepoint": 67282,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A540",
+    "glyph": "𐛓",
+    "codepoint": 67283,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A541",
+    "glyph": "𐛔",
+    "codepoint": 67284,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A542",
+    "glyph": "𐛕",
+    "codepoint": 67285,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A545",
+    "glyph": "𐛖",
+    "codepoint": 67286,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A547",
+    "glyph": "𐛗",
+    "codepoint": 67287,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A548",
+    "glyph": "𐛘",
+    "codepoint": 67288,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A549",
+    "glyph": "𐛙",
+    "codepoint": 67289,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A550",
+    "glyph": "𐛚",
+    "codepoint": 67290,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A551",
+    "glyph": "𐛛",
+    "codepoint": 67291,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A552",
+    "glyph": "𐛜",
+    "codepoint": 67292,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A553",
+    "glyph": "𐛝",
+    "codepoint": 67293,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A554",
+    "glyph": "𐛞",
+    "codepoint": 67294,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A555",
+    "glyph": "𐛟",
+    "codepoint": 67295,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A556",
+    "glyph": "𐛠",
+    "codepoint": 67296,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A557",
+    "glyph": "𐛡",
+    "codepoint": 67297,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A559",
+    "glyph": "𐛢",
+    "codepoint": 67298,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A563",
+    "glyph": "𐛣",
+    "codepoint": 67299,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A564",
+    "glyph": "𐛤",
+    "codepoint": 67300,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A565",
+    "glyph": "𐛥",
+    "codepoint": 67301,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A566",
+    "glyph": "𐛦",
+    "codepoint": 67302,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A569",
+    "glyph": "𐛨",
+    "codepoint": 67304,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A570",
+    "glyph": "𐛩",
+    "codepoint": 67305,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A571",
+    "glyph": "𐛪",
+    "codepoint": 67306,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A572",
+    "glyph": "𐛫",
+    "codepoint": 67307,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A573",
+    "glyph": "𐛬",
+    "codepoint": 67308,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A574",
+    "glyph": "𐛭",
+    "codepoint": 67309,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A575",
+    "glyph": "𐛮",
+    "codepoint": 67310,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A576",
+    "glyph": "𐛯",
+    "codepoint": 67311,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A577",
+    "glyph": "𐛰",
+    "codepoint": 67312,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A578",
+    "glyph": "𐛱",
+    "codepoint": 67313,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A579",
+    "glyph": "𐛲",
+    "codepoint": 67314,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A580",
+    "glyph": "𐛳",
+    "codepoint": 67315,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A581",
+    "glyph": "𐛴",
+    "codepoint": 67316,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A582",
+    "glyph": "𐛵",
+    "codepoint": 67317,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A583",
+    "glyph": "𐛶",
+    "codepoint": 67318,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A584",
+    "glyph": "𐛷",
+    "codepoint": 67319,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A585",
+    "glyph": "𐛸",
+    "codepoint": 67320,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A586",
+    "glyph": "𐛹",
+    "codepoint": 67321,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A587",
+    "glyph": "𐛺",
+    "codepoint": 67322,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A588",
+    "glyph": "𐛻",
+    "codepoint": 67323,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A589",
+    "glyph": "𐛼",
+    "codepoint": 67324,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A591",
+    "glyph": "𐛽",
+    "codepoint": 67325,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A592",
+    "glyph": "𐛾",
+    "codepoint": 67326,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A594",
+    "glyph": "𐛿",
+    "codepoint": 67327,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A595",
+    "glyph": "𐜀",
+    "codepoint": 67328,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A596",
+    "glyph": "𐜁",
+    "codepoint": 67329,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A598",
+    "glyph": "𐜂",
+    "codepoint": 67330,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A600",
+    "glyph": "𐜃",
+    "codepoint": 67331,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A601",
+    "glyph": "𐜄",
+    "codepoint": 67332,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A602",
+    "glyph": "𐜅",
+    "codepoint": 67333,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A603",
+    "glyph": "𐜆",
+    "codepoint": 67334,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A604",
+    "glyph": "𐜇",
+    "codepoint": 67335,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A606",
+    "glyph": "𐜈",
+    "codepoint": 67336,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A608",
+    "glyph": "𐜉",
+    "codepoint": 67337,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A609",
+    "glyph": "𐜊",
+    "codepoint": 67338,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A610",
+    "glyph": "𐜋",
+    "codepoint": 67339,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A611",
+    "glyph": "𐜌",
+    "codepoint": 67340,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A612",
+    "glyph": "𐜍",
+    "codepoint": 67341,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A613",
+    "glyph": "𐜎",
+    "codepoint": 67342,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A614",
+    "glyph": "𐜏",
+    "codepoint": 67343,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A615",
+    "glyph": "𐜐",
+    "codepoint": 67344,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A616",
+    "glyph": "𐜑",
+    "codepoint": 67345,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A617",
+    "glyph": "𐜒",
+    "codepoint": 67346,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A618",
+    "glyph": "𐜓",
+    "codepoint": 67347,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A619",
+    "glyph": "𐜔",
+    "codepoint": 67348,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A620",
+    "glyph": "𐜕",
+    "codepoint": 67349,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A621",
+    "glyph": "𐜖",
+    "codepoint": 67350,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A622",
+    "glyph": "𐜗",
+    "codepoint": 67351,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A623",
+    "glyph": "𐜘",
+    "codepoint": 67352,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A626",
+    "glyph": "𐜚",
+    "codepoint": 67354,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A627",
+    "glyph": "𐜛",
+    "codepoint": 67355,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A628",
+    "glyph": "𐜜",
+    "codepoint": 67356,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A634",
+    "glyph": "𐜞",
+    "codepoint": 67358,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A637",
+    "glyph": "𐜟",
+    "codepoint": 67359,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A638",
+    "glyph": "𐜠",
+    "codepoint": 67360,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A640",
+    "glyph": "𐜡",
+    "codepoint": 67361,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A642",
+    "glyph": "𐜢",
+    "codepoint": 67362,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A643",
+    "glyph": "𐜣",
+    "codepoint": 67363,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A644",
+    "glyph": "𐜤",
+    "codepoint": 67364,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A645",
+    "glyph": "𐜥",
+    "codepoint": 67365,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A646",
+    "glyph": "𐜦",
+    "codepoint": 67366,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A648",
+    "glyph": "𐜧",
+    "codepoint": 67367,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A649",
+    "glyph": "𐜨",
+    "codepoint": 67368,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A651",
+    "glyph": "𐜩",
+    "codepoint": 67369,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A652",
+    "glyph": "𐜪",
+    "codepoint": 67370,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A653",
+    "glyph": "𐜫",
+    "codepoint": 67371,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A654",
+    "glyph": "𐜬",
+    "codepoint": 67372,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A655",
+    "glyph": "𐜭",
+    "codepoint": 67373,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A656",
+    "glyph": "𐜮",
+    "codepoint": 67374,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A657",
+    "glyph": "𐜯",
+    "codepoint": 67375,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A658",
+    "glyph": "𐜰",
+    "codepoint": 67376,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A659",
+    "glyph": "𐜱",
+    "codepoint": 67377,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A660",
+    "glyph": "𐜲",
+    "codepoint": 67378,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A661",
+    "glyph": "𐜳",
+    "codepoint": 67379,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A662",
+    "glyph": "𐜴",
+    "codepoint": 67380,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A663",
+    "glyph": "𐜵",
+    "codepoint": 67381,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A664",
+    "glyph": "𐜶",
+    "codepoint": 67382,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A701 A",
+    "glyph": "𐝀",
+    "codepoint": 67392,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A702 B",
+    "glyph": "𐝁",
+    "codepoint": 67393,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A703 D",
+    "glyph": "𐝂",
+    "codepoint": 67394,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A704 E",
+    "glyph": "𐝃",
+    "codepoint": 67395,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A705 F",
+    "glyph": "𐝄",
+    "codepoint": 67396,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A706 H",
+    "glyph": "𐝅",
+    "codepoint": 67397,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A708 K",
+    "glyph": "𐝇",
+    "codepoint": 67399,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A709 L",
+    "glyph": "𐝈",
+    "codepoint": 67400,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A709-2 L2",
+    "glyph": "𐝉",
+    "codepoint": 67401,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A709-3 L3",
+    "glyph": "𐝊",
+    "codepoint": 67402,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A709-4 L4",
+    "glyph": "𐝋",
+    "codepoint": 67403,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A709-6 L6",
+    "glyph": "𐝌",
+    "codepoint": 67404,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A710 W",
+    "glyph": "𐝍",
+    "codepoint": 67405,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A711 X",
+    "glyph": "𐝎",
+    "codepoint": 67406,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A712 Y",
+    "glyph": "𐝏",
+    "codepoint": 67407,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A713 OMEGA",
+    "glyph": "𐝐",
+    "codepoint": 67408,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A714 ABB",
+    "glyph": "𐝑",
+    "codepoint": 67409,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A715 BB",
+    "glyph": "𐝒",
+    "codepoint": 67410,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A717 DD",
+    "glyph": "𐝓",
+    "codepoint": 67411,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A726 EYYY",
+    "glyph": "𐝔",
+    "codepoint": 67412,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A732 JE",
+    "glyph": "𐝕",
+    "codepoint": 67413,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A800",
+    "glyph": "𐝠",
+    "codepoint": 67424,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A801",
+    "glyph": "𐝡",
+    "codepoint": 67425,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A802",
+    "glyph": "𐝢",
+    "codepoint": 67426,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A803",
+    "glyph": "𐝣",
+    "codepoint": 67427,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A804",
+    "glyph": "𐝤",
+    "codepoint": 67428,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  },
+  {
+    "label": "A807",
+    "glyph": "𐝧",
+    "codepoint": 67431,
+    "phonetic": null,
+    "sharedWithLinearB": false,
+    "linearAOnly": true,
+    "source": "ucd"
+  }
+]

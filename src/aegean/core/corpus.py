@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .model import Document, DocumentMeta, Sign, SignInventory, Token, TokenKind
+from .model import Document, DocumentMeta, ReadingStatus, Sign, SignInventory, Token, TokenKind
 from .provenance import SCHEMA_VERSION, Provenance
 
 if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependency on L3 analysis
@@ -314,16 +314,20 @@ def _inventory_from_dict(d: dict[str, Any] | None) -> SignInventory | None:
 
 
 def _token_to_dict(t: Token) -> dict[str, Any]:
-    return {
+    d: dict[str, Any] = {
         "text": t.text, "kind": t.kind.value, "signs": list(t.signs),
         "glyphs": t.glyphs, "line_no": t.line_no, "position": t.position,
     }
+    if t.status is not ReadingStatus.CERTAIN:  # omit the default to keep JSON compact + back-compatible
+        d["status"] = t.status.value
+    return d
 
 
 def _token_from_dict(d: dict[str, Any]) -> Token:
     return Token(
         text=d["text"], kind=TokenKind(d["kind"]), signs=tuple(d.get("signs") or ()),
         glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
+        status=ReadingStatus(d["status"]) if d.get("status") else ReadingStatus.CERTAIN,
     )
 
 

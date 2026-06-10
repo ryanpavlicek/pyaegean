@@ -1,12 +1,20 @@
 # Linear A
 
 Linear A is fully wired as a [script plugin](Architecture). The bundled corpus is
-**1,721 inscriptions** with an **84-sign inventory** and a sign→sound map (the
-syllabic values Linear A shares with the deciphered Linear B).
+**1,721 inscriptions** with the full Unicode Linear A sign repertoire, of which
+**84 signs** carry the conventional sound values Linear A shares with the
+deciphered Linear B (the rest are undeciphered).
 
 > Linear A is **undeciphered**. The phonetic transcription uses Linear B sound
 > values as a working convention, and every analytical method here is
 > **exploratory** — evidence to weigh, not translation. See [Analysis](Analysis).
+>
+> The bundled corpus is a **normalized** transcription: it does not carry the
+> full Leiden apparatus (lacunae, restorations, uncertain readings). For
+> edition-grade work consult **GORILA** and **SigLA**. The data model can still
+> record editorial status via `aegean.ReadingStatus` (CERTAIN / UNCLEAR /
+> RESTORED / LOST), and the EpiDoc reader/writer preserve it
+> (`<unclear>`/`<supplied>`/`<gap>`) for bring-your-own corpora.
 
 ## Loading & filtering
 
@@ -60,7 +68,8 @@ doc.line_tokens                    # tokens regrouped by physical line
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
-len(inv)                           # 84
+len(inv)                           # ~344 — the full Unicode Linear A repertoire
+[s for s in inv if s.phonetic]     # the 84 signs with assigned sound values
 sign = inv.by_label("KU")
 sign.phonetic                      # 'ku'
 inv.to_dataframe()                 # pandas view of the inventory
@@ -79,7 +88,9 @@ word_to_phonetic("KU-RO", {"KU": "gu"})   # 'guro'  (hypothesis override)
 
 `KU-RO` ("total") and `PO-TO-KU-RO` ("grand total") let you check a tablet's
 arithmetic against its line items. **Exploratory**: section boundaries are
-heuristic and the metrology is contested.
+heuristic and the metrology is contested. Only about **40** of the 1,721 tablets
+(precisely 39) carry a stated `KU-RO` total and are checkable at all; most are
+too fragmentary — the nature of the corpus, not a tool limit.
 
 ```python
 from aegean.analysis import balance_check

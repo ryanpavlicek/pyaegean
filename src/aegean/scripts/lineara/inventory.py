@@ -1,8 +1,11 @@
-"""Build the Linear A SignInventory from the bundled 84-sign table.
+"""Build the Linear A SignInventory from the bundled sign table.
 
-Note: the sign↔Unicode mapping is *empirical* (derived by aligning the
-upstream transliterations with parsed glyph strings); each sign carries a
-``confidence``. Treat the glyph mapping as evidence, not canon.
+Coverage is the full Unicode Linear A block — the complete attested repertoire. The 84 signs
+with an assigned **sound value** (``phonetic``) come from aligning the upstream transliterations
+with parsed glyph strings: an *empirical* mapping, each carrying a ``confidence`` — treat it as
+evidence, not canon. The rest are carried from the Unicode Character Database (``source="ucd"``)
+with no sound value, since Linear A is undeciphered and most of its repertoire has no agreed
+reading. Filter by ``phonetic`` (or ``attrs["source"]``) to work with just the read signs.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from functools import lru_cache
 from ...core.model import Sign, SignInventory
 from ...data import load_bundled_json
 
-_ATTR_KEYS = ("sharedWithLinearB", "linearAOnly", "total", "confidence", "altGlyphs")
+_ATTR_KEYS = ("sharedWithLinearB", "linearAOnly", "total", "confidence", "altGlyphs", "source")
 
 
 @lru_cache(maxsize=1)

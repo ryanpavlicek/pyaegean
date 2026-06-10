@@ -27,6 +27,22 @@ class TokenKind(str, Enum):
     UNKNOWN = "unknown"
 
 
+class ReadingStatus(str, Enum):
+    """Editorial certainty of a token's reading (Leiden / EpiDoc conventions).
+
+    ``CERTAIN`` is the default. The others mark the apparatus an epigraphic edition must
+    preserve — damaged, restored, or lost text. The bundled corpora are normalized
+    transcriptions (almost entirely ``CERTAIN``; see the Linear A provenance note); a
+    bring-your-own EpiDoc corpus populates these from ``<unclear>`` / ``<supplied>`` /
+    ``<gap>`` markup, and the EpiDoc writer emits them back.
+    """
+
+    CERTAIN = "certain"      # securely read
+    UNCLEAR = "unclear"      # damaged but read (EpiDoc <unclear>; Leiden underdot)
+    RESTORED = "restored"    # editorially supplied (EpiDoc <supplied>; Leiden [ ])
+    LOST = "lost"            # not preserved / lacuna (EpiDoc <gap>; Leiden [---])
+
+
 @dataclass(frozen=True, slots=True)
 class Sign:
     """One graphic unit of a script (syllabogram, letter, or logogram)."""
@@ -51,6 +67,7 @@ class Token:
     glyphs: str | None = None       # Unicode form, when known
     line_no: int | None = None
     position: int | None = None     # index within the document's token stream
+    status: ReadingStatus = ReadingStatus.CERTAIN  # editorial certainty (Leiden/EpiDoc)
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,7 +7,13 @@ def test_load_count_and_inventory():
     c = aegean.load("lineara")
     assert len(c) == 1721
     assert c.script_id == "lineara"
-    assert c.sign_inventory is not None and len(c.sign_inventory) == 84
+    inv = c.sign_inventory
+    assert inv is not None
+    # The inventory covers the full Unicode Linear A repertoire (~340 signs); 84 of them are
+    # transliteration-aligned and carry an assigned sound value, the rest are UCD-derived.
+    assert len(inv) > 300
+    assert sum(1 for s in inv if s.attrs.get("source") != "ucd") == 84
+    assert all(s.phonetic is None for s in inv if s.attrs.get("source") == "ucd")
 
 
 def test_filter_and_word_frequencies():

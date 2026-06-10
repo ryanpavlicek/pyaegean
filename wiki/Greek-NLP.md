@@ -22,6 +22,12 @@ Every example below is real, runnable output. Import the module once:
 from aegean import greek
 ```
 
+> **Where this fits.** This stack optimizes for zero-dependency portability, an
+> instant import, transparent leakage-free evaluation, metrical scansion, and a
+> scriptable data layer. If your goal is the highest raw tagging/parsing
+> *accuracy*, a full neural pipeline will do better — that's a deliberate
+> trade-off, not an oversight.
+
 ## Normalization & Beta Code
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and

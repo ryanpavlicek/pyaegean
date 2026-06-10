@@ -13,9 +13,10 @@ returns it instead of the bundled sample; or call `load_epidoc_corpus` directly.
 from __future__ import annotations
 
 import pathlib
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
-from ...core.model import Document, DocumentMeta, Token
+from ...core.model import Document, DocumentMeta, ReadingStatus, Token
 from .loader import classify
 
 if TYPE_CHECKING:
@@ -35,6 +36,18 @@ def _first(root: Any, *tags: str) -> str:
         if el is not None and _text(el):
             return _text(el)
     return ""
+
+
+def _status_of(el: Any) -> ReadingStatus:
+    """Editorial status of a token from any EpiDoc apparatus element it contains."""
+    tags = {c.tag.replace(_TEI, "") for c in el.iter() if isinstance(c.tag, str)}
+    if "supplied" in tags:
+        return ReadingStatus.RESTORED
+    if "unclear" in tags:
+        return ReadingStatus.UNCLEAR
+    if "gap" in tags:
+        return ReadingStatus.LOST
+    return ReadingStatus.CERTAIN
 
 
 def _document(root: Any) -> Document | None:
@@ -58,7 +71,11 @@ def _document(root: Any) -> Document | None:
             if text:
                 # EpiDoc transliterations are lowercase; pyaegean's token convention (and the
                 # accounting markers / lexicon) is uppercase, so normalize on import.
-                tokens.append(classify(text.upper(), len(lines), pos))
+                tok = classify(text.upper(), len(lines), pos)
+                status = _status_of(el)
+                if status is not ReadingStatus.CERTAIN:
+                    tok = replace(tok, status=status)
+                tokens.append(tok)
                 cur.append(pos)
                 pos += 1
     if cur:

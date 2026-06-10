@@ -23,13 +23,24 @@ def test_site_coordinates_gazetteer() -> None:
         assert site in coords
 
 
+def test_pleiades_alignment() -> None:
+    coords = site_coordinates()
+    kn = coords["Knossos"]
+    assert kn.pleiades == 781961476
+    assert kn.pleiades_uri == "https://pleiades.stoa.org/places/781961476"
+    assert coords["Mycenae"].pleiades and coords["Troy"].pleiades  # major sites aligned
+    iou = coords["Iouktas"]  # a peak sanctuary not in Pleiades → left null, honestly
+    assert iou.pleiades is None and iou.pleiades_uri is None
+    assert sum(1 for s in coords.values() if s.pleiades) >= 20
+
+
 def test_to_geodataframe_inscription_level() -> None:
     pytest.importorskip("geopandas")
     c = aegean.load("lineara")
     gdf = aegean.geo.to_geodataframe(c)
     assert str(gdf.crs).upper().endswith("4326")
     assert 0 < len(gdf) <= len(c)  # one row per inscription with a mapped site
-    assert {"id", "site", "label", "region", "geometry"}.issubset(gdf.columns)
+    assert {"id", "site", "label", "region", "pleiades", "geometry"}.issubset(gdf.columns)
     # all points fall in the Aegean→Near-East bounding box
     assert gdf.geometry.x.between(20, 65).all()
     assert gdf.geometry.y.between(30, 41).all()

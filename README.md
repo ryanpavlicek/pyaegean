@@ -9,9 +9,12 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.7.0 (alpha).** Stable enough to use; the API may still shift before 1.0. Analytical
-> and generative output on the *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory** —
-> leads for a human expert, never ground truth.
+> **Status: v0.8.0 (beta).** A young, solo-authored project: usable and tested, but the API may
+> still shift, and a **1.0** waits on external use and a short methods write-up. Analytical and
+> generative output on the *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory** —
+> leads for a human expert, never ground truth. The bundled Linear A corpus is a *normalized*
+> transcription (no full epigraphic apparatus); for edition-grade readings consult GORILA / SigLA.
+> See [Project maturity & scope](#project-maturity--scope) below.
 
 ---
 
@@ -38,11 +41,11 @@ prior programming.
 
 | | |
 |---|---|
-| **All four Aegean scripts, one API** | `aegean.load("lineara")` gives the bundled **1,721-inscription** Linear A corpus with an 84-sign inventory; Linear B, the Cypriot syllabary, and Cypro-Minoan come from Unicode-built inventories. The two *deciphered* syllabaries transliterate and bridge into Greek — `po-me → ποιμήν` (Linear B), `pa-si-le-u-se → βασιλεύς` (Cypriot). |
+| **All four Aegean scripts, one API** | `aegean.load("lineara")` gives the bundled **1,721-inscription** Linear A corpus over the full Unicode Linear A sign repertoire (84 signs carry conventional sound values, the rest are undeciphered); Linear B, the Cypriot syllabary, and Cypro-Minoan add Unicode-built inventories with small *illustrative* text samples (bring your own corpus for Linear B — see below). The two *deciphered* syllabaries transliterate and bridge into Greek — `po-me → ποιμήν` (Linear B), `pa-si-le-u-se → βασιλεύς` (Cypriot). |
 | **A deep Greek NLP pipeline** | Beta Code ↔ Unicode, tokenize, syllabify, accent & prosody, **metrical scansion** (it scans the *Odyssey*'s opening — and honestly *declines* a line that only fits via synizesis), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), **LSJ glossing**, a dependency parser, a generalizing POS tagger (**~84%** on unseen forms), and a **neural lemmatizer** that reaches **76.3% on unseen forms** (a GreTa seq2seq served as torch-free ONNX). |
-| **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total — flagging which balance and which don't. |
+| **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total — flagging which balance and which don't. (≈40 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary — that's the nature of the corpus, not a limit of the tool.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
-| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **EpiDoc / CSV / Parquet** export via `aegean.io`. Every corpus carries provenance and a one-line citation. |
+| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **schema-valid EpiDoc / CSV / Parquet** export via `aegean.io` (the EpiDoc validates against the official EpiDoc RelaxNG and round-trips editorial status). Every corpus carries provenance and a one-line citation. |
 | **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame** — a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer — so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
 | **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, and Gemini. Every generative reading is built on a **local, deterministic grounding** step from the tools above, and is labeled **exploratory** with its provenance — a hypothesis, never an assertion. |
 | **Honest by construction** | Deciphered Greek gets real scholarship (attested lemmas, gold POS, measured accuracy). The *undeciphered* material — Linear A, Cypro-Minoan — is labeled **EXPLORATORY** everywhere: the tools surface *leads*, never answers. |
@@ -102,12 +105,36 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.7**: the script-agnostic core and all four Aegean scripts; the full Greek NLP
+Shipped through **v0.8**: the script-agnostic core and all four Aegean scripts; the full Greek NLP
 track (treebank, LSJ, dependency parser, generalizing tagger + lemmatizer, the neural lemmatizer, a
 benchmark harness, and a neutral out-of-AGDT evaluation); the multi-provider AI + translation layer;
-and a complete data layer — lossless JSON round-trip, a compound `query()`, and EpiDoc / CSV /
-Parquet export. **Next:** a stable **v1.0** (API + docs freeze). The
+and a complete data layer — lossless JSON round-trip, a compound `query()`, and schema-valid EpiDoc /
+CSV / Parquet export — plus the full Linear A sign repertoire, an editorial-status round-trip, and
+Pleiades-aligned find-sites. **Next:** hardening toward a **1.0** once there's external use and a
+short methods write-up (a JOSS submission is planned). The
 [wiki](https://github.com/ryanpavlicek/pyaegean/wiki) has the full roadmap.
+
+## Project maturity & scope
+
+pyaegean is a **young, single-author** project (first public release June 2026), shipped as
+**0.8.0 / beta** — usable and tested, but the API may still shift, and a **1.0** will wait until
+there's external use and a short methods write-up (a JOSS submission is planned). What that means
+concretely:
+
+- **Linear A is exploration-grade, not edition-grade.** The bundled 1,721-inscription corpus is a
+  *normalized* transcription: it does **not** carry the full Leiden apparatus (lacunae, restorations,
+  uncertain readings) — the upstream digitization dropped it. The sign repertoire *is* complete (the
+  full Unicode Linear A block; 84 signs carry conventional sound values), but for publication-grade
+  readings consult **GORILA** and **SigLA**. The data model can record editorial status
+  (`ReadingStatus`) and the EpiDoc reader/writer round-trip it, for bring-your-own corpora.
+- **The non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
+  syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For a
+  real Linear B corpus, point `PYAEGEAN_LINEARB_CORPUS` at your own DAMOS EpiDoc export — pyaegean
+  parses it locally and never re-hosts it.
+- **The Greek NLP stack favours portability and honesty over peak accuracy.** It's zero-dependency,
+  imports instantly, and every accuracy figure is measured leakage-free — but for maximum
+  tagging/parsing accuracy a full neural pipeline will do better. pyaegean's edge is the transparent
+  evaluation, the metrical scansion, and the scriptable, dependency-light data layer.
 
 ## About the author
 
