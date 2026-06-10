@@ -40,14 +40,21 @@ The expected accelerator is a **Colab G4** (NVIDIA RTX PRO 6000 Blackwell Server
 TF32 matmuls. At 96 GB, base-size encoders at the default batch are nowhere near memory
 limits — expect a few minutes per candidate, not tens.
 
+The pip install provides the `aegean` package; the `training/` scripts are deliberately
+**not** in the wheel, so clone the repo for them and run them from the clone:
+
 ```bash
 pip install "git+https://github.com/ryanpavlicek/pyaegean" torch transformers numpy
+git clone https://github.com/ryanpavlicek/pyaegean.git pyaegean_repo
 
-python training/build_upos_dataset.py          # fetches AGDT + UD folds to cache; writes training/data/
-python training/bakeoff_upos.py --model bowphs/GreBerta
-python training/bakeoff_upos.py --model bowphs/PhilBerta
-python training/bakeoff_upos.py --model pranaydeeps/Ancient-Greek-BERT
+python pyaegean_repo/training/build_upos_dataset.py   # fetches AGDT + UD folds to cache; writes data/ in the clone
+python pyaegean_repo/training/bakeoff_upos.py --model bowphs/GreBerta
+python pyaegean_repo/training/bakeoff_upos.py --model bowphs/PhilBerta
+python pyaegean_repo/training/bakeoff_upos.py --model pranaydeeps/Ancient-Greek-BERT
 ```
+
+Before the Colab runtime recycles, save the result files —
+`pyaegean_repo/training/out/<model>/metrics.json` (one per candidate).
 
 Each run writes `training/out/<model>/metrics.json`. The fixed budget — 2 epochs, lr 5e-5,
 effective batch 32 (native `--batch 32`), max-len 256, seed 42 — **must stay identical
