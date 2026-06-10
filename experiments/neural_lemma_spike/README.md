@@ -34,6 +34,22 @@ disjoint and each model is measured per-subset, the hybrid is arithmetic: **~91.
 unseen — beating stanza on *both* columns at once** (it scores 87.3% / 62.8%). "Seen" is
 definitionally "this form is in the training table", so the router is a trivial lookup.
 
+### Margin-push experiments (same held-out split; all tried, none beat gold-only)
+
+| experiment | unseen | verdict |
+| --- | --- | --- |
+| **gold-only seq2seq** (treebank), beam-5 | **76.3%** | **the winner** |
+| + Wiktionary paradigms, naive 4:1 mix | 67.7% | regressed — Wiktionary dominates the output convention |
+| + Wiktionary, gold-majority (52%) + two-stage fine-tune | 75.3% | no gain — data ceiling |
+| + lexicon-biased decoding (prefer known lemma) | 71.9% | regressed — overrides correct *novel* lemmas |
+| beam-10 vs beam-5 (gold model) | +~0.6 | marginal; free, kept |
+
+**Conclusion: isolated `form→lemma` plateaus at ~76.3% unseen.** Wiktionary's morphological
+breadth does not transfer to AGDT's dev distribution (the treebanks already cover that genre's
+morphology), and a known-lemma decoding prior hurts. The next real lever is sentence **context**
+— how GreTa/stanza actually lemmatize — which is naturally available in the production backend
+(it processes whole sentences), so it belongs there, not in this isolated-form spike.
+
 ## Files
 - `build_seq2seq_data.py` — builds `data/{train.jsonl,dev.jsonl}`: **unique `form→lemma`
   pairs** from AGDT-train + AGDT-disjoint treebanks (Pedalion + Gorman's non-AGDT authors)
