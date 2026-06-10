@@ -36,6 +36,12 @@ waits on external use and a short methods write-up.
 - **Hosted API reference** ([ryanpavlicek.github.io/pyaegean](https://ryanpavlicek.github.io/pyaegean/)):
   a browsable reference for every public module, class, and function, generated from the docstrings and
   type hints with pdoc and published to GitHub Pages (the new `[docs]` extra).
+- **Standard-benchmark evaluation** (`greek.evaluate_on_ud`): scores the active pipeline on the
+  Universal Dependencies Ancient Greek test folds (Perseus/PROIEL; CC BY-NC-SA, fetched to cache for
+  evaluation only) with the official, sha256-pinned CoNLL 2018 evaluator — the protocol behind the
+  field's published numbers. `greek.agdt_ud_overlap` builds the AGDT↔UD-Perseus leakage-exclusion
+  manifest (2,443 sentences, 100% form-verified) that model training must honour. Protocol, leakage
+  controls, and measured baselines: `docs/benchmarks.md`.
 
 ### Changed
 - **EpiDoc export is now schema-valid.** Output is wrapped in the required `<div type="edition">`
@@ -50,6 +56,11 @@ waits on external use and a short methods write-up.
 
 ### Fixed
 - The AI `summarize` capability now labels its result `kind="summarize"` (previously mislabeled `"ask"`).
+- **Infinite recursion with `use_tagger()` + `use_lemmatizer()` both active**: lemmatizing a form
+  outside the treebank lookup recursed to death (edit-tree lemmatizer → POS features → rule
+  morphology → lemmatizer …). The rule-based morphology engine now reads only the bundled seed
+  table for its lemma hints — which also keeps its analysis cache valid and the tagger's features
+  identical between training and inference, whatever backends are active.
 
 ## 0.7.0 — 2026-06-10
 

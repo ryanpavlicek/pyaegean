@@ -109,3 +109,30 @@ def test_analyze_is_cached_and_returns_tuple() -> None:
     out = analyze("λόγον")
     assert isinstance(out, tuple)
     assert analyze("λόγον") is out  # lru_cache returns the same object
+
+
+def test_rule_engine_is_backend_independent(monkeypatch) -> None:
+    """The rule engine's seed-lemma hint must never consult the trained backends.
+
+    Regression: with use_tagger() + use_lemmatizer() both active, analyze() used to
+    recurse to death on an out-of-vocabulary form (analyze → seed hint → edit-tree
+    predict → POS features → analyze …), and _rule_analyze's lru_cache made results
+    depend on backend state. The morphology engine now reads the seed tier only."""
+    from aegean.greek import lemmatizer, neural_lemmatizer
+    from aegean.greek.morphology import _rule_analyze
+
+    def boom(*_args, **_kwargs):  # any backend consultation is the bug
+        raise AssertionError("rule engine consulted a trained backend")
+
+    monkeypatch.setattr(lemmatizer, "active", lambda: object())
+    monkeypatch.setattr(lemmatizer, "predict", boom)
+    monkeypatch.setattr(neural_lemmatizer, "active", lambda: object())
+    monkeypatch.setattr(neural_lemmatizer, "predict", boom)
+
+    _rule_analyze.cache_clear()
+    try:
+        out = analyze("ἵππον")  # an OOV-ish nominal: the old path hit the cascade
+        assert out  # still analysable, from rules + the seed table alone
+        assert analyze("καί")  # closed-class branch too
+    finally:
+        _rule_analyze.cache_clear()  # don't leak stubbed-state entries to other tests

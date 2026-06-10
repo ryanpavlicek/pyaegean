@@ -25,6 +25,18 @@ def _lemma_table() -> dict[str, str]:
     }
 
 
+def seed_lemma_verbose(word: str) -> tuple[str, bool]:
+    """The **seed-tier only** lookup: ``(lemma, known)`` from the bundled table, or the
+    NFC-normalized form unchanged with ``known=False``. Never consults the trained
+    backends — the rule-based morphology engine depends on that (its features must not
+    change with backend state, and the backends themselves call back into it)."""
+    key = unicodedata.normalize("NFC", word.lower())
+    table = _lemma_table()
+    if key in table:
+        return table[key], True
+    return unicodedata.normalize("NFC", word), False
+
+
 def lemmatize_verbose(word: str) -> tuple[str, bool]:
     """Return ``(lemma, known)``. ``known`` is False when the form wasn't found and
     the (normalized) input is returned unchanged.
@@ -53,11 +65,7 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
         # A prediction identical to the (normalized) form is an identity fall-through, so
         # mirror the seed-table contract: known=False when the form is returned unchanged.
         return pred, pred != unicodedata.normalize("NFC", word)
-    key = unicodedata.normalize("NFC", word.lower())
-    table = _lemma_table()
-    if key in table:
-        return table[key], True
-    return unicodedata.normalize("NFC", word), False
+    return seed_lemma_verbose(word)
 
 
 def lemmatize(word: str) -> str:

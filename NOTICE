@@ -55,6 +55,20 @@ PROIEL treebank — Ancient Greek (fetched on demand, NOT redistributed)
   Dag T. T. Haug and Marius L. Jøhndal (2008), "Creating a Parallel Treebank of the Old
   Indo-European Bible Translations", Proc. LaTeCH 2008, pp. 27–34.
 
+Universal Dependencies — Ancient Greek treebanks (fetched on demand, NOT redistributed)
+  UD_Ancient_Greek-Perseus and UD_Ancient_Greek-PROIEL
+  (https://github.com/UniversalDependencies/), licensed CC BY-NC-SA 3.0. Downloaded by the
+  user on demand via aegean.greek.evaluate_on_ud() as cross-tool-comparable EVALUATION sets
+  only — pyaegean reads them locally in the cache, never bundles or re-hosts them, and never
+  trains on them (NonCommercial + ShareAlike; the AGDT↔UD overlap manifest built by
+  aegean.greek.agdt_ud_overlap() additionally excludes their sentences from AGDT-side
+  training). Cite the treebanks and the UD framework in academic work that relies on them.
+
+CoNLL 2018 shared-task evaluator (fetched on demand, NOT redistributed)
+  conll18_ud_eval.py (https://universaldependencies.org/conll18/), Mozilla Public
+  License 2.0. Downloaded by the user on demand (sha256-pinned) into the local cache and
+  imported from there by aegean.greek.evaluate_on_ud(); not bundled in the wheel.
+
 Aegean syllabic sign data — Unicode Character Database (bundled)
   The Linear B (src/aegean/data/bundled/linearb/), Cypriot (.../cypriot/), and Cypro-Minoan
   (.../cyprominoan/) sign inventories — and the phonetic maps for the two deciphered scripts —

@@ -449,6 +449,21 @@ Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
 `compare_pos_taggers`, or `compare_modes`.
 
+### Standard-benchmark evaluation (Universal Dependencies)
+
+`greek.evaluate_on_ud(treebank, split)` scores the active pipeline on the **Universal
+Dependencies** Ancient Greek test folds (Perseus / PROIEL) with the **official CoNLL 2018
+evaluator** — the protocol the field's published numbers use. The folds are CC BY-NC-SA,
+fetched to the cache for *evaluation only* (never trained on); `greek.agdt_ud_overlap()`
+builds the manifest of AGDT sentences that appear in the UD folds, which pyaegean's model
+training excludes. The full protocol, leakage controls, and measured numbers live in
+[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+
+```python
+greek.use_treebank(); greek.use_tagger(); greek.use_lemmatizer(); greek.use_parser()
+greek.evaluate_on_ud("proiel", "test")   # {'upos': …, 'lemma': …, 'uas': …, …}
+```
+
 ## Lemmatization (baseline)
 
 A small bundled form→lemma seed table with an identity fallback. This is the

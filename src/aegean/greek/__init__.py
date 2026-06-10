@@ -57,6 +57,7 @@ from .neural_lemmatizer import (
     use_neural_lemmatizer,
 )
 from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
+from .ud import agdt_ud_overlap, evaluate_on_ud
 from .normalize import (
     betacode_to_unicode,
     normalize,
@@ -132,6 +133,8 @@ __all__ = [
     "use_neural_lemmatizer",
     "disable_neural_lemmatizer",
     "evaluate_on_proiel",
+    "evaluate_on_ud",
+    "agdt_ud_overlap",
     "load_proiel_gold",
     "proiel_dir",
     "ParserNotLoadedError",

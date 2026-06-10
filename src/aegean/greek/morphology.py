@@ -33,7 +33,9 @@ import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 
-from .lemmatize import lemmatize_verbose
+# Seed tier only: the rule engine's lemma hints must not depend on backend state (the
+# trained backends call back into analyze(), and _rule_analyze's cache must stay valid).
+from .lemmatize import seed_lemma_verbose
 from .pos import _LEXICON  # closed-class lexicon (article, prepositions, …)
 
 # --- feature inventories -----------------------------------------------------
@@ -156,7 +158,7 @@ _SUBSCRIPT_ENDINGS = {"ω", "η", "α"}
 def _nominal(word: str) -> list[Analysis]:
     bare = _bare(word)
     has_subscript = "ͅ" in unicodedata.normalize("NFD", word)
-    seed_lemma, seed_known = lemmatize_verbose(word)
+    seed_lemma, seed_known = seed_lemma_verbose(word)
     matches = [
         (ending, feats, nom_ending)
         for ending, feats, nom_ending in _NOMINAL
@@ -316,7 +318,7 @@ def _rule_analyze(word: str) -> tuple[Analysis, ...]:
     """Rule-based candidate analyses — the baseline engine behind `analyze`."""
     fixed = _LEXICON.get(_closed_key(word))
     if fixed is not None:
-        lemma, _ = lemmatize_verbose(word)
+        lemma, _ = seed_lemma_verbose(word)
         return (Analysis(lemma=lemma, pos=fixed),)
     seen: set[tuple[object, ...]] = set()
     out: list[Analysis] = []
