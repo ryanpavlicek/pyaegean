@@ -65,8 +65,8 @@ Frozen `@dataclass(slots=True)` value objects; numpy/pandas lazy.
 - **`Sign`** (syllabogram | letter | logogram), **`Token`** (`kind`: WORD/LOGOGRAM/NUMERAL/SEPARATOR/…
   plus Greek adds PUNCT), **`Document`** (+ `DocumentMeta`), **`Corpus`** (the hub — shipped:
   `load()`, `.get()`, `.filter()`, `.word_frequencies()`, **`.to_dataframe(level=…)`**, `.to_dict()`,
-  `.provenance`; *planned*: `from_json`/`from_epidoc`, `.query()`, `.to_json`/`parquet`/`epidoc`),
-  **`NumeralSystem`**/`AegeanNumerals`.
+  `.provenance`, **`.to_json`/`.from_json`/`.from_dict`** (lossless round-trip) and **`.query()`**;
+  EpiDoc/CSV/Parquet export lives in `aegean.io`), **`NumeralSystem`**/`AegeanNumerals`.
 - Greek `Document`s carry token-level NLP annotations (lemma/POS/morph/IPA) when the pipeline has run,
   surfaced in `.to_dataframe(level="token")`.
 
@@ -108,7 +108,7 @@ src/aegean/
   **greek/   normalize tokenize syllabify accent phonology lemmatize morphology pos parse prosody lexicon .py**
   **translate/ __init__.py (hybrid lexicon+LLM)**
   **ai/      client.py (ABC) anthropic.py openai.py grok.py gemini.py prompts/ grounding.py cache.py**
-  io/        json_io epidoc tabular .py        (planned; currently an empty stub)
+  io/        epidoc.py tabular.py              (EpiDoc TEI + CSV/Parquet export — aegean.io)
   data/      registry.py _cache.py  bundled/lineara/*.json  **bundled/greek/*.json (small seeds)**
   adapters/  base.py  (damos liber lineara_xyz sigla perseus first1kgreek .py — phased; stub)
   integrations/ geo.py (planned; stub)  # no cltk dependency — pyaegean implements its own Greek NLP
@@ -160,7 +160,7 @@ port methodology + limitations into docstrings. Provenance: per-dataset `DataSpe
 
 ## Roadmap (sequenced by value × feasibility)
 
-Shipped through **0.4.0**: core + Linear A (with the workbench-corpus downloader) and the Greek start
+Shipped through **0.7.0**: core + Linear A (with the workbench-corpus downloader) and the Greek start
 (corpus loader, normalize/betacode, tokenize, syllabify, accentuation, baseline lemmatize); the
 multi-provider **AI layer** (Anthropic default + OpenAI + Grok + Gemini) wired to all four jobs, with
 translation/glossing, corpus Q&A, decipherment-hypothesis support, and NLP-assist disambiguation; and
@@ -188,18 +188,18 @@ gold set.
 Linear B and the Cypriot syllabary shipped in **0.4.0** — the two deciphered Aegean syllabaries that
 write Greek — each with a Unicode-built sign inventory, transliteration, and a Greek-reading bridge;
 Linear B adds per-script accounting (`to-so`/`to-sa`) and a bring-your-own EpiDoc corpus reader.
-**Cypro-Minoan** (undeciphered; a 99-sign Unicode inventory and sign-sequence tokenization, no
-phonetics or bridge — modelled on Linear A) has since landed on `main`, completing the Aegean
-syllabic set; it releases in the next version. A neutral **out-of-AGDT evaluator**
-(`greek.evaluate_on_proiel`, scoring against the PROIEL treebank — a source no pyaegean model
-trained on) has also landed, giving an honest cross-source generalization number.
+**0.5.0** added **Cypro-Minoan** (undeciphered; a 99-sign Unicode inventory and sign-sequence
+tokenization — modelled on Linear A), completing the Aegean syllabic set, plus a neutral
+**out-of-AGDT evaluator** (`greek.evaluate_on_proiel`, scoring against the PROIEL treebank — a source
+no pyaegean model trained on). **0.6.0** added the lossless `Corpus` JSON round-trip
+(`to_json`/`from_json`/`from_dict`) and a first-class `Corpus.query()`; **0.7.0** added the
+`aegean.io` export adapters (EpiDoc TEI write — completing the read+write round-trip — plus
+CSV/Parquet), filling the io package.
 
 Planned:
 
 - **Context-aware lemmatizer**: a sentence-context v2 of the `[neural]` backend, to push past the
   76.3% isolated-form ceiling on unseen lemma (larger, uncertain payoff).
-- **Data layer / IO**: the compound `query` engine, JSON round-trip (`to_json`/`from_json`), and
-  CSV/Parquet/EpiDoc write adapters — toward the v1.0 full EpiDoc round-trip.
 - **Koine / Biblical Greek** (low priority): NT corpus loader + Koine-tuned lemmatization/morphology
   from an openly-licensed tagged Greek NT (MorphGNT/SBLGNT or the Nestle1904 trees), building on the
   existing Koine phonology mode (`to_ipa(…, "koine")`) and the John 1:1 sample.

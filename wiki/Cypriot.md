@@ -8,7 +8,7 @@ model: a sign inventory, transliteration to phonetics, and a bridge into the Gre
 import aegean
 from aegean.scripts.cypriot import word_to_phonetic, greek_reading
 
-aegean.registered_scripts()          # ['cypriot', 'greek', 'lineara', 'linearb']
+aegean.registered_scripts()          # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 word_to_phonetic("PA-SI-LE-U-SE")    # 'pasileuse'  (βασιλεύς, "king")
 greek_reading("WA-NA-SA")            # ('ἄνασσα', 'queen, lady (the Paphian goddess)')
 ```

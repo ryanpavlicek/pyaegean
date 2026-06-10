@@ -5,6 +5,8 @@
 Compact text data ships **inside the wheel** and works offline:
 
 - Linear A: `inscriptions.json`, `signs.json`, `phonetic_map.json`
+- Linear B / Cypriot: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
+- Cypro-Minoan: `signs.json`, `sample_inscriptions.json` (undeciphered — no phonetic map or lexicon)
 - Greek: `sample_texts.json`, `lemmata.json`, `benchmark_gold.json`
 
 Large or license-restricted assets are **never bundled** — they are fetched on
@@ -125,7 +127,7 @@ corpus.provenance.source      # 'GORILA (Godart & Olivier 1976–1985) via mweng
 corpus.provenance.license
 corpus.provenance.cite()      # one-line citation for papers/logs
 
-corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, source, license, citation
+corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, documentCount, source, license, citation
 ```
 
 ## Licensing summary

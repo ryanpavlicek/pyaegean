@@ -1,4 +1,4 @@
-"""Multi-provider AI layer (v0.2) — grounded, exploratory-labeled.
+"""Multi-provider AI layer — grounded, exploratory-labeled.
 
 Providers: Anthropic (default), OpenAI, xAI Grok, Google Gemini — each an
 optional extra, lazily imported. Capabilities: translate, gloss,

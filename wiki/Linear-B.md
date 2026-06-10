@@ -10,7 +10,7 @@ exploratory.
 import aegean
 from aegean.scripts.linearb import word_to_phonetic, greek_reading
 
-aegean.registered_scripts()              # ['greek', 'lineara', 'linearb']
+aegean.registered_scripts()              # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 word_to_phonetic("QA-SI-RE-U")           # 'kwasireu'  (gʷasileus, the ancestor of βασιλεύς)
 greek_reading("PO-ME")                   # ('ποιμήν', 'shepherd')
 ```

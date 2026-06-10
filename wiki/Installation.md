@@ -25,7 +25,8 @@ pip install pyaegean            # core: Linear A + Greek, zero hard deps
 | `pyaegean[ai]` | all of the above providers | the full AI layer |
 | `pyaegean[epidoc]` | `lxml` | EpiDoc I/O |
 | `pyaegean[geo]` | `geopandas`, `shapely` | geographic analysis |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data` | everything except `neural` |
+| `pyaegean[parquet]` | `pyarrow` | Parquet export (`io.to_parquet`) |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data` | everything except `neural` and `parquet` |
 
 ```bash
 pip install "pyaegean[ai]"
@@ -38,7 +39,7 @@ pip install "pyaegean[all]"
 ```python
 import aegean
 print(aegean.__version__)
-print(aegean.registered_scripts())       # ['greek', 'lineara']
+print(aegean.registered_scripts())       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled sample corpus)
 ```

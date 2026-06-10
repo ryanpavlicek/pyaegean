@@ -12,7 +12,7 @@ at a time; nothing here can break your computer.
 ## What pyaegean is (in one breath)
 
 It's a free toolkit, written in the Python language, for working with Ancient
-Greek and the Aegean scripts (Linear A and B). You give it Greek text or a Linear A
+Greek and the Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). You give it Greek text or a Linear A
 inscription; it gives you back syllables, accents, metre, morphology, statistics,
 and more. You drive it by writing very short snippets of Python — usually one or
 two lines — which this documentation gives you ready to copy.
@@ -91,7 +91,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.3.0 ['greek', 'lineara']
+# 0.7.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

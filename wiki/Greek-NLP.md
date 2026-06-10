@@ -242,10 +242,10 @@ greek.evaluate_tagger(holdout=0.1)
 ```
 
 This is a generalizing tagger with **zero heavy dependencies, an instant import, and a
-~2 MB model** — a different point on the trade-off curve from a full neural pipeline like
-stanza (torch + ~500 MB), which reaches higher accuracy on the same data. The
-[CLTK benchmark harness](#comparing-against-cltk) lets you score the two side by side on a
-gold set of your choosing.
+~2 MB model** — a deliberate point on the trade-off curve, favouring pure-Python portability
+over the absolute accuracy of a full neural pipeline. The
+[benchmark harness](#benchmark-your-own-pipeline) lets you score any tagger on a gold set of
+your choosing.
 
 ## Morphological analysis
 
@@ -378,58 +378,28 @@ irregular, third-declension and open-class forms that separate the engines, and
 each item is attested in the AGDT — so it measures the win *where it applies*; on
 genuinely unattested forms the treebank falls back to the baseline.
 
-### Comparing against CLTK
+### Benchmark your own pipeline
 
-pyaegean doesn't depend on [CLTK](https://cltk.org) — the comparison takes a
-lemmatize (or POS) callable that *you* supply. CLTK 2.x runs Ancient Greek through a
-`stanza` (or LLM) backend, so a real run needs that installed:
+`compare_lemmatizers` and `compare_pos_taggers` take **any** lemma-or-POS callable you supply
+and score it on the same bundled gold set, so you can measure an external pipeline on identical
+items. The gold set is small (18 lemma / 20 POS items) and weighted toward *attested* forms, so
+it measures lexical coverage, **not** generalization to unseen text — for which the held-out
+evaluations below are the relevant measure.
 
-```python
-# pip install cltk stanza      # stanza pulls torch + downloads grc models on first run
-from cltk import NLP
-nlp = NLP(language_code="grc", suppress_banner=True)   # 2.x uses language_code=
-def cltk_lemma(w): return nlp.analyze(text=w).words[0].lemma
-def cltk_pos(w):   return nlp.analyze(text=w).words[0].upos.tag   # upos is a tag object
+### Held-out generalization
 
-benchmark.compare_lemmatizers(cltk_lemma)
-benchmark.compare_pos_taggers(cltk_pos)
-```
-
-**Measured head-to-head** (CLTK 2.5.1 with the stanza `grc` Perseus models, on the
-bundled gold set; pyaegean with `use_treebank()` active):
-
-| | pyaegean (baseline) | pyaegean (treebank) | CLTK |
-| --- | --- | --- | --- |
-| lemma | 28% | **100%** | **100%** |
-| POS | 50% | **100%** | 90% |
-
-On this gold set the treebank backend matches CLTK on lemmatization and scores higher on
-POS — but read the numbers for what they are. The gold is small (18 lemma / 20 POS items)
-and weighted toward *attested* forms, so it measures lexical coverage, **not**
-generalization to unseen text. CLTK was also scored on isolated words with no sentence
-context (its two POS "misses" — `ἦν → AUX`, a UD convention difference vs our `VERB`, and
-`τόν → PRON`, ambiguous out of context — partly reflect that). For generalization, the
-held-out evaluations below are the relevant measure.
-
-**Held-out generalization.** The
-[generalizing tagger](#generalizing-pos-tagger-opt-in) is measured on a leakage-free 90/10
-AGDT sentence split, scored *in context* on ≈54k tokens, with the **unseen-form** subset
-(forms absent from training) called out separately:
+The [generalizing tagger](#generalizing-pos-tagger-opt-in) is measured on a leakage-free 90/10
+AGDT sentence split, scored *in context* on ≈54k tokens, with the **unseen-form** subset (forms
+absent from training) called out separately:
 
 | POS — held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
 | pyaegean tagger (pure Python) | 84.4% | 83.6% |
-| stanza / CLTK grc | 89.6%¹ | 89.1% |
 
-¹ Raw, in the AGDT tag scheme. Canonicalizing the UD-vs-AGDT differences stanza is
-penalized for on *seen* closed-class words (PROPN→NOUN, AUX→VERB, SCONJ→CCONJ) raises its
-overall to 92.0%; the unseen column is unchanged (those are all seen forms).
-
-stanza scores higher on unseen forms here — though the AGDT is *in-training* for stanza (its
-models were trained on it), which flatters this split. The unseen column is the cleanest
-comparison, and pyaegean reaches it with no heavy dependencies. A fully neutral verdict for
-pyaegean needs a gold set it never trained on — see
-[Neutral evaluation (out-of-AGDT)](#neutral-evaluation-out-of-agdt) below.
+The AGDT is the tagger's own training source, so the **unseen-form** column is the honest
+generalization measure — **83.6%** from a zero-dependency, pure-Python model. A fully neutral
+check, on text pyaegean never trained on, is the
+[out-of-AGDT evaluation](#neutral-evaluation-out-of-agdt) below.
 
 The same evaluation for **lemmatization** (the
 [generalizing lemmatizer](#generalizing-lemmatizer-opt-in), scored with predicted POS):
@@ -437,17 +407,15 @@ The same evaluation for **lemmatization** (the
 | lemma — held-out AGDT | overall | unseen forms |
 | --- | --- | --- |
 | pyaegean lemmatizer (pure Python, edit-tree) | 84.5% | 40.3% |
-| stanza / CLTK grc | 87.3% | 62.8% |
 | **pyaegean `[neural]` (GreTa seq2seq, opt-in)** | **~92%** | **76.3%** |
 
-The pure-Python lemmatizer is competitive overall but trails on **unseen** forms, where
-recovering a lemma (often an accent/stem change, not just a suffix swap) is hardest. The
-opt-in **[neural] backend** reaches **76.3% on unseen forms** with a GreTa seq2seq that
-*generates* the lemma, and ships as a hybrid (the gold lookup answers seen forms, the
-seq2seq the rest), so overall lemma accuracy lands around **92%**. It is a fetched-to-cache
-ONNX model behind the `[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree
-stays the zero-dependency default. See
-[Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
+The pure-Python lemmatizer is solid overall but trails on **unseen** forms, where recovering a
+lemma (often an accent/stem change, not just a suffix swap) is hardest. The opt-in
+**[neural] backend** reaches **76.3% on unseen forms** with a GreTa seq2seq that *generates* the
+lemma, and ships as a hybrid (the gold lookup answers seen forms, the seq2seq the rest), so
+overall lemma accuracy lands around **92%**. It is a fetched-to-cache ONNX model behind the
+`[neural]` extra (onnxruntime, no torch); the pure-Python edit-tree stays the zero-dependency
+default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) below.
 
 ### Neutral evaluation (out-of-AGDT)
 
@@ -468,8 +436,8 @@ bundled**, like the AGDT). Lemma accuracy is the clean metric (lemmas compared a
 normalization and dropping PROIEL's `#N` homograph suffix); POS is compared under a reconciled
 tagset (PROIEL's PROPN/SCONJ collapse to pyaegean's NOUN/CCONJ, so the figure reflects real
 errors, not convention gaps). This is a neutral test **for pyaegean specifically** — PROIEL is
-in-training for some other tools (e.g. stanza's `grc_proiel` model), so it is not a level field
-for cross-tool comparison; it answers "how well does pyaegean read Greek it never trained on."
+in-training for some other systems, so it is not a level field for cross-tool comparison; it
+answers "how well does pyaegean read Greek it never trained on."
 
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer — `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,

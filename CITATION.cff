@@ -6,7 +6,7 @@ authors:
     given-names: Ryan
 repository-code: "https://github.com/ryanpavlicek/pyaegean"
 license: Apache-2.0
-version: 0.1.0.dev0
+version: 0.7.0
 keywords:
   - ancient greek
   - linear a
