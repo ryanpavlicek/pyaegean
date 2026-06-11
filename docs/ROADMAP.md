@@ -23,6 +23,13 @@ wired into the README badge, `CITATION.cff`, and the BibTeX block.
 
 ## WP1 — Quick wins (usability paper-cuts)
 
+> **Status: DONE (2026-06-11).** `greek.pipeline()` (per-token records, backends-aware),
+> the syllabification exception lexicon (Smyth §140 compounds, test-enforced),
+> `normalize(..., lenient=True)` (warned repairs for OCR artifacts), citation automation
+> (`Provenance.bibtex()/.apa()`, `Corpus.cite()`, subset notes on `filter()`, citable
+> `QueryResults`), the CONTRIBUTING menu + deprecation policy, the scansion-statement
+> audit (one stale `docs/PLAN.md` line fixed), and the CLAUDE.md refresh.
+
 Small, high-leverage items, mostly from the external review; one session.
 
 - **`greek.pipeline()` convenience layer.** One call that runs
@@ -77,6 +84,14 @@ unlock; the web demo is parked — see “Declined / parked”.)*
 CI-tested, documented.
 
 ## WP3 — Greek NLP accuracy program (“parity or better”)
+
+> **Status: DONE and SHIPPED (2026-06-11).** The joint neural pipeline
+> (`greek.use_neural_pipeline()`, the `grc-joint-v1` release asset) measures **above every
+> published number on the UD Perseus test fold** — lemma 94.40 / UAS 89.16 / LAS 84.38 /
+> UPOS 96.94 / UFeats 96.12 through the shipped pip path, confirmed end-to-end from raw
+> text (tokens F1 99.97) — leakage-clean, one checkpoint, official evaluator. The full
+> stage-by-stage record, protocol, and comparison tables: `docs/benchmarks.md`;
+> evidence: `training/results/`.
 
 **Goal:** pyaegean's Greek NLP must measure **at least as good as the leading neural pipelines for
 Ancient Greek** on the field's standard benchmarks — not only on our own honesty-first metrics.
