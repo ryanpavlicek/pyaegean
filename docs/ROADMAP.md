@@ -223,9 +223,11 @@ already in the published pack's range.
 > `Provenance.data_version`, pinning-for-papers recipe), **`Corpus.from_records()`** + the
 > `register_loader` recipe, and **variant readings** (`Token.alt` with the EpiDoc
 > `<app>/<lem>/<rdg>` round-trip, schema-validated). Remaining: Linear B sample/lexicon
-> growth, Cypriot growth, the DAMOS/LiBER and SigLA inquiries, the Linear A apparatus
-> audit (upstream recoverability → corpus v2), and `load_work` hardening (cached/authed
-> edition discovery, deeper textpart addressing).
+> growth, Cypriot growth, the DAMOS/LiBER inquiries, the Linear A apparatus audit
+> (upstream recoverability → corpus v2), **SigLA integration** (license resolved: the
+> dataset and drawings are published CC BY-NC-SA 4.0, so this is now a build item on the
+> PROIEL/UD fetch-to-cache pattern, not a permission question), and `load_work` hardening
+> (cached/authed edition discovery, deeper textpart addressing).
 
 The 0.8.0-hardening pass *documented* that the non-Linear-A corpora are vestigial. This WP makes
 them real where licensing allows.
@@ -247,10 +249,19 @@ them real where licensing allows.
   1. **Audit upstream**: inspect the raw mwenge/lineara.xyz source for apparatus our original port
      dropped (bracket/uncertainty markers partially survive — `[?]`, `?` — so there may be more to
      recover losslessly). Anything recoverable populates `ReadingStatus` on the bundled corpus.
-  2. **SigLA inquiry**: contact/licensing investigation for the scholarly sign-variant +
-     apparatus-grade data (Salgarella & Castellan).
-  3. **Corpus v2**: a GORILA-faithful bundled corpus with editorial status populated. If 1–2 dead-end,
-     the documented limitation stands — but we will have actually tried to fix it.
+  2. **SigLA integration** (Salgarella & Castellan). *Licensing resolved 2026-06-11*: the official
+     site publishes "Dataset and drawings are available under the CC BY-NC-SA 4.0 license" — so no
+     permission inquiry is needed; this follows the PROIEL/UD precedent (fetch-to-cache on demand,
+     NC clearly labeled and passed through to the user, never bundled or redistributed, derived
+     indexes built only in the local cache; anything *trained* on it would inherit NC and ship as a
+     separate clearly-labeled asset, never the default). Remaining work is engineering: find the
+     dataset's machine-readable access path (the site doesn't advertise a download endpoint — a
+     courtesy contact to the authors about a stable export is about *format*, not permission),
+     then a fetch-to-cache loader for the sign-variant + apparatus-grade readings.
+  3. **Corpus v2**: a GORILA-faithful bundled corpus with editorial status populated, with SigLA
+     enrichment as the opt-in fetched layer (NC data stays out of the Apache-2.0 wheel). If the
+     upstream audit dead-ends, the documented limitation stands — but we will have actually tried
+     to fix it.
 - **Data versioning & reproducibility.** A version + sha256 manifest for every bundled dataset and
   fetched asset (`aegean.data.versions()`); `Provenance` carries the data version; a “pinning for
   papers” recipe. *(Reviewer §2.)*

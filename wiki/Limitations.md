@@ -46,7 +46,11 @@ do. Three kinds of limits behave very differently:
 - **Linear A facsimile imagery** is © École Française d'Athènes and other
   rightsholders: referenced and fetched for academic use, never redistributed.
 - **SigLA's apparatus-grade sign data** (Salgarella & Castellan) would lift the
-  Linear A corpus to edition grade; a licensing inquiry is on the roadmap.
+  Linear A corpus toward edition grade — and its dataset and drawings are
+  published **CC BY-NC-SA 4.0**, so integration is a build item, not a
+  permission question: the same fetch-to-cache, research-use, never-bundled
+  pattern as PROIEL and the UD treebanks (the NC obligation passes to you, and
+  NC data stays out of the Apache-2.0 wheel). On the roadmap under WP4.
 
 ## Engineering limits we plan to lift
 

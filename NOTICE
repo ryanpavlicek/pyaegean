@@ -116,6 +116,11 @@ Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   pyaegean parses locally and never re-hosts.
 
 Planned (future versions; included here for forward attribution):
+  - SigLA — the Linear A paleographical database (Salgarella, E. & Castellan, S.,
+    https://sigla.phis.me): dataset and drawings published under CC BY-NC-SA 4.0.
+    Will follow the PROIEL/UD pattern — fetched to the user cache on demand for
+    research use, NonCommercial + ShareAlike obligations passed through, never
+    bundled in or redistributed with the Apache-2.0 wheel.
   - Morpheus morphological data (per applicable license).
   Each will be attributed and license-gated as it is integrated.
 
