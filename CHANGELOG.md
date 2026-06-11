@@ -71,6 +71,12 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Grounded-generation eval harness** (`aegean.ai.eval`): measures the AI layer's *grounding
+  fidelity* the way the lemmatizer is measured — fixed `GroundingCase`s scored for **groundedness**
+  (does the answer use the supplied evidence?) and **fabrication** (does it assert beyond it?).
+  `run_eval(cases, client)` returns an `EvalReport` with mean groundedness and the fabrication rate;
+  a built-in `DEFAULT_CASES` set ships as a smoke test. Scoring is transparent substring containment
+  (a screen for gross failure, not a semantic judge). CLI: `aegean ai eval`.
 - **Structured AI output** (`aegean.ai.extract`): a JSON-mode capability for feeding pipelines and
   databases — describe the shape with a `schema` (`field → description` map or a shape string), and
   the result's `data` holds the parsed object/array. A standalone `ai.parse_json` recovers JSON

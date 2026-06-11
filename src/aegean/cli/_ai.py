@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 ai_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Generative (exploratory, key-gated): translate, gloss, hypotheses, ask.",
+    help="Generative (exploratory, key-gated): translate, gloss, hypotheses, ask, extract, eval.",
     no_args_is_help=True,
 )
 
@@ -198,6 +198,40 @@ def extract(
     else:
         console().print(getattr(result, "text", ""), markup=False)
         console().print("(could not parse JSON from the response)", style="dim", markup=False)
+
+
+@ai_app.command()
+def eval(
+    provider: str = PROVIDER_OPT,
+    model: str | None = MODEL_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Grounded-generation eval: score the built-in cases for grounding fidelity.
+
+    Measures how faithfully a provider uses its grounding — groundedness (does it
+    reference the supplied evidence?) and fabrication rate (does it assert beyond
+    it?). The AI layer's analogue of the lemmatizer's held-out accuracy."""
+    from aegean import ai
+
+    client = _client(provider, model)
+    report = _run(lambda: ai.run_eval(ai.DEFAULT_CASES, client))  # type: ignore[arg-type]
+    if json_out:
+        emit_json(report)
+        return
+    from ._common import table
+
+    console().print(getattr(report, "summary", lambda: "")(), markup=False)
+    table(
+        "grounded-generation cases",
+        ["case", "grounded", "clean", "missing", "fabricated"],
+        [
+            [
+                r.name, f"{r.groundedness:.2f}", "yes" if r.clean else "NO",
+                ", ".join(r.missing) or "-", ", ".join(r.fabricated) or "-",
+            ]
+            for r in getattr(report, "cases", ())
+        ],
+    )
 
 
 @ai_app.command()

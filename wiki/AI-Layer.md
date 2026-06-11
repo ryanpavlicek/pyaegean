@@ -121,6 +121,33 @@ From the shell: `aegean ai extract "OLE S 1" --fields commodity,amount` prints t
 parsed JSON, ready to pipe into `jq`. Still exploratory — the extraction is a
 model hypothesis, not a verified parse.
 
+## Grounded-generation eval
+
+The generative layer is exploratory by design, so its worth rests on **grounding
+fidelity** — not authority. `aegean.ai.eval` measures it the way the lemmatizer
+is measured: fixed cases with known evidence, each scored for *groundedness*
+(did the answer reference the facts the evidence supports?) and *fabrication*
+(did it assert anything the evidence doesn't?).
+
+```python
+from aegean import ai
+
+report = ai.run_eval(ai.DEFAULT_CASES, client)   # any LLMClient
+report.summary()
+# grounded-generation eval: 3 case(s) · groundedness 1.00 · fabrication rate 0.00
+
+# define your own cases over the corpus / lexicon / analysis grounding:
+case = ai.GroundingCase(
+    name="ku-ro-total", prompt="KU-RO", kind="decipher",
+    grounding=ai.cooccurrence_evidence(aegean.load("lineara"), "KU-RO"),
+    must_use=("total",), must_avoid=("deciphered", "certainly"),
+)
+```
+
+Scoring is intentionally simple and transparent (case-insensitive substring
+containment) — a screen for gross failure, not a semantic judge. From the shell:
+`aegean ai eval --provider anthropic` prints the per-case table and the aggregate.
+
 ## Response caching
 
 A sha256-keyed cache (provider, model, system, prompt) makes repeats free and

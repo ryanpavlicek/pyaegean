@@ -37,6 +37,14 @@ from .client import (
     get_client,
     register_provider,
 )
+from .eval import (
+    DEFAULT_CASES,
+    CaseResult,
+    EvalReport,
+    GroundingCase,
+    run_eval,
+    score_text,
+)
 from .client import providers as list_providers
 from .grounding import (
     GroundingItem,
@@ -67,6 +75,13 @@ __all__ = [
     "extract",
     "parse_json",
     "PROMPT_VERSION",
+    # grounded-generation eval
+    "GroundingCase",
+    "CaseResult",
+    "EvalReport",
+    "run_eval",
+    "score_text",
+    "DEFAULT_CASES",
     # grounding
     "GroundingItem",
     "as_item",
