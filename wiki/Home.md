@@ -111,9 +111,10 @@ Linear A sign repertoire; the corpus-data expansion — the **full DAMOS Linear 
 first use; corpus **statistics** (dispersion/keyness/bootstrap), **visualization** one-liners,
 and **cross-script phonetic comparison**; traceable, measurable AI grounding; the opt-in
 analysis cache; and the extended Pleiades alignment (33/56, coordinate-verified).
-**Next:** the [0.8.0 program](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/ROADMAP.md)
-is complete and the roadmap is being reassessed; a **1.0 stable** waits on external use and a
-methods write-up.
+**Next:** Phase I of the [0.8.0 program](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/ROADMAP.md)
+is complete and **Phase II is underway** — DAMOS scribal hands, SigLA apparatus decoding, iambic
+scansion + a synizesis lexicon, deeper `load_work` addressing, and a timeboxed model-shrink pass.
+A **1.0 stable** still waits on external use and a methods write-up.
 
 ## For specialists
 

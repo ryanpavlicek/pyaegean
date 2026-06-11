@@ -1,10 +1,10 @@
 # pyaegean roadmap — the 0.8.0 program
 
-**Status (2026-06-11): the program is COMPLETE — WP1 through WP9 are all done** (each WP carries
-its ✓ banner below). The `v0.8.0` tag remains **deliberately uncut**: the roadmap is being
-**reassessed** now that the work packages are finished, and the tag/release decision follows that
-reassessment — not this document. There is no 0.9.0 on the horizon — 0.8.0 stays the release where
-the gaps got *fixed*, not footnoted.
+**Status (2026-06-11): Phase I (WP1–WP9) is COMPLETE** (each WP carries its ✓ banner below), and
+the reassessment adopted **Phase II (WP10–WP16, below)** — more development that ships under
+0.8.0. The `v0.8.0` tag remains **deliberately uncut** until Phase II completes and a further go
+decision is made. There is no 0.9.0 on the horizon — 0.8.0 stays the release where the gaps get
+*fixed*, not footnoted.
 
 **The principle shift.** The pre-release reviews surfaced shortfalls we initially addressed with
 honest documentation. Honest documentation stays — but as the floor, not the fix. Where a gap can
@@ -384,6 +384,98 @@ them real where licensing allows.
 
 ---
 
+# Phase II — the reassessed program (adopted 2026-06-11)
+
+With WP1–WP9 done, the roadmap was reassessed: **0.8.0 keeps absorbing development** (the tag
+stays uncut until this phase completes and a further go decision is made). Phase II pulls the
+highest-value outstanding items — three engineering rows still open on the
+[Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations) inventory, two
+data-depth gaps Phase I created the conditions to close, and one finish-the-row loader item —
+sequenced, as before, by (value ÷ risk).
+
+## WP10 — DAMOS corpus v2: scribal hands & find-context
+
+The v1 asset kept transliteration + site/series/chronology but dropped fields DAMOS curates and
+our model already has slots for: **Hand** (the scribe), **Find-area/Find-spot**, **Joins**, the
+museum **Location** and **Inv. no.** The raw per-tablet crawl cache survives, so this is a
+converter + loader change, no re-crawl.
+
+- Extend `scripts/build_damos_corpus.py` to carry scribe (Hand), findspot, joins, and
+  location/inventory; publish **`damos-corpus-v2`** (sha-pinned; v1 stays for reproducibility);
+  bump the DataSpec + `Provenance.data_version`.
+- Loader maps Hand → `DocumentMeta.scribe`, Find-area/spot → `findspot` — so
+  `damos.filter(scribe="138")` and **keyness by scribal hand** just work (`aegean keyness damos
+  --scribe 138`); add the scribal-hand recipe.
+- *Value: opens scribe-level scholarship (hand attribution, per-hand vocabulary) on the full
+  corpus. Risk: minimal — all pieces exist.*
+
+## WP11 — SigLA corpus v2: decode the apparatus flags
+
+The v1 decode conservatively preserved what it didn't interpret as `raw_flags`. Lift SigLA from a
+sign-stream to **apparatus-grade**:
+
+- Decode **numerals** (→ `NUMERAL` tokens with values), **erasure/overstrike flags**
+  (→ `ReadingStatus.LOST`/`UNCLEAR`), and **word grouping** (→ real `WORD` tokens instead of
+  `TokenKind.UNKNOWN` sign-by-sign) from the preserved flags, guided by the SigLA paper's schema.
+- Cross-validate the upgraded reading against the bundled GORILA corpus (the v1 method);
+  publish **`sigla-corpus-v2`**; document the flag semantics in the converter.
+- *Value: edition-grade Linear A from the open dataset — the original WP4 ambition. Risk: medium
+  (flag semantics need careful reverse-engineering; the cross-validation harness catches errors).*
+
+## WP12 — Greek metre II: iambic trimeter + the synizesis lexicon
+
+The two scansion rows from the Limitations inventory, on patterns the codebase already proves:
+
+- **Iambic trimeter** in `greek.meter` (x — ⏑ — ×3, with resolution and the standard caesurae),
+  same honest contract as hexameter: a line that doesn't fit raises with the reason.
+- A curated **synizesis lexicon** on the syllabification-exception pattern: each entry is a
+  form + the syllable pair that scans as one, **test-enforced** to (a) be required by a real line
+  that otherwise fails and (b) differ from the rule engine — contribution-friendly, never inferred.
+- Lyric metres stay out unless trimeter lands with room to spare (they are a research project).
+- *Value: closes two named limitations; the scansion feature stops declining Attic drama. Risk:
+  low-medium (well-specified in West/Smyth).*
+
+## WP13 — `load_work` depth: nested textparts + notes
+
+Finish the loader-hardening row (the WP4 half — cached/authenticated discovery — is done):
+
+- Address **nested textparts** (book → chapter → section), with a selector argument
+  (`load_work(urn, ref="1.1-1.50")`-style) instead of top-level-only reading.
+- Stop silently dropping `<note>`/`<bibl>` — carry them as document-level notes/attrs.
+- *Value: real philological workflows address sub-sections. Risk: low (TEI structure work).*
+
+## WP14 — Neural footprint: selective quantization + GPU EPs (timeboxed)
+
+Whole-model int8 failed the ≤0.3-point gate and was rejected; try the **selective** version under
+the same gate — per-component (encoder/heads) int8/fp16 — plus an opt-in onnxruntime GPU
+execution-provider flag. **Timeboxed with an honest-closure clause**: if no configuration passes
+the gate, record the evidence and close the item as "attempted, rejected by the gate" rather than
+shipping a worse model. *Value: 518 MB → smaller first fetch. Risk: medium-high, bounded.*
+
+## WP15 — Morpheus offline morphology: license audit, then go/no-go
+
+The remaining Limitations row for the offline rule tier (irregular/third-declension/contract
+paradigms, accent restoration). **Gated on a license audit first** — Morpheus code and its stem
+libraries carry distinct licenses; only a clean, redistributable-derivative path proceeds (the
+NOTICE forward-attribution slot is waiting). If the audit fails, close the item with the rationale
+and keep the treebank/neural tiers as the documented answer. *Risk: high uncertainty, hence last.*
+
+## WP16 — Standing: externals & community (runs alongside)
+
+- **Inquiry replies** (DAMOS / LiBER / SigLA, letters sent 2026-06-11): record each outcome in
+  `docs/inquiries/README.md`; a LiBER *text* path or an official export from any of them triggers
+  the corresponding integration (the LiBER gated loader stays deferred until then).
+- **Pleiades upstream**: turn `docs/pleiades-candidates.md` into submission-ready place drafts
+  (description, coordinates, period, references) the maintainer can file.
+- **Contribution-driven growth**: lexicon entries (Linear B bridge, Cypriot ICS facts), AI eval
+  cases, and corrections via the issue forms — triaged as they arrive.
+
+**Sequence:** WP10 → WP11 → WP12 → WP13 → WP14 → WP15, with WP16 standing. Out of scope for
+0.8.0 (unchanged): the JOSS paper (the 1.0 gate), the workbench bridge, the Koine track, the web
+demo, and a database backend.
+
+---
+
 ## Declined / parked (with rationale)
 
 - **Pydantic/msgspec core** — conflicts with the zero-dependency invariant that defines the package;
@@ -409,21 +501,10 @@ them real where licensing allows.
 
 ## Post-0.8.0 → 1.0
 
-The first three items below come straight from the
-[Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations) inventory — engineering
-limits a release cycle can lift:
+*(The reassessment pulled the three engineering items that used to lead this list into Phase II:
+iambic scansion + the synizesis lexicon → **WP12**, Morpheus morphology → **WP15**, model
+quantization/GPU → **WP14**.)*
 
-- **Iambic and lyric scansion + a synizesis lexicon.** Extend `meter` beyond dactylic
-  hexameter/elegiac pentameter (iambic trimeter first), and curate a lexicalised **synizesis
-  lexicon** on the syllabification-exception pattern (test-enforced entries, contribution-friendly) —
-  so the lines that today honestly fail to scan can scan honestly.
-- **Morpheus-backed offline morphology.** Fold Morpheus's morphological tables (per applicable
-  license; NOTICE carries the forward attribution) into the zero-dependency rule tier, closing the
-  irregular/third-declension/contract gaps and restoring accents on reconstructed lemmas without
-  requiring the treebank or neural backends.
-- **Shrink the neural pipeline model.** Selective quantization of `grc-joint` (518 MB fp32 today;
-  whole-model int8 failed the ≤0.3-point accuracy gate and was rejected) — per-component int8/fp16
-  under the same gate — plus optional GPU execution providers for onnxruntime.
 - **JOSS paper** (the methods write-up 1.0 waits on) — the WP3 benchmark protocol is half the paper;
   seed-variance repeats for the tight margins belong to this write-up.
 - **Workbench bridge**: `aegean workbench` fetches + serves the linearaworkbench static build

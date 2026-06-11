@@ -131,9 +131,10 @@ and **SigLA Linear A** corpora fetched on demand; corpus statistics (dispersion,
 bootstrap), one-line plots, and cross-script phonetic comparison; the multi-provider AI layer with
 traceable, measurable grounding; and a complete data layer — lossless JSON round-trip, a compound
 `query()`, schema-valid EpiDoc / CSV / Parquet export, an opt-in analysis cache, and
-Pleiades-aligned find-sites. **Next:** the 0.8.0 program is complete and the roadmap is being
-reassessed; a **1.0** waits on external use and a short methods write-up (a JOSS submission is
-planned). The [wiki](https://github.com/ryanpavlicek/pyaegean/wiki) has the full roadmap.
+Pleiades-aligned find-sites. **Next:** Phase II of the 0.8.0 program is underway — DAMOS scribal
+hands, SigLA apparatus decoding, iambic scansion, deeper `load_work` addressing, and a timeboxed
+model-shrink pass; a **1.0** waits on external use and a short methods write-up (a JOSS submission
+is planned). The [wiki](https://github.com/ryanpavlicek/pyaegean/wiki) has the full roadmap.
 
 ## Project maturity & scope
 
