@@ -57,6 +57,39 @@ align_sequences([["A-B", "X-Y", "C-D"], ["A-B", "Z-Z", "C-D"]])
 # [['A-B','A-B'], ['X-Y','Z-Z'], ['C-D','C-D']]
 ```
 
+## Cross-script comparison
+
+The distance and alignment above work on phoneme strings; `aegean.analysis.compare`
+feeds them words from *different scripts* by romanizing each to a common Latin
+phoneme alphabet. The deciphered syllabaries already do this
+(`word_to_phonetic`); the new piece is `romanize_greek`, so a Linear B word and
+its alphabetic-Greek descendant — or a Cypriot and a Greek form — can be lined
+up by **sound**.
+
+```python
+from aegean.analysis import phonetic_compare, nearest, romanize_greek
+
+romanize_greek("βασιλεύς")                       # 'basileus'  (accents/breathings dropped)
+cmp = phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek", fold_aspiration=True)
+cmp.similarity                                   # ~0.69
+[(c.a, c.b, c.op) for c in cmp.alignment][:1]    # [('q', 'b', 'sub-far')] — the qʷ→b reflex
+
+# triage: which Greek words sound closest to a Linear B form?
+nearest("qa-si-re-u", "linearb",
+        ["ποιμήν", "βασιλεύς", "πατήρ", "θεός"], "greek", fold_aspiration=True)
+# [('βασιλεύς', 0.31), ('πατήρ', 0.61), …]   — the true cognate ranks first
+```
+
+Two cautions stack here. The distance metric's phoneme classes are already a
+linguistic judgement (above); on top of that, **syllabic spelling is defective**
+— Linear B and Cypriot drop word-final consonants, omit cluster members, and
+don't write aspiration or voicing — so a Greek form looks longer than its
+syllabic spelling and the absolute distance is inflated. The reliable signal is
+the **ranking** (`nearest`), and an alignment shows a *hypothesised*
+correspondence, not a sound law. `fold_aspiration` (θ/φ/χ → t/p/k) meets the
+syllabaries' aspiration-blind orthography halfway. From the shell:
+`aegean analyze compare po-me ποιμήν` and `aegean analyze nearest qa-si-re-u greek`.
+
 ## Morphological clustering
 
 Heuristic lemmatization for an undeciphered script: find suffixes productive

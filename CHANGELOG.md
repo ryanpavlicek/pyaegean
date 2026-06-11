@@ -71,6 +71,15 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Cross-script phonetic comparison** (`aegean.analysis.compare`): line up a word in one
+  script against a word in another by sound. A new `romanize_greek` maps alphabetic Greek to
+  the Latin phoneme alphabet (accents/breathings stripped, θ→th/φ→ph/χ→kh, γ→n before a velar,
+  optional `fold_aspiration` θ/φ/χ→t/p/k); the deciphered syllabaries already romanize, so
+  `phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek")` aligns the qʷ→b labiovelar
+  reflex and `nearest(word, script, candidates, candidate_script)` ranks a wordlist by phonetic
+  closeness across scripts — the true cognate ranks first. CLI: `aegean analyze compare` and
+  `aegean analyze nearest`. Exploratory and doubly cautioned: defective syllabic spelling
+  inflates the absolute distance, so the *ranking* is the signal.
 - **Visualization one-liners** (`aegean.viz`, the new `[viz]` extra — matplotlib, imported
   lazily so `import aegean` stays dependency-free): `plot_sign_frequencies`, `plot_dispersion`
   (frequency vs Gries' DP), `plot_keyness` (diverging log-ratio bars with G² labels),

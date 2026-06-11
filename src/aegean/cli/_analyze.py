@@ -53,6 +53,91 @@ def align(
     )
 
 
+_SCRIPT_OPT = typer.Option(
+    "linearb", "--script-a", help="Script of WORD1 (greek/lineara/linearb/cypriot)."
+)
+_SCRIPT_B_OPT = typer.Option("greek", "--script-b", help="Script of WORD2.")
+_FOLD_OPT = typer.Option(
+    False, "--fold-aspiration", help="Map θ/φ/χ → t/p/k (fairer vs syllabic spelling)."
+)
+
+
+@analyze_app.command()
+def compare(
+    word1: str = typer.Argument(..., help="First word (e.g. a Linear B transliteration po-me)."),
+    word2: str = typer.Argument(..., help="Second word (e.g. Greek ποιμήν)."),
+    script_a: str = _SCRIPT_OPT,
+    script_b: str = _SCRIPT_B_OPT,
+    fold_aspiration: bool = _FOLD_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Compare two words ACROSS scripts by sound: romanize each, then align.
+
+    e.g. `aegean analyze compare po-me ποιμήν` (Linear B vs Greek 'shepherd').
+    Exploratory: syllabic spelling is defective, so read the alignment and the
+    ranking, not the absolute number."""
+    from aegean.analysis import phonetic_compare
+
+    try:
+        cmp = phonetic_compare(
+            word1, script_a, word2, script_b, fold_aspiration=fold_aspiration
+        )
+    except ValueError as e:
+        raise fail(str(e)) from None
+    if json_out:
+        emit_json(
+            {
+                "word1": word1, "script_a": script_a, "phonemes_a": cmp.phonemes_a,
+                "word2": word2, "script_b": script_b, "phonemes_b": cmp.phonemes_b,
+                "distance": cmp.distance, "similarity": cmp.similarity,
+                "alignment": list(cmp.alignment),
+            }
+        )
+        return
+    print(f"{word1} [{script_a}] → {cmp.phonemes_a}    {word2} [{script_b}] → {cmp.phonemes_b}")
+    print(f"similarity {cmp.similarity:.2f}  (distance {cmp.distance:.3f})")
+    table(
+        "alignment",
+        ["a", "b", "op"],
+        [[c.a or "·", c.b or "·", c.op] for c in cmp.alignment],
+    )
+
+
+@analyze_app.command()
+def nearest(
+    word: str = typer.Argument(..., help="The query word (e.g. Linear B qa-si-re-u)."),
+    corpus: str = typer.Argument(..., help="Corpus whose words are the candidates (e.g. greek)."),
+    script_a: str = _SCRIPT_OPT,
+    fold_aspiration: bool = _FOLD_OPT,
+    top: int = typer.Option(10, "--top", help="How many nearest candidates."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Rank a corpus's words by phonetic closeness to WORD across scripts.
+
+    e.g. `aegean analyze nearest qa-si-re-u greek` finds the Greek words that
+    sound closest to Linear B qa-si-re-u (→ βασιλεύς). The candidate script is
+    the corpus's own."""
+    from aegean.analysis import nearest as _nearest
+
+    c = load_corpus(corpus)
+    cand_script = c.script_id or "greek"
+    candidates = sorted({t.text for d in c for t in d.words})
+    try:
+        ranked = _nearest(
+            word, script_a, candidates, cand_script, top=top, fold_aspiration=fold_aspiration
+        )
+    except ValueError as e:
+        raise fail(str(e)) from None
+    if json_out:
+        emit_json([{"candidate": w, "distance": d} for w, d in ranked])
+        return
+    table(
+        f"nearest in {corpus} [{cand_script}] to {word} [{script_a}]",
+        ["candidate", "distance"],
+        [[w, f"{d:.3f}"] for w, d in ranked],
+    )
+
+
 @analyze_app.command()
 def assoc(
     corpus: str = CORPUS_ARG,

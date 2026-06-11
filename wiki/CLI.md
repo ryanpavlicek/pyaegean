@@ -106,11 +106,16 @@ weigh, not conclusions:
 ```bash
 aegean analyze distance KU-RO KI-RO          # weighted phonetic distance
 aegean analyze align KU-RO KI-RO             # per-position alignment
+aegean analyze compare po-me ποιμήν          # cross-script: Linear B vs Greek by sound
+aegean analyze nearest qa-si-re-u greek      # rank a corpus's words by sound (→ βασιλεύς)
 aegean analyze assoc lineara KU-RO KI-RO     # χ², G², Fisher, PMI over shared documents
 aegean analyze cooccur lineara KU-RO         # what shares a tablet with KU-RO
 aegean analyze clusters lineara              # stem + productive-suffix clusters
 aegean analyze structure lineara [HT13]      # accounting/libation/list/text census
 ```
+
+`compare`/`nearest` take `--script-a`/`--script-b` (greek · lineara · linearb ·
+cypriot) and `--fold-aspiration` (θ/φ/χ → t/p/k, fairer against syllabic spelling).
 
 ## Data (`aegean data …`)
 

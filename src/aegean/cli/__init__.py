@@ -4,13 +4,13 @@ Installed by the ``[cli]`` extra (``pip install "pyaegean[cli]"``; typer + rich)
 The command tree mirrors the public API:
 
 - corpus commands at the top level: ``info``, ``load``, ``show``, ``search``,
-  ``query``, ``stats``, ``balance``, ``cite``, ``export``, ``geo``, ``sign``,
-  ``bridge``;
+  ``query``, ``stats``, ``dispersion``, ``keyness``, ``balance``, ``cite``,
+  ``export``, ``geo``, ``sign``, ``bridge``, ``plot``;
 - ``aegean greek …`` — the full Greek NLP pipeline (normalize → … → parse,
   plus ``pipeline`` and the ``eval`` reproductions), with ``--neural`` /
   ``--treebank`` / … flags standing in for the ``use_*()`` activations;
-- ``aegean analyze …`` — distance, alignment, association statistics,
-  morphological clusters, structure census;
+- ``aegean analyze …`` — distance, alignment, cross-script comparison,
+  association statistics, morphological clusters, structure census;
 - ``aegean data …`` — the fetch-to-cache layer;
 - ``aegean ai …`` — the generative layer (exploratory-labeled, key-gated).
 

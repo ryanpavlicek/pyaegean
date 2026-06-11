@@ -26,6 +26,14 @@ from .collocation import (
     pmi_interval,
     wilson_interval,
 )
+from .compare import (
+    PHONEME_SCRIPTS,
+    PhoneticComparison,
+    nearest,
+    phonetic_compare,
+    romanize_greek,
+    to_phonemes,
+)
 from .distance import (
     BASE_VOWELS,
     CONSERVATIVE_PHONETIC_SCHEME,
@@ -127,6 +135,13 @@ __all__ = [
     "AlignCell",
     "AlignOp",
     "AlnPos",
+    # cross-script phonetic comparison
+    "romanize_greek",
+    "to_phonemes",
+    "phonetic_compare",
+    "nearest",
+    "PhoneticComparison",
+    "PHONEME_SCRIPTS",
     # collocation statistics
     "chi_squared_2x2",
     "log_likelihood_ratio_2x2",

@@ -297,8 +297,8 @@ them real where licensing allows.
 
 ## WP5 — Analysis & visualization
 
-> **In progress (2026-06-11).** Statistics layer ✓ and visualization helpers ✓ shipped;
-> comparative phonetics is next.
+> **Done (2026-06-11).** Statistics layer ✓, visualization helpers ✓, and comparative
+> phonetics ✓ all shipped — WP5 complete.
 
 - ~~**Visualization helpers** (lazy matplotlib via the `[data]`/`[viz]` extra): sign-frequency bars,
   collocation networks, scansion grids, accounting-discrepancy views — convenient one-liners, not a
@@ -310,9 +310,10 @@ them real where licensing allows.
   **Done** — `aegean.analysis.stats`: Gries' DP (+ Lijffijt & Gries normalization), keyness
   (G² Rayson-&-Garside form + Hardie log-ratio), percentile bootstrap over documents; CLI
   `aegean dispersion` / `aegean keyness`. *(Reviewer §3.)*
-- **Comparative phonetics**: generalize the distance/alignment module for cross-script comparison
+- ~~**Comparative phonetics**: generalize the distance/alignment module for cross-script comparison
   (Linear B ↔ alphabetic Greek, Cypriot variants) — exploratory-labeled where it touches
-  undeciphered material. *(Reviewer §3.)*
+  undeciphered material.~~ **Done** — `aegean.analysis.compare`: `romanize_greek`, `phonetic_compare`,
+  and cross-script `nearest`; CLI `aegean analyze compare`/`nearest`. *(Reviewer §3.)*
 
 ## WP6 — AI layer credibility
 
