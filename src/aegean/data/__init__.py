@@ -172,12 +172,13 @@ _REMOTE: dict[str, DataSpec] = {
         name="damos-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "damos-corpus-v1/damos-corpus.json"
+            "damos-corpus-v2/damos-corpus.json"
         ),
-        sha256="bcf3348ba92eb08cae6bb758e3ea4e713143c1ca20234678013541fb3627fbd9",
+        sha256="eab9ccdfc4324b62f015bccd5e3f917f256cab8c058840842127eadecfbca2d2",
         license="CC BY-NC-SA 4.0 (DAMOS — F. Aurora; NonCommercial, never bundled)",
-        note="DAMOS-derived Linear B corpus: ~5,900 tablets (Knossos, Pylos, Thebes, …) "
-             "with transliterations + site/chronology. Loadable via aegean.load('damos').",
+        note="DAMOS-derived Linear B corpus v2: ~5,900 tablets (Knossos, Pylos, Thebes, …) "
+             "with transliterations, site/chronology, scribal hands, find context, and "
+             "object class. Loadable via aegean.load('damos').",
         extract=False,
     ),
     # A user-supplied Linear B corpus override (bring-your-own). DAMOS is now loadable

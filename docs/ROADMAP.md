@@ -395,19 +395,22 @@ sequenced, as before, by (value ÷ risk).
 
 ## WP10 — DAMOS corpus v2: scribal hands & find-context
 
+> **Done (2026-06-11).** `damos-corpus-v2` published (3,945 of 5,932 documents carry a hand);
+> loader maps scribe/findspot/support; scribal-hand keyness verified end-to-end; the v1 asset
+> stays published for reproducibility.
+
 The v1 asset kept transliteration + site/series/chronology but dropped fields DAMOS curates and
 our model already has slots for: **Hand** (the scribe), **Find-area/Find-spot**, **Joins**, the
-museum **Location** and **Inv. no.** The raw per-tablet crawl cache survives, so this is a
+museum **Location** and **Inv. no.** The raw per-tablet crawl cache survived, so this was a
 converter + loader change, no re-crawl.
 
-- Extend `scripts/build_damos_corpus.py` to carry scribe (Hand), findspot, joins, and
+- ~~Extend `scripts/build_damos_corpus.py` to carry scribe (Hand), findspot, joins, and
   location/inventory; publish **`damos-corpus-v2`** (sha-pinned; v1 stays for reproducibility);
-  bump the DataSpec + `Provenance.data_version`.
-- Loader maps Hand → `DocumentMeta.scribe`, Find-area/spot → `findspot` — so
+  bump the DataSpec + `Provenance.data_version`.~~ **Done.**
+- ~~Loader maps Hand → `DocumentMeta.scribe`, Find-area/spot → `findspot` — so
   `damos.filter(scribe="138")` and **keyness by scribal hand** just work (`aegean keyness damos
-  --scribe 138`); add the scribal-hand recipe.
-- *Value: opens scribe-level scholarship (hand attribution, per-hand vocabulary) on the full
-  corpus. Risk: minimal — all pieces exist.*
+  --scribe 138`); add the scribal-hand recipe.~~ **Done** (plus `support` ← the object class:
+  tablet / stirrup jar / nodule / label).
 
 ## WP11 — SigLA corpus v2: decode the apparatus flags
 

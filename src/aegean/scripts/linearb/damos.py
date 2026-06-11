@@ -68,8 +68,15 @@ def _build_document(rec: dict[str, Any]) -> Any:
         tokens.extend(line_tokens)
         lines.append(idxs)
     heading = rec.get("heading") or f"DAMOS {rec.get('id')}"
+    # v2 find context: the area (e.g. "PY, Room 8") plus the grid ref when given.
+    findspot = " — ".join(
+        s for s in (rec.get("find_area"), rec.get("find_spot")) if s
+    )
     meta = DocumentMeta(
         site=rec.get("site") or "",
+        support=rec.get("support") or "",
+        scribe=rec.get("scribe") or "",
+        findspot=findspot,
         period=rec.get("chronology") or "",
         name=heading,
     )
@@ -90,8 +97,11 @@ def load_damos() -> Any:
     **CC BY-NC-SA 4.0** — the NonCommercial obligation passes to you) on first
     use, then loads offline from the cache. One `Document` per tablet, carrying
     the DAMOS transliteration (verbatim in ``transcription``) tokenised into
-    words / numerals / logograms with the site and chronology in the metadata.
-    Cite DAMOS in academic work (see ``NOTICE``)."""
+    words / numerals / logograms, with the site, chronology, **scribal hand**
+    (``meta.scribe``, e.g. ``"117"``), find context (``meta.findspot``), and
+    object class (``meta.support``: tablet / stirrup jar / nodule / label) in
+    the metadata — so ``corpus.filter(scribe="117")`` and scribal-hand keyness
+    work directly. Cite DAMOS in academic work (see ``NOTICE``)."""
     import json as _json
 
     from ...core.corpus import Corpus
@@ -114,10 +124,12 @@ def load_damos() -> Any:
             )
         ),
         url="https://damos.hf.uio.no",
-        data_version=f"damos-corpus-v1@{meta.get('generated', '')}",
+        data_version=f"damos-corpus-v{meta.get('version', 1)}@{meta.get('generated', '')}",
         notes=(
             "Mycenaean (Linear B) corpus; transliterations + core metadata decoded from "
-            "the DAMOS public API. Word boundaries follow DAMOS (comma/slash dividers).",
+            "the DAMOS public API. Word boundaries follow DAMOS (comma/slash dividers). "
+            "v2 carries the DAMOS-curated scribal hand (meta.scribe), find context "
+            "(meta.findspot), and object class (meta.support).",
         ),
     )
     return Corpus(docs, sign_inventory=linear_b_inventory(), provenance=provenance, script_id="linearb")

@@ -104,11 +104,25 @@ print(doc.transcription)             # the DAMOS transliteration, verbatim
 
 Each tablet is one `Document`: the transliteration is tokenised into words / numerals / logograms
 (using the DAMOS comma-and-slash word dividers), and the verbatim transliteration is kept in
-`Document.transcription`. The data is **NonCommercial + ShareAlike** — those obligations pass
-through to you; the corpus is hosted as a clearly-labeled CC BY-NC-SA release asset, fetched to
-your cache on demand, and **never bundled inside the Apache-2.0 wheel**. **Cite DAMOS**
-(Aurora 2015) in academic work. `scripts/build_damos_corpus.py` documents exactly how the asset
-is built from the DAMOS public API.
+`Document.transcription`. Since **v2**, the DAMOS-curated context rides along in the metadata:
+the **scribal hand** (`meta.scribe` — 3,945 of the 5,932 documents carry one), the **find
+context** (`meta.findspot`, e.g. `"PY, Room 8"`), and the **object class** (`meta.support`:
+tablet / stirrup jar / nodule / label). That makes scribe-level work one-liners:
+
+```python
+hand117 = corpus.filter(scribe="117")        # the most prolific Knossos hand: 684 tablets
+vases = corpus.filter(support="stirrup jar") # the painted-vase inscriptions as a group
+
+from aegean.analysis import keyness          # what does Hand 117 write about?
+rows = keyness(hand117, [d for d in corpus.documents if d.meta.scribe != "117"])
+```
+
+The data is **NonCommercial + ShareAlike** — those obligations pass through to you; the corpus is
+hosted as a clearly-labeled CC BY-NC-SA release asset, fetched to your cache on demand, and
+**never bundled inside the Apache-2.0 wheel**. **Cite DAMOS** (Aurora 2015) in academic work.
+`scripts/build_damos_corpus.py` documents exactly how the asset is built from the DAMOS public
+API (joins, museum location, and inventory numbers are also in the JSON for those who read it
+directly).
 
 ### The bundled sample — `aegean.load("linearb")`
 

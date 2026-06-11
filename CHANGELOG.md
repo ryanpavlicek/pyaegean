@@ -12,6 +12,14 @@ public API, and a hosted API reference. Released as **beta** — the API is clos
 waits on external use and a short methods write-up.
 
 ### Added
+- **DAMOS corpus v2 — scribal hands & find-context** (`damos-corpus-v2`, fetched by
+  `aegean.load("damos")`): the corpus now carries the DAMOS-curated **scribal hand**
+  (`meta.scribe` — 3,945 of 5,932 documents have one; Hand 117 alone wrote 684 tablets), the
+  **find context** (`meta.findspot`, area + grid ref), and the **object class** (`meta.support`:
+  tablet / stirrup jar / nodule / label), plus joins and museum location/inventory in the asset
+  JSON. Scribe-level scholarship becomes one-liners: `damos.filter(scribe="117")`,
+  `aegean keyness damos --scribe 117`. Rebuilt from the same public-API crawl as v1 (which stays
+  published for reproducibility); `Provenance.data_version` now reads `damos-corpus-v2@…`.
 - **Recipes** — a new wiki page of end-to-end scholarly workflows, each verified against the shipped
   corpora and ending in a citation: reconcile a corpus's accounting and export the discrepancies,
   map a word's distribution, lemmatize-and-cite a chapter, keyness over DAMOS, cross-script sound

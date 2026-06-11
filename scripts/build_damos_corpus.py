@@ -81,6 +81,14 @@ def site_of(item: dict, meta: dict, heading: str) -> str:
     }.get(prefix, prefix or "unknown")
 
 
+def _clean(value: object) -> str | None:
+    """Normalise a DAMOS field: strip, and treat ''/'-' placeholders as absent."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    return s if s and s != "-" else None
+
+
 def to_record(payload: dict) -> dict:
     it = payload["item"]
     meta = payload.get("meta") or {}
@@ -95,6 +103,14 @@ def to_record(payload: dict) -> dict:
         "set": it.get("set") or None,
         "chronology": it.get("chronology1") or (meta.get("Chronology") if meta else None),
         "lost": bool(it.get("lost")),
+        # v2 fields — the scribal hand and the find/object context DAMOS curates:
+        "scribe": _clean(meta.get("Hand")),          # e.g. "117" (Hand 117)
+        "find_area": _clean(meta.get("Find-area")),  # e.g. "PY, Room 8"
+        "find_spot": _clean(meta.get("Find-spot")),  # e.g. a grid ref like "7.54"
+        "support": _clean(it.get("object")),         # tablet | stirrup jar | nodule, …
+        "joins": _clean(meta.get("Joins")),          # e.g. "+ 31 = 5797"
+        "museum": _clean(meta.get("Location")),      # e.g. "HM" (Heraklion Museum)
+        "inventory": _clean(meta.get("Inv. no.")),
         "trismegistos": str(it["trismegistos"]) if it.get("trismegistos") else None,
         "permalink": it.get("permalink1") or f"{BASE}/{it.get('id')}",
         "content": (it.get("content") or "").strip(),
@@ -154,9 +170,11 @@ def main() -> int:
             print(f"  ! id {doc_id}: {e}", file=sys.stderr)
 
     with_text = sum(1 for r in records if r["content"])
+    with_scribe = sum(1 for r in records if r.get("scribe"))
     out = {
         "_meta": {
             "name": "DAMOS — Database of Mycenaean at Oslo",
+            "version": 2,
             "license": LICENSE,
             "attribution": ATTRIBUTION,
             "cite": CITE,
@@ -165,13 +183,16 @@ def main() -> int:
             "generated": time.strftime("%Y-%m-%d"),
             "document_count": len(records),
             "documents_with_text": with_text,
+            "documents_with_scribe": with_scribe,
             "note": (
                 "Linear B transliterations and core metadata decoded from the DAMOS "
                 "public web API; no imagery. Content is CC BY-NC-SA 4.0 — the "
                 "NonCommercial + ShareAlike obligations pass through to the user, and "
                 "the corpus is never bundled in the Apache-2.0 wheel. Transliteration "
                 "conventions follow DAMOS (Latin syllabograms, *NNN ideograms, line "
-                "numbers, editorial brackets)."
+                "numbers, editorial brackets). v2 adds the scribal hand (scribe), the "
+                "find context (find_area/find_spot), the object class (support), joins, "
+                "and the museum location/inventory, as curated by DAMOS."
             ),
         },
         "documents": records,

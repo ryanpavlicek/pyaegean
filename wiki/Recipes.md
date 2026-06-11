@@ -128,6 +128,20 @@ The textbook Ventris & Chadwick land-tenure result surfaces immediately. Read
 G² (significance) together with the log-ratio (effect size) and
 `aegean dispersion` — see [Analysis → Corpus statistics](Analysis).
 
+The same split works **by scribal hand** (v2 of the corpus carries the
+DAMOS-curated hand on `meta.scribe` — 3,945 documents have one): *what does the
+most prolific Knossos scribe write about?*
+
+```python
+h117 = damos.filter(scribe="117")            # Hand 117: 684 tablets
+rest117 = [d for d in damos.documents if d.meta.scribe != "117"]
+keyness(h117, rest117)[:5]                   # the hand's characteristic vocabulary
+```
+
+```bash
+aegean keyness damos --scribe 117 --top 10
+```
+
 ## 5 · Sound-match a syllabic word against Greek
 
 *Which Greek word does Linear B `qa-si-re-u` sound like?* Cross-script
