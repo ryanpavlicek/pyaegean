@@ -300,10 +300,26 @@ of the replace-the-shipped-lemmatizer rule.** UAS rose to 82.34 (within 0.83 of
 odyCy-joint's *in-domain* 83.17). The composition mode stays dev-chosen (`lookup-first`)
 for all folds — no per-fold test-set tuning.
 
-**Disposition:** one more dev-justified run (12 epochs — dev was still improving on
-every metric) attempts to close both micro-gaps; its numbers will be recorded
-regardless of direction. The Stage D+ checkpoint already supersedes Stage D's as the
-Stage E candidate either way.
+**Replicate (run 2, same config — 9 epochs, seed 42; GPU nondeterminism makes it a
+genuine variance read; `training/results/stage-dplus-r2/`):**
+
+| Metric (UD Perseus test) | run 1 | run 2 | spread |
+|---|---|---|---|
+| UAS | 88.58 | 88.40 | ±0.09 |
+| LAS | 83.80 | 83.63 | ±0.09 |
+| Lemma | 94.17 | 94.19 | ±0.01 |
+| UPOS / UFeats | 96.81 / 96.03 | 96.67 / 95.97 | ±0.07 / ±0.03 |
+| PROIEL lemma | 90.30 | 90.24 | ±0.03 |
+
+What the replicate establishes: **the UAS claim is robust** — both runs clear the 88.20
+bar (mean 88.49, worst run +0.20 above it); **the LAS gap is real at 9 epochs**, not
+noise (misses in both runs, mean 83.71 vs 83.98); the PROIEL lemma sits consistently
+just short (90.24–90.30 vs 90.38). Lemma and tagging are highly stable.
+
+**Disposition:** the dev-justified 12-epoch run (dev still improving on every metric at
+epoch 8 in both runs) remains the pending attempt on the LAS and PROIEL-lemma
+micro-gaps; recorded regardless of direction. The Stage D+ checkpoint already
+supersedes Stage D's as the Stage E candidate either way.
 
 ## WP3 targets (definition of done)
 
