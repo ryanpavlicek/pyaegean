@@ -63,12 +63,30 @@ def _work_dir(work: str) -> str:
 
 
 def _github_listing(repo: str, path: str, ref: str) -> list[str]:
-    """File names under ``path`` at ``ref`` (the GitHub contents API)."""
+    """File names under ``path`` at ``ref`` (the GitHub contents API).
+
+    The listing is cached on disk per (repo, ref, path) — a ref names an
+    immutable commit, so the cache never goes stale — which keeps repeat
+    `load_work` calls off the API entirely (the unauthenticated limit is
+    60 requests/hour). Set ``PYAEGEAN_GITHUB_TOKEN`` or ``GITHUB_TOKEN`` to
+    authenticate first-time discovery at scale."""
+    safe = f"{repo.replace('/', '--')}@{ref[:12]}--{path.replace('/', '--')}.json"
+    cache_file = cache_dir() / "greek-works" / "listings" / safe
+    if cache_file.exists():
+        names = json.loads(cache_file.read_text(encoding="utf-8"))
+        return [str(n) for n in names]
     url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
-    req = urllib.request.Request(url, headers={"User-Agent": "pyaegean"})
+    headers = {"User-Agent": "pyaegean"}
+    token = os.environ.get("PYAEGEAN_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=30) as resp:
         entries = json.loads(resp.read().decode("utf-8"))
-    return [e["name"] for e in entries]
+    names = [e["name"] for e in entries]
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps(names), encoding="utf-8")
+    return names
 
 
 def pick_edition(names: list[str], edition: str | None = None) -> str | None:

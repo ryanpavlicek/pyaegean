@@ -1,9 +1,10 @@
-# LiBER inquiry — DRAFT (not sent)
+# LiBER inquiry — sent 2026-06-11
 
-**To:** The LiBER team (Linear B Electronic Resources, CNR — Istituto di Scienze
-del Patrimonio Culturale; the project is associated with Maurizio Del Freo and
-Francesco Di Filippo) — *fill in the current contact address from the LiBER
-site before sending.*
+**To:** The LiBER editorial team — per liber.cnr.it/credits: Maurizio Del Freo
+(CNR — ISPC), Francesco Di Filippo (CNR — ISMed), Françoise Rougemont
+(CNRS — ArScAn). Rights holder: **© CNR Edizioni, 2024 — all rights reserved**
+(no reuse terms published; confirmed against the credits page, 2026-06-11),
+which is why this is a true permission request.
 
 **Subject:** Research-use access to LiBER data from an open-source Python
 toolkit — a permission request

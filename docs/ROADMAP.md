@@ -272,6 +272,14 @@ them real where licensing allows.
      dataset's machine-readable access path (the site doesn't advertise a download endpoint — a
      courtesy contact to the authors about a stable export is about *format*, not permission),
      then a fetch-to-cache loader for the sign-variant + apparatus-grade readings.
+     *Scouting result (2026-06-11):* the dataset ships inside the web app as OCaml-Marshal
+     payloads (`database.js`); no export endpoint or public source exists. *Decode
+     feasibility proven the same day* (`scripts/explore_sigla_db.py`: escape layers peeled,
+     Marshal header verified, document/site/period/sign-attestation content recognizable;
+     the SigLA paper documents the schema and invites reuse "outside the interface") —
+     so the loader is buildable now: a Marshal reader + the paper's schema mapping,
+     cross-validated against the bundled GORILA corpus, with the format courtesy contact
+     (sent) as a stability check.
   3. **Corpus v2**: a GORILA-faithful bundled corpus with editorial status populated, with SigLA
      enrichment as the opt-in fetched layer (NC data stays out of the Apache-2.0 wheel). If the
      upstream audit dead-ends, the documented limitation stands — but we will have actually tried

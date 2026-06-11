@@ -94,6 +94,32 @@ excerpts from Pylos, Knossos, and Mycenae tablets taken from *sourced quotations
 Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts
 to exercise the tools, **not editions** — the full corpus stays **bring-your-own**.
 
+**From a LiBER selection (interim recipe).** LiBER's interface exports a selection by
+copy-to-clipboard ("e.g., to be pasted into an *Excel* spreadsheet"). Your own copied
+selection — your use, under LiBER's terms; pyaegean fetches and re-hosts nothing — can be
+loaded through `Corpus.from_records`: save the paste as CSV with columns like
+`id,site,text`, then:
+
+```python
+import csv
+
+import aegean
+
+with open("my-liber-selection.csv", encoding="utf-8") as f:
+    records = [
+        {"id": r["id"], "text": r["text"], "meta": {"site": r.get("site", "")}}
+        for r in csv.DictReader(f)
+    ]
+corpus = aegean.Corpus.from_records(
+    records, script_id="linearb",
+    provenance=aegean.Provenance(
+        source="My LiBER selection (manual export)",
+        license="© CNR Edizioni — all rights reserved; personal research use",
+        citation="LiBER — Linear B Electronic Resources (Del Freo & Di Filippo, CNR).",
+    ),
+)
+```
+
 Point pyaegean at your own licensed EpiDoc export (e.g. a DAMOS download) and it parses it locally,
 never re-hosting:
 

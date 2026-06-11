@@ -1,4 +1,4 @@
-# DAMOS inquiry — DRAFT (not sent)
+# DAMOS inquiry — sent 2026-06-11
 
 **To:** Dr. Federico Aurora (DAMOS — Database of Mycenaean at Oslo, University of
 Oslo Library) — *fill in the current contact address from the DAMOS site before

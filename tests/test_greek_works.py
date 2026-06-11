@@ -66,3 +66,62 @@ def test_work_dir_validation():
     assert _work_dir("tlg0012.tlg001") == "data/tlg0012/tlg001"
     with pytest.raises(ValueError, match="tlg0012.tlg001"):
         _work_dir("not-a-work")
+
+
+def test_github_listing_is_cached_per_ref(tmp_path, monkeypatch):
+    """A second listing for the same (repo, ref, path) never touches the network —
+    refs are immutable commits, so the cache can't go stale."""
+    import urllib.request
+
+    from aegean.scripts.greek import perseus
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    calls = []
+
+    class _Resp:
+        def __enter__(self):  # type: ignore[no-untyped-def]
+            return self
+
+        def __exit__(self, *a):  # type: ignore[no-untyped-def]
+            return False
+
+        def read(self) -> bytes:
+            return b'[{"name": "x.tlg001.perseus-grc1.xml"}, {"name": "__cts__.xml"}]'
+
+    def fake_urlopen(req, timeout=0):  # type: ignore[no-untyped-def]
+        calls.append(req.full_url)
+        return _Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    first = perseus._github_listing("o/r", "data/x/y", "a" * 40)
+    second = perseus._github_listing("o/r", "data/x/y", "a" * 40)
+    assert first == second == ["x.tlg001.perseus-grc1.xml", "__cts__.xml"]
+    assert len(calls) == 1  # the second call was served from the cache
+
+
+def test_github_listing_sends_token_when_set(tmp_path, monkeypatch):
+    import urllib.request
+
+    from aegean.scripts.greek import perseus
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    monkeypatch.setenv("PYAEGEAN_GITHUB_TOKEN", "tok-123")
+    seen = {}
+
+    class _Resp:
+        def __enter__(self):  # type: ignore[no-untyped-def]
+            return self
+
+        def __exit__(self, *a):  # type: ignore[no-untyped-def]
+            return False
+
+        def read(self) -> bytes:
+            return b"[]"
+
+    def fake_urlopen(req, timeout=0):  # type: ignore[no-untyped-def]
+        seen["auth"] = req.get_header("Authorization")
+        return _Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    perseus._github_listing("o/r", "data/a/b", "b" * 40)
+    assert seen["auth"] == "Bearer tok-123"
