@@ -91,8 +91,22 @@ _REMOTE: dict[str, DataSpec] = {
             "grc-lemma-neural-v1/grc-lemma-neural.tar.gz"
         ),
         sha256="38126872e7a5be6389054062d4789ce5b6fc7e84327b07c2b93649a6f0f1a228",
-        license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), Gorman (CC0)",
+        license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), Gorman (CC BY-SA 4.0)",
         note="GreTa seq2seq lemmatizer (int8 ONNX encoder/decoder + tokenizer + gold lookup), ~232 MB tar.gz; the [neural] extra.",
+        extract=True,
+    ),
+    # The opt-in [neural] joint Greek pipeline: one GreBerta-based model for UPOS, the
+    # 9-position AGDT morphology (rendered as UD FEATS), UD dependency trees (biaffine +
+    # MST), and lemmas (edit-script head + train-only lookup). Trained leakage-clean on
+    # AGDT + Gorman + Pedalion; measured above every published UD Ancient Greek number
+    # (docs/benchmarks.md). URL is pinned to a release asset once published; until then
+    # set PYAEGEAN_GRC_JOINT_URL to fetch from your own copy.
+    "grc-joint": DataSpec(
+        name="grc-joint",
+        url="",
+        sha256="",
+        license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), Pedalion (CC BY-SA 4.0)",
+        note="joint tagger-parser-lemmatizer (ONNX + tokenizer + label maps + lemma scripts/lookup), tar.gz; the [neural] extra.",
         extract=True,
     ),
     # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is

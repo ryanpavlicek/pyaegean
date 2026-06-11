@@ -36,6 +36,17 @@ waits on external use and a short methods write-up.
 - **Hosted API reference** ([ryanpavlicek.github.io/pyaegean](https://ryanpavlicek.github.io/pyaegean/)):
   a browsable reference for every public module, class, and function, generated from the docstrings and
   type hints with pdoc and published to GitHub Pages (the new `[docs]` extra).
+- **The neural Greek pipeline** (`greek.use_neural_pipeline`, the `[neural]` extra): one
+  jointly-trained model (GreBerta encoder + tagging heads + biaffine parser + edit-script
+  lemmatizer) serving UPOS, full morphology (UD FEATS), **UD dependency trees** (single-root MST
+  decoding — non-projectivity handled natively), and lemmas. Trained leakage-clean on AGDT +
+  Gorman + Pedalion (1.41M tokens); measured **above every published UD Ancient Greek number**
+  (UD Perseus test: UPOS 96.95, UFeats 96.13, lemma 94.40, UAS 89.14, LAS 84.36 — protocol and
+  tables in `docs/benchmarks.md`; shipped-artifact numbers re-measured through this package).
+  Once active, `pos_tags`/`pos_tag`, `parse` (then returning UD relations), and `lemmatize` all
+  use it; `analyze_sentence` exposes the full joint analysis. Torch-free inference
+  (onnxruntime + tokenizers + numpy); the model bundle (CC BY-SA 4.0) is fetched to cache,
+  never bundled.
 - **Standard-benchmark evaluation** (`greek.evaluate_on_ud`): scores the active pipeline on the
   Universal Dependencies Ancient Greek test folds (Perseus/PROIEL; CC BY-NC-SA, fetched to cache for
   evaluation only) with the official, sha256-pinned CoNLL 2018 evaluator — the protocol behind the

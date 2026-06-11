@@ -501,12 +501,26 @@ def active() -> dict[str, Any] | None:
 
 def parse(sentence: str | list[str]) -> DepTree:
     """Parse a Greek sentence (a string or a list of tokens) into a `DepTree`.
-    Requires `use_parser`. POS/lemma come from the (treebank-aware) pipeline."""
+
+    Uses the neural pipeline when it is active (`aegean.greek.use_neural_pipeline`) —
+    relations are then **UD** (nsubj, obj, advcl, …) and ``postag`` carries the predicted
+    9-char tag. Otherwise requires `use_parser` (the arc-eager baseline, AGDT/Prague
+    relations), with POS/lemma from the (treebank-aware) pipeline."""
+    from . import joint
+    from .tokenize import tokenize_words
+
+    if joint.active() is not None:
+        words = tokenize_words(sentence) if isinstance(sentence, str) else list(sentence)
+        ana = joint.analyze_sentence(words)
+        return DepTree(tuple(
+            DepToken(id=i + 1, form=f, lemma=ana.lemma[i], upos=ana.upos[i],
+                     head=ana.head[i], relation=ana.deprel[i], postag=ana.xpos[i])
+            for i, f in enumerate(ana.tokens)
+        ))
     if _ACTIVE is None:
         raise ParserNotLoadedError("parser not loaded — call aegean.greek.use_parser() first")
     from .lemmatize import lemmatize
     from .pos import pos_tag
-    from .tokenize import tokenize_words
 
     words = tokenize_words(sentence) if isinstance(sentence, str) else list(sentence)
     form = ["<root>"] + words

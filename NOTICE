@@ -48,6 +48,17 @@ Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   via aegean.greek.use_neural_lemmatizer() (the [neural] extra); fetched to the local cache,
   never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
+Neural joint Greek pipeline model (fetched on demand, NOT bundled)
+  One GreBerta-based model (Riemenschneider & Frank's encoder, Apache-2.0) for UPOS,
+  AGDT-positional morphology (rendered as UD FEATS), UD dependency trees, and lemmas,
+  fine-tuned on the AGDT (CC BY-SA 3.0), the Gorman treebanks (CC BY-SA 4.0), and the
+  Pedalion treebanks (CC BY-SA 4.0) with the UD-Perseus dev/test and PROIEL evaluation
+  texts excluded from training. The resulting model bundle (ONNX + tokenizer + label
+  maps + lemma scripts/lookup) is licensed CC BY-SA 4.0; downloaded by the user on
+  demand via aegean.greek.use_neural_pipeline() (the [neural] extra), fetched to the
+  local cache, never bundled in the Apache-2.0 wheel. Attribute the treebanks in
+  academic work.
+
 PROIEL treebank — Ancient Greek (fetched on demand, NOT redistributed)
   The PROIEL treebank (https://github.com/proiel/proiel-treebank) — the Greek New Testament
   and Herodotus — licensed CC BY-NC-SA 3.0. Downloaded by the user on demand via

@@ -169,6 +169,7 @@ def pipeline_conllu(sentences: list[UDSentence], *, parse: bool = False) -> str:
     from `aegean.greek.parse` when ``parse=True`` (requires `use_parser`), else a flat
     placeholder that makes UAS/LAS meaningless (the caller omits them). XPOS/FEATS are
     not emitted by the current stack (``_``)."""
+    from . import joint
     from .lemmatize import lemmatize
 
     if parse:
@@ -177,6 +178,19 @@ def pipeline_conllu(sentences: list[UDSentence], *, parse: bool = False) -> str:
     lines: list[str] = []
     for sent in sentences:
         forms = [t.form for t in sent.tokens]
+        model = joint.active()
+        if model is not None:  # the neural pipeline: one encoder pass fills every column
+            ana = model.analyze(forms)
+            if sent.sent_id:
+                lines.append(f"# sent_id = {sent.sent_id}")
+            if sent.text:
+                lines.append(f"# text = {sent.text}")
+            for i in range(len(forms)):
+                lines.append("	".join((
+                    str(i + 1), forms[i], ana.lemma[i], ana.upos[i], ana.xpos[i],
+                    ana.feats[i], str(ana.head[i]), ana.deprel[i], "_", "_")))
+            lines.append("")
+            continue
         lemmas = [lemmatize(f) for f in forms]
         tags = _tag_forms(forms)
         # Placeholder when not parsing: a valid single-root flat tree (the evaluator
@@ -249,9 +263,9 @@ def evaluate_on_ud(
     gold_path = Path(source) if source is not None else ud_path(treebank, split)
     sentences = load_conllu(gold_path)
     if parse is None:
-        from . import syntax
+        from . import joint, syntax
 
-        parse = syntax.active() is not None
+        parse = joint.active() is not None or syntax.active() is not None
     system = pipeline_conllu(sentences, parse=parse)
 
     ev = _eval_module()
@@ -268,9 +282,12 @@ def evaluate_on_ud(
         "split": split,
         "parsed": parse,
         "upos": scores["UPOS"].f1,
+        "xpos": scores["XPOS"].f1,
+        "ufeats": scores["UFeats"].f1,
         "lemma": scores["Lemmas"].f1,
         "uas": scores["UAS"].f1 if parse else None,
         "las": scores["LAS"].f1 if parse else None,
+        "clas": scores["CLAS"].f1 if parse else None,
         "n_words": len([t for s in sentences for t in s.tokens]),
         "n_sentences": len(sentences),
     }

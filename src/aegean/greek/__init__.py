@@ -56,6 +56,13 @@ from .neural_lemmatizer import (
     disable_neural_lemmatizer,
     use_neural_lemmatizer,
 )
+from .joint import (
+    NeuralPipelineNotLoadedError,
+    SentenceAnalysis,
+    analyze_sentence,
+    disable_neural_pipeline,
+    use_neural_pipeline,
+)
 from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
 from .ud import agdt_ud_overlap, evaluate_on_ud
 from .normalize import (
@@ -134,6 +141,11 @@ __all__ = [
     "disable_neural_lemmatizer",
     "evaluate_on_proiel",
     "evaluate_on_ud",
+    "use_neural_pipeline",
+    "disable_neural_pipeline",
+    "analyze_sentence",
+    "SentenceAnalysis",
+    "NeuralPipelineNotLoadedError",
     "agdt_ud_overlap",
     "load_proiel_gold",
     "proiel_dir",

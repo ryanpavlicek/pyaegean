@@ -87,6 +87,10 @@ def pos_tag(word: str) -> str:
         if any(ch.isdigit() for ch in word):
             return "NUM"
         return "PUNCT" if word else "X"
+    from . import joint
+
+    if joint.active() is not None:  # the neural pipeline, when active, answers everything
+        return joint.analyze_sentence([word]).upos[0]
     n = _norm(word)
     if n in _LEXICON:
         return _LEXICON[n]
@@ -112,9 +116,12 @@ def pos_tags(text: str) -> list[tuple[str, str]]:
     trained tagger is active it tags the whole sentence **in context**, with the
     closed-class lexicon and the treebank lookup still taking precedence per token."""
     from ..core.model import TokenKind
-    from . import tagger, treebank
+    from . import joint, tagger, treebank
 
     toks = list(tokenize(text))
+    if joint.active() is not None:  # one encoder pass tags the whole sentence in context
+        ana = joint.analyze_sentence([t.text for t in toks])
+        return [(t.text, u) for t, u in zip(toks, ana.upos)]
     if tagger.active() is None:
         return [
             (t.text, "PUNCT" if t.kind is TokenKind.PUNCT else pos_tag(t.text))

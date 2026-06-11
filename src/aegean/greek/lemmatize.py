@@ -46,6 +46,11 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     active (see `aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
     used — it generalizes well to unseen forms (76.3%); next the trained edit-tree lemmatizer
     (see `aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted."""
+    from . import joint
+
+    if joint.active() is not None:  # the neural pipeline: contextual scripts + big lookup
+        pred = joint.analyze_sentence([word]).lemma[0]
+        return pred, pred != unicodedata.normalize("NFC", word)
     from . import treebank
 
     lex = treebank.active()
