@@ -215,6 +215,15 @@ already in the published pack's range.
 
 ## WP4 — Corpora: fix the thinness (not just disclose it)
 
+> **Status: IN PROGRESS (2026-06-11).** Done: **alphabetic Greek on demand**
+> (`greek.load_work` — Perseus canonical-greekLit + First1KGreek, commit-pinned; the Iliad
+> verified live as 24 books / 127,339 tokens), **data versioning** (`aegean.data.versions()`,
+> `Provenance.data_version`, pinning-for-papers recipe), **`Corpus.from_records()`** + the
+> `register_loader` recipe, and **variant readings** (`Token.alt` with the EpiDoc
+> `<app>/<lem>/<rdg>` round-trip, schema-validated). Remaining: Linear B sample/lexicon
+> growth, Cypriot growth, the DAMOS/LiBER and SigLA inquiries, and the Linear A apparatus
+> audit (upstream recoverability → corpus v2).
+
 The 0.8.0-hardening pass *documented* that the non-Linear-A corpora are vestigial. This WP makes
 them real where licensing allows.
 
