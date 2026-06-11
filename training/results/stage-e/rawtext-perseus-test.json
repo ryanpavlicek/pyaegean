@@ -1,0 +1,15 @@
+{
+ "protocol": "raw-text (own tokenization, character-aligned by the official evaluator)",
+ "treebank": "perseus",
+ "split": "test",
+ "tokens_f1": 0.9997137131405669,
+ "lemma": 0.9437923465979579,
+ "uas": 0.8915449947514076,
+ "las": 0.8437828037026434,
+ "clas": 0.8323598130841121,
+ "upos": 0.9690810191812196,
+ "xpos": 0.9353468842446798,
+ "ufeats": 0.9609218436873748,
+ "n_sentences": 1306,
+ "sentences_without_raw_text": 0
+}

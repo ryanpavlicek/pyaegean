@@ -1,0 +1,28 @@
+{
+ "gate_points": 0.3,
+ "gate_sentences": 300,
+ "fp32": {
+  "upos": 0.9796901893287435,
+  "las": 0.8478485370051635,
+  "lemma": 0.9645438898450946,
+  "n_tokens": 5810
+ },
+ "int8": {
+  "upos": 0.1674698795180723,
+  "las": 0.03975903614457831,
+  "lemma": 0.8824440619621342,
+  "n_tokens": 5810
+ },
+ "drops_points": {
+  "upos": 81.22203098106712,
+  "las": 80.80895008605852,
+  "lemma": 8.209982788296044
+ },
+ "shipped": "fp32",
+ "tar": {
+  "path": "pyaegean_repo/training/out/export/grc-joint.tar.gz",
+  "bytes": 518441866,
+  "sha256": "e5e442f01f49588a3239b76c8f0e6e9098b7cd99d0ee81d1ca58fbd2e02e3b92",
+  "fp32_onnx_bytes": 556555703
+ }
+}

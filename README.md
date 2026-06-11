@@ -42,7 +42,8 @@ prior programming.
 | | |
 |---|---|
 | **All four Aegean scripts, one API** | `aegean.load("lineara")` gives the bundled **1,721-inscription** Linear A corpus over the full Unicode Linear A sign repertoire (84 signs carry conventional sound values, the rest are undeciphered); Linear B, the Cypriot syllabary, and Cypro-Minoan add Unicode-built inventories with small *illustrative* text samples (bring your own corpus for Linear B — see below). The two *deciphered* syllabaries transliterate and bridge into Greek — `po-me → ποιμήν` (Linear B), `pa-si-le-u-se → βασιλεύς` (Cypriot). |
-| **A deep Greek NLP pipeline** | Beta Code ↔ Unicode, tokenize, syllabify, accent & prosody, **metrical scansion** (it scans the *Odyssey*'s opening — and honestly *declines* a line that only fits via synizesis), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), **LSJ glossing**, a dependency parser, a generalizing POS tagger (**~84%** on unseen forms), and a **neural lemmatizer** that reaches **76.3% on unseen forms** (a GreTa seq2seq served as torch-free ONNX). |
+| **A deep Greek NLP pipeline** | Beta Code ↔ Unicode, tokenize, syllabify, accent & prosody, **metrical scansion** (it scans the *Odyssey*'s opening — and honestly *declines* a line that only fits via synizesis), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), **LSJ glossing**, and pure-Python generalizing taggers/lemmatizers. |
+| **State-of-the-art neural NLP** | The opt-in **neural pipeline** (`greek.use_neural_pipeline()`, torch-free ONNX): one jointly-trained model for tagging, full morphology, **UD dependency parsing**, and lemmatization — measured end-to-end through this package at **96.9 UPOS / 96.1 UFeats / 94.4 lemma / 89.2 UAS / 84.4 LAS** on the UD Ancient Greek (Perseus) test benchmark, the strongest published results we know of ([protocol & tables](docs/benchmarks.md)). |
 | **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total — flagging which balance and which don't. (≈40 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary — that's the nature of the corpus, not a limit of the tool.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **schema-valid EpiDoc / CSV / Parquet** export via `aegean.io` (the EpiDoc validates against the official EpiDoc RelaxNG and round-trips editorial status). Every corpus carries provenance and a one-line citation. |
@@ -131,10 +132,11 @@ concretely:
   syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For a
   real Linear B corpus, point `PYAEGEAN_LINEARB_CORPUS` at your own DAMOS EpiDoc export — pyaegean
   parses it locally and never re-hosts it.
-- **The Greek NLP stack favours portability and honesty over peak accuracy.** It's zero-dependency,
-  imports instantly, and every accuracy figure is measured leakage-free — but for maximum
-  tagging/parsing accuracy a full neural pipeline will do better. pyaegean's edge is the transparent
-  evaluation, the metrical scansion, and the scriptable, dependency-light data layer.
+- **The Greek NLP stack is honest about its tiers.** The zero-dependency core favours portability
+  and instant imports; the opt-in `[neural]` pipeline delivers state-of-the-art accuracy on the UD
+  Ancient Greek benchmarks, measured leakage-free, end-to-end from raw text, through this exact
+  package — with the full protocol, leakage controls, and comparison tables documented in
+  [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## About the author
 

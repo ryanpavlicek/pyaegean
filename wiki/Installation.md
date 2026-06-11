@@ -17,7 +17,7 @@ pip install pyaegean            # core: Linear A + Greek, zero hard deps
 | Extra | Pulls in | For |
 | --- | --- | --- |
 | `pyaegean[data]` | `pandas` | DataFrame interop (`to_dataframe`) |
-| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek lemmatizer (`use_neural_lemmatizer()`) |
+| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek pipeline (`use_neural_pipeline()`) and lemmatizer (`use_neural_lemmatizer()`) |
 | `pyaegean[anthropic]` | `anthropic` | Anthropic (default) AI provider |
 | `pyaegean[openai]` | `openai` | OpenAI provider |
 | `pyaegean[grok]` | `openai` | xAI Grok (OpenAI-API-compatible) |
@@ -54,8 +54,9 @@ the opt-in Greek backends' data — the Perseus AGDT treebank (~75 MB,
 The pure-Python backends each cache a small trained model: `greek.use_parser()`,
 `greek.use_tagger()`, and `greek.use_lemmatizer()`. The neural lemmatizer
 (`greek.use_neural_lemmatizer()`, the `[neural]` extra) fetches a ~232 MB int8 ONNX
-GreTa model. All remain offline after the first fetch. See
-[Data & Provenance](Data-and-Provenance).
+GreTa model; the neural joint pipeline (`greek.use_neural_pipeline()`, same extra)
+fetches a ~518 MB fp32 ONNX model bundle. All remain offline after the first fetch.
+See [Data & Provenance](Data-and-Provenance).
 
 ## From source
 

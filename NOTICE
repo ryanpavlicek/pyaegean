@@ -40,8 +40,8 @@ Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistribute
 
 Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   An ONNX seq2seq lemmatizer fine-tuned from bowphs/GreTa (Riemenschneider & Frank,
-  "Exploring Large Language Models for Ancient Greek and Latin", Apache-2.0;
-  arXiv:2410.12055) on the AGDT (CC BY-SA 3.0), the Pedalion treebanks (CC BY-SA 4.0),
+  "Exploring Large Language Models for Classical Philology", Apache-2.0;
+  arXiv:2305.13698) on the AGDT (CC BY-SA 3.0), the Pedalion treebanks (CC BY-SA 4.0),
   and the Gorman Ancient Greek treebanks (CC BY-SA 4.0 — the repository's TREEBANK
   LICENSE; an earlier revision of this notice misstated it as CC0). The resulting model — ONNX weights plus a
   derived gold lemma lookup — is licensed CC BY-SA 4.0. Downloaded by the user on demand
@@ -49,7 +49,8 @@ Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
 
 Neural joint Greek pipeline model (fetched on demand, NOT bundled)
-  One GreBerta-based model (Riemenschneider & Frank's encoder, Apache-2.0) for UPOS,
+  One GreBerta-based model (Riemenschneider & Frank's encoder, Apache-2.0;
+  arXiv:2305.13698) for UPOS,
   AGDT-positional morphology (rendered as UD FEATS), UD dependency trees, and lemmas,
   fine-tuned on the AGDT (CC BY-SA 3.0), the Gorman treebanks (CC BY-SA 4.0), and the
   Pedalion treebanks (CC BY-SA 4.0) with the UD-Perseus dev/test and PROIEL evaluation

@@ -103,10 +103,31 @@ bundled, and runs torch-free on numpy + onnxruntime, loaded only on activation.
 
 Model card: the base model is **bowphs/GreTa**, an Ancient-Greek T5 released under
 **Apache-2.0**. pyaegean fine-tunes it into a form→lemma seq2seq on the **AGDT**
-(CC BY-SA 3.0), **Pedalion** (CC BY-SA 4.0), and **Gorman** (CC0) treebanks, then
-exports the result to int8 ONNX. The released model is **CC BY-SA 4.0**,
+(CC BY-SA 3.0), **Pedalion** (CC BY-SA 4.0), and **Gorman** (CC BY-SA 4.0) treebanks,
+then exports the result to int8 ONNX. The released model is **CC BY-SA 4.0**,
 fetched to the user cache and never bundled, so the wheel stays Apache-2.0. See
 [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
+
+### The Greek neural joint pipeline model (`use_neural_pipeline`, `[neural]`)
+
+`aegean.greek.use_neural_pipeline()` activates one jointly-trained model serving
+POS, full morphology (UD FEATS), UD dependency trees, and lemmas from a single
+forward pass — state of the art on the UD Ancient Greek benchmarks (see
+[Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the
+measured numbers). The model bundle (fp32 ONNX + tokenizer + label maps + lemma
+scripts/lookup, ~518 MB, sha256-pinned) is fetched to the cache, never bundled,
+and runs torch-free on numpy + onnxruntime, loaded only on activation.
+
+Model card: the base encoder is **bowphs/GreBerta** (Riemenschneider & Frank,
+Apache-2.0). pyaegean fine-tunes it — tagging heads, a biaffine dependency parser,
+and an edit-script lemma head — on the **AGDT** (CC BY-SA 3.0), **Gorman**
+(CC BY-SA 4.0), and **Pedalion** (CC BY-SA 4.0) treebanks, with every sentence of
+the UD-Perseus dev/test folds and all PROIEL evaluation texts **excluded from
+training** (the leakage manifest is built by `agdt_ud_overlap()`; the protocol is
+documented in
+[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
+The released bundle is **CC BY-SA 4.0**, fetched to the user cache and never
+bundled, so the wheel stays Apache-2.0.
 
 ### The PROIEL evaluation set (`evaluate_on_proiel`)
 
@@ -150,9 +171,14 @@ so a bring-your-own EpiDoc corpus keeps its apparatus through a load/export cycl
 - **Greek lexicon / LSJ (opt-in)** — Perseus Liddell-Scott-Jones, CC BY-SA 4.0;
   fetched and indexed in the user cache, never bundled or redistributed.
 - **Greek neural lemmatizer (opt-in `[neural]`)** — a GreTa seq2seq (Apache-2.0 base)
-  fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC0) treebanks.
-  The model — int8 ONNX weights plus a derived gold lemma lookup — is **CC BY-SA 4.0**, fetched
-  to the user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
+  fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion (CC BY-SA 4.0), and Gorman (CC BY-SA 4.0)
+  treebanks. The model — int8 ONNX weights plus a derived gold lemma lookup — is **CC BY-SA 4.0**,
+  fetched to the user cache (~232 MB), never bundled; the wheel stays Apache-2.0.
+- **Greek neural joint pipeline (opt-in `[neural]`)** — a GreBerta-based joint model
+  (Apache-2.0 base) fine-tuned on the AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), and
+  Pedalion (CC BY-SA 4.0) treebanks, evaluation folds excluded from training. The model
+  bundle is **CC BY-SA 4.0**, fetched to the user cache (~518 MB), never bundled; the
+  wheel stays Apache-2.0.
 - **PROIEL evaluation set (opt-in)** — the PROIEL treebank (Greek NT + Herodotus),
   CC BY-NC-SA 3.0; fetched to the user cache for `evaluate_on_proiel` only, never bundled or
   redistributed (NonCommercial + ShareAlike).

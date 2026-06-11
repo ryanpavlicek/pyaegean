@@ -90,7 +90,8 @@ No. The core library, the full Linear A corpus, and the Greek pipeline all work
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends — `greek.use_treebank()` (~75 MB AGDT), `greek.use_lsj()`
 (~270 MB Perseus LSJ), `greek.use_parser()` (downloads the AGDT if needed, then
-trains), and `greek.use_neural_lemmatizer()` (~232 MB ONNX model). Everything else,
+trains), `greek.use_neural_lemmatizer()` (~232 MB ONNX model), and
+`greek.use_neural_pipeline()` (~518 MB ONNX joint model). Everything else,
 including the rule-based pipeline, works fully offline.
 
 ### Do I need an API key?
@@ -129,16 +130,20 @@ classes (article, prepositions, pronouns…) and regular paradigms, but they mis
 irregular, third-declension, contract, and most open-class forms — and they tell you
 when a result is reconstructed (`lemma_certain=False`).
 
-Several opt-in backends raise accuracy well past that baseline. `greek.use_treebank()`
-supplies attested, correctly-accented lemmas, full morphology, and gold POS for forms
-attested in the AGDT. For forms outside the treebank, `greek.use_tagger()` generalizes
-POS at ~84% on unseen forms, and lemmatization generalizes too:
-`greek.use_neural_lemmatizer()` (a GreTa seq2seq, the `[neural]` extra) reaches 76.3%
+Several opt-in backends raise accuracy well past that baseline. The strongest is the
+**neural pipeline** — `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
+model for POS, morphology, UD dependency parsing, and lemmatization, state of the art
+on the UD Ancient Greek benchmarks (96.9 UPOS / 96.1 UFeats / 94.4 lemma / 89.2 UAS /
+84.4 LAS on the Perseus test fold, measured end-to-end from raw text — see
+[the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
+`greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,
+and gold POS for forms attested in the AGDT; `greek.use_tagger()` generalizes POS at
+~84% on unseen forms; `greek.use_neural_lemmatizer()` (a GreTa seq2seq) reaches 76.3%
 on unseen forms, while the zero-dependency `greek.use_lemmatizer()` (edit-trees +
-perceptron) reaches ~40%. Quantify any combination on your own gold set with
-`benchmark.compare_modes()`. For meaning, opt into `greek.use_lsj()` (LSJ glossing);
-for syntax, `greek.use_parser()` (a dependency parser, ~0.67 UAS / 0.57 LAS on
-projective AGDT). See [Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in)
+perceptron) reaches ~40%; `greek.use_parser()` is a pure-Python dependency parser
+(~0.67 UAS / 0.57 LAS on projective AGDT). Quantify any combination on your own gold
+set with `benchmark.compare_modes()`. For meaning, opt into `greek.use_lsj()` (LSJ
+glossing). See [Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in)
 and [Morphological analysis](Greek-NLP#morphological-analysis).
 
 ### How do I cite pyaegean and its data in a paper?

@@ -2,7 +2,7 @@
 
 The headline protocol (docs/benchmarks.md) feeds gold tokens. This script removes that
 last asterisk: it takes each UD sentence's raw ``# text``, tokenizes with pyaegean's own
-`aegean.greek.tokenize_words`, runs the active neural pipeline, and scores with the
+`aegean.greek.tokenize` (words and punctuation), runs the active neural pipeline, and scores with the
 official evaluator — whose character-based alignment handles tokenization differences,
 exactly as the published systems were scored. Requires `use_neural_pipeline` (run after
 the artifact is fetchable).
@@ -38,7 +38,9 @@ def main() -> None:
         text = sent.text or " ".join(t.form for t in sent.tokens)
         if not sent.text:
             skipped += 1  # no raw text in the fold; fall back to joined forms
-        words = greek.tokenize_words(text)
+        words = [t.text for t in greek.tokenize(text)]  # words AND punctuation:
+        # the official evaluator aligns by the character stream, so every gold
+        # character (commas included) must appear in the system tokens
         if not words:
             words = [t.form for t in sent.tokens]
         ana = greek.analyze_sentence(words)

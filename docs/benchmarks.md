@@ -355,6 +355,31 @@ What remains before these become *public package claims* is Stage E: export this
 checkpoint to the torch-free ONNX artifact, re-measure **through the shipped pipeline**
 (including one raw-text end-to-end run), and gate quantization at ≤0.3 points.
 
+## Stage E — shipped (the claims are now package claims)
+
+The 12-epoch checkpoint is published as the **`grc-joint-v1` release asset** (fp32 ONNX +
+tokenizer + label maps + lemma scripts/lookup, ~518 MB, CC BY-SA 4.0) and activated by
+`greek.use_neural_pipeline()` (the `[neural]` extra). Raw artifacts in
+`training/results/stage-e/`. Three closing measurements:
+
+1. **The quantization gate worked — by rejecting.** int8 dynamic quantization
+   catastrophically broke the model (dev UPOS 97.97 → 16.75, −81 points), so the gate
+   shipped **fp32** (`gate-report.json`). Size optimization (selective quantization
+   excluding embeddings/biaffine) is a known follow-up; correctness ships first.
+2. **The shipped path reproduces the checkpoint** (fetch from the release, sha256
+   verified, onnxruntime CPU, the package's own code): UD Perseus test lemma 94.40 /
+   UAS 89.16 / LAS 84.38 / UPOS 96.94 / UFeats 96.12 / XPOS 93.56; PROIEL lemma 90.57 /
+   UAS 82.52 — all within 0.03 of the checkpoint numbers. Throughput ≈ 450 words/s on
+   plain CPU (the whole Perseus fold in 46 s).
+3. **The raw-text protocol removes the gold-tokenization asterisk**: from each
+   sentence's raw ``# text`` through pyaegean's own tokenizer (tokens F1 99.97) to the
+   official evaluator's character alignment — lemma 94.38 / UAS 89.15 / LAS 84.38 /
+   UPOS 96.91 / UFeats 96.09. End-to-end from raw strings, the numbers hold.
+
+**Final shipped scoreboard (UD Perseus test, raw text, official evaluator):** every WP3
+metric above every published number we could find — through `pip install
+"pyaegean[neural]"`.
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,

@@ -3,18 +3,19 @@
 `aegean.greek` is the Ancient Greek NLP pipeline. It's a set of small, independent
 steps: each one is a plain function you can call on its own, and you can chain
 them into your own pipeline. The core pipeline runs fully offline with no API key;
-the opt-in treebank, LSJ, and dependency-parser backends fetch their data over the
-network on first use, then cache it.
+the opt-in treebank, LSJ, parser, and neural-pipeline backends fetch their data over
+the network on first use, then cache it.
 
 The core ships normalization, tokenization, syllabification, accent and prosody
 analysis, reconstructed IPA, **metrical scansion** (dactylic hexameter and elegiac
 pentameter), POS tagging, a baseline lemmatizer, and a rule-based **morphological
-analyzer**. On top, three **opt-in** backends (all built from Perseus gold data,
-documented below) add attested accented lemmas + gold POS/morphology
-([treebank](#treebank-backed-mode-opt-in)), dictionary glosses
-([LSJ](#lexicon-lsj-glossing-opt-in)), and dependency trees
-([parser](#dependency-parsing-opt-in-baseline)). Not yet covered: iambic/lyric
-metres and automatic synizesis.
+analyzer**. On top, **opt-in** backends add attested accented lemmas + gold
+POS/morphology ([treebank](#treebank-backed-mode-opt-in)), dictionary glosses
+([LSJ](#lexicon-lsj-glossing-opt-in)), dependency trees
+([parser](#dependency-parsing-opt-in-baseline)), and the
+**[neural pipeline](#the-neural-pipeline-opt-in)** — joint tagging, morphology,
+UD parsing, and lemmatization at state-of-the-art accuracy. Not yet covered:
+iambic/lyric metres and automatic synizesis.
 
 Every example below is real, runnable output. Import the module once:
 
@@ -22,11 +23,55 @@ Every example below is real, runnable output. Import the module once:
 from aegean import greek
 ```
 
-> **Where this fits.** This stack optimizes for zero-dependency portability, an
-> instant import, transparent leakage-free evaluation, metrical scansion, and a
-> scriptable data layer. If your goal is the highest raw tagging/parsing
-> *accuracy*, a full neural pipeline will do better — that's a deliberate
-> trade-off, not an oversight.
+> **Where this fits.** The zero-dependency core optimizes for portability, an instant
+> import, transparent leakage-free evaluation, metrical scansion, and a scriptable data
+> layer. For maximum accuracy, the opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
+> (`use_neural_pipeline`, the `[neural]` extra) is **state of the art on the UD Ancient
+> Greek benchmarks** — measured end-to-end through this package (the full protocol and
+> comparison tables live in
+> [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
+
+## The neural pipeline (opt-in)
+
+One jointly-trained model — a GreBerta encoder with tagging heads, a biaffine dependency
+parser decoded by a single-root MST (non-projectivity handled natively), and an
+edit-script lemmatizer — serving **UPOS, full morphology (UD FEATS), UD dependency
+trees, and lemmas** from a single forward pass. Trained leakage-clean on the AGDT +
+Gorman + Pedalion treebanks (1.41M tokens, with the evaluation folds' sentences excluded
+from training).
+
+```bash
+pip install "pyaegean[neural]"     # onnxruntime + tokenizers + numpy; no torch
+```
+
+```python
+greek.use_neural_pipeline()        # fetches the model bundle (~518 MB, one-time) to the cache
+
+ana = greek.analyze_sentence(["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"])
+list(zip(ana.tokens, ana.upos, ana.deprel, ana.lemma))
+# [('ἐν','ADP','case','ἐν'), ('ἀρχῇ','NOUN','root','ἀρχή'), ('ἦν','VERB','cop','εἰμί'),
+#  ('ὁ','DET','det','ὁ'), ('λόγος','NOUN','nsubj','λόγος')]
+ana.feats[1]                       # 'Case=Dat|Gender=Fem|Number=Sing'
+```
+
+Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, and
+`parse` — which then returns **UD relations** (`nsubj`, `obj`, `advcl`, …) with the
+predicted 9-character morphological tag on each token. `disable_neural_pipeline()`
+restores the cascades above.
+
+**Measured — UD Ancient Greek test folds, official CoNLL 2018 evaluator, through the
+shipped package, end-to-end from raw text** (tokens F1 99.97):
+
+| UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
+| --- | --- | --- | --- | --- | --- |
+| neural pipeline | **96.9** | **96.1** | **94.4** | **89.2** | **84.4** |
+
+Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.6,
+UAS 82.5, UPOS 87.2. Inference is torch-free (int8 quantization failed its accuracy
+gate, so the artifact ships fp32) at roughly 450 words/second on a plain CPU. The
+model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
+leakage controls, and the comparison tables are documented in
+[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
 
 ## Normalization & Beta Code
 
