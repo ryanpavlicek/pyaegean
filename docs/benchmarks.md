@@ -236,6 +236,40 @@ leads (POS 96.21 vs 95.83; XPOS 92.21 vs 91.09) but parsing trails by 0.7 UAS / 
 leakage-clean lemmatizer; the current hybrid's lookup contains the fold, so its 97.65 is
 an in-training number).
 
+## Stage D — the full model (the odyCy-era definition of done is complete)
+
+The complete joint model: GreBerta + tagging heads + biaffine parser + the **edit-script
+lemma head** (9,263 train-only classes) composed with the train-only lookup
+(`lookup-first`, the dev-preferred mode). Trained leakage-clean, 9 epochs / 254 s on an
+RTX PRO 6000 Blackwell (bf16, peak 5.8 GB); dev best: lemma 90.32, LAS 82.76. Run
+2026-06-10; raw metrics in `training/results/stage-d/`.
+
+| Test fold | Lemma | UAS | LAS | UPOS | UFeats |
+|---|---|---|---|---|---|
+| UD Perseus | **87.71** | 87.41 | 82.23 | 96.37 | 95.19 |
+| UD PROIEL | 85.83 | 81.04 | 62.67 | 87.67 | 59.01 |
+
+**Lemma 87.71 clears the 87.58 odyCy-era bar — by 0.13 points** (a thin, single-seed
+margin, stated plainly). With it, **the original WP3 definition of done is complete on
+UD Perseus**: all five metrics — POS 96.37, morph 95.19, lemma 87.71, UAS 87.41, LAS
+82.23 — above the 2023-published field, leakage-clean, from **one checkpoint**. Parsing
+and tagging held at their Stage C levels (±0.1, noise) with the lemma loss added.
+
+Two honest observations that shape the next step:
+
+1. **Against the raised 2024 bar** (arXiv:2410.12055): parsing trails by 0.8 UAS /
+   1.75 LAS, and their lemmatizer's 91.17 (own folds) likely outpaces our 87.71.
+2. **On PROIEL, the Stage D lemma (85.83) is *weaker* than the currently-shipped hybrid's
+   90.38** — the shipped GreTa seq2seq *generates* novel lemmas and trained on ~2.45×
+   the data (AGDT+Gorman+Pedalion), while the edit-script head classifies into a closed
+   inventory. The shipped hybrid therefore **remains the package's lemmatizer** unless
+   Stage D+ beats it on both folds.
+
+Both gaps point at the same lever: the **Gorman (CC0) + Pedalion (CC BY-SA) data
+extension** (the 2024 system's mix, ~2.45× tokens) — one combined retrain (Stage D+),
+with the overlap audit extended to PROIEL (Gorman includes Herodotus), is the planned
+close for parsing, lemma, and the PROIEL regression at once.
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,
