@@ -1,4 +1,4 @@
-"""Load the bundled Greek sample corpus into the script-agnostic model and
+﻿"""Load the bundled Greek sample corpus into the script-agnostic model and
 register it so ``Corpus.load("greek")`` works.
 
 The seed is a handful of short, public-domain Ancient Greek passages spanning
@@ -14,6 +14,7 @@ from typing import Any
 from ...core.corpus import Corpus, register_loader
 from ...core.model import Document, DocumentMeta
 from ...core.provenance import Provenance
+from ...data import bundled_data_version
 from ...data import load_bundled_json
 from ...greek.tokenize import tokenize
 from .inventory import greek_inventory
@@ -38,6 +39,7 @@ def _build_document(rec: dict[str, Any]) -> Document:
 
 
 _PROVENANCE = Provenance(
+    data_version=bundled_data_version(),
     source="Public-domain Ancient Greek text samples (Archaic→Koine)",
     license="Public domain (ancient texts); seed sample for the v0.1 Greek start",
     citation="Homer, Herodotus, Heraclitus, Sappho, Gospel of John (sample excerpts).",

@@ -100,6 +100,7 @@ aegean analyze structure lineara [HT13]      # accounting/libation/list/text cen
 aegean data list      # the fetchable datasets (sizes, licenses)
 aegean data fetch grc-joint    # pre-fetch (e.g. before going offline); sha256-verified
 aegean data cache     # cache location + contents (override with PYAEGEAN_CACHE)
+aegean data versions --json > data-versions.json   # pin every dataset's sha256 for a paper
 ```
 
 ## AI (`aegean ai …`) — exploratory, key-gated

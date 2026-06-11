@@ -138,6 +138,54 @@ models trained on — for a neutral, out-of-AGDT generalization number. PROIEL i
 and never bundled or re-hosted (NonCommercial + ShareAlike). Cite Haug & Jøhndal (2008).
 See [Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
 
+## Data versioning — pinning for papers
+
+Every dataset pyaegean can touch is versioned and hashable:
+
+```python
+from aegean import data
+manifest = data.versions()
+# {"package": "0.8.0",
+#  "bundled": {"lineara/inscriptions.json": {"sha256": "…", "bytes": …}, …},
+#  "fetched": {"grc-joint": {"url": "…", "sha256": "…", "cached": True}, …}}
+```
+
+Bundled data ships inside the wheel, so its version is the package version
+(also stamped on every bundled corpus as `Provenance.data_version`); fetched
+assets are sha256-pinned release files, verified on download. **To pin an
+analysis for a paper**: record `aegean.__version__` and dump the manifest
+(`aegean data versions --json > data-versions.json` from the CLI) alongside
+your results — matching sha256s mean byte-identical data.
+
+## Your own corpus
+
+A scholar's own inscriptions get the full API (filter, query, DataFrames,
+citation, export) without writing a loader:
+
+```python
+corpus = aegean.Corpus.from_records([
+    {"id": "X1", "text": "KU-RO 10", "meta": {"site": "My site"}},
+    {"id": "X2", "lines": [["A-DU", {"text": "5", "status": "unclear"}]]},
+], script_id="myfind",
+   provenance=aegean.Provenance(source="My dig notebook", citation="Me (2026)."))
+```
+
+Tokens may be plain strings (kinds inferred: parseable numerals vs words,
+hyphenated tokens get their signs split) or dicts carrying `kind`, `status`
+(editorial certainty), and `alt` (variant readings). Make it loadable by name
+with `aegean.core.corpus.register_loader("myfind", lambda: corpus)`; for
+EpiDoc sources, the bring-your-own reader (see [Linear B](Linear-B)) covers
+the same model including `<unclear>`/`<supplied>` status and `<app>`/`<rdg>`
+variants.
+
+## Variant readings
+
+`Token.alt` carries alternate readings alongside the editorial `status`. The
+EpiDoc writer emits them as a critical apparatus —
+`<app><lem><w>PO-ME</w></lem><rdg><w>PO-MA</w></rdg></app>` (validated against
+the official EpiDoc schema) — and the reader folds them back to one token with
+its `alt` tuple, so variants survive the EpiDoc *and* JSON round-trips.
+
 ## Provenance & citation
 
 Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:

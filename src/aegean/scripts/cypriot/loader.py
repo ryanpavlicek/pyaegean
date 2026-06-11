@@ -1,4 +1,4 @@
-"""Build the bundled Cypriot sample corpus into the script-agnostic model and register it so
+﻿"""Build the bundled Cypriot sample corpus into the script-agnostic model and register it so
 ``Corpus.load("cypriot")`` works.
 
 Only a small illustrative sample is bundled. The Cypriot epigraphic corpus (ICS — Inscriptions
@@ -16,6 +16,7 @@ from ...core.corpus import Corpus, register_loader
 from ...core.model import Document, DocumentMeta, Token, TokenKind
 from ...core.numerals import parse_value
 from ...core.provenance import Provenance
+from ...data import bundled_data_version
 from ...data import load_bundled_json
 from .inventory import cypriot_inventory
 
@@ -61,6 +62,7 @@ def _build_document(rec: dict[str, Any]) -> Document:
 
 
 _PROVENANCE = Provenance(
+    data_version=bundled_data_version(),
     source="Illustrative sample of Cypriot syllabic inscriptions",
     license="Sign data from the Unicode Character Database (Unicode-3.0). Sample transliterations are scholarly facts, bundled as illustrative excerpts — not a corpus.",
     citation="Masson, O. (1983). Les inscriptions chypriotes syllabiques (2nd ed.).",

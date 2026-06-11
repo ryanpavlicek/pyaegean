@@ -83,11 +83,19 @@ def to_epidoc(document: Document) -> str:
         for tok in line:
             wrap = _STATUS_EL.get(tok.status)
             carrier = _TAG.get(tok.kind, "seg")
-            # TEI's <g> (glyph) has a restricted content model and can't hold <unclear>/<supplied>;
-            # carry an *uncertain* logogram in <seg> instead (the reader re-derives its kind by text).
-            if wrap is not None and carrier == "g":
+            # TEI's <g> (glyph) has a restricted content model and can't hold <unclear>/<supplied>
+            # (and an <app> can't carry it inside <lem>/<rdg> meaningfully); carry the token in
+            # <seg> instead (the reader re-derives its kind by text).
+            if (wrap is not None or tok.alt) and carrier == "g":
                 carrier = "seg"
-            el = sub(ab, carrier)
+            if tok.alt:
+                # alternate readings: <app><lem><w>text</w></lem><rdg><w>alt</w></rdg>…</app>
+                app = sub(ab, "app")
+                el = sub(sub(app, "lem"), carrier)
+                for a in tok.alt:
+                    sub(sub(app, "rdg"), carrier, a)
+            else:
+                el = sub(ab, carrier)
             if wrap is None:
                 el.text = tok.text
             else:  # editorial markup, e.g. <w><supplied reason="lost">…</supplied></w>, <seg><unclear>…</unclear></seg>

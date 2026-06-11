@@ -1,4 +1,4 @@
-"""Build the bundled Cypro-Minoan sample corpus into the script-agnostic model and register it so
+﻿"""Build the bundled Cypro-Minoan sample corpus into the script-agnostic model and register it so
 ``Corpus.load("cyprominoan")`` works.
 
 The script is undeciphered, so a "word" is a sequence of sign numbers (``CM005-CM023-…``) with no
@@ -14,6 +14,7 @@ from typing import Any
 from ...core.corpus import Corpus, register_loader
 from ...core.model import Document, DocumentMeta, Token, TokenKind
 from ...core.provenance import Provenance
+from ...data import bundled_data_version
 from ...data import load_bundled_json
 from .inventory import cyprominoan_inventory
 
@@ -55,6 +56,7 @@ def _build_document(rec: dict[str, Any]) -> Document:
 
 
 _PROVENANCE = Provenance(
+    data_version=bundled_data_version(),
     source="Illustrative sample of Cypro-Minoan sign sequences",
     license="Sign data from the Unicode Character Database (Unicode-3.0). Sample sequences are illustrative — chosen to exercise the model, not transcriptions of specific edited inscriptions.",
     citation="Ferrara, S. (2012–2013). Cypro-Minoan Inscriptions, vols. 1–2.",

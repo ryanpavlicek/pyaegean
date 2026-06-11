@@ -118,9 +118,20 @@ def test_epidoc_export_validates_against_epidoc_schema(epidoc_rng) -> None:  # t
     """The export is real EpiDoc: it validates against the official EpiDoc RelaxNG schema."""
     from lxml import etree
 
+    variant_doc = Document(
+        id="KN X 2", script_id="linearb",
+        tokens=[
+            Token("PO-ME", TokenKind.WORD, ("PO", "ME"), line_no=0, position=0,
+                  alt=("PO-MA",)),
+            Token("TO-SO", TokenKind.WORD, ("TO", "SO"), line_no=0, position=1,
+                  status=ReadingStatus.UNCLEAR, alt=("TO-SA",)),
+        ],
+        lines=[[0, 1]], meta=DocumentMeta(site="Knossos"),
+    )
     samples = [
         to_epidoc(_doc()),                                  # hand-built Linear B doc
         to_epidoc(aegean.load("lineara").get("HT13")),      # a bundled Linear A tablet
+        to_epidoc(variant_doc),                             # <app>/<lem>/<rdg> variant readings
     ]
     for xml in samples:
         tree = etree.fromstring(xml.encode("utf-8"))

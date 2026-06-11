@@ -60,13 +60,40 @@ def _document(root: Any) -> Document | None:
     lines: list[list[int]] = []
     cur: list[int] = []
     pos = 0
+
+    def inside_app(el: Any) -> bool:
+        # token elements under <app> belong to the apparatus, consumed at the <app> itself
+        # (ancestry walk, not an id()-based skip set — lxml proxies are not identity-stable)
+        parent = el.getparent() if hasattr(el, "getparent") else None
+        while parent is not None:
+            if parent.tag == f"{_TEI}app":
+                return True
+            parent = parent.getparent()
+        return False
+
     for el in body.iter():
         tag = el.tag.replace(_TEI, "") if isinstance(el.tag, str) else ""
         if tag == "lb":
             if cur:
                 lines.append(cur)
                 cur = []
+        elif tag == "app":
+            # one token with alternate readings: <app><lem>…</lem><rdg>…</rdg>…</app>
+            lem = el.find(f"{_TEI}lem")
+            text = _text(lem) if lem is not None else ""
+            if text:
+                tok = classify(text.upper(), len(lines), pos)
+                alts = tuple(
+                    _text(r).upper() for r in el.findall(f"{_TEI}rdg") if _text(r)
+                )
+                status = _status_of(lem)
+                tok = replace(tok, status=status, alt=alts)
+                tokens.append(tok)
+                cur.append(pos)
+                pos += 1
         elif tag in _TOKEN_TAGS:
+            if inside_app(el):
+                continue
             text = _text(el)
             if text:
                 # EpiDoc transliterations are lowercase; pyaegean's token convention (and the

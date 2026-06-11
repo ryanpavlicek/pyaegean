@@ -255,6 +255,95 @@ class Corpus:
         return cls.from_dict(json.loads(text))
 
     @classmethod
+    def from_records(
+        cls,
+        records: Sequence[dict[str, Any]],
+        *,
+        script_id: str = "custom",
+        provenance: Provenance | None = None,
+        sign_inventory: SignInventory | None = None,
+    ) -> "Corpus":
+        """Build a corpus from plain dict records — your own inscriptions get the
+        full API (filter, query, DataFrames, citation, export).
+
+        Each record needs an ``"id"`` and its text as one of:
+
+        - ``"lines"``: a list of physical lines, each a list of tokens;
+        - ``"words"``: a flat token list (treated as one line);
+        - ``"text"``: a whitespace-tokenized string (one line).
+
+        A token is a string, or a dict ``{"text": …}`` with optional ``"kind"``
+        (a `TokenKind` value; inferred when omitted — numerals by parseability,
+        the rest words), ``"status"`` (a `ReadingStatus` value), and ``"alt"``
+        (alternate readings). Hyphenated tokens get their ``signs`` split.
+        Optional record keys: ``"meta"`` (site/period/scribe/support/findspot/
+        name), ``"translations"``. Example::
+
+            corpus = Corpus.from_records([
+                {"id": "X1", "text": "KU-RO 10", "meta": {"site": "My site"}},
+                {"id": "X2", "lines": [["A-DU", {"text": "5", "status": "unclear"}]]},
+            ], script_id="lineara")
+
+        To make it loadable by name, register a loader:
+        ``aegean.core.corpus.register_loader("myfind", lambda: corpus)``."""
+        from .numerals import parse_value
+
+        docs: list[Document] = []
+        for rec in records:
+            if "id" not in rec:
+                raise ValueError(f"record missing 'id': {rec!r}")
+            if "lines" in rec:
+                raw_lines = [list(line) for line in rec["lines"]]
+            elif "words" in rec:
+                raw_lines = [list(rec["words"])]
+            elif "text" in rec:
+                raw_lines = [str(rec["text"]).split()]
+            else:
+                raise ValueError(f"record {rec['id']!r} needs 'lines', 'words', or 'text'")
+            tokens: list[Token] = []
+            lines: list[list[int]] = []
+            pos = 0
+            for line_no, raw in enumerate(raw_lines):
+                idxs: list[int] = []
+                for item in raw:
+                    spec = item if isinstance(item, dict) else {"text": item}
+                    text = str(spec["text"])
+                    kind = (
+                        TokenKind(spec["kind"])
+                        if "kind" in spec
+                        else (TokenKind.NUMERAL if parse_value(text) is not None else TokenKind.WORD)
+                    )
+                    tokens.append(
+                        Token(
+                            text=text, kind=kind,
+                            signs=tuple(text.split("-")) if "-" in text else (),
+                            line_no=line_no, position=pos,
+                            status=ReadingStatus(spec.get("status", "certain")),
+                            alt=tuple(spec.get("alt") or ()),
+                        )
+                    )
+                    idxs.append(pos)
+                    pos += 1
+                lines.append(idxs)
+            m = rec.get("meta") or {}
+            docs.append(
+                Document(
+                    id=str(rec["id"]), script_id=script_id, tokens=tokens, lines=lines,
+                    translations=list(rec.get("translations") or []),
+                    meta=DocumentMeta(
+                        site=m.get("site", ""), support=m.get("support", ""),
+                        scribe=m.get("scribe", ""), findspot=m.get("findspot", ""),
+                        period=m.get("period", ""), name=m.get("name", ""),
+                    ),
+                )
+            )
+        prov = provenance or Provenance(
+            source="User-supplied corpus (Corpus.from_records)",
+            license="user-supplied",
+        )
+        return cls(docs, sign_inventory, prov, script_id)
+
+    @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Corpus":
         """Reconstruct a Corpus from the dict `to_json` serializes (its ``json.loads``)."""
         meta = data.get("_meta") or {}
@@ -294,6 +383,7 @@ def _provenance_to_dict(p: Provenance | None) -> dict[str, Any] | None:
     return {
         "source": p.source, "license": p.license, "citation": p.citation,
         "url": p.url, "schema_version": p.schema_version, "notes": list(p.notes),
+        "data_version": p.data_version,
     }
 
 
@@ -305,6 +395,7 @@ def _provenance_from_dict(d: dict[str, Any] | None) -> Provenance | None:
         citation=d.get("citation", ""), url=d.get("url", ""),
         schema_version=d.get("schema_version", SCHEMA_VERSION),
         notes=tuple(d.get("notes") or ()),
+        data_version=d.get("data_version", ""),
     )
 
 
@@ -344,6 +435,8 @@ def _token_to_dict(t: Token) -> dict[str, Any]:
     }
     if t.status is not ReadingStatus.CERTAIN:  # omit the default to keep JSON compact + back-compatible
         d["status"] = t.status.value
+    if t.alt:
+        d["alt"] = list(t.alt)
     return d
 
 
@@ -352,6 +445,7 @@ def _token_from_dict(d: dict[str, Any]) -> Token:
         text=d["text"], kind=TokenKind(d["kind"]), signs=tuple(d.get("signs") or ()),
         glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
         status=ReadingStatus(d["status"]) if d.get("status") else ReadingStatus.CERTAIN,
+        alt=tuple(d.get("alt") or ()),
     )
 
 

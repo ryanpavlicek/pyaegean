@@ -22,6 +22,7 @@ class Provenance:
     url: str = ""
     schema_version: int = SCHEMA_VERSION
     notes: tuple[str, ...] = field(default_factory=tuple)
+    data_version: str = ""           # version of the dataset itself (see aegean.data.versions)
 
     def cite(self) -> str:
         """A one-line citation string for papers / logs."""

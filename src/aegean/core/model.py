@@ -68,6 +68,7 @@ class Token:
     line_no: int | None = None
     position: int | None = None     # index within the document's token stream
     status: ReadingStatus = ReadingStatus.CERTAIN  # editorial certainty (Leiden/EpiDoc)
+    alt: tuple[str, ...] = ()       # alternate readings (EpiDoc <app>/<rdg>); text is the lemma
 
 
 @dataclass(frozen=True, slots=True)

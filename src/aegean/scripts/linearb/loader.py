@@ -1,4 +1,4 @@
-"""Build the bundled Linear B sample corpus into the script-agnostic model and register it so
+﻿"""Build the bundled Linear B sample corpus into the script-agnostic model and register it so
 ``Corpus.load("linearb")`` works.
 
 No openly-licensed Linear B tablet corpus exists — the most complete one, DAMOS, is CC BY-NC-SA —
@@ -18,6 +18,7 @@ from ...core.corpus import Corpus, register_loader
 from ...core.model import Document, DocumentMeta, Token, TokenKind
 from ...core.numerals import parse_value
 from ...core.provenance import Provenance
+from ...data import bundled_data_version
 from ...data import load_bundled_json
 from .inventory import linear_b_inventory
 
@@ -63,6 +64,7 @@ def _build_document(rec: dict[str, Any]) -> Document:
 
 
 _PROVENANCE = Provenance(
+    data_version=bundled_data_version(),
     source="Illustrative sample of canonical Linear B tablets; transliterations after Ventris & Chadwick and standard editions",
     license="Sign data from the Unicode Character Database (Unicode-3.0). Sample transliterations are scholarly facts, bundled as illustrative excerpts — not a corpus.",
     citation="Ventris, M. & Chadwick, J. (1973). Documents in Mycenaean Greek (2nd ed.). Cambridge University Press.",

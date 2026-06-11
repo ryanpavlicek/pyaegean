@@ -126,6 +126,58 @@ _REMOTE: dict[str, DataSpec] = {
 }
 
 
+def bundled_data_version() -> str:
+    """The version of the bundled datasets.
+
+    Bundled data ships inside the wheel and is immutable for a given release, so
+    its version *is* the package version; `versions` gives per-file sha256s."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("pyaegean")
+    except PackageNotFoundError:  # pragma: no cover — running from an uninstalled tree
+        return "0.0.0+unknown"
+
+
+def versions() -> dict[str, Any]:
+    """A reproducibility manifest of every dataset pyaegean can touch.
+
+    Returns ``{"package": …, "bundled": {…}, "fetched": {…}}``: each bundled
+    JSON file with its sha256 + size (hashed from the installed wheel contents),
+    and each registered fetchable asset with its pinned URL/sha256, license, and
+    whether it is present in the local cache.
+
+    **Pinning for papers**: record ``aegean.__version__`` and this manifest
+    (e.g. ``json.dump(aegean.data.versions(), f)``) alongside your results;
+    anyone with the same package version and matching sha256s is analyzing
+    byte-identical data. Fetched assets are sha256-verified on download, so a
+    matching pin in this manifest *is* the byte-level guarantee."""
+    import hashlib
+
+    bundled: dict[str, dict[str, Any]] = {}
+    root = files("aegean.data").joinpath("bundled")
+    for sub in sorted(root.iterdir(), key=lambda t: t.name):
+        if not sub.is_dir():
+            continue
+        for f in sorted(sub.iterdir(), key=lambda t: t.name):
+            if f.name.endswith(".json"):
+                blob = f.read_bytes()
+                bundled[f"{sub.name}/{f.name}"] = {
+                    "sha256": hashlib.sha256(blob).hexdigest(),
+                    "bytes": len(blob),
+                }
+    fetched = {
+        name: {
+            "url": _resolve_url(spec),
+            "sha256": spec.sha256,
+            "license": spec.license,
+            "cached": (cache_dir() / name).exists(),
+        }
+        for name, spec in sorted(_REMOTE.items())
+    }
+    return {"package": bundled_data_version(), "bundled": bundled, "fetched": fetched}
+
+
 def _env_url_var(name: str) -> str:
     return "PYAEGEAN_" + name.upper().replace("-", "_") + "_URL"
 

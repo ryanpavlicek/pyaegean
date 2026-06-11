@@ -70,6 +70,18 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Data versioning for reproducibility** (`aegean.data.versions()`, `aegean data versions`):
+  a manifest of every bundled data file (sha256 + size, hashed from the installed wheel) and
+  every fetchable asset (pinned sha256, cache state). Bundled corpora stamp
+  `Provenance.data_version`; the "pinning for papers" recipe is in the Data & Provenance wiki.
+- **`Corpus.from_records()`** — build a corpus from plain dicts, so a scholar's own
+  inscriptions get the full API (filter, query, DataFrames, citation, export, EpiDoc).
+  Records carry `lines`/`words`/`text` plus metadata; tokens may be dicts with `kind`,
+  `status`, and `alt`. Pair with `register_loader` to make it loadable by name.
+- **Variant readings** (`Token.alt`): alternate readings alongside editorial `status`,
+  surviving both round-trips — JSON (omitted when empty, so existing files stay valid) and
+  EpiDoc, where they become a critical apparatus (`<app><lem>…</lem><rdg>…</rdg></app>`,
+  validated against the official EpiDoc RelaxNG schema) and parse back to one token.
 - **The `aegean` command line** (the `[cli]` extra: typer + rich; console script `aegean`,
   also `python -m aegean.cli`): the whole toolkit without writing Python. Corpus commands
   (`info`, `load`, `show`, `search`, `query`, `stats`, `balance`, `cite`, `export`, `geo`,

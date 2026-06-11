@@ -1,4 +1,4 @@
-"""Build the bundled Linear A corpus into the script-agnostic model and
+﻿"""Build the bundled Linear A corpus into the script-agnostic model and
 register it so ``Corpus.load("lineara")`` works.
 """
 
@@ -12,6 +12,7 @@ from ...core.corpus import Corpus, register_loader
 from ...core.model import Document, DocumentMeta, Token, TokenKind
 from ...core.numerals import parse_value
 from ...core.provenance import Provenance
+from ...data import bundled_data_version
 from ...data import load_bundled_json
 from .inventory import linear_a_inventory
 
@@ -74,6 +75,7 @@ def _build_document(rec: dict[str, Any]) -> Document:
 
 
 _PROVENANCE = Provenance(
+    data_version=bundled_data_version(),
     source="GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz",
     license="Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed",
     citation="Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.",

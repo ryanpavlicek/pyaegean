@@ -43,7 +43,7 @@ parquet = ["pyarrow>=14"]
 geo = ["geopandas>=0.14", "shapely>=2.0"]
 neural = ["onnxruntime>=1.17", "tokenizers>=0.15", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache
 cli = ["typer>=0.12", "rich>=13"]  # the `aegean` command-line interface
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13"]
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "lxml>=5.0"]
 docs = ["pdoc>=14"]                # builds the API reference (pdoc → GitHub Pages); build-time only
 all = ["pyaegean[ai,epidoc,geo,data,cli]"]
 

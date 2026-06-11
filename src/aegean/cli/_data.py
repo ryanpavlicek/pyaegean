@@ -48,6 +48,30 @@ def fetch(
 
 
 @data_app.command()
+def versions(json_out: bool = JSON_OPT) -> None:
+    """The reproducibility manifest: every dataset's version + sha256.
+
+    Pin it for a paper: `aegean data versions --json > data-versions.json`."""
+    from aegean.data import versions as _versions
+
+    manifest = _versions()
+    if json_out:
+        emit_json(manifest)
+        return
+    rows = [["package", str(manifest["package"]), ""]]
+    rows += [
+        [f"bundled/{name}", str(info["sha256"])[:16] + "…", f"{info['bytes']} B"]
+        for name, info in manifest["bundled"].items()
+    ]
+    rows += [
+        [f"fetched/{name}", str(info["sha256"])[:16] + "…" if info["sha256"] else "(unpinned)",
+         "cached" if info["cached"] else "not cached"]
+        for name, info in manifest["fetched"].items()
+    ]
+    table("data versions (pin with --json for papers)", ["dataset", "sha256", "status"], rows)
+
+
+@data_app.command()
 def cache(json_out: bool = JSON_OPT) -> None:
     """Show the cache location and its current contents."""
     from aegean.data import cache_dir
