@@ -223,8 +223,9 @@ already in the published pack's range.
 > `Provenance.data_version`, pinning-for-papers recipe), **`Corpus.from_records()`** + the
 > `register_loader` recipe, and **variant readings** (`Token.alt` with the EpiDoc
 > `<app>/<lem>/<rdg>` round-trip, schema-validated). Remaining: Linear B sample/lexicon
-> growth, Cypriot growth, the DAMOS/LiBER and SigLA inquiries, and the Linear A apparatus
-> audit (upstream recoverability → corpus v2).
+> growth, Cypriot growth, the DAMOS/LiBER and SigLA inquiries, the Linear A apparatus
+> audit (upstream recoverability → corpus v2), and `load_work` hardening (cached/authed
+> edition discovery, deeper textpart addressing).
 
 The 0.8.0-hardening pass *documented* that the non-Linear-A corpora are vestigial. This WP makes
 them real where licensing allows.
@@ -233,6 +234,9 @@ them real where licensing allows.
   **Perseus canonical-greekLit / First1KGreek** (CC BY-SA): load any covered work into the standard
   `Corpus`/`Document` model (`aegean.load("greek")` keeps the offline 5-passage sample; a new
   `greek` corpus fetcher exposes the real thing). This is the single biggest "5 famous quotes" fix.
+  *(Shipped as `greek.load_work`.)* Hardening follow-up: cache/authenticate the edition-discovery
+  listing (the unauthenticated GitHub API is rate-limited at scale), address textparts below the
+  top level, and surface dropped `<note>`/`<bibl>` apparatus on request.
 - **Linear B.** (a) Expand the bundled illustrative sample ~2 → ~25 canonical tablets and grow the
   Greek-bridge lexicon ~45 → 300+ entries — curated scholarly facts from the standard editions
   (Ventris & Chadwick, Docs²). (b) Open a licensing inquiry with **DAMOS** (Oslo) / **LiBER** (CNR)
@@ -330,7 +334,23 @@ them real where licensing allows.
 
 ## Post-0.8.0 → 1.0
 
-- **JOSS paper** (the methods write-up 1.0 waits on) — the WP3 benchmark protocol is half the paper.
+The first three items below come straight from the
+[Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations) inventory — engineering
+limits a release cycle can lift:
+
+- **Iambic and lyric scansion + a synizesis lexicon.** Extend `meter` beyond dactylic
+  hexameter/elegiac pentameter (iambic trimeter first), and curate a lexicalised **synizesis
+  lexicon** on the syllabification-exception pattern (test-enforced entries, contribution-friendly) —
+  so the lines that today honestly fail to scan can scan honestly.
+- **Morpheus-backed offline morphology.** Fold Morpheus's morphological tables (per applicable
+  license; NOTICE carries the forward attribution) into the zero-dependency rule tier, closing the
+  irregular/third-declension/contract gaps and restoring accents on reconstructed lemmas without
+  requiring the treebank or neural backends.
+- **Shrink the neural pipeline model.** Selective quantization of `grc-joint` (518 MB fp32 today;
+  whole-model int8 failed the ≤0.3-point accuracy gate and was rejected) — per-component int8/fp16
+  under the same gate — plus optional GPU execution providers for onnxruntime.
+- **JOSS paper** (the methods write-up 1.0 waits on) — the WP3 benchmark protocol is half the paper;
+  seed-variance repeats for the tight margins belong to this write-up.
 - **Workbench bridge**: `aegean workbench` fetches + serves the linearaworkbench static build
   (release-asset, fetch-to-cache).
 - **Koine / Biblical Greek track**: NT corpus loader + Koine-tuned lemma/morphology

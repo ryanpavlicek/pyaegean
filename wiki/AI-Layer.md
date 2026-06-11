@@ -1,8 +1,12 @@
 # AI Layer
 
-`aegean.ai` is a **multi-provider**, **optional**, **grounded** AI layer.
-Every generative output is labeled **exploratory** with full provenance —
-readings of this material are hypotheses, never ground truth.
+> **Exploratory material.** Every generative output here is a labeled,
+> provenanced *hypothesis* — never ground truth, and on the undeciphered
+> scripts never a reading. The full picture of what pyaegean can and cannot
+> claim is on the **[Limitations](Limitations)** page.
+
+`aegean.ai` is a **multi-provider**, **optional**, **grounded** AI layer built
+on local, deterministic grounding evidence.
 
 > Providers' SDKs are optional extras, imported lazily. `import aegean` never
 > requires them. API keys are read from the environment and never logged.

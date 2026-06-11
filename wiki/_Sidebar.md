@@ -25,5 +25,6 @@
 **Reference**
 - [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
+- [Limitations](Limitations)
 - [FAQ & Troubleshooting](FAQ)
 - [Development](Development)

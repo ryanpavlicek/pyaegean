@@ -134,8 +134,10 @@ short methods write-up (a JOSS submission is planned). The
 
 pyaegean is a **young, single-author** project (first public release June 2026), shipped as
 **0.8.0 / beta** — usable and tested, but the API may still shift, and a **1.0** will wait until
-there's external use and a short methods write-up (a JOSS submission is planned). What that means
-concretely:
+there's external use and a short methods write-up (a JOSS submission is planned). The wiki's
+**[Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations)** page is the complete
+inventory — what the evidence forbids, what licensing forbids, what engineering will fix (each
+tracked on the [roadmap](docs/ROADMAP.md)), and what is a deliberate trade-off. The short version:
 
 - **Linear A is exploration-grade, not edition-grade.** The bundled 1,721-inscription corpus is a
   *normalized* transcription: it does **not** carry the full Leiden apparatus (lacunae, restorations,

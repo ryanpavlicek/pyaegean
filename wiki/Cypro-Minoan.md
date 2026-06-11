@@ -1,5 +1,9 @@
 # Cypro-Minoan
 
+> **Exploratory material.** Cypro-Minoan is undeciphered: the methods here
+> surface *evidence to weigh*, never readings or translations. The full picture
+> of what pyaegean can and cannot claim is on the **[Limitations](Limitations)** page.
+
 Cypro-Minoan is the **undeciphered** writing system of Bronze Age Cyprus (c. 1550–1050 BC), found on
 clay balls, cylinders, and tablets at sites such as Enkomi and (in a variant) Ugarit. It descends
 from Linear A and is structurally a syllabary, but its phonetic values are unknown and the language

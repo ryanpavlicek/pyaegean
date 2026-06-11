@@ -5,9 +5,11 @@ Linear A is fully wired as a [script plugin](Architecture). The bundled corpus i
 signs**, of which **84** carry the conventional sound values Linear A shares with
 the deciphered Linear B (the rest have no agreed reading).
 
-> Linear A is **undeciphered**. The phonetic transcription uses Linear B sound
-> values as a working convention, and every analytical method here is
-> **exploratory** — evidence to weigh, not translation. See [Analysis](Analysis).
+> **Exploratory material.** Linear A is **undeciphered**: the phonetic
+> transcription uses Linear B sound values as a working convention, and every
+> analytical method here surfaces *evidence to weigh*, never readings or
+> translations. See [Analysis](Analysis) for the methods and the
+> **[Limitations](Limitations)** page for the full picture.
 >
 > The bundled corpus is a **normalized** transcription: it does not carry the
 > full Leiden apparatus (lacunae, restorations, uncertain readings). For

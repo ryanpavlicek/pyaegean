@@ -5,8 +5,10 @@ Python, **faithfully** — each is checked against shared golden fixtures
 (`tests/fixtures/golden/algorithms.json`) so the port can't silently diverge,
 and property tests mirror the workbench's invariants.
 
-> All cross-linguistic and decipherment-adjacent methods are **exploratory**.
-> The Linear A corpus is undeciphered.
+> **Exploratory material.** Linear A is undeciphered: the cross-linguistic and
+> decipherment-adjacent methods here surface *evidence to weigh*, never readings
+> or translations. The full picture of what pyaegean can and cannot claim is on
+> the **[Limitations](Limitations)** page.
 
 ## Phonetic distance & classes
 

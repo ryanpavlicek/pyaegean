@@ -22,7 +22,9 @@ pluggable multi-provider AI layer.
 > out-of-AGDT (PROIEL) evaluator. The multi-provider AI layer + hybrid translation are
 > implemented, over a corpus data layer with a lossless JSON round-trip (`to_json`/`from_json`)
 > and a compound `query()`, plus EpiDoc/CSV/Parquet export. Analytical and generative output on the
-> undeciphered Linear A material is **exploratory** — see [Data & Provenance](Data-and-Provenance).
+> undeciphered Linear A material is **exploratory** — see [Limitations](Limitations) for the full
+> picture of what pyaegean can and cannot claim, and [Data & Provenance](Data-and-Provenance) for
+> where every dataset comes from.
 
 ### New here?
 
