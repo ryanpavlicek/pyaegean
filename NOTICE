@@ -28,6 +28,11 @@ Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistri
   dependency-parser model, a POS-tagger model, and a lemmatizer model) in the local cache
   and neither bundles nor re-hosts the treebank itself. Attribute the AGDT in academic
   work that relies on it.
+  For convenience the project also hosts these derived artifacts as the
+  pyaegean release asset "agdt-derived" (the lexicon + the three trained models, ~15 MB);
+  the Greek backends fetch it on demand instead of downloading the AGDT and training
+  locally, falling back to build-from-source if it is unreachable. The derived artifacts
+  are CC BY-SA 3.0 (a derivative of the AGDT); fetched to the cache, never bundled.
 
 Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistributed)
   A Greek-English Lexicon (Liddell, Scott, Jones), digitized by the Perseus Digital
@@ -36,7 +41,11 @@ Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistribute
   with funding from The National Endowment for the Humanities. Data accessed from
   https://github.com/PerseusDL/lexica/. Downloaded by the user on demand via
   aegean.greek.use_lsj(); pyaegean builds a derived index in the local cache and
-  neither bundles nor re-hosts the lexicon.
+  neither bundles nor re-hosts the lexicon. For convenience the project also hosts that
+  derived lemma->entry index as the pyaegean release asset "lsj-index" (~15 MB, CC BY-SA
+  4.0 — a derivative of the Perseus LSJ); use_lsj() fetches it on demand instead of
+  downloading the ~270 MB TEI and building locally, falling back to build-from-source if
+  it is unreachable. Fetched to the cache, never bundled.
 
 Neural Greek lemmatizer model (fetched on demand, NOT bundled)
   An ONNX seq2seq lemmatizer fine-tuned from bowphs/GreTa (Riemenschneider & Frank,

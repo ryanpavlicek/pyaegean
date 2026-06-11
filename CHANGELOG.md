@@ -71,6 +71,14 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Prebuilt artifacts for a fast first use.** The opt-in Greek backends now prefer small
+  project-hosted prebuilt assets over slow local builds (with build-from-source as the
+  automatic fallback): `greek.use_lsj()` fetches a ~15 MB prebuilt LSJ index (`lsj-index-v1`)
+  instead of downloading ~270 MB of Perseus TEI and building it, and `greek.use_treebank()` /
+  `use_tagger()` / `use_lemmatizer()` / `use_parser()` share one ~15 MB AGDT-derived bundle
+  (`agdt-derived-v1`) instead of a 75 MB download and minutes of training. Both assets carry
+  the source licenses (CC BY-SA 4.0 / 3.0), are sha256-pinned, and are never bundled; a new
+  `data.fetch_prebuilt()` helper drives the prefer-then-fall-back logic.
 - **The SigLA corpus, loadable** (`aegean.load("sigla")`): the Linear A paleographical
   database (Salgarella & Castellan, CC BY-NC-SA 4.0 — fetched on demand, never bundled)
   decoded from its published web-app payload into the JSON its paper describes, hosted as the

@@ -51,10 +51,13 @@ print(len(aegean.load("greek")))          # 5  (bundled offline sample; real wor
 The compact text corpora (Linear A inscriptions/signs, Greek seeds) ship inside
 the wheel and work fully offline. Large assets are **not** bundled — they are fetched
 on demand into a user cache on first use: the ~116 MB Linear A facsimile imagery, plus
-the opt-in Greek backends' data — the Perseus AGDT treebank (~75 MB,
-`greek.use_treebank()`) and the full Perseus LSJ (~270 MB, `greek.use_lsj()`).
-The pure-Python backends each cache a small trained model: `greek.use_parser()`,
-`greek.use_tagger()`, and `greek.use_lemmatizer()`. The neural lemmatizer
+the opt-in Greek backends' data. For speed, the Greek backends now prefer small
+**prebuilt** artifacts hosted by the project: `greek.use_lsj()` fetches a ~15 MB
+prebuilt index (instead of downloading ~270 MB of Perseus TEI and building locally),
+and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` / `use_parser()`
+share one ~15 MB AGDT-derived bundle (instead of a 75 MB download and minutes of
+training). If a prebuilt asset is ever unreachable, each falls back to building from
+the upstream source. The neural lemmatizer
 (`greek.use_neural_lemmatizer()`, the `[neural]` extra) fetches a ~232 MB int8 ONNX
 GreTa model; the neural joint pipeline (`greek.use_neural_pipeline()`, same extra)
 fetches a ~518 MB fp32 ONNX model bundle. All remain offline after the first fetch.

@@ -88,11 +88,14 @@ greek.normalize("ό")     # canonical NFC form
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
-and the opt-in Greek backends — `greek.use_treebank()` (~75 MB AGDT), `greek.use_lsj()`
-(~270 MB Perseus LSJ), `greek.use_parser()` (downloads the AGDT if needed, then
-trains), `greek.use_neural_lemmatizer()` (~232 MB ONNX model), and
-`greek.use_neural_pipeline()` (~518 MB ONNX joint model). Everything else,
-including the rule-based pipeline, works fully offline.
+and the opt-in Greek backends. The treebank/LSJ/tagger/lemmatizer/parser backends now
+fetch small **prebuilt** artifacts — `greek.use_lsj()` a ~15 MB index (not 270 MB of
+Perseus TEI), and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
+`use_parser()` one shared ~15 MB AGDT-derived bundle (no 75 MB download or local
+training) — falling back to building from source if an asset is unreachable. The
+`[neural]` models are larger: `greek.use_neural_lemmatizer()` (~232 MB) and
+`greek.use_neural_pipeline()` (~518 MB). Everything else, including the rule-based
+pipeline, works fully offline.
 
 ### Do I need an API key?
 

@@ -112,6 +112,36 @@ _REMOTE: dict[str, DataSpec] = {
         note="joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup), ~518 MB tar.gz; the [neural] extra.",
         extract=True,
     ),
+    # Prebuilt Perseus LSJ lemma index (built by greek.lexicon.build_index from
+    # PerseusDL/lexica). Hosting the ~15 MB built index lets use_lsj() skip the
+    # ~270 MB TEI download + local build. CC BY-SA 4.0 (Perseus); never bundled.
+    "lsj-index": DataSpec(
+        name="lsj-index",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "lsj-index-v1/lsj-perseus-index.json.gz"
+        ),
+        sha256="12b7fdb741e98d63fd29c9a0e2a1a56c774bfac2f6c81139f113ffb96aaebee5",
+        license="CC BY-SA 4.0 (Perseus Digital Library); derived index, fetched, never bundled",
+        note="prebuilt LSJ lemma→entry index (~15 MB); use_lsj() prefers it over the 270 MB build.",
+        extract=False,
+    ),
+    # Prebuilt AGDT-derived artifacts: the treebank lexicon + the trained POS
+    # tagger / lemmatizer / arc-eager parser. Hosting them lets the use_treebank/
+    # use_tagger/use_lemmatizer/use_parser backends skip the 75 MB AGDT download
+    # and minutes of training. CC BY-SA 3.0-derived (Perseus AGDT); never bundled.
+    "agdt-derived": DataSpec(
+        name="agdt-derived",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "agdt-derived-v1/agdt-derived.tar.gz"
+        ),
+        sha256="fb559b77a15146a51e34df5e9e2e5952347af086253282a25e8efcf65f8ba363",
+        license="CC BY-SA 3.0 (derived from the Perseus AGDT); fetched, never bundled",
+        note="prebuilt AGDT lexicon + tagger/lemmatizer/parser models; the opt-in "
+             "Greek backends prefer these over downloading the AGDT and training.",
+        extract=True,
+    ),
     # The SigLA-derived Linear A dataset (Salgarella & Castellan, sigla.phis.me):
     # decoded from the published web-app payload into the JSON the SigLA paper
     # describes (scripts/build_sigla_corpus.py). CC BY-NC-SA 4.0 as published by
@@ -297,6 +327,31 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     _verify(tmp, sha256, name)
     tmp.replace(dest)  # atomic within the cache dir
     return dest
+
+
+def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) -> bool:
+    """Place a hosted prebuilt artifact at ``dest``; return ``True`` on success.
+
+    Lets an opt-in backend prefer a small hosted index/model over a slow local
+    build (a ~270 MB download, or minutes of training), while keeping
+    build-from-source as the fallback: any failure — no pinned URL, network
+    error, checksum mismatch — returns ``False`` instead of raising, so the
+    caller proceeds to build. ``member`` names a file inside an ``extract``
+    dataset's unpacked directory.
+    """
+    import shutil
+
+    try:
+        got = fetch(name)
+    except DataNotAvailableError:
+        return False
+    src = got / member if member is not None else got
+    if not src.exists():
+        return False
+    if src.resolve() != dest.resolve():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dest)
+    return True
 
 
 def _fetch_and_extract(

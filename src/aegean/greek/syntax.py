@@ -455,11 +455,19 @@ def _build_tree(
 def train_parser(
     *, source_dir: Path | str | None = None, epochs: int = 5, force: bool = False
 ) -> Path:
-    """Train (and cache, gzipped) the parser model, returning its path. Trains from
-    the AGDT (downloaded on first use) unless ``source_dir`` is given (tests)."""
+    """Train (and cache, gzipped) the parser model, returning its path.
+
+    Prefers the hosted **prebuilt model** (skipping the AGDT download + training);
+    falls back to training from the AGDT (downloaded on first use). ``source_dir``
+    trains from local fixture XML (tests; no network, no prebuilt fetch)."""
     out = cache_dir() / _MODEL_NAME
     if out.exists() and not force and source_dir is None:
         return out
+    if source_dir is None:
+        from ..data import fetch_prebuilt
+
+        if fetch_prebuilt("agdt-derived", out, member=_MODEL_NAME):
+            return out
     trees = load_gold_trees(source_dir=source_dir)
     weights, rels, n_proj = _train(trees, epochs)
     model = {"weights": weights, "relations": rels, "sentences": len(trees), "projective": n_proj}

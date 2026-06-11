@@ -227,17 +227,23 @@ def _lsj_dir(*, download: bool) -> Path:
 def build_index(*, source_dir: Path | str | None = None, force: bool = False) -> Path:
     """Build (and cache, gzipped) the lemma→entry index, returning its path.
 
-    Downloads the Perseus LSJ files into the cache first, unless ``source_dir`` is
-    given (used by tests to parse a local fixture without any network). A present
-    index is reused unless ``force`` (or a ``source_dir``) is given.
+    A present index is reused unless ``force`` (or a ``source_dir``) is given.
+    Otherwise it first tries the hosted **prebuilt index** (~15 MB); only if that
+    is unreachable does it download the full Perseus LSJ TEI (~270 MB) and build
+    locally. ``source_dir`` parses local fixture XML instead (used by tests; no
+    network, no prebuilt fetch).
     """
     out = cache_dir() / _INDEX_NAME
     if out.exists() and not force and source_dir is None:
         return out
-    if source_dir is not None:
-        files = sorted(Path(source_dir).glob("*.xml"))
-    else:
+    if source_dir is None:
+        from ..data import fetch_prebuilt
+
+        if fetch_prebuilt("lsj-index", out):
+            return out
         files = [_lsj_dir(download=True) / name for name in _FILES]
+    else:
+        files = sorted(Path(source_dir).glob("*.xml"))
 
     index: dict[str, dict[str, Any]] = {}
     for fp in files:

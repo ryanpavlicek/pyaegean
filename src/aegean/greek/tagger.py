@@ -128,11 +128,19 @@ def _decode(forms: list[str], weights: dict[str, dict[str, float]], labels: list
 
 
 def train_tagger(*, source_dir: str | None = None, epochs: int = 8, force: bool = False) -> Path:
-    """Train (and cache, gzipped) the POS tagger, returning the model path. Trains from
-    the AGDT (downloaded on first use) unless ``source_dir`` is given (tests)."""
+    """Train (and cache, gzipped) the POS tagger, returning the model path.
+
+    Prefers the hosted **prebuilt model** (skipping the AGDT download + training);
+    falls back to training from the AGDT (downloaded on first use). ``source_dir``
+    trains from local fixture XML (tests; no network, no prebuilt fetch)."""
     out = cache_dir() / _MODEL_NAME
     if out.exists() and not force and source_dir is None:
         return out
+    if source_dir is None:
+        from ..data import fetch_prebuilt
+
+        if fetch_prebuilt("agdt-derived", out, member=_MODEL_NAME):
+            return out
     weights, labels = _train(_sentences(source_dir), epochs)
     with gzip.open(out, "wt", encoding="utf-8") as f:
         json.dump({"weights": weights, "labels": labels}, f, ensure_ascii=False)

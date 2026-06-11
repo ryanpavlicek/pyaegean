@@ -188,6 +188,10 @@ def build_lexicon(*, source_dir: Path | str | None = None, force: bool = False) 
     if source_dir is not None:
         files = sorted(Path(source_dir).glob("*.tb.xml"))
     else:
+        from ..data import fetch_prebuilt
+
+        if fetch_prebuilt("agdt-derived", out, member=_LEXICON_NAME):
+            return out
         files = [_agdt_dir(download=True) / name for name in _AGDT_FILES]
 
     # form → Counter over deduped analyses (each analysis encoded as sorted items).
