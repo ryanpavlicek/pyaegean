@@ -104,6 +104,7 @@ def main() -> None:
         wrapper, (ex_ids, ex_mask, ex_pos), str(fp32_path),
         input_names=["input_ids", "attention_mask", "word_pos"],
         output_names=out_names, dynamic_axes=dyn, opset_version=args.opset,
+        dynamo=False,  # the legacy exporter: dynamic_axes API, no onnxscript needed
     )
     print(f"exported fp32: {fp32_path.stat().st_size / 1e6:.0f} MB", flush=True)
 
