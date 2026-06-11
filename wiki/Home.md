@@ -110,6 +110,13 @@ Linear A sign repertoire; and the corpus-data expansion — the **full DAMOS Lin
 first use. **Next:** analysis & visualization helpers (the statistics layer), then hardening
 toward a **1.0 stable** once there's external use and a methods write-up.
 
+## For specialists
+
+Aegean epigrapher, Mycenologist, philologist, or historical linguist? See
+**[For Specialists](For-Specialists)** for what's established vs. exploratory and
+how to file a correction, validate an exploratory result, or contribute a sourced
+fact — your judgement is part of how the toolkit stays trustworthy.
+
 ## License
 
 Apache-2.0. Corpus data is GORILA (Godart & Olivier 1976–1985) via

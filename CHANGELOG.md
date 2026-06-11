@@ -71,6 +71,11 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Expert validation loop.** GitHub issue forms for **corrections** (a wrong reading/gloss/lemma),
+  **validations** (confirm or refute an exploratory result), and **data contributions** (a sourced
+  fact), plus a new **[For Specialists](https://github.com/ryanpavlicek/pyaegean/wiki/For-Specialists)**
+  wiki page laying out what's established vs. exploratory and how a domain expert can help. The
+  Limitations page is now framed as the living register, linked from Home and the templates.
 - **Grounded-generation eval harness** (`aegean.ai.eval`): measures the AI layer's *grounding
   fidelity* the way the lemmatizer is measured — fixed `GroundingCase`s scored for **groundedness**
   (does the answer use the supplied evidence?) and **fabrication** (does it assert beyond it?).

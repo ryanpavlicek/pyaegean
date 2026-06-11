@@ -26,5 +26,6 @@
 - [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
 - [Limitations](Limitations)
+- [For Specialists](For-Specialists)
 - [FAQ & Troubleshooting](FAQ)
 - [Development](Development)

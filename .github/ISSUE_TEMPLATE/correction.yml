@@ -1,0 +1,44 @@
+name: "Correction (a reading, gloss, lemma, or fact is wrong)"
+description: "Report an incorrect reading, gloss, lemma, sign value, translation, or other fact."
+title: "[correction] "
+labels: ["correction"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you — corrections from specialists are how this toolkit earns trust.
+        Please point to the exact value and give a source so the fix is verifiable.
+
+        This is for **factual corrections**. To confirm or refute an *exploratory*
+        (AI / decipherment / cross-linguistic) result, use the **Validation** form
+        instead; that output is labeled a hypothesis, not a claim.
+  - type: input
+    id: where
+    attributes:
+      label: What is wrong, and where?
+      description: The value and its location — a file path, a function, a sign id, a corpus document, or a wiki page.
+      placeholder: "e.g. src/aegean/data/bundled/linearb/phonetic_map.json — sign *34 mapped to 'a2'"
+    validations:
+      required: true
+  - type: input
+    id: correct
+    attributes:
+      label: What is the correct value?
+      placeholder: "e.g. *34 should be 'jo' (not 'a2')"
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source / authority
+      description: The edition, lexicon, or publication that supports the correction (a page or entry reference is ideal).
+      placeholder: "e.g. Ventris & Chadwick, Documents in Mycenaean Greek (2nd ed.), p. …; or GORILA vol. …"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: pyaegean version
+      placeholder: "aegean --version, or pip show pyaegean"
+    validations:
+      required: false

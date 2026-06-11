@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: "For specialists — how to validate & contribute"
+    url: https://github.com/ryanpavlicek/pyaegean/wiki/For-Specialists
+    about: "What's exploratory vs. established, and how a domain expert can correct, validate, or contribute."
+  - name: "Known limitations"
+    url: https://github.com/ryanpavlicek/pyaegean/wiki/Limitations
+    about: "The living register of what the toolkit can and cannot claim, before you file."
+  - name: "Bug reports & feature requests"
+    url: https://github.com/ryanpavlicek/pyaegean/issues/new
+    about: "For software bugs or feature ideas, open a blank issue."

@@ -317,16 +317,22 @@ them real where licensing allows.
 
 ## WP6 — AI layer credibility
 
-- **Grounding traceability**: every `ExploratoryResult` carries a structured trace — which corpus
+> **Done (2026-06-11).** All four items shipped — WP6 complete.
+
+- ~~**Grounding traceability**: every `ExploratoryResult` carries a structured trace — which corpus
   entries, analysis steps, and rules built its grounding — rendered human-readably
-  (`result.trace()`). *(Reviewer §4 — “a strong differentiator.”)*
-- **Structured outputs**: JSON-mode for capabilities, so AI output can feed pipelines/databases.
+  (`result.trace()`).~~ **Done** — `GroundingItem(content, source, ref)` + `ExploratoryResult.trace()`;
+  CLI `--trace`. *(Reviewer §4 — “a strong differentiator.”)*
+- ~~**Structured outputs**: JSON-mode for capabilities, so AI output can feed pipelines/databases.~~
+  **Done** — `ai.extract` + `ai.parse_json`; CLI `aegean ai extract`. *(Reviewer §4.)*
+- ~~**Grounded-generation eval harness**: fixed cases with known answers; measure grounding fidelity
+  (does the output use the evidence? does it fabricate?) the way the lemmatizer is measured.~~
+  **Done** — `aegean.ai.eval` (`GroundingCase`, `run_eval`, `DEFAULT_CASES`); CLI `aegean ai eval`.
   *(Reviewer §4.)*
-- **Grounded-generation eval harness**: fixed cases with known answers; measure grounding fidelity
-  (does the output use the evidence? does it fabricate?) the way the lemmatizer is measured.
-  *(Reviewer §4.)*
-- **Expert validation loop**: a “For specialists” wiki page, GitHub issue templates for corrections
-  /validations from domain experts, and a living limitations register. *(Reviewer: validation.)*
+- ~~**Expert validation loop**: a “For specialists” wiki page, GitHub issue templates for corrections
+  /validations from domain experts, and a living limitations register.~~ **Done** — three GitHub
+  issue forms (correction / validation / data-contribution) + the For-Specialists wiki page, with
+  Limitations as the living register. *(Reviewer: validation.)*
 
 ## WP7 — Engineering
 

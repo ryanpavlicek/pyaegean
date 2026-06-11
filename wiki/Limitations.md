@@ -3,7 +3,9 @@
 pyaegean's rule is that it tells you where it's confident and where it's guessing.
 This page is the complete picture in one place: what the toolkit **cannot** do and
 why, what it **does not yet** do and plans to, and what it deliberately **won't**
-do. Three kinds of limits behave very differently:
+do. It is a **living register** — found something it gets wrong, or a limit worth
+recording? See [For Specialists](For-Specialists) for how to file a correction or
+validation. Three kinds of limits behave very differently:
 
 1. **Limits of the evidence** — undeciphered scripts, fragmentary tablets,
    contested readings. No amount of code removes these; the toolkit's job is to
