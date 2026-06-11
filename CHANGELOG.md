@@ -71,6 +71,13 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Visualization one-liners** (`aegean.viz`, the new `[viz]` extra — matplotlib, imported
+  lazily so `import aegean` stays dependency-free): `plot_sign_frequencies`, `plot_dispersion`
+  (frequency vs Gries' DP), `plot_keyness` (diverging log-ratio bars with G² labels),
+  `plot_collocation_network` (document co-occurrence, circular layout, exploratory-labeled),
+  `plot_balance` (stated totals vs computed sums on the diagonal), and `plot_scansion` (a
+  syllable grid with quantities, foot boundaries, and the caesura). Each returns the `Axes`.
+  New CLI command: `aegean plot freq|dispersion|keyness|network|balance|scansion … -o out.png`.
 - **Corpus statistics** (`aegean.analysis.stats`, pure stdlib): **dispersion** — Gries' deviation
   of proportions (DP, with the Lijffijt & Gries normalization) for how evenly an item spreads over
   documents; **keyness** — Dunning's log-likelihood G² (Rayson & Garside form) plus Hardie's

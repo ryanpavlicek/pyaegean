@@ -25,9 +25,10 @@ pip install pyaegean            # core: Linear A + Greek, zero hard deps
 | `pyaegean[ai]` | all of the above providers | the full AI layer |
 | `pyaegean[epidoc]` | `lxml` | EpiDoc I/O |
 | `pyaegean[geo]` | `geopandas`, `shapely` | geographic analysis |
+| `pyaegean[viz]` | `matplotlib` | one-line plots (`aegean.viz`, `aegean plot`) |
 | `pyaegean[parquet]` | `pyarrow` | Parquet export (`io.to_parquet`) |
 | `pyaegean[cli]` | `typer`, `rich` | the [`aegean` command line](CLI) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli` | everything except `neural` and `parquet` |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz` | everything except `neural` and `parquet` |
 
 ```bash
 pip install "pyaegean[ai]"

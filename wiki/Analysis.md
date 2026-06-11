@@ -154,6 +154,34 @@ significance (G², p) together with effect size (log-ratio) and dispersion.
 From the shell: `aegean dispersion damos --top 10` and
 `aegean keyness damos --site Pylos` (see [CLI](CLI)).
 
+## Visualization (`aegean.viz`, the `[viz]` extra)
+
+One-line matplotlib figures over the corpus model and the analysis layer —
+conveniences, not a plotting framework. Each returns the `Axes` (compose with
+`ax=`, save with `.figure.savefig(...)`); `import aegean` stays
+dependency-free (matplotlib loads only inside the calls; install with
+`pip install 'pyaegean[viz]'`).
+
+```python
+import aegean
+from aegean import viz
+
+c = aegean.load("damos")
+viz.plot_sign_frequencies(c, top=20)              # frequency bars (words or signs)
+viz.plot_dispersion(c)                            # frequency vs Gries' DP scatter
+viz.plot_keyness(c.filter(site="Pylos"),          # diverging log-ratio bars, G² labels
+                 [d for d in c.documents if d.meta.site != "Pylos"])
+viz.plot_collocation_network(aegean.load("lineara"), "KU-RO")   # ego network (exploratory)
+viz.plot_balance(aegean.load("lineara"))          # stated totals vs computed sums
+viz.plot_scansion("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ")
+```
+
+The scansion grid draws each syllable with its quantity (— ˘ ×), foot
+boundaries, and the caesura (‖); the balance view puts every checked KU-RO /
+TO-SO total on a stated-vs-computed diagonal so discrepancies stand out (with
+the same heuristic-sections caveat as `balance_check`). From the shell:
+`aegean plot freq|dispersion|keyness|network|balance|scansion … -o out.png`.
+
 ## Query engine
 
 A compound predicate engine over the corpus: an inscription/word field registry,

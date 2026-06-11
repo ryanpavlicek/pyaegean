@@ -29,6 +29,8 @@ aegean search lineara "KU-*-RO"             # wildcard sign-pattern word search
 aegean stats lineara --top 10               # word frequencies (--signs for signs)
 aegean dispersion damos --top 10            # Gries' DP: evenly spread vs concentrated
 aegean keyness damos --site Pylos           # key vocabulary of a subset vs the rest
+aegean plot keyness damos --site Pylos -o pylos.png   # any of: freq | dispersion |
+aegean plot scansion "ἄνδρα μοι ἔννεπε…" -o scan.svg  # keyness | network | balance | scansion
 aegean balance lineara HT13                 # KU-RO reconciliation (--strict exits 1)
 aegean cite lineara --site "Haghia Triada"  # cite the exact subset (--style bibtex|apa)
 aegean export lineara -f csv -o lineara.csv # json | csv | parquet | epidoc

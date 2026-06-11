@@ -19,6 +19,7 @@ from . import greek  # noqa: F401 — Greek NLP pipeline
 from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
+from . import viz  # noqa: F401 — one-line plots (matplotlib lazy/optional, the [viz] extra)
 from .core import (
     Corpus,
     Document,
@@ -67,5 +68,6 @@ __all__ = [
     "ai",
     "io",
     "translate",
+    "viz",
     "__version__",
 ]
