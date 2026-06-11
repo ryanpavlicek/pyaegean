@@ -60,6 +60,15 @@ Neural joint Greek pipeline model (fetched on demand, NOT bundled)
   local cache, never bundled in the Apache-2.0 wheel. Attribute the treebanks in
   academic work.
 
+Greek literary works — Perseus canonical-greekLit / First1KGreek (fetched on demand, NOT redistributed)
+  TEI editions of Ancient Greek works from PerseusDL/canonical-greekLit (Perseus Digital
+  Library) and OpenGreekAndLatin/First1KGreek (Open Greek and Latin), both CC BY-SA.
+  Downloaded by the user on demand via aegean.greek.load_work() — one work at a time,
+  pinned to an upstream commit (recorded as Provenance.data_version) — into the local
+  cache; pyaegean neither bundles nor re-hosts the texts. Attribute the Perseus Digital
+  Library / Open Greek and Latin and the underlying print edition (see each file's TEI
+  header) in academic work.
+
 PROIEL treebank — Ancient Greek (fetched on demand, NOT redistributed)
   The PROIEL treebank (https://github.com/proiel/proiel-treebank) — the Greek New Testament
   and Herodotus — licensed CC BY-NC-SA 3.0. Downloaded by the user on demand via

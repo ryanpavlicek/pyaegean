@@ -395,6 +395,44 @@ def pipeline(
     )
 
 
+@greek_app.command()
+def work(
+    work_id: str = typer.Argument(..., help="CTS-style work id, e.g. tlg0012.tlg001 (Iliad)."),
+    source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
+    edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
+    out_path: str | None = typer.Option(None, "--output", "-o", help="Write the corpus as JSON."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Fetch a real Greek work (Perseus canonical-greekLit / First1KGreek, CC BY-SA).
+
+    The TEI file is fetched once to the cache (pinned commit = reproducible),
+    parsed into one document per book/chapter."""
+    from aegean.data import DataNotAvailableError
+    from aegean.greek import load_work
+
+    try:
+        c = load_work(work_id, source=source, edition=edition)
+    except (DataNotAvailableError, ValueError) as exc:
+        raise fail(str(exc)) from None
+    if out_path:
+        c.to_json(out_path)
+        print(f"wrote {len(c)} documents to {out_path}")
+        return
+    summary = {
+        "work": work_id,
+        "documents": len(c),
+        "tokens": sum(len(d.tokens) for d in c),
+        "first": c.documents[0].id if len(c) else "",
+        "name": c.documents[0].meta.name if len(c) else "",
+        "source": c.provenance.source if c.provenance else "",
+        "data_version": c.provenance.data_version if c.provenance else "",
+    }
+    if json_out:
+        emit_json(summary)
+        return
+    table(f"{work_id}", ["field", "value"], [[k, str(v)] for k, v in summary.items() if k != "work"])
+
+
 @greek_app.command("eval")
 def evaluate(
     target: str = typer.Argument(

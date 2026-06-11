@@ -80,6 +80,7 @@ from .normalize import (
     unicode_to_betacode,
 )
 from .pipeline import TokenRecord, pipeline
+from ..scripts.greek.perseus import load_work
 from .prosody import scan, syllable_quantities
 from .meter import (
     Foot,
@@ -103,6 +104,7 @@ __all__ = [
     "unicode_to_betacode",
     "pipeline",
     "TokenRecord",
+    "load_work",
     "tokenize",
     "tokenize_words",
     "sentences",

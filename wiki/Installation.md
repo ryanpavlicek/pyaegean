@@ -42,7 +42,8 @@ import aegean
 print(aegean.__version__)
 print(aegean.registered_scripts())       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
-print(len(aegean.load("greek")))          # 5  (bundled sample corpus)
+print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
+                                          #     via greek.load_work("tlg0012.tlg001"))
 ```
 
 ## Offline & data

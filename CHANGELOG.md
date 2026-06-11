@@ -70,6 +70,13 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Real Greek works on demand** (`greek.load_work("tlg0012.tlg001")`, CLI `aegean greek work`):
+  a fetch-to-cache TEI reader for **Perseus canonical-greekLit** and **First1KGreek** (CC BY-SA).
+  One call loads a work into the standard corpus model — the Iliad arrives as 24 book-Documents
+  (~127k tokens) with real verse lines; prose works split by chapter/paragraph. Downloads are
+  pinned to an upstream commit (recorded as `Provenance.data_version`) for reproducibility, and
+  editorial `<note>`/`<bibl>` subtrees are excluded from the text. The bundled 5-passage sample
+  remains the offline default; this closes the "five famous quotes" gap for alphabetic Greek.
 - **Data versioning for reproducibility** (`aegean.data.versions()`, `aegean data versions`):
   a manifest of every bundled data file (sha256 + size, hashed from the installed wheel) and
   every fetchable asset (pinned sha256, cache state). Bundled corpora stamp

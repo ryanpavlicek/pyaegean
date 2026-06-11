@@ -43,7 +43,11 @@ _PROVENANCE = Provenance(
     source="Public-domain Ancient Greek text samples (Archaic→Koine)",
     license="Public domain (ancient texts); seed sample for the v0.1 Greek start",
     citation="Homer, Herodotus, Heraclitus, Sappho, Gospel of John (sample excerpts).",
-    notes=("Seed corpus only — the full First1KGreek/Perseus corpus lands later.",),
+    notes=(
+        "Offline seed sample. Real works load on demand via "
+        "aegean.greek.load_work('tlg0012.tlg001') — Perseus canonical-greekLit "
+        "and First1KGreek, fetched to cache (CC BY-SA).",
+    ),
 )
 
 

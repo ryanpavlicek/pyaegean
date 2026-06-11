@@ -138,6 +138,19 @@ models trained on — for a neutral, out-of-AGDT generalization number. PROIEL i
 and never bundled or re-hosted (NonCommercial + ShareAlike). Cite Haug & Jøhndal (2008).
 See [Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
 
+### Greek literary works (`greek.load_work`)
+
+`aegean.greek.load_work("tlg0012.tlg001")` fetches one work's Greek TEI edition
+from **Perseus canonical-greekLit** or **First1KGreek** (both CC BY-SA; tried in
+that order, or pick with `source=`) into the cache and returns a standard
+`Corpus` — one `Document` per book/chapter, verse lines or paragraphs as the
+physical lines. The download is **pinned to an upstream commit** (recorded as
+`Provenance.data_version`, e.g. `PerseusDL/canonical-greekLit@d4fab69a2c26`),
+so a loaded work is reproducible; override the ref with
+`PYAEGEAN_GREEKLIT_REF` / `PYAEGEAN_FIRST1K_REF`. Nothing is re-hosted; cite
+the Perseus Digital Library / Open Greek and Latin and the underlying edition
+(each file's TEI header names it).
+
 ## Data versioning — pinning for papers
 
 Every dataset pyaegean can touch is versioned and hashable:

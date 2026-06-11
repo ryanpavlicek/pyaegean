@@ -142,10 +142,13 @@ concretely:
   full Unicode Linear A block; 84 signs carry conventional sound values), but for publication-grade
   readings consult **GORILA** and **SigLA**. The data model can record editorial status
   (`ReadingStatus`) and the EpiDoc reader/writer round-trip it, for bring-your-own corpora.
-- **The non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
+- **The bundled non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
   syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For a
   real Linear B corpus, point `PYAEGEAN_LINEARB_CORPUS` at your own DAMOS EpiDoc export — pyaegean
-  parses it locally and never re-hosts it.
+  parses it locally and never re-hosts it. **Alphabetic Greek, by contrast, loads real works on
+  demand**: `greek.load_work("tlg0012.tlg001")` fetches the Iliad (24 books, ~127k tokens) from
+  Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) into the standard
+  corpus model.
 - **The Greek NLP stack is honest about its tiers.** The zero-dependency core favours portability
   and instant imports; the opt-in `[neural]` pipeline delivers state-of-the-art accuracy on the UD
   Ancient Greek benchmarks, measured leakage-free, end-to-end from raw text, through this exact

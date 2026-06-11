@@ -75,6 +75,14 @@ aegean greek tag "…" --treebank --tagger               # AGDT lookup + percept
 aegean greek gloss λόγος                               # LSJ gloss (~270 MB first use)
 ```
 
+Real Greek works load on demand (Perseus canonical-greekLit / First1KGreek,
+CC BY-SA, commit-pinned, cached):
+
+```bash
+aegean greek work tlg0012.tlg001                 # the Iliad: 24 books, ~127k tokens
+aegean greek work tlg0012.tlg001 -o iliad.json   # as a round-trippable corpus file
+```
+
 `aegean greek eval ud --treebank perseus --split test --neural` reproduces the
 published numbers through the official CoNLL 2018 evaluator (heavy: fetches
 gold data and the model); `eval proiel|tagger|lemmatizer|parser` cover the
