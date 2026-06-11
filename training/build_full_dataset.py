@@ -40,6 +40,26 @@ from aegean.greek.treebank import _clean_lemma, agdt_dir  # noqa: E402
 from build_upos_dataset import split_ids  # noqa: E402
 
 
+def row_from_attrs(file: str, sid: str, attrs: list[dict]) -> dict:
+    """Convert one sentence's AGDT-schema attrs into a full dataset row (labels via the
+    validated converters)."""
+    flags = copular_flags(attrs)
+    tree = convert_tree(attrs)
+    return {
+        "file": file, "sid": sid,
+        "tokens": [a["form"] for a in attrs],
+        "upos": [
+            upos_from_xpos(a["form"], a["xpos"], lemma=a["lemma"],
+                           has_pnom_child=f, own_relation=a["relation"])
+            for a, f in zip(attrs, flags)
+        ],
+        "xpos": [a["xpos"] for a in attrs],
+        "head": [h for h, _r in tree],
+        "deprel": [r for _h, r in tree],
+        "lemma": [a["lemma"] or a["form"] for a in attrs],
+    }
+
+
 def load_agdt_full(base: Path) -> list[dict]:
     rows: list[dict] = []
     for fp in sorted(base.glob("*.tb.xml")):
@@ -57,29 +77,60 @@ def load_agdt_full(base: Path) -> list[dict]:
                      "xpos": (w.get("postag") or "").ljust(9, "-")[:9]}
                     for w in words
                 ]
-                flags = copular_flags(attrs)
-                tree = convert_tree(attrs)
-                rows.append({
-                    "file": fp.name, "sid": sid,
-                    "tokens": [a["form"] for a in attrs],
-                    "upos": [
-                        upos_from_xpos(a["form"], a["xpos"], lemma=a["lemma"],
-                                       has_pnom_child=f, own_relation=a["relation"])
-                        for a, f in zip(attrs, flags)
-                    ],
-                    "xpos": [a["xpos"] for a in attrs],
-                    "head": [h for h, _r in tree],
-                    "deprel": [r for _h, r in tree],
-                    "lemma": [a["lemma"] or a["form"] for a in attrs],
-                })
+                rows.append(row_from_attrs(fp.name, sid, attrs))
             sent.clear()
     return rows
+
+
+def _haspunct(form: str) -> bool:
+    return not any(ch.isalpha() or ch.isdigit() for ch in form)
+
+
+def _overlap_keys_ud(splits: tuple[str, ...]) -> set[tuple[str, ...]]:
+    """Form-tuple keys (full + punctuation-stripped) of the UD-Perseus fold sentences."""
+    from aegean.greek.ud import load_conllu, ud_path
+
+    keys: set[tuple[str, ...]] = set()
+    for split in splits:
+        for s in load_conllu(ud_path("perseus", split)):
+            forms = tuple(unicodedata.normalize("NFC", t.form) for t in s.tokens)
+            keys.add(forms)
+            keys.add(tuple(f for f in forms if not _haspunct(f)))
+    return keys
+
+
+def _overlap_keys_proiel() -> set[tuple[str, ...]]:
+    """Form-tuple keys of the PROIEL evaluation sentences (PROIEL has no punct tokens)."""
+    from aegean.greek.proiel import load_proiel_gold
+
+    return {tuple(t.form for t in sent) for sent in load_proiel_gold()}
+
+
+def load_extras_clean(ud_keys: set, proiel_keys: set) -> tuple[list[dict], dict]:
+    """Gorman + Pedalion rows with overlap-matched sentences excluded (train-only data)."""
+    from extra_treebanks import load_extra
+
+    rows: list[dict] = []
+    audit = {"gorman": {"kept": 0, "excluded": 0}, "pedalion": {"kept": 0, "excluded": 0}}
+    for source in ("gorman", "pedalion"):
+        for r in load_extra(source):
+            forms = tuple(a["form"] for a in r["attrs"])
+            stripped = tuple(f for f in forms if not _haspunct(f))
+            if forms in ud_keys or stripped in ud_keys or stripped in proiel_keys:
+                audit[source]["excluded"] += 1
+                continue
+            audit[source]["kept"] += 1
+            rows.append(row_from_attrs(r["file"], r["sid"], r["attrs"]))
+    return rows, audit
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(Path(__file__).parent / "data"))
     ap.add_argument("--min-freq", type=int, default=2)
+    ap.add_argument("--with-extras", action="store_true",
+                    help="Stage D+: add Gorman + Pedalion to TRAIN (overlap-audited "
+                         "against UD-Perseus dev/test and PROIEL; dev unchanged)")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -91,6 +142,16 @@ def main() -> None:
     rows = load_agdt_full(base)
     train = [r for r in rows if (r["file"], r["sid"]) not in excluded]
     dev = [r for r in rows if (r["file"], r["sid"]) in dev_ids]
+
+    extras_audit = None
+    if args.with_extras:
+        print("fetching/auditing Gorman + Pedalion (overlap vs UD dev/test + PROIEL) ...",
+              flush=True)
+        ud_keys = _overlap_keys_ud(("dev", "test"))
+        proiel_keys = _overlap_keys_proiel()
+        extra_rows, extras_audit = load_extras_clean(ud_keys, proiel_keys)
+        train = train + extra_rows
+        print(f"extras merged into train: {extras_audit}", flush=True)
 
     # --- the edit-script inventory + train-only lookups (TRAIN data only) ----------
     script_counts: Counter[str] = Counter()
@@ -131,6 +192,8 @@ def main() -> None:
     cov_dev = sum(1 for r in dev for s in r["script"] if s != -100)
     stats = {
         "built": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "with_extras": bool(args.with_extras),
+        "extras_audit": extras_audit,
         "train_sentences": len(train), "dev_sentences": len(dev),
         "train_tokens": n_train, "dev_tokens": n_dev,
         "n_scripts": len(scripts), "min_freq": args.min_freq,
