@@ -127,6 +127,7 @@ def main() -> None:
     scores = ev.evaluate(gold_ud, system_ud)
     result = {
         "checkpoint": str(ckpt), "compose": args.compose,
+        "checkpoint_epochs": spec.get("epochs"), "checkpoint_best_epoch": spec.get("best_epoch"),
         "treebank": args.treebank, "split": args.split,
         "lemma": scores["Lemmas"].f1,
         "uas": scores["UAS"].f1, "las": scores["LAS"].f1, "clas": scores["CLAS"].f1,

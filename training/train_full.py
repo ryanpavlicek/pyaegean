@@ -301,7 +301,9 @@ def main() -> None:
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
                 json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps,
-                            "n_scripts": len(scripts)}, ensure_ascii=False), encoding="utf-8")
+                            "n_scripts": len(scripts), "epochs": args.epochs,
+                            "seed": args.seed, "best_epoch": epoch},
+                           ensure_ascii=False), encoding="utf-8")
             shutil.copy(data_dir / "lemma-scripts.json", out / "model" / "lemma-scripts.json")
             shutil.copy(data_dir / "lemma-lookup.json", out / "model" / "lemma-lookup.json")
 
