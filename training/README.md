@@ -160,3 +160,39 @@ Defaults: 6 epochs, lr 3e-5, batch 32, bf16 auto; selection on dev LAS. Tune on 
 `metrics.json`, both `ud-*-test.json`, and **the checkpoint** (`out/parser/model/`,
 ~520 MB → Drive) — it supersedes the Stage B artifact (same tagging heads included)
 and is what Stage E exports to ONNX.
+
+## Stage D — the full model: tags + trees + lemmas (one checkpoint)
+
+**Target (UD Perseus test): lemma ≥ 87.6** — from a **leakage-clean** lemmatizer (the
+shipped hybrid's lookup contains the fold, so its 97.65 is an in-training number; the
+clean reference is PROIEL 90.38).
+
+**Design.** The Stage C JointParser with its lemma head on: a word-level classifier over
+**edit scripts** (Chrupała edit trees, reusing `aegean.greek.lemmatizer`'s pure-Python
+build/apply — 9,263 classes cover 98.5% of train / 96.7% of dev tokens), composed with a
+**train-only lookup** (form, form|UPOS, lowercased). Context-sensitivity comes free from
+the encoder (homographs disambiguate by sentence), with no autoregressive decoding — and
+the artifact stays ONE checkpoint serving UPOS/XPOS/FEATS/heads/deprels/lemmas. The lemma
+supervision is byte-identical to UD's lemma column (validated on all 159,895 aligned
+train tokens). Even with an untrained head, the lookup alone floors dev lemma at ~82%.
+
+**Run (same clone setup; notebook: `training/stage_d_full.ipynb`):**
+
+```bash
+python pyaegean_repo/training/build_full_dataset.py
+python pyaegean_repo/training/train_full.py --model bowphs/GreBerta
+# pick --compose from the dev line the trainer prints (lemma_best_mode), then:
+python pyaegean_repo/training/eval_full_ud.py \
+    --checkpoint pyaegean_repo/training/out/full/model --compose <best-mode> \
+    --treebank perseus --split test --out pyaegean_repo/training/out/full/ud-perseus-test.json
+python pyaegean_repo/training/eval_full_ud.py \
+    --checkpoint pyaegean_repo/training/out/full/model --compose <best-mode> \
+    --treebank proiel --split test --out pyaegean_repo/training/out/full/ud-proiel-test.json
+```
+
+Selection: (dev LAS + best lemma composition)/2. Bring back `metrics.json`, both
+`ud-*-test.json`, and **the checkpoint** (`out/full/model/`, ~550 MB → Drive: weights +
+tokenizer + labels.json + the lemma scripts/lookup) — this is THE Stage E artifact,
+superseding Stage C's. If lemma lands short, the levers are more epochs, a lower
+--min-freq when building (more script classes), and a morph-conditioned seq2seq as the
+unseen-form tier (the shipped GreTa pattern, retrained leakage-clean).

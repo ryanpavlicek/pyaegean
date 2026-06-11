@@ -56,10 +56,13 @@ class Biaffine(nn.Module):
 
 
 class JointParser(nn.Module):
-    """Shared encoder + tagging heads + biaffine arc/relation scorers."""
+    """Shared encoder + tagging heads + biaffine arc/relation scorers.
+
+    With ``n_scripts > 0`` (Stage D), a word-level lemma head classifies edit scripts —
+    the full pipeline (tags, morphology, trees, lemmas) in one checkpoint."""
 
     def __init__(self, model_name: str, tag_sizes: dict[str, int], n_rels: int,
-                 arc_dim: int = 512, rel_dim: int = 128) -> None:
+                 arc_dim: int = 512, rel_dim: int = 128, n_scripts: int = 0) -> None:
         super().__init__()
         self.encoder = AutoModel.from_pretrained(model_name)
         hidden = self.encoder.config.hidden_size
@@ -71,6 +74,7 @@ class JointParser(nn.Module):
         self.rel_dep, self.rel_head = mlp(rel_dim), mlp(rel_dim)
         self.arc_attn = Biaffine(arc_dim, 1)
         self.rel_attn = Biaffine(rel_dim, n_rels)
+        self.lemma_head = nn.Linear(hidden, n_scripts) if n_scripts else None
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 word_pos: torch.Tensor):
@@ -84,7 +88,8 @@ class JointParser(nn.Module):
         cands = torch.cat((root, words), dim=1)             # [B, W+1, H]
         arc = self.arc_attn(self.arc_dep(words), self.arc_head(cands)).squeeze(1)  # [B, W, W+1]
         rel = self.rel_attn(self.rel_dep(words), self.rel_head(cands))             # [B, R, W, W+1]
-        return tag_logits, arc, rel
+        lem = self.lemma_head(words) if self.lemma_head is not None else None      # [B, W, S]
+        return tag_logits, arc, rel, lem
 
 
 # ---- Chu-Liu/Edmonds maximum spanning arborescence (numpy, eval-time) ----------------
@@ -251,7 +256,7 @@ def evaluate(model, dl, device, amp_dtype) -> dict[str, float]:
         for batch in dl:
             inputs = {k: batch[k].to(device) for k in ("input_ids", "attention_mask", "word_pos")}
             with torch.autocast(device_type=device, dtype=amp_dtype, enabled=amp_dtype is not None):
-                tag_logits, arc, rel = model(**inputs)
+                tag_logits, arc, rel, _lem = model(**inputs)
             arc = arc.float().cpu()
             rel = rel.float().cpu()
             up = tag_logits["upos"].argmax(-1).cpu()
@@ -350,7 +355,7 @@ def main() -> None:
             gh = batch["arc_heads"].to(device)
             gr = batch["arc_rels"].to(device)
             with torch.autocast(device_type=device, dtype=amp_dtype, enabled=amp_dtype is not None):
-                tag_logits, arc, rel = model(**inputs)
+                tag_logits, arc, rel, _lem = model(**inputs)
                 loss = sum(
                     ce(tag_logits[h].flatten(0, 1), batch[f"labels_{h}"].flatten().to(device))
                     for h in TAG_HEADS
