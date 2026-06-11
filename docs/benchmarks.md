@@ -90,6 +90,17 @@ in **bold**.
 e.g. Stanza-perseus scores 59.00 UAS on PROIEL — which is why pyaegean keeps out-of-domain
 and unseen-form measurement first-class.)
 
+**Newer baseline (found in a freshness sweep, 2026-06-10):** Riemenschneider & Frank 2024,
+*“A State-of-the-Art Morphosyntactic Parser and Lemmatizer for Ancient Greek”*
+(<https://arxiv.org/abs/2410.12055> — the GreBERTa/GreTa authors), reports on the UD
+Perseus test fold (models trained on the UD train fold; gold tokenization): GreBERTa-based
+parsing **UAS 88.20 / LAS 83.98**, POS 95.83, XPOS 91.09; and a GreTa lemmatizer at 91.17
+lemma accuracy on their own (AGDT+Gorman+Pedalion, normalized) folds. This **raises the
+parsing bar** above the odyCy-era table: the live targets are UAS ≥ 88.2 / LAS ≥ 84.0.
+Their main models train on AGDT+Gorman+Pedalion (~1.26 M tokens, ≈2.45× pyaegean's
+current AGDT-only split) — the same license-clean data lever (Gorman CC0, Pedalion
+CC BY-SA) already named in ROADMAP WP3 §3.6, which is pyaegean's planned response.
+
 ## pyaegean — Stage 0 baseline (current stack, pre-program)
 
 Measured with the protocol above, pyaegean 0.8.0-dev. “Pure-Python stack” =
@@ -217,10 +228,13 @@ odyCy-joint's **in-domain** 83.17. The LAS gap to in-domain systems is largely d
 convention divergence between the two treebanks' UD conversions (the same effect capping
 PROIEL UFeats), the NC-variant gate's territory if PROIEL-side parity is ever pursued.
 
-Scoreboard after Stage C: UD-Perseus **POS ✓ morph ✓ UAS ✓ LAS ✓** — four of five
-metrics above the published state of the art, leakage-clean. Remaining: **lemma**
-(Stage D — must be ≥ 87.6 on Perseus test from a leakage-clean lemmatizer; the current
-hybrid's lookup contains the fold, so its 97.65 is an in-training number).
+Scoreboard after Stage C: UD-Perseus **POS ✓ morph ✓ UAS ✓ LAS ✓** against the odyCy-era
+published field, leakage-clean. Against the **2024 baseline** (see above), tagging still
+leads (POS 96.21 vs 95.83; XPOS 92.21 vs 91.09) but parsing trails by 0.7 UAS / 1.7 LAS
+(87.49/82.30 vs 88.20/83.98) — the planned close is the Gorman+Pedalion data extension
+(≈2.45× training tokens). Remaining: **lemma** (Stage D — ≥ 87.6 on Perseus test from a
+leakage-clean lemmatizer; the current hybrid's lookup contains the fold, so its 97.65 is
+an in-training number).
 
 ## WP3 targets (definition of done)
 
