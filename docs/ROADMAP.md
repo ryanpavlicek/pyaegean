@@ -1,9 +1,10 @@
 # pyaegean roadmap — the 0.8.0 program
 
-**Status:** `main` holds the 0.8.0 hardening pass (full Linear A sign repertoire, `ReadingStatus` +
-schema-valid EpiDoc, Pleiades alignment, honest scope docs). The `v0.8.0` tag is **deliberately not
-cut**: everything in this document ships under 0.8.0. There is no 0.9.0 on the horizon — 0.8.0 is
-the release where the gaps get *fixed*, not footnoted.
+**Status (2026-06-11): the program is COMPLETE — WP1 through WP9 are all done** (each WP carries
+its ✓ banner below). The `v0.8.0` tag remains **deliberately uncut**: the roadmap is being
+**reassessed** now that the work packages are finished, and the tag/release decision follows that
+reassessment — not this document. There is no 0.9.0 on the horizon — 0.8.0 stays the release where
+the gaps got *fixed*, not footnoted.
 
 **The principle shift.** The pre-release reviews surfaced shortfalls we initially addressed with
 honest documentation. Honest documentation stays — but as the floor, not the fix. Where a gap can
@@ -14,10 +15,10 @@ be closed with engineering, we close it. This document consolidates, in one plac
 3. the external reviewer's criticisms and big-ticket proposals (CLI first; web demo parked), and
 4. everything outstanding from the prior roadmap (`docs/PLAN.md`).
 
-Work packages are sequenced roughly by (value ÷ risk); WP3 is the long pole and runs in parallel
-with the others (its training cycles are offline). `v0.8.0` tags when WP1–WP6 are done and the WP3
-targets are met — the tag then publishes to PyPI via OIDC and mints the first Zenodo DOI, which gets
-wired into the README badge, `CITATION.cff`, and the BibTeX block.
+Work packages were sequenced roughly by (value ÷ risk); WP3 was the long pole and ran in parallel
+with the others (its training cycles are offline). When the tag decision is eventually made (after
+the post-program reassessment), `v0.8.0` publishes to PyPI via OIDC and mints the first Zenodo DOI,
+which gets wired into the README badge, `CITATION.cff`, and the BibTeX block.
 
 ---
 
@@ -363,10 +364,23 @@ them real where licensing allows.
 
 ## WP9 — Docs, recipes, community
 
-- **Recipes**: end-to-end scholarly workflows (“reconcile accounting across the HT corpus and export
-  discrepancies”, “map a word's distribution”, “lemmatize and cite a chapter”). *(Reviewer §7.)*
-- **Benchmark notebook** (WP3 deliverable) maintained as living documentation.
-- Wiki/README refresh as each WP lands; CHANGELOG discipline + the WP1 deprecation policy in force.
+> **Done (2026-06-11).** All three items shipped — and with it, **the 0.8.0 program is complete**.
+> The tag stays uncut pending the roadmap reassessment (see the Status banner at the top).
+
+- ~~**Recipes**: end-to-end scholarly workflows (“reconcile accounting across the HT corpus and export
+  discrepancies”, “map a word's distribution”, “lemmatize and cite a chapter”).~~ **Done** — the
+  wiki [Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes) page: the three named
+  workflows plus keyness-on-DAMOS, cross-script sound matching, cluster-and-cache, and
+  grounded-AI-with-audit — every Python snippet executed against the shipped corpora before
+  publication, each recipe ending in `cite()`. *(Reviewer §7.)*
+- ~~**Benchmark notebook** (WP3 deliverable) maintained as living documentation.~~ **Done** — the
+  getting-started notebook refreshed: prebuilt-asset first-use costs (15 MB, not 75/270 MB), a new
+  RUN_HEAVY-gated Act 4 (the full DAMOS corpus + keyness), and the Recipes link; executes clean
+  under nbmake (as CI does).
+- ~~Wiki/README refresh as each WP lands; CHANGELOG discipline + the WP1 deprecation policy in
+  force.~~ **Done** — refreshed per-WP throughout the program (two dedicated staleness sweeps);
+  final pass updated Home/README to the program-complete state. CHANGELOG discipline and the
+  deprecation policy remain in force.
 
 ---
 

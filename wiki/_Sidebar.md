@@ -5,6 +5,7 @@
 **Start here**
 - [Getting Started](Getting-Started)
 - [Tutorial](Tutorial)
+- [Recipes](Recipes)
 - [Installation](Installation)
 
 **Aegean scripts**

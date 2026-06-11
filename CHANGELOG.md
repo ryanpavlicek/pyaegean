@@ -12,6 +12,12 @@ public API, and a hosted API reference. Released as **beta** — the API is clos
 waits on external use and a short methods write-up.
 
 ### Added
+- **Recipes** — a new wiki page of end-to-end scholarly workflows, each verified against the shipped
+  corpora and ending in a citation: reconcile a corpus's accounting and export the discrepancies,
+  map a word's distribution, lemmatize-and-cite a chapter, keyness over DAMOS, cross-script sound
+  matching, cluster-and-cache, and a grounded AI question with its provenance audit. The
+  getting-started notebook gained a RUN_HEAVY-gated Act 4 (the full DAMOS corpus + keyness) and
+  now states the prebuilt-asset first-use costs.
 - **Extended Pleiades alignment** (gazetteer): the find-site → Pleiades coverage grew from 26 to 33
   of 56, each new id **verified by coordinate** against the Pleiades API (the representative point is
   within a few km of ours and the place description matches) — Mt Juktas, the Arkalochori cave, Kato

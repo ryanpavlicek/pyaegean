@@ -68,11 +68,12 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, the full DAMOS corpus on demand (`aegean.load("damos")`, ~5,900 tablets) |
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge — the script is undeciphered) |
-| [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
+| [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, **cross-script comparison** (Linear B ↔ Greek by sound), morphology clustering, collocation stats, **corpus statistics** (dispersion, keyness, bootstrap), query engine, structure detection, an opt-in analysis cache |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), **LSJ glossing** (`use_lsj`), generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`) — joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek benchmarks (96.9 UPOS / 96.1 UFeats / 94.4 lemma / 89.2 UAS / 84.4 LAS, Perseus test) — plus real works on demand (`load_work`) and a **benchmark** harness |
 | [`aegean.io`](Architecture) | Export adapters: EpiDoc (TEI) write — the inverse of the bring-your-own reader — plus CSV and Parquet |
 | [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python — corpus commands, the full Greek NLP pipeline, analysis, data fetching, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
-| [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled Aegean gazetteer, for mapping/spatial analysis |
+| [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
+| `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids — and `aegean plot` from the shell |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
@@ -104,11 +105,15 @@ round-trip (`to_json`/`from_json`), a compound `query()`, schema-valid EpiDoc/CS
 export, citation automation (`cite()` down to the exact subset), and a data-versioning
 manifest (`data.versions()`); geographic analysis with Pleiades alignment; editorial-status +
 variant-reading round-trips (`ReadingStatus`, `Token.alt` ↔ EpiDoc); the full Unicode
-Linear A sign repertoire; and the corpus-data expansion — the **full DAMOS Linear B corpus**
+Linear A sign repertoire; the corpus-data expansion — the **full DAMOS Linear B corpus**
 (`aegean.load("damos")`, ~5,900 tablets) and the **SigLA Linear A dataset**
 (`aegean.load("sigla")`) fetched on demand, with prebuilt LSJ/AGDT artifacts for a fast
-first use. **Next:** analysis & visualization helpers (the statistics layer), then hardening
-toward a **1.0 stable** once there's external use and a methods write-up.
+first use; corpus **statistics** (dispersion/keyness/bootstrap), **visualization** one-liners,
+and **cross-script phonetic comparison**; traceable, measurable AI grounding; the opt-in
+analysis cache; and the extended Pleiades alignment (33/56, coordinate-verified).
+**Next:** the [0.8.0 program](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/ROADMAP.md)
+is complete and the roadmap is being reassessed; a **1.0 stable** waits on external use and a
+methods write-up.
 
 ## For specialists
 

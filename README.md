@@ -118,19 +118,22 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Example notebook](notebooks/getting-started.ipynb)** — a runnable guided tour ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb))
 - **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)** — two guided, end-to-end research walkthroughs
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)** — per-script guides
+- **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)** — end-to-end scholarly workflows, each ending in a citation
 - **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)** — reference
 - **[API reference](https://ryanpavlicek.github.io/pyaegean/)** — every public module, class, and function, generated from the source
 
 ## Roadmap
 
 Shipped through **v0.8**: the script-agnostic core and all four Aegean scripts; the full Greek NLP
-track (treebank, LSJ, dependency parser, generalizing tagger + lemmatizer, the neural lemmatizer, a
-benchmark harness, and a neutral out-of-AGDT evaluation); the multi-provider AI + translation layer;
-and a complete data layer — lossless JSON round-trip, a compound `query()`, and schema-valid EpiDoc /
-CSV / Parquet export — plus the full Linear A sign repertoire, an editorial-status round-trip, and
-Pleiades-aligned find-sites. **Next:** hardening toward a **1.0** once there's external use and a
-short methods write-up (a JOSS submission is planned). The
-[wiki](https://github.com/ryanpavlicek/pyaegean/wiki) has the full roadmap.
+track (treebank, LSJ, dependency parser, generalizing tagger + lemmatizer, the neural joint
+pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); the full **DAMOS Linear B**
+and **SigLA Linear A** corpora fetched on demand; corpus statistics (dispersion, keyness,
+bootstrap), one-line plots, and cross-script phonetic comparison; the multi-provider AI layer with
+traceable, measurable grounding; and a complete data layer — lossless JSON round-trip, a compound
+`query()`, schema-valid EpiDoc / CSV / Parquet export, an opt-in analysis cache, and
+Pleiades-aligned find-sites. **Next:** the 0.8.0 program is complete and the roadmap is being
+reassessed; a **1.0** waits on external use and a short methods write-up (a JOSS submission is
+planned). The [wiki](https://github.com/ryanpavlicek/pyaegean/wiki) has the full roadmap.
 
 ## Project maturity & scope
 
