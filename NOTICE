@@ -121,12 +121,20 @@ Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   neither by default; set PYAEGEAN_LINEARB_CORPUS to load your own licensed copy, which
   pyaegean parses locally and never re-hosts.
 
+SigLA — the Linear A paleographical database (fetched on demand, NOT bundled)
+  Salgarella, E. & Castellan, S., SigLA: The Signs of Linear A — a palaeographical
+  database (https://sigla.phis.me). Dataset and drawings are published under
+  CC BY-NC-SA 4.0, and the SigLA paper notes that copies of SigLA can be hosted and
+  the data used outside the interface. pyaegean's `sigla-corpus` release asset is
+  that dataset decoded from the published web-app payload into the JSON form the
+  paper describes (scripts/build_sigla_corpus.py; attribution, citation, source
+  sha256, and generation date in the file's _meta; drawings are NOT included and
+  remain at sigla.phis.me). Downloaded by the user on demand via
+  aegean.load("sigla") / aegean.scripts.lineara.load_sigla(); the NonCommercial +
+  ShareAlike obligations pass through to the user, and the data is never bundled
+  in or redistributed with the Apache-2.0 wheel. Cite SigLA in academic work.
+
 Planned (future versions; included here for forward attribution):
-  - SigLA — the Linear A paleographical database (Salgarella, E. & Castellan, S.,
-    https://sigla.phis.me): dataset and drawings published under CC BY-NC-SA 4.0.
-    Will follow the PROIEL/UD pattern — fetched to the user cache on demand for
-    research use, NonCommercial + ShareAlike obligations passed through, never
-    bundled in or redistributed with the Apache-2.0 wheel.
   - Morpheus morphological data (per applicable license).
   Each will be attributed and license-gated as it is integrated.
 

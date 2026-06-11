@@ -263,23 +263,19 @@ them real where licensing allows.
      documents now carry editorial status, regression-pinned in tests. Restorations and dotted
      readings were dropped upstream and are NOT recoverable from this source — that is SigLA's
      role (step 2).
-  2. **SigLA integration** (Salgarella & Castellan). *Licensing resolved 2026-06-11*: the official
-     site publishes "Dataset and drawings are available under the CC BY-NC-SA 4.0 license" — so no
-     permission inquiry is needed; this follows the PROIEL/UD precedent (fetch-to-cache on demand,
-     NC clearly labeled and passed through to the user, never bundled or redistributed, derived
-     indexes built only in the local cache; anything *trained* on it would inherit NC and ship as a
-     separate clearly-labeled asset, never the default). Remaining work is engineering: find the
-     dataset's machine-readable access path (the site doesn't advertise a download endpoint — a
-     courtesy contact to the authors about a stable export is about *format*, not permission),
-     then a fetch-to-cache loader for the sign-variant + apparatus-grade readings.
-     *Scouting result (2026-06-11):* the dataset ships inside the web app as OCaml-Marshal
-     payloads (`database.js`); no export endpoint or public source exists. *Decode
-     feasibility proven the same day* (`scripts/explore_sigla_db.py`: escape layers peeled,
-     Marshal header verified, document/site/period/sign-attestation content recognizable;
-     the SigLA paper documents the schema and invites reuse "outside the interface") —
-     so the loader is buildable now: a Marshal reader + the paper's schema mapping,
-     cross-validated against the bundled GORILA corpus, with the format courtesy contact
-     (sent) as a stability check.
+  2. **SigLA integration — SHIPPED (2026-06-11).** Licensing was resolved without inquiry (the
+     site publishes the dataset CC BY-NC-SA 4.0; the paper invites use "outside the interface"
+     and notes copies can be hosted). The dataset shipped inside the web app as OCaml-Marshal
+     payloads with no export endpoint — so pyaegean gained a pure-Python **Marshal reader**
+     (`scripts/lineara/sigla.py`, three structural self-checks, offline-tested), a converter
+     (`scripts/build_sigla_corpus.py`) emitting the JSON database the paper describes, the
+     **`sigla-corpus-v1` release asset** (sha256-pinned, NC-labeled, ~1 MB), and
+     `aegean.load("sigla")`: 781 documents with typology/site/**dimensions**/period/EFA refs
+     and 5,065 sign attestations in tablet order. Cross-validated against the bundled GORILA
+     corpus (547/651 shared docs at ≥60% overlap under 28 data-derived notation equivalences;
+     residue = rare-ligature notation). Remaining refinements: numerals/erasure flags and word
+     grouping (preserved as `raw_flags`), and the format courtesy contact (sent) as a
+     stability check.
   3. **Corpus v2**: a GORILA-faithful bundled corpus with editorial status populated, with SigLA
      enrichment as the opt-in fetched layer (NC data stays out of the Apache-2.0 wheel). If the
      upstream audit dead-ends, the documented limitation stands — but we will have actually tried

@@ -17,9 +17,35 @@ the deciphered Linear B (the rest have no agreed reading).
 > uncertain readings as `UNCLEAR` (120 tokens) — 366 of the 1,721 documents
 > carry editorial status. The **full** Leiden apparatus (restorations, dotted
 > readings) is still absent — the upstream digitization dropped it — so for
-> edition-grade work consult **GORILA** and **SigLA** (whose CC BY-NC-SA data
-> is a planned opt-in enrichment). The EpiDoc reader/writer round-trip status
-> as `<unclear>`/`<supplied>`/`<gap>`.
+> edition-grade work consult **GORILA** and **SigLA** (see below). The EpiDoc
+> reader/writer round-trip status as `<unclear>`/`<supplied>`/`<gap>`.
+
+## The SigLA corpus (opt-in, fetched)
+
+A second, independent Linear A corpus: **SigLA**, the paleographical database of
+Salgarella & Castellan (dataset published **CC BY-NC-SA 4.0**; its paper invites
+use outside the interface). pyaegean hosts the decoded dataset as a sha256-pinned
+release asset and loads it on demand — the NonCommercial obligation passes to
+you, and nothing ships in the wheel:
+
+```python
+sigla = aegean.load("sigla")        # ~1 MB fetch on first use, then cached
+len(sigla)                          # 781 documents
+doc = sigla.get("HT 13")
+doc.meta.name                       # 'HT 13 (6.1×10.5×0.8 cm)' — physical dimensions!
+" ".join(t.text for t in doc.tokens)
+# 'KA U DE TA *164 TE RE ZA *707 TE TU TE KI … KU RO *707'
+```
+
+What it adds over the bundled corpus: document **typology**, find-site,
+**physical dimensions**, period, and EFA plate references — and a fully
+independent reading of each tablet, useful for cross-checking (the two corpora
+agree on 84% of shared documents at ≥60% sign overlap once notation differences
+like `*120`↔`GRA` are normalized; the rest is genuine scholarly variation).
+**Granularity caveat:** this is a *sign-level* corpus — one token per sign
+attestation, in tablet order, with no word boundaries — so word-level analyses
+belong on the bundled corpus. Cite SigLA in academic work
+([Limitations](Limitations) · [Data & Provenance](Data-and-Provenance)).
 
 ## Loading & filtering
 

@@ -151,6 +151,20 @@ so a loaded work is reproducible; override the ref with
 the Perseus Digital Library / Open Greek and Latin and the underlying edition
 (each file's TEI header names it).
 
+### The SigLA corpus (`aegean.load("sigla")`)
+
+The **SigLA** paleographical database (Salgarella & Castellan,
+https://sigla.phis.me) publishes its dataset and drawings under
+**CC BY-NC-SA 4.0**, and its paper invites use "outside the interface" and
+notes copies can be hosted. pyaegean hosts the decoded dataset (the JSON form
+the paper describes, reconstructed from the published web-app payload by
+`scripts/build_sigla_corpus.py`) as the sha256-pinned `sigla-corpus-v1`
+release asset — ~1 MB, fetched on demand, **never bundled** (NonCommercial
+data stays out of the Apache-2.0 wheel; the NC + ShareAlike obligations pass
+through to you). Attribution, citation, source sha256, and generation date
+are inside the file's `_meta`; drawings are **not** included and remain at
+sigla.phis.me. Cite SigLA in academic work.
+
 ## Data versioning — pinning for papers
 
 Every dataset pyaegean can touch is versioned and hashable:

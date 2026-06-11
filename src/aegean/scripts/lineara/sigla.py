@@ -245,3 +245,80 @@ def parse_database_js(text: str) -> dict[str, Any]:
         ocaml_literal = js_literal.replace("\\\\", "\\")  # JS string layer
         out[name] = unmarshal(_ocaml_literal_bytes(ocaml_literal))
     return out
+
+
+# ── the corpus loader (fetches the decoded, versioned release asset) ─────────
+
+
+def load_sigla() -> Any:
+    """Load the SigLA-derived Linear A dataset as a `Corpus` (opt-in, fetched).
+
+    Fetches the ``sigla-corpus`` release asset (~1 MB JSON; sha256-pinned;
+    **CC BY-NC-SA 4.0** — the NonCommercial obligation passes to you) on first
+    use, then loads offline from the cache. One `Document` per SigLA document,
+    with typology/site/period metadata and the physical dimensions in the
+    document name; one token per **sign attestation**, in tablet order — this
+    is a *sign-level paleographical* corpus: word boundaries are not encoded
+    in this dataset version, so tokens carry ``TokenKind.UNKNOWN``. Linear-A-
+    only signs appear as ``*NNN``; attestations the converter has not yet
+    decoded (numerals/erasures) carry no text and are skipped. Cite SigLA in
+    academic work (see ``NOTICE``)."""
+    import json as _json
+
+    from ...core.corpus import Corpus
+    from ...core.model import Document, DocumentMeta, Token, TokenKind
+    from ...core.provenance import Provenance
+    from ...data import fetch
+
+    path = fetch("sigla-corpus")
+    payload = _json.loads(path.read_text(encoding="utf-8"))
+    meta = payload.get("_meta", {})
+    docs: list[Document] = []
+    for rec in payload["documents"]:
+        tokens: list[Token] = []
+        for i, att in enumerate(rec.get("attestations", [])):
+            sign = att.get("sign") or ""
+            if not sign:
+                continue  # undecoded attestation (numeral/erasure) — no text yet
+            tokens.append(
+                Token(sign, TokenKind.UNKNOWN, (sign,), None, 0, len(tokens))
+            )
+        dims = rec.get("dimensions_cm")
+        name = str(rec["id"]) + (
+            f" ({'×'.join(f'{d:g}' for d in dims)} cm)" if dims else ""
+        )
+        docs.append(
+            Document(
+                id=str(rec["id"]), script_id="lineara", tokens=tokens,
+                lines=[list(range(len(tokens)))] if tokens else [],
+                meta=DocumentMeta(
+                    site=rec.get("site") or "",
+                    support=rec.get("typology") or "",
+                    period=rec.get("period") or "",
+                    name=name,
+                ),
+            )
+        )
+    provenance = Provenance(
+        source="SigLA — The Signs of Linear A (Salgarella & Castellan), decoded dataset",
+        license="CC BY-NC-SA 4.0 (as published by SigLA; NonCommercial — fetched, never bundled)",
+        citation=str(
+            meta.get(
+                "cite",
+                "Salgarella, E. & Castellan, S. (2020). SigLA. https://sigla.phis.me",
+            )
+        ),
+        url="https://sigla.phis.me",
+        data_version=f"sigla-corpus-v1@{str(meta.get('source_sha256', ''))[:12]}",
+        notes=(
+            "sign-level paleographical corpus: one token per sign attestation, in "
+            "tablet order; word boundaries are not encoded in this dataset version",
+        ),
+    )
+    return Corpus(docs, None, provenance, "lineara")
+
+
+# loadable by name: aegean.load("sigla") — fetches ~1 MB to the cache on first use
+from ...core.corpus import register_loader  # noqa: E402
+
+register_loader("sigla", load_sigla)

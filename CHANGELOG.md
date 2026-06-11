@@ -71,6 +71,17 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **The SigLA corpus, loadable** (`aegean.load("sigla")`): the Linear A paleographical
+  database (Salgarella & Castellan, CC BY-NC-SA 4.0 — fetched on demand, never bundled)
+  decoded from its published web-app payload into the JSON its paper describes, hosted as the
+  sha256-pinned `sigla-corpus-v1` release asset (~1 MB). 781 documents with metadata the
+  bundled corpus never had — typology, find-site, **physical dimensions**, period, EFA plate
+  refs — and 5,065 sign attestations in tablet order (sign-level granularity; word boundaries
+  are not in this dataset version). Built by `scripts/build_sigla_corpus.py` over a new
+  pure-Python **OCaml Marshal reader** (three structural self-checks; offline-tested), and
+  cross-validated against the bundled GORILA corpus: 547/651 shared documents at ≥60% sign
+  overlap under 28 data-derived notation equivalences (`*120↔GRA`, `*302↔OLE`, …) — the
+  residue is rare-ligature notation, not data error.
 - **Linear B sample and lexicon expansion (source-verified)** — the bundled illustrative sample
   grows 2 → 18 tablets (PY Ta 641 and PY Er 312 hand-curated, plus sixteen one-line excerpts from
   Pylos/Knossos/Mycenae tablets taken from *sourced quotations* in Wiktionary's Mycenaean Greek

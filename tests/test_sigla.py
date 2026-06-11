@@ -66,3 +66,40 @@ def test_parse_database_js_two_escape_layers():
     js = ocaml.replace("\\", "\\\\")
     db = parse_database_js(f"/* X */\nvar x = '{js}';\n")
     assert db == {"x": "ok"}
+
+
+def test_load_sigla_builds_a_corpus(tmp_path, monkeypatch):
+    """Offline: a synthetic dataset file in the release-asset schema (no SigLA data)."""
+    import json
+
+    from aegean.core.model import TokenKind
+    from aegean.scripts.lineara import sigla
+
+    synthetic = {
+        "_meta": {"cite": "Fake cite.", "source_sha256": "ab" * 32},
+        "documents": [
+            {
+                "id": "XX 1", "typology": "Tablet", "site": "Nowhere",
+                "dimensions_cm": [1.0, 2.0, 0.5], "period": "LM I",
+                "attestations": [
+                    {"sign": "KA", "series": "AB", "number": 77, "raw_flags": [0]},
+                    {"sign": "*301", "series": "A", "number": 301, "raw_flags": [1]},
+                    {"sign": "", "series": "", "number": None, "raw_flags": [9]},
+                ],
+            }
+        ],
+        "signs": [],
+    }
+    f = tmp_path / "sigla-corpus.json"
+    f.write_text(json.dumps(synthetic), encoding="utf-8")
+    import aegean.data
+
+    monkeypatch.setattr(aegean.data, "fetch", lambda name, **k: f)
+    c = sigla.load_sigla()
+    assert len(c) == 1
+    doc = c.get("XX 1")
+    assert [t.text for t in doc.tokens] == ["KA", "*301"]  # the blank attestation is skipped
+    assert all(t.kind is TokenKind.UNKNOWN for t in doc.tokens)  # sign-level granularity
+    assert doc.meta.site == "Nowhere" and "1×2×0.5 cm" in doc.meta.name
+    assert c.provenance.license.startswith("CC BY-NC-SA")
+    assert c.provenance.data_version.startswith("sigla-corpus-v1@abab")

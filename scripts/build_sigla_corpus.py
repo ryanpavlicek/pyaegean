@@ -58,20 +58,10 @@ def opt(v: Any) -> Any:
     return None if v == 0 else v
 
 
-# the series prefixes actually used by SigLA's sign records — discovered from
-# the signs map itself before attestations are walked (see main())
-_SERIES: set[str] = set()
-
-
 def _find_sign_record(v: Any, depth: int = 0) -> Block | None:
-    """Locate the (shared) 9-field sign record: fields[0] is the series string."""
+    """Locate the 9-field sign record: fields[0] is the series string (AB/A/N)."""
     if isinstance(v, Block):
-        if (
-            len(v.fields) == 9
-            and isinstance(v.fields[0], str)
-            and (not _SERIES or v.fields[0] in _SERIES)
-            and isinstance(v.fields[1], int)
-        ):
+        if len(v.fields) == 9 and isinstance(v.fields[0], str):
             return v
         if depth < 5:
             for f in v.fields:
@@ -92,22 +82,39 @@ def _first_string(v: Any, depth: int = 0) -> str:
     return ""
 
 
-def _sign_label(rec: Block) -> tuple[str, str, str]:
-    """(series, value, representative_ref) — verified positions: series at
-    fields[0]; transliteration under fields[2]; drawing ref under fields[3]."""
+def _triple(rec: Block) -> tuple[str, str, str]:
+    """(series, transliteration, representative drawing ref) — the content key.
+
+    The ``data`` and ``signs`` payloads are separate Marshal values, so their
+    sign records are copies, not shared objects; this triple joins them (the
+    representative ref, e.g. ``KH 5/5``, is unique per sign)."""
     return str(rec.fields[0]), _first_string(rec.fields[2]), _first_string(rec.fields[3])
 
 
-def _attestation(att: Any) -> dict[str, Any] | None:
-    """One attestation block → {sign, series, raw_flags}; None when no sign record."""
-    if not isinstance(att, Block):
-        return None
-    rec = _find_sign_record(att)
+def _display(series: str, number: int | None, value: str) -> str:
+    """The sign as pyaegean's corpus writes it: transliteration for the
+    deciphered-convention AB signs, ``*NNN`` for the Linear-A-only signs."""
+    if value:
+        return value.upper()
+    if number is not None:
+        return f"*{number}"
+    return ""
+
+
+def _attestation(att: Any, by_triple: dict[tuple[str, str, str], int]) -> dict[str, Any]:
+    """One attestation block → conservative record; unresolved data kept raw."""
+    raw = [f for f in att.fields if isinstance(f, int)] if isinstance(att, Block) else []
+    rec = _find_sign_record(att) if isinstance(att, Block) else None
     if rec is None:
-        return None
-    series, value, _ref = _sign_label(rec)
-    raw = [f for f in att.fields if isinstance(f, int)]
-    return {"sign": value, "series": series, "raw_flags": raw}
+        return {"sign": "", "series": "", "number": None, "raw_flags": raw}
+    series, value, ref = _triple(rec)
+    number = by_triple.get((series, value, ref))
+    return {
+        "sign": _display(series, number, value),
+        "series": series,
+        "number": number,
+        "raw_flags": raw,
+    }
 
 
 def main() -> None:
@@ -121,14 +128,28 @@ def main() -> None:
     src_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
     db = parse_database_js(text)
 
-    # discover the series-prefix vocabulary from the canonical sign records first,
-    # so attestation matching accepts every real series (syllabograms, logograms,
-    # fractions) and nothing else
-    for _label, rec in map_items(db["signs"].fields[0]):
+    # the signs payload: integer transnumeration → record; build the content-key
+    # join table and the published sign list in one pass
+    signs = []
+    by_triple: dict[tuple[str, str, str], int] = {}
+    for number, rec in map_items(db["signs"].fields[0]):
         found = _find_sign_record(rec)
-        if found is not None:
-            _SERIES.add(str(found.fields[0]))
-    print(f"series prefixes discovered: {sorted(_SERIES)}")
+        if found is None:
+            signs.append({"number": number, "series": "", "value": "", "ref": ""})
+            continue
+        series, value, ref = _triple(found)
+        by_triple[(series, value, ref)] = number
+        signs.append(
+            {
+                "number": number,
+                "series": series,
+                "value": value,
+                "ref": ref,
+                "display": _display(series, number, value),
+            }
+        )
+    print(f"signs: {len(signs)} ({len(by_triple)} joinable); series: "
+          f"{sorted({s['series'] for s in signs if s['series']})}")
 
     documents = []
     for doc_id, wrapper in map_items(db["data"].fields[0]):
@@ -139,9 +160,7 @@ def main() -> None:
         atts = []
         if isinstance(atts_block, Block):
             for att in atts_block.fields:
-                a = _attestation(att)
-                if a and a["sign"]:
-                    atts.append(a)
+                atts.append(_attestation(att, by_triple))
         documents.append(
             {
                 "id": doc_id,
@@ -154,15 +173,6 @@ def main() -> None:
                 "attestations": atts,
             }
         )
-
-    signs = []
-    for label, rec in map_items(db["signs"].fields[0]):
-        found = _find_sign_record(rec)
-        if found is None:
-            signs.append({"label": label, "series": "", "value": "", "ref": ""})
-            continue
-        series, value, ref = _sign_label(found)
-        signs.append({"label": label, "series": series, "value": value, "ref": ref})
 
     out = {
         "_meta": {
@@ -197,25 +207,54 @@ def main() -> None:
     # bundled ids have no space ("HT13"); SigLA's do ("HT 13") — match on both
     bundled = {d.id.replace(" ", ""): d for d in aegean.load("lineara")}
     norm = lambda s: re.sub(r"[^A-Z0-9*]", "", s.upper())  # noqa: E731
-    checked = agree = 0
-    disagreements: list[str] = []
-    for d in documents:
-        b = bundled.get(str(d["id"]).replace(" ", ""))
-        if b is None or not d["attestations"]:
-            continue
-        sig_seq = [norm(a["sign"]) for a in d["attestations"] if a["sign"]]
-        our_signs = [
-            norm(s) for t in b.tokens for s in (t.signs if t.signs else (t.text,))
-            if norm(s) and not norm(s).isdigit()
-        ]
-        checked += 1
-        overlap = sum(1 for s in sig_seq if s in set(our_signs))
-        if sig_seq and overlap / len(sig_seq) >= 0.6:
-            agree += 1
-        elif len(disagreements) < 8:
-            disagreements.append(f"{d['id']}: sigla {sig_seq[:8]} vs ours {our_signs[:8]}")
-    print(f"cross-validation: {agree}/{checked} shared documents with ≥60% sign overlap")
-    for d_ in disagreements:
+
+    def sequences() -> Any:
+        for d in documents:
+            b = bundled.get(str(d["id"]).replace(" ", ""))
+            if b is None or not d["attestations"]:
+                continue
+            sig_seq = [norm(a["sign"]) for a in d["attestations"] if a["sign"]]
+            our_signs = [
+                norm(s) for t in b.tokens for s in (t.signs if t.signs else (t.text,))
+                if norm(s) and not norm(s).isdigit()
+            ]
+            if sig_seq:
+                yield d["id"], sig_seq, our_signs
+
+    def score(equiv: dict[str, str]) -> tuple[int, int, list[str]]:
+        checked = agree = 0
+        residue: list[str] = []
+        for doc_id, sig_seq, our_signs in sequences():
+            checked += 1
+            ours_set = set(our_signs)
+            overlap = sum(1 for s in sig_seq if s in ours_set or equiv.get(s) in ours_set)
+            if overlap / len(sig_seq) >= 0.6:
+                agree += 1
+            elif len(residue) < 6:
+                residue.append(f"{doc_id}: sigla {sig_seq[:6]} vs ours {our_signs[:6]}")
+        return agree, checked, residue
+
+    strict_agree, checked, _ = score({})
+    # data-derived notation table: positionally align same-length documents and
+    # harvest consistent (SigLA transnumeration ↔ lineara.xyz name) pairs — the
+    # equivalences come from the two datasets themselves, not from memory
+    from collections import Counter
+
+    pair_counts: Counter[tuple[str, str]] = Counter()
+    for _doc_id, sig_seq, our_signs in sequences():
+        if len(sig_seq) == len(our_signs):
+            for a, o in zip(sig_seq, our_signs):
+                if a != o:
+                    pair_counts[(a, o)] += 1
+    equiv: dict[str, str] = {}
+    for (a, o), n in pair_counts.most_common():
+        if n >= 3 and a not in equiv:
+            equiv[a] = o
+    loose_agree, _, residue = score(equiv)
+    print(f"cross-validation: strict {strict_agree}/{checked} documents at ≥60% sign overlap;")
+    print(f"  with the {len(equiv)} data-derived notation equivalences "
+          f"(e.g. *120↔GRA, *302↔OLE): {loose_agree}/{checked}")
+    for d_ in residue:
         print("  ?", d_)
 
 

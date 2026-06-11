@@ -112,6 +112,23 @@ _REMOTE: dict[str, DataSpec] = {
         note="joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup), ~518 MB tar.gz; the [neural] extra.",
         extract=True,
     ),
+    # The SigLA-derived Linear A dataset (Salgarella & Castellan, sigla.phis.me):
+    # decoded from the published web-app payload into the JSON the SigLA paper
+    # describes (scripts/build_sigla_corpus.py). CC BY-NC-SA 4.0 as published by
+    # SigLA — NonCommercial data is fetched on demand and never bundled in the
+    # Apache-2.0 wheel; attribution/citation live in the file's _meta and NOTICE.
+    "sigla-corpus": DataSpec(
+        name="sigla-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "sigla-corpus-v1/sigla-corpus.json"
+        ),
+        sha256="d671011d742219a750a6e037000c3bfe1f56594594efb64883bffcbcd32f4f6e",
+        license="CC BY-NC-SA 4.0 (SigLA — Salgarella & Castellan; NonCommercial, never bundled)",
+        note="SigLA-derived Linear A dataset: 781 documents, 5,065 sign attestations, "
+             "376 sign records (~1 MB JSON). Drawings stay at sigla.phis.me.",
+        extract=False,
+    ),
     # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is
     # CC BY-NC-SA, LiBER all-rights-reserved), so there is no default URL. Set
     # PYAEGEAN_LINEARB_CORPUS to your own licensed export; pyaegean parses it locally.
