@@ -66,6 +66,7 @@ src/aegean/
              joint (neural pipeline) mst udfeats
              proiel (out-of-AGDT eval) ud (UD eval) benchmark (harness)
   io/        epidoc (TEI export) tabular (CSV/Parquet export)
+  cli/       the `aegean` command ([cli] extra; typer+rich, imported only by the console script)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
   data/      bundled/{lineara,linearb,cypriot,cyprominoan,greek}/*.json  + fetch()/cache

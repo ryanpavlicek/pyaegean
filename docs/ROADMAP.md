@@ -57,6 +57,18 @@ Small, high-leverage items, mostly from the external review; one session.
 
 ## WP2 — The `aegean` CLI (big ticket #1)
 
+> **Status: DONE (2026-06-11), with scope EXPANDED per the maintainer** — not just the v1 set
+> below but essentially the whole public API: 12 corpus commands (incl. `show`, `sign`,
+> `bridge`, subset-aware `cite`), the full `aegean greek` group (16 commands incl. `normalize
+> --lenient`, `betacode`, `ipa`, `morph`, `gloss`, `pipeline`, and `eval` reproductions, with
+> backend flags for every `use_*()` activation), `aegean analyze` (6 commands incl. the
+> association-statistics `assoc`), `aegean data` (fetch/cache from the shell), and the
+> exploratory-labeled, key-gated `aegean ai` group. Conventions held: `--json` everywhere,
+> stdin via `-`, clean exit codes, CliRunner coverage for every command offline, a wiki
+> reference page (`wiki/CLI.md`) with shell recipes. The config file was dropped in favour of
+> environment variables (`PYAEGEAN_CACHE`, per-dataset URL overrides) — fewer moving parts,
+> same control.
+
 A command-line interface so classicists and epigraphers can use the toolkit without writing Python,
 and so the data layer becomes scriptable/pipeable in shell workflows. *(Reviewer's top adoption
 unlock; the web demo is parked — see “Declined / parked”.)*

@@ -70,6 +70,17 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **The `aegean` command line** (the `[cli]` extra: typer + rich; console script `aegean`,
+  also `python -m aegean.cli`): the whole toolkit without writing Python. Corpus commands
+  (`info`, `load`, `show`, `search`, `query`, `stats`, `balance`, `cite`, `export`, `geo`,
+  `sign`, `bridge`), the full Greek pipeline (`aegean greek normalize|betacode|strip|tokenize|
+  syllabify|accent|quantities|scan|ipa|tag|lemmatize|morph|parse|gloss|pipeline|eval`, with
+  `--neural`/`--treebank`/… flags standing in for the `use_*()` activations), analysis
+  (`distance`, `align`, `assoc`, `cooccur`, `clusters`, `structure`), the data layer
+  (`data list|fetch|cache`), and the exploratory-labeled AI layer (`ai translate|gloss|
+  hypotheses|ask|providers`). Conventions: `--json` on every command, `-` reads stdin,
+  clean exit codes (`balance --strict` exits 1 on a discrepancy). The CLI is imported only
+  by the console script, so `import aegean` stays dependency-free.
 
 ### Changed
 - **EpiDoc export is now schema-valid.** Output is wrapped in the required `<div type="edition">`

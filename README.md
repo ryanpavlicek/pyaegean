@@ -55,9 +55,10 @@ prior programming.
 
 ```bash
 pip install pyaegean              # core + Linear A + Greek (zero heavy dependencies)
-pip install "pyaegean[neural]"    # + the neural Greek lemmatizer (onnxruntime; no torch)
+pip install "pyaegean[cli]"       # + the `aegean` command line
+pip install "pyaegean[neural]"    # + the neural Greek pipeline & lemmatizer (onnxruntime; no torch)
 pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini clients
-pip install "pyaegean[all]"       # the data, AI, EpiDoc, and geo extras
+pip install "pyaegean[all]"       # the data, AI, EpiDoc, geo, and CLI extras
 ```
 
 ## Try it
@@ -90,6 +91,16 @@ greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 # [('ἐν','ADP','ἐν'), ('ἀρχῇ','NOUN','ἀρχή'), ('ἦν','VERB','εἰμί'), …]   one call, per-token records
 ```
 
+Or skip Python entirely — the **`aegean` CLI** (`[cli]` extra) covers the whole toolkit,
+with `--json` on every command and stdin piping:
+
+```bash
+aegean show lineara HT13                       # one tablet, line by line
+aegean balance lineara --strict                # reconcile every stated total
+aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
+aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural --json
+```
+
 Everything above runs **offline with zero heavy dependencies**. Large assets are fetched to a local
 cache only when you opt in (and never re-hosted): the Linear A facsimile mirror
 (`aegean.data.fetch("lineara-images")`), the Perseus AGDT treebank (`greek.use_treebank()`), the
@@ -104,7 +115,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Example notebook](notebooks/getting-started.ipynb)** — a runnable guided tour ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb))
 - **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)** — two guided, end-to-end research walkthroughs
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)** — per-script guides
-- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)** — reference
+- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)** — reference
 - **[API reference](https://ryanpavlicek.github.io/pyaegean/)** — every public module, class, and function, generated from the source
 
 ## Roadmap

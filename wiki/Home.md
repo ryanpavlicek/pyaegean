@@ -68,6 +68,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), **LSJ glossing** (`use_lsj`), generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`) — joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek benchmarks (96.9 UPOS / 94.4 lemma / 89.2 UAS, Perseus test) — plus a **benchmark** harness |
 | [`aegean.io`](Architecture) | Export adapters: EpiDoc (TEI) write — the inverse of the bring-your-own reader — plus CSV and Parquet |
+| [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python — corpus commands, the full Greek NLP pipeline, analysis, data fetching, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled Aegean gazetteer, for mapping/spatial analysis |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
@@ -79,6 +80,7 @@ and function, generated from the docstrings and type hints — complementing the
 
 ```bash
 pip install pyaegean            # core + Linear A + Greek
+pip install "pyaegean[cli]"     # + the `aegean` command line
 pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini clients
 pip install "pyaegean[all]"     # everything
 ```
