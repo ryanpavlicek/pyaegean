@@ -184,6 +184,44 @@ both expected. Versus the Stage 0 baseline, PROIEL UPOS moved **75.03 → 87.31*
 Scoreboard against the definition of done, after Stage B: UD-Perseus **POS ✓, morph ✓**;
 lemma 90.4 (Stage D to close); **UAS/LAS pending — Stage C, the biaffine parser.**
 
+## Stage C — biaffine parser (targets demolished)
+
+The joint tagger-parser: one GreBerta encoder carrying the Stage B tagging heads **plus**
+biaffine arc/relation scorers (Dozat–Manning), trained on the leakage-clean AGDT split
+with UD-convention trees from the validated converter (`agdt_ud_deps.py`; 96.5% heads /
+94.5% head+label agreement — see the Stage C scaffolding commit). Decoding: single-root
+Chu-Liu/Edmonds MST, so non-projectivity is handled natively. 6 epochs, lr 3e-5, batch
+32, bf16, 161 s on an RTX PRO 6000 Blackwell (peak 5.4 GB); selection on dev LAS (best:
+86.53 / 82.81). Run 2026-06-10; raw metrics in `training/results/stage-c/`.
+
+| Test fold | Metric | pyaegean Stage C | best published | published Perseus-trained best |
+|---|---|---|---|---|
+| UD Perseus | UAS | **87.49** | 78.80 (odyCy-joint) | — |
+| UD Perseus | LAS | **82.30** | 73.09 (odyCy-joint) | — |
+| UD Perseus | CLAS | 80.03 | — | — |
+| UD Perseus | UPOS / UFeats | 96.21 / 95.19 | 95.39 / 92.56 | — |
+| UD PROIEL | UAS | **81.61** | 85.74 (greCy-proiel, in-domain) | 64.55 (odyCy-perseus) |
+| UD PROIEL | LAS | **63.18** | 82.28 (greCy-proiel, in-domain) | 48.72 (odyCy-perseus) |
+
+**Both Stage C targets are met with ~9 points to spare**: UAS 87.49 vs the published best
+78.80 (+8.7), LAS 82.30 vs 73.09 (+9.2) — from a leakage-clean model, with the tagging
+metrics still above every published number in the same checkpoint. Against the Stage 0
+arc-eager baseline, Perseus UAS moved **37.9 → 87.5**. The wins compound from three
+choices: graph-based decoding (Ancient Greek is ~69% non-projective sentences), ~2.7×
+the training data of the UD-trained systems (31,112 leakage-clean AGDT sentences vs the
+11,476-sentence UD train fold), and a strong monolingual encoder.
+
+Out-of-domain (PROIEL): UAS 81.61 / LAS 63.18 beats every published *Perseus-trained*
+system by ~17 / ~14.5 points — and the out-of-domain UAS sits within 1.6 points of
+odyCy-joint's **in-domain** 83.17. The LAS gap to in-domain systems is largely deprel-
+convention divergence between the two treebanks' UD conversions (the same effect capping
+PROIEL UFeats), the NC-variant gate's territory if PROIEL-side parity is ever pursued.
+
+Scoreboard after Stage C: UD-Perseus **POS ✓ morph ✓ UAS ✓ LAS ✓** — four of five
+metrics above the published state of the art, leakage-clean. Remaining: **lemma**
+(Stage D — must be ≥ 87.6 on Perseus test from a leakage-clean lemmatizer; the current
+hybrid's lookup contains the fold, so its 97.65 is an in-training number).
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,

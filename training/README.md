@@ -1,10 +1,12 @@
 # training/ — model training for the WP3 accuracy program
 
-> **Stage A is decided: `bowphs/GreBerta`** (see `docs/benchmarks.md` for the table and
-> rationale; raw metrics in `training/results/stage-a/`). **Stage B is trained and its
-> targets are met** — UD-Perseus test UPOS 96.18 / UFeats 95.32, above every published
-> number (`training/results/stage-b/`; checkpoint in the maintainer's Drive). The
-> protocols below are kept for reproducibility.
+> **Stage A is decided: `bowphs/GreBerta`** (`training/results/stage-a/`). **Stage B met
+> its targets** — UD-Perseus test UPOS 96.18 / UFeats 95.32 (`training/results/stage-b/`).
+> **Stage C met its targets with ~9 points to spare** — UD-Perseus test UAS 87.49 / LAS
+> 82.30 vs the published best 78.80 / 73.09, tagging intact in the same joint checkpoint
+> (`training/results/stage-c/`; the checkpoint, in the maintainer's Drive, is the Stage E
+> export artifact). See `docs/benchmarks.md` for tables. The protocols below are kept for
+> reproducibility.
 
 Training-side code for the Greek NLP accuracy program (`docs/ROADMAP.md` WP3,
 `docs/benchmarks.md` for the protocol + targets). Nothing in this directory ships in the
