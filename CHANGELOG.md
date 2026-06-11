@@ -12,6 +12,13 @@ public API, and a hosted API reference. Released as **beta** — the API is clos
 waits on external use and a short methods write-up.
 
 ### Added
+- **Opt-in persistent analysis cache** (`aegean.cache`, off by default): memoises expensive pure
+  analyses (`find_morphological_clusters`, `dispersions`, `keyness`) to a local sqlite file, keyed on
+  a content fingerprint of the inputs (`Corpus.fingerprint()`), so re-running on the same corpus is
+  served from disk across runs. Disabled, `@memoize` is a transparent passthrough — never changes a
+  result, only its speed. stdlib only (sqlite3 + pickle); enable via `aegean.cache.enable()` or
+  `PYAEGEAN_ANALYSIS_CACHE=1`; CLI `aegean cache` (`--clear`). A stale/class-changed entry is treated
+  as a miss; the key embeds a format + per-function version.
 - **Full Linear A sign repertoire.** The bundled inventory now covers the entire Unicode Linear A
   block (344 signs) instead of only the 84 transliteration-aligned signs; those 84 keep their
   conventional sound values and confidence, the rest are carried from the Unicode Character Database

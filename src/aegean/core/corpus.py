@@ -7,6 +7,7 @@ importing the script (no cycles).
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
@@ -66,6 +67,31 @@ class Corpus:
     def get(self, doc_id: str) -> Document | None:
         """The document with id ``doc_id``, or ``None`` if there is no such document."""
         return self._by_id.get(doc_id)
+
+    def fingerprint(self) -> str:
+        """A stable content hash of this corpus — its script, documents (ids and
+        token text), and any ``subset:`` provenance note. Cheap relative to the
+        analyses it keys: one pass over the tokens, no model build. Two corpora
+        with the same fingerprint have the same analysable content, so it's the
+        cache key for `aegean.cache`-memoised analyses."""
+        h = hashlib.sha256()
+        h.update((self.script_id or "").encode("utf-8"))
+        for d in self.documents:
+            h.update(b"\x00")
+            h.update(d.id.encode("utf-8"))
+            h.update(str(len(d.tokens)).encode("ascii"))
+            for t in d.tokens:
+                h.update(b"\x1f")
+                h.update(t.text.encode("utf-8"))
+        if self.provenance is not None:
+            for note in self.provenance.notes:
+                if note.startswith("subset:"):
+                    h.update(note.encode("utf-8"))
+        return h.hexdigest()
+
+    def cache_key(self) -> str:
+        """Alias for `fingerprint`, the protocol `aegean.cache` keys on."""
+        return self.fingerprint()
 
     def _repr_html_(self) -> str:
         """Rich rendering in Jupyter/Colab (plain ``repr`` everywhere else)."""

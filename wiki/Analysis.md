@@ -215,6 +215,38 @@ TO-SO total on a stated-vs-computed diagonal so discrepancies stand out (with
 the same heuristic-sections caveat as `balance_check`). From the shell:
 `aegean plot freq|dispersion|keyness|network|balance|scansion … -o out.png`.
 
+## Caching expensive analyses (opt-in)
+
+Some analyses are pure but slow — morphological clustering over the whole
+vocabulary, repeated dispersion/keyness sweeps, large queries. `aegean.cache` is
+an **off-by-default** persistent cache that memoises them to a local sqlite file,
+keyed on a content fingerprint of the inputs, so re-running the same analysis on
+the same corpus is served from disk. Disabled (the default), it's a transparent
+passthrough — it never changes a result, only how fast it arrives. No new
+dependency: sqlite3 and pickle are stdlib.
+
+```python
+import aegean
+
+aegean.cache.enable()                              # opt in (or PYAEGEAN_ANALYSIS_CACHE=1)
+aegean.analysis.find_morphological_clusters(
+    aegean.load("lineara").word_frequencies())     # computed once, then from disk
+aegean.cache.stats()                               # {'enabled': True, 'entries': 1, 'path': …}
+aegean.cache.clear()                               # wipe it
+```
+
+It pays off when recompute costs much more than a pass over the corpus (the
+fingerprint) — clustering, or the same sweep repeated across a session. The
+cache key embeds a format + per-function version, so a library upgrade never
+returns a stale result; a corrupt or class-changed entry is treated as a miss
+and recomputed. From the shell, `aegean cache` shows the state and `aegean cache
+--clear` wipes it (enable it per shell with `PYAEGEAN_ANALYSIS_CACHE=1`). Stored
+with pickle in your own cache dir — enable it only for caches you control.
+
+`Corpus.fingerprint()` is the content hash the cache keys on (also useful on its
+own to tell whether two corpora — or a corpus and a filtered subset — have the
+same analysable content).
+
 ## Query engine
 
 A compound predicate engine over the corpus: an inscription/word field registry,

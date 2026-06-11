@@ -15,6 +15,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
+from ..cache import memoize as _memoize
+
 
 @dataclass(frozen=True, slots=True)
 class ClusterMember:
@@ -37,6 +39,7 @@ class MorphCluster:
     suffixes: tuple[str, ...]
 
 
+@_memoize(version="1")
 def find_morphological_clusters(
     words: Iterable[Mapping[str, object] | tuple[str, int]],
     min_suffix_productivity: int = 5,

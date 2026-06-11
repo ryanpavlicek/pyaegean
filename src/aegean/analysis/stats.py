@@ -35,6 +35,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from ..cache import memoize as _memoize
 from ..core.model import Document, TokenKind
 from .collocation import chi_squared_p_value, log_likelihood_ratio_2x2
 
@@ -139,6 +140,7 @@ def dispersion(corpus: Any, item: str, *, kind: str = "words") -> Dispersion:
     return _dp(item, shares, per_doc)
 
 
+@_memoize(version="1")
 def dispersions(
     corpus: Any,
     *,
@@ -190,6 +192,7 @@ class KeynessRow:
     p_value: float
 
 
+@_memoize(version="1")
 def keyness(
     target: Any,
     reference: Any,

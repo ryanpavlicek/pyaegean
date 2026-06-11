@@ -14,6 +14,7 @@ from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
 from . import analysis  # noqa: F401
+from . import cache  # noqa: F401 — opt-in persistent cache for expensive analyses (off by default)
 from . import geo  # noqa: F401 — geographic analysis (geopandas/shapely lazy/optional)
 from . import greek  # noqa: F401 — Greek NLP pipeline
 from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
@@ -63,6 +64,7 @@ __all__ = [
     "register",
     "registered_scripts",
     "analysis",
+    "cache",
     "geo",
     "greek",
     "ai",

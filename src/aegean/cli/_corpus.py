@@ -33,6 +33,7 @@ def register(app: typer.Typer) -> None:
     app.command()(stats)
     app.command()(dispersion)
     app.command()(keyness)
+    app.command(name="cache")(cache_cmd)
     app.command()(balance)
     app.command()(cite)
     app.command()(export)
@@ -347,6 +348,37 @@ def keyness(
             ]
             for r in rows
         ],
+    )
+
+
+def cache_cmd(
+    clear: bool = typer.Option(False, "--clear", help="Wipe every cached entry."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Inspect (or --clear) the opt-in analysis cache.
+
+    The cache is off by default; enable it per shell with PYAEGEAN_ANALYSIS_CACHE=1
+    (or a path) so expensive analyses (dispersion, keyness, clustering) are reused
+    across runs."""
+    from ..cache import clear as _clear
+    from ..cache import stats as _stats
+
+    if clear:
+        _clear()
+    info = _stats()
+    if json_out:
+        emit_json(info)
+        return
+    if not info["enabled"]:
+        console().print(
+            "analysis cache: off — set PYAEGEAN_ANALYSIS_CACHE=1 (or a path) to enable",
+            markup=False,
+        )
+        return
+    console().print(
+        f"analysis cache: on · {info['entries']} entr{'y' if info['entries'] == 1 else 'ies'} · "
+        f"{info['path']}" + ("  (cleared)" if clear else ""),
+        markup=False,
     )
 
 
