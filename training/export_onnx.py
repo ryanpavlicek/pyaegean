@@ -164,7 +164,8 @@ def main() -> None:
 
     tar_path = out / "grc-joint.tar.gz"
     with tarfile.open(tar_path, "w:gz") as tar:
-        tar.add(art, arcname="grc-joint")
+        for f in sorted(art.iterdir()):  # pack flat: files at the archive root
+            tar.add(f, arcname=f.name)
     sha = hashlib.sha256(tar_path.read_bytes()).hexdigest()
     report["tar"] = {"path": str(tar_path), "bytes": tar_path.stat().st_size,
                      "sha256": sha, "fp32_onnx_bytes": fp32_bytes}

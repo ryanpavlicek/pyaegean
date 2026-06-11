@@ -96,6 +96,11 @@ class _JointModel:
                 "pip install 'pyaegean[neural]'"
             ) from e
         self._np = np
+        if not (model_dir / "model.onnx").exists():
+            # tolerate an archive packed with a single top-level directory
+            nested = [d for d in model_dir.iterdir() if d.is_dir()]
+            if len(nested) == 1 and (nested[0] / "model.onnx").exists():
+                model_dir = nested[0]
         opts = ort.SessionOptions()
         opts.log_severity_level = 3
         self._sess = ort.InferenceSession(
