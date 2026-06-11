@@ -103,10 +103,13 @@ _REMOTE: dict[str, DataSpec] = {
     # set PYAEGEAN_GRC_JOINT_URL to fetch from your own copy.
     "grc-joint": DataSpec(
         name="grc-joint",
-        url="",
-        sha256="",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-joint-v1/grc-joint.tar.gz"
+        ),
+        sha256="e5e442f01f49588a3239b76c8f0e6e9098b7cd99d0ee81d1ca58fbd2e02e3b92",
         license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), Pedalion (CC BY-SA 4.0)",
-        note="joint tagger-parser-lemmatizer (ONNX + tokenizer + label maps + lemma scripts/lookup), tar.gz; the [neural] extra.",
+        note="joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup), ~518 MB tar.gz; the [neural] extra.",
         extract=True,
     ),
     # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is
