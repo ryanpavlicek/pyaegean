@@ -38,11 +38,14 @@ Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit.
 
 ## Pleiades alignment
 
-26 of the 56 find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
-linked-open-data work. It's on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving
-the full `https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the
-GeoDataFrames from `to_geodataframe` / `word_distribution`. Minor findspots not in Pleiades are left
-null.
+33 of the 56 find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
+linked-open-data work. Every id is **verified by coordinate** — the Pleiades representative point is
+within a few km of ours and its description matches the site — so a match is confirmed, never
+guessed. It's on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving the full
+`https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the GeoDataFrames
+from `to_geodataframe` / `word_distribution`. The remaining sites are mostly minor findspots, peak
+sanctuaries, and caves not yet in Pleiades — left null, and listed as upstream-contribution candidates
+in [docs/pleiades-candidates.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/pleiades-candidates.md).
 
 ```python
 geo.site_coordinates()["Haghia Triada"].pleiades_uri

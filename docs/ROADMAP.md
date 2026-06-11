@@ -351,9 +351,15 @@ them real where licensing allows.
 
 ## WP8 — Geo / linked data
 
-- Extend Pleiades coverage past 26/56 where places exist; **contribute the missing Bronze Age sites
+> **Done (2026-06-11).** Coverage extended 26→33/56, each id coordinate-verified; the
+> genuinely-absent sites are catalogued as upstream-contribution candidates.
+
+- ~~Extend Pleiades coverage past 26/56 where places exist; **contribute the missing Bronze Age sites
   upstream to Pleiades** (the good-citizen move that also fixes our nulls), and consider ToposText
-  cross-ids. GeoJSON export (`aegean geo --geojson`, WP2).
+  cross-ids.~~ **Done** — verified-by-coordinate alignment took coverage to 33/56 (Mt Juktas,
+  Arkalochori, Kato Syme, Psychro/Diktaean cave, Apodoulou, Kardamoutsa, Tel Haror=Gerar);
+  `docs/pleiades-candidates.md` lists the ~22 sites not yet in Pleiades as upstream candidates and
+  notes ToposText cross-ids as a future option (no clean id API). GeoJSON export shipped in WP2.
 
 ## WP9 — Docs, recipes, community
 

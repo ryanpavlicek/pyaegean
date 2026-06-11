@@ -29,9 +29,12 @@ def test_pleiades_alignment() -> None:
     assert kn.pleiades == 781961476
     assert kn.pleiades_uri == "https://pleiades.stoa.org/places/781961476"
     assert coords["Mycenae"].pleiades and coords["Troy"].pleiades  # major sites aligned
-    iou = coords["Iouktas"]  # a peak sanctuary not in Pleiades → left null, honestly
-    assert iou.pleiades is None and iou.pleiades_uri is None
-    assert sum(1 for s in coords.values() if s.pleiades) >= 20
+    # coordinate-verified additions (WP8): Tel Haror = Gerar, the Arkalochori cave
+    assert coords["Tel Haror"].pleiades == 687907
+    assert coords["Arkhalkhori"].pleiades == 220781958
+    vry = coords["Vrysinas"]  # a peak sanctuary not in Pleiades → left null, honestly
+    assert vry.pleiades is None and vry.pleiades_uri is None
+    assert sum(1 for s in coords.values() if s.pleiades) >= 33
 
 
 def test_to_geodataframe_inscription_level() -> None:

@@ -70,7 +70,7 @@ the pointer says where.
 | Scansion covers dactylic hexameter + elegiac pentameter only, and **synizesis is declined, never inferred** (a line that needs it raises rather than guesses) | Post-0.8.0: iambic trimeter and lyric metres, plus a curated synizesis lexicon on the same pattern as the syllabification exceptions |
 | The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas (the treebank and neural tiers cover these) | Post-0.8.0: Morpheus-backed morphological tables for the offline tier |
 | The neural pipeline's model is a 518 MB fp32 download (int8 quantization failed its accuracy gate and was rejected) | Post-0.8.0: selective quantization under the same ≤0.3-point gate, and optional GPU execution providers |
-| Only 26 of 56 gazetteer find-sites carry Pleiades ids | WP8: extend the alignment and contribute the missing Bronze Age sites upstream |
+| 33 of 56 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots/peak sanctuaries not yet in Pleiades | WP8 extended the alignment (26→33, each coordinate-verified); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
 | The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution — adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
 
 ## Measured accuracy boundaries

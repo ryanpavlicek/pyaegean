@@ -12,6 +12,13 @@ public API, and a hosted API reference. Released as **beta** — the API is clos
 waits on external use and a short methods write-up.
 
 ### Added
+- **Extended Pleiades alignment** (gazetteer): the find-site → Pleiades coverage grew from 26 to 33
+  of 56, each new id **verified by coordinate** against the Pleiades API (the representative point is
+  within a few km of ours and the place description matches) — Mt Juktas, the Arkalochori cave, Kato
+  Syme, the Psychro/Diktaean cave, the Apodoulou tholos, Kardamoutsa, and Tel Haror (= Gerar); two
+  coordinates were corrected to the authoritative point. The verification rejected several false
+  near-matches (Kannia ≠ Gortyn). Sites genuinely absent from Pleiades are listed as
+  upstream-contribution candidates in [docs/pleiades-candidates.md](docs/pleiades-candidates.md).
 - **Streaming corpus views** for large corpora: `Corpus.iter_documents()`, `iter_tokens()`, and
   `iter_words()` are generators — process a corpus token-by-token without materialising an all-tokens
   list (`word_frequencies` now streams through `iter_words`). A design note
@@ -37,7 +44,7 @@ waits on external use and a short methods write-up.
 - **Geographic analysis** (`aegean.geo`, the `[geo]` extra): a bundled Aegean find-site gazetteer
   plus `to_geodataframe(corpus, level="inscription"|"site")` and `word_distribution(corpus, word)` —
   turning a corpus into a geopandas GeoDataFrame (EPSG:4326) for spatial analysis and mapping.
-- **Pleiades alignment** for the gazetteer: 26 of the 56 find-sites carry a Pleiades place id
+- **Pleiades alignment** for the gazetteer: 33 of the 56 find-sites carry a Pleiades place id
   (`SiteCoord.pleiades` / `pleiades_uri`), surfaced as a `pleiades` column in the GeoDataFrames, for
   linked-open-data work; minor findspots not in Pleiades are left null.
 - **Wider public API surface** (toward a stable API): the core value types (`Document`, `Token`,
