@@ -20,3 +20,7 @@ experiments/
 # training artifacts (datasets rebuild from cache; bake-off checkpoints are throwaway)
 training/data/
 training/out/
+
+# SigLA-derived dataset (CC BY-NC-SA): built by scripts/build_sigla_corpus.py,
+# published only as a clearly-labeled release asset - never in the Apache-2.0 tree
+sigla-corpus.json
