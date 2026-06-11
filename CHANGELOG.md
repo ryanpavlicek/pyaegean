@@ -53,6 +53,23 @@ waits on external use and a short methods write-up.
   field's published numbers. `greek.agdt_ud_overlap` builds the AGDT↔UD-Perseus leakage-exclusion
   manifest (2,443 sentences, 100% form-verified) that model training must honour. Protocol, leakage
   controls, and measured baselines: `docs/benchmarks.md`.
+- **One-call analysis** (`greek.pipeline`): tokenize → sentence split → POS-tag → lemmatize
+  (→ parse) over a text in a single call, returning per-token `TokenRecord`s (punctuation kept).
+  Uses whatever backends are active; with the neural pipeline active, one model pass fills every
+  field (UPOS, XPOS, FEATS, lemma, UD head/relation).
+- **Lenient normalization** (`greek.normalize(..., lenient=True)`): repairs — and warns about, via
+  `NormalizationWarning` — the artifacts of OCR'd or half-converted text: Latin letters embedded in
+  Greek words, Beta-Code diacritic remnants attached to Greek letters, and stray combining marks.
+  Conservative by design (only repairs where the visual lookalike and Beta Code agree, and only
+  where a mark is phonologically possible); strict mode is unchanged.
+- **Syllabification exception lexicon**: lexicalised compounds divide at the point of union
+  (Smyth §140) — `syllabify("εἰσφέρω")` now gives `εἰσ-φέ-ρω` where phonotactics alone said
+  `εἰ-σφέ-ρω`. A curated, test-enforced lexicon consulted before the rule engine (every entry must
+  provably differ from the rules); one-line contributions welcome (`CONTRIBUTING.md`).
+- **Citation automation**: `Provenance.bibtex()` / `.apa()`; `Corpus.cite(style)` cites the corpus
+  — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
+  counts); `Corpus.query()` results carry provenance + the query summary, so
+  `QueryResults.cite(style)` cites the exact result set used in a paper.
 
 ### Changed
 - **EpiDoc export is now schema-valid.** Output is wrapped in the required `<div type="edition">`
@@ -63,7 +80,12 @@ waits on external use and a short methods write-up.
 - Documentation states scope honestly: the inventory's read-vs-unread split, that accounting
   reconciliation applies to the ~40 Linear A tablets carrying a stated total, that the non-Linear-A
   bundled corpora are illustrative samples (bring-your-own for a full Linear B corpus), and where the
-  Greek NLP stack sits (portability + transparent evaluation over peak neural accuracy).
+  Greek NLP stack sits (the zero-dependency core favours portability and transparent evaluation;
+  the opt-in neural pipeline carries the accuracy claims).
+- `CONTRIBUTING.md` now opens with a menu of small, well-scoped contributions (syllabification
+  exceptions, sign facts, gazetteer alignments, collocation measures, …) and documents the
+  **deprecation policy**: deprecate in a minor, remove no sooner than the next minor, warnings
+  always name the replacement.
 
 ### Fixed
 - The AI `summarize` capability now labels its result `kind="summarize"` (previously mislabeled `"ask"`).

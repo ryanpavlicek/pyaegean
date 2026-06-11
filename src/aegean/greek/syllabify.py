@@ -1,12 +1,18 @@
-"""Ancient Greek syllabification (rule-based).
+"""Ancient Greek syllabification (rule-based, with a curated exception lexicon).
 
 Standard pedagogical rules: every syllable has one vowel/diphthong nucleus; a
 single consonant between vowels joins the following syllable; a consonant
 cluster splits so that the largest valid Greek onset (a single consonant, a
 stop+liquid/nasal "muta cum liquida", or a known initial cluster) opens the
 following syllable and the rest closes the preceding one; doubled consonants
-split. This is a baseline: a few lexicalised exceptions exist that the rules
-don't capture.
+split.
+
+Pure phonotactics missplits **compounds**, which divide at the point of union
+(Smyth §140): rule-only output gives ``εἰ-σφέ-ρω`` where the correct division is
+``εἰσ-φέ-ρω``. A small curated lexicon of such lexicalised forms is consulted
+before the rule engine (`_EXCEPTIONS` below — contributions welcome, see
+``CONTRIBUTING.md``). Forms not in the lexicon, including inflected variants of
+listed compounds, fall back to the rules.
 """
 
 from __future__ import annotations
@@ -24,6 +30,33 @@ _VALID_ONSETS = {
 }
 # Diphthongs (two vowels that share one nucleus). ι/υ subscript handled via base.
 _DIPHTHONGS = {"αι", "ει", "οι", "υι", "αυ", "ευ", "ου", "ηυ", "ωυ"}
+
+# Lexicalised exceptions the phonotactic rules can't capture: compounds divide
+# at the point of union (Smyth §140), so the prefix keeps its final consonant
+# even where the cluster could open the next syllable (σφ, σκ, κλ, …). Keys are
+# NFC dictionary forms; values are the correct division. Every entry must
+# differ from the rule engine's output (tests enforce this).
+_EXCEPTIONS: dict[str, tuple[str, ...]] = {
+    # ἐκ- compounds (κ + liquid/nasal would join the next syllable by rule)
+    "ἐκλείπω": ("ἐκ", "λεί", "πω"),
+    "ἐκλύω": ("ἐκ", "λύ", "ω"),
+    "ἐκμανθάνω": ("ἐκ", "μαν", "θά", "νω"),
+    # εἰσ- compounds (σ + stop is a valid onset by rule)
+    "εἰσφέρω": ("εἰσ", "φέ", "ρω"),
+    "εἰσφορά": ("εἰσ", "φο", "ρά"),
+    "εἰσβαίνω": ("εἰσ", "βαί", "νω"),
+    "εἰσπέμπω": ("εἰσ", "πέμ", "πω"),
+    # προσ- compounds
+    "προσφέρω": ("προσ", "φέ", "ρω"),
+    "προσβάλλω": ("προσ", "βάλ", "λω"),
+    "προσκυνέω": ("προσ", "κυ", "νέ", "ω"),
+    "προσμένω": ("προσ", "μέ", "νω"),
+    # δυσ- compounds
+    "δυσμενής": ("δυσ", "με", "νής"),
+    "δυσχερής": ("δυσ", "χε", "ρής"),
+    "δύσκολος": ("δύσ", "κο", "λος"),
+    "δύσφημος": ("δύσ", "φη", "μος"),
+}
 
 
 def _base(ch: str) -> str:
@@ -49,7 +82,24 @@ def _valid_onset(cluster: list[str]) -> bool:
 
 
 def syllabify(word: str) -> list[str]:
-    """Split a Greek word into syllables (NFC). Non-letters pass through."""
+    """Split a Greek word into syllables (NFC). Non-letters pass through.
+
+    Lexicalised compound divisions (`_EXCEPTIONS`, Smyth §140) take precedence
+    over the phonotactic rules; the original casing is preserved."""
+    nfc = unicodedata.normalize("NFC", word)
+    exception = _EXCEPTIONS.get(nfc) or _EXCEPTIONS.get(nfc.lower())
+    if exception is not None and len("".join(exception)) == len(nfc):
+        # slice the original by the exception's syllable lengths → casing kept
+        out, start = [], 0
+        for syl in exception:
+            out.append(nfc[start:start + len(syl)])
+            start += len(syl)
+        return out
+    return _rule_syllabify(nfc)
+
+
+def _rule_syllabify(word: str) -> list[str]:
+    """The phonotactic rule engine (no exception lexicon)."""
     chars = list(unicodedata.normalize("NFC", word))
     if not chars:
         return []

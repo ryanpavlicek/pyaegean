@@ -1,0 +1,131 @@
+"""One-call convenience pipeline: text in, per-token analysis records out.
+
+`pipeline` composes the individually-callable stages (tokenize → sentence split →
+POS-tag → lemmatize → optional parse) so a complete analysis doesn't require
+chaining nine functions. It uses whatever backends are **active**: activate them
+first with the ``use_*`` functions (`use_treebank`, `use_tagger`, `use_lemmatizer`,
+`use_neural_lemmatizer`, `use_parser`, `use_neural_pipeline`), and `pipeline`
+picks the best of what's loaded per stage — exactly as the individual functions do.
+
+With the neural pipeline active (``use_neural_pipeline()``, the ``[neural]``
+extra), each sentence is analyzed in **one model pass** and every field of every
+record is filled (UPOS, 9-char XPOS, UD FEATS, lemma, UD head/relation). Without
+it, tagging/lemmatization use the active cascade, ``xpos``/``feats`` are ``None``,
+and dependency fields are filled only when ``parse=True`` (which then requires
+`use_parser` and yields AGDT/Prague relations over word tokens).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .lemmatize import lemmatize_verbose
+from .tokenize import _SENTENCE_SPLIT_RE
+from .tokenize import tokenize as _tokenize
+
+__all__ = ["TokenRecord", "pipeline"]
+
+
+@dataclass(frozen=True, slots=True)
+class TokenRecord:
+    """One token's full analysis from `pipeline`.
+
+    ``head`` refers to the ``index`` of another record **in the same sentence**
+    (``0`` = sentence root, ``None`` = no parse). ``xpos``/``feats`` are filled
+    only by the neural pipeline; ``lemma_known`` is ``False`` when the lemma is a
+    fallback (the normalized form itself, from an unknown word)."""
+
+    sentence: int  # 0-based sentence number within the input text
+    index: int  # 1-based token position within the sentence
+    text: str
+    upos: str
+    lemma: str
+    lemma_known: bool
+    head: int | None = None  # index of the head record; 0 = root
+    relation: str | None = None  # UD (neural pipeline) or AGDT/Prague (use_parser)
+    xpos: str | None = None  # 9-char positional tag (neural pipeline only)
+    feats: str | None = None  # UD FEATS string (neural pipeline only)
+
+
+def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
+    """Analyze ``text`` end-to-end and return one `TokenRecord` per token.
+
+    Tokenizes (words **and** punctuation — nothing is dropped), splits into
+    sentences on Greek sentence-final punctuation, POS-tags, lemmatizes, and —
+    when ``parse=True`` or the neural pipeline is active — attaches dependency
+    heads/relations. Backends are chosen by what is active (see the module
+    docstring); the zero-dependency baseline needs no setup::
+
+        from aegean import greek
+        records = greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
+        [(r.text, r.upos, r.lemma) for r in records]
+
+    ``parse=True`` without the neural pipeline requires `use_parser` (raises
+    `ParserNotLoadedError` otherwise) and parses **word** tokens only —
+    punctuation records keep ``head=None``.
+    """
+    from ..core.model import TokenKind
+    from . import joint, syntax
+
+    # One tokenization pass over the whole text; sentence boundaries fall after
+    # any PUNCT token containing a sentence-final mark, so punctuation tokens
+    # stay in their sentence rather than being discarded.
+    sents: list[list[str]] = [[]]
+    word_flags: list[list[bool]] = [[]]
+    for tok in _tokenize(text):
+        sents[-1].append(tok.text)
+        word_flags[-1].append(tok.kind is TokenKind.WORD)
+        if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(tok.text):
+            sents.append([])
+            word_flags.append([])
+    if sents and not sents[-1]:
+        sents.pop()
+        word_flags.pop()
+
+    records: list[TokenRecord] = []
+    for s_idx, (words, is_word) in enumerate(zip(sents, word_flags)):
+        if joint.active() is not None:
+            ana = joint.analyze_sentence(words)
+            records.extend(
+                TokenRecord(
+                    sentence=s_idx, index=i + 1, text=ana.tokens[i],
+                    upos=ana.upos[i], lemma=ana.lemma[i], lemma_known=True,
+                    head=ana.head[i], relation=ana.deprel[i],
+                    xpos=ana.xpos[i], feats=ana.feats[i],
+                )
+                for i in range(len(ana.tokens))
+            )
+            continue
+
+        from .pos import pos_tag, pos_tags
+
+        # Joining the tokens with spaces re-tokenizes to exactly these tokens
+        # (each was a maximal tokenizer match), so the tagger sees full context.
+        sent_str = " ".join(words)
+        tags = pos_tags(sent_str)
+        if len(tags) != len(words):  # defensive: fall back to per-token tagging
+            tags = [(w, pos_tag(w)) for w in words]
+        heads: dict[int, tuple[int, str]] = {}  # token position → (head record index, rel)
+        if parse:
+            # the baseline parser works over word tokens only (same word regex
+            # as the tokenizer), so its 1-based ids map onto the WORD records
+            word_positions = [i for i, w in enumerate(is_word) if w]
+            tree = syntax.parse(sent_str)  # raises ParserNotLoadedError if not loaded
+            for k, dep in enumerate(tree.tokens):
+                if k >= len(word_positions):
+                    break  # defensive: tokenizer/parser disagreement
+                rec_head = 0 if dep.head == 0 else word_positions[dep.head - 1] + 1
+                heads[word_positions[k]] = (rec_head, dep.relation)
+        for i, (tok_text, tag) in enumerate(tags):
+            if is_word[i]:
+                lemma, known = lemmatize_verbose(tok_text)
+            else:
+                lemma, known = tok_text, True  # a punct/number token is its own lemma
+            head, rel = heads.get(i, (None, None))
+            records.append(
+                TokenRecord(
+                    sentence=s_idx, index=i + 1, text=tok_text,
+                    upos=tag, lemma=lemma, lemma_known=known, head=head, relation=rel,
+                )
+            )
+    return records

@@ -85,6 +85,9 @@ greek.betacode_to_unicode("mh=nin")     # 'μῆνιν'   (type Greek in plain A
 greek.syllabify("ἄνθρωπος")             # ['ἄν', 'θρω', 'πος']
 greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ").pattern
 # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'             (Odyssey 1.1)
+
+[(r.text, r.upos, r.lemma) for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")]
+# [('ἐν','ADP','ἐν'), ('ἀρχῇ','NOUN','ἀρχή'), ('ἦν','VERB','εἰμί'), …]   one call, per-token records
 ```
 
 Everything above runs **offline with zero heavy dependencies**. Large assets are fetched to a local

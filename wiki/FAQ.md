@@ -152,8 +152,18 @@ Every corpus carries its citation, and the repo ships a `CITATION.cff`:
 
 ```python
 corpus = aegean.load("lineara")
-corpus.provenance.cite()
+corpus.cite()           # one line; also corpus.cite("bibtex") / corpus.cite("apa")
 # Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz
+```
+
+The citation follows the **exact subset you used**: a filtered corpus records what
+was filtered, and query results record the query —
+
+```python
+corpus.filter(site="Haghia Triada").cite()
+# … — https://github.com/mwenge/lineara.xyz [subset: filter(site='Haghia Triada') → 1110 of 1721 documents]
+results = corpus.query([FilterRow("word-prefix", "KU")], output="words")
+results.cite()          # … [query: Word starts with: KU → N words]
 ```
 
 See [Data & Provenance](Data-and-Provenance) for full licensing and attribution.

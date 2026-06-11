@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from collections.abc import Callable, Iterator, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -92,17 +93,39 @@ class Corpus:
 
     def filter(self, **meta: Any) -> "Corpus":
         """Return a new Corpus whose documents match all given metadata fields
-        (AND-combination), e.g. ``corpus.filter(site="HT", period="LMIB")``."""
+        (AND-combination), e.g. ``corpus.filter(site="HT", period="LMIB")``.
+
+        The subset's provenance records what was filtered (a ``subset:`` note),
+        so `cite` on the result cites the exact subset used."""
 
         def ok(d: Document) -> bool:
             return all(getattr(d.meta, k, None) == v for k, v in meta.items())
 
-        return Corpus(
-            [d for d in self.documents if ok(d)],
-            self.sign_inventory,
-            self.provenance,
-            self.script_id,
-        )
+        docs = [d for d in self.documents if ok(d)]
+        prov = self.provenance
+        if prov is not None and meta:
+            desc = ", ".join(f"{k}={v!r}" for k, v in sorted(meta.items()))
+            note = f"subset: filter({desc}) → {len(docs)} of {len(self.documents)} documents"
+            prov = replace(prov, notes=prov.notes + (note,))
+        return Corpus(docs, self.sign_inventory, prov, self.script_id)
+
+    def cite(self, style: str = "plain") -> str:
+        """Cite this corpus — or the exact filtered subset — in one call.
+
+        ``style``: ``"plain"`` (one line), ``"bibtex"`` (a ``@misc`` entry), or
+        ``"apa"``. Filtered subsets (see `filter`) carry a ``subset:`` note that
+        all three styles include, so the citation states exactly what was used."""
+        if self.provenance is None:
+            raise ValueError("this corpus carries no provenance to cite")
+        p = self.provenance
+        if style == "plain":
+            subset = [n for n in p.notes if n.startswith("subset:")]
+            return p.cite() + (f" [{'; '.join(subset)}]" if subset else "")
+        if style == "bibtex":
+            return p.bibtex(key=f"{self.script_id or 'aegean'}-corpus")
+        if style == "apa":
+            return p.apa()
+        raise ValueError(f"style must be 'plain', 'bibtex', or 'apa'; got {style!r}")
 
     # ── analysis-friendly views ─────────────────────────────────────────
     def word_frequencies(self) -> list[tuple[str, int]]:
@@ -255,9 +278,10 @@ class Corpus:
         ``filters`` is a sequence of `aegean.analysis.FilterRow` rows (a field id, a
         value, and optional ``connector``/``negate``); ``output`` selects ``"inscriptions"``
         or ``"words"``. Returns `aegean.analysis.QueryResults` (``.inscriptions`` and
-        ``.words``). The available fields are in `aegean.analysis.FIELDS`. Unlike
-        `filter` (exact metadata match), this supports text/prefix/sign-pattern/
-        co-occurrence predicates with AND/OR/NOT."""
+        ``.words``) carrying this corpus's provenance and a summary of the filters,
+        so ``results.cite()`` cites the exact result set. The available fields are
+        in `aegean.analysis.FIELDS`. Unlike `filter` (exact metadata match), this
+        supports text/prefix/sign-pattern/co-occurrence predicates with AND/OR/NOT."""
         from ..analysis.query import run_query  # lazy: no import-time core→analysis edge
 
         return run_query(self, list(filters), output, annotated_ids)

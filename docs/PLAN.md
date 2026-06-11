@@ -76,7 +76,8 @@ Pipeline of composable, individually-callable stages (each a function + a class 
 `normalize` (NFC/NFD, betacode↔unicode, diacritic handling) → `tokenize` (word/sentence) →
 `syllabify` → `accentuate`/accent analysis → `phonology` (IPA, by period) → `lemmatize` →
 `morphology` (full parse: case/number/gender/tense/voice/mood/person) → `pos` → `parse`
-(dependency, trained on AGDT) → `prosody`/`meter` (hexameter/iambic scansion) →
+(dependency, trained on AGDT) → `prosody`/`meter` (dactylic hexameter + elegiac pentameter
+scansion; synizesis declined, never inferred; iambic/lyric remain future work) →
 `lexicon` (LSJ lookup). Hybrid sourcing: ship/download open data (Morpheus tables, treebanks, LSJ),
 implement our own engine, and let `aegean.ai.nlp_assist` disambiguate/fill gaps. The **benchmark
 harness** (`tests/benchmark_greek/`) scores each stage against gold treebanks, and can also score a

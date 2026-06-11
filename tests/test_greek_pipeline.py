@@ -62,6 +62,28 @@ def test_syllabify(word, expected):
     assert syllabify(word) == expected
 
 
+# ── lexicalised exceptions (compounds divide at the point of union, Smyth §140) ──
+def test_syllabify_exceptions_override_the_rules():
+    assert syllabify("εἰσφέρω") == ["εἰσ", "φέ", "ρω"]    # rules would give εἰ-σφέ-ρω
+    assert syllabify("ἐκλείπω") == ["ἐκ", "λεί", "πω"]    # rules would give ἐ-κλεί-πω
+    assert syllabify("δύσκολος") == ["δύσ", "κο", "λος"]  # rules would give δύ-σκο-λος
+
+
+def test_syllabify_exceptions_preserve_casing():
+    assert syllabify("Εἰσφέρω") == ["Εἰσ", "φέ", "ρω"]
+
+
+def test_every_exception_entry_earns_its_place():
+    """Each lexicon entry must join back to its form AND differ from the rules
+    (otherwise it is dead weight and should be removed)."""
+    from aegean.greek.syllabify import _EXCEPTIONS, _rule_syllabify
+
+    for form, syls in _EXCEPTIONS.items():
+        assert "".join(syls) == form, f"{form}: syllables don't join back"
+        assert list(syls) != _rule_syllabify(form), f"{form}: rules already agree"
+        assert syllabify(form) == list(syls)
+
+
 # ── accent analysis ──────────────────────────────────────────────────────────
 @pytest.mark.parametrize(
     "word,acc,pos,cls",

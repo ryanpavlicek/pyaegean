@@ -13,10 +13,11 @@ documents and words by surface properties. Sign-pattern matching reuses
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field as _field
+from dataclasses import dataclass, field as _field, replace
 from typing import Any, Literal
 
 from ..core.model import Document
+from ..core.provenance import Provenance
 from .patterns import word_matches_sign_pattern
 
 # ── Field registry ───────────────────────────────────────────────────────────
@@ -70,10 +71,38 @@ class FilterRow:
 
 @dataclass(frozen=True, slots=True)
 class QueryResults:
-    """A query's result set: the matching inscriptions and/or ``(word, count)`` pairs."""
+    """A query's result set: the matching inscriptions and/or ``(word, count)`` pairs.
+
+    `Corpus.query` attaches the corpus's ``provenance`` and a ``description``
+    of the filters, so `cite` can cite the exact result set used in a paper."""
 
     inscriptions: list[Document]
     words: list[tuple[str, int]]
+    provenance: Provenance | None = None
+    description: str = ""
+
+    def cite(self, style: str = "plain") -> str:
+        """Cite this exact result set: the source plus the query that produced it.
+
+        ``style``: ``"plain"`` (one line), ``"bibtex"`` (a ``@misc`` entry), or
+        ``"apa"``. Raises `ValueError` when the results carry no provenance
+        (results from `eval_query` directly rather than `Corpus.query`)."""
+        if self.provenance is None:
+            raise ValueError("these results carry no provenance to cite — use Corpus.query")
+        n, unit = (
+            (len(self.inscriptions), "inscriptions")
+            if self.inscriptions or not self.words
+            else (len(self.words), "words")
+        )
+        note = f"query: {self.description or 'all'} → {n} {unit}"
+        if style == "plain":
+            return f"{self.provenance.cite()} [{note}]"
+        stamped = replace(self.provenance, notes=self.provenance.notes + (note,))
+        if style == "bibtex":
+            return stamped.bibtex(key="aegean-query")
+        if style == "apa":
+            return stamped.apa()
+        raise ValueError(f"style must be 'plain', 'bibtex', or 'apa'; got {style!r}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -287,14 +316,21 @@ def run_query(
 ) -> QueryResults:
     """Build the indices from a `Corpus` and evaluate ``filters``.
 
-    Convenience over `eval_query` for the common whole-corpus case.
+    Convenience over `eval_query` for the common whole-corpus case. The result
+    carries the corpus's provenance and a filter summary, so it is citable
+    via `QueryResults.cite`.
     """
     documents = list(corpus)
-    return eval_query(
+    results = eval_query(
         filters,
         output,
         documents,
         build_word_index(documents),
         annotated_ids or set(),
         build_cooccurrence_map(documents),
+    )
+    return replace(
+        results,
+        provenance=getattr(corpus, "provenance", None),
+        description=summarize_filters(filters),
     )

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import warnings
+
 import pytest
 
 from aegean.greek import (
+    NormalizationWarning,
     betacode_to_unicode,
     normalize,
     strip_diacritics,
@@ -56,3 +59,41 @@ def test_normalize_nfc_default():
     assert normalize(decomposed) == "ό"
     assert len(normalize(decomposed)) == 1
     assert normalize(decomposed, "NFD") == decomposed
+
+
+# ── lenient mode (OCR / messy text repair) ───────────────────────────────────
+def test_lenient_repairs_latin_lookalikes_in_greek_words():
+    with pytest.warns(NormalizationWarning, match="Latin letter"):
+        assert normalize("λόγoς", lenient=True) == "λόγος"  # Latin o inside a Greek word
+
+
+def test_lenient_word_final_sigma():
+    with pytest.warns(NormalizationWarning):
+        assert normalize("λόγοs", lenient=True) == "λόγος"  # Latin s at word end → ς
+
+
+def test_lenient_leaves_pure_latin_words_alone():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # no warning may fire
+        assert normalize("ὁ λόγος said hello", lenient=True) == "ὁ λόγος said hello"
+
+
+def test_lenient_converts_betacode_remnant_diacritics():
+    with pytest.warns(NormalizationWarning, match="Beta-Code remnant"):
+        assert normalize("μη=νιν", lenient=True) == "μῆνιν"
+    # a parenthesis after a consonant is punctuation, not a breathing
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert normalize("λόγος(", lenient=True) == "λόγος("
+
+
+def test_lenient_drops_stray_combining_marks():
+    stray = "́" + "ἀρχῇ"  # combining acute with no base letter
+    with pytest.warns(NormalizationWarning, match="stray combining mark"):
+        assert normalize(stray, lenient=True) == "ἀρχῇ"
+
+
+def test_strict_mode_is_unchanged_and_silent():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert normalize("λόγoς") == "λόγoς"  # the Latin o survives strict mode

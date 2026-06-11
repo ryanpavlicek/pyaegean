@@ -61,8 +61,9 @@ src/aegean/
              cyprominoan/{loader,inventory}  (undeciphered — signs only)
   analysis/  distance align collocation morphology patterns query accounting structure
   greek/     normalize tokenize syllabify accent prosody meter phonology pos morphology lemmatize
-             treebank (AGDT lexicon) lexicon (LSJ) syntax (dependency parser)
-             neural_lemmatizer (GreTa seq2seq) joint (neural pipeline) mst udfeats
+             pipeline (one-call records) treebank (AGDT lexicon) lexicon (LSJ)
+             syntax (dependency parser) neural_lemmatizer (GreTa seq2seq)
+             joint (neural pipeline) mst udfeats
              proiel (out-of-AGDT eval) ud (UD eval) benchmark (harness)
   io/        epidoc (TEI export) tabular (CSV/Parquet export)
   ai/        client cache providers grounding capabilities

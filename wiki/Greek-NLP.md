@@ -31,6 +31,26 @@ from aegean import greek
 > comparison tables live in
 > [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
 
+## One call: `pipeline()`
+
+Every stage below is independently callable, but you don't have to compose them:
+`pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
+text and returns one record per token (punctuation included — nothing is dropped):
+
+```python
+records = greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
+[(r.text, r.upos, r.lemma) for r in records]
+# [('ἐν','ADP','ἐν'), ('ἀρχῇ','NOUN','ἀρχή'), ('ἦν','VERB','εἰμί'),
+#  ('ὁ','DET','ὁ'), ('λόγος','NOUN','λόγος'), ('.','PUNCT','.')]
+```
+
+Each `TokenRecord` carries `sentence`, `index`, `text`, `upos`, `lemma`,
+`lemma_known`, and — when parsed — `head`/`relation` (plus `xpos`/`feats` from the
+neural pipeline). `pipeline` uses whatever backends are **active**: with none, the
+zero-dependency baseline; after `use_treebank()`/`use_tagger()` etc., their better
+answers; after `use_neural_pipeline()`, one model pass fills every field of every
+record. `parse=True` without the neural pipeline requires `use_parser()`.
+
 ## The neural pipeline (opt-in)
 
 One jointly-trained model — a GreBerta encoder with tagging heads, a biaffine dependency
@@ -92,6 +112,23 @@ Supported Beta Code: the 24 letters (`*` marks capitals, `s1/s2/s3` sigma
 variants) and the diacritics — smooth `)` / rough `(` breathings, acute `/`,
 grave `\`, circumflex `=`, diaeresis `+`, iota subscript `|`.
 
+**Lenient mode for OCR'd or messy text.** `normalize(..., lenient=True)` repairs —
+and *warns about* (a `NormalizationWarning` per repair class) — the common artifacts
+of scanned editions and half-converted files, instead of letting them silently break
+tokenization downstream:
+
+```python
+greek.normalize("λόγoς", lenient=True)    # 'λόγος'  (Latin o inside a Greek word)
+greek.normalize("μη=νιν", lenient=True)   # 'μῆνιν'  (Beta-Code remnant diacritic)
+```
+
+Three repair classes: Latin letters embedded in Greek-containing words (only letters
+where the visual lookalike and the Beta-Code letter agree — ambiguous ones like `p`
+are reported but left alone), Beta-Code diacritics still attached to Greek letters
+(converted only where the mark is phonologically possible: breathings on vowels/ρ,
+diaeresis on ι/υ, …), and stray combining marks with no base letter (dropped).
+Pure-Latin words pass through untouched, and the default strict mode is unchanged.
+
 ## Tokenization
 
 ```python
@@ -108,14 +145,22 @@ Elision apostrophes are kept inside a single token (`ποικιλόθρον’`)
 ## Syllabification
 
 Rule-based: diphthong nuclei, "muta cum liquida" clusters that stay together,
-doubled-consonant splits, and valid Greek onsets.
+doubled-consonant splits, and valid Greek onsets — plus a curated **exception
+lexicon** for lexicalised compounds, which divide at the point of union
+(Smyth §140) where pure phonotactics would missplit.
 
 ```python
 greek.syllabify("λόγος")        # ['λό', 'γος']
 greek.syllabify("ἄνθρωπος")     # ['ἄν', 'θρω', 'πος']
 greek.syllabify("θάλασσα")      # ['θά', 'λασ', 'σα']
 greek.syllabify("ποικιλόθρον")  # ['ποι', 'κι', 'λό', 'θρον']
+greek.syllabify("εἰσφέρω")      # ['εἰσ', 'φέ', 'ρω']   (compound: εἰσ + φέρω,
+                                #  where the rules alone would give εἰ-σφέ-ρω)
 ```
+
+The lexicon lists dictionary forms (inflected variants fall back to the rules);
+adding an entry is a welcome one-line contribution — see `CONTRIBUTING.md`, which
+also explains the test that makes every entry prove it differs from the rules.
 
 ## Accent analysis
 

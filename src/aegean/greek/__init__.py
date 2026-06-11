@@ -1,12 +1,18 @@
 """Greek NLP pipeline — composable, individually-callable stages.
 
-The dependency-free core covers ``normalize`` (NFC/NFD + Beta Code ↔ Unicode),
-``tokenize`` (word/sentence), ``syllabify``, accent analysis (``accentuation``),
-``prosody``/``meter`` scansion, ``phonology`` (IPA), a seed ``lemmatize``, baseline
-``pos``, and a rule-based ``morphology`` analyzer (``analyze``).
+The dependency-free core covers ``normalize`` (NFC/NFD + Beta Code ↔ Unicode, with
+a lenient OCR-repair mode), ``tokenize`` (word/sentence), ``syllabify``, accent
+analysis (``accentuation``), ``prosody``/``meter`` scansion, ``phonology`` (IPA),
+a seed ``lemmatize``, baseline ``pos``, and a rule-based ``morphology`` analyzer
+(``analyze``). ``pipeline`` runs the whole stack over a text in one call.
 
 Opt-in backends layer on richer data and models:
 
+- ``use_neural_pipeline`` (the ``[neural]`` extra) loads the joint neural model —
+  one pass serving UPOS, full morphology (UD FEATS), UD dependency trees, and
+  lemmas, state of the art on the UD Ancient Greek benchmarks (measured numbers
+  in ``docs/benchmarks.md``). Once active, ``pos_tag``/``pos_tags``,
+  ``lemmatize``, ``parse``, and ``pipeline`` all use it.
 - ``use_treebank`` (Perseus AGDT) supplies attested, correctly-accented lemmas and
   full features for known forms.
 - ``use_lsj`` (Perseus Liddell-Scott-Jones) provides glossing (``gloss``/``lookup``).
@@ -16,8 +22,8 @@ Opt-in backends layer on richer data and models:
 - ``use_lemmatizer`` is an edit-tree lemmatizer (~40% on unseen forms).
 - ``use_neural_lemmatizer`` (the ``[neural]`` extra) is a GreTa T5 seq2seq model
   served as int8 ONNX without torch; it pairs a gold lookup with seq2seq decoding and
-  reaches 76.3% on unseen forms. ``lemmatize`` cascades treebank -> neural ->
-  edit-tree -> seed.
+  reaches 76.3% on unseen forms. ``lemmatize`` cascades neural pipeline ->
+  treebank -> neural -> edit-tree -> seed.
 
 Every stage is a plain function so it can be used standalone::
 
@@ -25,6 +31,7 @@ Every stage is a plain function so it can be used standalone::
     greek.betacode_to_unicode("mh=nin")      # 'μῆνιν'
     greek.syllabify("ἄνθρωπος")              # ['ἄν', 'θρω', 'πος']
     greek.accentuation("λόγος").classification  # 'paroxytone'
+    greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")    # per-token records, one call
 """
 
 from __future__ import annotations
@@ -66,11 +73,13 @@ from .joint import (
 from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
 from .ud import agdt_ud_overlap, evaluate_on_ud
 from .normalize import (
+    NormalizationWarning,
     betacode_to_unicode,
     normalize,
     strip_diacritics,
     unicode_to_betacode,
 )
+from .pipeline import TokenRecord, pipeline
 from .prosody import scan, syllable_quantities
 from .meter import (
     Foot,
@@ -88,9 +97,12 @@ from .tokenize import sentences, tokenize, tokenize_words
 
 __all__ = [
     "normalize",
+    "NormalizationWarning",
     "strip_diacritics",
     "betacode_to_unicode",
     "unicode_to_betacode",
+    "pipeline",
+    "TokenRecord",
     "tokenize",
     "tokenize_words",
     "sentences",
