@@ -316,10 +316,44 @@ bar (mean 88.49, worst run +0.20 above it); **the LAS gap is real at 9 epochs**,
 noise (misses in both runs, mean 83.71 vs 83.98); the PROIEL lemma sits consistently
 just short (90.24–90.30 vs 90.38). Lemma and tagging are highly stable.
 
-**Disposition:** the dev-justified 12-epoch run (dev still improving on every metric at
-epoch 8 in both runs) remains the pending attempt on the LAS and PROIEL-lemma
-micro-gaps; recorded regardless of direction. The Stage D+ checkpoint already
-supersedes Stage D's as the Stage E candidate either way.
+**The 12-epoch run (the final training run; `training/results/stage-dplus-12/`;
+verified by the provenance guard — `checkpoint_epochs: 12, best_epoch: 11` in the
+verdict files; 838 s on the RTX PRO 6000 Blackwell):**
+
+| Test fold | Lemma | UAS | LAS | CLAS | UPOS | UFeats | XPOS |
+|---|---|---|---|---|---|---|---|
+| UD Perseus | **94.40** | **89.14** | **84.36** | 83.21 | **96.95** | **96.13** | **93.57** |
+| UD PROIEL | **90.59** | 82.51 | 63.51 | 60.99 | 87.16 | 59.49 | n/a |
+
+**Both remaining gaps closed:**
+
+- **LAS 84.36 vs the 2024 bar's 83.98 — cleared (+0.38).** With UAS 89.14 (+0.94, and
+  now a three-run claim: 88.58 / 88.40 / 89.14 all clear 88.20), parsing holds both
+  crowns. The +0.38 LAS margin is ~4× the observed run-to-run spread (±0.09).
+- **PROIEL lemma 90.59 vs the shipped hybrid's 90.38 — cleared (+0.21).** The
+  replacement rule is satisfied: the joint model beats the shipped GreTa hybrid on the
+  clean out-of-domain fold (and trivially on Perseus), so **the joint model becomes the
+  package's lemmatizer** in Stage E.
+
+### The program scoreboard — complete
+
+Every WP3 metric on UD Perseus test now sits **above every published number we could
+find**, including the raised 2024 baseline, from one leakage-clean checkpoint:
+
+| Metric | pyaegean | best published | margin |
+|---|---|---|---|
+| UPOS | 96.95 | 95.83 (2024) | +1.12 |
+| XPOS | 93.57 | 91.09 (2024) | +2.48 |
+| UFeats | 96.13 | 92.56 (odyCy 2023) | +3.57 |
+| Lemma | 94.40 | 87.58 (Stanza, same fold) | +6.82 |
+| UAS | 89.14 | 88.20 (2024) | +0.94 |
+| LAS | 84.36 | 83.98 (2024) | +0.38 |
+
+(Protocol throughout: gold tokenization, official CoNLL 2018 evaluator, training split
+excludes the UD dev/test overlap manifest and the PROIEL text; composition dev-chosen.)
+What remains before these become *public package claims* is Stage E: export this
+checkpoint to the torch-free ONNX artifact, re-measure **through the shipped pipeline**
+(including one raw-text end-to-end run), and gate quantization at ≤0.3 points.
 
 ## WP3 targets (definition of done)
 

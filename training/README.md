@@ -3,13 +3,15 @@
 > **Stage A decided: `bowphs/GreBerta`** (`results/stage-a/`). **Stage B met its
 > targets** — UPOS 96.18 / UFeats 95.32 (`results/stage-b/`). **Stage C met its targets
 > with ~9 points to spare** — UAS 87.49 / LAS 82.30 (`results/stage-c/`). **Stage D
-> completed the odyCy-era definition of done** — lemma 87.71 with everything else held
-> (`results/stage-d/`). **Stage D+ (the combined retrain on 1.41M audited tokens)
-> cleared UAS (88.58 vs the 2024 bar's 88.20) and pushed lemma to 94.17 / tagging to
-> new highs — LAS missed the 2024 bar by 0.18 and the PROIEL lemma tied the shipped
-> hybrid at 90.30 vs 90.38** (`results/stage-dplus/`; dev was still climbing, so a
-> 12-epoch run attempts both micro-gaps). See `docs/benchmarks.md`. The protocols
-> below are kept for reproducibility.
+> completed the odyCy-era definition of done** (`results/stage-d/`). **Stage D+ at 12
+> epochs completed the program: every metric above every published number, including
+> the raised 2024 bar** — UD-Perseus test lemma 94.40 / UAS 89.14 / LAS 84.36 / UPOS
+> 96.95 / UFeats 96.13 / XPOS 93.57, and PROIEL lemma 90.59 (beats the shipped hybrid →
+> the joint model becomes the package's lemmatizer). Results: `results/stage-dplus/`
+> (9-epoch run 1), `results/stage-dplus-r2/` (variance replicate),
+> `results/stage-dplus-12/` (**the final checkpoint — the Stage E export artifact**,
+> in the maintainer's Drive). See `docs/benchmarks.md`. The protocols below are kept
+> for reproducibility.
 
 Training-side code for the Greek NLP accuracy program (`docs/ROADMAP.md` WP3,
 `docs/benchmarks.md` for the protocol + targets). Nothing in this directory ships in the
