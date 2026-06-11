@@ -270,6 +270,41 @@ extension** (the 2024 system's mix, ~2.45× tokens) — one combined retrain (St
 with the overlap audit extended to PROIEL (Gorman includes Herodotus), is the planned
 close for parsing, lemma, and the PROIEL regression at once.
 
+## Stage D+ — the combined retrain (AGDT + Gorman + Pedalion)
+
+The full joint model retrained on the audited combined corpus — 76,149 sentences /
+1,414,213 tokens (the overlap audit excluded 1,591 Gorman + 155 Pedalion sentences
+matching the UD or PROIEL evaluation folds; Gorman's ten Herodotus files excluded at
+source). 9 epochs / 628 s on an RTX PRO 6000 Blackwell (bf16); `lookup-first`
+composition (dev-best). Run 2026-06-11; raw metrics in `training/results/stage-dplus/`.
+
+| Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
+|---|---|---|---|---|---|---|
+| UD Perseus | **94.17** | **88.58** | 83.80 | **96.81** | **96.03** | 93.34 |
+| UD PROIEL | 90.30 | 82.34 | 63.35 | 87.31 | 59.52 | n/a |
+
+Against the **raised 2024 bar** (UAS 88.20 / LAS 83.98):
+
+- **UAS 88.58 — cleared (+0.38).** Nothing published parses UD Perseus better.
+- **LAS 83.80 — missed by 0.18.** Dev LAS was still climbing at the final epoch
+  (epoch 7→8: +0.11), so the gap is plausibly closed by a longer run; recorded as a
+  miss until it is.
+- **Lemma 94.17** — +6.5 over Stage D, far past every published Perseus-fold number,
+  and above the 2024 GreTa lemmatizer's 91.17 (measured on their own folds, noted for
+  context, not as a same-fold comparison).
+- Tagging reached new highs (UPOS 96.81 / UFeats 96.03) — the extra data lifted
+  everything at once.
+
+On PROIEL: **lemma 90.30 vs the shipped hybrid's 90.38 — a statistical tie, 0.08 short
+of the replace-the-shipped-lemmatizer rule.** UAS rose to 82.34 (within 0.83 of
+odyCy-joint's *in-domain* 83.17). The composition mode stays dev-chosen (`lookup-first`)
+for all folds — no per-fold test-set tuning.
+
+**Disposition:** one more dev-justified run (12 epochs — dev was still improving on
+every metric) attempts to close both micro-gaps; its numbers will be recorded
+regardless of direction. The Stage D+ checkpoint already supersedes Stage D's as the
+Stage E candidate either way.
+
 ## WP3 targets (definition of done)
 
 - **UD Perseus test:** ≥ the best published number on every metric — POS ≥ 95.4,
