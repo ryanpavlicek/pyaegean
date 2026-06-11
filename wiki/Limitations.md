@@ -47,12 +47,12 @@ do. Three kinds of limits behave very differently:
   **evaluation only** and never trains on them.
 - **Linear A facsimile imagery** is © École Française d'Athènes and other
   rightsholders: referenced and fetched for academic use, never redistributed.
-- **SigLA's apparatus-grade sign data** (Salgarella & Castellan) would lift the
-  Linear A corpus toward edition grade — and its dataset and drawings are
-  published **CC BY-NC-SA 4.0**, so integration is a build item, not a
-  permission question: the same fetch-to-cache, research-use, never-bundled
-  pattern as PROIEL and the UD treebanks (the NC obligation passes to you, and
-  NC data stays out of the Apache-2.0 wheel). On the roadmap under WP4.
+- **SigLA's sign-level data** (Salgarella & Castellan) is published
+  **CC BY-NC-SA 4.0** and is now integrated on the same fetch-to-cache,
+  research-use, never-bundled pattern as PROIEL and the UD treebanks:
+  `aegean.load("sigla")` fetches the decoded dataset (781 documents) and the
+  NC obligation passes to you, with NC data staying out of the Apache-2.0
+  wheel. Its drawings remain at sigla.phis.me (referenced, not redistributed).
 
 ## Engineering limits we plan to lift
 

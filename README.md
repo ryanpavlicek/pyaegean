@@ -103,10 +103,12 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural --json
 ```
 
 Everything above runs **offline with zero heavy dependencies**. Large assets are fetched to a local
-cache only when you opt in (and never re-hosted): the Linear A facsimile mirror
-(`aegean.data.fetch("lineara-images")`), the Perseus AGDT treebank (`greek.use_treebank()`), the
-full LSJ lexicon (`greek.use_lsj()`), and the neural lemmatizer model
-(`greek.use_neural_lemmatizer()`).
+cache only when you opt in (and never bundled inside the wheel): the full Linear B corpus
+(`aegean.load("damos")`), the SigLA Linear A dataset (`aegean.load("sigla")`), the Linear A
+facsimile mirror (`aegean.data.fetch("lineara-images")`), the AGDT-derived lexicon and models
+(`greek.use_treebank()` and friends — small prebuilt artifacts, with build-from-source as the
+fallback), the LSJ index (`greek.use_lsj()`), and the neural models
+(`greek.use_neural_lemmatizer()` / `use_neural_pipeline()`).
 
 ## Documentation
 
@@ -148,9 +150,10 @@ tracked on the [roadmap](docs/ROADMAP.md)), and what is a deliberate trade-off. 
   **GORILA** and **SigLA**.
 - **The bundled non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
   syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For
-  the **full Linear B corpus**, `aegean.load("damos")` fetches ~5,900 tablets from **DAMOS** (the
-  Database of Mycenaean at Oslo, CC BY-NC-SA 4.0 — fetched to your cache, NonCommercial, never
-  re-hosted); or point `PYAEGEAN_LINEARB_CORPUS` at your own EpiDoc export. **Alphabetic Greek, similarly, loads real works on
+  the **full Linear B corpus**, `aegean.load("damos")` fetches ~5,900 tablets of **DAMOS** (the
+  Database of Mycenaean at Oslo, CC BY-NC-SA 4.0 — hosted as a clearly-labeled NC release asset,
+  fetched to your cache, never bundled inside the Apache-2.0 wheel); or point
+  `PYAEGEAN_LINEARB_CORPUS` at your own EpiDoc export. **Alphabetic Greek, similarly, loads real works on
   demand**: `greek.load_work("tlg0012.tlg001")` fetches the Iliad (24 books, ~127k tokens) from
   Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) into the standard
   corpus model.
@@ -202,6 +205,8 @@ No obligation for casual or exploratory use — but if it helped, I'd love to he
 
 Apache-2.0. Linear A corpus data is GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz; the
 Linear B / Cypriot / Cypro-Minoan sign data is from the Unicode Character Database. Facsimile imagery
-© École Française d'Athènes (referenced, not redistributed). The opt-in Greek backends fetch the
-Perseus AGDT treebank (CC BY-SA 3.0) and LSJ (CC BY-SA 4.0) to cache — built locally, never bundled
-or re-hosted. See [`NOTICE`](NOTICE).
+© École Française d'Athènes (referenced, not redistributed). The opt-in Greek backends fetch small
+prebuilt artifacts derived from the Perseus AGDT (CC BY-SA 3.0) and LSJ (CC BY-SA 4.0) to cache,
+falling back to building from upstream. The DAMOS and SigLA corpora are CC BY-NC-SA 4.0, hosted as
+clearly-labeled release assets and fetched to cache — NC data is never bundled inside the wheel.
+See [`NOTICE`](NOTICE).

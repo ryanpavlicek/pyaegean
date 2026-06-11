@@ -87,6 +87,8 @@ greek.normalize("ό")     # canonical NFC form
 
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
+the fetched corpora — `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
+~2 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1 MB) —
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends. The treebank/LSJ/tagger/lemmatizer/parser backends now
 fetch small **prebuilt** artifacts — `greek.use_lsj()` a ~15 MB index (not 270 MB of

@@ -316,7 +316,7 @@ that predicts a tag from suffix/prefix/shape/accent features plus left-to-right 
 context — so it **generalizes** to forms it has never seen.
 
 ```python
-greek.use_tagger()        # one-time train (~2–3 min) from the cached AGDT, then cached
+greek.use_tagger()        # one-time fetch of the prebuilt model (or local train as fallback), then cached
 greek.pos_tags("ἐν ἀρχῇ ἦν ὁ λόγος")   # every token tagged, in context
 greek.disable_tagger()    # back to the lookup/heuristic
 ```
@@ -329,8 +329,8 @@ everything else, including words neither has seen.
 the disjoint 10% (≈54k tokens, via `greek.evaluate_tagger()`), it reaches **84.4% POS
 overall and 83.6% on unseen forms** — forms absent from the training split. For contrast,
 on the same tokens the lookup scores 0% on unseen (no entry) and the suffix heuristic only
-~50%. The cached model is ~2.2 MB and `import aegean` stays instant — the model is built on
-first `use_tagger()`, never bundled.
+~50%. The cached model is ~2.2 MB and `import aegean` stays instant — the model arrives on
+first `use_tagger()` (prebuilt fetch, or trained locally as the fallback), never bundled.
 
 ```python
 greek.evaluate_tagger(holdout=0.1)
@@ -421,7 +421,7 @@ features — including the irregular, contract, athematic and third-declension f
 the rule engine can't reach:
 
 ```python
-greek.use_treebank()         # one-time download (~75 MB) + build, cached; then instant
+greek.use_treebank()         # one-time fetch of the ~15 MB prebuilt lexicon, cached; then instant
 
 greek.lemmatize("ἄνδρα")      # 'ἀνήρ'      (3rd declension; the rule engine gives a bare stem)
 greek.lemmatize("ἔφη")        # 'φημί'      (suppletive athematic verb)
@@ -432,8 +432,11 @@ greek.analyze("ἀνθρώπων")[0]  # ἄνθρωπος [NOUN gen pl masc]   
 
 Once active, `lemmatize`/`analyze` prefer the treebank for known forms and fall
 back to the rule/seed engine for the rest; `greek.disable_treebank()` restores the
-default. Network is needed only on the first call. The treebank is **CC BY-SA 3.0**,
-fetched to your cache and never bundled — see
+default. Network is needed only on the first call: it fetches the prebuilt
+AGDT-derived lexicon (part of one shared ~15 MB bundle), falling back to
+downloading the treebank itself (~75 MB) and building locally if the asset is
+unreachable. The data is **CC BY-SA 3.0** (derived from the AGDT), fetched to your
+cache and never bundled — see
 [Data & Provenance](Data-and-Provenance#the-greek-treebank-lexicon-use_treebank).
 
 ## Benchmark harness
@@ -460,7 +463,7 @@ for stage, s in benchmark.run_benchmark().items():
 
 `compare_modes()` scores lemma + POS with the
 [treebank backend](#treebank-backed-mode-opt-in) **off vs on** (it activates
-`use_treebank()` for you, building the lexicon on first use):
+`use_treebank()` for you, fetching the prebuilt lexicon on first use):
 
 ```python
 benchmark.compare_modes()
@@ -582,7 +585,7 @@ right tree for each form.
 
 ```python
 greek.use_tagger()        # recommended — the lemmatizer conditions on the tagger's POS
-greek.use_lemmatizer()    # one-time train (~5 min) from the cached AGDT, then cached
+greek.use_lemmatizer()    # one-time fetch of the prebuilt model (or local train as fallback), then cached
 greek.lemmatize("ἀνθρώπων")   # 'ἄνθρωπος', even if the form was never attested
 greek.disable_lemmatizer()
 ```
@@ -593,7 +596,8 @@ lemma; everything else goes to the model.
 **Measured — held-out AGDT, leakage-free.** Trained on a 90% sentence split and scored on the
 disjoint 10% (via `greek.evaluate_lemmatizer()`, with *predicted* POS), it reaches **84.5%
 overall and 40.3% on unseen forms** — versus the lookup's 0% on unseen. The cached model is
-~7 MB (built on first use, never bundled).
+~7 MB (fetched prebuilt on first use — or trained locally if the asset is unreachable — never
+bundled).
 
 This is real generalization from a zero-dependency model (0% → 40% on unseen, competitive
 on attested forms). Recovering an unseen Greek lemma often means an internal stem/accent
@@ -629,14 +633,15 @@ fetched, not bundled.
 ## Lexicon (LSJ glossing, opt-in)
 
 What does a word *mean*? `use_lsj()` switches on the full **Perseus Liddell-Scott-Jones**
-lexicon — it fetches the LSJ (~270 MB, one-time) and builds a cached index, then
+lexicon — it fetches the prebuilt ~15 MB index (one-time; or, if that asset is
+unreachable, downloads the ~270 MB TEI and builds the index locally), then
 `gloss`/`lookup` resolve a Greek word to its dictionary entry. Looking up an inflected
 form works: it tries the form, then lemmatizes (using the [treebank backend](#treebank-backed-mode-opt-in)
 if active) and retries — so it composes with everything above.
 
 ```python
 greek.use_treebank()         # optional, but lets inflected/irregular forms resolve
-greek.use_lsj()              # one-time ~270 MB download + build, cached; then instant
+greek.use_lsj()              # one-time fetch of the ~15 MB prebuilt index, cached; then instant
 
 greek.gloss("ἀνδρός")         # 'ἀνήρ: man, opp. god, …'        (lemmatized ἀνδρός → ἀνήρ)
 greek.gloss("γυναικός")       # 'γυνή: wife, spouse, …'
@@ -660,10 +665,11 @@ bundled — see [Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-us
 
 ## Dependency parsing (opt-in, baseline)
 
-`use_parser()` trains (on first use, from the cached AGDT — a few minutes) a
-transition-based **arc-eager** parser with an **averaged-perceptron** classifier
-(pure Python, no heavy deps); then `parse()` turns a sentence into a dependency tree
-with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED, Aux*…).
+`use_parser()` activates (on first use it fetches the prebuilt model from the shared
+AGDT-derived bundle; if that's unreachable it downloads the AGDT and trains locally —
+a few minutes) a transition-based **arc-eager** parser with an **averaged-perceptron**
+classifier (pure Python, no heavy deps); then `parse()` turns a sentence into a
+dependency tree with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED, Aux*…).
 
 ```python
 greek.use_treebank()     # optional — improves the POS/lemmas the parser feeds on

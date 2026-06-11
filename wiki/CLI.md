@@ -35,6 +35,12 @@ aegean sign lineara KU                      # one sign: glyph, codepoint, sound 
 aegean bridge linearb po-me                 # po-me → ποιμήν (shepherd)
 ```
 
+Every command takes a corpus name: the bundled `lineara` / `linearb` / `cypriot` /
+`cyprominoan` / `greek`, or the fetched-on-demand `damos` (the full ~5,900-tablet
+Linear B corpus) and `sigla` (the SigLA Linear A dataset) — both CC BY-NC-SA,
+downloaded to your cache on first use. `aegean stats damos --top 10` works exactly
+like its `lineara` counterpart.
+
 The compound query engine takes repeated `--where field=value` rows (prefix
 `or:` to OR a row, `!` to negate it; `--fields` lists the field registry):
 

@@ -49,9 +49,11 @@ print(len(aegean.load("greek")))          # 5  (bundled offline sample; real wor
 ## Offline & data
 
 The compact text corpora (Linear A inscriptions/signs, Greek seeds) ship inside
-the wheel and work fully offline. Large assets are **not** bundled — they are fetched
-on demand into a user cache on first use: the ~116 MB Linear A facsimile imagery, plus
-the opt-in Greek backends' data. For speed, the Greek backends now prefer small
+the wheel and work fully offline. Large or NC-licensed assets are **not** bundled —
+they are fetched on demand into a user cache on first use: the full DAMOS Linear B
+corpus (`aegean.load("damos")`, ~2 MB) and the SigLA Linear A dataset
+(`aegean.load("sigla")`, ~1 MB; both CC BY-NC-SA), the ~116 MB Linear A facsimile
+imagery, plus the opt-in Greek backends' data. For speed, the Greek backends now prefer small
 **prebuilt** artifacts hosted by the project: `greek.use_lsj()` fetches a ~15 MB
 prebuilt index (instead of downloading ~270 MB of Perseus TEI and building locally),
 and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` / `use_parser()`

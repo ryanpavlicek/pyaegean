@@ -103,10 +103,12 @@ multi-provider AI layer and hybrid translation; the corpus data layer with a los
 round-trip (`to_json`/`from_json`), a compound `query()`, schema-valid EpiDoc/CSV/Parquet
 export, citation automation (`cite()` down to the exact subset), and a data-versioning
 manifest (`data.versions()`); geographic analysis with Pleiades alignment; editorial-status +
-variant-reading round-trips (`ReadingStatus`, `Token.alt` ↔ EpiDoc); and the full Unicode
-Linear A sign repertoire. **Next:** corpus-data expansion (Linear B/Cypriot samples, the
-Linear A apparatus path), then hardening toward a **1.0 stable** once there's external use
-and a methods write-up.
+variant-reading round-trips (`ReadingStatus`, `Token.alt` ↔ EpiDoc); the full Unicode
+Linear A sign repertoire; and the corpus-data expansion — the **full DAMOS Linear B corpus**
+(`aegean.load("damos")`, ~5,900 tablets) and the **SigLA Linear A dataset**
+(`aegean.load("sigla")`) fetched on demand, with prebuilt LSJ/AGDT artifacts for a fast
+first use. **Next:** analysis & visualization helpers (the statistics layer), then hardening
+toward a **1.0 stable** once there's external use and a methods write-up.
 
 ## License
 

@@ -1,10 +1,11 @@
 ﻿"""Build the bundled Linear B sample corpus into the script-agnostic model and register it so
 ``Corpus.load("linearb")`` works.
 
-No openly-licensed Linear B tablet corpus exists — the most complete one, DAMOS, is CC BY-NC-SA —
-so only a small illustrative sample of canonical tablets is bundled. Point
-``PYAEGEAN_LINEARB_CORPUS`` at your own licensed export (e.g. a DAMOS EpiDoc download) to work
-with a full corpus; pyaegean never re-hosts it.
+The bundled corpus is a small illustrative sample of canonical tablets — the zero-network
+default (the Apache-2.0 wheel carries no NC-licensed data). For the **full corpus**,
+``aegean.load("damos")`` fetches the ~5,900-tablet DAMOS edition (CC BY-NC-SA 4.0) to the
+cache; or point ``PYAEGEAN_LINEARB_CORPUS`` at your own licensed EpiDoc export, which
+pyaegean parses locally and never re-hosts.
 """
 
 from __future__ import annotations
@@ -86,7 +87,7 @@ _PROVENANCE = Provenance(
 @lru_cache(maxsize=1)
 def load_linearb() -> Corpus:
     # Bring-your-own: PYAEGEAN_LINEARB_CORPUS points at a local EpiDoc file/directory; otherwise
-    # the bundled illustrative sample is used (no openly-licensed corpus exists to ship).
+    # the bundled illustrative sample is used (the full corpus is aegean.load("damos"), fetched).
     source = os.environ.get("PYAEGEAN_LINEARB_CORPUS")
     if source:
         from .epidoc import load_epidoc_corpus

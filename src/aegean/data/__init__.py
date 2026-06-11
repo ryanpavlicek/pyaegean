@@ -59,14 +59,18 @@ class DataSpec:
     extract: bool = False  # when True, the download is a tar archive to unpack
 
 
-# Remote datasets. pyaegean never re-hosts data; it fetches from the upstream
-# host. The Linear A facsimile imagery is fetched (not copied) from a release on
-# the ryanpavlicek/linearaworkbench repo, where the owner already hosts it. The
-# images remain © École Française d'Athènes plus other rightsholders (the
-# corpus's per-image `imageRights` are a patchwork — GORILA/EFA, named scholars,
-# photographers); that attribution is unaffected by fetching. The URL + sha256 are
-# pinned below (verified against the published release); set
-# PYAEGEAN_LINEARA_IMAGES_URL to override the source with your own licensed copy.
+# Remote datasets, all fetched to the user cache on demand — never bundled in the
+# Apache-2.0 wheel. Two hosting patterns:
+#   * upstream-fetched: pulled straight from where the rights-holder publishes it
+#     (the Linear A facsimile imagery comes from the ryanpavlicek/linearaworkbench
+#     release; the images remain © École Française d'Athènes plus other
+#     rightsholders, unaffected by fetching);
+#   * project-hosted: datasets/artifacts this project derived or decoded under the
+#     source license and republishes as clearly-labeled pyaegean release assets —
+#     the DAMOS and SigLA corpora (CC BY-NC-SA 4.0; the NC+SA obligations pass to
+#     the user) and the prebuilt LSJ index / AGDT-derived models (CC BY-SA).
+# Every URL + sha256 is pinned below; each PYAEGEAN_<NAME>_URL env var overrides a
+# source with your own licensed copy.
 _REMOTE: dict[str, DataSpec] = {
     "lineara-images": DataSpec(
         name="lineara-images",

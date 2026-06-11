@@ -105,9 +105,10 @@ print(doc.transcription)             # the DAMOS transliteration, verbatim
 Each tablet is one `Document`: the transliteration is tokenised into words / numerals / logograms
 (using the DAMOS comma-and-slash word dividers), and the verbatim transliteration is kept in
 `Document.transcription`. The data is **NonCommercial + ShareAlike** — those obligations pass
-through to you, the corpus is fetched to your cache and **never bundled or re-hosted**, and you
-should **cite DAMOS** (Aurora 2015) in academic work. `scripts/build_damos_corpus.py` documents
-exactly how the asset is built from the DAMOS public API.
+through to you; the corpus is hosted as a clearly-labeled CC BY-NC-SA release asset, fetched to
+your cache on demand, and **never bundled inside the Apache-2.0 wheel**. **Cite DAMOS**
+(Aurora 2015) in academic work. `scripts/build_damos_corpus.py` documents exactly how the asset
+is built from the DAMOS public API.
 
 ### The bundled sample — `aegean.load("linearb")`
 

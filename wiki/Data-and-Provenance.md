@@ -69,28 +69,34 @@ overrides any dataset's URL.
 
 ### The Greek treebank lexicon (`use_treebank`)
 
-`aegean.greek.use_treebank()` downloads the Perseus **Ancient Greek Dependency
-Treebank** (AGDT v2.1, Greek) — 33 `.tb.xml` files, ~75 MB, pinned to a fixed
-commit — into the cache, then builds a derived form→lemma/morphology lexicon there
-(`agdt-greek-lexicon.json`); `use_parser()` trains a dependency-parser model
-(`agdt-parser-model.json.gz`), `use_tagger()` trains a POS-tagger model
-(`agdt-postagger.json.gz`), and `use_lemmatizer()` trains an edit-tree lemmatizer model
-(`agdt-lemmatizer.json.gz`) from the same files. The treebank is **CC BY-SA 3.0**; it is fetched (never
-re-hosted), and the derived lexicon stays in the local cache — pyaegean neither
-bundles nor redistributes it, so the ShareAlike terms don't reach the Apache-2.0
-package. Cite the AGDT in work that relies on it. Network is needed only on the
-first call; the build is idempotent thereafter. See
+`aegean.greek.use_treebank()` activates the lexicon derived from the Perseus
+**Ancient Greek Dependency Treebank** (AGDT v2.1, Greek); `use_parser()` /
+`use_tagger()` / `use_lemmatizer()` activate the models trained from the same
+files. On first use each now fetches the small **prebuilt** artifact from the
+project-hosted `agdt-derived` release asset (one ~15 MB bundle: the
+form→lemma/morphology lexicon `agdt-greek-lexicon.json` plus the three trained
+models; sha256-pinned). If that asset is ever unreachable, the original path
+still works: download the AGDT itself (33 `.tb.xml` files, ~75 MB, pinned to a
+fixed commit) and build/train locally. The treebank is **CC BY-SA 3.0**: the
+source treebank is never re-hosted, the derived artifacts are published under
+the same ShareAlike terms (CC BY-SA 3.0, clearly labeled), and everything is
+fetched to the cache — never bundled in the Apache-2.0 wheel. Cite the AGDT in
+work that relies on it. Network is needed only on the first call. See
 [Greek NLP → Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in).
 
 ### The Greek lexicon (LSJ, `use_lsj`)
 
-`aegean.greek.use_lsj()` downloads the **Perseus Liddell-Scott-Jones** lexicon (the
-TEI *A Greek-English Lexicon* — 27 files, ~270 MB, pinned to a fixed commit) into the
-cache and builds a derived, gzipped lemma→entry index there (`lsj-perseus-index.json.gz`,
-~15 MB). The LSJ is **CC BY-SA 4.0** (Perseus Digital Library, with NEH funding); it is
-fetched (never re-hosted) and the index stays in the local cache — pyaegean neither
-bundles nor redistributes it. Attribute Perseus per the statement in `NOTICE`. Network
-is needed only on the first call. See
+`aegean.greek.use_lsj()` activates a lemma→entry index derived from the **Perseus
+Liddell-Scott-Jones** lexicon. On first use it now fetches the **prebuilt** index
+(`lsj-perseus-index.json.gz`, ~15 MB, sha256-pinned) from the project-hosted
+`lsj-index` release asset; if that is unreachable it falls back to the original
+path — downloading the TEI *A Greek-English Lexicon* itself (27 files, ~270 MB,
+pinned to a fixed commit) and building the index locally. The LSJ is **CC BY-SA
+4.0** (Perseus Digital Library, with NEH funding): the source TEI is never
+re-hosted, the derived index is published under the same ShareAlike terms
+(clearly labeled), and both are fetched to the cache — never bundled in the
+Apache-2.0 wheel. Attribute Perseus per the statement in `NOTICE`. Network is
+needed only on the first call. See
 [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
 
 ### The Greek neural lemmatizer model (`use_neural_lemmatizer`, `[neural]`)
