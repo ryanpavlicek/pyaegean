@@ -199,9 +199,14 @@ def main() -> None:
         "n_scripts": len(scripts), "min_freq": args.min_freq,
         "script_coverage_train": round(cov_train / n_train, 4),
         "script_coverage_dev": round(cov_dev / n_dev, 4),
-        "upos_labels": sorted({u for r in rows for u in r["upos"]}),
-        "deprels": sorted({d for r in rows for d in r["deprel"]}),
-        "xpos_position_chars": [sorted({x[i] for r in rows for x in r["xpos"]}) for i in range(9)],
+        # label inventories come from the ACTUAL dataset (train incl. any extras + dev),
+        # never from the AGDT rows alone — extras can introduce characters/labels of
+        # their own (the Stage D+ KeyError lesson)
+        "upos_labels": sorted({u for r in train + dev for u in r["upos"]}),
+        "deprels": sorted({d for r in train + dev for d in r["deprel"]}),
+        "xpos_position_chars": [
+            sorted({x[i] for r in train + dev for x in r["xpos"]}) for i in range(9)
+        ],
         "protocol": "Stage D: parser rows + lemma supervision + edit-script classes; "
                     "inventory and lookups are train-only. See docs/benchmarks.md.",
     }

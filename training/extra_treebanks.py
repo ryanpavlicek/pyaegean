@@ -277,6 +277,16 @@ def _is_artificial(w: ET.Element) -> bool:
     return w.get("artificial") is not None or not form or form.startswith("[")
 
 
+_XPOS_OK = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-")
+
+
+def _clean_xpos(postag: str) -> str:
+    """A 9-char AGDT-convention postag: pad, lowercase, and coerce any character outside
+    the AGDT alphabet (Gorman/Pedalion use e.g. ``_`` for absent values) to ``-``."""
+    tag = (postag or "").lower().ljust(9, "-")[:9]
+    return "".join(ch if ch in _XPOS_OK else "-" for ch in tag)
+
+
 def load_extra(source: str, paths: list[Path] | None = None) -> list[dict]:
     """Parse one extra treebank into the build_full_dataset row-input shape.
 
@@ -307,7 +317,7 @@ def load_extra(source: str, paths: list[Path] | None = None) -> list[dict]:
                  "relation": w.get("relation") or "",
                  "form": unicodedata.normalize("NFC", w.get("form") or ""),
                  "lemma": _clean_lemma(w.get("lemma") or ""),
-                 "xpos": (w.get("postag") or "").ljust(9, "-")[:9]}
+                 "xpos": _clean_xpos(w.get("postag") or "")}
                 for w in words if not _is_artificial(w)
             ]
             if attrs:
