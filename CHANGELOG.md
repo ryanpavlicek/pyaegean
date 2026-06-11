@@ -71,6 +71,14 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Linear A editorial status recovered from the data** — the WP4 upstream audit found the
+  apparatus signal was never lost, only unread: the upstream marks erased/illegible signs with
+  a placeholder codepoint (U+1076B; its own tooling names it "erased"), and pyaegean's bundle
+  carries it byte-identically. The loader now interprets it: standalone erased-sign runs load
+  as `ReadingStatus.LOST` (552 tokens), damaged-at-break words and `[?]`-bracketed uncertain
+  readings as `UNCLEAR` (120 tokens), and tablet ruling dashes as separators — 366 of the
+  1,721 documents now carry editorial status (regression-pinned). Restorations and dotted
+  readings were dropped upstream and remain absent; SigLA integration is the planned path.
 - **Real Greek works on demand** (`greek.load_work("tlg0012.tlg001")`, CLI `aegean greek work`):
   a fetch-to-cache TEI reader for **Perseus canonical-greekLit** and **First1KGreek** (CC BY-SA).
   One call loads a work into the standard corpus model — the Iliad arrives as 24 book-Documents

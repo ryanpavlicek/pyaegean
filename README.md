@@ -140,11 +140,12 @@ inventory — what the evidence forbids, what licensing forbids, what engineerin
 tracked on the [roadmap](docs/ROADMAP.md)), and what is a deliberate trade-off. The short version:
 
 - **Linear A is exploration-grade, not edition-grade.** The bundled 1,721-inscription corpus is a
-  *normalized* transcription: it does **not** carry the full Leiden apparatus (lacunae, restorations,
-  uncertain readings) — the upstream digitization dropped it. The sign repertoire *is* complete (the
-  full Unicode Linear A block; 84 signs carry conventional sound values), but for publication-grade
-  readings consult **GORILA** and **SigLA**. The data model can record editorial status
-  (`ReadingStatus`) and the EpiDoc reader/writer round-trip it, for bring-your-own corpora.
+  *normalized* transcription. The apparatus it *does* carry is interpreted on load — erased-sign
+  marks become `ReadingStatus.LOST` and damaged/bracketed readings `UNCLEAR` (672 tokens across 366
+  documents) — but the **full** Leiden apparatus (restorations, dotted readings) was dropped by the
+  upstream digitization and remains absent. The sign repertoire *is* complete (the full Unicode
+  Linear A block; 84 signs carry conventional sound values); for publication-grade readings consult
+  **GORILA** and **SigLA**.
 - **The bundled non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
   syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For a
   real Linear B corpus, point `PYAEGEAN_LINEARB_CORPUS` at your own DAMOS EpiDoc export — pyaegean

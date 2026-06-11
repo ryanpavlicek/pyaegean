@@ -11,12 +11,15 @@ the deciphered Linear B (the rest have no agreed reading).
 > translations. See [Analysis](Analysis) for the methods and the
 > **[Limitations](Limitations)** page for the full picture.
 >
-> The bundled corpus is a **normalized** transcription: it does not carry the
-> full Leiden apparatus (lacunae, restorations, uncertain readings). For
-> edition-grade work consult **GORILA** and **SigLA**. The data model can still
-> record editorial status via `aegean.ReadingStatus` (CERTAIN / UNCLEAR /
-> RESTORED / LOST), and the EpiDoc reader/writer preserve it
-> (`<unclear>`/`<supplied>`/`<gap>`) for bring-your-own corpora.
+> The bundled corpus is a **normalized** transcription, but the apparatus it
+> *does* carry is now interpreted: the upstream's erased-sign marks load as
+> `ReadingStatus.LOST` (552 tokens), damaged-at-break words and bracketed
+> uncertain readings as `UNCLEAR` (120 tokens) — 366 of the 1,721 documents
+> carry editorial status. The **full** Leiden apparatus (restorations, dotted
+> readings) is still absent — the upstream digitization dropped it — so for
+> edition-grade work consult **GORILA** and **SigLA** (whose CC BY-NC-SA data
+> is a planned opt-in enrichment). The EpiDoc reader/writer round-trip status
+> as `<unclear>`/`<supplied>`/`<gap>`.
 
 ## Loading & filtering
 

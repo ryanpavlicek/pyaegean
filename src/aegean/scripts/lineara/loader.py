@@ -1,5 +1,12 @@
 ﻿"""Build the bundled Linear A corpus into the script-agnostic model and
 register it so ``Corpus.load("lineara")`` works.
+
+The loader also *interprets the apparatus the data carries* (recovered by the
+WP4 upstream audit — the signal was always present, just unread): the upstream
+erased-sign placeholder becomes `ReadingStatus.LOST`, words damaged at a break
+or with bracketed uncertain readings become ``UNCLEAR``, and tablet ruling
+dashes become separators. The bundled JSON stays a faithful mirror of the
+upstream; the interpretation lives here, versioned and tested.
 """
 
 from __future__ import annotations
@@ -9,7 +16,7 @@ from functools import lru_cache
 from typing import Any
 
 from ...core.corpus import Corpus, register_loader
-from ...core.model import Document, DocumentMeta, Token, TokenKind
+from ...core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
 from ...core.numerals import parse_value
 from ...core.provenance import Provenance
 from ...data import bundled_data_version
@@ -17,20 +24,43 @@ from ...data import load_bundled_json
 from .inventory import linear_a_inventory
 
 _SEP = {"\U00010101"}  # 𐄁 — word/entry divider
+_RULE = {"—", "–"}  # a ruling/divider line drawn on the tablet
+# The upstream (mwenge/lineara.xyz) marks erased/illegible signs with U+1076B —
+# an unassigned codepoint just past the Linear A block; its own utils.js
+# `stripErased()` removes it. Standalone runs mean the text here is lost;
+# attached to a word, the reading is damaged at a break.
+_ERASED = "\U0001076B"
 _IDEOGRAM_RE = re.compile(r"^[A-Z*][A-Z0-9*+'\[\]?]*$")
 
 
 def classify(text: str, line_no: int | None, position: int) -> Token:
-    """Tag a transliterated token by role (Linear A conventions)."""
-    if text in _SEP:
-        return Token(text, TokenKind.SEPARATOR, (text,), None, line_no, position)
-    if parse_value(text) is not None:
-        return Token(text, TokenKind.NUMERAL, (text,), None, line_no, position)
-    if "-" in text:
-        return Token(text, TokenKind.WORD, tuple(text.split("-")), None, line_no, position)
-    if _IDEOGRAM_RE.match(text):
-        return Token(text, TokenKind.LOGOGRAM, (text,), None, line_no, position)
-    return Token(text, TokenKind.UNKNOWN, (text,), None, line_no, position)
+    """Tag a transliterated token by role and editorial status (Linear A conventions)."""
+    bare = text.replace(_ERASED, "")
+    if not bare:  # nothing but erased-sign marks: the text here is not preserved
+        return Token(
+            text, TokenKind.UNKNOWN, (text,), None, line_no, position,
+            status=ReadingStatus.LOST,
+        )
+    status = ReadingStatus.CERTAIN
+    if bare != text:
+        status = ReadingStatus.UNCLEAR  # partially erased / damaged at a break
+    elif "[" in text or "]" in text or "?" in text:
+        status = ReadingStatus.UNCLEAR  # bracketed uncertain reading, e.g. VIR+[?]
+    if bare in _SEP:
+        return Token(text, TokenKind.SEPARATOR, (bare,), None, line_no, position, status=status)
+    if bare in _RULE:
+        return Token(text, TokenKind.SEPARATOR, (bare,), None, line_no, position, status=status)
+    if parse_value(bare) is not None:
+        return Token(text, TokenKind.NUMERAL, (bare,), None, line_no, position, status=status)
+    if "-" in bare:
+        # sign labels come from the preserved reading; the marker is not a sign
+        return Token(
+            text, TokenKind.WORD, tuple(s for s in bare.split("-") if s), None,
+            line_no, position, status=status,
+        )
+    if _IDEOGRAM_RE.match(bare):
+        return Token(text, TokenKind.LOGOGRAM, (bare,), None, line_no, position, status=status)
+    return Token(text, TokenKind.UNKNOWN, (bare,), None, line_no, position, status=status)
 
 
 def _build_document(rec: dict[str, Any]) -> Document:

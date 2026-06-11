@@ -246,9 +246,15 @@ them real where licensing allows.
   respectfully); document the outcome either way. The BYO EpiDoc path stays first-class.
 - **Cypriot.** Modest sample + lexicon growth from published ICS facts.
 - **Linear A apparatus (the deepest unfixed finding).** Phased:
-  1. **Audit upstream**: inspect the raw mwenge/lineara.xyz source for apparatus our original port
-     dropped (bracket/uncertainty markers partially survive — `[?]`, `?` — so there may be more to
-     recover losslessly). Anything recoverable populates `ReadingStatus` on the bundled corpus.
+  1. **Audit upstream** — *DONE (2026-06-11)*: the pipeline was lossless all along (pyaegean's
+     bundle is marker-identical to upstream); the apparatus was present but uninterpreted. The
+     upstream marks erased/illegible signs with the unassigned codepoint U+1076B (its own
+     `stripErased()` confirms the intent); the loader now reads it — standalone runs →
+     `ReadingStatus.LOST` (552 tokens), damaged-at-break words and `[?]`-bracketed uncertain
+     readings → `UNCLEAR` (120 tokens); tablet ruling dashes → separators. 366 of 1,721
+     documents now carry editorial status, regression-pinned in tests. Restorations and dotted
+     readings were dropped upstream and are NOT recoverable from this source — that is SigLA's
+     role (step 2).
   2. **SigLA integration** (Salgarella & Castellan). *Licensing resolved 2026-06-11*: the official
      site publishes "Dataset and drawings are available under the CC BY-NC-SA 4.0 license" — so no
      permission inquiry is needed; this follows the PROIEL/UD precedent (fetch-to-cache on demand,

@@ -212,13 +212,15 @@ corpus.provenance.cite()      # one-line citation for papers/logs
 corpus.to_dict()["_meta"]      # tool, schemaVersion, scriptId, documentCount, source, license, citation
 ```
 
-A note on the Linear A corpus: the bundled transcription is **normalized** — it
-does **not** carry the full Leiden apparatus (lacunae, restorations, uncertain
-readings), because the upstream digitization dropped it. For edition-grade
-readings, consult **GORILA** and **SigLA**. The data model can still record
-editorial status — `aegean.ReadingStatus` (CERTAIN / UNCLEAR / RESTORED / LOST),
-which the EpiDoc reader/writer round-trip as `<unclear>`/`<supplied>`/`<gap>` —
-so a bring-your-own EpiDoc corpus keeps its apparatus through a load/export cycle.
+A note on the Linear A corpus: the bundled transcription is **normalized**, and
+the apparatus the upstream data *does* carry is interpreted on load — its
+erased-sign marks become `ReadingStatus.LOST` (552 tokens) and damaged or
+bracketed-uncertain readings become `UNCLEAR` (120 tokens, across 366
+documents). The **full** Leiden apparatus (restorations, dotted readings) was
+dropped by the upstream digitization and remains absent; for edition-grade
+readings consult **GORILA** and **SigLA**. `aegean.ReadingStatus` round-trips
+through JSON and EpiDoc (`<unclear>`/`<supplied>`/`<gap>`), so bring-your-own
+corpora keep their apparatus through a load/export cycle.
 
 ## Licensing summary
 

@@ -59,7 +59,7 @@ the pointer says where.
 
 | Limitation today | Plan |
 | --- | --- |
-| The bundled Linear A corpus is a *normalized* transcription — the upstream digitization dropped the full Leiden apparatus (lacunae, restorations, uncertainty) | WP4: audit the upstream source for recoverable apparatus → populate `ReadingStatus` → a GORILA-faithful corpus v2 (with the SigLA inquiry as the deeper path) |
+| The bundled Linear A corpus is a *normalized* transcription — the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *The audit is done and what survived is now interpreted*: erased-sign marks load as `LOST` (552 tokens) and damaged/bracketed readings as `UNCLEAR` (120 tokens, 366 documents) | WP4: the remaining path to edition grade is the SigLA integration (CC BY-NC-SA, fetch-to-cache) |
 | Linear B bundles ~2 sample tablets and a ~45-entry Greek-bridge lexicon | WP4: grow to ~25 canonical tablets and 300+ lexicon entries from the standard editions |
 | The Cypriot sample is similarly small | WP4: modest sample + lexicon growth from published ICS facts |
 | `greek.load_work` reads top-level textparts only, drops `<note>`/`<bibl>` silently, and discovers editions via an unauthenticated GitHub listing (rate-limited at scale) | WP4: loader hardening — cached listings/auth token, deeper textpart addressing |
