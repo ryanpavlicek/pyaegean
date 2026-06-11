@@ -12,7 +12,7 @@ from ._common import CORPUS_ARG, JSON_OPT, emit_json, fail, load_corpus, table
 
 analyze_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Analysis: distance, alignment, association stats, clusters, structure.",
+    help="Analysis: distance, alignment, cross-script compare/nearest, association stats, clusters, structure.",
     no_args_is_help=True,
 )
 
