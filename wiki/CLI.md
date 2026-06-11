@@ -27,6 +27,8 @@ aegean load lineara --site "Haghia Triada" -o ht.json   # filter → lossless JS
 aegean show lineara HT13                    # one document, line by line
 aegean search lineara "KU-*-RO"             # wildcard sign-pattern word search
 aegean stats lineara --top 10               # word frequencies (--signs for signs)
+aegean dispersion damos --top 10            # Gries' DP: evenly spread vs concentrated
+aegean keyness damos --site Pylos           # key vocabulary of a subset vs the rest
 aegean balance lineara HT13                 # KU-RO reconciliation (--strict exits 1)
 aegean cite lineara --site "Haghia Triada"  # cite the exact subset (--style bibtex|apa)
 aegean export lineara -f csv -o lineara.csv # json | csv | parquet | epidoc

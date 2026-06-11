@@ -297,12 +297,17 @@ them real where licensing allows.
 
 ## WP5 — Analysis & visualization
 
+> **In progress (2026-06-11).** Statistics layer ✓ shipped; visualization helpers and comparative
+> phonetics are next.
+
 - **Visualization helpers** (lazy matplotlib via the `[data]`/`[viz]` extra): sign-frequency bars,
   collocation networks, scansion grids, accounting-discrepancy views — convenient one-liners, not a
   plotting framework. *(Reviewer §3.)*
-- **Statistics layer**: dispersion measures (e.g. Gries' DP), keyness (log-ratio, log-likelihood),
-  bootstrap confidence intervals — pure stdlib where feasible, with scholarly framing in docstrings.
-  *(Reviewer §3.)*
+- ~~**Statistics layer**: dispersion measures (e.g. Gries' DP), keyness (log-ratio, log-likelihood),
+  bootstrap confidence intervals — pure stdlib where feasible, with scholarly framing in docstrings.~~
+  **Done** — `aegean.analysis.stats`: Gries' DP (+ Lijffijt & Gries normalization), keyness
+  (G² Rayson-&-Garside form + Hardie log-ratio), percentile bootstrap over documents; CLI
+  `aegean dispersion` / `aegean keyness`. *(Reviewer §3.)*
 - **Comparative phonetics**: generalize the distance/alignment module for cross-script comparison
   (Linear B ↔ alphabetic Greek, Cypriot variants) — exploratory-labeled where it touches
   undeciphered material. *(Reviewer §3.)*

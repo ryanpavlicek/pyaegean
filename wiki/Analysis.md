@@ -91,6 +91,69 @@ fishers_exact(5, 5, 5, 10)               # ≈ 0.007937 (two-sided)
 wilson_interval(5, 10)                    # (low, high) 95% CI
 ```
 
+## Corpus statistics: dispersion, keyness, bootstrap
+
+Where collocation scores one word *pair*, these compare **whole corpora and
+subsets** — pure stdlib, working over any loadable corpus (`lineara`, `damos`,
+a `filter()` subset, or a plain document list). In plain terms: *dispersion*
+asks "is this word everywhere, or does it live in a few documents?"; *keyness*
+asks "what vocabulary makes this group of texts different from that one?"; the
+*bootstrap* asks "how sure can I be of this number, given how few documents
+there are?"
+
+**Dispersion** — Gries' deviation of proportions (DP; Gries 2008, normalized
+per Lijffijt & Gries 2012). 0 = spread exactly as document sizes predict;
+toward 1 = concentrated in few documents:
+
+```python
+from aegean.analysis import dispersion, dispersions
+import aegean
+
+c = aegean.load("damos")
+dispersion(c, "pa-ro")          # Dispersion(item='pa-ro', frequency=230, range=97, …, dp_norm=0.87)
+dispersions(c, top=10)          # the most evenly-spread words first
+```
+
+A frequent word with *high* `dp_norm` is the interesting case on Aegean
+material — formulaic or genre/site-bound vocabulary rather than corpus-wide
+language.
+
+**Keyness** — which items are characteristic of a target (sub)corpus against a
+reference: Dunning's log-likelihood **G²** for significance (Rayson & Garside
+2000) plus Hardie's (2014) **log-ratio** for effect size (each point ≈ one
+doubling of relative frequency; positive = overused in the target):
+
+```python
+from aegean.analysis import keyness
+
+pylos = c.filter(site="Pylos")
+rest = [d for d in c.documents if d.meta.site != "Pylos"]
+rows = keyness(pylos, rest)
+rows[0]    # KeynessRow(item='pe-mo', …, log_likelihood=254.1, log_ratio=+8.5, p=3e-57)
+# the Pylos land-tenure series surfaces immediately: pe-mo, o-na-to, ko-to-na, e-ke …
+```
+
+**Bootstrap confidence intervals** — a percentile interval for *any* corpus
+statistic, resampling documents with replacement (Efron & Tibshirani 1993);
+documents are the resampling unit because tokens within a tablet are not
+independent. Deterministic by default (`seed=0`) for reproducibility:
+
+```python
+from aegean.analysis import bootstrap_ci
+from aegean.core.model import TokenKind
+
+mean_words = lambda docs: sum(
+    sum(1 for t in d.tokens if t.kind is TokenKind.WORD) for d in docs
+) / len(docs)
+bootstrap_ci(c, mean_words)     # BootstrapCI(estimate=…, low=…, high=…, level=0.95)
+```
+
+A scholarly caution: on small or fragmentary corpora a significant G² flags an
+imbalance worth *inspecting*, not a proven fact about the language — read
+significance (G², p) together with effect size (log-ratio) and dispersion.
+From the shell: `aegean dispersion damos --top 10` and
+`aegean keyness damos --site Pylos` (see [CLI](CLI)).
+
 ## Query engine
 
 A compound predicate engine over the corpus: an inscription/word field registry,

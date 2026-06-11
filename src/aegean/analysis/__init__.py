@@ -74,6 +74,15 @@ from .query import (
     summarize_filters,
     word_matches,
 )
+from .stats import (
+    BootstrapCI,
+    Dispersion,
+    KeynessRow,
+    bootstrap_ci,
+    dispersion,
+    dispersions,
+    keyness,
+)
 from .structure import (
     CATEGORIES,
     LIBATION_WORDS,
@@ -129,6 +138,14 @@ __all__ = [
     "find_morphological_clusters",
     "MorphCluster",
     "ClusterMember",
+    # corpus statistics (dispersion / keyness / bootstrap)
+    "dispersion",
+    "dispersions",
+    "keyness",
+    "bootstrap_ci",
+    "Dispersion",
+    "KeynessRow",
+    "BootstrapCI",
     # query engine
     "FIELDS",
     "FieldDef",

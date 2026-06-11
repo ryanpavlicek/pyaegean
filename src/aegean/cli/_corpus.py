@@ -1,5 +1,5 @@
-"""Top-level corpus commands: info, load, show, search, query, stats, balance,
-cite, export, geo, sign, bridge."""
+"""Top-level corpus commands: info, load, show, search, query, stats, dispersion,
+keyness, balance, cite, export, geo, sign, bridge."""
 
 from __future__ import annotations
 
@@ -31,6 +31,8 @@ def register(app: typer.Typer) -> None:
     app.command()(search)
     app.command()(query)
     app.command()(stats)
+    app.command()(dispersion)
+    app.command()(keyness)
     app.command()(balance)
     app.command()(cite)
     app.command()(export)
@@ -250,6 +252,102 @@ def stats(
         emit_json([{"item": w, "count": n} for w, n in pairs])
         return
     table(title, ["item", "count"], [[w, str(n)] for w, n in pairs])
+
+
+def dispersion(
+    corpus: str = CORPUS_ARG,
+    item: str | None = typer.Argument(None, help="One item; omit to rank the whole corpus."),
+    signs: bool = typer.Option(False, "--signs", help="Sign dispersion instead of words."),
+    top: int = typer.Option(20, "--top", help="How many rows (ranking mode)."),
+    min_frequency: int = typer.Option(2, "--min-frequency", help="Skip rarer items (ranking mode)."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """How evenly items spread across documents (Gries' DP; 0 = even, 1 = concentrated)."""
+    from ..analysis import stats as _stats
+
+    c = load_corpus(corpus)
+    kind = "signs" if signs else "words"
+    try:
+        rows = (
+            [_stats.dispersion(c, item, kind=kind)]
+            if item
+            else _stats.dispersions(c, kind=kind, min_frequency=min_frequency, top=top)
+        )
+    except ValueError as e:
+        raise fail(str(e)) from None
+    if json_out:
+        emit_json([vars(r) for r in rows])
+        return
+    table(
+        f"{corpus}: dispersion ({kind})",
+        ["item", "freq", "range/parts", "DP", "DPnorm"],
+        [
+            [r.item, str(r.frequency), f"{r.range}/{r.parts}", f"{r.dp:.3f}", f"{r.dp_norm:.3f}"]
+            for r in rows
+        ],
+    )
+
+
+def keyness(
+    corpus: str = CORPUS_ARG,
+    reference: str | None = typer.Option(
+        None, "--reference", help="Reference corpus name; omit to compare a subset vs the rest."
+    ),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
+    signs: bool = typer.Option(False, "--signs", help="Sign keyness instead of words."),
+    top: int = typer.Option(20, "--top", help="How many rows."),
+    min_target: int = typer.Option(2, "--min-target", help="Skip items rarer than this in both."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Key items of a (sub)corpus against a reference (log-likelihood G² + log-ratio).
+
+    Either name a second corpus (--reference), or give metadata filters
+    (--site/--period/...) to compare that subset against the rest of the same corpus.
+    """
+    from ..analysis import stats as _stats
+
+    c = load_corpus(corpus)
+    filtered = apply_meta_filters(c, site, period, scribe, support)
+    if reference is not None:
+        target, ref = filtered, load_corpus(reference)
+        ref_label = reference
+    else:
+        if filtered is c:
+            raise fail(
+                "give --reference CORPUS, or a filter (--site/--period/…) to split this corpus"
+            )
+        target = filtered
+        subset_ids = {d.id for d in filtered.documents}
+        ref = [d for d in c.documents if d.id not in subset_ids]
+        ref_label = "rest"
+    kind = "signs" if signs else "words"
+    try:
+        rows = _stats.keyness(target, ref, kind=kind, min_target=min_target)[
+            : top if top > 0 else None
+        ]
+    except ValueError as e:
+        raise fail(str(e)) from None
+    if json_out:
+        emit_json([vars(r) for r in rows])
+        return
+    table(
+        f"{corpus}: keyness vs {ref_label} ({kind})",
+        ["item", "target", "reference", "G2", "log-ratio", "p"],
+        [
+            [
+                r.item,
+                f"{r.target_count}/{r.target_total}",
+                f"{r.reference_count}/{r.reference_total}",
+                f"{r.log_likelihood:.2f}",
+                f"{r.log_ratio:+.2f}",
+                f"{r.p_value:.2g}",
+            ]
+            for r in rows
+        ],
+    )
 
 
 def balance(

@@ -71,6 +71,15 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Corpus statistics** (`aegean.analysis.stats`, pure stdlib): **dispersion** — Gries' deviation
+  of proportions (DP, with the Lijffijt & Gries normalization) for how evenly an item spreads over
+  documents; **keyness** — Dunning's log-likelihood G² (Rayson & Garside form) plus Hardie's
+  log-ratio effect size for what distinguishes a (sub)corpus from a reference; and **bootstrap
+  confidence intervals** for any corpus statistic (percentile, documents as the resampling unit,
+  reproducible by default). Works over any corpus or `filter()` subset; on DAMOS,
+  `keyness(pylos, rest)` surfaces the Pylos land-tenure vocabulary (pe-mo, o-na-to, ko-to-na…)
+  immediately. New CLI commands: `aegean dispersion` and `aegean keyness` (subset-vs-rest via
+  `--site/--period/...`, or corpus-vs-corpus via `--reference`).
 - **The DAMOS Linear B corpus, loadable** (`aegean.load("damos")`): the most complete edition of
   the Mycenaean (Linear B) corpus — F. Aurora's Database of Mycenaean at Oslo, CC BY-NC-SA 4.0 —
   decoded from the DAMOS public web API into a hosted `damos-corpus` release asset (~5,900 tablets
