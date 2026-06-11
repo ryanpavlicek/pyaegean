@@ -71,6 +71,12 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Structured AI output** (`aegean.ai.extract`): a JSON-mode capability for feeding pipelines and
+  databases — describe the shape with a `schema` (`field → description` map or a shape string), and
+  the result's `data` holds the parsed object/array. A standalone `ai.parse_json` recovers JSON
+  leniently from a model response (a ```json fence, or a bare object/array inside prose; returns
+  `None` rather than raising on failure). CLI: `aegean ai extract TEXT --fields a,b,c` prints the
+  parsed JSON.
 - **Traceable AI grounding** (`aegean.ai`): grounding evidence is now structured — each piece is
   a `GroundingItem(content, source, ref)` instead of a bare string, so a generative result can be
   audited back to the local, non-generative facts it rested on. `ExploratoryResult.trace()` renders

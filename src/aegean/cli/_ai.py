@@ -159,6 +159,48 @@ def ask(
 
 
 @ai_app.command()
+def extract(
+    text: str = typer.Argument(..., help="Source to extract structured data from ('-' reads stdin)."),
+    fields: str | None = typer.Option(
+        None, "--fields", help="Comma-separated field names for the JSON object (e.g. lemma,pos,gloss)."
+    ),
+    instruction: str = typer.Option(
+        "Extract the structured data from the following.", "--instruction", help="What to extract."
+    ),
+    corpus: str | None = typer.Option(None, "--corpus", help="Ground on this corpus's frequent words."),
+    provider: str = PROVIDER_OPT,
+    model: str | None = MODEL_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Structured (JSON) extraction — prints the parsed data, for piping into tools.
+
+    `aegean ai extract "OLE S 1" --fields commodity,amount` → {"commodity": "OLE", …}.
+    Exploratory: the extraction is a model hypothesis, not a verified parse."""
+    from aegean import ai
+
+    schema = {f.strip(): "" for f in fields.split(",") if f.strip()} if fields else None
+    grounding: list[GroundingItem] = []
+    if corpus:
+        grounding = ai.corpus_context(load_corpus(corpus))
+    client = _client(provider, model)
+    result = _run(
+        lambda: ai.extract(
+            read_text(text), instruction=instruction, schema=schema,
+            grounding=grounding, client=client,  # type: ignore[arg-type]
+        )
+    )
+    data = getattr(result, "data", None)
+    if json_out:
+        emit_json(data if data is not None else {"raw": getattr(result, "text", "")})
+        return
+    if data is not None:
+        emit_json(data)  # structured output is JSON even in the default view
+    else:
+        console().print(getattr(result, "text", ""), markup=False)
+        console().print("(could not parse JSON from the response)", style="dim", markup=False)
+
+
+@ai_app.command()
 def providers(json_out: bool = JSON_OPT) -> None:
     """List the registered AI providers."""
     from aegean import ai

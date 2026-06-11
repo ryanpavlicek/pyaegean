@@ -156,6 +156,82 @@ def test_evidence_block_mixes_strings_and_items():
     assert "corpus:x" not in block  # source stays out of the prompt
 
 
+# ── structured (JSON) output ─────────────────────────────────────────────────
+class JSONClient(LLMClient):
+    """Returns a canned response regardless of prompt. ``model``-first so
+    ``get_client('jsonstub')`` (which passes model positionally) works; set the
+    response via the ``response=`` keyword."""
+
+    provider = "jsonstub"
+    default_model = "js-1"
+
+    def __init__(self, model=None, *, response="{}", **kw):
+        super().__init__(model, **kw)
+        self.response = response
+
+    def _complete(self, *, prompt, system, max_tokens):
+        return LLMResponse(self.response, self.provider, self.model)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"a": 1}', {"a": 1}),
+        ('```json\n{"a": 1}\n```', {"a": 1}),
+        ('Here you go:\n```json\n[1, 2, 3]\n```\nHope that helps', [1, 2, 3]),
+        ('Sure! {"a": 1, "b": [2]} is the answer.', {"a": 1, "b": [2]}),
+        ("```\n[true, false]\n```", [True, False]),
+        ("not json at all", None),
+        ("", None),
+    ],
+)
+def test_parse_json_tolerant(raw, expected):
+    assert ai.parse_json(raw) == expected
+
+
+def test_extract_parses_into_data():
+    c = JSONClient(response='```json\n{"commodity": "OLE", "amount": 1}\n```')
+    r = ai.extract("OLE S 1", schema={"commodity": "ideogram", "amount": "number"}, client=c)
+    assert r.kind == "extract"
+    assert r.data == {"commodity": "OLE", "amount": 1}
+    assert r.exploratory is True
+
+
+def test_extract_unparseable_keeps_text_and_none_data():
+    c = JSONClient(response="I could not find any structured data, sorry.")
+    r = ai.extract("…", client=c)
+    assert r.data is None
+    assert "could not find" in r.text
+
+
+def test_extract_grounding_and_json_system():
+    c = CapturingClient()
+    r = ai.extract("X", schema="list of {site, count}", grounding=["ku-ro (×40)"], client=c)
+    system, prompt = c.calls[-1]
+    assert "ONLY valid JSON" in system     # JSON system prompt used
+    assert "site, count" in prompt          # schema shape included
+    assert "ku-ro" in prompt                # grounding flows
+    assert r.grounding[0].content == "ku-ro (×40)"
+
+
+def test_cli_extract_emits_parsed_json(monkeypatch):
+    from typer.testing import CliRunner
+
+    from aegean.ai import client as client_mod
+    from aegean.cli import _build_app
+
+    # make 'jsonstub' reachable via get_client, auto-restored after the test
+    monkeypatch.setitem(client_mod._PROVIDERS, "jsonstub", JSONClient)
+    app = _build_app()
+    runner = CliRunner()
+    r = runner.invoke(
+        app, ["ai", "extract", "OLE S 1", "--fields", "commodity,amount", "--provider", "jsonstub"]
+    )
+    # the stub returns "{}" by default → valid JSON, exit 0
+    assert r.exit_code == 0, r.output
+    assert "{}" in r.output
+
+
 # ── cache ────────────────────────────────────────────────────────────────────
 def test_cache_dedups_calls():
     cache = ai.ResponseCache()

@@ -19,8 +19,10 @@ from .capabilities import (
     PROMPT_VERSION,
     ask,
     decipher_hypotheses,
+    extract,
     gloss,
     nlp_assist,
+    parse_json,
     summarize,
     translate,
 )
@@ -62,6 +64,8 @@ __all__ = [
     "nlp_assist",
     "ask",
     "summarize",
+    "extract",
+    "parse_json",
     "PROMPT_VERSION",
     # grounding
     "GroundingItem",

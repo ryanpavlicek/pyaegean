@@ -95,6 +95,32 @@ Plain strings are still accepted as grounding (tagged `source="custom"`). On the
 CLI, add `--trace` to `aegean ai translate|gloss|hypotheses|ask` to print the
 provenance trace under the answer.
 
+## Structured output (`extract`)
+
+When you need data, not prose, `ai.extract` asks for JSON and parses it into
+`result.data` — so the AI layer can feed a pipeline or database. Describe the
+shape with `schema` (a `field → description` mapping, or a free-form string); the
+parse is lenient (a ```json fence, or a bare object/array inside prose, both
+work), and `result.data` is `None` (never an exception) if nothing parseable
+comes back.
+
+```python
+from aegean import ai
+
+r = ai.extract(
+    ".2 di-we OLE S 1   .3 GRA 3",
+    schema={"commodity": "ideogram", "unit": "metrogram", "amount": "number"},
+    client=client,
+)
+r.data        # [{'commodity': 'OLE', 'unit': 'S', 'amount': 1}, {'commodity': 'GRA', 'amount': 3}]
+
+ai.parse_json('the answer is {"x": [1, 2]} ok')   # {'x': [1, 2]} — the standalone parser
+```
+
+From the shell: `aegean ai extract "OLE S 1" --fields commodity,amount` prints the
+parsed JSON, ready to pipe into `jq`. Still exploratory — the extraction is a
+model hypothesis, not a verified parse.
+
 ## Response caching
 
 A sha256-keyed cache (provider, model, system, prompt) makes repeats free and

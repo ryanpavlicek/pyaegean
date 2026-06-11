@@ -139,6 +139,7 @@ aegean ai translate "KU-RO 130" --script lineara      # exploratory (undeciphere
 aegean ai gloss "μῆνιν ἄειδε θεά"                     # interlinear gloss
 aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara   # cautious decipherment hypotheses
 aegean ai ask "What is KU-RO?" --corpus lineara --trace      # --trace audits the grounding
+aegean ai extract "OLE S 1" --fields commodity,amount        # structured JSON, ready for jq
 ```
 
 Add `--trace` to any of these to print the grounding provenance under the

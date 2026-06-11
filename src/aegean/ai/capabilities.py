@@ -1,15 +1,18 @@
 """The AI jobs, grounded and exploratory-labeled.
 
-translate · gloss · decipher_hypotheses · nlp_assist · ask / summarize. Each
-builds a task-specific system prompt, wraps untrusted source text, feeds optional
-grounding evidence, calls the active `LLMClient`, and returns an
-`ExploratoryResult` — generative output is always labeled unverified with
-its provenance.
+translate · gloss · decipher_hypotheses · nlp_assist · ask · summarize · extract
+(structured JSON). Each builds a task-specific system prompt, wraps untrusted
+source text, feeds optional grounding evidence, calls the active `LLMClient`, and
+returns an `ExploratoryResult` — generative output is always labeled unverified
+with its provenance.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+import json
+import re
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 from .client import ExploratoryResult, LLMClient, get_client
 from .grounding import GroundingItem, as_item, evidence_block, wrap_untrusted
@@ -180,4 +183,82 @@ def summarize(
         system=_BASE_SYSTEM,
         prompt=_compose(instruction, text, grounding),
         grounding=grounding,
+    )
+
+
+# ── structured (JSON) output ─────────────────────────────────────────────────
+
+_JSON_SYSTEM = (
+    _BASE_SYSTEM
+    + " Respond with ONLY valid JSON — no prose, no markdown code fences, no "
+    "commentary before or after."
+)
+_FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)```", re.DOTALL)
+
+
+def parse_json(text: str) -> Any | None:
+    """Best-effort parse of a JSON value from a model response. Returns ``None``
+    (never raises) when nothing parseable is found.
+
+    Tolerant of the ways models wrap JSON: a ```json fenced block, or prose
+    around a bare object/array. Tries the fenced content, then the whole string,
+    then the outermost ``{...}`` / ``[...]`` slice."""
+    if not text:
+        return None
+    fence = _FENCE_RE.search(text)
+    candidate = (fence.group(1) if fence else text).strip()
+    try:
+        return json.loads(candidate)
+    except (json.JSONDecodeError, ValueError):
+        pass
+    for opener, closer in (("{", "}"), ("[", "]")):
+        i, j = candidate.find(opener), candidate.rfind(closer)
+        if 0 <= i < j:
+            try:
+                return json.loads(candidate[i : j + 1])
+            except (json.JSONDecodeError, ValueError):
+                continue
+    return None
+
+
+def extract(
+    text: str,
+    *,
+    instruction: str = "Extract the structured data from the following.",
+    schema: Mapping[str, str] | str | None = None,
+    grounding: Grounding = (),
+    client: LLMClient | None = None,
+) -> ExploratoryResult:
+    """Ask for **structured (JSON) output** and parse it into ``result.data`` so
+    the AI layer can feed a pipeline or database.
+
+    ``schema`` describes the wanted shape — a mapping of ``field → description``
+    (rendered as a field list) or a free-form shape string — and is appended to
+    ``instruction``. The model is told to return JSON only; the response is
+    parsed leniently (`parse_json`). ``result.data`` is the parsed value (or
+    ``None`` if the model didn't return parseable JSON — ``result.text`` always
+    has the raw response). Still exploratory and grounded like every capability.
+
+    >>> r = extract("KN Fp 1: OLE S 1", schema={"commodity": "ideogram",
+    ...             "amount": "number"}, client=client)   # doctest: +SKIP
+    >>> r.data                                            # doctest: +SKIP
+    {'commodity': 'OLE', 'amount': 1}
+    """
+    shape = ""
+    if isinstance(schema, Mapping):
+        fields = ", ".join(f"{k} ({v})" for k, v in schema.items())
+        shape = f"Return a JSON object (or array of objects) with fields: {fields}."
+    elif isinstance(schema, str):
+        shape = f"Return JSON of this shape: {schema}"
+    full_instruction = f"{instruction}\n{shape}".strip()
+    c = _client(client)
+    resp = c.complete(_compose(full_instruction, text, grounding), system=_JSON_SYSTEM)
+    return ExploratoryResult(
+        text=resp.text,
+        kind="extract",
+        provider=resp.provider,
+        model=resp.model,
+        prompt_version=PROMPT_VERSION,
+        grounding=tuple(as_item(g) for g in grounding if str(g)),
+        data=parse_json(resp.text),
     )
