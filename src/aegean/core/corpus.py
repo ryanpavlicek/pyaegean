@@ -153,14 +153,30 @@ class Corpus:
             return p.apa()
         raise ValueError(f"style must be 'plain', 'bibtex', or 'apa'; got {style!r}")
 
-    # ── analysis-friendly views ─────────────────────────────────────────
-    def word_frequencies(self) -> list[tuple[str, int]]:
-        """(word, count) for every lexical word, sorted by descending count."""
-        counter: Counter[str] = Counter()
+    # ── streaming views (memory-friendly over large corpora) ────────────
+    def iter_documents(self) -> Iterator[Document]:
+        """Iterate documents (the explicit-name form of ``iter(corpus)``)."""
+        return iter(self.documents)
+
+    def iter_tokens(self) -> Iterator[Token]:
+        """Every `Token`, in document then in-document order — a memory-friendly
+        stream that never builds an all-tokens list (useful on a large corpus)."""
+        for doc in self.documents:
+            yield from doc.tokens
+
+    def iter_words(self) -> Iterator[str]:
+        """Every lexical (`WORD`) token's text, in order, lazily. The unit
+        `word_frequencies` counts — stream it to feed your own ``Counter`` or a
+        running statistic without materialising a list."""
         for doc in self.documents:
             for tok in doc.tokens:
                 if tok.kind is TokenKind.WORD:
-                    counter[tok.text] += 1
+                    yield tok.text
+
+    # ── analysis-friendly views ─────────────────────────────────────────
+    def word_frequencies(self) -> list[tuple[str, int]]:
+        """(word, count) for every lexical word, sorted by descending count."""
+        counter: Counter[str] = Counter(self.iter_words())
         return sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
 
     # ── interop ─────────────────────────────────────────────────────────

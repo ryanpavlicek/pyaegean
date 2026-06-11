@@ -13,6 +13,34 @@ from aegean.core.model import ReadingStatus, Token, TokenKind
 from aegean.core.provenance import Provenance
 
 
+# ── streaming views (WP7) ────────────────────────────────────────────────────
+def test_iterators_are_lazy_and_consistent():
+    from collections import Counter
+    from collections.abc import Iterator
+
+    corpus = aegean.load("lineara")
+    assert isinstance(corpus.iter_tokens(), Iterator)
+    assert isinstance(corpus.iter_words(), Iterator)
+
+    # iter_documents matches iteration / the document list
+    assert [d.id for d in corpus.iter_documents()] == [d.id for d in corpus]
+
+    # iter_tokens streams every token across documents, in order
+    assert sum(1 for _ in corpus.iter_tokens()) == sum(len(d.tokens) for d in corpus)
+
+    # iter_words is the unit word_frequencies counts — same multiset
+    assert Counter(corpus.iter_words()) == Counter(dict(corpus.word_frequencies()))
+    assert sum(1 for _ in corpus.iter_words()) == sum(len(d.words) for d in corpus)
+
+
+def test_iterators_do_not_materialize_a_list():
+    # a generator is consumed once; a second pass over the same object is empty
+    corpus = aegean.load("linearb")
+    it = corpus.iter_tokens()
+    first = list(it)
+    assert first and list(it) == []  # exhausted — it was lazy, not a list
+
+
 # ── data versioning ──────────────────────────────────────────────────────────
 def test_versions_manifest_shape():
     manifest = data.versions()

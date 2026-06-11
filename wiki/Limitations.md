@@ -103,3 +103,9 @@ the *weak* numbers are public:
 - **A web demo is parked** — the [CLI](CLI) is the no-Python path; the
   [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) web app
   covers the visual Linear A use case.
+- **Corpora are held in memory** — fine for everything pyaegean ships and fetches
+  (the largest, DAMOS, is ~5,900 documents). `Corpus.iter_documents/iter_tokens/
+  iter_words` stream token-by-token where you need it, and an opt-in
+  [analysis cache](Analysis#caching-expensive-analyses-opt-in) reuses heavy
+  results; true streaming *load* is deferred until a corpus needs it (the design
+  note: [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).

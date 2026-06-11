@@ -12,6 +12,11 @@ public API, and a hosted API reference. Released as **beta** — the API is clos
 waits on external use and a short methods write-up.
 
 ### Added
+- **Streaming corpus views** for large corpora: `Corpus.iter_documents()`, `iter_tokens()`, and
+  `iter_words()` are generators — process a corpus token-by-token without materialising an all-tokens
+  list (`word_frequencies` now streams through `iter_words`). A design note
+  ([docs/large-corpora.md](docs/large-corpora.md)) records the in-memory model and why true streaming
+  load is deferred until a corpus that needs it exists.
 - **Opt-in persistent analysis cache** (`aegean.cache`, off by default): memoises expensive pure
   analyses (`find_morphological_clusters`, `dispersions`, `keyness`) to a local sqlite file, keyed on
   a content fingerprint of the inputs (`Corpus.fingerprint()`), so re-running on the same corpus is

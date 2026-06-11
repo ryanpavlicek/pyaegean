@@ -336,16 +336,18 @@ them real where licensing allows.
 
 ## WP7 — Engineering
 
-> **In progress (2026-06-11).** Persistent cache ✓ shipped; large-corpus readiness next.
+> **Done (2026-06-11).** Persistent cache ✓ and large-corpus readiness ✓ — WP7 complete.
 
 - ~~**Opt-in persistent cache** for expensive analyses (collocations, clustering, large queries) —
   stdlib-based (sqlite/json), no new hard dependency, off by default.~~ **Done** — `aegean.cache`
   (sqlite + pickle, off by default), `@memoize` on `find_morphological_clusters` / `dispersions` /
   `keyness`, keyed on `Corpus.fingerprint()`; CLI `aegean cache`, env `PYAEGEAN_ANALYSIS_CACHE`.
   *(Reviewer §5.)*
-- **Large-corpus readiness**: a short design note + lazy iterators where free now; streaming proper
-  is deferred until a corpus that needs it exists (First1KGreek via WP4 is the test case).
-  *(Reviewer §5.)*
+- ~~**Large-corpus readiness**: a short design note + lazy iterators where free now; streaming proper
+  is deferred until a corpus that needs it exists (First1KGreek via WP4 is the test case).~~
+  **Done** — `Corpus.iter_documents/iter_tokens/iter_words` generators (`word_frequencies` streams
+  through them); the design note `docs/large-corpora.md` records the memory model and the deferred
+  streaming-load seam. *(Reviewer §5.)*
 
 ## WP8 — Geo / linked data
 
