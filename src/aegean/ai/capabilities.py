@@ -12,7 +12,9 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from .client import ExploratoryResult, LLMClient, get_client
-from .grounding import evidence_block, wrap_untrusted
+from .grounding import GroundingItem, as_item, evidence_block, wrap_untrusted
+
+Grounding = Iterable[str | GroundingItem]
 
 # Bump when a prompt's wording changes so cached/sourced results stay traceable.
 PROMPT_VERSION = "2026.06-v1"
@@ -35,7 +37,7 @@ def _run(
     kind: str,
     system: str,
     prompt: str,
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
 ) -> ExploratoryResult:
     c = _client(client)
     resp = c.complete(prompt, system=system)
@@ -45,11 +47,11 @@ def _run(
         provider=resp.provider,
         model=resp.model,
         prompt_version=PROMPT_VERSION,
-        grounding=tuple(g for g in grounding if g),
+        grounding=tuple(as_item(g) for g in grounding if str(g)),
     )
 
 
-def _compose(instruction: str, text: str, grounding: Iterable[str]) -> str:
+def _compose(instruction: str, text: str, grounding: Grounding) -> str:
     parts = [instruction, wrap_untrusted(text)]
     ev = evidence_block(grounding)
     if ev:
@@ -62,7 +64,7 @@ def translate(
     *,
     source: str = "Ancient Greek",
     target: str = "English",
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Translate source text, grounded in optional lexicon/corpus evidence."""
@@ -84,7 +86,7 @@ def gloss(
     text: str,
     *,
     source: str = "Ancient Greek",
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Produce an interlinear, word-by-word gloss of the source text."""
@@ -104,7 +106,7 @@ def gloss(
 def decipher_hypotheses(
     text: str,
     *,
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Offer decipherment hypotheses for an undeciphered (Linear A) sequence,
@@ -128,7 +130,7 @@ def nlp_assist(
     text: str,
     *,
     task: str = "lemma and POS disambiguation",
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Ask the model to disambiguate an NLP analysis (lemma/POS/parse) where the
@@ -149,7 +151,7 @@ def nlp_assist(
 def ask(
     question: str,
     *,
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Answer a question over corpus/commentary grounding."""
@@ -167,7 +169,7 @@ def ask(
 def summarize(
     text: str,
     *,
-    grounding: Iterable[str] = (),
+    grounding: Grounding = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Summarize a corpus excerpt or commentary."""

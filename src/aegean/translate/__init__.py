@@ -11,33 +11,36 @@ from __future__ import annotations
 
 from ..ai import translate as _ai_translate
 from ..ai.client import ExploratoryResult, LLMClient
+from ..ai.grounding import GroundingItem
 
 _SOURCE_NAMES = {"greek": "Ancient Greek", "lineara": "Linear A"}
 
 
-def _greek_grounding(text: str) -> list[str]:
+def _greek_grounding(text: str) -> list[GroundingItem]:
     from ..greek import lemmatize_verbose, tokenize_words
 
-    out: list[str] = []
+    out: list[GroundingItem] = []
     for w in tokenize_words(text):
         lemma, known = lemmatize_verbose(w)
         if known:
-            out.append(f"{w} → lemma {lemma}")
+            out.append(GroundingItem(f"{w} → lemma {lemma}", source="lemmatizer", ref=w))
     return out
 
 
-def _lineara_grounding(text: str) -> list[str]:
+def _lineara_grounding(text: str) -> list[GroundingItem]:
     from ..scripts.lineara.phonetic import word_to_phonetic
 
     return [
-        f"{w} → /{word_to_phonetic(w)}/"
+        GroundingItem(f"{w} → /{word_to_phonetic(w)}/", source="transliteration", ref=w)
         for w in text.split()
         if "-" in w
     ]
 
 
-def grounding_for(text: str, script: str) -> list[str]:
-    """Local, deterministic grounding evidence for ``text`` in ``script``."""
+def grounding_for(text: str, script: str) -> list[GroundingItem]:
+    """Local, deterministic grounding evidence for ``text`` in ``script`` — each
+    item tagged with its source (``lemmatizer`` / ``transliteration``) so the
+    result's `trace()` shows where the grounding came from."""
     if script == "greek":
         return _greek_grounding(text)
     if script == "lineara":

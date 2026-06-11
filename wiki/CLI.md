@@ -138,8 +138,12 @@ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"             # ground
 aegean ai translate "KU-RO 130" --script lineara      # exploratory (undeciphered!)
 aegean ai gloss "μῆνιν ἄειδε θεά"                     # interlinear gloss
 aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara   # cautious decipherment hypotheses
-aegean ai ask "What is KU-RO?" --corpus lineara
+aegean ai ask "What is KU-RO?" --corpus lineara --trace      # --trace audits the grounding
 ```
+
+Add `--trace` to any of these to print the grounding provenance under the
+answer — the local corpus/lexicon/analysis facts the model was given, grouped
+by source.
 
 ## Recipes
 

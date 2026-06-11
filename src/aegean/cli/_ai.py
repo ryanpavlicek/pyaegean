@@ -7,9 +7,14 @@ such as ``pyaegean[anthropic]``) and its API key in the environment.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import typer
 
 from ._common import JSON_OPT, console, emit_json, fail, load_corpus, read_text
+
+if TYPE_CHECKING:
+    from aegean.ai import GroundingItem
 
 ai_app = typer.Typer(
     pretty_exceptions_show_locals=False,
@@ -45,20 +50,29 @@ def _run(capability: "object") -> object:
         raise fail(str(exc)) from None
 
 
-def _emit_result(result: object, json_out: bool) -> None:
+def _emit_result(result: object, json_out: bool, trace: bool = False) -> None:
     if json_out:
         emit_json(result)
         return
     labeled = getattr(result, "labeled", None)
     text = labeled() if callable(labeled) else getattr(result, "text", str(result))
     console().print(text, markup=False)
+    if trace:
+        trace_fn = getattr(result, "trace", None)
+        if callable(trace_fn):
+            console().print(trace_fn(), style="dim", markup=False)
+            return
     provider = getattr(result, "provider", "")
     model = getattr(result, "model", "")
     grounding = getattr(result, "grounding", ())
     console().print(
-        f"exploratory · {provider}:{model} · grounded on {len(grounding)} item(s)",
+        f"exploratory · {provider}:{model} · grounded on {len(grounding)} item(s) "
+        "(--trace to audit them)",
         style="dim", markup=False,
     )
+
+
+TRACE_OPT = typer.Option(False, "--trace", help="Print the grounding provenance trace.")
 
 
 @ai_app.command()
@@ -68,6 +82,7 @@ def translate(
     target: str = typer.Option("English", "--target", help="Target language."),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Hybrid translation: local lexicon/transliteration grounding → LLM (exploratory)."""
@@ -77,7 +92,7 @@ def translate(
     result = _run(
         lambda: tr.translate(read_text(text), script=script, target=target, client=client)  # type: ignore[arg-type]
     )
-    _emit_result(result, json_out)
+    _emit_result(result, json_out, trace)
 
 
 @ai_app.command()
@@ -86,6 +101,7 @@ def gloss(
     source: str = typer.Option("Ancient Greek", "--source", help="Source language label."),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Interlinear word-by-word gloss (exploratory)."""
@@ -93,7 +109,7 @@ def gloss(
 
     client = _client(provider, model)
     result = _run(lambda: ai.gloss(read_text(text), source=source, client=client))  # type: ignore[arg-type]
-    _emit_result(result, json_out)
+    _emit_result(result, json_out, trace)
 
 
 @ai_app.command()
@@ -104,19 +120,20 @@ def hypotheses(
     ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Cautious decipherment hypotheses for an undeciphered sequence (strictly exploratory)."""
     from aegean import ai
 
-    grounding: list[str] = []
+    grounding: list[GroundingItem] = []
     if corpus:
         grounding = ai.corpus_context(load_corpus(corpus))
     client = _client(provider, model)
     result = _run(
         lambda: ai.decipher_hypotheses(read_text(text), grounding=grounding, client=client)  # type: ignore[arg-type]
     )
-    _emit_result(result, json_out)
+    _emit_result(result, json_out, trace)
 
 
 @ai_app.command()
@@ -127,17 +144,18 @@ def ask(
     ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Answer a question strictly from the provided grounding (exploratory)."""
     from aegean import ai
 
-    grounding: list[str] = []
+    grounding: list[GroundingItem] = []
     if corpus:
         grounding = ai.corpus_context(load_corpus(corpus))
     client = _client(provider, model)
     result = _run(lambda: ai.ask(read_text(question), grounding=grounding, client=client))  # type: ignore[arg-type]
-    _emit_result(result, json_out)
+    _emit_result(result, json_out, trace)
 
 
 @ai_app.command()

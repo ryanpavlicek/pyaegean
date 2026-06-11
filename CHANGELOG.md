@@ -71,6 +71,14 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Traceable AI grounding** (`aegean.ai`): grounding evidence is now structured — each piece is
+  a `GroundingItem(content, source, ref)` instead of a bare string, so a generative result can be
+  audited back to the local, non-generative facts it rested on. `ExploratoryResult.trace()` renders
+  a human-readable provenance trace (the grounding grouped by source — corpus, lexicon, analysis
+  step — with refs); `corpus_context` tags items `corpus:<id>`, and new builders `lexicon_evidence`
+  (LSJ glosses) and `cooccurrence_evidence` add `lexicon:LSJ` / `analysis:cooccurrence` evidence.
+  Plain strings are still accepted (tagged `custom`). CLI: `--trace` on `aegean ai translate|gloss|
+  hypotheses|ask` prints the trace.
 - **Cross-script phonetic comparison** (`aegean.analysis.compare`): line up a word in one
   script against a word in another by sound. A new `romanize_greek` maps alphabetic Greek to
   the Latin phoneme alphabet (accents/breathings stripped, θ→th/φ→ph/χ→kh, γ→n before a velar,

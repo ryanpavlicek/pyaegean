@@ -10,6 +10,7 @@ from __future__ import annotations
 import aegean
 from aegean import greek
 from aegean.ai.client import ExploratoryResult
+from aegean.ai.grounding import GroundingItem
 from aegean.core.model import Document, Sign, SignInventory, Token, TokenKind
 
 
@@ -64,12 +65,13 @@ def test_exploratory_result_repr_html() -> None:
         provider="anthropic",
         model="claude",
         prompt_version="1",
-        grounding=("KU-RO → total",),
+        grounding=(GroundingItem("KU-RO → total", source="corpus:lineara"),),
     )
     html = r._repr_html_()
     assert "EXPLORATORY" in html
     assert "a tentative reading" in html
-    assert "KU-RO" in html  # grounding listed
+    assert "KU-RO" in html  # grounding content listed
+    assert "corpus:lineara" in html  # with its source
 
 
 def test_repr_html_escapes_untrusted_text() -> None:

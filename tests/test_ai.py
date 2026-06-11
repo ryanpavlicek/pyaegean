@@ -87,9 +87,35 @@ def test_capabilities_return_labeled_exploratory_results():
 def test_grounding_flows_into_result_and_prompt():
     c = CapturingClient()
     r = ai.translate("μῆνιν", grounding=["μῆνιν → lemma μῆνις"], client=c)
-    assert r.grounding == ("μῆνιν → lemma μῆνις",)
+    # a plain string is coerced to a GroundingItem(source="custom")
+    assert len(r.grounding) == 1
+    assert r.grounding[0].content == "μῆνιν → lemma μῆνις"
+    assert r.grounding[0].source == "custom"
     _, prompt = c.calls[-1]
     assert "μῆνις" in prompt  # evidence is included in the prompt
+
+
+def test_structured_grounding_item_and_trace():
+    c = CapturingClient()
+    items = [
+        ai.GroundingItem("ku-ro (×40)", source="corpus:lineara", ref="ku-ro"),
+        ai.GroundingItem("ki-ro (×18)", source="corpus:lineara", ref="ki-ro"),
+        ai.GroundingItem("computation, reckoning", source="lexicon:LSJ", ref="λόγος"),
+    ]
+    r = ai.decipher_hypotheses("A-TA", grounding=items, client=c)
+    trace = r.trace()
+    assert "EXPLORATORY decipher via capture/cap-1" in trace
+    assert "corpus:lineara (2)" in trace and "lexicon:LSJ (1)" in trace
+    assert "ku-ro (×40)" in trace
+    # provenance serializes the structure
+    prov = r.provenance()["grounding"]
+    assert prov[0] == {"content": "ku-ro (×40)", "source": "corpus:lineara", "ref": "ku-ro"}
+
+
+def test_trace_names_ungrounded_generation():
+    c = CapturingClient()
+    r = ai.gloss("X", client=c)
+    assert "grounding: none" in r.trace()
 
 
 # ── prompt-injection awareness ───────────────────────────────────────────────
@@ -111,12 +137,23 @@ def test_corpus_context_from_real_corpus():
     corpus = aegean.load("greek")
     ctx = ai.corpus_context(corpus, limit=5)
     assert 0 < len(ctx) <= 5
-    assert any("λόγος" in line for line in ctx)
+    assert all(isinstance(g, ai.GroundingItem) for g in ctx)
+    assert all(g.source == "corpus:greek" for g in ctx)
+    assert any("λόγος" in g.content for g in ctx)
 
 
-def test_evidence_block_empty_and_nonempty():
+def test_cooccurrence_evidence_builder():
+    corpus = aegean.load("lineara")
+    ev = ai.cooccurrence_evidence(corpus, "KU-RO", limit=5)
+    assert 0 < len(ev) <= 5
+    assert all(g.source == "analysis:cooccurrence" and g.ref == "KU-RO" for g in ev)
+
+
+def test_evidence_block_mixes_strings_and_items():
     assert ai.evidence_block([]) == ""
-    assert "- a" in ai.evidence_block(["a", "", "b"])
+    block = ai.evidence_block(["a", "", ai.GroundingItem("b", source="corpus:x")])
+    assert "- a" in block and "- b" in block  # only content reaches the prompt
+    assert "corpus:x" not in block  # source stays out of the prompt
 
 
 # ── cache ────────────────────────────────────────────────────────────────────

@@ -51,22 +51,53 @@ class LLMResponse:
 class ExploratoryResult:
     """A generative result, explicitly labeled exploratory and provenanced.
 
-    ``grounding`` lists the corpus/lexicon evidence fed to the model. Use
-    `labeled` when surfacing to a user so the caveat travels with the text.
+    ``grounding`` is the structured corpus/lexicon/analysis evidence fed to the
+    model (each a `GroundingItem` with a source and a ref). Use `labeled` when
+    surfacing to a user so the caveat travels with the text, `trace` to audit
+    which local facts grounded the output, and `data` (when set by a structured
+    capability) for the parsed JSON payload.
     """
 
     text: str
-    kind: str            # "translate" | "gloss" | "decipher" | "nlp_assist" | "ask" | "summarize"
+    kind: str            # "translate" | "gloss" | "decipher" | "nlp_assist" | "ask" | "summarize" | "extract"
     provider: str
     model: str
     prompt_version: str
-    grounding: tuple[str, ...] = ()
+    grounding: tuple[GroundingItem, ...] = ()
     exploratory: bool = True
+    data: Any = None     # parsed structured output, when a capability requested JSON
 
     def labeled(self) -> str:
         """The text prefixed with an unmistakable exploratory provenance tag."""
         tag = f"[EXPLORATORY · {self.kind} · {self.provider}/{self.model}]"
         return f"{tag}\n{self.text}"
+
+    def trace(self) -> str:
+        """A human-readable provenance trace: the generative step and the local,
+        non-generative evidence that grounded it, grouped by source.
+
+        Makes the exploratory result auditable — every grounding line names the
+        source (corpus, lexicon, analysis step) and the ref it came from, so a
+        reader can check the output against the facts it was given rather than
+        taking it on trust."""
+        from collections import defaultdict
+
+        lines = [
+            f"EXPLORATORY {self.kind} via {self.provider}/{self.model} "
+            f"(prompt {self.prompt_version})",
+        ]
+        if not self.grounding:
+            lines.append("  grounding: none (ungrounded generation — weigh accordingly)")
+            return "\n".join(lines)
+        by_source: dict[str, list[GroundingItem]] = defaultdict(list)
+        for item in self.grounding:
+            by_source[item.source].append(item)
+        lines.append(f"  grounded in {len(self.grounding)} item(s) from {len(by_source)} source(s):")
+        for source in sorted(by_source):
+            items = by_source[source]
+            lines.append(f"  • {source} ({len(items)}):")
+            lines.extend(f"      - {item.content}" for item in items)
+        return "\n".join(lines)
 
     def provenance(self) -> dict[str, Any]:
         return {
@@ -75,7 +106,9 @@ class ExploratoryResult:
             "prompt_version": self.prompt_version,
             "kind": self.kind,
             "exploratory": self.exploratory,
-            "grounding": list(self.grounding),
+            "grounding": [
+                {"content": g.content, "source": g.source, "ref": g.ref} for g in self.grounding
+            ],
         }
 
     def _repr_html_(self) -> str:
@@ -90,7 +123,11 @@ class ExploratoryResult:
             f"<div style='white-space:pre-wrap'>{esc(self.text)}</div>"
         )
         if self.grounding:
-            items = "".join(f"<li>{esc(g)}</li>" for g in self.grounding)
+            items = "".join(
+                f"<li>{esc(g.content)} "
+                f"<span style='color:#aaa'>[{esc(g.source)}]</span></li>"
+                for g in self.grounding
+            )
             body += (
                 "<div style='color:#666;font-size:0.85em;margin-top:6px'>grounding:"
                 f"<ul style='margin:2px 0'>{items}</ul></div>"
@@ -183,3 +220,4 @@ def providers() -> list[str]:
 # Imported here to avoid a circular import at module top (cache imports nothing
 # from this module, but keep the public type available for annotations above).
 from .cache import ResponseCache  # noqa: E402
+from .grounding import GroundingItem  # noqa: E402

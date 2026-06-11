@@ -54,25 +54,46 @@ ai.summarize(text, client=client)
 
 ```python
 r.text               # the model's output
-r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask' | 'summarize'
+r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask' | 'summarize' | 'extract'
 r.exploratory        # True
 r.provider, r.model, r.prompt_version
-r.grounding          # the evidence that was fed in
+r.grounding          # the evidence fed in — a tuple of GroundingItem(content, source, ref)
 r.labeled()          # output prefixed with an unmistakable EXPLORATORY tag
+r.trace()            # human-readable provenance: the local facts that grounded it
 r.provenance()       # dict for logging/export
 ```
 
-## Grounding & prompt-injection safety
+## Grounding, traceability & prompt-injection safety
 
 Feed real evidence so the model reasons over the corpus, and wrap untrusted
-source text so embedded instructions can't steer it.
+source text so embedded instructions can't steer it. Every piece of evidence is
+a **`GroundingItem`** carrying not just the text shown to the model but *where it
+came from* — so the result can be audited back to the local, non-generative
+facts it rested on.
 
 ```python
 from aegean import ai
-ctx = ai.corpus_context(aegean.load("greek"), limit=10)   # top words as evidence
-ai.wrap_untrusted("…source…")                             # delimited, do-not-follow
-ai.ask("…", grounding=ctx, client=client)
+
+corpus = aegean.load("lineara")
+ctx = ai.corpus_context(corpus, limit=10)              # top words → corpus:lineara items
+ctx += ai.cooccurrence_evidence(corpus, "KU-RO")       # analysis:cooccurrence items
+# ai.lexicon_evidence(["λόγος", "θεός"])               # lexicon:LSJ glosses (needs use_lsj)
+ai.wrap_untrusted("…source…")                          # delimited, do-not-follow
+
+r = ai.decipher_hypotheses("KU-RO", grounding=ctx, client=client)
+print(r.trace())
+# EXPLORATORY decipher via anthropic/claude-… (prompt 2026.06-v1)
+#   grounded in 13 item(s) from 2 source(s):
+#   • analysis:cooccurrence (3):
+#       - co-occurs with KU-RO: KI-RO (×5)
+#   • corpus:lineara (10):
+#       - KU-RO (×37)
+#       …
 ```
+
+Plain strings are still accepted as grounding (tagged `source="custom"`). On the
+CLI, add `--trace` to `aegean ai translate|gloss|hypotheses|ask` to print the
+provenance trace under the answer.
 
 ## Response caching
 
@@ -91,11 +112,12 @@ transliteration), then delegates the translation to the AI layer.
 
 ```python
 from aegean import translate
-translate.grounding_for("ἦν ὁ λόγος", "greek")     # ['ἦν → lemma εἰμί', ...]
-translate.grounding_for("KU-RO DA-RO", "lineara")  # ['KU-RO → /kuro/', ...]
+translate.grounding_for("ἦν ὁ λόγος", "greek")     # [GroundingItem('ἦν → lemma εἰμί', 'lemmatizer'), …]
+translate.grounding_for("KU-RO DA-RO", "lineara")  # [GroundingItem('KU-RO → /kuro/', 'transliteration'), …]
 
 r = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
 print(r.labeled())
+print(r.trace())     # names the lemmatizer / transliteration grounding
 ```
 
 ## Errors

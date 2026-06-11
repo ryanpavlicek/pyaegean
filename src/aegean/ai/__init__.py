@@ -36,7 +36,15 @@ from .client import (
     register_provider,
 )
 from .client import providers as list_providers
-from .grounding import corpus_context, evidence_block, wrap_untrusted
+from .grounding import (
+    GroundingItem,
+    as_item,
+    cooccurrence_evidence,
+    corpus_context,
+    evidence_block,
+    lexicon_evidence,
+    wrap_untrusted,
+)
 
 __all__ = [
     # client / factory
@@ -56,7 +64,11 @@ __all__ = [
     "summarize",
     "PROMPT_VERSION",
     # grounding
+    "GroundingItem",
+    "as_item",
     "corpus_context",
+    "lexicon_evidence",
+    "cooccurrence_evidence",
     "evidence_block",
     "wrap_untrusted",
     # errors
