@@ -13,7 +13,7 @@ waits on external use and a short methods write-up.
 
 ### Added
 - **Full Linear A sign repertoire.** The bundled inventory now covers the entire Unicode Linear A
-  block (~340 signs) instead of only the 84 transliteration-aligned signs; those 84 keep their
+  block (344 signs) instead of only the 84 transliteration-aligned signs; those 84 keep their
   conventional sound values and confidence, the rest are carried from the Unicode Character Database
   (`attrs["source"] == "ucd"`) with no assigned reading. Closes a gap where most *attested* glyphs
   had no inventory entry.
@@ -41,8 +41,9 @@ waits on external use and a short methods write-up.
   lemmatizer) serving UPOS, full morphology (UD FEATS), **UD dependency trees** (single-root MST
   decoding — non-projectivity handled natively), and lemmas. Trained leakage-clean on AGDT +
   Gorman + Pedalion (1.41M tokens); measured **above every published UD Ancient Greek number**
-  (UD Perseus test: UPOS 96.95, UFeats 96.13, lemma 94.40, UAS 89.14, LAS 84.36 — protocol and
-  tables in `docs/benchmarks.md`; shipped-artifact numbers re-measured through this package).
+  through the shipped artifact and package (UD Perseus test: UPOS 96.94, UFeats 96.12,
+  lemma 94.40, UAS 89.16, LAS 84.38; confirmed end-to-end from raw text at tokens F1 99.97 —
+  protocol and tables in `docs/benchmarks.md`).
   Once active, `pos_tags`/`pos_tag`, `parse` (then returning UD relations), and `lemmatize` all
   use it; `analyze_sentence` exposes the full joint analysis. Torch-free inference
   (onnxruntime + tokenizers + numpy); the model bundle (CC BY-SA 4.0) is fetched to cache,

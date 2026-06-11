@@ -48,6 +48,9 @@ for chk in balance_check(doc):
 #              difference=0.5, balances=False, marker='KU-RO', total_line_index=7)
 ```
 
+(Each result is a `BalanceCheck` — a small Python object whose fields you can read
+directly: `chk.stated_total`, `chk.balances`, and so on.)
+
 Interesting: under this reading the items sum to **131.0** but the scribe wrote
 **130.5** — a discrepancy of ½. Is that an ancient error, a misread sign, or an
 artefact of how *we* drew the section boundary?

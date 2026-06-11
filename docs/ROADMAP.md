@@ -103,7 +103,8 @@ CI-tested, documented.
 > UPOS 96.94 / UFeats 96.12 through the shipped pip path, confirmed end-to-end from raw
 > text (tokens F1 99.97) — leakage-clean, one checkpoint, official evaluator. The full
 > stage-by-stage record, protocol, and comparison tables: `docs/benchmarks.md`;
-> evidence: `training/results/`.
+> evidence: `training/results/`. Sections 3.0–3.7 below are the program **as designed**
+> (planning language preserved for the record); the results live in `docs/benchmarks.md`.
 
 **Goal:** pyaegean's Greek NLP must measure **at least as good as the leading neural pipelines for
 Ancient Greek** on the field's standard benchmarks — not only on our own honesty-first metrics.
@@ -215,7 +216,8 @@ already in the published pack's range.
 
 ## WP4 — Corpora: fix the thinness (not just disclose it)
 
-> **Status: IN PROGRESS (2026-06-11).** Done: **alphabetic Greek on demand**
+> **Status: IN PROGRESS (2026-06-11) — the framework is shipped; corpus-data expansion
+> remains.** Done: **alphabetic Greek on demand**
 > (`greek.load_work` — Perseus canonical-greekLit + First1KGreek, commit-pinned; the Iliad
 > verified live as 24 books / 127,339 tokens), **data versioning** (`aegean.data.versions()`,
 > `Provenance.data_version`, pinning-for-papers recipe), **`Corpus.from_records()`** + the

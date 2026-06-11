@@ -18,6 +18,7 @@
 - [Greek NLP](Greek-NLP)
 
 **Capabilities**
+- [CLI](CLI)
 - [AI Layer](AI-Layer)
 - [Geography](Geography)
 

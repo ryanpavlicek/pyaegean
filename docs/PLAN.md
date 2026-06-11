@@ -1,5 +1,10 @@
 # pyaegean — a specialist Python package for Ancient Greek (alphabetic + Aegean syllabic)
 
+> **Historical document.** This is the original design that guided v0.1–v0.8 development,
+> kept for the record; statements of intent here may not reflect what shipped. The living
+> plan is [`ROADMAP.md`](ROADMAP.md); what actually shipped is in
+> [`CHANGELOG.md`](../CHANGELOG.md); start from the [README](../README.md) for the current state.
+
 ## Context
 
 The Linear A Workbench (TS) is web-only; researchers publish in Python (Jupyter/pandas). Research

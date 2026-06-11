@@ -1,9 +1,9 @@
 # Linear A
 
 Linear A is fully wired as a [script plugin](Architecture). The bundled corpus is
-**1,721 inscriptions** with the full Unicode Linear A sign repertoire, of which
-**84 signs** carry the conventional sound values Linear A shares with the
-deciphered Linear B (the rest are undeciphered).
+**1,721 inscriptions** with the full Unicode Linear A sign repertoire — **344
+signs**, of which **84** carry the conventional sound values Linear A shares with
+the deciphered Linear B (the rest have no agreed reading).
 
 > Linear A is **undeciphered**. The phonetic transcription uses Linear B sound
 > values as a working convention, and every analytical method here is
@@ -68,7 +68,7 @@ doc.line_tokens                    # tokens regrouped by physical line
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
-len(inv)                           # ~344 — the full Unicode Linear A repertoire
+len(inv)                           # 344 — the full Unicode Linear A repertoire
 [s for s in inv if s.phonetic]     # the 84 signs with assigned sound values
 sign = inv.by_label("KU")
 sign.phonetic                      # 'ku'

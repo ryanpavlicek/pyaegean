@@ -256,7 +256,7 @@ greek.scan_hexameter("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχι
 # ScansionError: line does not scan as dactylic hexameter (17 syllables): ...
 ```
 
-Iambic and lyric metres, and automatic synizesis, are planned for later versions.
+Iambic and lyric metres, and automatic synizesis, remain out of scope for now.
 
 ## Phonology (reconstructed IPA)
 

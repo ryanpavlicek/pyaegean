@@ -116,8 +116,7 @@ Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
   pyaegean parses locally and never re-hosts.
 
 Planned (future versions; included here for forward attribution):
-  - First1KGreek / Open Greek and Latin — CC BY.
-  - Morpheus morphological data; LSJ lexicon (per applicable license).
+  - Morpheus morphological data (per applicable license).
   Each will be attributed and license-gated as it is integrated.
 
 The structured-data layer of this package is licensed Apache-2.0; underlying

@@ -170,7 +170,8 @@ See [Data & Provenance](Data-and-Provenance) for full licensing and attribution.
 
 ## Getting help
 
-- **Bugs / feature requests:** [GitHub Issues](https://github.com/ryanpavlicek/pyaegean/issues).
+- **Bugs / feature requests:** [GitHub Issues](https://github.com/ryanpavlicek/pyaegean/issues)
+  — please include your pyaegean version (`python -c "import aegean; print(aegean.__version__)"`).
 - **How a function behaves:** the per-domain reference pages — [Linear A](Linear-A),
   [Analysis](Analysis), [Greek NLP](Greek-NLP), [AI Layer](AI-Layer).
 - **Contributing a fix or a script plugin:** [Development](Development).
