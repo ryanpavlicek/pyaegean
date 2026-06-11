@@ -71,6 +71,14 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **Linear B sample and lexicon expansion (source-verified)** — the bundled illustrative sample
+  grows 2 → 18 tablets (PY Ta 641 and PY Er 312 hand-curated, plus sixteen one-line excerpts from
+  Pylos/Knossos/Mycenae tablets taken from *sourced quotations* in Wiktionary's Mycenaean Greek
+  entries, each citing its tablet and carrying a translation), and the Greek-bridge lexicon grows
+  45 → 150 entries (the curated core layered with every Wiktionary entry that states its Ancient
+  Greek equation — `e-ra-wo → ἔλαιον`, `ku-ru-so → χρυσός`, …; extraction scripts in `scripts/`,
+  attribution in `NOTICE`). `[X]`-restored readings now load as `ReadingStatus.RESTORED`. The
+  Cypriot lexicon grows 13 → 17 with verified Idalion Bronze equations (κασίγνητος, ἄνευ, …).
 - **Linear A editorial status recovered from the data** — the WP4 upstream audit found the
   apparatus signal was never lost, only unread: the upstream marks erased/illegible signs with
   a placeholder codepoint (U+1076B; its own tooling names it "erased"), and pyaegean's bundle

@@ -46,8 +46,11 @@ word_to_phonetic("WO-NO")      # 'wono'     (ϝοῖνος → οἶνος, "win
 ## Bridge to Greek
 
 Linear B *is* Greek, so a transliterated word resolves to its Classical Greek lemma and meaning.
-`greek_reading` returns `(lemma, gloss)` from a curated lexicon of the well-established equations;
-pass the lemma on to the [LSJ backend](Greek-NLP#lexicon-lsj-glossing-opt-in) for the full entry.
+`greek_reading` returns `(lemma, gloss)` from a **150-entry** lexicon of well-established
+equations — a hand-curated core layered with entries extracted from Wiktionary's Mycenaean
+Greek pages (via the kaikki.org dump, CC BY-SA): only entries whose etymology *states* the
+Ancient Greek equation are taken, so every bridge is source-attested rather than reconstructed.
+Pass the lemma on to the [LSJ backend](Greek-NLP#lexicon-lsj-glossing-opt-in) for the full entry.
 
 ```python
 from aegean.scripts.linearb import greek_reading, gloss
@@ -85,8 +88,11 @@ proof, exactly as for Linear A.
 
 **No openly-licensed Linear B corpus exists.** The most complete one, DAMOS (Database of Mycenaean
 at Oslo), is CC BY-NC-SA, and LiBER is all-rights-reserved — neither can be redistributed in an
-Apache-2.0 package. So pyaegean bundles only a **small illustrative sample** (PY Ta 641, the tablet
-that confirmed Ventris's decipherment; PY Er 312) and leaves the full corpus **bring-your-own**.
+Apache-2.0 package. So pyaegean bundles an **18-tablet illustrative sample** — PY Ta 641 (the
+tablet that confirmed Ventris's decipherment) and PY Er 312 hand-curated, plus sixteen one-line
+excerpts from Pylos, Knossos, and Mycenae tablets taken from *sourced quotations* in Wiktionary's
+Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts
+to exercise the tools, **not editions** — the full corpus stays **bring-your-own**.
 
 Point pyaegean at your own licensed EpiDoc export (e.g. a DAMOS download) and it parses it locally,
 never re-hosting:

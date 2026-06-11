@@ -101,7 +101,13 @@ Aegean syllabic sign data — Unicode Character Database (bundled)
   is undeciphered, so its signs carry conventional numbers (CM001 …) and no phonetic values. The
   bundled illustrative samples of transliterations and sign sequences are scholarly fact (after
   Ventris & Chadwick, Documents in Mycenaean Greek; Masson, Les inscriptions chypriotes syllabiques;
-  and Ferrara, Cypro-Minoan Inscriptions), included as excerpts, not corpora.
+  Chadwick, Linear B and Related Scripts, for the Idalion readings; and Ferrara, Cypro-Minoan
+  Inscriptions), included as excerpts, not corpora. The expanded Linear B Greek-bridge lexicon
+  entries and sample-tablet excerpts were extracted from Wiktionary's Mycenaean Greek entries via
+  the kaikki.org machine-readable dump (Wiktionary text is dual-licensed CC BY-SA 4.0 / GFDL —
+  attribution to the Wiktionary contributors; only entries stating an Ancient Greek equation,
+  and quotations citing their tablet, were taken; scripts/build_linearb_lexicon.py and
+  build_linearb_samples.py document the method), layered under the hand-curated readings.
 
 Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.json)
   Approximate site-level latitude/longitude for the find-sites attested in the corpora, compiled from

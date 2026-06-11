@@ -222,12 +222,14 @@ already in the published pack's range.
 > verified live as 24 books / 127,339 tokens), **data versioning** (`aegean.data.versions()`,
 > `Provenance.data_version`, pinning-for-papers recipe), **`Corpus.from_records()`** + the
 > `register_loader` recipe, and **variant readings** (`Token.alt` with the EpiDoc
-> `<app>/<lem>/<rdg>` round-trip, schema-validated). Remaining: Linear B sample/lexicon
-> growth, Cypriot growth, the DAMOS/LiBER inquiries, the Linear A apparatus audit
-> (upstream recoverability → corpus v2), **SigLA integration** (license resolved: the
-> dataset and drawings are published CC BY-NC-SA 4.0, so this is now a build item on the
-> PROIEL/UD fetch-to-cache pattern, not a permission question), and `load_work` hardening
-> (cached/authed edition discovery, deeper textpart addressing).
+> `<app>/<lem>/<rdg>` round-trip, schema-validated). Also done: the **Linear A apparatus
+> audit** (552 LOST + 120 UNCLEAR tokens recovered by interpretation; see the item below),
+> **Linear B expansion** (18 tablets / 150 lexicon entries, all source-attested), and
+> **Cypriot growth** (17 entries). Remaining: the DAMOS/LiBER inquiries (drafts in
+> `docs/inquiries/`, awaiting send + answers), **SigLA integration** (license resolved —
+> published CC BY-NC-SA 4.0 — but no advertised download endpoint; a format courtesy
+> contact, then a fetch-to-cache loader), and `load_work` hardening (cached/authed
+> edition discovery, deeper textpart addressing).
 
 The 0.8.0-hardening pass *documented* that the non-Linear-A corpora are vestigial. This WP makes
 them real where licensing allows.
@@ -239,12 +241,18 @@ them real where licensing allows.
   *(Shipped as `greek.load_work`.)* Hardening follow-up: cache/authenticate the edition-discovery
   listing (the unauthenticated GitHub API is rate-limited at scale), address textparts below the
   top level, and surface dropped `<note>`/`<bibl>` apparatus on request.
-- **Linear B.** (a) Expand the bundled illustrative sample ~2 → ~25 canonical tablets and grow the
-  Greek-bridge lexicon ~45 → 300+ entries — curated scholarly facts from the standard editions
-  (Ventris & Chadwick, Docs²). (b) Open a licensing inquiry with **DAMOS** (Oslo) / **LiBER** (CNR)
-  for a fetch-to-cache research path (the PROIEL eval-only precedent shows NC data can be used
-  respectfully); document the outcome either way. The BYO EpiDoc path stays first-class.
-- **Cypriot.** Modest sample + lexicon growth from published ICS facts.
+- **Linear B.** (a) *DONE (2026-06-11), with an honesty adjustment*: the sample grew 2 → **18
+  tablets** (every addition a sourced Wiktionary quotation citing its tablet, with translation —
+  nothing typed from memory) and the lexicon 45 → **150 entries** (the hand-curated core layered
+  with every kaikki/Wiktionary entry that *states* its Ancient Greek equation). The original
+  "~25 / 300+" estimates hit a real ceiling: many Mycenaean words have **no** alphabetic Greek
+  descendant to bridge to, and unstated equations won't be authored from memory — 150 verified
+  beats 300 plausible. `[X]`-restored readings now load as `ReadingStatus.RESTORED`.
+  (b) Licensing inquiries with **DAMOS** (Oslo) / **LiBER** (CNR): drafts ready in
+  `docs/inquiries/`, to be sent by the maintainer; outcome will be documented either way. The
+  BYO EpiDoc path stays first-class.
+- **Cypriot.** *DONE (modest, as planned)*: lexicon 13 → 17 — four Idalion Bronze equations
+  verified against the published readings (Chadwick) added to the Masson/ICS-sourced core.
 - **Linear A apparatus (the deepest unfixed finding).** Phased:
   1. **Audit upstream** — *DONE (2026-06-11)*: the pipeline was lossless all along (pyaegean's
      bundle is marker-identical to upstream); the apparatus was present but uninterpreted. The

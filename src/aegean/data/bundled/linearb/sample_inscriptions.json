@@ -1,4 +1,328 @@
 [
-{"id":"PY Ta 641","site":"Pylos","support":"Tablet","scribe":"Hand 2","context":"LH IIIB","name":"PY Ta 641 (the tripod tablet)","words":["TI-RI-PO-DE","AI-KE-U","KE-RE-SI-JO","WE-KE","*201","2"],"translations":["two tripods of Cretan workmanship (illustrative excerpt; the tablet that confirmed Ventris's decipherment)"]},
-{"id":"PY Er 312","site":"Pylos","support":"Tablet","scribe":"Hand 1","context":"LH IIIB","name":"PY Er 312 (the king's estate)","words":["WA-NA-KA-TE-RO","TE-ME-NO","TO-SO-JO","PE-MO","GRA","30"],"translations":["the king's domain; so much seed-grain: GRA 30 (illustrative excerpt)"]}
+ {
+  "id": "PY Ta 641",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "Hand 2",
+  "context": "LH IIIB",
+  "name": "PY Ta 641 (the tripod tablet)",
+  "words": [
+   "TI-RI-PO-DE",
+   "AI-KE-U",
+   "KE-RE-SI-JO",
+   "WE-KE",
+   "*201",
+   "2"
+  ],
+  "translations": [
+   "two tripods of Cretan workmanship (illustrative excerpt; the tablet that confirmed Ventris's decipherment)"
+  ]
+ },
+ {
+  "id": "PY Er 312",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "Hand 1",
+  "context": "LH IIIB",
+  "name": "PY Er 312 (the king's estate)",
+  "words": [
+   "WA-NA-KA-TE-RO",
+   "TE-ME-NO",
+   "TO-SO-JO",
+   "PE-MO",
+   "GRA",
+   "30"
+  ],
+  "translations": [
+   "the king's domain; so much seed-grain: GRA 30 (illustrative excerpt)"
+  ]
+ },
+ {
+  "id": "KN Ga 675",
+  "site": "Knossos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "KN Ga 675",
+  "words": [
+   "WA-NA-KA-TE",
+   "[KO]",
+   "PE-MA",
+   "AROM",
+   "10"
+  ],
+  "translations": [
+   "for the king.dat-instr.sg: [coriander?] seed - 10 units(?) (illustrative excerpt; quotation via Wiktionary, ref. c. 1330 BC BCE (LM IIIA2 - LM IIIB), Knossos Ga(1) 675)"
+  ]
+ },
+ {
+  "id": "KN Np 267",
+  "site": "Knossos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "KN Np 267",
+  "words": [
+   "SA-MA-DA",
+   "CROC",
+   "RO"
+  ],
+  "translations": [
+   "(please add an English translation of this quotation) (illustrative excerpt; quotation via Wiktionary, ref. KN Np(1) 267)"
+  ]
+ },
+ {
+  "id": "KN Np 272",
+  "site": "Knossos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "KN Np 272",
+  "words": [
+   "DA-WO",
+   "CROC",
+   "Q",
+   "1"
+  ],
+  "translations": [
+   "(please add an English translation of this quotation) (illustrative excerpt; quotation via Wiktionary, ref. KN Np(1) 272 + 7419 + fr.)"
+  ]
+ },
+ {
+  "id": "KN Np 85",
+  "site": "Knossos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "KN Np 85",
+  "words": [
+   "KA-TA-RA",
+   "CROC",
+   "QI",
+   "6"
+  ],
+  "translations": [
+   "(please add an English translation of this quotation) (illustrative excerpt; quotation via Wiktionary, ref. KN Np(1) 85 + 5047 + 7938 + 8057)"
+  ]
+ },
+ {
+  "id": "MY Ge 602",
+  "site": "Mycenae",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "MY Ge 602",
+  "words": [
+   "MI-TA",
+   "PE",
+   "2"
+  ],
+  "translations": [
+   "mint, two bunches (illustrative excerpt; quotation via Wiktionary, ref. MY Ge 602, line 5b)"
+  ]
+ },
+ {
+  "id": "MY Ge 605",
+  "site": "Mycenae",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "MY Ge 605",
+  "words": [
+   "MI-TA",
+   "PE",
+   "1"
+  ],
+  "translations": [
+   "mint, one bunch (illustrative excerpt; quotation via Wiktionary, ref. MY Ge 605, line 6b)"
+  ]
+ },
+ {
+  "id": "MY Ge 606",
+  "site": "Mycenae",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "MY Ge 606",
+  "words": [
+   "MA-RA-TU-WO",
+   "V",
+   "1",
+   "SA-SA-MA",
+   "V",
+   "4"
+  ],
+  "translations": [
+   "fennel seeds: 1 khoinix ; sesame seeds: 4 khoinikes (illustrative excerpt; quotation via Wiktionary, ref. c. 1300 BCE (LH IIIB1), Mycenae Ge 606)"
+  ]
+ },
+ {
+  "id": "PY Cn 3",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Cn 3",
+  "words": [
+   "JO-I-JE-SI",
+   "ME-ZA-NA",
+   "E-RE-U-TE-RE",
+   "DI-WI-JE-WE",
+   "QO-O"
+  ],
+  "translations": [
+   "They send(?) from Messene,\n to inspector [Di-wi-je-we], bulls.acc.pl (illustrative excerpt; quotation via Wiktionary, ref. c. 1200 BCE (LH IIIB2 - LH IIIC), Pylos Cn(2) 3)"
+  ]
+ },
+ {
+  "id": "PY Eb 846",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Eb 846",
+  "words": [
+   "A3-TI-JO-QO",
+   "E-KE-QE",
+   "O-NA-TO",
+   "KE-KE-ME-NA",
+   "KO-TO-NA"
+  ],
+  "translations": [
+   "Aethiops, and he holds the lease of a communal plot (illustrative excerpt; quotation via Wiktionary, ref. PY Eb 846.A)"
+  ]
+ },
+ {
+  "id": "PY En 74",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY En 74",
+  "words": [
+   "O-DA-A2",
+   "O-NA-TE-RE",
+   "E-KO-SI",
+   "A3-TI-JO-QO",
+   "KO-TO-NA"
+  ],
+  "translations": [
+   "now this is how the tenants hold plots belonging to Aethiops (illustrative excerpt; quotation via Wiktionary, ref. PY En 74.11–12)"
+  ]
+ },
+ {
+  "id": "PY Eo 247",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Eo 247",
+  "words": [
+   "I-PA-SA-NA-TI",
+   "TE-O-JO",
+   "DO-E-RA",
+   "E-KE-QE",
+   "O-NA-TO",
+   "PA-RO",
+   "A3-TI-JO-QE",
+   "GRA",
+   "T",
+   "2"
+  ],
+  "translations": [
+   "Ipasanati, servant of the god, and she holds a lease from Aethiops: 24 l. wheat\n[... etc.] (illustrative excerpt; quotation via Wiktionary, ref. PY Eo 247.1–7)"
+  ]
+ },
+ {
+  "id": "PY Fr 1202",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Fr 1202",
+  "words": [
+   "ME-TU-WO",
+   "NE-WO",
+   "MA-TE-RE",
+   "TE-I-JA",
+   "S",
+   "1"
+  ],
+  "translations": [
+   "in the month of new wine for the divine mother: sage-scented oil 160 l (illustrative excerpt; quotation via Wiktionary, ref. LH IIIB2/LH IIICI (c. 1250 - 1050 BCE), PY Fr 1202)"
+  ]
+ },
+ {
+  "id": "PY Fr 1224",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Fr 1224",
+  "words": [
+   "PA-KI-JA-NI-JO-JO",
+   "ME-NO",
+   "PO-SE-A-DO-NE"
+  ],
+  "translations": [
+   "in the month of pa-ki-ja-ni-jo, to Poseidon, sage- and e-ti-perfumed wild-olive oil 0.8 l (illustrative excerpt; quotation via Wiktionary, ref. PY Fr 1224.b)"
+  ]
+ },
+ {
+  "id": "PY Jn 829",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Jn 829",
+  "words": [
+   "KA-KO",
+   "NA-WI-JO",
+   "PA-TA-JO-I-QE",
+   "E-KE-SI-QE",
+   "A3-KA-SA-MA"
+  ],
+  "translations": [
+   "bronze for ships and the points for arrows and spears (illustrative excerpt; quotation via Wiktionary, ref. PY Jn 829.3)"
+  ]
+ },
+ {
+  "id": "PY Sa 794",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Sa 794",
+  "words": [
+   "KA-KO",
+   "DE-DE-ME-NO",
+   "NO-PE-RE-E",
+   "ROTA",
+   "ZE",
+   "1"
+  ],
+  "translations": [
+   "one pair of wheels bound with bronze, unfit for service (illustrative excerpt; quotation via Wiktionary, ref. PY Sa 794)"
+  ]
+ },
+ {
+  "id": "PY Un 267",
+  "site": "Pylos",
+  "support": "Tablet",
+  "scribe": "",
+  "context": "",
+  "name": "PY Un 267",
+  "words": [
+   "O-DO-KE",
+   "A-KO-SO-TA",
+   "TU-WE-TA",
+   "A-RE-PA-ZO-O",
+   "TU-WE-A",
+   "A-RE-PA-TE",
+   "ZE-SO-ME-NO"
+  ],
+  "translations": [
+   "Thus has A(r/l)xo(i)tas supplied\nThuestes the unguent-boiler:\n spices, for unguent.dat-instr.sg\n to be boiled.dat-instr.sg (illustrative excerpt; quotation via Wiktionary, ref. c. 1200 BCE (LH IIIB2/LH IIIC), Pylos Un 267)"
+  ]
+ }
 ]

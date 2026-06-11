@@ -38,6 +38,38 @@ def test_word_to_phonetic() -> None:
     assert word_to_phonetic("TI-RI-PO-DE") == "tiripode"  # τρίποδε, "two tripods"
 
 
+def test_expanded_lexicon_and_samples() -> None:
+    """The WP4 expansion: every entry source-verified (curated layer + the
+    Wiktionary/kaikki extract with a stated Ancient Greek equation)."""
+    import json
+    from pathlib import Path
+
+    lex = json.loads(
+        (Path(__file__).parents[1] / "src/aegean/data/bundled/linearb/lexicon.json")
+        .read_text(encoding="utf-8")
+    )
+    assert len(lex) == 150
+    assert all(v["lemma"] and v["gloss"] for v in lex.values())
+    # extracted equations alongside the original curated ones
+    assert greek_reading("e-ra-wo") == ("ἔλαιον", "olive oil")
+    assert greek_reading("ku-ru-so")[0] == "χρυσός"
+    assert greek_reading("po-me") == ("ποιμήν", "shepherd")  # curated layer intact
+
+    corpus = aegean.load("linearb")
+    assert len(corpus) == 18  # 2 curated + 16 sourced one-line excerpts
+    assert {d.meta.site for d in corpus} >= {"Pylos", "Knossos", "Mycenae"}
+    assert all(d.translations for d in corpus)  # every excerpt carries its translation
+
+
+def test_restored_reading_status() -> None:
+    from aegean.core.model import ReadingStatus, TokenKind
+
+    corpus = aegean.load("linearb")
+    ko = next(t for t in corpus.get("KN Ga 675").tokens if t.text == "[KO]")
+    assert ko.status is ReadingStatus.RESTORED  # editor-supplied reading
+    assert ko.kind is TokenKind.LOGOGRAM and ko.signs == ("KO",)
+
+
 def test_greek_bridge() -> None:
     assert greek_reading("PO-ME") == ("ποιμήν", "shepherd")
     assert greek_reading("po-me") == ("ποιμήν", "shepherd")  # case-insensitive

@@ -27,8 +27,9 @@ len(list(get_script("cypriot").sign_inventory))   # 55
 
 ## Transliteration and the Greek bridge
 
-`greek_reading` returns `(lemma, gloss)` from a curated lexicon of well-established Cypriot
-equations; pass the lemma to the [LSJ backend](Greek-NLP#lexicon-lsj-glossing-opt-in) for the full
+`greek_reading` returns `(lemma, gloss)` from a curated 17-entry lexicon of well-established
+Cypriot equations (largely the Idalion Bronze vocabulary, after Masson's ICS and Chadwick);
+pass the lemma to the [LSJ backend](Greek-NLP#lexicon-lsj-glossing-opt-in) for the full
 dictionary entry.
 
 ```python

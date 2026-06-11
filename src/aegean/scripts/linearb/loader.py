@@ -15,7 +15,7 @@ from functools import lru_cache
 from typing import Any
 
 from ...core.corpus import Corpus, register_loader
-from ...core.model import Document, DocumentMeta, Token, TokenKind
+from ...core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
 from ...core.numerals import parse_value
 from ...core.provenance import Provenance
 from ...data import bundled_data_version
@@ -24,19 +24,30 @@ from .inventory import linear_b_inventory
 
 _SEP = {"\U00010100", "\U00010101"}  # 𐄀 𐄁 — Aegean word dividers
 _IDEOGRAM_RE = re.compile(r"^[A-Z*][A-Z0-9*+'\[\]?]*$")
+_RESTORED_RE = re.compile(r"^\[[^\]]+\]$")  # an editorially restored reading, e.g. [KO]
 
 
 def classify(text: str, line_no: int | None, position: int) -> Token:
-    """Tag a transliterated Linear B token by role (same conventions as Linear A)."""
-    if text in _SEP:
-        return Token(text, TokenKind.SEPARATOR, (text,), None, line_no, position)
-    if parse_value(text) is not None:
-        return Token(text, TokenKind.NUMERAL, (text,), None, line_no, position)
-    if "-" in text:
-        return Token(text, TokenKind.WORD, tuple(text.split("-")), None, line_no, position)
-    if _IDEOGRAM_RE.match(text):
-        return Token(text, TokenKind.LOGOGRAM, (text,), None, line_no, position)
-    return Token(text, TokenKind.UNKNOWN, (text,), None, line_no, position)
+    """Tag a transliterated Linear B token by role and editorial status
+    (same conventions as Linear A)."""
+    status = ReadingStatus.CERTAIN
+    bare = text
+    if _RESTORED_RE.match(text):  # wholly editor-supplied reading
+        status = ReadingStatus.RESTORED
+        bare = text[1:-1]
+    elif "[" in text or "]" in text or "?" in text:
+        status = ReadingStatus.UNCLEAR  # bracketed uncertain element, e.g. VIR+[?]
+    if bare in _SEP:
+        return Token(text, TokenKind.SEPARATOR, (bare,), None, line_no, position, status=status)
+    if parse_value(bare) is not None:
+        return Token(text, TokenKind.NUMERAL, (bare,), None, line_no, position, status=status)
+    if "-" in bare:
+        return Token(
+            text, TokenKind.WORD, tuple(bare.split("-")), None, line_no, position, status=status
+        )
+    if _IDEOGRAM_RE.match(bare):
+        return Token(text, TokenKind.LOGOGRAM, (bare,), None, line_no, position, status=status)
+    return Token(text, TokenKind.UNKNOWN, (bare,), None, line_no, position, status=status)
 
 
 def _build_document(rec: dict[str, Any]) -> Document:
