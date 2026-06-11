@@ -5,6 +5,7 @@ from __future__ import annotations
 from ...core.model import SignInventory, Token
 from ...core.script import Script, register
 from . import loader  # noqa: F401 — registers the Corpus loader on import
+from .damos import load_damos
 from .epidoc import load_epidoc_corpus, parse_epidoc
 from .inventory import linear_b_inventory
 from .lexicon import gloss, greek_reading
@@ -15,6 +16,7 @@ __all__ = [
     "LinearB",
     "gloss",
     "greek_reading",
+    "load_damos",
     "load_epidoc_corpus",
     "parse_epidoc",
     "word_to_phonetic",

@@ -86,13 +86,37 @@ proof, exactly as for Linear A.
 
 ## The corpus
 
-**No openly-licensed Linear B corpus exists.** The most complete one, DAMOS (Database of Mycenaean
-at Oslo), is CC BY-NC-SA, and LiBER is all-rights-reserved — neither can be redistributed in an
-Apache-2.0 package. So pyaegean bundles an **18-tablet illustrative sample** — PY Ta 641 (the
-tablet that confirmed Ventris's decipherment) and PY Er 312 hand-curated, plus sixteen one-line
+### The full DAMOS corpus — `aegean.load("damos")`
+
+The most complete edition of the Mycenaean corpus is **DAMOS** (the Database of Mycenaean at Oslo,
+F. Aurora), published under **CC BY-NC-SA 4.0**. pyaegean hosts the DAMOS transliterations and core
+metadata as a fetched-on-demand release asset, so the whole corpus is one call away:
+
+```python
+import aegean
+
+corpus = aegean.load("damos")        # fetches ~a few MB to the cache on first use, then offline
+len(corpus.documents)                # ~5,900 tablets: Knossos, Pylos, Thebes, Mycenae, Tiryns, …
+doc = corpus.documents[0]
+print(doc.id, "—", doc.meta.site)    # 'KN Fp(1) 1 + 31 (138) — Knossos'
+print(doc.transcription)             # the DAMOS transliteration, verbatim
+```
+
+Each tablet is one `Document`: the transliteration is tokenised into words / numerals / logograms
+(using the DAMOS comma-and-slash word dividers), and the verbatim transliteration is kept in
+`Document.transcription`. The data is **NonCommercial + ShareAlike** — those obligations pass
+through to you, the corpus is fetched to your cache and **never bundled or re-hosted**, and you
+should **cite DAMOS** (Aurora 2015) in academic work. `scripts/build_damos_corpus.py` documents
+exactly how the asset is built from the DAMOS public API.
+
+### The bundled sample — `aegean.load("linearb")`
+
+For a zero-network default, pyaegean also bundles an **18-tablet illustrative sample** — PY Ta 641
+(the tablet that confirmed Ventris's decipherment) and PY Er 312 hand-curated, plus sixteen one-line
 excerpts from Pylos, Knossos, and Mycenae tablets taken from *sourced quotations* in Wiktionary's
-Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts
-to exercise the tools, **not editions** — the full corpus stays **bring-your-own**.
+Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts to
+exercise the tools, **not editions** — use `aegean.load("damos")` above for the full corpus, or
+bring your own below.
 
 **From a LiBER selection (interim recipe).** LiBER's interface exports a selection by
 copy-to-clipboard ("e.g., to be pasted into an *Excel* spreadsheet"). Your own copied

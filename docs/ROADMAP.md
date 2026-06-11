@@ -248,9 +248,14 @@ them real where licensing allows.
   "~25 / 300+" estimates hit a real ceiling: many Mycenaean words have **no** alphabetic Greek
   descendant to bridge to, and unstated equations won't be authored from memory — 150 verified
   beats 300 plausible. `[X]`-restored readings now load as `ReadingStatus.RESTORED`.
-  (b) Licensing inquiries with **DAMOS** (Oslo) / **LiBER** (CNR): drafts ready in
-  `docs/inquiries/`, to be sent by the maintainer; outcome will be documented either way. The
-  BYO EpiDoc path stays first-class.
+  (b) **DAMOS — now a loadable corpus (DONE, 2026-06-11).** DAMOS (Oslo) is **CC BY-NC-SA 4.0**;
+  its public web API was located and the transliterations + core metadata for ~5,900 tablets
+  decoded into the hosted `damos-corpus` asset, loadable via **`aegean.load("damos")`**
+  (`scripts/build_damos_corpus.py`; NonCommercial + ShareAlike pass-through; fetched, never
+  bundled). This is the openly-licensed full Linear B corpus the bundled sample stood in for.
+  The courtesy letter still stands as a stability/format check. **LiBER** (CNR) is
+  all-rights-reserved with a metadata-only public endpoint, so it stays bring-your-own
+  (`PYAEGEAN_LINEARB_CORPUS`) pending its reply. The BYO EpiDoc path stays first-class.
 - **Cypriot.** *DONE (modest, as planned)*: lexicon 13 → 17 — four Idalion Bronze equations
   verified against the published readings (Chadwick) added to the Masson/ICS-sourced core.
 - **Linear A apparatus (the deepest unfixed finding).** Phased:

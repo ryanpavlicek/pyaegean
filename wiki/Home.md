@@ -65,7 +65,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | --- | --- |
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()` |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (344 signs; 84 carry conventional sound values), sign→sound map, transliteration |
-| [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, bring-your-own EpiDoc corpus |
+| [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, the full DAMOS corpus on demand (`aegean.load("damos")`, ~5,900 tablets) |
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge — the script is undeciphered) |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, morphology clustering, collocation stats, query engine, structure detection |

@@ -159,9 +159,26 @@ _REMOTE: dict[str, DataSpec] = {
              "376 sign records (~1 MB JSON). Drawings stay at sigla.phis.me.",
         extract=False,
     ),
-    # The Linear B corpus is bring-your-own: no openly-licensed corpus exists (DAMOS is
-    # CC BY-NC-SA, LiBER all-rights-reserved), so there is no default URL. Set
-    # PYAEGEAN_LINEARB_CORPUS to your own licensed export; pyaegean parses it locally.
+    # The DAMOS Linear B corpus (Aurora, damos.hf.uio.no): transliterations + core
+    # metadata for ~5,900 Mycenaean tablets, decoded from the DAMOS public API into
+    # compact JSON (scripts/build_damos_corpus.py). CC BY-NC-SA 4.0 as published by
+    # DAMOS — NonCommercial data fetched on demand, never bundled in the Apache-2.0
+    # wheel; attribution/citation in the file's _meta and NOTICE.
+    "damos-corpus": DataSpec(
+        name="damos-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "damos-corpus-v1/damos-corpus.json"
+        ),
+        sha256="bcf3348ba92eb08cae6bb758e3ea4e713143c1ca20234678013541fb3627fbd9",
+        license="CC BY-NC-SA 4.0 (DAMOS — F. Aurora; NonCommercial, never bundled)",
+        note="DAMOS-derived Linear B corpus: ~5,900 tablets (Knossos, Pylos, Thebes, …) "
+             "with transliterations + site/chronology. Loadable via aegean.load('damos').",
+        extract=False,
+    ),
+    # A user-supplied Linear B corpus override (bring-your-own). DAMOS is now loadable
+    # directly via aegean.load("damos"); this remains for a local licensed export (e.g.
+    # a LiBER selection or a DAMOS EpiDoc download) via PYAEGEAN_LINEARB_CORPUS.
     "linearb-corpus": DataSpec(
         name="linearb-corpus",
         url="",

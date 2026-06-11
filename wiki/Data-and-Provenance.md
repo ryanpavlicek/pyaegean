@@ -165,6 +165,21 @@ through to you). Attribution, citation, source sha256, and generation date
 are inside the file's `_meta`; drawings are **not** included and remain at
 sigla.phis.me. Cite SigLA in academic work.
 
+### The DAMOS Linear B corpus (`aegean.load("damos")`)
+
+**DAMOS** — the Database of Mycenaean at Oslo (F. Aurora,
+https://damos.hf.uio.no) — is the most complete edition of the Mycenaean
+(Linear B) corpus, published under **CC BY-NC-SA 4.0**. pyaegean hosts the
+transliterations and core metadata (site, series, chronology, Trismegistos id)
+for ~5,900 tablets, decoded from the DAMOS public web API into compact JSON
+(`scripts/build_damos_corpus.py`) as the sha256-pinned `damos-corpus-v1`
+release asset — fetched on demand, **never bundled** (NonCommercial data stays
+out of the Apache-2.0 wheel; the NC + ShareAlike obligations pass through to
+you). Attribution, citation, source URL, and generation date are inside the
+file's `_meta`; no imagery is included. This is the openly-licensed full corpus
+the bundled Linear B sample stands in for. Cite DAMOS (Aurora 2015) in academic
+work.
+
 ## Data versioning — pinning for papers
 
 Every dataset pyaegean can touch is versioned and hashable:

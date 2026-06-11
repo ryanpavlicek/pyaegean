@@ -36,11 +36,13 @@ do. Three kinds of limits behave very differently:
 
 ## Limits of licensing (fixable only by permission)
 
-- **No openly-licensed Linear B corpus exists.** DAMOS (Oslo) is CC BY-NC-SA;
-  LiBER (CNR) is all-rights-reserved. pyaegean bundles a small illustrative
-  sample and parses *your own* licensed export locally
-  (`PYAEGEAN_LINEARB_CORPUS`); licensing inquiries with both projects are a
-  roadmap item, and the outcome will be documented either way.
+- **The full Linear B corpus is NonCommercial, so it is fetched, not bundled.**
+  The most complete edition, DAMOS (Oslo), is **CC BY-NC-SA 4.0** — usable and
+  redistributable, but NonCommercial, so it can't live in the Apache-2.0 wheel.
+  `aegean.load("damos")` fetches it (~5,900 tablets) to your cache on demand and
+  the NC + ShareAlike obligations pass through to you. LiBER (CNR) is
+  all-rights-reserved and stays bring-your-own (`PYAEGEAN_LINEARB_CORPUS`). The
+  bundled 18-tablet sample remains the offline, zero-network default.
 - **The UD and PROIEL treebanks are CC BY-NC-SA** — pyaegean fetches them for
   **evaluation only** and never trains on them.
 - **Linear A facsimile imagery** is © École Française d'Athènes and other
@@ -60,7 +62,7 @@ the pointer says where.
 | Limitation today | Plan |
 | --- | --- |
 | The bundled Linear A corpus is a *normalized* transcription — the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *The audit is done and what survived is now interpreted*: erased-sign marks load as `LOST` (552 tokens) and damaged/bracketed readings as `UNCLEAR` (120 tokens, 366 documents). *The SigLA corpus is now loadable* (`aegean.load("sigla")`): 781 documents with typology, dimensions, and periods, sign-level granularity | Remaining: decode SigLA's numerals/erasure flags and word grouping (preserved as `raw_flags` in the dataset), and the complex-sign refinements |
-| Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon — every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations at the source; many Mycenaean words have no alphabetic descendant to bridge to | Further growth is contribution-driven and per-entry verified; the real-corpus route stays bring-your-own EpiDoc pending the DAMOS/LiBER inquiries |
+| Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon — every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations at the source; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")` (DAMOS, CC BY-NC-SA, fetched not bundled); lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | `greek.load_work` reads top-level textparts only, drops `<note>`/`<bibl>` silently, and discovers editions via an unauthenticated GitHub listing (rate-limited at scale) | WP4: loader hardening — cached listings/auth token, deeper textpart addressing |
 | Scansion covers dactylic hexameter + elegiac pentameter only, and **synizesis is declined, never inferred** (a line that needs it raises rather than guesses) | Post-0.8.0: iambic trimeter and lyric metres, plus a curated synizesis lexicon on the same pattern as the syllabification exceptions |

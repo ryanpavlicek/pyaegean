@@ -124,11 +124,22 @@ Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.jso
   Workbench (https://github.com/ryanpavlicek/linearaworkbench, Apache-2.0). Rounded to ~1 km — for
   mapping, not survey work.
 
-Linear B corpora — DAMOS, LiBER (NOT bundled, NOT fetched by default)
-  No openly-licensed Linear B tablet corpus exists. DAMOS (Database of Mycenaean at Oslo) is
-  CC BY-NC-SA 4.0; LiBER (CNR) is all-rights-reserved. pyaegean bundles neither and fetches
-  neither by default; set PYAEGEAN_LINEARB_CORPUS to load your own licensed copy, which
-  pyaegean parses locally and never re-hosts.
+DAMOS — Database of Mycenaean at Oslo (fetched on demand, NOT bundled)
+  DAMOS (F. Aurora, University of Oslo; https://damos.hf.uio.no), the most complete edition
+  of the Mycenaean (Linear B) corpus, published under CC BY-NC-SA 4.0. pyaegean's
+  `damos-corpus` release asset is the transliterations and core metadata (site, series,
+  chronology, Trismegistos id) for ~5,900 tablets, decoded from the DAMOS public web API
+  into compact JSON (scripts/build_damos_corpus.py; attribution, citation, source URL, and
+  generation date in the file's _meta; no imagery). Downloaded by the user on demand via
+  aegean.load("damos"); the NonCommercial + ShareAlike obligations pass through to the user,
+  and the data is never bundled in or redistributed with the Apache-2.0 wheel. Cite DAMOS:
+  Aurora, F. (2015), "DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
+  attested language", Procedia - Social and Behavioral Sciences 198: 21-31.
+
+LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
+  LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
+  bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your
+  own licensed export, which pyaegean parses locally and never re-hosts.
 
 SigLA — the Linear A paleographical database (fetched on demand, NOT bundled)
   Salgarella, E. & Castellan, S., SigLA: The Signs of Linear A — a palaeographical

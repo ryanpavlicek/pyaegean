@@ -147,9 +147,10 @@ tracked on the [roadmap](docs/ROADMAP.md)), and what is a deliberate trade-off. 
   Linear A block; 84 signs carry conventional sound values); for publication-grade readings consult
   **GORILA** and **SigLA**.
 - **The bundled non-Linear-A corpora are illustrative samples**, not editions: Linear B, the Cypriot
-  syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For a
-  real Linear B corpus, point `PYAEGEAN_LINEARB_CORPUS` at your own DAMOS EpiDoc export — pyaegean
-  parses it locally and never re-hosts it. **Alphabetic Greek, by contrast, loads real works on
+  syllabary, and Cypro-Minoan each bundle a *handful* of canonical texts to exercise the tools. For
+  the **full Linear B corpus**, `aegean.load("damos")` fetches ~5,900 tablets from **DAMOS** (the
+  Database of Mycenaean at Oslo, CC BY-NC-SA 4.0 — fetched to your cache, NonCommercial, never
+  re-hosted); or point `PYAEGEAN_LINEARB_CORPUS` at your own EpiDoc export. **Alphabetic Greek, similarly, loads real works on
   demand**: `greek.load_work("tlg0012.tlg001")` fetches the Iliad (24 books, ~127k tokens) from
   Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) into the standard
   corpus model.

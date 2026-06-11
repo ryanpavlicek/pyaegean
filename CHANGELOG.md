@@ -71,6 +71,16 @@ waits on external use and a short methods write-up.
   — and, after `filter()`, the **exact subset** (a recorded `subset:` note with the filter and
   counts); `Corpus.query()` results carry provenance + the query summary, so
   `QueryResults.cite(style)` cites the exact result set used in a paper.
+- **The DAMOS Linear B corpus, loadable** (`aegean.load("damos")`): the most complete edition of
+  the Mycenaean (Linear B) corpus — F. Aurora's Database of Mycenaean at Oslo, CC BY-NC-SA 4.0 —
+  decoded from the DAMOS public web API into a hosted `damos-corpus` release asset (~5,900 tablets
+  from Knossos, Pylos, Thebes, Mycenae, Tiryns and more, with transliterations, site, series, and
+  chronology). One `Document` per tablet, the transliteration tokenised into words / numerals /
+  logograms with the DAMOS comma-slash word dividers; the verbatim transliteration is kept in
+  `Document.transcription`. This is the openly-licensed full corpus the bundled Linear B sample
+  stood in for. The NonCommercial + ShareAlike obligations pass through to the user; the data is
+  fetched to the cache, never bundled (`scripts/build_damos_corpus.py` documents the build). Cite
+  DAMOS (Aurora 2015) in academic work.
 - **Prebuilt artifacts for a fast first use.** The opt-in Greek backends now prefer small
   project-hosted prebuilt assets over slow local builds (with build-from-source as the
   automatic fallback): `greek.use_lsj()` fetches a ~15 MB prebuilt LSJ index (`lsj-index-v1`)
