@@ -1,0 +1,79 @@
+name: Release
+
+# Publishes pyaegean to (Test)PyPI via OIDC Trusted Publishing — no API tokens are
+# stored anywhere. One-time setup by the repo owner on the index web UI: add a
+# "pending publisher" for project "pyaegean":
+#   Owner: ryanpavlicek   Repository: pyaegean   Workflow: release.yml
+#   Environment name: pypi   (and a second entry with Environment: testpypi on TestPyPI)
+#   PyPI:     https://pypi.org/manage/account/publishing/
+#   TestPyPI: https://test.pypi.org/manage/account/publishing/
+#
+# Dry-run to TestPyPI:  Actions → Release → "Run workflow" → target = testpypi.
+# Real release to PyPI: publish a GitHub Release tagged v0.1.0 (or Run workflow → pypi).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Where to publish"
+        type: choice
+        options: [testpypi, pypi]
+        default: testpypi
+
+jobs:
+  build:
+    # Build/publish only for version-tagged releases (vX.Y.Z) or a manual dispatch. Asset-hosting
+    # releases (e.g. grc-lemma-neural-v1) must not trigger a publish — they carry no package version,
+    # so a build would re-attempt the current pyproject version and PyPI would reject the duplicate.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - name: Footprint guard (wheel is code + JSON only, no heavy binaries)
+        run: python scripts/check_footprint.py --wheel "dist/*.whl"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
+  testpypi:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    needs: build
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

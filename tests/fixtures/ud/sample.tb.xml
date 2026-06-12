@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<treebank xml:lang="grc" version="2.1">
+  <sentence id="1" document_id="sample">
+    <word id="1" form="ἐν" lemma="ἐν" postag="r--------" relation="AuxP" head="3"/>
+    <word id="2" form="ἀρχῇ" lemma="ἀρχή" postag="n-s---fd-" relation="ADV" head="1"/>
+    <word id="3" form="ἦν" lemma="εἰμί" postag="v3siia---" relation="PRED" head="0"/>
+    <word id="4" form="ὁ" lemma="ὁ" postag="l-s---mn-" relation="ATR" head="5"/>
+    <word id="5" form="λόγος" lemma="λόγος" postag="n-s---mn-" relation="SBJ" head="3"/>
+  </sentence>
+  <sentence id="2" document_id="sample">
+    <word id="1" form="καὶ" lemma="καί" postag="c--------" relation="AuxY" head="2"/>
+    <word id="2" form="θεός" lemma="θεός" postag="n-s---mn-" relation="PRED" head="0"/>
+    <word id="3" form="." lemma="." postag="u--------" relation="AuxK" head="2"/>
+  </sentence>
+</treebank>

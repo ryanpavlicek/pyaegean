@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use pyaegean in your research, please cite it (and the underlying scholarly editions, e.g. GORILA for Linear A)."
+title: "pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts"
+abstract: "A specialist, dependency-light Python toolkit for Ancient Greek and the Aegean syllabic scripts (Linear A, Linear B, the Cypriot syllabary, and Cypro-Minoan): a script-agnostic corpus data layer, a Greek NLP pipeline, ported Linear A Workbench analysis, and a grounded multi-provider AI layer."
+authors:
+  - family-names: Pavlicek
+    given-names: Ryan
+    orcid: "https://orcid.org/0009-0009-8303-3644"
+repository-code: "https://github.com/ryanpavlicek/pyaegean"
+license: Apache-2.0
+version: 0.8.0
+date-released: 2026-06-10
+keywords:
+  - ancient greek
+  - linear a
+  - linear b
+  - mycenaean
+  - aegean scripts
+  - epigraphy
+  - computational philology

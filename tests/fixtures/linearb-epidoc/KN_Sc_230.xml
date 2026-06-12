@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A small DAMOS-style EpiDoc fixture (synthetic, for parser testing). -->
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt><title>KN Sc 230</title></titleStmt>
+    </fileDesc>
+    <sourceDesc>
+      <msDesc>
+        <history><origin><origPlace>Knossos</origPlace></origin></history>
+      </msDesc>
+    </sourceDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="textpart">
+        <ab>
+          <lb n="1"/><w>a-no-qo-ta</w> <w>OVIS</w> <num>30</num>
+          <lb n="2"/><w>we-da-ne-u</w> <w>OVIS</w> <num>20</num>
+          <lb n="3"/><w>to-so</w> <w>OVIS</w> <num>50</num>
+        </ab>
+      </div>
+    </body>
+  </text>
+</TEI>

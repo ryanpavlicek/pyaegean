@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic AGDT-format fixture (authored for pyaegean's tests, NOT copied from the
+  Perseus treebank) so the parser/lexicon can be exercised offline without
+  redistributing CC BY-SA data. Uses the real v2.1 <word form/lemma/postag> schema.
+-->
+<treebank version="2.1" xml:lang="grc">
+  <sentence id="1">
+    <word id="1" form="εἶπον" lemma="λέγω" postag="v1saia---" relation="PRED" head="0"/>
+    <word id="2" form="ἄνδρα" lemma="ἀνήρ" postag="n-s---ma-" relation="OBJ" head="1"/>
+    <word id="3" form="λόγον" lemma="λόγος" postag="n-s---ma-" relation="OBJ" head="1"/>
+    <word id="4" form="ὁ" lemma="ὁ" postag="l-s---mn-" relation="ATR" head="2"/>
+    <word id="5" form="μένει" lemma="μένω1" postag="v3spia---" relation="PRED" head="0"/>
+  </sentence>
+  <sentence id="2">
+    <word id="1" form="εἶπον" lemma="λέγω" postag="v3paia---" relation="PRED" head="0"/>
+    <word id="2" form="," lemma="," postag="u--------" relation="AuxX" head="1"/>
+  </sentence>
+</treebank>

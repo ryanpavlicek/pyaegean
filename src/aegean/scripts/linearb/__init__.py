@@ -1,0 +1,40 @@
+"""Linear B script plugin."""
+
+from __future__ import annotations
+
+from ...core.model import SignInventory, Token
+from ...core.script import Script, register
+from . import loader  # noqa: F401 — registers the Corpus loader on import
+from .damos import load_damos
+from .epidoc import load_epidoc_corpus, parse_epidoc
+from .inventory import linear_b_inventory
+from .lexicon import gloss, greek_reading
+from .loader import classify
+from .phonetic import word_to_phonetic
+
+__all__ = [
+    "LinearB",
+    "gloss",
+    "greek_reading",
+    "load_damos",
+    "load_epidoc_corpus",
+    "parse_epidoc",
+    "word_to_phonetic",
+]
+
+
+class LinearB(Script):
+    """Linear B — the Mycenaean Greek syllabary."""
+
+    id = "linearb"
+    name = "Linear B"
+
+    @property
+    def sign_inventory(self) -> SignInventory:
+        return linear_b_inventory()
+
+    def tokenize(self, raw: str) -> list[Token]:
+        return [classify(w, None, i) for i, w in enumerate(raw.split())]
+
+
+register(LinearB())
