@@ -4,6 +4,17 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **Workbench round-trip** (`aegean.io`): `to_workbench(corpus, path=None)` emits the
+  [Linear A Research Workbench](https://ryanpavlicek.github.io/linearaworkbench/)'s
+  inscription-record JSON, so any corpus — your own `from_records` finds included — opens in
+  the browser app via its `?corpus=<url>` loader; `from_workbench_export(source)` loads the
+  workbench's schema-v1 corpus exports (Data Export module or static data API) back into a
+  `Corpus`, carrying glyphs, transcriptions, image references, and the export's own metadata
+  into the provenance.
+
 ## 0.8.0 — 2026-06-10
 
 A hardening pass for scholarly use: a complete Linear A sign repertoire, an editorial-status
