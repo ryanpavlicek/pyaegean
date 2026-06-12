@@ -90,6 +90,10 @@ def _build_document(rec: dict[str, Any]) -> Document:
         findspot=rec.get("findspot", ""),
         period=rec.get("context", ""),
         name=rec.get("name", ""),
+        # Facsimile/photograph references (relative paths under the upstream
+        # mirror; never binaries) — what the `has-image` query field tests,
+        # matching the workbench's behavior on the same corpus.
+        images=tuple(rec.get("images") or ()),
     )
     return Document(
         id=rec["id"],

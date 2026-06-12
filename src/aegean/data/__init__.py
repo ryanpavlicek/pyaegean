@@ -80,7 +80,7 @@ _REMOTE: dict[str, DataSpec] = {
         ),
         sha256="1afddcd0fc8ce4f3058e8f84d5589e7fb34f56ea615bf0c228d1b2c92722e396",
         license="© École Française d'Athènes and other rightsholders — academic reference only",
-        note="3,368 facsimile/photo files (~116 MB tar.gz, ~125 MB unpacked); fetched from the linearaworkbench release.",
+        note="3,368 facsimile/photo files (~116 MB tar.gz, ~119 MB unpacked); fetched from the linearaworkbench release.",
         extract=True,
     ),
     # The opt-in [neural] Greek lemmatizer model: GreTa seq2seq exported to ONNX, plus its

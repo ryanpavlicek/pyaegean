@@ -19,3 +19,9 @@ structure-detection ports are likewise tested inline, in
 `tests/test_query.py` (mirroring `queryEngine.test.ts`) and
 `tests/test_structure.py` (asserting the documented precedence over the real
 corpus).
+
+Two deliberate, documented differences from the TypeScript query engine
+(edge cases, not golden-fixture material): equal-count words in the
+words-output sort alphabetically here, where the TS engine stable-sorts by
+insertion order; and an empty string for a numeric field raises
+`ValueError` here, where TS `Number("")` is `0` and matches everything.
