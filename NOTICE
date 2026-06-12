@@ -1,0 +1,163 @@
+pyaegean
+Copyright 2026 Ryan Pavlicek
+
+This product includes software developed by Ryan Pavlicek, licensed under the
+Apache License, Version 2.0.
+
+================================================================================
+Third-party data and attributions
+================================================================================
+
+Linear A corpus (bundled text JSON: src/aegean/data/bundled/lineara/)
+  Derived from the GORILA edition — Godart, L. & Olivier, J.-P. (1976–1985),
+  "Recueil des inscriptions en linéaire A" (Études Crétoises) — via the
+  open dataset at https://github.com/mwenge/lineara.xyz.
+  Used as a scholarly reference corpus. Transliterations and structured
+  metadata only; no facsimile imagery is bundled or redistributed.
+
+Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
+  © École Française d'Athènes and respective rights holders. Downloaded by the
+  user on demand from the linearaworkbench repository for academic reference;
+  never re-hosted by this package.
+
+Ancient Greek Dependency Treebank — AGDT v2.1 (fetched on demand, NOT redistributed)
+  Perseus Ancient Greek Dependency Treebank, v2.1
+  (https://github.com/PerseusDL/treebank_data), licensed CC BY-SA 3.0. Downloaded
+  by the user on demand via aegean.greek.use_treebank() / use_parser() / use_tagger() /
+  use_lemmatizer(); pyaegean builds derived artifacts (a lemma/morphology lexicon, a
+  dependency-parser model, a POS-tagger model, and a lemmatizer model) in the local cache
+  and neither bundles nor re-hosts the treebank itself. Attribute the AGDT in academic
+  work that relies on it.
+  For convenience the project also hosts these derived artifacts as the
+  pyaegean release asset "agdt-derived" (the lexicon + the three trained models, ~15 MB);
+  the Greek backends fetch it on demand instead of downloading the AGDT and training
+  locally, falling back to build-from-source if it is unreachable. The derived artifacts
+  are CC BY-SA 3.0 (a derivative of the AGDT); fetched to the cache, never bundled.
+
+Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistributed)
+  A Greek-English Lexicon (Liddell, Scott, Jones), digitized by the Perseus Digital
+  Library (https://github.com/PerseusDL/lexica), licensed CC BY-SA 4.0. Text provided
+  under a CC BY-SA license by Perseus Digital Library, http://www.perseus.tufts.edu,
+  with funding from The National Endowment for the Humanities. Data accessed from
+  https://github.com/PerseusDL/lexica/. Downloaded by the user on demand via
+  aegean.greek.use_lsj(); pyaegean builds a derived index in the local cache and
+  neither bundles nor re-hosts the lexicon. For convenience the project also hosts that
+  derived lemma->entry index as the pyaegean release asset "lsj-index" (~15 MB, CC BY-SA
+  4.0 — a derivative of the Perseus LSJ); use_lsj() fetches it on demand instead of
+  downloading the ~270 MB TEI and building locally, falling back to build-from-source if
+  it is unreachable. Fetched to the cache, never bundled.
+
+Neural Greek lemmatizer model (fetched on demand, NOT bundled)
+  An ONNX seq2seq lemmatizer fine-tuned from bowphs/GreTa (Riemenschneider & Frank,
+  "Exploring Large Language Models for Classical Philology", Apache-2.0;
+  arXiv:2305.13698) on the AGDT (CC BY-SA 3.0), the Pedalion treebanks (CC BY-SA 4.0),
+  and the Gorman Ancient Greek treebanks (CC BY-SA 4.0 — the repository's TREEBANK
+  LICENSE; an earlier revision of this notice misstated it as CC0). The resulting model — ONNX weights plus a
+  derived gold lemma lookup — is licensed CC BY-SA 4.0. Downloaded by the user on demand
+  via aegean.greek.use_neural_lemmatizer() (the [neural] extra); fetched to the local cache,
+  never bundled in the Apache-2.0 wheel. Attribute GreTa and the treebanks in academic work.
+
+Neural joint Greek pipeline model (fetched on demand, NOT bundled)
+  One GreBerta-based model (Riemenschneider & Frank's encoder, Apache-2.0;
+  arXiv:2305.13698) for UPOS,
+  AGDT-positional morphology (rendered as UD FEATS), UD dependency trees, and lemmas,
+  fine-tuned on the AGDT (CC BY-SA 3.0), the Gorman treebanks (CC BY-SA 4.0), and the
+  Pedalion treebanks (CC BY-SA 4.0) with the UD-Perseus dev/test and PROIEL evaluation
+  texts excluded from training. The resulting model bundle (ONNX + tokenizer + label
+  maps + lemma scripts/lookup) is licensed CC BY-SA 4.0; downloaded by the user on
+  demand via aegean.greek.use_neural_pipeline() (the [neural] extra), fetched to the
+  local cache, never bundled in the Apache-2.0 wheel. Attribute the treebanks in
+  academic work.
+
+Greek literary works — Perseus canonical-greekLit / First1KGreek (fetched on demand, NOT redistributed)
+  TEI editions of Ancient Greek works from PerseusDL/canonical-greekLit (Perseus Digital
+  Library) and OpenGreekAndLatin/First1KGreek (Open Greek and Latin), both CC BY-SA.
+  Downloaded by the user on demand via aegean.greek.load_work() — one work at a time,
+  pinned to an upstream commit (recorded as Provenance.data_version) — into the local
+  cache; pyaegean neither bundles nor re-hosts the texts. Attribute the Perseus Digital
+  Library / Open Greek and Latin and the underlying print edition (see each file's TEI
+  header) in academic work.
+
+PROIEL treebank — Ancient Greek (fetched on demand, NOT redistributed)
+  The PROIEL treebank (https://github.com/proiel/proiel-treebank) — the Greek New Testament
+  and Herodotus — licensed CC BY-NC-SA 3.0. Downloaded by the user on demand via
+  aegean.greek.evaluate_on_proiel() as a neutral, out-of-AGDT evaluation set; pyaegean reads it
+  locally in the cache and neither bundles nor re-hosts it (NonCommercial + ShareAlike). Cite:
+  Dag T. T. Haug and Marius L. Jøhndal (2008), "Creating a Parallel Treebank of the Old
+  Indo-European Bible Translations", Proc. LaTeCH 2008, pp. 27–34.
+
+Universal Dependencies — Ancient Greek treebanks (fetched on demand, NOT redistributed)
+  UD_Ancient_Greek-Perseus and UD_Ancient_Greek-PROIEL
+  (https://github.com/UniversalDependencies/), licensed CC BY-NC-SA 3.0. Downloaded by the
+  user on demand via aegean.greek.evaluate_on_ud() as cross-tool-comparable EVALUATION sets
+  only — pyaegean reads them locally in the cache, never bundles or re-hosts them, and never
+  trains on them (NonCommercial + ShareAlike; the AGDT↔UD overlap manifest built by
+  aegean.greek.agdt_ud_overlap() additionally excludes their sentences from AGDT-side
+  training). Cite the treebanks and the UD framework in academic work that relies on them.
+
+CoNLL 2018 shared-task evaluator (fetched on demand, NOT redistributed)
+  conll18_ud_eval.py (https://universaldependencies.org/conll18/), Mozilla Public
+  License 2.0. Downloaded by the user on demand (sha256-pinned) into the local cache and
+  imported from there by aegean.greek.evaluate_on_ud(); not bundled in the wheel.
+
+Aegean syllabic sign data — Unicode Character Database (bundled)
+  The Linear B (src/aegean/data/bundled/linearb/), Cypriot (.../cypriot/), and Cypro-Minoan
+  (.../cyprominoan/) sign inventories — and the phonetic maps for the two deciphered scripts —
+  are derived from the Unicode Character Database (UnicodeData.txt — the "Linear B Syllabary",
+  "Linear B Ideograms", "Cypriot Syllabary", and "Cypro-Minoan" blocks), Copyright
+  © 1991–present Unicode, Inc., distributed under the Unicode License v3
+  (https://www.unicode.org/license.txt); the only obligation is to retain this notice. Cypro-Minoan
+  is undeciphered, so its signs carry conventional numbers (CM001 …) and no phonetic values. The
+  bundled illustrative samples of transliterations and sign sequences are scholarly fact (after
+  Ventris & Chadwick, Documents in Mycenaean Greek; Masson, Les inscriptions chypriotes syllabiques;
+  Chadwick, Linear B and Related Scripts, for the Idalion readings; and Ferrara, Cypro-Minoan
+  Inscriptions), included as excerpts, not corpora. The expanded Linear B Greek-bridge lexicon
+  entries and sample-tablet excerpts were extracted from Wiktionary's Mycenaean Greek entries via
+  the kaikki.org machine-readable dump (Wiktionary text is dual-licensed CC BY-SA 4.0 / GFDL —
+  attribution to the Wiktionary contributors; only entries stating an Ancient Greek equation,
+  and quotations citing their tablet, were taken; scripts/build_linearb_lexicon.py and
+  build_linearb_samples.py document the method), layered under the hand-curated readings.
+
+Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.json)
+  Approximate site-level latitude/longitude for the find-sites attested in the corpora, compiled from
+  standard archaeological references (GORILA, Younger, and public gazetteers) via the Linear A Research
+  Workbench (https://github.com/ryanpavlicek/linearaworkbench, Apache-2.0). Rounded to ~1 km — for
+  mapping, not survey work.
+
+DAMOS — Database of Mycenaean at Oslo (fetched on demand, NOT bundled)
+  DAMOS (F. Aurora, University of Oslo; https://damos.hf.uio.no), the most complete edition
+  of the Mycenaean (Linear B) corpus, published under CC BY-NC-SA 4.0. pyaegean's
+  `damos-corpus` release asset is the transliterations and core metadata (site, series,
+  chronology, Trismegistos id) for ~5,900 tablets, decoded from the DAMOS public web API
+  into compact JSON (scripts/build_damos_corpus.py; attribution, citation, source URL, and
+  generation date in the file's _meta; no imagery). Downloaded by the user on demand via
+  aegean.load("damos"); the NonCommercial + ShareAlike obligations pass through to the user,
+  and the data is never bundled in or redistributed with the Apache-2.0 wheel. Cite DAMOS:
+  Aurora, F. (2015), "DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
+  attested language", Procedia - Social and Behavioral Sciences 198: 21-31.
+
+LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
+  LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
+  bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your
+  own licensed export, which pyaegean parses locally and never re-hosts.
+
+SigLA — the Linear A paleographical database (fetched on demand, NOT bundled)
+  Salgarella, E. & Castellan, S., SigLA: The Signs of Linear A — a palaeographical
+  database (https://sigla.phis.me). Dataset and drawings are published under
+  CC BY-NC-SA 4.0, and the SigLA paper notes that copies of SigLA can be hosted and
+  the data used outside the interface. pyaegean's `sigla-corpus` release asset is
+  that dataset decoded from the published web-app payload into the JSON form the
+  paper describes (scripts/build_sigla_corpus.py; attribution, citation, source
+  sha256, and generation date in the file's _meta; drawings are NOT included and
+  remain at sigla.phis.me). Downloaded by the user on demand via
+  aegean.load("sigla") / aegean.scripts.lineara.load_sigla(); the NonCommercial +
+  ShareAlike obligations pass through to the user, and the data is never bundled
+  in or redistributed with the Apache-2.0 wheel. Cite SigLA in academic work.
+
+Planned (future versions; included here for forward attribution):
+  - Morpheus morphological data (per applicable license).
+  Each will be attributed and license-gated as it is integrated.
+
+The structured-data layer of this package is licensed Apache-2.0; underlying
+scholarly editions and imagery remain under their respective rights. Cite the
+original editions in academic work (see Corpus.provenance.cite()).

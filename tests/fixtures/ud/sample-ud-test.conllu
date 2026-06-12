@@ -1,0 +1,17 @@
+# newdoc id = sample.tb.xml
+# sent_id = sample.tb.xml@1
+# text = ἐν ἀρχῇ ἦν ὁ λόγος
+1	ἐν	ἐν	ADP	r--------	_	3	case	_	_
+2	ἀρχῇ	ἀρχή	NOUN	n-s---fd-	Case=Dat|Gender=Fem|Number=Sing	3	obl	_	_
+3	ἦν	εἰμί	VERB	v3siia---	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+4-5	ὁλόγος	_	_	_	_	_	_	_	_
+4	ὁ	ὁ	DET	l-s---mn-	Case=Nom|Gender=Masc|Number=Sing	5	det	_	_
+5	λόγος	λόγος	NOUN	n-s---mn-	Case=Nom|Gender=Masc|Number=Sing	3	nsubj	_	_
+5.1	_	_	_	_	_	_	_	_	_
+
+# sent_id = sample.tb.xml@2
+# text = καὶ θεός.
+1	καὶ	καί	CCONJ	c--------	_	2	cc	_	_
+2	θεός	θεός	NOUN	n-s---mn-	Case=Nom|Gender=Masc|Number=Sing	0	root	_	SpaceAfter=No
+3	.	.	PUNCT	u--------	_	2	punct	_	_
+

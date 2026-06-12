@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<proiel>
+  <source id="test-grc" language="grc">
+    <div>
+      <sentence id="1" status="reviewed">
+        <token id="1" form="Βίβλος" lemma="βίβλος" part-of-speech="Nb" morphology="-s---fn--i" relation="xobj"/>
+        <token id="2" form="Ἰησοῦ" lemma="Ἰησοῦς" part-of-speech="Ne" morphology="-s---mg--i" relation="atr"/>
+        <token id="99" empty-token-sort="V" relation="pred"/>
+      </sentence>
+      <sentence id="2" status="reviewed">
+        <token id="3" form="ἐστιν" lemma="εἰμί#1" part-of-speech="V-" morphology="3spia----i" relation="pred"/>
+        <token id="4" form="καὶ" lemma="καί#1" part-of-speech="C-" morphology="---------n" relation="aux"/>
+        <token id="5" form="ὅτι" lemma="ὅτι" part-of-speech="G-" morphology="---------n" relation="aux"/>
+      </sentence>
+    </div>
+  </source>
+</proiel>

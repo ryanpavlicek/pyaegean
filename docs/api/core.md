@@ -1,0 +1,3 @@
+# aegean.core
+
+::: aegean.core

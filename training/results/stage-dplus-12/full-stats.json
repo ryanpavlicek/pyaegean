@@ -1,0 +1,158 @@
+{
+ "built": "2026-06-11 04:29:25",
+ "with_extras": true,
+ "extras_audit": {
+  "gorman": {
+   "kept": 26401,
+   "excluded": 1591
+  },
+  "pedalion": {
+   "kept": 18636,
+   "excluded": 155
+  }
+ },
+ "train_sentences": 76149,
+ "dev_sentences": 1137,
+ "train_tokens": 1414213,
+ "dev_tokens": 22135,
+ "n_scripts": 15546,
+ "min_freq": 2,
+ "script_coverage_train": 0.993,
+ "script_coverage_dev": 0.9877,
+ "upos_labels": [
+  "ADJ",
+  "ADP",
+  "ADV",
+  "AUX",
+  "CCONJ",
+  "DET",
+  "INTJ",
+  "NOUN",
+  "NUM",
+  "PART",
+  "PRON",
+  "PUNCT",
+  "SCONJ",
+  "VERB",
+  "X"
+ ],
+ "deprels": [
+  "acl",
+  "advcl",
+  "advmod",
+  "appos",
+  "aux",
+  "case",
+  "cc",
+  "ccomp",
+  "conj",
+  "cop",
+  "csubj",
+  "dep",
+  "det",
+  "iobj",
+  "mark",
+  "nmod",
+  "nsubj",
+  "nummod",
+  "obj",
+  "obl",
+  "parataxis",
+  "punct",
+  "root",
+  "vocative",
+  "xcomp"
+ ],
+ "xpos_position_chars": [
+  [
+   "-",
+   "a",
+   "b",
+   "c",
+   "d",
+   "e",
+   "g",
+   "i",
+   "l",
+   "m",
+   "n",
+   "p",
+   "r",
+   "u",
+   "v",
+   "x",
+   "z"
+  ],
+  [
+   "-",
+   "1",
+   "2",
+   "3",
+   "n"
+  ],
+  [
+   "-",
+   "d",
+   "p",
+   "s"
+  ],
+  [
+   "-",
+   "a",
+   "e",
+   "f",
+   "i",
+   "l",
+   "p",
+   "r",
+   "t"
+  ],
+  [
+   "-",
+   "a",
+   "f",
+   "g",
+   "i",
+   "m",
+   "n",
+   "o",
+   "p",
+   "s"
+  ],
+  [
+   "-",
+   "a",
+   "d",
+   "e",
+   "i",
+   "m",
+   "p"
+  ],
+  [
+   "-",
+   "c",
+   "f",
+   "m",
+   "n"
+  ],
+  [
+   "-",
+   "a",
+   "b",
+   "d",
+   "e",
+   "g",
+   "l",
+   "n",
+   "v"
+  ],
+  [
+   "-",
+   "c",
+   "d",
+   "p",
+   "s"
+  ]
+ ],
+ "protocol": "Stage D: parser rows + lemma supervision + edit-script classes; inventory and lookups are train-only. See docs/benchmarks.md."
+}
