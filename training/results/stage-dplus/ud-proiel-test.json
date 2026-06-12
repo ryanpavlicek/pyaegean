@@ -1,0 +1,15 @@
+{
+ "checkpoint": "pyaegean_repo/training/out/full/model",
+ "compose": "lookup-first",
+ "treebank": "proiel",
+ "split": "test",
+ "lemma": 0.9029592909719093,
+ "uas": 0.8234189574883581,
+ "las": 0.633468529367583,
+ "clas": 0.608184564680033,
+ "upos": 0.8731410545290671,
+ "xpos": 0.0,
+ "ufeats": 0.5951629863301787,
+ "n_sentences": 1047,
+ "n_words": 13314
+}

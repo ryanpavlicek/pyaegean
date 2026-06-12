@@ -1,0 +1,43 @@
+name: "Validation (confirm or refute an exploratory result)"
+description: "An expert assessment of an exploratory output — a decipherment hypothesis, a cross-linguistic match, an AI reading."
+title: "[validation] "
+labels: ["validation", "exploratory"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        pyaegean's decipherment-adjacent, cross-linguistic, and AI outputs are
+        **exploratory** — labeled hypotheses, never established facts. Expert
+        judgement on whether one holds up (or doesn't) is genuinely valuable, and
+        a refutation is as useful as a confirmation.
+
+        Where the output is a generative (AI) result, pasting its `trace()` /
+        `--trace` provenance helps others see what evidence it rested on.
+  - type: textarea
+    id: claim
+    attributes:
+      label: The exploratory output
+      description: Paste the result (and how you produced it — the function/CLI call and any grounding).
+      placeholder: |
+        e.g. ai.decipher_hypotheses("KU-RO", grounding=...) →
+        "KU-RO is plausibly a total…"  (paste r.trace() if you have it)
+    validations:
+      required: true
+  - type: dropdown
+    id: verdict
+    attributes:
+      label: Your assessment
+      options:
+        - "Supported (consistent with the evidence / scholarship)"
+        - "Plausible but unproven"
+        - "Refuted (contradicted by evidence / scholarship)"
+        - "Not assessable as stated"
+    validations:
+      required: true
+  - type: textarea
+    id: reasoning
+    attributes:
+      label: Reasoning and sources
+      description: Why — with references where possible. If refuting, what is the evidence against?
+    validations:
+      required: true

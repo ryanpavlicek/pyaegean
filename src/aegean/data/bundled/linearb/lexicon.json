@@ -1,0 +1,602 @@
+{
+ "A-KA-WI-JA-DE": {
+  "lemma": "Ἀχαΐα",
+  "gloss": "A feast name or potential endonym of the Mycenaean people,"
+ },
+ "A-KE-RO": {
+  "lemma": "ἄγγελος",
+  "gloss": "messenger"
+ },
+ "A-KE-TI-RI-JA": {
+  "lemma": "ἀσκήτρια",
+  "gloss": "decorator/finisher (female)"
+ },
+ "A-KO-RA": {
+  "lemma": "ᾰ̓γορᾱ́",
+  "gloss": "collection"
+ },
+ "A-KO-RO": {
+  "lemma": "ἀγρός",
+  "gloss": "field"
+ },
+ "A-KO-SO-NE": {
+  "lemma": "ἄξων",
+  "gloss": "shaft(s), axle(s)"
+ },
+ "A-KU-RO": {
+  "lemma": "ἄργυρος",
+  "gloss": "silver"
+ },
+ "A-MA": {
+  "lemma": "ἄμη",
+  "gloss": "harvest"
+ },
+ "A-MI-NI-SO": {
+  "lemma": "Ἀμνισός",
+  "gloss": "toponym for Amnisos on the north coast of Crete"
+ },
+ "A-NE-MO": {
+  "lemma": "ἄνεμος",
+  "gloss": "wind (of the priestess of the winds)"
+ },
+ "A-PI": {
+  "lemma": "ἀμφί",
+  "gloss": "around, on both sides"
+ },
+ "A-PI-PO-RE-WE": {
+  "lemma": "ἀμφιφορεύς",
+  "gloss": "amphoras"
+ },
+ "A-PI-QO-RO": {
+  "lemma": "ἀμφίπολος",
+  "gloss": "attendant"
+ },
+ "A-PI-QO-TO": {
+  "lemma": "ἀμφίβροτος",
+  "gloss": "table adjective meaning round or with a rim"
+ },
+ "A-PU-DU-SI": {
+  "lemma": "ἀπόδοσις",
+  "gloss": "delivery"
+ },
+ "A-RE": {
+  "lemma": "Ἄρης",
+  "gloss": "Ares, Greek god of war"
+ },
+ "A-RE-KA-SA-DA-RA": {
+  "lemma": "Ᾰ̓λεξᾰ́νδρᾱ",
+  "gloss": "a female given name, equivalent to English Alexandra"
+ },
+ "A-RE-PA": {
+  "lemma": "ἄλειφαρ",
+  "gloss": "unguent, ointment"
+ },
+ "A-SA-MI-TO": {
+  "lemma": "ἀσάμινθος",
+  "gloss": "bath"
+ },
+ "A-SI-WI-JA": {
+  "lemma": "Ἀσία",
+  "gloss": "an ethnonym for a Lydian (Asian)"
+ },
+ "A-TO-RO-QO": {
+  "lemma": "ἄνθρωπος",
+  "gloss": "human being, man"
+ },
+ "A3-KU-PI-TI-JO": {
+  "lemma": "Αἰγύπτιος",
+  "gloss": "a male given name meaning “man of Memphis” or “man of Egypt”"
+ },
+ "A3-TI-JO-QO": {
+  "lemma": "Αἰθίοψ",
+  "gloss": "a male given name, a landholder from the 𐀞𐀑𐀊𐀚 (pa-ki-ja-ne) district in Pylos"
+ },
+ "A3-ZA": {
+  "lemma": "αἴξ",
+  "gloss": "goat"
+ },
+ "DA-MO": {
+  "lemma": "δῆμος",
+  "gloss": "village community, district"
+ },
+ "DA-PU2-RI-TO-JO": {
+  "lemma": "λαβύρινθος",
+  "gloss": "of the labyrinth"
+ },
+ "DE-DE-ME-NO": {
+  "lemma": "δεδεμένος",
+  "gloss": "bound (mediopassive perfect participle)"
+ },
+ "DE-MI-NI-A": {
+  "lemma": "δέμνιον",
+  "gloss": "bedclothes"
+ },
+ "DE-PA": {
+  "lemma": "δέπας",
+  "gloss": "cup"
+ },
+ "DI-DA-KA-RE": {
+  "lemma": "διδάσκαλος",
+  "gloss": "unknown to an extent, possibly \"at the schoolmaster's\" or \"under instruction\""
+ },
+ "DI-DO-SI": {
+  "lemma": "διδόασι",
+  "gloss": "they give"
+ },
+ "DI-PA": {
+  "lemma": "δέπας",
+  "gloss": "cup, goblet"
+ },
+ "DI-PTE-RA": {
+  "lemma": "διφθέρα",
+  "gloss": "leather"
+ },
+ "DI-WO": {
+  "lemma": "Ζεύς",
+  "gloss": "of Zeus (genitive)"
+ },
+ "DI-WO-NU-SO": {
+  "lemma": "Διόνυσος",
+  "gloss": "Dionysus"
+ },
+ "DO-E-RA": {
+  "lemma": "δούλη",
+  "gloss": "slave, servant (female)"
+ },
+ "DO-E-RO": {
+  "lemma": "δοῦλος",
+  "gloss": "slave, servant (male)"
+ },
+ "DO-RA": {
+  "lemma": "δῶρον",
+  "gloss": "gifts"
+ },
+ "DO-SE": {
+  "lemma": "δίδωμι",
+  "gloss": "to give"
+ },
+ "DU-RU-TO-MO": {
+  "lemma": "δρυτόμος",
+  "gloss": "lumberjack (nominative plural)"
+ },
+ "E-KE": {
+  "lemma": "ἔχω",
+  "gloss": "he/she holds, has"
+ },
+ "E-MA-A2": {
+  "lemma": "Ἑρμῆς",
+  "gloss": "Hermes"
+ },
+ "E-PI": {
+  "lemma": "ἐπί",
+  "gloss": "on"
+ },
+ "E-RA": {
+  "lemma": "Ἥρα",
+  "gloss": "a toponym, name of an unidentified location"
+ },
+ "E-RA-WA": {
+  "lemma": "ἐλαία",
+  "gloss": "olive tree"
+ },
+ "E-RA-WO": {
+  "lemma": "ἔλαιον",
+  "gloss": "olive oil"
+ },
+ "E-RA3-WO": {
+  "lemma": "ἔλαιον",
+  "gloss": "olive oil"
+ },
+ "E-RE-MO": {
+  "lemma": "ἐρῆμος",
+  "gloss": "desert"
+ },
+ "E-RE-PA": {
+  "lemma": "ἐλέφας",
+  "gloss": "ivory"
+ },
+ "E-RE-U-TE-RO": {
+  "lemma": "ἐλεύθερος",
+  "gloss": "free, exempt"
+ },
+ "E-RI-KA": {
+  "lemma": "ἑλίκη",
+  "gloss": "willow"
+ },
+ "E-TE-WO-KE-RE-WE-I-JO": {
+  "lemma": "Ἐτεοκλῆς",
+  "gloss": "a male patronymic"
+ },
+ "E-U-KE-TO": {
+  "lemma": "εὔχομαι",
+  "gloss": "he/she declares, claims"
+ },
+ "FICUS": {
+  "lemma": "νικύλεον",
+  "gloss": "fig"
+ },
+ "I-JE-RE-JA": {
+  "lemma": "ἱέρεια",
+  "gloss": "priestess"
+ },
+ "I-JE-RE-U": {
+  "lemma": "ἱερεύς",
+  "gloss": "priest"
+ },
+ "I-PE-ME-DE-JA": {
+  "lemma": "Ἰφιμέδεια",
+  "gloss": "A Thessalian princess, Iphimedeia"
+ },
+ "I-QO": {
+  "lemma": "ἵππος",
+  "gloss": "horse"
+ },
+ "KA-DA-MI-JA": {
+  "lemma": "κάρδαμον",
+  "gloss": "cress (Lepidium sativum)"
+ },
+ "KA-KI-JO": {
+  "lemma": "χάλκειος",
+  "gloss": "of bronze, brazen"
+ },
+ "KA-KO": {
+  "lemma": "χαλκός",
+  "gloss": "bronze, copper"
+ },
+ "KA-KO-DE-TA": {
+  "lemma": "χαλκόδετος",
+  "gloss": "bronze-bound, bronze-covered"
+ },
+ "KA-NA-KO": {
+  "lemma": "κνῆκος",
+  "gloss": "safflower (Carthamus tinctorius)"
+ },
+ "KA-PO": {
+  "lemma": "καρπός",
+  "gloss": "fruit"
+ },
+ "KE-RA": {
+  "lemma": "κέρας",
+  "gloss": "horn"
+ },
+ "KE-RE-TE-U": {
+  "lemma": "Κρηθεύς",
+  "gloss": "a male given name, Cretheus"
+ },
+ "KE-RE-WO": {
+  "lemma": "κλέϝος",
+  "gloss": "fame"
+ },
+ "KI-TA-NO": {
+  "lemma": "κρίτανος",
+  "gloss": "terebinth"
+ },
+ "KI-TI-ME-NA": {
+  "lemma": "ἐϋκτίμενος",
+  "gloss": "field"
+ },
+ "KI-TO": {
+  "lemma": "χιτών",
+  "gloss": "chiton"
+ },
+ "KO-NO-SO": {
+  "lemma": "Κνωσός",
+  "gloss": "Knossos (place in north-central Crete)"
+ },
+ "KO-RI-JA-DA-NA": {
+  "lemma": "κορίαννον",
+  "gloss": "coriander"
+ },
+ "KO-RU": {
+  "lemma": "κόρυς",
+  "gloss": "helmet"
+ },
+ "KO-WA": {
+  "lemma": "κόρη",
+  "gloss": "girl, daughter"
+ },
+ "KO-WO": {
+  "lemma": "κόρος",
+  "gloss": "boy, son"
+ },
+ "KU-KE-RE-U": {
+  "lemma": "κύκλος",
+  "gloss": "a male given name meaning “wheelwright”, equivalent to Ancient Greek Κυκλεύς…"
+ },
+ "KU-MI-NO": {
+  "lemma": "κύμινον",
+  "gloss": "cumin"
+ },
+ "KU-NA-JA": {
+  "lemma": "γυνή",
+  "gloss": "woman"
+ },
+ "KU-RU-SO": {
+  "lemma": "χρυσός",
+  "gloss": "gold"
+ },
+ "MA-RA-TU-WO": {
+  "lemma": "μάραθον",
+  "gloss": "fennel"
+ },
+ "MA-TE": {
+  "lemma": "μήτηρ",
+  "gloss": "mother"
+ },
+ "ME-NO": {
+  "lemma": "μήν",
+  "gloss": "month"
+ },
+ "ME-RI": {
+  "lemma": "μέλι",
+  "gloss": "honey"
+ },
+ "ME-ZA-NA": {
+  "lemma": "Μεσσήνη",
+  "gloss": "a place, Messene"
+ },
+ "MI-TA": {
+  "lemma": "μίνθη",
+  "gloss": "mint (Mentha, likely M. spicata)"
+ },
+ "MO-RI-WO-DO": {
+  "lemma": "μόλυβδος",
+  "gloss": "lead (metal)"
+ },
+ "MO-WO": {
+  "lemma": "μόνος",
+  "gloss": "single"
+ },
+ "NA-U-DO-MO": {
+  "lemma": "ναῦς",
+  "gloss": "shipbuilders"
+ },
+ "O-KA": {
+  "lemma": "ἔχω",
+  "gloss": "to hold"
+ },
+ "O-NO": {
+  "lemma": "ὄνος",
+  "gloss": "donkey"
+ },
+ "O-PE-RO": {
+  "lemma": "ὄφελος",
+  "gloss": "deficit"
+ },
+ "PA-I-TO": {
+  "lemma": "Φαιστός",
+  "gloss": "toponym for Phaistos in south-central Crete"
+ },
+ "PA-KO-WE": {
+  "lemma": "σφάκος",
+  "gloss": "sage-scented"
+ },
+ "PA-MA-KO": {
+  "lemma": "φάρμακον",
+  "gloss": "medicine"
+ },
+ "PA-RA-JO": {
+  "lemma": "παλαιός",
+  "gloss": "old"
+ },
+ "PA-RO": {
+  "lemma": "παρά",
+  "gloss": "from"
+ },
+ "PA-SI": {
+  "lemma": "πᾶς",
+  "gloss": "to all (dative plural)"
+ },
+ "PA-TE": {
+  "lemma": "πατήρ",
+  "gloss": "father"
+ },
+ "PA-WE-A": {
+  "lemma": "φᾶρος",
+  "gloss": "large piece of cloth"
+ },
+ "PE-KO-TO": {
+  "lemma": "πλεκτός",
+  "gloss": "knitwear"
+ },
+ "PE-MA": {
+  "lemma": "σπέρμα",
+  "gloss": "seed, seed-grain"
+ },
+ "PE-MO": {
+  "lemma": "σπέρμα",
+  "gloss": "seed, seed-grain (Pylos form)"
+ },
+ "PE-RE": {
+  "lemma": "φέρω",
+  "gloss": "to bring"
+ },
+ "PE-RU-SI-NU-WO": {
+  "lemma": "πέρυσι",
+  "gloss": "last year's"
+ },
+ "PI-TA-KE-U": {
+  "lemma": "Πιτακεύς",
+  "gloss": "A male given name, Pitakeus"
+ },
+ "PI-TI-RO2-WE-SA": {
+  "lemma": "πτίλον",
+  "gloss": "decorated with a feather pattern"
+ },
+ "PO-ME": {
+  "lemma": "ποιμήν",
+  "gloss": "shepherd"
+ },
+ "PO-NI-KI-JA": {
+  "lemma": "Φοίνικες",
+  "gloss": "murex"
+ },
+ "PO-NI-KI-JO": {
+  "lemma": "φοινίκιον",
+  "gloss": "date palm?"
+ },
+ "PO-RO": {
+  "lemma": "πῶλος",
+  "gloss": "foal, young animal"
+ },
+ "PO-RU-PO-DE": {
+  "lemma": "πολύπους",
+  "gloss": "octopus"
+ },
+ "PO-TI-NI-JA": {
+  "lemma": "πότνια",
+  "gloss": "lady"
+ },
+ "PU-KA-WO": {
+  "lemma": "πῦρ",
+  "gloss": "fire-kindler"
+ },
+ "QA-SI-RE-JA": {
+  "lemma": "βασίλεια",
+  "gloss": "royal woman"
+ },
+ "QA-SI-RE-U": {
+  "lemma": "βασιλεύς",
+  "gloss": "chief, local leader (later: king)"
+ },
+ "QE": {
+  "lemma": "τε",
+  "gloss": "and"
+ },
+ "QI-SI-PE-E": {
+  "lemma": "ξίφος",
+  "gloss": "two swords"
+ },
+ "QO-O": {
+  "lemma": "βοῦς",
+  "gloss": "cows, oxen, cattle"
+ },
+ "QO-U-KO-RO": {
+  "lemma": "βουκόλος",
+  "gloss": "oxherd"
+ },
+ "RA-WA-KE-TA": {
+  "lemma": "λαὸς + ἡγέομαι",
+  "gloss": "leader of the people (lāwāgetās)"
+ },
+ "RE-PO-TO": {
+  "lemma": "λεπτός",
+  "gloss": "thin"
+ },
+ "RE-U-KA": {
+  "lemma": "λευκός",
+  "gloss": "white"
+ },
+ "RE-WO": {
+  "lemma": "λέων",
+  "gloss": "lion"
+ },
+ "RI-JO": {
+  "lemma": "ῥίον",
+  "gloss": "cape"
+ },
+ "RI-ME-NE": {
+  "lemma": "λιμένες",
+  "gloss": "ports"
+ },
+ "RI-NO": {
+  "lemma": "λίνον",
+  "gloss": "linen"
+ },
+ "RO-U-SO": {
+  "lemma": "Λουσοί",
+  "gloss": "toponym for Lusi in Arcadia, Greece"
+ },
+ "SA-SA-MA": {
+  "lemma": "σησάμη",
+  "gloss": "sesame"
+ },
+ "SE-RI-NO": {
+  "lemma": "σέλινον",
+  "gloss": "celery"
+ },
+ "SI-TO": {
+  "lemma": "σῖτος",
+  "gloss": "wheat"
+ },
+ "SU-ZA": {
+  "lemma": "σῦκον",
+  "gloss": "fig fruit"
+ },
+ "TA-PE-JA": {
+  "lemma": "τάπης",
+  "gloss": "carpets"
+ },
+ "TE-ME-NO": {
+  "lemma": "τέμενος",
+  "gloss": "sacred or royal precinct, estate"
+ },
+ "TE-O": {
+  "lemma": "θεός",
+  "gloss": "god"
+ },
+ "TI-RI-PO": {
+  "lemma": "τρίπους",
+  "gloss": "tripod"
+ },
+ "TI-RI-PO-DE": {
+  "lemma": "τρίπους",
+  "gloss": "two tripods (dual)"
+ },
+ "TO-PE-ZA": {
+  "lemma": "τράπεζα",
+  "gloss": "table"
+ },
+ "TO-RA-KE": {
+  "lemma": "θώραξ",
+  "gloss": "thoraxes, breastplates"
+ },
+ "TO-SA": {
+  "lemma": "τόσος",
+  "gloss": "so many (total, feminine/neuter plural)"
+ },
+ "TO-SO": {
+  "lemma": "τόσος",
+  "gloss": "so much, so many (total)"
+ },
+ "TU-KA-TE": {
+  "lemma": "θυγάτηρ",
+  "gloss": "daughter"
+ },
+ "TU-RO": {
+  "lemma": "τυρός",
+  "gloss": "cheese"
+ },
+ "TU-RO2": {
+  "lemma": "τυρός",
+  "gloss": "cheese"
+ },
+ "TU-WE-A": {
+  "lemma": "θύος",
+  "gloss": "aromatic"
+ },
+ "U-DO": {
+  "lemma": "ὕδωρ",
+  "gloss": "water"
+ },
+ "WA-NA-KA": {
+  "lemma": "ἄναξ",
+  "gloss": "king, lord (wanax)"
+ },
+ "WA-NA-SA": {
+  "lemma": "ἄνασσα",
+  "gloss": "queen, lady"
+ },
+ "WI-DE": {
+  "lemma": "εἴδομαι",
+  "gloss": "to see"
+ },
+ "WO-KO": {
+  "lemma": "οἶκος",
+  "gloss": "home"
+ },
+ "WO-NO": {
+  "lemma": "οἶνος",
+  "gloss": "wine"
+ }
+}

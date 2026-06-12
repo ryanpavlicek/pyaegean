@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title xml:lang="lat">Opus Exemplare</title>
+        <title xml:lang="grc">Ἔργον</title>
+        <author>Testius</author>
+      </titleStmt>
+      <publicationStmt><p>fixture</p></publicationStmt>
+      <sourceDesc><p>authored test fixture</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="edition" n="urn:cts:greekLit:tlg9999.tlg001.test-grc1" xml:lang="grc">
+        <div type="textpart" subtype="book" n="1">
+          <l n="1">μῆνιν ἄειδε θεὰ</l>
+          <l n="2">οὐλομένην, ἣ μυρία<note>an editorial note to exclude</note></l>
+        </div>
+        <div type="textpart" subtype="chapter" n="2">
+          <p>ἐν ἀρχῇ ἦν ὁ λόγος. <bibl>Ev. Jo. 1.1</bibl>καὶ ὁ λόγος ἦν.</p>
+          <p>πάντα δι᾽ αὐτοῦ ἐγένετο.</p>
+        </div>
+      </div>
+    </body>
+  </text>
+</TEI>

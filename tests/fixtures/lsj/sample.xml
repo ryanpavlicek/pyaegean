@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic LSJ-format fixture (authored for pyaegean's tests, NOT copied from the
+  Perseus LSJ) so the TEI parser/index can be exercised offline without
+  redistributing CC BY-SA content. Uses the real entryFree/orth/sense schema with
+  Beta Code keys (lo/gos -> λόγος) and Beta Code inside <foreign>.
+-->
+<lexicon>
+  <entryFree id="n1" key="lo/gos" type="main" TEIform="entryFree">
+    <orth lang="greek" TEIform="orth">lo/gos</orth>, <gramGrp TEIform="gramGrp"><gram>masc.</gram></gramGrp>
+    <sense id="n1.0" n="A" level="1" TEIform="sense">computation, reckoning; related to the verb
+       <foreign lang="greek" TEIform="foreign">le/gw</foreign>
+       <bibl TEIform="bibl"><author>Hdt.</author> <biblScope>1.1</biblScope></bibl></sense>
+    <sense id="n1.1" n="II" level="2" TEIform="sense">the word or that by which inner thought is expressed</sense>
+  </entryFree>
+  <entryFree id="n2" key="a)/nqrwpos" type="main" TEIform="entryFree">
+    <orth lang="greek" TEIform="orth">a)/nqrwpos</orth>,
+    <sense id="n2.0" n="A" level="1" TEIform="sense">man, human being</sense>
+  </entryFree>
+</lexicon>
