@@ -12,6 +12,9 @@ Linear A corpus (bundled text JSON: src/aegean/data/bundled/lineara/)
   Derived from the GORILA edition — Godart, L. & Olivier, J.-P. (1976–1985),
   "Recueil des inscriptions en linéaire A" (Études Crétoises) — via the
   open dataset at https://github.com/mwenge/lineara.xyz.
+  The GORILA volumes are digitized in the École française d'Athènes'
+  CEFAEL library:
+  https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND
   Used as a scholarly reference corpus. Transliterations and structured
   metadata only; no facsimile imagery is bundled or redistributed.
 

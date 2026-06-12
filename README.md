@@ -166,8 +166,10 @@ All feedback is welcome.
 If pyaegean helped with work you publish, a citation is genuinely appreciated — it's how a small
 open project justifies the time. In the scholarly spirit, two layers:
 
-1. **Always cite the underlying scholarship** pyaegean stands on — GORILA (Godart & Olivier
-   1976–1985) for Linear A; the Perseus AGDT treebank, LSJ, and (for fetched works) the Perseus
+1. **Always cite the underlying scholarship** pyaegean stands on —
+   [GORILA](https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND)
+   (Godart & Olivier 1976–1985; all five volumes are digitized in the École française
+   d'Athènes' CEFAEL library at that link) for Linear A; the Perseus AGDT treebank, LSJ, and (for fetched works) the Perseus
    Digital Library / Open Greek and Latin for Greek; the Unicode Character Database for the
    Linear B / Cypriot / Cypro-Minoan sign data; and GreBerta/GreTa plus the AGDT, Gorman, and
    Pedalion treebanks behind the neural models. The editions are listed in [`NOTICE`](NOTICE),

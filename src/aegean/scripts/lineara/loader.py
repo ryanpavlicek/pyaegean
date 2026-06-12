@@ -113,6 +113,10 @@ _PROVENANCE = Provenance(
     license="Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed",
     citation="Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.",
     url="https://github.com/mwenge/lineara.xyz",
+    notes=(
+        "GORILA digitized at CEFAEL (École française d'Athènes): "
+        "https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND",
+    ),
 )
 
 

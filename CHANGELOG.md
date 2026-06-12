@@ -7,6 +7,8 @@ All notable changes to pyaegean are documented here. The format follows
 ## Unreleased
 
 ### Added
+- **GORILA online**: the Linear A corpus provenance (and README / NOTICE / wiki) now points
+  to the digitized GORILA volumes in the École française d'Athènes' CEFAEL library.
 - **Workbench round-trip** (`aegean.io`): `to_workbench(corpus, path=None)` emits the
   [Linear A Research Workbench](https://ryanpavlicek.github.io/linearaworkbench/)'s
   inscription-record JSON, so any corpus — your own `from_records` finds included — opens in
