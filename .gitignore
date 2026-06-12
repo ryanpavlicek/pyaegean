@@ -21,7 +21,7 @@ _site_test/
 # Local-only — not part of the public package
 CLAUDE.md
 experiments/
-docs/ROADMAP.md
+docs/ROADMAP*.md
 docs/PLAN.md
 docs/inquiries/
 
