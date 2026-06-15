@@ -33,14 +33,17 @@ Limitations
   where it is standard; a line needing synizesis on a word **not** in the lexicon
   still raises `ScansionError` rather than guessing.
 - Diaeresis (e.g. ``ϊ``) correctly blocks diphthong formation.
-- Meters: dactylic hexameter, elegiac pentameter, and **iambic trimeter** (with
-  resolution). Lyric metres remain future work.
+- Meters: dactylic hexameter, elegiac pentameter, **iambic trimeter** (with
+  resolution), and the **aeolic lyric lines** (glyconic, pherecratean, the sapphic
+  and alcaic line types) as fixed quantity templates. Dactylo-epitrite and free
+  astrophic lyric remain future work.
 """
 
 from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 
 HEAVY = "heavy"
@@ -77,6 +80,7 @@ _SYNIZESIS: dict[str, str] = {
     "πηληιαδεω": "εω",   # Πηληϊάδεω (Il. 1.1) — the genitive ending -εω is one syllable
     "πολεως": "εω",      # πόλεως — Attic genitive, frequent in tragic trimeter
     "χρυσεω": "εω",      # χρυσέῳ and the like — adjectival -εω / -εῳ
+    "θεους": "εου",      # θεούς — the three written vowels εου coalesce to one syllable
 }
 
 
@@ -210,14 +214,24 @@ def _items(line: str) -> list[_Item]:
             base = _strip_combining(ch).lower()
             if base in _VOWELS:
                 text = ch
-                if i + 1 < len(chars) and _strip_combining(chars[i + 1]).lower() in _VOWELS:
+                nxt1 = _strip_combining(chars[i + 1]).lower() if i + 1 < len(chars) else ""
+                nxt2 = _strip_combining(chars[i + 2]).lower() if i + 2 < len(chars) else ""
+                if (
+                    not syn_used and len(syn) == 3 and nxt1 in _VOWELS and nxt2 in _VOWELS
+                    and base + nxt1 + nxt2 == syn
+                ):
+                    # this word's one synizesis trigram (e.g. θεούς: εου → one nucleus)
+                    text += chars[i + 1] + chars[i + 2]
+                    i += 2
+                    syn_used = True
+                elif nxt1 in _VOWELS:
                     nxt = chars[i + 1]
-                    pair = base + _strip_combining(nxt).lower()
-                    if _is_diphthong(ch, nxt) or (not syn_used and syn and pair == syn):
+                    pair = base + nxt1
+                    if _is_diphthong(ch, nxt) or (not syn_used and len(syn) == 2 and pair == syn):
                         # natural diphthong, or this word's one synizesis bigram
                         text += nxt
                         i += 1
-                        if syn and pair == syn:
+                        if len(syn) == 2 and pair == syn:
                             syn_used = True
                 items.append(_Item(True, text, base, word_idx, first))
             else:
@@ -697,10 +711,92 @@ def scan_trimeter(line: str) -> LineScansion:
     return _replace(scansion, caesura=caesura, caesura_index=caesura_index)
 
 
-_SCANNERS = {
+# --- aeolic lyric lines (fixed quantity templates) ---------------------------
+
+# Each aeolic line is a fixed sequence of quantities (the choriambic nucleus does not
+# resolve). Interior ANCEPS positions are the "aeolic base"; the final position is ANCEPS
+# for brevis in longo. A line scans iff every syllable can take its position's quantity
+# (an ANCEPS position accepts either) — no resolution, so it is a straight template match.
+_AEOLIC: dict[str, tuple[str, ...]] = {
+    # glyconic — × × — ⏑ ⏑ — ⏑ ×  (aeolic base + choriamb + ⏑ —)
+    "glyconic": (ANCEPS, ANCEPS, HEAVY, LIGHT, LIGHT, HEAVY, LIGHT, ANCEPS),
+    # pherecratean — × × — ⏑ ⏑ — ×  (catalectic glyconic)
+    "pherecratean": (ANCEPS, ANCEPS, HEAVY, LIGHT, LIGHT, HEAVY, ANCEPS),
+    # sapphic hendecasyllable — — ⏑ — × — ⏑ ⏑ — ⏑ — ×
+    "sapphic_hendecasyllable": (
+        HEAVY, LIGHT, HEAVY, ANCEPS, HEAVY, LIGHT, LIGHT, HEAVY, LIGHT, HEAVY, ANCEPS,
+    ),
+    # adonean — — ⏑ ⏑ — ×  (the close of the sapphic stanza)
+    "adonean": (HEAVY, LIGHT, LIGHT, HEAVY, ANCEPS),
+    # alcaic hendecasyllable — × — ⏑ — × — ⏑ ⏑ — ⏑ ×
+    "alcaic_hendecasyllable": (
+        ANCEPS, HEAVY, LIGHT, HEAVY, ANCEPS, HEAVY, LIGHT, LIGHT, HEAVY, LIGHT, ANCEPS,
+    ),
+    # alcaic enneasyllable — × — ⏑ — × — ⏑ — ×
+    "alcaic_enneasyllable": (ANCEPS, HEAVY, LIGHT, HEAVY, ANCEPS, HEAVY, LIGHT, HEAVY, ANCEPS),
+    # alcaic decasyllable — — ⏑ ⏑ — ⏑ ⏑ — ⏑ — ×
+    "alcaic_decasyllable": (
+        HEAVY, LIGHT, LIGHT, HEAVY, LIGHT, LIGHT, HEAVY, LIGHT, HEAVY, ANCEPS,
+    ),
+}
+
+AEOLIC_LINES: tuple[str, ...] = tuple(_AEOLIC)  # the supported aeolic line names
+
+
+def _scan_aeolic(syllables: list[_Syllable], template: tuple[str, ...]) -> list[str] | None:
+    """Fit syllables to a fixed aeolic quantity template, or ``None`` if they do not match."""
+    opts = [s.options for s in syllables]
+    if len(opts) != len(template):
+        return None
+    quantities: list[str] = []
+    for opt, code in zip(opts, template):
+        if code == ANCEPS:
+            quantities.append(ANCEPS)
+        elif _fits(opt, code):
+            quantities.append(code)
+        else:
+            return None
+    return quantities
+
+
+def scan_aeolic(line: str, line_type: str = "glyconic") -> LineScansion:
+    """Scan an **aeolic lyric line** against a fixed quantity template.
+
+    ``line_type`` is one of `AEOLIC_LINES` — ``"glyconic"``, ``"pherecratean"``,
+    ``"sapphic_hendecasyllable"``, ``"adonean"``, ``"alcaic_hendecasyllable"``,
+    ``"alcaic_enneasyllable"``, ``"alcaic_decasyllable"``. These are fixed patterns (the
+    choriamb does not resolve), so the line either matches or it doesn't — `ScansionError`
+    is raised on a mismatch (e.g. the wrong syllable count, or a line needing synizesis on a
+    word not in the lexicon)."""
+    if line_type not in _AEOLIC:
+        raise ScansionError(
+            f"unknown aeolic line {line_type!r}; available: {', '.join(sorted(_AEOLIC))}"
+        )
+    template = _AEOLIC[line_type]
+    syllables = _analyze(line)
+    quantities = _scan_aeolic(syllables, template)
+    if quantities is None:
+        raise ScansionError(
+            f"line does not scan as {line_type} "
+            f"({len(syllables)} syllables, expected {len(template)}): {line!r}"
+        )
+    plan = [(line_type, quantities)]
+    return _assemble(line, line_type, syllables, plan, ambiguous=False, detect_caesura=False)
+
+
+def _aeolic_scanner(line_type: str) -> Callable[[str], LineScansion]:
+    """A single-argument scanner bound to one aeolic ``line_type`` (for ``_SCANNERS``)."""
+    def _scan(line: str) -> LineScansion:
+        return scan_aeolic(line, line_type)
+
+    return _scan
+
+
+_SCANNERS: dict[str, Callable[[str], LineScansion]] = {
     "hexameter": scan_hexameter,
     "pentameter": scan_pentameter,
     "trimeter": scan_trimeter,
+    **{name: _aeolic_scanner(name) for name in _AEOLIC},
 }
 
 

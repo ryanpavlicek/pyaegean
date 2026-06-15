@@ -1,0 +1,58 @@
+"""``aegean db`` — the SQLite persistence layer (aegean.db) from the shell.
+
+Build a queryable SQLite database from any corpus and full-text search it. The database is
+a faithful round-trip (documents + tokens + provenance) with an FTS5 text index; load it
+back in Python with ``Corpus.from_sql(path)`` or stream it with ``aegean.db.stream(path)``.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import typer
+
+from ._common import CORPUS_ARG, JSON_OPT, emit_json, load_corpus, table
+
+db_app = typer.Typer(
+    help="SQLite persistence: build a corpus database and full-text search it.",
+    no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+
+
+@db_app.command()
+def build(
+    corpus: str = CORPUS_ARG,
+    output: Path = typer.Option(..., "--output", "-o", help="Destination .db file."),
+    no_fts: bool = typer.Option(False, "--no-fts", help="Skip the FTS5 full-text index."),
+) -> None:
+    """Write a corpus to a SQLite database (documents + tokens, queryable, with FTS5)."""
+    from aegean.db import to_sqlite
+
+    c = load_corpus(corpus)
+    to_sqlite(c, output, fts=not no_fts)
+    print(f"wrote {len(c)} documents to {output}")
+
+
+@db_app.command()
+def search(
+    path: Path = typer.Argument(..., help="A SQLite corpus DB (from `aegean db build`)."),
+    query: str = typer.Argument(..., help="Text to find — a literal token or phrase (e.g. KU-RO)."),
+    limit: int = typer.Option(50, "--limit", help="Max hits."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Full-text search a SQLite corpus's tokens; prints (doc, position, text) hits."""
+    from aegean.db import search as db_search
+
+    hits = db_search(path, query, limit=limit)
+    if json_out:
+        emit_json([{"doc_id": d, "position": p, "text": t} for d, p, t in hits])
+        return
+    if not hits:
+        print("no matches")
+        return
+    table(
+        f"'{query}' in {path.name}",
+        ["doc", "pos", "text"],
+        [[d, str(p), t] for d, p, t in hits],
+    )

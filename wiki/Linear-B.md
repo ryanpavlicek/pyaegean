@@ -112,10 +112,23 @@ tablet / stirrup jar / nodule / label). That makes scribe-level work one-liners:
 ```python
 hand117 = corpus.filter(scribe="117")        # the most prolific Knossos hand: 684 tablets
 vases = corpus.filter(support="stirrup jar") # the painted-vase inscriptions as a group
-
-from aegean.analysis import keyness          # what does Hand 117 write about?
-rows = keyness(hand117, [d for d in corpus.documents if d.meta.scribe != "117"])
 ```
+
+The **scribal-hand analysis** layer (`aegean.analysis.scribal`) profiles the hands and finds
+what is characteristic of each one:
+
+```python
+from aegean.analysis import scribal_hands, hand_keyness
+
+for h in scribal_hands(corpus)[:5]:          # profile every hand, busiest first
+    print(h.hand, h.doc_count, "tablets at", list(h.sites)[:3])
+
+rows = hand_keyness(corpus, "117")           # what does Hand 117 write more than the others?
+print([r.item for r in rows[:5]])            # log-likelihood keyness, this hand vs all the rest
+```
+
+Per-hand dispersion is the standard helper over the hand's slice —
+`dispersion(corpus.filter(scribe="117"), "some-word")`.
 
 The data is **NonCommercial + ShareAlike** — those obligations pass through to you; the corpus is
 hosted as a clearly-labeled CC BY-NC-SA release asset, fetched to your cache on demand, and

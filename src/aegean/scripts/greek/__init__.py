@@ -12,10 +12,12 @@ from types import ModuleType
 from ...core.model import SignInventory, Token
 from ...core.script import Script, register
 from . import loader  # noqa: F401 — registers the Corpus loader on import
+from . import nt  # noqa: F401 — registers the New Testament corpus loader on import
 from .inventory import greek_inventory
+from .nt import load_nt
 from .perseus import load_work
 
-__all__ = ["Greek", "load_work"]
+__all__ = ["Greek", "load_work", "load_nt"]
 
 
 class Greek(Script):

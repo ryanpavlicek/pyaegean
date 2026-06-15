@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.8.0 (beta).** The API is close to stable, but a 1.0 awaits outside use and a short
+> **Status: v0.8.1 (beta).** The API is close to stable, but a 1.0 awaits outside use and a short
 > methods write-up. The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set — each deciphered script with a sign inventory, transliteration, and a
@@ -112,12 +112,17 @@ first use; corpus **statistics** (dispersion/keyness/bootstrap), **visualization
 and **cross-script phonetic comparison**; traceable, measurable AI grounding; the opt-in
 analysis cache; and the extended Pleiades alignment (33/56, coordinate-verified).
 
+**New in v0.8.1:** the annotated Greek New Testament (`load_nt`, Nestle 1904) with Koine glossing
+(`use_dodson`); scribal-hand analysis (`scribal_hands` / `hand_keyness`); SQLite persistence +
+full-text search (`aegean.db`, `Corpus.to_sql`); aeolic lyric scansion; an in-browser
+[Pyodide demo](https://ryanpavlicek.github.io/pyaegean/demo/); the `aegean workbench` local server;
+and an `aegean-mcp` Model Context Protocol server for agents.
+
 **On the list next:**
 
-- DAMOS scribal-hand analysis and SigLA apparatus decoding
-- Richer `load_work` addressing across more of the Perseus / First1KGreek canon
 - A smaller neural model (selective quantization, optional GPU execution), held to the same accuracy gate
-- Morpheus-backed tables for the offline morphology tier
+- A NonCommercial PROIEL-trained model variant (opt-in, separately labelled)
+- SigLA apparatus decoding; richer `load_work` addressing across more of the Perseus / First1KGreek canon
 - Wider gazetteer / Pleiades coverage
 
 A **1.0 stable** waits on outside use and a short methods write-up.

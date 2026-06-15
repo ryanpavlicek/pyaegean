@@ -9,7 +9,12 @@ see each function's docstring.
 from __future__ import annotations
 
 from ..core.numerals import BalanceCheck
-from .accounting import account_lines, balance_check
+from .accounting import (
+    account_lines,
+    balance_check,
+    checkable_accounts,
+    is_checkable_account,
+)
 from .align import (
     AlignCell,
     AlignOp,
@@ -24,7 +29,14 @@ from .collocation import (
     fishers_exact,
     log_likelihood_ratio_2x2,
     pmi_interval,
+    sign_bigram_pmi,
+    sign_bigram_pmis,
     wilson_interval,
+)
+from .commodity import (
+    ExclusivityRow,
+    ideogram_group_exclusivity,
+    line_cooccurrence_pmi,
 )
 from .compare import (
     PHONEME_SCRIPTS,
@@ -52,10 +64,32 @@ from .distance import (
     sequence_distance,
     sequence_similarity,
 )
+from .edge import (
+    EdgeBiasRow,
+    PositionalRow,
+    Productivity,
+    SuccessorRow,
+    SuccessorVariety,
+    affix_edge_bias,
+    baayen_productivity,
+    edge_bias_g2,
+    positional_bias,
+    positional_bias_g2,
+    successor_variety,
+)
 from .morphology import (
     ClusterMember,
     MorphCluster,
     find_morphological_clusters,
+)
+from .multivariate import (
+    CAPoint,
+    CAResult,
+    DendroMerge,
+    DendroResult,
+    correspondence_analysis,
+    label_propagation,
+    upgma_with_bootstrap,
 )
 from .patterns import (
     SIGN_PATTERN_HELP,
@@ -84,12 +118,49 @@ from .query import (
 )
 from .stats import (
     BootstrapCI,
+    Chao1Result,
     Dispersion,
+    HeapsFit,
     KeynessRow,
+    ZipfMandelbrotFit,
     bootstrap_ci,
+    bootstrap_counts_ci,
+    chao1,
     dispersion,
     dispersions,
+    fit_heaps,
+    fit_zipf_mandelbrot_mle,
     keyness,
+    mattr,
+    miller_madow_entropy,
+    mulberry32,
+    shannon_entropy,
+    spearman_rho,
+)
+from .lb_divergence import (
+    DivergenceRow,
+    LaValueCount,
+    LaValueCounts,
+    LbFrequencies,
+    build_lb_divergence,
+    linear_a_sign_value_counts,
+    parse_damos_frequencies,
+)
+from .profiling import (
+    CommodityMetrology,
+    Dossier,
+    DossierEntry,
+    DocumentTypeProfile,
+    FractionRow,
+    MetrologyProfile,
+    account_dossiers,
+    document_type_profile,
+    metrology_profile,
+)
+from .scribal import (
+    HandProfile,
+    hand_keyness,
+    scribal_hands,
 )
 from .structure import (
     CATEGORIES,
@@ -98,12 +169,21 @@ from .structure import (
     classify_corpus,
     classify_structure,
 )
+from .surprisal import (
+    SignBigramModel,
+    SurprisalStep,
+    WordSurprisal,
+    train_sign_bigram_model,
+    word_surprisal,
+)
 
 __all__ = [
     # accounting
     "balance_check",
     "account_lines",
     "BalanceCheck",
+    "is_checkable_account",
+    "checkable_accounts",
     # sign patterns
     "word_matches_sign_pattern",
     "compile_sign_pattern",
@@ -161,6 +241,73 @@ __all__ = [
     "Dispersion",
     "KeynessRow",
     "BootstrapCI",
+    # vocabulary richness & information (count-vector estimators)
+    "mulberry32",
+    "shannon_entropy",
+    "miller_madow_entropy",
+    "bootstrap_counts_ci",
+    "chao1",
+    "Chao1Result",
+    "mattr",
+    "fit_heaps",
+    "HeapsFit",
+    "fit_zipf_mandelbrot_mle",
+    "ZipfMandelbrotFit",
+    # positional / edge keyness + morphological productivity
+    "edge_bias_g2",
+    "affix_edge_bias",
+    "EdgeBiasRow",
+    "positional_bias_g2",
+    "positional_bias",
+    "PositionalRow",
+    "baayen_productivity",
+    "Productivity",
+    "successor_variety",
+    "SuccessorVariety",
+    "SuccessorRow",
+    # sign-bigram adjacency PMI + commodity/ideogram line statistics
+    "sign_bigram_pmi",
+    "sign_bigram_pmis",
+    "line_cooccurrence_pmi",
+    "ideogram_group_exclusivity",
+    "ExclusivityRow",
+    # graphotactic surprisal (Witten-Bell sign-bigram, leave-one-out)
+    "train_sign_bigram_model",
+    "word_surprisal",
+    "SignBigramModel",
+    "WordSurprisal",
+    "SurprisalStep",
+    # multivariate (correspondence analysis, UPGMA, label propagation)
+    "correspondence_analysis",
+    "CAPoint",
+    "CAResult",
+    "upgma_with_bootstrap",
+    "DendroMerge",
+    "DendroResult",
+    "label_propagation",
+    # Linear A vs Linear B sign-frequency divergence
+    "spearman_rho",
+    "parse_damos_frequencies",
+    "LbFrequencies",
+    "linear_a_sign_value_counts",
+    "LaValueCounts",
+    "LaValueCount",
+    "build_lb_divergence",
+    "DivergenceRow",
+    # scribal-hand analysis (DAMOS hands)
+    "scribal_hands",
+    "HandProfile",
+    "hand_keyness",
+    # corpus profiling (document types, dossiers, metrology)
+    "document_type_profile",
+    "DocumentTypeProfile",
+    "account_dossiers",
+    "Dossier",
+    "DossierEntry",
+    "metrology_profile",
+    "MetrologyProfile",
+    "FractionRow",
+    "CommodityMetrology",
     # query engine
     "FIELDS",
     "FieldDef",

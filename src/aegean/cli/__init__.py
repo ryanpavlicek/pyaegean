@@ -47,10 +47,11 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _viz
+    from . import _corpus, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._data import data_app
+    from ._db import db_app
     from ._greek import greek_app
 
     app = typer.Typer(
@@ -78,8 +79,10 @@ def _build_app() -> Any:
 
     _corpus.register(app)
     _viz.register(app)
+    _workbench.register(app)
     app.add_typer(greek_app, name="greek")
     app.add_typer(analyze_app, name="analyze")
     app.add_typer(data_app, name="data")
+    app.add_typer(db_app, name="db")
     app.add_typer(ai_app, name="ai")
     return app

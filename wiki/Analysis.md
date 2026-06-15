@@ -187,6 +187,26 @@ significance (G², p) together with effect size (log-ratio) and dispersion.
 From the shell: `aegean dispersion damos --top 10` and
 `aegean keyness damos --site Pylos` (see [CLI](CLI)).
 
+## Scribal-hand analysis
+
+For a corpus that records a hand per document (DAMOS's `meta.scribe`, and the Linear A
+corpus's ~100 attributed hands), `scribal_hands` profiles each one and `hand_keyness` finds
+what is characteristic of a hand versus all the others:
+
+```python
+from aegean.analysis import scribal_hands, hand_keyness
+
+for h in scribal_hands(corpus)[:5]:        # busiest hands first
+    print(h.hand, h.doc_count, list(h.sites)[:3])
+
+rows = hand_keyness(corpus, "117")         # what hand 117 writes more than the rest
+print([r.item for r in rows[:5]])          # log-likelihood keyness, this hand vs the others
+```
+
+Per-hand dispersion is the standard helper over the hand's slice —
+`dispersion(corpus.filter(scribe="117"), "some-word")`. On the CLI: `aegean analyze hands CORPUS`
+(`--hand H` for one hand's keyness).
+
 ## Visualization (`aegean.viz`, the `[viz]` extra)
 
 One-line matplotlib figures over the corpus model and the analysis layer —
@@ -246,6 +266,24 @@ with pickle in your own cache dir — enable it only for caches you control.
 `Corpus.fingerprint()` is the content hash the cache keys on (also useful on its
 own to tell whether two corpora — or a corpus and a filtered subset — have the
 same analysable content).
+
+## SQLite persistence & full-text search (`aegean.db`)
+
+A corpus can be persisted to a queryable SQLite database — stdlib `sqlite3` only, no new
+dependency — and reloaded losslessly:
+
+```python
+from aegean import db
+
+db.to_sqlite(corpus, "corpus.db")           # documents + tokens as rows, with an FTS5 index
+again = Corpus.from_sql("corpus.db")        # round-trips (cites the same)
+db.search("corpus.db", "KU-RO")             # full-text search the tokens → (doc_id, position, text)
+for doc in db.stream("corpus.db"):          # iterate without loading the whole corpus
+    ...
+```
+
+`Corpus.to_sql` / `Corpus.from_sql` are the thin method wrappers; on the CLI,
+`aegean db build` / `aegean db search` (and `aegean export -f sqlite`).
 
 ## Query engine
 

@@ -1,0 +1,12 @@
+# Source distribution contents.
+#
+# The wheel is built from src/ (package data declared in pyproject); this file only
+# trims the sdist. The test suite ships without its fixtures (they are not packaged),
+# so it cannot run from an sdist anyway — exclude it rather than ship a half-suite.
+prune tests
+recursive-exclude tests *
+
+# Never ship local tooling / build cruft in the sdist.
+prune node_modules
+global-exclude *.pyc
+global-exclude __pycache__

@@ -80,7 +80,7 @@ _REMOTE: dict[str, DataSpec] = {
         ),
         sha256="1afddcd0fc8ce4f3058e8f84d5589e7fb34f56ea615bf0c228d1b2c92722e396",
         license="© École Française d'Athènes and other rightsholders — academic reference only",
-        note="3,368 facsimile/photo files (~116 MB tar.gz, ~125 MB unpacked); fetched from the linearaworkbench release.",
+        note="3,368 facsimile/photo files (~116 MB tar.gz, ~119 MB unpacked); fetched from the linearaworkbench release.",
         extract=True,
     ),
     # The opt-in [neural] Greek lemmatizer model: GreTa seq2seq exported to ONNX, plus its
@@ -181,6 +181,41 @@ _REMOTE: dict[str, DataSpec] = {
              "with transliterations, site/chronology, scribal hands, find context, and "
              "object class. Loadable via aegean.load('damos').",
         extract=False,
+    ),
+    # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
+    # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
+    # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public
+    # domain, so — unlike DAMOS/SigLA — this asset MAY be redistributed; the full 27 books
+    # fetch on demand while one book is bundled as an offline sample (load_nt). sha256 is
+    # set PYAEGEAN_NT_CORPUS_URL to a local build to override the hosted asset, or use
+    # the bundled sample offline.
+    "nt-corpus": DataSpec(
+        name="nt-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "nt-corpus-v1/nt-corpus.json"
+        ),
+        sha256="e7aa5dcad729eb91f77018abbef71304d13e200f29dabe1260b79fa37b153949",
+        license="CC0-1.0 (morphology, lemmas, Strong's); base Greek text public domain",
+        note="Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens with gold "
+             "lemma, Robinson morph, Strong's, and reconciled UD UPOS. Loadable via "
+             "aegean.load('nt') / greek.load_nt(book, ref=...).",
+        extract=False,
+    ),
+    # The prebuilt Linear A Research Workbench static web app (the browser UI), hosted as a
+    # release asset on the workbench repo and served locally by `aegean workbench`. The app
+    # build is Apache-2.0; the Linear A corpus data baked into it is GORILA-derived (via
+    # lineara.xyz). Fetched + extracted to the cache on demand, never bundled.
+    "workbench-app": DataSpec(
+        name="workbench-app",
+        url=(
+            "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
+            "workbench-app-v1.5.1/workbench-app.tar.gz"
+        ),
+        sha256="22d05fd641c6419793b81adea4a658f8961d2916a0c06e357e141f6419dfec8c",
+        license="Apache-2.0 (Linear A Research Workbench build); embedded Linear A data is GORILA-derived",
+        note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
+        extract=True,
     ),
     # A user-supplied Linear B corpus override (bring-your-own). DAMOS is now loadable
     # directly via aegean.load("damos"); this remains for a local licensed export (e.g.

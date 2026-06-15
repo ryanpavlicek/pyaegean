@@ -81,6 +81,34 @@ def test_to_json_is_lossless_where_to_dict_is_not() -> None:
     assert c.to_dict()["documents"][0]["words"] == ["KU-RO", "PA-I-TO"]
 
 
+def test_token_annotations_roundtrip_and_dataframe() -> None:
+    """Per-token annotations (lemma/morph/strongs/gloss for the Greek NT) survive the
+    lossless JSON round-trip and surface as to_dataframe columns; empty annotations stay
+    absent from the JSON so older corpora round-trip byte-for-byte."""
+    anno = {"lemma": "λόγος", "morph": "N-NSM", "strongs": "3056", "gloss": "word"}
+    toks = [
+        Token("λόγος", TokenKind.WORD, glyphs="λόγος", line_no=0, position=0, annotations=anno),
+        Token("KU-RO", TokenKind.WORD, line_no=0, position=1),  # no annotations
+    ]
+    doc = Document(id="d1", script_id="greek", tokens=toks, lines=[[0, 1]])
+    c = Corpus([doc], script_id="greek")
+
+    full = json.loads(c.to_json())
+    jtoks = full["documents"][0]["tokens"]
+    assert jtoks[0]["annotations"] == anno          # carried
+    assert "annotations" not in jtoks[1]            # omitted when empty (back-compat)
+
+    c2 = Corpus.from_json(c.to_json())
+    assert c2.documents == c.documents              # dataclass __eq__ includes annotations
+    assert c2.documents[0].tokens[0].annotations == anno
+
+    pd = __import__("pandas")
+    df = c.to_dataframe(level="word")
+    assert df.loc[df["text"] == "λόγος", "lemma"].iloc[0] == "λόγος"
+    assert df.loc[df["text"] == "λόγος", "strongs"].iloc[0] == "3056"
+    assert pd.isna(df.loc[df["text"] == "KU-RO", "lemma"].iloc[0])  # unannotated -> NaN
+
+
 def test_query_inscription_scope_matches_filter() -> None:
     c = aegean.load("lineara")
     via_query = {d.id for d in c.query([FilterRow("site-is", "Haghia Triada")]).inscriptions}

@@ -4,6 +4,66 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## 0.8.1 — 2026-06-14
+
+### Added
+- **Greek New Testament corpus** (`greek.load_nt`, `aegean.load("nt")`): the Nestle 1904 NT
+  with a gold lemma, Robinson morphology, Strong's number, reconciled UD UPOS, and a Koine
+  gloss on every token (carried in the new `Token.annotations`). `load_work`-style reference
+  addressing (`load_nt("John", ref="1.1-18")`). Text is public domain and the
+  morphology/lemmas/Strong's are CC0 (biblicalhumanities/Nestle1904): one book is bundled as
+  an offline sample, the full 27 books fetch to cache on demand.
+- **Koine glossing** (`greek.use_dodson` / `gloss_nt` / `gloss_strongs` / `lookup_nt`): the
+  Dodson Greek lexicon (CC0), bundled in the wheel — the Koine counterpart to `use_lsj`. The
+  NT corpus self-glosses from it offline.
+- **NT evaluation fold** (`greek.evaluate_on_nt`, `aegean greek eval nt`): scores the neural
+  pipeline against the Nestle 1904 gold (lemma + reconciled UPOS) — a Nestle-own-gold
+  complement to the PROIEL out-of-AGDT check. Numbers in `docs/benchmarks.md`.
+- **Per-token annotations** (`Token.annotations`): an optional `dict[str, str]` on the core
+  `Token` (mirroring `Sign.attrs`) for script-specific facts; round-trips losslessly and
+  surfaces as `to_dataframe` columns.
+- **In-browser demo** (`docs/demo/`, published with the docs site at `/demo/`): the core
+  toolkit running entirely client-side via Pyodide — Beta Code → Unicode, the Greek pipeline,
+  metrical scansion, and Linear A wildcard sign search — no install, no server.
+- **MCP server** (`aegean-mcp`, the `[mcp]` extra): a Model Context Protocol server exposing
+  the toolkit to agents (Claude Code and other MCP clients) — list/inspect corpora, wildcard
+  sign search, accounting reconciliation, the Greek pipeline, verse scansion, and Koine
+  glossing, as MCP tools over stdio.
+- **Aeolic lyric scansion** (`greek.scan_aeolic`, `greek.AEOLIC_LINES`): the glyconic,
+  pherecratean, sapphic (hendecasyllable + adonean) and alcaic (hendecasyllable / enneasyllable
+  / decasyllable) line types, as fixed quantity templates — a line scans-or-declines like the
+  existing hexameter / pentameter / trimeter. Also `scan_line(line, "<aeolic type>")`. Adds
+  three-vowel synizesis (θεούς-type) to the curated, test-enforced synizesis lexicon.
+- **`aegean workbench`** (CLI): fetch the Linear A Research Workbench's static build to the
+  cache (sha256-pinned, ~3 MB) and serve it locally — the browser UI over the corpus and
+  analysis modules, with cached Linear A facsimile imagery mounted at `/upstream/images/`
+  when present.
+- **Scribal-hand analysis** (`aegean.analysis.scribal_hands` / `hand_keyness`): profile each
+  DAMOS scribal hand (tablets, sites, chronology, the hand's most frequent words) and surface
+  what is characteristic of one hand versus all the others via the same log-likelihood keyness
+  — over the hands DAMOS records in `meta.scribe`.
+- **SQLite persistence** (`Corpus.to_sql` / `Corpus.from_sql`, `aegean.db`): a faithful,
+  queryable round-trip of a corpus to a stdlib-`sqlite3` database — documents and tokens as
+  rows with an optional FTS5 text index (`aegean.db.search`), and provenance + sign inventory
+  preserved so a DB-loaded corpus cites exactly like a JSON-loaded one. `aegean.db.stream(path)`
+  yields documents one at a time for large databases, without materializing the corpus.
+- **GORILA online**: the Linear A corpus provenance (and README / NOTICE / wiki) now points
+  to the digitized GORILA volumes in the École française d'Athènes' CEFAEL library.
+
+### Packaging
+- Declared the license as the PEP 639 SPDX expression (`license = "Apache-2.0"`), dropping the
+  deprecated trove classifier; the wheel/sdist now carry Metadata 2.4 with `License-Expression`.
+- Test and classify **Python 3.14** (added to the CI matrix and the trove classifiers).
+- `MANIFEST.in` excludes `tests/` from the sdist; the six repo-relative README links are
+  absolutized so they resolve on the PyPI description page.
+- **Workbench round-trip** (`aegean.io`): `to_workbench(corpus, path=None)` emits the
+  [Linear A Research Workbench](https://linearaworkbench.xyz/)'s
+  inscription-record JSON, so any corpus — your own `from_records` finds included — opens in
+  the browser app via its `?corpus=<url>` loader; `from_workbench_export(source)` loads the
+  workbench's schema-v1 corpus exports (Data Export module or static data API) back into a
+  `Corpus`, carrying glyphs, transcriptions, image references, and the export's own metadata
+  into the provenance.
+
 ## 0.8.0 — 2026-06-10
 
 A hardening pass for scholarly use: a complete Linear A sign repertoire, an editorial-status

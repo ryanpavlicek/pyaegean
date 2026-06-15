@@ -141,6 +141,34 @@ The model ships fp32 (~518 MB): int8 dynamic quantization broke it on the dev se
 (UPOS 97.97 → 16.75), so the quantization gate rejected it. Selective quantization is a
 known follow-up; correctness ships first.
 
+### Koine / New Testament (Nestle 1904 own gold)
+
+`greek.evaluate_on_nt()` scores the shipped pipeline against the **Nestle 1904** NT's own
+gold lemmas and morphology — a complement to the UD-PROIEL row above, which measures the
+model against a *different* project's NT annotation. Both are genuinely out of domain: the
+model trains on AGDT + Gorman + Pedalion, never on the NT.
+
+| Test set | Lemma | UPOS (reconciled) | scored tokens |
+|---|---|---|---|
+| Nestle 1904 NT (whole) | 87.04 | 87.57 | 137,303 |
+
+Reproduce: `aegean greek eval nt` (or `greek.use_neural_pipeline(); greek.evaluate_on_nt()`)
+— gold-tokenized, all 27 books, ≈10 min on plain CPU.
+
+What is and isn't reported, and why:
+
+- **Lemma** is the clean metric. It sits a few points under the PROIEL-NT lemma (90.6)
+  largely because Nestle 1904's lemma conventions differ from the AGDT the model learned
+  (principal-part choice, proper-noun citation form, movable-nu) — a real convention gap as
+  much as model error; scoring only normalizes NFC + homograph digits, not lemma style.
+- **UPOS** is compared under the same reconciled tagset as the PROIEL check (PROPN→NOUN,
+  SCONJ→CCONJ, AUX→VERB), so it measures real disagreement rather than a Robinson-vs-UD
+  convention gap.
+- **Not reported:** finer UD features and UAS/LAS. The Robinson morph tagset and pyaegean's
+  UD FEATS do not align feature-for-feature, and the Nestle 1904 word list carries no UD
+  dependency trees — a UFeats or LAS number here would be a convention artefact, not an
+  accuracy (the same reasoning as the PROIEL UFeats note above).
+
 ## pyaegean — the pure-Python baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

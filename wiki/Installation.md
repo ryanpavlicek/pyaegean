@@ -28,7 +28,8 @@ pip install pyaegean            # core: Linear A + Greek, zero hard deps
 | `pyaegean[viz]` | `matplotlib` | one-line plots (`aegean.viz`, `aegean plot`) |
 | `pyaegean[parquet]` | `pyarrow` | Parquet export (`io.to_parquet`) |
 | `pyaegean[cli]` | `typer`, `rich` | the [`aegean` command line](CLI) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz` | everything except `neural` and `parquet` |
+| `pyaegean[mcp]` | `mcp` | the `aegean-mcp` Model Context Protocol server (for agents) |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp` | everything except `neural` and `parquet` |
 
 ```bash
 pip install "pyaegean[ai]"

@@ -71,7 +71,9 @@ def load_corpus(name: str) -> Any:
     try:
         return aegean.load(name)
     except Exception:
-        ids = ", ".join(sorted(aegean.registered_scripts()))
+        from aegean.core.corpus import _LOADERS
+
+        ids = ", ".join(sorted(_LOADERS))
         raise fail(f"unknown corpus {name!r}; available: {ids}") from None
 
 
@@ -99,5 +101,8 @@ def table(title: str, columns: list[str], rows: list[list[str]]) -> None:
     console().print(t)
 
 
-CORPUS_ARG = typer.Argument(..., help="Corpus id (e.g. lineara, linearb, cypriot, greek).")
+CORPUS_ARG = typer.Argument(
+    ..., help="Corpus id: lineara, linearb, cypriot, cyprominoan, greek, or a fetched corpus "
+              "(nt, damos, sigla)."
+)
 JSON_OPT = typer.Option(False, "--json", help="Machine-readable JSON on stdout.")

@@ -69,6 +69,9 @@ class Token:
     position: int | None = None     # index within the document's token stream
     status: ReadingStatus = ReadingStatus.CERTAIN  # editorial certainty (Leiden/EpiDoc)
     alt: tuple[str, ...] = ()       # alternate readings (EpiDoc <app>/<rdg>); text is the lemma
+    # Script-specific per-token facts kept flexible (mirrors Sign.attrs): e.g. the
+    # Greek NT carries lemma, morph, strongs, gloss, normalized, upos, ref here.
+    annotations: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77"]   # >=77 for PEP 639 SPDX license expression + Metadata 2.4
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.8.0"
+version = "0.8.1"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Ryan Pavlicek" }]
 keywords = [
   "ancient greek", "linear a", "linear b", "cypriot", "cypro-minoan", "mycenaean",
@@ -18,15 +18,17 @@ keywords = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: Apache Software License",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Text Processing :: Linguistic",
   "Typing :: Typed",
 ]
+# License is declared as the PEP 639 SPDX expression `license = "Apache-2.0"` above;
+# the deprecated "License ::" classifier is intentionally omitted (setuptools>=77 rejects both).
 # Core has ZERO hard third-party dependencies: `import aegean` is instant and pulls
 # nothing heavy. pandas (DataFrame interop) is the optional [data] extra; collocation
 # statistics are pure stdlib. Corpora and trained models fetch to cache, never bundled.
@@ -45,12 +47,14 @@ geo = ["geopandas>=0.14", "shapely>=2.0"]
 viz = ["matplotlib>=3.8"]          # one-line plots (aegean.viz / `aegean plot`); the core is matplotlib-free
 neural = ["onnxruntime>=1.17", "tokenizers>=0.15", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache
 cli = ["typer>=0.12", "rich>=13"]  # the `aegean` command-line interface
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "lxml>=5.0", "matplotlib>=3.8"]
+mcp = ["mcp>=1.0"]                 # the `aegean-mcp` Model Context Protocol server
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.0"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]  # API reference (mkdocs → GitHub Pages); build-time only
-all = ["pyaegean[ai,epidoc,geo,data,cli,viz]"]
+all = ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp]"]
 
 [project.scripts]
 aegean = "aegean.cli:main"
+aegean-mcp = "aegean.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/ryanpavlicek/pyaegean"
@@ -84,5 +88,5 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*"]
+module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*"]
 ignore_missing_imports = true

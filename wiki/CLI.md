@@ -70,6 +70,8 @@ aegean greek accent λόγος                            # paroxytone
 aegean greek quantities πατρός                       # syllable quantities
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
 aegean greek scan "ὦ κοινὸν αὐτάδελφον Ἰσμήνης κάρα" --meter trimeter  # iambic dialogue
+aegean greek scan "φαίνεταί μοι κῆνος ἴσος θέοισιν" --meter sapphic_hendecasyllable  # aeolic lyric
+aegean greek gloss-nt λόγος                          # Koine gloss (bundled Dodson lexicon, no download)
 aegean greek ipa "λόγος" --period koine              # reconstructed pronunciation
 aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."               # UPOS per token
 aegean greek lemmatize "μῆνιν ἄειδε θεά"             # lemma per word
@@ -115,6 +117,7 @@ aegean analyze assoc lineara KU-RO KI-RO     # χ², G², Fisher, PMI over share
 aegean analyze cooccur lineara KU-RO         # what shares a tablet with KU-RO
 aegean analyze clusters lineara              # stem + productive-suffix clusters
 aegean analyze structure lineara [HT13]      # accounting/libation/list/text census
+aegean analyze hands lineara                 # scribal-hand profiles (--hand H for one hand's keyness)
 ```
 
 `compare`/`nearest` take `--script-a`/`--script-b` (greek · lineara · linearb ·
@@ -128,6 +131,41 @@ aegean data fetch grc-joint    # pre-fetch (e.g. before going offline); sha256-v
 aegean data cache     # cache location + contents (override with PYAEGEAN_CACHE)
 aegean data versions --json > data-versions.json   # pin every dataset's sha256 for a paper
 ```
+
+## Workbench (`aegean workbench`)
+
+```bash
+aegean workbench                 # fetch the Linear A Research Workbench build + serve it locally
+aegean workbench --port 9000     # on a chosen port (default 8000); --no-browser to not open one
+```
+
+Fetches the sha256-pinned workbench build (~3 MB) to the cache on first use, then serves the
+browser UI — the corpus, maps, and analysis modules — at `http://localhost:8000/` until you
+press Ctrl+C. If the Linear A facsimile imagery is already cached
+(`aegean data fetch lineara-images`), the picture browser works too.
+
+## SQLite (`aegean db`)
+
+```bash
+aegean db build lineara -o lineara.db    # a queryable SQLite DB (documents + tokens + FTS5 index)
+aegean db search lineara.db KU-RO        # full-text search the tokens
+```
+
+`aegean export CORPUS -f sqlite -o file.db` writes the same database; load it back with
+`Corpus.from_sql(path)` in Python, or stream it with `aegean.db.stream(path)`.
+
+## MCP server (`aegean-mcp`)
+
+Expose the toolkit to agents (Claude Code and other MCP clients) over stdio:
+
+```bash
+pip install "pyaegean[mcp]"
+aegean-mcp                               # serve the tools over stdio
+```
+
+It offers eight read/analysis tools — list/inspect corpora, wildcard sign search, accounting
+reconciliation, the Greek pipeline, verse scansion, and Koine glossing — so an agent can use
+pyaegean without writing Python.
 
 ## AI (`aegean ai …`) — exploratory, key-gated
 

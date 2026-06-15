@@ -15,8 +15,10 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from collections.abc import Sequence
 from typing import Any
 
+from .analysis.multivariate import CAResult
 from .analysis.stats import _documents, _items_of, dispersions, keyness
 
 __all__ = [
@@ -26,7 +28,40 @@ __all__ = [
     "plot_collocation_network",
     "plot_scansion",
     "plot_balance",
+    "correspondence_layout",
+    "plot_correspondence_analysis",
 ]
+
+
+def _percentile_abs(values: Sequence[float], q: float) -> float:
+    s = sorted(abs(v) for v in values)
+    return s[min(len(s) - 1, int(len(s) * q))] if s else 0.0
+
+
+def correspondence_layout(
+    points: Sequence[tuple[float, float]],
+    *,
+    percentile: float = 0.9,
+    pad_factor: float = 1.1,
+    floor: float = 1e-9,
+) -> list[tuple[float, float]]:
+    """Scale CA coordinates into the box [-1, 1]² for legible plotting.
+
+    A correspondence-analysis axis is usually dominated by one or two outlier
+    points that, scaled by the global maximum, crush the rest of the cloud into a
+    thin band. This scales **each axis independently** to its ``percentile``-th
+    absolute coordinate (×``pad_factor``) and pins points beyond that at the box
+    edge (±1). The picture then shows relative position along each axis, not
+    literal CA distances — state that in any caption."""
+    if not points:
+        return []
+    max_x = max(floor, _percentile_abs([x for x, _ in points], percentile) * pad_factor)
+    max_y = max(floor, _percentile_abs([y for _, y in points], percentile) * pad_factor)
+
+    def clamp(v: float) -> float:
+        return -1.0 if v < -1.0 else 1.0 if v > 1.0 else v
+
+    return [(clamp(x / max_x), clamp(y / max_y)) for x, y in points]
 
 
 def _plt() -> Any:
@@ -275,5 +310,43 @@ def plot_balance(corpus: Any, *, ax: Any = None) -> Any:
     ax.set_ylabel("stated total")
     ax.set_title("accounting reconciliation (heuristic sections)")
     ax.legend(loc="lower right", fontsize=8)
+    ax.figure.tight_layout()
+    return ax
+
+
+def plot_correspondence_analysis(
+    ca: CAResult, *, label_top: int = 12, ax: Any = None
+) -> Any:
+    """Correspondence-analysis biplot: rows (blue) and columns (amber) in one
+    plane, with per-axis percentile scaling so a single outlier can't flatten the
+    cloud (see :func:`correspondence_layout`). The heaviest ``label_top`` columns
+    and all rows are labelled. Shows relative position along each axis, not
+    literal CA distances."""
+    n_rows = len(ca.rows)
+    coords = correspondence_layout([(p.x, p.y) for p in ca.rows + ca.cols])
+    row_xy = coords[:n_rows]
+    col_xy = coords[n_rows:]
+    ax = _axes(ax, figsize=(7, 6))
+    ax.axhline(0, color="#ccc", linewidth=0.6, zorder=1)
+    ax.axvline(0, color="#ccc", linewidth=0.6, zorder=1)
+    ax.scatter(
+        [x for x, _ in col_xy], [y for _, y in col_xy],
+        s=20, color="#e7a33e", alpha=0.8, label="columns", zorder=2,
+    )
+    ax.scatter(
+        [x for x, _ in row_xy], [y for _, y in row_xy],
+        s=[8 + 120 * math.sqrt(p.mass) for p in ca.rows],
+        color="#4a6fa5", alpha=0.4, label="rows", zorder=3,
+    )
+    for (x, y), p in zip(row_xy, ca.rows, strict=True):
+        ax.annotate(p.label, (x, y), fontsize=8, fontweight="bold", zorder=4)
+    heaviest = sorted(range(len(ca.cols)), key=lambda j: -ca.cols[j].mass)[:label_top]
+    for j in heaviest:
+        ax.annotate(ca.cols[j].label, col_xy[j], fontsize=7, color="#9c6a1e", zorder=4)
+    pct = (ca.inertia[0] + ca.inertia[1]) * 100
+    ax.set_title(f"correspondence analysis ({pct:.0f}% of inertia on axes 1–2)")
+    ax.set_xlabel("axis 1")
+    ax.set_ylabel("axis 2")
+    ax.legend(loc="best", fontsize=8)
     ax.figure.tight_layout()
     return ax

@@ -79,13 +79,25 @@ from .normalize import (
     strip_diacritics,
     unicode_to_betacode,
 )
+from .koine import (
+    DodsonEntry,
+    DodsonNotLoadedError,
+    gloss_nt,
+    gloss_strongs,
+    lookup_nt,
+    use_dodson,
+)
+from .nt_eval import evaluate_on_nt
 from .pipeline import TokenRecord, pipeline
 from ..scripts.greek.perseus import load_work
+from ..scripts.greek.nt import load_nt
 from .prosody import scan, syllable_quantities
 from .meter import (
+    AEOLIC_LINES,
     Foot,
     LineScansion,
     ScansionError,
+    scan_aeolic,
     scan_hexameter,
     scan_line,
     scan_pentameter,
@@ -106,6 +118,14 @@ __all__ = [
     "pipeline",
     "TokenRecord",
     "load_work",
+    "load_nt",
+    "use_dodson",
+    "gloss_nt",
+    "lookup_nt",
+    "gloss_strongs",
+    "DodsonEntry",
+    "DodsonNotLoadedError",
+    "evaluate_on_nt",
     "tokenize",
     "tokenize_words",
     "sentences",
@@ -118,6 +138,8 @@ __all__ = [
     "scan_hexameter",
     "scan_pentameter",
     "scan_trimeter",
+    "scan_aeolic",
+    "AEOLIC_LINES",
     "syllable_options",
     "LineScansion",
     "Foot",

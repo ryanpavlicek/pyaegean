@@ -9,5 +9,13 @@ from __future__ import annotations
 
 from .epidoc import to_epidoc, write_epidoc
 from .tabular import to_csv, to_parquet
+from .workbench import from_workbench_export, to_workbench
 
-__all__ = ["to_csv", "to_epidoc", "to_parquet", "write_epidoc"]
+__all__ = [
+    "from_workbench_export",
+    "to_csv",
+    "to_epidoc",
+    "to_parquet",
+    "to_workbench",
+    "write_epidoc",
+]
