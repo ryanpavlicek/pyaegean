@@ -49,6 +49,53 @@ def test_demo_lineara_search() -> None:
     assert any(m["word"] == "KU-MA-RO" for m in out["matches"])
 
 
+def test_demo_greek_word() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.greek_word("ἀνθρώπους"))
+    assert r["syllables"] == ["ἀν", "θρώ", "πους"]
+    assert "acute" in r["accent"] and r["ipa_attic"] and r["ipa_koine"]
+    assert any(m["lemma"] == "ἄνθρωπος" for m in r["morphology"])
+
+
+def test_demo_gloss_nt() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.gloss_nt("ἀγάπη"))
+    assert r["word"] == "ἀγάπη" and "love" in r["gloss"]
+
+
+def test_demo_catalog() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.catalog("homer"))
+    assert r["total"] >= 2 and any(m["id"] == "tlg0012.tlg001" for m in r["matches"])
+
+
+def test_demo_bridge() -> None:
+    demo = _load_demo()
+    assert json.loads(demo.bridge("linearb", "po-me"))["greek"] == "ποιμήν"
+    assert json.loads(demo.bridge("cypriot", "pa-si-le-u-se"))["greek"] == "βασιλεύς"
+    assert "error" in json.loads(demo.bridge("linearb", "zz-zz"))
+
+
+def test_demo_lineara_balance() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.lineara_balance("HT9b"))
+    assert r["checks"] and r["checks"][0]["marker"] == "KU-RO" and r["checks"][0]["balances"]
+    assert "error" in json.loads(demo.lineara_balance("NOPE"))
+
+
+def test_demo_import_text() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.import_text("ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος"))
+    assert r["documents"] == 1 and r["tokens"] == 8
+    assert any(t["word"] == "λόγος" and t["count"] == 2 for t in r["top"])
+
+
+def test_demo_phonetic_compare() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.phonetic_compare("qa-si-re-u", "βασιλεύς"))
+    assert 0 < r["similarity"] <= 1
+
+
 def test_demo_works_without_sqlite3() -> None:
     """Pyodide unvendors sqlite3 from its stdlib, so `import aegean` and the demo's calls
     must not require it (regression: a top-level `import sqlite3` in the opt-in cache made
@@ -67,6 +114,14 @@ def test_demo_works_without_sqlite3() -> None:
         "assert list(greek.pipeline('ἐν ἀρχῇ ἦν ὁ λόγος'))\n"
         "c = aegean.load('lineara')\n"
         "assert any(word_matches_sign_pattern(w, '*-RO') for w, _ in c.word_frequencies())\n"
+        "assert greek.catalog('homer')\n"
+        "greek.use_dodson(); assert greek.gloss_nt('ἀγάπη')\n"
+        "from aegean.scripts.linearb.lexicon import greek_reading\n"
+        "assert greek_reading('po-me')[0] == 'ποιμήν'\n"
+        "from aegean import io\n"
+        "assert io.from_text('ἦν ὁ λόγος').word_frequencies()\n"
+        "from aegean.analysis import balance_check\n"
+        "assert balance_check(c.get('HT9b'))\n"
         "print('OK')\n"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
@@ -81,5 +136,6 @@ def test_demo_html_wiring() -> None:
     assert 'micropip.install("pyaegean")' in html      # installs the package in-browser
     # every JS-referenced tool exists in the demo module
     demo = _load_demo()
-    for name in ("greek_pipeline", "greek_scan", "betacode", "lineara_search"):
+    for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
+                 "bridge", "lineara_search", "lineara_balance", "import_text", "phonetic_compare"):
         assert hasattr(demo, name) and f'"{name}"' in html

@@ -6,6 +6,16 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+## 0.8.3 — 2026-06-15
+
+### Changed
+- The in-browser demo (docs/demo) now has a live example of **every feature that runs
+  client-side**: Greek word analysis (syllables / accent / IPA / morphology), Koine glossing,
+  the work catalogue, the syllabary→Greek bridge, Linear A accounting reconciliation, the file
+  importer, and cross-script phonetic comparison — alongside the existing Beta Code, NLP
+  pipeline, scansion, and Linear A sign-search examples.
+- Refreshed the README "About the author" section.
+
 ## 0.8.2 — 2026-06-15
 
 ### Added

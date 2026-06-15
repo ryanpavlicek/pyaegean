@@ -24,8 +24,9 @@
           border: 1px solid var(--line); border-radius: 6px; background: #fff; }
   textarea { min-height: 52px; resize: vertical; }
   .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .row input[type=text] { flex: 1; }
   button { font: inherit; padding: 7px 14px; border: 0; border-radius: 6px; cursor: pointer;
-           background: var(--accent); color: #fff; }
+           background: var(--accent); color: #fff; white-space: nowrap; }
   button:disabled { background: #bbb; cursor: not-allowed; }
   pre { background: #f4f4f4; border-radius: 6px; padding: 10px; overflow-x: auto; margin: 10px 0 0;
         font-size: 0.9em; white-space: pre-wrap; word-break: break-word; }
@@ -39,13 +40,16 @@
 <main>
   <h1>pyaegean <span class="status" id="status">loading…</span></h1>
   <p class="sub">The toolkit running entirely in your browser via
-    <a href="https://pyodide.org/">Pyodide</a> — no install, no server. This is the pure-Python
-    core (Greek pipeline + the bundled Linear A corpus); the neural and AI layers don't run
-    client-side. First load fetches the package, so give it a few seconds.</p>
+    <a href="https://pyodide.org/">Pyodide</a> — no install, no server. Every example below is the
+    pure-Python core running client-side: the Greek pipeline, scansion and word analysis, the
+    bundled Koine lexicon and the offline work catalogue, the deciphered-syllabary Greek bridge,
+    the bundled Linear A corpus, the file importer, and cross-script comparison. The neural and
+    AI layers, and the network-only backends (fetching real works, LSJ), don't run here. First
+    load fetches the package, so give it a few seconds.</p>
 
   <div class="card">
     <h2>Beta Code → Unicode</h2>
-    <label for="bc">Type polytonic Greek in plain ASCII</label>
+    <label for="bc">Type polytonic Greek in plain ASCII — no Greek keyboard needed</label>
     <input type="text" id="bc" value="mh=nin a)/eide qea\ Phlhi+a/dew )Axilh=os">
     <div class="row"><button data-tool="bc" disabled>Convert</button></div>
     <pre id="bc-out"></pre>
@@ -53,15 +57,24 @@
 
   <div class="card">
     <h2>Greek NLP pipeline</h2>
-    <label for="nlp">A Greek sentence — get per-token part of speech and lemma</label>
+    <label for="nlp">A Greek sentence — get per-token part of speech and lemma (dictionary form)</label>
     <textarea id="nlp">ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.</textarea>
     <div class="row"><button data-tool="nlp" disabled>Analyze</button></div>
     <pre id="nlp-out"></pre>
   </div>
 
   <div class="card">
+    <h2>Greek word — syllables · accent · pronunciation · morphology</h2>
+    <label for="word">One Greek word: its syllables, accent class, reconstructed IPA (Attic and
+      Koine), and candidate morphological readings</label>
+    <input type="text" id="word" value="ἀνθρώπους">
+    <div class="row"><button data-tool="word" disabled>Analyze word</button></div>
+    <pre id="word-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Metrical scansion</h2>
-    <label for="scan">A verse line</label>
+    <label for="scan">A verse line — scan it into long/short syllables (— heavy, ⏑ light, × anceps)</label>
     <input type="text" id="scan" value="ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ">
     <div class="row">
       <select id="meter">
@@ -77,6 +90,38 @@
   </div>
 
   <div class="card">
+    <h2>New Testament glossing (Koine)</h2>
+    <label for="gloss">A New Testament Greek word — look it up in the bundled Dodson lexicon</label>
+    <input type="text" id="gloss" value="ἀγάπη">
+    <div class="row"><button data-tool="gloss" disabled>Gloss</button></div>
+    <pre id="gloss-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Greek work catalogue</h2>
+    <label for="cat">Search the offline index of ~1,778 loadable works — by author, title (English
+      or Greek), or free text. Each id loads with <code>greek.load_work(id)</code>.</label>
+    <input type="text" id="cat" value="sophocles">
+    <div class="row"><button data-tool="cat" disabled>Search works</button></div>
+    <pre id="cat-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Syllabary → Greek bridge</h2>
+    <label for="brword">A word in a <em>deciphered</em> syllabary, read as Greek from the bundled
+      lexicon (try <code>po-me</code>, <code>wa-na-ka</code>, or Cypriot <code>pa-si-le-u-se</code>)</label>
+    <div class="row">
+      <select id="brscript">
+        <option value="linearb">Linear B</option>
+        <option value="cypriot">Cypriot</option>
+      </select>
+      <input type="text" id="brword" value="po-me">
+      <button data-tool="bridge" disabled>Read as Greek</button>
+    </div>
+    <pre id="bridge-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Linear A — wildcard sign search</h2>
     <label for="la">A sign pattern over the 1,721-inscription corpus — signs are written with
       <code>-</code> between them, and <code>*</code> matches any one sign (so <code>*-RO</code>
@@ -86,6 +131,38 @@
     <pre id="la-out"></pre>
     <p class="sub" style="margin:8px 0 0">Linear A is undeciphered; this matches transliterated
       sign sequences, not meanings.</p>
+  </div>
+
+  <div class="card">
+    <h2>Linear A — accounting reconciliation</h2>
+    <label for="bal">A tablet id — check its stated <code>KU-RO</code> total against the sum of its
+      line items (try <code>HT13</code>, <code>HT9b</code>, <code>HT11a</code>, <code>HT31</code>)</label>
+    <input type="text" id="bal" value="HT13">
+    <div class="row"><button data-tool="bal" disabled>Reconcile</button></div>
+    <pre id="bal-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Exploratory: it flags where a scribe's total doesn't match
+      the items — sometimes a real discrepancy, sometimes a damaged reading.</p>
+  </div>
+
+  <div class="card">
+    <h2>Cross-script phonetic comparison</h2>
+    <label>How close is a Linear B spelling to a Greek word? (Syllabic spelling is defective — it
+      drops final consonants and clusters — so the score is a guide, not a verdict.)</label>
+    <div class="row">
+      <input type="text" id="phsyl" value="qa-si-re-u">
+      <input type="text" id="phgrk" value="βασιλεύς">
+      <button data-tool="phon" disabled>Compare</button>
+    </div>
+    <pre id="phon-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Bring your own text</h2>
+    <label for="imp">Paste any Greek and turn it into a corpus — token count and the most frequent
+      words (the same importer behind <code>aegean import</code>)</label>
+    <textarea id="imp">μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος οὐλομένην, ἣ μυρί Ἀχαιοῖς ἄλγε ἔθηκε</textarea>
+    <div class="row"><button data-tool="imp" disabled>Import &amp; count</button></div>
+    <pre id="imp-out"></pre>
   </div>
 
   <footer>
@@ -104,19 +181,20 @@ function show(id, obj) {
   document.getElementById(id).textContent =
     typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
 }
+function val(id) { return document.getElementById(id).value; }
 
 async function init() {
   try {
     pyodide = await loadPyodide();
-    // aegean currently imports sqlite3 at package init (the opt-in analysis cache);
-    // Pyodide unvendors sqlite3 from its stdlib, so load it explicitly or `import aegean`
-    // raises ModuleNotFoundError. (0.8.2+ makes that import lazy, but the published wheel
-    // micropip installs here still needs it.)
+    // sqlite3 is unvendored from Pyodide's stdlib; load it explicitly so the analysis cache
+    // (lazily imported in 0.8.2+) never trips `import aegean` in older wheels — harmless either way.
     await pyodide.loadPackage(["micropip", "sqlite3"]);
     await pyodide.runPythonAsync(`import micropip\nawait micropip.install("pyaegean")`);
     const code = await (await fetch("demo.py")).text();
     pyodide.runPython(code);
-    for (const name of ["greek_pipeline", "greek_scan", "betacode", "lineara_search"]) {
+    for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
+                        "catalog", "bridge", "lineara_search", "lineara_balance", "import_text",
+                        "phonetic_compare"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -132,26 +210,67 @@ function call(name, ...args) {
   catch (e) { return { error: String(e) }; }
 }
 
-document.addEventListener("click", (ev) => {
-  const tool = ev.target.getAttribute && ev.target.getAttribute("data-tool");
-  if (!tool || !pyodide) return;
-  if (tool === "bc") show("bc-out", call("betacode", document.getElementById("bc").value).unicode);
-  if (tool === "nlp") {
-    const rows = call("greek_pipeline", document.getElementById("nlp").value);
+const handlers = {
+  bc: () => show("bc-out", call("betacode", val("bc")).unicode),
+  nlp: () => {
+    const rows = call("greek_pipeline", val("nlp"));
     show("nlp-out", Array.isArray(rows)
       ? rows.map(r => `${r.text}\t${r.upos}\t${r.lemma}`).join("\n") : rows);
-  }
-  if (tool === "scan") {
-    const r = call("greek_scan", document.getElementById("scan").value,
-                   document.getElementById("meter").value);
+  },
+  word: () => {
+    const r = call("greek_word", val("word"));
+    if (r.error) return show("word-out", r);
+    const m = (r.morphology || []).map(a =>
+      `  ${a.lemma} · ${a.pos} · ${Object.entries(a.features).map(([k,v]) => k+"="+v).join(" ")}`);
+    show("word-out",
+      `syllables:  ${r.syllables.join("·")}\naccent:     ${r.accent}\n` +
+      `IPA Attic:  ${r.ipa_attic}\nIPA Koine:  ${r.ipa_koine}\n` +
+      `morphology:\n${m.join("\n") || "  (no rule-based parse)"}`);
+  },
+  scan: () => {
+    const r = call("greek_scan", val("scan"), val("meter"));
     document.getElementById("scan-out").innerHTML = r.scans
       ? `<span class="pat">${r.pattern}</span>` : "does not scan — " + (r.error || "");
-  }
-  if (tool === "la") {
-    const r = call("lineara_search", document.getElementById("la").value);
+  },
+  gloss: () => { const r = call("gloss_nt", val("gloss"));
+    show("gloss-out", r.error ? r : `${r.word} — ${r.gloss || "(not in the Dodson NT lexicon)"}`); },
+  cat: () => {
+    const r = call("catalog", val("cat"));
+    if (r.error) return show("cat-out", r);
+    const head = `${r.total} match${r.total === 1 ? "" : "es"}${r.total > r.matches.length ? " (showing " + r.matches.length + ")" : ""}:\n`;
+    show("cat-out", r.matches.length
+      ? head + r.matches.map(w => `${w.id}\t${w.author} — ${w.title}${w.greek ? " (" + w.greek + ")" : ""}`).join("\n")
+      : "no works match");
+  },
+  bridge: () => { const r = call("bridge", val("brscript"), val("brword"));
+    show("bridge-out", r.error ? r.error : `${r.word} → ${r.greek}   (${r.gloss})`); },
+  la: () => {
+    const r = call("lineara_search", val("la"));
     show("la-out", r.matches && r.matches.length
       ? r.matches.map(m => `${m.word}  (${m.count})`).join("\n") : "no matches");
-  }
+  },
+  bal: () => {
+    const r = call("lineara_balance", val("bal"));
+    if (r.error) return show("bal-out", r.error);
+    show("bal-out", r.checks.length
+      ? r.checks.map(c => `${c.marker}: stated ${c.stated} vs ${c.computed} summed ` +
+          `(${c.items} items) → ${c.balances ? "balances" : "off by " + Math.abs(c.difference)}`).join("\n")
+      : `no checkable ${"KU-RO"}/total on ${r.doc}`);
+  },
+  phon: () => { const r = call("phonetic_compare", val("phsyl"), val("phgrk"));
+    show("phon-out", r.error ? r : `${r.syllabic}  ≈  ${r.greek}\nsimilarity: ${r.similarity}  (1.0 = identical)`); },
+  imp: () => {
+    const r = call("import_text", val("imp"));
+    show("imp-out", r.error ? r
+      : `${r.documents} document, ${r.tokens} tokens\nmost frequent:\n` +
+        r.top.map(w => `  ${w.word}  (${w.count})`).join("\n"));
+  },
+};
+
+document.addEventListener("click", (ev) => {
+  const tool = ev.target.getAttribute && ev.target.getAttribute("data-tool");
+  if (!tool || !pyodide || !handlers[tool]) return;
+  handlers[tool]();
 });
 
 init();
