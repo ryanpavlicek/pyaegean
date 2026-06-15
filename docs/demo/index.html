@@ -78,8 +78,10 @@
 
   <div class="card">
     <h2>Linear A — wildcard sign search</h2>
-    <label for="la">A sign pattern over the 1,721-inscription corpus (<code>*</code> = any sign)</label>
-    <input type="text" id="la" value="KU-*-RO">
+    <label for="la">A sign pattern over the 1,721-inscription corpus — signs are written with
+      <code>-</code> between them, and <code>*</code> matches any one sign (so <code>*-RO</code>
+      finds every two-sign word ending in RO; <code>KU-RO</code> matches that word exactly)</label>
+    <input type="text" id="la" value="*-RO">
     <div class="row"><button data-tool="la" disabled>Search</button></div>
     <pre id="la-out"></pre>
     <p class="sub" style="margin:8px 0 0">Linear A is undeciphered; this matches transliterated
@@ -106,7 +108,11 @@ function show(id, obj) {
 async function init() {
   try {
     pyodide = await loadPyodide();
-    await pyodide.loadPackage("micropip");
+    // aegean currently imports sqlite3 at package init (the opt-in analysis cache);
+    // Pyodide unvendors sqlite3 from its stdlib, so load it explicitly or `import aegean`
+    // raises ModuleNotFoundError. (0.8.2+ makes that import lazy, but the published wheel
+    // micropip installs here still needs it.)
+    await pyodide.loadPackage(["micropip", "sqlite3"]);
     await pyodide.runPythonAsync(`import micropip\nawait micropip.install("pyaegean")`);
     const code = await (await fetch("demo.py")).text();
     pyodide.runPython(code);

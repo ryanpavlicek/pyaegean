@@ -17,15 +17,19 @@
 
 **Greek**
 - [Greek NLP](Greek-NLP)
+- [Greek Works & Books](Greek-Works-and-Books)
+- [Meters](Meters)
 
 **Capabilities**
 - [CLI](CLI)
+- [CLI Cheatsheet](CLI-Cheatsheet)
 - [AI Layer](AI-Layer)
 - [Geography](Geography)
 
 **Reference**
 - [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
+- [Glossary](Glossary)
 - [Limitations](Limitations)
 - [For Specialists](For-Specialists)
 - [FAQ & Troubleshooting](FAQ)

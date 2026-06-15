@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 
@@ -110,6 +111,53 @@ class ExploratoryResult:
                 {"content": g.content, "source": g.source, "ref": g.ref} for g in self.grounding
             ],
         }
+
+    def to_dict(self) -> dict[str, Any]:
+        """A stable, JSON-ready serialization. Keeps the ``exploratory`` flag, the text, the
+        grounding, and any structured ``data`` — so a saved AI result can never be mistaken
+        for ground truth when read back."""
+        return {
+            "_meta": {"tool": "pyaegean", "type": "ExploratoryResult", "schemaVersion": 1},
+            "kind": self.kind,
+            "text": self.text,
+            "provider": self.provider,
+            "model": self.model,
+            "prompt_version": self.prompt_version,
+            "exploratory": self.exploratory,
+            "grounding": [
+                {"content": g.content, "source": g.source, "ref": g.ref} for g in self.grounding
+            ],
+            "data": self.data,
+        }
+
+    def to_json(self, path: str | Path | None = None, *, indent: int | None = 2) -> str | None:
+        """Serialize to JSON: returns the string, or writes it to ``path`` and returns ``None``."""
+        import json
+
+        text = json.dumps(self.to_dict(), ensure_ascii=False, indent=indent)
+        if path is None:
+            return text
+        Path(path).write_text(text, encoding="utf-8")
+        return None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ExploratoryResult":
+        """Reconstruct an `ExploratoryResult` from `to_dict` output."""
+        return cls(
+            text=data["text"],
+            kind=data.get("kind", ""),
+            provider=data.get("provider", ""),
+            model=data.get("model", ""),
+            prompt_version=data.get("prompt_version", ""),
+            grounding=tuple(
+                GroundingItem(
+                    content=g["content"], source=g.get("source", "custom"), ref=g.get("ref", "")
+                )
+                for g in data.get("grounding", ())
+            ),
+            exploratory=data.get("exploratory", True),
+            data=data.get("data"),
+        )
 
     def _repr_html_(self) -> str:
         """Rich rendering in Jupyter/Colab — the exploratory tag is unmissable."""

@@ -7,6 +7,8 @@ such as ``pyaegean[anthropic]``) and its API key in the environment.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
@@ -72,6 +74,27 @@ def _emit_result(result: object, json_out: bool, trace: bool = False) -> None:
     )
 
 
+def _write_ai_result(result: object, output: Path) -> None:
+    """Save an exploratory AI result: ``.json`` (text + provenance + grounding + parsed data,
+    keeping the exploratory flag) or ``.txt`` (the labeled text). Never drops the label."""
+    suffix = output.suffix.lower()
+    if suffix == ".json":
+        to_dict = getattr(result, "to_dict", None)
+        payload = to_dict() if callable(to_dict) else {"text": getattr(result, "text", str(result))}
+        output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    elif suffix in (".txt", ""):
+        labeled = getattr(result, "labeled", None)
+        text = labeled() if callable(labeled) else getattr(result, "text", str(result))
+        output.write_text(text + "\n", encoding="utf-8")
+    else:
+        raise fail(f"AI --output {output.name!r}: use a .json or .txt extension")
+
+
+AI_OUTPUT_OPT = typer.Option(
+    None, "--output", "-o",
+    help="Save the result to a file (.json: text + provenance + grounding; .txt: labeled text).",
+)
+
 TRACE_OPT = typer.Option(False, "--trace", help="Print the grounding provenance trace.")
 
 
@@ -82,6 +105,7 @@ def translate(
     target: str = typer.Option("English", "--target", help="Target language."),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
     trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -92,6 +116,9 @@ def translate(
     result = _run(
         lambda: tr.translate(read_text(text), script=script, target=target, client=client)  # type: ignore[arg-type]
     )
+    if output is not None:
+        _write_ai_result(result, output)
+        return
     _emit_result(result, json_out, trace)
 
 
@@ -101,6 +128,7 @@ def gloss(
     source: str = typer.Option("Ancient Greek", "--source", help="Source language label."),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
     trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -109,6 +137,9 @@ def gloss(
 
     client = _client(provider, model)
     result = _run(lambda: ai.gloss(read_text(text), source=source, client=client))  # type: ignore[arg-type]
+    if output is not None:
+        _write_ai_result(result, output)
+        return
     _emit_result(result, json_out, trace)
 
 
@@ -120,6 +151,7 @@ def hypotheses(
     ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
     trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -133,6 +165,9 @@ def hypotheses(
     result = _run(
         lambda: ai.decipher_hypotheses(read_text(text), grounding=grounding, client=client)  # type: ignore[arg-type]
     )
+    if output is not None:
+        _write_ai_result(result, output)
+        return
     _emit_result(result, json_out, trace)
 
 
@@ -144,6 +179,7 @@ def ask(
     ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
     trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -155,6 +191,9 @@ def ask(
         grounding = ai.corpus_context(load_corpus(corpus))
     client = _client(provider, model)
     result = _run(lambda: ai.ask(read_text(question), grounding=grounding, client=client))  # type: ignore[arg-type]
+    if output is not None:
+        _write_ai_result(result, output)
+        return
     _emit_result(result, json_out, trace)
 
 
@@ -170,6 +209,7 @@ def extract(
     corpus: str | None = typer.Option(None, "--corpus", help="Ground on this corpus's frequent words."),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Structured (JSON) extraction — prints the parsed data, for piping into tools.
@@ -190,6 +230,9 @@ def extract(
         )
     )
     data = getattr(result, "data", None)
+    if output is not None:
+        _write_ai_result(result, output)
+        return
     if json_out:
         emit_json(data if data is not None else {"raw": getattr(result, "text", "")})
         return

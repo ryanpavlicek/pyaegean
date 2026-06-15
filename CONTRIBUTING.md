@@ -40,6 +40,21 @@ architecture — each has an obvious home and an obvious test:
 For anything larger, open an issue first so the design can be agreed before
 you write code.
 
+## Regenerating bundled data
+
+Some bundled JSON is generated, not hand-edited, by the scripts in `scripts/`:
+regenerate it there rather than editing the JSON by hand. The Greek-works
+discovery catalogue (`src/aegean/data/bundled/greek/works_catalogue.json`, behind
+`greek.catalog()` / `aegean greek catalog`) is built by
+`scripts/build_greek_catalogue.py`, which crawls Perseus canonical-greekLit and
+First1KGreek at the commits pinned in `aegean.scripts.greek.perseus._SOURCES` —
+so bumping a pin and rerunning the script keeps the catalogue in lockstep with
+what `load_work` actually fetches. It records metadata only (id/author/title/Greek
+title/source); the texts stay CC BY-SA and fetched on demand, never bundled. The
+sibling builders (`build_dodson_lexicon.py`, `build_nt_corpus.py`,
+`build_damos_corpus.py`, `build_sigla_corpus.py`, the Linear B builders) document
+their own sources and methods in their module docstrings.
+
 ## Principles
 
 - **Script-agnostic core.** New writing systems are plugins: subclass

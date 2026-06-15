@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -29,6 +29,25 @@ def register_loader(script_id: str, fn: Callable[[], "Corpus"]) -> None:
     _LOADERS[script_id] = fn
 
 
+def _merged_provenance(corpora: "list[Corpus]", n_docs: int) -> Provenance:
+    """A fresh provenance for a merged corpus that names every input, so `cite` stays truthful."""
+    sources = [
+        (c.provenance.citation or c.provenance.source)
+        if c.provenance is not None
+        else (c.script_id or "unnamed corpus")
+        for c in corpora
+    ]
+    licenses = sorted(
+        {c.provenance.license for c in corpora if c.provenance and c.provenance.license}
+    )
+    return Provenance(
+        source="Merged corpus (aegean.combine)",
+        license="; ".join(licenses) or "mixed",
+        citation="Merged corpus of: " + "; ".join(sources),
+        notes=(f"merged: {len(corpora)} corpora → {n_docs} documents",),
+    )
+
+
 class Corpus:
     """A collection of `Document` s plus shared inventory + provenance."""
 
@@ -39,11 +58,35 @@ class Corpus:
         provenance: Provenance | None = None,
         script_id: str = "",
     ) -> None:
-        self.documents = list(documents)
+        docs = list(documents)
+        by_id = {d.id: d for d in docs}
+        if len(by_id) != len(docs):
+            # Duplicate document ids: collapse to one per id (keeping the last — what `.get()`
+            # already returned) so .documents, len(), iteration, fingerprint, and the id lookup
+            # all agree. A corpus can't hold two documents with the same id. Warn rather than
+            # drop silently: a duplicate id is a data problem worth surfacing.
+            import warnings
+
+            seen: set[str] = set()
+            dupes: list[str] = []
+            for d in docs:
+                if d.id in seen:
+                    dupes.append(d.id)
+                else:
+                    seen.add(d.id)
+            uniq = sorted(set(dupes))
+            shown = ", ".join(uniq[:5]) + (f" (+{len(uniq) - 5} more)" if len(uniq) > 5 else "")
+            warnings.warn(
+                f"Corpus: collapsed {len(docs) - len(by_id)} duplicate document id(s), "
+                f"keeping the last of each: {shown}",
+                stacklevel=2,
+            )
+            docs = list(by_id.values())
+        self.documents = docs
         self.sign_inventory = sign_inventory
         self.provenance = provenance
         self.script_id = script_id
-        self._by_id = {d.id: d for d in self.documents}
+        self._by_id = by_id
 
     # ── construction ────────────────────────────────────────────────────
     @classmethod
@@ -85,7 +128,7 @@ class Corpus:
                 h.update(t.text.encode("utf-8"))
         if self.provenance is not None:
             for note in self.provenance.notes:
-                if note.startswith("subset:"):
+                if note.startswith(("subset:", "merged:", "appended:")):
                     h.update(note.encode("utf-8"))
         return h.hexdigest()
 
@@ -135,6 +178,70 @@ class Corpus:
             prov = replace(prov, notes=prov.notes + (note,))
         return Corpus(docs, self.sign_inventory, prov, self.script_id)
 
+    def subset(self, ids: Iterable[str]) -> "Corpus":
+        """A new Corpus of just the documents whose id is in ``ids`` (original order kept).
+
+        The id-based counterpart to `filter`; records a ``subset:`` provenance note so `cite`
+        on the result names the slice."""
+        wanted = set(ids)
+        docs = [d for d in self.documents if d.id in wanted]
+        prov = self.provenance
+        if prov is not None:
+            note = f"subset: {len(docs)} of {len(self.documents)} documents by id"
+            prov = replace(prov, notes=prov.notes + (note,))
+        return Corpus(docs, self.sign_inventory, prov, self.script_id)
+
+    def merge(self, *others: "Corpus", dedupe: str = "error") -> "Corpus":
+        """Merge this corpus with ``others`` into one (documents concatenated in order).
+
+        ``dedupe`` controls duplicate document ids across the inputs: ``"error"`` (raise,
+        listing the collisions — the safe default), ``"first"`` / ``"last"`` (keep that
+        occurrence), or ``"suffix"`` (rename later collisions ``id#2``, ``id#3``, …). The
+        merged ``script_id`` is the common value, or ``"mixed"`` when the inputs differ; the
+        sign inventory is the first input's when scripts agree, else ``None``. A fresh
+        provenance names every source, so `cite` on the result stays truthful.
+
+        See also `aegean.combine`, the module-level form that takes a list."""
+        if dedupe not in ("error", "first", "last", "suffix"):
+            raise ValueError("dedupe must be 'error', 'first', 'last', or 'suffix'")
+        corpora = [self, *others]
+        out: list[Document] = []
+        at: dict[str, int] = {}
+        seen_count: dict[str, int] = {}
+        collisions: list[str] = []
+        for c in corpora:
+            for d in c.documents:
+                if d.id not in at:
+                    at[d.id] = len(out)
+                    seen_count[d.id] = 1
+                    out.append(d)
+                    continue
+                collisions.append(d.id)
+                if dedupe == "first":
+                    continue
+                if dedupe == "last":
+                    out[at[d.id]] = d
+                elif dedupe == "suffix":
+                    seen_count[d.id] += 1
+                    renamed = replace(d, id=f"{d.id}#{seen_count[d.id]}")
+                    at[renamed.id] = len(out)
+                    out.append(renamed)
+        if dedupe == "error" and collisions:
+            uniq = sorted(set(collisions))
+            shown = ", ".join(uniq[:10]) + (f" (+{len(uniq) - 10} more)" if len(uniq) > 10 else "")
+            raise ValueError(
+                f"duplicate document ids across corpora: {shown}; "
+                "pass dedupe='first', 'last', or 'suffix'"
+            )
+        scripts = {c.script_id for c in corpora}
+        script_id = next(iter(scripts)) if len(scripts) == 1 else "mixed"
+        inventory = (
+            next((c.sign_inventory for c in corpora if c.sign_inventory is not None), None)
+            if script_id != "mixed"
+            else None
+        )
+        return Corpus(out, inventory, _merged_provenance(corpora, len(out)), script_id)
+
     def cite(self, style: str = "plain") -> str:
         """Cite this corpus — or the exact filtered subset — in one call.
 
@@ -145,8 +252,8 @@ class Corpus:
             raise ValueError("this corpus carries no provenance to cite")
         p = self.provenance
         if style == "plain":
-            subset = [n for n in p.notes if n.startswith("subset:")]
-            return p.cite() + (f" [{'; '.join(subset)}]" if subset else "")
+            notes = [n for n in p.notes if n.startswith(("subset:", "merged:", "appended:"))]
+            return p.cite() + (f" [{'; '.join(notes)}]" if notes else "")
         if style == "bibtex":
             return p.bibtex(key=f"{self.script_id or 'aegean'}-corpus")
         if style == "apa":
@@ -400,13 +507,14 @@ class Corpus:
         )
 
     # ── SQLite persistence ───────────────────────────────────────────────
-    def to_sql(self, path: str | Path, *, fts: bool = True) -> None:
+    def to_sql(self, path: str | Path, *, fts: bool = True, append: bool = False) -> None:
         """Write this corpus to a SQLite database (stdlib only). Documents and tokens
         become queryable rows with an optional FTS5 text index; provenance round-trips.
-        Reload with `Corpus.from_sql`; full-text search with `aegean.db.search`."""
+        With ``append=True`` the documents are upserted into an existing database (by id)
+        instead of overwriting it. Reload with `Corpus.from_sql`; search with `aegean.db.search`."""
         from ..db import to_sqlite
 
-        to_sqlite(self, path, fts=fts)
+        to_sqlite(self, path, fts=fts, append=append)
 
     @classmethod
     def from_sql(cls, path: str | Path) -> "Corpus":

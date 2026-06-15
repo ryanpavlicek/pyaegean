@@ -11,7 +11,7 @@ from pathlib import Path
 
 import typer
 
-from ._common import CORPUS_ARG, JSON_OPT, emit_json, load_corpus, table
+from ._common import CORPUS_ARG, JSON_OPT, emit_json, fail, load_corpus, table
 
 db_app = typer.Typer(
     help="SQLite persistence: build a corpus database and full-text search it.",
@@ -32,6 +32,26 @@ def build(
     c = load_corpus(corpus)
     to_sqlite(c, output, fts=not no_fts)
     print(f"wrote {len(c)} documents to {output}")
+
+
+@db_app.command()
+def add(
+    source: str = typer.Argument(
+        ..., help="Corpus to add: an id, a .json/.db file, a Greek work id, or '-'."
+    ),
+    output: Path = typer.Option(..., "--output", "-o", help="Existing .db to append into."),
+) -> None:
+    """Append or update documents in an existing SQLite corpus DB (upsert by document id).
+
+    A document whose id already exists is replaced; new ids are added. Build the database
+    first with `aegean db build`. Example: aegean db add tlg0012.tlg002 -o homer.db"""
+    from aegean.db import to_sqlite
+
+    if not output.exists():
+        raise fail(f"no database to append to: {output} (create it with `aegean db build`)")
+    c = load_corpus(source)
+    to_sqlite(c, output, append=True)
+    print(f"added/updated {len(c)} documents in {output}")
 
 
 @db_app.command()

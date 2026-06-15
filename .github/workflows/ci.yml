@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
 
+# Least-privilege default: every job here only reads the repo (checkout + lint/test/build),
+# so contents:read is all that's needed. Publishing lives in release.yml, which escalates
+# per-job where it needs id-token:write.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

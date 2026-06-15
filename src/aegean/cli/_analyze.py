@@ -6,9 +6,20 @@ analyses (evidence to weigh, not conclusions), exactly as in the Python API.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
-from ._common import CORPUS_ARG, JSON_OPT, emit_json, fail, load_corpus, table
+from ._common import (
+    CORPUS_ARG,
+    JSON_OPT,
+    RESULT_OPT,
+    emit_json,
+    fail,
+    load_corpus,
+    table,
+    write_result,
+)
 
 analyze_app = typer.Typer(
     pretty_exceptions_show_locals=False,
@@ -143,6 +154,7 @@ def assoc(
     corpus: str = CORPUS_ARG,
     word1: str = typer.Argument(..., help="First word."),
     word2: str = typer.Argument(..., help="Second word."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Document-level association between two words: χ², log-likelihood, Fisher, PMI.
@@ -174,6 +186,9 @@ def assoc(
         "fisher_p": fishers_exact(joint, count1, count2, total),
         "pmi_interval": list(pmi_interval(joint, count1, count2, total)),
     }
+    if output is not None:
+        write_result(data, output)
+        return
     if json_out:
         emit_json(data)
         return
@@ -191,6 +206,7 @@ def cooccur(
     corpus: str = CORPUS_ARG,
     word: str = typer.Argument(..., help="A multi-sign word, e.g. KU-RO."),
     top: int = typer.Option(20, "--top", help="How many co-occurring words."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Words sharing a document with WORD, ranked by shared-document count."""
@@ -204,9 +220,17 @@ def cooccur(
             counter.update(w for w in words if w != word)
     if not counter:
         raise fail(f"{word!r} does not co-occur with anything in {corpus!r}")
-    pairs = counter.most_common(top if top > 0 else None)
+    # Deterministic order: by shared-document count, then alphabetically by word to break
+    # ties, so the output is reproducible (the per-document word sets iterate in hash order,
+    # which would otherwise make tied rows shuffle between runs).
+    ranked = sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
+    pairs = ranked if top <= 0 else ranked[:top]
+    payload = [{"word": w, "shared_documents": n} for w, n in pairs]
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json([{"word": w, "shared_documents": n} for w, n in pairs])
+        emit_json(payload)
         return
     table(f"co-occurs with {word}", ["word", "shared docs"], [[w, str(n)] for w, n in pairs])
 
@@ -216,6 +240,7 @@ def clusters(
     corpus: str = CORPUS_ARG,
     min_size: int = typer.Option(2, "--min-size", help="Minimum cluster size."),
     top: int = typer.Option(15, "--top", help="How many clusters."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Morphological clusters: stems with productive-suffix derivations (exploratory)."""
@@ -224,6 +249,9 @@ def clusters(
     c = load_corpus(corpus)
     found = find_morphological_clusters(c.word_frequencies(), min_cluster_size=min_size)
     shown = found[: top if top > 0 else None]
+    if output is not None:
+        write_result(shown, output)
+        return
     if json_out:
         emit_json(shown)
         return
@@ -277,6 +305,7 @@ def hands(
     top: int = typer.Option(20, "--top", help="Rows to show."),
     min_docs: int = typer.Option(1, "--min-docs", help="Minimum tablets for a hand to be listed."),
     signs: bool = typer.Option(False, "--signs", help="For --hand: key signs instead of words."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Scribal-hand analysis over a corpus that records a hand per document (e.g. DAMOS).
@@ -291,12 +320,16 @@ def hands(
             rows = hand_keyness(c, hand, kind="signs" if signs else "words")[:top]
         except ValueError as exc:
             raise fail(str(exc)) from None
+        payload = [
+            {"item": r.item, "in_hand": r.target_count, "elsewhere": r.reference_count,
+             "log_likelihood": r.log_likelihood, "log_ratio": r.log_ratio}
+            for r in rows
+        ]
+        if output is not None:
+            write_result(payload, output)
+            return
         if json_out:
-            emit_json([
-                {"item": r.item, "in_hand": r.target_count, "elsewhere": r.reference_count,
-                 "log_likelihood": r.log_likelihood, "log_ratio": r.log_ratio}
-                for r in rows
-            ])
+            emit_json(payload)
             return
         table(
             f"hand {hand}: characteristic {'signs' if signs else 'words'} vs the rest",
@@ -308,12 +341,16 @@ def hands(
     profiles = scribal_hands(c, min_docs=min_docs)[:top]
     if not profiles:
         raise fail(f"no scribal hands recorded in {corpus!r} (needs meta.scribe)")
+    payload = [
+        {"hand": p.hand, "doc_count": p.doc_count, "token_count": p.token_count,
+         "word_count": p.word_count, "sites": p.sites, "top_words": p.top_words}
+        for p in profiles
+    ]
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json([
-            {"hand": p.hand, "doc_count": p.doc_count, "token_count": p.token_count,
-             "word_count": p.word_count, "sites": p.sites, "top_words": p.top_words}
-            for p in profiles
-        ])
+        emit_json(payload)
         return
     table(
         f"scribal hands in {corpus}",

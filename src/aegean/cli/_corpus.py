@@ -10,12 +10,15 @@ import typer
 from ._common import (
     CORPUS_ARG,
     JSON_OPT,
+    RESULT_OPT,
     apply_meta_filters,
     console,
     emit_json,
     fail,
     load_corpus,
     table,
+    write_corpus,
+    write_result,
 )
 
 SITE_OPT = typer.Option(None, "--site", help="Keep documents from this find-site.")
@@ -37,9 +40,85 @@ def register(app: typer.Typer) -> None:
     app.command()(balance)
     app.command()(cite)
     app.command()(export)
+    app.command()(combine)
+    app.command(name="import")(import_)
     app.command()(geo)
     app.command()(sign)
     app.command()(bridge)
+
+
+def combine(
+    sources: list[str] = typer.Argument(
+        ..., help="Two or more corpora to merge: ids, .json/.db files, work ids, or '-'."
+    ),
+    output: Path = typer.Option(..., "--output", "-o", help="Destination .json or .db file."),
+    on_conflict: str = typer.Option(
+        "error", "--on-conflict",
+        help="Duplicate document ids across sources: error, first, last, or suffix.",
+    ),
+) -> None:
+    """Merge several corpora into one and save it; each source is resolved like any corpus
+    argument (id, .json/.db file, Greek work id, or '-').
+
+    Example — all of Homer in one database:
+    aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db"""
+    import aegean
+
+    loaded = [load_corpus(s) for s in sources]
+    try:
+        merged = aegean.combine(loaded, dedupe=on_conflict)
+    except ValueError as exc:
+        raise fail(str(exc)) from None
+    write_corpus(merged, output)
+    print(f"wrote {len(merged)} documents to {output} (merged {len(loaded)} sources)")
+
+
+def import_(
+    source: str = typer.Argument(
+        ..., help="A .txt file, a folder of text files, or a .csv to import."
+    ),
+    output: Path = typer.Option(..., "--output", "-o", help="Destination .json or .db corpus file."),
+    script: str = typer.Option(
+        "greek", "--script", help="Script id for the text (greek, nt, lineara, linearb, …)."
+    ),
+    split: str = typer.Option(
+        "whole", "--split",
+        help="For text: 'whole' (one doc), 'paragraph' (blank-line blocks), or 'line'.",
+    ),
+    doc_id: str | None = typer.Option(None, "--id", help="Base document id (default: the file name)."),
+    glob: str = typer.Option("*.txt", "--glob", help="For a folder: which files to import."),
+    text_col: str = typer.Option("text", "--text-col", help="For CSV: the column holding the text."),
+    id_col: str | None = typer.Option(None, "--id-col", help="For CSV: the column holding the id."),
+    encoding: str = typer.Option("utf-8", "--encoding", help="Text encoding to read with."),
+) -> None:
+    """Import your OWN text into a corpus you can then analyse, search, and export.
+
+    SOURCE is a plain-text file, a folder of text files, or a CSV. The result is written to
+    -o (.json or .db) and then works anywhere a corpus is accepted:
+
+      aegean import myplato.txt -o myplato.json   &&   aegean stats myplato.json
+      aegean import poems/ -o corpus.db --split line
+      aegean import rows.csv -o corpus.json --text-col line --id-col id"""
+    from aegean import io as aegean_io
+
+    p = Path(source)
+    try:
+        if p.is_dir():
+            corpus = aegean_io.from_text_dir(
+                p, script_id=script, glob=glob, split=split, encoding=encoding
+            )
+        elif p.suffix.lower() == ".csv":
+            corpus = aegean_io.from_csv(
+                p, text_col=text_col, id_col=id_col, script_id=script, encoding=encoding
+            )
+        else:
+            corpus = aegean_io.from_text_file(
+                p, script_id=script, split=split, doc_id=doc_id, encoding=encoding
+            )
+    except (FileNotFoundError, NotADirectoryError, ValueError, LookupError) as exc:
+        raise fail(str(exc)) from None
+    write_corpus(corpus, output)
+    print(f"wrote {len(corpus)} document(s) to {output}")
 
 
 def info(corpus: str = CORPUS_ARG, json_out: bool = JSON_OPT) -> None:
@@ -139,6 +218,7 @@ def show(
 def search(
     corpus: str = CORPUS_ARG,
     pattern: str = typer.Argument(..., help='Sign pattern, e.g. "KU-*-RO" (* = any one sign).'),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Find words matching a wildcard sign pattern, with frequencies."""
@@ -146,8 +226,12 @@ def search(
 
     c = load_corpus(corpus)
     hits = [(w, n) for w, n in c.word_frequencies() if word_matches_sign_pattern(w, pattern)]
+    payload = {"pattern": pattern, "matches": [{"word": w, "count": n} for w, n in hits]}
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json({"pattern": pattern, "matches": [{"word": w, "count": n} for w, n in hits]})
+        emit_json(payload)
         return
     table(f"{pattern!r}: {len(hits)} word(s)", ["word", "count"], [[w, str(n)] for w, n in hits])
 
@@ -164,6 +248,11 @@ def query(
         "inscriptions", "--output-kind", help="Result type: inscriptions or words."
     ),
     fields: bool = typer.Option(False, "--fields", help="List the queryable fields and exit."),
+    output: Path | None = typer.Option(
+        None, "--output", "-o",
+        help="Save the matched inscriptions as a reusable corpus (.json or .db); "
+        "inscriptions output only.",
+    ),
     limit: int = typer.Option(25, "--limit", help="Rows shown in human output."),
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -201,6 +290,12 @@ def query(
         rows.append(FilterRow(field, parsed, connector="or" if connector == "or" else "and", negate=negate))
     c = load_corpus(corpus)
     res = c.query(rows, output_kind)
+    if output is not None:
+        if output_kind != "inscriptions":
+            raise fail("--output saves inscriptions; drop --output-kind words")
+        write_corpus(res.to_corpus(c), output)
+        print(f"wrote {len(res.inscriptions)} inscriptions to {output}")
+        return
     if json_out:
         emit_json(
             {
@@ -232,6 +327,7 @@ def stats(
     corpus: str = CORPUS_ARG,
     signs: bool = typer.Option(False, "--signs", help="Sign frequencies instead of words."),
     top: int = typer.Option(20, "--top", help="How many rows."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Frequency tables: words (default) or individual signs."""
@@ -249,8 +345,12 @@ def stats(
     else:
         pairs = c.word_frequencies()[: top if top > 0 else None]
         title = f"{corpus}: top {len(pairs)} words"
+    payload = [{"item": w, "count": n} for w, n in pairs]
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json([{"item": w, "count": n} for w, n in pairs])
+        emit_json(payload)
         return
     table(title, ["item", "count"], [[w, str(n)] for w, n in pairs])
 
@@ -261,6 +361,7 @@ def dispersion(
     signs: bool = typer.Option(False, "--signs", help="Sign dispersion instead of words."),
     top: int = typer.Option(20, "--top", help="How many rows (ranking mode)."),
     min_frequency: int = typer.Option(2, "--min-frequency", help="Skip rarer items (ranking mode)."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """How evenly items spread across documents (Gries' DP; 0 = even, 1 = concentrated)."""
@@ -276,8 +377,12 @@ def dispersion(
         )
     except ValueError as e:
         raise fail(str(e)) from None
+    payload = [vars(r) for r in rows]
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json([vars(r) for r in rows])
+        emit_json(payload)
         return
     table(
         f"{corpus}: dispersion ({kind})",
@@ -301,6 +406,7 @@ def keyness(
     signs: bool = typer.Option(False, "--signs", help="Sign keyness instead of words."),
     top: int = typer.Option(20, "--top", help="How many rows."),
     min_target: int = typer.Option(2, "--min-target", help="Skip items rarer than this in both."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Key items of a (sub)corpus against a reference (log-likelihood G² + log-ratio).
@@ -331,8 +437,12 @@ def keyness(
         ]
     except ValueError as e:
         raise fail(str(e)) from None
+    payload = [vars(r) for r in rows]
+    if output is not None:
+        write_result(payload, output)
+        return
     if json_out:
-        emit_json([vars(r) for r in rows])
+        emit_json(payload)
         return
     table(
         f"{corpus}: keyness vs {ref_label} ({kind})",

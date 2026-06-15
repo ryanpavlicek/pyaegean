@@ -9,10 +9,20 @@ first use (a note goes to stderr); afterwards everything is offline.
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 import typer
 
-from ._common import JSON_OPT, console, emit_json, fail, read_text, table
+from ._common import (
+    JSON_OPT,
+    RESULT_OPT,
+    console,
+    emit_json,
+    fail,
+    read_text,
+    table,
+    write_result,
+)
 
 greek_app = typer.Typer(
     pretty_exceptions_show_locals=False,
@@ -450,7 +460,10 @@ def work(
 
     The TEI file is fetched once to the cache (pinned commit = reproducible),
     parsed into one document per book/chapter — or, with --ref, just the
-    addressed textpart or verse line-range."""
+    addressed textpart or verse line-range.
+
+    Don't know the id? `aegean greek works` lists well-known ones; any Perseus
+    canonical-greekLit / First1KGreek id works (browse them at scaife.perseus.org)."""
     from aegean.data import DataNotAvailableError
     from aegean.greek import load_work
 
@@ -475,6 +488,82 @@ def work(
         emit_json(summary)
         return
     table(f"{work_id}", ["field", "value"], [[k, str(v)] for k, v in summary.items() if k != "work"])
+
+
+@greek_app.command()
+def works(json_out: bool = JSON_OPT) -> None:
+    """List a curated catalog of well-known Greek works loadable with `aegean greek work`.
+
+    Every id here is verified. It is a starting point, not the whole canon — `work` takes
+    any Perseus canonical-greekLit / First1KGreek id; browse them at scaife.perseus.org."""
+    from aegean.greek import popular_works
+
+    ws = popular_works()
+    if json_out:
+        emit_json(ws)
+        return
+    table("Popular Greek works", ["id", "author", "title"],
+          [[w["id"], w["author"], w["title"]] for w in ws])
+    print("\nLoad one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10")
+    print("This is a curated subset — search the full ~1,800-work canon with `aegean greek catalog`")
+
+
+@greek_app.command()
+def catalog(
+    query: str | None = typer.Argument(
+        None, help="Free-text filter across id, author, and title (English or Greek)."
+    ),
+    author: str | None = typer.Option(None, "--author", "-a", help="Filter by author (substring)."),
+    title: str | None = typer.Option(None, "--title", "-t", help="Filter by title (English or Greek)."),
+    source: str | None = typer.Option(None, "--source", help="Limit to 'perseus' or 'first1k'."),
+    limit: int = typer.Option(40, "--limit", "-n", help="Max rows to show (0 = all)."),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Search the full discovery catalogue (~1,800 works) of loadable Greek texts.
+
+    Every work with a Greek edition in Perseus canonical-greekLit + First1KGreek — far more
+    than the 25 in `aegean greek works`. Bundled metadata, no network. Pass any id to
+    `aegean greek work`.
+
+    Examples:  aegean greek catalog sappho   |   aegean greek catalog --author plato"""
+    from aegean.greek import catalog as greek_catalog
+
+    rows = greek_catalog(query, author=author, title=title, source=source)
+    if output is not None:
+        write_result(rows, output)
+        print(f"wrote {len(rows)} works to {output}")
+        return
+    if json_out:
+        emit_json(rows)
+        return
+    total = len(rows)
+    if not total:
+        print("No works match. Try a looser filter, or browse https://scaife.perseus.org")
+        return
+    shown = rows if limit <= 0 else rows[:limit]
+    table(
+        f"Greek works ({total} match{'' if total == 1 else 'es'})",
+        ["id", "author", "title", "greek", "src"],
+        [[r["id"], r["author"], r["title"], r.get("greek_title", ""), r["source"]] for r in shown],
+    )
+    if limit > 0 and total > limit:
+        print(f"\n… and {total - limit} more — narrow with --author/--title, or --limit 0 to list all (-o to save).")
+    print("Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10")
+
+
+@greek_app.command("nt-books")
+def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
+    """List the 27 books of the Greek New Testament and the names `gloss-nt`/load_nt accept."""
+    from aegean.greek import nt_books
+
+    books = nt_books()
+    if json_out:
+        emit_json(books)
+        return
+    table("New Testament books (Nestle 1904)", ["book", "accepted names"],
+          [[b["name"], ", ".join(b["aliases"])] for b in books])
+    print("\nLoad one in Python:  greek.load_nt('John', ref='1.1-18')")
 
 
 @greek_app.command("eval")

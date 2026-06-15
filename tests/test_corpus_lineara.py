@@ -55,7 +55,8 @@ def test_load_count_and_inventory():
     inv = c.sign_inventory
     assert inv is not None
     # The inventory covers the full Unicode Linear A repertoire (~340 signs); 84 of them are
-    # transliteration-aligned and carry an assigned sound value, the rest are UCD-derived.
+    # transliteration-aligned (source != "ucd"), of which 47 carry an assigned sound value;
+    # the rest are UCD-derived.
     assert len(inv) > 300
     assert sum(1 for s in inv if s.attrs.get("source") != "ucd") == 84
     assert all(s.phonetic is None for s in inv if s.attrs.get("source") == "ucd")

@@ -31,7 +31,6 @@ import hashlib
 import json
 import os
 import pickle
-import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
@@ -59,6 +58,11 @@ class DiskCache:
     are silently not cached, and unreadable rows are treated as misses."""
 
     def __init__(self, path: str | Path) -> None:
+        # Lazy import: the cache is opt-in, so only require sqlite3 once it's actually
+        # used. This keeps `import aegean` working where sqlite3 is unvendored from the
+        # stdlib (e.g. Pyodide / the in-browser demo) or a Python built without it.
+        import sqlite3
+
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(self.path))

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import urllib.request
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from ...core.model import Document, DocumentMeta, Token
@@ -352,3 +353,96 @@ def load_work(
         notes=(f"fetched to cache; {scope}",),
     )
     return Corpus(docs, None, provenance, "greek")
+
+
+# A small, curated catalog of well-known works for discovery. Every id below was verified to
+# resolve against the live source. This is a STARTING POINT, not the full canon: load_work
+# accepts any Perseus canonical-greekLit / First1KGreek CTS id — browse the complete
+# catalogue at the Scaife Viewer (https://scaife.perseus.org).
+POPULAR_WORKS: tuple[dict[str, str], ...] = (
+    {"id": "tlg0012.tlg001", "author": "Homer", "title": "Iliad"},
+    {"id": "tlg0012.tlg002", "author": "Homer", "title": "Odyssey"},
+    {"id": "tlg0020.tlg001", "author": "Hesiod", "title": "Theogony"},
+    {"id": "tlg0020.tlg002", "author": "Hesiod", "title": "Works and Days"},
+    {"id": "tlg0085.tlg004", "author": "Aeschylus", "title": "Seven Against Thebes"},
+    {"id": "tlg0085.tlg005", "author": "Aeschylus", "title": "Agamemnon"},
+    {"id": "tlg0085.tlg006", "author": "Aeschylus", "title": "Libation Bearers"},
+    {"id": "tlg0011.tlg001", "author": "Sophocles", "title": "Trachiniae"},
+    {"id": "tlg0011.tlg002", "author": "Sophocles", "title": "Antigone"},
+    {"id": "tlg0011.tlg003", "author": "Sophocles", "title": "Ajax"},
+    {"id": "tlg0011.tlg004", "author": "Sophocles", "title": "Oedipus Tyrannus"},
+    {"id": "tlg0006.tlg001", "author": "Euripides", "title": "Cyclops"},
+    {"id": "tlg0006.tlg002", "author": "Euripides", "title": "Alcestis"},
+    {"id": "tlg0006.tlg003", "author": "Euripides", "title": "Medea"},
+    {"id": "tlg0019.tlg002", "author": "Aristophanes", "title": "Knights"},
+    {"id": "tlg0019.tlg003", "author": "Aristophanes", "title": "Clouds"},
+    {"id": "tlg0016.tlg001", "author": "Herodotus", "title": "Histories"},
+    {"id": "tlg0003.tlg001", "author": "Thucydides", "title": "History of the Peloponnesian War"},
+    {"id": "tlg0032.tlg002", "author": "Xenophon", "title": "Memorabilia"},
+    {"id": "tlg0032.tlg006", "author": "Xenophon", "title": "Anabasis"},
+    {"id": "tlg0059.tlg002", "author": "Plato", "title": "Apology"},
+    {"id": "tlg0059.tlg003", "author": "Plato", "title": "Crito"},
+    {"id": "tlg0059.tlg004", "author": "Plato", "title": "Phaedo"},
+    {"id": "tlg0059.tlg030", "author": "Plato", "title": "Republic"},
+    {"id": "tlg0086.tlg010", "author": "Aristotle", "title": "Nicomachean Ethics"},
+)
+
+
+def popular_works() -> list[dict[str, str]]:
+    """A curated, verified catalog of well-known Greek works loadable with :func:`load_work`.
+
+    Each entry is ``{'id', 'author', 'title'}`` where ``id`` is the CTS id passed to
+    ``load_work`` (e.g. ``'tlg0012.tlg001'`` → the Iliad). This is a deliberately small
+    starting point — for the full reachable canon use :func:`catalog`, or browse the
+    Scaife Viewer (https://scaife.perseus.org). Pure metadata — no download."""
+    return [dict(w) for w in POPULAR_WORKS]
+
+
+@lru_cache(maxsize=1)
+def _catalogue() -> tuple[dict[str, str], ...]:
+    """The bundled discovery index, loaded once (metadata only — never the texts)."""
+    from ...data import load_bundled_json
+
+    data = load_bundled_json("greek", "works_catalogue.json")
+    return tuple(dict(w) for w in data["works"])
+
+
+def catalog(
+    query: str | None = None,
+    *,
+    author: str | None = None,
+    title: str | None = None,
+    source: str | None = None,
+) -> list[dict[str, str]]:
+    """Search the **full** bundled index of Greek works loadable with :func:`load_work`.
+
+    Unlike :func:`popular_works` (25 curated highlights), this covers every work with a
+    Greek (``-grc``) edition in Perseus canonical-greekLit + First1KGreek — ~1,800 works.
+    Each entry is ``{'id', 'author', 'title', 'greek_title', 'source'}``; pass any ``id``
+    straight to ``load_work``. Pure bundled metadata — no network, no download.
+
+    All filters are case-insensitive substring matches and combine with AND:
+
+    * ``query`` — matches across id, author, English title, and Greek title (the catch-all)
+    * ``author`` — e.g. ``"plato"``
+    * ``title`` — matches the English **or** Greek title
+    * ``source`` — ``"perseus"`` or ``"first1k"``
+
+    Returns a list of dicts; pure bundled metadata, so it works offline and is instant.
+    """
+    works = _catalogue()
+
+    def keep(w: dict[str, str]) -> bool:
+        if author and author.lower() not in w["author"].lower():
+            return False
+        if title and title.lower() not in f"{w['title']} {w.get('greek_title', '')}".lower():
+            return False
+        if source and w["source"] != source:
+            return False
+        if query:
+            hay = f"{w['id']} {w['author']} {w['title']} {w.get('greek_title', '')}".lower()
+            if query.lower() not in hay:
+                return False
+        return True
+
+    return [dict(w) for w in works if keep(w)]

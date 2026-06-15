@@ -10,6 +10,7 @@ and imports instantly; the heavier backends are opt-in and fetched to cache.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
@@ -48,6 +49,20 @@ def load(script_id: str) -> Corpus:
     return Corpus.load(script_id)
 
 
+from .core.resolve import read_corpus  # noqa: E402 — flexible loader (id/work/file/stdin)
+
+
+def combine(corpora: "Iterable[Corpus]", *, dedupe: str = "error") -> Corpus:
+    """Merge several corpora into one (see `Corpus.merge`).
+
+    ``corpora`` is any iterable of `Corpus`; ``dedupe`` handles duplicate document ids
+    (``"error"`` (default), ``"first"``, ``"last"``, or ``"suffix"``)."""
+    items = list(corpora)
+    if not items:
+        raise ValueError("combine() needs at least one corpus")
+    return items[0].merge(*items[1:], dedupe=dedupe)
+
+
 __all__ = [
     "Corpus",
     "Document",
@@ -60,6 +75,8 @@ __all__ = [
     "Provenance",
     "Script",
     "load",
+    "read_corpus",
+    "combine",
     "get_script",
     "register",
     "registered_scripts",

@@ -56,7 +56,8 @@ def test_info_json(app):
 
 
 def test_info_unknown_corpus(app):
-    assert "available" in err(app, "info", "nope")
+    msg = err(app, "info", "nope")
+    assert "unknown corpus" in msg and "lineara" in msg  # lists the registered ids
 
 
 def test_load_filter_and_export(app, tmp_path):
