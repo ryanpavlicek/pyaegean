@@ -63,13 +63,49 @@ def _build_fts(conn: sqlite3.Connection) -> None:
     )
 
 
-def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True) -> None:
-    """Write ``corpus`` to a SQLite database at ``path`` (overwriting any existing file).
+def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -> None:
+    """Insert one ``_document_to_dict`` dict and its tokens at ``doc_order = order``."""
+    m = dd["meta"]
+    conn.execute(
+        "INSERT INTO documents(doc_order, id, script_id, glyphs, transcription, "
+        "translations, site, support, scribe, findspot, period, name, images, notes, "
+        "lines) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            order, dd["id"], dd["script_id"], dd["glyphs"], dd["transcription"],
+            json.dumps(dd["translations"]), m["site"], m["support"], m["scribe"],
+            m["findspot"], m["period"], m["name"], json.dumps(m["images"]),
+            json.dumps(m["notes"]), json.dumps(dd["lines"]),
+        ),
+    )
+    conn.executemany(
+        "INSERT INTO tokens(doc_id, position, line_no, text, kind, glyphs, status, "
+        "signs, alt, annotations) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        [
+            (
+                dd["id"], t["position"], t["line_no"], t["text"], t["kind"],
+                t.get("glyphs"), t.get("status", "certain"),
+                json.dumps(t.get("signs", [])), json.dumps(t.get("alt", [])),
+                json.dumps(t.get("annotations", {})),
+            )
+            for t in dd["tokens"]
+        ],
+    )
 
-    Documents and tokens become queryable rows; provenance and the sign inventory are stored
-    in a ``meta`` table; with ``fts=True`` an FTS5 index over token text is built when the
-    local SQLite supports it. Round-trips losslessly via `from_sqlite`."""
+
+def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: bool = False) -> None:
+    """Write ``corpus`` to a SQLite database at ``path``.
+
+    By default this **overwrites** any existing file. With ``append=True`` it instead
+    upserts ``corpus``'s documents into an existing database (by document id — a document
+    with a matching id is replaced, others are added), keeping the rest intact; the FTS5
+    index is refreshed. Documents and tokens become queryable rows; provenance and the sign
+    inventory live in a ``meta`` table. Round-trips losslessly via `from_sqlite`."""
     p = str(path)
+    if append:
+        if p != ":memory:" and not Path(p).exists():
+            raise FileNotFoundError(f"no database to append to: {p} (build it first)")
+        _append_sqlite(corpus, p)
+        return
     if p != ":memory:":
         Path(p).unlink(missing_ok=True)
     conn = sqlite3.connect(p)
@@ -83,34 +119,50 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True) -> None:
         }
         conn.executemany("INSERT INTO meta(key, value) VALUES (?, ?)", list(meta.items()))
         for i, doc in enumerate(corpus.documents):
-            dd = _document_to_dict(doc)
-            m = dd["meta"]
-            conn.execute(
-                "INSERT INTO documents(doc_order, id, script_id, glyphs, transcription, "
-                "translations, site, support, scribe, findspot, period, name, images, notes, "
-                "lines) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (
-                    i, dd["id"], dd["script_id"], dd["glyphs"], dd["transcription"],
-                    json.dumps(dd["translations"]), m["site"], m["support"], m["scribe"],
-                    m["findspot"], m["period"], m["name"], json.dumps(m["images"]),
-                    json.dumps(m["notes"]), json.dumps(dd["lines"]),
-                ),
-            )
-            conn.executemany(
-                "INSERT INTO tokens(doc_id, position, line_no, text, kind, glyphs, status, "
-                "signs, alt, annotations) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                [
-                    (
-                        dd["id"], t["position"], t["line_no"], t["text"], t["kind"],
-                        t.get("glyphs"), t.get("status", "certain"),
-                        json.dumps(t.get("signs", [])), json.dumps(t.get("alt", [])),
-                        json.dumps(t.get("annotations", {})),
-                    )
-                    for t in dd["tokens"]
-                ],
-            )
+            _insert_document(conn, _document_to_dict(doc), i)
         if fts:
             _build_fts(conn)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _append_sqlite(corpus: Corpus, p: str) -> None:
+    """Upsert ``corpus``'s documents into the existing DB at ``p`` (by document id)."""
+    conn = sqlite3.connect(p)
+    try:
+        has_fts = bool(
+            conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tokens_fts'"
+            ).fetchone()
+        )
+        next_order = conn.execute("SELECT COALESCE(MAX(doc_order), -1) FROM documents").fetchone()[0] + 1
+        row = conn.execute("SELECT value FROM meta WHERE key = 'script_id'").fetchone()
+        existing_script = row[0] if row else ""
+        for doc in corpus.documents:
+            dd = _document_to_dict(doc)
+            prev = conn.execute(
+                "SELECT doc_order FROM documents WHERE id = ?", (dd["id"],)
+            ).fetchone()
+            if prev is not None:  # replace in place: drop the old rows, reuse its order
+                order = int(prev[0])
+                conn.execute("DELETE FROM documents WHERE id = ?", (dd["id"],))
+                conn.execute("DELETE FROM tokens WHERE doc_id = ?", (dd["id"],))
+            else:
+                order, next_order = next_order, next_order + 1
+            _insert_document(conn, dd, order)
+        if has_fts:  # rebuild from current tokens so replaced docs leave no stale hits
+            conn.execute("DROP TABLE tokens_fts")
+            _build_fts(conn)
+        if existing_script and corpus.script_id and existing_script not in ("mixed", corpus.script_id):
+            conn.execute("UPDATE meta SET value = 'mixed' WHERE key = 'script_id'")
+            import sys
+
+            print(
+                f"aegean: appended a {corpus.script_id!r} corpus into a {existing_script!r} "
+                "database; the database's script id is now 'mixed'",
+                file=sys.stderr,
+            )
         conn.commit()
     finally:
         conn.close()

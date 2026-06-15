@@ -22,6 +22,13 @@ on:
         options: [testpypi, pypi]
         default: testpypi
 
+# Least-privilege default for the build job (checkout + build + upload-artifact only).
+# The testpypi/pypi jobs declare their own job-level `id-token: write` for OIDC Trusted
+# Publishing; a job-level permissions block REPLACES this default, so those jobs get
+# exactly id-token:write (no contents) — which is all the publish step needs.
+permissions:
+  contents: read
+
 jobs:
   build:
     # Build/publish only for version-tagged releases (vX.Y.Z) or a manual dispatch. Asset-hosting

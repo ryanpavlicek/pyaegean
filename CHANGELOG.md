@@ -4,6 +4,71 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+## 0.8.2 — 2026-06-15
+
+### Added
+- **Universal corpus input** (`aegean.read_corpus`, and every `aegean` corpus command). A
+  command's corpus argument now accepts not just a registered id but a **Greek work id**
+  (`tlg0012.tlg001`), a path to a saved **`.json`** or **`.db`** corpus, or **`-`** for JSON on
+  stdin — so e.g. `aegean db build tlg0012.tlg001 -o iliad.db`, `aegean stats iliad.json`, and
+  `aegean export tlg0012.tlg002 -f csv -o odyssey.csv` all work without writing Python.
+- **Combine corpora** (`aegean combine`; `aegean.combine`, `Corpus.merge`, `Corpus.subset`):
+  merge several corpora or works into one and save it — `aegean combine tlg0012.tlg001
+  tlg0012.tlg002 -o homer.db` puts all of Homer in one database. Duplicate document ids are
+  handled explicitly (`--on-conflict error|first|last|suffix`), and the merged provenance names
+  every source so `cite` stays truthful.
+- **Save results to files** (`--output/-o` on `stats`, `keyness`, `dispersion`, `search`, and
+  `analyze {assoc,cooccur,clusters,hands}`): write a command's result as `.json`, `.csv`
+  (stdlib, no pandas), or `.txt` by extension — no shell redirection needed.
+- **Save AI outputs** (`--output/-o` on `ai {translate,gloss,hypotheses,ask,extract}`;
+  `ExploratoryResult.to_dict`/`to_json`/`from_dict`): export a translation/gloss as `.json`
+  (text + provenance + grounding) or `.txt` (labeled text). The **exploratory** label and
+  grounding are preserved on disk, so a saved result can't be mistaken for ground truth.
+- **Append to a database** (`aegean db add`, `aegean.db.to_sqlite(..., append=True)`,
+  `Corpus.to_sql(..., append=True)`): upsert documents into an existing SQLite corpus by id
+  (a matching id is replaced, new ids are added; the FTS index is refreshed) — so a database
+  can be built up incrementally, e.g. `aegean db add tlg0012.tlg002 -o homer.db`.
+- **Save a queried subset** (`aegean query ... -o out.json|.db`, `QueryResults.to_corpus`):
+  write the inscriptions a query matched as a reusable corpus, with a `subset:` provenance note
+  so `cite` on the result names the query.
+- **Work and book discovery** for the Greek loaders. `greek.popular_works()` and
+  `aegean greek works` list a curated, verified catalog of well-known Perseus works with
+  their CTS ids (Homer, the tragedians, Herodotus, Plato, …); `greek.nt_books()` and
+  `aegean greek nt-books` list the 27 New Testament books and the names `load_nt` accepts.
+  `aegean greek work` now points at the catalog. Both are pure metadata (offline).
+- **Full work catalogue** (`greek.catalog()`, `aegean greek catalog`): a bundled, offline
+  discovery index of **every** work with a Greek (`-grc`) edition in Perseus
+  canonical-greekLit + First1KGreek — 1,778 works, far beyond the 25 curated highlights —
+  searchable by author, title (English or Greek), free-text, or source. Each entry's id loads
+  directly with `load_work`. Metadata only (id/author/title/Greek title/source); the texts
+  themselves stay CC BY-SA and fetched on demand, never bundled. Regenerate with
+  `scripts/build_greek_catalogue.py`.
+- **Bring your own text files** (`aegean import`; `aegean.io.from_text`, `from_text_file`,
+  `from_text_dir`, `from_csv`): import a plain `.txt` file, a folder of text files, or a CSV
+  into a `Corpus` — `aegean import myplato.txt -o myplato.json` then `aegean stats
+  myplato.json`. `--split whole|paragraph|line` chooses how a text becomes documents; Greek
+  text is tokenized with the Greek tokenizer, other scripts by whitespace. The
+  `read_corpus`/`CORPUS` error now points at `aegean import` when handed a `.txt`/`.csv`.
+
+### Fixed
+- **`Corpus` with duplicate document ids** is now self-consistent: the constructor collapses
+  duplicates to one document per id (keeping the last, which is what `.get()` already returned)
+  and warns, so `.documents`, `len()`, iteration, `fingerprint()`, and the id lookup all agree
+  instead of disagreeing (`.documents` had kept both copies while `.get()` saw only the last).
+- **`aegean analyze cooccur`** now returns a deterministic order — by shared-document count,
+  then alphabetically by word to break ties — so its output is reproducible across runs
+  (it previously inherited the hash-order of per-document word sets, shuffling tied rows).
+- **Linear A sound-value count** corrected in the docs: 47 of the 344 inventory signs carry
+  an assigned sound value (the source docstring, README, and wiki had said 84).
+- **In-browser demo** failed on every action: `import aegean` raised `ModuleNotFoundError`
+  because the opt-in analysis cache did a top-level `import sqlite3`, which Pyodide unvendors.
+  `aegean.cache` now imports sqlite3 lazily, so `import aegean` works without it (Pyodide, or
+  a Python built without sqlite3); the demo also loads sqlite3 for the published wheel and
+  uses a clearer Linear A search example (`*-RO`). The footprint guard now asserts that
+  `import aegean` never imports sqlite3.
+
 ## 0.8.1 — 2026-06-14
 
 ### Added
@@ -69,8 +134,8 @@ All notable changes to pyaegean are documented here. The format follows
 A hardening pass for scholarly use: a complete Linear A sign repertoire, an editorial-status
 model with a schema-valid EpiDoc round-trip, Pleiades-aligned find-sites and geographic
 analysis, the full Greek NLP track through a state-of-the-art neural pipeline, the DAMOS and
-SigLA corpora on demand, a wider public API, and a hosted API reference. Released as **beta** —
-the API is close to stable, but a 1.0 waits on outside use and a short methods write-up.
+SigLA corpora on demand, a wider public API, and a hosted API reference. Released as **beta**;
+the API is close to stable but may still shift before 1.0.
 
 ### Added
 - **Neural Greek pipeline** (`greek.use_neural_pipeline`, the `[neural]` extra): one

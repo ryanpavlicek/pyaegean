@@ -66,6 +66,16 @@ _OSIS: tuple[tuple[str, tuple[str, ...]], ...] = (
 _ALIAS: dict[str, str] = {a: osis for osis, aliases in _OSIS for a in (osis.lower(), *aliases)}
 
 
+def nt_books() -> list[dict[str, Any]]:
+    """The 27 books of the Greek New Testament, in canonical order.
+
+    Each entry is ``{'name': 'John', 'aliases': ['john', 'jn', 'jhn']}``. Any of the
+    name or its aliases is accepted as the ``book`` argument to :func:`load_nt`; the
+    ``name`` is what appears in document ids (e.g. ``'John 1'``). Pure metadata — no
+    download — so it works offline and is the answer to "which books can I load?"."""
+    return [{"name": osis, "aliases": list(aliases)} for osis, aliases in _OSIS]
+
+
 def robinson_to_upos(morph: str) -> str:
     """Map a Robinson/Nestle1904 morph tag to a coarse UD UPOS (e.g. ``N-NSF`` -> NOUN)."""
     tag = morph.strip()

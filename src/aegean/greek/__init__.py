@@ -89,8 +89,8 @@ from .koine import (
 )
 from .nt_eval import evaluate_on_nt
 from .pipeline import TokenRecord, pipeline
-from ..scripts.greek.perseus import load_work
-from ..scripts.greek.nt import load_nt
+from ..scripts.greek.perseus import catalog, load_work, popular_works
+from ..scripts.greek.nt import load_nt, nt_books
 from .prosody import scan, syllable_quantities
 from .meter import (
     AEOLIC_LINES,
@@ -118,7 +118,10 @@ __all__ = [
     "pipeline",
     "TokenRecord",
     "load_work",
+    "popular_works",
+    "catalog",
     "load_nt",
+    "nt_books",
     "use_dodson",
     "gloss_nt",
     "lookup_nt",

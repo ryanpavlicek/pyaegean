@@ -14,11 +14,14 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field as _field, replace
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..core.model import Document
 from ..core.provenance import Provenance
 from .patterns import word_matches_sign_pattern
+
+if TYPE_CHECKING:
+    from ..core.corpus import Corpus
 
 # ── Field registry ───────────────────────────────────────────────────────────
 FieldKind = Literal[
@@ -103,6 +106,23 @@ class QueryResults:
         if style == "apa":
             return stamped.apa()
         raise ValueError(f"style must be 'plain', 'bibtex', or 'apa'; got {style!r}")
+
+    def to_corpus(self, source: "Corpus") -> "Corpus":
+        """Rebuild a reusable `Corpus` from this result set's matched inscriptions.
+
+        Carries ``source``'s sign inventory and script id, and stamps a ``subset:`` provenance
+        note so `cite` on the saved corpus names the query. A words-only result has no
+        inscriptions, so it yields an empty corpus — query with ``output="inscriptions"``."""
+        from ..core.corpus import Corpus
+
+        prov = source.provenance
+        if prov is not None:
+            note = (
+                f"subset: query({self.description or 'all'}) → "
+                f"{len(self.inscriptions)} documents"
+            )
+            prov = replace(prov, notes=prov.notes + (note,))
+        return Corpus(self.inscriptions, source.sign_inventory, prov, source.script_id)
 
 
 @dataclass(frozen=True, slots=True)

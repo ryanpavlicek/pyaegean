@@ -49,6 +49,31 @@ def test_demo_lineara_search() -> None:
     assert any(m["word"] == "KU-MA-RO" for m in out["matches"])
 
 
+def test_demo_works_without_sqlite3() -> None:
+    """Pyodide unvendors sqlite3 from its stdlib, so `import aegean` and the demo's calls
+    must not require it (regression: a top-level `import sqlite3` in the opt-in cache made
+    the whole in-browser demo crash). Run in a subprocess with sqlite3 blocked."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys\n"
+        "sys.modules['sqlite3'] = None  # simulate Pyodide: importing sqlite3 raises\n"
+        "import aegean\n"
+        "from aegean import greek\n"
+        "from aegean.analysis import word_matches_sign_pattern\n"
+        "assert greek.betacode_to_unicode('mh=nin') == 'μῆνιν'\n"
+        "assert greek.scan_line('ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ').pattern\n"
+        "assert list(greek.pipeline('ἐν ἀρχῇ ἦν ὁ λόγος'))\n"
+        "c = aegean.load('lineara')\n"
+        "assert any(word_matches_sign_pattern(w, '*-RO') for w, _ in c.word_frequencies())\n"
+        "print('OK')\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.returncode == 0, f"demo path needs sqlite3:\n{r.stdout}\n{r.stderr}"
+    assert "OK" in r.stdout
+
+
 def test_demo_html_wiring() -> None:
     html = (_DEMO_DIR / "index.html").read_text(encoding="utf-8")
     assert 'fetch("demo.py")' in html                 # loads the tested Python module

@@ -27,6 +27,14 @@ HEAVY = [
     "pandas", "numpy", "scipy", "lxml", "anthropic", "openai", "google",
     "torch", "onnxruntime", "tokenizers", "transformers", "geopandas", "shapely",
 ]
+# Stdlib modules Pyodide unvendors (must be loadPackage'd separately). `import aegean` must
+# not pull these at import time, or the package fails to import in the browser demo. sqlite3
+# is the one that bit us: a top-level `import sqlite3` in the opt-in cache made `import aegean`
+# raise under Pyodide. It's always present in normal CPython, so this doubles as a regression
+# sentinel — if `import aegean` starts importing it again, it shows up in sys.modules here.
+# (ssl/urllib are already pulled by the fetch layer at init but stay off this list: the demo
+# loads them via micropip before importing aegean, so they don't break it — see Limitations.)
+STDLIB_OPTIONAL = ["sqlite3"]
 IMPORT_MS_BOUND = 400.0
 WHEEL_SOFT_BYTES = 5 * 1024 * 1024
 HEAVY_EXT = (".gz", ".so", ".pyd", ".dll", ".bin", ".onnx", ".npy", ".npz", ".pt", ".h5", ".parquet")
@@ -35,15 +43,18 @@ HEAVY_EXT = (".gz", ".so", ".pyd", ".dll", ".bin", ".onnx", ".npy", ".npz", ".pt
 def check_import_clean() -> None:
     code = (
         "import sys, aegean\n"
-        f"heavy = {HEAVY!r}\n"
-        "bad = [m for m in heavy if any(k == m or k.startswith(m + '.') for k in sys.modules)]\n"
-        "print('loaded heavy: ' + (', '.join(bad) if bad else 'none'))\n"
+        f"watch = {(HEAVY + STDLIB_OPTIONAL)!r}\n"
+        "bad = [m for m in watch if any(k == m or k.startswith(m + '.') for k in sys.modules)]\n"
+        "print('loaded on import: ' + (', '.join(bad) if bad else 'none'))\n"
         "sys.exit(1 if bad else 0)"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     print((r.stdout + r.stderr).strip())
     if r.returncode != 0:
-        raise SystemExit("FAIL import-clean: `import aegean` loaded heavy modules (or errored)")
+        raise SystemExit(
+            "FAIL import-clean: `import aegean` loaded a heavy or non-portable-stdlib module "
+            "(or errored)"
+        )
     print("OK  import-clean")
 
 
