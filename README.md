@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.2 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.3 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory** — leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -167,6 +167,9 @@ with `-o`; append to a database with `aegean db add`), a **Greek work catalogue*
 a **file importer** (`aegean import` / `aegean.io.from_text*` — bring your own `.txt`, a folder, or a
 CSV into a `Corpus`).
 
+**v0.8.3** expands the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) with a
+live example of every feature that runs client-side.
+
 On the list next:
 
 - A smaller neural model (selective quantization, optional GPU execution), held to the same accuracy gate
@@ -176,17 +179,13 @@ On the list next:
 
 ## About the author
 
-Ryan Pavlicek. I'm a software engineer in Cincinnati, Ohio. My classical-languages credentials start
-and end at amateur Koine Greek: proficient enough (maybe ~85–90%) to read the Greek New Testament, no
-further. I'm not a classicist or a Bronze Age epigrapher, and I have no illusions about becoming
-one. But building serious, honest software tooling for working with ancient languages this
-hard (one of them undeciphered by definition), struck me as an unusually fun engineering problem.
+Ryan Pavlicek
 
-pyaegean is an outsider's library that the actual specialists are free to pick up, ignore, or
-correct. If something here is wrong, please open an issue or contact me directly.
-All feedback is welcome.
+I'm a software engineer that likes creating useful tools for exploring interesting problems.
 
-**Email**: 'ryan [dot] pavlicek [dot] github [at] gmail [dot] com'
+If you need to reach me please email or create an issue on the GitHub repo.
+
+**Email:** 'ryan [dot] pavlicek [dot] github [at] gmail [dot] com'
 
 *(Replace `[at]` with `@` and `[dot]` with `.`)*
 
@@ -213,7 +212,7 @@ open project justifies the time. In the scholarly spirit, two layers:
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.2},
+  version = {0.8.3},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```
