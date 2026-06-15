@@ -81,6 +81,8 @@ nav:
       - aegean.data: api/data.md
       - aegean.viz: api/viz.md
       - aegean.cache: api/cache.md
+      - aegean.db: api/db.md
+      - aegean.mcp_server: api/mcp.md
   - Benchmarks: benchmarks.md
   - Design notes:
       - Large corpora: large-corpora.md

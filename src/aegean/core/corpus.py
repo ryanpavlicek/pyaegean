@@ -213,6 +213,9 @@ class Corpus:
             want_word = level == "word"
             rows = [
                 {
+                    # token annotations (lemma/morph/strongs/gloss for the Greek NT, etc.)
+                    # spread first so the canonical columns below always win on a name clash.
+                    **tok.annotations,
                     "doc_id": d.id,
                     "line_no": tok.line_no,
                     "position": tok.position,
@@ -396,6 +399,24 @@ class Corpus:
             script_id=meta.get("scriptId", ""),
         )
 
+    # ── SQLite persistence ───────────────────────────────────────────────
+    def to_sql(self, path: str | Path, *, fts: bool = True) -> None:
+        """Write this corpus to a SQLite database (stdlib only). Documents and tokens
+        become queryable rows with an optional FTS5 text index; provenance round-trips.
+        Reload with `Corpus.from_sql`; full-text search with `aegean.db.search`."""
+        from ..db import to_sqlite
+
+        to_sqlite(self, path, fts=fts)
+
+    @classmethod
+    def from_sql(cls, path: str | Path) -> "Corpus":
+        """Reconstruct a Corpus from a SQLite database written by `to_sql` — the lossless
+        counterpart to `from_json`. For huge databases, `aegean.db.stream` yields documents
+        one at a time instead of loading them all."""
+        from ..db import from_sqlite
+
+        return from_sqlite(path)
+
     # ── compound query ───────────────────────────────────────────────────
     def query(
         self,
@@ -479,6 +500,8 @@ def _token_to_dict(t: Token) -> dict[str, Any]:
         d["status"] = t.status.value
     if t.alt:
         d["alt"] = list(t.alt)
+    if t.annotations:
+        d["annotations"] = dict(t.annotations)
     return d
 
 
@@ -488,6 +511,7 @@ def _token_from_dict(d: dict[str, Any]) -> Token:
         glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
         status=ReadingStatus(d["status"]) if d.get("status") else ReadingStatus.CERTAIN,
         alt=tuple(d.get("alt") or ()),
+        annotations=dict(d.get("annotations") or {}),
     )
 
 

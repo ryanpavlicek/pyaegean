@@ -1,7 +1,11 @@
 """The headline data-layer contract for Linear A."""
 
+import hashlib
+import json
+
 import aegean
 from aegean.core.model import ReadingStatus, TokenKind
+from aegean.data import load_bundled_json
 
 # The upstream's erased/illegible-sign placeholder (see lineara/loader.py).
 _ERASED = "\U0001076B"
@@ -87,3 +91,31 @@ def test_tokenize_classifies_kinds():
     kinds = [t.kind.value for t in toks]
     assert kinds == ["word", "numeral", "logogram"]
     assert toks[0].signs == ("KU", "RO")
+
+
+def test_manifest_parity_with_workbench():
+    """The bundled corpus matches the manifest stamped by the linearaworkbench
+    corpus build: same record count, same sha256 over the canonical projection
+    of the shared fields. The workbench verifies the identical checksum on its
+    side, so the two projects' copies of this corpus cannot drift apart
+    silently — whichever side drifts fails its own CI."""
+    manifest = load_bundled_json("lineara", "manifest.json")
+    recs = load_bundled_json("lineara", "inscriptions.json")
+    assert len(recs) == manifest["inscriptionCount"]
+    projection = [{k: r.get(k) for k in manifest["parityFields"]} for r in recs]
+    canonical = json.dumps(projection, ensure_ascii=False, separators=(",", ":"))
+    sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    assert sha == manifest["paritySha256"]
+
+
+def test_image_references_drive_has_image():
+    """Every bundled inscription carries its facsimile/photograph references
+    (paths only, never binaries), so the `has-image` query field behaves
+    exactly as it does in the workbench over the same corpus."""
+    from aegean.analysis import FilterRow
+
+    c = aegean.load("lineara")
+    assert all(d.meta.images for d in c)
+    assert all(isinstance(p, str) and p for d in c for p in d.meta.images)
+    results = c.query([FilterRow("has-image", True)])
+    assert len(results.inscriptions) == len(c)

@@ -18,6 +18,10 @@ candidate collocations to inspect — they are not confirmed lexical units.
 from __future__ import annotations
 
 import math
+from collections import defaultdict
+from collections.abc import Iterable
+
+from .patterns import normalize_sign_label
 
 
 def _cells(
@@ -146,3 +150,54 @@ def pmi_interval(
     lo = math.log2(pj_low / denom) if pj_low > 0 else -20.0
     hi = math.log2(pj_high / denom)
     return (lo, hi)
+
+
+def sign_bigram_pmi(
+    joint: int, left_total: int, right_total: int, grand_total: int
+) -> float | None:
+    """Pointwise mutual information (bits) of an adjacent ordered sign pair a→b.
+
+    ``joint`` is the directed adjacency count of a→b; ``left_total`` the total
+    outgoing adjacencies from a (a as the left/previous sign); ``right_total``
+    the total incoming adjacencies to b (b as the right/next sign);
+    ``grand_total`` all adjacency-pair tokens. Returns
+    ``log₂(joint·grand / (left·right))`` — positive = the pair occurs more often
+    than the two signs' slot frequencies predict, negative = less. Returns
+    ``None`` (PMI undefined) when any input is zero, e.g. a never-attested pair.
+    Directed: PMI(a→b) ≠ PMI(b→a) in general. Unsmoothed, so rare pairs read high."""
+    if joint <= 0 or left_total <= 0 or right_total <= 0 or grand_total <= 0:
+        return None
+    return math.log2((joint * grand_total) / (left_total * right_total))
+
+
+def sign_bigram_pmis(
+    words: Iterable[tuple[str, int]],
+) -> dict[tuple[str, str], float]:
+    """Directed sign-bigram PMI (bits) for every adjacent sign pair attested in a
+    multi-sign word vocabulary.
+
+    ``words`` is an iterable of ``(word, count)`` pairs (hyphen-joined signs, a
+    token frequency); adjacencies are token-weighted and subscript sign labels
+    are folded (``RA₂`` → ``RA2``). No boundary markers — interior adjacencies
+    only. Returns ``{(a, b): pmi}`` over attested pairs (a never-attested pair is
+    simply absent, its PMI being undefined)."""
+    outgoing: dict[tuple[str, str], int] = defaultdict(int)
+    for word, count in words:
+        parts = [normalize_sign_label(p) for p in word.split("-")]
+        if len(parts) < 2:
+            continue
+        for a, b in zip(parts, parts[1:], strict=False):
+            outgoing[(a, b)] += count
+    left: dict[str, int] = defaultdict(int)
+    right: dict[str, int] = defaultdict(int)
+    grand = 0
+    for (a, b), v in outgoing.items():
+        left[a] += v
+        right[b] += v
+        grand += v
+    result: dict[tuple[str, str], float] = {}
+    for (a, b), v in outgoing.items():
+        pmi = sign_bigram_pmi(v, left[a], right[b], grand)
+        if pmi is not None:
+            result[(a, b)] = pmi
+    return result

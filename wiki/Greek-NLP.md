@@ -14,8 +14,9 @@ accented lemmas + gold POS/morphology ([treebank](#treebank-backed-mode-opt-in))
 dictionary glosses ([LSJ](#lexicon-lsj-glossing-opt-in)), dependency trees
 ([parser](#dependency-parsing-opt-in-baseline)), and the
 **[neural pipeline](#the-neural-pipeline-opt-in)** — joint tagging, morphology,
-UD parsing, and lemmatization at state-of-the-art accuracy. Not yet covered:
-lyric metres.
+UD parsing, and lemmatization at state-of-the-art accuracy. Scansion covers the
+dactylic, elegiac, iambic, and **aeolic lyric** lines; non-aeolic lyric (e.g.
+dactylo-epitrite) is not yet covered.
 
 Every example below is real, runnable output. Import the module once:
 
@@ -91,6 +92,49 @@ UAS 82.5, UPOS 87.2. Inference is torch-free (int8 quantization failed its accur
 gate, so the artifact ships fp32) at roughly 450 words/second on a plain CPU. The
 model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
 leakage controls, and the comparison tables are documented in
+[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+
+## The Greek New Testament (Koine)
+
+`greek.load_nt` loads the **Nestle 1904** Greek NT as an annotated `Corpus` — the Koine
+counterpart to `load_work`. Every token carries a gold **lemma**, a Robinson **morph**
+parse, a **Strong's** number, a reconciled UD **upos**, and the **normalized** form in
+`Token.annotations` (so `to_dataframe` surfaces them as columns):
+
+```python
+from aegean import greek
+
+nt = greek.load_nt("John", ref="1.1-1.5")     # a name/abbrev + load_work-style ref
+tok = nt.documents[0].tokens[1]
+tok.text, tok.annotations["lemma"], tok.annotations["morph"], tok.annotations["strongs"]
+# ('ἀρχῇ', 'ἀρχή', 'N-DSF', '746')
+
+greek.load_nt("Romans", ref="8")               # a whole chapter; ref="8.28" a verse
+greek.load_nt()                                # the whole 27-book NT
+```
+
+`book` accepts names or abbreviations (`John`/`Jn`, `1Cor`, `Rev`); `ref` mirrors
+`load_work` (`"3"` chapter, `"3.16"` verse, `"3.16-18"` range). The base text is public
+domain and the morphology/lemmas/Strong's are CC0, so **one book is bundled** (works
+offline) and the full corpus fetches to cache on demand.
+
+**Koine glossing** comes from the bundled Dodson lexicon (CC0) — the Koine counterpart to
+`use_lsj`:
+
+```python
+greek.use_dodson()
+greek.gloss_strongs("3056")   # 'a word, speech, divine utterance, analogy'
+greek.gloss_nt("ἀγάπη")       # 'love'  (lemmatizes + accent-folds on a miss)
+```
+
+The NT corpus self-glosses from the same lexicon, so each token already carries a
+`gloss` annotation offline.
+
+**Measuring the model on the NT.** `greek.evaluate_on_nt()` scores the neural pipeline
+against the Nestle 1904 gold (lemma + reconciled UPOS) — a Nestle-own-gold complement to
+the PROIEL out-of-AGDT check, and both are genuinely out-of-domain (the models train on
+AGDT + Gorman + Pedalion). The measured numbers and the honesty notes (lemma-convention
+differences; why finer features aren't cross-comparable) are in
 [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
 
 ## Normalization & Beta Code
@@ -247,6 +291,23 @@ greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμο
 # '×⏑⏑⏑—|×—⏑—|×—⏑×'   — the first long is resolved (Διό- = ⏑⏑)
 ```
 
+**Aeolic lyric lines** are matched against fixed quantity templates (the choriambic
+nucleus doesn't resolve), so a line scans-or-declines just like the metres above.
+`greek.AEOLIC_LINES` lists the supported types — `glyconic`, `pherecratean`,
+`sapphic_hendecasyllable`, `adonean`, `alcaic_hendecasyllable`, `alcaic_enneasyllable`,
+`alcaic_decasyllable`:
+
+```python
+greek.scan_aeolic("φαίνεταί μοι κῆνος ἴσος θέοισιν", "sapphic_hendecasyllable").pattern
+# '—⏑—×—⏑⏑—⏑—×'   (Sappho 31.1)
+greek.scan_aeolic("ἀσυννέτημμι τὼν ἀνέμων στάσιν", "alcaic_hendecasyllable").pattern
+# '×—⏑—×—⏑⏑—⏑×'   (Alcaeus 326.1)
+```
+
+Synizesis (two or three written vowels read as one syllable, e.g. Πηληϊάδεω's `-εω` or
+θεούς's `εου`) is applied only for words in a small curated lexicon, never guessed — a line
+needing it on an unlisted word declines rather than scan wrongly.
+
 `scan_line(line, meter)` dispatches by name (`"hexameter"` / `"pentameter"` /
 `"trimeter"`), and a `LineScansion` carries `.line`, `.meter`, `.feet`,
 `.syllables`, `.quantities`, `.caesura`, `.caesura_index`, and `.ambiguous`
@@ -274,7 +335,8 @@ greek.scan_hexameter("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχι
 ```
 
 A line needing synizesis on a word **not** in the lexicon still raises
-`ScansionError` rather than guessing. Lyric metres remain out of scope for now.
+`ScansionError` rather than guessing. The aeolic lyric lines are supported (above);
+other lyric metres (dactylo-epitrite, free astrophic) remain out of scope for now.
 
 ## Phonology (reconstructed IPA)
 

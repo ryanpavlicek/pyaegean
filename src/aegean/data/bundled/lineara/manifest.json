@@ -1,0 +1,21 @@
+{
+  "sourceRepo": "mwenge/lineara.xyz",
+  "sourceCommit": "568f452c7a5ec80fa292cb307ead2fc6f65d07fb",
+  "inscriptionCount": 1721,
+  "signCount": 84,
+  "parityFields": [
+    "id",
+    "site",
+    "support",
+    "scribe",
+    "findspot",
+    "context",
+    "name",
+    "words",
+    "translations",
+    "lines",
+    "glyphs",
+    "transcription"
+  ],
+  "paritySha256": "9cf53d8f3b9220888d502dc09efd9d3771d5a68b7dad1446827c96f3ea5de9f9"
+}

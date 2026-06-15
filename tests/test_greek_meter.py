@@ -5,8 +5,10 @@ from __future__ import annotations
 import pytest
 
 from aegean.greek import (
+    AEOLIC_LINES,
     LineScansion,
     ScansionError,
+    scan_aeolic,
     scan_hexameter,
     scan_line,
     scan_pentameter,
@@ -138,14 +140,25 @@ def test_synizesis_entry_is_required(monkeypatch) -> None:
 
 
 def test_synizesis_entries_coalesce_vowels() -> None:
-    # Every lexicon entry must actually merge two written vowels into one nucleus
-    # (i.e. change the analysis) — a dead entry is rejected, like a syllabify
-    # exception that the rules already get right.
-    from aegean.greek.meter import _SYNIZESIS, _items
+    # Every lexicon entry must actually merge its two or three written vowels into one
+    # nucleus (i.e. change the analysis) — a dead entry is rejected, like a syllabify
+    # exception that the rules already get right. Accent-insensitive: the coalesced nucleus
+    # keeps its accent (e.g. θεούς -> εού), so compare on the plain vowels.
+    from aegean.greek.meter import _SYNIZESIS, _items, _strip_combining
 
-    for word, bigram in _SYNIZESIS.items():
+    for word, vowels in _SYNIZESIS.items():
         merged = [it for it in _items(word) if it.is_vowel and len(it.text) >= 2]
-        assert any(bigram in it.text.lower() for it in merged), f"{word!r} did not coalesce"
+        assert any(
+            vowels in _strip_combining(it.text).lower() for it in merged
+        ), f"{word!r} did not coalesce"
+
+
+def test_three_vowel_synizesis() -> None:
+    # θεούς takes three-vowel synizesis (εου -> one syllable); without the lexicon entry
+    # the natural ου diphthong would still leave it two syllables (θε-ούς).
+    from aegean.greek.meter import _analyze
+
+    assert len(_analyze("θεούς")) == 1
 
 
 def test_pattern_str_round_trips_glyphs() -> None:
@@ -212,3 +225,46 @@ def test_trimeter_rejects_a_hexameter() -> None:
 def test_scan_line_dispatches_trimeter() -> None:
     sc = scan_line("ἥκω Διὸς παῖς τήνδε Θηβαίων χθόνα", "trimeter")
     assert sc.meter == "trimeter" and len(sc.feet) == 3
+
+
+# --- aeolic lyric lines ------------------------------------------------------
+
+# Real lines, scanned against the standard aeolic templates (— ⏑ × notation).
+def test_sapphic_hendecasyllable() -> None:
+    sc = scan_aeolic("φαίνεταί μοι κῆνος ἴσος θέοισιν", "sapphic_hendecasyllable")  # Sappho 31.1
+    assert sc.meter == "sapphic_hendecasyllable"
+    assert sc.pattern == "—⏑—×—⏑⏑—⏑—×"
+    assert len(sc.syllables) == 11
+
+
+def test_alcaic_hendecasyllable() -> None:
+    sc = scan_aeolic("ἀσυννέτημμι τὼν ἀνέμων στάσιν", "alcaic_hendecasyllable")  # Alcaeus 326.1
+    assert sc.pattern == "×—⏑—×—⏑⏑—⏑×"
+
+
+def test_glyconic() -> None:
+    sc = scan_aeolic("Ἀφροδίτα δολόπλοκε", "glyconic")
+    assert sc.pattern == "××—⏑⏑—⏑×" and len(sc.syllables) == 8
+
+
+def test_scan_line_dispatches_aeolic() -> None:
+    sc = scan_line("φαίνεταί μοι κῆνος ἴσος θέοισιν", "sapphic_hendecasyllable")
+    assert sc.meter == "sapphic_hendecasyllable"
+
+
+def test_aeolic_rejects_wrong_length() -> None:
+    # a hexameter line is far too long for any aeolic colon
+    with pytest.raises(ScansionError):
+        scan_aeolic("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ", "glyconic")
+
+
+def test_aeolic_unknown_line_type() -> None:
+    with pytest.raises(ScansionError, match="unknown aeolic line"):
+        scan_aeolic("φαίνεταί μοι κῆνος ἴσος θέοισιν", "not_a_metre")
+
+
+def test_aeolic_lines_constant() -> None:
+    assert "sapphic_hendecasyllable" in AEOLIC_LINES and "glyconic" in AEOLIC_LINES
+    # every advertised line type is dispatchable through scan_line
+    for name in AEOLIC_LINES:
+        assert callable(__import__("aegean.greek.meter", fromlist=["_SCANNERS"])._SCANNERS[name])

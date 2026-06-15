@@ -181,11 +181,15 @@ def quantities(word: list[str] = typer.Argument(..., help="Greek word(s)."), jso
 def scan(
     line: str = TEXT_ARG,
     meter: str = typer.Option(
-        "hexameter", "--meter", help="hexameter, pentameter, or trimeter."
+        "hexameter", "--meter",
+        help="hexameter, pentameter, trimeter, or an aeolic line "
+             "(glyconic, pherecratean, sapphic_hendecasyllable, adonean, "
+             "alcaic_hendecasyllable, alcaic_enneasyllable, alcaic_decasyllable).",
     ),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Metrical scansion (dactylic hexameter / elegiac pentameter / iambic trimeter).
+    """Metrical scansion: dactylic hexameter, elegiac pentameter, iambic trimeter, or the
+    aeolic lyric lines (fixed quantity templates).
 
     Synizesis is lexical, not inferred: a line that only fits via synizesis on a
     word outside the curated lexicon exits 1 with the reason rather than guessing."""
@@ -357,6 +361,40 @@ def gloss(
         print(g)
 
 
+@greek_app.command("gloss-nt")
+def gloss_nt(
+    word: str = typer.Argument(..., help="A Greek word, or a Strong's number with --strongs."),
+    strongs: bool = typer.Option(False, "--strongs", help="Treat the argument as a Strong's number."),
+    full: bool = typer.Option(False, "--full", help="Show the full Dodson entry (lemma + definition)."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Koine (New Testament) gloss from the bundled Dodson lexicon — no download (CC0)."""
+    from aegean import greek
+
+    greek.use_dodson()
+    if strongs:
+        g = greek.gloss_strongs(word)
+        if g is None:
+            raise fail(f"no Dodson entry for Strong's {word!r}")
+        if json_out:
+            emit_json({"strongs": word, "gloss": g})
+        else:
+            print(g)
+        return
+    entry = greek.lookup_nt(word)
+    if entry is None:
+        raise fail(f"no Dodson entry for {word!r}")
+    if json_out:
+        emit_json({
+            "word": word, "lemma": entry.lemma, "strongs": entry.strongs,
+            "gloss": entry.gloss, "definition": entry.definition,
+        })
+    elif full:
+        console().print(f"{entry.lemma} (G{entry.strongs}): {entry.definition}", markup=False)
+    else:
+        print(entry.gloss)
+
+
 @greek_app.command()
 def pipeline(
     text: str = TEXT_ARG,
@@ -442,7 +480,7 @@ def work(
 @greek_app.command("eval")
 def evaluate(
     target: str = typer.Argument(
-        ..., help="ud, proiel, tagger, lemmatizer, or parser (heavy: fetches/trains)."
+        ..., help="ud, proiel, nt, tagger, lemmatizer, or parser (heavy: fetches/trains)."
     ),
     treebank_fold: str = typer.Option("perseus", "--treebank", help="For ud: perseus or proiel."),
     split: str = typer.Option("test", "--split", help="For ud: dev or test."),
@@ -468,6 +506,9 @@ def evaluate(
         result = greek.evaluate_on_ud(treebank=treebank_fold, split=split)
     elif target == "proiel":
         result = greek.evaluate_on_proiel()
+    elif target == "nt":
+        greek.use_neural_pipeline()  # the NT fold reports the shipped neural model's number
+        result = greek.evaluate_on_nt()
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":
@@ -476,7 +517,7 @@ def evaluate(
         greek.use_parser()
         result = greek.evaluate_parser()
     else:
-        raise fail("target must be ud, proiel, tagger, lemmatizer, or parser")
+        raise fail("target must be ud, proiel, nt, tagger, lemmatizer, or parser")
     if json_out:
         emit_json(result)
         return

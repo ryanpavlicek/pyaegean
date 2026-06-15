@@ -66,8 +66,8 @@ Each of these is on the [roadmap](Home#roadmap).
 | Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon — every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations at the source; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")` (DAMOS, CC BY-NC-SA, fetched not bundled); lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | ~~`greek.load_work` reads top-level textparts only and drops `<note>`/`<bibl>` silently~~ | **Done:** `load_work(work, ref=…)` addresses a textpart / nested div / verse line-range, and `<note>`/`<bibl>` are carried in `DocumentMeta.notes` |
-| Scansion covers dactylic hexameter, elegiac pentameter, and **iambic trimeter** (with resolution). Synizesis is applied only for words in a curated, test-enforced lexicon — a line needing it on an un-listed word still declines rather than guesses | **Done.** Remaining by design: **lyric metres** (a research project), and three-vowel synizesis (e.g. θεούς) beyond the two-vowel bigram model |
-| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas (the treebank and neural tiers cover these) | Planned: Morpheus-backed tables for the offline tier, gated on a license audit |
+| Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis (two- and three-vowel, e.g. θεούς) is applied only for words in a curated, test-enforced lexicon — a line needing it on an un-listed word still declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic) — a research project |
+| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design** — the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source (the Morpheus audit did not clear) |
 | The neural pipeline's model is a 518 MB fp32 download (int8 quantization failed its accuracy gate and was rejected) | Planned: selective quantization under the same ≤0.3-point gate, and optional GPU execution providers |
 | 33 of 56 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots/peak sanctuaries not yet in Pleiades | The alignment was extended (26→33, each coordinate-verified); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
 | The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution — adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
@@ -99,7 +99,9 @@ the *weak* numbers are public:
 - **The AI layer is exploratory by construction.** Every generative result is a
   labeled, provenanced hypothesis built on local deterministic grounding — by
   policy it is never presented as a reading, whatever the model's confidence.
-- **No web demo** — the [CLI](CLI) is the no-Python path; the
+- **Try it in the browser** — the core pipeline runs client-side via Pyodide at
+  [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/), no install; the
+  [CLI](CLI) is the full no-Python path and the
   [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) web app
   covers the visual Linear A use case.
 - **Corpora are held in memory** — fine for everything pyaegean ships and fetches

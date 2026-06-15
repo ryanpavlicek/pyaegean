@@ -9,6 +9,9 @@ at a time; nothing here can break your computer.
 > Already comfortable with Python and `pip`? Skip ahead to
 > [Installation](Installation) and the [Tutorial](Tutorial).
 
+> **Just want to try it first?** The core pipeline runs **in your browser**, nothing to
+> install: [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/) (Pyodide).
+
 ## What pyaegean is (in one breath)
 
 It's a free toolkit, written in the Python language, for working with Ancient
@@ -93,7 +96,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.8.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.8.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

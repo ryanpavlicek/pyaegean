@@ -12,11 +12,13 @@ tutorials, and the per-script handbooks, see the
 - [`aegean.core`](api/core.md) — the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …).
 - [`aegean.greek`](api/greek.md) — the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse).
 - [`aegean.analysis`](api/analysis.md) — accounting reconciliation, sign-pattern search, statistics, comparison.
-- [`aegean.io`](api/io.md) — EpiDoc / CSV / Parquet export.
+- [`aegean.io`](api/io.md) — EpiDoc / CSV / Parquet export, plus the Linear A Research Workbench round-trip.
+- [`aegean.db`](api/db.md) — SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
+- [`aegean.mcp_server`](api/mcp.md) — the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
 ```bash
 pip install pyaegean            # core + Linear A + Greek (zero heavy dependencies)
-pip install "pyaegean[all]"     # the data, AI, EpiDoc, geo, viz, and CLI extras
+pip install "pyaegean[all]"     # the data, AI, EpiDoc, geo, viz, CLI, and MCP extras
 ```
 
 See the [README](https://github.com/ryanpavlicek/pyaegean#install) for the full extras

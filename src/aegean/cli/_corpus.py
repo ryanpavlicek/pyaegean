@@ -442,31 +442,42 @@ def cite(
 
 def export(
     corpus: str = CORPUS_ARG,
-    fmt: str = typer.Option(..., "--format", "-f", help="json, csv, parquet, or epidoc."),
+    fmt: str = typer.Option(..., "--format", "-f", help="json, csv, parquet, epidoc, or sqlite."),
     output: Path = typer.Option(..., "--output", "-o", help="Destination file."),
+    level: str = typer.Option(
+        "document", "--level",
+        help="For csv/parquet: document, token, or word (token carries NT lemma/morph/Strong's/gloss).",
+    ),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
 ) -> None:
-    """Export a (filtered) corpus: lossless JSON, tabular CSV/Parquet, or EpiDoc TEI."""
+    """Export a (filtered) corpus: lossless JSON, tabular CSV/Parquet, EpiDoc TEI, or a SQLite DB.
+
+    ``--level token`` (csv/parquet) emits one row per token, spreading any per-token
+    annotations — the Greek NT's lemma/morph/Strong's/gloss — into columns."""
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     if fmt == "json":
         c.to_json(output)
     elif fmt == "csv":
         from aegean.io import to_csv
 
-        to_csv(c, output)
+        to_csv(c, output, level=level)
     elif fmt == "parquet":
         from aegean.io import to_parquet
 
-        to_parquet(c, output)
+        to_parquet(c, output, level=level)
     elif fmt == "epidoc":
         from aegean.io import write_epidoc
 
         write_epidoc(c, output)
+    elif fmt == "sqlite":
+        from aegean.db import to_sqlite
+
+        to_sqlite(c, output)
     else:
-        raise fail(f"unknown format {fmt!r}; use json, csv, parquet, or epidoc")
+        raise fail(f"unknown format {fmt!r}; use json, csv, parquet, epidoc, or sqlite")
     print(f"wrote {len(c)} documents to {output} ({fmt})")
 
 

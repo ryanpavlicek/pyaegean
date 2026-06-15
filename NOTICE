@@ -12,6 +12,9 @@ Linear A corpus (bundled text JSON: src/aegean/data/bundled/lineara/)
   Derived from the GORILA edition — Godart, L. & Olivier, J.-P. (1976–1985),
   "Recueil des inscriptions en linéaire A" (Études Crétoises) — via the
   open dataset at https://github.com/mwenge/lineara.xyz.
+  The GORILA volumes are digitized in the École française d'Athènes'
+  CEFAEL library:
+  https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND
   Used as a scholarly reference corpus. Transliterations and structured
   metadata only; no facsimile imagery is bundled or redistributed.
 
@@ -154,9 +157,24 @@ SigLA — the Linear A paleographical database (fetched on demand, NOT bundled)
   ShareAlike obligations pass through to the user, and the data is never bundled
   in or redistributed with the Apache-2.0 wheel. Cite SigLA in academic work.
 
-Planned (future versions; included here for forward attribution):
-  - Morpheus morphological data (per applicable license).
-  Each will be attributed and license-gated as it is integrated.
+Greek New Testament — Nestle 1904 morphology (one book bundled; full corpus fetched on demand)
+  The Nestle 1904 Greek New Testament with per-token lemma, Robinson-style morphology, and
+  Strong's numbers, from biblicalhumanities/Nestle1904
+  (https://github.com/biblicalhumanities/Nestle1904). The base Greek text (Eberhard Nestle
+  1904; digital edition by Diego Santos) is public domain; the morphology, lemmas, and
+  Strong's numbers (Ulrik Sandborg-Petersen, largely derived from Maurice A. Robinson's
+  analysis) are dedicated to the public domain under CC0 1.0. Because CC0 imposes no
+  attribution or share-alike obligation, pyaegean both bundles one book as an offline sample
+  (src/aegean/data/bundled/greek/nt_sample.json) and hosts the full 27-book corpus as the
+  `nt-corpus` release asset, fetched on demand via aegean.greek.load_nt() /
+  aegean.load("nt") (built by scripts/build_nt_corpus.py).
+
+Dodson Greek Lexicon (bundled: src/aegean/data/bundled/greek/dodson.json)
+  John Jeffrey Dodson, "A Public Domain Greek-English Lexicon of the New Testament", digital
+  edition by biblicalhumanities (https://github.com/biblicalhumanities/Dodson-Greek-Lexicon),
+  dedicated to the public domain under CC0 1.0. Strong's-keyed Koine glosses; bundled and used
+  by aegean.greek.use_dodson() / gloss_nt() / gloss_strongs() (built by
+  scripts/build_dodson_lexicon.py).
 
 The structured-data layer of this package is licensed Apache-2.0; underlying
 scholarly editions and imagery remain under their respective rights. Cite the

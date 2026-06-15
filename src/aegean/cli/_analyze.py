@@ -266,3 +266,58 @@ def structure(
         ["category", "documents"],
         [[k, str(len(v))] for k, v in buckets.items()],
     )
+
+
+@analyze_app.command()
+def hands(
+    corpus: str = CORPUS_ARG,
+    hand: str | None = typer.Option(
+        None, "--hand", help="Keyness for one hand vs the rest; omit to profile every hand."
+    ),
+    top: int = typer.Option(20, "--top", help="Rows to show."),
+    min_docs: int = typer.Option(1, "--min-docs", help="Minimum tablets for a hand to be listed."),
+    signs: bool = typer.Option(False, "--signs", help="For --hand: key signs instead of words."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Scribal-hand analysis over a corpus that records a hand per document (e.g. DAMOS).
+
+    Without --hand: profile every scribal hand (tablets, tokens, top words). With --hand:
+    what is characteristic of that hand versus all the others (log-likelihood keyness)."""
+    from aegean.analysis import hand_keyness, scribal_hands
+
+    c = load_corpus(corpus)
+    if hand is not None:
+        try:
+            rows = hand_keyness(c, hand, kind="signs" if signs else "words")[:top]
+        except ValueError as exc:
+            raise fail(str(exc)) from None
+        if json_out:
+            emit_json([
+                {"item": r.item, "in_hand": r.target_count, "elsewhere": r.reference_count,
+                 "log_likelihood": r.log_likelihood, "log_ratio": r.log_ratio}
+                for r in rows
+            ])
+            return
+        table(
+            f"hand {hand}: characteristic {'signs' if signs else 'words'} vs the rest",
+            ["item", "in-hand", "elsewhere", "G²", "log-ratio"],
+            [[r.item, str(r.target_count), str(r.reference_count),
+              f"{r.log_likelihood:.4g}", f"{r.log_ratio:+.2f}"] for r in rows],
+        )
+        return
+    profiles = scribal_hands(c, min_docs=min_docs)[:top]
+    if not profiles:
+        raise fail(f"no scribal hands recorded in {corpus!r} (needs meta.scribe)")
+    if json_out:
+        emit_json([
+            {"hand": p.hand, "doc_count": p.doc_count, "token_count": p.token_count,
+             "word_count": p.word_count, "sites": p.sites, "top_words": p.top_words}
+            for p in profiles
+        ])
+        return
+    table(
+        f"scribal hands in {corpus}",
+        ["hand", "tablets", "tokens", "top words"],
+        [[p.hand, str(p.doc_count), str(p.token_count),
+          ", ".join(w for w, _ in p.top_words[:5])] for p in profiles],
+    )

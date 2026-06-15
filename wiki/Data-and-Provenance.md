@@ -45,7 +45,9 @@ The facsimile/photo set (3,368 files, ~116 MB download, ~125 MB unpacked) is
 **fetched (never re-hosted)** from a release on the `ryanpavlicek/linearaworkbench`
 repo. `fetch` downloads the `tar.gz` and unpacks it
 into a cache directory of images. Its copyright is a patchwork — most images are
-**© École Française d'Athènes** (the GORILA volumes), others are held by named
+**© École Française d'Athènes** (the
+[GORILA volumes](https://cefael.efa.gr/result.php?serie_title_operator=con&volume_number_operator=%3D&issue_year_operator=%3D&section_title=Recueil+des+inscriptions+en+lin%C3%A9aire+A&section_title_operator=con&author_lastname_operator=con&publisher_name_operator=con&site_id=1&actionID=advanced&operator=AND),
+digitized in the École's CEFAEL library at that link), others are held by named
 scholars, publications, and photographers (see the corpus's per-image
 `imageRights`); that attribution is unaffected by fetching, and pyaegean does not
 redistribute the images itself.
@@ -196,6 +198,16 @@ file's `_meta`; no imagery is included. This is the openly-licensed full corpus
 the bundled Linear B sample stands in for. Cite DAMOS (Aurora 2015) in academic
 work.
 
+### The Greek New Testament + Dodson lexicon (`greek.load_nt`, `use_dodson`)
+
+The **Nestle 1904** Greek NT base text is public domain; its per-token morphology, lemmas,
+and Strong's numbers (from biblicalhumanities/Nestle1904) are dedicated to the public domain
+under **CC0**. Because CC0 imposes no restriction, **one book is bundled** in the wheel as an
+offline sample and the full 27-book corpus is hosted as the `nt-corpus` release asset, fetched
+on demand by `greek.load_nt`. Koine glossing uses the **Dodson Greek Lexicon** (J. J. Dodson;
+**CC0**), which is small enough to bundle in the wheel (`greek.use_dodson`). Cite the Nestle
+1904 edition and Dodson in academic work.
+
 ## Data versioning — pinning for papers
 
 Every dataset pyaegean can touch is versioned and hashable:
@@ -203,7 +215,7 @@ Every dataset pyaegean can touch is versioned and hashable:
 ```python
 from aegean import data
 manifest = data.versions()
-# {"package": "0.8.0",
+# {"package": "0.8.1",
 #  "bundled": {"lineara/inscriptions.json": {"sha256": "…", "bytes": …}, …},
 #  "fetched": {"grc-joint": {"url": "…", "sha256": "…", "cached": True}, …}}
 ```
