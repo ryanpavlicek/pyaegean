@@ -3,21 +3,28 @@
 Drops the ``aegean`` prefix: inside the shell you type subcommands directly
 (``stats lineara --top 5``, ``greek catalog plato``, ``ai translate …``) with
 Tab-completion of commands and options and a recallable history. Each line is
-dispatched through the same Typer/Click app the ``aegean`` command uses, so every
+dispatched through the same Typer app the ``aegean`` command uses, so every
 subcommand behaves identically. The interactive line editing is provided by
 ``prompt_toolkit`` (ships with the ``[cli]`` extra); when standard input is not a
 terminal (a pipe or a test harness) commands are read line-by-line instead, so
 the shell is scriptable too.
+
+The Click that backs the command tree is reached through Typer (``typer.Context``
+and the group object itself), never by importing the standalone ``click``
+package — typer ≥ 0.26 vendors its own Click, so the standalone package may not
+be installed.
 """
 
 from __future__ import annotations
 
 import shlex
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
-import click
 import typer
+
+if TYPE_CHECKING:  # type hints only; at runtime Click is reached via typer, not imported
+    import click
 
 _EXIT_WORDS = {":exit", ":quit", ":q", "exit", "quit"}
 _HELP_WORDS = {":help", "help", "?"}
@@ -27,6 +34,13 @@ def register(app: typer.Typer) -> None:
     app.command()(repl)
 
 
+def _is_group(cmd: object) -> bool:
+    """Whether a command can enumerate and resolve subcommands. Duck-typed on
+    purpose: a Typer/Click group answers ``get_command``/``list_commands``, and
+    typer 0.26's ``TyperGroup`` is not a ``click.Group`` subclass for ``isinstance``."""
+    return hasattr(cmd, "get_command") and hasattr(cmd, "list_commands")
+
+
 def repl(ctx: typer.Context) -> None:
     """Start an interactive shell — run commands without the ``aegean`` prefix.
 
@@ -34,8 +48,7 @@ def repl(ctx: typer.Context) -> None:
     with Tab-completion and history. ``:help`` shows the command list; ``:exit``,
     ``quit``, or Ctrl-D leaves the shell.
     """
-    group = ctx.find_root().command  # the top-level aegean group
-    assert isinstance(group, click.Group)  # the root command is always the group
+    group = cast("click.Group", ctx.find_root().command)  # the top-level aegean group
     if sys.stdin.isatty():
         _interactive_loop(group)
     else:
@@ -63,17 +76,19 @@ def _run_line(group: click.Group, line: str) -> bool:
         print("aegean: already in the interactive shell.", file=sys.stderr)
         return True
     try:
-        # Re-enter the CLI as if freshly invoked; non-standalone so errors raise
-        # instead of killing the process, keeping the shell alive line to line.
+        # Re-enter the CLI as if freshly invoked; non-standalone so Click raises
+        # instead of exiting the process, keeping the shell alive line to line.
         group.main(args=args, prog_name="aegean", standalone_mode=False)
     except SystemExit:
         pass  # e.g. --help calls ctx.exit(); not a reason to leave the shell
-    except click.ClickException as exc:
-        exc.show()
-    except click.exceptions.Abort:
-        print("aborted.", file=sys.stderr)
-    except Exception as exc:  # a command blowing up must not end the session
-        print(f"aegean: {exc}", file=sys.stderr)
+    except Exception as exc:  # any command error must not end the session
+        # Click's own errors render themselves via .show(); anything else gets one
+        # line. Duck-typed so it holds whether typer uses standalone or vendored Click.
+        show = getattr(exc, "show", None)
+        if callable(show):
+            show()
+        else:
+            print(f"aegean: {exc}", file=sys.stderr)
     return True
 
 
@@ -89,7 +104,7 @@ def _interactive_loop(group: click.Group) -> None:  # pragma: no cover - needs a
         raise SystemExit(1) from None
 
     session: Any = PromptSession(
-        history=InMemoryHistory(), completer=_make_completer(group)
+        history=InMemoryHistory(), completer=_make_completer(cast(Any, group))
     )
     print(
         "aegean interactive shell — commands without the 'aegean' prefix.\n"
@@ -107,10 +122,10 @@ def _interactive_loop(group: click.Group) -> None:  # pragma: no cover - needs a
             break
 
 
-def _make_completer(group: click.Group) -> Any:  # pragma: no cover - needs a TTY
-    """A prompt_toolkit completer that walks the Click command tree: it completes
-    command names at the current level, descends into sub-groups, and offers a
-    command's option flags once the word starts with ``-``."""
+def _make_completer(group: Any) -> Any:  # pragma: no cover - needs a TTY
+    """A prompt_toolkit completer that walks the command tree: it completes command
+    names at the current level, descends into sub-groups, and offers a command's
+    option flags once the word starts with ``-``."""
     from prompt_toolkit.completion import Completer, Completion
 
     class _AegeanCompleter(Completer):  # type: ignore[misc]
@@ -123,13 +138,14 @@ def _make_completer(group: click.Group) -> Any:  # pragma: no cover - needs a TT
             word = "" if text[-1:].isspace() else (tokens.pop() if tokens else "")
 
             cmd: Any = group
-            ctx = click.Context(group, info_name="aegean")
-            for tok in tokens:  # descend through any sub-groups already typed
-                if not isinstance(cmd, click.Group):
-                    return
-                cmd = cmd.get_command(ctx, tok)
-                if cmd is None:
-                    return
+            ctx = typer.Context(group, info_name="aegean")
+            for tok in tokens:  # descend through sub-groups; stop at the first leaf/arg
+                if not _is_group(cmd):
+                    break  # a leaf command — the remaining tokens are its args/options
+                sub = cmd.get_command(ctx, tok)
+                if sub is None:
+                    break  # not a known subcommand here (a positional arg or a typo)
+                cmd = sub
 
             if word.startswith("-"):
                 seen = set()
@@ -138,7 +154,7 @@ def _make_completer(group: click.Group) -> Any:  # pragma: no cover - needs a TT
                         if opt.startswith("-") and opt.startswith(word) and opt not in seen:
                             seen.add(opt)
                             yield Completion(opt, start_position=-len(word))
-            elif isinstance(cmd, click.Group):
+            elif _is_group(cmd):
                 for name in cmd.list_commands(ctx):
                     if name.startswith(word):
                         sub = cmd.get_command(ctx, name)

@@ -6,6 +6,14 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+## 0.8.5 — 2026-06-16
+
+### Fixed
+- The `aegean` command line now starts under typer ≥ 0.26 (which vendors its own Click and no
+  longer installs the standalone `click` package). The interactive shell reaches Click through
+  typer instead of importing `click` directly, so a fresh `pip install "pyaegean[cli]"` works.
+  (0.8.4 could fail to start the `aegean` command when standalone `click` was absent.)
+
 ## 0.8.4 — 2026-06-16
 
 ### Added

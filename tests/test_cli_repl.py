@@ -64,3 +64,24 @@ def test_repl_does_not_nest(app):  # type: ignore[no-untyped-def]
 def test_repl_help_word_shows_commands(app):  # type: ignore[no-untyped-def]
     out = _repl(app, ":help\n:exit\n")
     assert "Commands" in out and "greek" in out
+
+
+def test_repl_completer(app):  # type: ignore[no-untyped-def]
+    # The Tab-completer is TTY-only in use, but its logic is pure and testable: it
+    # completes commands at the current level, descends into sub-groups, and offers a
+    # leaf command's options. (Also guards the typer-version-robust group handling.)
+    from aegean.cli._repl import _make_completer
+
+    group = typer.main.get_command(app)
+    comp = _make_completer(group)
+
+    class _Doc:
+        def __init__(self, text: str) -> None:
+            self.text_before_cursor = text
+
+    def names(text: str) -> set:  # type: ignore[type-arg]
+        return {c.text for c in comp.get_completions(_Doc(text), None)}
+
+    assert "stats" in names("st")  # top-level command
+    assert "syllabify" in names("greek sy")  # descend into the greek sub-group
+    assert any(o.startswith("--") for o in names("stats lineara --"))  # leaf options

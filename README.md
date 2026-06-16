@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.4 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.5 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory** — leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -216,7 +216,7 @@ open project justifies the time. In the scholarly spirit, two layers:
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.4},
+  version = {0.8.5},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```
