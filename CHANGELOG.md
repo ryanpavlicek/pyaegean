@@ -6,6 +6,17 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+## 0.8.4 — 2026-06-16
+
+### Added
+- **Interactive shell** (`aegean repl`). Starts a prompt where you run subcommands without
+  the `aegean` prefix (`stats lineara --top 5`, `greek catalog plato`, `ai translate …`),
+  with Tab-completion of commands and options and a recallable history. Each line is
+  dispatched through the same command tree, so behaviour is identical to the one-shot CLI;
+  a bad command prints its error and the shell stays open. When stdin is not a terminal the
+  shell reads one command per line, so it is scriptable too. (Adds `prompt_toolkit` to the
+  `[cli]` extra; `import aegean` stays dependency-free.)
+
 ## 0.8.3 — 2026-06-15
 
 ### Changed

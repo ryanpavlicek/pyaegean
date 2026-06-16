@@ -47,7 +47,7 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _viz, _workbench
+    from . import _corpus, _repl, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._data import data_app
@@ -78,6 +78,7 @@ def _build_app() -> Any:
         """pyaegean — Ancient Greek + Aegean scripts, from the command line."""
 
     _corpus.register(app)
+    _repl.register(app)
     _viz.register(app)
     _workbench.register(app)
     app.add_typer(greek_app, name="greek")

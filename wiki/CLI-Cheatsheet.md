@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.8.3
+aegean --version                # pyaegean 0.8.4
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -34,7 +34,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `parse` `gloss` `gloss-nt` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `versions` `cache` |
@@ -55,6 +55,7 @@ file — `.json` / `.csv` (stdlib, no pandas) / `.txt` by extension.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
+| `repl` | Interactive shell — run commands without the `aegean` prefix (Tab-completion + history) | — | `aegean repl` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
 | `show` | One document: metadata + line-by-line tokens | `--json` | `aegean show lineara HT13` |

@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.3 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.4 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory** — leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -116,6 +116,7 @@ Or skip Python entirely — the **`aegean` CLI** (`[cli]` extra) covers the whol
 with `--json` on every command and stdin piping:
 
 ```bash
+aegean repl                                    # interactive shell: run commands without the `aegean` prefix
 aegean show lineara HT13                       # one tablet, line by line
 aegean balance lineara --strict                # reconcile every stated total
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
@@ -167,6 +168,9 @@ with `-o`; append to a database with `aegean db add`), a **Greek work catalogue*
 a **file importer** (`aegean import` / `aegean.io.from_text*` — bring your own `.txt`, a folder, or a
 CSV into a `Corpus`).
 
+**v0.8.4** adds an **interactive shell** (`aegean repl`) — run commands without the `aegean`
+prefix, with Tab-completion of commands and options and a recallable history.
+
 **v0.8.3** expands the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) with a
 live example of every feature that runs client-side.
 
@@ -212,7 +216,7 @@ open project justifies the time. In the scholarly spirit, two layers:
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.3},
+  version = {0.8.4},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

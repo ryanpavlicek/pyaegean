@@ -56,18 +56,53 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.8.3
+aegean --version          # pyaegean 0.8.4
 ```
 
 | Group | What's in it |
 |---|---|
-| **(top level)** | `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`, `work`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
+
+---
+
+## Interactive shell (`aegean repl`)
+
+If you're running several commands in a row, `aegean repl` opens an interactive
+shell so you don't retype `aegean` each time. Inside it you type the subcommand
+directly, with **Tab-completion** of commands and options and an **arrow-key
+history**:
+
+```text
+$ aegean repl
+aegean interactive shell — commands without the 'aegean' prefix.
+Tab completes, :help lists commands, :exit or Ctrl-D quits.
+aegean> info lineara
+…the same table aegean info lineara prints…
+aegean> greek syllabify Ποσειδῶνι
+Ποσειδῶνι → Πο-σει-δῶ-νι
+aegean> stats lineara --top 3
+…
+aegean> :exit
+```
+
+Every line is dispatched through the same command tree, so a command behaves
+exactly as it does on the regular command line — `--json`, `-o`, corpus files and
+work ids, all of it. A mistyped command just prints its error and leaves the shell
+open. `:help` (or `help`) prints the command list; `:exit`, `quit`, or **Ctrl-D**
+leaves. The shell needs the `[cli]` extra (it ships `prompt_toolkit`).
+
+When standard input isn't a terminal, the shell reads one command per line instead
+of prompting, so you can script it:
+
+```bash
+printf 'info lineara\nstats lineara --top 5\n' | aegean repl
+```
 
 ---
 
