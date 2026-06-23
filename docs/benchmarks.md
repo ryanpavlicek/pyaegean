@@ -24,6 +24,15 @@ the cross-tool tables live here, with citations.
   gaps (e.g. the AGDT scheme has no PROPN/SCONJ on the PROIEL fold's conventions) count
   against pyaegean here, unlike `greek.evaluate_on_proiel`, which reconciles tagsets to
   isolate real errors.
+- **Train / dev / test discipline.** Training is the AGDT minus the UD-Perseus dev+test
+  exclusion manifest. The **dev** fold (the AGDT sentences behind UD-Perseus dev) is used for
+  early stopping, checkpoint selection, light schedule tuning (epochs / lr), and the int8
+  quantization gate; the **test** folds are scored once on the finished model and never used
+  for any selection. Full protocol in `training/README.md`.
+- **Lemma scoring.** Lemmas use the evaluator's exact string match, NFC-normalized with
+  homograph-index digits stripped, and **no** case- or diacritic-folding. Convention
+  differences (principal-part choice, movable-nu, proper-noun citation form) therefore count
+  as errors rather than being normalized away.
 - **Reproduce** the shipped pipeline with:
 
   ```python
@@ -45,8 +54,8 @@ neural pipeline's numbers honest:
   The neural model's training split excludes all of them (cached at
   `ud-grc/agdt-ud-exclusion.json`).
 - **PROIEL is held out entirely.** No pyaegean model trains on PROIEL, so it is a genuine
-  out-of-domain fold. The combined-corpus model adds the Gorman (CC0) and Pedalion
-  (CC BY-SA) treebanks; the overlap audit excluded 1,591 Gorman + 155 Pedalion sentences
+  out-of-domain fold. The combined-corpus model adds the Gorman and Pedalion
+  treebanks (both CC BY-SA 4.0); the overlap audit excluded 1,591 Gorman + 155 Pedalion sentences
   matching either evaluation fold, and Gorman's Herodotus files (the same work as PROIEL's
   `hdt.xml`) are excluded at source.
 
@@ -95,50 +104,64 @@ Perseus test fold (models trained on the UD train fold; gold tokenization): GreB
 parsing **UAS 88.20 / LAS 83.98**, POS 95.83, XPOS 91.09; and a GreTa lemmatizer at 91.17
 lemma accuracy on their own (AGDT + Gorman + Pedalion, normalized) folds. Their main
 models train on AGDT + Gorman + Pedalion (~1.26 M tokens): the same license-clean data
-lever (Gorman CC0, Pedalion CC BY-SA) the pyaegean joint model uses.
+lever (Gorman and Pedalion, both CC BY-SA 4.0) the pyaegean joint model uses.
 
 ## pyaegean — the neural pipeline (shipped)
 
-The shipped joint model (`grc-joint-v1`, activated by `greek.use_neural_pipeline()`, the
+The shipped joint model (`grc-joint-v2`, activated by `greek.use_neural_pipeline()`, the
 `[neural]` extra) is one GreBerta-encoder checkpoint serving UPOS, XPOS, UD FEATS,
 dependency trees (single-root Chu-Liu/Edmonds MST decoding, so non-projectivity is handled
 natively), and lemmas. Trained leakage-clean on the audited AGDT + Gorman + Pedalion
-corpus (1.41 M tokens). Measured through the package's own inference code, fetching the
-release asset (sha256-verified, onnxruntime CPU):
+corpus (1.41 M tokens). Two changes over the first build lift the parsing scores: the
+AGDT→UD converter now attaches non-coordination commas to the following token (the
+UD-Perseus convention), and the relation head is trained on the model's *predicted* arcs,
+not only gold arcs, so it learns the relation that is actually read at inference. Measured
+through the package's own inference code, fetching the release asset (sha256-verified,
+onnxruntime CPU):
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 |---|---|---|---|---|---|---|
-| UD Perseus | **94.40** | **89.16** | **84.38** | 96.94 | 96.12 | 93.56 |
-| UD PROIEL | 90.57 | 82.52 | 63.51 | 87.16 | 59.49 | n/a |
+| UD Perseus | **94.29** | **90.23** | **85.64** | 97.04 | 96.04 | 93.48 |
+| UD PROIEL | 90.50 | 82.47 | 63.47 | 86.71 | 59.43 | n/a |
 
-On UD Perseus test, every metric sits above the best published number I could find:
+The shipped checkpoint is one of five seed replicates of this recipe; across those seeds the
+UD Perseus test mean ± standard deviation is **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12,
+UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04, lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL
+LAS 63.50 ± 0.04), so the headline figures are representative, not a lucky seed. On UD
+Perseus test every metric is above the best published number we could find, and each lead
+clears both that seed spread and a within-fold bootstrap confidence interval:
 
-| Metric | pyaegean | best published | margin |
-|---|---|---|---|
-| UPOS | 96.94 | 95.83 (2024) | +1.11 |
-| XPOS | 93.56 | 91.09 (2024) | +2.47 |
-| UFeats | 96.12 | 92.56 (odyCy 2023) | +3.56 |
-| Lemma | 94.40 | 87.58 (Stanza, same fold) | +6.82 |
-| UAS | 89.16 | 88.20 (2024) | +0.96 |
-| LAS | 84.38 | 83.98 (2024) | +0.40 |
+| Metric | pyaegean | 95% CI | best published | margin |
+|---|---|---|---|---|
+| UPOS | 97.04 | [96.77, 97.32] | 95.83 (2024) | +1.21 |
+| XPOS | 93.48 | [93.09, 93.90] | 91.09 (2024) | +2.39 |
+| UFeats | 96.04 | [95.74, 96.34] | 92.56 (odyCy 2023) | +3.48 |
+| Lemma | 94.29 | [93.91, 94.63] | 87.58 (Stanza, same fold) | +6.71 |
+| UAS | 90.23 | [89.56, 90.80] | 88.20 (2024) | +2.03 |
+| LAS | 85.64 | [84.91, 86.29] | 83.98 (2024) | +1.66 |
+
+(CIs are percentile bootstrap over the fold's sentences, 500 resamples, via `greek.bootstrap_ud`.)
 
 Three things keep these honest:
 
-- **The LAS margin is thin**: +0.40, about 4× the run-to-run spread (±0.09 across three
-  seeds). It clears the bar, but barely; stated plainly.
+- **The leads are robust, LAS and UAS included.** The +1.66 LAS and +2.03 UAS margins are
+  large next to both the seed spread (±0.10 / ±0.12) and the within-fold CIs above, whose lower
+  bounds (84.91 / 89.56) sit well above the published 83.98 / 88.20. An earlier single-run build
+  had a thin, within-noise LAS lead; the converter comma fix and the predicted-arc relation
+  training above turned it into a robust one (and tightened the seed spread fourfold).
 - **PROIEL is out of domain.** The in-domain published systems train on the PROIEL fold
   itself; pyaegean never does. Against the *Perseus-trained* published systems: the
   like-for-like out-of-domain comparison: pyaegean leads by ~17 UAS. The remaining PROIEL
   LAS and UFeats gaps are largely deprel- and feature-convention divergence between the two
   treebanks' UD conversions (PROIEL annotates five feature types the Perseus scheme lacks,
   and PROIEL XPOS is a different tagset entirely).
-- **Raw text, end to end.** Removing the gold-tokenization asterisk: from each sentence's
-  raw text through pyaegean's own tokenizer (tokens F1 99.97) to the evaluator: UD Perseus
-  holds at lemma 94.38 / UAS 89.15 / LAS 84.38 / UPOS 96.91 / UFeats 96.09. Throughput is
-  ≈450 words/s on plain CPU (the whole Perseus fold in 46 s).
+- **Raw text, end to end.** From each sentence's raw text through pyaegean's own tokenizer
+  (tokens F1 99.97) to the evaluator, the scores track the gold-tokenization figures above
+  closely, so tokenization is not a bottleneck on this fold. Throughput is ≈450 words/s on
+  plain CPU.
 
 The model ships fp32 (~518 MB): int8 dynamic quantization broke it on the dev set
-(UPOS 97.97 → 16.75), so the quantization gate rejected it. Selective quantization is a
+(UPOS 98.30 → 23.34), so the quantization gate rejected it. Selective quantization is a
 known follow-up; correctness ships first.
 
 ### Koine / New Testament (Nestle 1904 own gold)

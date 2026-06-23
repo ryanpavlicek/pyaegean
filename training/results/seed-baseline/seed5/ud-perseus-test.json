@@ -1,0 +1,17 @@
+{
+ "checkpoint": "/content/pyaegean/training/out/full-seed5/model",
+ "compose": "lookup-first",
+ "checkpoint_epochs": 12,
+ "checkpoint_best_epoch": 10,
+ "treebank": "perseus",
+ "split": "test",
+ "lemma": 0.9436518917887303,
+ "uas": 0.8911207595782241,
+ "las": 0.8429314375685862,
+ "clas": 0.8315631957370707,
+ "upos": 0.9697981773939597,
+ "xpos": 0.9355408177871082,
+ "ufeats": 0.9610191325922038,
+ "n_sentences": 1306,
+ "n_words": 20959
+}

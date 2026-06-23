@@ -242,17 +242,17 @@ Turn on the neural pipeline (`greek.use_neural_pipeline()`, the `[neural]` extra
 and the same functions consult it instead.
 
 **Out-of-domain performance drops, as it does for every system.** The neural
-pipeline's lemma accuracy is **94.40** on the UD Perseus test fold and **90.57**
+pipeline's lemma accuracy is **94.29** on the UD Perseus test fold and **90.50**
 on UD PROIEL: a treebank none of pyaegean's models train on. Both numbers are
 always reported together.
 
 | Metric | UD Perseus (in family) | UD PROIEL (out of domain) |
 | --- | --- | --- |
-| Lemma | 94.40 | 90.57 |
-| UPOS | 96.94 | 87.16 |
-| UFeats | 96.12 | 59.49 (convention-capped) |
-| UAS | 89.16 | 82.52 |
-| LAS | 84.38 | 63.51 (scheme-capped) |
+| Lemma | 94.29 | 90.50 |
+| UPOS | 97.04 | 86.71 |
+| UFeats | 96.04 | 59.43 (convention-capped) |
+| UAS | 90.23 | 82.47 |
+| LAS | 85.64 | 63.47 (scheme-capped) |
 
 The PROIEL UFeats/LAS figures are *measurement* boundaries, not model failures:
 PROIEL's UD conversion uses feature types and a relation scheme the Perseus

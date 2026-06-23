@@ -1,5 +1,16 @@
 {
-  "_about": "Small hand-authored gold set for scoring the Greek pipeline. Values are independently stated (correct linguistic answers), not copied from any engine's output. Used by aegean.greek.benchmark. Deterministic stages (tokenize/syllabify/accent/scansion) are chosen to be both correct and handled by the engine (CI asserts 100%); the lemma/pos/morphology stages deliberately include irregular/open-class forms the baseline misses, to measure the treebank-backed lift and compare against CLTK.",
+  "_about": "Small hand-authored gold set for scoring the Greek pipeline. Values are independently stated (correct linguistic answers), not copied from any engine's output. Used by aegean.greek.benchmark. Deterministic stages (tokenize/syllabify/accent/scansion) are chosen to be both correct and handled by the engine (CI asserts 100%); the lemma/pos/morphology stages deliberately include irregular/open-class forms the baseline misses, to measure the treebank-backed lift and compare against CLTK. The betacode stage round-trips Beta Code <-> Unicode (a deterministic stage UD cannot test; CI asserts 100%).",
+  "betacode": [
+    {"beta": "mh=nin", "unicode": "μῆνιν"},
+    {"beta": "a)/eide", "unicode": "ἄειδε"},
+    {"beta": "qea/", "unicode": "θεά"},
+    {"beta": "lo/gos", "unicode": "λόγος"},
+    {"beta": "a)nh/r", "unicode": "ἀνήρ"},
+    {"beta": "a)rxh=|", "unicode": "ἀρχῇ"},
+    {"beta": "ou)de/n", "unicode": "οὐδέν"},
+    {"beta": "r(ei=", "unicode": "ῥεῖ"},
+    {"beta": "pa=sa", "unicode": "πᾶσα"}
+  ],
   "tokenize": [
     {"text": "ἐν ἀρχῇ ἦν ὁ λόγος", "tokens": ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"]},
     {"text": "πάντα ῥεῖ", "tokens": ["πάντα", "ῥεῖ"]},

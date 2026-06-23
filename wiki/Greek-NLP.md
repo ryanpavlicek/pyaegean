@@ -148,7 +148,7 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
-| neural pipeline | **96.9** | **96.1** | **94.4** | **89.2** | **84.4** |
+| neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.6** |
 
 Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.6,
 UAS 82.5, UPOS 87.2. Inference is torch-free (int8 quantization failed its accuracy

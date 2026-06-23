@@ -6,6 +6,28 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+## 0.8.7 (2026-06-23)
+
+### Changed
+- **Neural pipeline model `grc-joint-v2`.** Two training-pipeline changes raise Ancient Greek
+  parsing on the UD Perseus test fold to LAS 85.6 / UAS 90.2 (from 84.4 / 89.2), now the best
+  published result on every metric and stable across five training seeds: the AGDT→UD converter
+  attaches non-coordination commas to the following token (the UD-Perseus convention), and the
+  relation head is trained on the model's predicted arcs, not only gold arcs. Installed with
+  `pip install "pyaegean[neural]"`; the model is fetched as the `grc-joint-v2` release asset.
+
+### Added
+- **Bootstrap confidence intervals for the UD evaluation** (`greek.bootstrap_ud`, with the
+  generic `analysis.bootstrap_ci_seq` and `analysis.bootstrap_dict_seq`): percentile CIs over a
+  fold's sentences for each metric, reported alongside the headline numbers in `docs/benchmarks.md`.
+- **Beta Code round-trip stage** in the internal regression set (`greek.benchmark`): a
+  deterministic normalization check the UD benchmark does not cover.
+
+### Fixed
+- `docs/benchmarks.md`: corrected the Gorman treebank license to CC BY-SA 4.0, documented the
+  train/dev/test split and lemma-scoring conventions, and added seed mean ± std and bootstrap CIs
+  to the reported numbers.
+
 ## 0.8.6 (2026-06-23)
 
 ### Changed
