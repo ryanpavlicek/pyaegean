@@ -9,17 +9,17 @@ clay balls, cylinders, and tablets at sites such as Enkomi and (in a variant) Ug
 from Linear A and is structurally a syllabary, but its phonetic values are unknown and the language
 behind it is unidentified. pyaegean treats it like [Linear A](Linear-A): a **99-sign inventory** plus
 **sign-sequence tokenization** for exploratory work, with **no** transliteration, lexicon, or Greek
-bridge — there are no settled sound values to offer.
+bridge; there are no settled sound values to offer.
 
 **Use this page when you want to** browse the distinct signs, decompose Cypro-Minoan "words" into
 their component sign numbers, and run the same corpus/statistics tooling you'd use on the deciphered
-scripts — while staying honest that everything stops at the sign level.
+scripts, while staying honest that everything stops at the sign level.
 
 ```python
 import aegean
 from aegean.core.script import get_script
 
-aegean.__version__                                # '0.8.5'
+aegean.__version__                                # '0.8.6'
 aegean.registered_scripts()                       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 len(get_script("cyprominoan").sign_inventory)     # 99
 ```
@@ -31,7 +31,7 @@ len(get_script("cyprominoan").sign_inventory)     # 99
 | Capability | Cypro-Minoan | Why |
 |---|---|---|
 | Sign inventory (glyph, codepoint) | ✅ 99 signs | From the Unicode block |
-| Phonetic / sound values | ❌ always `None` | Undeciphered — no settled values |
+| Phonetic / sound values | ❌ always `None` | Undeciphered: no settled values |
 | Tokenization (sign-sequence → signs) | ✅ | Splits hyphen-joined groups |
 | Transliteration to sounds | ❌ | Nothing to transliterate to |
 | Greek bridge / lemma mapping | ❌ | See [`bridge` refuses it](#why-no-greek-bridge) |
@@ -45,7 +45,7 @@ For the deciphered side of the toolkit (sound values, lemmas, Greek), see [Linea
 
 ## Sign inventory
 
-Built from the Unicode **"Cypro-Minoan"** block (U+12F90–U+12FF2) — **99 signs**, each identified only
+Built from the Unicode **"Cypro-Minoan"** block (U+12F90–U+12FF2): **99 signs**, each identified only
 by its conventional number (`CM001`, `CM002`, …) and glyph. Because the script is undeciphered, every
 sign's `phonetic` value is `None`; the inventory is a catalogue of distinct signs, **not** a syllabary
 with sounds.
@@ -78,7 +78,7 @@ inv.by_codepoint(0x12F90).label      # 'CM001'
 inv.by_glyph("𒾐").label              # 'CM001'
 ```
 
-If you have pandas (the `[data]` extra), the whole inventory drops straight into a DataFrame — handy
+If you have pandas (the `[data]` extra), the whole inventory drops straight into a DataFrame: handy
 for sorting or exporting the sign table:
 
 ```python
@@ -124,7 +124,7 @@ aegean sign cyprominoan CM005 --json
 # }
 ```
 
-> Note: in JSON the empty `"phonetic": ""` is just how "no value" serializes — it is **not** a sound
+> Note: in JSON the empty `"phonetic": ""` is just how "no value" serializes; it is **not** a sound
 > value. In Python the same field is `None`.
 
 ### A note on the numbering
@@ -180,7 +180,7 @@ toks = sc.tokenize("CM005-CM023-CM002 CM008-CM027")
 # [('CM005-CM023', 'word'), ('𐄁', 'separator'), ('CM008-CM027', 'word')]
 ```
 
-There is no CLI subcommand that calls `tokenize` directly — tokenization happens automatically when a
+There is no CLI subcommand that calls `tokenize` directly: tokenization happens automatically when a
 document is loaded, so you see its results through `show`, `stats`, and `search` below.
 
 ---
@@ -189,11 +189,11 @@ document is loaded, so you see its results through `show`, `stats`, and `search`
 
 The edited Cypro-Minoan corpus (Enkomi/Ugarit; Ferrara's *Cypro-Minoan Inscriptions*) is not openly
 redistributable, and sign readings are contested. Only a small **illustrative sample** of sign
-sequences is bundled — chosen to **exercise the model**, not to transcribe specific inscriptions. The
+sequences is bundled: chosen to **exercise the model**, not to transcribe specific inscriptions. The
 sign inventory is the shippable core; the sample is just enough to demonstrate the tooling. To work
 on a larger sign-sequence set you've assembled yourself, import it from a `.txt` file or a CSV
 (`aegean import seqs.csv -o cm.db --script cyprominoan`, or `aegean.io.from_csv`) and the whole
-corpus API applies — the sign sequences are split on whitespace, same as the bundled sample.
+corpus API applies: the sign sequences are split on whitespace, same as the bundled sample.
 
 ### What's bundled
 
@@ -255,7 +255,7 @@ aegean cite cyprominoan
 ## Frequencies, search, and export
 
 Because everything is the script-agnostic model, the general corpus tooling works on the sample. With
-only four short words the counts are tiny, but the **commands and output shape are real** — they scale
+only four short words the counts are tiny, but the **commands and output shape are real**: they scale
 to any larger sign-sequence corpus you bring in.
 
 ### Sign and word frequencies
@@ -291,7 +291,7 @@ aegean search cyprominoan "CM005-*"
 
 ### Export
 
-The corpus exports through the same paths as every other script — lossless JSON, tabular CSV/Parquet,
+The corpus exports through the same paths as every other script: lossless JSON, tabular CSV/Parquet,
 EpiDoc TEI, or SQLite:
 
 ```bash
@@ -325,7 +325,7 @@ Most commands also take `--json` for machine-readable output. Run any with `-h` 
 ## Why no Greek bridge
 
 [Linear B](Linear-B) and the [Cypriot syllabary](Cypriot) are deciphered, so pyaegean can transliterate
-them and map words to Greek lemmas via the **bridge**. Cypro-Minoan is **not** — proposed
+them and map words to Greek lemmas via the **bridge**. Cypro-Minoan is **not**: proposed
 decipherments exist but none is accepted, and even the total number of distinct signs is debated.
 Offering phonetic values or "readings" would be speculation dressed as fact, so the plugin
 deliberately stops at the sign level. The `bridge` command refuses it outright:
@@ -348,13 +348,13 @@ exploratory. For the scripts where a Greek reading **is** possible, see [Linear 
   model; they are **not** transcriptions of specific edited inscriptions, and the frequency/search
   numbers reflect that tiny sample.
 - **The full edited corpus isn't bundled** (licensing) and sign readings are contested.
-- **Glyphs may render as boxes or as cuneiform** if your font lacks the Cypro-Minoan block — the
+- **Glyphs may render as boxes or as cuneiform** if your font lacks the Cypro-Minoan block: the
   codepoints (U+12F90–U+12FF2) are correct regardless of what your terminal draws.
 - **No transliteration, lexicon, alignment-to-Greek, or `bridge`.** Cross-script comparison tooling
   treats Cypro-Minoan as sign sequences only.
 
-The complete, candid account of what pyaegean can and cannot claim — for this script and all the
-others — lives on the **[Limitations](Limitations)** page.
+The complete, candid account of what pyaegean can and cannot claim (for this script and all the
+others) lives on the **[Limitations](Limitations)** page.
 
 ---
 

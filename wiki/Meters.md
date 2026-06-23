@@ -2,7 +2,7 @@
 
 This is the reference for **metrical scansion** in pyaegean: you hand it a line of
 Ancient Greek verse and a metre, and it fits the whole line to that metre's
-quantity template — recovering the feet, the long/short sequence, and (for the
+quantity template: recovering the feet, the long/short sequence, and (for the
 spoken metres) the main caesura. Use it to check whether a line scans, to see
 *how* it scans, or to pull the metre out of a corpus line by line.
 
@@ -40,7 +40,7 @@ Every pattern is written with three symbols. There is nothing else to learn.
 |---|---|---|
 | `—` | heavy (longum) | a long/heavy syllable |
 | `⏑` | light (breve) | a short/light syllable |
-| `×` | anceps | "either" — a position the metre lets be long *or* short (also the line-final *brevis in longo*) |
+| `×` | anceps | "either": a position the metre lets be long *or* short (also the line-final *brevis in longo*) |
 
 Feet are separated by `|` in the printed pattern. The aeolic lines are printed as
 one unbroken run (they aren't divided into feet).
@@ -90,7 +90,7 @@ through a single `--meter` flag.
 | `greek.scan_trimeter(line)` | iambic trimeter (with resolution) | `aegean greek scan LINE --meter trimeter` |
 | `greek.scan_aeolic(line, line_type)` | one named aeolic line | `aegean greek scan LINE --meter <line_type>` |
 | `greek.scan_line(line, meter)` | any of the above, by name | `aegean greek scan LINE --meter <meter>` |
-| `greek.syllable_options(line)` | the raw pre-metrical analysis | — |
+| `greek.syllable_options(line)` | the raw pre-metrical analysis |— |
 
 `scan_line` is the general entry point: pass `"hexameter"`, `"pentameter"`,
 `"trimeter"`, or any aeolic line name. The named functions are just convenient
@@ -170,7 +170,7 @@ word-break falls at the right element.
 
 ### Aeolic lyric lines
 
-These are **fixed quantity templates** — the choriambic nucleus does not resolve,
+These are **fixed quantity templates**: the choriambic nucleus does not resolve,
 so the line either matches the template exactly or it doesn't. Interior `×`
 positions are the *aeolic base*; the final `×` is *brevis in longo*. Use
 `scan_aeolic(line, line_type)` (or `scan_line(line, line_type)`).
@@ -273,7 +273,7 @@ can pipe a corpus through it.
 
 The scanner only returns a scansion that genuinely fits the template. A line that
 does **not** fit raises `ScansionError` from Python and exits non-zero (with the
-reason) from the CLI — it does not silently produce a wrong reading.
+reason) from the CLI: it does not silently produce a wrong reading.
 
 ```python
 from aegean import greek
@@ -304,18 +304,18 @@ aegean greek scan "φαίνεταί μοι κῆνος ἴσος θέοισιν"
 ## How the quantities are decided
 
 Before fitting, every vowel nucleus is given the **set of quantities it could
-carry**, not a single value — the metre then resolves the open choices. The rules:
+carry**, not a single value: the metre then resolves the open choices. The rules:
 
 | Situation | Quantity |
 |---|---|
 | closed by position (two+ consonants, or a double ζ/ξ/ψ, before the next nucleus) | heavy |
-| short vowel before *muta cum liquida* (stop + liquid/nasal) | **common** — heavy **or** light |
+| short vowel before *muta cum liquida* (stop + liquid/nasal) | **common**: heavy **or** light |
 | open, long nucleus (η, ω, circumflex, iota-subscript, or a diphthong) | heavy |
 | open, short nucleus (ε, ο) | light |
-| open *dichronon* (α, ι, υ — length not fixed by spelling) | **common** — heavy **or** light |
+| open *dichronon* (α, ι, υ: length not fixed by spelling) | **common**: heavy **or** light |
 | word-final long vowel/diphthong in hiatus (*correptio epica*) | also allowed to shorten |
 
-You can see this raw, pre-metrical layer directly — useful for debugging why a
+You can see this raw, pre-metrical layer directly: useful for debugging why a
 line does or doesn't scan:
 
 ```python
@@ -334,7 +334,7 @@ the simpler within-a-word weight of each syllable, use
 ## Resolution
 
 In iambic trimeter, a long element may be **resolved** into two shorts (one extra
-syllable). The scanner allows this where the practice does — on the resolvable
+syllable). The scanner allows this where the practice does: on the resolvable
 long elements only, never on the breves or the line-final element.
 
 ```python
@@ -352,7 +352,7 @@ position's quantity available, or it declines.
 ## Synizesis (curated, never guessed)
 
 **Synizesis** is two (or three) written vowels read as a *single* metrical
-syllable — e.g. the `-εω` of `Πηληϊάδεω` in *Iliad* 1.1. This is **lexical**, not
+syllable: e.g. the `-εω` of `Πηληϊάδεω` in *Iliad* 1.1. This is **lexical**, not
 predictable from spelling, so pyaegean never *infers* it. A small curated lexicon
 lists the words where it is standard; a line that only fits via synizesis on a
 word **outside** that lexicon still declines rather than guessing.
@@ -404,19 +404,19 @@ coalescences beyond the listed `θεούς`-type case are out of the current mod
   [Beta Code](Greek-NLP#normalization--beta-code) converted first); it does not
   edit, emend, or restore the text for you.
 - When more than one valid scansion fits, the first is returned and
-  `.ambiguous` is set to `True` — inspect it before trusting a single reading.
+  `.ambiguous` is set to `True`: inspect it before trusting a single reading.
 
 For the full picture of what the Greek prosody/scansion tools can and can't do,
 see [Limitations](Limitations).
 
 ## See also
 
-- [Greek NLP](Greek-NLP) — the rest of the Greek toolkit (syllables, accents,
+- [Greek NLP](Greek-NLP): the rest of the Greek toolkit (syllables, accents,
   prosody, IPA, morphology, lemmatisation).
-- [Greek NLP · Prosody](Greek-NLP#prosody-syllable-quantity) — per-syllable
+- [Greek NLP · Prosody](Greek-NLP#prosody-syllable-quantity): per-syllable
   heavy/light/common weight for a single word.
-- [Greek NLP · Metrical scansion](Greek-NLP#metrical-scansion) — the same
+- [Greek NLP · Metrical scansion](Greek-NLP#metrical-scansion): the same
   scanner in the context of the wider pipeline.
-- [CLI](CLI) — every `aegean` command and flag.
-- [Tutorial](Tutorial) — guided walkthroughs, including scanning a passage.
-- [Limitations](Limitations) — honest scope notes.
+- [CLI](CLI): every `aegean` command and flag.
+- [Tutorial](Tutorial): guided walkthroughs, including scanning a passage.
+- [Limitations](Limitations): honest scope notes.

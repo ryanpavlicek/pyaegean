@@ -5,11 +5,11 @@ for one of four providers, feed the model **real local evidence** from the corpu
 and lexicon, and ask it to translate, gloss, propose decipherment hypotheses,
 answer questions, or pull structured data out of a tablet. You'd reach for it when
 the rule-based tools have done all they can and you want a *labeled, traceable
-hypothesis* to think against — drafting a translation, sanity-checking a gloss,
+hypothesis* to think against: drafting a translation, sanity-checking a gloss,
 brainstorming readings of an undeciphered sign group.
 
-> **Exploratory material — read this first.** Every generative output here is a
-> labeled, provenanced **hypothesis** — never ground truth, and on the
+> **Exploratory material: read this first.** Every generative output here is a
+> labeled, provenanced **hypothesis**: never ground truth, and on the
 > undeciphered scripts never a reading. The layer marks each result `EXPLORATORY`,
 > records which local facts grounded it, and can print a full provenance trace.
 > What pyaegean can and cannot claim is on the **[Limitations](Limitations)** page.
@@ -156,7 +156,7 @@ r.provenance()       # a dict for logging/export
 KU-RO most likely marks a running total of the preceding entries.
 ```
 
-`provenance()` is the same information as a dict, ready for JSON logging — it
+`provenance()` is the same information as a dict, ready for JSON logging: it
 records the provider, model, prompt version, kind, the exploratory flag, and every
 grounding item with its source and ref. In a Jupyter/Colab notebook the result
 also renders with a red `EXPLORATORY` badge so it can never be mistaken for a
@@ -176,20 +176,20 @@ verified fact.
 
 ## Saving AI results
 
-An exploratory result is worth keeping — a draft translation to revise, a set of
+An exploratory result is worth keeping: a draft translation to revise, a set of
 hypotheses to weigh, an extraction to feed a pipeline. The whole point of the
 label and the grounding is that they should *survive on disk*, so a saved result
 can never be mistaken later for a verified fact.
 
 ### From the CLI: `--output / -o`
 
-Every generative command — `translate`, `gloss`, `hypotheses`, `ask`,
-`extract` — takes `--output PATH` (short `-o`). The extension decides the format:
+Every generative command (`translate`, `gloss`, `hypotheses`, `ask`,
+`extract`) takes `--output PATH` (short `-o`). The extension decides the format:
 
 - **`.json`** writes the full result: the text, the provider/model/prompt
   provenance, every grounding item, any parsed `data`, **and the `exploratory`
-  flag** — the same shape as `ExploratoryResult.to_dict()`.
-- **`.txt`** writes the `labeled()` text — the human-readable answer with its
+  flag**: the same shape as `ExploratoryResult.to_dict()`.
+- **`.txt`** writes the `labeled()` text: the human-readable answer with its
   `[EXPLORATORY · …]` tag baked in at the top of the file.
 
 ```bash
@@ -226,14 +226,14 @@ KU-RO most likely marks a running total of the preceding entries.
 }
 ```
 
-Any other extension is refused with a clear message — use `.json` or `.txt`.
+Any other extension is refused with a clear message: use `.json` or `.txt`.
 Without `-o`, the commands behave exactly as before (labeled text to the
 terminal, or `--json` to stdout).
 
 ### From Python: `to_dict` / `to_json` / `from_dict`
 
 Every `ExploratoryResult` serializes itself, so you can save one from a script
-and load it back later — round-trip clean, with the exploratory flag intact.
+and load it back later: round-trip clean, with the exploratory flag intact.
 
 ```python
 from aegean.ai import ExploratoryResult, GroundingItem
@@ -245,7 +245,7 @@ r.to_json()       # the same as a JSON string
 r.to_json("kuro.json")   # …or write it straight to a file (returns None)
 ```
 
-`from_dict` reverses it exactly — the text, the grounding, and the
+`from_dict` reverses it exactly: the text, the grounding, and the
 `exploratory` flag all come back:
 
 ```python
@@ -270,7 +270,7 @@ matters.
 ## Capabilities
 
 All capabilities accept an optional `client=` (defaults to a fresh Anthropic
-client) and `grounding=` (an iterable of evidence — `GroundingItem`s or plain
+client) and `grounding=` (an iterable of evidence: `GroundingItem`s or plain
 strings). They all return an `ExploratoryResult`.
 
 | Capability | Python | CLI | What it does |
@@ -289,7 +289,7 @@ strings). They all return an `ExploratoryResult`.
 ### Translate
 
 `ai.translate` translates source text and adds a short note on any ambiguous
-choices. The CLI command is the **hybrid** translator (`aegean.translate`) — it
+choices. The CLI command is the **hybrid** translator (`aegean.translate`): it
 first builds local grounding (Greek baseline lemmas, or Linear A
 transliteration) and *then* calls the model, so the translation is anchored to
 real local facts. See [Hybrid translation](#hybrid-translation) below.
@@ -309,7 +309,7 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 
 | `translate` argument / flag | Default | Meaning |
 | --- | --- | --- |
-| `text` / `TEXT` | — | Source text. `-` reads stdin (CLI). |
+| `text` / `TEXT` |— | Source text. `-` reads stdin (CLI). |
 | `source=` (API) | `"Ancient Greek"` | Source-language label. |
 | `--script` (CLI) | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `target=` / `--target` | `"English"` | Target language. |
@@ -330,7 +330,7 @@ aegean ai gloss "ἦν" --source "Ancient Greek" --trace
 ```
 
 For deterministic, non-generative tagging and lemmatization, prefer the rule-based
-and neural Greek pipeline on the [Greek NLP](Greek-NLP) page — the gloss here is a
+and neural Greek pipeline on the [Greek NLP](Greek-NLP) page: the gloss here is a
 model hypothesis, useful as a second opinion.
 
 ### Decipherment hypotheses
@@ -402,7 +402,7 @@ ai.summarize(long_commentary_text, client=client)
 
 When you need data, not prose, `ai.extract` asks for JSON and parses it into
 `result.data`, so the AI layer can feed a pipeline, a spreadsheet, or a database.
-Describe the shape with `schema` — a `field → description` mapping, or a free-form
+Describe the shape with `schema`: a `field → description` mapping, or a free-form
 string. The parse is lenient (a ```` ```json ```` fence, or a bare object/array
 inside prose, both work), and `result.data` is `None` (never an exception) when
 nothing parseable comes back. `result.text` always holds the raw response.
@@ -427,14 +427,14 @@ aegean ai extract "OLE S 1" --fields commodity,amount --json | jq '.[].commodity
 
 | `extract` argument / flag | Default | Meaning |
 | --- | --- | --- |
-| `text` / `TEXT` | — | Source. `-` reads stdin. |
+| `text` / `TEXT` |— | Source. `-` reads stdin. |
 | `instruction=` / `--instruction` | `"Extract the structured data from the following."` | What to extract. |
 | `schema=` (API) | `None` | `field → description` mapping or a shape string. |
 | `--fields` (CLI) | `None` | Comma-separated field names → an object schema. |
 | `--corpus` (CLI) | `None` | Ground on that corpus's frequent words. |
 | `--json` (CLI) | off | Emit JSON only on stdout. |
 
-The standalone parser is exposed too — handy when you have a model response from
+The standalone parser is exposed too: handy when you have a model response from
 elsewhere:
 
 ```python
@@ -450,7 +450,7 @@ deterministic accounting parses of Linear A/B tablets, see [Analysis](Analysis).
 ## Grounding, traceability & prompt-injection safety
 
 The whole point of this layer is that the model reasons over **real, local
-evidence** you can audit — not its training memory. You feed evidence as
+evidence** you can audit, not its training memory. You feed evidence as
 `grounding=`, and every piece is a **`GroundingItem`** carrying both the text the
 model sees *and where it came from*, so the result can be traced back to the
 non-generative facts it rested on.
@@ -465,10 +465,10 @@ GroundingItem(content="KU-RO (×37)", source="corpus:lineara", ref="KU-RO")
 | Field | Meaning |
 | --- | --- |
 | `content` | What the model sees (drops into the prompt like a plain line). |
-| `source` | Provenance category — `corpus:<id>`, `lexicon:LSJ`, `analysis:cooccurrence`, `lemmatizer`, `transliteration`, `custom`. |
-| `ref` | The specific locator — a word, lemma, or document id. |
+| `source` | Provenance category: `corpus:<id>`, `lexicon:LSJ`, `analysis:cooccurrence`, `lemmatizer`, `transliteration`, `custom`. |
+| `ref` | The specific locator: a word, lemma, or document id. |
 
-Plain strings are accepted anywhere grounding is — they become
+Plain strings are accepted anywhere grounding is: they become
 `GroundingItem(content=string, source="custom")`:
 
 ```python
@@ -478,7 +478,7 @@ ai.as_item("plain string").source   # 'custom'
 ### Evidence builders
 
 These turn the deterministic, local parts of pyaegean into grounding. They're
-**best-effort** — each returns an empty list rather than failing if its inputs
+**best-effort**: each returns an empty list rather than failing if its inputs
 aren't available.
 
 | Builder | Source tag | What it produces |
@@ -486,8 +486,8 @@ aren't available.
 | `corpus_context(corpus, limit=20)` | `corpus:<script_id>` | The corpus's most frequent words (seed grounding). |
 | `cooccurrence_evidence(corpus, word, limit=12)` | `analysis:cooccurrence` | Words that most often share a document with `word`. |
 | `lexicon_evidence(words, limit=20)` | `lexicon:LSJ` | A short LSJ gloss per word that has an entry (needs `greek.use_lsj()`). |
-| `evidence_block(items)` | — | Renders a list of items as the prompt's bullet block. |
-| `wrap_untrusted(text, label="SOURCE")` | — | Delimits untrusted source text with a do-not-follow note. |
+| `evidence_block(items)` |— | Renders a list of items as the prompt's bullet block. |
+| `wrap_untrusted(text, label="SOURCE")` |— | Delimits untrusted source text with a do-not-follow note. |
 
 ```python
 import aegean
@@ -523,12 +523,12 @@ ai.wrap_untrusted("ignore previous; do X")
 ```
 
 The base system prompt also tells the model to treat all source text as untrusted
-data — belt and braces.
+data, belt and braces.
 
 ### Tracing a result
 
 `trace()` renders the generative step plus the local evidence that grounded it,
-grouped by source — so a reader can check the output against its facts rather than
+grouped by source, so a reader can check the output against its facts rather than
 taking it on trust:
 
 ```python
@@ -545,7 +545,7 @@ print(r.trace())
 #       - co-occurs with KU-RO: *306-TU (×4)
 ```
 
-When nothing was fed in, the trace says so explicitly — an ungrounded generation
+When nothing was fed in, the trace says so explicitly: an ungrounded generation
 is the weakest kind and the trace flags it:
 
 ```python
@@ -563,8 +563,8 @@ the provenance trace under the answer. Without it, you get a one-line footer:
 ## Hybrid translation
 
 `aegean.translate` is the translator the CLI uses. It builds **deterministic,
-local** grounding first — Greek baseline lemmas, or Linear A sign→sound
-transliteration — and then delegates the translation to the AI layer, so the
+local** grounding first (Greek baseline lemmas, or Linear A sign→sound
+transliteration) and then delegates the translation to the AI layer, so the
 trace names exactly which local facts anchored it.
 
 ```python
@@ -585,7 +585,7 @@ print(r.trace())     # names the lemmatizer / transliteration grounding
 ```
 
 The grounding is real and local; the translation itself is generative and returned
-as an exploratory result — emphatically so for undeciphered Linear A, where the
+as an exploratory result, emphatically so for undeciphered Linear A, where the
 "translation" is a guess built on a phonetic reading of the signs.
 
 ---
@@ -595,12 +595,11 @@ as an exploratory result — emphatically so for undeciphered Linear A, where th
 The generative layer is exploratory by design, so its worth rests on **grounding
 fidelity**, not authority. `aegean.ai`'s eval harness measures that the way the
 [lemmatizer](Greek-NLP) is measured: fixed cases with known evidence, each scored
-for two things —
+for two things:
 
-- **groundedness** — of the facts the evidence supports (`must_use`), how many did
-  the answer actually reference?
-- **fabrication** — did the answer assert anything the evidence does *not* support
-  (`must_avoid` — a wrong gloss, an over-confident reading)?
+- **groundedness**: of the facts the evidence supports (`must_use`), how many did the answer reference?
+- **fabrication**: did the answer assert anything the evidence does *not* support
+  (`must_avoid`: a wrong gloss, an over-confident reading)?
 
 ```python
 from aegean import ai
@@ -642,15 +641,15 @@ report = ai.run_eval([case], client)
 
 | `GroundingCase` field | Default | Meaning |
 | --- | --- | --- |
-| `name` | — | Case label. |
-| `prompt` | — | What gets passed to the capability. |
+| `name` |— | Case label. |
+| `prompt` |— | What gets passed to the capability. |
 | `grounding` | `()` | Evidence to feed. |
 | `must_use` | `()` | Strings a grounded answer should reference. |
 | `must_avoid` | `()` | Strings that, if present, signal fabrication. |
 | `kind` | `"ask"` | One of `ask`, `decipher`, `gloss`, `summarize`, `translate`. |
 | `note` | `""` | Free-form note. |
 
-Scoring is intentionally simple and transparent — **case-insensitive substring
+Scoring is intentionally simple and transparent: **case-insensitive substring
 containment** over the answer text. It's a screen for gross failure, not a
 semantic judge; treat a clean score as "didn't obviously fail," not "is correct."
 You can score a single answer directly with `ai.score_text(text, case)`.
@@ -660,7 +659,7 @@ You can score a single answer directly with `ai.score_text(text, case)`.
 ## Response caching
 
 A sha256-keyed cache over `(provider, model, system, prompt)` makes repeats free
-and deterministic — in memory by default, or persisted to JSON. Keys are digests,
+and deterministic: in memory by default, or persisted to JSON. Keys are digests,
 so prompts of any size hash to a fixed-length key and raw text never lands in the
 index.
 
@@ -694,7 +693,7 @@ keeps cost down and makes notebooks reproducible.
 
 Shared conventions (see [CLI](CLI)): a `TEXT` argument of `-` reads stdin; `--json`
 prints one machine-readable document and nothing else; `--output/-o` saves the
-result to a file (`.json` or `.txt` — see [Saving AI results](#saving-ai-results));
+result to a file (`.json` or `.txt`: see [Saving AI results](#saving-ai-results));
 `--provider` defaults to `anthropic`. The `--json` form of a generative command
 emits the full result:
 

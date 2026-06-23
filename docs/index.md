@@ -1,20 +1,20 @@
 # pyaegean API reference
 
 `pyaegean` is a specialist Python toolkit for Ancient Greek and the Aegean syllabic
-scripts — alphabetic Greek and Linear A, Linear B, the Cypriot syllabary, and
+scripts: alphabetic Greek and Linear A, Linear B, the Cypriot syllabary, and
 Cypro-Minoan. This site is the **API reference**, generated from the source. For guides,
 tutorials, and the per-script handbooks, see the
 **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**.
 
 ## Where to start
 
-- [`aegean`](api/aegean.md) — the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
-- [`aegean.core`](api/core.md) — the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
-- [`aegean.greek`](api/greek.md) — the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
-- [`aegean.analysis`](api/analysis.md) — accounting reconciliation, sign-pattern search, statistics, comparison.
-- [`aegean.io`](api/io.md) — import your own text (`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) and export to EpiDoc / CSV / Parquet, plus the Linear A Research Workbench round-trip.
-- [`aegean.db`](api/db.md) — SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
-- [`aegean.mcp_server`](api/mcp.md) — the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
+- [`aegean`](api/aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
+- [`aegean.core`](api/core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
+- [`aegean.greek`](api/greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
+- [`aegean.analysis`](api/analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
+- [`aegean.io`](api/io.md): import your own text (`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) and export to EpiDoc / CSV / Parquet, plus the Linear A Research Workbench round-trip.
+- [`aegean.db`](api/db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
+- [`aegean.mcp_server`](api/mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
 ## Build a corpus from your own text
 
@@ -42,9 +42,9 @@ $ aegean stats myplato.json --top 5           # …then any corpus command works
 ## Find a work to load
 
 `greek.catalog()` is a bundled, offline index of **every** work with a Greek (`-grc`)
-edition in Perseus canonical-greekLit + First1KGreek — 1,778 works, far beyond the 25
+edition in Perseus canonical-greekLit + First1KGreek: 1,778 works, far beyond the 25
 curated `popular_works()`. Each entry's `id` loads directly with `greek.load_work`
-(metadata only — the texts stay fetched-on-demand, never bundled).
+(metadata only: the texts stay fetched-on-demand, never bundled).
 
 ```python
 from aegean import greek

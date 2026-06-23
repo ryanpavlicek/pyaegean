@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide is for people who have **never written a line of Python** — and maybe
+This guide is for people who have **never written a line of Python**, and maybe
 never opened a "terminal." If you're a working linguist, philologist, or
 epigrapher who wants to *use* pyaegean rather than develop it, you're in the right
 place. We'll go from nothing installed to your first real result. Take it one step
@@ -17,8 +17,8 @@ at a time; nothing here can break your computer.
 It's a free toolkit, written in the Python language, for working with Ancient
 Greek and the Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). You give it Greek text or a Linear A
 inscription; it gives you back syllables, accents, metre, morphology, statistics,
-and more. You drive it by writing very short snippets of Python — usually one or
-two lines — which this documentation gives you ready to copy.
+and more. You drive it by writing very short snippets of Python: usually one or
+two lines: which this documentation gives you ready to copy.
 
 ## Step 1 — Install Python
 
@@ -70,7 +70,7 @@ Now **activate** it (you do this each time you come back to the project):
 source .venv/bin/activate
 ```
 
-Your prompt will now show `(.venv)` at the start — that means the sandbox is on.
+Your prompt will now show `(.venv)` at the start: that means the sandbox is on.
 
 > **Windows note:** if PowerShell refuses to run the activate script with a
 > message about "execution policy," run this once, then try again:
@@ -84,10 +84,10 @@ With the environment active:
 pip install pyaegean
 ```
 
-That's it — you now have the core library and the full Linear A corpus, working
-**offline** with zero third-party dependencies. The heavier Greek NLP backends —
+That's it: you now have the core library and the full Linear A corpus, working
+**offline** with zero third-party dependencies. The heavier Greek NLP backends:
 treebank lookup, dictionary glossing, and the **neural pipeline** (the most accurate
-tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away) — are opt-in:
+tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away): are opt-in:
 each is fetched to a local cache the first time you turn it on, never bundled. See the
 [Greek NLP](Greek-NLP) page when you want them. If you'd rather not write Python at
 all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`.
@@ -96,13 +96,13 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.8.5 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.8.6 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code
 
 There are three ways to actually run Python. For research and exploration, we
-**recommend Jupyter** (the third option) — but here are all three.
+**recommend Jupyter** (the third option), but here are all three.
 
 ### Option A — the interactive prompt (quickest)
 
@@ -131,7 +131,7 @@ print("Linear A inscriptions:", len(corpus))
 ### Option C — Jupyter (recommended for research)
 
 Jupyter gives you a notebook in your web browser where code, results, tables, and
-your own notes live together — ideal for exploring a corpus and keeping a record.
+your own notes live together: ideal for exploring a corpus and keeping a record.
 
 ```bash
 pip install jupyterlab
@@ -166,8 +166,8 @@ If you saw that pattern print out, **everything is working.**
 ## Step 7 — Find a real Greek work to read
 
 The five-line `aegean.load("greek")` sample is just a taster. For the actual canon,
-pyaegean ships an **offline discovery catalogue** of ~1,800 works — every text with a
-Greek edition in the open Perseus and First1KGreek repositories — so you can look up an
+pyaegean ships an **offline discovery catalogue** of ~1,800 works: every text with a
+Greek edition in the open Perseus and First1KGreek repositories, so you can look up an
 id without leaving Python or going online:
 
 ```python
@@ -198,13 +198,13 @@ aegean greek catalog --author plato --limit 5
 Pass any `id` you find straight to `greek.load_work("tlg0059.tlg002", ref="1")`, which
 fetches the text (network on first use only, then cached). The catalogue is honest about
 coverage: it lists exactly what the open repos hold, so a few authors that aren't online
-upstream — Sappho, for one — simply aren't in it. See
+upstream: Sappho, for one: simply aren't in it. See
 [Greek Works and Books](Greek-Works-and-Books) for the full guide to loading works.
 
 ## Step 8 — Bring your own text
 
 Have your own passage of Greek? Turn it into a real corpus — with the full
-filter / search / analyse / export toolkit — in one call. No `Corpus` boilerplate:
+filter / search / analyse / export toolkit: in one call. No `Corpus` boilerplate:
 
 ```python
 from aegean import io
@@ -224,21 +224,21 @@ aegean import myplato.txt -o myplato.json
 aegean stats myplato.json --top 5
 ```
 
-(`aegean.load(...)` and the CLI corpus argument still expect a `.json`/`.db` corpus —
+(`aegean.load(...)` and the CLI corpus argument still expect a `.json`/`.db` corpus:
 import a raw `.txt`/`.csv` first, as above.)
 
 ## Seeing Greek correctly
 
 Polytonic Greek (with breathings and accents) displays fine in Jupyter and in
 modern editors like VS Code. If accents look like boxes or question marks in a
-plain Windows terminal, that's just the terminal font — use Jupyter or an editor,
+plain Windows terminal, that's just the terminal font: use Jupyter or an editor,
 or run `chcp 65001` first to switch the terminal to UTF-8. You never need a Greek
 keyboard: type in [Beta Code](Greek-NLP#normalization--beta-code) and convert.
 
 ## Where to go next
 
-- **[Tutorial](Tutorial)** — two complete, guided walkthroughs that answer a real
+- **[Tutorial](Tutorial)**: two complete, guided walkthroughs that answer a real
   research question, one in Linear A and one in Greek.
-- **[Greek NLP](Greek-NLP)** — every Greek function with runnable examples.
-- **[Linear A](Linear-A)** and **[Analysis](Analysis)** — the Aegean side.
-- **[FAQ & Troubleshooting](FAQ)** — if something didn't go to plan.
+- **[Greek NLP](Greek-NLP)**: every Greek function with runnable examples.
+- **[Linear A](Linear-A)** and **[Analysis](Analysis)**: the Aegean side.
+- **[FAQ & Troubleshooting](FAQ)**: if something didn't go to plan.

@@ -1,19 +1,19 @@
 # Development
 
-This page is for people who want to **work on pyaegean itself** — build it from
+This page is for people who want to **work on pyaegean itself**: build it from
 source, run the same checks CI runs, and add a corpus, a sign value, or a
 lexicon entry. If you only want to *use* the toolkit, start at
 [Getting Started](Getting-Started) instead; you don't need any of this.
 
 You don't have to be a seasoned Python developer to contribute. Most useful
-additions are small, well-scoped facts — a sound value for one sign, a Greek
-reading for one syllabic word, a syllabification exception — and each has an
+additions are small, well-scoped facts: a sound value for one sign, a Greek
+reading for one syllabic word, a syllabification exception, and each has an
 obvious home in a JSON file and an automatic test. The sections below walk
 through all of it, with copy-pasteable commands and the real output you should
 see.
 
 > New to the layout of the codebase and *why* it's split the way it is? Read the
-> [Architecture](Architecture) page alongside this one — it explains the layering
+> [Architecture](Architecture) page alongside this one: it explains the layering
 > rules this page tells you how to follow.
 
 ---
@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.8.5 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.8.6 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -61,7 +61,7 @@ environment:
 | `mcp` | the `aegean-mcp` Model Context Protocol server |
 
 The `[dev]` extra deliberately does **not** include the heavy neural backend
-(`onnxruntime`, `tokenizers`, `numpy`) or the AI provider SDKs — those tests run
+(`onnxruntime`, `tokenizers`, `numpy`) or the AI provider SDKs: those tests run
 without them and skip the parts that need a model or an API key. If you're
 working on the neural pipeline specifically, add `pip install -e ".[neural]"`.
 The full list of extras is in [Installation](Installation).
@@ -71,7 +71,7 @@ The full list of extras is in [Installation](Installation).
 ## The check suite (the merge gate)
 
 Every change must pass the full gate before it lands on `main`. These are the
-exact commands CI runs — run them locally first and you'll never be surprised by
+exact commands CI runs: run them locally first and you'll never be surprised by
 a red build. A **green local gate is necessary but not always sufficient**: a
 couple of checks (notably anything that renders CLI `--help`) can behave
 differently in CI's terminal width, so watch the CI run on your shipping commit
@@ -128,7 +128,7 @@ In CI the test job runs with coverage (`pytest --cov=aegean
 --cov-report=term-missing`) across the full Python matrix.
 
 **4. Footprint guard.** This is the check that defends the project's defining
-promise — that `import aegean` is instant and pulls in nothing heavy. Run it
+promise: that `import aegean` is instant and pulls in nothing heavy. Run it
 **after a core-only install** (no extras) for a faithful reading; with `[dev]`
 installed the heavy libs are present in the environment but still must not be
 *imported by* `import aegean`:
@@ -141,11 +141,11 @@ python scripts/check_footprint.py
 # OK  import-fast
 ```
 
-The wheel check asserts the built wheel ships only code + JSON — no binaries:
+The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.8.5-py3-none-any.whl: 2717 KB uncompressed, 143 files
+# wheel dist/pyaegean-0.8.6-py3-none-any.whl: 2717 KB uncompressed, 143 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -154,13 +154,13 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.8.5-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.8.6-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
 
 `scripts/check_footprint.py` enforces three invariants. It replaced an old
-"wheel must be under N MB" byte cap that was theater — the wheel is tiny no
+"wheel must be under N MB" byte cap that was theater: the wheel is tiny no
 matter what, so the cap could never fail while saying nothing about what
 actually matters.
 
@@ -168,11 +168,11 @@ actually matters.
 | --- | --- | --- |
 | **import-clean** | (no args) | `import aegean` loads **no** heavy third-party module and none of the stdlib modules Pyodide unvendors (so the in-browser demo keeps working) |
 | **import-fast** | (no args) | cold `import aegean` (subprocess median of 3) stays under **400 ms** |
-| **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only — no `.so/.pyd/.dll/.onnx/.npy/.gz/...` — under a 5 MB accident tripwire |
+| **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only: no `.so/.pyd/.dll/.onnx/.npy/.gz/...`: under a 5 MB accident tripwire |
 
 The "heavy" watch-list is `pandas, numpy, scipy, lxml, anthropic, openai,
 google, torch, onnxruntime, tokenizers, transformers, geopandas, shapely`, plus
-the stdlib `sqlite3` (which Pyodide unvendors — a top-level `import sqlite3`
+the stdlib `sqlite3` (which Pyodide unvendors: a top-level `import sqlite3`
 once broke the browser demo, so the guard doubles as a regression sentinel). If
 you add a feature that needs one of these, the guard will fail until you make
 that import **lazy** (see the next section).
@@ -204,13 +204,13 @@ will reject changes that break it. Two rules:
    library and the full Linear A corpus and nothing else. `numpy`/`pandas`,
    `onnxruntime`, `lxml`, `matplotlib`, and the provider SDKs are all **optional
    extras**, never hard requirements. Collocation statistics, numerals, the
-   query engine, structure detection — all pure standard library.
+   query engine, structure detection: all pure standard library.
 
 2. **`import aegean` stays instant and clean.** Anything heavy must be imported
    **inside the function that needs it**, not at module top level. This keeps
    the cold import fast and lets the package import under Pyodide in the browser.
 
-The pattern, straight from the codebase — `Corpus.to_dataframe` imports pandas
+The pattern, straight from the codebase: `Corpus.to_dataframe` imports pandas
 lazily and turns its absence into a helpful error rather than a crash at import:
 
 ```python
@@ -242,7 +242,7 @@ fetchable assets.
 - **Lazy heavy imports.** As above: `numpy`/`pandas`, `onnxruntime`, `lxml`, and
   provider SDKs are imported inside the functions that need them.
 - **Script-agnostic core.** New writing systems are plugins. The core
-  (`aegean.core`) never imports a specific script — it knows them only through
+  (`aegean.core`) never imports a specific script: it knows them only through
   the `Script` interface and a loader registry.
 - **No large/binary assets in the repo or wheel.** Use `aegean.data.fetch()`.
 - **Exploratory labeling.** The Linear A material is undeciphered. Any
@@ -260,7 +260,7 @@ fetchable assets.
 
 ### Good first contributions
 
-Small facts with an obvious home and an automatic test — the menu from
+Small facts with an obvious home and an automatic test: the menu from
 `CONTRIBUTING.md`:
 
 | Contribution | Where it goes | What checks it |
@@ -285,7 +285,7 @@ pyaegean is pre-1.0, but the public API is treated as a contract:
 2. **Warnings carry the replacement.** Every deprecation emits a
    `DeprecationWarning` that names the replacement API and the release that
    introduced the deprecation.
-3. **The CHANGELOG records both ends** — the release that deprecates and the
+3. **The CHANGELOG records both ends**: the release that deprecates and the
    release that removes.
 4. **Data and models version forward.** Fetched artifacts are sha256-pinned
    release assets; a new model is a new asset name (`grc-joint-v2`), never a
@@ -298,10 +298,10 @@ pyaegean is pre-1.0, but the public API is treated as a contract:
 A writing system is a plugin the core knows only by interface. There are two
 registries, both populated on `import aegean`:
 
-- the **script registry** — `aegean.core.script.register(script)` records a
+- the **script registry**: `aegean.core.script.register(script)` records a
   `Script` instance under its `id` (powers `registered_scripts()`,
   `get_script()`, tokenization, the sign inventory);
-- the **loader registry** — `aegean.core.corpus.register_loader(id, fn)` records
+- the **loader registry**: `aegean.core.corpus.register_loader(id, fn)` records
   a zero-arg function that returns a `Corpus` (powers `aegean.load(id)` /
   `Corpus.load(id)`).
 
@@ -340,8 +340,8 @@ register(Cypriot())
 
 ### Adding a new script plugin
 
-1. **Subclass `core.Script`** — set `id`, `name`, and implement `sign_inventory`
-   and `tokenize` — and `register()` the instance.
+1. **Subclass `core.Script`**: set `id`, `name`, and implement `sign_inventory`
+   and `tokenize`, and `register()` the instance.
 2. **Register a corpus loader** with `core.corpus.register_loader(id, fn)`.
 3. **Import your plugin** from `src/aegean/scripts/__init__.py` so it registers
    on `import aegean`.
@@ -359,7 +359,7 @@ package or yours to keep local.
 
 ### A. Build your own corpus at runtime (no repo change)
 
-`Corpus.from_records` turns plain dict records into a full `Corpus` — filter,
+`Corpus.from_records` turns plain dict records into a full `Corpus`: filter,
 query, DataFrames, citation, export all work. Each record needs an `"id"` and
 its text as one of `"lines"` (a list of physical lines), `"words"` (a flat
 list), or `"text"` (a whitespace-tokenized string). This runs today against the
@@ -405,7 +405,7 @@ The Cypriot loader (`src/aegean/scripts/cypriot/loader.py`) is the model:
 2. Build `Document`s into a `Corpus` in your loader, attach a `Provenance` that
    states the **source, license, and citation**, and `register_loader(id, fn)`
    it (cache the build with `@lru_cache(maxsize=1)`).
-3. Keep it **small and redistributable** — only bundle what the license allows.
+3. Keep it **small and redistributable**: only bundle what the license allows.
    Larger corpora (DAMOS, SigLA) and license-restricted ones are **fetched**,
    not bundled.
 
@@ -456,7 +456,7 @@ inventory builder maps the known keys onto a `Sign` and carries the rest into
 
 | Field | Meaning |
 | --- | --- |
-| `label` | the transliteration label (e.g. `DA`, `A`) — the lookup key |
+| `label` | the transliteration label (e.g. `DA`, `A`): the lookup key |
 | `glyph` | the Unicode character, when known |
 | `codepoint` | its integer code point |
 | `phonetic` | the sound value, or absent for an unread Linear A sign |
@@ -464,11 +464,11 @@ inventory builder maps the known keys onto a `Sign` and carries the rest into
 
 To **correct a sound value or attribute**, edit the entry in `signs.json` and
 **cite a source**. Linear A sound values are an *empirical* alignment, not
-canon — each carries a `confidence`, and most of the repertoire (carried from
+canon: each carries a `confidence`, and most of the repertoire (carried from
 the Unicode Character Database, `source="ucd"`) has no agreed reading at all.
 Treat values as evidence; see [Linear A](Linear-A) and [Limitations](Limitations).
 
-Verify your edit two ways — Python and CLI:
+Verify your edit two ways: Python and CLI:
 
 ```python
 import aegean
@@ -505,7 +505,7 @@ The `SignInventory` lookups available to a test or a feature:
 ## Adding a lexicon entry
 
 The deciphered syllabaries (Cypriot, Linear B) carry a bundled lexicon that maps
-a transliterated word to its **Greek reading** — a `(lemma, gloss)` pair. The
+a transliterated word to its **Greek reading**: a `(lemma, gloss)` pair. The
 file is `src/aegean/data/bundled/<script>/lexicon.json`, keyed by the normalized
 (uppercased, editorial-markers stripped) transliteration:
 
@@ -514,7 +514,7 @@ file is `src/aegean/data/bundled/<script>/lexicon.json`, keyed by the normalized
 ```
 
 Add the equation with a source (the Cypriot lexicon holds the well-established
-ones — e.g. `PA-SI-LE-U-SE` → βασιλεύς). Then verify through the bridge:
+ones: e.g. `PA-SI-LE-U-SE` → βασιλεύς). Then verify through the bridge:
 
 ```python
 from aegean import scripts
@@ -542,7 +542,7 @@ Every behavior gets a test. The conventions:
   from the TypeScript behavior is documented in `tests/fixtures/golden/README.md`.
 - **Invariants get property tests** with `hypothesis` (e.g. syllables rejoin to
   the original word; an alignment is symmetric).
-- **Data edits get data tests** — the syllabification-exception check rejects an
+- **Data edits get data tests**: the syllabification-exception check rejects an
   entry the rules already get right; inventory tests check the sign tables load.
 
 Run a focused file while you iterate, the whole suite before you push:
@@ -586,7 +586,7 @@ docs/        benchmarks.md, methodology.md, large-corpora.md + the API-reference
 
 These pages live in `wiki/` **in the main repo** and are published to the GitHub
 wiki automatically by `.github/workflows/wiki.yml` on push to `main`. Edit the
-Markdown here and open a normal change — do **not** edit the wiki UI directly, or
+Markdown here and open a normal change: do **not** edit the wiki UI directly, or
 the next sync will overwrite it. The API reference is separate: it's a mkdocs
 site under `docs/` (build it with the `[docs]` extra) published to GitHub Pages.
 
@@ -600,7 +600,7 @@ site under `docs/` (build it with the `[docs]` extra) published to GitHub Pages.
   *touch* them. CI runs the guard in a clean core-only job for exactly this
   reason.
 - A **green local gate is necessary but not always sufficient.** A few checks
-  depend on terminal width or environment specifics — anything rendering CLI
+  depend on terminal width or environment specifics: anything rendering CLI
   `--help` text can pass locally and fail in CI's narrower terminal. Watch the
   CI run on your shipping commit.
 - **Heavy and network examples** (the neural pipeline, AI providers, fetching a
@@ -608,7 +608,7 @@ site under `docs/` (build it with the `[docs]` extra) published to GitHub Pages.
   of the fast local gate. They're covered by their own opt-in tests.
 - Linear A is **undeciphered**; the sign sound values are empirical and
   confidence-weighted, and any decipherment/cross-linguistic/metrological/AI
-  output is exploratory. Keep new contributions honestly labeled — see
+  output is exploratory. Keep new contributions honestly labeled: see
   [Limitations](Limitations).
 
 For the conceptual map of the codebase, read [Architecture](Architecture). For

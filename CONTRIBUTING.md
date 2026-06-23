@@ -2,7 +2,7 @@
 
 Thanks for your interest! pyaegean is a specialist Python toolkit for Ancient
 Greek (alphabetic + Aegean syllabic), focused on deep, high-quality Greek coverage.
-The [README](README.md#roadmap) has the roadmap — what's shipped and what's next.
+The [README](README.md#roadmap) has the roadmap: what's shipped and what's next.
 
 ## Setup
 
@@ -16,7 +16,7 @@ mypy
 ## Good first contributions (a menu)
 
 Small, well-scoped facts that make the toolkit better without touching the
-architecture — each has an obvious home and an obvious test:
+architecture: each has an obvious home and an obvious test:
 
 - **A syllabification exception.** Compounds divide at the point of union
   (Smyth §140), which pure phonotactics can't see. Add the form to
@@ -28,7 +28,7 @@ architecture — each has an obvious home and an obvious test:
   correction for a Linear A/B, Cypriot, or Cypro-Minoan sign
   (`src/aegean/data/bundled/<script>/signs.json`), with a source.
 - **A gazetteer alignment.** A find-site missing its Pleiades ID
-  (`src/aegean/data/bundled/geo/site_coordinates.json`) — cite the Pleiades URI.
+  (`src/aegean/data/bundled/geo/site_coordinates.json`): cite the Pleiades URI.
 - **A collocation / statistics measure.** A new association measure in
   `src/aegean/analysis/collocation.py` with a literature reference and a
   golden-value test.
@@ -47,7 +47,7 @@ regenerate it there rather than editing the JSON by hand. The Greek-works
 discovery catalogue (`src/aegean/data/bundled/greek/works_catalogue.json`, behind
 `greek.catalog()` / `aegean greek catalog`) is built by
 `scripts/build_greek_catalogue.py`, which crawls Perseus canonical-greekLit and
-First1KGreek at the commits pinned in `aegean.scripts.greek.perseus._SOURCES` —
+First1KGreek at the commits pinned in `aegean.scripts.greek.perseus._SOURCES`:
 so bumping a pin and rerunning the script keeps the catalogue in lockstep with
 what `load_work` actually fetches. It records metadata only (id/author/title/Greek
 title/source); the texts stay CC BY-SA and fetched on demand, never bundled. The
@@ -86,7 +86,7 @@ pyaegean is pre-1.0, but the public API is treated as a contract:
    removed in 0.(x+1).0 at the earliest.
 2. **Warnings carry the replacement.** Every deprecation emits a
    `DeprecationWarning` that names the replacement API and the release that
-   introduced the deprecation — never a bare "this is deprecated".
+   introduced the deprecation: never a bare "this is deprecated".
 3. **The CHANGELOG records both ends**: the release that deprecates and the
    release that removes.
 4. **Data and models version forward.** Fetched artifacts are sha256-pinned

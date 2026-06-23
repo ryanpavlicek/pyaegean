@@ -3,7 +3,7 @@
 pyaegean's rule is that it tells you where it's confident and where it's
 guessing. This page is the complete picture in one place: what the toolkit
 **cannot** do and why, what it **does not yet** do and plans to, and what it
-deliberately **won't** do. Use it the way you'd use a methods section — to know
+deliberately **won't** do. Use it the way you'd use a methods section: to know
 exactly how far a result can be pushed before you reach for a human expert.
 
 It is a **living register**. Found something it gets wrong, or a limit worth
@@ -11,12 +11,12 @@ recording? See [For Specialists](For-Specialists) for how to file a correction o
 a validation. Three kinds of limits behave very differently, and the rest of this
 page is organized around them:
 
-1. **Limits of the evidence** — undeciphered scripts, fragmentary tablets,
+1. **Limits of the evidence**: undeciphered scripts, fragmentary tablets,
    contested readings. No amount of code removes these; the toolkit's job is to
    keep them visible.
-2. **Limits of licensing** — data the project may use but not redistribute, so it
+2. **Limits of licensing**: data the project may use but not redistribute, so it
    is fetched on demand rather than bundled.
-3. **Engineering limits** — things code *can* fix, tracked on the
+3. **Engineering limits**: things code *can* fix, tracked on the
    [roadmap](Home#roadmap), each paired with the plan.
 
 Then two reference sections: the **measured accuracy boundaries** (the weak
@@ -40,7 +40,7 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Neural model size | ~518 MB fp32 download | [Engineering](#engineering-limits-we-plan-to-lift) |
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
-| AI layer | Exploratory by construction — never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
+| AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
 
 ---
 
@@ -50,13 +50,13 @@ These are properties of the material itself. They will not go away with a better
 release.
 
 - **Linear A and Cypro-Minoan are undeciphered.** Linear A's phonetic
-  transcription uses Linear B sound values as a *working convention* — in the
+  transcription uses Linear B sound values as a *working convention*: in the
   bundled inventory **47 of the 344 signs** carry an empirical sound value
   (drawn from the 67 signs shared with the Linear B grid), each with a
   `confidence`; the rest have no agreed reading. Cypro-Minoan goes further: of
   its **99 catalogued signs, none** carries a settled sound value, so pyaegean
   offers no transliteration or lexicon for it. Every analytical or generative
-  result over this material is labeled **exploratory** — evidence for a human
+  result over this material is labeled **exploratory**: evidence for a human
   expert to weigh, never a reading or a translation.
 
   ```python
@@ -77,7 +77,7 @@ release.
 - **The corpora are fragmentary.** Only **about 35 of the 1,721** bundled Linear A
   inscriptions carry a stated, checkable accounting total (`KU-RO`/`TO-SO`); most
   tablets are too damaged to balance. Stricter still, only a handful are *intact
-  and balancing* — `accounting.checkable_accounts(corpus)` returns the clean
+  and balancing*: `accounting.checkable_accounts(corpus)` returns the clean
   drill set. That is the nature of the evidence, not a parser gap.
 
   ```python
@@ -93,7 +93,7 @@ release.
   erased or as a damaged/bracketed reading, pyaegean keeps it as a token status
   rather than dropping it: **552** tokens load as `LOST` (across 326 documents)
   and **120** as `UNCLEAR` (across 91 documents). In total **366 documents**
-  carry at least one such mark — so any analysis can choose to trust, weight, or
+  carry at least one such mark, so any analysis can choose to trust, weight, or
   exclude them.
 
   ```python
@@ -114,7 +114,7 @@ release.
 - **Annotation conventions differ across treebanks.** On the out-of-domain PROIEL
   evaluation, morphological-feature scores are capped by convention mismatches
   (PROIEL annotates feature types the Perseus scheme lacks, and the 9-character
-  AGDT positional tag doesn't exist there at all) — a measurement boundary, not a
+  AGDT positional tag doesn't exist there at all): a measurement boundary, not a
   model defect. Protocol notes:
   [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
 
@@ -122,23 +122,23 @@ The four undeciphered/partly-read scripts at a glance:
 
 | Script | `aegean.load(...)` id | Signs | Signs with a sound value | Lexicon | Status |
 | --- | --- | --- | --- | --- | --- |
-| Linear A | `lineara` | 344 | 47 (working convention) | — | Undeciphered |
+| Linear A | `lineara` | 344 | 47 (working convention) |— | Undeciphered |
 | Linear B | `linearb` | (Linear B grid) | full grid | 150 entries | Deciphered |
 | Cypriot syllabary | `cypriot` | (ICS grid) | full grid | 17 entries | Deciphered |
-| Cypro-Minoan | `cyprominoan` | 99 | 0 | — | Undeciphered |
+| Cypro-Minoan | `cyprominoan` | 99 | 0 |— | Undeciphered |
 
 ---
 
 ## Limits of licensing (fixable only by permission)
 
 Some of the most useful data is NonCommercial or all-rights-reserved. pyaegean's
-wheel is Apache-2.0, so NonCommercial data **can't live in the wheel** — it is
+wheel is Apache-2.0, so NonCommercial data **can't live in the wheel**: it is
 fetched to your local cache on demand, sha256-pinned, with the upstream
 obligations passing through to you. The bundled, offline defaults stay small and
 license-clean.
 
 - **The full Linear B corpus is NonCommercial, so it is fetched, not bundled.**
-  The most complete edition, DAMOS (Oslo), is **CC BY-NC-SA 4.0** — usable and
+  The most complete edition, DAMOS (Oslo), is **CC BY-NC-SA 4.0**: usable and
   redistributable, but NonCommercial. `aegean.load("damos")` fetches it
   (~5,900 tablets: Knossos, Pylos, Thebes, …, with site/chronology, scribal
   hands, find context, and object class) to your cache on demand, and the NC +
@@ -157,13 +157,13 @@ license-clean.
   `aegean.load("sigla")` fetches the decoded **v2** dataset (**781 documents**)
   with typology, dimensions, periods, **SigLA's own word division** (**1,376
   words** grouped into `WORD` tokens) and commodity ideograms (`LOGOGRAM`
-  tokens). SigLA is a *palaeographic* database — it records sign occurrences and
-  word division, **not** the cardinal-number quantities of the accounts — so it
+  tokens). SigLA is a *palaeographic* database: it records sign occurrences and
+  word division, **not** the cardinal-number quantities of the accounts, so it
   carries no numeral values (use GORILA, the bundled corpus, for accounting), and
   its word division and complex-sign notation differ editorially from GORILA. The
   drawings remain at sigla.phis.me (referenced, never redistributed).
 
-- **The UD and PROIEL treebanks are CC BY-NC-SA** — pyaegean fetches them for
+- **The UD and PROIEL treebanks are CC BY-NC-SA**: pyaegean fetches them for
   **evaluation only** and never trains on them. (The models *are* trained on the
   CC BY-SA AGDT / Gorman / Pedalion treebanks, which permit it.)
 
@@ -177,7 +177,7 @@ The fetched, never-bundled assets, and why:
 | --- | --- | --- | --- |
 | `damos` | Full Linear B, ~5,900 tablets | CC BY-NC-SA 4.0 | NonCommercial |
 | `sigla` | SigLA Linear A palaeography, 781 docs | CC BY-NC-SA 4.0 | NonCommercial |
-| `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size — redistributable, one book bundled offline |
+| `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size: redistributable, one book bundled offline |
 | UD / PROIEL folds | Evaluation treebanks | CC BY-NC-SA | NonCommercial; eval only, never trained on |
 | neural model | Joint tagger/parser/lemmatizer | CC BY-SA (from treebanks) | Size (~518 MB); the `[neural]` extra |
 | facsimile mirror | Linear A photos/drawings | © rightsholders | Not licensed for redistribution |
@@ -196,18 +196,18 @@ Each of these is something code *can* fix, and each is on the
 
 | Limitation today | Plan |
 | --- | --- |
-| The bundled Linear A corpus is a *normalized* transcription — the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 781 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database) — use GORILA for accounting |
-| Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon — every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
+| The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 781 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
+| Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | ~~`greek.load_work` reads top-level textparts only and drops `<note>`/`<bibl>` silently~~ | **Done:** `load_work(work, ref=…)` addresses a textpart / nested div / verse line-range, and `<note>`/`<bibl>` are carried in `DocumentMeta.notes` |
 | ~~No way to *discover* which Greek works or NT books are loadable~~ | **Done:** `greek.popular_works()` / `aegean greek works` (a curated, source-verified catalog of 25 well-known works) and `greek.nt_books()` / `aegean greek nt-books` (the 27 NT books); any Perseus / First1KGreek CTS id still works |
-| Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon — a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic) — a research project. See [Meters](Meters) |
-| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design** — the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source (the Morpheus audit did not clear) |
+| Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
+| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source (the Morpheus audit did not clear) |
 | The neural pipeline's model is a 518 MB fp32 download (int8 quantization failed its accuracy gate and was rejected) | Planned: selective quantization under the same ≤0.3-point gate, and optional GPU execution providers |
 | 33 of 56 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots / peak sanctuaries not yet in Pleiades | The alignment was extended (each coordinate-verified); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
-| The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution — adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
+| The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution: adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
 
-The discovery helpers above are pure offline metadata — handy when you don't know
+The discovery helpers above are pure offline metadata: handy when you don't know
 the CTS id you need:
 
 ```python
@@ -225,7 +225,7 @@ aegean greek nt-books     # the 27 NT books load_nt accepts
 
 ## Measured accuracy boundaries
 
-Every accuracy claim is measured and the protocol published — which means the
+Every accuracy claim is measured and the protocol published: which means the
 *weak* numbers are public too. Two boundaries matter most.
 
 **The zero-dependency baselines are honest floors, not the accuracy story.** They
@@ -243,7 +243,7 @@ and the same functions consult it instead.
 
 **Out-of-domain performance drops, as it does for every system.** The neural
 pipeline's lemma accuracy is **94.40** on the UD Perseus test fold and **90.57**
-on UD PROIEL — a treebank none of pyaegean's models train on. Both numbers are
+on UD PROIEL: a treebank none of pyaegean's models train on. Both numbers are
 always reported together.
 
 | Metric | UD Perseus (in family) | UD PROIEL (out of domain) |
@@ -267,7 +267,7 @@ See [Greek NLP](Greek-NLP) for how to switch tiers.
 These are deliberate. They're listed here so you can judge them, not so they get
 "fixed."
 
-- **The core stays zero-dependency** — no pydantic, no database backend, instant
+- **The core stays zero-dependency**: no pydantic, no database backend, instant
   import. Heavy capability lives behind extras and the fetch-to-cache layer.
   Models and corpora are **never bundled** in the wheel. The opt-in extras:
 
@@ -290,15 +290,15 @@ These are deliberate. They're listed here so you can judge them, not so they get
   `Corpus.from_json()`. Reach for the latter whenever round-tripping matters.
 
 - **The gazetteer is mapping-grade** (~1 km site-level coordinates), for
-  distribution maps — not survey work.
+  distribution maps: not survey work.
 
 - **The AI layer is exploratory by construction.** Every generative result is a
-  labeled, provenanced hypothesis built on local deterministic grounding — by
+  labeled, provenanced hypothesis built on local deterministic grounding: by
   policy it is never presented as a reading, whatever the model's confidence. It
   needs your own API key and the matching extra; nothing is sent anywhere unless
   you turn it on.
 
-- **Corpora are held in memory** — fine for everything pyaegean ships and fetches
+- **Corpora are held in memory**: fine for everything pyaegean ships and fetches
   (the largest, DAMOS, is ~5,900 documents). `Corpus.iter_documents` /
   `iter_tokens` / `iter_words` stream token-by-token where you need it, and an
   opt-in [analysis cache](Analysis#caching-expensive-analyses-opt-in) reuses
@@ -306,7 +306,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
   note:
   [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).
 
-- **Try it without installing anything** — the core pipeline runs client-side via
+- **Try it without installing anything**: the core pipeline runs client-side via
   Pyodide at [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/); the
   [CLI](CLI) is the full no-Python path; and the
   [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) web app
@@ -315,4 +315,4 @@ These are deliberate. They're listed here so you can judge them, not so they get
 ---
 
 Spotted a limit that's missing, stale, or wrong? That's exactly what this page is
-for — see [For Specialists](For-Specialists) to file it.
+for: see [For Specialists](For-Specialists) to file it.

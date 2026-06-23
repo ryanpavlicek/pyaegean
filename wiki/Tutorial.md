@@ -1,14 +1,14 @@
 # Tutorial
 
 Three complete, run-along walkthroughs that each answer a real question. The
-first two stand on their own — one in **Linear A**, one in **Greek** — and the
+first two stand on their own: one in **Linear A**, one in **Greek**, and the
 third shows how to pull a real Greek work off the shelf and run the pipeline over
 it. Every snippet here is runnable, and every result shown is **real output** from
 the version you just installed; nothing is invented. If you haven't installed
 pyaegean yet, do [Getting Started](Getting-Started) first.
 
 Paste the snippets into a [Jupyter notebook](Getting-Started#option-c--jupyter-recommended-for-research)
-cell by cell, or into the interactive `python` prompt — each tutorial builds up
+cell by cell, or into the interactive `python` prompt; each tutorial builds up
 step by step. Where a step has **both** a Python API and a shell command, both are
 shown; pick whichever fits how you work. The shell side assumes you installed the
 CLI (`pip install "pyaegean[cli]"`); see the [CLI](CLI) page for the full command
@@ -18,9 +18,9 @@ list.
 
 | # | Question | Track | Network needed? |
 |---|----------|-------|-----------------|
-| [1](#tutorial-1--does-a-3500-year-old-ledger-add-up) | Does a 3,500-year-old ledger add up? | Linear A | No — bundled corpus, fully offline |
+| [1](#tutorial-1--does-a-3500-year-old-ledger-add-up) | Does a 3,500-year-old ledger add up? | Linear A | No: bundled corpus, fully offline |
 | [2](#tutorial-2--reading-the-first-line-of-the-odyssey) | Reading the first line of the *Odyssey* | Greek | No (treebank step is opt-in) |
-| [3](#tutorial-3--pulling-a-real-work-off-the-shelf) | Pulling a real work off the shelf | Greek | Yes — fetches one work to cache, once |
+| [3](#tutorial-3--pulling-a-real-work-off-the-shelf) | Pulling a real work off the shelf | Greek | Yes: fetches one work to cache, once |
 
 ---
 
@@ -54,8 +54,8 @@ metrological **fractions** (¹⁄₂).
 aegean show lineara HT13
 ```
 
-`aegean info lineara` gives the corpus-level view — size, source, license, and the
-citation you should use — before you go further:
+`aegean info lineara` gives the corpus-level view: size, source, license, and the
+citation you should use, before you go further:
 
 ```bash
 aegean info lineara
@@ -84,7 +84,7 @@ for chk in balance_check(doc):
 #              difference=0.5, balances=False, marker='KU-RO', total_line_index=7)
 ```
 
-(Each result is a `BalanceCheck` — a small Python object whose fields you can read
+(Each result is a `BalanceCheck`: a small Python object whose fields you can read
 directly: `chk.stated_total`, `chk.balances`, and so on.)
 
 The same check from the shell prints a table; add `--json` for machine-readable
@@ -104,15 +104,15 @@ aegean balance lineara HT13 --json
 ```
 
 Interesting: under this reading the items sum to **131.0** but the scribe wrote
-**130.5** — a discrepancy of ½. Is that an ancient error, a misread sign, or an
+**130.5**: a discrepancy of ½. Is that an ancient error, a misread sign, or an
 artefact of how *we* drew the section boundary?
 
 > **This is exploratory.** Section boundaries are heuristic and Linear A
 > metrology is genuinely contested. `balance_check` is a tool for *finding* lines
-> worth a human's attention — not a verdict. See [Linear A](Linear-A#accounting-reconciliation-ku-ro--po-to-ku-ro).
+> worth a human's attention, not a verdict. See [Linear A](Linear-A#accounting-reconciliation-ku-ro--po-to-ku-ro).
 
 Omit the document id to sweep the whole corpus at once (`aegean balance lineara`),
-and add `--strict` to make the command exit non-zero if any checked total fails —
+and add `--strict` to make the command exit non-zero if any checked total fails:
 handy in a script that should flag discrepancies.
 
 ### How does the total-word behave elsewhere?
@@ -138,7 +138,7 @@ aegean search lineara "KU-*-RO"
 # └──────────┴───────┘
 ```
 
-Only **KU-MA-RO** matches — and notice `KU-RO` itself does *not*, because `*`
+Only **KU-MA-RO** matches, and notice `KU-RO` itself does *not*, because `*`
 requires exactly one sign between KU and RO (KU-RO has none). That's the kind of
 precise, testable query the [pattern language](Linear-A#sign-pattern-search-the--wildcard) is for.
 
@@ -169,7 +169,7 @@ len(res.inscriptions)                         # 32
 # ['HT9a', 'HT9b', 'HT11a', 'HT11b', 'HT13', 'HT25b', 'HT27a', 'HT39']
 ```
 
-The same query from the shell — each `--where` is ANDed with the one before it:
+The same query from the shell: each `--where` is ANDed with the one before it:
 
 ```bash
 aegean query lineara --where id-contains=HT --where ins-contains-word=KU-RO
@@ -218,7 +218,7 @@ buckets = classify_corpus(corpus)
 # {'accounting': 134, 'libation': 15, 'list': 7, 'text': 2, 'other': 1563}
 ```
 
-You've now gone from one tablet's arithmetic to a corpus-wide structural view — in
+You've now gone from one tablet's arithmetic to a corpus-wide structural view, in
 a dozen lines. **Where next:** the [Analysis](Analysis) page has phonetic distance,
 alignment, morphological clustering, collocation statistics, and the multivariate
 methods; [Linear A](Linear-A) is the full reference for the script itself.
@@ -297,7 +297,7 @@ The scansion glyphs:
 |---|---|
 | `—` | heavy (long) syllable |
 | `⏑` | light (short) syllable |
-| `×` | *anceps* — the final syllable, either quantity |
+| `×` | *anceps*: the final syllable, either quantity |
 | `\|` | foot boundary |
 
 `scan_hexameter` is one of several metre functions. Each is a plain function, and
@@ -309,7 +309,7 @@ each has a `--meter` value for `aegean greek scan`:
 | `scan_pentameter` | `pentameter` | elegiac pentameter |
 | `scan_trimeter` | `trimeter` | iambic trimeter (drama) |
 | `scan_aeolic` | one of the aeolic line names | fixed-template lyric lines |
-| `scan_line` | — | dispatches by name |
+| `scan_line` |— | dispatches by name |
 
 The aeolic line templates available to `scan_aeolic` / `--meter` are in
 `greek.AEOLIC_LINES`: `glyconic`, `pherecratean`, `sapphic_hendecasyllable`,
@@ -341,7 +341,7 @@ verb) and `μάλα` (an adverb) both come back as **NOUN**. The baseline is rel
 on closed classes; open-class words fall back to NOUN.
 
 You can fix this for *attested* forms by switching on the
-[treebank backend](Greek-NLP#treebank-backed-mode-opt-in) — it uses gold tags from
+[treebank backend](Greek-NLP#treebank-backed-mode-opt-in): it uses gold tags from
 the Perseus treebank (a one-time fetch to cache, then offline):
 
 ```python
@@ -382,7 +382,7 @@ aegean greek morph "λόγον"
 # λόγος [NOUN voc sg neut]
 ```
 
-Several readings come back because the `-ον` ending is genuinely ambiguous — that
+Several readings come back because the `-ον` ending is genuinely ambiguous; that
 ambiguity is the linguistic reality, and you disambiguate with context.
 
 Now try it on `ἄνδρα` from our line:
@@ -398,9 +398,9 @@ for a in greek.analyze("ἄνδρα"):
 
 These are all *wrong*: `ἄνδρα` is the accusative singular of `ἀνήρ` (a third-
 declension noun with an irregular stem). The lemma even comes back unaccented
-(`ανδρα`) — the engine's signal that it **reconstructed** the form rather than
+(`ανδρα`): the engine's signal that it **reconstructed** the form rather than
 recognising it (`lemma_certain` is `False`). Irregular and third-declension forms
-are exactly what the rule-based baseline can't resolve — but switch on the
+are exactly what the rule-based baseline can't resolve, but switch on the
 [treebank backend](Greek-NLP#treebank-backed-mode-opt-in) (`greek.use_treebank()`) and
 `analyze("ἄνδρα")` correctly returns `ἀνήρ [NOUN acc sg masc]` (`lemma_certain=True`).
 See [Morphological analysis](Greek-NLP#morphological-analysis) for the full scope.
@@ -418,7 +418,7 @@ for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")[:3]:
 # TokenRecord(sentence=0, index=3, text='ἦν', upos='VERB', lemma='εἰμί', lemma_known=True, ...)
 ```
 
-`pipeline` honours whichever backends you've turned on — turn on the treebank or
+`pipeline` honours whichever backends you've turned on; turn on the treebank or
 neural pipeline first and the `upos`/`lemma`/`head`/`relation` fields fill out
 accordingly. The shell equivalent is `aegean greek pipeline "<text>"`.
 
@@ -439,20 +439,20 @@ harness, the opt-in [treebank lemmas/morphology](Greek-NLP#treebank-backed-mode-
 ## Tutorial 3 — Pulling a real work off the shelf
 
 The bundled Greek corpus (`aegean.load("greek")`) is just five short sample
-passages — enough to exercise the pipeline, not enough to do research on. For the
+passages: enough to exercise the pipeline, not enough to do research on. For the
 real texts, pyaegean fetches one work at a time from the open Perseus
 *canonical-greekLit* and *First1KGreek* corpora (both **CC BY-SA 4.0**) into a
 local cache. This walkthrough uses the **discovery helpers** to find a work, then
-loads its first lines and scans them — and shows how the *Iliad*'s opening differs,
+loads its first lines and scans them, and shows how the *Iliad*'s opening differs,
 metrically, from the *Odyssey*'s in Tutorial 2.
 
-> **This step uses the network**, but only the first time per work — the TEI file
+> **This step uses the network**, but only the first time per work: the TEI file
 > is fetched once to your cache (pinned to a fixed commit, so it's reproducible)
 > and reused afterward. Everything else on this page is fully offline.
 
 ### Find a work
 
-`popular_works()` is a curated, verified catalog of well-known works — pure
+`popular_works()` is a curated, verified catalog of well-known works: pure
 metadata, no download — so you can look up the id `load_work` needs:
 
 ```python
@@ -497,7 +497,7 @@ Perseus canonical-greekLit / First1KGreek CTS id. The 25 curated entries:
 | Aristotle | `tlg0086.tlg010` Nicomachean Ethics |
 
 To go beyond those 25 curated highlights without leaving the toolkit, search the
-**full** discovery catalogue — every work with a Greek edition in the two open
+**full** discovery catalogue: every work with a Greek edition in the two open
 repos, ~1,800 in all. It's bundled metadata (no download), so it's offline and
 instant; `catalog()` takes substring filters (`author=`, `title=`, `source=`) or a
 free-text `query`, and every `id` it returns is one you can hand straight to
@@ -528,7 +528,7 @@ aegean greek catalog --author plato --limit 3
 ```
 
 The coverage is exactly what those open repos hold at the pinned commit, so a few
-authors that aren't in the upstream data are honestly absent here too —
+authors that aren't in the upstream data are honestly absent here too:
 `greek.catalog("Sappho")` returns `[]` rather than inventing an id. The full
 treatment, with every filter, is in
 [Finding any other work](Greek-Works-and-Books#3-finding-any-other-work); for
@@ -557,7 +557,7 @@ len(doc.lines)                       # 7
 # 'μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος'
 ```
 
-Every fetched corpus carries its provenance — exactly what you'd cite, and the
+Every fetched corpus carries its provenance: exactly what you'd cite, and the
 pinned commit that makes it reproducible:
 
 ```python
@@ -594,7 +594,7 @@ The arguments that shape what you get back:
 ### Run the pipeline over the real line
 
 The line you loaded is ordinary Greek text, so every Tutorial 2 step works on it
-unchanged. Scan its metre — and watch the contrast with the *Odyssey*:
+unchanged. Scan its metre, and watch the contrast with the *Odyssey*:
 
 ```python
 line0 = " ".join(t.text for t in doc.tokens if t.line_no == 0)
@@ -607,7 +607,7 @@ sc.caesura        # 'penthemimeral'
 Two real differences from the *Odyssey*'s opening: the *Iliad*'s third foot is a
 **spondee** (`——`, two heavies) rather than a dactyl, and its main pause is the
 **penthemimeral** caesura (after the fifth half-foot) instead of the trochaic one.
-Same metre, different texture — exactly the kind of comparison this loader makes
+Same metre, different texture: exactly the kind of comparison this loader makes
 easy.
 
 And the one-call pipeline tags and lemmatizes it:
@@ -620,7 +620,7 @@ for r in greek.pipeline(line0)[:3]:
 # θεὰ NOUN θεά True
 ```
 
-(`ἄειδε` is a verb mis-tagged NOUN by the baseline — turn on the treebank or
+(`ἄειδε` is a verb mis-tagged NOUN by the baseline; turn on the treebank or
 [neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the correct tag, as in
 Tutorial 2.)
 
@@ -645,7 +645,7 @@ exploratory:
   contested.
 - **The Greek baseline falls back.** Out of the box, open-class words tag as NOUN
   and irregular forms get reconstructed (unaccented) lemmas. The opt-in treebank
-  and neural backends fix this for the forms they cover — always know which mode
+  and neural backends fix this for the forms they cover; always know which mode
   you're in.
 - **Scansion is rule-based**, with synizesis treated lexically rather than guessed;
   a line that only fits via an out-of-lexicon synizesis is reported as unscanned

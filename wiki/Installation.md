@@ -7,8 +7,8 @@ confirm it works.
 
 The good news for newcomers: **the core install is one command and has zero
 third-party dependencies.** The wheel ships code and JSON only, so `import aegean`
-is instant and works fully offline. Everything heavier — `pandas`, the Greek NLP
-backends, the AI provider SDKs, plotting, the command line — is an *optional
+is instant and works fully offline. Everything heavier: `pandas`, the Greek NLP
+backends, the AI provider SDKs, plotting, the command line: is an *optional
 extra* that you pull in only when you ask for it. Nothing is downloaded behind
 your back.
 
@@ -34,7 +34,7 @@ pip install pyaegean            # core: Linear A + Greek, zero hard deps
 ```
 
 That gives you the full Linear A corpus, the Aegean scripts, the Greek phonology
-and metre engine, and the analysis tools — all offline. The heavier Greek
+and metre engine, and the analysis tools: all offline. The heavier Greek
 backends and the AI layer are extras, described below.
 
 ### Platform notes
@@ -64,7 +64,7 @@ The command is the same everywhere; only the surrounding setup differs slightly.
 
 ## Optional extras
 
-Extras are installed with the `pyaegean[name]` syntax. Quote the whole thing —
+Extras are installed with the `pyaegean[name]` syntax. Quote the whole thing:
 some shells (notably zsh on macOS) treat square brackets specially:
 
 ```bash
@@ -79,7 +79,7 @@ The complete matrix:
 | Extra | Pulls in | What it unlocks |
 | --- | --- | --- |
 | `pyaegean[data]` | `pandas>=2.0` | DataFrame interop (`corpus.to_dataframe()`) |
-| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`) — torch-free |
+| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
 | `pyaegean[anthropic]` | `anthropic>=0.39` | Anthropic (the default) AI provider |
 | `pyaegean[openai]` | `openai>=1.30` | OpenAI provider |
 | `pyaegean[grok]` | `openai>=1.30` | xAI Grok (OpenAI-API-compatible) |
@@ -98,7 +98,7 @@ A few things worth knowing:
 - **`[all]` deliberately omits `[neural]` and `[parquet]`.** The neural models pull
   in `onnxruntime` and download large model bundles; `parquet` adds `pyarrow`.
   Both are heavy and not everyone needs them, so you opt in to those by name.
-- **`[grok]` and `[openai]` install the same SDK** — Grok speaks the OpenAI API,
+- **`[grok]` and `[openai]` install the same SDK**: Grok speaks the OpenAI API,
   so it reuses the `openai` package with a different endpoint and key.
 - **The AI layer is exploratory and key-gated.** Installing `[ai]` only adds the
   SDKs; you still supply your own API key at runtime. See [AI Layer](AI-Layer).
@@ -113,7 +113,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.8.5
+# pyaegean 0.8.6
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -123,11 +123,11 @@ The MCP server currently exposes these tools to a connected agent: `list_corpora
 ## Verify
 
 A 30-second check that the core and the Greek engine are working. None of this
-touches the network — it all runs on the bundled, offline data:
+touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.8.5
+print(aegean.__version__)                 # 0.8.6
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -144,7 +144,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.8.5
+# pyaegean 0.8.6
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -162,15 +162,15 @@ aegean info lineara
 
 > The bundled Greek corpus is a tiny five-document public-domain sample (Homer,
 > Herodotus, Heraclitus, Sappho, Gospel of John). To work with full texts, fetch
-> them by id — see [Greek NLP](Greek-NLP).
+> them by id: see [Greek NLP](Greek-NLP).
 
 ## Offline & data
 
-This is one of pyaegean's design promises, so it's worth spelling out.
+Here's how the offline promise works in practice.
 
 **What ships inside the wheel and works fully offline:** the Linear A
 inscriptions and signs, the Aegean script inventories, the small Greek seed
-sample, the ~1,800-work Greek discovery catalogue (`greek.catalog()` —
+sample, the ~1,800-work Greek discovery catalogue (`greek.catalog()`:
 metadata only, not the texts), and all the phonology / metre / analysis code.
 Nothing in that list ever needs the network.
 
@@ -190,14 +190,14 @@ aegean data list
 | --- | --- | --- | --- |
 | `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~25 MB | CC BY-SA 3.0 (from Perseus AGDT) |
 | `lsj-index` | prebuilt LSJ lemma→entry index (`use_lsj()` prefers it over the 270 MB build) | ~15 MB | CC BY-SA 4.0 (Perseus) |
-| `damos-corpus` | DAMOS-derived Linear B corpus v2: ~5,900 tablets — `load("damos")` | ~3 MB | CC BY-NC-SA 4.0 (DAMOS, F. Aurora) |
-| `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs / 1,376 words — `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
-| `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens — `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
-| `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX) — the `[neural]` extra | ~232 MB | CC BY-SA 4.0 (derived) |
-| `grc-joint` | joint tagger-parser-lemmatizer (fp32 ONNX bundle) — the `[neural]` extra | ~518 MB | CC BY-SA 4.0 (derived) |
-| `lineara-images` | 3,368 facsimile/photo files | ~116 MB | © École Française d'Athènes & others — academic reference only |
-| `workbench-app` | prebuilt Linear A Research Workbench web app — served by `aegean workbench` | ~3 MB | Apache-2.0 |
-| `linearb-corpus` | a slot for a user-supplied Linear B export | — | bring-your-own |
+| `damos-corpus` | DAMOS-derived Linear B corpus v2: ~5,900 tablets: `load("damos")` | ~3 MB | CC BY-NC-SA 4.0 (DAMOS, F. Aurora) |
+| `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs / 1,376 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
+| `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens: `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
+| `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX): the `[neural]` extra | ~232 MB | CC BY-SA 4.0 (derived) |
+| `grc-joint` | joint tagger-parser-lemmatizer (fp32 ONNX bundle): the `[neural]` extra | ~518 MB | CC BY-SA 4.0 (derived) |
+| `lineara-images` | 3,368 facsimile/photo files | ~116 MB | © École Française d'Athènes & others: academic reference only |
+| `workbench-app` | prebuilt Linear A Research Workbench web app: served by `aegean workbench` | ~3 MB | Apache-2.0 |
+| `linearb-corpus` | a slot for a user-supplied Linear B export |— | bring-your-own |
 
 For speed, the Greek backends prefer small **prebuilt** artifacts over building
 from source: `greek.use_lsj()` fetches the ~15 MB index instead of downloading
@@ -220,7 +220,7 @@ aegean data cache
 
 The default is your OS user-cache directory (e.g. `~/.cache/pyaegean` on
 Linux/macOS, `%USERPROFILE%\.cache\pyaegean` on Windows). **Set the
-`PYAEGEAN_CACHE` environment variable** to put it elsewhere — handy for a shared
+`PYAEGEAN_CACHE` environment variable** to put it elsewhere: handy for a shared
 drive, a larger disk, or a reproducible/offline machine:
 
 ```bash
@@ -296,13 +296,13 @@ pip install -e ".[dev]"
   `greek.use_treebank()` or `aegean.load("damos")`). That's by design.
 - **Some datasets are NonCommercial (CC BY-NC-SA).** DAMOS (Linear B) and SigLA
   (Linear A) are not redistributed inside the package precisely because of their
-  licenses — you fetch them yourself, under their terms. The facsimile imagery is
+  licenses: you fetch them yourself, under their terms. The facsimile imagery is
   for academic reference only. Mind the license column before reusing data.
 - **The AI layer needs your own API key** and is explicitly exploratory; it does
   not ship a model. See [AI Layer](AI-Layer).
 - **`aegean.__version__` reads installed package metadata.** If it ever prints
   `0.0.0+unknown`, the package metadata wasn't found (an unusual editable/zip
-  setup) — reinstall normally and it resolves.
+  setup): reinstall normally and it resolves.
 
 For anything that didn't go to plan, see [FAQ & Troubleshooting](FAQ) and the
 project-wide [Limitations](Limitations) page. To start using it, head to

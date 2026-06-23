@@ -1,8 +1,8 @@
 # The `aegean` command line
 
-`aegean` is the whole toolkit from your terminal — corpora, Greek NLP, surface
+`aegean` is the whole toolkit from your terminal (corpora, Greek NLP, surface
 analysis, the fetch-to-cache data layer, SQLite, plots, and the (exploratory) AI
-layer — without writing a line of Python. If you've never used a command line
+layer) without writing a line of Python. If you've never used a command line
 before, start with [Getting Started](Getting-Started) (it shows you how to open a
 terminal); then come back here. Everything below is something you can copy, paste,
 and run.
@@ -50,13 +50,13 @@ aegean greek scan --help
 
 > **Windows note:** if polytonic Greek shows up as boxes or `?`, that's the
 > terminal font, not pyaegean. Set `PYTHONUTF8=1` and run `chcp 65001` once to
-> switch the console to UTF-8 — or just use the `--json` output, which is always
+> switch the console to UTF-8, or just use the `--json` output, which is always
 > correct, and view it in an editor. See [Getting Started](Getting-Started#seeing-greek-correctly).
 
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.8.5
+aegean --version          # pyaegean 0.8.6
 ```
 
 | Group | What's in it |
@@ -92,7 +92,7 @@ aegean> :exit
 ```
 
 Every line is dispatched through the same command tree, so a command behaves
-exactly as it does on the regular command line — `--json`, `-o`, corpus files and
+exactly as it does on the regular command line: `--json`, `-o`, corpus files and
 work ids, all of it. A mistyped command just prints its error and leaves the shell
 open. `:help` (or `help`) prints the command list; `:exit`, `quit`, or **Ctrl-D**
 leaves. The shell needs the `[cli]` extra (it ships `prompt_toolkit`).
@@ -227,7 +227,7 @@ aegean query lineara --where "site-is=Haghia Triada" --where "or:id-contains=ZA"
 ```
 
 The result carries a `description` of the query and a `citation` for the exact
-subset — so the precise result set behind a figure is one `--json | jq .citation`
+subset, so the precise result set behind a figure is one `--json | jq .citation`
 away. List the queryable fields with `--fields`:
 
 ```bash
@@ -264,7 +264,7 @@ aegean stats zakros.json --top 3                 # then analyse the saved subset
 ```
 
 The saved file records a `subset: query(…) → N documents` provenance note, so the
-exact filter behind it travels with the data. (`-o` only writes inscriptions —
+exact filter behind it travels with the data. (`-o` only writes inscriptions:
 use `--output-kind words --json` if you want the word list instead.)
 
 > **Note:** `--limit` only trims the human-readable table; `--json` always emits
@@ -333,7 +333,7 @@ aegean keyness lineara --site "Zakros" --top 5
 
 > **Save a result straight to a file.** `stats`, `keyness`, `dispersion`, and
 > `search` all take `--output/-o`, and the format follows the extension: `.json`
-> (the same document as `--json`), `.csv` (a plain table — stdlib only, no pandas),
+> (the same document as `--json`), `.csv` (a plain table: stdlib only, no pandas),
 > or `.txt` (the human view). It writes silently and prints nothing else:
 >
 > ```bash
@@ -361,7 +361,7 @@ aegean balance lineara HT13
 └──────┴────────┴────────┴──────────┴──────┴──────────┘
 ```
 
-`--strict` makes the command exit `1` whenever any checked total fails — handy in
+`--strict` makes the command exit `1` whenever any checked total fails, handy in
 a script. See [Linear A](Linear-A) for what KU-RO discrepancies actually mean.
 
 ### `cite` — cite a corpus or the exact subset
@@ -392,14 +392,14 @@ aegean export lineara -f sqlite -o lineara.db             # same DB as `aegean d
 | `sqlite` | queryable DB with FTS5 | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
-annotations — the Greek NT's lemma / morph / Strong's / gloss — into columns.
+annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
 Filters (`--site` etc.) apply before export.
 
 ### `combine` — merge several corpora into one file
 
 Give two or more sources and one `--output/-o` (a `.json` or `.db`) and `combine`
 merges them into a single saved corpus. Each source is resolved like any corpus
-argument — an id, a saved `.json`/`.db`, a Greek work id, or `-` — so you can
+argument: an id, a saved `.json`/`.db`, a Greek work id, or `-`, so you can
 stitch works, subsets, and bundled corpora together in one go:
 
 ```bash
@@ -414,9 +414,9 @@ aegean combine lineara cypriot -o aegean-mix.json
 # wrote 1723 documents to aegean-mix.json (merged 2 sources)
 ```
 
-The merged corpus keeps a provenance that **names every source** — its citation
+The merged corpus keeps a provenance that **names every source**: its citation
 reads `Merged corpus of: …` listing each one. If two sources share a document id,
-`--on-conflict` decides what happens: `error` (the default — stop and tell you),
+`--on-conflict` decides what happens: `error` (the default, stop and tell you),
 `first` (keep the earliest), `last` (keep the latest), or `suffix` (keep both,
 appending `#2`, `#3`, … to the later ids). The same in Python:
 
@@ -435,7 +435,7 @@ just_a_few = aegean.load("lineara").subset(["HT13", "HT9a", "HT11a"])
 ### `import` — bring your own text into a corpus
 
 Everything above analyses corpora that pyaegean already knows about. `import` turns
-**your own** material — a plain-text file, a folder of text files, or a CSV — into a
+**your own** material (a plain-text file, a folder of text files, or a CSV) into a
 real corpus you can then `stats`, `search`, `query`, `export`, and so on. It always
 writes to `--output/-o` (a `.json` or `.db`), and the result works anywhere a corpus
 is accepted. (Greek/Koine text is run through the Greek tokenizer, which strips
@@ -460,7 +460,7 @@ aegean stats john.json --top 5                          # then analyse it like a
 └───────┴───────┘
 ```
 
-**`--split` decides how a text becomes documents** — `whole` (the default, one
+**`--split` decides how a text becomes documents**: `whole` (the default, one
 document for the whole file), `paragraph` (one per blank-line-separated block), or
 `line` (one per non-empty line). With more than one block the ids are numbered
 `<base>:1`, `<base>:2`, …; the base id is the file's stem unless you override it with
@@ -494,7 +494,7 @@ aegean show verses.json v2
 ```
 
 `--encoding` (default `utf-8`) reads non-UTF-8 files. The same lives on `aegean.io`
-in Python — `from_text`, `from_text_file`, `from_text_dir`, and `from_csv` (the CSV
+in Python: `from_text`, `from_text_file`, `from_text_dir`, and `from_csv` (the CSV
 one also takes `meta_cols=` to carry columns into document metadata):
 
 ```python
@@ -607,8 +607,8 @@ aegean workbench                 # fetch the build (~3 MB, first use) and open i
 aegean workbench --port 9000     # choose a port (default 8000); --no-browser to not open one
 ```
 
-Fetches the sha256-pinned static build to the cache, then serves the browser UI —
-the corpus, maps, and analysis modules — at `http://localhost:8000/` until you
+Fetches the sha256-pinned static build to the cache, then serves the browser UI (
+the corpus, maps, and analysis modules) at `http://localhost:8000/` until you
 press Ctrl+C. If the Linear A facsimile imagery is already cached
 (`aegean data fetch lineara-images`), the picture browser works too.
 
@@ -690,7 +690,7 @@ aegean greek scan "λόγος"
 
 | name | metre |
 |---|---|
-| `hexameter` | dactylic hexameter (Homer) — the default |
+| `hexameter` | dactylic hexameter (Homer): the default |
 | `pentameter` | elegiac pentameter (the second line of an elegiac couplet) |
 | `trimeter` | iambic trimeter (tragic/comic dialogue) |
 | `glyconic` · `pherecratean` · `adonean` | aeolic cola |
@@ -734,7 +734,7 @@ aegean greek gloss-nt λόγος --full
 aegean greek gloss-nt 3056 --strongs        # look up by Strong's number
 ```
 
-`gloss-nt` uses the **bundled** CC0 Dodson lexicon — no download. The classical
+`gloss-nt` uses the **bundled** CC0 Dodson lexicon: no download. The classical
 `gloss` command uses the larger LSJ index instead and activates it on first use
 (`~270 MB`, or `~15 MB` if `lsj-index` is fetched). See the backend section below.
 
@@ -751,7 +751,7 @@ to stderr); after that, everything is offline.
 | `--lemmatizer` | the edit-tree lemmatizer | trains from the AGDT |
 | `--parser` | the pure-Python arc-eager dependency parser | trains from the AGDT |
 | `--neural-lemmatizer` | the GreTa seq2seq lemmatizer (`[neural]`) | ~232 MB model |
-| `--neural` | the **joint neural pipeline** — best tagger/parser/lemmatizer (`[neural]`) | ~518 MB model |
+| `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~518 MB model |
 | `--lsj` | LSJ glossing (also set by `greek gloss`) | ~270 MB (or ~15 MB index) |
 
 ```bash
@@ -791,7 +791,7 @@ edition file.
 
 **`catalog` is the full discovery index behind `works`.** Where `works` lists 25
 curated highlights, `catalog` searches the **complete** bundled metadata for every
-work with a Greek edition in Perseus canonical-greekLit + First1KGreek — 1,778 works
+work with a Greek edition in Perseus canonical-greekLit + First1KGreek: 1,778 works
 in all (768 from `perseus`, 1,010 from `first1k`). It's offline and instant: just
 metadata, no fetch. Any id it prints goes straight to `aegean greek work`.
 
@@ -851,7 +851,7 @@ aegean greek catalog --author aristophanes --source perseus -o aristophanes.csv
 ```
 
 Coverage is exactly what those open repositories hold at the pinned commit, so some
-authors are genuinely absent upstream and therefore here too — `aegean greek catalog
+authors are genuinely absent upstream and therefore here too: `aegean greek catalog
 sappho` honestly returns nothing rather than inventing an entry:
 
 ```bash
@@ -865,7 +865,7 @@ source=None)`, returning a list of `{id, author, title, greek_title, source}` di
 
 ### Reproducing the published numbers (`eval`)
 
-`aegean greek eval TARGET` runs the official evaluators against fetched gold data —
+`aegean greek eval TARGET` runs the official evaluators against fetched gold data:
 heavy, but it reproduces pyaegean's measured accuracy. Targets: `ud`, `proiel`,
 `nt`, `tagger`, `lemmatizer`, `parser`.
 
@@ -918,7 +918,7 @@ aegean analyze nearest qa-si-re-u greek --top 5 --json
 
 `--script-a`/`--script-b` choose the scripts (`greek` · `lineara` · `linearb` ·
 `cypriot`); `--fold-aspiration` maps θ/φ/χ → t/p/k, which is fairer against
-defective syllabic spelling. These numbers are exploratory — read the alignment
+defective syllabic spelling. These numbers are exploratory: read the alignment
 and the *ranking*, not the absolute distance.
 
 ### Association and co-occurrence
@@ -938,11 +938,11 @@ aegean analyze hands damos                  # scribal-hand profiles (needs a han
 aegean analyze hands damos --hand "Knossos 103"   # one hand's characteristic vocabulary (keyness)
 ```
 
-`hands` needs a corpus that records a scribe per document — DAMOS does, so it
+`hands` needs a corpus that records a scribe per document: DAMOS does, so it
 fetches on first use; the bundled `lineara` records HT scribes too.
 
 > **Save any of these to a file.** `assoc`, `cooccur`, `clusters`, and `hands` all
-> take `--output/-o`, with the format set by the extension — `.json`, `.csv`
+> take `--output/-o`, with the format set by the extension: `.json`, `.csv`
 > (stdlib, no pandas), or `.txt`:
 >
 > ```bash
@@ -973,14 +973,14 @@ downloaded on demand, never bundled):
 | `grc-joint` | the joint tagger-parser-lemmatizer model (~518 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `grc-lemma-neural` | the GreTa seq2seq lemmatizer (~232 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
-| `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets) — `aegean.load('damos')` | CC BY-NC-SA 4.0 |
-| `sigla-corpus` | SigLA Linear A dataset (781 docs) — `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
-| `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens) — `aegean.load('nt')` | CC0-1.0 |
+| `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
+| `sigla-corpus` | SigLA Linear A dataset (781 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
+| `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
 | `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
 | `linearb-corpus` | a bring-your-own Linear B export (no default source) | per your source |
-| `workbench-app` | the prebuilt workbench web app (~3 MB) — served by `aegean workbench` | Apache-2.0 |
+| `workbench-app` | the prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |
 
-`aegean data versions --json` is the reproducibility manifest — every bundled and
+`aegean data versions --json` is the reproducibility manifest: every bundled and
 fetched dataset with its sha256. See [Data & Provenance](Data-and-Provenance) for
 the licensing details and why nothing non-redistributable is bundled.
 
@@ -1034,11 +1034,11 @@ corpus.to_sql("aegean.db", append=True)      # or aegean.db.to_sqlite(corpus, "a
 
 ## AI — `aegean ai …` (exploratory, key-gated)
 
-The generative layer. **Every result here is exploratory** — a labeled model
+The generative layer. **Every result here is exploratory**: a labeled model
 hypothesis carrying its grounding evidence, never a citable fact, and never a
 "decipherment." It needs a provider SDK (an extra such as
 `pip install "pyaegean[anthropic]"`) and that provider's API key in your
-environment. Without a key, the command exits `1` with a clear message — it never
+environment. Without a key, the command exits `1` with a clear message: it never
 silently calls out.
 
 ```bash
@@ -1062,15 +1062,15 @@ aegean ai eval --provider anthropic                           # grounding-fideli
 ```
 
 `--corpus NAME` grounds the answer on that corpus's frequent words. `--trace`
-prints the grounding provenance under the answer — the local corpus / lexicon /
-analysis facts the model was given, grouped by source — so you can audit exactly
+prints the grounding provenance under the answer: the local corpus / lexicon /
+analysis facts the model was given, grouped by source, so you can audit exactly
 what it was (and wasn't) told. `extract` always prints JSON, so it pipes straight
 into `jq`.
 
 **Save the output, label and all.** `translate`, `gloss`, `hypotheses`, `ask`, and
 `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
 and grounding evidence; a `.txt` file is the labeled text. The exploratory label
-stays attached on disk — a saved result never loses the "this is a hypothesis, not
+stays attached on disk: a saved result never loses the "this is a hypothesis, not
 a finding" framing:
 
 ```bash
@@ -1088,7 +1088,7 @@ label and grounding intact. The full design and the meaning of "grounded" are on
 ## MCP server — `aegean-mcp`
 
 A separate console script (the `[mcp]` extra) that exposes the toolkit to AI
-agents — Claude Code and other MCP clients — over stdio, so an agent can use
+agents (Claude Code and other MCP clients) over stdio, so an agent can use
 pyaegean without writing Python.
 
 ```bash
@@ -1130,7 +1130,7 @@ aegean cite lineara --site "Zakros" --style bibtex >> paper.bib
 ```
 
 Build one searchable database of all of Homer straight from work ids, then keep
-growing it — no Python anywhere:
+growing it: no Python anywhere:
 
 ```bash
 aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db     # Iliad + Odyssey (see Greek Works and Books for ids)
@@ -1159,9 +1159,9 @@ More worked pipelines are on [Recipes](Recipes).
   data to the cache the first time, with a note on stderr; afterwards it's offline.
   Pre-fetch with `aegean data fetch` before going offline.
 - **`--json` is the contract; the table view is for humans.** Don't parse the
-  rich tables — pass `--json` and use `jq`. `--limit` trims only the human view.
+  rich tables: pass `--json` and use `jq`. `--limit` trims only the human view.
 - **Metre and accuracy are bounded.** Lyric metres beyond the fixed aeolic
-  templates are out of scope, and the trainable backends have measured ceilings —
+  templates are out of scope, and the trainable backends have measured ceilings:
   both documented on [Meters](Meters) and
   [Limitations](Limitations#measured-accuracy-boundaries).
 
