@@ -88,5 +88,14 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "numpy.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*"]
+module = ["pandas.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numpy 2.5+ ships PEP 695 `type` statements in its .pyi stubs (Python 3.12+ syntax);
+# with python_version = "3.10" mypy errors out parsing them. We don't type-check numpy
+# internals, so skip following into the package rather than pinning its version.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
 ignore_missing_imports = true
