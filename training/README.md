@@ -1,9 +1,13 @@
 # training/ — model training for the Greek NLP pipeline
 
-> **The shipped model.** `grc-joint-v1` is the 12-epoch combined-corpus checkpoint:
-> on the UD Ancient Greek (Perseus) test fold, lemma 94.40 / UAS 89.14 / LAS 84.36 /
-> UPOS 96.95 / UFeats 96.13 / XPOS 93.57, and PROIEL lemma 90.59. Per-stage raw metrics
-> are under `results/`; the full protocol and tables are in `docs/benchmarks.md`.
+> **The shipped model.** `grc-joint-v2` is the combined-corpus checkpoint, with two changes
+> over the first build: the AGDT→UD converter attaches non-coordination commas to the
+> following token (the UD-Perseus convention), and the relation head is trained on the model's
+> predicted arcs, not only gold arcs. As exported and re-measured through the shipped ONNX
+> pipeline, the UD Ancient Greek (Perseus) test fold is lemma 94.29 / UAS 90.23 / LAS 85.64 /
+> UPOS 97.04 / UFeats 96.04 / XPOS 93.48, and PROIEL lemma 90.50. Across five seed replicates
+> the recipe averages LAS 85.58 ± 0.10 / UAS 90.15 ± 0.12. Per-stage raw metrics are under
+> `results/`; the full protocol and tables are in `docs/benchmarks.md`.
 
 Training-side code for the Greek NLP models (`docs/benchmarks.md` has the protocol and
 the numbers). Nothing in this directory ships in the wheel; trained artifacts are

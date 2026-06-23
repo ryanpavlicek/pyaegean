@@ -31,6 +31,7 @@ from .accent import accentuation
 from .lemmatize import lemmatize
 from .meter import ScansionError, scan_line
 from .morphology import analyze
+from .normalize import betacode_to_unicode, unicode_to_betacode
 from .pos import pos_tag
 from .syllabify import syllabify
 from .tokenize import tokenize_words
@@ -62,9 +63,23 @@ def _count(items: list[dict[str, Any]], ok: Callable[[dict[str, Any]], bool]) ->
     return sum(1 for it in items if ok(it))
 
 
+def _betacode_roundtrips(unicode: str, beta: str) -> bool:
+    """Beta Code → Unicode matches the gold, and Unicode survives a Beta round-trip.
+
+    A deterministic stage the UD benchmark does not cover. The pairs are authored from
+    the Beta Code standard (not copied from engine output), so this is a real correctness
+    check, not a tautology.
+    """
+    return (
+        betacode_to_unicode(beta) == unicode
+        and betacode_to_unicode(unicode_to_betacode(unicode)) == unicode
+    )
+
+
 def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[str, Score]:
     """Score the pyaegean pipeline against ``gold`` (defaults to the bundled set)."""
     g = gold or load_gold()
+    bc = g.get("betacode", [])
     tok = g.get("tokenize", [])
     syl = g.get("syllabify", [])
     acc = g.get("accent", [])
@@ -73,6 +88,10 @@ def run_benchmark(gold: dict[str, list[dict[str, Any]]] | None = None) -> dict[s
     sca = g.get("scansion", [])
     mor = g.get("morphology", [])
     return {
+        "betacode": Score(
+            "betacode", len(bc),
+            _count(bc, lambda it: _betacode_roundtrips(it["unicode"], it["beta"])),
+        ),
         "tokenize": Score(
             "tokenize", len(tok),
             _count(tok, lambda it: tokenize_words(it["text"]) == it["tokens"]),

@@ -1,0 +1,28 @@
+{
+ "gate_points": 0.3,
+ "gate_sentences": 300,
+ "fp32": {
+  "upos": 0.982960413080895,
+  "las": 0.899827882960413,
+  "lemma": 0.963855421686747,
+  "n_tokens": 5810
+ },
+ "int8": {
+  "upos": 0.2333907056798623,
+  "las": 0.07796901893287435,
+  "lemma": 0.8796901893287435,
+  "n_tokens": 5810
+ },
+ "drops_points": {
+  "upos": 74.95697074010327,
+  "las": 82.18588640275387,
+  "lemma": 8.416523235800344
+ },
+ "shipped": "fp32",
+ "tar": {
+  "path": "/content/export/grc-joint.tar.gz",
+  "bytes": 518437922,
+  "sha256": "4b2094c405652ea760f7ed78f27c9cecfac42167e25e81b1161ce4f51d25b994",
+  "fp32_onnx_bytes": 556555703
+ }
+}

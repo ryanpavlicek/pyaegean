@@ -192,6 +192,23 @@ def convert_tree(words: list[dict]) -> list[tuple[int, str]]:
             fixed[i] = "cop"
             move_children(i, promoted, keep={i, promoted})
 
+    # non-coordination commas (AuxX) attach to the immediately following token — the
+    # UD-Perseus convention (coordination separators are handled above). Guard against a
+    # cycle when that next token is the comma's own dependent.
+    for i in range(n):
+        if _base(rels[i]) != "AuxX":
+            continue
+        tgt = i + 1 if i + 1 < n else i - 1
+        if 0 <= tgt != i:
+            j, hops = tgt, 0
+            while j != -1 and hops <= n:
+                if j == i:
+                    break
+                j, hops = out_head[j], hops + 1
+            else:
+                out_head[i] = tgt
+        fixed[i] = "punct"
+
     # AuxK (final punctuation) hangs off the root token; force a single root
     roots = [i for i in range(n) if out_head[i] == -1]
     root_tok = roots[0] if roots else 0

@@ -11,7 +11,7 @@ from aegean.greek import benchmark
 def test_run_benchmark_returns_a_score_per_stage():
     scores = benchmark.run_benchmark()
     assert set(scores) == {
-        "tokenize", "syllabify", "accent", "lemma", "pos", "scansion", "morphology",
+        "betacode", "tokenize", "syllabify", "accent", "lemma", "pos", "scansion", "morphology",
     }
     for s in scores.values():
         assert s.total > 0
@@ -27,6 +27,7 @@ def test_deterministic_stages_match_gold_exactly():
     assert scores["syllabify"].accuracy == 1.0
     assert scores["accent"].accuracy == 1.0
     assert scores["scansion"].accuracy == 1.0
+    assert scores["betacode"].accuracy == 1.0
 
 
 def test_seed_lemmatizer_covers_its_easy_core():

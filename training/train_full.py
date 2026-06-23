@@ -280,6 +280,14 @@ def main() -> None:
                     2, gh_safe.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1))
                 ).squeeze(2)
                 loss = loss + ce(rel_at_gold.flatten(0, 1), gr.flatten())
+                # also supervise relations at the model's PREDICTED heads, not only gold
+                # arcs: at inference the relation is read at the predicted head, so this
+                # closes the train/test mismatch (gold heads -> argmax heads).
+                ph_pred = arc.argmax(dim=2)
+                rel_at_pred = rel.permute(0, 2, 3, 1).gather(
+                    2, ph_pred.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1))
+                ).squeeze(2)
+                loss = loss + ce(rel_at_pred.flatten(0, 1), gr.flatten())
                 loss = loss + ce(lem.flatten(0, 1), gs.flatten())
             scaler.scale(loss).backward()
             scaler.step(optim)

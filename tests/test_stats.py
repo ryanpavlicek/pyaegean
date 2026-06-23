@@ -146,6 +146,46 @@ def test_bootstrap_input_validation():
         stats.bootstrap_ci(docs, _mean_words, level=1.5)
 
 
+def test_bootstrap_ci_seq_resamples_arbitrary_items():
+    # The unit-agnostic core: resample over plain numbers (e.g. per-sentence scores).
+    xs = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+    ci1 = stats.bootstrap_ci_seq(xs, lambda s: sum(s) / len(s), n_resamples=499, seed=1)
+    ci2 = stats.bootstrap_ci_seq(xs, lambda s: sum(s) / len(s), n_resamples=499, seed=1)
+    assert ci1 == ci2  # reproducible by default
+    assert ci1.estimate == pytest.approx(5.5)
+    assert ci1.low <= ci1.estimate <= ci1.high
+
+
+def test_bootstrap_ci_seq_validation():
+    with pytest.raises(ValueError, match="at least 2"):
+        stats.bootstrap_ci_seq([1.0], lambda s: s[0])
+    with pytest.raises(ValueError, match="level"):
+        stats.bootstrap_ci_seq([1.0, 2.0], lambda s: s[0], level=0.0)
+
+
+def test_bootstrap_dict_seq_shares_resamples_across_metrics():
+    # One statistic call yields several metrics; all bootstrapped over the SAME resamples.
+    items = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+
+    def stat(s):
+        m = sum(s) / len(s)
+        return {"mean": m, "double": 2.0 * m}
+
+    cis = stats.bootstrap_dict_seq(items, stat, n_resamples=499, seed=3)
+    assert set(cis) == {"mean", "double"}
+    assert cis["mean"].estimate == pytest.approx(5.5)
+    assert cis["double"].estimate == pytest.approx(11.0)
+    assert cis["mean"].low <= cis["mean"].estimate <= cis["mean"].high
+    # same resamples → 'double' is exactly twice 'mean' at every quantile
+    assert cis["double"].low == pytest.approx(2.0 * cis["mean"].low)
+    assert cis["double"].high == pytest.approx(2.0 * cis["mean"].high)
+
+
+def test_bootstrap_dict_seq_validation():
+    with pytest.raises(ValueError, match="at least 2"):
+        stats.bootstrap_dict_seq([1.0], lambda s: {"m": s[0]})
+
+
 # ── coercion + CLI ─────────────────────────────────────────────────────────
 
 

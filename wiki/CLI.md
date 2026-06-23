@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.8.6
+aegean --version          # pyaegean 0.8.7
 ```
 
 | Group | What's in it |

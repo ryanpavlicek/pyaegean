@@ -71,7 +71,7 @@ from .joint import (
     use_neural_pipeline,
 )
 from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
-from .ud import agdt_ud_overlap, evaluate_on_ud
+from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_on_ud
 from .normalize import (
     NormalizationWarning,
     betacode_to_unicode,
@@ -180,6 +180,7 @@ __all__ = [
     "evaluate_lemmatizer",
     "use_neural_lemmatizer",
     "disable_neural_lemmatizer",
+    "bootstrap_ud",
     "evaluate_on_proiel",
     "evaluate_on_ud",
     "use_neural_pipeline",

@@ -40,6 +40,42 @@ def test_pipeline_conllu_gold_tokenization() -> None:
     assert all(r[2] for r in rows)  # a lemma is always emitted
 
 
+def test_split_conllu_sentences_counts_and_terminates_blocks() -> None:
+    from aegean.greek.ud import _split_conllu_sentences
+
+    text = (
+        "# sent_id = 1\n1\tα\tα\tX\t_\t_\t0\troot\t_\t_\n\n"
+        "# sent_id = 2\n1\tβ\tβ\tX\t_\t_\t0\troot\t_\t_\n"
+    )
+    blocks = _split_conllu_sentences(text)
+    assert len(blocks) == 2
+    assert blocks[0].startswith("# sent_id = 1") and blocks[0].endswith("\n\n")
+
+
+def test_bootstrap_conllu_resamples_sentences_offline() -> None:
+    # Inject a fake scorer so the resampling logic is verified without the real evaluator.
+    from aegean.greek.ud import _bootstrap_conllu
+
+    gold = "".join(f"{v}\n\n" for v in (0, 5, 10, 15, 20))  # each block carries a number
+    system = gold  # alignment only needs equal block counts
+
+    def score(g: str, s: str) -> dict[str, float]:
+        nums = [float(x) for x in g.split()]
+        return {"mean": sum(nums) / len(nums)}
+
+    ci = _bootstrap_conllu(gold, system, score, n_resamples=400, seed=2)["mean"]
+    assert ci.estimate == pytest.approx(10.0)  # mean of 0..20
+    assert ci.low < ci.estimate < ci.high  # genuine resample spread
+    assert ci.n_resamples == 400
+
+
+def test_bootstrap_conllu_rejects_misaligned() -> None:
+    from aegean.greek.ud import _bootstrap_conllu
+
+    with pytest.raises(ValueError, match="mismatch"):
+        _bootstrap_conllu("a\n\nb\n\n", "a\n\n", lambda g, s: {"m": 1.0})
+
+
 def test_agdt_ud_overlap_builds_verified_manifest(tmp_path: Path) -> None:
     manifest = agdt_ud_overlap(
         splits=("test",), source=CONLLU, agdt_source=FIXTURE, write=False

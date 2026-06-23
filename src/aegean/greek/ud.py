@@ -18,14 +18,15 @@ Protocol (spelled out in ``docs/benchmarks.md``):
   measure tagging/lemma/parsing quality, not tokenizer agreement.
 - **No tagset collapsing.** UPOS and lemmas are scored exactly as emitted (unlike
   `evaluate_on_proiel`, which reconciles tagsets) — convention gaps count against us.
-- **DEPREL.** pyaegean's parser emits AGDT/Prague labels, not UD relations, so LAS against
-  UD gold is not meaningful for the current stack; **UAS** (unlabeled) is comparable.
-- **Leakage caveat.** UD Perseus is converted *from* the AGDT: its sentence ids point
-  straight at AGDT files (``tlg0008….tb.xml@197``). Models trained on the full AGDT — the
-  current production models — have therefore *seen* the UD-Perseus test sentences, and
-  their Perseus-fold scores are an in-training upper bound. `agdt_ud_overlap` builds
-  the exclusion manifest that training splits use to remove exactly this overlap. The
-  PROIEL fold is clean for pyaegean (no pyaegean model trains on PROIEL).
+- **DEPREL.** The shipped neural pipeline emits UD relations, so **LAS** is scored directly
+  against UD gold. (The legacy pure-Python parser emits AGDT/Prague labels, for which only
+  **UAS** is comparable; it is reported as a baseline, not as the accuracy claim.)
+- **Leakage.** UD Perseus is converted *from* the AGDT, so its sentence ids point straight at
+  AGDT files (``tlg0008….tb.xml@197``). The shipped neural model's training split removes every
+  UD-Perseus dev+test sentence via the `agdt_ud_overlap` exclusion manifest, so its Perseus
+  scores are leakage-clean. The legacy full-AGDT backends have *seen* those sentences, so their
+  Perseus-fold scores are an in-training upper bound. The PROIEL fold is clean for every
+  pyaegean model (none trains on PROIEL).
 """
 
 from __future__ import annotations
@@ -37,11 +38,24 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..data import cache_dir, download_file
 
-__all__ = ["UDSentence", "UDToken", "agdt_ud_overlap", "evaluate_on_ud", "load_conllu", "ud_path"]
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
+
+    from ..analysis.stats import BootstrapCI
+
+__all__ = [
+    "UDSentence",
+    "UDToken",
+    "agdt_ud_overlap",
+    "bootstrap_ud",
+    "evaluate_on_ud",
+    "load_conllu",
+    "ud_path",
+]
 
 _CACHE_SUBDIR = "ud-grc"
 
@@ -291,6 +305,117 @@ def evaluate_on_ud(
         "n_words": len([t for s in sentences for t in s.tokens]),
         "n_sentences": len(sentences),
     }
+
+
+# --- bootstrap confidence intervals over the fold's sentences --------------------
+
+_METRIC_KEY = {
+    "upos": "UPOS",
+    "xpos": "XPOS",
+    "ufeats": "UFeats",
+    "lemma": "Lemmas",
+    "uas": "UAS",
+    "las": "LAS",
+    "clas": "CLAS",
+}
+
+
+def _split_conllu_sentences(text: str) -> list[str]:
+    """Split a CoNLL-U string into sentence blocks, each terminated by a blank line."""
+    blocks: list[str] = []
+    cur: list[str] = []
+    for line in text.splitlines():
+        if line.strip():
+            cur.append(line)
+        elif cur:
+            blocks.append("\n".join(cur) + "\n\n")
+            cur = []
+    if cur:
+        blocks.append("\n".join(cur) + "\n\n")
+    return blocks
+
+
+def _score_conllu_text(
+    ev: Any, gold_text: str, system_text: str, metrics: Sequence[str]
+) -> dict[str, float]:
+    """Score one aligned (gold, system) CoNLL-U pair with the official evaluator."""
+    import io
+
+    gold_ud = ev.load_conllu(io.StringIO(gold_text))
+    system_ud = ev.load_conllu(io.StringIO(system_text))
+    scores = ev.evaluate(gold_ud, system_ud)
+    return {m: float(scores[_METRIC_KEY[m]].f1) for m in metrics}
+
+
+def _bootstrap_conllu(
+    gold_text: str,
+    system_text: str,
+    score: Callable[[str, str], dict[str, float]],
+    *,
+    n_resamples: int = 999,
+    level: float = 0.95,
+    seed: int = 0,
+) -> dict[str, BootstrapCI]:
+    """Bootstrap CIs over the sentences of an aligned gold/system CoNLL-U pair.
+
+    ``score(gold, system)`` scores one CoNLL-U pair to ``{metric: value}``. The two texts must
+    be sentence-aligned (guaranteed by the gold-tokenization protocol). The resampling unit is
+    the **sentence**; ``score`` is injected so the resampling is testable without the evaluator.
+    """
+    from ..analysis.stats import bootstrap_dict_seq
+
+    gold_blocks = _split_conllu_sentences(gold_text)
+    sys_blocks = _split_conllu_sentences(system_text)
+    if len(gold_blocks) != len(sys_blocks):
+        raise ValueError(
+            f"gold/system sentence-count mismatch: {len(gold_blocks)} vs {len(sys_blocks)}"
+        )
+    pairs = list(zip(gold_blocks, sys_blocks, strict=True))
+
+    def stat(sample: Sequence[tuple[str, str]]) -> dict[str, float]:
+        return score("".join(g for g, _ in sample), "".join(s for _, s in sample))
+
+    return bootstrap_dict_seq(pairs, stat, n_resamples=n_resamples, level=level, seed=seed)
+
+
+def bootstrap_ud(
+    treebank: str = "perseus",
+    split: str = "test",
+    *,
+    metrics: Sequence[str] = ("upos", "xpos", "ufeats", "lemma", "uas", "las"),
+    n_resamples: int = 999,
+    level: float = 0.95,
+    seed: int = 0,
+    source: Path | str | None = None,
+    parse: bool | None = None,
+) -> dict[str, BootstrapCI]:
+    """Percentile bootstrap CIs for :func:`evaluate_on_ud`'s metrics, over the fold's sentences.
+
+    The active pipeline runs **once** over the fold; each of ``n_resamples`` draws re-scores a
+    sentence resample (with replacement) with the official evaluator. Sentences are the
+    resampling unit — tokens within a sentence are not independent. Activate the same backends
+    you would for :func:`evaluate_on_ud`; with no parser active, ``uas``/``las`` are dropped.
+    The band is sampling variability *given this fold* — read the module docstring's leakage
+    caveat before quoting the Perseus fold for an AGDT-trained model.
+    """
+    gold_path = Path(source) if source is not None else ud_path(treebank, split)
+    sentences = load_conllu(gold_path)
+    if parse is None:
+        from . import joint, syntax
+
+        parse = joint.active() is not None or syntax.active() is not None
+    system_text = pipeline_conllu(sentences, parse=parse)
+    gold_text = gold_path.read_text(encoding="utf-8")
+    wanted = [m for m in metrics if parse or m not in ("uas", "las")]
+    ev = _eval_module()
+    return _bootstrap_conllu(
+        gold_text,
+        system_text,
+        lambda g, s: _score_conllu_text(ev, g, s, wanted),
+        n_resamples=n_resamples,
+        level=level,
+        seed=seed,
+    )
 
 
 # --- the leakage-exclusion manifest ----------------------------------------------

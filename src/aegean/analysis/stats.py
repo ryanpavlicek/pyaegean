@@ -33,7 +33,7 @@ import random as _random
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, TypeVar
 
 from ..cache import memoize as _memoize
 from ..core.model import Document, TokenKind
@@ -47,6 +47,8 @@ __all__ = [
     "dispersions",
     "keyness",
     "bootstrap_ci",
+    "bootstrap_ci_seq",
+    "bootstrap_dict_seq",
     # vocabulary richness & information (count-vector estimators)
     "mulberry32",
     "shannon_entropy",
@@ -275,6 +277,88 @@ class BootstrapCI:
     n_resamples: int
 
 
+_T = TypeVar("_T")
+
+
+def _percentile_ci(
+    values: list[float], estimate: float, level: float, n_resamples: int
+) -> BootstrapCI:
+    """A percentile CI from bootstrap replicate ``values`` (linear-interpolated quantiles)."""
+    vs = sorted(values)
+
+    def quantile(q: float) -> float:
+        pos = q * (len(vs) - 1)
+        lo = math.floor(pos)
+        hi = math.ceil(pos)
+        return vs[lo] + (vs[hi] - vs[lo]) * (pos - lo)
+
+    alpha = (1.0 - level) / 2.0
+    return BootstrapCI(
+        estimate=estimate,
+        low=quantile(alpha),
+        high=quantile(1.0 - alpha),
+        level=level,
+        n_resamples=n_resamples,
+    )
+
+
+def bootstrap_ci_seq(
+    items: Sequence[_T],
+    statistic: Callable[[Sequence[_T]], float],
+    *,
+    n_resamples: int = 999,
+    level: float = 0.95,
+    seed: int = 0,
+) -> BootstrapCI:
+    """Percentile bootstrap CI for ``statistic(items)``, resampling items with replacement.
+
+    The unit-agnostic core behind :func:`bootstrap_ci` (which resamples documents). Reach
+    for it directly when the resampling unit is something else — e.g. the sentences of a
+    held-out evaluation fold, where a per-fold metric is bootstrapped over its sentences.
+    ``seed`` makes the interval **reproducible by default** — vary it to see Monte-Carlo
+    wobble. The band quantifies sampling variability *given these items* only.
+    """
+    n = len(items)
+    if n < 2:
+        raise ValueError("bootstrap needs at least 2 items")
+    if not 0 < level < 1:
+        raise ValueError("level must be in (0, 1)")
+    rng = _random.Random(seed)
+    values = [float(statistic(rng.choices(items, k=n))) for _ in range(n_resamples)]
+    return _percentile_ci(values, float(statistic(items)), level, n_resamples)
+
+
+def bootstrap_dict_seq(
+    items: Sequence[_T],
+    statistic: Callable[[Sequence[_T]], dict[str, float]],
+    *,
+    n_resamples: int = 999,
+    level: float = 0.95,
+    seed: int = 0,
+) -> dict[str, BootstrapCI]:
+    """Bootstrap several metrics that share one computation, over resampled ``items``.
+
+    ``statistic(items)`` returns a ``{name: value}`` mapping; every name is bootstrapped
+    over the **same** resamples, with one ``statistic`` call per resample. Use it when a
+    single expensive call yields all the metrics at once — e.g. scoring an evaluation fold,
+    where re-running the scorer once per metric would be wasteful. The intervals are jointly
+    consistent (drawn from the same resamples) and reproducible by ``seed``.
+    """
+    n = len(items)
+    if n < 2:
+        raise ValueError("bootstrap needs at least 2 items")
+    if not 0 < level < 1:
+        raise ValueError("level must be in (0, 1)")
+    point = statistic(items)
+    acc: dict[str, list[float]] = {k: [] for k in point}
+    rng = _random.Random(seed)
+    for _ in range(n_resamples):
+        sample = statistic(rng.choices(items, k=n))
+        for k in acc:
+            acc[k].append(float(sample[k]))
+    return {k: _percentile_ci(acc[k], float(point[k]), level, n_resamples) for k in point}
+
+
 def bootstrap_ci(
     corpus: Any,
     statistic: Callable[[Sequence[Document]], float],
@@ -298,30 +382,8 @@ def bootstrap_ci(
     >>> bootstrap_ci(corpus, mean_doc_words)   # doctest: +SKIP
     BootstrapCI(estimate=7.1, low=6.4, high=7.9, level=0.95, n_resamples=999)
     """
-    docs = _documents(corpus)
-    if len(docs) < 2:
-        raise ValueError("bootstrap needs at least 2 documents")
-    if not 0 < level < 1:
-        raise ValueError("level must be in (0, 1)")
-    rng = _random.Random(seed)
-    values = sorted(
-        float(statistic(rng.choices(docs, k=len(docs)))) for _ in range(n_resamples)
-    )
-
-    def quantile(q: float) -> float:
-        # linear interpolation between order statistics
-        pos = q * (len(values) - 1)
-        lo = math.floor(pos)
-        hi = math.ceil(pos)
-        return values[lo] + (values[hi] - values[lo]) * (pos - lo)
-
-    alpha = (1.0 - level) / 2.0
-    return BootstrapCI(
-        estimate=float(statistic(docs)),
-        low=quantile(alpha),
-        high=quantile(1.0 - alpha),
-        level=level,
-        n_resamples=n_resamples,
+    return bootstrap_ci_seq(
+        _documents(corpus), statistic, n_resamples=n_resamples, level=level, seed=seed
     )
 
 
