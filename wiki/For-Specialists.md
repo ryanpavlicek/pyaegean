@@ -2,8 +2,8 @@
 
 This page is for the people pyaegean most wants to hear from: Aegean
 epigraphers, Mycenologists, classical philologists, historical linguists. It
-explains the one thing that matters most for trusting a result — **the line
-between settled scholarship and machine-generated hypothesis** — and then gives
+explains the one thing that matters most for trusting a result: **the line
+between settled scholarship and machine-generated hypothesis**, and then gives
 you the concrete tools to *audit* a result, *cite* it correctly, and *correct or
 extend* the toolkit where your judgement says it's wrong. Your corrections are
 part of how it stays honest.
@@ -18,19 +18,19 @@ example is copy-pasteable.
 
 pyaegean draws a hard line between settled scholarship and machine-generated
 hypotheses, and labels every result accordingly. The toolkit will *never* hand
-you a Linear A "translation" dressed up as fact — and where it does generate a
+you a Linear A "translation" dressed up as fact, and where it does generate a
 reading, the exploratory tag travels with the text.
 
 There are three registers:
 
 | Register | What it covers | How it's marked | If it's wrong, it's a… |
 |---|---|---|---|
-| **Established** | Facts carried from editions, lexica, and the Unicode standard: Linear B / Cypriot sign values, the Greek lexicon & morphology (Perseus AGDT, LSJ), bundled transliterations, the find-site gazetteer. | Each cites its source — see `info`/`cite`, [Data & Provenance](Data-and-Provenance), and `NOTICE`. | **correction** |
+| **Established** | Facts carried from editions, lexica, and the Unicode standard: Linear B / Cypriot sign values, the Greek lexicon & morphology (Perseus AGDT, LSJ), bundled transliterations, the find-site gazetteer. | Each cites its source: see `info`/`cite`, [Data & Provenance](Data-and-Provenance), and `NOTICE`. | **correction** |
 | **Measured** | Model accuracies reported leakage-free on held-out data (the Greek lemmatizer/tagger/parser and the neural pipeline). | Numbers with a reproducible protocol in [Greek NLP](Greek-NLP) / `docs/benchmarks.md`. | **reproduce or challenge** the number |
 | **Exploratory** | Anything decipherment-adjacent over the **undeciphered** Linear A material (cross-linguistic distances, morphological clusters, structure heuristics, metrological guesses) and **all** AI-layer output. | An explicit `[EXPLORATORY …]` tag, an `exploratory=True` flag, a red badge in Jupyter, and an auditable `trace()`. | **validation** (confirm or refute) |
 
-The full, candid register of what the toolkit can and cannot claim — by
-evidence, licensing, engineering, and design — is the [Limitations](Limitations)
+The full, candid register of what the toolkit can and cannot claim: by
+evidence, licensing, engineering, and design: is the [Limitations](Limitations)
 page, kept current as a living document.
 
 ### Seeing the boundary in the data model
@@ -41,7 +41,7 @@ states are exhaustive:
 
 | `ReadingStatus` | Meaning | EpiDoc / Leiden |
 |---|---|---|
-| `certain` | securely read (the default) | — |
+| `certain` | securely read (the default) |— |
 | `unclear` | damaged but read | `<unclear>` / underdot |
 | `restored` | editorially supplied | `<supplied>` / `[ ]` |
 | `lost` | not preserved / lacuna | `<gap>` / `[---]` |
@@ -49,7 +49,7 @@ states are exhaustive:
 The bundled corpora are normalized transcriptions (mostly `certain`, with a
 real fraction `lost`/`unclear` where the originals are damaged).
 If you bring your own EpiDoc, these are populated from the markup and round-trip
-back out — see [Linear A](Linear-A) and the I/O notes on [Data & Provenance](Data-and-Provenance).
+back out: see [Linear A](Linear-A) and the I/O notes on [Data & Provenance](Data-and-Provenance).
 
 ```python
 import aegean
@@ -101,7 +101,7 @@ print(p.cite())    # one-line citation, edition + URL
 ```
 
 A crucial honesty note that `info` makes explicit: the **Linear B** sample is
-*not a corpus* — it's an illustrative excerpt of canonical tablets, with sign
+*not a corpus*: it's an illustrative excerpt of canonical tablets, with sign
 data from the Unicode Character Database. Treat it accordingly:
 
 ```bash
@@ -111,7 +111,7 @@ aegean info linearb
 #            excerpts — not a corpus.
 ```
 
-For full-corpus Mycenaean work, bring your own (DAMOS, LiBER) — see
+For full-corpus Mycenaean work, bring your own (DAMOS, LiBER): see
 [Data & Provenance](Data-and-Provenance) and [Limitations](Limitations).
 
 ---
@@ -122,7 +122,7 @@ For full-corpus Mycenaean work, bring your own (DAMOS, LiBER) — see
 
 Every syllabic sign resolves to its glyph, codepoint, sound value, and
 script-specific attributes. This is **established** data with a Unicode/edition
-source — so a wrong value here is a *correction*, with a path in §6.
+source, so a wrong value here is a *correction*, with a path in §6.
 
 **CLI**
 
@@ -184,7 +184,7 @@ Inventory sizes (signs reported by `info`):
 ### Reading a *deciphered* syllabic word as Greek
 
 For the deciphered scripts (Linear B, Cypriot) there's a **Greek-reading
-bridge** — established because Linear B *is* Greek. This is one of the few places
+bridge**: established because Linear B *is* Greek. This is one of the few places
 a syllabic word maps to a real Greek lemma:
 
 ```bash
@@ -193,7 +193,7 @@ aegean bridge linearb ko-no-so
 ```
 
 The bridge only accepts `linearb` or `cypriot`. There is deliberately **no
-bridge for Linear A** — it is undeciphered, and anything in that direction lives
+bridge for Linear A**: it is undeciphered, and anything in that direction lives
 in the exploratory AI layer (§5), never here. See [Linear A](Linear-A) and
 [Cypriot](Cypriot) for the script-by-script story.
 
@@ -228,11 +228,11 @@ record the *exact subset* you used.
 | What you used | Call | Styles |
 |---|---|---|
 | A whole corpus | `Corpus.cite(style=…)` / `aegean cite <id>` | `plain`, `bibtex`, `apa` |
-| A filtered subset | `corpus.filter(...).cite()` / `aegean cite <id> --site …` | same — note records the filter |
-| A query result set | `QueryResults.cite(style=…)` | same — note records the query |
-| The raw provenance | `corpus.provenance.cite()` / `.bibtex()` / `.apa()` | — |
+| A filtered subset | `corpus.filter(...).cite()` / `aegean cite <id> --site …` | same: note records the filter |
+| A query result set | `QueryResults.cite(style=…)` | same: note records the query |
+| The raw provenance | `corpus.provenance.cite()` / `.bibtex()` / `.apa()` |— |
 
-**CLI — plain, BibTeX, and a subset**
+**CLI: plain, BibTeX, and a subset**
 
 ```bash
 aegean cite lineara
@@ -255,7 +255,7 @@ The subset note is the point: a reviewer can see you cited *1110 Haghia Triada
 documents*, not "the corpus." The `aegean cite` filter flags are `--site`,
 `--period`, `--scribe`, `--support`.
 
-**Python — a query result set cites itself**
+**Python: a query result set cites itself**
 
 ```python
 import aegean
@@ -277,7 +277,7 @@ the full per-source rights table.
 
 ## 5. Validating an exploratory result
 
-Exploratory output is only as good as the evidence under it — so the toolkit
+Exploratory output is only as good as the evidence under it, so the toolkit
 makes that evidence *visible*. Every AI capability returns an `ExploratoryResult`
 you can audit three ways.
 
@@ -288,9 +288,9 @@ you can audit three ways.
 | Translate | `ai.translate(text, …)` | `aegean ai translate` | hybrid local-grounding → LLM translation |
 | Gloss | `ai.gloss(text, …)` | `aegean ai gloss` | interlinear word-by-word gloss |
 | Decipher | `ai.decipher_hypotheses(seq, …)` | `aegean ai hypotheses` | cautious Linear A hypotheses, each tied to evidence |
-| NLP assist | `ai.nlp_assist(text, …)` | — | disambiguate lemma/POS where the rules are unsure |
+| NLP assist | `ai.nlp_assist(text, …)` |— | disambiguate lemma/POS where the rules are unsure |
 | Ask | `ai.ask(q, grounding=…)` | `aegean ai ask` | answer **only** from supplied grounding |
-| Summarize | `ai.summarize(text, …)` | — | faithful summary of an excerpt |
+| Summarize | `ai.summarize(text, …)` |— | faithful summary of an excerpt |
 | Extract | `ai.extract(text, schema=…)` | `aegean ai extract` | structured JSON into `result.data` |
 
 Providers are optional extras, key-gated; the registered set is fixed:
@@ -326,7 +326,7 @@ and its grounding listed beneath.
 
 This is the heart of validation: a refutation is only fair if you can see what
 the model was *given*. `trace()` groups the grounding by source and ref. (Shown
-here driven by a deterministic stub so the output is reproducible — a real
+here driven by a deterministic stub so the output is reproducible: a real
 provider produces the same trace structure.)
 
 ```python
@@ -359,7 +359,7 @@ aegean ai hypotheses "KU-RO" --corpus lineara --trace
 ```
 
 If a trace says **`grounding: none (ungrounded generation — weigh accordingly)`**,
-the answer rested on the model's parametric knowledge alone — discount it
+the answer rested on the model's parametric knowledge alone: discount it
 heavily. The grounding helpers that *fill* a trace, all local and
 non-generative:
 
@@ -377,7 +377,7 @@ hidden inside an inscription you're analysing can't steer the model
 
 The generative layer's value rests on **grounding fidelity**, not authority, so
 it's measured the way the lemmatizer is: fixed cases, known evidence, scored for
-two things — **groundedness** (did the answer use the evidence it should?) and
+two things: **groundedness** (did the answer use the evidence it should?) and
 **fabrication** (did it assert anything the evidence doesn't support?).
 
 ```bash
@@ -398,7 +398,7 @@ for c in report.cases:
     print(c.name, c.groundedness, c.clean, c.missing, c.fabricated)
 ```
 
-The three built-in cases are themselves instructive — they encode what *faithful*
+The three built-in cases are themselves instructive: they encode what *faithful*
 looks like:
 
 | Case | What it checks |
@@ -410,7 +410,7 @@ looks like:
 Write your own `GroundingCase` objects (with `must_use` / `must_avoid` strings)
 and pass them to `run_eval` to hold a provider to *your* standard before you
 trust its output. Scoring is deliberately transparent (case-insensitive
-substring containment) — a screen for gross failure, not a semantic judge. More
+substring containment): a screen for gross failure, not a semantic judge. More
 on [AI Layer](AI-Layer).
 
 ---
@@ -426,7 +426,7 @@ Attribution is **first-class**: contributed facts keep their source.
 | **Validation** | confirm or refute an exploratory result | the result and (ideally) its `trace()` | the limitations register or a benchmark item |
 | **Data contribution** | a single sourced fact | the fact + its citation | a bundled lexicon/JSON with the citation and an automatic test |
 
-A pull request is welcome too — the [contribution menu](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#good-first-contributions-a-menu)
+A pull request is welcome too: the [contribution menu](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#good-first-contributions-a-menu)
 gives each kind of fact an obvious home and an automatic test.
 
 ### 6.1 File a correction
@@ -444,7 +444,7 @@ test. The relevant homes:
 ### 6.2 File a validation
 
 Pick an exploratory result and try to break it. A **refutation is as valuable as
-a confirmation** — pasting the `trace()` lets others see the same evidence and
+a confirmation**: pasting the `trace()` lets others see the same evidence and
 agree or disagree. Confirmed/refuted results are triaged into the
 [Limitations](Limitations) register or, where they become reusable, into a
 benchmark item.
@@ -452,7 +452,7 @@ benchmark item.
 ### 6.3 Contribute a sourced fact
 
 A single, well-scoped fact that improves coverage without touching the
-architecture. Each has an obvious home **and an automatic test** — for example,
+architecture. Each has an obvious home **and an automatic test**: for example,
 the syllabification exception lexicon rejects any entry the rules already get
 right (so you can only add real exceptions):
 
@@ -482,7 +482,7 @@ agreed before code is written.
 You don't have to wait for a contribution to land to use your own material with
 the full API. `Corpus.from_records(...)` turns plain dict records (with `id`,
 text as `lines`/`words`/`text`, optional per-token `status`/`alt`, and `meta`)
-into a `Corpus` that filters, queries, exports, and cites like the bundled ones —
+into a `Corpus` that filters, queries, exports, and cites like the bundled ones:
 and you can attach your own `Provenance` so citations stay honest. If your
 material is already plain text or a CSV, the `aegean.io.from_text*` / `from_csv`
 importers (and the `aegean import` CLI) build the same `Corpus` for you in one
@@ -499,7 +499,7 @@ step, without the `from_records` boilerplate. See [Tutorial](Tutorial) and
 - **The bundled Linear B is a sample, not a corpus** (see §2). Full Mycenaean
   work is bring-your-own (DAMOS, LiBER), which carry their own licences.
 - **Measured ≠ established.** The neural Greek pipeline's accuracy is a number on
-  held-out data, reproducible but not a guarantee on your text — check
+  held-out data, reproducible but not a guarantee on your text: check
   [Greek NLP](Greek-NLP).
 - **AI output is exploratory by construction** and depends on a third-party
   provider and your key; the eval harness measures fidelity, not correctness.

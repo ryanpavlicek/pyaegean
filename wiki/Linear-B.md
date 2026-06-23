@@ -1,11 +1,11 @@
 # Linear B
 
-Linear B is the **deciphered** Aegean syllabary — it writes Mycenaean Greek, the earliest
+Linear B is the **deciphered** Aegean syllabary: it writes Mycenaean Greek, the earliest
 attested form of the language (roughly 1400–1200 BC, on clay tablets from Knossos, Pylos, Thebes
 and elsewhere). pyaegean reads it through the same `Script` plugin model as
 [Linear A](Linear-A): a sign inventory, transliteration to phonetics, a bridge straight into the
 [Greek track](Greek-NLP), and the script-agnostic accounting check. Because Linear B is *read*,
-the work here is verifiable rather than exploratory — when you ask for the Greek behind a
+the work here is verifiable rather than exploratory; when you ask for the Greek behind a
 Mycenaean word, you get a real, source-attested equation, not a guess.
 
 Use this page if you want to: turn a transliterated word like `PO-ME` into `ποιμήν` ("shepherd")
@@ -27,19 +27,19 @@ greek_reading("PO-ME")                   # ('ποιμήν', 'shepherd')
 | Task | Python | CLI |
 | --- | --- | --- |
 | Look up a sign | `get_script("linearb").sign_inventory` | `aegean sign linearb KA` |
-| Transliteration → sound | `word_to_phonetic("WA-NA-KA")` | — (via `bridge`) |
+| Transliteration → sound | `word_to_phonetic("WA-NA-KA")` |: (via `bridge`) |
 | Read a word as Greek | `greek_reading("PO-ME")` | `aegean bridge linearb po-me` |
 | Full dictionary entry | `greek_reading` → `aegean.greek.gloss(lemma)` | see [Greek NLP](Greek-NLP) |
 | Load the full corpus | `aegean.load("damos")` | `aegean info damos`, `aegean stats damos` |
 | Slice by scribal hand | `corpus.filter(scribe="117")` | `aegean load damos --scribe 117` |
-| Profile every hand | `scribal_hands(corpus)` | — |
+| Profile every hand | `scribal_hands(corpus)` |— |
 | Check a tablet's total | `balance_check(doc)` | `aegean balance linearb` |
 | Bring your own corpus | `load_epidoc_corpus(path)` | `PYAEGEAN_LINEARB_CORPUS=…` |
 
 ## Sign inventory
 
-The inventory is built from the Unicode Character Database — the Linear B Syllabary and Ideograms
-blocks — so it is authoritative and freely licensed (see [Data & Provenance](Data-and-Provenance)).
+The inventory is built from the Unicode Character Database (the Linear B Syllabary and Ideograms
+blocks), so it is authoritative and freely licensed (see [Data & Provenance](Data-and-Provenance)).
 It holds **211 signs**:
 
 | Class (`attrs.signClass`) | Count | What it is |
@@ -51,7 +51,7 @@ It holds **211 signs**:
 | **total** | **211** | 123 of these are ideograms + monograms |
 
 Every sign keeps its **Bennett number** (`B077`, `B131`) and its Unicode name; ideograms (and a
-few monograms) also carry a `commodity` tag where one applies — 76 signs in all (70 ideograms +
+few monograms) also carry a `commodity` tag where one applies: 76 signs in all (70 ideograms +
 6 monograms).
 
 ```python
@@ -93,7 +93,7 @@ aegean sign linearb QA --json
 # }
 ```
 
-You can also pass a single glyph instead of a label — `aegean sign linearb 𐀏` finds `KA`.
+You can also pass a single glyph instead of a label: `aegean sign linearb 𐀏` finds `KA`.
 
 ### The full syllabary (sound values)
 
@@ -187,11 +187,11 @@ aegean bridge linearb po-me --json
 # }
 ```
 
-The lexicon holds a **150-entry** core of well-established equations — a hand-curated set layered
-with entries extracted from Wiktionary's Mycenaean Greek pages (via the kaikki.org dump, CC BY-SA):
+The lexicon holds a **150-entry** core of well-established equations: a hand-curated set layered
+with entries extracted from Wiktionary's Mycenaean Greek pages (via the kaikki.org dump, CC BY-SA);
 only entries whose etymology *states* the Ancient Greek equation are taken, so every bridge is
 source-attested rather than reconstructed. A few words resolve to a compound where the Greek is
-itself two roots — e.g. `RA-WA-KE-TA` → `λαὸς + ἡγέομαι`.
+itself two roots: e.g. `RA-WA-KE-TA` → `λαὸς + ἡγέομαι`.
 
 ### From a reading to the full dictionary entry
 
@@ -212,7 +212,7 @@ aegean.greek.gloss(lemma2)
 # 'ἄναξ: …—lord, master, …'
 ```
 
-The LSJ source carries some untransliterated beta-code, so a glyph occasionally surfaces raw — here
+The LSJ source carries some untransliterated beta-code, so a glyph occasionally surfaces raw: here
 `(a)/nac)` is the beta-code for `(ἄναξ)`.
 
 ## The full DAMOS corpus — `aegean.load("damos")`
@@ -265,7 +265,7 @@ The sites, busiest first (real counts):
 | Tiryns | 27 |
 | (plus inscribed vases: Thebes, Khania, Tiryns, Mycenae…) | |
 
-The whole thing is browsable from the shell too — `aegean` treats `damos` like any fetched corpus:
+The whole thing is browsable from the shell too: `aegean` treats `damos` like any fetched corpus:
 
 ```bash
 aegean info damos              # size, provenance, license, citation
@@ -287,7 +287,7 @@ aegean dispersion damos ku-ta-to   # how concentrated a place-name is (Gries' DP
 
 ### Slicing the corpus
 
-`corpus.filter(...)` returns a new `Corpus` of the matching documents — chainable with every
+`corpus.filter(...)` returns a new `Corpus` of the matching documents: chainable with every
 analysis function:
 
 ```python
@@ -324,16 +324,16 @@ rows = hand_keyness(corpus, "117")           # what does Hand 117 write more tha
 `HandProfile` carries: `hand`, `doc_count`, `token_count`, `word_count`, `sites` (a `{site: tablets}`
 map), `periods`, and `top_words`. `scribal_hands` takes `top_n=` (how many top words) and
 `min_docs=` (drop hands below a threshold). Per-hand **dispersion** is just the standard helper over
-the hand's slice — `dispersion(corpus.filter(scribe="117"), "ku-ta-to")`.
+the hand's slice: `dispersion(corpus.filter(scribe="117"), "ku-ta-to")`.
 
 The hand layer is script-agnostic: any corpus whose documents set `meta.scribe` works. DAMOS is the
 one that ships with hands today.
 
 ### Licensing and citation (read this)
 
-The DAMOS data is **NonCommercial + ShareAlike** — those obligations pass through to you. The corpus
+The DAMOS data is **NonCommercial + ShareAlike**: those obligations pass through to you. The corpus
 is hosted as a clearly-labeled CC BY-NC-SA 4.0 release asset, fetched to your cache on demand, and
-**never bundled inside the Apache-2.0 wheel**. **Cite DAMOS** (Aurora 2015) in academic work — the
+**never bundled inside the Apache-2.0 wheel**. **Cite DAMOS** (Aurora 2015) in academic work: the
 `Provenance` on the loaded corpus carries the citation, and `aegean data versions` pins the exact
 asset sha256 for reproducible papers. `scripts/build_damos_corpus.py` documents exactly how the
 asset is built from the DAMOS public API (joins, museum location and inventory numbers are also in
@@ -341,13 +341,13 @@ the JSON for those who read it directly).
 
 ## Accounting
 
-Linear B tablets are administrative records — names, commodity ideograms, and numerals, often
+Linear B tablets are administrative records: names, commodity ideograms, and numerals, often
 with a `to-so`/`to-sa` (τόσος, "so much") total. The script-agnostic accounting engine reads them
 directly, using Linear B's own markers in place of Linear A's `KU-RO`:
 
 | Role | Linear B markers | Meaning |
 | --- | --- | --- |
-| total | `TO-SO`, `TO-SA` | "so much / so many" — the stated total |
+| total | `TO-SO`, `TO-SA` | "so much / so many": the stated total |
 | deficit | `O-PE-RO`, `O-PE-RO-SI` | what is owed / outstanding |
 
 `balance_check(doc)` sums the item lines above each total line and compares. Each result is a
@@ -384,20 +384,20 @@ aegean balance linearb --json --strict          # machine-readable; exit 1 if an
 ```
 
 `is_checkable_account(doc)` and `checkable_accounts(corpus)` pick out the *intact, balancing*
-accounts — every token securely read, at least one total within tolerance (10% by default, because
+accounts: every token securely read, at least one total within tolerance (10% by default, because
 Aegean metrology is imperfectly understood). They're a good "trust the arithmetic" filter for a
 drill set.
 
-The reconciliation is heuristic — section boundaries are inferred — so a balance is **evidence, not
+The reconciliation is heuristic (section boundaries are inferred), so a balance is **evidence, not
 proof**, exactly as for Linear A. See [Limitations](Limitations).
 
 ## The bundled sample — `aegean.load("linearb")`
 
-For a zero-network default, pyaegean also bundles an **18-tablet illustrative sample** — PY Ta 641
+For a zero-network default, pyaegean also bundles an **18-tablet illustrative sample**: PY Ta 641
 (the tablet that confirmed Ventris's decipherment) and PY Er 312 hand-curated, plus sixteen one-line
 excerpts from Pylos, Knossos and Mycenae tablets taken from *sourced quotations* in Wiktionary's
 Mycenaean entries (each cites its tablet and carries a translation; CC BY-SA). These are excerpts to
-exercise the tools, **not editions** — use `aegean.load("damos")` above for the full corpus, or
+exercise the tools, **not editions**: use `aegean.load("damos")` above for the full corpus, or
 bring your own below.
 
 ```python
@@ -428,8 +428,8 @@ aegean cite linearb
 ### From a CSV (e.g. a LiBER selection)
 
 LiBER's interface exports a selection by copy-to-clipboard ("e.g., to be pasted into an *Excel*
-spreadsheet"). Your own copied selection — your use, under LiBER's terms; pyaegean fetches and
-re-hosts nothing — saves as a CSV with columns like `id,site,text`. The one-step path is the
+spreadsheet"). Your own copied selection: your use, under LiBER's terms; pyaegean fetches and
+re-hosts nothing; saves as a CSV with columns like `id,site,text`. The one-step path is the
 `from_csv` importer (or `aegean import sel.csv -o liber.db --script linearb` with no Python):
 
 ```python
@@ -443,7 +443,7 @@ corpus = from_csv(
 ```
 
 `from_csv` stamps a generic *user-supplied* provenance. When you want the licensing recorded
-explicitly — the right move for LiBER material — build through `Corpus.from_records` instead, which
+explicitly (the right move for LiBER material) build through `Corpus.from_records` instead, which
 takes your own `provenance=`:
 
 ```python
@@ -513,12 +513,12 @@ Every command takes `--json` for machine-readable output. `corpus` accepts `line
 
 ## Limitations and honest notes
 
-- **The bridge is a curated lexicon, not a parser.** 150 well-attested equations — it will not read
+- **The bridge is a curated lexicon, not a parser.** 150 well-attested equations: it will not read
   an arbitrary unattested word. Words outside the lexicon return `None`. That's by design: every
   reading is source-attested.
 - **Accounting is heuristic.** Section boundaries are inferred and Aegean metrology is contested; a
   balance is evidence, not proof. And it expects uppercase markers, so it doesn't fire over the raw
-  (lowercase) DAMOS corpus — see the case note above.
+  (lowercase) DAMOS corpus: see the case note above.
 - **DAMOS is NonCommercial.** The CC BY-NC-SA 4.0 obligations pass through to you, and the asset is
   never bundled in the wheel. Cite Aurora 2015.
 - **Some tablets are fragmentary.** Many DAMOS transliterations carry brackets and damage markers
@@ -529,12 +529,12 @@ See the full [Limitations](Limitations) page for the project-wide caveats.
 
 ## Related pages
 
-- [Greek NLP](Greek-NLP) — what to do with the lemma once the bridge hands it to you (glossing,
+- [Greek NLP](Greek-NLP): what to do with the lemma once the bridge hands it to you (glossing,
   morphology, treebank lookup).
-- [Linear A](Linear-A) — the undeciphered sibling script, same plugin model.
-- [Cypriot](Cypriot) — the other deciphered syllabary with a Greek-reading `bridge`.
-- [Analysis](Analysis) — dispersion, keyness, collocation, structure, and the rest of the toolkit
+- [Linear A](Linear-A): the undeciphered sibling script, same plugin model.
+- [Cypriot](Cypriot): the other deciphered syllabary with a Greek-reading `bridge`.
+- [Analysis](Analysis): dispersion, keyness, collocation, structure, and the rest of the toolkit
   that works over the DAMOS corpus.
-- [Data & Provenance](Data-and-Provenance) — where every dataset comes from and how it is licensed.
-- [CLI](CLI) — the full command reference.
+- [Data & Provenance](Data-and-Provenance): where every dataset comes from and how it is licensed.
+- [CLI](CLI): the full command reference.
 - [Meters](Meters) and [Limitations](Limitations).

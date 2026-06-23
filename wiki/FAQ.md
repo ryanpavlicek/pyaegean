@@ -6,7 +6,7 @@ inscription, and it gives back syllables, accents, metre, morphology, statistics
 corpus queries, and more. Use it to explore a corpus, scan verse, tag and
 lemmatise Greek, or run honest, citeable analysis over undeciphered scripts.
 
-This is a big Q&A for the snags that come up — install, Greek text, finding works
+This is a big Q&A for the snags that come up: install, Greek text, finding works
 to load, the web demo, offline use, the AI layer, and citing your results. If your
 question isn't here, please
 [open an issue](https://github.com/ryanpavlicek/pyaegean/issues). New to all this?
@@ -21,8 +21,8 @@ Start with [Getting Started](Getting-Started).
 Python can't find the library. Almost always one of:
 
 1. **Your virtual environment isn't active.** Re-activate it (you do this every
-   new terminal session) — `.venv\Scripts\Activate.ps1` on Windows,
-   `source .venv/bin/activate` on macOS/Linux — then try again. See
+   new terminal session): `.venv\Scripts\Activate.ps1` on Windows,
+   `source .venv/bin/activate` on macOS/Linux, then try again. See
    [Getting Started, Step 3](Getting-Started#step-3--make-a-project-folder-with-its-own-environment).
 2. **It isn't installed in *this* environment.** Run `pip install pyaegean`.
 3. You installed with one Python and are running another. Check with
@@ -32,7 +32,7 @@ Python can't find the library. Almost always one of:
 
 Don't install system-wide or use `sudo`. Make a
 [virtual environment](Getting-Started#step-3--make-a-project-folder-with-its-own-environment)
-and install into it — no special permissions needed.
+and install into it: no special permissions needed.
 
 ### PowerShell won't run the activate script ("execution policy")
 
@@ -45,7 +45,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ### `ImportError` mentioning pandas
 
 The core library has no hard third-party dependencies. pandas is an optional extra
-for DataFrame output — install it with `pip install "pyaegean[data]"`. It's imported
+for DataFrame output: install it with `pip install "pyaegean[data]"`. It's imported
 only when you call a DataFrame feature, which is part of why `import aegean` stays
 fast.
 
@@ -58,7 +58,7 @@ pip install --upgrade pyaegean
 That fetches the latest release from PyPI and installs it over the old one (no need
 to uninstall first). A few tips:
 
-- **Update an extra the same way** — keep the bracket so the optional dependencies
+- **Update an extra the same way**: keep the bracket so the optional dependencies
   upgrade too: `pip install --upgrade "pyaegean[cli]"` (or `[neural]`, `[all]`, …).
 - **Check what you'll get / what you have:**
 
@@ -68,9 +68,9 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.8.5`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.8.6`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
-  corpora or models you've already fetched — they live in a separate cache (see
+  corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
   keyed by an immutable version, so they're reused as-is.
 
@@ -86,7 +86,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `parquet` | Parquet export (`pyarrow`) |
 | `epidoc` | EpiDoc TEI import/export |
 | `geo` | GeoJSON / geographic output |
-| `viz` | plotting (`matplotlib`) — figures and the scansion grid |
+| `viz` | plotting (`matplotlib`): figures and the scansion grid |
 | `neural` | the neural pipeline + neural lemmatizer (most accurate Greek NLP) |
 | `cli` | the `aegean` command-line interface |
 | `mcp` | the MCP server, to drive pyaegean from an MCP client (e.g. Claude Code) |
@@ -163,7 +163,7 @@ ws[0]
 
 That's a curated short list. For the **whole** reachable canon, `greek.catalog()` is an
 offline, instant index of every work with a Greek edition in the open Perseus +
-First1KGreek repos — ~1,800 of them — searchable by author, title (English or Greek), or
+First1KGreek repos: ~1,800 of them: searchable by author, title (English or Greek), or
 free text:
 
 ```python
@@ -175,7 +175,7 @@ hits[0]
 #  'greek_title': 'Εὐθύφρων', 'source': 'perseus'}
 ```
 
-Each entry's `id` goes straight to `load_work`. The catalogue is honest about coverage —
+Each entry's `id` goes straight to `load_work`. The catalogue is honest about coverage:
 it lists exactly what the open repos hold at the pinned commit, so some authors that
 aren't online upstream (Sappho, for instance) genuinely aren't in it; that's correct, not
 a gap in pyaegean.
@@ -207,7 +207,7 @@ aegean greek works
 ```
 
 A sample of the 25 curated works (the list is a starting point, **not** the whole
-canon — `load_work` takes *any* Perseus canonical-greekLit / First1KGreek CTS id;
+canon: `load_work` takes *any* Perseus canonical-greekLit / First1KGreek CTS id;
 browse them all at [scaife.perseus.org](https://scaife.perseus.org)):
 
 | id | author | title |
@@ -225,7 +225,7 @@ browse them all at [scaife.perseus.org](https://scaife.perseus.org)):
 | `tlg0086.tlg010` | Aristotle | Nicomachean Ethics |
 
 **Then load one** (network on first fetch only; pinned to a commit, so it's
-reproducible). `ref` selects a sub-section — a book number, a `book.chapter`, or a
+reproducible). `ref` selects a sub-section: a book number, a `book.chapter`, or a
 verse line-range:
 
 ```python
@@ -308,7 +308,7 @@ chapter range). All 27 books and their aliases:
 | Jude | jude, jud |
 | Rev | revelation, rev, rv, apocalypse |
 
-For a quick Koine gloss (no download — the bundled Dodson lexicon is CC0):
+For a quick Koine gloss (no download: the bundled Dodson lexicon is CC0):
 
 ```python
 greek.use_dodson()
@@ -323,7 +323,7 @@ aegean greek gloss-nt "λόγος"
 ### Can I load my own text file?
 
 Yes. `aegean.io` turns a string, a `.txt`, a folder of `.txt` files, or a `.csv` into a
-real `Corpus` — with the full filter / search / analyse / export API — so you don't have
+real `Corpus`: with the full filter / search / analyse / export API: so you don't have
 to write any `Corpus` boilerplate. It's all offline stdlib:
 
 ```python
@@ -336,7 +336,7 @@ io.from_csv("rows.csv", text_col="line", id_col="id") # one document per row
 ```
 
 Greek (and `nt`) text is run through the Greek word tokenizer (punctuation stripped);
-other scripts split on whitespace — pass `script_id="lineara"` etc. for those. `split`
+other scripts split on whitespace: pass `script_id="lineara"` etc. for those. `split`
 controls how a file becomes documents: `"whole"` (default, one doc), `"paragraph"`
 (blank-line blocks), or `"line"`.
 
@@ -349,7 +349,7 @@ aegean stats myplato.json --top 5            # …now analyse it like any corpus
 ```
 
 Note that `aegean.load(...)` and the CLI's corpus argument still take only a `.json`/`.db`
-corpus — a raw `.txt`/`.csv` has to be **imported first**, as above. (The error you'd get
+corpus: a raw `.txt`/`.csv` has to be **imported first**, as above. (The error you'd get
 from skipping that step says so, and prints the exact `aegean import` line to run.)
 
 ---
@@ -359,31 +359,31 @@ from skipping that step says so, and prints the exact `aegean import` line to ru
 ### How do I try pyaegean without installing anything?
 
 The pure-Python core (the Greek pipeline plus the bundled Linear A corpus) runs
-**in your browser** — nothing to install, no server:
+**in your browser**: nothing to install, no server:
 [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/). It's
 [Pyodide](https://pyodide.org/) (CPython compiled to WebAssembly) running locally
 in the page.
 
 ### Why does the web demo need a moment to start?
 
-When the page opens it shows **"loading…"** for a few seconds. That's expected — on
+When the page opens it shows **"loading…"** for a few seconds. That's expected: on
 first load the browser has to:
 
 1. download and start the Pyodide WebAssembly runtime,
 2. load `micropip` and the `sqlite3` stdlib module, then
-3. `micropip.install("pyaegean")` — fetch the package wheel and unpack it.
+3. `micropip.install("pyaegean")`: fetch the package wheel and unpack it.
 
 When that finishes the status flips to **"ready"** and the tools respond instantly.
 It's slower the very first time because everything is being fetched over the
 network; subsequent runs are quicker as the browser caches the pieces. If it gets
 stuck on "failed to load," it's usually a flaky network or a strict
-content-blocker — reload, or just `pip install pyaegean` locally instead.
+content-blocker: reload, or just `pip install pyaegean` locally instead.
 
 ### What can't the web demo do?
 
 Only the offline core runs client-side: Beta Code, syllabification, accents,
 scansion, and the bundled Linear A corpus. The **neural** and **AI** layers don't
-run in the browser — those need a local install (and, for AI, a provider key). For
+run in the browser: those need a local install (and, for AI, a provider key). For
 anything heavy, install locally per [Getting Started](Getting-Started).
 
 ---
@@ -392,7 +392,7 @@ anything heavy, install locally per [Getting Started](Getting-Started).
 
 ### Greek shows up as boxes, `?`, or mojibake
 
-That's a display/font issue, not a data problem — the text is correct underneath.
+That's a display/font issue, not a data problem: the text is correct underneath.
 
 - **Best fix:** use [Jupyter](Getting-Started#option-c--jupyter-recommended-for-research)
   or a modern editor (VS Code), which render polytonic Greek cleanly.
@@ -402,7 +402,7 @@ That's a display/font issue, not a data problem — the text is correct undernea
 
 ### I don't have a Greek keyboard
 
-You don't need one. Type **Beta Code** — the standard ASCII transliteration used by
+You don't need one. Type **Beta Code**: the standard ASCII transliteration used by
 the TLG and Perseus — and convert:
 
 ```python
@@ -427,7 +427,7 @@ greek.normalize("ό")     # canonical NFC form
 
 ### Can it really scan verse and break words into syllables?
 
-Yes — entirely offline, no extras needed:
+Yes: entirely offline, no extras needed:
 
 ```python
 greek.syllabify("ἄνθρωπος")                   # ['ἄν', 'θρω', 'πος']
@@ -436,7 +436,7 @@ greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'
 ```
 
-The scanner covers dactylic hexameter, elegiac pentameter, and iambic trimeter —
+The scanner covers dactylic hexameter, elegiac pentameter, and iambic trimeter:
 see [Metrical scansion](Greek-NLP#metrical-scansion).
 
 ---
@@ -447,15 +447,15 @@ see [Metrical scansion](Greek-NLP#metrical-scansion).
 
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
-the fetched corpora — `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
-~2 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1 MB) —
+the fetched corpora: `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
+~2 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1 MB):
 `greek.load_work(...)` / `greek.load_nt(...)` (real Greek texts, pinned to a commit),
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends. The treebank/LSJ/tagger/lemmatizer/parser backends now
-fetch small **prebuilt** artifacts — `greek.use_lsj()` a ~15 MB index (not 270 MB of
+fetch small **prebuilt** artifacts: `greek.use_lsj()` a ~15 MB index (not 270 MB of
 Perseus TEI), and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
 `use_parser()` one shared ~15 MB AGDT-derived bundle (no 75 MB download or local
-training) — falling back to building from source if an asset is unreachable. The
+training): falling back to building from source if an asset is unreachable. The
 `[neural]` models are larger: `greek.use_neural_lemmatizer()` (~232 MB) and
 `greek.use_neural_pipeline()` (~518 MB). Everything else, including the rule-based
 pipeline, works fully offline.
@@ -515,10 +515,10 @@ irregular, third-declension, contract, and most open-class forms — and they te
 when a result is reconstructed (`lemma_certain=False`).
 
 Several opt-in backends raise accuracy well past that baseline. The strongest is the
-**neural pipeline** — `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
+**neural pipeline**: `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
 model for POS, morphology, UD dependency parsing, and lemmatization, state of the art
 on the UD Ancient Greek benchmarks (96.9 UPOS / 96.1 UFeats / 94.4 lemma / 89.2 UAS /
-84.4 LAS on the Perseus test fold, measured end-to-end from raw text — see
+84.4 LAS on the Perseus test fold, measured end-to-end from raw text: see
 [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
 `greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,
 and gold POS for forms attested in the AGDT; `greek.use_tagger()` generalizes POS at
@@ -541,7 +541,7 @@ corpus.cite()           # one line; also corpus.cite("bibtex") / corpus.cite("ap
 ```
 
 The citation follows the **exact subset you used**: a filtered corpus records what
-was filtered, and query results record the query —
+was filtered, and query results record the query:
 
 ```python
 from aegean.analysis import FilterRow
@@ -552,7 +552,7 @@ results = corpus.query([FilterRow("word-prefix", "KU")], output="words")
 results.cite()          # … [query: Word starts with: KU → N words]
 ```
 
-Fetched Greek works carry their own provenance and license, too — `load_work`
+Fetched Greek works carry their own provenance and license, too: `load_work`
 pins the source commit and records the upstream CC BY-SA attribution:
 
 ```python
@@ -568,8 +568,8 @@ See [Data & Provenance](Data-and-Provenance) for full licensing and attribution.
 ## Getting help
 
 - **Bugs / feature requests:** [GitHub Issues](https://github.com/ryanpavlicek/pyaegean/issues)
-  — please include your pyaegean version (`python -c "import aegean; print(aegean.__version__)"`).
-- **How a function behaves:** the per-domain reference pages — [Linear A](Linear-A),
+ : please include your pyaegean version (`python -c "import aegean; print(aegean.__version__)"`).
+- **How a function behaves:** the per-domain reference pages: [Linear A](Linear-A),
   [Analysis](Analysis), [Greek NLP](Greek-NLP), [AI Layer](AI-Layer),
   [Greek Works and Books](Greek-Works-and-Books), [CLI](CLI).
 - **What the tools can and can't do:** [Limitations](Limitations).

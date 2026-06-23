@@ -1,12 +1,12 @@
 # Geography
 
 `aegean.geo` maps a corpus's **find-sites** to coordinates and hands you the corpus back as a
-geopandas **GeoDataFrame** — so you can ask *where* things are: where a word clusters, how far a
+geopandas **GeoDataFrame**, so you can ask *where* things are: where a word clusters, how far a
 script reaches, how a corpus spreads across Crete and the wider Aegean. You'd reach for it to draw a
 distribution map, run a spatial join, or export your find-sites as GeoJSON for QGIS, a web map, or a
 linked-open-data project.
 
-It's an **opt-in** extra (`pip install "pyaegean[geo]"` — geopandas + shapely). `import aegean` stays
+It's an **opt-in** extra (`pip install "pyaegean[geo]"`: geopandas + shapely). `import aegean` stays
 instant and dependency-free; geopandas and shapely are imported lazily, only when you call a geo
 function, and that call raises a clear error if the extra isn't installed:
 
@@ -15,7 +15,7 @@ ImportError: geographic analysis needs the optional dependencies: pip install 'p
 ```
 
 Everything here is also reachable from the command line with `aegean geo` if you'd rather not write
-Python — see [CLI](CLI). The table view (`aegean geo CORPUS`) works with **just the core install**;
+Python: see [CLI](CLI). The table view (`aegean geo CORPUS`) works with **just the core install**;
 only GeoJSON export pulls in the `[geo]` extra.
 
 ---
@@ -35,7 +35,7 @@ geo.site_coordinates()                       # the raw site -> coordinate gazett
 ```
 
 Each of the first three returns a `geopandas.GeoDataFrame` in **EPSG:4326** (WGS84 lat/lon) with a
-`geometry` column of points — ready for `.plot()`, spatial joins, or export. Inscriptions whose site
+`geometry` column of points: ready for `.plot()`, spatial joins, or export. Inscriptions whose site
 isn't in the gazetteer are silently dropped (see [Coverage](#coverage)).
 
 ### What's in the box
@@ -45,7 +45,7 @@ isn't in the gazetteer are silently dropped (see [Coverage](#coverage)).
 | `geo.to_geodataframe(corpus)` | GeoDataFrame, one row per inscription | yes |
 | `geo.to_geodataframe(corpus, level="site")` | GeoDataFrame, one row per site + count | yes |
 | `geo.word_distribution(corpus, word)` | GeoDataFrame of sites where `word` occurs | yes |
-| `geo.site_coordinates()` | `dict[str, SiteCoord]` — the bundled gazetteer | no |
+| `geo.site_coordinates()` | `dict[str, SiteCoord]`: the bundled gazetteer | no |
 | `geo.SiteCoord` | a single site's coordinates + Pleiades id | no |
 
 ---
@@ -165,18 +165,18 @@ aegean geo lineara --json
 
 | Flag | Default | What it does |
 |---|---|---|
-| `CORPUS` (argument) | — | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`) |
+| `CORPUS` (argument) |— | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`) |
 | `--level` | `site` | `site` or `inscription` (only affects GeoJSON export) |
-| `--output`, `-o` | — | write GeoJSON to this path instead of printing the table (needs `[geo]`) |
+| `--output`, `-o` |— | write GeoJSON to this path instead of printing the table (needs `[geo]`) |
 | `--json` | off | machine-readable JSON rows on stdout (table mode) |
-| `--help`, `-h` | — | show usage and exit |
+| `--help`, `-h` |— | show usage and exit |
 
 ---
 
 ## Where a word shows up — `word_distribution`
 
 `word_distribution` answers "where, across the corpus, does this word turn up?" It returns a
-site-level GeoDataFrame with a per-site `count`, sorted most-frequent first — exactly what you want
+site-level GeoDataFrame with a per-site `count`, sorted most-frequent first: exactly what you want
 to map a single term.
 
 ```python
@@ -203,16 +203,16 @@ transliteration (here, dash-joined sign sequences like `KU-RO`). See [Linear A](
 > geometry column on an empty frame, so the call raises rather than returning an empty GeoDataFrame.
 > Check that the word is attested first (e.g. with the corpus's concordance / counts).
 
-There's no dedicated CLI subcommand for `word_distribution` — it's a Python-only helper.
+There's no dedicated CLI subcommand for `word_distribution`: it's a Python-only helper.
 
 ---
 
 ## The gazetteer
 
-`geo.site_coordinates()` returns the bundled site → coordinate table — a `dict[str, SiteCoord]`
+`geo.site_coordinates()` returns the bundled site → coordinate table: a `dict[str, SiteCoord]`
 keyed by the corpus's `meta.site` label. This is the one geo function that needs **no extra**; it's
 plain data. Coordinates are **approximate** (site-level, ~1 km), drawn from standard archaeological
-references — fine for mapping, not survey work.
+references: fine for mapping, not survey work.
 
 ```python
 from aegean import geo
@@ -246,8 +246,8 @@ sc.pleiades_uri           # 'https://pleiades.stoa.org/places/589672'
 coords["Pyrgos"].pleiades_uri   # None  (not aligned)
 ```
 
-The gazetteer covers the find-sites in all four Aegean-script corpora — the Cretan and Aegean Linear
-A sites, plus Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit — and a few
+The gazetteer covers the find-sites in all four Aegean-script corpora: the Cretan and Aegean Linear
+A sites, plus Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit, and a few
 outliers like Tel Haror (Negev) and Margiana (Turkmenistan).
 
 ### Regions
@@ -268,8 +268,8 @@ outliers like Tel Haror (Negev) and Margiana (Turkmenistan).
 ## Pleiades alignment
 
 **33 of the 56** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
-linked-open-data work. Every id is **verified by coordinate** — the Pleiades representative point is
-within a few km of ours and its description matches the site — so a match is confirmed, never
+linked-open-data work. Every id is **verified by coordinate** (the Pleiades representative point is
+within a few km of ours and its description matches the site), so a match is confirmed, never
 guessed. It lives on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving the full
 `https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the GeoDataFrames
 from `to_geodataframe` / `word_distribution`.
@@ -279,7 +279,7 @@ geo.site_coordinates()["Haghia Triada"].pleiades_uri
 # 'https://pleiades.stoa.org/places/589672'
 ```
 
-The remaining 23 sites are mostly minor findspots, peak sanctuaries, and caves not yet in Pleiades —
+The remaining 23 sites are mostly minor findspots, peak sanctuaries, and caves not yet in Pleiades,
 left null, and listed as upstream-contribution candidates in
 [docs/pleiades-candidates.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/pleiades-candidates.md).
 
@@ -310,7 +310,7 @@ aegean geo lineara --json
 
 ## GeoJSON export
 
-A GeoDataFrame serialises to GeoJSON the standard geopandas way — both from Python and the CLI. The
+A GeoDataFrame serialises to GeoJSON the standard geopandas way: both from Python and the CLI. The
 output is a `FeatureCollection` in EPSG:4326; the GeoDataFrame columns become each feature's
 `properties`, and `geometry` becomes a GeoJSON `Point`.
 
@@ -362,7 +362,7 @@ tabular exports (CSV, Parquet, EpiDoc, SQLite) for the corpus itself live under
 
 ## Plotting
 
-A GeoDataFrame plots in one line (with `matplotlib` installed — that's the separate `[viz]` extra):
+A GeoDataFrame plots in one line (with `matplotlib` installed: that's the separate `[viz]` extra):
 
 ```python
 gdf = geo.to_geodataframe(corpus, level="site")
@@ -378,7 +378,7 @@ wd = geo.word_distribution(corpus, "KU-RO")
 wd.plot(markersize=wd["count"] * 10)
 ```
 
-pyaegean doesn't ship its own basemap — bring your own (contextily, a shapefile of Crete, etc.).
+pyaegean doesn't ship its own basemap: bring your own (contextily, a shapefile of Crete, etc.).
 For non-spatial plots (sign frequencies, period histograms) see `aegean.viz` / [CLI](CLI)'s
 `aegean plot`.
 
@@ -414,7 +414,7 @@ find-sites across all four scripts. The few Linear A inscriptions with no row si
   can't infer geometry on no rows). Check the word is attested first.
 - **`pleiades` shows as a float in the GeoDataFrame** because the column mixes ids with nulls; the id
   is still integral. Use `SiteCoord.pleiades` for the clean `int`.
-- **23 sites have no Pleiades id** — mostly minor findspots, peak sanctuaries, and caves. They're
+- **23 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're
   tracked as upstream-contribution candidates, not errors.
 - **`word_distribution` matches the exact surface form.** It won't normalise or fuzzy-match; pass the
   word as the corpus transliterates it.
@@ -431,8 +431,8 @@ See [Data & Provenance](Data-and-Provenance) and `NOTICE`.
 
 ## See also
 
-- [Installation](Installation) — the `[geo]` and `[viz]` extras
-- [Linear A](Linear-A) / [Linear B](Linear-B) / [Cypriot](Cypriot) / [Cypro-Minoan](Cypro-Minoan) — the corpora you map
-- [Analysis](Analysis) — finding the words and patterns worth mapping
-- [CLI](CLI) — `aegean geo` and the other corpus commands
-- [Data & Provenance](Data-and-Provenance) — where the coordinates come from
+- [Installation](Installation): the `[geo]` and `[viz]` extras
+- [Linear A](Linear-A) / [Linear B](Linear-B) / [Cypriot](Cypriot) / [Cypro-Minoan](Cypro-Minoan): the corpora you map
+- [Analysis](Analysis): finding the words and patterns worth mapping
+- [CLI](CLI): `aegean geo` and the other corpus commands
+- [Data & Provenance](Data-and-Provenance): where the coordinates come from

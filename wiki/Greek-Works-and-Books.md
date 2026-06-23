@@ -3,15 +3,15 @@
 This page is the reference for **loading real Greek texts** into pyaegean: the
 classical literary corpus (Homer, Plato, Herodotus…) and the Greek New Testament.
 You'd come here when you want to stop typing Greek by hand and instead pull a whole
-work — or a single book, chapter, or line-range — straight into a `Corpus` you can
+work (or a single book, chapter, or line-range) straight into a `Corpus` you can
 tokenize, scan, tag, and count.
 
 Two doors lead in:
 
-- **`greek.load_work("tlg0012.tlg001")`** — any work in the Perseus
+- **`greek.load_work("tlg0012.tlg001")`**: any work in the Perseus
   canonical-greekLit / First1KGreek collections, addressed by a **CTS id** (the
   `tlgAAAA.tlgBBB` scheme explained below).
-- **`greek.load_nt("John")`** — the Greek New Testament (Nestle 1904), with a gold
+- **`greek.load_nt("John")`**: the Greek New Testament (Nestle 1904), with a gold
   lemma, morphology, Strong's number, and a gloss already attached to every word.
 
 Both fetch their text once to a local cache and then work offline, and both return
@@ -19,7 +19,7 @@ the same standard `Corpus` object you get everywhere else in pyaegean. Once a wo
 is loaded, everything on [Greek NLP](Greek-NLP) applies to it.
 
 > **A work id works everywhere now.** As of 0.8.2 you can hand a Greek work id
-> straight to almost any `aegean` command — no Python required. `aegean stats
+> straight to almost any `aegean` command: no Python required. `aegean stats
 > tlg0012.tlg001`, `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`, and
 > `aegean db build tlg0012.tlg001 -o iliad.db` all resolve the id through
 > `load_work` for you. Anywhere a command takes a `CORPUS` argument it now accepts
@@ -28,7 +28,7 @@ is loaded, everything on [Greek NLP](Greek-NLP) applies to it.
 > below puts that to work.
 
 > New to all this? Start with [Getting Started](Getting-Started), then the
-> [Tutorial](Tutorial) — it walks through loading the Iliad end to end. For the
+> [Tutorial](Tutorial): it walks through loading the Iliad end to end. For the
 > command-line forms, see [CLI](CLI); for the licences and cache details, see
 > [Data & Provenance](Data-and-Provenance).
 
@@ -37,7 +37,7 @@ is loaded, everything on [Greek NLP](Greek-NLP) applies to it.
 ## 1. The `tlgAAAA.tlgBBB` work-id scheme, in plain language
 
 Every classical Greek work has a stable catalogue address. pyaegean uses the same
-one the scholarly world uses — the **CTS** ("Canonical Text Services") id — so the
+one the scholarly world uses: the **CTS** ("Canonical Text Services") id, so the
 id you find in a citation or in the Scaife Viewer is exactly the id you paste here.
 
 A work id has two halves joined by a dot:
@@ -50,12 +50,12 @@ tlg0012 . tlg001
            that author
 ```
 
-- The **first half** (`tlg0012`) names the **author / text group** — Homer.
-- The **second half** (`tlg001`) names **one work** by that author — `tlg001` is
+- The **first half** (`tlg0012`) names the **author / text group**: Homer.
+- The **second half** (`tlg001`) names **one work** by that author: `tlg001` is
   the Iliad, `tlg002` is the Odyssey.
 
 So `tlg0012.tlg001` is read as "Homer, work 1 = the Iliad." The numbers are
-arbitrary catalogue numbers, not anything you'd guess — you look them up. The
+arbitrary catalogue numbers, not anything you'd guess: you look them up. The
 `tlg` prefix comes from the *Thesaurus Linguae Graecae*, whose numbering this
 scheme inherits. (A few First1KGreek works use a `stoa` prefix instead of `tlg`;
 the dotted shape is the same.)
@@ -86,7 +86,7 @@ len(works)            # 25
 works[0]              # {'id': 'tlg0012.tlg001', 'author': 'Homer', 'title': 'Iliad'}
 ```
 
-`popular_works()` is **pure metadata — no download**, so it works offline and is
+`popular_works()` is **pure metadata: no download**, so it works offline and is
 instant. Each entry is a plain dict with `id`, `author`, and `title`.
 
 ### CLI
@@ -150,7 +150,7 @@ Sophocles plays are `tlg0011.tlg00x`; all four Plato dialogues here are
 `tlg0059.tlg0xx`. That's the `tlgAAAA` group at work.
 
 This is the curated short list. To search the **full** 1,778-work discovery index
-in-package, use `catalog()` / `aegean greek catalog` — see
+in-package, use `catalog()` / `aegean greek catalog`: see
 [§3](#3-finding-any-other-work).
 
 ---
@@ -158,13 +158,13 @@ in-package, use `catalog()` / `aegean greek catalog` — see
 ## 3. Finding any other work
 
 `load_work` accepts **any** Perseus canonical-greekLit / First1KGreek CTS id, not
-just the 25 above. There are two ways to find an id — a built-in search, and the
+just the 25 above. There are two ways to find an id: a built-in search, and the
 official web browser.
 
 ### The built-in catalogue — `catalog()` / `aegean greek catalog`
 
 pyaegean bundles a **complete discovery index** of every work that has a Greek
-(`-grc`) edition in those two collections — **1,778 works** (768 from Perseus
+(`-grc`) edition in those two collections: **1,778 works** (768 from Perseus
 canonical-greekLit, 1,010 from First1KGreek), far more than the 25 highlights in
 `popular_works()`. It is pure bundled metadata (id, author, English title, Greek
 title, source), so searching it needs **no network** and is instant. Anything it
@@ -208,26 +208,26 @@ aegean greek catalog sappho
 ```
 
 (`sappho` returns nothing because Sappho's Greek text isn't openly digitized in
-either collection — see the coverage note below.)
+either collection: see the coverage note below.)
 
 > **The catalogue is honest about coverage.** It lists exactly what these open
-> repositories actually hold at the pinned commit — not the entire theoretical
+> repositories actually hold at the pinned commit, not the entire theoretical
 > canon. Some authors whose Greek text isn't openly digitized there (e.g. Sappho)
 > simply won't appear; that's the same set `load_work` can reach, no surprises.
 
 ### The Scaife Viewer (the web browser for these collections)
 
-For the canonical web view — or to confirm an edition — use Scaife:
+For the canonical web view (or to confirm an edition) use Scaife:
 
 1. Go to the **Scaife Viewer**: **<https://scaife.perseus.org>**. This is the
    official browser for these exact collections.
 2. Search for your author or work and open it.
 3. Read the CTS id out of the URL or the work's citation. A Scaife URN looks like
-   `urn:cts:greekLit:tlg0012.tlg001.perseus-grc2` — the `tlg0012.tlg001` middle is
+   `urn:cts:greekLit:tlg0012.tlg001.perseus-grc2`: the `tlg0012.tlg001` middle is
    the id you pass to `load_work` (drop the `urn:cts:greekLit:` prefix and the
    trailing edition label).
 
-That's it — there's no separate registry to install. If you pass an id that can't
+That's it: there's no separate registry to install. If you pass an id that can't
 be found in either collection, you get an actionable error rather than a silent
 empty result:
 
@@ -258,7 +258,7 @@ greek.load_work("tlg0086.tlg005", source="first1k", edition="1st1K-grc1")
 
 ### Whole work
 
-With no `ref`, you get the whole work as **one `Document` per top-level part** — a
+With no `ref`, you get the whole work as **one `Document` per top-level part**: a
 book of the Iliad, a chapter run of a prose work.
 
 ```python
@@ -352,7 +352,7 @@ aegean greek work tlg0012.tlg001 -o iliad.json   # wrote 24 documents to iliad.j
 ### Notes carried along
 
 Editorial `<note>` and `<bibl>` material is **not dropped and not mixed into the
-running text** — it rides along in `doc.meta.notes` so the text you analyse is clean
+running text**: it rides along in `doc.meta.notes` so the text you analyse is clean
 while the apparatus stays available.
 
 ---
@@ -360,12 +360,12 @@ while the apparatus stays available.
 ## 5. Put works into a database
 
 Loading a work re-fetches and re-parses it every run. For anything you'll come back
-to — searching it, joining it with another work, sharing it — write it once into a
+to (searching it, joining it with another work, sharing it) write it once into a
 **SQLite database** and read from that. The database carries the documents and their
 tokens, plus an FTS5 full-text index, so searches are instant and need no network.
 
 The key change in 0.8.2 is that `aegean db build` (and `combine`, `stats`, `export`,
-… — anything taking a `CORPUS`) accepts a **Greek work id directly**, so you can do
+…: anything taking a `CORPUS`) accepts a **Greek work id directly**, so you can do
 all of this without writing a line of Python.
 
 ### One work → one database
@@ -379,7 +379,7 @@ aegean db build tlg0012.tlg001 -o iliad.db
 the cache). Add `--no-fts` to skip the full-text index if you only want the raw
 tables.
 
-The Python equivalent — load it yourself, then save:
+The Python equivalent: load it yourself, then save:
 
 ```python
 from aegean import greek
@@ -396,12 +396,12 @@ aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db
 # wrote 48 documents to homer.db (merged 2 sources)
 ```
 
-That's the Iliad (24 books) and the Odyssey (24 books) — all of Homer — in one
+That's the Iliad (24 books) and the Odyssey (24 books), all of Homer, in one
 file. Write `-o homer.json` instead for a portable JSON corpus rather than a
 database. The merged corpus's provenance names **every** source it was built from,
 so the trail back to Perseus stays intact.
 
-If two sources share a document id, `--on-conflict` decides what happens —
+If two sources share a document id, `--on-conflict` decides what happens:
 `error` (the default, refuse and tell you), `first`, `last`, or `suffix` (keep both,
 disambiguating the later id):
 
@@ -409,7 +409,7 @@ disambiguating the later id):
 aegean combine a.json b.json -o merged.db --on-conflict last
 ```
 
-The same thing in Python — `combine([...])`, or `Corpus.merge(*others)`:
+The same thing in Python: `combine([...])`, or `Corpus.merge(*others)`:
 
 ```python
 from aegean import greek, combine
@@ -444,7 +444,7 @@ aegean db search homer.db μῆνιν
 └────────────────┴─────┴───────┘
 ```
 
-`μῆνιν` — "wrath", the very first word of the Iliad. Add `--limit N` to cap hits
+`μῆνιν`: "wrath", the very first word of the Iliad. Add `--limit N` to cap hits
 (default 50) or `--json` for machine-readable output. The query is a literal token
 or phrase, matched through the FTS5 index.
 
@@ -465,8 +465,8 @@ aegean db search lineara.db KU-RO --limit 3
 
 ### Grow an existing database — `db add`
 
-To extend a database you've already built — say you started with the Iliad and now
-want the Odyssey in the same file — `db add` **upserts** the new source: documents
+To extend a database you've already built (say you started with the Iliad and now
+want the Odyssey in the same file) `db add` **upserts** the new source: documents
 whose id already exists are replaced, new ids are added, and the FTS index is
 refreshed.
 
@@ -487,7 +487,7 @@ greek.load_work("tlg0012.tlg002").to_sql("homer.db", append=True) # upsert in
 
 ### Taking just part of a corpus — `subset`
 
-`Corpus.subset(ids)` returns a new corpus with only the documents you name — handy
+`Corpus.subset(ids)` returns a new corpus with only the documents you name: handy
 before saving or combining. It records a `subset: N of M documents by id` note in
 the provenance so the slice stays honest:
 
@@ -514,7 +514,7 @@ books_1_3.to_sql("iliad_opening.db")
 of the Greek NT (Nestle 1904) where **every token already carries gold
 annotations**: a `lemma`, a Robinson-style `morph` parse, a `strongs` number, a
 reconciled UD `upos`, the `normalized` form, and (where available) a short `gloss`.
-You don't have to run a tagger — it's all there.
+You don't have to run a tagger: it's all there.
 
 One book ships **inside the package** (Philemon), so `load_nt("Philemon")` works
 **fully offline**; the other 26 books fetch to cache on first use.
@@ -576,7 +576,7 @@ greek.load_nt("Rom", ref="8")         # Romans chapter 8
 greek.load_nt()                       # the whole 27-book NT
 ```
 
-`load_nt(book=None, *, ref=None, force=False)` — `force=True` re-fetches even if
+`load_nt(book=None, *, ref=None, force=False)`: `force=True` re-fetches even if
 cached; passing a `ref` without a `book` raises (you can't address a verse across
 all 27 books).
 
@@ -609,7 +609,7 @@ robinson_to_upos("A-NUI")     # 'NUM'    (indeclinable numeral)
 ## 7. The 27 books and the names you can use
 
 `nt_books()` lists every book in canonical order together with the abbreviations
-`load_nt` (and `gloss-nt`) will accept for it. It's **pure metadata — no download**.
+`load_nt` (and `gloss-nt`) will accept for it. It's **pure metadata: no download**.
 
 ```python
 from aegean import greek
@@ -619,7 +619,7 @@ books[3]           # {'name': 'John', 'aliases': ['john', 'jn', 'jhn']}
 ```
 
 Any of the canonical `name` **or** any alias is accepted (case-insensitive; spaces
-and dots are ignored — `"1 Cor"`, `"1cor"`, `"1Cor."` all resolve to `1Cor`). The
+and dots are ignored: `"1 Cor"`, `"1cor"`, `"1Cor."` all resolve to `1Cor`). The
 `name` is what shows up in document ids.
 
 On the command line:
@@ -669,12 +669,12 @@ greek.load_nt("Genesis")
 # 'John', 'Jn', 'Matthew', '1Cor', 'Rev'
 ```
 
-(Genesis is in the Hebrew Bible, not the Greek NT — `load_nt` covers the 27 NT
+(Genesis is in the Hebrew Bible, not the Greek NT: `load_nt` covers the 27 NT
 books only.)
 
 > Looking up a single word's Koine gloss without loading a book? That's
 > `aegean greek gloss-nt` / `greek.lookup_nt(...)`, documented on
-> [Greek NLP](Greek-NLP) — it uses the bundled Dodson lexicon and needs no download.
+> [Greek NLP](Greek-NLP): it uses the bundled Dodson lexicon and needs no download.
 
 ---
 
@@ -694,7 +694,7 @@ greek.syllabify("Ἀχιλῆος")            # syllabify a word from it
 ```
 
 See [Greek NLP](Greek-NLP) for syllabification, accentuation, metrical scansion,
-tagging, lemmatization, and parsing — every one of those applies to a loaded work.
+tagging, lemmatization, and parsing; every one of those applies to a loaded work.
 
 ---
 
@@ -745,7 +745,7 @@ offline NT sample book). Full details are on [Data & Provenance](Data-and-Proven
 - **Line numbering is the edition's, not invented.** Verse `<l>` lines are filtered
   by their numeric `n`; non-numeric or unnumbered lines won't match a numeric range.
 - **NT annotations are gold and fixed** (Nestle 1904 morphology), independent of
-  pyaegean's own taggers — useful as a benchmark as well as a corpus.
+  pyaegean's own taggers: useful as a benchmark as well as a corpus.
 
 For the broader picture of what is and isn't in scope, see [Limitations](Limitations).
 
@@ -753,8 +753,8 @@ For the broader picture of what is and isn't in scope, see [Limitations](Limitat
 
 ## See also
 
-- [Greek NLP](Greek-NLP) — everything you can run on a loaded work
-- [CLI](CLI) — the `aegean greek work` / `works` / `nt-books` commands
-- [Tutorial](Tutorial) — a guided, end-to-end load of the Iliad
-- [Data & Provenance](Data-and-Provenance) — caches, licences, pinned commits
-- [Limitations](Limitations) — scope and known gaps
+- [Greek NLP](Greek-NLP): everything you can run on a loaded work
+- [CLI](CLI): the `aegean greek work` / `works` / `nt-books` commands
+- [Tutorial](Tutorial): a guided, end-to-end load of the Iliad
+- [Data & Provenance](Data-and-Provenance): caches, licences, pinned commits
+- [Limitations](Limitations): scope and known gaps

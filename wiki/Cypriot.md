@@ -1,6 +1,6 @@
 # Cypriot syllabary
 
-The Cypriot syllabary wrote Greek — the Arcado-Cypriot dialect — from roughly the 11th to the
+The Cypriot syllabary wrote Greek (the Arcado-Cypriot dialect) from roughly the 11th to the
 4th century BC. Like [Linear B](Linear-B) it is **deciphered**, so reading it is verifiable
 rather than guesswork. Use this page when you want to look up a Cypriot sign, turn a transliterated
 word into its sound, or read a syllabic word as Greek (the famous **pa-si-le-u-se → basileus**
@@ -17,7 +17,7 @@ greek_reading("PA-SI-LE-U-SE")       # ('βασιλεύς', 'king')
 gloss("WA-NA-SA")                    # 'queen, lady (the Paphian goddess)'
 ```
 
-If you have never run Python before, start with [Getting Started](Getting-Started) and come back —
+If you have never run Python before, start with [Getting Started](Getting-Started) and come back:
 every snippet here is meant to be copied and pasted as-is. If you prefer the shell, every feature
 below also has an `aegean ...` command; install it with `pip install "pyaegean[cli]"` (see the
 [CLI](CLI) page).
@@ -28,18 +28,18 @@ below also has an `aegean ...` command; install it with `pip install "pyaegean[c
 
 The Cypriot syllabary is an **open** syllabary: most signs spell a consonant-plus-vowel syllable
 (`PA`, `SI`, `LE`), with five bare vowels (`A E I O U`). It is more phonetically transparent than
-Linear B — there are **no labiovelars**, so a transliterated word already sits very close to the
+Linear B; there are **no labiovelars**, so a transliterated word already sits very close to the
 spoken Greek. The trade-offs are spelling conventions rather than ambiguous signs: word-final
 consonants get a "dummy" vowel (βασιλεύ**ς** is written `…-SE`, giving `pasileuse`), and consonant
 clusters are split across syllables. Those conventions are exactly why the Greek bridge below is
-useful — it maps the syllabic spelling back to the real Greek lemma.
+useful: it maps the syllabic spelling back to the real Greek lemma.
 
 ---
 
 ## Sign inventory
 
 The inventory is built from the Unicode "Cypriot Syllabary" block (U+10800–U+1083F), generated from
-the Unicode Character Database — so the glyph-to-value mapping is authoritative and freely licensed
+the Unicode Character Database, so the glyph-to-value mapping is authoritative and freely licensed
 (see [Data & Provenance](Data-and-Provenance)). It holds **55 syllabograms**, each carrying a
 settled phonetic value, its glyph, its codepoint, and its Unicode name.
 
@@ -144,7 +144,7 @@ word_to_phonetic("A-TO-RO-PO-SE")   # 'atoropose'   (ἄνθρωπος)
 ```
 
 Editorial markers (`*`, `[`, `]`, `?`) are stripped before lookup, and any sign that is not in the
-table falls through **lowercased** rather than raising — so a damaged or unusual reading still
+table falls through **lowercased** rather than raising, so a damaged or unusual reading still
 returns something legible:
 
 ```python
@@ -154,14 +154,14 @@ word_to_phonetic("PA-ZZ-LE")        # 'pazzle'   (the unknown sign 'ZZ' passes t
 ### Testing an alternative sign value (`overrides`)
 
 The optional `overrides` argument lets you try a different value for one or more signs without
-touching the bundled table — handy for "what if this sign were read differently?" experiments.
+touching the bundled table: handy for "what if this sign were read differently?" experiments.
 
 ```python
 word_to_phonetic("SA-PO")                          # 'sapo'
 word_to_phonetic("SA-PO", overrides={"PO": "pho"}) # 'sapho'
 ```
 
-> There is no separate CLI command just for romanization — use the `bridge` command below (which
+> There is no separate CLI command just for romanization: use the `bridge` command below (which
 > reads the word as Greek), or the cross-script `analyze compare`, which romanizes both sides for
 > you and shows the alignment.
 
@@ -234,7 +234,7 @@ own work, not to be a dictionary. Lookups are case-insensitive and tolerate `[ ]
 ### From the bridge into the dictionary
 
 The lexicon gives you a short gloss. For the full LSJ entry, hand the returned **lemma** to the
-Greek track's dictionary backend (opt-in — it fetches a local cache the first time you turn it on):
+Greek track's dictionary backend (opt-in: it fetches a local cache the first time you turn it on):
 
 ```python
 import aegean
@@ -253,8 +253,8 @@ Without that call, `aegean.greek.gloss(...)` raises `LexiconNotLoadedError` tell
 
 ## Comparing a Cypriot word with its Greek by sound
 
-The cross-script comparator romanizes each side and aligns them position by position — a vivid way
-to *see* the bridge. `pa-si-le-u-se` vs `βασιλεύς` lines up almost perfectly: the only differences
+The cross-script comparator romanizes each side and aligns them position by position: a vivid way
+to *see* the bridge. `pa-si-le-u-se` vs `βασιλεύς` lines up almost perfectly; the only differences
 are the `p/b` onset (a sub-class substitution) and the dummy final vowel (a deletion).
 
 ```bash
@@ -288,17 +288,17 @@ round(cmp.similarity, 2)         # 0.83
 ```
 
 `--fold-aspiration` (map θ/φ/χ → t/p/k) makes the comparison fairer against syllabic spelling,
-which cannot write aspiration. More on these tools — distance, alignment, nearest-neighbour search —
+which cannot write aspiration. More on these tools (distance, alignment, nearest-neighbour search)
 is on the [Analysis](Analysis) page.
 
 ---
 
 ## The bundled corpus
 
-The Cypriot epigraphic corpus (ICS — *Inscriptions de Chypre syllabiques*, Masson, and its
+The Cypriot epigraphic corpus (ICS: *Inscriptions de Chypre syllabiques*, Masson, and its
 successors) is **not openly redistributable**, so only a small **illustrative sample** ships with
 pyaegean. The sign inventory and the transliteration/bridge are the shippable core; for a fuller
-corpus, bring your own — if you have transliterations in a `.txt` file or a CSV, import them in one
+corpus, bring your own: if you have transliterations in a `.txt` file or a CSV, import them in one
 step (`aegean import ics.csv -o cypriot.db --script cypriot`, or `aegean.io.from_csv`) and they get
 the whole corpus API. What is bundled loads through the standard corpus API:
 
@@ -343,11 +343,11 @@ aegean show cypriot cypriot-dedication
 
 | Document id | Words | Reading |
 | --- | --- | --- |
-| `cypriot-dedication` | `O-NA-SI-LO-SE TO-I A-PO-LO-NI` | "Onasilos, to Apollo" — an illustrative dedicatory fragment |
-| `cypriot-formula` | `A-KA-TA TU-KA` | ἀγαθᾷ τύχᾳ, "with good fortune" — an illustrative formula |
+| `cypriot-dedication` | `O-NA-SI-LO-SE TO-I A-PO-LO-NI` | "Onasilos, to Apollo": an illustrative dedicatory fragment |
+| `cypriot-formula` | `A-KA-TA TU-KA` | ἀγαθᾷ τύχᾳ, "with good fortune": an illustrative formula |
 
-Because it is a real corpus object, the rest of the toolkit works on it — `aegean search`,
-`aegean stats`, `aegean export`, and so on (see [CLI](CLI) and [Analysis](Analysis)) — though with
+Because it is a real corpus object, the rest of the toolkit works on it: `aegean search`,
+`aegean stats`, `aegean export`, and so on (see [CLI](CLI) and [Analysis](Analysis)): though with
 only two documents the numbers are illustrative.
 
 ---
@@ -357,10 +357,10 @@ only two documents the numbers are illustrative.
 | Capability | Python | CLI |
 | --- | --- | --- |
 | List registered scripts | `aegean.registered_scripts()` | `aegean info` (per corpus) |
-| Sign inventory | `get_script("cypriot").sign_inventory` | — |
+| Sign inventory | `get_script("cypriot").sign_inventory` |— |
 | Look up one sign | `inv.by_label("PA")` | `aegean sign cypriot PA` |
 | Transliteration → sound | `word_to_phonetic("PA-SI-LE-U-SE")` | (via `bridge` / `analyze compare`) |
-| Try an alternate sign value | `word_to_phonetic(w, overrides={...})` | — |
+| Try an alternate sign value | `word_to_phonetic(w, overrides={...})` |— |
 | Greek reading (lemma + gloss) | `greek_reading("PA-SI-LE-U-SE")` | `aegean bridge cypriot PA-SI-LE-U-SE` |
 | English gloss only | `gloss("WA-NA-SA")` | (the `()` in `bridge` output) |
 | Full dictionary entry | `aegean.greek.use_lsj()` then `greek.gloss(lemma)` | `aegean greek …` |
@@ -374,7 +374,7 @@ only two documents the numbers are illustrative.
 ## Provenance and licensing
 
 The sign data comes from the Unicode Character Database (**Unicode-3.0** license). The sample
-transliterations are scholarly facts, bundled as illustrative excerpts — not a corpus. The bundled
+transliterations are scholarly facts, bundled as illustrative excerpts, not a corpus. The bundled
 corpus cites Masson, O. (1983), *Les inscriptions chypriotes syllabiques* (2nd ed.). See
 [Data & Provenance](Data-and-Provenance) and the repository `NOTICE` file.
 
@@ -385,10 +385,10 @@ corpus cites Masson, O. (1983), *Les inscriptions chypriotes syllabiques* (2nd e
 - **Sample, not a corpus.** Only two illustrative inscriptions ship; the real ICS corpus is not
   openly redistributable. The sign inventory and the bridge are the durable parts.
 - **The lexicon is small and curated** (17 entries). A word outside it returns `None`
-  (`greek_reading`) or fails the `bridge` command — that is by design, not a bug. It seeds your
+  (`greek_reading`) or fails the `bridge` command; that is by design, not a bug. It seeds your
   own work; it is not a Cypriot dictionary.
 - **Spelling conventions are real.** The dummy final vowel (`…-SE` for final ς) and split clusters
-  mean a romanized form like `pasileuse` is not literally the Greek word — that gap is exactly what
+  mean a romanized form like `pasileuse` is not literally the Greek word; that gap is exactly what
   the Greek bridge closes.
 - **Glyphs need a font.** Cypriot characters (U+10800–U+1083F) display in Jupyter and modern
   editors; a plain terminal may show boxes. See the font note in [Getting Started](Getting-Started).

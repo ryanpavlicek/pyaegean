@@ -41,7 +41,7 @@ class AnthropicClient(LLMClient):
         }
         if system:
             kwargs["system"] = system
-        msg = client.messages.create(**kwargs)  # type: ignore[arg-type]
+        msg = client.messages.create(**kwargs)  # type: ignore[call-overload]
         text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
         return LLMResponse(text, self.provider, self.model, raw=msg)
 

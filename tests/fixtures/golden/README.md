@@ -4,7 +4,7 @@ Language-neutral expected-value JSON shared with the TypeScript workbench
 (`linearaworkbench`). Both implementations assert against the SAME values so
 the Python port can never silently diverge from the original.
 
-- `algorithms.json` — phonetic distance, phoneme/word alignment, collocation
+- `algorithms.json`: phonetic distance, phoneme/word alignment, collocation
   statistics, sequence distance, and morphological clustering. Extracted from
   the workbench `src/lib/algorithms.test.ts` and `compareAlign.test.ts`.
   Numeric tolerances mirror the TS `toBeCloseTo(value, digits)`
