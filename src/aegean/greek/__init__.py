@@ -42,6 +42,7 @@ from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
+from .usage import UsageInfo, usage
 from .syntax import (
     DepToken,
     DepTree,
@@ -176,6 +177,8 @@ __all__ = [
     "disable_lsj",
     "gloss",
     "lookup",
+    "usage",
+    "UsageInfo",
     "entry",
     "LSJEntry",
     "LSJLexicon",

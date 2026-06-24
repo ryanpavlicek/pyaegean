@@ -78,3 +78,28 @@ def test_gloss_requires_use_lsj() -> None:
     lexicon.disable_lsj()
     with pytest.raises(LexiconNotLoadedError):
         greek.gloss("λόγος")
+
+
+# ── dialect / register tags ──────────────────────────────────────────────────
+def test_usage_dialect_and_register(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _activate(tmp_path, monkeypatch)
+    u = greek.usage("κοῦρος")  # fixture: "Dor. and Ep. for …, poet. …, Com. Ar."
+    assert set(u.dialects) == {"doric", "epic"}
+    assert set(u.registers) == {"poetic", "comic"}
+    assert bool(u) is True
+
+
+def test_usage_empty_for_unmarked_entry(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _activate(tmp_path, monkeypatch)
+    u = greek.usage("ἄνθρωπος")  # "man, human being" — no dialect/register markers
+    assert u.dialects == () and u.registers == () and not u
+
+
+def test_usage_requires_use_lsj() -> None:
+    lexicon.disable_lsj()
+    with pytest.raises(LexiconNotLoadedError):
+        greek.usage("κοῦρος")

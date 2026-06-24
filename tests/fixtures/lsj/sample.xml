@@ -17,4 +17,10 @@
     <orth lang="greek" TEIform="orth">a)/nqrwpos</orth>,
     <sense id="n2.0" n="A" level="1" TEIform="sense">man, human being</sense>
   </entryFree>
+  <entryFree id="n3" key="kou=ros" type="main" TEIform="entryFree">
+    <orth lang="greek" TEIform="orth">kou=ros</orth>,
+    <sense id="n3.0" n="A" level="1" TEIform="sense">Dor. and Ep. for
+       <foreign lang="greek" TEIform="foreign">ko/ros</foreign>, poet. word for a young man,
+       Com. <bibl TEIform="bibl"><author>Ar.</author></bibl></sense>
+  </entryFree>
 </lexicon>
