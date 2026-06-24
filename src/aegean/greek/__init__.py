@@ -41,7 +41,7 @@ from .accent import AccentInfo, accentuation
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
-from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, gloss, lookup, use_lsj
+from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
 from .syntax import (
     DepToken,
     DepTree,
@@ -86,6 +86,17 @@ from .koine import (
     gloss_strongs,
     lookup_nt,
     use_dodson,
+)
+from .lexicons import (
+    LexEntry,
+    LexiconInfo,
+    active_lexica,
+    disable_lexicon,
+    entry,
+    gloss,
+    lexica,
+    lexicon_link,
+    use_lexicon,
 )
 from .nt_eval import evaluate_on_nt
 from .pipeline import TokenRecord, pipeline
@@ -164,8 +175,16 @@ __all__ = [
     "disable_lsj",
     "gloss",
     "lookup",
+    "entry",
     "LSJEntry",
     "LSJLexicon",
+    "LexEntry",
+    "LexiconInfo",
+    "lexica",
+    "use_lexicon",
+    "disable_lexicon",
+    "active_lexica",
+    "lexicon_link",
     "parse",
     "use_parser",
     "disable_parser",
