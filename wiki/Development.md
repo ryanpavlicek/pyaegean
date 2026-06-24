@@ -91,6 +91,15 @@ python -m build && python -m twine check dist/*
 python scripts/check_footprint.py --wheel "dist/*.whl"   # wheel = code + JSON only
 ```
 
+Pinned remote assets (release tarballs + commit-pinned upstream sources) are verified on a
+weekly schedule by `.github/workflows/assets.yml`, not per-PR — link rot is a function of
+time, not of any one change. Run it yourself anytime:
+
+```bash
+python scripts/check_assets.py                 # every pinned URL still resolves
+python scripts/check_assets.py --verify-hashes # also sha256-verify the release assets (slow)
+```
+
 A quick smoke check that the bundled corpus still loads:
 
 ```bash

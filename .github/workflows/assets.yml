@@ -1,0 +1,35 @@
+name: Asset integrity
+
+# pyaegean's reproducibility story (docs/benchmarks.md, aegean.data.versions()) rests on
+# fetch-to-cache assets that live OUTSIDE the wheel: sha256-pinned release tarballs and
+# commit-pinned upstream sources. Link rot, a deleted release, or a re-tagged asset silently
+# breaks a pin. This job verifies every pinned URL still resolves, on a schedule — not per-PR,
+# because it concerns external drift over time and must not make PRs depend on third-party uptime.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays, 06:17 UTC
+  workflow_dispatch:
+    inputs:
+      verify_hashes:
+        description: "Also download + sha256-verify the release assets (slow, gigabytes)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Pinned asset URLs resolve
+        run: python scripts/check_assets.py
+      - name: Verify release-asset sha256 (manual dispatch only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_hashes }}
+        run: python scripts/check_assets.py --verify-hashes
