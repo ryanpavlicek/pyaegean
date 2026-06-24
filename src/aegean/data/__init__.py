@@ -130,6 +130,39 @@ _REMOTE: dict[str, DataSpec] = {
         note="prebuilt LSJ lemma→entry index (~15 MB); use_lsj() prefers it over the 270 MB build.",
         extract=False,
     ),
+    "middle-liddell-index": DataSpec(
+        name="middle-liddell-index",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-lexica-v1/middle-liddell-index.json.gz"
+        ),
+        sha256="8c4481f5b4252ac1cfdc4d11087e52be35408a720cfe72ae9815adecc74cde4f",
+        license="public domain (1889); Perseus digitization CC BY-SA, Scaife data MIT; derived index, fetched, never bundled",
+        note="prebuilt Middle Liddell lemma→entry index (~2.3 MB); use_lexicon('middle-liddell') prefers it.",
+        extract=False,
+    ),
+    "cunliffe-index": DataSpec(
+        name="cunliffe-index",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-lexica-v1/cunliffe-index.json.gz"
+        ),
+        sha256="3e3f0d9d9bfd89e609090aafff833041feb0e4421485e1fada14e1f338974608",
+        license="public domain (1924); Scaife structured data MIT; derived index, fetched, never bundled",
+        note="prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB); use_lexicon('cunliffe') prefers it.",
+        extract=False,
+    ),
+    "abbott-smith-index": DataSpec(
+        name="abbott-smith-index",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-lexica-v1/abbott-smith-index.json.gz"
+        ),
+        sha256="abfa896ecb196e7cae840bc8fd1f549271849dc36e6d140df236ffeec9297507",
+        license="public domain (1922); derived index, fetched, never bundled",
+        note="prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB); use_lexicon('abbott-smith') prefers it.",
+        extract=False,
+    ),
     # Prebuilt AGDT-derived artifacts: the treebank lexicon + the trained POS
     # tagger / lemmatizer / arc-eager parser. Hosting them lets the use_treebank/
     # use_tagger/use_lemmatizer/use_parser backends skip the 75 MB AGDT download
