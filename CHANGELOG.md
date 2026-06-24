@@ -4,6 +4,15 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **EpiDoc inbound reader** (`aegean.io.from_epidoc` / `read_epidoc`, and `aegean import --epidoc`):
+  load any EpiDoc TEI edition (a file or a folder of `.xml`) into a `Corpus` — the inverse of the
+  EpiDoc writer. Recovers the id, find-place, token/line stream, editorial certainty
+  (`<unclear>`/`<supplied>`), and `<app>` alternate readings, using only the stdlib XML parser
+  (no extra dependency).
+
 ## 0.8.9 (2026-06-24)
 
 ### Added

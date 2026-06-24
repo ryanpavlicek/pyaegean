@@ -93,6 +93,9 @@ def import_(
     workbench: bool = typer.Option(
         False, "--workbench", help="Treat SOURCE as a Linear A Workbench export (JSON) and import that."
     ),
+    epidoc: bool = typer.Option(
+        False, "--epidoc", help="Treat SOURCE as EpiDoc TEI (a file or a folder of .xml) and import it."
+    ),
 ) -> None:
     """Import your OWN text into a corpus you can then analyse, search, and export.
 
@@ -101,13 +104,16 @@ def import_(
 
       aegean import myplato.txt -o myplato.json   &&   aegean stats myplato.json
       aegean import poems/ -o corpus.db --split line
-      aegean import rows.csv -o corpus.json --text-col line --id-col id"""
+      aegean import rows.csv -o corpus.json --text-col line --id-col id
+      aegean import inscriptions/ -o ins.json --epidoc --script greek   # any EpiDoc TEI edition"""
     from aegean import io as aegean_io
 
     p = Path(source)
     try:
         if workbench:
             corpus = aegean_io.from_workbench_export(p)
+        elif epidoc:
+            corpus = aegean_io.from_epidoc(p, script_id=script)
         elif p.is_dir():
             corpus = aegean_io.from_text_dir(
                 p, script_id=script, glob=glob, split=split, encoding=encoding

@@ -1,14 +1,18 @@
-"""Write the corpus model to EpiDoc TEI XML — the inverse of the EpiDoc reader.
+"""Read and write the corpus model as EpiDoc TEI XML, both on the stdlib XML parser.
 
-A `Document` becomes a TEI document: the header carries the id and
-find-place, the body carries the transliteration as ``<w>``/``<num>``/``<g>``/``<seg>`` tokens with
-``<lb/>`` line breaks. Built with the stdlib XML writer (lazy-imported), so **export needs no extra
-dependency** — reading EpiDoc still uses lxml via the ``[epidoc]`` extra (see
-`aegean.scripts.linearb.parse_epidoc`).
+**Writing** (`to_epidoc` / `write_epidoc`): a `Document` becomes a TEI document — the header
+carries the id and find-place, the body carries the transliteration as
+``<w>``/``<num>``/``<g>``/``<seg>`` tokens with ``<lb/>`` line breaks and ``<unclear>``/``<supplied>``
+apparatus for non-certain readings.
 
-It round-trips through that reader for the content EpiDoc preserves — the document id, find-place,
-and the token/line stream. The reader re-derives token kinds from the text, so a written corpus
-reloads with the same words, numerals, ideograms, separators, and lines.
+**Reading** (`from_epidoc` / `read_epidoc`): the inverse, and script-agnostic — it ingests any
+EpiDoc edition (a single file or a directory) into a `Corpus`, taking the id and find-place from
+the header and the token/line stream + editorial certainty from the ``<div type="edition">``. Token
+kinds come from the carrier element (``<w>``→word, ``<num>``→numeral, ``<g>``→logogram); a logogram
+that had to be carried in ``<seg>`` to hold apparatus markup reloads as a word. Both directions use
+**only the stdlib XML parser**, so neither needs an extra dependency. (The Linear B-specific
+`aegean.scripts.linearb.parse_epidoc` keeps its own lxml reader for DAMOS-style files, where it
+re-derives Aegean token kinds from the transliteration text.)
 """
 
 from __future__ import annotations
@@ -16,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..core.model import Document, ReadingStatus, TokenKind
+from ..core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
 
 if TYPE_CHECKING:
     import xml.etree.ElementTree as ET
@@ -126,3 +130,157 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     for doc in obj:
         (out / f"{_safe_name(doc.id)}.xml").write_text(to_epidoc(doc), encoding="utf-8")
+
+
+# ── reading EpiDoc TEI back into the corpus model ────────────────────────────────
+
+_TOKEN_TAGS = frozenset({"w", "num", "g", "seg"})
+_KIND_BY_TAG = {"w": TokenKind.WORD, "num": TokenKind.NUMERAL, "g": TokenKind.LOGOGRAM}
+
+
+def _local(tag: object) -> str:
+    """Local name of a (possibly namespaced) ElementTree tag."""
+    return tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+
+
+def _node_text(el: ET.Element) -> str:
+    return "".join(el.itertext()).strip()
+
+
+def _first_text(root: ET.Element, *tags: str) -> str:
+    """First non-empty text among the named TEI elements, searched anywhere."""
+    for tag in tags:
+        el = root.find(f".//{{{_TEI}}}{tag}")
+        if el is not None and _node_text(el):
+            return _node_text(el)
+    return ""
+
+
+def _reading_status(el: ET.Element) -> ReadingStatus:
+    """Editorial certainty from any EpiDoc apparatus element the token contains."""
+    inner = {_local(d.tag) for d in el.iter()}
+    if "supplied" in inner:
+        return ReadingStatus.RESTORED
+    if "gap" in inner:
+        return ReadingStatus.LOST
+    if "unclear" in inner:
+        return ReadingStatus.UNCLEAR
+    return ReadingStatus.CERTAIN
+
+
+def _kind_of(carrier: str, text: str) -> TokenKind:
+    kind = _KIND_BY_TAG.get(carrier)
+    if kind is not None:
+        return kind
+    # <seg> is the writer's fallback carrier (e.g. a logogram that had to hold apparatus
+    # markup); re-derive the obvious numeral case, otherwise treat it as a word.
+    return TokenKind.NUMERAL if text and all(c.isdigit() for c in text) else TokenKind.WORD
+
+
+def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Document | None:
+    edition = next(
+        (d for d in root.iter(f"{{{_TEI}}}div") if d.get("type") == "edition"), None
+    )
+    region = edition if edition is not None else root.find(f".//{{{_TEI}}}body")
+    if region is None:
+        return None
+
+    doc_id = _first_text(root, "idno", "title") or root.get(f"{{{_XML}}}id") or fallback_id
+    name = _first_text(root, "title")
+    site = _first_text(root, "origPlace", "settlement", "provenance")
+    notes = tuple(
+        _node_text(n) for n in root.iter()
+        if _local(n.tag) in ("note", "bibl") and _node_text(n)
+    )
+
+    # stdlib ElementTree has no getparent(); a child→parent map lets us skip token
+    # elements nested inside an <app> (they are consumed at the <app> itself). Stdlib
+    # Element objects are identity-stable, so they are safe dict keys.
+    parents = {child: parent for parent in region.iter() for child in parent}
+
+    def inside_app(el: ET.Element) -> bool:
+        p = parents.get(el)
+        while p is not None:
+            if _local(p.tag) == "app":
+                return True
+            p = parents.get(p)
+        return False
+
+    tokens: list[Token] = []
+    lines: list[list[int]] = []
+    cur: list[int] = []
+    pos = 0
+    for el in region.iter():
+        tag = _local(el.tag)
+        if tag == "lb":
+            if cur:
+                lines.append(cur)
+                cur = []
+        elif tag == "app":
+            lem = el.find(f"{{{_TEI}}}lem")
+            text = _node_text(lem) if lem is not None else ""
+            if not text:
+                continue
+            carrier = (
+                next((_local(c.tag) for c in lem.iter() if _local(c.tag) in _TOKEN_TAGS), "seg")
+                if lem is not None else "seg"
+            )
+            alts = tuple(_node_text(r) for r in el.findall(f"{{{_TEI}}}rdg") if _node_text(r))
+            tokens.append(Token(
+                text=text, kind=_kind_of(carrier, text),
+                status=ReadingStatus.CERTAIN if lem is None else _reading_status(lem),
+                alt=alts, line_no=len(lines), position=pos,
+            ))
+            cur.append(pos)
+            pos += 1
+        elif tag in _TOKEN_TAGS:
+            if inside_app(el):
+                continue
+            text = _node_text(el)
+            if not text:
+                continue
+            tokens.append(Token(
+                text=text, kind=_kind_of(tag, text), status=_reading_status(el),
+                line_no=len(lines), position=pos,
+            ))
+            cur.append(pos)
+            pos += 1
+    if cur:
+        lines.append(cur)
+
+    meta = DocumentMeta(site=site, name=name or doc_id, notes=notes)
+    return Document(id=doc_id, script_id=script_id, tokens=tokens, lines=lines, meta=meta)
+
+
+def read_epidoc(source: str | Path, *, script_id: str = "greek") -> list[Document]:
+    """Parse an EpiDoc TEI file — or a directory of ``*.xml`` files — into Documents.
+
+    ``script_id`` labels the result: EpiDoc's ``xml:lang`` can't disambiguate (say) Linear A
+    from Cypro-Minoan, so the caller names the script. Uses the stdlib XML parser only."""
+    import xml.etree.ElementTree as ET
+
+    path = Path(source)
+    files = sorted(path.glob("*.xml")) if path.is_dir() else [path]
+    out: list[Document] = []
+    for f in files:
+        doc = _read_document(ET.parse(str(f)).getroot(), script_id, f.stem)
+        if doc is not None:
+            out.append(doc)
+    return out
+
+
+def from_epidoc(source: str | Path, *, script_id: str = "greek") -> Corpus:
+    """Load EpiDoc TEI (a file or a directory of ``*.xml``) into a `Corpus`.
+
+    The inverse of `write_epidoc`: round-trips the id, find-place, token/line stream,
+    editorial certainty, and alternate readings. ``script_id`` labels the corpus
+    (default ``"greek"``). pyaegean parses your files locally and never re-hosts them."""
+    from ..core.corpus import Corpus
+    from ..core.provenance import Provenance
+
+    docs = read_epidoc(source, script_id=script_id)
+    provenance = Provenance(
+        source=f"EpiDoc TEI import: {source}",
+        license="Parsed locally from your EpiDoc; redistribute under the source's terms.",
+    )
+    return Corpus(docs, provenance=provenance, script_id=script_id)

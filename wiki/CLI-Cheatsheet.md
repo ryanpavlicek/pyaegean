@@ -68,7 +68,7 @@ file: `.json` / `.csv` (stdlib, no pandas) / `.txt` by extension.
 | `cite` | Cite the corpus, or the exact filtered subset | `--style --site/...` | `aegean cite lineara --site Zakros --style bibtex` |
 | `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | `-f/--format -o/--output --level --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
-| `import` | Import your **own** text (`.txt` / folder / `.csv`), or a Workbench export | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench` | `aegean import john.txt -o john.json --script nt` |
+| `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc` | `aegean import john.txt -o john.json --script nt` |
 | `geo` | Find-site coordinates, or `--word`'s per-site map; GeoJSON with `-o` | `--word --level -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |

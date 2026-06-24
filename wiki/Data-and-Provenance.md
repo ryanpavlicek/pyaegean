@@ -616,15 +616,16 @@ Tokens may be plain strings (kinds inferred: parseable numerals vs words,
 hyphenated tokens get their signs split) or dicts carrying `kind`, `status`
 (editorial certainty), and `alt` (variant readings). Make it loadable by name with
 `aegean.core.corpus.register_loader("myfind", lambda: corpus)`; for EpiDoc
-sources, the bring-your-own reader (see [Linear B](Linear-B)) covers the same model
-including `<unclear>`/`<supplied>` status and `<app>`/`<rdg>` variants.
+sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads any EpiDoc TEI
+edition into the same model — id, find-place, token/line stream, `<unclear>`/`<supplied>`
+status, and `<app>`/`<rdg>` variants — on the stdlib XML parser, no extra needed.
 
 ### Variant readings
 
 `Token.alt` carries alternate readings alongside the editorial `status`. The
 EpiDoc writer emits them as a critical apparatus:
 `<app><lem><w>PO-ME</w></lem><rdg><w>PO-MA</w></rdg></app>` (validated against the
-official EpiDoc schema), and the reader folds them back to one token with its
+official EpiDoc schema), and `from_epidoc` folds them back to one token with its
 `alt` tuple, so variants survive the EpiDoc *and* JSON round-trips.
 
 ---

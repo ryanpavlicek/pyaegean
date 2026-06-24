@@ -72,6 +72,42 @@ def test_write_single_document_to_file(tmp_path: Path) -> None:
     assert back.lines == [[0, 1, 2], [3, 4]]
 
 
+def test_from_epidoc_roundtrip_uses_only_stdlib(tmp_path: Path) -> None:
+    # the general inbound reader needs no [epidoc] extra (unlike the linearb lxml reader):
+    # write with the stdlib writer, read back with the stdlib from_epidoc, documents match.
+    from aegean.io import from_epidoc
+
+    out = tmp_path / "kn_x_1.xml"
+    write_epidoc(_doc(), out)
+    back = from_epidoc(out, script_id="linearb").documents[0]
+    assert back.id == "KN X 1" and back.meta.site == "Knossos"
+    assert [t.text for t in back.tokens] == ["A-NO-QO-TA", "OVIS", "30", "TO-SO", "50"]
+    assert [t.kind for t in back.tokens] == [
+        TokenKind.WORD, TokenKind.LOGOGRAM, TokenKind.NUMERAL, TokenKind.WORD, TokenKind.NUMERAL,
+    ]
+    assert back.lines == [[0, 1, 2], [3, 4]]
+
+
+def test_from_epidoc_preserves_apparatus_and_alternate_readings(tmp_path: Path) -> None:
+    from aegean.io import from_epidoc
+
+    toks = [
+        Token("μῆνιν", TokenKind.WORD, line_no=0, position=0),
+        Token("ἄειδε", TokenKind.WORD, status=ReadingStatus.UNCLEAR, line_no=0, position=1),
+        Token("θεά", TokenKind.WORD, alt=("θεᾱ",), line_no=0, position=2),
+    ]
+    doc = Document(
+        id="IL1", script_id="greek", tokens=toks, lines=[[0, 1, 2]],
+        meta=DocumentMeta(name="Iliad 1.1"),
+    )
+    out = tmp_path / "il.xml"
+    write_epidoc(doc, out)
+    back = from_epidoc(out, script_id="greek").documents[0]
+    assert [t.text for t in back.tokens] == ["μῆνιν", "ἄειδε", "θεά"]
+    assert back.tokens[1].status is ReadingStatus.UNCLEAR
+    assert back.tokens[2].alt == ("θεᾱ",)
+
+
 def test_to_csv_document_and_token_levels(tmp_path: Path) -> None:
     c = aegean.load("linearb")
     doc_csv = tmp_path / "doc.csv"

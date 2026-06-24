@@ -136,6 +136,14 @@ def test_export_import_workbench_roundtrip(app, tmp_path):
     assert "document" in msg and back.exists()
 
 
+def test_import_epidoc_roundtrip(app, tmp_path):
+    epi = tmp_path / "epi"
+    ok(app, "export", "lineara", "--site", "Zakros", "-f", "epidoc", "-o", str(epi))
+    back = tmp_path / "back.json"
+    msg = ok(app, "import", str(epi), "--epidoc", "--script", "lineara", "-o", str(back))
+    assert "document" in msg and back.exists()
+
+
 def test_geo_table(app):
     rows = json.loads(ok(app, "geo", "lineara", "--json"))
     assert any(r["site"] == "Haghia Triada" for r in rows)
