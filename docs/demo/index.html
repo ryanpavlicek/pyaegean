@@ -174,6 +174,20 @@
     <pre id="imp-out"></pre>
   </div>
 
+  <div class="card">
+    <h2>Read EpiDoc TEI</h2>
+    <label for="epi">Paste an EpiDoc TEI edition and read it into a corpus — id, find-place, token preview
+      (<code>io.from_epidoc</code>, behind <code>aegean import --epidoc</code>; stdlib-only, no extra)</label>
+    <textarea id="epi"><TEI xmlns="http://www.tei-c.org/ns/1.0">
+ <teiHeader><fileDesc><sourceDesc><msDesc><msIdentifier><idno>IG-1</idno></msIdentifier>
+ <history><origin><origPlace>Athens</origPlace></origin></history></msDesc></sourceDesc></fileDesc></teiHeader>
+ <text><body><div type="edition"><ab><lb n="1"/>
+ <w>ἐν</w> <w>ἀρχῇ</w> <w>ἦν</w> <w>ὁ</w> <w>λόγος</w></ab></div></body></text>
+</TEI></textarea>
+    <div class="row"><button data-tool="epi" disabled>Read EpiDoc</button></div>
+    <pre id="epi-out"></pre>
+  </div>
+
   <footer>
     Built on <a href="https://github.com/ryanpavlicek/pyaegean">pyaegean</a>
     (<a href="https://pypi.org/project/pyaegean/">PyPI</a>) — the released version runs here.
@@ -203,7 +217,7 @@ async function init() {
     pyodide.runPython(code);
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
                         "catalog", "bridge", "lineara_search", "lineara_balance", "import_text",
-                        "phonetic_compare", "lexicon_link"]) {
+                        "phonetic_compare", "lexicon_link", "epidoc_import"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -275,6 +289,12 @@ const handlers = {
     show("imp-out", r.error ? r
       : `${r.documents} document, ${r.tokens} tokens\nmost frequent:\n` +
         r.top.map(w => `  ${w.word}  (${w.count})`).join("\n"));
+  },
+  epi: () => {
+    const r = call("epidoc_import", val("epi"));
+    show("epi-out", r.error ? r
+      : `${r.id}${r.site ? "  ·  " + r.site : ""}\n${r.documents} document, ${r.tokens} tokens\n` +
+        `tokens: ${r.preview.join(" ")}`);
   },
 };
 

@@ -96,6 +96,21 @@ def test_demo_phonetic_compare() -> None:
     assert 0 < r["similarity"] <= 1
 
 
+def test_demo_epidoc_import() -> None:
+    demo = _load_demo()
+    from aegean.core.model import Document, DocumentMeta, Token, TokenKind
+    from aegean.io import to_epidoc
+
+    doc = Document(
+        id="IG1", script_id="greek",
+        tokens=[Token("λόγος", TokenKind.WORD, line_no=0, position=0)],
+        lines=[[0]], meta=DocumentMeta(site="Athens", name="t"),
+    )
+    r = json.loads(demo.epidoc_import(to_epidoc(doc)))
+    assert r["id"] == "IG1" and r["site"] == "Athens" and r["tokens"] == 1 and r["preview"] == ["λόγος"]
+    assert "error" in json.loads(demo.epidoc_import("not xml"))
+
+
 def test_demo_works_without_sqlite3() -> None:
     """Pyodide unvendors sqlite3 from its stdlib, so `import aegean` and the demo's calls
     must not require it (regression: a top-level `import sqlite3` in the opt-in cache made
@@ -138,5 +153,5 @@ def test_demo_html_wiring() -> None:
     demo = _load_demo()
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
                  "bridge", "lineara_search", "lineara_balance", "import_text", "phonetic_compare",
-                 "lexicon_link"):
+                 "lexicon_link", "epidoc_import"):
         assert hasattr(demo, name) and f'"{name}"' in html
