@@ -429,7 +429,7 @@ reporting where its answer is solid and where it has fallen back to a guess.
 **Where next:**
 the [Greek NLP](Greek-NLP) reference covers IPA phonology, prosody, the benchmark
 harness, the opt-in [treebank lemmas/morphology](Greek-NLP#treebank-backed-mode-opt-in),
-[LSJ glossing](Greek-NLP#lexicon-lsj-glossing-opt-in), the
+[dictionary glossing](Greek-NLP#more-dictionaries-the-lexicon-registry), the
 [neural pipeline](Greek-NLP#the-neural-pipeline-opt-in), and the baseline
 [dependency parser](Greek-NLP#dependency-parsing-opt-in-baseline); the
 [AI Layer](AI-Layer) adds (clearly-labeled, exploratory) translation on top.
