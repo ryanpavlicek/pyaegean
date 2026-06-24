@@ -4,10 +4,10 @@ The opt-in ``[neural]`` backend's flagship: a jointly-trained GreBerta encoder w
 token-classification heads (UPOS + the 9 AGDT postag positions), biaffine arc/relation
 scorers decoded by a single-root MST (`aegean.greek.mst`), and an edit-script lemma head
 composed with a train-only lookup. Trained leakage-clean on AGDT + Gorman + Pedalion
-(1.41M tokens); measured on the UD Ancient Greek test folds **above every published
-number** (UD Perseus: UPOS 96.95, UFeats 96.13, lemma 94.40, UAS 89.14, LAS 84.36 —
-see ``docs/benchmarks.md`` for protocol and tables; shipped-artifact numbers are
-re-measured through this module and recorded there).
+(1.41M tokens); measured on the UD Ancient Greek test folds as the **best published
+result on every metric** (UD Perseus: UPOS 97.0, UFeats 96.0, lemma 94.3, XPOS 93.5,
+UAS 90.2, LAS 85.6 — see ``docs/benchmarks.md`` for protocol, seeds, and bootstrap CIs;
+shipped-artifact numbers are re-measured through this module and recorded there).
 
 Inference is **torch-free** (onnxruntime + tokenizers + numpy — the ``[neural]`` extra),
 imported only on activation, so ``import aegean`` stays instant. The model bundle (ONNX +
@@ -202,8 +202,8 @@ def use_neural_pipeline(*, force: bool = False) -> None:
     `pos_tag`, `aegean.greek.parse` (UD relations), and `aegean.greek.lemmatize`
     all use it; `analyze_sentence` returns the full joint analysis in one call.
 
-    Raises `aegean.data.DataNotAvailableError` if the model URL is not yet pinned (set
-    ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror) or the download fails, and
+    Raises `aegean.data.DataNotAvailableError` if the download fails (set
+    ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror), and
     `NeuralPipelineNotLoadedError` if the optional dependencies are missing."""
     global _ACTIVE
     model_dir = fetch(_DATASET, force=force)

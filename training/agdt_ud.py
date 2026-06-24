@@ -15,8 +15,8 @@ out) under the UD-Perseus conversion's conventions:
   UD train fold map to exactly one FEATS string).
 
 Training-side only: the trained tagger predicts UD UPOS directly (it learns the lexical
-and contextual splits), so inference needs no UPOS converter; ``feats_from_xpos`` moves
-into the package at Stage E to render predicted tags as UD FEATS.
+and contextual splits), so inference needs no UPOS converter; ``feats_from_xpos`` now lives
+in the package (re-exported below) to render predicted tags as UD FEATS.
 """
 
 from __future__ import annotations
