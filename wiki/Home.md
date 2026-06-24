@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.8.8 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.8.9 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -137,9 +137,14 @@ the best published result on every metric and robust across five training seeds.
 `lexicon_link`) adding Middle Liddell, Cunliffe, and Abbott-Smith beside LSJ and Dodson, with
 Logeion deep-links; and stricter, clearer `load_work` reference addressing.
 
+**New in v0.8.9:** **OpenRouter** as a fifth AI provider (one key, many models); and fuller CLI
+parity with the Python API: `aegean greek nt`, `aegean ai summarize`, `aegean geo --word`,
+`aegean greek eval --bootstrap`, and a Linear A Workbench round-trip (`export -f workbench` /
+`import --workbench`).
+
 **On the list next:**
 
-- A smaller neural model (selective quantization, optional GPU execution), held to the same accuracy gate
+- More public-domain dictionaries in the registry (Autenrieth, Slater), as their open digitizations are confirmed license-clean
 - SigLA apparatus decoding; richer `load_work` addressing across more of the Perseus / First1KGreek canon
 - Wider gazetteer / Pleiades coverage
 

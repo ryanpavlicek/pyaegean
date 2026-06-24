@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.8 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.9 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -147,7 +147,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.8.8**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.8.9**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); a **pluggable lexicon
 registry** with Middle Liddell, Cunliffe, Abbott-Smith, LSJ, and Dodson, plus Logeion deep-links;
@@ -155,17 +155,17 @@ the annotated **Greek New Testament** with Koine glossing; the full **DAMOS Line
 **SigLA Linear A** corpora on demand; corpus statistics (dispersion, keyness, bootstrap), one-line
 plots, and cross-script phonetic comparison; a complete data layer (lossless JSON round-trip, a
 compound `query()`, schema-valid EpiDoc / CSV / Parquet export, **SQLite persistence** with
-full-text search, an opt-in analysis cache, and Pleiades-aligned find-sites); the **`aegean`**
-command line and the **`aegean-mcp`** server; and an in-browser demo.
+full-text search, an opt-in analysis cache, and Pleiades-aligned find-sites); a **multi-provider
+AI layer** (Anthropic, OpenAI, Grok, Gemini, OpenRouter) with grounded, exploratory-labeled
+translation; the **`aegean`** command line mirroring the Python API and the **`aegean-mcp`**
+server; and an in-browser demo.
 
 On the list next:
 
-- A smaller neural model: selective quantization and optional GPU execution providers, held to the
-  same accuracy gate
 - More public-domain dictionaries in the registry (Autenrieth, Slater), as their open
   digitizations are confirmed license-clean
-- SigLA editorial-apparatus decoding and wider Pleiades / gazetteer coverage, as the upstream
-  apparatus data and verified coordinates become available
+- SigLA editorial-apparatus decoding, richer `load_work` addressing, and wider Pleiades /
+  gazetteer coverage, as the upstream apparatus data and verified coordinates become available
 
 
 ## About the author
@@ -202,7 +202,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.8},
+  version = {0.8.9},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```
