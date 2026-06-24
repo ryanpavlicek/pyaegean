@@ -15,7 +15,8 @@ LAS 85.58 ± 0.10 / UAS 90.15 ± 0.12.
 ## Pipeline
 
 The model is built in stages. Each stage has a dataset builder and a training script in
-this directory; per-stage metrics are under `results/`.
+this directory; `results/` holds the shipped-model evidence (the grc-joint-v2 seed
+replicates, the export gate report, and bootstrap CIs).
 
 - **Stage A — encoder selection.** Fine-tune UPOS on each candidate encoder under an
   identical budget; pick on dev accuracy, generalization to unseen forms, size, and
