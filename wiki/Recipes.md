@@ -296,7 +296,7 @@ print(r.trace())       # every corpus/analysis fact the answer rested on, by sou
 
 ```bash
 aegean ai ask "What is KU-RO?" --corpus lineara --trace
-aegean ai providers             # anthropic · gemini · grok · openai
+aegean ai providers             # anthropic · gemini · grok · openai · openrouter
 aegean ai eval                  # grounding-fidelity scores for your provider
 ```
 

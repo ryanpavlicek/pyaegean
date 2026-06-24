@@ -261,7 +261,7 @@ def get_client(
 
 
 def providers() -> list[str]:
-    """The sorted names of registered providers, e.g. ``['anthropic', 'gemini', 'grok', 'openai']``."""
+    """Sorted names of registered providers, e.g. ``['anthropic', 'gemini', 'grok', 'openai', 'openrouter']``."""
     return sorted(_PROVIDERS)
 
 

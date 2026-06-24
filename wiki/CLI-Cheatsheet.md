@@ -718,7 +718,7 @@ hard limits: [Limitations](Limitations).
 
 ```bash
 aegean ai providers
-# anthropic / gemini / grok / openai
+# anthropic / gemini / grok / openai / openrouter
 
 # heavy (needs the provider extra + API key in your environment):
 aegean ai translate "KU-RO 130" --script lineara          # exploratory (undeciphered!)
@@ -726,7 +726,7 @@ aegean ai ask "What is KU-RO?" --corpus lineara --trace   # answer + grounding p
 aegean ai extract "OLE S 1" --fields commodity,amount     # → {"commodity":"OLE","amount":…}
 ```
 
-`--provider` is `anthropic` (default) / `openai` / `grok` / `gemini`; `--model`
+`--provider` is `anthropic` (default) / `openai` / `grok` / `gemini` / `openrouter`; `--model`
 overrides the model. `--corpus NAME` grounds the answer on that corpus's frequent
 words. `--trace` prints the grounding provenance under the answer, so you can audit
 exactly what the model was (and wasn't) told. `extract` always prints JSON.

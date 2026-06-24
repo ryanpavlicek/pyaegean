@@ -281,7 +281,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `geo` | geopandas, shapely | GeoJSON / GeoDataFrames |
   | `viz` | matplotlib | the `plot` figures |
   | `mcp` | mcp | the Model Context Protocol server (e.g. for Claude Code) |
-  | `anthropic` / `openai` / `gemini` / `grok` | one provider SDK | the AI layer |
+  | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` | one provider SDK | the AI layer |
   | `ai` | all providers | the AI layer, any provider |
   | `all` | `ai,epidoc,geo,data,cli,viz,mcp` | everything except `neural` |
 
