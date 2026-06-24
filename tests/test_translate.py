@@ -3,6 +3,8 @@ translation call is delegated to the AI layer (faked here)."""
 
 from __future__ import annotations
 
+import warnings
+
 from aegean import translate
 from aegean.ai.client import LLMClient, LLMResponse
 
@@ -35,7 +37,9 @@ def test_lineara_grounding_uses_transliteration():
 
 def test_translate_greek_is_grounded_and_exploratory():
     c = CapturingClient()
-    r = translate.translate("ἦν ὁ λόγος", script="greek", client=c)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # baseline-lemmatizer notice is covered separately
+        r = translate.translate("ἦν ὁ λόγος", script="greek", client=c)
     assert r.kind == "translate" and r.exploratory is True
     assert "εἰμί" in c.last_prompt          # grounding reached the prompt
     assert "Ancient Greek" in c.last_prompt  # source language named
@@ -48,3 +52,21 @@ def test_translate_lineara_routes_source_name():
     r = translate.translate("KU-RO DA-RO", script="lineara", client=c)
     assert "Linear A" in c.last_prompt
     assert [item.content for item in r.grounding] == ["KU-RO → /kuro/", "DA-RO → /daro/"]
+
+
+def test_translate_greek_warns_on_baseline_lemmatizer():
+    # With only the seed table loaded, lexical grounding misses rare/inflected forms;
+    # the user is told how to get fuller grounding (treebank / neural pipeline).
+    c = CapturingClient()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        translate.translate("ἦν ὁ λόγος", script="greek", client=c)
+    assert any("baseline lemmatizer" in str(w.message) for w in caught)
+
+
+def test_translate_lineara_does_not_warn_about_lemmatizer():
+    c = CapturingClient()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        translate.translate("KU-RO DA-RO", script="lineara", client=c)
+    assert not any("baseline lemmatizer" in str(w.message) for w in caught)
