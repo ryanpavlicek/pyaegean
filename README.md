@@ -172,7 +172,7 @@ On the list next:
 
 Ryan Pavlicek
 
-A software engineer building tools for exploring interesting problems in classical linguistics and history.
+I'm a software engineer that likes creating useful tools for exploring interesting problems.
 
 Contact: email or create an issue on the GitHub repo.
 
