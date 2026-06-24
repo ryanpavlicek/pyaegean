@@ -562,6 +562,48 @@ def work(
 
 
 @greek_app.command()
+def nt(
+    book: str | None = typer.Argument(
+        None, help="NT book name, e.g. John (omit to load all 27 books)."
+    ),
+    ref: str | None = typer.Option(
+        None, "--ref", help="Select a passage: '1' (chapter) or '1.1-1.18' (verses)."
+    ),
+    out_path: str | None = typer.Option(None, "--output", "-o", help="Write the corpus as JSON."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Load the Greek New Testament (Nestle 1904): gold lemma / morph / Strong's + Koine gloss.
+
+    With no BOOK, loads all 27 books; name a book (and optionally --ref) for one passage. Tokens
+    carry per-word annotations — `aegean export <file> -f csv --level token` spreads them into
+    columns. `aegean greek nt-books` lists the book names; `aegean greek gloss-nt` glosses a word."""
+    from aegean.data import DataNotAvailableError
+    from aegean.greek import load_nt
+
+    try:
+        c = load_nt(book, ref=ref)
+    except (DataNotAvailableError, ValueError, KeyError, LookupError) as exc:
+        raise fail(str(exc)) from None
+    if out_path:
+        c.to_json(out_path)
+        print(f"wrote {len(c)} documents to {out_path}")
+        return
+    summary = {
+        "scope": book or "whole NT",
+        "ref": ref or "",
+        "documents": len(c),
+        "tokens": sum(len(d.tokens) for d in c),
+        "first": c.documents[0].id if len(c) else "",
+        "source": c.provenance.source if c.provenance else "",
+        "data_version": c.provenance.data_version if c.provenance else "",
+    }
+    if json_out:
+        emit_json(summary)
+        return
+    table("Greek NT", ["field", "value"], [[k, str(v)] for k, v in summary.items()])
+
+
+@greek_app.command()
 def works(json_out: bool = JSON_OPT) -> None:
     """List a curated catalog of well-known Greek works loadable with `aegean greek work`.
 
@@ -644,6 +686,9 @@ def evaluate(
     ),
     treebank_fold: str = typer.Option("perseus", "--treebank", help="For ud: perseus or proiel."),
     split: str = typer.Option("test", "--split", help="For ud: dev or test."),
+    bootstrap: bool = typer.Option(
+        False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
+    ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -663,7 +708,13 @@ def evaluate(
     )
     result: object
     if target == "ud":
-        result = greek.evaluate_on_ud(treebank=treebank_fold, split=split)
+        if bootstrap:
+            cis = greek.bootstrap_ud(treebank=treebank_fold, split=split)
+            result = {
+                k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]" for k, ci in cis.items()
+            }
+        else:
+            result = greek.evaluate_on_ud(treebank=treebank_fold, split=split)
     elif target == "proiel":
         result = greek.evaluate_on_proiel()
     elif target == "nt":

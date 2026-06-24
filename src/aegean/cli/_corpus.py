@@ -90,6 +90,9 @@ def import_(
     text_col: str = typer.Option("text", "--text-col", help="For CSV: the column holding the text."),
     id_col: str | None = typer.Option(None, "--id-col", help="For CSV: the column holding the id."),
     encoding: str = typer.Option("utf-8", "--encoding", help="Text encoding to read with."),
+    workbench: bool = typer.Option(
+        False, "--workbench", help="Treat SOURCE as a Linear A Workbench export (JSON) and import that."
+    ),
 ) -> None:
     """Import your OWN text into a corpus you can then analyse, search, and export.
 
@@ -103,7 +106,9 @@ def import_(
 
     p = Path(source)
     try:
-        if p.is_dir():
+        if workbench:
+            corpus = aegean_io.from_workbench_export(p)
+        elif p.is_dir():
             corpus = aegean_io.from_text_dir(
                 p, script_id=script, glob=glob, split=split, encoding=encoding
             )
@@ -552,7 +557,9 @@ def cite(
 
 def export(
     corpus: str = CORPUS_ARG,
-    fmt: str = typer.Option(..., "--format", "-f", help="json, csv, parquet, epidoc, or sqlite."),
+    fmt: str = typer.Option(
+        ..., "--format", "-f", help="json, csv, parquet, epidoc, sqlite, or workbench."
+    ),
     output: Path = typer.Option(..., "--output", "-o", help="Destination file."),
     level: str = typer.Option(
         "document", "--level",
@@ -586,21 +593,59 @@ def export(
         from aegean.db import to_sqlite
 
         to_sqlite(c, output)
+    elif fmt == "workbench":
+        from aegean.io import to_workbench
+
+        to_workbench(c, output)
     else:
-        raise fail(f"unknown format {fmt!r}; use json, csv, parquet, epidoc, or sqlite")
+        raise fail(f"unknown format {fmt!r}; use json, csv, parquet, epidoc, sqlite, or workbench")
     print(f"wrote {len(c)} documents to {output} ({fmt})")
 
 
 def geo(
     corpus: str = CORPUS_ARG,
+    word: str | None = typer.Option(
+        None, "--word", help="Map where this word is attested (per-site counts) instead of every site."
+    ),
     level: str = typer.Option("site", "--level", help="site or inscription."),
     output: Path | None = typer.Option(
         None, "--output", "-o", help="Write GeoJSON here instead of printing a table."
     ),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Geographic view: find-site coordinates (GeoJSON needs the [geo] extra)."""
+    """Geographic view: find-site coordinates, or with --word the per-site attestations of one
+    word (GeoJSON needs the [geo] extra; the table does not)."""
     c = load_corpus(corpus)
+    from aegean.geo import site_coordinates
+
+    coords = site_coordinates()
+    if word is not None:
+        if output is not None:
+            from aegean.geo import word_distribution
+
+            gdf = word_distribution(c, word)
+            output.write_text(gdf.to_json(), encoding="utf-8")
+            print(f"wrote {len(gdf)} features to {output}")
+            return
+        from collections import Counter
+
+        counts: Counter[str] = Counter()
+        for d in c:
+            if d.meta.site in coords and any(t.text == word for t in d.words):
+                counts[d.meta.site] += 1
+        wrows = [
+            {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}
+            for s, n in counts.most_common()
+        ]
+        if json_out:
+            emit_json(wrows)
+            return
+        table(
+            f"{corpus}: {word!r} attested at {len(wrows)} located site(s)",
+            ["site", "lat", "lon", "count"],
+            [[str(r["site"]), str(r["lat"]), str(r["lon"]), str(r["count"])] for r in wrows],
+        )
+        return
     if output is not None:
         from aegean.geo import to_geodataframe
 
@@ -608,10 +653,7 @@ def geo(
         output.write_text(gdf.to_json(), encoding="utf-8")
         print(f"wrote {len(gdf)} features to {output}")
         return
-    from aegean.geo import site_coordinates
-
     sites = {d.meta.site for d in c if d.meta.site}
-    coords = site_coordinates()
     rows = [
         {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "pleiades": coords[s].pleiades or ""}
         for s in sorted(sites)

@@ -11,6 +11,10 @@ All notable changes to pyaegean are documented here. The format follows
   built-in provider reaching many models from one key through OpenRouter's OpenAI-compatible
   gateway. Set `OPENROUTER_API_KEY` for the key and `OPENROUTER_MODEL` for the `vendor/model`
   id (e.g. `anthropic/claude-3.5-sonnet`); works everywhere `--provider` is accepted.
+- **Fuller CLI parity** with the Python API: `aegean greek nt` (load a New Testament book or
+  passage with its gold annotations), `aegean ai summarize`, `aegean geo --word` (a word's
+  per-site attestation map), `aegean greek eval ud --bootstrap` (percentile CIs), and a Linear A
+  Workbench round-trip (`export -f workbench` / `import --workbench`).
 
 ## 0.8.8 (2026-06-24)
 

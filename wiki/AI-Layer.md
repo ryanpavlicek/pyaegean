@@ -1,9 +1,9 @@
 # AI Layer
 
 `aegean.ai` is an **optional, key-gated** generative layer: you bring an API key
-for one of four providers, feed the model **real local evidence** from the corpus
-and lexicon, and ask it to translate, gloss, propose decipherment hypotheses,
-answer questions, or pull structured data out of a tablet. You'd reach for it when
+for one of five providers, feed the model **real local evidence** from the corpus
+and lexicon, and ask it to translate, gloss, summarize, propose decipherment
+hypotheses, answer questions, or pull structured data out of a tablet. You'd reach for it when
 the rule-based tools have done all they can and you want a *labeled, traceable
 hypothesis* to think against: drafting a translation, sanity-checking a gloss,
 brainstorming readings of an undeciphered sign group.
@@ -188,7 +188,7 @@ can never be mistaken later for a verified fact.
 
 ### From the CLI: `--output / -o`
 
-Every generative command (`translate`, `gloss`, `hypotheses`, `ask`,
+Every generative command (`translate`, `gloss`, `summarize`, `hypotheses`, `ask`,
 `extract`) takes `--output PATH` (short `-o`). The extension decides the format:
 
 - **`.json`** writes the full result: the text, the provider/model/prompt
@@ -285,11 +285,10 @@ strings). They all return an `ExploratoryResult`.
 | Hypotheses | `ai.decipher_hypotheses(text, …)` | `aegean ai hypotheses` | Cautious, cited decipherment guesses. |
 | NLP assist | `ai.nlp_assist(text, task=, …)` | *(API only)* | Disambiguate a lemma/POS/parse. |
 | Ask | `ai.ask(question, …)` | `aegean ai ask` | Answer strictly from the grounding. |
-| Summarize | `ai.summarize(text, …)` | *(API only)* | Faithful, concise summary. |
+| Summarize | `ai.summarize(text, …)` | `aegean ai summarize` | Faithful, concise summary. |
 | Extract | `ai.extract(text, schema=, …)` | `aegean ai extract` | Structured JSON into `r.data`. |
 
-> The CLI surfaces the most common jobs. `nlp_assist` and `summarize` are
-> available from Python.
+> The CLI surfaces the most common jobs; `nlp_assist` is available from Python.
 
 ### Translate
 
@@ -395,12 +394,15 @@ r = ai.ask("What words most often share a tablet with KU-RO?",
 aegean ai ask "What are the most frequent Linear A words?" --corpus lineara --trace
 ```
 
-### Summarize (API)
+### Summarize
 
 A faithful, concise summary of a corpus excerpt or commentary.
 
 ```python
 ai.summarize(long_commentary_text, client=client)
+```
+```bash
+aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt   # --corpus grounds it; --trace audits
 ```
 
 ### Extract (structured JSON)
@@ -559,7 +561,7 @@ print(ai.gloss("ἦν", client=client).trace())
 #   grounding: none (ungrounded generation — weigh accordingly)
 ```
 
-On the CLI, add `--trace` to `translate`, `gloss`, `hypotheses`, or `ask` to print
+On the CLI, add `--trace` to `translate`, `gloss`, `summarize`, `hypotheses`, or `ask` to print
 the provenance trace under the answer. Without it, you get a one-line footer:
 `exploratory · provider:model · grounded on N item(s) (--trace to audit them)`.
 
@@ -691,6 +693,7 @@ keeps cost down and makes notebooks reproducible.
 | `aegean ai providers` | List registered providers | `--json` |
 | `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai gloss TEXT` | Word-by-word gloss | `--source`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
+| `aegean ai summarize TEXT` | Grounded summary | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai hypotheses TEXT` | Decipherment hypotheses | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai ask QUESTION` | Answer over grounding | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai extract TEXT` | Structured JSON | `--fields`, `--instruction`, `--corpus`, `--provider`, `--model`, `--output/-o`, `--json` |

@@ -144,6 +144,32 @@ def gloss(
 
 
 @ai_app.command()
+def summarize(
+    text: str = typer.Argument(..., help="Text to summarize ('-' reads stdin)."),
+    corpus: str | None = typer.Option(
+        None, "--corpus", help="Ground on this corpus's frequent words for context."
+    ),
+    provider: str = PROVIDER_OPT,
+    model: str | None = MODEL_OPT,
+    output: Path | None = AI_OUTPUT_OPT,
+    trace: bool = TRACE_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """A short, grounded summary of a passage (exploratory)."""
+    from aegean import ai
+
+    grounding: list[GroundingItem] = []
+    if corpus:
+        grounding = ai.corpus_context(load_corpus(corpus))
+    client = _client(provider, model)
+    result = _run(lambda: ai.summarize(read_text(text), grounding=grounding, client=client))  # type: ignore[arg-type]
+    if output is not None:
+        _write_ai_result(result, output)
+        return
+    _emit_result(result, json_out, trace)
+
+
+@ai_app.command()
 def hypotheses(
     text: str = typer.Argument(..., help="An undeciphered (Linear A) sequence."),
     corpus: str | None = typer.Option(

@@ -40,7 +40,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 | **`data`** | `list` `fetch` `versions` `cache` |
 | **`db`** | `build` `add` `search` |
 | **`geo`** | (top-level command: coordinates / GeoJSON) |
-| **`ai`** | `translate` `gloss` `hypotheses` `ask` `extract` `eval` `providers` |
+| **`ai`** | `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` `providers` |
 | **`workbench`** | (top-level command: serve the web UI) |
 | **`aegean-mcp`** | separate console script: serve the tools to AI agents over MCP |
 
@@ -66,10 +66,10 @@ file: `.json` / `.csv` (stdlib, no pandas) / `.txt` by extension.
 | `keyness` | Characteristic items vs a reference (G² + log-ratio) | `--reference --site/... --signs --top --min-target -o/--output` | `aegean keyness lineara --site Zakros` |
 | `balance` | Accounting reconciliation (KU-RO / TO-SO vs items) | `--strict --json` | `aegean balance lineara HT13` |
 | `cite` | Cite the corpus, or the exact filtered subset | `--style --site/...` | `aegean cite lineara --site Zakros --style bibtex` |
-| `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite | `-f/--format -o/--output --level --site/...` | `aegean export lineara -f csv -o lineara.csv` |
+| `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | `-f/--format -o/--output --level --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
-| `import` | Import your **own** text (`.txt` / folder / `.csv`) into a corpus | `-o/--output --script --split --id --glob --text-col --id-col --encoding` | `aegean import john.txt -o john.json --script nt` |
-| `geo` | Find-site coordinates; GeoJSON with `-o` | `--level -o/--output --json` | `aegean geo lineara` |
+| `import` | Import your **own** text (`.txt` / folder / `.csv`), or a Workbench export | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench` | `aegean import john.txt -o john.json --script nt` |
+| `geo` | Find-site coordinates, or `--word`'s per-site map; GeoJSON with `-o` | `--word --level -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
 | `cache` | Inspect (or `--clear`) the opt-in **analysis** cache | `--clear --json` | `aegean cache` |
@@ -310,10 +310,11 @@ on [Greek NLP](Greek-NLP).
 | `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek) | `--ref --source --edition -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` |
+| `nt` | Load the Greek NT (Nestle 1904, bundled): gold lemma/morph/Strong's + gloss | `--ref -o --json` | `aegean greek nt John --ref 1.1-1.18` |
 | `works` | List the curated catalog of 25 well-known works | `--json` | `aegean greek works` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata) | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy) | `--treebank --split --neural --tagger --lemmatizer --neural-lemmatizer --json` | `aegean greek eval ud --neural` |
+| `eval` | Reproduce the published numbers (heavy) | `--treebank --split --bootstrap --neural --tagger --lemmatizer --neural-lemmatizer --json` | `aegean greek eval ud --neural` |
 
 ### Stages that work immediately
 
@@ -441,6 +442,7 @@ aegean greek catalog --author plato               # search the full ~1,800-work 
 aegean greek work tlg0012.tlg001                  # heavy: the Iliad, one doc per book
 aegean greek work tlg0012.tlg001 --ref 1.1-1.50   # just book 1, lines 1–50
 aegean greek work tlg0012.tlg001 -o iliad.json    # save as a corpus file
+aegean greek nt John --ref 1.1-1.18               # the Greek NT (bundled): gold lemma/morph/gloss
 ```
 
 The curated catalog (`aegean greek works`):
@@ -711,6 +713,7 @@ hard limits: [Limitations](Limitations).
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
 | `translate` | Hybrid translation (local grounding → LLM) | `--script --target --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
+| `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
 | `ask` | Answer strictly from the supplied grounding | `--corpus --provider --model --trace -o/--output --json` | `aegean ai ask "What is KU-RO?" --corpus lineara` |
 | `extract` | Structured (JSON) extraction, ready to pipe | `--fields --instruction --corpus --provider --model -o/--output --json` | `aegean ai extract "OLE S 1" --fields commodity,amount` |

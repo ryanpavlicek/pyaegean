@@ -127,10 +127,25 @@ def test_export_json_and_csv(app, tmp_path):
     assert "unknown format" in err(app, "export", "lineara", "-f", "xml", "-o", str(out))
 
 
+def test_export_import_workbench_roundtrip(app, tmp_path):
+    wb = tmp_path / "wb.json"
+    ok(app, "export", "lineara", "--site", "Zakros", "-f", "workbench", "-o", str(wb))
+    assert wb.exists()
+    back = tmp_path / "back.json"
+    msg = ok(app, "import", str(wb), "--workbench", "-o", str(back))
+    assert "document" in msg and back.exists()
+
+
 def test_geo_table(app):
     rows = json.loads(ok(app, "geo", "lineara", "--json"))
     assert any(r["site"] == "Haghia Triada" for r in rows)
     assert all("lat" in r and "lon" in r for r in rows)
+
+
+def test_geo_word_distribution(app):
+    rows = json.loads(ok(app, "geo", "lineara", "--word", "KU-RO", "--json"))
+    assert rows and all({"site", "lat", "lon", "count"} <= set(r) for r in rows)
+    assert any(r["site"] == "Haghia Triada" and r["count"] > 0 for r in rows)
 
 
 def test_sign_lookup(app):
@@ -238,6 +253,15 @@ def test_greek_eval_rejects_bad_target(app):
     assert "target must be" in err(app, "greek", "eval", "everything")
 
 
+def test_greek_eval_has_bootstrap_flag(app):
+    assert "--bootstrap" in ok(app, "greek", "eval", "--help")
+
+
+def test_greek_nt_loads(app):
+    data = json.loads(ok(app, "greek", "nt", "John", "--ref", "1.1-1.5", "--json"))
+    assert data["scope"] == "John" and data["documents"] >= 1 and data["tokens"] > 0
+
+
 def test_greek_pipeline_with_stubbed_joint(app, monkeypatch):
     pytest.importorskip("numpy")
     from test_joint import _stub_model
@@ -312,6 +336,10 @@ def test_ai_providers(app):
     assert set(json.loads(ok(app, "ai", "providers", "--json"))) == {
         "anthropic", "openai", "grok", "gemini", "openrouter",
     }
+
+
+def test_ai_summarize_registered(app):
+    assert "summary" in ok(app, "ai", "summarize", "--help").lower()
 
 
 def test_ai_unknown_provider_is_clean(app):
