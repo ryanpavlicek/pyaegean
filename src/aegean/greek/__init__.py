@@ -98,6 +98,7 @@ from .lexicons import (
     lexicon_link,
     use_lexicon,
 )
+from . import scaife_lex  # noqa: F401  -- registers the middle-liddell + cunliffe lexica
 from .nt_eval import evaluate_on_nt
 from .pipeline import TokenRecord, pipeline
 from ..scripts.greek.perseus import catalog, load_work, popular_works
