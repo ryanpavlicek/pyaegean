@@ -769,7 +769,7 @@ one:
 | Lossless JSON | `Corpus.to_json` | `export -f json` | yes | none |
 | CSV | `io.to_csv` | `export -f csv` | tabular view | `[data]` |
 | Parquet | `io.to_parquet` | `export -f parquet` | tabular view | `[parquet]` |
-| EpiDoc TEI XML | `io.to_epidoc` / `io.write_epidoc` | `export -f epidoc` | content EpiDoc preserves | none (writing) |
+| EpiDoc TEI XML | `io.to_epidoc`/`write_epidoc` ↔ `io.from_epidoc`/`read_epidoc` | `export -f epidoc` / `import --epidoc` | content EpiDoc preserves | none |
 | SQLite DB | `Corpus.to_sql` / `db.to_sqlite` | `export -f sqlite` | yes | none |
 | Workbench JSON | `io.to_workbench` / `io.from_workbench_export` | `aegean workbench` (serves the app) | tokenized text + surface forms | none |
 
@@ -820,11 +820,11 @@ undetermined for the undeciphered scripts, `grc` Greek, `gmy` Mycenaean Greek):
 | `greek` | `grc` |
 
 The output validates against the EpiDoc RelaxNG schema and round-trips through the
-EpiDoc *reader* (which lives in `aegean.scripts.linearb.parse_epidoc` and needs
-the `[epidoc]` extra / lxml) for the content EpiDoc preserves: id, find-place,
-and the token/line stream. The reader re-derives token kinds from the text, so a
-written corpus reloads with the same words, numerals, logograms, separators, and
-lines.
+generic EpiDoc *reader* (`io.from_epidoc` / `io.read_epidoc`, stdlib-only, no extra)
+for the content EpiDoc preserves: id, find-place, the token/line stream, editorial
+certainty, and `<app>` variants. A separate Linear B-specific reader,
+`aegean.scripts.linearb.parse_epidoc`, handles DAMOS-style files with lxml (the
+`[epidoc]` extra), re-deriving Aegean token kinds from the transliteration text.
 
 ### The Linear A Research Workbench
 

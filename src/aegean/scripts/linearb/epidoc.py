@@ -1,7 +1,8 @@
 """Parse DAMOS-style EpiDoc TEI XML (a user-supplied Linear B corpus) into the corpus model.
 
 This is the bring-your-own path for users with their own licensed export — e.g. a DAMOS EpiDoc
-download or another edition (the ``[epidoc]`` extra provides lxml); for the ready-made full
+download or another edition (the ``[epidoc]`` extra provides lxml; for the generic, stdlib-only
+EpiDoc reader use ``aegean.io.from_epidoc``); for the ready-made full
 corpus use ``aegean.load("damos")`` instead. pyaegean parses your files locally and never
 re-hosts them. The reader is tolerant of EpiDoc variation — it takes the tablet id and
 provenance from the header and the transliteration (words, numerals, ideograms) line by line,
