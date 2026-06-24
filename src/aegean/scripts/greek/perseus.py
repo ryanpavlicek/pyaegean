@@ -203,16 +203,40 @@ def _collect_notes(part: Any) -> tuple[str, ...]:
 
 def _parse_ref(ref: str) -> tuple[list[str], list[str]]:
     """``"1.1-1.50"`` → ``(['1','1'], ['1','50'])``; ``"1"`` → ``(['1'], ['1'])``;
-    ``"1.1-50"`` → ``(['1','1'], ['1','50'])`` (the hi inherits the lo's prefix)."""
-    lo, _, hi = ref.partition("-")
-    start = [c for c in lo.split(".") if c]
-    if not start:
-        raise ValueError(f"empty work ref {ref!r}")
+    ``"1.1-50"`` → ``(['1','1'], ['1','50'])`` (the hi inherits the lo's prefix).
+
+    Malformed refs (empty components like ``"1..2"`` or ``".1"``, a stray ``"-"``)
+    and descending verse ranges (``"1.50-1.1"``) raise `ValueError` with the reason."""
+    if not ref.strip():
+        raise ValueError("empty work ref")
+    if "--" in ref or ref.startswith("-") or ref.endswith("-"):
+        raise ValueError(f"malformed work ref {ref!r}: a range is 'lo-hi', e.g. '1.1-1.50'")
+    lo, _sep, hi = ref.partition("-")
+
+    def components(part: str, label: str) -> list[str]:
+        comps = [c.strip() for c in part.split(".")]
+        if any(c == "" for c in comps):
+            raise ValueError(
+                f"malformed work ref {ref!r}: empty component in {label} {part!r} "
+                "(use e.g. '1', '1.2', or '1.1-1.50')"
+            )
+        return comps
+
+    start = components(lo, "ref")
     if not hi:
         return start, list(start)
-    end = [c for c in hi.split(".") if c]
+    end = components(hi, "range end")
     if len(end) < len(start):
         end = start[: len(start) - len(end)] + end
+    if (
+        start[-1].isdigit()
+        and end[-1].isdigit()
+        and start[:-1] == end[:-1]
+        and int(end[-1]) < int(start[-1])
+    ):
+        raise ValueError(
+            f"descending work ref {ref!r}: end {end[-1]} is before start {start[-1]}"
+        )
     return start, end
 
 
@@ -300,7 +324,15 @@ def parse_tei_work(
         hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
         doc = make_doc(part, ref, ref, lo, hi)
         if doc is None:
-            raise ValueError(f"{work}: ref {ref!r} selected no text")
+            avail = [d.get("n") for d in part.iterfind(f"{_TEI}div") if d.get("n")]
+            if avail:
+                hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
+            elif lo is not None:
+                nums = [n for n in (_line_num(el) for el in part.iter(f"{_TEI}l")) if n is not None]
+                hint = f"; lines present: {min(nums)}–{max(nums)}" if nums else ""
+            else:
+                hint = ""
+            raise ValueError(f"{work}: ref {ref!r} selected no text{hint}")
         return title, author, [doc]
 
     parts = [d for d in edition_div.iterfind(f"{_TEI}div")] or [edition_div]

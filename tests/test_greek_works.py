@@ -8,6 +8,7 @@ import pytest
 
 from aegean.core.model import TokenKind
 from aegean.scripts.greek.perseus import (
+    _parse_ref,
     _work_dir,
     parse_tei_work,
     pick_edition,
@@ -79,6 +80,29 @@ def test_ref_selects_a_nested_div():
 def test_ref_with_no_match_raises():
     with pytest.raises(ValueError, match="selected no text"):
         parse_tei_work(FIXTURE.read_bytes(), "w", ref="99")
+
+
+def test_ref_no_match_error_lists_sections():
+    with pytest.raises(ValueError, match="sections here"):
+        parse_tei_work(FIXTURE.read_bytes(), "w", ref="99")
+
+
+@pytest.mark.parametrize("bad", ["1..2", ".1", "1.", "-", "1-", "-1", "1--2", "   "])
+def test_parse_ref_rejects_malformed(bad):
+    with pytest.raises(ValueError):
+        _parse_ref(bad)
+
+
+def test_parse_ref_rejects_descending_range():
+    with pytest.raises(ValueError, match="descending"):
+        _parse_ref("1.50-1.1")
+
+
+def test_parse_ref_valid_forms():
+    assert _parse_ref("1") == (["1"], ["1"])
+    assert _parse_ref("1.2") == (["1", "2"], ["1", "2"])
+    assert _parse_ref("1.1-1.50") == (["1", "1"], ["1", "50"])
+    assert _parse_ref("1.1-50") == (["1", "1"], ["1", "50"])
 
 
 def test_notes_survive_the_json_round_trip():
