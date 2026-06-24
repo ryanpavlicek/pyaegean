@@ -841,6 +841,63 @@ The LSJ is **CC BY-SA 4.0** (Perseus Digital Library), fetched to your cache and
 bundled: see [Data & Provenance](Data-and-Provenance#the-greek-lexicon-lsj-lsj-index-use_lsj).
 `greek.disable_lsj()` turns it back off.
 
+### More dictionaries: the lexicon registry
+
+`use_lsj` and `use_dodson` are two backends in a small **registry** of dictionaries.
+`greek.lexica()` lists what is available; `greek.use_lexicon(id)` activates a hosted one;
+and `greek.gloss(word, dictionary=id)` / `greek.entry(word, dictionary=id)` resolve a word
+against a chosen dictionary (with no `dictionary=`, the first active one). Inflected forms
+lemmatize on a miss, exactly as with LSJ.
+
+```python
+greek.lexica()                       # every dictionary: id, scope, license, hosted vs link
+
+greek.use_lexicon("middle-liddell")  # the concise Intermediate Lexicon (classical)
+greek.gloss("λόγος", dictionary="middle-liddell")
+# 'λόγος: λόγος, ὁ, λέγω (A) the word or that by which the inward thought is expressed, …'
+
+greek.use_lexicon("cunliffe")        # Cunliffe, A Lexicon of the Homeric Dialect
+greek.gloss("μῆνις", dictionary="cunliffe")
+# 'μῆνις: μῆνις ἡ. 1 Wrath, ire : μῆνιν ἄειδε Ἀχιλῆος Il. 1.1. …'
+
+greek.use_lexicon("abbott-smith")    # Abbott-Smith, A Manual Greek Lexicon of the NT
+greek.gloss("πίστις", dictionary="abbott-smith")
+# 'πίστις: faith; belief; trust; confidence; the faith; fidelity; …'
+
+greek.entry("λόγος", dictionary="cunliffe").body   # the full entry text
+```
+
+The hosted dictionaries:
+
+| id | dictionary | scope |
+| --- | --- | --- |
+| `lsj` | Liddell-Scott-Jones | classical (full) |
+| `middle-liddell` | An Intermediate Greek-English Lexicon | classical (concise) |
+| `cunliffe` | A Lexicon of the Homeric Dialect | Homeric |
+| `abbott-smith` | A Manual Greek Lexicon of the New Testament | Koine / NT |
+| `dodson` | Dodson Greek Lexicon | Koine / NT (bundled) |
+
+Each (except the bundled Dodson) is fetched to your cache on first use and built into a
+lemma→entry index, never bundled: sources and licenses are in
+[Data & Provenance](Data-and-Provenance).
+
+**Dictionaries pyaegean cannot host** (Autenrieth, Slater, Montanari, DGE, Bailly, …) are
+reachable as deep-links. `greek.lexicon_link(word)` builds a
+[Logeion](https://logeion.uchicago.edu/) URL (or Perseus, with `service="perseus"`),
+lemmatizing the word first; Logeion aggregates all of those dictionaries.
+
+```python
+greek.lexicon_link("λόγος")   # 'https://logeion.uchicago.edu/λόγος'  (percent-encoded for the browser)
+```
+
+From the shell:
+
+```bash
+aegean greek lexica                          # list the dictionaries
+aegean greek gloss μῆνις --dict cunliffe     # gloss from a chosen dictionary
+aegean greek lexicon-link μήνιδος            # a Logeion deep-link to the lemma
+```
+
 ## The Greek New Testament (Koine)
 
 `greek.load_nt` loads the **Nestle 1904** Greek NT as an annotated `Corpus`: the Koine

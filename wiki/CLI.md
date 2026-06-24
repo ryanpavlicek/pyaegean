@@ -56,13 +56,13 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.8.7
+aegean --version          # pyaegean 0.8.8
 ```
 
 | Group | What's in it |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`, `work`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`/`lexica`/`lexicon-link`, `work`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -636,6 +636,9 @@ aegean greek quantities πατρός                    # πα:common | τρός
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, …"     # dactylic hexameter
 aegean greek ipa "λόγος" --period koine          # loɣos  (--period attic|koine)
 aegean greek gloss-nt λόγος                        # Koine gloss, bundled Dodson lexicon (no download)
+aegean greek gloss μῆνις --dict cunliffe           # gloss from a chosen dictionary (LSJ, Middle Liddell, Cunliffe, Abbott-Smith)
+aegean greek lexica                                # list the available dictionaries
+aegean greek lexicon-link μήνιδος                  # a Logeion deep-link to the lemma (for dictionaries we don't host)
 ```
 
 Real runs:

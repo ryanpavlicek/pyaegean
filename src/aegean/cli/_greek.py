@@ -1,9 +1,12 @@
-﻿"""The `aegean greek` group: the full Greek NLP pipeline from the shell.
+﻿"""The `aegean greek` group: the full Greek NLP pipeline from the shell, plus
+dictionary glossing.
 
 Backend flags mirror the `use_*` activation functions: ``--treebank``,
 ``--tagger``, ``--lemmatizer``, ``--neural-lemmatizer``, ``--neural`` (the joint
 pipeline), ``--lsj``. Each activation may download its data/model to the cache on
-first use (a note goes to stderr); afterwards everything is offline.
+first use (a note goes to stderr); afterwards everything is offline. The lexicon
+commands (`gloss`, `gloss-nt`, `lexica`, `lexicon-link`) reach the dictionary
+registry; `gloss --dict <id>` picks which dictionary to use.
 """
 
 from __future__ import annotations

@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.8.7 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.8.8 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -69,7 +69,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge: the script is undeciphered) |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, **cross-script comparison** (Linear B ↔ Greek by sound), morphology clustering, collocation stats, **corpus statistics** (dispersion, keyness, bootstrap), query engine, structure detection, an opt-in analysis cache |
-| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), **LSJ glossing** (`use_lsj`), generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`): joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek benchmarks (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test): plus real works on demand (`load_work`), an offline **discovery catalogue** of ~1,800 loadable works (`greek.catalog()` / `aegean greek catalog`), and a **benchmark** harness |
+| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **lexicon registry** (`use_lexicon`: LSJ, Middle Liddell, Cunliffe, Abbott-Smith) with Logeion deep-links, generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`): joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek benchmarks (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test): plus real works on demand (`load_work`), an offline **discovery catalogue** of ~1,800 loadable works (`greek.catalog()` / `aegean greek catalog`), and a **benchmark** harness |
 | [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, and Parquet |
 | [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: corpus commands, the full Greek NLP pipeline, analysis, data fetching, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
@@ -129,6 +129,13 @@ prefix, with Tab-completion of commands and options and a recallable history.
 **New in v0.8.3:** the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) now has a
 live example of every feature that runs client-side: word analysis, Koine glossing, the work
 catalogue, the syllabary→Greek bridge, Linear A accounting, the importer, and more.
+
+**New in v0.8.7:** the upgraded neural model `grc-joint-v2`: UD Perseus test LAS 85.6 / UAS 90.2,
+the best published result on every metric and robust across five training seeds.
+
+**New in v0.8.8:** a pluggable **lexicon registry** (`use_lexicon` / `gloss(…, dictionary=…)` /
+`lexicon_link`) adding Middle Liddell, Cunliffe, and Abbott-Smith beside LSJ and Dodson, with
+Logeion deep-links; and stricter, clearer `load_work` reference addressing.
 
 **On the list next:**
 

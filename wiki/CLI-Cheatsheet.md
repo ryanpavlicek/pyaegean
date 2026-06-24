@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.8.7
+aegean --version                # pyaegean 0.8.8
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -35,7 +35,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 | Group | Commands |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `parse` `gloss` `gloss-nt` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `parse` `gloss` `gloss-nt` `lexica` `lexicon-link` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `versions` `cache` |
 | **`db`** | `build` `add` `search` |
@@ -304,8 +304,10 @@ on [Greek NLP](Greek-NLP).
 | `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
 | `morph` | Candidate morphological parses | `--treebank --json` | `aegean greek morph λόγον` |
 | `parse` | Dependency-parse a sentence | `--neural --parser --json` | `aegean greek parse "…" --neural` |
-| `gloss` | Short LSJ gloss (~270 MB fetch first use) | `--json` | `aegean greek gloss λόγος` |
+| `gloss` | Gloss from a registry dictionary (LSJ by default) | `--dict/-d --full --json` | `aegean greek gloss μῆνις --dict cunliffe` |
 | `gloss-nt` | Koine gloss from bundled Dodson lexicon (no download) | `--strongs --full --json` | `aegean greek gloss-nt λόγος --full` |
+| `lexica` | List the available dictionaries (hosted + deep-link) | `--json` | `aegean greek lexica` |
+| `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek) | `--ref --source --edition -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` |
 | `works` | List the curated catalog of 25 well-known works | `--json` | `aegean greek works` |

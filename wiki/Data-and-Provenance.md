@@ -197,6 +197,25 @@ labeled), and both are fetched to the cache: never bundled in the Apache-2.0
 wheel. Attribute Perseus per the statement in `NOTICE`. Network is needed only on
 the first call. See [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing-opt-in).
 
+#### More dictionaries (the lexicon registry)
+
+Beyond LSJ and the bundled Dodson, `greek.use_lexicon(id)` activates three more
+dictionaries, each fetched to the cache on first use, built into a lemma→entry index, and
+never bundled:
+
+- **Middle Liddell** (*An Intermediate Greek-English Lexicon*) and **Cunliffe** (*A Lexicon
+  of the Homeric Dialect*) are built from the structured JSONL in
+  `scaife-viewer/atlas-data-prep` (pinned to a commit; the repository is MIT-licensed). The
+  underlying lexica are public domain (1889 / 1924), digitized by Perseus and the Scaife
+  Viewer; attribute both.
+- **Abbott-Smith** (*A Manual Greek Lexicon of the New Testament*, 1922) is built from the TEI
+  in `translatable-exegetical-tools/Abbott-Smith` (pinned to a commit); text and markup are
+  public domain.
+
+Dictionaries that are not openly redistributable (Autenrieth, Slater, Montanari, DGE, Bailly)
+are not hosted; `greek.lexicon_link(word)` builds a Logeion deep-link to them instead. None of
+these is bundled in the Apache-2.0 wheel. See [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
+
 #### The Greek neural lemmatizer model (`grc-lemma-neural`, `use_neural_lemmatizer`, `[neural]`)
 
 `aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer that
@@ -474,7 +493,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.8.7'  (your installed version)
+v["package"]                                  # '0.8.8'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -526,7 +545,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.8.7'
+# '0.8.8'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
