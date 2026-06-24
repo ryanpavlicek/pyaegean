@@ -352,23 +352,47 @@ def parse(
 @greek_app.command()
 def gloss(
     lemma: str = typer.Argument(..., help="A lemma (or a form — it is lemmatized first)."),
+    dictionary: str = typer.Option(
+        "lsj", "--dict", "-d",
+        help="Which dictionary: lsj, middle-liddell, cunliffe, abbott-smith, dodson "
+        "(see `aegean greek lexica`).",
+    ),
+    full: bool = typer.Option(False, "--full", help="Show the full entry, not just the concise gloss."),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Short LSJ gloss (activates the LSJ index; ~270 MB fetch on first use)."""
+    """Gloss a word from a registry dictionary (activates it; may fetch on first use).
+
+    Defaults to LSJ. For dictionaries pyaegean does not host (Autenrieth, Slater, …),
+    use `aegean greek lexicon-link`.
+    """
     from aegean import greek
 
-    _activate(lsj=True)
-    g = greek.gloss(lemma)
-    if g is None:
-        lem, known = greek.lemmatize_verbose(lemma)
-        if known:
-            g = greek.gloss(lem)
-    if g is None:
-        raise fail(f"no LSJ entry found for {lemma!r}")
+    if not json_out:
+        print(
+            f"aegean: activating the {dictionary} lexicon (first use may download/build)…",
+            file=sys.stderr,
+        )
+    try:
+        greek.use_lexicon(dictionary)
+    except ValueError as exc:  # a deep-link-only lexicon
+        raise fail(str(exc)) from None
+    except KeyError:
+        raise fail(f"unknown dictionary {dictionary!r}; see `aegean greek lexica`") from None
+    except Exception as exc:
+        raise fail(f"could not activate {dictionary!r}: {exc}") from None
+
+    e = greek.entry(lemma, dictionary=dictionary)
+    if e is None:
+        raise fail(f"no {dictionary} entry found for {lemma!r}")
     if json_out:
-        emit_json({"query": lemma, "gloss": g})
+        emit_json({
+            "query": lemma, "dictionary": dictionary, "headword": e.headword,
+            "gloss": e.gloss, "definition": e.body,
+        })
+    elif full:
+        console().print(f"{e.headword}: {e.body}", markup=False)
     else:
-        print(g)
+        print(f"{e.headword}: {e.gloss}")
 
 
 @greek_app.command("gloss-nt")
@@ -403,6 +427,50 @@ def gloss_nt(
         console().print(f"{entry.lemma} (G{entry.strongs}): {entry.definition}", markup=False)
     else:
         print(entry.gloss)
+
+
+@greek_app.command()
+def lexica(json_out: bool = JSON_OPT) -> None:
+    """List the dictionaries available for `gloss --dict` and `lexicon-link`."""
+    from aegean import greek
+
+    infos = greek.lexica()
+    if json_out:
+        emit_json([
+            {"id": i.id, "name": i.name, "scope": i.scope, "hosted": i.hosted, "license": i.license}
+            for i in infos
+        ])
+        return
+    table(
+        "lexica",
+        ["id", "scope", "kind", "name"],
+        [[i.id, i.scope, "hosted" if i.hosted else "link", i.name] for i in infos],
+    )
+
+
+@greek_app.command("lexicon-link")
+def lexicon_link(
+    word: str = WORD_ARG,
+    service: str = typer.Option("logeion", "--service", help="logeion or perseus."),
+    no_lemmatize: bool = typer.Option(
+        False, "--no-lemmatize", help="Link the surface form, not its lemma."
+    ),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Deep-link a word to an online dictionary aggregator (Logeion by default).
+
+    Covers dictionaries pyaegean does not host (Autenrieth, Slater, Montanari, …).
+    """
+    from aegean import greek
+
+    try:
+        url = greek.lexicon_link(word, service=service, lemmatize=not no_lemmatize)
+    except KeyError as exc:
+        raise fail(str(exc)) from None
+    if json_out:
+        emit_json({"word": word, "service": service, "url": url})
+    else:
+        print(url)
 
 
 @greek_app.command()
