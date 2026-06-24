@@ -514,6 +514,17 @@ aegean export lineara -f workbench -o wb.json   # corpus → Workbench JSON
 aegean import wb.json --workbench -o back.json  # Workbench JSON → corpus
 ```
 
+**EpiDoc TEI** imports back the same way — any EpiDoc edition (a file or a folder of `.xml`),
+not just pyaegean's own output — via `--epidoc`, the inverse of `export -f epidoc`:
+
+```bash
+aegean export lineara -f epidoc -o ins/                    # corpus → EpiDoc TEI (one file per doc)
+aegean import ins/ --epidoc --script lineara -o back.json  # any EpiDoc edition → corpus
+```
+
+It recovers the id, find-place, token/line stream, editorial certainty
+(`<unclear>`/`<supplied>`), and `<app>` variants, using only the stdlib XML parser.
+
 `import` is the **only** way plain text enters a corpus: `read_corpus` and every
 corpus argument still load only `.json`/`.db` files (and work ids), so feeding a raw
 `.txt` straight to a command fails with a message telling you to import it first:
