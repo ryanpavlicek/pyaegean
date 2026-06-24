@@ -121,6 +121,9 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `lineara-images` | 3,368 facsimile/photo files (archive) | ~116 MB tar.gz, ~119 MB unpacked | © École Française d'Athènes + other rightsholders: academic reference only | Fetched from the `ryanpavlicek/linearaworkbench` release; never re-hosted |
 | `agdt-derived` | Prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~15 MB | CC BY-SA 3.0 (derived from Perseus AGDT) | Project-hosted derivative of the AGDT |
 | `lsj-index` | Prebuilt LSJ lemma→entry index | ~15 MB | CC BY-SA 4.0 (Perseus Digital Library) | Project-hosted derivative of the Perseus LSJ |
+| `middle-liddell-index` | Prebuilt Middle Liddell lemma→entry index | ~2.3 MB | public domain (1889); Perseus / Scaife digitization | Project-hosted; `use_lexicon("middle-liddell")` |
+| `cunliffe-index` | Prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT | Project-hosted; `use_lexicon("cunliffe")` |
+| `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup) | ~518 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
 | `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, SigLA's word division (1,376 words) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
@@ -200,8 +203,9 @@ the first call. See [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing
 #### More dictionaries (the lexicon registry)
 
 Beyond LSJ and the bundled Dodson, `greek.use_lexicon(id)` activates three more
-dictionaries, each fetched to the cache on first use, built into a lemma→entry index, and
-never bundled:
+dictionaries. Each fetches a small prebuilt lemma→entry index (the `middle-liddell-index` /
+`cunliffe-index` / `abbott-smith-index` assets above) to the cache on first use; if that is
+unreachable it builds the index from the upstream source instead. Never bundled:
 
 - **Middle Liddell** (*An Intermediate Greek-English Lexicon*) and **Cunliffe** (*A Lexicon
   of the Homeric Dialect*) are built from the structured JSONL in
