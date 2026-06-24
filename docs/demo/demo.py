@@ -3,7 +3,8 @@
 Stable, pure-Python 0.8.x APIs only — everything here runs entirely client-side: the Greek
 pipeline + scansion + word analysis, the bundled Koine (Dodson) lexicon, the offline Greek
 work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corpus
-(sign search + accounting), the file importer, and cross-script phonetic comparison. The
+(sign search + accounting), the file importer, the stdlib EpiDoc reader, and cross-script
+phonetic comparison. The
 neural tier is excluded (it needs onnxruntime, which doesn't run in the browser), as are the
 network-only backends (load_work/load_nt, LSJ/treebank) and the generative AI layer. Each
 function returns a JSON string for easy consumption from JavaScript. This module is exercised
@@ -159,6 +160,38 @@ def import_text(text: str) -> str:
             "documents": len(corpus),
             "tokens": len(doc.tokens),
             "top": [{"word": w, "count": n} for w, n in corpus.word_frequencies()[:10]],
+        },
+        ensure_ascii=False,
+    )
+
+
+def epidoc_import(xml: str) -> str:
+    """Read a pasted EpiDoc TEI document into a Corpus (stdlib XML parser, fully offline)."""
+    import os
+    import tempfile
+    import xml.etree.ElementTree as ET
+
+    from aegean import io
+
+    if not xml.strip():
+        return json.dumps({"error": "paste an EpiDoc <TEI> document"})
+    path = os.path.join(tempfile.mkdtemp(), "in.xml")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(xml)
+    try:
+        corpus = io.from_epidoc(path, script_id="greek")
+    except ET.ParseError as exc:
+        return json.dumps({"error": f"could not parse EpiDoc XML: {exc}"})
+    if not corpus.documents:
+        return json.dumps({"error": "no <div type='edition'> or <body> tokens found"})
+    doc = corpus.documents[0]
+    return json.dumps(
+        {
+            "id": doc.id,
+            "site": doc.meta.site,
+            "documents": len(corpus),
+            "tokens": len(doc.tokens),
+            "preview": [t.text for t in doc.tokens[:12]],
         },
         ensure_ascii=False,
     )
