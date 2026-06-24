@@ -208,6 +208,22 @@ def test_greek_syllabify_with_exception(app):
     assert "εἰσ-φέ-ρω" in out and "ἄν-θρω-πος" in out
 
 
+def test_greek_rarity(app, tmp_path):
+    # Offline: a tiny Greek reference corpus written to JSON, passed via --corpus.
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
+
+    words = ["ὁ"] * 20 + ["λόγος"] * 5 + ["σφάκελος"]
+    toks = [Token(text=w, kind=TokenKind.WORD) for w in words]
+    doc = Document(id="d", script_id="greek", tokens=toks, lines=[list(range(len(toks)))])
+    ref = tmp_path / "ref.json"
+    Corpus(documents=[doc], script_id="greek").to_json(ref)
+
+    assert "σφάκελος" in ok(app, "greek", "rarity", "ὁ λόγος σφάκελος", "--corpus", str(ref))
+    data = json.loads(ok(app, "greek", "rarity", "σφάκελος", "--corpus", str(ref), "--json"))
+    assert data["words"][0]["label"] == "hapax"
+
+
 def test_greek_accent_json(app):
     rows = json.loads(ok(app, "greek", "accent", "λόγος", "--json"))
     assert rows[0]["classification"] == "paroxytone"
