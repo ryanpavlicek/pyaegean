@@ -406,7 +406,7 @@ marked exploratory for exactly this reason:
 
 ```bash
 aegean ai --help
-# Generative (exploratory, key-gated): translate, gloss, hypotheses, ask, ...
+# Generative (exploratory, key-gated): translate, gloss, summarize, hypotheses, ask, ...
 ```
 
 ### Grounding

@@ -776,7 +776,7 @@ one:
 The one command that covers the file formats:
 
 ```bash
-aegean export CORPUS -f {json|csv|parquet|epidoc|sqlite} -o PATH [--level …] \
+aegean export CORPUS -f {json|csv|parquet|epidoc|sqlite|workbench} -o PATH [--level …] \
               [--site …] [--period …] [--scribe …] [--support …]
 ```
 
@@ -875,7 +875,7 @@ the shape of its result.
 |---|---|---|
 | `aegean stats` / `keyness` / `dispersion` / `search` | the result table | `.json` / `.csv` / `.txt` |
 | `aegean analyze {assoc,cooccur,clusters,hands}` | the analysis result | `.json` / `.csv` / `.txt` |
-| `aegean ai {translate,gloss,hypotheses,ask,extract}` | the AI result | `.json` / `.txt` |
+| `aegean ai {translate,gloss,summarize,hypotheses,ask,extract}` | the AI result | `.json` / `.txt` |
 
 ```bash
 # a frequency table straight to CSV (stdlib csv, no pandas)

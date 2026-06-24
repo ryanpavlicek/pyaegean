@@ -62,11 +62,11 @@ aegean --version          # pyaegean 0.8.8
 | Group | What's in it |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`/`lexica`/`lexicon-link`, `work`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`/`lexica`/`lexicon-link`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
-| **`aegean ai …`** | `providers` `translate` `gloss` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
+| **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
 
 ---
@@ -381,6 +381,7 @@ bibliography with `aegean cite lineara --site Zakros --style bibtex >> paper.bib
 aegean export lineara -f csv -o lineara.csv               # → "wrote 1721 documents to lineara.csv (csv)"
 aegean export greek -f epidoc -o greek.xml                # EpiDoc TEI
 aegean export lineara -f sqlite -o lineara.db             # same DB as `aegean db build`
+aegean export lineara -f workbench -o wb.json             # Linear A Workbench JSON
 ```
 
 | `--format` | output | needs |
@@ -390,6 +391,7 @@ aegean export lineara -f sqlite -o lineara.db             # same DB as `aegean d
 | `parquet` | same, columnar | `[parquet]` extra |
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
+| `workbench` | Linear A Research Workbench JSON (round-trips via `import --workbench`) | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
@@ -504,6 +506,14 @@ c = io.from_text_file("john.txt", script_id="nt", split="line")
 c = io.from_csv("verses.csv", text_col="line", id_col="id", script_id="nt")
 ```
 
+A **Linear A Workbench export** (the JSON the workbench saves) imports back with
+`--workbench`, the inverse of `export -f workbench`:
+
+```bash
+aegean export lineara -f workbench -o wb.json   # corpus → Workbench JSON
+aegean import wb.json --workbench -o back.json  # Workbench JSON → corpus
+```
+
 `import` is the **only** way plain text enters a corpus: `read_corpus` and every
 corpus argument still load only `.json`/`.db` files (and work ids), so feeding a raw
 `.txt` straight to a command fails with a message telling you to import it first:
@@ -516,7 +526,7 @@ aegean stats john.txt --top 3
 #   [stderr, exit 1]
 ```
 
-### `geo` — find-site coordinates
+### `geo` — find-site coordinates, or a word's map
 
 ```bash
 aegean geo lineara
@@ -534,6 +544,22 @@ aegean geo lineara
 
 Add `-o sites.geojson` to write GeoJSON instead of printing a table (that path
 needs the `[geo]` extra). More on the map data in [Geography](Geography).
+
+`--word` maps where a single word is attested, with per-site counts (the table needs
+no extra; `-o` writes GeoJSON):
+
+```bash
+aegean geo lineara --word KU-RO          # sites where KU-RO occurs, most-attested first
+```
+```
+       lineara: 'KU-RO' attested at 3 located site(s)
+┌───────────────┬───────┬───────┬───────┐
+│ site          │ lat   │ lon   │ count │
+├───────────────┼───────┼───────┼───────┤
+│ Haghia Triada │ 35.06 │ 24.79 │ 32    │
+│ Phaistos      │ 35.05 │ 24.81 │ 1     │
+└───────────────┴───────┴───────┴───────┘
+```
 
 ### `sign` — look up one sign
 
@@ -792,6 +818,17 @@ aegean greek work tlg0012.tlg001 -o iliad.json   # save as a corpus file
 range). `--source` is `auto`/`perseus`/`first1k`; `--edition` picks a specific
 edition file.
 
+**The Greek New Testament** has its own loader, `nt` (Nestle 1904, bundled, offline),
+because it carries gold per-token lemma / morph / Strong's plus a Koine gloss:
+
+```bash
+aegean greek nt                          # all 27 books
+aegean greek nt John --ref 1.1-1.18      # one passage (a chapter.verse range)
+aegean greek nt John -o john.json        # save as a corpus (then export --level token)
+```
+
+`nt-books` lists the book names it accepts; `gloss-nt` glosses a single NT word.
+
 **`catalog` is the full discovery index behind `works`.** Where `works` lists 25
 curated highlights, `catalog` searches the **complete** bundled metadata for every
 work with a Greek edition in Perseus canonical-greekLit + First1KGreek: 1,778 works
@@ -875,9 +912,11 @@ heavy, but it reproduces pyaegean's measured accuracy. Targets: `ud`, `proiel`,
 ```bash
 # heavy: fetches gold data and the model
 aegean greek eval ud --treebank perseus --split test --neural
+aegean greek eval ud --neural --bootstrap          # percentile CIs over the fold's sentences
 ```
 
-The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
+`--bootstrap` (ud only) reports each metric as `estimate [low, high]` instead of a
+single point. The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 [Limitations](Limitations#measured-accuracy-boundaries).
 
 ---
@@ -1050,6 +1089,7 @@ aegean ai providers
 # gemini
 # grok
 # openai
+# openrouter
 ```
 
 The commands (each takes `--provider` / `--model`, and most take `--trace`):
@@ -1058,6 +1098,7 @@ The commands (each takes `--provider` / `--model`, and most take `--trace`):
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"                      # grounded hybrid translation
 aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered!)
 aegean ai gloss "μῆνιν ἄειδε θεά"                             # interlinear word-by-word gloss
+aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # short, grounded summary
 aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara     # cautious decipherment hypotheses
 aegean ai ask "What is KU-RO?" --corpus lineara --trace       # answer strictly from grounding
 aegean ai extract "OLE S 1" --fields commodity,amount         # structured JSON, ready for jq
@@ -1070,8 +1111,8 @@ analysis facts the model was given, grouped by source, so you can audit exactly
 what it was (and wasn't) told. `extract` always prints JSON, so it pipes straight
 into `jq`.
 
-**Save the output, label and all.** `translate`, `gloss`, `hypotheses`, `ask`, and
-`extract` take `--output/-o`. A `.json` file carries the text plus its provenance
+**Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,
+`ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
 and grounding evidence; a `.txt` file is the labeled text. The exploratory label
 stays attached on disk: a saved result never loses the "this is a hypothesis, not
 a finding" framing:

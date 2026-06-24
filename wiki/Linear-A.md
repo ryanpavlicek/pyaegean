@@ -573,7 +573,7 @@ same commands, and the Greek side lives under [Greek NLP](Greek-NLP) /
 | `aegean balance lineara [HT13]` | KU-RO reconciliation | `--strict --json` |
 | `aegean analyze structure lineara [HT13]` | Heuristic categories | `--json` |
 | `aegean cite lineara` | Cite the corpus (or a subset) | `--style --site --period --scribe --support` |
-| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite | (see [CLI](CLI)) |
+| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | (see [CLI](CLI)) |
 
 ---
 

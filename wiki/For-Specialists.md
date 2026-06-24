@@ -301,6 +301,7 @@ aegean ai providers
 # gemini
 # grok
 # openai
+# openrouter
 ```
 
 Pick one with `--provider`; the model is `--model` or a `<PROVIDER>_MODEL` env
