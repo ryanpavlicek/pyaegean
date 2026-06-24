@@ -106,6 +106,22 @@ lemma accuracy on their own (AGDT + Gorman + Pedalion, normalized) folds. Their 
 models train on AGDT + Gorman + Pedalion (~1.26 M tokens): the same license-clean data
 lever (Gorman and Pedalion, both CC BY-SA 4.0) the pyaegean joint model uses.
 
+Two more recent reference points, each reported under its *own* evaluation, so points of
+reference rather than rows in the single-protocol table above:
+
+- **Stanza's published model-performance numbers**
+  (<https://stanfordnlp.github.io/stanza/performance.html>), under Stanza's own tokenization,
+  give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma 87.86 / UAS 79.46 / LAS 73.97, and
+  **grc_proiel** (in-domain for that model) UPOS 97.42 / lemma 97.18 / LAS 79.02. Its
+  self-reported Perseus lemma (87.86) edges the 87.58 measured in the table above; pyaegean's
+  94.29 still leads it by +6.4.
+- **DILEMMA** (<https://github.com/ciscoriordan/dilemma>) is the closest *architectural* peer: a
+  Greek tagger/lemmatizer on the same torch-free ONNX inference path pyaegean uses. But it is
+  lemmatizer-first and publishes accuracy only on its own multi-period benchmarks (93.7%
+  equiv-adjusted on its DiGreC treebank, 99.7% on Classical Greek), not UD Ancient Greek Perseus
+  UAS/LAS, so there is no same-fold parsing number to compare. It is a design peer here, not a
+  measured row.
+
 ## pyaegean — the neural pipeline (shipped)
 
 The shipped joint model (`grc-joint-v2`, activated by `greek.use_neural_pipeline()`, the
@@ -136,7 +152,7 @@ clears both that seed spread and a within-fold bootstrap confidence interval:
 | UPOS | 97.04 | [96.77, 97.32] | 95.83 (2024) | +1.21 |
 | XPOS | 93.48 | [93.09, 93.90] | 91.09 (2024) | +2.39 |
 | UFeats | 96.04 | [95.74, 96.34] | 92.56 (odyCy 2023) | +3.48 |
-| Lemma | 94.29 | [93.91, 94.63] | 87.58 (Stanza, same fold) | +6.71 |
+| Lemma | 94.29 | [93.91, 94.63] | 87.86 (Stanza model card) | +6.43 |
 | UAS | 90.23 | [89.56, 90.80] | 88.20 (2024) | +2.03 |
 | LAS | 85.64 | [84.91, 86.29] | 83.98 (2024) | +1.66 |
 
