@@ -470,7 +470,7 @@ corpus = aegean.Corpus.from_records(
 Point pyaegean at a licensed EpiDoc file or directory and it parses it locally, never re-hosting:
 
 ```bash
-pip install "pyaegean[epidoc]"                  # the EpiDoc reader (lxml)
+pip install "pyaegean[epidoc]"                  # lxml, for this DAMOS reader (the generic io.from_epidoc needs no extra)
 export PYAEGEAN_LINEARB_CORPUS=/path/to/damos   # a file or directory of EpiDoc XML
 ```
 

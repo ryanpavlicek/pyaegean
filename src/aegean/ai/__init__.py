@@ -1,6 +1,6 @@
 """Multi-provider AI layer — grounded, exploratory-labeled.
 
-Providers: Anthropic (default), OpenAI, xAI Grok, Google Gemini — each an
+Providers: Anthropic (default), OpenAI, xAI Grok, Google Gemini, and OpenRouter. Each is an
 optional extra, lazily imported. Capabilities: translate, gloss,
 decipher_hypotheses, nlp_assist, ask, summarize. Every generative output is an
 `ExploratoryResult` with provenance and an unverified flag.

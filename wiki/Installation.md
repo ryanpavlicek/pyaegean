@@ -86,7 +86,7 @@ The complete matrix:
 | `pyaegean[openrouter]` | `openai>=1.30` | OpenRouter (OpenAI-API-compatible gateway to many models) |
 | `pyaegean[gemini]` | `google-genai>=0.3` | Google Gemini provider |
 | `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | the full AI layer (all providers) |
-| `pyaegean[epidoc]` | `lxml>=5.0` | EpiDoc TEI import/export |
+| `pyaegean[epidoc]` | `lxml>=5.0` | the Linear B DAMOS EpiDoc reader + schema validation (writing, and the generic `io.from_epidoc` reader, use the stdlib) |
 | `pyaegean[geo]` | `geopandas`, `shapely` | geographic analysis / GeoJSON |
 | `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
 | `pyaegean[parquet]` | `pyarrow>=14` | Parquet export (`io.to_parquet`) |
