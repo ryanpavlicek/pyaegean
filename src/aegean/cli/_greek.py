@@ -317,6 +317,53 @@ def morph(
 
 
 @greek_app.command()
+def inflect(
+    lemma: str = typer.Argument(..., help="Greek lemma (dictionary form)."),
+    case: str = typer.Option("", "--case", help="nom/gen/dat/acc/voc/loc"),
+    number: str = typer.Option("", "--number", help="sg/pl/du"),
+    gender: str = typer.Option("", "--gender", help="masc/fem/neut"),
+    tense: str = typer.Option("", "--tense", help="pres/impf/aor/perf/plup/fut/futperf"),
+    voice: str = typer.Option("", "--voice", help="act/mid/pass/mp"),
+    mood: str = typer.Option("", "--mood", help="ind/subj/opt/inf/imp/part"),
+    person: str = typer.Option("", "--person", help="1/2/3"),
+    pos: str = typer.Option("", "--pos", help="NOUN/VERB/ADJ/…"),
+    full: bool = typer.Option(False, "--paradigm", help="List the full attested paradigm instead."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Inflection synthesis (inverse lemmatizer): attested form(s) of a lemma for the
+    given features, from the AGDT. With --paradigm, list every attested cell."""
+    from aegean import greek
+
+    print("aegean: activating inflection synthesis (first use may download/build)…", file=sys.stderr)
+    try:
+        greek.use_inflector()
+    except Exception as exc:
+        raise fail(f"could not activate inflection synthesis: {exc}") from None
+
+    if full:
+        cells = greek.paradigm(lemma)
+        if json_out:
+            emit_json([{"features": f, "form": form} for f, form in cells])
+            return
+        if not cells:
+            print(f"{lemma}: no attested forms")
+            return
+        for feats, form in cells:
+            print(f"{form}\t{' '.join(f'{k}={v}' for k, v in feats.items())}")
+        return
+
+    want = {
+        "case": case, "number": number, "gender": gender, "tense": tense,
+        "voice": voice, "mood": mood, "person": person, "pos": pos,
+    }
+    forms = greek.inflect(lemma, **{k: v for k, v in want.items() if v})
+    if json_out:
+        emit_json(list(forms))
+        return
+    print(" ".join(forms) if forms else f"{lemma}: no attested form for those features")
+
+
+@greek_app.command()
 def parse(
     sentence: str = TEXT_ARG,
     neural: bool = NEURAL_OPT,

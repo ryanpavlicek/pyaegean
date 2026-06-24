@@ -38,6 +38,14 @@ from __future__ import annotations
 
 from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
 from .accent import AccentInfo, accentuation
+from .inflect import (
+    Inflector,
+    InflectorNotLoadedError,
+    disable_inflector,
+    inflect,
+    paradigm,
+    use_inflector,
+)
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
@@ -172,6 +180,12 @@ __all__ = [
     "use_treebank",
     "disable_treebank",
     "TreebankLexicon",
+    "use_inflector",
+    "disable_inflector",
+    "inflect",
+    "paradigm",
+    "Inflector",
+    "InflectorNotLoadedError",
     "use_lsj",
     "disable_lsj",
     "gloss",

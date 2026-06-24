@@ -208,6 +208,23 @@ def test_greek_syllabify_with_exception(app):
     assert "εἰσ-φέ-ρω" in out and "ἄν-θρω-πος" in out
 
 
+def test_greek_inflect(app, tmp_path, monkeypatch):
+    # Offline: pre-build the AGDT lexicon from the fixture into the cache, so the
+    # command's use_inflector() loads it without a network fetch.
+    import pathlib
+
+    from aegean.greek.inflect import disable_inflector
+    from aegean.greek.treebank import build_lexicon
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    build_lexicon(source_dir=pathlib.Path(__file__).parent / "fixtures" / "agdt", force=True)
+    try:
+        assert "λόγον" in ok(app, "greek", "inflect", "λόγος", "--case", "acc", "--number", "sg")
+        assert "εἶπον" in ok(app, "greek", "inflect", "λέγω", "--paradigm")
+    finally:
+        disable_inflector()
+
+
 def test_greek_accent_json(app):
     rows = json.loads(ok(app, "greek", "accent", "λόγος", "--json"))
     assert rows[0]["classification"] == "paroxytone"
