@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.9 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.10 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -147,7 +147,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.8.9**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.8.10**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); a **pluggable lexicon
 registry** with Middle Liddell, Cunliffe, Abbott-Smith, LSJ, and Dodson, plus Logeion deep-links;
@@ -202,7 +202,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.9},
+  version = {0.8.10},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

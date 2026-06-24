@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.8.9 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.8.10 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -141,6 +141,10 @@ Logeion deep-links; and stricter, clearer `load_work` reference addressing.
 parity with the Python API: `aegean greek nt`, `aegean ai summarize`, `aegean geo --word`,
 `aegean greek eval --bootstrap`, and a Linear A Workbench round-trip (`export -f workbench` /
 `import --workbench`).
+
+**New in v0.8.10:** **EpiDoc TEI now reads back in** (`from_epidoc` / `aegean import --epidoc`):
+load any EpiDoc edition (a file or a folder of `.xml`) into a corpus, the inverse of the writer,
+on the stdlib XML parser (no extra dependency).
 
 **On the list next:**
 
