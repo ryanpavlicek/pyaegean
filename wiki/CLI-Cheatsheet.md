@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.8.8
+aegean --version                # pyaegean 0.8.9
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -190,6 +190,7 @@ In Python: `QueryResults.to_corpus(source)`.
 aegean export lineara -f csv -o lineara.csv       # → "wrote 1721 documents to lineara.csv (csv)"
 aegean export greek   -f epidoc -o greek.xml      # EpiDoc TEI XML
 aegean export lineara -f sqlite -o lineara.db     # same DB as `aegean db build`
+aegean export lineara -f workbench -o wb.json     # Linear A Workbench JSON
 ```
 
 | `--format` | output | needs |
@@ -199,6 +200,7 @@ aegean export lineara -f sqlite -o lineara.db     # same DB as `aegean db build`
 | `parquet` | same, columnar | `[parquet]` extra |
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
+| `workbench` | Linear A Workbench JSON (round-trips via `import --workbench`) | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.

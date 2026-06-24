@@ -31,8 +31,8 @@ replicates, the export gate report, and bootstrap CIs).
   train-only lookup, on the same checkpoint. The result is one model serving tags, trees,
   and lemmas.
 - **Stage E — export.** Export the checkpoint to ONNX (fp32, torch-free at inference) and
-  package it as the `grc-joint` release asset. int8 dynamic quantization is gated on a
-  ≤0.3-point accuracy drop and is currently rejected.
+  package it as the `grc-joint` release asset. int8 dynamic quantization was gated on a
+  ≤0.3-point accuracy drop, which it failed; the shipped model is fp32.
 
 ## Data protocol
 

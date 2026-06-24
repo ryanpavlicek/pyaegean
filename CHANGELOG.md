@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.8.9 (2026-06-24)
 
 ### Added
 - **OpenRouter AI provider** (`provider="openrouter"`, the `[openrouter]` extra): a fifth
