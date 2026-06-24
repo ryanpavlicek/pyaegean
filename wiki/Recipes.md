@@ -648,10 +648,31 @@ print(greek.gloss_nt("ἀρχή"))    # ruler, beginning
 aegean greek gloss-nt λόγος       # a word, speech, divine utterance, analogy
 ```
 
-For classical (non-Koine) Greek the deeper glosses come from LSJ via
-`greek.use_lsj()` / `aegean greek gloss`: but that activates a ~270 MB fetch the
-first time (or ~15 MB if you've fetched the prebuilt `lsj-index`). Dodson is the
-zero-download path. See [Greek NLP → Glossing](Greek-NLP).
+**More dictionaries.** Dodson and LSJ are two backends in a **lexicon registry**.
+`greek.use_lexicon(id)` activates **Middle Liddell** (concise classical), **Cunliffe**
+(Homeric), **Abbott-Smith** (New Testament), or **LSJ**, and `greek.gloss(word,
+dictionary=id)` glosses from the one you choose (each fetches a small index on first use,
+0.1–15 MB):
+
+```python
+greek.use_lexicon("cunliffe")                            # Cunliffe's Homeric lexicon
+print(greek.gloss("μῆνις", dictionary="cunliffe"))       # μῆνις: μῆνις ἡ. 1 Wrath, ire …
+
+greek.use_lexicon("abbott-smith")                        # Abbott-Smith's NT lexicon
+print(greek.gloss("πίστις", dictionary="abbott-smith"))  # πίστις: faith; belief; trust; …
+```
+
+For dictionaries pyaegean cannot host (Autenrieth, Slater, Montanari, …), build a
+**Logeion deep-link** instead, which runs offline:
+
+```python
+greek.lexicon_link("μήνιδος")   # → a logeion.uchicago.edu link to the lemma μῆνις
+```
+
+From the shell: `aegean greek lexica` lists the dictionaries, `aegean greek gloss μῆνις
+--dict cunliffe` glosses from one, and `aegean greek lexicon-link μήνιδος` builds the link.
+Dodson is still the zero-download path. See
+[Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
 
 ## 19 · Build a SQLite database and full-text search it
 
