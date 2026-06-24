@@ -252,6 +252,29 @@ def test_greek_pipeline_with_stubbed_joint(app, monkeypatch):
     assert [t["relation"] for t in parsed] == ["det", "nsubj", "root"]
 
 
+def test_greek_lexica_lists(app):
+    ids = {d["id"] for d in json.loads(ok(app, "greek", "lexica", "--json"))}
+    assert {"lsj", "dodson", "middle-liddell", "cunliffe", "abbott-smith"} <= ids
+
+
+def test_greek_lexicon_link(app):
+    out = ok(app, "greek", "lexicon-link", "λόγος", "--no-lemmatize")
+    assert out.strip() == "https://logeion.uchicago.edu/%CE%BB%CF%8C%CE%B3%CE%BF%CF%82"
+    pers = ok(app, "greek", "lexicon-link", "λόγος", "--service", "perseus", "--no-lemmatize")
+    assert "perseus.tufts.edu" in pers
+    assert "link service" in err(app, "greek", "lexicon-link", "λόγος", "--service", "nope")
+
+
+def test_greek_gloss_dict_dodson(app):
+    data = json.loads(ok(app, "greek", "gloss", "λόγος", "--dict", "dodson", "--json"))
+    assert data["dictionary"] == "dodson" and "word" in data["gloss"]
+
+
+def test_greek_gloss_deeplink_only_errors(app):
+    msg = err(app, "greek", "gloss", "λόγος", "--dict", "autenrieth")
+    assert "deep-link" in msg or "lexicon-link" in msg
+
+
 # ── analyze group ────────────────────────────────────────────────────────────
 def test_analyze_distance_and_align(app):
     d = json.loads(ok(app, "analyze", "distance", "KU-RO", "KI-RO", "--json"))
