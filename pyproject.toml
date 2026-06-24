@@ -40,6 +40,7 @@ anthropic = ["anthropic>=0.39"]
 openai = ["openai>=1.30"]
 gemini = ["google-genai>=0.3"]
 grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
+openrouter = ["openai>=1.30"]      # OpenRouter is an OpenAI-API-compatible gateway
 ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
 parquet = ["pyarrow>=14"]

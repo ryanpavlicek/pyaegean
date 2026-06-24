@@ -305,7 +305,7 @@ aegean ai providers
 
 Pick one with `--provider`; the model is `--model` or a `<PROVIDER>_MODEL` env
 var (point `ANTHROPIC_MODEL` at the latest flagship). See [AI Layer](AI-Layer)
-for keys and the [anthropic] / [openai] / [grok] / [gemini] extras.
+for keys and the [anthropic] / [openai] / [grok] / [gemini] / [openrouter] extras.
 
 ### Audit #1 — the exploratory label travels with the text
 

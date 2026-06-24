@@ -74,7 +74,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: corpus commands, the full Greek NLP pipeline, analysis, data fetching, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
-| [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini), grounding, caching, exploratory-labeled capabilities, hybrid translation |
+| [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
 The **[API reference](https://ryanpavlicek.github.io/pyaegean/)** documents every public module, class,
@@ -85,7 +85,7 @@ and function, generated from the docstrings and type hints: complementing the gu
 ```bash
 pip install pyaegean            # core + Linear A + Greek
 pip install "pyaegean[cli]"     # + the `aegean` command line
-pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini clients
+pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients
 pip install "pyaegean[all]"     # everything
 ```
 

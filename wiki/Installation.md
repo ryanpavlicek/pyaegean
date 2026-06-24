@@ -83,6 +83,7 @@ The complete matrix:
 | `pyaegean[anthropic]` | `anthropic>=0.39` | Anthropic (the default) AI provider |
 | `pyaegean[openai]` | `openai>=1.30` | OpenAI provider |
 | `pyaegean[grok]` | `openai>=1.30` | xAI Grok (OpenAI-API-compatible) |
+| `pyaegean[openrouter]` | `openai>=1.30` | OpenRouter (OpenAI-API-compatible gateway to many models) |
 | `pyaegean[gemini]` | `google-genai>=0.3` | Google Gemini provider |
 | `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | the full AI layer (all providers) |
 | `pyaegean[epidoc]` | `lxml>=5.0` | EpiDoc TEI import/export |

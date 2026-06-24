@@ -43,6 +43,7 @@ pip install "pyaegean[anthropic]"      # the default provider
 pip install "pyaegean[openai]"         # OpenAI
 pip install "pyaegean[grok]"           # xAI Grok
 pip install "pyaegean[gemini]"         # Google Gemini
+pip install "pyaegean[openrouter]"     # OpenRouter (one key, many models)
 pip install "pyaegean[cli]"            # the `aegean` command-line tool
 ```
 
@@ -62,7 +63,7 @@ See [Installation](Installation) for the full extras matrix.
 
 ## Providers & clients
 
-Four providers ship built in. Each is registered automatically when you
+Five providers ship built in. Each is registered automatically when you
 `import aegean.ai`.
 
 | Provider | id | SDK extra | Key env var | Model env var | Default model |
@@ -71,18 +72,21 @@ Four providers ship built in. Each is registered automatically when you
 | OpenAI | `openai` | `pyaegean[openai]` | `OPENAI_API_KEY` | `OPENAI_MODEL` | `gpt-4o` |
 | xAI Grok | `grok` | `pyaegean[grok]` | `XAI_API_KEY` | `XAI_MODEL` | `grok-2-latest` |
 | Google Gemini | `gemini` | `pyaegean[gemini]` | `GEMINI_API_KEY` | `GEMINI_MODEL` | `gemini-1.5-pro` |
+| OpenRouter | `openrouter` | `pyaegean[openrouter]` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `openai/gpt-4o-mini` |
 
 > The default models are starting points. Model ids drift; the layer is built so
 > you can point each provider at the current model without touching code (see
-> [Model selection](#model-selection) below). Grok talks to xAI through the
-> OpenAI-compatible endpoint under the hood, so it uses the `openai` SDK.
+> [Model selection](#model-selection) below). Grok and OpenRouter talk through
+> OpenAI-compatible endpoints under the hood, so they use the `openai` SDK; OpenRouter
+> reaches many vendors from one key, with `vendor/model` ids (e.g.
+> `anthropic/claude-3.5-sonnet`) set via `OPENROUTER_MODEL`.
 
 List what's registered, and build a client:
 
 ```python
 from aegean import ai
 
-ai.list_providers()                      # ['anthropic', 'gemini', 'grok', 'openai']
+ai.list_providers()                      # ['anthropic', 'gemini', 'grok', 'openai', 'openrouter']
 
 client = ai.get_client("anthropic")      # needs pyaegean[anthropic] + a key
 client = ai.get_client("openai", model="gpt-4o")
@@ -97,6 +101,7 @@ aegean ai providers
 # gemini
 # grok
 # openai
+# openrouter
 ```
 
 ### `get_client` arguments
@@ -727,7 +732,7 @@ time), so a bad key won't blow up until you actually make a call.
 | --- | --- | --- |
 | `ProviderNotInstalled` | The provider's SDK isn't installed | `pip install "pyaegean[<provider>]"` |
 | `MissingAPIKey` | No key in the env or `api_key=` | Set `$<PROVIDER>_API_KEY` or pass `api_key=` |
-| `UnknownProvider` | An unregistered provider id | Use one of `anthropic`, `openai`, `grok`, `gemini` |
+| `UnknownProvider` | An unregistered provider id | Use one of `anthropic`, `openai`, `grok`, `gemini`, `openrouter` |
 
 All three subclass `AIError`. On the CLI they print one clean line to stderr and
 exit 1:
@@ -738,7 +743,7 @@ aegean ai gloss "ἦν"          # with no SDK installed
 
 python -c "from aegean import ai; ai.get_client('llama')"
 # aegean.ai.client.UnknownProvider: unknown provider 'llama';
-#   available: ['anthropic', 'gemini', 'grok', 'openai']
+#   available: ['anthropic', 'gemini', 'grok', 'openai', 'openrouter']
 ```
 
 ---

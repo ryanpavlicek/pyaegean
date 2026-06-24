@@ -6,6 +6,12 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+### Added
+- **OpenRouter AI provider** (`provider="openrouter"`, the `[openrouter]` extra): a fifth
+  built-in provider reaching many models from one key through OpenRouter's OpenAI-compatible
+  gateway. Set `OPENROUTER_API_KEY` for the key and `OPENROUTER_MODEL` for the `vendor/model`
+  id (e.g. `anthropic/claude-3.5-sonnet`); works everywhere `--provider` is accepted.
+
 ## 0.8.8 (2026-06-24)
 
 ### Added

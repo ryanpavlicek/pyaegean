@@ -1,12 +1,15 @@
 """Built-in provider adapters: Anthropic (default), OpenAI, xAI Grok, Google
-Gemini. Each SDK is an optional extra, imported lazily inside ``_complete`` and
-surfaced as `ProviderNotInstalled` if absent. API keys are read from the
-environment and never logged.
+Gemini, and OpenRouter (an OpenAI-compatible gateway to many models from one key).
+Each SDK is an optional extra, imported lazily inside ``_complete`` and surfaced as
+`ProviderNotInstalled` if absent. API keys are read from the environment and never
+logged.
 
 Default models are configurable (model ids drift): set ``ANTHROPIC_MODEL`` /
-``OPENAI_MODEL`` / ``XAI_MODEL`` / ``GEMINI_MODEL`` to pin the current model for
-each provider. The Anthropic default is a current GA model; point
-``ANTHROPIC_MODEL`` at the latest flagship Claude for maximum capability.
+``OPENAI_MODEL`` / ``XAI_MODEL`` / ``GEMINI_MODEL`` / ``OPENROUTER_MODEL`` to pin the
+current model for each provider. The Anthropic default is a current GA model; point
+``ANTHROPIC_MODEL`` at the latest flagship Claude for maximum capability. OpenRouter
+model ids are ``vendor/model`` (e.g. ``anthropic/claude-3.5-sonnet``); set
+``OPENROUTER_MODEL`` to choose any of its catalogue.
 """
 
 from __future__ import annotations
@@ -85,6 +88,15 @@ class GrokClient(_OpenAICompatibleClient):
     env_model = "XAI_MODEL"
     default_model = "grok-2-latest"
     base_url = "https://api.x.ai/v1"  # xAI is OpenAI-API-compatible
+
+
+@register_provider
+class OpenRouterClient(_OpenAICompatibleClient):
+    provider = "openrouter"
+    env_key = "OPENROUTER_API_KEY"
+    env_model = "OPENROUTER_MODEL"
+    default_model = "openai/gpt-4o-mini"  # OpenRouter ids are vendor/model; override via OPENROUTER_MODEL
+    base_url = "https://openrouter.ai/api/v1"  # OpenAI-API-compatible gateway
 
 
 @register_provider

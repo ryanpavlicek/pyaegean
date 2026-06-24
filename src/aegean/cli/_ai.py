@@ -25,7 +25,7 @@ ai_app = typer.Typer(
 )
 
 PROVIDER_OPT = typer.Option(
-    "anthropic", "--provider", help="anthropic, openai, grok, or gemini."
+    "anthropic", "--provider", help="anthropic, openai, grok, gemini, or openrouter."
 )
 MODEL_OPT = typer.Option(None, "--model", help="Provider model override.")
 
