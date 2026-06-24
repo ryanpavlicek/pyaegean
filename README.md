@@ -147,37 +147,24 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.8**: the script-agnostic core and all four Aegean scripts; the full Greek NLP
-track (treebank, LSJ, dependency parser, generalizing tagger + lemmatizer, the neural joint
-pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); the full **DAMOS Linear B**
-and **SigLA Linear A** corpora fetched on demand; corpus statistics (dispersion, keyness,
-bootstrap), one-line plots, and cross-script phonetic comparison; and a complete data layer:
-lossless JSON round-trip, a compound `query()`, schema-valid EpiDoc / CSV / Parquet export, an
-opt-in analysis cache, and Pleiades-aligned find-sites.
-
-**v0.8.1** adds the **annotated Greek New Testament** (Nestle 1904, with Koine glossing via the
-bundled Dodson lexicon and an own-gold eval fold), **scribal-hand analysis** (DAMOS and Linear A),
-**SQLite persistence + full-text search**, **aeolic lyric scansion**, an **in-browser Pyodide
-demo**, the **`aegean workbench`** local server, and an **`aegean-mcp` Model Context Protocol
-server** for agents.
-
-**v0.8.2** adds the **manipulate → save → export toolkit** (load any registered id, Greek work, or
-saved `.json`/`.db` through `read_corpus`; `combine` corpora; save subsets and analysis/AI results
-with `-o`; append to a database with `aegean db add`), a **Greek work catalogue** (`greek.catalog` /
-`aegean greek catalog`: search the ~1,778 works loadable from Perseus / First1KGreek, offline), and
-a **file importer** (`aegean import` / `aegean.io.from_text*`: bring your own `.txt`, a folder, or a
-CSV into a `Corpus`).
-
-**v0.8.4** adds an **interactive shell** (`aegean repl`): run commands without the `aegean`
-prefix, with Tab-completion of commands and options and a recallable history.
-
-**v0.8.3** expands the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) with a
-live example of every feature that runs client-side.
+Shipped through **v0.8.7**: the script-agnostic core and all four Aegean scripts; the full Greek
+NLP track (treebank, LSJ, dependency parser, generalizing tagger and lemmatizer, the neural joint
+pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); the annotated **Greek New
+Testament** with Koine glossing; the full **DAMOS Linear B** and **SigLA Linear A** corpora on
+demand; corpus statistics (dispersion, keyness, bootstrap), one-line plots, and cross-script
+phonetic comparison; a complete data layer (lossless JSON round-trip, a compound `query()`,
+schema-valid EpiDoc / CSV / Parquet export, **SQLite persistence** with full-text search, an
+opt-in analysis cache, and Pleiades-aligned find-sites); the **`aegean`** command line and the
+**`aegean-mcp`** server; and an in-browser demo.
 
 On the list next:
 
-- A smaller neural model (selective quantization, optional GPU execution), held to the same accuracy gate
-- SigLA apparatus decoding; richer `load_work` addressing across more of the Perseus / First1KGreek canon
+- A smaller neural model: selective quantization and optional GPU execution providers, held to the
+  same accuracy gate
+- A pluggable lexicon registry adding more public-domain Greek dictionaries (Middle Liddell,
+  Cunliffe, Autenrieth, Abbott-Smith, Slater), with deep links out to Logeion / Scaife
+- SigLA editorial-apparatus decoding, and richer `load_work` addressing across the Perseus /
+  First1KGreek canon
 - Wider gazetteer / Pleiades coverage
 
 

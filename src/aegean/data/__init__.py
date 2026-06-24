@@ -86,8 +86,8 @@ _REMOTE: dict[str, DataSpec] = {
     # The opt-in [neural] Greek lemmatizer model: GreTa seq2seq exported to ONNX, plus its
     # tokenizer and a gold form->lemma lookup, packed as a tar.gz. Derived from CC BY-SA
     # corpora, so the *model* is CC BY-SA; it is fetched (never bundled), so the wheel stays
-    # Apache-2.0. URL is pinned to a release asset once published; until then set
-    # PYAEGEAN_GRC_LEMMA_NEURAL_URL to fetch from your own copy.
+    # Apache-2.0. URL is pinned to the grc-lemma-neural-v1 release asset; set
+    # PYAEGEAN_GRC_LEMMA_NEURAL_URL to fetch from your own mirror instead.
     "grc-lemma-neural": DataSpec(
         name="grc-lemma-neural",
         url=(
@@ -102,9 +102,9 @@ _REMOTE: dict[str, DataSpec] = {
     # The opt-in [neural] joint Greek pipeline: one GreBerta-based model for UPOS, the
     # 9-position AGDT morphology (rendered as UD FEATS), UD dependency trees (biaffine +
     # MST), and lemmas (edit-script head + train-only lookup). Trained leakage-clean on
-    # AGDT + Gorman + Pedalion; measured above every published UD Ancient Greek number
-    # (docs/benchmarks.md). URL is pinned to a release asset once published; until then
-    # set PYAEGEAN_GRC_JOINT_URL to fetch from your own copy.
+    # AGDT + Gorman + Pedalion; the best published result on every UD Ancient Greek metric
+    # (docs/benchmarks.md). URL is pinned to the grc-joint-v2 release asset; set
+    # PYAEGEAN_GRC_JOINT_URL to fetch from your own mirror instead.
     "grc-joint": DataSpec(
         name="grc-joint",
         url=(
