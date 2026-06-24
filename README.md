@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.8.7 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.8.8 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -41,7 +41,7 @@ prior programming.
 | | |
 |---|---|
 | **All four Aegean scripts, one API** | `aegean.load("lineara")` gives the bundled **1,721-inscription** Linear A corpus over the full Unicode Linear A sign repertoire (47 signs carry conventional sound values, the rest are undeciphered); Linear B, the Cypriot syllabary, and Cypro-Minoan add Unicode-built inventories with small *illustrative* text samples (bring your own corpus for Linear B: see below). The two *deciphered* syllabaries transliterate and bridge into Greek: `po-me → ποιμήν` (Linear B), `pa-si-le-u-se → βασιλεύς` (Cypriot). |
-| **A deep Greek NLP pipeline** | Beta Code ↔ Unicode (Beta Code is the plain-ASCII way of typing polytonic Greek), tokenize, syllabify, accent & prosody, **metrical scansion** (scans the *Odyssey*'s opening; rejects lines that require synizesis), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), **LSJ glossing**, and pure-Python generalizing taggers/lemmatizers. |
+| **A deep Greek NLP pipeline** | Beta Code ↔ Unicode (Beta Code is the plain-ASCII way of typing polytonic Greek), tokenize, syllabify, accent & prosody, **metrical scansion** (scans the *Odyssey*'s opening; rejects lines that require synizesis), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), a **dictionary registry** (LSJ, Middle Liddell, Cunliffe, Abbott-Smith) with Logeion deep-links, and pure-Python generalizing taggers/lemmatizers. |
 | **State-of-the-art neural NLP** | The opt-in **neural pipeline** (`greek.use_neural_pipeline()`; runs without PyTorch): one jointly-trained model for tagging, full morphology, **dependency parsing** (Universal Dependencies trees), and lemmatization; in plain terms, it reads a Greek sentence and tells you each word's part of speech, grammatical form, dictionary headword, and place in the sentence's structure. Measured end-to-end through this package at **97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS** on the UD Ancient Greek (Perseus) test benchmark, to our knowledge the best published results on every metric and robust across five training seeds (LAS 85.6 ± 0.1) ([protocol & tables](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)). |
 | **Real texts on demand** | `greek.load_work("tlg0012.tlg001")` fetches a complete work (the Iliad arrives as 24 books / ~127k tokens) from Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) straight into the corpus model. Don't know an id? `greek.catalog(author="Plato")` searches a bundled, offline index of **1,778** Greek works (every `-grc` edition in both repos): author, title (English or Greek), or free text, and every hit's id loads with `load_work`. |
 | **Bring your own text** | `aegean.io.from_text` / `from_text_file` / `from_text_dir` / `from_csv` turn a passage, a folder of `.txt`, or a CSV into a real `Corpus`: `aegean.io.from_text("ἐν ἀρχῇ ἦν ὁ λόγος.")` gives the full filter / query / analyse / export API over your own material, with Greek run through the Greek tokenizer. |
@@ -147,25 +147,25 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.8.7**: the script-agnostic core and all four Aegean scripts; the full Greek
-NLP track (treebank, LSJ, dependency parser, generalizing tagger and lemmatizer, the neural joint
-pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); the annotated **Greek New
-Testament** with Koine glossing; the full **DAMOS Linear B** and **SigLA Linear A** corpora on
-demand; corpus statistics (dispersion, keyness, bootstrap), one-line plots, and cross-script
-phonetic comparison; a complete data layer (lossless JSON round-trip, a compound `query()`,
-schema-valid EpiDoc / CSV / Parquet export, **SQLite persistence** with full-text search, an
-opt-in analysis cache, and Pleiades-aligned find-sites); the **`aegean`** command line and the
-**`aegean-mcp`** server; and an in-browser demo.
+Shipped through **v0.8.8**: the script-agnostic core and all four Aegean scripts; the full Greek
+NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
+pipeline, a benchmark harness, and a neutral out-of-AGDT evaluation); a **pluggable lexicon
+registry** with Middle Liddell, Cunliffe, Abbott-Smith, LSJ, and Dodson, plus Logeion deep-links;
+the annotated **Greek New Testament** with Koine glossing; the full **DAMOS Linear B** and
+**SigLA Linear A** corpora on demand; corpus statistics (dispersion, keyness, bootstrap), one-line
+plots, and cross-script phonetic comparison; a complete data layer (lossless JSON round-trip, a
+compound `query()`, schema-valid EpiDoc / CSV / Parquet export, **SQLite persistence** with
+full-text search, an opt-in analysis cache, and Pleiades-aligned find-sites); the **`aegean`**
+command line and the **`aegean-mcp`** server; and an in-browser demo.
 
 On the list next:
 
 - A smaller neural model: selective quantization and optional GPU execution providers, held to the
   same accuracy gate
-- A pluggable lexicon registry adding more public-domain Greek dictionaries (Middle Liddell,
-  Cunliffe, Autenrieth, Abbott-Smith, Slater), with deep links out to Logeion / Scaife
-- SigLA editorial-apparatus decoding, and richer `load_work` addressing across the Perseus /
-  First1KGreek canon
-- Wider gazetteer / Pleiades coverage
+- More public-domain dictionaries in the registry (Autenrieth, Slater), as their open
+  digitizations are confirmed license-clean
+- SigLA editorial-apparatus decoding and wider Pleiades / gazetteer coverage, as the upstream
+  apparatus data and verified coordinates become available
 
 
 ## About the author
@@ -202,7 +202,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.8.7},
+  version = {0.8.8},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

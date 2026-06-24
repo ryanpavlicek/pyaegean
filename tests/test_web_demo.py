@@ -137,5 +137,6 @@ def test_demo_html_wiring() -> None:
     # every JS-referenced tool exists in the demo module
     demo = _load_demo()
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
-                 "bridge", "lineara_search", "lineara_balance", "import_text", "phonetic_compare"):
+                 "bridge", "lineara_search", "lineara_balance", "import_text", "phonetic_compare",
+                 "lexicon_link"):
         assert hasattr(demo, name) and f'"{name}"' in html

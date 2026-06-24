@@ -6,6 +6,28 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+## 0.8.8 (2026-06-24)
+
+### Added
+- **Pluggable lexicon registry** for Greek dictionaries. `greek.lexica()` lists the
+  available dictionaries; `greek.use_lexicon(id)` activates a hosted one;
+  `greek.gloss(word, dictionary=id)` and `greek.entry(word, dictionary=id)` resolve a word
+  against a chosen (or any active) dictionary; `greek.lexicon_link(word)` builds a Logeion
+  or Perseus deep-link for dictionaries that are not hosted. LSJ and Dodson are now backends
+  in the registry; `use_lsj` / `use_dodson` / `gloss` / `lookup` keep working unchanged.
+- **Three new dictionaries** behind the registry, each fetched to the cache on first use
+  and built into a lemma→entry index (never bundled): the Intermediate Greek-English
+  Lexicon (Middle Liddell, classical), Cunliffe's Lexicon of the Homeric Dialect (Homeric),
+  and Abbott-Smith's Manual Greek Lexicon of the New Testament (Koine).
+- CLI: `aegean greek lexica` lists the dictionaries, `aegean greek gloss --dict <id>` glosses
+  from a chosen one, and `aegean greek lexicon-link <word>` builds a deep-link.
+
+### Changed
+- **`load_work` reference addressing** is stricter and clearer: malformed refs (empty
+  components like `1..2`, a stray `-`) and descending verse ranges (`1.50-1.1`) raise with
+  the reason, and the "selected no text" error lists the sections (or the line range) present
+  where the ref failed.
+
 ## 0.8.7 (2026-06-23)
 
 ### Changed

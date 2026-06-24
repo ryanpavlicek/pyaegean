@@ -19,7 +19,7 @@ scripts, while staying honest that everything stops at the sign level.
 import aegean
 from aegean.core.script import get_script
 
-aegean.__version__                                # '0.8.7'
+aegean.__version__                                # '0.8.8'
 aegean.registered_scripts()                       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 len(get_script("cyprominoan").sign_inventory)     # 99
 ```

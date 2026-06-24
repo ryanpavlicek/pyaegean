@@ -90,6 +90,15 @@ def catalog(query: str, limit: int = 15) -> str:
     )
 
 
+def lexicon_link(word: str) -> str:
+    """A Logeion deep-link for a Greek word (lemmatized first) — covers dictionaries not hosted here."""
+    from aegean import greek
+
+    word = word.strip().split()[0] if word.strip() else word
+    url = greek.lexicon_link(word) if word else ""
+    return json.dumps({"word": word, "url": url}, ensure_ascii=False)
+
+
 def bridge(script: str, word: str) -> str:
     """Read a deciphered syllabic word (Linear B / Cypriot) as Greek — the bundled bridge."""
     if script == "linearb":

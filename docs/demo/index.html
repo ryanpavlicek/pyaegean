@@ -98,6 +98,15 @@
   </div>
 
   <div class="card">
+    <h2>Dictionary deep-link</h2>
+    <label for="link">Any Greek word — build a Logeion link to its dictionary entry (LSJ, Middle
+      Liddell, Cunliffe, Autenrieth, and more). The word is lemmatized first.</label>
+    <input type="text" id="link" value="μήνιδος">
+    <div class="row"><button data-tool="link" disabled>Build link</button></div>
+    <pre id="link-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Greek work catalogue</h2>
     <label for="cat">Search the offline index of ~1,778 loadable works — by author, title (English
       or Greek), or free text. Each id loads with <code>greek.load_work(id)</code>.</label>
@@ -194,7 +203,7 @@ async function init() {
     pyodide.runPython(code);
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
                         "catalog", "bridge", "lineara_search", "lineara_balance", "import_text",
-                        "phonetic_compare"]) {
+                        "phonetic_compare", "lexicon_link"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -234,6 +243,8 @@ const handlers = {
   },
   gloss: () => { const r = call("gloss_nt", val("gloss"));
     show("gloss-out", r.error ? r : `${r.word} — ${r.gloss || "(not in the Dodson NT lexicon)"}`); },
+  link: () => { const r = call("lexicon_link", val("link"));
+    show("link-out", r.error ? r : `${r.word}  →  ${r.url}`); },
   cat: () => {
     const r = call("catalog", val("cat"));
     if (r.error) return show("cat-out", r);
