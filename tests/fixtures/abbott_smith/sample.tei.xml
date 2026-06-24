@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <body>
+    <entry n="λόγος|G3056">
+      <form><orth>λόγος</orth>, <foreign xml:lang="grc">-ου, ὁ</foreign></form>
+      <sense>
+        <sense n="1."><gloss>a word</gloss></sense>
+        <sense n="2."><gloss>a saying</gloss>, <gloss>statement</gloss></sense>
+      </sense>
+    </entry>
+    <entry n="ἀγάπη|G26">
+      <form><orth>ἀγάπη</orth></form>
+      <sense><gloss>love</gloss></sense>
+    </entry>
+  </body>
+</TEI>

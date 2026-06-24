@@ -7,16 +7,17 @@ from pathlib import Path
 from aegean import greek
 from aegean.greek import scaife_lex
 from aegean.greek.lexicons import LexiconInfo
+from aegean.greek.lexindex import IndexLexicon
 
 FIXTURE = Path(__file__).parent / "fixtures" / "scaife" / "entries.jsonl"
 
 
-def _lex() -> scaife_lex.ScaifeLexicon:
+def _lex() -> IndexLexicon:
     data = scaife_lex.index_from_files([FIXTURE])
     info = LexiconInfo(
         id="fixture", name="t", scope="x", license="y", source="z", hosted=True
     )
-    return scaife_lex.ScaifeLexicon(info, data)
+    return IndexLexicon(info, data)
 
 
 def test_parse_both_jsonl_shapes():
