@@ -254,7 +254,10 @@ def test_greek_eval_rejects_bad_target(app):
 
 
 def test_greek_eval_has_bootstrap_flag(app):
-    assert "--bootstrap" in ok(app, "greek", "eval", "--help")
+    # --bootstrap is accepted: with a bad target it reaches the runtime target check
+    # (exit 1) rather than an "unknown option" usage error (exit 2). Robust to the
+    # terminal width that rich uses to wrap --help output in CI.
+    assert "target must be" in err(app, "greek", "eval", "nope", "--bootstrap")
 
 
 def test_greek_nt_loads(app):
