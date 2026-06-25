@@ -4,6 +4,17 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.10.0 (2026-06-25)
+
+### Changed
+- **Quantized neural pipeline** (`grc-joint`): the joint tagger/parser/lemmatizer now ships quantized
+  at **~173 MB** (down from ~518 MB, about 3x smaller), with **no loss of accuracy** on the UD Ancient
+  Greek Perseus benchmark (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.6, identical to the
+  fp32 model within rounding). The recipe is weight-only int8 on the matrix weights plus fp16
+  elsewhere, keeping activations in full precision; full int8 (quantized activations) collapses the
+  encoder, so it is avoided. The `[neural]` extra now requires `onnxruntime>=1.23`; the fp32 model
+  remains available at the `grc-joint-v2` release for reproducibility.
+
 ## 0.9.0 (2026-06-24)
 
 ### Added

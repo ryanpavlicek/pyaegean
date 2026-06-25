@@ -68,7 +68,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.9.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.10.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
