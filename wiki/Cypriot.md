@@ -295,51 +295,51 @@ is on the [Analysis](Analysis) page.
 
 ## The bundled corpus
 
-The Cypriot epigraphic corpus (ICS: *Inscriptions de Chypre syllabiques*, Masson, and its
-successors) is **not openly redistributable**, so only a small **illustrative sample** ships with
-pyaegean. The sign inventory and the transliteration/bridge are the shippable core; for a fuller
-corpus, bring your own: if you have transliterations in a `.txt` file or a CSV, import them in one
-step (`aegean import ics.csv -o cypriot.db --script cypriot`, or `aegean.io.from_csv`) and they get
-the whole corpus API. What is bundled loads through the standard corpus API:
+pyaegean bundles the **Cypriot syllabic inscriptions of *Inscriptiones Graecae* XV 1** — the
+Berlin-Brandenburg Academy of Sciences and Humanities digital edition
+([telota.bbaw.de/ig](https://telota.bbaw.de/ig)), licensed **CC BY 4.0**. A point-in-time snapshot
+of **178 inscriptions** ships with the package, so the readable corpus is always available offline
+and never depends on the source staying online. Each inscription carries its transliteration (with
+the editorial apparatus), find-place, date, material, a translation where the edition gives one,
+and its own source URL for the CC-BY link-back; two illustrative samples round it out. To refresh
+the snapshot from the source, run `scripts/build_cypriot_ig.py` (a repo-only build tool). Have your
+own transliterations as well? Import a `.txt` or CSV in one step (`aegean.io.from_csv`) and they get
+the whole corpus API too.
 
 ```python
 import aegean
 
 c = aegean.load("cypriot")
-len(c)                                # 2
-for d in c:
-    print(d.id, [t.text for t in d.words])
-# cypriot-dedication ['O-NA-SI-LO-SE', 'TO-I', 'A-PO-LO-NI']
-# cypriot-formula ['A-KA-TA', 'TU-KA']
+len(c)                                # 180 (178 IG XV 1 + 2 illustrative samples)
+d = next(x for x in c if x.id == "IG XV 1, 1")
+print(d.id, d.meta.site, [t.text for t in d.tokens][:4])
+# IG XV 1, 1 Amathus ['ị-te-ọ-..-..-..-j̣ạ']
 ```
 
 From the shell:
 
 ```bash
 aegean info cypriot
-#                             aegean corpus: cypriot
-# ┌────────────────────┬────────────────────────────────────────────────────────┐
-# │ field              │ value                                                  │
-# ├────────────────────┼────────────────────────────────────────────────────────┤
-# │ documents          │ 2                                                      │
-# │ words              │ 5                                                      │
-# │ tokens             │ 5                                                      │
-# │ signs_in_inventory │ 55                                                     │
-# │ source             │ Illustrative sample of Cypriot syllabic inscriptions   │
-# │ license            │ Sign data from the Unicode Character Database          │
-# │                    │ (Unicode-3.0). Sample transliterations are scholarly   │
-# │                    │ facts, bundled as illustrative excerpts — not a        │
-# │                    │ corpus.                                                │
-# │ citation           │ Masson, O. (1983). Les inscriptions chypriotes         │
-# │                    │ syllabiques (2nd ed.).                                 │
-# └────────────────────┴────────────────────────────────────────────────────────┘
+# documents          180
+# signs_in_inventory 55
+# source             Inscriptiones Graecae XV 1: Cypriot syllabic inscriptions
+#                    (BBAW digital edition), plus illustrative samples
+# license            Inscriptiones Graecae XV 1: CC BY 4.0 (Berlin-Brandenburg
+#                    Academy of Sciences and Humanities). Sign data: Unicode-3.0.
+# citation           Inscriptiones Graecae XV 1 (Cypriot syllabic inscriptions),
+#                    digital edition, https://telota.bbaw.de/ig (CC BY 4.0).
 
-aegean show cypriot cypriot-dedication
-# cypriot-dedication  site=Cyprus  support=Inscription
-#   1: O-NA-SI-LO-SE TO-I A-PO-LO-NI
+aegean show cypriot "IG XV 1, 1"
+# IG XV 1, 1  site=Amathus  support=Basis ( Marmor )
+#   1: ị-te-ọ-..-..-..-j̣ạ
 ```
 
-### The two sample documents
+Each IG XV 1 document keeps its source URL (`doc.meta.notes`) for the CC-BY link-back, and the
+Greek side of a bilingual where present.
+
+### Sample documents
+
+Alongside the IG XV 1 corpus, two illustrative samples show the syllabary→Greek bridge:
 
 | Document id | Words | Reading |
 | --- | --- | --- |
@@ -347,8 +347,7 @@ aegean show cypriot cypriot-dedication
 | `cypriot-formula` | `A-KA-TA TU-KA` | ἀγαθᾷ τύχᾳ, "with good fortune": an illustrative formula |
 
 Because it is a real corpus object, the rest of the toolkit works on it: `aegean search`,
-`aegean stats`, `aegean export`, and so on (see [CLI](CLI) and [Analysis](Analysis)): though with
-only two documents the numbers are illustrative.
+`aegean stats`, `aegean export`, `aegean geo`, and so on (see [CLI](CLI) and [Analysis](Analysis)).
 
 ---
 

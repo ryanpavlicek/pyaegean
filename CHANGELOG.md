@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.9.0 (2026-06-24)
+
+### Added
+- **Cypriot syllabic corpus** (`aegean.load("cypriot")`): 178 inscriptions of *Inscriptiones
+  Graecae* XV 1, the Berlin-Brandenburg Academy digital edition (CC BY 4.0), bundled as a hosted
+  snapshot with transliteration, editorial apparatus, find-place/date/material, and translations.
+  The corpus grows from a 2-document illustrative sample to a real syllabic corpus.
+- **Inflection synthesis** (`greek.inflect(lemma, **features)`, `greek.paradigm(lemma)`): the
+  inverse of lemmatization, generating the attested inflected forms of a lemma from the AGDT.
+  Activate with `greek.use_inflector()`. CLI: `aegean greek inflect`.
+- **Terminology rarity** (`greek.terminology_rarity(text, corpus)`): a corpus-relative
+  vocabulary-rarity score that flags rare or technical vocabulary, a translation-difficulty signal.
+  CLI: `aegean greek rarity`.
+- **Dialect and register tags** (`greek.usage(word)`): a word's dialect (Doric, Attic, Ionic, …)
+  and register (poetic, medical, comic, …), mined from its LSJ entry. CLI: `aegean greek usage`.
+- **Gated gloss grounding for translation** (`aegean.translate(text, glosses=True)`): adds gated,
+  content-word LSJ glosses to the grounding (a polysemy gate, with an optional frequency gate), and
+  warns when only the baseline lemmatizer is active. CLI: `aegean ai translate --glosses/--no-glosses`.
+- **PROIEL convention-drift report** (`greek.proiel_drift()`): a part-of-speech confusion matrix
+  and lemma-mismatch breakdown of the out-of-AGDT PROIEL evaluation, separating annotation-convention
+  divergence from real error. CLI: `aegean greek eval proiel --drift`.
+
 ## 0.8.10 (2026-06-24)
 
 ### Added
