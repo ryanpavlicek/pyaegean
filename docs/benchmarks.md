@@ -26,8 +26,9 @@ the cross-tool tables live here, with citations.
   isolate real errors.
 - **Train / dev / test discipline.** Training is the AGDT minus the UD-Perseus dev+test
   exclusion manifest. The **dev** fold (the AGDT sentences behind UD-Perseus dev) is used for
-  early stopping, checkpoint selection, light schedule tuning (epochs / lr), and the int8
-  quantization gate; the **test** folds are scored once on the finished model and never used
+  early stopping, checkpoint selection, light schedule tuning (epochs / lr), and the
+  quantization gate (weight-only int8 + fp16 passes losslessly; full int8 activations are
+  rejected there, see below); the **test** folds are scored once on the finished model and never used
   for any selection. Full protocol in `training/README.md`.
 - **Lemma scoring.** Lemmas use the evaluator's exact string match, NFC-normalized with
   homograph-index digits stripped, and **no** case- or diacritic-folding. Convention
@@ -124,7 +125,7 @@ reference rather than rows in the single-protocol table above:
 
 ## pyaegean — the neural pipeline (shipped)
 
-The shipped joint model (`grc-joint-v2`, activated by `greek.use_neural_pipeline()`, the
+The shipped joint model (`grc-joint-v3`, activated by `greek.use_neural_pipeline()`, the
 `[neural]` extra) is one GreBerta-encoder checkpoint serving UPOS, XPOS, UD FEATS,
 dependency trees (single-root Chu-Liu/Edmonds MST decoding, so non-projectivity is handled
 natively), and lemmas. Trained leakage-clean on the audited AGDT + Gorman + Pedalion
@@ -176,9 +177,23 @@ Three things keep these honest:
   closely, so tokenization is not a bottleneck on this fold. Throughput is ≈450 words/s on
   plain CPU.
 
-The model ships fp32 (~518 MB): int8 dynamic quantization broke it on the dev set
-(UPOS 98.30 → 23.34), so the quantization gate rejected it. Selective quantization is a
-known follow-up; correctness ships first.
+The model ships **quantized at ~173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
+about 3× smaller than the fp32 build (~518 MB tar.gz / 556 MB uncompressed) and lossless:
+UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 /
+UAS 90.2 / LAS 85.6). The recipe is **weight-only int8 + fp16, activations kept fp32**:
+onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
+else (crucially the ~160 MB word-embedding table). Activations stay fp32 by design.
+
+This is the recipe that works because the obvious one does not: **full int8 (quantized
+activations) collapses the GreBerta encoder.** Its activation outliers do not survive
+8-bit quantization, so every dynamic or static int8-activation recipe we tried dropped
+UPOS from 97 to ~16–32 and LAS from 86 to ~1–13 (an earlier dynamic-quantization attempt
+broke it on the dev set, UPOS 98.30 → 23.34). Keeping activations fp32 and quantizing only
+the weights avoids the outlier problem and ships the size win at no accuracy cost.
+
+The quantized model requires **onnxruntime ≥ 1.23** (the 8-bit MatMulNBits CPU kernel); the
+`[neural]` extra floor was raised from 1.17 to 1.23 accordingly. The fp32 model stays
+available at the `grc-joint-v2` release for reproducibility.
 
 ### Koine / New Testament (Nestle 1904 own gold)
 

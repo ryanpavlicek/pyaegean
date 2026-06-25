@@ -130,7 +130,7 @@ pip install "pyaegean[neural]"     # onnxruntime + tokenizers + numpy; no torch
 ```
 
 ```python
-greek.use_neural_pipeline()        # fetches the model bundle (~518 MB, one-time) to the cache
+greek.use_neural_pipeline()        # fetches the model bundle (~173 MB, one-time) to the cache
 
 ana = greek.analyze_sentence(["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"])
 list(zip(ana.tokens, ana.upos, ana.deprel, ana.lemma))
@@ -154,8 +154,16 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 | neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.6** |
 
 Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.6,
-UAS 82.5, UPOS 87.2. Inference is torch-free (int8 quantization failed its accuracy
-gate, so the artifact ships fp32) at roughly 450 words/second on a plain CPU. The
+UAS 82.5, UPOS 87.2. Inference is torch-free, at roughly 450 words/second on a plain
+CPU. The bundle ships **quantized** (~173 MB, down from ~518 MB; 182 MB uncompressed)
+and the quantization is **lossless**: the scores above are unchanged from the fp32
+model (within ±0.02). It is weight-only int8 (onnxruntime MatMulNBits, block 128,
+symmetric) on the MatMul weights plus fp16 on everything else (the ~160 MB word-embedding
+table included), with activations kept fp32. Weight-only is the point that holds:
+full int8 with quantized activations collapses the GreBerta encoder (its activation
+outliers send UPOS 97→~16-32 and LAS 86→~1-13), and keeping activations fp32 avoids
+that. The quantized kernel needs **onnxruntime>=1.23** (the `[neural]` floor); the
+fp32 model stays available at the `grc-joint-v2` release for reproducibility. The
 model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
 leakage controls, and the comparison tables are documented in
 [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).

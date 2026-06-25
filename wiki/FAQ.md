@@ -457,8 +457,9 @@ Perseus TEI), and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
 `use_parser()` one shared ~15 MB AGDT-derived bundle (no 75 MB download or local
 training): falling back to building from source if an asset is unreachable. The
 `[neural]` models are larger: `greek.use_neural_lemmatizer()` (~232 MB) and
-`greek.use_neural_pipeline()` (~518 MB). Everything else, including the rule-based
-pipeline, works fully offline.
+`greek.use_neural_pipeline()` (~173 MB; quantized and lossless, needs
+`onnxruntime>=1.23`). Everything else, including the rule-based pipeline, works
+fully offline.
 
 ### Do I need an API key?
 

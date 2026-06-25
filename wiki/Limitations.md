@@ -37,7 +37,7 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Full Linear B corpus | NonCommercial → fetched, not bundled (`load("damos")`) | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
 | SigLA / UD / PROIEL data | NonCommercial → fetched for research/eval only | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
 | Offline morphology | Misses irregular/3rd-decl./contract paradigms | [Engineering](#engineering-limits-we-plan-to-lift) |
-| Neural model size | ~518 MB fp32 download | [Engineering](#engineering-limits-we-plan-to-lift) |
+| Neural model size | ~173 MB quantized download | [Engineering](#engineering-limits-we-plan-to-lift) |
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
 | AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
@@ -179,7 +179,7 @@ The fetched, never-bundled assets, and why:
 | `sigla` | SigLA Linear A palaeography, 781 docs | CC BY-NC-SA 4.0 | NonCommercial |
 | `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size: redistributable, one book bundled offline |
 | UD / PROIEL folds | Evaluation treebanks | CC BY-NC-SA | NonCommercial; eval only, never trained on |
-| neural model | Joint tagger/parser/lemmatizer | CC BY-SA (from treebanks) | Size (~518 MB); the `[neural]` extra |
+| neural model | Joint tagger/parser/lemmatizer | CC BY-SA (from treebanks) | Size (~173 MB); the `[neural]` extra |
 | facsimile mirror | Linear A photos/drawings | © rightsholders | Not licensed for redistribution |
 
 Bring-your-own corpora are supported too: point `PYAEGEAN_LINEARB_CORPUS` at a
@@ -203,7 +203,7 @@ Each of these is something code *can* fix, and each is on the
 | ~~No way to *discover* which Greek works or NT books are loadable~~ | **Done:** `greek.popular_works()` / `aegean greek works` (a curated, source-verified catalog of 25 well-known works) and `greek.nt_books()` / `aegean greek nt-books` (the 27 NT books); any Perseus / First1KGreek CTS id still works |
 | Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
 | The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source that isn't currently available |
-| The neural pipeline's model is a 518 MB fp32 download (int8 quantization failed its accuracy gate and was rejected) | **By design**: 518 MB is already compact for an end-to-end joint tagger/parser/lemmatizer, and no quantization has held the ≤0.3-point accuracy gate, so the fp32 model ships as-is |
+| ~~The neural pipeline's model is a 518 MB fp32 download~~ | **Done:** the shipped model is now a ~173 MB quantized download (weight-only int8 on the MatMul weights plus fp16 elsewhere, activations kept fp32), lossless within the ≤0.3-point accuracy gate; it needs `onnxruntime>=1.23`. The fp32 model stays at the `grc-joint-v2` release for reproducibility |
 | 33 of 56 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots / peak sanctuaries not yet in Pleiades | The alignment was extended (each coordinate-verified); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
 | The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution: adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
 
