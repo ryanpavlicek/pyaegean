@@ -35,7 +35,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 | Group | Commands |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `parse` `gloss` `gloss-nt` `lexica` `lexicon-link` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `versions` `cache` |
 | **`db`** | `build` `add` `search` |
@@ -305,18 +305,21 @@ on [Greek NLP](Greek-NLP).
 | `tag` | POS-tag (UD coarse tags) | `--treebank --tagger --neural --json` | `aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
 | `morph` | Candidate morphological parses | `--treebank --json` | `aegean greek morph λόγον` |
+| `inflect` | Inflection synthesis (inverse lemmatizer): attested form(s) of a lemma | `--case --number --gender --tense --voice --mood --person --pos --paradigm --json` | `aegean greek inflect λόγος --case gen --number sg` |
 | `parse` | Dependency-parse a sentence | `--neural --parser --json` | `aegean greek parse "…" --neural` |
 | `gloss` | Gloss from a registry dictionary (LSJ by default) | `--dict/-d --full --json` | `aegean greek gloss μῆνις --dict cunliffe` |
 | `gloss-nt` | Koine gloss from bundled Dodson lexicon (no download) | `--strongs --full --json` | `aegean greek gloss-nt λόγος --full` |
 | `lexica` | List the available dictionaries (hosted + deep-link) | `--json` | `aegean greek lexica` |
 | `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
+| `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
+| `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek) | `--ref --source --edition -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` |
 | `nt` | Load the Greek NT (Nestle 1904, bundled): gold lemma/morph/Strong's + gloss | `--ref -o --json` | `aegean greek nt John --ref 1.1-1.18` |
 | `works` | List the curated catalog of 25 well-known works | `--json` | `aegean greek works` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata) | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy) | `--treebank --split --bootstrap --neural --tagger --lemmatizer --neural-lemmatizer --json` | `aegean greek eval ud --neural` |
+| `eval` | Reproduce the published numbers (heavy) | `--treebank --split --bootstrap --drift --neural --tagger --lemmatizer --neural-lemmatizer --json` | `aegean greek eval ud --neural` |
 
 ### Stages that work immediately
 
@@ -541,10 +544,14 @@ In Python: `from aegean import greek; greek.load_nt("John", ref="1.1-18")` and
 
 `aegean greek eval TARGET` runs the official evaluators against fetched gold data
 (heavy). Targets: `ud`, `proiel`, `nt`, `tagger`, `lemmatizer`, `parser`. For `ud`,
-`--treebank` is `perseus` / `proiel` and `--split` is `dev` / `test`.
+`--treebank` is `perseus` / `proiel` and `--split` is `dev` / `test`. For `proiel`,
+`--drift` prints a POS-confusion / lemma convention-drift breakdown (which separates
+systematic annotation-convention divergence from real error) instead of the bare
+accuracy numbers.
 
 ```bash
 aegean greek eval ud --treebank perseus --split test --neural   # heavy
+aegean greek eval proiel --drift                                # where the PROIEL gap comes from
 ```
 
 The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
@@ -713,7 +720,7 @@ hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --glosses/--no-glosses --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -734,7 +741,9 @@ aegean ai extract "OLE S 1" --fields commodity,amount     # → {"commodity":"OL
 `--provider` is `anthropic` (default) / `openai` / `grok` / `gemini` / `openrouter`; `--model`
 overrides the model. `--corpus NAME` grounds the answer on that corpus's frequent
 words. `--trace` prints the grounding provenance under the answer, so you can audit
-exactly what the model was (and wasn't) told. `extract` always prints JSON.
+exactly what the model was (and wasn't) told. `extract` always prints JSON. For Greek,
+`translate` adds gated LSJ glosses to the grounding by default (best on rare or
+documentary vocabulary); pass `--no-glosses` for lemma-only grounding on familiar text.
 
 `-o FILE` saves the run for later: `.json` keeps the text **plus its provenance and
 grounding** (and the exploratory label is preserved on disk), while `.txt` writes the

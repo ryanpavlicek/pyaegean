@@ -317,6 +317,7 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `source=` (API) | `"Ancient Greek"` | Source-language label. |
 | `--script` (CLI) | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `target=` / `--target` | `"English"` | Target language. |
+| `glosses=` / `--glosses` / `--no-glosses` | on | Add gated LSJ glosses to the Greek grounding (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
 | `--trace` | off | Print the grounding provenance under the answer. |
 
 ### Gloss
@@ -595,6 +596,65 @@ The grounding is real and local; the translation itself is generative and return
 as an exploratory result, emphatically so for undeciphered Linear A, where the
 "translation" is a guess built on a phonetic reading of the signs.
 
+### Gated LSJ gloss grounding
+
+For Greek, `aegean.translate` adds **gated, content-word LSJ glosses** on top of the
+lemma grounding (`glosses=True`, the default). For each content word that has an LSJ
+entry, a short dominant-sense gloss is fed in alongside its lemma, so the model reasons
+over real dictionary evidence and not only its training memory.
+
+```python
+from aegean import translate, greek
+
+greek.use_lsj()                                   # glosses are best-effort, empty without it
+translate.grounding_for("σπεῖρε τὴν ἄρουραν", "greek")
+# [GroundingItem('σπεῖρε → lemma σπείρω',  'lemmatizer', 'σπεῖρε'),
+#  GroundingItem('σπεῖρε (σπείρω): sow',   'lexicon:LSJ', 'σπεῖρε'),
+#  GroundingItem('ἄρουραν (ἄρουρα): tilled or arable land', 'lexicon:LSJ', 'ἄρουραν')]
+
+r = translate.translate("σπεῖρε τὴν ἄρουραν", script="greek", client=client)
+print(r.trace())   # the lemmatizer and lexicon:LSJ grounding both show
+```
+
+The gate is what keeps the glosses from misleading the model. **Highly polysemous words
+are left to the model**: a first-sense gloss for a word like στάσις or κρίσις is often the
+wrong contextual sense, and forcing it in degrades a capable reading rather than helping it.
+The signal is in obscure, dominant-sense vocabulary (documentary, medical, botanical) the
+model would otherwise misread, so that is where a gloss is emitted and where it earns its
+keep. On familiar text the glosses are neutral to mildly counterproductive; pass
+`glosses=False` for lemma-only grounding.
+
+```bash
+aegean ai translate "σπεῖρε τὴν ἄρουραν" --script greek --glosses --trace   # default
+aegean ai translate "ἦν ὁ λόγος" --script greek --no-glosses                # lemma-only
+```
+
+Coverage of rare and inflected forms depends on the **active lemmatizer**: the seed table
+misses most oblique forms, so a glossed translation on it leaves much ungrounded. A warning
+fires when only the baseline lemmatizer is loaded, naming the fix (call
+`greek.use_treebank()`, or `greek.use_neural_lemmatizer()` for the fullest coverage on
+oblique and documentary forms, first). The richer the lemmatizer, the more content words
+resolve to an entry, so both the help on obscure vocabulary and the gloss noise on familiar
+text grow with it.
+
+The gloss builder is reusable on its own. `ai.grounding.content_glosses(text)` returns the
+same gated glosses as a `GroundingItem` list (empty without `greek.use_lsj()`), `max_senses`
+sets the polysemy cap, and the optional `skip_lemmas` frequency gate suppresses glosses for
+lemmas you pass in (give it a high-frequency list derived from your own corpus to focus the
+grounding on genuinely rare words; the package bundles none, since frequency is corpus- and
+register-dependent):
+
+```python
+from aegean import ai, greek
+greek.use_lsj()
+
+ai.grounding.content_glosses("σπεῖρε τὴν ἄρουραν")                 # gated glosses
+ai.grounding.content_glosses(text, skip_lemmas=my_frequent_lemmas)  # skip words you know
+```
+
+The glosses are deterministic, local evidence; the translation built on them stays an
+exploratory, labeled hypothesis like every other output in this layer.
+
 ---
 
 ## Grounded-generation eval
@@ -691,7 +751,7 @@ keeps cost down and makes notebooks reproducible.
 | Command | Purpose | Key options |
 | --- | --- | --- |
 | `aegean ai providers` | List registered providers | `--json` |
-| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
+| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai gloss TEXT` | Word-by-word gloss | `--source`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai summarize TEXT` | Grounded summary | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai hypotheses TEXT` | Decipherment hypotheses | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
