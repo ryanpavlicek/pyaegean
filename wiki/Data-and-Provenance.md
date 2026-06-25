@@ -125,7 +125,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `cunliffe-index` | Prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT | Project-hosted; `use_lexicon("cunliffe")` |
 | `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
-| `grc-joint` | Joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup) | ~518 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
+| `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
 | `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, SigLA's word division (1,376 words) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
@@ -241,9 +241,14 @@ See [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 POS, full morphology (UD FEATS), UD dependency trees, and lemmas from a single
 forward pass: state of the art on the UD Ancient Greek benchmarks (see
 [Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the
-measured numbers). The model bundle (fp32 ONNX + tokenizer + label maps + lemma
-scripts/lookup, ~518 MB, sha256-pinned) is fetched to the cache, never bundled,
-and runs torch-free on numpy + onnxruntime, loaded only on activation.
+measured numbers). The model bundle (quantized ONNX + tokenizer + label maps + lemma
+scripts/lookup, ~173 MB tar.gz, sha256-pinned) is fetched to the cache, never bundled,
+and runs torch-free on numpy + onnxruntime, loaded only on activation. The released
+model is quantized and lossless (weight-only int8 on the MatMul weights plus fp16
+elsewhere, activations kept fp32), so the UD Ancient Greek scores are unchanged from
+the full-precision model; it needs `onnxruntime>=1.23` for the 8-bit kernel. The
+full-precision (fp32) model stays available at the `grc-joint-v2` release for
+reproducibility.
 
 Model card: the base encoder is **bowphs/GreBerta** (Riemenschneider & Frank,
 Apache-2.0). pyaegean fine-tunes it: tagging heads, a biaffine dependency parser,
@@ -654,7 +659,7 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   GreBerta-based joint model (Apache-2.0 base) fine-tuned on the AGDT (CC BY-SA
   3.0), Gorman (CC BY-SA 4.0), and Pedalion (CC BY-SA 4.0) treebanks, evaluation
   folds excluded from training. The model bundle is **CC BY-SA 4.0**, fetched to
-  the user cache (~518 MB), never bundled; the wheel stays Apache-2.0.
+  the user cache (~173 MB), never bundled; the wheel stays Apache-2.0.
 - **PROIEL / UD evaluation sets (opt-in)**: PROIEL treebank and the UD Ancient
   Greek treebanks, CC BY-NC-SA 3.0; fetched to the user cache for evaluation only,
   never bundled, never trained on (NonCommercial + ShareAlike).

@@ -195,7 +195,7 @@ aegean data list
 | `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs / 1,376 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
 | `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens: `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX): the `[neural]` extra | ~232 MB | CC BY-SA 4.0 (derived) |
-| `grc-joint` | joint tagger-parser-lemmatizer (fp32 ONNX bundle): the `[neural]` extra | ~518 MB | CC BY-SA 4.0 (derived) |
+| `grc-joint` | joint tagger-parser-lemmatizer (quantized ONNX bundle): the `[neural]` extra | ~173 MB | CC BY-SA 4.0 (derived) |
 | `lineara-images` | 3,368 facsimile/photo files | ~116 MB | © École Française d'Athènes & others: academic reference only |
 | `workbench-app` | prebuilt Linear A Research Workbench web app: served by `aegean workbench` | ~3 MB | Apache-2.0 |
 | `linearb-corpus` | a slot for a user-supplied Linear B export |— | bring-your-own |

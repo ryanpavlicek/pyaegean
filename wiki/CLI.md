@@ -864,7 +864,7 @@ to stderr); after that, everything is offline.
 | `--lemmatizer` | the edit-tree lemmatizer | trains from the AGDT |
 | `--parser` | the pure-Python arc-eager dependency parser | trains from the AGDT |
 | `--neural-lemmatizer` | the GreTa seq2seq lemmatizer (`[neural]`) | ~232 MB model |
-| `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~518 MB model |
+| `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~173 MB model |
 | `--lsj` | LSJ glossing (also set by `greek gloss`) | ~270 MB (or ~15 MB index) |
 
 ```bash
@@ -1101,7 +1101,7 @@ downloaded on demand, never bundled):
 | name | what | license |
 |---|---|---|
 | `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | CC BY-SA 3.0 (Perseus AGDT) |
-| `grc-joint` | the joint tagger-parser-lemmatizer model (~518 MB; the `[neural]` extra) | CC BY-SA 4.0 |
+| `grc-joint` | the joint tagger-parser-lemmatizer model (~173 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `grc-lemma-neural` | the GreTa seq2seq lemmatizer (~232 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
 | `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |

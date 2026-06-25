@@ -40,7 +40,7 @@ TREEBANK_OPT = typer.Option(False, "--treebank", help="Activate the Perseus AGDT
 TAGGER_OPT = typer.Option(False, "--tagger", help="Activate the generalizing POS tagger (trains from the AGDT on first use).")
 LEMMATIZER_OPT = typer.Option(False, "--lemmatizer", help="Activate the edit-tree lemmatizer (trains from the AGDT on first use).")
 NEURAL_LEMM_OPT = typer.Option(False, "--neural-lemmatizer", help="Activate the seq2seq lemmatizer (~232 MB model, [neural] extra).")
-NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~518 MB model, [neural] extra).")
+NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~173 MB model, [neural] extra).")
 LSJ_OPT = typer.Option(False, "--lsj", help="Activate LSJ glossing (~270 MB fetch on first use).")
 
 
