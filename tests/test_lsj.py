@@ -156,3 +156,28 @@ def test_greek_grounding_glosses_toggle(
     off = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek", glosses=False)
     assert any(i.source == "lemmatizer" for i in off)   # lemma grounding still present
     assert all(i.source != "lexicon:LSJ" for i in off)  # but no glosses
+
+
+# ── dialect / register tags ──────────────────────────────────────────────────
+def test_usage_dialect_and_register(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _activate(tmp_path, monkeypatch)
+    u = greek.usage("κοῦρος")  # fixture: "Dor. and Ep. for …, poet. …, Com. Ar."
+    assert set(u.dialects) == {"doric", "epic"}
+    assert set(u.registers) == {"poetic", "comic"}
+    assert bool(u) is True
+
+
+def test_usage_empty_for_unmarked_entry(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _activate(tmp_path, monkeypatch)
+    u = greek.usage("ἄνθρωπος")  # "man, human being" — no dialect/register markers
+    assert u.dialects == () and u.registers == () and not u
+
+
+def test_usage_requires_use_lsj() -> None:
+    lexicon.disable_lsj()
+    with pytest.raises(LexiconNotLoadedError):
+        greek.usage("κοῦρος")

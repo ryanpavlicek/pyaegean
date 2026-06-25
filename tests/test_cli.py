@@ -241,6 +241,21 @@ def test_greek_rarity(app, tmp_path):
     assert data["words"][0]["label"] == "hapax"
 
 
+def test_greek_usage(app, tmp_path, monkeypatch):
+    # Offline: pre-build the LSJ index from the fixture, so use_lsj loads it without a fetch.
+    import pathlib
+
+    from aegean.greek.lexicon import build_index, disable_lsj
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    build_index(source_dir=pathlib.Path(__file__).parent / "fixtures" / "lsj", force=True)
+    try:
+        out = ok(app, "greek", "usage", "κοῦρος")
+        assert "doric" in out and "poetic" in out
+    finally:
+        disable_lsj()
+
+
 def test_greek_accent_json(app):
     rows = json.loads(ok(app, "greek", "accent", "λόγος", "--json"))
     assert rows[0]["classification"] == "paroxytone"
