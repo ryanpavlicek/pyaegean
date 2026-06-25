@@ -70,7 +70,7 @@ from .joint import (
     disable_neural_pipeline,
     use_neural_pipeline,
 )
-from .proiel import evaluate_on_proiel, load_proiel_gold, proiel_dir
+from .proiel import DriftReport, evaluate_on_proiel, load_proiel_gold, proiel_dir, proiel_drift
 from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_on_ud
 from .normalize import (
     NormalizationWarning,
@@ -202,6 +202,8 @@ __all__ = [
     "disable_neural_lemmatizer",
     "bootstrap_ud",
     "evaluate_on_proiel",
+    "proiel_drift",
+    "DriftReport",
     "evaluate_on_ud",
     "use_neural_pipeline",
     "disable_neural_pipeline",
