@@ -94,64 +94,12 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Shipped (through v0.8):** all four Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan);
-a deep Greek NLP track: treebank lemmas/POS, LSJ glossing, generalizing pure-Python
-taggers/lemmatizers/parser, the **neural joint pipeline** (state of the art on the UD Ancient
-Greek benchmarks: 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test,
-end-to-end from raw text), real works on demand (`load_work`: Perseus/First1KGreek), and a
-benchmark harness; the **`aegean` [command line](CLI)** covering the whole toolkit; the
-multi-provider AI layer and hybrid translation; the corpus data layer with a lossless JSON
-round-trip (`to_json`/`from_json`), a compound `query()`, schema-valid EpiDoc/CSV/Parquet
-export, citation automation (`cite()` down to the exact subset), and a data-versioning
-manifest (`data.versions()`); geographic analysis with Pleiades alignment; editorial-status +
-variant-reading round-trips (`ReadingStatus`, `Token.alt` ↔ EpiDoc); the full Unicode
-Linear A sign repertoire; the corpus-data expansion: the **full DAMOS Linear B corpus**
-(`aegean.load("damos")`, ~5,900 tablets) and the **SigLA Linear A dataset**
-(`aegean.load("sigla")`) fetched on demand, with prebuilt LSJ/AGDT artifacts for a fast
-first use; corpus **statistics** (dispersion/keyness/bootstrap), **visualization** one-liners,
-and **cross-script phonetic comparison**; traceable, measurable AI grounding; the opt-in
-analysis cache; and the extended Pleiades alignment (33/56, coordinate-verified).
-
-**New in v0.8.1:** the annotated Greek New Testament (`load_nt`, Nestle 1904) with Koine glossing
-(`use_dodson`); scribal-hand analysis (`scribal_hands` / `hand_keyness`); SQLite persistence +
-full-text search (`aegean.db`, `Corpus.to_sql`); aeolic lyric scansion; an in-browser
-[Pyodide demo](https://ryanpavlicek.github.io/pyaegean/demo/); the `aegean workbench` local server;
-and an `aegean-mcp` Model Context Protocol server for agents.
-
-**New in v0.8.2:** a manipulate → save → export toolkit (`read_corpus`, `aegean.combine` / `aegean
-combine`, `query -o`, `aegean db add`, `--output/-o` on the analysis + AI commands); the offline
-**Greek work catalogue** (`greek.catalog()` / `aegean greek catalog`, ~1,778 loadable works); and a
-**file importer** (`aegean import` / `aegean.io.from_text*` for `.txt`/folder/CSV).
-
-**New in v0.8.4:** an **interactive shell**: `aegean repl` runs commands without the `aegean`
-prefix, with Tab-completion of commands and options and a recallable history.
-
-**New in v0.8.3:** the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) now has a
-live example of every feature that runs client-side: word analysis, Koine glossing, the work
-catalogue, the syllabary→Greek bridge, Linear A accounting, the importer, and more.
-
-**New in v0.8.7:** the upgraded neural model `grc-joint-v2`: UD Perseus test LAS 85.6 / UAS 90.2,
-the best published result on every metric and robust across five training seeds.
-
-**New in v0.8.8:** a pluggable **lexicon registry** (`use_lexicon` / `gloss(…, dictionary=…)` /
-`lexicon_link`) adding Middle Liddell, Cunliffe, and Abbott-Smith beside LSJ and Dodson, with
-Logeion deep-links; and stricter, clearer `load_work` reference addressing.
-
-**New in v0.8.9:** **OpenRouter** as a fifth AI provider (one key, many models); and fuller CLI
-parity with the Python API: `aegean greek nt`, `aegean ai summarize`, `aegean geo --word`,
-`aegean greek eval --bootstrap`, and a Linear A Workbench round-trip (`export -f workbench` /
-`import --workbench`).
-
-**New in v0.9.0:** a 178-inscription **Cypriot syllabic corpus** (*Inscriptiones Graecae* XV 1,
-BBAW digital edition, CC BY 4.0, bundled); **inflection synthesis** (`greek.inflect` / `paradigm`,
-the inverse lemmatizer); **terminology-rarity** scoring (`greek.terminology_rarity`); **dialect
-and register** tags from LSJ (`greek.usage`); **gated LSJ gloss grounding** for translation
-(`translate(..., glosses=True)`); and a **PROIEL convention-drift** breakdown (`greek.proiel_drift`
-/ `aegean greek eval proiel --drift`).
-
-**New in v0.8.10:** **EpiDoc TEI now reads back in** (`from_epidoc` / `aegean import --epidoc`):
-load any EpiDoc edition (a file or a folder of `.xml`) into a corpus, the inverse of the writer,
-on the stdlib XML parser (no extra dependency).
+**Current release: v0.9.0.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
+Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
+neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
+`aegean-mcp` server, and a grounded multi-provider AI layer. The pages in the sidebar cover every
+feature in depth; the [CHANGELOG](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
+has the per-release history.
 
 **On the list next:**
 
