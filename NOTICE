@@ -18,6 +18,15 @@ Linear A corpus (bundled text JSON: src/aegean/data/bundled/lineara/)
   Used as a scholarly reference corpus. Transliterations and structured
   metadata only; no facsimile imagery is bundled or redistributed.
 
+Cypriot syllabic inscriptions — Inscriptiones Graecae XV 1
+  (bundled text JSON: src/aegean/data/bundled/cypriot/ig_inscriptions.json)
+  Inscriptiones Graecae XV 1 (Cypriot syllabic inscriptions), digital edition by the
+  Berlin-Brandenburg Academy of Sciences and Humanities (TELOTA), https://telota.bbaw.de/ig,
+  licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). A point-in-time snapshot
+  is bundled and redistributed here under that license; each inscription record keeps its
+  source URL for the required attribution / link-back. Transliterations, translations, and
+  structured metadata only.
+
 Linear A facsimile / photographic imagery (fetched on demand, NOT redistributed)
   © École Française d'Athènes and respective rights holders. Downloaded by the
   user on demand from the linearaworkbench repository for academic reference;
