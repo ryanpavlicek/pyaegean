@@ -8,9 +8,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from aegean.greek.proiel import evaluate_on_proiel, load_proiel_gold
+from aegean.greek.proiel import evaluate_on_proiel, load_proiel_gold, proiel_drift
 
 FIXTURE = str(Path(__file__).parent / "fixtures" / "proiel")
+
+
+def _gold_map() -> dict[str, tuple[str, str]]:
+    return {t.form: (t.lemma, t.upos) for s in load_proiel_gold(source_dir=FIXTURE) for t in s}
 
 
 def test_load_gold_parses_tokens_and_skips_empties() -> None:
@@ -64,3 +68,31 @@ def test_evaluate_wrong_tagger_scores_zero() -> None:
 
     r = evaluate_on_proiel(wrong, source_dir=FIXTURE)
     assert r["lemma"] == 0.0 and r["pos"] == 0.0
+
+
+# ── convention-drift breakdown ───────────────────────────────────────────────
+def test_drift_perfect_tagger_has_no_confusions() -> None:
+    gold = _gold_map()
+    report = proiel_drift(lambda forms: [gold[f] for f in forms], source_dir=FIXTURE)
+    assert report.pos_scored == 5
+    assert report.pos_errors == 0 and report.lemma_errors == 0
+    assert report.pos_confusions == () and report.top_share == 0.0
+    assert report.pos_accuracy == 1.0 and report.lemma_accuracy == 1.0
+
+
+def test_drift_captures_pos_confusions() -> None:
+    gold = _gold_map()
+    # keep gold lemmas, force every POS to VERB: non-VERB tokens become gold→VERB confusions
+    report = proiel_drift(lambda forms: [(gold[f][0], "VERB") for f in forms], source_dir=FIXTURE)
+    assert report.lemma_errors == 0  # lemmas untouched
+    assert report.pos_errors == sum(c for _g, _p, c in report.pos_confusions)
+    assert all(pred == "VERB" for _g, pred, _c in report.pos_confusions)
+    assert report.pos_confusions == tuple(sorted(report.pos_confusions, key=lambda t: -t[2]))  # sorted
+    assert "→ VERB" in report.summary()
+
+
+def test_drift_samples_lemma_mismatches() -> None:
+    report = proiel_drift(lambda forms: [("ERR", "X") for _ in forms], source_dir=FIXTURE)
+    assert report.lemma_errors == 5 and len(report.lemma_mismatches) == 5
+    assert all(pred == "ERR" for _form, _gold, pred in report.lemma_mismatches)
+    assert report.top_share > 0.0  # all errors land on X → concentrated
