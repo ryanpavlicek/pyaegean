@@ -177,17 +177,17 @@ Three things keep these honest:
   closely, so tokenization is not a bottleneck on this fold. Throughput is ≈450 words/s on
   plain CPU.
 
-The model ships **quantized at ~173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
-about 3× smaller than the fp32 build (~518 MB tar.gz / 556 MB uncompressed) and lossless:
+The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
+about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless:
 UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 /
 UAS 90.2 / LAS 85.6). The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
-else (crucially the ~160 MB word-embedding table). Activations stay fp32 by design.
+else (crucially the 160 MB word-embedding table). Activations stay fp32 by design.
 
 This is the recipe that works because the obvious one does not: **full int8 (quantized
 activations) collapses the GreBerta encoder.** Its activation outliers do not survive
 8-bit quantization, so every dynamic or static int8-activation recipe we tried dropped
-UPOS from 97 to ~16–32 and LAS from 86 to ~1–13 (an earlier dynamic-quantization attempt
+UPOS from 97 to 16–32 and LAS from 86 to 1–13 (an earlier dynamic-quantization attempt
 broke it on the dev set, UPOS 98.30 → 23.34). Keeping activations fp32 and quantizing only
 the weights avoids the outlier problem and ships the size win at no accuracy cost.
 
