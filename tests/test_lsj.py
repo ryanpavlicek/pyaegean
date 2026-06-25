@@ -78,3 +78,81 @@ def test_gloss_requires_use_lsj() -> None:
     lexicon.disable_lsj()
     with pytest.raises(LexiconNotLoadedError):
         greek.gloss("λόγος")
+
+
+# ── gated content-word glossing (grounding) ──────────────────────────────────
+def test_content_glosses_gates_high_polysemy(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.grounding import content_glosses
+
+    _activate(tmp_path, monkeypatch)
+    # ἄνθρωπος has 1 sense, λόγος has 2; a cap of 1 gates λόγος out (its first-sense
+    # gloss would be unreliable), keeps the single-sense word, and skips the article.
+    items = content_glosses("ὁ λόγος ἄνθρωπος", max_senses=1)
+    refs = {g.ref for g in items}
+    assert "ἄνθρωπος" in refs
+    assert "λόγος" not in refs   # over the polysemy cap
+    assert "ὁ" not in refs       # function word
+    assert all(g.source == "lexicon:LSJ" and ":" in g.content for g in items)
+
+
+def test_content_glosses_are_concise(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from aegean.ai.grounding import content_glosses
+
+    _activate(tmp_path, monkeypatch)
+    by_ref = {g.ref: g.content for g in content_glosses("λόγος ἄνθρωπος", max_senses=6)}
+    # citation ("Hdt. 1.1") and the trailing ";"-separated note are trimmed off.
+    assert by_ref["λόγος"] == "λόγος: computation, reckoning"
+    assert by_ref["ἄνθρωπος"] == "ἄνθρωπος: man, human being"
+
+
+def test_content_glosses_dedupes_by_lemma(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.grounding import content_glosses
+
+    _activate(tmp_path, monkeypatch)
+    assert len(content_glosses("λόγος λόγος", max_senses=6)) == 1
+
+
+def test_content_glosses_skip_lemmas(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.grounding import content_glosses
+
+    _activate(tmp_path, monkeypatch)
+    # a caller-supplied high-frequency set suppresses those lemmas (the frequency gate)
+    refs = {g.ref for g in content_glosses("λόγος ἄνθρωπος", max_senses=6, skip_lemmas=frozenset({"λόγος"}))}
+    assert "ἄνθρωπος" in refs and "λόγος" not in refs
+
+
+def test_content_glosses_empty_without_lsj() -> None:
+    from aegean.ai.grounding import content_glosses
+
+    lexicon.disable_lsj()
+    assert content_glosses("ὁ λόγος ἄνθρωπος") == []
+
+
+def test_greek_grounding_includes_gated_glosses(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean import translate
+
+    _activate(tmp_path, monkeypatch)
+    g = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek")
+    sources = {item.source for item in g}
+    assert "lemmatizer" in sources       # lemma grounding still present
+    assert "lexicon:LSJ" in sources      # gated glosses now added too
+    assert any("man, human being" in item.content for item in g)
+
+
+def test_greek_grounding_glosses_toggle(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean import translate
+
+    _activate(tmp_path, monkeypatch)
+    off = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek", glosses=False)
+    assert any(i.source == "lemmatizer" for i in off)   # lemma grounding still present
+    assert all(i.source != "lexicon:LSJ" for i in off)  # but no glosses

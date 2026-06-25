@@ -103,6 +103,11 @@ def translate(
     text: str = typer.Argument(..., help="Text to translate ('-' reads stdin)."),
     script: str = typer.Option("greek", "--script", help="greek or lineara."),
     target: str = typer.Option("English", "--target", help="Target language."),
+    glosses: bool = typer.Option(
+        True, "--glosses/--no-glosses",
+        help="Add gated LSJ glosses to the grounding (greek). Best on rare/documentary "
+        "vocab; pass --no-glosses for lemma-only grounding on familiar text.",
+    ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
     output: Path | None = AI_OUTPUT_OPT,
@@ -114,7 +119,7 @@ def translate(
 
     client = _client(provider, model)
     result = _run(
-        lambda: tr.translate(read_text(text), script=script, target=target, client=client)  # type: ignore[arg-type]
+        lambda: tr.translate(read_text(text), script=script, target=target, glosses=glosses, client=client)  # type: ignore[arg-type]
     )
     if output is not None:
         _write_ai_result(result, output)

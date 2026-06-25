@@ -49,6 +49,7 @@ from .client import providers as list_providers
 from .grounding import (
     GroundingItem,
     as_item,
+    content_glosses,
     cooccurrence_evidence,
     corpus_context,
     evidence_block,
@@ -87,6 +88,7 @@ __all__ = [
     "as_item",
     "corpus_context",
     "lexicon_evidence",
+    "content_glosses",
     "cooccurrence_evidence",
     "evidence_block",
     "wrap_untrusted",
