@@ -405,6 +405,22 @@ def rarity(
 
 
 @greek_app.command()
+def usage(
+    word: str = WORD_ARG,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Dialect and register tags for a word, mined from its LSJ entry (--lsj fetch on first use)."""
+    from aegean import greek
+
+    _activate(lsj=True)
+    u = greek.usage(word)
+    if json_out:
+        emit_json({"word": word, "dialects": list(u.dialects), "registers": list(u.registers)})
+        return
+    print(f"{word}: dialects={', '.join(u.dialects) or '—'}  registers={', '.join(u.registers) or '—'}")
+
+
+@greek_app.command()
 def parse(
     sentence: str = TEXT_ARG,
     neural: bool = NEURAL_OPT,
