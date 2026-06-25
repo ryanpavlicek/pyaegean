@@ -689,6 +689,9 @@ def evaluate(
     bootstrap: bool = typer.Option(
         False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
     ),
+    drift: bool = typer.Option(
+        False, "--drift", help="For proiel: a POS-confusion / lemma convention-drift breakdown."
+    ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -716,6 +719,19 @@ def evaluate(
         else:
             result = greek.evaluate_on_ud(treebank=treebank_fold, split=split)
     elif target == "proiel":
+        if drift:
+            report = greek.proiel_drift()
+            if json_out:
+                emit_json({
+                    "pos_scored": report.pos_scored, "pos_errors": report.pos_errors,
+                    "lemma_errors": report.lemma_errors, "top_share": round(report.top_share, 3),
+                    "pos_confusions": [
+                        {"gold": g, "predicted": p, "count": c} for g, p, c in report.pos_confusions
+                    ],
+                })
+            else:
+                print(report.summary())
+            return
         result = greek.evaluate_on_proiel()
     elif target == "nt":
         greek.use_neural_pipeline()  # the NT fold reports the shipped neural model's number
