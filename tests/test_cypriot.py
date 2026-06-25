@@ -37,7 +37,17 @@ def test_greek_bridge() -> None:
 
 def test_corpus_loads() -> None:
     corpus = aegean.load("cypriot")
-    assert len(corpus) >= 1
-    doc = next(iter(corpus))
-    texts = [t.text for t in doc.tokens]
-    assert "O-NA-SI-LO-SE" in texts
+    assert len(corpus) >= 100  # the IG XV 1 corpus plus the illustrative samples
+    all_texts = {t.text for doc in corpus for t in doc.tokens}
+    assert "O-NA-SI-LO-SE" in all_texts  # the illustrative sample is still present
+
+
+def test_ig_corpus_present_and_attributed() -> None:
+    corpus = aegean.load("cypriot")
+    by_id = {doc.id: doc for doc in corpus}
+    assert "IG XV 1, 1" in by_id
+    doc = by_id["IG XV 1, 1"]
+    assert doc.meta.site == "Amathus"
+    assert any("telota.bbaw.de" in n for n in doc.meta.notes)  # CC-BY link-back per inscription
+    prov = corpus.provenance
+    assert "CC BY 4.0" in prov.license and "telota.bbaw.de" in prov.url
