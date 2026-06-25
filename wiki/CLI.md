@@ -62,7 +62,7 @@ aegean --version          # pyaegean 0.9.0
 | Group | What's in it |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → parse, plus `pipeline`, `gloss`/`gloss-nt`/`lexica`/`lexicon-link`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -762,6 +762,38 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --json   # per-to
 A lemma that the lexicon doesn't know is still returned, marked `(fallback)` (and
 `"known": false` in JSON), so you can tell a real hit from a heuristic guess.
 
+### Inflection synthesis (`inflect`)
+
+`inflect` is the inverse of `lemmatize`: give it a lemma plus the features you want
+and it returns the attested form(s), read off the same Perseus AGDT the analysis stack
+uses. It activates inflection synthesis on first use (a note goes to stderr; the AGDT is
+fetched and the inverse index built once, then it's offline). Coverage is what the corpus
+attests: an unattested (lemma, features) cell returns nothing rather than a guess.
+
+```bash
+aegean greek inflect λόγος --case gen --number sg
+# λόγου
+
+aegean greek inflect λόγος --paradigm
+# λόγος	case=nom number=sg gender=masc pos=NOUN
+# λόγου	case=gen number=sg gender=masc pos=NOUN
+# …  (every attested cell, one per line)
+```
+
+The feature flags take the analyzer's short codes: `--case` (nom/gen/dat/acc/voc/loc),
+`--number` (sg/pl/du), `--gender` (masc/fem/neut), `--tense`
+(pres/impf/aor/perf/plup/fut/futperf), `--voice` (act/mid/pass/mp), `--mood`
+(ind/subj/opt/inf/imp/part), `--person` (1/2/3), and `--pos` (NOUN/VERB/ADJ/…). Pass
+`--paradigm` to list every attested cell instead of filtering, and `--json` for the raw
+forms (or the `{features, form}` cells under `--paradigm`). The same in Python:
+
+```python
+from aegean import greek
+greek.use_inflector()
+greek.inflect("λόγος", case="gen", number="sg")   # ('λόγου',)
+greek.paradigm("λόγος")                            # ((features, form), …)
+```
+
 ### Glossing
 
 ```bash
@@ -777,6 +809,47 @@ aegean greek gloss-nt 3056 --strongs        # look up by Strong's number
 `gloss-nt` uses the **bundled** CC0 Dodson lexicon: no download. The classical
 `gloss` command uses the larger LSJ index instead and activates it on first use
 (`~270 MB`, or `~15 MB` if `lsj-index` is fetched). See the backend section below.
+
+### Dialect and register (`usage`)
+
+`usage` reads a word's **dialect** (Doric, Attic, Ionic, Aeolic, Epic, …) and
+**register** (poetic, medical, comic, tragic, …) tags off its LSJ entry, which marks
+them with standard abbreviations. It activates LSJ on first use (the same fetch as
+`greek gloss`). The match is heuristic, so it surfaces the tags LSJ records without
+resolving every nuance; a word with no entry or no recognised tags prints dashes:
+
+```bash
+aegean greek usage μῆνις
+# μῆνις: dialects=epic  registers=poetic
+```
+
+`--json` returns `{word, dialects, registers}` (each a list). The same in Python is
+`greek.usage(word)` (after `greek.use_lsj()`), returning a `UsageInfo` with `.dialects`
+and `.registers`.
+
+### Terminology rarity (`rarity`)
+
+`rarity` scores how unusual a text's vocabulary is **relative to a reference corpus**,
+a cheap, offline translation-difficulty signal: rare, technical, or documentary terms
+are where a translator (human or model) is most likely to stumble. Each content word is
+scored by its lemma's frequency in the reference corpus (`absent` / `hapax` / `rare` /
+`uncommon` / `common`), and the overall score is the mean. The default reference is the
+Greek NT (`--corpus nt`, fetched on first use); pass `--corpus <path>` to score against
+a corpus JSON of your own register instead.
+
+```bash
+aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt
+# overall rarity 0.42  (vs … lemmas / … tokens)
+#   μῆνιν	uncommon	0.55  (lemma μῆνις, ×…)
+#   …
+```
+
+`--top` sets how many of the rarest words to list; `--treebank` activates the AGDT
+lemmatizer first (better lemma coverage on oblique forms); `--json` emits the overall
+score, the corpus size, and the full per-word breakdown. Because the score is corpus-
+relative, it is a difficulty *signal*, not a measured accuracy. The same in Python is
+`greek.terminology_rarity(text, corpus)`, whose result carries `.overall` and a
+`.hardest(n)` helper.
 
 ### Backend flags (download/build on first use)
 
@@ -924,10 +997,15 @@ heavy, but it reproduces pyaegean's measured accuracy. Targets: `ud`, `proiel`,
 # heavy: fetches gold data and the model
 aegean greek eval ud --treebank perseus --split test --neural
 aegean greek eval ud --neural --bootstrap          # percentile CIs over the fold's sentences
+aegean greek eval proiel --drift                   # where the out-of-AGDT PROIEL gap comes from
 ```
 
 `--bootstrap` (ud only) reports each metric as `estimate [low, high]` instead of a
-single point. The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
+single point. `--drift` (proiel only) replaces the bare accuracy numbers with a
+breakdown of *where* the out-of-AGDT gap comes from: a gold→predicted POS-confusion
+table plus sampled lemma mismatches, which separates systematic annotation-convention
+divergence from scattered real error (`evaluate_on_proiel` itself is unchanged). The
+exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 [Limitations](Limitations#measured-accuracy-boundaries).
 
 ---
@@ -1107,6 +1185,7 @@ The commands (each takes `--provider` / `--model`, and most take `--trace`):
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"                      # grounded hybrid translation
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --no-glosses         # lemma-only grounding (no LSJ glosses)
 aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered!)
 aegean ai gloss "μῆνιν ἄειδε θεά"                             # interlinear word-by-word gloss
 aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # short, grounded summary
@@ -1120,7 +1199,10 @@ aegean ai eval --provider anthropic                           # grounding-fideli
 prints the grounding provenance under the answer: the local corpus / lexicon /
 analysis facts the model was given, grouped by source, so you can audit exactly
 what it was (and wasn't) told. `extract` always prints JSON, so it pipes straight
-into `jq`.
+into `jq`. For Greek, `translate` adds gated, content-word LSJ glosses to the grounding
+by default; these help most on rare or documentary vocabulary the model would otherwise
+misread, so pass `--no-glosses` for lemma-only grounding on text a capable model already
+handles well.
 
 **Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,
 `ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance

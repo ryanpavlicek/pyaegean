@@ -55,8 +55,11 @@ backends layer in extra accuracy without changing the call you make.
 | POS tag | `pos_tag` / `pos_tags` | `aegean greek tag` | opt-in backends |
 | Lemmatize | `lemmatize` | `aegean greek lemmatize` | opt-in backends |
 | Morphology | `analyze` / `lemmas` / `best_pos` | `aegean greek morph` | opt-in treebank |
+| Inflection synthesis | `inflect` / `paradigm` | `aegean greek inflect` | opt-in treebank |
 | Dependency parse | `parse` | `aegean greek parse` | opt-in backends |
 | LSJ gloss | `gloss` / `lookup` | `aegean greek gloss` | yes (first use) |
+| Dialect / register | `usage` | `aegean greek usage` | yes (LSJ) |
+| Terminology rarity | `terminology_rarity` | `aegean greek rarity` | reference corpus |
 | Koine (NT) gloss | `gloss_nt` / `gloss_strongs` / `lookup_nt` | `aegean greek gloss-nt` | no (bundled) |
 | One-call pipeline | `pipeline` | `aegean greek pipeline` | opt-in backends |
 | Load a real work | `load_work` | `aegean greek work` | yes (first use) |
@@ -665,6 +668,50 @@ unreachable. The data is **CC BY-SA 3.0** (derived from the AGDT), fetched to yo
 cache and never bundled: see
 [Data & Provenance](Data-and-Provenance#the-greek-treebank-lexicon--models-agdt-derived-use_treebank).
 
+## Inflection synthesis (opt-in)
+
+The inverse of analysis: where `analyze`/`lemmatize` map a *form* to its lemma and
+features, `inflect` maps a **lemma plus a feature spec** back to the attested form(s).
+`use_inflector()` builds (and caches) an inverse index over the same AGDT treebank lexicon
+the analysis stack uses, then `inflect` / `paradigm` resolve against it. Coverage is what
+the corpus attests: every `(lemma, features)` cell seen in the AGDT is generated exactly,
+most-attested first; an unattested lemma or cell comes back empty.
+
+```python
+greek.use_inflector()                          # one-time AGDT lexicon build, then cached
+greek.inflect("λόγος", case="gen", number="sg")   # ('λόγου',)
+greek.inflect("λόγος", case="dat", number="pl")   # ('λόγοις',)
+greek.inflect("λύω", tense="pres", voice="act", mood="ind", person="1", number="sg")  # ('λύω',)
+```
+
+A call before `use_inflector()` raises `InflectorNotLoadedError`. `paradigm` returns every
+attested cell of a lemma as `(features, form)` pairs:
+
+```python
+cells = greek.paradigm("λόγος")
+[(f, form) for f, form in cells][:3]
+# [({'pos': 'NOUN', 'case': 'nom', 'number': 'sg', 'gender': 'masc'}, 'λόγος'),
+#  ({'pos': 'NOUN', 'case': 'gen', 'number': 'sg', 'gender': 'masc'}, 'λόγου'), …]
+```
+
+The feature keys are the analyzer's short codes: `pos` (NOUN/VERB/ADJ/…), `case`
+(nom/gen/dat/acc/voc/loc), `number` (sg/pl/du), `gender` (masc/fem/neut), `tense`
+(pres/impf/aor/perf/plup/fut/futperf), `voice` (act/mid/pass/mp), `mood`
+(ind/subj/opt/inf/imp/part), `person` (1/2/3), and `degree` (comp/sup). Pass any partial
+subset; the unspecified keys are left free.
+
+The CLI `inflect` takes the lemma plus a flag per feature, and `--paradigm` lists the whole
+table (`--json` for the structured cells):
+
+```bash
+aegean greek inflect "λόγος" --case gen --number sg     # λόγου
+aegean greek inflect "λόγος" --paradigm                 # every attested cell
+```
+
+Built from the AGDT (CC BY-SA 3.0), fetched to your cache and never bundled (the same
+shared lexicon as the [treebank backend](#treebank-backed-mode-opt-in));
+`greek.disable_inflector()` turns it off.
+
 ## Lemmatization (baseline)
 
 A small bundled form→lemma seed table with an identity fallback. This is the
@@ -898,6 +945,33 @@ aegean greek gloss μῆνις --dict cunliffe     # gloss from a chosen diction
 aegean greek lexicon-link μήνιδος            # a Logeion deep-link to the lemma
 ```
 
+### Dialect and register tags
+
+LSJ marks a word's **dialect** (Doric, Attic, Ionic, Aeolic, Epic, …) and its **register**
+(poetic, medical, comic, tragic, …) with standard abbreviations in the entry text.
+`greek.usage(word)` reads those off the active LSJ entry against a curated abbreviation map
+and returns a `UsageInfo` with `dialects` and `registers` tuples (so it requires
+`greek.use_lsj()`):
+
+```python
+greek.use_lsj()
+
+u = greek.usage("θάλασσα")
+u.dialects, u.registers       # the dialect/register tags LSJ records for the entry
+bool(greek.usage("xyz"))      # False — empty UsageInfo when there is no entry or no tag
+```
+
+A `UsageInfo` is falsy when both tuples are empty, so `if greek.usage(word):` tests whether
+LSJ recorded anything. From the shell:
+
+```bash
+aegean greek usage "θάλασσα"        # the dialect/register tags (--json for the record)
+```
+
+This is a **heuristic**: it matches the abbreviation tokens in the flattened entry text, so
+it surfaces what LSJ records without resolving every nuance (an abbreviation that doubles as
+a citation marker can occasionally slip through).
+
 ## The Greek New Testament (Koine)
 
 `greek.load_nt` loads the **Nestle 1904** Greek NT as an annotated `Corpus`: the Koine
@@ -963,6 +1037,41 @@ out-of-domain (the models train on AGDT + Gorman + Pedalion). The measured numbe
 the honesty notes (lemma-convention differences; why finer features aren't
 cross-comparable) are in
 [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+
+## Terminology rarity
+
+How unusual is a text's vocabulary, measured against a reference corpus? Rare, technical,
+or documentary terms are where a translator (human or model) is most likely to stumble, so
+`greek.terminology_rarity(text, corpus)` is a cheap, offline, deterministic
+*translation-difficulty* signal: it scores each content word by its lemma's frequency in
+the reference corpus on a log scale, and averages.
+
+Rarity is always **relative to the corpus you pass**. Score against the Greek NT and a
+word's rarity reflects how unusual it is in Koine; score against a tragedy and it reflects
+that register. Pass any `Corpus` (or `QueryResults`); the NT is a natural reference, and its
+gold lemma annotations are used directly:
+
+```python
+nt = greek.load_nt()                      # the reference corpus
+r = greek.terminology_rarity("ἐν ἀρχῇ ἦν ὁ λόγος", nt)
+
+r.overall                                 # mean word rarity, 0 (easy) .. 1 (all-rare)
+r.corpus_lemmas, r.corpus_tokens          # the size of the frequency basis
+[(w.word, w.label) for w in r.hardest(3)] # the three rarest words, rarest first
+```
+
+Each `WordRarity` carries the surface `word`, its `lemma`, the lemma's `count` in the
+reference corpus, a `rarity` (0 = as common as the corpus's most frequent lemma, 1 =
+absent), and a `label` (`absent` / `hapax` / `rare` / `uncommon` / `common`).
+`RarityResult.hardest(n)` returns the `n` rarest words, most rare first, to surface the
+terms worth grounding. From the shell (`--corpus nt` uses the NT, or pass a corpus path):
+
+```bash
+aegean greek rarity "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt --top 3
+```
+
+This is **exploratory**: a rarity score is a difficulty signal, not a measured accuracy,
+and it only means as much as the corpus you score against is representative.
 
 ## Loading real works
 
@@ -1182,6 +1291,23 @@ errors, not convention gaps). This is a neutral test **for pyaegean specifically
 in-training for some other systems, so it is not a level field for cross-tool comparison; it
 answers "how well does pyaegean read Greek it never trained on."
 
+**Where the gap comes from.** The model is trained on the AGDT convention, so scoring it on
+the differently-annotated PROIEL conflates real mistakes with convention differences.
+`greek.proiel_drift()` (CLI `aegean greek eval proiel --drift`) re-tags the same gold and
+returns a `DriftReport` that separates the two: the gold→predicted POS confusion matrix
+(most-frequent first), a sample of lemma mismatches, and the scored counts.
+
+```python
+report = greek.proiel_drift()
+print(report.summary())     # the top POS confusions, gold → predicted, with their share
+report.top_share            # fraction of POS errors in the single most common pair
+```
+
+`.summary()` prints a short, readable breakdown; a high `top_share` (most POS errors
+concentrated in a few pairs) points to a systematic convention difference rather than
+scattered real error. `evaluate_on_proiel` is unchanged: `proiel_drift` only explains its
+gap.
+
 Pass your own gold (same schema as the bundled `benchmark_gold.json`) to any
 scorer: `score_lemmatizer`, `score_pos`, `compare_lemmatizers`,
 `compare_pos_taggers`, or `compare_modes`.
@@ -1209,7 +1335,7 @@ evaluators and the fetched gold data. The targets:
 | `eval` target | What it measures |
 | --- | --- |
 | `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--treebank perseus|proiel`, `--split dev|test` |
-| `proiel` | the neutral out-of-AGDT check (lemma + POS) |
+| `proiel` | the neutral out-of-AGDT check (lemma + POS); `--drift` for the convention-vs-error breakdown |
 | `nt` | the neural pipeline against the Nestle 1904 gold |
 | `tagger` | the held-out AGDT POS evaluation |
 | `lemmatizer` | the held-out AGDT lemma evaluation |
