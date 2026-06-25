@@ -103,17 +103,17 @@ _REMOTE: dict[str, DataSpec] = {
     # 9-position AGDT morphology (rendered as UD FEATS), UD dependency trees (biaffine +
     # MST), and lemmas (edit-script head + train-only lookup). Trained leakage-clean on
     # AGDT + Gorman + Pedalion; the best published result on every UD Ancient Greek metric
-    # (docs/benchmarks.md). URL is pinned to the grc-joint-v2 release asset; set
+    # (docs/benchmarks.md). URL is pinned to the grc-joint-v3 release asset; set
     # PYAEGEAN_GRC_JOINT_URL to fetch from your own mirror instead.
     "grc-joint": DataSpec(
         name="grc-joint",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "grc-joint-v2/grc-joint.tar.gz"
+            "grc-joint-v3/grc-joint.tar.gz"
         ),
-        sha256="4b2094c405652ea760f7ed78f27c9cecfac42167e25e81b1161ce4f51d25b994",
+        sha256="f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
         license="CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), Pedalion (CC BY-SA 4.0)",
-        note="joint tagger-parser-lemmatizer (fp32 ONNX + tokenizer + label maps + lemma scripts/lookup), ~518 MB tar.gz; the [neural] extra.",
+        note="joint tagger-parser-lemmatizer (int8-weight + fp16 ONNX + tokenizer + label maps + lemma scripts/lookup), ~173 MB tar.gz; the [neural] extra (onnxruntime>=1.23).",
         extract=True,
     ),
     # Prebuilt Perseus LSJ lemma index (built by greek.lexicon.build_index from
