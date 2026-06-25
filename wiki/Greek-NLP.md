@@ -680,12 +680,15 @@ most-attested first; an unattested lemma or cell comes back empty.
 ```python
 greek.use_inflector()                          # one-time AGDT lexicon build, then cached
 greek.inflect("λόγος", case="gen", number="sg")   # ('λόγου',)
-greek.inflect("λόγος", case="dat", number="pl")   # ('λόγοις',)
+greek.inflect("λόγος", case="gen", number="pl")   # ('λόγων',)
 greek.inflect("λύω", tense="pres", voice="act", mood="ind", person="1", number="sg")  # ('λύω',)
 ```
 
-A call before `use_inflector()` raises `InflectorNotLoadedError`. `paradigm` returns every
-attested cell of a lemma as `(features, form)` pairs:
+`inflect` returns a **tuple** because one cell can have several attested spellings: the AGDT
+records Homeric and dialectal datives such as `λόγοισι(ν)` beside Attic `λόγοις`, and treebank
+annotation noise occasionally leaves a stray form, so treat low-frequency extras as candidates,
+not certainties. A call before `use_inflector()` raises `InflectorNotLoadedError`. `paradigm`
+returns every attested cell of a lemma as `(features, form)` pairs:
 
 ```python
 cells = greek.paradigm("λόγος")
