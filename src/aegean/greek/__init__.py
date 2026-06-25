@@ -48,6 +48,7 @@ from .inflect import (
 )
 from .lemmatize import lemmatize, lemmatize_verbose
 from .morphology import Analysis, analyze, best_pos, lemmas
+from .rarity import RarityResult, WordRarity, terminology_rarity
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
 from .syntax import (
@@ -186,6 +187,9 @@ __all__ = [
     "paradigm",
     "Inflector",
     "InflectorNotLoadedError",
+    "terminology_rarity",
+    "RarityResult",
+    "WordRarity",
     "use_lsj",
     "disable_lsj",
     "gloss",

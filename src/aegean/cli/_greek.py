@@ -364,6 +364,47 @@ def inflect(
 
 
 @greek_app.command()
+def rarity(
+    text: str = TEXT_ARG,
+    corpus: str = typer.Option(
+        "nt", "--corpus", help="Reference corpus: 'nt' (the Greek NT) or a path to a corpus JSON."
+    ),
+    top: int = typer.Option(5, "--top", help="Show the N rarest words."),
+    treebank: bool = TREEBANK_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Terminology rarity of a text vs a reference corpus — a translation-difficulty signal.
+
+    Rarity is relative to the chosen corpus's vocabulary; rare/technical terms score high."""
+    from aegean import greek
+    from aegean.core.corpus import Corpus
+
+    _activate(treebank=treebank)
+    if corpus == "nt":
+        print("aegean: loading the Greek NT reference corpus (first use may download)…", file=sys.stderr)
+        try:
+            ref: object = greek.load_nt()
+        except Exception as exc:
+            raise fail(f"could not load the NT corpus: {exc}") from None
+    else:
+        ref = Corpus.from_json(corpus)
+    r = greek.terminology_rarity(read_text(text), ref)
+    if json_out:
+        emit_json({
+            "overall": r.overall, "corpus_lemmas": r.corpus_lemmas, "corpus_tokens": r.corpus_tokens,
+            "words": [
+                {"word": w.word, "lemma": w.lemma, "count": w.count,
+                 "rarity": round(w.rarity, 3), "label": w.label}
+                for w in r.words
+            ],
+        })
+        return
+    print(f"overall rarity {r.overall:.2f}  (vs {r.corpus_lemmas} lemmas / {r.corpus_tokens} tokens)")
+    for w in r.hardest(top):
+        print(f"  {w.word}\t{w.label}\t{w.rarity:.2f}  (lemma {w.lemma}, ×{w.count})")
+
+
+@greek_app.command()
 def parse(
     sentence: str = TEXT_ARG,
     neural: bool = NEURAL_OPT,
