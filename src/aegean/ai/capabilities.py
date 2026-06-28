@@ -85,6 +85,52 @@ def translate(
     )
 
 
+def verify_translation(
+    text: str,
+    draft: str,
+    *,
+    source: str = "Ancient Greek",
+    target: str = "English",
+    grounding: Grounding = (),
+    client: LLMClient | None = None,
+) -> ExploratoryResult:
+    """Check a draft translation against deterministic grounding and repair only
+    definite contradictions, returning the corrected translation.
+
+    The model is shown the source text, the draft, and the local analysis
+    (morphology, syntax, dictionary glosses, idiom meanings), and is asked to fix
+    only clear errors the analysis contradicts (wrong voice, subject/object, case
+    relation, a rare word's or idiom's sense, an omission or addition) and
+    otherwise keep the draft. This is the repair half of a translate-then-check
+    pass: because the grounding never touches the draft, it can only catch errors,
+    not introduce them. The result is a ``translate``-kind `ExploratoryResult`
+    carrying the grounding, so callers handle it exactly like a `translate` result.
+    """
+    instruction = (
+        f"Here is a {source} passage, a draft {target} translation, and a "
+        "deterministic analysis (morphology, syntax, dictionary glosses for rare "
+        "words, and idiom meanings) from a specialist toolkit. Check the draft "
+        "against the analysis and fix any DEFINITE error: wrong voice "
+        "(active/middle/passive), wrong subject or object, wrong case relation, "
+        "the wrong sense of a rare word or idiom, or an omission/addition that "
+        "contradicts the analysis. If the draft is already correct, keep it. "
+        f"Output ONLY the final corrected {target} translation."
+    )
+    prompt = "\n\n".join(
+        [instruction, wrap_untrusted(text, "GREEK"), wrap_untrusted(draft, "DRAFT")]
+    )
+    ev = evidence_block(grounding)
+    if ev:
+        prompt = f"{prompt}\n\n{ev}"
+    return _run(
+        client,
+        kind="translate",
+        system=_BASE_SYSTEM,
+        prompt=prompt,
+        grounding=grounding,
+    )
+
+
 def gloss(
     text: str,
     *,

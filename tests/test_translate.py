@@ -15,10 +15,13 @@ class CapturingClient(LLMClient):
     def __init__(self, model="cap-1", **kw):
         super().__init__(model, **kw)
         self.last_prompt = ""
+        self.prompts: list[str] = []
 
     def _complete(self, *, prompt, system, max_tokens):
         self.last_prompt = prompt
-        return LLMResponse("translation", self.provider, self.model)
+        self.prompts.append(prompt)
+        # Distinct per-call text so the second (repair) response is identifiable.
+        return LLMResponse(f"translation #{len(self.prompts)}", self.provider, self.model)
 
 
 def test_greek_grounding_lemma_mode_uses_lemma_table():
@@ -168,6 +171,46 @@ def test_translate_mode_none_sends_no_grounding_and_no_warning():
         r = translate.translate(_SENT, script="greek", mode="none", client=c)
     assert r.grounding == [] or list(r.grounding) == []
     assert not any("baseline lemmatizer" in str(w.message) for w in caught)
+
+
+# --- post-hoc verify: translate raw, then check + repair against grounding -------------
+
+
+def test_verify_makes_two_calls_and_returns_repaired_result():
+    # verify=True runs a draft call then a check-and-repair call: two provider calls,
+    # and the result is the repaired (second) translation as an ExploratoryResult.
+    c = CapturingClient()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        r = translate.translate(_SENT, script="greek", verify=True, client=c)
+    assert len(c.prompts) == 2                       # draft + repair
+    assert r.text == "translation #2"                 # the repaired text is returned
+    assert r.kind == "translate" and r.exploratory is True
+    # The repair prompt carries the draft and the full grounding; the draft prompt did not.
+    draft_prompt, repair_prompt = c.prompts
+    assert "= εἰμί (verb" not in draft_prompt          # draft is grounding-free
+    assert "translation #1" in repair_prompt           # the raw draft is checked
+    assert "= εἰμί (verb" in repair_prompt             # full grounding reaches the checker
+    # The grounding travels with the result for the trace, as a normal translate result.
+    assert any("εἰμί" in item.content for item in r.grounding)
+
+
+def test_verify_false_makes_one_call():
+    c = CapturingClient()
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        r = translate.translate(_SENT, script="greek", verify=False, client=c)
+    assert len(c.prompts) == 1                          # single grounded call (default path)
+    assert r.text == "translation #1"
+    assert r.kind == "translate"
+
+
+def test_verify_lineara_falls_back_to_single_call():
+    # verify has no effect on non-Greek scripts: the normal single grounded call is used.
+    c = CapturingClient()
+    r = translate.translate("KU-RO DA-RO", script="lineara", verify=True, client=c)
+    assert len(c.prompts) == 1
+    assert [item.content for item in r.grounding] == ["KU-RO → /kuro/", "DA-RO → /daro/"]
 
 
 # --- upgraded concise-cascade gloss layer (mode="full") --------------------------------

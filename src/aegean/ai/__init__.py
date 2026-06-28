@@ -25,6 +25,7 @@ from .capabilities import (
     parse_json,
     summarize,
     translate,
+    verify_translation,
 )
 from .client import (
     AIError,
@@ -72,6 +73,7 @@ __all__ = [
     "ResponseCache",
     # capabilities
     "translate",
+    "verify_translation",
     "gloss",
     "decipher_hypotheses",
     "nlp_assist",

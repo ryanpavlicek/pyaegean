@@ -39,7 +39,9 @@ import warnings
 from typing import Literal
 
 from ..ai import translate as _ai_translate
+from ..ai import verify_translation as _ai_verify_translation
 from ..ai.client import ExploratoryResult, LLMClient
+from ..ai.client import get_client as _get_client
 from ..ai.grounding import GroundingItem, content_glosses
 from ..ai.idioms import idiom_glosses
 
@@ -287,6 +289,7 @@ def translate(
     target: str = "English",
     mode: GroundingMode = "morphology",
     glosses: bool = True,
+    verify: bool = False,
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Translate ``text`` (a ``greek`` or ``lineara`` string) into ``target``,
@@ -311,12 +314,25 @@ def translate(
     affects the gloss-bearing modes (``"lemma"``, ``"full"``), where ``glosses=False``
     drops the glosses.
 
+    ``verify`` (Greek only) runs a **translate-then-check-and-repair** pass instead of a
+    single grounded call. The text is first translated **raw**, with no grounding in the
+    prompt, so the local analysis cannot bias the draft. The full grounding (morphology,
+    idiom glosses, and concise glosses, as for ``mode="full"``) is then supplied to a
+    second call that checks the draft against it and corrects only definite contradictions
+    (wrong voice, subject or object, case relation, a rare word's or idiom's sense, an
+    omission or addition), keeping the draft where it is already right. Because the
+    grounding only ever reaches the checker, it can catch errors but never cause them. This
+    reduces definite errors, most on hard text, at the cost of a second model call, so it
+    is worth reaching for on hard or high-stakes passages and skipping on routine ones. It
+    supersedes ``mode`` for Greek (the checker always sees the full grounding); for
+    non-Greek scripts it has no effect and the normal single call is used.
+
     Coverage of rare or inflected forms (and the clause skeleton) depends on the active
     backends, so a warning is raised when only the baseline seed table is loaded (call
     ``aegean.greek.use_treebank()``, or ``use_neural_pipeline()`` for gold morphology and a
     UD parse, first).
     """
-    if script == "greek" and mode != "none" and not _rich_lemmatizer_active():
+    if script == "greek" and (verify or mode != "none") and not _rich_lemmatizer_active():
         warnings.warn(
             "Grounded Greek translation is using the baseline lemmatizer; morphology and "
             "lexical grounding will miss many rare or inflected forms and the clause "
@@ -326,6 +342,20 @@ def translate(
             stacklevel=2,
         )
     source = _SOURCE_NAMES.get(script, script)
+    if verify and script == "greek":
+        # Translate-then-check-and-repair. Resolve one client so both calls share a
+        # provider/model, then translate raw (empty grounding, so the analysis cannot
+        # bias the draft) and check that draft against the full grounding.
+        c = client if client is not None else _get_client()
+        draft = _ai_translate(text, source=source, target=target, grounding=(), client=c)
+        return _ai_verify_translation(
+            text,
+            draft.text,
+            source=source,
+            target=target,
+            grounding=grounding_for(text, "greek", mode="full"),
+            client=c,
+        )
     return _ai_translate(
         text,
         source=source,

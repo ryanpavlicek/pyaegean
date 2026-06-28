@@ -115,6 +115,12 @@ def translate(
         help="Whether the gloss-bearing modes (full, lemma) add their glosses. "
         "Superseded by --mode; --no-glosses drops the glosses on those modes.",
     ),
+    verify: bool = typer.Option(
+        False, "--verify",
+        help="Greek only: translate raw first, then check the draft against the full "
+        "grounding and repair only definite errors. Catches more errors on hard text "
+        "without letting the grounding bias the draft, at the cost of a second model call.",
+    ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
     output: Path | None = AI_OUTPUT_OPT,
@@ -124,14 +130,15 @@ def translate(
     """Hybrid translation: local morphology/lexicon/transliteration grounding → LLM
     (exploratory). The default morphology-first grounding gives the model deterministic
     morphology, case-role, and clause structure rather than auto-selected dictionary
-    senses."""
+    senses. With --verify (Greek), translate raw then check and repair against the
+    grounding so it can only catch errors, never cause them."""
     from aegean import translate as tr
 
     client = _client(provider, model)
     result = _run(
         lambda: tr.translate(
             read_text(text), script=script, target=target,
-            mode=mode, glosses=glosses, client=client,  # type: ignore[arg-type]
+            mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
         )
     )
     if output is not None:
