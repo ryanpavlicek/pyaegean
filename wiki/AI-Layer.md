@@ -321,8 +321,13 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `source=` (API) | `"Ancient Greek"` | Source-language label. |
 | `--script` (CLI) | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `target=` / `--target` | `"English"` | Target language. |
-| `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
+| `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags + idiom meanings, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
+| `verify=` / `--verify` | off | Draft the translation first, then check it against the analysis and repair definite errors (a second model call). The analysis only checks the draft, so it catches errors without biasing the translation; recommended for hard or high-stakes passages. |
 | `glosses=` / `--glosses` / `--no-glosses` | on | Legacy flag, superseded by `mode`; still toggles glosses in `lemma`/`full` modes (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
+
+The morphology grounding also flags **idiom meanings** for any non-compositional multiword expression it
+recognises (`ai.idiom_glosses`, a curated lexicon: ἐφ' ἡμῖν → "in our power", οἷός τε → "be able to"),
+since a literal word-by-word reading of an idiom is a common mistranslation.
 | `--trace` | off | Print the grounding provenance under the answer. |
 
 ### Gloss
