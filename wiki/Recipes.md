@@ -1050,7 +1050,7 @@ for item in translate.grounding_for(text, "greek", mode="full"):
 # Clause skeleton: main predicate 'ἡγοῦμαι' (ἡγέομαι, middle pres sg 1st); object σκύβαλα
 # σκύβαλα = σκύβαλον (noun, acc pl n)
 # Rare / easily-mistranslated words: κερδήσω, σκύβαλα
-# σκύβαλα (σκύβαλον): dung, filth, refuse          ← the meaning a weak model misses
+# σκύβαλα (σκύβαλον): refuse                       ← the meaning a weak model misses
 ```
 
 That last line is the point: without it a small model renders σκύβαλα as
