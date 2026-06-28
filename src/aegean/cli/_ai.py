@@ -103,10 +103,16 @@ def translate(
     text: str = typer.Argument(..., help="Text to translate ('-' reads stdin)."),
     script: str = typer.Option("greek", "--script", help="greek or lineara."),
     target: str = typer.Option("English", "--target", help="Target language."),
+    mode: str = typer.Option(
+        "morphology", "--mode",
+        help="Greek grounding style: morphology (default; deterministic morphology + "
+        "clause skeleton, no glosses), lemma (lemma lines + gated LSJ glosses), full "
+        "(morphology + gated glosses), none.",
+    ),
     glosses: bool = typer.Option(
         True, "--glosses/--no-glosses",
-        help="Add gated LSJ glosses to the grounding (greek). Best on rare/documentary "
-        "vocab; pass --no-glosses for lemma-only grounding on familiar text.",
+        help="Whether the gloss-bearing modes (lemma, full) add gated LSJ glosses. "
+        "Superseded by --mode; --no-glosses drops the glosses on those modes.",
     ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
@@ -114,12 +120,18 @@ def translate(
     trace: bool = TRACE_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Hybrid translation: local lexicon/transliteration grounding → LLM (exploratory)."""
+    """Hybrid translation: local morphology/lexicon/transliteration grounding → LLM
+    (exploratory). The default morphology-first grounding gives the model deterministic
+    morphology, case-role, and clause structure rather than auto-selected dictionary
+    senses."""
     from aegean import translate as tr
 
     client = _client(provider, model)
     result = _run(
-        lambda: tr.translate(read_text(text), script=script, target=target, glosses=glosses, client=client)  # type: ignore[arg-type]
+        lambda: tr.translate(
+            read_text(text), script=script, target=target,
+            mode=mode, glosses=glosses, client=client,  # type: ignore[arg-type]
+        )
     )
     if output is not None:
         _write_ai_result(result, output)

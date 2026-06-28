@@ -434,3 +434,29 @@ def test_ai_translate_with_fake_client(app, monkeypatch):
     data = json.loads(res.output)
     assert data["text"] == "A TRANSLATION" and data["exploratory"] is True
     assert data["kind"] == "translate"
+
+
+def test_ai_translate_mode_option_selects_grounding(app, monkeypatch):
+    # The --mode option reaches the grounding: morphology emits per-token "= lemma (pos)"
+    # lines, lemma emits the legacy "→ lemma" lines. Asserts behavior, not help text.
+    from aegean import ai
+    from aegean.ai.client import LLMClient, LLMResponse
+
+    seen = {}
+
+    class FakeClient(LLMClient):
+        provider = "fake"
+
+        def _complete(self, *, prompt, system, max_tokens):  # type: ignore[no-untyped-def]
+            seen["prompt"] = prompt
+            return LLMResponse("A TRANSLATION", self.provider, self.model)
+
+    monkeypatch.setattr(ai, "get_client", lambda *a, **k: FakeClient("fake-1"))
+
+    res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--mode", "morphology"])
+    assert res.exit_code == 0, res.output
+    assert "= εἰμί (verb" in seen["prompt"]
+
+    res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--mode", "lemma"])
+    assert res.exit_code == 0, res.output
+    assert "→ lemma εἰμί" in seen["prompt"]

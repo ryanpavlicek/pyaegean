@@ -140,7 +140,7 @@ def test_greek_grounding_includes_gated_glosses(
     from aegean import translate
 
     _activate(tmp_path, monkeypatch)
-    g = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek")
+    g = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek", mode="lemma")
     sources = {item.source for item in g}
     assert "lemmatizer" in sources       # lemma grounding still present
     assert "lexicon:LSJ" in sources      # gated glosses now added too
@@ -153,7 +153,9 @@ def test_greek_grounding_glosses_toggle(
     from aegean import translate
 
     _activate(tmp_path, monkeypatch)
-    off = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek", glosses=False)
+    # glosses=False on the gloss-bearing lemma mode drops the LSJ glosses, leaving
+    # lemma-only grounding.
+    off = translate.grounding_for("ὁ λόγος ἄνθρωπος", "greek", mode="lemma", glosses=False)
     assert any(i.source == "lemmatizer" for i in off)   # lemma grounding still present
     assert all(i.source != "lexicon:LSJ" for i in off)  # but no glosses
 
