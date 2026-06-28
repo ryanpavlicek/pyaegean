@@ -168,3 +168,150 @@ def test_translate_mode_none_sends_no_grounding_and_no_warning():
         r = translate.translate(_SENT, script="greek", mode="none", client=c)
     assert r.grounding == [] or list(r.grounding) == []
     assert not any("baseline lemmatizer" in str(w.message) for w in caught)
+
+
+# --- upgraded concise-cascade gloss layer (mode="full") --------------------------------
+
+import pytest  # noqa: E402
+
+from aegean.ai import clean_gloss, concise_gloss, content_glosses  # noqa: E402
+from aegean.greek import koine as _koine  # noqa: E402
+from aegean.greek import lexicon as _lexmod  # noqa: E402
+from aegean.greek import lexicons as _lexicons  # noqa: E402
+from aegean.greek.lexicons import LexiconInfo  # noqa: E402
+from aegean.greek.lexindex import IndexLexicon  # noqa: E402
+
+
+def _concise_lex(dict_id, data):
+    """An in-memory concise dictionary served as a registry Lexicon under ``dict_id``.
+
+    ``data`` maps lemma → raw definition body; the registry gloss comes out as
+    ``"headword: <concise body>"``, exactly as the hosted Scaife backends emit it."""
+    info = LexiconInfo(
+        id=dict_id, name="t", scope="x", license="y", source="z", hosted=True
+    )
+    index = {k: {"hw": k, "def": v} for k, v in data.items()}
+    return IndexLexicon(info, index)
+
+
+@pytest.fixture
+def _reset_lexica():
+    """Run with no lexicon active (registry + both legacy globals cleared, so a real
+    cached dictionary another test left active cannot leak in); restore afterwards."""
+    saved = dict(_lexicons._ACTIVE)
+    saved_lsj = _lexmod.active()
+    saved_dodson = _koine.active()
+    _lexicons._ACTIVE.clear()
+    _lexmod.disable_lsj()
+    _koine.disable_dodson()
+    yield
+    _lexicons._ACTIVE.clear()
+    _lexicons._ACTIVE.update(saved)
+    _lexmod._ACTIVE = saved_lsj
+    _koine._ACTIVE = saved_dodson
+
+
+def test_clean_gloss_strips_headword_greek_and_redirects():
+    # Leading "headword:" repeat dropped.
+    assert clean_gloss("καιρός: due measure, proportion") == "due measure, proportion"
+    # Leading Greek etymology run dropped (a concise definition leads with English).
+    assert clean_gloss("βιός a bow") == "a bow"
+    # "= X" cross-reference redirect dropped, leaving the meaning.
+    assert clean_gloss("= life, existence") == "life, existence"
+    # Editorial-abbreviation lead dropped.
+    assert clean_gloss("Dim. of a small house") == "a small house"
+    # A bare redirect / Greek-only line yields nothing (caller falls through).
+    assert clean_gloss("τόξον") == ""
+    assert clean_gloss("= ") == ""
+
+
+def test_concise_cascade_prefers_concise_over_lsj_first_sense(_reset_lexica):
+    # LSJ leads καιρός with its archaic, etymological-first sense ("row of thrums in a
+    # loom"); the concise dictionary leads with the common meaning. The cascade must take
+    # the concise one and never the LSJ first sense.
+    _lexmod._ACTIVE = _lexmod.LSJLexicon({
+        "καιρός": {
+            "hw": "καιρός", "key": "kairos", "lead": "καιρός, ὁ",
+            "short": "row of thrums in a loom",
+            "senses": [{"m": "I", "l": 0, "t": "row of thrums in a loom"}],
+        }
+    })
+    _lexicons._ACTIVE["middle-liddell"] = _concise_lex(
+        "middle-liddell", {"καιρός": "due measure, the right moment"}
+    )
+    g = concise_gloss("καιρός")
+    assert g == "due measure, the right moment"
+    assert "thrums" not in g  # the LSJ etymological-first sense was not used
+
+
+def test_concise_cascade_falls_back_to_lsj_only_last(_reset_lexica):
+    # With no concise dictionary loaded, the cascade falls back to LSJ (cleaned).
+    _lexmod._ACTIVE = _lexmod.LSJLexicon({
+        "λόγος": {
+            "hw": "λόγος", "key": "logos", "lead": "λόγος, ὁ",
+            "short": "word, speech",
+            "senses": [{"m": "I", "l": 0, "t": "word, speech"}],
+        }
+    })
+    assert concise_gloss("λόγος") == "word, speech"
+    # And with nothing loaded at all, it degrades to empty rather than raising.
+    _lexmod.disable_lsj()
+    assert concise_gloss("λόγος") == ""
+
+
+def test_content_glosses_cascade_uses_concise_source(_reset_lexica):
+    _lexicons._ACTIVE["middle-liddell"] = _concise_lex(
+        "middle-liddell", {"λόγος": "word, speech, account", "θεός": "God, a god"}
+    )
+    items = content_glosses("ὁ λόγος καὶ ὁ θεός", source="cascade")
+    # Concise-sourced glosses are tagged lexicon:concise (auditable in the trace).
+    assert items
+    assert all(i.source == "lexicon:concise" for i in items)
+    joined = " | ".join(i.content for i in items)
+    assert "word, speech, account" in joined
+    # The function word ὁ is not glossed.
+    assert not any(i.ref == "ὁ" for i in items)
+
+
+def test_content_glosses_cascade_empty_without_any_dictionary(_reset_lexica):
+    # No dictionary loaded: the cascade source yields nothing and never raises.
+    assert content_glosses("ὁ λόγος", source="cascade") == []
+
+
+def test_full_mode_includes_concise_glosses_morphology_has_none(_reset_lexica):
+    _lexicons._ACTIVE["middle-liddell"] = _concise_lex(
+        "middle-liddell", {"λόγος": "word, speech, account"}
+    )
+    sent = "ἐν ἀρχῇ ἦν ὁ λόγος"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        morph = translate.grounding_for(sent, "greek", mode="morphology")
+        full = translate.grounding_for(sent, "greek", mode="full")
+    # morphology mode never carries a dictionary gloss.
+    assert not any(i.source in ("lexicon:concise", "lexicon:LSJ") for i in morph)
+    # full mode adds the upgraded concise-cascade glosses on top of the morphology lines.
+    concise_items = [i for i in full if i.source == "lexicon:concise"]
+    assert concise_items
+    assert any("word, speech, account" in i.content for i in concise_items)
+    # full is a superset: every morphology line is carried over unchanged.
+    assert _contents(morph) == _contents(full)[: len(_contents(morph))]
+
+
+def test_full_mode_degrades_gracefully_with_no_concise_dict(_reset_lexica):
+    # No concise dictionary and no corpus signal: full mode degrades to morphology-only
+    # (no gloss items), never raising.
+    sent = "ἐν ἀρχῇ ἦν ὁ λόγος"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        morph = translate.grounding_for(sent, "greek", mode="morphology")
+        full = translate.grounding_for(sent, "greek", mode="full")
+    assert not any(i.source == "lexicon:concise" for i in full)
+    assert _contents(morph) == _contents(full)
+
+
+def test_lemma_mode_unchanged_uses_legacy_lsj_source(_reset_lexica):
+    # The upgrade rides on "full"; "lemma" keeps the legacy lemma lines and, since no LSJ
+    # is loaded here, no glosses. Its lemma lines are the legacy "→ lemma" format.
+    lemma = translate.grounding_for("ἦν ὁ λόγος", "greek", mode="lemma")
+    assert any("→ lemma" in i.content for i in lemma)
+    assert not any(i.source == "lexicon:concise" for i in lemma)

@@ -49,6 +49,8 @@ from .client import providers as list_providers
 from .grounding import (
     GroundingItem,
     as_item,
+    clean_gloss,
+    concise_gloss,
     content_glosses,
     cooccurrence_evidence,
     corpus_context,
@@ -90,6 +92,8 @@ __all__ = [
     "corpus_context",
     "lexicon_evidence",
     "content_glosses",
+    "concise_gloss",
+    "clean_gloss",
     "cooccurrence_evidence",
     "evidence_block",
     "wrap_untrusted",

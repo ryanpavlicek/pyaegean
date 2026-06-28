@@ -10,19 +10,22 @@ translation itself is generative and returned as an exploratory, provenanced
 Greek grounding has several **modes** (see `grounding_for`). The default,
 ``"morphology"``, grounds the model in deterministic morphology and syntax (lemma,
 part of speech, case/voice/tense, and a clause skeleton from the dependency parse)
-and adds **no** dictionary glosses. This is the recommended mode: morphology, voice,
-case-role, and syntactic structure are facts the toolkit computes reliably and that a
-model can use directly, whereas an auto-selected dictionary gloss can surface the wrong
-or an archaic sense and steer the model away from a correct reading. The older
-``"lemma"`` mode (lemma lines plus gated content-word LSJ glosses) is retained for
-back-compatibility; ``"full"`` combines morphology lines with the conservative gated
-glosses; ``"none"`` adds no grounding.
+and adds **no** dictionary glosses: morphology, voice, case-role, and syntactic structure
+are facts the toolkit computes reliably and that a model can use directly. ``"full"`` keeps
+those morphology lines and adds a gloss layer in the configuration that helps rather than
+hurts: glosses sourced from a **concise, common-sense-first** dictionary cascade (Middle
+Liddell, Cunliffe for Homer, Abbott-Smith / Dodson for the NT), cleaned, and gated to the
+text's rare content words (see `ai.grounding.content_glosses` with ``source="cascade"``).
+That source matters: a first-sense gloss from the historical LSJ lexicon is often the
+archaic meaning (καιρός, βίος), so asserting it injects errors, whereas a concise dictionary
+leads with the common sense and helps most exactly on the rare vocabulary a model is likely
+to miss. ``"none"`` adds no grounding.
 
-The gated glosses used by ``"lemma"`` and ``"full"`` are deliberately selective
-(see `ai.grounding.content_glosses`): they gloss only low-polysemy content words, where
-the dominant-sense gloss is reliable, and leave highly polysemous words to the model. An
-ungated first-sense gloss for a word like στάσις or κρίσις is often the wrong contextual
-sense.
+The older ``"lemma"`` mode (lemma lines plus gated content-word LSJ glosses) is retained
+unchanged for back-compatibility; its glosses are the deliberately selective LSJ ones (see
+`ai.grounding.content_glosses` with the default ``source="lsj"``): only low-polysemy content
+words, where the dominant-sense gloss is reliable, leaving highly polysemous words to the
+model.
 """
 
 from __future__ import annotations
@@ -180,10 +183,13 @@ def _greek_grounding(
     if mode in ("morphology", "full"):
         out = _morphology_items(text)
         if mode == "full" and glosses:
-            out.extend(content_glosses(text))
+            # The validated-best gloss layer: a concise, common-sense-first dictionary
+            # cascade (never LSJ-first-sense), cleaned, and gated to the rare content words
+            # (where a gloss helps). Best-effort: empty if no concise dictionary is loaded.
+            out.extend(content_glosses(text, source="cascade", rarity_gate=True))
         return out
 
-    # mode == "lemma": the original lemma-line + gated-gloss grounding, preserved exactly.
+    # mode == "lemma": the original lemma-line + gated LSJ-gloss grounding, preserved exactly.
     out = []
     for w in tokenize_words(text):
         lemma, known = lemmatize_verbose(w)
@@ -226,9 +232,17 @@ def grounding_for(
       toolkit computes reliably and a model can use directly; an auto-selected dictionary
       gloss can surface the wrong or an archaic sense and mislead the model, so this mode
       omits glosses entirely.
+    - ``"full"``: the ``"morphology"`` lines **and** a gloss layer in the configuration
+      that helps. Glosses come from a concise, common-sense-first dictionary cascade
+      (Middle Liddell, Cunliffe for Homer, Abbott-Smith / Dodson for the NT), cleaned, and
+      gated to the rare content words. **Not** LSJ-first-sense: that historical lexicon
+      orders senses etymologically, so its lead sense is often the archaic meaning and
+      asserting it injects errors; a concise dictionary leads with the common sense and
+      helps most on the rare vocabulary a model is likely to miss. Source tag
+      ``lexicon:concise``. Best-effort: the glosses are simply absent if no concise
+      dictionary is loaded (``greek.use_lexicon("middle-liddell")`` etc.).
     - ``"lemma"``: the lemma-line grounding plus gated content-word LSJ glosses (the prior
-      default; retained for back-compatibility).
-    - ``"full"``: the ``"morphology"`` lines **and** the gated content-word glosses.
+      default; retained unchanged for back-compatibility). Source tag ``lexicon:LSJ``.
     - ``"none"``: no grounding.
 
     ``glosses`` is retained for back-compatibility and is **superseded by** ``mode``:
@@ -266,12 +280,13 @@ def translate(
     For ``greek``, ``mode`` (default ``"morphology"``) selects the grounding style; see
     `grounding_for`. The default grounds the model in deterministic morphology and
     syntax (lemma, part of speech, case/voice/tense, clause skeleton) with **no**
-    dictionary glosses. This is recommended: morphology, voice, case-role, and syntactic
-    structure reliably help a model, whereas an auto-selected dictionary gloss can surface
-    the wrong or an archaic sense and steer the model away from a correct reading. Use
-    ``mode="lemma"`` for the older lemma-line plus gated-gloss grounding, ``mode="full"``
-    to add those gated glosses on top of the morphology lines, or ``mode="none"`` for no
-    grounding.
+    dictionary glosses. Use ``mode="full"`` to add, on top of those morphology lines, a
+    gloss layer sourced from a concise, common-sense-first dictionary cascade (Middle
+    Liddell, Cunliffe, Abbott-Smith / Dodson), cleaned and gated to the rare content words:
+    a concise dictionary leads with the common sense and helps most on rare vocabulary,
+    whereas an LSJ-first-sense gloss is often the archaic meaning and misleads. Use
+    ``mode="lemma"`` for the older lemma-line plus gated LSJ-gloss grounding, or
+    ``mode="none"`` for no grounding.
 
     ``glosses`` is retained for back-compatibility and is superseded by ``mode``: it only
     affects the gloss-bearing modes (``"lemma"``, ``"full"``), where ``glosses=False``

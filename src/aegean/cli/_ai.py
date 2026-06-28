@@ -106,12 +106,13 @@ def translate(
     mode: str = typer.Option(
         "morphology", "--mode",
         help="Greek grounding style: morphology (default; deterministic morphology + "
-        "clause skeleton, no glosses), lemma (lemma lines + gated LSJ glosses), full "
-        "(morphology + gated glosses), none.",
+        "clause skeleton, no glosses), full (morphology + concise common-sense-first "
+        "glosses, gated to rare words), lemma (legacy lemma lines + gated LSJ glosses), "
+        "none.",
     ),
     glosses: bool = typer.Option(
         True, "--glosses/--no-glosses",
-        help="Whether the gloss-bearing modes (lemma, full) add gated LSJ glosses. "
+        help="Whether the gloss-bearing modes (full, lemma) add their glosses. "
         "Superseded by --mode; --no-glosses drops the glosses on those modes.",
     ),
     provider: str = PROVIDER_OPT,
