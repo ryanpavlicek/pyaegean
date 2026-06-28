@@ -95,5 +95,11 @@ pyaegean is pre-1.0, but the public API is treated as a contract:
 
 ## Tests
 
-Every behavior gets a test. Ports get parity tests; invariants get property
-tests (`hypothesis`). Keep `pytest` green and the wheel small.
+Every public function gets a **correctness** test, old and new: a test that checks
+the actual output is *right*, not merely that the call runs without error. Use gold
+or hand-computed expected values, a known-answer case, or a property invariant
+(round-trip identity, range bound, symmetry, monotonicity). Ports get parity tests
+against `tests/fixtures/golden/`; statistical functions get cross-checks against a
+hand-computed or reference (`scipy`) value; invariants get property tests
+(`hypothesis`). A new public function is not done until it has one. Keep `pytest`
+green and the wheel small.

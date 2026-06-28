@@ -103,3 +103,12 @@ def test_strips_an_existing_wrong_accent():
 def test_place_accent_dispatch():
     assert place_accent("λυω", recessive=True).form == "λύω"
     assert place_accent("ἀνθρωπου", recessive=False, lemma="ἄνθρωπος").form == "ἀνθρώπου"
+
+
+def test_dative_plural_final_diphthong_is_long():
+    # Regression: word-final -οις / -αις (dat. pl.), and -αι/-οι + any consonant, are LONG, not short,
+    # so the accent cannot reach the antepenult — dative plurals are paroxytone, not proparoxytone.
+    assert place_accent("ανθρωποις", recessive=False, lemma="ἄνθρωπος").classification == "paroxytone"
+    assert place_accent("θαλασσαις", recessive=False, lemma="θάλασσα").classification == "paroxytone"
+    # but a bare word-final -οι (nom. pl.) still counts short, so the antepenult accent is allowed.
+    assert place_accent("ανθρωποι", recessive=False, lemma="ἄνθρωπος").classification == "proparoxytone"

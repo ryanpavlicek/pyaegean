@@ -100,3 +100,12 @@ def test_diphthong_breathing_is_not_crasis() -> None:
     # the coronis detector (regression guard).
     for w in ("οὐ", "αὐτός", "εὐθύς", "οἶνος"):
         assert resolve_sandhi(w).kind != "crasis"
+
+
+def test_elided_proclitic_prepositions_resolve() -> None:
+    # Regression: the _ELISION entries were keyed with accents but the lookup is accent-blind, so
+    # elided proclitics like ἀπ' / ἐπ' / καθ' were dead code and silently failed to resolve.
+    for surface, full in (("ἀπ'", "ἀπό"), ("ἐπ'", "ἐπί"), ("καθ'", "κατά"),
+                          ("ἀφ'", "ἀπό"), ("ἀλλ'", "ἀλλά"), ("ἀν'", "ἀνά")):
+        r = resolve_sandhi(surface)
+        assert r.kind == "elision" and r.words == (full,), f"{surface} -> {r.words}"
