@@ -46,7 +46,7 @@ def test_elision_proclitic() -> None:
 
 
 def test_elision_listed_full_word() -> None:
-    r = resolve_sandhi("ταῦτ'")  # the prompt's canonical example
+    r = resolve_sandhi("ταῦτ'")  # listed full-word elision: ταῦτ' -> ταῦτα
     assert r.kind == "elision"
     assert not r.uncertain
     assert r.words == ("ταῦτα",)
