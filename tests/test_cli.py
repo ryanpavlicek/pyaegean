@@ -196,6 +196,18 @@ def test_greek_strip(app):
     assert ok(app, "greek", "strip", "ἄνθρωπος").strip() == "ανθρωπος"
 
 
+def test_greek_accentuate(app):
+    assert "λύω" in ok(app, "greek", "accentuate", "λυω")
+    assert "ἔλυον" in ok(app, "greek", "accentuate", "ἐλυον")
+
+
+def test_greek_sandhi(app):
+    out = ok(app, "greek", "sandhi", "κἀγώ")
+    assert "καί" in out and "ἐγώ" in out
+    data = json.loads(ok(app, "greek", "sandhi", "οὐκ", "--json"))
+    assert data["words"] == ["οὐ"] and data["kind"] == "movable-nu"
+
+
 def test_greek_tokenize(app):
     out = json.loads(ok(app, "greek", "tokenize", "ἐν ἀρχῇ ἦν.", "--json"))
     assert out == ["ἐν", "ἀρχῇ", "ἦν", "."]

@@ -49,6 +49,8 @@ backends layer in extra accuracy without changing the call you make.
 | Tokenize / sentences | `tokenize` / `tokenize_words` / `sentences` | `aegean greek tokenize` | no |
 | Syllabify | `syllabify` | `aegean greek syllabify` | no |
 | Accent analysis | `accentuation` | `aegean greek accent` | no |
+| Accent placement | `place_accent` / `recessive_accent` / `persistent_accent` | `aegean greek accentuate` | no |
+| Resolve sandhi | `resolve_sandhi` / `resolve_sentence` | `aegean greek sandhi` | no |
 | Prosody (quantities) | `syllable_quantities` / `scan` | `aegean greek quantities` | no |
 | Metrical scansion | `scan_hexameter` / `scan_line` / … | `aegean greek scan` | no |
 | Reconstructed IPA | `to_ipa` | `aegean greek ipa` | no |
@@ -314,6 +316,104 @@ Classifications:
 | circumflex | ultima | perispomenon |
 | circumflex | penult | properispomenon |
 | grave | ultima | barytone |
+
+## Accent placement
+
+Where `accentuation` *reads* the accent off a word that already carries one,
+`place_accent` *predicts* where the accent belongs, from the Greek accentuation
+laws: the law of limitation (an accent falls no further back than the antepenult,
+and not on the antepenult when the ultima is long), the **recessive** rule for
+finite verbs (the accent retreats as far toward the antepenult as the laws allow),
+the **persistent** rule for nominals (the accent stays on the lemma's syllable
+unless a long ultima forces it forward), and the properispomenon rule (a long
+penult before a short ultima takes the circumflex).
+
+```python
+greek.place_accent("λυε", recessive=True).form              # 'λύε'   (finite verb: recessive)
+greek.place_accent("λογος", recessive=False, lemma="λόγος").form   # 'λόγος' (nominal: persistent)
+
+acc = greek.place_accent("λογος", recessive=False, lemma="λόγος")
+acc.accent_type, acc.position_from_end, acc.classification   # ('acute', 2, 'paroxytone')
+acc.certain, acc.note                                        # (True, 'persistent')
+```
+
+`recessive_accent(word, …)` and `persistent_accent(form, lemma, …)` are the two
+rules directly; `place_accent(word, *, recessive, lemma=None, ultima_length=None,
+penult_length=None)` dispatches between them (`recessive=True`, or persistent with
+a `lemma`). Each returns an `AccentPlacement` with `form`, `accent_type`,
+`position_from_end` (1=ultima, 2=penult, 3=antepenult), `classification`,
+`certain`, and `note`.
+
+**Dichrona are flagged, not guessed.** Whether α, ι, or υ is long or short cannot
+be read off the spelling, and that length is sometimes what decides the accent (a
+circumflex vs an acute on the penult, or whether the antepenult is even allowed).
+When a *dichronon* is the deciding factor the placement is returned with
+`certain=False` and a `note` saying what was undetermined, rather than a silent
+guess. Supplying the missing length via `ultima_length=` / `penult_length=`
+(`"long"` / `"short"`), or a `lemma` whose own accent resolves it, makes the
+answer `certain`:
+
+```python
+greek.place_accent("λυε", recessive=True).certain                       # False — penult dichronon
+greek.place_accent("λυε", recessive=True, penult_length="short").certain  # True  — length supplied
+```
+
+The CLI `accentuate` takes one or more words and prints each placement (`--json`
+for the records); `--recessive` / `--persistent` choose the rule and `--lemma`
+supplies the persistent home syllable:
+
+```bash
+aegean greek accentuate λυε --recessive
+# λύε	paroxytone  (uncertain: recessive; penult acute/circumflex undetermined (dichronon))
+
+aegean greek accentuate λογος --persistent --lemma λόγος
+# λόγος	paroxytone
+```
+
+This is a rule engine over the accentuation laws, not a corpus lookup: it predicts
+the regular placement and is honest about the cases the spelling leaves
+undetermined.
+
+## Resolving crasis, elision, and movable nu
+
+Surface contractions otherwise pass through the pipeline opaquely.
+`resolve_sandhi` expands one token to the underlying word(s), so downstream stages
+(lemmatize, gloss, parse) see real words rather than a clipped or fused form:
+
+```python
+greek.resolve_sandhi("κἀγώ").words      # ('καί', 'ἐγώ')   (crasis)
+greek.resolve_sandhi("τἀμά").words      # ('τὰ', 'ἐμά')    (crasis)
+greek.resolve_sandhi("οὐκ").words       # ('οὐ',)          (movable-nu / οὐκ alternation)
+greek.resolve_sandhi("λόγος").words     # ('λόγος',)       (no sandhi: passes through)
+```
+
+A `ResolvedForm` carries `surface`, `words` (the underlying sequence), `kind`
+(`"crasis"` / `"elision"` / `"movable-nu"` / `None`), `uncertain`, `note`, and
+`alternatives`. `resolve_sentence(text)` maps it over every word of a sentence;
+flatten with `[w for r in result for w in r.words]` to get the expanded word
+stream the rest of the pipeline should index against.
+
+```python
+greek.resolve_sandhi("κἀγώ").kind       # 'crasis'
+greek.resolve_sandhi("κἀγώ").note       # 'crasis κἀγώ = καί + ἐγώ'
+```
+
+The CLI `sandhi` takes one or more words and prints the expansion (`--json` for
+the records):
+
+```bash
+aegean greek sandhi κἀγώ
+# καί ἐγώ	crasis
+```
+
+**Conservative by design.** Crasis is expanded only from a small curated,
+contribution-friendly lexicon (a one-line addition; see `CONTRIBUTING.md`); a
+coronis form not in it is flagged `uncertain` and left intact. Elision is restored
+only where the elided vowel is unambiguous (a listed proclitic/particle or a clear
+inflectional ending); otherwise the clipped stem is kept and flagged. The
+movable-ν and οὐκ/οὐχ/οὐ rules are purely contextual and need no lexicon. The
+resolver never over-expands: an ambiguous form comes back unchanged with
+`uncertain=True` and a note.
 
 ## Prosody (syllable quantity)
 
@@ -609,6 +709,19 @@ come back as a single, confident reading:
 ```python
 greek.analyze("ὁ")       # (Analysis(lemma='ὁ', pos='DET'),)
 greek.analyze("καί")[0]  # καί → CCONJ
+```
+
+The closed-class coverage is wide. The indefinite and interrogative τις / τίς
+(distinguished by the written accent), the relative ὅς / ἥ / ὅ paradigm, the
+determiners ἄλλος / ἕκαστος / πᾶς, the low cardinals and ordinals, and a longer
+particle list now tag and analyse with their case/number/gender (or their part of
+speech), where the bare rule engine previously returned nothing:
+
+```python
+[str(a) for a in greek.analyze("τις")]   # ['τις [PRON nom sg masc]', 'τις [PRON nom sg fem]']
+greek.analyze("τίς")[0]                   # τίς → PRON (interrogative: the acute distinguishes it)
+greek.analyze("ὅς")[0]                    # ὅς  → PRON (relative)
+greek.analyze("ἕκαστος")[0]              # ἕκαστος → DET
 ```
 
 Two convenience shortcuts when you don't need the full feature set:
@@ -1333,6 +1446,33 @@ training excludes. The full protocol, leakage controls, and measured numbers liv
 greek.use_treebank(); greek.use_tagger(); greek.use_lemmatizer(); greek.use_parser()
 greek.evaluate_on_ud("proiel", "test")   # {'upos': …, 'lemma': …, 'uas': …, …}
 ```
+
+### Evaluation receipts
+
+A score is only reproducible if you know what produced it. `greek.eval_receipt`
+wraps a scores dict in a **content-addressed, tamper-evident** record that ties the
+result to its inputs: the package version, the data manifest, the active model id,
+the treebank, the split, and the protocol. The `id` is a short sha256 over the
+canonical JSON of every field, so identical inputs always give the identical id and
+changing any field changes it.
+
+```python
+scores = greek.evaluate_on_ud("perseus", "test")   # or any metric → value mapping
+r = greek.eval_receipt(scores, treebank="perseus", split="test", protocol="conll18")
+
+r.id                       # e.g. 'a15940ec010157d0' — the content hash of the whole record
+r.verify()                 # True — re-hashes the stored fields and confirms they still produce r.id
+r.package_version, r.model_id   # resolved automatically from the environment
+```
+
+An `EvalReceipt` is frozen and serializes both ways: `r.as_dict()` / `r.as_json()`
+write the full record (id included), and `EvalReceipt.from_dict(data)` reads it
+back. `r.verify(other)` confirms two receipts describe the byte-identical
+evaluation (same content-addressed id), so a number quoted in a paper can be
+checked against the receipt that produced it. Pass `package_version=` /
+`manifest=` / `model_id=` to override the resolved environment for a fully
+deterministic, offline receipt; `extra=` carries any further reproducibility
+metadata (a seed, the evaluator sha, a fold manifest).
 
 ### Reproduce the numbers from the shell
 

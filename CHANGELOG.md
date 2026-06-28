@@ -4,6 +4,35 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.10.1 (2026-06-28)
+
+### Added
+- **Accent placement** (`greek.place_accent`, `recessive_accent`, `persistent_accent`; `aegean greek
+  accentuate`): predicts a word's accent from the Greek accentuation laws (the law of limitation,
+  recessive vs persistent accent, the properispomenon rule). Dichrona (α/ι/υ, undetermined from
+  spelling) are flagged honestly rather than guessed; a supplied lemma or vowel length resolves them.
+- **Crasis / elision / movable-nu resolver** (`greek.resolve_sandhi`, `resolve_sentence`; `aegean greek
+  sandhi`): expands surface contractions to their underlying word(s) (κἀγώ to καί + ἐγώ, τἀμά to
+  τὰ + ἐμά) through a small, contribution-friendly curated lexicon. Conservative: unlisted or ambiguous
+  forms are flagged uncertain, never over-expanded.
+- **Wider closed-class coverage** in the zero-dependency rule POS/morphology: the indefinite and
+  interrogative τις/τίς (distinguished by the written accent), the relative ὅς/ἥ/ὅ paradigm,
+  determiners (ἄλλος/ἕκαστος/πᾶς), the low cardinals and ordinals, and more particles now tag and
+  analyse correctly (`analyze("τις")` is no longer empty).
+- **LSJ sense selection** (`ai.select_sense`) and a **grounding-regime detector** (`ai.grounding_regime`):
+  offline, deterministic helpers that rank an LSJ entry's senses by fit to a context and estimate
+  whether grounding a generation step will help, stay neutral, or hurt for a given text. Exploratory.
+- **Evaluation receipts** (`greek.eval_receipt`): a content-addressed, tamper-evident record tying an
+  evaluation result to its exact inputs (package version, data manifest, model id, protocol, scores),
+  for reproducibility.
+- **Paired significance testing** (`analysis.mcnemar`, `analysis.paired_bootstrap`): tests whether two
+  systems differ significantly on a shared evaluation set, rather than only bounding one system's score.
+- **Aegean structure tooling** (exploratory): Monte-Carlo null models with explicit, documented nulls
+  (`analysis.monte_carlo_p`) so a structure statistic carries a p-value against a stated baseline;
+  distributional sign embeddings (`analysis.sign_embeddings`); unsupervised morpheme segmentation
+  (`analysis.segment`, `candidate_morphs`); and Brown sign-class induction (`analysis.induce_classes`),
+  aimed at the least-served script, Cypro-Minoan.
+
 ## 0.10.0 (2026-06-25)
 
 ### Changed

@@ -41,8 +41,13 @@ A few of the newer/lower-level ones are Python-only. This table is the map.
 | Dispersion (Gries' DP) | `dispersion`, `dispersions` | `aegean dispersion` |
 | Keyness (G² + log-ratio) | `keyness` | `aegean keyness` |
 | Bootstrap CI | `bootstrap_ci`, `bootstrap_counts_ci` |— |
+| Paired significance (A vs B) | `mcnemar`, `paired_bootstrap` |— |
+| Monte-Carlo null models | `monte_carlo_p` |— |
 | Vocabulary richness / info | `chao1`, `mattr`, `fit_heaps`, `fit_zipf_mandelbrot_mle`, `shannon_entropy`, `miller_madow_entropy` |— |
 | Morphological clusters | `find_morphological_clusters` | `aegean analyze clusters` |
+| Morpheme segmentation | `segment`, `candidate_morphs` |— |
+| Sign embeddings | `sign_embeddings` |— |
+| Brown sign-class induction | `induce_classes` |— |
 | Affix productivity / edge bias | `baayen_productivity`, `affix_edge_bias`, `successor_variety` |— |
 | Positional bias | `positional_bias` |— |
 | Sign-bigram PMI | `sign_bigram_pmi`, `sign_bigram_pmis` |— |
@@ -325,6 +330,82 @@ imbalance worth *inspecting*, not a proven fact about the language; read
 significance (G², p) together with effect size (log-ratio) and dispersion.
 See [Limitations](Limitations).
 
+## Paired significance: does system A differ from system B?
+
+The bootstrap above puts a CI on *one* system's score; these two tests answer the
+complementary question, *do two systems differ significantly on the same items?*,
+over gold-aligned per-item results. Pure stdlib, deterministic by seed.
+
+**McNemar's test** over two systems' binary per-item correctness. Only the
+discordant items carry signal (`b` = A-right/B-wrong, `c` = A-wrong/B-right); a
+small `p_value` means the systems differ where they disagree. For few discordant
+items the exact two-sided binomial is used, otherwise a continuity-corrected
+chi-square:
+
+```python
+from aegean.analysis import mcnemar
+r = mcnemar([True, True, False, True], [True, False, False, False])
+r.b, r.c, r.method, round(r.p_value, 4)     # (2, 0, 'exact', 0.5)
+```
+
+**Paired bootstrap** over the per-item score *differences* `A − B` (any numbers:
+0/1 accuracy, per-sentence LAS, a similarity). It returns the mean difference, a
+percentile CI, and the fraction of resamples favouring each system:
+
+```python
+from aegean.analysis import paired_bootstrap
+r = paired_bootstrap([1, 1, 1, 1, 0, 1], [0, 1, 0, 1, 0, 0], seed=1)
+round(r.mean_difference, 3), round(r.frac_a, 2)   # (0.5, 0.99)   ← A scores higher
+(round(r.low, 2), round(r.high, 2))               # the 95% band on the mean difference
+```
+
+`McNemarResult` = `(b, c, statistic, p_value, method)`; `PairedBootstrapResult` =
+`(mean_difference, low, high, level, n_resamples, frac_a, frac_b)`. Both treat
+items as the exchangeable unit and assume the systems ran on the same items in the
+same order. They quantify whether a gap is more than sampling noise, nothing about
+whether the items are representative. On small Aegean evaluation sets read the
+p-value and CI together with the effect size (the mean difference); a comparison
+over an **undeciphered** script's putative readings is exploratory, the test can
+say two heuristics disagree, never that either is correct.
+
+## Monte-Carlo null models
+
+The highest-integrity move for an undeciphered-script statistic: never report it
+as a bare number, pair it with an explicit *null* and a p-value, so a reader knows
+whether the value is more than randomness alone would produce. `monte_carlo_p`
+scores any structure statistic (a `Callable[[Sequence[str]], float]` over a
+sign-hyphen-sign word list, larger = more "structured") against a seeded null:
+
+```python
+from aegean.analysis import monte_carlo_p, train_sign_bigram_model, word_surprisal
+import aegean, statistics
+
+c = aegean.load("lineara")
+words = [t.text for d in c.documents for t in d.tokens if t.kind.name == "WORD" and "-" in t.text]
+model = train_sign_bigram_model(c.word_frequencies())
+stat = lambda ws: statistics.mean(word_surprisal(model, w).mean for w in ws)
+
+res = monte_carlo_p(stat(words), stat, words, null="within_word", n=999, seed=0)
+res.observed, round(res.p_value, 4), res.null    # (…, …, 'within_word')
+```
+
+`MonteCarloResult` = `(observed, p_value, null_mean, null_low, null_high, level, n,
+null)`. The p-value is the add-one upper-tail estimate `(1 + #{null ≥ observed}) /
+(1 + n)` (never exactly 0, valid for finite `n`). Two nulls, each with documented,
+explicit invariants:
+
+| `null` | preserves | destroys |
+| --- | --- | --- |
+| `within_word` | per-word length and the corpus-wide unigram-sign counts | sign *order* and within-word co-occurrence |
+| `reshuffle` | every word intact, and the per-length word counts | a word's *position* in the list |
+
+Use `within_word` to ask whether the sign *ordering* is more than the unigram
+frequencies and word lengths force; `reshuffle` for statistics that read the
+arrangement of whole words. **Exploratory.** A small p-value says the statistic
+departs from the stated null, never that a morpheme, reading, or interpretation is
+confirmed. Honest reporting names the null, the seed, and `n` alongside the
+p-value.
+
 ## Vocabulary richness & information
 
 Estimators that work over a **count vector** (token counts per type), so they
@@ -392,6 +473,79 @@ aegean analyze clusters lineara --top 4
 # I-DA    I-DA, I-DA-A, I-DA-DA, I-DA-MI                A, DA, MI
 # KU-PA   KU-PA, KU-PA-JA, KU-PA-RI, KU-PA-ZU           JA, RI, ZU
 ```
+
+## Morpheme segmentation (Harris)
+
+Where `find_morphological_clusters` groups words by a shared productive suffix,
+`segment` cuts each word at the local peaks of its **successor- and
+predecessor-variety** curves (Harris's distributional boundary signal, forward and
+backward, the two cut sets unioned). The cut points are read off the whole
+vocabulary at once.
+
+```python
+from aegean.analysis import segment, candidate_morphs
+wf = [w for w, _ in c.word_frequencies()]
+
+seg = segment(["A-TA-NA-JE", "A-TA-DE"])[0]
+seg.word, seg.cuts, seg.pieces     # the boundary offsets and the resulting morphs
+
+# the recurring word-final morphs, ranked by how many distinct words bear them:
+candidate_morphs(wf, min_count=5)[:5]
+# [('TE', 37), ('NA', 36), ('JA', 34), ('RE', 34), ('TI', 29)]
+```
+
+A `Segmentation` = `(word, units, cuts, pieces)`, where `cuts` are boundary offsets
+into `units` and `pieces` are the resulting morphs (joined the way the word was).
+`candidate_morphs(words, *, min_count=2)` counts each word-final morph by the number
+of *distinct* word types ending in it (so a repeated word cannot inflate it).
+**Exploratory:** the cuts are distributional hypotheses, and on hapax-heavy
+undeciphered corpora the variety signal is thin. A high-count morph is a *candidate*
+productive suffix to inspect, never a confirmed morpheme or a meaning.
+
+## Sign embeddings
+
+A dense distributional vector per sign, learned from sign adjacency *within words*:
+a (sign × context) co-occurrence table, PPMI-reweighted, reduced by a deterministic
+truncated SVD and L2-normalized, so the nearest neighbours read as cosine
+similarity. No numpy/scipy.
+
+```python
+from aegean.analysis import sign_embeddings
+emb = sign_embeddings(c)                 # dim=50, window=1 by default
+emb.dim, len(emb.vocab)                  # (50, 162)
+[s for s, _ in emb.neighbours("KU", k=3)]   # the signs most similar in distribution
+```
+
+`SignEmbeddings` carries `vocab`, `vectors`, `dim`, and `window`; `neighbours(sign,
+k=…)` ranks the rest by cosine similarity. **Exploratory:** the vectors encode
+distributional context, not phonetic or semantic value, and on the small Aegean
+corpora the geometry is noisy. Trust only the strongest neighbours, and corroborate
+before reading anything into them.
+
+## Brown sign-class induction
+
+`induce_classes` groups a script's signs into distributional **classes** by Brown
+clustering: it seeds one class per sign, then greedily merges the pair whose merge
+gives up the least average mutual information of the class-bigram model, until
+`n_classes` remain (Brown et al. 1992). It is aimed at the undeciphered material
+(especially Cypro-Minoan), where a vowel/consonant or open/closed split, if one
+exists, should surface as shared adjacency behaviour.
+
+```python
+from aegean.analysis import induce_classes
+sc = induce_classes(c, n_classes=8)
+len(sc)                  # 8
+sc.classes()[0][:5]      # the members of the first class, sign-sorted
+sc.class_of("KU")        # the integer class id of a sign (-1 if never attested)
+sc.report                # the quality numbers (mutual information, perplexity) and the corpus size
+```
+
+A `SignClasses` exposes `class_of(sign)`, `classes()`, and a `report`.
+**Exploratory:** signs share a class because they occur in the same contexts, a
+candidate shared grammatical or phonotactic role, **never** a phonetic reading. On
+the small Aegean corpora most sign bigrams are seen once or never, so the classing
+overfits; the attached `report` carries the corpus size so the classes are read as
+leads, not facts.
 
 ## Affix productivity, edge bias & successor variety
 

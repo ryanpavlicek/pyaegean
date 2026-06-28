@@ -56,13 +56,13 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.10.0
+aegean --version          # pyaegean 0.10.1
 ```
 
 | Group | What's in it |
 |---|---|
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → tokenize → syllabify → accent → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -669,6 +669,8 @@ aegean greek strip "μῆνιν"                        # μηνιν   (drop all
 aegean greek tokenize "ἐν ἀρχῇ ἦν ὁ λόγος."       # one token per line (--sentences to split sentences)
 aegean greek syllabify εἰσφέρω                    # εἰσ-φέ-ρω
 aegean greek accent λόγος                         # acute, paroxytone
+aegean greek accentuate λυε --recessive           # predict the accent (recessive verb): λύε
+aegean greek sandhi κἀγώ                           # expand crasis: καί ἐγώ
 aegean greek quantities πατρός                    # πα:common | τρός:heavy
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, …"     # dactylic hexameter
 aegean greek ipa "λόγος" --period koine          # loɣos  (--period attic|koine)
@@ -705,6 +707,34 @@ from aegean import greek
 greek.accentuation("λόγος").classification     # 'paroxytone'
 greek.betacode_to_unicode("mh=nin")            # 'μῆνιν'
 ```
+
+### Accent placement (`accentuate`) and sandhi (`sandhi`)
+
+`accentuate` *predicts* a word's accent from the accentuation laws (where `accent`
+*reads* an existing one). `--recessive` is the rule for finite verbs, `--persistent
+--lemma L` the rule for nominals (the lemma supplies the home syllable). A
+*dichronon* (α/ι/υ) whose length the spelling leaves open is flagged uncertain
+rather than guessed; `--lemma` or a supplied vowel length resolves it.
+
+```bash
+aegean greek accentuate λυε --recessive
+# λύε	paroxytone  (uncertain: recessive; penult acute/circumflex undetermined (dichronon))
+
+aegean greek accentuate λογος --persistent --lemma λόγος
+# λόγος	paroxytone
+```
+
+`sandhi` expands a surface contraction to the underlying word(s): crasis (κἀγώ →
+καί ἐγώ), elision, and the movable-ν / οὐκ alternation (οὐκ → οὐ). It is
+conservative: an unlisted or ambiguous form is flagged uncertain and left intact,
+never over-expanded.
+
+```bash
+aegean greek sandhi κἀγώ
+# καί ἐγώ	crasis
+```
+
+Both take one or more words and `--json`.
 
 ### Scansion (`scan`)
 
