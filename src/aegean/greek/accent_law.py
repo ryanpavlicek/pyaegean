@@ -88,8 +88,10 @@ def _vowel_length(syllable: str, *, is_final: bool) -> str:
         return LONG
     nucleus = "".join(c for c in _bases(syllable) if c in _VOWELS)
     if len(nucleus) >= 2:  # diphthong
-        if is_final and nucleus in {"αι", "οι"}:
-            return SHORT  # final -αι / -οι count short for accent (optative/locative excepted)
+        if is_final and nucleus in {"αι", "οι"} and _bases(syllable)[-1] in _VOWELS:
+            # A bare word-final -αι / -οι counts short for accent (optative/locative excepted);
+            # -αις / -οις (dat. pl.) and -αι / -οι + consonant keep their full diphthong length.
+            return SHORT
         return LONG
     if len(nucleus) == 1:
         v = nucleus[0]
