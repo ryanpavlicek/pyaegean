@@ -460,3 +460,29 @@ def test_ai_translate_mode_option_selects_grounding(app, monkeypatch):
     res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--mode", "lemma"])
     assert res.exit_code == 0, res.output
     assert "→ lemma εἰμί" in seen["prompt"]
+
+
+def test_ai_translate_verify_flag_runs_check_and_repair(app, monkeypatch):
+    # --verify (Greek) translates raw, then checks + repairs against the grounding:
+    # two provider calls, and the repaired (second) translation is returned.
+    from aegean import ai
+    from aegean.ai.client import LLMClient, LLMResponse
+
+    prompts: list[str] = []
+
+    class FakeClient(LLMClient):
+        provider = "fake"
+
+        def _complete(self, *, prompt, system, max_tokens):  # type: ignore[no-untyped-def]
+            prompts.append(prompt)
+            return LLMResponse(f"TRANSLATION {len(prompts)}", self.provider, self.model)
+
+    monkeypatch.setattr(ai, "get_client", lambda *a, **k: FakeClient("fake-1"))
+    res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--verify", "--json"])
+    assert res.exit_code == 0, res.output
+    assert len(prompts) == 2                 # draft + repair
+    data = json.loads(res.output)
+    assert data["text"] == "TRANSLATION 2"   # the repaired translation is returned
+    assert data["kind"] == "translate" and data["exploratory"] is True
+    assert "= εἰμί (verb" not in prompts[0]  # the draft is grounding-free
+    assert "= εἰμί (verb" in prompts[1]      # the checker sees the full grounding
