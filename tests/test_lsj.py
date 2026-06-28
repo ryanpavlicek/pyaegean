@@ -181,3 +181,93 @@ def test_usage_requires_use_lsj() -> None:
     lexicon.disable_lsj()
     with pytest.raises(LexiconNotLoadedError):
         greek.usage("κοῦρος")
+
+
+# ── deterministic sense selection (grounding) ────────────────────────────────
+def test_select_sense_picks_non_dominant_on_context(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import select_sense
+
+    _activate(tmp_path, monkeypatch)
+    # λόγος has two senses: A "computation, reckoning" (cites λέγω) and the buried
+    # II "the word …" (cites ἔπος). A context mentioning ἔπος should surface II over
+    # the dominant sense A — exactly the buried-sense case content_glosses refuses.
+    cands = select_sense("λόγος", "ἔπος ἄνθρωπος")
+    assert cands  # ranked, best first
+    assert cands[0].marker == "II"
+    assert cands[0].dominant is False
+    assert "επος" in cands[0].overlap
+
+
+def test_select_sense_dominant_without_overlap(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import select_sense
+
+    _activate(tmp_path, monkeypatch)
+    # No overlapping Greek in the context: the order/length prior keeps the dominant
+    # (sense A) reading on top, the same gloss content_glosses would pick.
+    cands = select_sense("λόγος", "ἄνθρωπος")
+    assert cands[0].marker == "A" and cands[0].dominant is True
+    cands_legw = select_sense("λόγος", "λέγω")  # sense A cites λέγω -> A wins on overlap
+    assert cands_legw[0].marker == "A" and "λεγω" in cands_legw[0].overlap
+
+
+def test_select_sense_respects_max_candidates(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import select_sense
+
+    _activate(tmp_path, monkeypatch)
+    assert len(select_sense("λόγος", "ἔπος", max_candidates=1)) == 1
+
+
+def test_select_sense_empty_without_lsj() -> None:
+    from aegean.ai.sense import select_sense
+
+    lexicon.disable_lsj()
+    assert select_sense("λόγος", "ἔπος") == []
+
+
+def test_select_sense_empty_for_unknown_word(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import select_sense
+
+    _activate(tmp_path, monkeypatch)
+    assert select_sense("ζzzz", "ἄνθρωπος") == []
+
+
+# ── grounding-regime detector ────────────────────────────────────────────────
+def test_grounding_regime_help_on_rare_vocabulary(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import grounding_regime
+
+    _activate(tmp_path, monkeypatch)
+    # Long, rare-looking, low-polysemy vocabulary: the regime where a dominant-sense
+    # gloss adds real signal.
+    sig = grounding_regime("φαρμακολογικωτάτη συγγραφεύς")
+    assert sig.regime == "help" and bool(sig) is True
+    assert sig.rarity >= 0.6 and sig.content_words == 2
+
+
+def test_grounding_regime_neutral_on_empty_content(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.ai.sense import grounding_regime
+
+    _activate(tmp_path, monkeypatch)
+    sig = grounding_regime("ὁ καὶ δέ")  # all function words
+    assert sig.regime == "neutral" and sig.content_words == 0 and not sig
+
+
+def test_grounding_regime_degrades_without_lsj() -> None:
+    from aegean.ai.sense import grounding_regime
+
+    lexicon.disable_lsj()
+    # No LSJ: polysemy/markedness are 0 but the heuristic rarity signal still computes.
+    sig = grounding_regime("φαρμακολογικωτάτη συγγραφεύς")
+    assert sig.polysemy == 0.0 and sig.markedness == 0.0
+    assert sig.content_words == 2 and sig.rarity > 0.0

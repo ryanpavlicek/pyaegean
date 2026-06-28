@@ -56,6 +56,7 @@ from .grounding import (
     lexicon_evidence,
     wrap_untrusted,
 )
+from .sense import RegimeSignal, SenseCandidate, grounding_regime, select_sense
 
 __all__ = [
     # client / factory
@@ -92,6 +93,11 @@ __all__ = [
     "cooccurrence_evidence",
     "evidence_block",
     "wrap_untrusted",
+    # sense selection + grounding regime (exploratory)
+    "select_sense",
+    "grounding_regime",
+    "SenseCandidate",
+    "RegimeSignal",
     # errors
     "AIError",
     "ProviderNotInstalled",

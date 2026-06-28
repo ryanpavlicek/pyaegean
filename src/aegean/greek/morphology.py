@@ -111,6 +111,14 @@ def _bare(word: str) -> str:
     return stripped.replace("ς", "σ")
 
 
+def _closed_key(word: str) -> str:
+    """Normalisation matching the closed-class lexicon keys in `.pos`."""
+    grave, acute = "̀", "́"
+    nfc = unicodedata.normalize("NFC", word).lower()
+    nfd = unicodedata.normalize("NFD", nfc).replace(grave, acute)
+    return unicodedata.normalize("NFC", nfd)
+
+
 # --- nominal endings ---------------------------------------------------------
 # Each entry: bare ending → (declension, list of (case, number, gender), the
 # bare nominative-singular ending used to rebuild the lemma; None = the lemma is
@@ -310,12 +318,103 @@ def _verbal(word: str) -> list[Analysis]:
     return out
 
 
+# --- closed-class pronoun paradigms ------------------------------------------
+# Fully-inflected, attested paradigms (Smyth §§333-340) for the closed pronouns
+# whose forms the ending rules can't read from the stem alone. Each form maps to
+# its case/number/gender analyses; these take precedence over the flat POS
+# lexicon (which carries only a coarse tag). Forms are stored under the
+# `_closed_key` normalization (lowercase NFC, grave→acute) so running-text
+# variants match. Genuinely ambiguous forms (e.g. relative ᾧ vs the same shape
+# elsewhere) legitimately yield several readings — the caller disambiguates.
+
+
+def _pron(lemma: str, *cells: tuple[str, str, str, str]) -> dict[str, list[Analysis]]:
+    """Build a form→analyses map from ``(form, case, number, gender)`` cells.
+
+    Multiple cells may share a form (Greek syncretism); their analyses
+    accumulate under that form's normalized key."""
+    out: dict[str, list[Analysis]] = {}
+    for form, case, number, gender in cells:
+        out.setdefault(_closed_key(form), []).append(
+            Analysis(lemma=lemma, pos="PRON", case=case, number=number, gender=gender)
+        )
+    return out
+
+
+def _merge(*maps: dict[str, list[Analysis]]) -> dict[str, tuple[Analysis, ...]]:
+    merged: dict[str, list[Analysis]] = {}
+    for m in maps:
+        for key, analyses in m.items():
+            merged.setdefault(key, []).extend(analyses)
+    return {k: tuple(v) for k, v in merged.items()}
+
+
+# Interrogative τίς, τί (Smyth §333): persistent acute, never enclitic. Both the
+# pronominal (τίνος …) and the article-borrowed (τοῦ, τῷ) genitive/dative are
+# attested for the interrogative; only the pronominal series is listed here, the
+# borrowed forms coincide with the article and are tagged there.
+_INTERROGATIVE = _pron(
+    "τίς",
+    ("τίς", "nom", "sg", "masc"), ("τίς", "nom", "sg", "fem"),
+    ("τίνος", "gen", "sg", "masc"), ("τίνος", "gen", "sg", "fem"), ("τίνος", "gen", "sg", "neut"),
+    ("τίνι", "dat", "sg", "masc"), ("τίνι", "dat", "sg", "fem"), ("τίνι", "dat", "sg", "neut"),
+    ("τίνα", "acc", "sg", "masc"), ("τίνα", "acc", "sg", "fem"),
+    ("τί", "nom", "sg", "neut"), ("τί", "acc", "sg", "neut"),
+    ("τίνες", "nom", "pl", "masc"), ("τίνες", "nom", "pl", "fem"),
+    ("τίνων", "gen", "pl", "masc"), ("τίνων", "gen", "pl", "fem"), ("τίνων", "gen", "pl", "neut"),
+    ("τίσι", "dat", "pl", "masc"), ("τίσι", "dat", "pl", "fem"), ("τίσι", "dat", "pl", "neut"),
+    ("τίσιν", "dat", "pl", "masc"), ("τίσιν", "dat", "pl", "fem"), ("τίσιν", "dat", "pl", "neut"),
+    ("τίνας", "acc", "pl", "masc"), ("τίνας", "acc", "pl", "fem"),
+    ("τίνα", "nom", "pl", "neut"), ("τίνα", "acc", "pl", "neut"),
+)
+
+# Indefinite τις, τι (Smyth §334): enclitic, unaccented citation form. The
+# accent on a key distinguishes it from the interrogative above.
+_INDEFINITE = _pron(
+    "τις",
+    ("τις", "nom", "sg", "masc"), ("τις", "nom", "sg", "fem"),
+    ("τινός", "gen", "sg", "masc"), ("τινός", "gen", "sg", "fem"), ("τινός", "gen", "sg", "neut"),
+    ("τινί", "dat", "sg", "masc"), ("τινί", "dat", "sg", "fem"), ("τινί", "dat", "sg", "neut"),
+    ("τινά", "acc", "sg", "masc"), ("τινά", "acc", "sg", "fem"),
+    ("τι", "nom", "sg", "neut"), ("τι", "acc", "sg", "neut"),
+    ("τινές", "nom", "pl", "masc"), ("τινές", "nom", "pl", "fem"),
+    ("τινῶν", "gen", "pl", "masc"), ("τινῶν", "gen", "pl", "fem"), ("τινῶν", "gen", "pl", "neut"),
+    ("τισί", "dat", "pl", "masc"), ("τισί", "dat", "pl", "fem"), ("τισί", "dat", "pl", "neut"),
+    ("τισίν", "dat", "pl", "masc"), ("τισίν", "dat", "pl", "fem"), ("τισίν", "dat", "pl", "neut"),
+    ("τινάς", "acc", "pl", "masc"), ("τινάς", "acc", "pl", "fem"),
+    ("τινά", "nom", "pl", "neut"), ("τινά", "acc", "pl", "neut"),
+)
+
+# Relative ὅς, ἥ, ὅ (Smyth §339). Many cells coincide with the article in shape
+# (ᾧ, ᾗ, οἷς, αἷς, ὧν, …) but differ in being unaspirated vs the relative's rough
+# breathing; here only the relative (rough-breathing) forms are keyed, so they do
+# not collide with the article's τ-forms in the POS lexicon.
+_RELATIVE = _pron(
+    "ὅς",
+    ("ὅς", "nom", "sg", "masc"), ("ἥ", "nom", "sg", "fem"), ("ὅ", "nom", "sg", "neut"),
+    ("οὗ", "gen", "sg", "masc"), ("ἧς", "gen", "sg", "fem"), ("οὗ", "gen", "sg", "neut"),
+    ("ᾧ", "dat", "sg", "masc"), ("ᾗ", "dat", "sg", "fem"), ("ᾧ", "dat", "sg", "neut"),
+    ("ὅν", "acc", "sg", "masc"), ("ἥν", "acc", "sg", "fem"), ("ὅ", "acc", "sg", "neut"),
+    ("οἵ", "nom", "pl", "masc"), ("αἵ", "nom", "pl", "fem"), ("ἅ", "nom", "pl", "neut"),
+    ("ὧν", "gen", "pl", "masc"), ("ὧν", "gen", "pl", "fem"), ("ὧν", "gen", "pl", "neut"),
+    ("οἷς", "dat", "pl", "masc"), ("αἷς", "dat", "pl", "fem"), ("οἷς", "dat", "pl", "neut"),
+    ("οὕς", "acc", "pl", "masc"), ("ἅς", "acc", "pl", "fem"), ("ἅ", "acc", "pl", "neut"),
+)
+
+_CLOSED_PARADIGM: dict[str, tuple[Analysis, ...]] = _merge(
+    _INTERROGATIVE, _INDEFINITE, _RELATIVE
+)
+
+
 # --- public API --------------------------------------------------------------
 
 
 @lru_cache(maxsize=4096)
 def _rule_analyze(word: str) -> tuple[Analysis, ...]:
     """Rule-based candidate analyses — the baseline engine behind `analyze`."""
+    paradigm = _CLOSED_PARADIGM.get(_closed_key(word))
+    if paradigm is not None:
+        return paradigm
     fixed = _LEXICON.get(_closed_key(word))
     if fixed is not None:
         lemma, _ = seed_lemma_verbose(word)
@@ -348,14 +447,6 @@ def analyze(word: str) -> tuple[Analysis, ...]:
         if hit:
             return hit
     return _rule_analyze(word)
-
-
-def _closed_key(word: str) -> str:
-    """Normalisation matching the closed-class lexicon keys in `.pos`."""
-    grave, acute = "̀", "́"
-    nfc = unicodedata.normalize("NFC", word).lower()
-    nfd = unicodedata.normalize("NFD", nfc).replace(grave, acute)
-    return unicodedata.normalize("NFC", nfd)
 
 
 def lemmas(word: str) -> list[str]:
