@@ -4,6 +4,27 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.12.0 (2026-06-28)
+
+### Changed
+- **Grounded translation now defaults to morphology-first grounding.** `aegean.translate.translate`
+  and `grounding_for` take a `mode` parameter (`"morphology"`, `"lemma"`, `"full"`, `"none"`),
+  defaulting to **`"morphology"`**: the model is grounded in deterministic lemma, part-of-speech, voice,
+  case-role, and clause-structure analysis from the pipeline, with rare-word flags, and no
+  automatically-selected dictionary glosses. Deterministic morphology reliably helps a model with the
+  grammar (voice, subject/object, case), whereas an auto-selected sense gloss can surface the wrong
+  sense and mislead it. The previous lemma-plus-gloss behaviour is preserved as `mode="lemma"`. CLI:
+  `aegean ai translate --mode`.
+
+### Added
+- **Concise, common-sense-first glosses for `mode="full"`.** When glosses are wanted, `mode="full"`
+  adds them from a cascade of concise dictionaries (Middle Liddell, Cunliffe, Abbott-Smith, Dodson),
+  rarity-gated to the words that need them and cleaned, instead of the first sense of LSJ (a historical
+  lexicon whose opening sense is often the archaic one, e.g. καιρός "a row of thrums in the loom" before
+  "the right time"). New helpers `ai.concise_gloss` and `ai.clean_gloss`. Most useful for rare or
+  technical vocabulary and for weaker models. A new Recipe (Get the best AI translation) and a notebook
+  section walk through choosing the mode.
+
 ## 0.11.0 (2026-06-28)
 
 ### Added
