@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.10.1
+aegean --version                # pyaegean 0.11.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command

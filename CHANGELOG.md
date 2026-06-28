@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## 0.10.1 (2026-06-28)
+## 0.11.0 (2026-06-28)
 
 ### Added
 - **Accent placement** (`greek.place_accent`, `recessive_accent`, `persistent_accent`; `aegean greek
