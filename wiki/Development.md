@@ -154,7 +154,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.13.0-py3-none-any.whl: 3003 KB uncompressed, 160 files
+# wheel dist/pyaegean-0.13.0-py3-none-any.whl: 3029 KB uncompressed, 162 files
 # OK  nothing-heavy-bundled
 ```
 
