@@ -655,6 +655,63 @@ ai.grounding.content_glosses(text, skip_lemmas=my_frequent_lemmas)  # skip words
 The glosses are deterministic, local evidence; the translation built on them stays an
 exploratory, labeled hypothesis like every other output in this layer.
 
+### LSJ sense selection (EXPLORATORY)
+
+Where `content_glosses` always feeds the dominant (first) LSJ sense, `ai.select_sense`
+ranks an entry's senses by fit to a **context**, so a glossed grounding can carry the
+contextually plausible reading instead of LSJ's lead sense. It needs the LSJ lexicon
+(`greek.use_lsj()`) and is best-effort: `[]` when LSJ is not loaded or the word has no
+entry.
+
+```python
+from aegean import ai, greek
+greek.use_lsj()
+
+for s in ai.select_sense("λόγος", "ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος ἦν πρὸς τὸν θεόν"):
+    print(s)
+# each line: "I. <gloss>  [score]" — best-fitting sense first
+```
+
+`select_sense(word, context, *, max_candidates=3, …)` returns up to `max_candidates`
+`SenseCandidate`s, best first. Each carries `marker`, `level`, `gloss`, `score` (the
+context-fit total), `overlap` (the context lemmas the sense's cited Greek shares), and
+`dominant` (whether it is LSJ's lead sense). The score blends lexical overlap between the
+sense's citations and the context's content lemmas, a markedness bonus for a
+dialectally/register-marked sense, and a mild prior favouring the earlier, more central
+senses; ties keep LSJ order, so with no overlap signal the dominant sense leads, exactly
+as `content_glosses` assumes.
+
+**EXPLORATORY.** A ranked sense is a hypothesis from a lexical-overlap heuristic, not a
+word-sense disambiguation. Treat it as a lead to weigh, and label it unverified at point
+of use.
+
+### Grounding-regime detector (EXPLORATORY)
+
+Lexical grounding helps on some text and quietly hurts on other text (the
+dominant-gloss trap on a familiar, highly polysemous word). `ai.grounding_regime`
+estimates which regime a generation step is in, before you spend a call:
+
+```python
+from aegean import ai, greek
+greek.use_lsj()                                   # optional — adds the polysemy/markedness signals
+
+sig = ai.grounding_regime("σπεῖρε τὴν ἄρουραν")
+sig.regime                                        # 'help' | 'neutral' | 'hurt'
+sig.rarity, sig.polysemy, sig.markedness          # the three component signals
+bool(sig)                                          # True only when regime == 'help'
+```
+
+`grounding_regime(text, *, corpus=None)` returns a `RegimeSignal` combining three
+deterministic signals: **rarity** (corpus-relative via `greek.terminology_rarity` when a
+`corpus` is passed, else a length/charset heuristic), **polysemy load** (mean LSJ senses
+over the content words, when `greek.use_lsj()` is active), and **register markedness**
+(the share of content words LSJ tags dialectal/poetic/technical). High rarity favours
+grounding (`help`); high polysemy without rarity favours `hurt`; little of either is
+`neutral`.
+
+**EXPLORATORY.** It is a difficulty *signal* for when to apply grounding, not a measured
+accuracy, and never raises on a missing backend (it returns the signals it can compute).
+
 ---
 
 ## Grounded-generation eval

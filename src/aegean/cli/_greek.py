@@ -270,6 +270,28 @@ def accentuate(
 
 
 @greek_app.command()
+def sandhi(
+    word: str = typer.Argument(..., help="A Greek token (crasis / elision / movable-nu are resolved)."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Resolve a surface contraction (crasis / elision / movable-nu) to its underlying word(s)."""
+    from aegean import greek
+
+    r = greek.resolve_sandhi(word)
+    if json_out:
+        emit_json({
+            "surface": r.surface, "words": list(r.words), "kind": r.kind,
+            "uncertain": r.uncertain, "note": r.note,
+        })
+        return
+    if r.kind is None:
+        print(word)
+        return
+    flag = "  (uncertain)" if r.uncertain else ""
+    print(f"{' '.join(r.words)}\t{r.kind}{flag}")
+
+
+@greek_app.command()
 def tag(
     text: str = TEXT_ARG,
     treebank: bool = TREEBANK_OPT,
