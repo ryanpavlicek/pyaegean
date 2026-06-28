@@ -4,6 +4,20 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.13.0 (2026-06-28)
+
+### Added
+- **Idiom / multiword-expression grounding.** `ai.idiom_glosses(text)` detects non-compositional Greek
+  idioms (ἐφ' ἡμῖν "in our power", οὐκ ἔστιν ὅπως "there is no way that", οἷός τε "be able to", …) from
+  a curated bundled lexicon and grounds their real meaning, the error class that per-token morphology
+  grounding cannot reach. Detection is surface plus contiguous-lemma matching (so inflected idioms are
+  caught); idioms are added to the morphology and full translation grounding by default.
+- **Post-hoc verify translation** (`translate(..., verify=True)`; `aegean ai translate --verify`):
+  translates the passage first, then checks the draft against the gold morphology, glosses, and idioms
+  and repairs definite contradictions (wrong voice, subject/object, case, a wrong rare-word or idiom
+  sense, omission/addition). Because the analysis only checks the draft, it can catch errors without
+  ever biasing the translation. Costs a second model call; recommended for hard or high-stakes passages.
+
 ## 0.12.0 (2026-06-28)
 
 ### Changed
