@@ -246,6 +246,30 @@ def ipa(
 
 
 @greek_app.command()
+def accentuate(
+    word: str = typer.Argument(..., help="The Greek word (any existing accent is re-placed)."),
+    recessive: bool = typer.Option(
+        True, "--recessive/--persistent",
+        help="Recessive (finite verbs, the default) vs persistent (nominals; needs --lemma)."),
+    lemma: str = typer.Option(
+        "", "--lemma", help="The lemma whose written accent fixes the home syllable (persistent)."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Place the legal accent on a word, by the limitation laws (recessive verb / persistent nominal)."""
+    from aegean import greek
+
+    ap = greek.place_accent(word, recessive=recessive, lemma=lemma or None)
+    if json_out:
+        emit_json({
+            "form": ap.form, "accent": ap.accent_type, "position_from_end": ap.position_from_end,
+            "classification": ap.classification, "certain": ap.certain, "note": ap.note,
+        })
+        return
+    suffix = "" if ap.certain else f"  (uncertain: {ap.note})"
+    print(f"{ap.form}\t{ap.classification}{suffix}")
+
+
+@greek_app.command()
 def tag(
     text: str = TEXT_ARG,
     treebank: bool = TREEBANK_OPT,
