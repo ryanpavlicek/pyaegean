@@ -11,11 +11,16 @@ Greek grounding has several **modes** (see `grounding_for`). The default,
 ``"morphology"``, grounds the model in deterministic morphology and syntax (lemma,
 part of speech, case/voice/tense, and a clause skeleton from the dependency parse)
 and adds **no** dictionary glosses: morphology, voice, case-role, and syntactic structure
-are facts the toolkit computes reliably and that a model can use directly. ``"full"`` keeps
-those morphology lines and adds a gloss layer in the configuration that helps rather than
-hurts: glosses sourced from a **concise, common-sense-first** dictionary cascade (Middle
-Liddell, Cunliffe for Homer, Abbott-Smith / Dodson for the NT), cleaned, and gated to the
-text's rare content words (see `ai.grounding.content_glosses` with ``source="cascade"``).
+are facts the toolkit computes reliably and that a model can use directly. It also adds a
+gloss of any **idiom** present (``ai.idiom_glosses``): a non-compositional multiword
+expression is the one error class per-token morphology cannot reach, since the words'
+lemmas and case only reinforce the wrong literal reading, and the curated idiom lexicon
+matches deterministically with a low false-positive rate, so it rides with the safe
+default. ``"full"`` keeps those morphology and idiom lines and adds a gloss layer in the
+configuration that helps rather than hurts: glosses sourced from a **concise,
+common-sense-first** dictionary cascade (Middle Liddell, Cunliffe for Homer, Abbott-Smith /
+Dodson for the NT), cleaned, and gated to the text's rare content words (see
+`ai.grounding.content_glosses` with ``source="cascade"``).
 That source matters: a first-sense gloss from the historical LSJ lexicon is often the
 archaic meaning (καιρός, βίος), so asserting it injects errors, whereas a concise dictionary
 leads with the common sense and helps most exactly on the rare vocabulary a model is likely
@@ -36,6 +41,7 @@ from typing import Literal
 from ..ai import translate as _ai_translate
 from ..ai.client import ExploratoryResult, LLMClient
 from ..ai.grounding import GroundingItem, content_glosses
+from ..ai.idioms import idiom_glosses
 
 _SOURCE_NAMES = {"greek": "Ancient Greek", "lineara": "Linear A"}
 
@@ -182,6 +188,13 @@ def _greek_grounding(
 
     if mode in ("morphology", "full"):
         out = _morphology_items(text)
+        # Idiom glosses ride with the morphology grounding in both modes. A
+        # non-compositional multiword expression is the one error class per-token
+        # morphology cannot reach (its lemmas/case only reinforce the literal reading), and
+        # the curated lexicon matches deterministically with a low false-positive rate on
+        # exact surface match, so it belongs in the safe default, not gated like sense
+        # glosses. Best-effort: empty when no idiom is present. Source tag lexicon:idiom.
+        out.extend(idiom_glosses(text))
         if mode == "full" and glosses:
             # The validated-best gloss layer: a concise, common-sense-first dictionary
             # cascade (never LSJ-first-sense), cleaned, and gated to the rare content words
@@ -220,19 +233,24 @@ def grounding_for(
 ) -> list[GroundingItem]:
     """Local, deterministic grounding evidence for ``text`` in ``script`` — each item
     tagged with its source (``analysis:morphology`` / ``analysis:syntax`` /
-    ``analysis:rarity`` / ``lemmatizer`` / ``lexicon:LSJ`` / ``transliteration``) so the
-    result's `trace()` shows where the grounding came from.
+    ``analysis:rarity`` / ``lexicon:idiom`` / ``lemmatizer`` / ``lexicon:LSJ`` /
+    ``transliteration``) so the result's `trace()` shows where the grounding came from.
 
     For ``greek``, ``mode`` selects the grounding style:
 
     - ``"morphology"`` (default, recommended): deterministic morphology and syntax —
       a per-token line (lemma, part of speech, case/voice/tense) plus a clause skeleton
       (main predicate, subject, object) from the dependency parse, and a rare-word flag.
-      **No dictionary glosses.** Morphology, voice, case-role, and structure are facts the
-      toolkit computes reliably and a model can use directly; an auto-selected dictionary
-      gloss can surface the wrong or an archaic sense and mislead the model, so this mode
-      omits glosses entirely.
-    - ``"full"``: the ``"morphology"`` lines **and** a gloss layer in the configuration
+      **No dictionary glosses**, but it does include a gloss of any **idiom** present (a
+      curated, non-compositional multiword expression matched on surface/lemma; source
+      ``lexicon:idiom``). Morphology, voice, case-role, and structure are facts the toolkit
+      computes reliably and a model can use directly; an auto-selected dictionary gloss can
+      surface the wrong or an archaic sense and mislead the model, so this mode omits those.
+      An idiom gloss is different: the phrase is non-compositional, so the literal token
+      reading is *itself* the error, and the lexicon match is deterministic and
+      low-false-positive, which is why it rides with the default.
+    - ``"full"``: the ``"morphology"`` lines (including idiom glosses) **and** a gloss layer
+      in the configuration
       that helps. Glosses come from a concise, common-sense-first dictionary cascade
       (Middle Liddell, Cunliffe for Homer, Abbott-Smith / Dodson for the NT), cleaned, and
       gated to the rare content words. **Not** LSJ-first-sense: that historical lexicon
@@ -279,8 +297,9 @@ def translate(
 
     For ``greek``, ``mode`` (default ``"morphology"``) selects the grounding style; see
     `grounding_for`. The default grounds the model in deterministic morphology and
-    syntax (lemma, part of speech, case/voice/tense, clause skeleton) with **no**
-    dictionary glosses. Use ``mode="full"`` to add, on top of those morphology lines, a
+    syntax (lemma, part of speech, case/voice/tense, clause skeleton) plus a gloss of any
+    non-compositional idiom present (``ai.idiom_glosses``), with **no** dictionary glosses
+    on ordinary words. Use ``mode="full"`` to add, on top of those morphology lines, a
     gloss layer sourced from a concise, common-sense-first dictionary cascade (Middle
     Liddell, Cunliffe, Abbott-Smith / Dodson), cleaned and gated to the rare content words:
     a concise dictionary leads with the common sense and helps most on rare vocabulary,

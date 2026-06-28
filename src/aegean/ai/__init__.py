@@ -58,6 +58,7 @@ from .grounding import (
     lexicon_evidence,
     wrap_untrusted,
 )
+from .idioms import idiom_glosses
 from .sense import RegimeSignal, SenseCandidate, grounding_regime, select_sense
 
 __all__ = [
@@ -97,6 +98,7 @@ __all__ = [
     "cooccurrence_evidence",
     "evidence_block",
     "wrap_untrusted",
+    "idiom_glosses",
     # sense selection + grounding regime (exploratory)
     "select_sense",
     "grounding_regime",

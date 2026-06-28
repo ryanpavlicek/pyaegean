@@ -1,0 +1,230 @@
+[
+  {
+    "surface": "οὐ μόνον ... ἀλλὰ καί",
+    "lemmas": "οὐ μόνος ἀλλά καί",
+    "gloss": "not only ... but also",
+    "note": "correlative, prose and NT"
+  },
+  {
+    "surface": "οὐχ ὅπως ... ἀλλὰ καί",
+    "lemmas": "οὐ ὅπως ἀλλά καί",
+    "gloss": "not only not ... but even",
+    "note": "classical prose"
+  },
+  {
+    "surface": "ὡς ἐπὶ τὸ πολύ",
+    "lemmas": "ὡς ἐπί ὁ πολύς",
+    "gloss": "for the most part, generally",
+    "note": "prose (Aristotle, Polybius)"
+  },
+  {
+    "surface": "οἷός τε εἰμί",
+    "lemmas": "οἷος τε εἰμί",
+    "gloss": "be able to, be capable",
+    "note": "classical prose, with infinitive"
+  },
+  {
+    "surface": "οὐκ ἔστιν ὅπως",
+    "lemmas": "οὐ εἰμί ὅπως",
+    "gloss": "there is no way that, it is impossible that",
+    "note": "classical prose"
+  },
+  {
+    "surface": "πέρας γε δή",
+    "lemmas": "πέρας γε δή",
+    "gloss": "finally, in the end",
+    "note": "later prose; idiomatic clincher"
+  },
+  {
+    "surface": "τὰ μὲν ἄλλα",
+    "lemmas": "ὁ μέν ἄλλος",
+    "gloss": "in other respects, for the rest",
+    "note": "adverbial, prose"
+  },
+  {
+    "surface": "ἐπὶ τὸ πλεῖστον",
+    "lemmas": "ἐπί ὁ πολύς",
+    "gloss": "for the most part, to the greatest extent",
+    "note": "classical prose"
+  },
+  {
+    "surface": "ὅσῳ ... τοσούτῳ",
+    "lemmas": "ὅσος τοσοῦτος",
+    "gloss": "the more ... the more",
+    "note": "correlative dative of degree, prose"
+  },
+  {
+    "surface": "διὰ ταχέων",
+    "lemmas": "διά ταχύς",
+    "gloss": "quickly, speedily",
+    "note": "classical prose"
+  },
+  {
+    "surface": "διὰ τοῦτο",
+    "lemmas": "διά οὗτος",
+    "gloss": "for this reason, therefore",
+    "note": "prose and NT, very common"
+  },
+  {
+    "surface": "δῆλον ὅτι",
+    "lemmas": "δῆλος ὅτι",
+    "gloss": "clearly, evidently",
+    "note": "prose, often written δηλονότι"
+  },
+  {
+    "surface": "καθ' ἑαυτόν",
+    "lemmas": "κατά ἑαυτοῦ",
+    "gloss": "by oneself, in itself, separately",
+    "note": "classical prose"
+  },
+  {
+    "surface": "καθ' ὅσον",
+    "lemmas": "κατά ὅσος",
+    "gloss": "in so far as, to the extent that",
+    "note": "prose"
+  },
+  {
+    "surface": "καὶ γάρ",
+    "lemmas": "καί γάρ",
+    "gloss": "for indeed, and in fact",
+    "note": "particle combination, prose"
+  },
+  {
+    "surface": "καὶ δή",
+    "lemmas": "καί δή",
+    "gloss": "and now, and look; suppose that",
+    "note": "lively particle combo, prose and drama"
+  },
+  {
+    "surface": "μὲν οὖν",
+    "lemmas": "μέν οὖν",
+    "gloss": "so then; nay rather",
+    "note": "transitional/corrective particles, prose"
+  },
+  {
+    "surface": "οἷόν τε",
+    "lemmas": "οἷος τε",
+    "gloss": "it is possible",
+    "note": "impersonal, classical prose, with infinitive"
+  },
+  {
+    "surface": "οὐ μὴ",
+    "lemmas": "οὐ μή",
+    "gloss": "surely not, by no means (emphatic denial)",
+    "note": "with subjunctive/future, classical and NT"
+  },
+  {
+    "surface": "οὐδὲν ἧττον",
+    "lemmas": "οὐδείς ἥσσων",
+    "gloss": "nonetheless, none the less",
+    "note": "classical prose"
+  },
+  {
+    "surface": "παρ' ὀλίγον",
+    "lemmas": "παρά ὀλίγος",
+    "gloss": "within a little, almost; by a narrow margin",
+    "note": "prose"
+  },
+  {
+    "surface": "παρὰ πολύ",
+    "lemmas": "παρά πολύς",
+    "gloss": "by far, by a great deal",
+    "note": "prose"
+  },
+  {
+    "surface": "πρὸς τούτοις",
+    "lemmas": "πρός οὗτος",
+    "gloss": "besides, in addition to this",
+    "note": "prose"
+  },
+  {
+    "surface": "τί γάρ;",
+    "lemmas": "τίς γάρ",
+    "gloss": "why? of course; what then?",
+    "note": "dialogue idiom, prose"
+  },
+  {
+    "surface": "τί δέ;",
+    "lemmas": "τίς δέ",
+    "gloss": "what then? and what about...?",
+    "note": "transition in dialogue, prose and NT"
+  },
+  {
+    "surface": "τί παθών",
+    "lemmas": "τίς πάσχω",
+    "gloss": "why on earth, what possessed (someone)",
+    "note": "colloquial classical, esp. Aristophanes/Plato"
+  },
+  {
+    "surface": "τοσούτῳ μᾶλλον",
+    "lemmas": "τοσοῦτος μᾶλλον",
+    "gloss": "so much the more",
+    "note": "correlative, prose"
+  },
+  {
+    "surface": "τὸ καθόλου",
+    "lemmas": "ὁ καθόλου",
+    "gloss": "in general, universally",
+    "note": "philosophical prose (Aristotle)"
+  },
+  {
+    "surface": "ἀφ' οὗ",
+    "lemmas": "ἀπό ὅς",
+    "gloss": "since, from the time when",
+    "note": "temporal, prose"
+  },
+  {
+    "surface": "ἐκ τούτου",
+    "lemmas": "ἐκ οὗτος",
+    "gloss": "after this, thereupon; from this",
+    "note": "prose (Xenophon)"
+  },
+  {
+    "surface": "ἐν τάχει",
+    "lemmas": "ἐν τάχος",
+    "gloss": "quickly, soon",
+    "note": "adverbial prepositional phrase, prose and poetry"
+  },
+  {
+    "surface": "ἐπὶ τούτοις",
+    "lemmas": "ἐπί οὗτος",
+    "gloss": "on these terms; thereupon",
+    "note": "prose"
+  },
+  {
+    "surface": "ἐφ' ἡμῖν",
+    "lemmas": "ἐπί ἐγώ",
+    "gloss": "in our power, up to us",
+    "note": "philosophical prose (Stoic/Aristotle)"
+  },
+  {
+    "surface": "ἐφ' ᾧτε",
+    "lemmas": "ἐπί ὅστε",
+    "gloss": "on condition that",
+    "note": "with infinitive/future, classical prose"
+  },
+  {
+    "surface": "ἔστιν οἵ",
+    "lemmas": "εἰμί ὅς",
+    "gloss": "some, certain ones",
+    "note": "classical prose; ἔστιν ὅτε 'sometimes', ἔστιν οὗ 'in some places'"
+  },
+  {
+    "surface": "ἕνεκα τούτου",
+    "lemmas": "ἕνεκα οὗτος",
+    "gloss": "for this reason, on this account",
+    "note": "prose; postposed ἕνεκα"
+  },
+  {
+    "surface": "ἕως ἄν",
+    "lemmas": "ἕως ἄν",
+    "gloss": "until (such time as)",
+    "note": "with subjunctive, prose and NT"
+  },
+  {
+    "surface": "ὥρα ἐστί",
+    "lemmas": "ὥρα εἰμί",
+    "gloss": "it is time (to)",
+    "note": "with infinitive, prose"
+  }
+]
