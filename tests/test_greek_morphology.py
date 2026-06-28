@@ -111,6 +111,50 @@ def test_analyze_is_cached_and_returns_tuple() -> None:
     assert analyze("λόγον") is out  # lru_cache returns the same object
 
 
+def test_indefinite_and_interrogative_pronoun() -> None:
+    # analyze('τις') used to return [] — the enclitic indefinite is now covered.
+    indef = analyze("τις")
+    assert indef and all(a.pos == "PRON" and a.lemma == "τις" for a in indef)
+    assert _has("τις", "PRON", case="nom", number="sg", gender="masc")
+    # The interrogative τίς (persistent acute) is a distinct lemma/paradigm.
+    interr = analyze("τίς")
+    assert interr and all(a.pos == "PRON" and a.lemma == "τίς" for a in interr)
+    assert _has("τίς", "PRON", case="nom", number="sg")
+    # Oblique forms carry case/number/gender, and the accent keeps the two apart.
+    assert _has("τινός", "PRON", case="gen", number="sg")  # enclitic indefinite
+    assert _has("τίνα", "PRON", case="acc", number="sg", gender="masc")  # interrogative
+    assert all(a.lemma == "τις" for a in analyze("τινός"))
+    assert all(a.lemma == "τίς" for a in analyze("τίνα"))
+
+
+def test_relative_pronoun_paradigm() -> None:
+    assert _has("ὅς", "PRON", case="nom", number="sg", gender="masc")
+    assert _has("ἥ", "PRON", case="nom", number="sg", gender="fem")
+    assert _has("ὅ", "PRON", case="nom", number="sg", gender="neut")
+    assert _has("ᾧ", "PRON", case="dat", number="sg", gender="masc")
+    assert _has("ὧν", "PRON", case="gen", number="pl")
+    assert _has("οἷς", "PRON", case="dat", number="pl")
+    assert all(a.lemma == "ὅς" for a in analyze("ᾧ"))
+    # The relative ἥ (rough breathing) is not the article ἡ (smooth): the latter
+    # stays a single DET reading, untouched.
+    art = analyze("ἡ")
+    assert art and art[0] == Analysis(lemma="ἡ", pos="DET")
+
+
+def test_added_determiners_numerals_ordinals() -> None:
+    # Determiners and numerals resolve to a single confident closed-class tag.
+    assert analyze("ἄλλος")[0].pos == "DET"
+    assert analyze("ἕκαστος")[0].pos == "DET"
+    assert analyze("πᾶς")[0].pos == "DET"
+    assert analyze("εἷς")[0].pos == "NUM"
+    assert analyze("δύο")[0].pos == "NUM"
+    assert analyze("τρεῖς")[0].pos == "NUM"
+    assert best_pos("εἷς") == "NUM"
+    # Ordinals follow UD: ADJ, not NUM.
+    assert analyze("πρῶτος")[0].pos == "ADJ"
+    assert best_pos("πρῶτος") == "ADJ"
+
+
 def test_rule_engine_is_backend_independent(monkeypatch) -> None:
     """The rule engine's seed-lemma hint must never consult the trained backends.
 

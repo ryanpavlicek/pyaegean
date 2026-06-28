@@ -11,7 +11,8 @@
     <sense id="n1.0" n="A" level="1" TEIform="sense">computation, reckoning; related to the verb
        <foreign lang="greek" TEIform="foreign">le/gw</foreign>
        <bibl TEIform="bibl"><author>Hdt.</author> <biblScope>1.1</biblScope></bibl></sense>
-    <sense id="n1.1" n="II" level="2" TEIform="sense">the word or that by which inner thought is expressed</sense>
+    <sense id="n1.1" n="II" level="2" TEIform="sense">the word or that by which inner thought is expressed,
+       <foreign lang="greek" TEIform="foreign">e)/pos</foreign></sense>
   </entryFree>
   <entryFree id="n2" key="a)/nqrwpos" type="main" TEIform="entryFree">
     <orth lang="greek" TEIform="orth">a)/nqrwpos</orth>,

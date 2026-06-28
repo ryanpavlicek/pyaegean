@@ -39,6 +39,7 @@ from __future__ import annotations
 from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
 from .accent import AccentInfo, accentuation
 from .accent_law import AccentPlacement, place_accent, persistent_accent, recessive_accent
+from .sandhi import ResolvedForm, resolve_sandhi, resolve_sentence
 from .inflect import (
     Inflector,
     InflectorNotLoadedError,
@@ -163,6 +164,9 @@ __all__ = [
     "recessive_accent",
     "persistent_accent",
     "AccentPlacement",
+    "resolve_sandhi",
+    "resolve_sentence",
+    "ResolvedForm",
     "syllable_quantities",
     "scan",
     "scan_line",

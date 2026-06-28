@@ -46,3 +46,26 @@ def test_pos_tags_over_a_sentence():
 
 def test_grave_is_folded_to_acute_for_lookup():
     assert pos_tag("καὶ") == pos_tag("καί") == "CCONJ"
+
+
+@pytest.mark.parametrize(
+    "word,tag",
+    [
+        # interrogative vs enclitic indefinite (told apart by the accent)
+        ("τίς", "PRON"), ("τί", "PRON"), ("τις", "PRON"), ("τι", "PRON"),
+        ("τίνος", "PRON"), ("τινός", "PRON"),
+        # relative ὅς ἥ ὅ and a few oblique forms
+        ("ὅς", "PRON"), ("ἥ", "PRON"), ("ὅ", "PRON"), ("ᾧ", "PRON"), ("ὧν", "PRON"),
+        # determiners
+        ("ἄλλος", "DET"), ("ἕκαστος", "DET"), ("πᾶς", "DET"),
+        # cardinals (NUM) and ordinals (ADJ, per UD)
+        ("εἷς", "NUM"), ("μία", "NUM"), ("ἕν", "NUM"), ("δύο", "NUM"),
+        ("τρεῖς", "NUM"), ("τέσσαρες", "NUM"),
+        ("πρῶτος", "ADJ"), ("δεύτερος", "ADJ"), ("τρίτος", "ADJ"),
+        # remaining common particles
+        ("μέντοι", "PART"), ("καίτοι", "PART"), ("δῆτα", "PART"), ("γοῦν", "PART"),
+        ("τοίνυν", "PART"), ("που", "PART"), ("ποτε", "PART"), ("πως", "PART"),
+    ],
+)
+def test_added_closed_class_tags(word, tag):
+    assert pos_tag(word) == tag

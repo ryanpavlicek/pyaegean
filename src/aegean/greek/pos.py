@@ -53,14 +53,40 @@ _LEXICON: dict[str, str] = {
     ),
     **_entries("CCONJ", "καί", "τε", "δέ", "ἀλλά", "ἤ", "οὐδέ", "μηδέ"),
     **_entries("SCONJ", "ὅτι", "εἰ", "ἐάν", "ἵνα", "ὡς", "ὅπως", "ἐπεί", "γάρ", "οὖν"),
-    **_entries("PART", "μέν", "δή", "γε", "ἄν", "οὐ", "οὐκ", "οὐχ", "μή", "ἄρα", "τοι"),
+    **_entries(
+        "PART",
+        "μέν", "δή", "γε", "ἄν", "οὐ", "οὐκ", "οὐχ", "μή", "ἄρα", "τοι",
+        # remaining common particles (Smyth §§2769ff.; the indefinite adverbs
+        # που/ποτε/πως are enclitic and distinct from interrogative ποῦ/πότε/πῶς)
+        "μέντοι", "καίτοι", "δῆτα", "γοῦν", "τοίνυν", "που", "ποτε", "πως",
+    ),
     **_entries(
         "PRON",
         "ἐγώ", "μου", "ἐμοῦ", "ἐμοί", "ἐμέ", "σύ", "σοῦ", "σοί", "σέ",
         "ἡμεῖς", "ὑμεῖς", "αὐτός", "αὐτή", "αὐτό", "αὐτοῦ", "αὐτῆς",
-        "αὐτόν", "αὐτήν", "ὅς", "ἥ", "ὅ", "οὗτος", "αὕτη", "τοῦτο",
-        "ὅδε", "ἥδε", "τόδε", "τίς", "τί", "ἐκεῖνος",
+        "αὐτόν", "αὐτήν", "οὗτος", "αὕτη", "τοῦτο",
+        "ὅδε", "ἥδε", "τόδε", "ἐκεῖνος",
+        # relative ὅς, ἥ, ὅ (Smyth §339)
+        "ὅς", "ἥ", "ὅ", "οὗ", "ἧς", "ᾧ", "ᾗ", "ὅν", "ἥν",
+        "οἵ", "αἵ", "ἅ", "ὧν", "οἷς", "αἷς", "οὕς", "ἅς",
+        # interrogative τίς, τί (Smyth §333; persistent acute)
+        "τίς", "τί", "τίνος", "τίνι", "τίνα", "τίνες", "τίνων", "τίσι", "τίσιν", "τίνας",
+        # indefinite τις, τι (Smyth §334; enclitic — the accent tells them apart)
+        "τις", "τι", "τινός", "τινί", "τινά", "τινές", "τινῶν", "τισί", "τισίν", "τινάς",
     ),
+    # determiners (Smyth §§337, 340): adjectival quantifiers, citation forms
+    **_entries("DET", "ἄλλος", "ἕκαστος", "πᾶς"),
+    # low cardinals (Smyth §§347-349): tagged NUM, following UD.
+    **_entries(
+        "NUM",
+        "εἷς", "μία", "ἕν", "ἑνός", "μιᾶς", "ἑνί", "μιᾷ", "ἕνα",
+        "δύο", "δυοῖν", "τρεῖς", "τρία", "τριῶν", "τρισί", "τρισίν",
+        "τέσσαρες", "τέτταρες", "τέσσαρα", "τέτταρα", "τεσσάρων", "τεττάρων",
+    ),
+    # low ordinals: UD tags ordinals ADJ (NumType=Ord), not NUM. Only the
+    # masc-nom citation form is keyed; the full -ος paradigm is handled by the
+    # nominal ending rules.
+    **_entries("ADJ", "πρῶτος", "δεύτερος", "τρίτος"),
     # The copula is effectively a closed paradigm — tag it precisely.
     **_entries(
         "VERB",
