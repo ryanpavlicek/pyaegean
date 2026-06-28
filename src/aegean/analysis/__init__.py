@@ -176,6 +176,21 @@ from .surprisal import (
     train_sign_bigram_model,
     word_surprisal,
 )
+from .null_models import (
+    MonteCarloResult,
+    length_reshuffle_null,
+    monte_carlo_p,
+    within_word_null,
+)
+from .significance import (
+    McNemarResult,
+    PairedBootstrapResult,
+    mcnemar,
+    paired_bootstrap,
+)
+from .embeddings import SignEmbeddings, sign_embeddings
+from .segmentation import Segmentation, candidate_morphs, segment
+from .clustering import ClusterReport, SignClasses, induce_classes
 
 __all__ = [
     # accounting
@@ -330,4 +345,23 @@ __all__ = [
     "CATEGORIES",
     "StructureCategory",
     "LIBATION_WORDS",
+    # permutation / Monte-Carlo null models for structure statistics (exploratory)
+    "MonteCarloResult",
+    "within_word_null",
+    "length_reshuffle_null",
+    "monte_carlo_p",
+    # paired system-vs-system significance (McNemar + paired bootstrap)
+    "McNemarResult",
+    "mcnemar",
+    "PairedBootstrapResult",
+    "paired_bootstrap",
+    # distributional sign embeddings / segmentation / class induction (exploratory)
+    "SignEmbeddings",
+    "sign_embeddings",
+    "Segmentation",
+    "segment",
+    "candidate_morphs",
+    "SignClasses",
+    "ClusterReport",
+    "induce_classes",
 ]

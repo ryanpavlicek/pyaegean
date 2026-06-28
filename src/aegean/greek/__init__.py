@@ -83,6 +83,7 @@ from .joint import (
 )
 from .proiel import DriftReport, evaluate_on_proiel, load_proiel_gold, proiel_dir, proiel_drift
 from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_on_ud
+from .eval_receipt import EvalReceipt, eval_receipt
 from .normalize import (
     NormalizationWarning,
     betacode_to_unicode,
@@ -231,6 +232,8 @@ __all__ = [
     "proiel_drift",
     "DriftReport",
     "evaluate_on_ud",
+    "eval_receipt",
+    "EvalReceipt",
     "use_neural_pipeline",
     "disable_neural_pipeline",
     "analyze_sentence",
