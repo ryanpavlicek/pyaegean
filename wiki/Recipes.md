@@ -39,6 +39,7 @@ you used lands in your paper's references. If you're brand new, start with
 | 23 | [Save a stats or keyness table to CSV](#23--save-a-stats-or-keyness-table-to-csv) | any | no |
 | 24 | [Save a query as a reusable corpus, then reload it](#24--save-a-query-as-a-reusable-corpus-then-reload-it) | any | no |
 | 25 | [Find a work in the catalogue, or bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) | Greek | no |
+| 26 | [Get the best AI translation out of pyaegean](#26--get-the-best-ai-translation-out-of-pyaegean) | Greek | API key (generation only) |
 
 Throughout, the `--json` flag is your friend: every CLI command emits clean JSON
 on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/) or load it
@@ -1008,6 +1009,67 @@ for the whole file. See
 for the import paths and
 [Finding any other work](Greek-Works-and-Books#3-finding-any-other-work) for the
 full catalogue.
+
+---
+
+## 26 · Get the best AI translation out of pyaegean
+
+*(The grounding is offline and deterministic; only the final generation needs a
+provider key.)* A specialist toolkit should make a general model translate
+Ancient Greek **better**, not worse. The lever is `translate(..., mode=...)`: how
+much locally-derived analysis you hand the model. Pick the mode by how hard the
+passage is.
+
+```python
+from aegean import greek, translate
+
+greek.use_neural_pipeline()    # gold morphology + dependency parse feed the grounding
+
+text = "καὶ ἡγοῦμαι σκύβαλα εἶναι, ἵνα Χριστὸν κερδήσω."   # Philippians 3:8
+result = translate.translate(text, mode="morphology")       # the default
+print(result.labeled())        # [EXPLORATORY · translate · <provider>] <translation>
+```
+
+Four modes, by difficulty:
+
+| mode | what the model is told | reach for it when |
+|------|------------------------|-------------------|
+| `"morphology"` *(default)* | lemma, part of speech, **voice**, case-role, clause skeleton, rare-word flags | always: the safe floor; it fixes wrong voice, swapped subject/object, and case errors |
+| `"full"` | morphology **plus concise dictionary glosses** on the rare words | rare, technical, poetic, or documentary vocabulary the model will not know |
+| `"lemma"` | lemmas + gated glosses (legacy) | reproducing older behaviour |
+| `"none"` | the bare text | a top-tier model on a famous, easy passage |
+
+The grounding is fully inspectable offline, with no key and no network beyond the
+one-time dictionary fetch:
+
+```python
+greek.use_lsj(); greek.use_lexicon("abbott-smith")   # a concise, common-sense-first dictionary
+
+for item in translate.grounding_for(text, "greek", mode="full"):
+    print(item)
+# Clause skeleton: main predicate 'ἡγοῦμαι' (ἡγέομαι, middle pres sg 1st); object σκύβαλα
+# σκύβαλα = σκύβαλον (noun, acc pl n)
+# Rare / easily-mistranslated words: κερδήσω, σκύβαλα
+# σκύβαλα (σκύβαλον): dung, filth, refuse          ← the meaning a weak model misses
+```
+
+That last line is the point: without it a small model renders σκύβαλα as
+"scourges"; with it, "refuse." The glosses in `"full"` come from **concise,
+common-sense-first** dictionaries (Middle Liddell, Cunliffe for Homer,
+Abbott-Smith for the New Testament), rarity-gated to the words that matter. They
+are deliberately *not* the first sense of LSJ, a historical lexicon whose opening
+sense is frequently the archaic one (καιρός "a row of thrums in the loom" comes
+before "the right time").
+
+**What grounding does, and what it does not.** The morphology reliably removes
+grammatical errors (voice, subject/object, case); the `"full"` glosses remove
+rare-word errors. Both help **weaker models and rarer text the most**: a frontier
+model on a canonical line has little to gain. Grounding will not make a weak model
+an expert, and Ancient Greek translation has genuine interpretive range (no two
+published Homers agree), so every result is a **labeled, provenanced hypothesis**,
+never a verdict. `ai.grounding_regime(text, corpus=...)` gives an exploratory
+help/neutral/hurt signal, but the simple rule holds: morphology always, glosses
+when the vocabulary is rare. See [AI Layer](AI-Layer).
 
 ---
 
