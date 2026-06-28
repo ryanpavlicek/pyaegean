@@ -79,27 +79,29 @@ _CRASIS: dict[str, tuple[str, ...]] = {
 # any accent are stripped before lookup). Restricted to forms with a single
 # possible restoration; ambiguous ones (e.g. ``τ'`` = τε? τοι?) are omitted and
 # flagged uncertain at point of use.
+# Keyed ACCENT-BLIND (bare, lowercased) to match the _bare_lower(stem) lookup below;
+# the aspirated variants (ἐφ' ὑφ' καθ' μεθ' ἀφ') keep their distinct consonant, which
+# is what disambiguates them from the unaspirated forms.
 _ELISION: dict[str, str] = {
-    "ἀλλ": "ἀλλά",
+    "αλλ": "ἀλλά",
     "δ": "δέ",
     "γ": "γε",
     "τ": "τε",
-    "οὐδ": "οὐδέ",
-    "μηδ": "μηδέ",
     "ουδ": "οὐδέ",
-    "ἀπ": "ἀπό",
-    "ἐπ": "ἐπί",
-    "ἐφ": "ἐπί",      # before a rough vowel (aspirated)
-    "ὑπ": "ὑπό",
-    "ὑφ": "ὑπό",
+    "μηδ": "μηδέ",
+    "απ": "ἀπό",
+    "επ": "ἐπί",
+    "εφ": "ἐπί",      # ἐφ' before a rough breathing (aspirated)
+    "υπ": "ὑπό",
+    "υφ": "ὑπό",      # ὑφ' aspirated
     "μετ": "μετά",
-    "μεθ": "μετά",
+    "μεθ": "μετά",   # μεθ' aspirated
     "κατ": "κατά",
-    "καθ": "κατά",
+    "καθ": "κατά",   # καθ' aspirated
     "παρ": "παρά",
     "δι": "διά",
-    "ἀν": "ἀνά",
-    "ἀφ": "ἀπό",
+    "αν": "ἀνά",
+    "αφ": "ἀπό",      # ἀφ' aspirated
 }
 
 # ELIDED WORDS: full (non-proclitic) forms whose elision is common and whose
