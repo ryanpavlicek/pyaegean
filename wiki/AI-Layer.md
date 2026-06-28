@@ -294,9 +294,13 @@ strings). They all return an `ExploratoryResult`.
 
 `ai.translate` translates source text and adds a short note on any ambiguous
 choices. The CLI command is the **hybrid** translator (`aegean.translate`): it
-first builds local grounding (Greek baseline lemmas, or Linear A
-transliteration) and *then* calls the model, so the translation is anchored to
-real local facts. See [Hybrid translation](#hybrid-translation) below.
+first builds local grounding and *then* calls the model, so the translation is
+anchored to real local facts. By default the Greek grounding is **morphology-first**
+(`mode="morphology"`: lemma, part of speech, voice, case-role, clause structure, and
+rare-word flags); `mode="full"` adds concise dictionary glosses on the rare words,
+`mode="none"` sends the bare text. See [Hybrid translation](#hybrid-translation)
+below, and [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean) for
+choosing a mode.
 
 ```python
 from aegean import ai
@@ -317,7 +321,8 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `source=` (API) | `"Ancient Greek"` | Source-language label. |
 | `--script` (CLI) | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `target=` / `--target` | `"English"` | Target language. |
-| `glosses=` / `--glosses` / `--no-glosses` | on | Add gated LSJ glosses to the Greek grounding (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
+| `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
+| `glosses=` / `--glosses` / `--no-glosses` | on | Legacy flag, superseded by `mode`; still toggles glosses in `lemma`/`full` modes (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
 | `--trace` | off | Print the grounding provenance under the answer. |
 
 ### Gloss

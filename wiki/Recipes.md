@@ -747,7 +747,7 @@ aegean data fetch damos           # pre-fetch a dataset (idempotent when cached)
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.11.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.12.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.11.0"
+version = "0.12.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
