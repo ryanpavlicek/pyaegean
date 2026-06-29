@@ -2,10 +2,11 @@
 
 The workbench (the browser UI at linearaworkbench.xyz) is published as a small static-build
 release asset; this command fetches it to the cache (sha256-pinned, ~3 MB, the established
-fetch-to-cache pattern) and serves it on ``http://localhost:<port>/``. If the Linear A
-facsimile imagery has already been fetched (``aegean.data.fetch("lineara-images")``), it is
-mounted at ``/upstream/images/`` so the imagery browser works too; otherwise the app runs
-fine without it (image-heavy views just show no picture).
+fetch-to-cache pattern) and serves it on ``http://localhost:<port>/``. The Linear A facsimile
+imagery is a separate ~116 MB asset: ``aegean workbench --fetch-images`` (or
+``aegean data fetch lineara-images``) downloads it, after which it is mounted at
+``/upstream/images/`` so the imagery browser works too. Without it the app runs fine (image-heavy
+views just show no picture).
 """
 
 from __future__ import annotations
@@ -33,8 +34,24 @@ def _images_dir() -> Path | None:
     """The cached Linear A imagery directory, if the user has fetched it; else None."""
     from ..data import cache_dir
 
-    d = cache_dir() / "lineara-images"
-    return d if d.is_dir() else None
+    base = cache_dir() / "lineara-images"
+    # The asset unpacks to lineara-images/images/<file>, so serve from that inner
+    # directory; fall back to the base for any flat layout.
+    inner = base / "images"
+    if inner.is_dir():
+        return inner
+    return base if base.is_dir() else None
+
+
+def _prepare_images(*, fetch_images: bool) -> Path | None:
+    """Optionally download the ~116 MB Linear A imagery asset, then return the cached images
+    directory (or ``None`` if it was never fetched)."""
+    if fetch_images:
+        from ..data import fetch
+
+        print("Fetching Linear A imagery (~116 MB, first time only)...")
+        fetch("lineara-images")
+    return _images_dir()
 
 
 def _resolve_path(path: str, static_dir: Path, images_dir: Path | None) -> str | None:
@@ -73,12 +90,18 @@ def workbench(
     port: int = typer.Option(8000, "--port", "-p", help="Port to serve on."),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't open a web browser."),
     force: bool = typer.Option(False, "--force", help="Re-download the app build."),
+    fetch_images: bool = typer.Option(
+        False,
+        "--fetch-images",
+        help="Download the Linear A facsimile imagery (~116 MB, once) so the picture browser works.",
+    ),
 ) -> None:
     """Serve the Linear A Research Workbench from a local web server.
 
-    Fetches the sha256-pinned ``workbench-app`` build to the cache on first use, then serves
-    it at ``http://localhost:<port>/`` until interrupted (Ctrl+C). Cached Linear A imagery,
-    if present, is mounted so the picture browser works."""
+    Fetches the sha256-pinned ``workbench-app`` build to the cache on first use, then serves it
+    at ``http://localhost:<port>/`` until interrupted (Ctrl+C). The facsimile imagery is a
+    separate ~116 MB asset: pass ``--fetch-images`` (or run ``aegean data fetch lineara-images``)
+    to download it; once cached it is mounted at ``/upstream/images/`` so the picture browser works."""
     import socketserver
     import webbrowser
 
@@ -89,7 +112,12 @@ def workbench(
     except Exception as exc:  # network/checksum errors surface as one clean CLI line
         raise fail(f"could not fetch the workbench build: {exc}") from exc
 
-    handler = _make_handler(static_dir, _images_dir())
+    try:
+        images_dir = _prepare_images(fetch_images=fetch_images)
+    except Exception as exc:  # network/checksum errors surface as one clean CLI line
+        raise fail(f"could not fetch the imagery: {exc}") from exc
+
+    handler = _make_handler(static_dir, images_dir)
     url = f"http://localhost:{port}/"
     try:
         server = socketserver.ThreadingTCPServer(("127.0.0.1", port), handler)
@@ -97,6 +125,8 @@ def workbench(
         raise fail(f"could not bind port {port} ({exc}); try --port <n>") from exc
     with server:
         print(f"Serving the Linear A Research Workbench at {url}  (Ctrl+C to stop)")
+        if images_dir is None:
+            print("  facsimile images not cached — re-run with --fetch-images to show them.")
         if not no_browser:
             webbrowser.open(url)
         try:
