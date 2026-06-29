@@ -41,6 +41,27 @@ def test_inflected_idiom_caught_by_lemma_path():
     assert any(c.startswith("οἷός τε εἰμί:") and "be able to" in c for c in contents), contents
 
 
+def test_lemma_path_longest_match_suppresses_nested_sub_idiom():
+    # Longest-match suppression must apply on the *lemma* path, not only the surface path.
+    # In "οἷός τε ἐστί φεύγειν", ἐστί lemmatizes to εἰμί, so the long idiom οἷός τε εἰμί
+    # (lemmas οιος τε ειμι) matches contiguously; its nested sub-idiom οἷόν τε (lemmas
+    # οιος τε) occupies a lemma span contained in the longer one and must be dropped.
+    g = idiom_glosses("οἷός τε ἐστί φεύγειν")
+    refs = [i.ref for i in g]
+    assert "οἷός τε εἰμί" in refs, refs
+    assert "οἷόν τε" not in refs, refs  # the contained sub-idiom is suppressed
+
+
+def test_two_distinct_lemma_path_idioms_both_emit():
+    # Suppression is containment-based, not blanket: two genuinely distinct idioms whose
+    # lemma spans are disjoint must both survive. Here οἷός τε εἰμί (lemma path) and
+    # πρὸς τούτοις (inflected τούτοις, lemma path) sit in different parts of the sentence.
+    g = idiom_glosses("οἷός τε ἐστί λέγειν, πρὸς τούτοις ἔρχεται")
+    refs = {i.ref for i in g}
+    assert "οἷός τε εἰμί" in refs, refs
+    assert "πρὸς τούτοις" in refs, refs
+
+
 def test_no_false_positive_on_unrelated_text():
     # Opening of the Iliad: no idiom from the lexicon is present.
     g = idiom_glosses("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος")

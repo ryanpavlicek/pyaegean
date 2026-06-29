@@ -40,7 +40,8 @@ class ReadingStatus(str, Enum):
     CERTAIN = "certain"      # securely read
     UNCLEAR = "unclear"      # damaged but read (EpiDoc <unclear>; Leiden underdot)
     RESTORED = "restored"    # editorially supplied (EpiDoc <supplied>; Leiden [ ])
-    LOST = "lost"            # not preserved / lacuna (EpiDoc <gap>; Leiden [---])
+    LOST = "lost"            # not preserved / lacuna (read from EpiDoc <gap> or
+    #                          <supplied reason="undefined">; Leiden [---])
 
 
 @dataclass(frozen=True, slots=True)
