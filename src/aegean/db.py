@@ -5,8 +5,9 @@ dependency-free (the same precedent as ``aegean.cache``).
 are normalized into rows (so SQL and full-text search work over them), with the nested
 structure (signs, alternate readings, annotations, line groupings, image refs, notes) kept
 in JSON columns. Provenance and the sign inventory live in a small key/value ``meta`` table.
-``search`` uses FTS5 when the local SQLite build has it, falling back to ``LIKE``; ``stream``
-yields documents lazily for a large DB-backed corpus without materializing it.
+``search`` matches a whole token by default (an FTS5 phrase when available, else an indexed
+exact-match query on ``tokens(text)``); ``mode="substring"`` is the opt-in ``LIKE`` within-token
+search. ``stream`` yields documents lazily for a large DB-backed corpus without materializing it.
 
 A corpus out of the database cites exactly like a corpus out of JSON — the provenance round-
 trips. ``Corpus.to_sql`` / ``Corpus.from_sql`` are thin wrappers over these functions.

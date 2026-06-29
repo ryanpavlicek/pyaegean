@@ -11,7 +11,7 @@ what it meant here, this is the page to keep open.
 > the full command reference see the [CLI](CLI) page; for every Greek function see
 > [Greek NLP](Greek-NLP).
 
-The examples below were run against pyaegean 0.13.0 (the `aegean` command-line tool
+The examples below were run against pyaegean 0.14.0 (the `aegean` command-line tool
 and the `aegean` Python package). Where a feature has both a Python call and a
 shell command, both are shown.
 
@@ -216,8 +216,8 @@ The dictionary headword for an inflected form: the entry you'd look up. `λόγ�
 ### Lemmatization
 The act of reducing each word to its lemma. With no extra backends installed
 pyaegean uses a bundled seed table plus a generalizing rule layer that strips the
-regular first/second-declension and thematic-verb endings back to the citation form;
-the opt-in neural pipeline is more accurate (see [Greek NLP](Greek-NLP)).
+regular second-declension and thematic-verb endings back to the citation form;
+the opt-in neural pipeline is far more accurate (see [Greek NLP](Greek-NLP)).
 
 ```python
 greek.lemmatize("λόγοι")                # 'λόγος'

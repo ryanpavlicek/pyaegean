@@ -836,9 +836,11 @@ shared lexicon as the [treebank backend](#treebank-backed-mode-opt-in));
 
 Two always-offline tiers, tried in order: a small bundled form→lemma **seed table** (for
 irregular and high-frequency forms), then a **generalizing rule layer** that strips the
-regular first/second-declension and thematic-verb endings back to the citation form by
-accent-preserving substitution (`-ου/-ῳ/-ον/-οι/-οις → -ος`, the `-η`/`-α` feminine series,
+regular second-declension and thematic-verb endings back to the citation form by
+accent-preserving substitution (`-ου/-ῳ/-ον/-οι/-οις → -ος`, the first-declension `-αν → -α`,
 and the thematic active `-εις/-ει/-ομεν/-ετε/-ουσι(ν)` plus the infinitive `-ειν` → `-ω`).
+Conservative guards skip contracted/perispomenon forms (`Ἰησοῦς`, `ζῇ`), common neuter `-ον`
+nouns, and indeclinables; the ambiguous `-η` series is left to the seed table and the backends.
 The rules keep the surface stem intact, so an unseen `νόμου` lemmatizes to `νόμος` without a
 lookup. For attested forms the [treebank backend](#treebank-backed-mode-opt-in) supplies
 real, accented lemmas, and the rule-based [morphological analyzer](#morphological-analysis)
