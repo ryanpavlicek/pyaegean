@@ -128,6 +128,50 @@ def test_eval_word_output_sorted_desc():
     assert res.words[0] == ("PA-I-TO", 2)
 
 
+def test_word_output_count_is_document_frequency_not_token_count():
+    """`output="words"` counts distinct inscriptions (document frequency), not
+    tokens. Fixture: KU-RO is written twice in HT1 and once in HT2 — token
+    frequency 3, but document frequency 2. The query count must be 2, and it
+    must differ from the token frequency the corpus reports for the same word."""
+    corpus = [
+        doc("HT1", "HT", ["KU-RO", "PA-I-TO", "KU-RO"]),  # KU-RO twice in one doc
+        doc("HT2", "HT", ["KU-RO"]),                        # and once in another
+    ]
+    idx = build_word_index(corpus)
+    cooc = build_cooccurrence_map(corpus)
+
+    res = eval_query([row("word-prefix", "KU")], "words", corpus, idx, set(), cooc)
+    assert dict(res.words)["KU-RO"] == 2  # document frequency: HT1, HT2 — not 3
+
+    # The token frequency (every occurrence) is 3, so the two semantics differ
+    # here: this is what guards the docstring claim that they are distinct.
+    token_freq = sum(1 for d in corpus for t in d.tokens if t.text == "KU-RO")
+    assert token_freq == 3
+    assert dict(res.words)["KU-RO"] != token_freq
+
+
+def test_corpus_query_word_count_is_document_frequency():
+    """The public `Corpus.query` path agrees: document frequency, not tokens.
+    `Corpus.word_frequencies` reports the token frequency for the same word, so
+    the two `(word, count)` APIs return different numbers on this fixture."""
+    from aegean.core.corpus import Corpus
+
+    c = Corpus(
+        [
+            doc("HT1", "HT", ["KU-RO", "KU-RO"]),  # written twice in one document
+            doc("HT2", "HT", ["KU-RO"]),
+            doc("ZA1", "ZA", ["KU-RO"]),
+        ],
+        script_id="lineara",
+    )
+    qcount = dict(c.query([row("word-prefix", "KU")], output="words").words)["KU-RO"]
+    assert qcount == 3  # distinct documents: HT1, HT2, ZA1
+
+    token_count = dict(c.word_frequencies())["KU-RO"]
+    assert token_count == 4  # four written occurrences
+    assert qcount != token_count
+
+
 def test_run_query_over_corpus_object():
     corpus, _, _ = _eval_corpus()
 

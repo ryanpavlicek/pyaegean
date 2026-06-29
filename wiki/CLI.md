@@ -219,7 +219,10 @@ aegean search lineara "KU-*-RO"
 
 Build a query from repeated `--where field=value` rows. Rows AND together by
 default; prefix the field with `or:` to OR a row, or `!` to negate it.
-`--output-kind` is `inscriptions` (default) or `words`.
+`--output-kind` is `inscriptions` (default) or `words`. With `words` each
+`(word, count)` is the word's **document frequency** (distinct inscriptions it
+occurs in), not its token count, so it differs from the token-frequency counts
+that `search` and `stats` report.
 
 ```bash
 aegean query lineara --where "site-is=Haghia Triada" --where "or:id-contains=ZA" \

@@ -190,8 +190,12 @@ def _content_lemmas(text: str) -> list[str]:
     return out
 
 
-def _lemma_contiguous(lemmas: list[str], wanted: tuple[str, ...]) -> bool:
-    """Whether ``wanted`` appears as a **contiguous** run inside ``lemmas``.
+def _lemma_span(lemmas: list[str], wanted: tuple[str, ...]) -> tuple[int, int] | None:
+    """The first ``[start, end)`` lemma-index span where ``wanted`` appears **contiguously**.
+
+    Returns ``None`` when ``wanted`` is not an adjacent run inside ``lemmas``. The span is
+    what lets the lemma path apply the same longest-match suppression the surface path
+    does: a shorter idiom whose lemma span is contained in a longer match's is dropped.
 
     Contiguity is deliberate: a *gapped* subsequence match over an all-function-word
     idiom (e.g. ``ἐν ὁ``) fires on any sentence that merely contains those words
@@ -203,8 +207,11 @@ def _lemma_contiguous(lemmas: list[str], wanted: tuple[str, ...]) -> bool:
     path); see `idiom_glosses`."""
     n = len(wanted)
     if n == 0 or n > len(lemmas):
-        return False
-    return any(tuple(lemmas[i : i + n]) == wanted for i in range(len(lemmas) - n + 1))
+        return None
+    for i in range(len(lemmas) - n + 1):
+        if tuple(lemmas[i : i + n]) == wanted:
+            return (i, i + n)
+    return None
 
 
 def idiom_glosses(text: str) -> list[GroundingItem]:
@@ -229,8 +236,9 @@ def idiom_glosses(text: str) -> list[GroundingItem]:
       (the surface path catches them). Inflection coverage depends on the active
       lemmatizer; the path simply yields fewer matches without a rich backend loaded.
 
-    When idioms overlap, the **longest** surface match wins and its shorter sub-idioms
-    are suppressed; identical glosses are de-duplicated. Best-effort and offline:
+    When idioms overlap, the **longest** match wins and its shorter sub-idioms are
+    suppressed, on both the surface path (by token span) and the lemma path (by
+    lemma-index span); identical glosses are de-duplicated. Best-effort and offline:
     returns ``[]`` (never raises) on empty input or a missing backend. The lexicon is a
     curated set of vetted non-compositional expressions, not an exhaustive idiom
     dictionary; a gloss is a meaning aid, not a syntactic claim.
@@ -265,13 +273,22 @@ def idiom_glosses(text: str) -> list[GroundingItem]:
     # merely present in order: a gapped subsequence over an all-function-word idiom would
     # fire on any sentence containing those words scattered apart. Explicitly gapped ``...``
     # correlatives are excluded here (contiguity is wrong for them); the surface path
-    # already catches them. These have no token span, so they neither suppress nor are
-    # suppressed by span; gloss-level de-duplication below drops restated meanings.
+    # already catches them. Longest-match suppression applies on this path too, keyed on
+    # the lemma-index span: ``_idioms()`` is longest-first, so a shorter idiom whose lemma
+    # span is contained in an already-accepted longer match is dropped (``οἷόν τε`` nested
+    # in ``οἷός τε εἰμί``). Two genuinely distinct idioms occupy disjoint lemma spans and
+    # both survive. Gloss-level de-duplication below drops any restated meanings.
+    lemma_covered: list[tuple[int, int]] = []
     for idiom in _idioms():
         if idiom.surface in seen_surface or len(idiom.segments) > 1:
             continue
-        if _lemma_contiguous(lemmas, idiom.lemmas):
-            matched.append(idiom)
+        lspan = _lemma_span(lemmas, idiom.lemmas)
+        if lspan is None:
+            continue
+        if any(c[0] <= lspan[0] and lspan[1] <= c[1] for c in lemma_covered):
+            continue  # contained in a longer accepted match
+        lemma_covered.append(lspan)
+        matched.append(idiom)
 
     out: list[GroundingItem] = []
     seen_gloss: set[str] = set()

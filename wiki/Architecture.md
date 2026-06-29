@@ -146,8 +146,8 @@ conventions for damaged, restored, and lost text.
 |---|---|---|---|
 | `CERTAIN` | `"certain"` | (plain text) | securely read |
 | `UNCLEAR` | `"unclear"` | `<unclear>` | underdot |
-| `RESTORED` | `"restored"` | `<supplied>` | `[ ]` |
-| `LOST` | `"lost"` | `<gap>` / `<supplied reason="lost">` | `[---]` |
+| `RESTORED` | `"restored"` | `<supplied reason="lost">` | `[ ]` |
+| `LOST` | `"lost"` | `<supplied reason="undefined">` (also reads `<gap>`) | `[---]` |
 
 A token's `alt` tuple holds alternate readings (EpiDoc `<app>`/`<rdg>`); `text`
 is the lemma. The bundled corpora are normalized transcriptions (almost entirely
@@ -525,7 +525,8 @@ columns.
 
 `filter()` does exact metadata matching; the **query engine** does everything
 else: text/prefix/suffix/sign-pattern/co-occurrence predicates with AND / OR /
-NOT, returning either inscriptions or `(word, count)` pairs. It's a faithful port
+NOT, returning either inscriptions or `(word, count)` pairs (the count is
+document frequency: distinct inscriptions, not tokens). It's a faithful port
 of the Linear A Research Workbench's query engine, so results match the browser
 tool.
 
@@ -574,7 +575,11 @@ print(len(res.inscriptions))           # 55
 print(res.description)                 # Site is: Haghia Triada · Word starts with: KU
 ```
 
-Switch `output="words"` to get ranked `(word, count)` pairs instead:
+Switch `output="words"` to get ranked `(word, count)` pairs instead. Here
+`count` is the word's **document frequency** (how many distinct inscriptions it
+occurs in), not how many times it is written, so `('KU-RO', 34)` means KU-RO
+appears in 34 separate documents. For token counts (every occurrence) use
+`corpus.word_frequencies()` instead.
 
 ```python
 res = c.query([FilterRow("word-prefix", "KU")], output="words")

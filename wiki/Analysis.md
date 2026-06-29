@@ -877,7 +877,10 @@ aegean search lineara "KU-*-RO"
 A compound predicate engine over the corpus: an inscription/word field registry,
 AND/OR/NOT combination, and inscription- or word-output modes. Call it as the
 `corpus.query(filters, output=...)` method or the standalone
-`run_query(corpus, filters)`.
+`run_query(corpus, filters)`. With `output="words"` each `(word, count)` pair's
+count is the word's **document frequency** (the number of distinct inscriptions
+it occurs in), not its token frequency; for token counts use
+`corpus.word_frequencies()`.
 
 ```python
 from aegean.analysis import FilterRow, run_query, summarize_filters

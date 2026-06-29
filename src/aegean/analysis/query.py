@@ -76,6 +76,14 @@ class FilterRow:
 class QueryResults:
     """A query's result set: the matching inscriptions and/or ``(word, count)`` pairs.
 
+    In ``words``, ``count`` is the word's **document frequency**: the number of
+    distinct inscriptions the word occurs in (e.g. ``("KU-RO", 34)`` means KU-RO
+    appears in 34 separate documents), not how many times it is written. A word
+    repeated within one inscription still counts that inscription once. This
+    differs from `Corpus.word_frequencies`, whose ``count`` is the token
+    frequency (every occurrence). The list is sorted by descending count, then
+    by word.
+
     `Corpus.query` attaches the corpus's ``provenance`` and a ``description``
     of the filters, so `cite` can cite the exact result set used in a paper."""
 
@@ -247,7 +255,12 @@ def eval_query(
     cooccur_map: dict[str, set[str]],
 ) -> QueryResults:
     """Run a query (filters + output mode) over pre-built indices and return the
-    result set in canonical shape."""
+    result set in canonical shape.
+
+    For ``output="words"`` each ``(word, count)`` pair's ``count`` is the word's
+    document frequency (the number of matching inscriptions it occurs in), not
+    its token frequency; a word repeated within one inscription counts that
+    inscription once."""
     matching = [d for d in documents if inscription_matches(d, filters, annotated_ids)]
     has_word_filters = any(FIELDS[f.field].scope == "word" for f in filters)
 

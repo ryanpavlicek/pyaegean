@@ -164,10 +164,21 @@ def test_epidoc_export_validates_against_epidoc_schema(epidoc_rng) -> None:  # t
         ],
         lines=[[0, 1]], meta=DocumentMeta(site="Knossos"),
     )
+    status_doc = Document(
+        id="KN X 3", script_id="linearb",
+        tokens=[
+            Token("DA-RO", TokenKind.WORD, ("DA", "RO"), line_no=0, position=0,
+                  status=ReadingStatus.RESTORED),
+            Token("PA-RO", TokenKind.WORD, ("PA", "RO"), line_no=0, position=1,
+                  status=ReadingStatus.LOST),
+        ],
+        lines=[[0, 1]], meta=DocumentMeta(site="Knossos"),
+    )
     samples = [
         to_epidoc(_doc()),                                  # hand-built Linear B doc
         to_epidoc(aegean.load("lineara").get("HT13")),      # a bundled Linear A tablet
         to_epidoc(variant_doc),                             # <app>/<lem>/<rdg> variant readings
+        to_epidoc(status_doc),                              # <supplied> restored + lost markup
     ]
     for xml in samples:
         tree = etree.fromstring(xml.encode("utf-8"))
@@ -198,6 +209,41 @@ def test_editorial_status_roundtrips(tmp_path: Path) -> None:
     assert [t.status for t in back.tokens] == [
         ReadingStatus.CERTAIN, ReadingStatus.RESTORED, ReadingStatus.UNCLEAR,
     ]
+
+
+def test_lost_and_restored_roundtrip_distinctly(tmp_path: Path) -> None:
+    """A LOST token and a RESTORED token survive write→read as *distinct* statuses.
+
+    Regression: the writer mapped both RESTORED and LOST to <supplied reason="lost"> and the
+    reader mapped <supplied> → RESTORED, so a LOST token round-tripped to RESTORED. The writer
+    now emits reason="undefined" for LOST, and the reader keys off @reason."""
+    pytest.importorskip("lxml")
+    from aegean.scripts.linearb import parse_epidoc
+
+    toks = [
+        Token("KU-RO", TokenKind.WORD, ("KU", "RO"), line_no=0, position=0,
+              status=ReadingStatus.CERTAIN),
+        Token("DA-RO", TokenKind.WORD, ("DA", "RO"), line_no=0, position=1,
+              status=ReadingStatus.RESTORED),
+        Token("PA-RO", TokenKind.WORD, ("PA", "RO"), line_no=0, position=2,
+              status=ReadingStatus.LOST),
+    ]
+    doc = Document(id="KN X 11", script_id="linearb", tokens=toks, lines=[[0, 1, 2]],
+                   meta=DocumentMeta(site="Knossos"))
+
+    xml = to_epidoc(doc)
+    # RESTORED and LOST must emit *different*, distinguishable EpiDoc encodings.
+    assert 'reason="lost"' in xml and 'reason="undefined"' in xml
+
+    corpus_dir = tmp_path / "epidoc"
+    write_epidoc(Corpus([doc], script_id="linearb"), corpus_dir)
+    back = parse_epidoc(corpus_dir)[0]
+    by_text = {t.text: t.status for t in back.tokens}
+    assert by_text == {
+        "KU-RO": ReadingStatus.CERTAIN,
+        "DA-RO": ReadingStatus.RESTORED,
+        "PA-RO": ReadingStatus.LOST,
+    }
 
 
 def test_reading_status_survives_json_roundtrip() -> None:

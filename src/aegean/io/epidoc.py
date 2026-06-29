@@ -38,10 +38,14 @@ _TAG = {TokenKind.WORD: "w", TokenKind.NUMERAL: "num", TokenKind.LOGOGRAM: "g"}
 _LANG = {"lineara": "und", "linearb": "gmy", "cypriot": "grc", "cyprominoan": "und", "greek": "grc"}
 
 # non-CERTAIN reading → the EpiDoc apparatus element that wraps the token text.
+# RESTORED and LOST both use <supplied> (which, unlike the empty <gap>, can carry the token
+# text so it survives the round trip) and are kept distinct by @reason: an editor-supplied
+# reading is reason="lost"; a non-preserved/conjectural reading is reason="undefined". Both
+# @reason values are EpiDoc-recommended, so the output stays schema-valid.
 _STATUS_EL = {
     ReadingStatus.UNCLEAR: ("unclear", {}),
     ReadingStatus.RESTORED: ("supplied", {"reason": "lost"}),
-    ReadingStatus.LOST: ("supplied", {"reason": "lost"}),
+    ReadingStatus.LOST: ("supplied", {"reason": "undefined"}),
 }
 
 
@@ -157,10 +161,18 @@ def _first_text(root: ET.Element, *tags: str) -> str:
 
 
 def _reading_status(el: ET.Element) -> ReadingStatus:
-    """Editorial certainty from any EpiDoc apparatus element the token contains."""
-    inner = {_local(d.tag) for d in el.iter()}
-    if "supplied" in inner:
+    """Editorial certainty from any EpiDoc apparatus element the token contains.
+
+    ``<supplied>`` carries two distinct statuses by its ``@reason`` (matching the writer):
+    ``reason="undefined"`` (a non-preserved / conjectural reading) is ``LOST``; any other
+    ``<supplied>`` (the editor-supplied ``reason="lost"``) is ``RESTORED``. A bare ``<gap>``
+    (an external edition's empty lacuna marker) is also ``LOST``."""
+    supplied = next((d for d in el.iter() if _local(d.tag) == "supplied"), None)
+    if supplied is not None:
+        if supplied.get("reason") == "undefined":
+            return ReadingStatus.LOST
         return ReadingStatus.RESTORED
+    inner = {_local(d.tag) for d in el.iter()}
     if "gap" in inner:
         return ReadingStatus.LOST
     if "unclear" in inner:

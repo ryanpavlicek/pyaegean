@@ -41,10 +41,21 @@ def _first(root: Any, *tags: str) -> str:
 
 
 def _status_of(el: Any) -> ReadingStatus:
-    """Editorial status of a token from any EpiDoc apparatus element it contains."""
-    tags = {c.tag.replace(_TEI, "") for c in el.iter() if isinstance(c.tag, str)}
-    if "supplied" in tags:
+    """Editorial status of a token from any EpiDoc apparatus element it contains.
+
+    ``<supplied>`` carries two distinct statuses by its ``@reason`` (matching the writer):
+    ``reason="undefined"`` (a non-preserved / conjectural reading) is ``LOST``; any other
+    ``<supplied>`` (the editor-supplied ``reason="lost"``) is ``RESTORED``. A bare ``<gap>``
+    (an external edition's empty lacuna marker) is also ``LOST``."""
+    supplied = next(
+        (c for c in el.iter() if isinstance(c.tag, str) and c.tag.replace(_TEI, "") == "supplied"),
+        None,
+    )
+    if supplied is not None:
+        if supplied.get("reason") == "undefined":
+            return ReadingStatus.LOST
         return ReadingStatus.RESTORED
+    tags = {c.tag.replace(_TEI, "") for c in el.iter() if isinstance(c.tag, str)}
     if "unclear" in tags:
         return ReadingStatus.UNCLEAR
     if "gap" in tags:

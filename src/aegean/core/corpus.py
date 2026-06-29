@@ -539,7 +539,10 @@ class Corpus:
         value, and optional ``connector``/``negate``); ``output`` selects ``"inscriptions"``
         or ``"words"``. Returns `aegean.analysis.QueryResults` (``.inscriptions`` and
         ``.words``) carrying this corpus's provenance and a summary of the filters,
-        so ``results.cite()`` cites the exact result set. The available fields are
+        so ``results.cite()`` cites the exact result set. In ``.words`` each count is
+        the word's **document frequency** (how many distinct inscriptions it occurs
+        in), not its token frequency; for token counts use `word_frequencies`. The
+        available fields are
         in `aegean.analysis.FIELDS`. Unlike `filter` (exact metadata match), this
         supports text/prefix/sign-pattern/co-occurrence predicates with AND/OR/NOT."""
         from ..analysis.query import run_query  # lazy: no import-time core→analysis edge

@@ -36,7 +36,10 @@ model.
 from __future__ import annotations
 
 import warnings
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from ..greek.pipeline import TokenRecord
 
 from ..ai import translate as _ai_translate
 from ..ai import verify_translation as _ai_verify_translation
@@ -98,15 +101,71 @@ def _readable_feats(feats: str | None, *keys: str) -> str:
     return " ".join(out)
 
 
+def _root_skeleton(rt: TokenRecord, recs: list[TokenRecord]) -> str:
+    """The clause skeleton for one sentence root ``rt`` and its dependents.
+
+    Two predicate shapes are distinguished from the dependency parse:
+
+    - **Copular clause.** In UD a non-verbal predicate is the root and the copula
+      (``εἰμί``) hangs off it as a ``cop`` dependent (``ὁ θεὸς ἀγαθός ἐστιν`` →
+      root ``ἀγαθός``, ``cop`` ``ἐστιν``). A naive "root is the predicate" reading
+      drops the copula and, when the root sits inside a prepositional phrase
+      (``ἐν ἀρχῇ ἦν ὁ λόγος`` → root ``ἀρχῇ``, ``case`` ``ἐν``), mislabels a
+      PP-internal noun the main predicate. Here the copula and the predicate
+      nominal/adjective are presented together, e.g.
+      ``predicate ἦν + ἀρχή (predicate nominal)``.
+    - **Verbal clause.** The root is the lexical predicate verb; subject and object
+      are reported as before (``γράφει`` → ``main predicate γράφει; subject …``)."""
+    kids = [r for r in recs if r.head == rt.index and r.relation]
+    by_rel = {r.relation: r for r in kids}
+    cop = by_rel.get("cop")
+    parts: list[str] = []
+    if cop is not None:
+        # Non-verbal (copular) predication: lead with the copula + the predicate
+        # nominal/adjective so the copula is never dropped and a PP-internal noun is
+        # never called the predicate.
+        kind = "predicate adjective" if rt.upos == "ADJ" else "predicate nominal"
+        parts.append(f"predicate {cop.text} + {rt.lemma} ({kind})")
+    else:
+        pred = _readable_feats(rt.feats, "Voice", "Tense", "Number", "Person")
+        parts.append(f"main predicate '{rt.text}' ({rt.lemma}{', ' + pred if pred else ''})")
+    subj = by_rel.get("nsubj")
+    if subj is not None:
+        parts.append(f"subject {subj.text}")
+    obj = by_rel.get("obj")
+    if obj is not None:
+        parts.append(f"object {obj.text}")
+    return "; ".join(parts)
+
+
+def _clause_skeleton(recs: list[TokenRecord]) -> str:
+    """A readable clause skeleton across every sentence root in ``recs``, or ``""``.
+
+    Each root (``head == 0``) that heads a clause becomes one ``;``-joined clause,
+    and clauses are joined with `` | ``. Roots that are neither a content predicate
+    (VERB / ADJ / NOUN) nor a copular predicate are skipped. Pure (no I/O); the parse
+    is supplied by the caller, which keeps the copular-vs-verbal logic unit-testable."""
+    clauses: list[str] = []
+    for rt in recs:
+        if rt.head != 0:
+            continue
+        has_cop = any(r.head == rt.index and r.relation == "cop" for r in recs)
+        if rt.upos not in {"VERB", "ADJ", "NOUN"} and not has_cop:
+            continue
+        clauses.append(_root_skeleton(rt, recs))
+    return " | ".join(clauses)
+
+
 def _morphology_items(text: str) -> list[GroundingItem]:
     """Deterministic morphology + syntax grounding for Greek, no dictionary glosses.
 
     Produces, in order: an optional clause-skeleton line from the dependency parse
-    (main predicate plus subject/object), one compact line per non-punct token
-    (``word = lemma (pos, readable-morph)``), and an optional rare-word flag line. Uses
-    the active backends via `greek.pipeline(text, parse=True)` and degrades gracefully:
-    without a parser the skeleton is simply omitted; rule-based POS/lemma still populate
-    the token lines. Never raises."""
+    (predicate plus subject/object, with copular clauses presented as copula +
+    predicate nominal/adjective rather than dropping the copula; see `_clause_skeleton`),
+    one compact line per non-punct token (``word = lemma (pos, readable-morph)``), and an
+    optional rare-word flag line. Uses the active backends via `greek.pipeline(text,
+    parse=True)` and degrades gracefully: without a parser the skeleton is simply omitted;
+    rule-based POS/lemma still populate the token lines. Never raises."""
     from ..greek import pipeline
 
     try:
@@ -121,23 +180,11 @@ def _morphology_items(text: str) -> list[GroundingItem]:
 
     out: list[GroundingItem] = []
 
-    # Clause skeleton: roots (head == 0) that head a clause, with their subject/object.
-    skeleton: list[str] = []
-    for rt in recs:
-        if rt.head != 0 or rt.upos not in {"VERB", "ADJ", "NOUN"}:
-            continue
-        pred = _readable_feats(rt.feats, "Voice", "Tense", "Number", "Person")
-        kids = {r.relation: r.text for r in recs if r.head == rt.index and r.relation}
-        parts = [f"main predicate '{rt.text}' ({rt.lemma}{', ' + pred if pred else ''})"]
-        if "nsubj" in kids:
-            parts.append(f"subject {kids['nsubj']}")
-        if "obj" in kids:
-            parts.append(f"object {kids['obj']}")
-        skeleton.append("; ".join(parts))
+    skeleton = _clause_skeleton(recs)
     if skeleton:
         out.append(
             GroundingItem(
-                "Clause skeleton: " + " | ".join(skeleton),
+                "Clause skeleton: " + skeleton,
                 source="analysis:syntax",
                 ref="clause",
             )
