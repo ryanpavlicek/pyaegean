@@ -661,7 +661,10 @@ def geo(
         return
     sites = {d.meta.site for d in c if d.meta.site}
     rows = [
-        {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "pleiades": coords[s].pleiades or ""}
+        {
+            "site": s, "lat": coords[s].lat, "lon": coords[s].lon,
+            "pleiades": coords[s].pleiades or "", "contested": coords[s].contested or "",
+        }
         for s in sorted(sites)
         if s in coords
     ]
@@ -670,8 +673,12 @@ def geo(
         return
     table(
         f"{corpus}: {len(rows)} located site(s) of {len(sites)}",
-        ["site", "lat", "lon", "pleiades"],
-        [[str(r["site"]), str(r["lat"]), str(r["lon"]), str(r["pleiades"])] for r in rows],
+        ["site", "lat", "lon", "pleiades", "contested"],
+        [
+            [str(r["site"]), str(r["lat"]), str(r["lon"]), str(r["pleiades"]),
+             "disputed" if r["contested"] else ""]
+            for r in rows
+        ],
     )
 
 

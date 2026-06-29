@@ -156,6 +156,15 @@ def test_geo_word_distribution(app):
     assert any(r["site"] == "Haghia Triada" and r["count"] > 0 for r in rows)
 
 
+def test_geo_contested_flag(app):
+    rows = json.loads(ok(app, "geo", "lineara", "--json"))
+    by_site = {r["site"]: r for r in rows}
+    # ordinary sites carry an empty contested field
+    assert by_site["Haghia Triada"]["contested"] == ""
+    # the disputed find-spot is listed and flagged with its reason
+    assert "not a genuine find-spot" in by_site["Margiana"]["contested"]
+
+
 def test_sign_lookup(app):
     data = json.loads(ok(app, "sign", "lineara", "KU", "--json"))
     assert data["phonetic"] == "ku" and data["codepoint"] == "U+10642"

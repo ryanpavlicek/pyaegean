@@ -110,6 +110,7 @@ number of distinct **located** sites in the Linear A corpus.
 | `region` | both | str | one of the six [region codes](#regions) |
 | `period` | inscription | str | the inscription's `meta.period` (e.g. `LMIB`) |
 | `pleiades` | both | int / null | the [Pleiades](#pleiades-alignment) place id, if aligned |
+| `contested` | both | str / null | reason string if the find-spot's provenance is disputed (e.g. Margiana), else null; see [Contested find-spots](#contested-find-spots) |
 | `inscriptions` | site | int | number of inscriptions from this site |
 | `count` | (word_distribution) | int | number of inscriptions at this site that contain the word |
 | `geometry` | all | Point | EPSG:4326 point, `POINT (lon lat)` |
@@ -133,32 +134,34 @@ with `--output`. The CLI defaults to `--level site`.
 ```bash
 aegean geo lineara
 #        lineara: 52 located site(s) of 52
-# ┌──────────────────┬───────┬───────┬───────────┐
-# │ site             │ lat   │ lon   │ pleiades  │
-# ├──────────────────┼───────┼───────┼───────────┤
-# │ Apodoulou        │ 35.16 │ 24.73 │ 119143959 │
-# │ Arkhalkhori      │ 35.15 │ 25.27 │ 220781958 │
-# │ Armenoi          │ 35.3  │ 24.5  │           │
-# │ ...              │       │       │           │
-# └──────────────────┴───────┴───────┴───────────┘
+# ┌──────────────────┬───────┬───────┬───────────┬───────────┐
+# │ site             │ lat   │ lon   │ pleiades  │ contested │
+# ├──────────────────┼───────┼───────┼───────────┼───────────┤
+# │ Apodoulou        │ 35.16 │ 24.73 │ 119143959 │           │
+# │ Arkhalkhori      │ 35.15 │ 25.27 │ 220781958 │           │
+# │ Armenoi          │ 35.3  │ 24.5  │           │           │
+# │ ...              │       │       │           │           │
+# └──────────────────┴───────┴───────┴───────────┴───────────┘
+# (Margiana's row shows "disputed" in the contested column.)
 
 aegean geo linearb
 #     linearb: 3 located site(s) of 3
-# ┌─────────┬───────┬───────┬───────────┐
-# │ site    │ lat   │ lon   │ pleiades  │
-# ├─────────┼───────┼───────┼───────────┤
-# │ Knossos │ 35.3  │ 25.16 │ 781961476 │
-# │ Mycenae │ 37.73 │ 22.75 │ 570491    │
-# │ Pylos   │ 37.03 │ 21.7  │ 570640    │
-# └─────────┴───────┴───────┴───────────┘
+# ┌─────────┬───────┬───────┬───────────┬───────────┐
+# │ site    │ lat   │ lon   │ pleiades  │ contested │
+# ├─────────┼───────┼───────┼───────────┼───────────┤
+# │ Knossos │ 35.3  │ 25.16 │ 781961476 │           │
+# │ Mycenae │ 37.73 │ 22.75 │ 570491    │           │
+# │ Pylos   │ 37.03 │ 21.7  │ 570640    │           │
+# └─────────┴───────┴───────┴───────────┴───────────┘
 ```
 
 Machine-readable rows with `--json`:
 
 ```bash
 aegean geo lineara --json
-# [{"site": "Apodoulou", "lat": 35.16, "lon": 24.73, "pleiades": 119143959}, ... ]
-# one object per located site; pleiades is "" when the site isn't aligned
+# [{"site": "Apodoulou", "lat": 35.16, "lon": 24.73, "pleiades": 119143959, "contested": ""}, ... ]
+# one object per located site; pleiades is "" when unaligned, and contested is "" unless the
+# provenance is disputed (e.g. Margiana carries its reason string)
 ```
 
 ### `aegean geo` flags
@@ -235,6 +238,8 @@ A frozen dataclass. Fields:
 | `region` | str | one of the six region codes below |
 | `pleiades` | int / None | Pleiades place id, if aligned (default `None`) |
 | `pleiades_uri` | property → str / None | full `https://pleiades.stoa.org/places/<id>` URI, or `None` |
+| `contested` | str / None | reason string if the find-spot's provenance is disputed; `None` for ordinary sites (default `None`); see [Contested find-spots](#contested-find-spots) |
+| `is_contested` | property → bool | whether `contested` is set |
 
 ```python
 sc = coords["Haghia Triada"]
@@ -244,11 +249,13 @@ sc.pleiades               # 589672
 sc.pleiades_uri           # 'https://pleiades.stoa.org/places/589672'
 
 coords["Pyrgos"].pleiades_uri   # None  (not aligned)
+coords["Margiana"].is_contested # True  (disputed provenance)
 ```
 
 The gazetteer covers the find-sites in all four Aegean-script corpora: the Cretan and Aegean Linear
 A sites, plus Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit, and a few
-outliers like Tel Haror (Negev) and Margiana (Turkmenistan).
+outliers like Tel Haror (Negev) and Margiana (Turkmenistan), the last of which is flagged
+[contested](#contested-find-spots).
 
 ### Regions
 
@@ -261,7 +268,23 @@ outliers like Tel Haror (Negev) and Margiana (Turkmenistan).
 | `mainland` | 4 | the Greek mainland (Mycenae, Tiryns, Pylos, Hagios Stefanos) |
 | `anatolia` | 2 | the Anatolian coast (Miletus, Troy) |
 | `levant` | 4 | Cyprus and the Levantine coast (Enkomi, Ugarit, Tel Haror, Cyprus) |
-| `remote` | 1 | far-flung outliers (Margiana, Turkmenistan) |
+| `remote` | 1 | far-flung outliers (Margiana, Turkmenistan, a [contested](#contested-find-spots) find-spot) |
+
+### Contested find-spots
+
+A find-spot can be present in the upstream corpus yet not be an accepted provenance. Such a site
+keeps its inscription (so the bundled corpus stays faithful to upstream and matches the workbench's
+parity checksum) but is flagged: `SiteCoord.contested` holds the reason, `is_contested` is `True`,
+and the GeoDataFrames and the `aegean geo` table carry a `contested` column. The one current case
+is **Margiana** (Turkmenistan): no Linear A inscription is accepted from Central Asia (the "1427 in
+Margiana" figure misreads the GORILA corpus total, and the only link is the fringe "Cretan
+Protolinear" theory), so it is never silently mapped as a genuine find-spot.
+
+```python
+m = coords["Margiana"]
+m.is_contested            # True
+m.contested               # 'Disputed: no Linear A inscription is accepted from Central Asia; ...'
+```
 
 ---
 
@@ -335,7 +358,8 @@ The first feature of the site-level export:
     "label": "Haghia Triada",
     "region": "crete",
     "pleiades": 589672.0,
-    "inscriptions": 1110
+    "inscriptions": 1110,
+    "contested": null
   },
   "geometry": { "type": "Point", "coordinates": [24.79, 35.06] }
 }
