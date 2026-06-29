@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.14.2
+aegean --version          # pyaegean 0.14.3
 ```
 
 | Group | What's in it |
@@ -546,14 +546,15 @@ aegean stats john.txt --top 3
 aegean geo lineara
 ```
 ```
-       lineara: 52 located site(s) of 52
-┌──────────────────┬───────┬───────┬───────────┐
-│ site             │ lat   │ lon   │ pleiades  │
-├──────────────────┼───────┼───────┼───────────┤
-│ Haghia Triada    │ 35.06 │ 24.79 │ 589672    │
-│ Gournia          │ 35.11 │ 25.79 │ 771100776 │
-│ …                │       │       │           │
-└──────────────────┴───────┴───────┴───────────┘
+             lineara: 52 located site(s) of 52
+┌──────────────────┬───────┬───────┬───────────┬───────────┐
+│ site             │ lat   │ lon   │ pleiades  │ contested │
+├──────────────────┼───────┼───────┼───────────┼───────────┤
+│ Apodoulou        │ 35.16 │ 24.73 │ 119143959 │           │
+│ Arkhalkhori      │ 35.15 │ 25.27 │ 220781958 │           │
+│ Armenoi          │ 35.3  │ 24.5  │           │           │
+│ …                │       │       │           │           │
+└──────────────────┴───────┴───────┴───────────┴───────────┘
 ```
 
 Add `-o sites.geojson` to write GeoJSON instead of printing a table (that path
@@ -572,6 +573,7 @@ aegean geo lineara --word KU-RO          # sites where KU-RO occurs, most-attest
 ├───────────────┼───────┼───────┼───────┤
 │ Haghia Triada │ 35.06 │ 24.79 │ 32    │
 │ Phaistos      │ 35.05 │ 24.81 │ 1     │
+│ Zakros        │ 35.1  │ 26.26 │ 1     │
 └───────────────┴───────┴───────┴───────┘
 ```
 
@@ -644,13 +646,16 @@ every other kind it's a corpus name.
 
 ```bash
 aegean workbench                 # fetch the build (~3 MB, first use) and open it in your browser
+aegean workbench --fetch-images  # also download the facsimile imagery (~116 MB) so pictures show
 aegean workbench --port 9000     # choose a port (default 8000); --no-browser to not open one
 ```
 
 Fetches the sha256-pinned static build to the cache, then serves the browser UI (
 the corpus, maps, and analysis modules) at `http://localhost:8000/` until you
-press Ctrl+C. If the Linear A facsimile imagery is already cached
-(`aegean data fetch lineara-images`), the picture browser works too.
+press Ctrl+C. The facsimile imagery is a separate ~116 MB asset: pass
+`--fetch-images` (or run `aegean data fetch lineara-images`) to download it, after
+which the picture browser works. Without it the app runs fine, but image views
+show no picture (and the command says so at startup).
 
 ---
 

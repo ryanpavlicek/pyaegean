@@ -4,6 +4,24 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.14.3 (2026-06-29)
+
+### Fixed
+- **`geo --word` matches case-insensitively.** It was the only word-search path that did not fold
+  case (`db.search`, the query engine, and `aegean search` already do), so `geo lineara --word
+  ku-ro` found nothing while `KU-RO` worked. The CLI and `aegean.geo.word_distribution` now both
+  fold case.
+- **`aegean workbench` serves the facsimile imagery again.** The cached `lineara-images` asset
+  unpacks into an `images/` subdirectory; the local server looked one level too high, so every
+  facsimile returned 404 even after the asset was fetched.
+
+### Added
+- **`aegean workbench --fetch-images`** downloads the ~116 MB Linear A imagery in one step, and the
+  command now hints how to fetch it when it is not cached.
+- **`aegean geo` on a corpus without find-sites** prints a one-line explanation instead of an empty
+  grid, and its `--help` notes which corpora produce rows (lineara, linearb, cypriot, cyprominoan,
+  sigla, damos).
+
 ## 0.14.2 (2026-06-29)
 
 ### Added
