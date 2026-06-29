@@ -67,6 +67,16 @@ def test_word_distribution() -> None:
     assert "Haghia Triada" in set(kuro["site"])  # KU-RO is attested there
 
 
+def test_word_distribution_case_insensitive() -> None:
+    pytest.importorskip("geopandas")
+    c = aegean.load("lineara")
+    # Linear A words are stored uppercase (KU-RO); a lowercase query must still match.
+    lower = aegean.geo.word_distribution(c, "ku-ro")
+    upper = aegean.geo.word_distribution(c, "KU-RO")
+    assert int(lower["count"].sum()) == int(upper["count"].sum()) > 0
+    assert set(lower["site"]) == set(upper["site"])
+
+
 def test_to_geodataframe_rejects_bad_level() -> None:
     pytest.importorskip("geopandas")
     with pytest.raises(ValueError, match="level must be"):
