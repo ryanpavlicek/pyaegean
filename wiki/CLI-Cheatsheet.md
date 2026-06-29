@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.14.2
+aegean --version                # pyaegean 0.14.3
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -69,12 +69,12 @@ file: `.json` / `.csv` (stdlib, no pandas) / `.txt` by extension.
 | `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | `-f/--format -o/--output --level --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
 | `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc` | `aegean import john.txt -o john.json --script nt` |
-| `geo` | Find-site coordinates, or `--word`'s per-site map; GeoJSON with `-o` | `--word --level -o/--output --json` | `aegean geo lineara --word KU-RO` |
+| `geo` | Find-site coordinates, or `--word`'s per-site map (case-insensitive); GeoJSON with `-o` | `--word --level -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
 | `cache` | Inspect (or `--clear`) the opt-in **analysis** cache | `--clear --json` | `aegean cache` |
 | `plot` | Draw one figure to a file (`[viz]` extra) | `-o/--output --signs --top --word --meter --dpi …` | `aegean plot keyness lineara --site Zakros -o k.png` |
-| `workbench` | Serve the Linear A Research Workbench locally | `-p/--port --no-browser --force` | `aegean workbench` |
+| `workbench` | Serve the Linear A Research Workbench locally | `-p/--port --no-browser --force --fetch-images` | `aegean workbench` |
 
 ### Verified examples
 

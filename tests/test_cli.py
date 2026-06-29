@@ -166,9 +166,11 @@ def test_geo_contested_flag(app):
 
 
 def test_geo_word_case_insensitive(app):
-    # a lowercase query matches the uppercase-stored transliteration (KU-RO)
-    rows = json.loads(ok(app, "geo", "lineara", "--word", "ku-ro", "--json"))
-    assert any(r["site"] == "Haghia Triada" and r["count"] > 0 for r in rows)
+    # a lowercase query returns the identical result to the uppercase-stored form (KU-RO)
+    lower = json.loads(ok(app, "geo", "lineara", "--word", "ku-ro", "--json"))
+    upper = json.loads(ok(app, "geo", "lineara", "--word", "KU-RO", "--json"))
+    assert lower == upper
+    assert any(r["site"] == "Haghia Triada" and r["count"] > 0 for r in lower)
 
 
 def test_geo_empty_corpus_hint(app):

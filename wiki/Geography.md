@@ -169,10 +169,15 @@ aegean geo lineara --json
 | Flag | Default | What it does |
 |---|---|---|
 | `CORPUS` (argument) |— | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`) |
+| `--word` |— | map the per-site attestations of one word (**case-insensitive**) instead of every site |
 | `--level` | `site` | `site` or `inscription` (only affects GeoJSON export) |
 | `--output`, `-o` |— | write GeoJSON to this path instead of printing the table (needs `[geo]`) |
 | `--json` | off | machine-readable JSON rows on stdout (table mode) |
 | `--help`, `-h` |— | show usage and exit |
+
+Only provenanced inscription corpora yield rows: `lineara`, `linearb`, `cypriot`, `cyprominoan`,
+`sigla`, `damos`. Alphabetic Greek corpora (`greek`, `nt`, Greek work ids) carry no find-spot, so
+`geo` prints a one-line note rather than an empty table.
 
 ---
 
@@ -198,8 +203,8 @@ wd
 # 2         Zakros         Zakros  crete  650881089      1   POINT (26.26 35.1)
 ```
 
-The match is exact on the word token's surface form (`t.text == word`), so use the corpus's own
-transliteration (here, dash-joined sign sequences like `KU-RO`). See [Linear A](Linear-A) and
+The match is on the word token's surface form, folded for case (`ku-ro` finds `KU-RO`), so use the
+corpus's own transliteration (here, dash-joined sign sequences like `KU-RO`). See [Linear A](Linear-A) and
 [Analysis](Analysis) for how to find the words worth mapping.
 
 > Edge case: if a word has **zero** hits the result has no rows, and geopandas can't infer the
@@ -440,8 +445,8 @@ find-sites across all four scripts. The few Linear A inscriptions with no row si
   is still integral. Use `SiteCoord.pleiades` for the clean `int`.
 - **23 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're
   tracked as upstream-contribution candidates, not errors.
-- **`word_distribution` matches the exact surface form.** It won't normalise or fuzzy-match; pass the
-  word as the corpus transliterates it.
+- **`word_distribution` matches the surface form case-insensitively.** It won't otherwise normalise
+  or fuzzy-match; pass the word as the corpus transliterates it.
 
 See [Limitations](Limitations) for the project-wide caveats.
 
