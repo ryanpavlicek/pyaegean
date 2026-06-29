@@ -5,21 +5,25 @@ Two zero-dependency tiers, tried in order:
 1. a small bundled form→lemma table (seeded from the sample corpus), for irregular
    and high-frequency forms whose lemma is not derivable from the ending;
 2. a **generalizing ending-stripping rule layer** (`rule_lemma_verbose`) that recovers
-   the citation form of the *regular* paradigms by accent-preserving ending substitution:
-   the first/second-declension noun/adjective oblique endings back to the nominative
-   (``-ου/-ῳ/-ον/-οι/-οις/-ους → -ος``; the ``-η``/``-α`` feminine series) and the regular
-   thematic verb endings back to the ``-ω`` citation form (``-εις/-ει/-ομεν/-ετε/-ουσι(ν)``,
-   plus the present infinitive ``-ειν``). It keeps the surface stem (with its breathing and
-   accent) intact and only synthesises the ending, so an unseen ``νόμου`` lemmatizes to
-   ``νόμος`` without any lookup.
+   the citation form of the *regular* second-declension and thematic-verb paradigms by
+   accent-preserving ending substitution: the ``-ου/-ῳ/-ον/-οι/-οις/-ους`` oblique endings back
+   to the nominative ``-ος`` (plus the first-declension ``-αν`` accusative ``→ -α``) and the
+   regular thematic *active* endings back to the ``-ω`` citation form
+   (``-εις/-ει/-ομεν/-ετε/-ουσι(ν)``, plus the present infinitive ``-ειν``). It keeps the surface
+   stem (with its breathing and accent) intact and only synthesises the ending, so an unseen
+   ``νόμου`` lemmatizes to ``νόμος`` without any lookup. Conservative guards, measured on the full
+   New Testament (where a blind stripper regressed ~1,000 tokens), skip the forms it would wreck: a
+   circumflex on the ending marks a contracted nominative (``Ἰησοῦς``), adverb (``ἐκεῖ``), or
+   contracted verb (``ζῇ``), and a curated list covers the common neuter ``-ον`` nouns (``ἔργον``,
+   whose lemma *is* the ``-ον`` form) and the indeclinables/reflexives.
 
 This is the seed/rule tier of the cascade: the treebank, neural, and edit-tree backends
 (opt-in) handle the heavier, ambiguous, and irregular work and take precedence when active.
-Forms outside the regular paradigms (third-declension stems, indeclinables, suppletives) are
-returned normalized (NFC) unchanged, flagged via `lemmatize_verbose`. The rule layer cannot
-restore an accent that *recedes* between the inflected form and the lemma (a long ultima that
-shortens, e.g. ``κυρίῳ`` → ``κύριος``, or a circumflex/acute shift like ``δούλοις`` →
-``δοῦλος``): it preserves the surface stem accent, so those need the opt-in backends.
+Forms outside this scope (the ambiguous first-declension ``-η`` series, third-declension stems,
+indeclinables, suppletives) are returned normalized (NFC) unchanged, flagged via
+`lemmatize_verbose`. The rule layer also cannot restore an accent that *recedes* between the
+inflected form and the lemma (``κυρίῳ`` → ``κύριος``, ``δούλοις`` → ``δοῦλος``): it preserves the
+surface stem accent, so those need the opt-in backends.
 """
 
 from __future__ import annotations
@@ -60,7 +64,7 @@ def seed_lemma_verbose(word: str) -> tuple[str, bool]:
 
 
 # --- generalizing ending-stripping rule layer --------------------------------
-# These rules recover the citation form of the *regular* first/second-declension
+# These rules recover the citation form of the *regular* second-declension
 # nominal and thematic-verbal paradigms by accent-preserving ending substitution.
 # Endings are matched against the bare (lowercased, diacritic-stripped, final-ς→σ)
 # form; the citation ending replaces the matched ending while the surface stem (its
@@ -127,12 +131,17 @@ def _acute_on_last_vowel(segment: str) -> str:
 # forms, and the genitive -ης/-ας collide with them, so those are left to the seed table.
 _NOMINAL_PLAIN: tuple[tuple[str, str], ...] = (
     ("ουσ", "ος"), ("οισ", "ος"), ("ου", "ος"), ("ον", "ος"), ("οι", "ος"),
-    ("αισ", "η"), ("ην", "η"), ("αι", "η"),
     ("αν", "α"),
 )
-# Dative-singular endings, told apart only by the iota subscript (ῳ/ῃ/ᾳ).
+# The first-declension feminine -η *plural/accusative* endings (-αις/-ην/-αι) are deliberately
+# absent: on the New Testament gold they recover almost nothing (the high-frequency feminines are
+# in the seed table) yet collide with the 3rd-declension nominative -ης (παῖς) and the -μαι middle
+# (ἔρχομαι), so they were net-harmful. The feminine dat.-sg. -ῃ/-ᾳ are out too: -ῃ collides with the
+# contracted verb (ζῇ → ζάω) and both are feminine, out of this -ος/verb scope.
+# Only the masculine/neuter dative singular -ῳ → -ος (no contracted verb ends in -ῳ, so the
+# perispomenon ἀγαθῷ is safe to strip).
 _NOMINAL_SUBSCRIPT: tuple[tuple[str, str], ...] = (
-    ("ω", "ος"), ("η", "η"), ("α", "α"),
+    ("ω", "ος"),
 )
 # Regular thematic active endings (present/future indicative, present infinitive) → -ω.
 # Only the *active* series is mapped: the mediopassive endings (-ομαι/-εται/-ονται/…) are
@@ -148,14 +157,34 @@ _VERBAL: tuple[tuple[str, str], ...] = (
 # (μᾶλλον is an adverb, not the accusative of a noun μᾶλλος; πλήν is a preposition/conjunction,
 # not a 1st-declension accusative). Kept deliberately tiny and only for forms that are NOT also
 # a real inflected paradigm cell, so the guard never suppresses a correct lemmatization.
-_INDECLINABLE = frozenset({"μᾶλλον", "πλήν"})
+_INDECLINABLE = frozenset({
+    "μᾶλλον", "πλήν",
+    # High-frequency indeclinables whose -ου / -αν / -οῦ ending an oblique rule would otherwise
+    # strip to a spurious -ος / -α (ὅπου → ὅπος, ὅταν → ὅτα, ὁμοῦ → ὁμός). Adverbs, conjunctions,
+    # particles, and the reflexive pronouns (which have no nominative): closed classes, never an
+    # inflected noun cell, so the guard only ever blocks a wrong lemmatization.
+    "ὅπου", "ποῦ", "οὗ", "ὅταν", "ἄν", "ἐάν", "ἤτοι",
+    "ἑαυτοῦ", "ἐμαυτοῦ", "σεαυτοῦ", "ὁμοῦ", "πανταχοῦ", "ἀλλαχοῦ",
+})
+
+# Common second-declension NEUTER nouns, whose nominative/accusative is -ον (the citation form):
+# a gender-blind ending rule would wrongly strip -ον to a masculine -ος (ἔργον → ἔργος). This is a
+# general list of textbook-frequency neuters (the rule has no way to know the gender), kept separate
+# from the seed table; the oblique cases of rarer neuters can still be mis-stemmed (use a backend).
+_NEUTER_2ND = frozenset({
+    "ἔργον", "τέκνον", "δῶρον", "πλοῖον", "σημεῖον", "παιδίον", "βιβλίον", "ἱμάτιον", "εὐαγγέλιον",
+    "δαιμόνιον", "ποτήριον", "πρόβατον", "σάββατον", "δεῖπνον", "ἔλαιον", "μνημεῖον", "ζῷον",
+    "εἴδωλον", "ἄστρον", "θηρίον", "δένδρον", "μέτρον", "ὅπλον", "ἱερόν", "πρόσωπον", "μυστήριον",
+    "βραβεῖον", "ταμεῖον", "ἄροτρον", "ἄκρον", "ἔριον",
+})
 
 
 def _rule_lemma(word: str) -> str | None:
     """The citation form recovered by ending substitution, or ``None`` when no regular
     rule applies. Operates on the surface form; the longest matching ending wins."""
-    if unicodedata.normalize("NFC", word) in _INDECLINABLE:
-        return None
+    nfc = unicodedata.normalize("NFC", word)
+    if nfc in _INDECLINABLE or nfc in _NEUTER_2ND:
+        return None  # the surface form is already the lemma; no ending rule applies
     bare = _bare(word)
     best: tuple[int, str] | None = None  # (ending length, citation ending base)
     for ending, citation in _NOMINAL_SUBSCRIPT:
@@ -166,15 +195,28 @@ def _rule_lemma(word: str) -> str | None:
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)
-    for table in (_NOMINAL_PLAIN, _VERBAL):
-        for ending, citation in table:
-            if (
-                bare.endswith(ending)
-                and len(bare) > len(ending)
-                and not _last_n_have(word, len(ending), frozenset({_IOTA_SUBSCRIPT}))
-                and (best is None or len(ending) > best[0])
-            ):
-                best = (len(ending), citation)
+    for ending, citation in _NOMINAL_PLAIN:
+        if (
+            bare.endswith(ending)
+            and len(bare) > len(ending)
+            and not _last_n_have(word, len(ending), frozenset({_IOTA_SUBSCRIPT}))
+            # A circumflex on -ους marks a contracted nominative (Ἰησοῦς, νοῦς), not the
+            # accusative plural; do not strip it. The acc. pl. -ους is never perispomenon.
+            and not (ending == "ουσ" and _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX})))
+            and (best is None or len(ending) > best[0])
+        ):
+            best = (len(ending), citation)
+    for ending, citation in _VERBAL:
+        if (
+            bare.endswith(ending)
+            and len(bare) > len(ending)
+            and not _last_n_have(word, len(ending), frozenset({_IOTA_SUBSCRIPT}))
+            # A circumflex on a verbal ending is a *contracted* verb (ποιεῖ) the flat swap
+            # cannot resolve, or a perispomenon adverb (ἐκεῖ); skip rather than mis-stem it.
+            and not _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX}))
+            and (best is None or len(ending) > best[0])
+        ):
+            best = (len(ending), citation)
     if best is None:
         return None
     length, citation = best
