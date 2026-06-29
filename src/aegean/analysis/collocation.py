@@ -2,9 +2,10 @@
 
 A faithful port of the statistical helpers in the workbench
 ``src/lib/algorithms.ts``. The workbench hand-rolled erf (Abramowitz & Stegun)
-and lgamma (Lanczos) approximations; here those are replaced by SciPy's exact
-special functions (imported lazily, so ``import aegean`` stays instant). Results
-match the shared golden fixtures within the asserted tolerances.
+and lgamma (Lanczos) approximations; here the stdlib ``math.erfc`` and
+``math.lgamma`` stand in (verified accurate to ~1e-14 against the golden
+fixtures), so ``import aegean`` stays zero-dependency and instant. Results match
+the shared golden fixtures within the asserted tolerances.
 
 For a word pair (a, b) across N documents the table is::
 
@@ -98,8 +99,13 @@ def fishers_exact(joint: int, count_a: int, count_b: int, total: int) -> float:
     """Fisher's exact test, two-sided, for the 2×2 table: the summed
     hypergeometric probability of all tables with the same marginals whose
     probability is ≤ the observed table's. More accurate than χ² for small
-    expected counts but O(N) per pair. Returns 1 for a degenerate margin."""
-    if joint < 0 or count_a <= 0 or count_b <= 0 or count_a > total or count_b > total:
+    expected counts but O(N) per pair. Returns 1 for a degenerate margin or an
+    impossible table (one whose implied cell counts are negative)."""
+    # A degenerate margin or an impossible table (an implied cell < 0, e.g.
+    # joint > count_a) has no admissible hypergeometric support; ``_cells``
+    # rejects exactly those, matching χ²/G²'s shared guard and avoiding a
+    # ``math.lgamma`` domain error on the negative ``count - joint`` arguments.
+    if _cells(joint, count_a, count_b, total) is None:
         return 1.0
 
     def ln_choose(n: int, k: int) -> float:

@@ -60,6 +60,54 @@ def test_hexameter_structure_invariants(line: str, pattern: str) -> None:
         assert q in opts[syl]
 
 
+# Lines whose correct scansion turns on a vowel quantity the spelling cannot give
+# (the third foot of Il. 1.3 needs ψῡ- long) or on a word-final consonant before a
+# vowel-initial word. Patterns are from standard editions, not read off the scanner.
+def test_iliad_1_3_scans_to_canonical_pattern() -> None:
+    # Il. 1.3 πολλὰς δ' ἰφθίμους ψυχὰς Ἄϊδι προΐαψεν is — — | — — | — — | — ⏑⏑ |
+    # — ⏑⏑ | — ×: feet 1–3 spondees, 4–5 dactyls. ψυχάς has a long υ by nature
+    # (ψῡχή) and the long acc.-pl. ending -ᾱς, so the third foot is a spondee, not
+    # the greedy dactyl μους–ψυ–χας the scanner used to return.
+    sc = scan_hexameter("πολλὰς δ' ἰφθίμους ψυχὰς Ἄϊδι προΐαψεν")
+    assert sc.meter == "hexameter"
+    assert sc.pattern == "——|——|——|—⏑⏑|—⏑⏑|—×"
+    assert not sc.ambiguous          # the scansion is now unique, not a coin-flip
+    # ψυ and the closing χὰς are both heavy here.
+    assert dict(zip(sc.syllables, sc.quantities))["ψυ"] is HEAVY
+
+
+def test_odyssey_1_7_scans_to_canonical_pattern() -> None:
+    # Od. 1.7 αὐτῶν γὰρ σφετέρῃσιν ἀτασθαλίῃσιν ὄλοντο is a spondee then four
+    # dactyls: — — | — ⏑⏑ | — ⏑⏑ | — ⏑⏑ | — ⏑⏑ | — ×. Both word-final -σιν before a
+    # vowel are LIGHT (the ν runs over the boundary, no position made).
+    sc = scan_hexameter("αὐτῶν γὰρ σφετέρῃσιν ἀτασθαλίῃσιν ὄλοντο,")
+    assert sc.meter == "hexameter"
+    assert sc.pattern == "——|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×"
+    assert not sc.ambiguous
+
+
+def test_long_by_nature_entry_is_required(monkeypatch) -> None:
+    # Without its lexicon entry, Il. 1.3 reverts to the wrong, ambiguous reading —
+    # proving ψυχάς's long υ is load-bearing, not redundant with the rules.
+    from aegean.greek import meter
+
+    monkeypatch.setattr(meter, "_LONG_BY_NATURE", {})
+    sc = scan_hexameter("πολλὰς δ' ἰφθίμους ψυχὰς Ἄϊδι προΐαψεν")
+    assert sc.pattern != "——|——|——|—⏑⏑|—⏑⏑|—×"
+    assert sc.ambiguous          # the line is genuinely ambiguous without the entry
+
+
+def test_long_by_nature_entries_make_their_vowels_long() -> None:
+    # Every entry must actually force a dichronon long where the rules leave it
+    # common — a dead entry (vowel already determined, or never present) is rejected,
+    # like a syllabify exception the rules already get right.
+    from aegean.greek.meter import _LONG_BY_NATURE, _quantity_is_forced_long
+
+    for word, vowels in _LONG_BY_NATURE.items():
+        for v in vowels:
+            assert _quantity_is_forced_long(word, v), f"{word!r}/{v!r} not forced long"
+
+
 def test_pentameter_scansion() -> None:
     # Simonides' Thermopylae epitaph (pentameter of the couplet).
     sc = scan_pentameter("κείμεθα τοῖς κείνων ῥήμασι πειθόμενοι.")

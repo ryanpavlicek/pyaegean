@@ -215,8 +215,9 @@ The dictionary headword for an inflected form: the entry you'd look up. `λόγ�
 
 ### Lemmatization
 The act of reducing each word to its lemma. With no extra backends installed
-pyaegean uses its rule-based lemmatizer; the opt-in neural pipeline is more
-accurate (see [Greek NLP](Greek-NLP)).
+pyaegean uses a bundled seed table plus a generalizing rule layer that strips the
+regular first/second-declension and thematic-verb endings back to the citation form;
+the opt-in neural pipeline is more accurate (see [Greek NLP](Greek-NLP)).
 
 ```python
 greek.lemmatize("λόγοι")                # 'λόγος'

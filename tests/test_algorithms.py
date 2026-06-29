@@ -140,6 +140,37 @@ def test_fishers_exact(case):
     ) == pytest.approx(case["expected"], abs=case["tol"])
 
 
+@pytest.mark.parametrize(
+    "joint, count_a, count_b, total",
+    [
+        (5, 3, 5, 10),  # joint > count_a  → implied a12 = count_a - joint < 0
+        (5, 5, 3, 10),  # joint > count_b  → implied a21 = count_b - joint < 0
+        (3, 5, 5, 6),  # a22 = total - count_a - count_b + joint = -1 < 0
+    ],
+)
+def test_fishers_exact_impossible_table_returns_one(joint, count_a, count_b, total):
+    """An impossible 2×2 table (an implied cell count is negative) has no
+    admissible hypergeometric support; ``fishers_exact`` returns its documented
+    degenerate value 1.0 rather than raising a ``math.lgamma`` domain error.
+    Mirrors the graceful 0.0 that ``chi_squared_2x2`` / ``log_likelihood_ratio_2x2``
+    already return on the same inputs via the shared ``_cells`` guard."""
+    # Hand check (joint=5, count_a=3): a12 = 3 - 5 = -2 < 0, so the table cannot
+    # be realized; the test is degenerate and the two-sided p-value is 1.0.
+    assert fishers_exact(joint, count_a, count_b, total) == 1.0
+    # And χ²/G² stay graceful (0.0) on the very same impossible inputs.
+    assert chi_squared_2x2(joint, count_a, count_b, total) == 0.0
+    assert log_likelihood_ratio_2x2(joint, count_a, count_b, total) == 0.0
+
+
+def test_fishers_exact_valid_table_unchanged():
+    """The guard fix must not perturb a genuine result: the canonical fully
+    associated 5/5/5/10 table still yields the hand-verified two-sided
+    hypergeometric p-value. The two extreme tables k=0 and k=5 each have
+    probability 1/C(10,5) = 1/252, both ≤ the observed (k=5) probability, so the
+    two-sided sum is 2/252 ≈ 0.007937."""
+    assert fishers_exact(5, 5, 5, 10) == pytest.approx(2.0 / 252.0, abs=1e-9)
+
+
 def test_wilson_interval_brackets_and_bounds():
     lo, hi = wilson_interval(5, 10)
     assert 0 <= lo < 0.5 < hi <= 1

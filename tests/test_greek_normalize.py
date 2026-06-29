@@ -47,6 +47,45 @@ def test_unicode_betacode_roundtrip(_, greek):
     assert betacode_to_unicode(unicode_to_betacode(greek)) == greek
 
 
+# (text with literal reserved punctuation, expected escaped beta code)
+ROUNDTRIP_LITERALS = [
+    ("(ἐν ἀρχῇ)", "`(e)n a)rxh=|`)"),         # parentheses around a phrase
+    ("λόγος (ἀρχή)", "lo/gos `(a)rxh/`)"),     # parenthetical Greek gloss
+    ("ἡ τιμή = 5 + 3", "h( timh/ `= 5 `+ 3"),  # arithmetic signs
+    ("ὁδός | ἀγορά", "o(do/s `| a)gora/"),    # literal pipe (not iota subscript)
+    ("λόγος1", "lo/gos`1"),                    # digit after final sigma, not s1
+]
+
+
+@pytest.mark.parametrize("text,beta", ROUNDTRIP_LITERALS)
+def test_unicode_betacode_escapes_literal_punctuation(text, beta):
+    # the reserved markup chars are backtick-escaped on the way out ...
+    assert unicode_to_betacode(text) == beta
+    # ... and read back verbatim, so Greek text with punctuation round-trips.
+    assert betacode_to_unicode(unicode_to_betacode(text)) == text
+
+
+def test_parenthetical_round_trips_identically():
+    # the audit's headline case: a parenthetical must survive unchanged.
+    text = "(ἐν ἀρχῇ)"
+    assert betacode_to_unicode(unicode_to_betacode(text)) == text
+    # without the escape the leading '(' would be re-read as a rough breathing.
+    assert "ἑ" not in betacode_to_unicode(unicode_to_betacode(text))
+
+
+def test_backtick_escape_char_itself_round_trips():
+    # a literal backtick must not be mistaken for the escape introducer.
+    text = "ἀρχή`τέλος"
+    assert unicode_to_betacode(text) == "a)rxh/``te/los"
+    assert betacode_to_unicode(unicode_to_betacode(text)) == text
+
+
+def test_betacode_escape_reads_next_char_literally():
+    # reader-side: `( is a literal '(', independent of the writer.
+    assert betacode_to_unicode("`(a`)") == "(α)"
+    assert betacode_to_unicode("a`=b") == "α=β"  # '=' would be a circumflex bare
+
+
 def test_strip_diacritics():
     assert strip_diacritics("ἄνθρωπος") == "ανθρωπος"
     assert strip_diacritics("τῷ") == "τω"
@@ -91,6 +130,33 @@ def test_lenient_drops_stray_combining_marks():
     stray = "́" + "ἀρχῇ"  # combining acute with no base letter
     with pytest.warns(NormalizationWarning, match="stray combining mark"):
         assert normalize(stray, lenient=True) == "ἀρχῇ"
+
+
+def test_lenient_v_maps_to_upsilon_not_nu():
+    # a stray Latin v in Greek OCR is a misread upsilon, not a nu:
+    # the -ευς ending scanned as -εvς must repair to -ευς (βασιλεύς).
+    with pytest.warns(NormalizationWarning, match="Latin letter"):
+        out = normalize("βασιλεvς", lenient=True)
+    assert out == "βασιλευς"
+    assert "ν" not in out  # mapped to upsilon, never nu
+
+
+def test_lenient_only_repairs_greek_dominated_words():
+    # one Greek glyph stranded in an otherwise-Latin token does NOT trigger the
+    # Latin→Greek mapping: the token is left exactly as given, and silently.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # no warning may fire
+        assert normalize("modelα", lenient=True) == "modelα"
+    # but a Greek-dominated token (one stray Latin o) is still repaired.
+    with pytest.warns(NormalizationWarning, match="Latin letter"):
+        assert normalize("λόγoς", lenient=True) == "λόγος"
+
+
+def test_lenient_dominance_is_a_strict_majority():
+    # a 1-Greek / 1-Latin tie is not Greek-dominated, so it is left alone.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert normalize("oα", lenient=True) == "oα"  # Latin o + Greek alpha
 
 
 def test_strict_mode_is_unchanged_and_silent():

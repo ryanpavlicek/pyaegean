@@ -48,18 +48,30 @@ _MARK_TO_BETA: dict[str, str] = {v: k for k, v in _BETA_TO_MARK.items()}
 
 _SIGMA_VARIANTS = {"1": "σ", "2": "ς", "3": "ϲ"}
 
+# Beta Code reserves these ASCII characters as markup (breathings, accents,
+# subscript, the capital marker, and the sigma-variant digits after ``s``).
+# A literal one of these in the source text would otherwise be re-read as
+# markup on the way back, so ``unicode_to_betacode`` escapes each with a
+# leading backtick and ``betacode_to_unicode`` emits the escaped character
+# verbatim. The backtick itself is escaped (`` `` ``) so the scheme is total.
+_BETA_ESCAPE = "`"
+_BETA_RESERVED = frozenset(_BETA_TO_MARK) | {"*", _BETA_ESCAPE}
+
 
 # ── lenient repair (OCR / messy epigraphic text) ────────────────────────────
-# Latin letters repaired inside Greek-containing words. The set is restricted to
+# Latin letters repaired inside Greek-dominated words. The set is restricted to
 # letters where the visual lookalike and the Beta-Code remnant agree on the same
 # Greek letter (so the repair is right under either failure mode); ambiguous
-# letters (c, f, j, l, p, q, y) are warned about but left alone.
+# letters (c, f, j, l, p, q, y) are warned about but left alone. Lowercase ``v``
+# is the one shape-only call: it has no Beta-Code reading, and in Greek OCR a
+# stray ``v`` is overwhelmingly a misread upsilon (the ``-ευς`` ending scanned
+# as ``-εvς``), not a nu, so it maps to ``υ``.
 _LATIN_TO_GREEK: dict[str, str] = {
     "A": "Α", "B": "Β", "E": "Ε", "Z": "Ζ", "H": "Η", "I": "Ι", "K": "Κ",
     "M": "Μ", "N": "Ν", "O": "Ο", "P": "Ρ", "T": "Τ", "X": "Χ", "Y": "Υ",
     "a": "α", "b": "β", "d": "δ", "e": "ε", "g": "γ", "h": "η", "i": "ι",
     "k": "κ", "m": "μ", "n": "ν", "o": "ο", "r": "ρ", "s": "σ", "t": "τ",
-    "u": "υ", "v": "ν", "w": "ω", "x": "χ", "z": "ζ",
+    "u": "υ", "v": "υ", "w": "ω", "x": "χ", "z": "ζ",
 }
 # A wordish span: ASCII letters, Greek letters, and combining marks.
 _WORDISH_RE = re.compile(r"[A-Za-z\u0370-\u03ff\u1f00-\u1fff\u0300-\u036f]+")
@@ -80,15 +92,27 @@ def _bare(ch: str) -> str:
     return "".join(c for c in d if not unicodedata.combining(c))
 
 
+def _greek_dominates(span: str) -> bool:
+    """True when Greek letters outnumber Latin letters in a wordish span.
+
+    The repair only fires on Greek-dominated tokens, so a normal Latin word with
+    one stray Greek glyph (``modelα``) is left untouched and the "only touches
+    Greek words" guarantee holds. A tie (equal Greek and Latin letters) is not
+    Greek-dominated."""
+    greek = sum(1 for ch in span if _GREEK_LETTER_RE.match(ch))
+    latin = sum(1 for ch in span if ch.isascii() and ch.isalpha())
+    return greek > latin
+
+
 def _repair_latin(text: str) -> tuple[str, list[str]]:
-    """Map Latin letters inside Greek-containing words to their Greek letters."""
+    """Map Latin letters inside Greek-dominated words to their Greek letters."""
     repaired: list[str] = []
     unmapped: list[str] = []
 
     def fix(m: re.Match[str]) -> str:
         span = m.group(0)
-        if not _GREEK_LETTER_RE.search(span):
-            return span  # a pure-Latin word: not ours to touch
+        if not _greek_dominates(span):
+            return span  # pure-Latin or Latin-dominated: not ours to touch
         out = []
         for j, ch in enumerate(span):
             if ch in _LATIN_TO_GREEK:
@@ -150,11 +174,14 @@ def normalize(text: str, form: NormForm = "NFC", *, lenient: bool = False) -> st
     """Unicode-normalize Greek text (``NFC`` precomposed by default).
 
     ``lenient=True`` first repairs common artifacts of OCR'd or half-converted
-    text — Latin letters embedded in Greek words (``λόγoς`` with a Latin *o*),
+    text: Latin letters embedded in Greek words (``λόγoς`` with a Latin *o*),
     Beta-Code diacritics left attached to Greek letters (``μη=νιν``), and stray
-    combining marks with no base letter — emitting a `NormalizationWarning`
-    describing each repair class. Repairs only ever touch characters inside
-    words that contain Greek; pure-Latin words pass through untouched."""
+    combining marks with no base letter, emitting a `NormalizationWarning`
+    describing each repair class. The Latin repair only fires on Greek-dominated
+    words (more Greek letters than Latin), so pure-Latin words and a normal Latin
+    word carrying one stray Greek glyph (``modelα``) both pass through untouched.
+    A stray ``v`` reads as a misread upsilon (``υ``), the dominant Greek-OCR
+    confusion, not as ``ν``."""
     if lenient:
         text, latin_notes = _repair_latin(text)
         text, mark_notes = _repair_marks(text)
@@ -176,11 +203,24 @@ def _is_word_break(ch: str) -> bool:
 
 
 def betacode_to_unicode(text: str) -> str:
-    """Convert a Beta Code string to precomposed (NFC) polytonic Greek."""
+    """Convert a Beta Code string to precomposed (NFC) polytonic Greek.
+
+    A backtick escapes the character after it (``unicode_to_betacode`` uses this
+    to protect literal reserved markup), so ``` `( ``` emits a literal ``(``
+    rather than a smooth breathing."""
     out: list[str] = []
     i, n = 0, len(text)
     while i < n:
         ch = text[i]
+        if ch == _BETA_ESCAPE:
+            # Emit the next character verbatim (or a lone trailing backtick).
+            if i + 1 < n:
+                out.append(text[i + 1])
+                i += 2
+            else:
+                out.append(_BETA_ESCAPE)
+                i += 1
+            continue
         capital = False
         if ch == "*":
             capital = True
@@ -226,19 +266,34 @@ def betacode_to_unicode(text: str) -> str:
 
 def unicode_to_betacode(text: str) -> str:
     """Convert polytonic Greek to Beta Code (capitals as ``*``; final sigma as
-    ``s``). Round-trips with `betacode_to_unicode` for supported text."""
+    ``s``). Round-trips with `betacode_to_unicode`: any literal ASCII that Beta
+    Code reserves as markup (``( ) / \\ = + | *`` and the ``s1``/``s2``/``s3``
+    sigma digits, plus the backtick escape itself) is backtick-escaped, so Greek
+    text with embedded parentheses, arithmetic, or other punctuation survives
+    the trip unchanged. (ASCII *letters* are Beta Code's own alphabet, so plain
+    Latin words are read back as Greek; this maps Greek, not mixed prose.)"""
     out: list[str] = []
+    last_was_sigma = False
     for ch in unicodedata.normalize("NFD", text):
         if ch in _MARK_TO_BETA:
             out.append(_MARK_TO_BETA[ch])
+            last_was_sigma = False
             continue
         if ch in ("ς", "ϲ"):
             out.append("s")
+            last_was_sigma = True
             continue
         low = ch.lower()
         if low in _GREEK_TO_BETA:
             beta = _GREEK_TO_BETA[low]
             out.append("*" + beta if ch.isupper() else beta)
+            last_was_sigma = beta == "s"
         else:
+            # A literal reserved char, or a sigma-variant digit that would bind
+            # to a preceding emitted ``s``, is escaped so the reader emits it
+            # verbatim instead of consuming it as markup.
+            if ch in _BETA_RESERVED or (last_was_sigma and ch in _SIGMA_VARIANTS):
+                out.append(_BETA_ESCAPE)
             out.append(ch)
+            last_was_sigma = False
     return "".join(out)
