@@ -680,9 +680,10 @@ c.to_sql("lineara.db")                 # FTS5 text index by default
 c2 = aegean.Corpus.from_sql("lineara.db")
 print(c.fingerprint() == c2.fingerprint())   # True
 
-# full-text search (matches a literal token/phrase — hyphens are fine)
+# search a whole token literally (KU-RO matches the token KU-RO, never PO-TO-KU-RO)
 db.search("lineara.db", "KU-RO", limit=3)
 # [('HT9a', 25, 'KU-RO'), ('HT9b', 20, 'KU-RO'), ('HT11a', 7, 'KU-RO')]
+db.search("lineara.db", "KU-RO", mode="substring")   # opt in to within-token matches (PO-TO-KU-RO, …)
 
 # stream documents one at a time for a huge DB, without loading the whole corpus
 for doc in db.stream("lineara.db"):
@@ -690,8 +691,10 @@ for doc in db.stream("lineara.db"):
 ```
 
 The schema is two main tables (`documents`, `tokens`) with indices on
-`tokens(doc_id)` and `tokens(text)`, plus a `tokens_fts` FTS5 virtual table when
-the local SQLite build supports it (search falls back to `LIKE` if it doesn't).
+`tokens(doc_id)` and `tokens(text)`, plus a `tokens_fts` FTS5 virtual table (with the
+hyphen kept as a token character) when the local SQLite build supports it; token search
+confirms an exact match on top of the index, and uses the `tokens(text)` index directly
+when FTS is unavailable.
 
 From the shell, `aegean db` is its own subcommand group:
 

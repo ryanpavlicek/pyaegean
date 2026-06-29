@@ -445,8 +445,9 @@ aegean db search homer.db μῆνιν
 ```
 
 `μῆνιν`: "wrath", the very first word of the Iliad. Add `--limit N` to cap hits
-(default 50) or `--json` for machine-readable output. The query is a literal token
-or phrase, matched through the FTS5 index.
+(default 50) or `--json` for machine-readable output. The query matches a whole token
+literally (so `KU-RO` finds the token `KU-RO`, never `PO-TO-KU-RO`); pass `--substring`
+to match within tokens instead.
 
 (Here it is on a small offline corpus, so you can run it yourself end to end:)
 

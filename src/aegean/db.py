@@ -51,13 +51,19 @@ CREATE INDEX idx_tokens_text ON tokens(text);
 
 
 def _build_fts(conn: sqlite3.Connection) -> None:
-    """Create + populate an FTS5 index over token text, or no-op if FTS5 is unavailable."""
+    """Create + populate an FTS5 index over token text, or no-op if FTS5 is unavailable.
+
+    ``tokenchars '-'`` keeps the hyphen a token character so a hyphenated transliteration
+    (``KU-RO``, ``PO-TO-KU-RO``) stays a single FTS token instead of splitting into ``KU`` +
+    ``RO``; otherwise a phrase query ``"KU-RO"`` would match the subsequence inside
+    ``PO-TO-KU-RO``. ``search`` still confirms an exact token match on top of this."""
     try:
         conn.execute(
-            "CREATE VIRTUAL TABLE tokens_fts USING fts5(text, doc_id UNINDEXED, position UNINDEXED)"
+            "CREATE VIRTUAL TABLE tokens_fts USING fts5(text, doc_id UNINDEXED, "
+            "position UNINDEXED, tokenize=\"unicode61 tokenchars '-'\")"
         )
     except sqlite3.OperationalError:
-        return  # this SQLite build has no FTS5; search() falls back to LIKE
+        return  # this SQLite build has no FTS5; search() falls back to an exact-match query
     conn.execute(
         "INSERT INTO tokens_fts(text, doc_id, position) SELECT text, doc_id, position FROM tokens"
     )
@@ -215,31 +221,55 @@ def from_sqlite(path: str | Path) -> Corpus:
     return Corpus(docs, inventory, provenance, meta.get("script_id", ""))
 
 
-def search(path: str | Path, query: str, *, limit: int = 50) -> list[tuple[str, int, str]]:
-    """Full-text search a SQLite corpus's tokens; returns ``(doc_id, position, text)`` hits.
+def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
+           ) -> list[tuple[str, int, str]]:
+    """Search a SQLite corpus's tokens; returns ``(doc_id, position, text)`` hits.
 
-    The query is matched as a literal token/phrase, so transliterations with hyphens or other
-    punctuation (``KU-RO``, ``A-DU``) work directly. Uses the FTS5 index built by ``to_sqlite``
-    when present, falling back to a ``LIKE`` substring match otherwise."""
+    ``mode="token"`` (default) matches a **whole token literally**: the query must equal the
+    token, so a transliteration with hyphens (``KU-RO``, ``A-DU``) matches only that token and
+    never a longer token that merely contains it (``KU-RO`` does not match ``PO-TO-KU-RO``). It
+    uses the FTS5 index when present (then confirms the exact match) and an indexed exact-match
+    query otherwise.
+
+    ``mode="substring"`` matches the query as a **substring** of a token, so ``KU-RO`` also
+    finds ``PO-TO-KU-RO`` — useful for tracing every token a sign-group occurs in.
+
+    Matching is case-insensitive."""
+    if mode not in {"token", "substring"}:
+        raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
     conn = sqlite3.connect(str(path))
     try:
+        if mode == "substring":
+            esc = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            cur = conn.execute(
+                "SELECT doc_id, position, text FROM tokens WHERE text LIKE ? ESCAPE '\\' LIMIT ?",
+                (f"%{esc}%", limit),
+            )
+            return [(str(r[0]), int(r[1]), str(r[2])) for r in cur]
+        target = query.casefold()
         has_fts = bool(
             conn.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tokens_fts'"
             ).fetchone()
         )
         if has_fts:
-            phrase = '"' + query.replace('"', '""') + '"'  # match literally, not as FTS5 syntax
+            phrase = '"' + query.replace('"', '""') + '"'  # a literal FTS5 phrase, not syntax
             cur = conn.execute(
-                "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ? LIMIT ?",
-                (phrase, limit),
+                "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ?",
+                (phrase,),
             )
         else:
             cur = conn.execute(
-                "SELECT doc_id, position, text FROM tokens WHERE text LIKE ? LIMIT ?",
-                (f"%{query}%", limit),
+                "SELECT doc_id, position, text FROM tokens WHERE text = ? COLLATE NOCASE",
+                (query,),
             )
-        return [(str(r[0]), int(r[1]), str(r[2])) for r in cur]
+        out: list[tuple[str, int, str]] = []
+        for doc_id, position, text in cur:
+            if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
+                out.append((str(doc_id), int(position), str(text)))
+                if len(out) >= limit:
+                    break
+        return out
     finally:
         conn.close()
 
