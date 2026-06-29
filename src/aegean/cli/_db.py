@@ -57,14 +57,22 @@ def add(
 @db_app.command()
 def search(
     path: Path = typer.Argument(..., help="A SQLite corpus DB (from `aegean db build`)."),
-    query: str = typer.Argument(..., help="Text to find — a literal token or phrase (e.g. KU-RO)."),
+    query: str = typer.Argument(..., help="Text to find — a whole token by default (e.g. KU-RO)."),
     limit: int = typer.Option(50, "--limit", help="Max hits."),
+    substring: bool = typer.Option(
+        False, "--substring",
+        help="Match the query within tokens (KU-RO also finds PO-TO-KU-RO) instead of the "
+             "default exact whole-token match.",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Full-text search a SQLite corpus's tokens; prints (doc, position, text) hits."""
+    """Search a SQLite corpus's tokens; prints (doc, position, text) hits.
+
+    Matches a whole token literally by default (``KU-RO`` matches only the token ``KU-RO``,
+    never ``PO-TO-KU-RO``); pass ``--substring`` to match within tokens."""
     from aegean.db import search as db_search
 
-    hits = db_search(path, query, limit=limit)
+    hits = db_search(path, query, limit=limit, mode="substring" if substring else "token")
     if json_out:
         emit_json([{"doc_id": d, "position": p, "text": t} for d, p, t in hits])
         return

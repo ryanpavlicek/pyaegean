@@ -73,10 +73,41 @@ def test_search_finds_tokens(tmp_path: Path) -> None:
     assert ("HT14", "A-DU") in adu
 
 
-def test_search_like_fallback(tmp_path: Path) -> None:
+def test_search_no_fts_exact_fallback(tmp_path: Path) -> None:
     p = tmp_path / "c.db"
-    _sample().to_sql(p, fts=False)              # no FTS index -> LIKE path
+    _sample().to_sql(p, fts=False)              # no FTS index -> indexed exact-match fallback
     assert any(t == "KU-RO" for _d, _pos, t in db.search(p, "KU-RO"))
+
+
+def _embedding_corpus() -> Corpus:
+    # D2's token PO-TO-KU-RO *embeds* D1's token KU-RO. A literal token search for KU-RO must not
+    # leak PO-TO-KU-RO; the _sample() fixture has no token that embeds another, so it could not
+    # catch the FTS-subsequence / LIKE-substring over-match this regression guards.
+    d1 = Document(id="D1", script_id="lineara", lines=[[0]], meta=DocumentMeta(site="x"),
+                  tokens=[Token("KU-RO", TokenKind.WORD, ("KU", "RO"), line_no=0, position=0)])
+    d2 = Document(id="D2", script_id="lineara", lines=[[0]], meta=DocumentMeta(site="x"),
+                  tokens=[Token("PO-TO-KU-RO", TokenKind.WORD, ("PO", "TO", "KU", "RO"),
+                                line_no=0, position=0)])
+    return Corpus([d1, d2], script_id="lineara")
+
+
+def test_search_token_mode_is_exact_on_both_paths(tmp_path: Path) -> None:
+    c = _embedding_corpus()
+    for fts in (True, False):
+        p = tmp_path / f"emb_{fts}.db"
+        c.to_sql(p, fts=fts)
+        hits = db.search(p, "KU-RO")                       # default mode="token"
+        assert {t for _d, _pos, t in hits} == {"KU-RO"}, f"fts={fts}: leaked {hits}"
+        assert {d for d, _pos, _t in hits} == {"D1"}, f"fts={fts}"   # only the exact-KU-RO doc
+
+
+def test_search_substring_mode_overmatches_by_design(tmp_path: Path) -> None:
+    c = _embedding_corpus()
+    for fts in (True, False):
+        p = tmp_path / f"sub_{fts}.db"
+        c.to_sql(p, fts=fts)
+        texts = {t for _d, _pos, t in db.search(p, "KU-RO", mode="substring")}
+        assert texts == {"KU-RO", "PO-TO-KU-RO"}, f"fts={fts}: {texts}"
 
 
 def test_stream_matches_from_sql(tmp_path: Path) -> None:
