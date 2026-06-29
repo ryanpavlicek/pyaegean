@@ -71,3 +71,26 @@ def test_to_geodataframe_rejects_bad_level() -> None:
     pytest.importorskip("geopandas")
     with pytest.raises(ValueError, match="level must be"):
         aegean.geo.to_geodataframe(aegean.load("lineara"), level="bogus")
+
+
+def test_contested_findspot_flagged() -> None:
+    coords = site_coordinates()
+    marg = coords["Margiana"]
+    assert marg.is_contested
+    assert marg.contested and "not a genuine find-spot" in marg.contested
+    # ordinary sites carry no flag
+    ht = coords["Haghia Triada"]
+    assert ht.contested is None and not ht.is_contested
+    # Margiana is the only disputed entry in the gazetteer
+    assert [k for k, v in coords.items() if v.is_contested] == ["Margiana"]
+
+
+def test_contested_surfaces_in_geodataframe() -> None:
+    pytest.importorskip("geopandas")
+    c = aegean.load("lineara")
+    gdf = aegean.geo.to_geodataframe(c)
+    assert "contested" in gdf.columns
+    # Margiana's inscription is flagged; ordinary rows are not
+    marg = gdf[gdf["site"] == "Margiana"]
+    assert len(marg) >= 1 and marg["contested"].notna().all()
+    assert gdf[gdf["site"] == "Haghia Triada"]["contested"].isna().all()

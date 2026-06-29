@@ -6,6 +6,10 @@ corpus as a GeoDataFrame for spatial analysis and plotting. The coordinates are 
 work. Where a site aligns to a Pleiades place, its stable id travels with it (``SiteCoord.pleiades``
 / ``pleiades_uri``) for linked-open-data work — the major sites are aligned, minor findspots/peak
 sanctuaries mostly are not. Sites not in the gazetteer are dropped; see `site_coordinates` for coverage.
+A few entries are flagged ``contested`` (Margiana): present because the upstream corpus carries them
+but not accepted as Linear A find-spots. The flag (``SiteCoord.contested`` / ``is_contested``, and a
+``contested`` column on the GeoDataFrames) travels with the site so it is never silently mapped as a
+genuine provenance.
 
 geopandas/shapely are imported lazily, so ``import aegean`` stays instant and dependency-free; the
 geo functions raise a clear error if the extra isn't installed.
@@ -34,11 +38,21 @@ class SiteCoord:
     lon: float
     region: str        # one of: crete | aegean | anatolia | levant | mainland | remote
     pleiades: int | None = None   # Pleiades place id, if the site aligns to one
+    # Set when the find-spot's provenance is disputed: the site is present because
+    # the upstream corpus carries it, but it is not an accepted Linear A find-spot.
+    # The string is the reason; ``None`` for ordinary sites. Carried through the
+    # GeoDataFrames so it is never silently mapped as a genuine provenance.
+    contested: str | None = None
 
     @property
     def pleiades_uri(self) -> str | None:
         """The site's stable Pleiades URI, or ``None`` if it isn't aligned to a place."""
         return f"https://pleiades.stoa.org/places/{self.pleiades}" if self.pleiades else None
+
+    @property
+    def is_contested(self) -> bool:
+        """Whether this find-spot's provenance is disputed (see :attr:`contested`)."""
+        return self.contested is not None
 
 
 def site_coordinates() -> dict[str, SiteCoord]:
@@ -72,6 +86,7 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
                 "id": d.id, "site": d.meta.site, "label": coords[d.meta.site].name,
                 "region": coords[d.meta.site].region, "period": d.meta.period,
                 "pleiades": coords[d.meta.site].pleiades,
+                "contested": coords[d.meta.site].contested,
                 "geometry": point(coords[d.meta.site].lon, coords[d.meta.site].lat),
             }
             for d in corpus
@@ -83,6 +98,7 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
             {
                 "site": site, "label": coords[site].name, "region": coords[site].region,
                 "pleiades": coords[site].pleiades, "inscriptions": n,
+                "contested": coords[site].contested,
                 "geometry": point(coords[site].lon, coords[site].lat),
             }
             for site, n in counts.most_common()
@@ -106,6 +122,7 @@ def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def
         {
             "site": site, "label": coords[site].name, "region": coords[site].region,
             "pleiades": coords[site].pleiades, "count": n,
+            "contested": coords[site].contested,
             "geometry": point(coords[site].lon, coords[site].lat),
         }
         for site, n in counts.most_common()
