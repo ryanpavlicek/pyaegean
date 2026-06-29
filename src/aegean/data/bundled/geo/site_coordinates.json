@@ -54,5 +54,5 @@
 "Enkomi": {"name": "Enkomi", "lat": 35.17, "lon": 33.87, "region": "levant", "pleiades": 13818291},
 "Ugarit": {"name": "Ugarit (Ras Shamra)", "lat": 35.6, "lon": 35.78, "region": "levant", "pleiades": null},
 "Tel Haror": {"name": "Tel Haror (Negev)", "lat": 31.38, "lon": 34.61, "region": "levant", "pleiades": 687907},
-"Margiana": {"name": "Margiana (Turkmenistan)", "lat": 37.7, "lon": 62.0, "region": "remote", "pleiades": 961934}
+"Margiana": {"name": "Margiana (Turkmenistan)", "lat": 37.7, "lon": 62.0, "region": "remote", "pleiades": 961934, "contested": "Disputed: no Linear A inscription is accepted from Central Asia; present in the upstream corpus but not a genuine find-spot. The only link is the fringe 'Cretan Protolinear' theory, and the '1427 in Margiana' claim misreads the GORILA corpus total (all Linear A artefacts, overwhelmingly Cretan)."}
 }
