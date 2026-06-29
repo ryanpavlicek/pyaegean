@@ -4,6 +4,20 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.14.1 (2026-06-29)
+
+### Fixed
+- **`analysis.wilson_interval`** clamps an out-of-range count: `k > n` made p̂ > 1 and drove the
+  variance (and its square root) negative; it now returns a valid in-[0,1] interval, and `n <= 0`
+  returns the no-information interval `(0, 1)`.
+- **`analysis.fit_heaps`** rejects a constant-x growth curve relative to the data scale instead of an
+  exact-zero comparison, which float roundoff defeated into a fabricated power-law fit.
+
+Both are unreachable from the library's own callers (`pmi_interval` keeps `joint ≤ total`; a real
+vocabulary-growth curve has increasing token counts), but they match the degenerate-input contract the
+rest of the statistics layer already upholds. Surfaced by a cross-repo audit of the Linear A Research
+Workbench, whose ported helpers shared the same gaps.
+
 ## 0.14.0 (2026-06-28)
 
 ### Added
