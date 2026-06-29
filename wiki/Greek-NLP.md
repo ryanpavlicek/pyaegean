@@ -834,15 +834,21 @@ shared lexicon as the [treebank backend](#treebank-backed-mode-opt-in));
 
 ## Lemmatization (baseline)
 
-A small bundled form→lemma seed table with an identity fallback. This is the
-always-offline **baseline**; for attested forms the
-[treebank backend](#treebank-backed-mode-opt-in) supplies real, accented lemmas, and
-the rule-based [morphological analyzer](#morphological-analysis) is documented above.
+Two always-offline tiers, tried in order: a small bundled form→lemma **seed table** (for
+irregular and high-frequency forms), then a **generalizing rule layer** that strips the
+regular first/second-declension and thematic-verb endings back to the citation form by
+accent-preserving substitution (`-ου/-ῳ/-ον/-οι/-οις → -ος`, the `-η`/`-α` feminine series,
+and the thematic active `-εις/-ει/-ομεν/-ετε/-ουσι(ν)` plus the infinitive `-ειν` → `-ω`).
+The rules keep the surface stem intact, so an unseen `νόμου` lemmatizes to `νόμος` without a
+lookup. For attested forms the [treebank backend](#treebank-backed-mode-opt-in) supplies
+real, accented lemmas, and the rule-based [morphological analyzer](#morphological-analysis)
+is documented above.
 
 ```python
-greek.lemmatize("λόγου")            # 'λόγος'
-greek.lemmatize("ἦν")               # 'εἰμί'
-greek.lemmatize_verbose("ξενικον")  # ('ξενικον', False)  ← not in the seed table
+greek.lemmatize("λόγου")             # 'λόγος'   (seed table)
+greek.lemmatize("ἦν")                # 'εἰμί'    (seed table; irregular)
+greek.lemmatize("νόμου")             # 'νόμος'   (rule layer; not in the table)
+greek.lemmatize_verbose("πατρός")    # ('πατρός', False)  ← 3rd-declension, not rule-recoverable
 ```
 
 The CLI lemmatizes every word, form→lemma per line (backend flags `--treebank`,
@@ -855,13 +861,16 @@ aegean greek lemmatize "λόγου ἦν"
 # ἦν	εἰμί
 ```
 
-To lemmatize **unseen** forms, switch on the
+The rule layer covers the *regular* paradigms only; it cannot restore an accent that recedes
+between the inflected form and the lemma (`κυρίῳ → κύριος`), and third-declension stems,
+indeclinables, and irregular/suppletive forms come back unchanged. For those, switch on the
 [generalizing lemmatizer](#generalizing-lemmatizer-opt-in) below.
 
 ## Generalizing lemmatizer (opt-in)
 
-The seed table and the treebank lookup only lemmatize *attested* forms; an unseen form comes
-back unchanged. `use_lemmatizer()` switches on a trained lemmatizer that **generalizes**: from
+The seed table and the treebank lookup only lemmatize *attested* forms, and the baseline rule
+layer only the *regular* paradigms; an irregular unseen form comes back unchanged.
+`use_lemmatizer()` switches on a trained lemmatizer that **generalizes** more broadly: from
 each (form, lemma) pair it learns a Chrupała-style **edit tree**: a recursive transform that
 keeps the shared stem and rewrites the differing prefix/suffix, so a rule learned from one
 word (`-ου → -ος`) applies to unseen words (`νόμου → νόμος`), and edit trees capture accent

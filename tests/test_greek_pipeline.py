@@ -116,6 +116,47 @@ def test_lemmatize_seed_table():
 
 
 def test_lemmatize_unknown_returns_normalized_form():
-    lemma, known = lemmatize_verbose("ξενικον")
+    # A form outside the regular paradigms the rule layer covers (a third-declension stem
+    # whose lemma is not recoverable from the ending) is returned unchanged.
+    lemma, known = lemmatize_verbose("πατρός")
     assert known is False
-    assert lemma == "ξενικον"
+    assert lemma == "πατρός"
+
+
+# The generalizing ending-stripping rule layer must recover the citation form of regular
+# inflected words it has never seen (none of these are in the seed table), by stem-preserving
+# ending substitution. Each pair is a hand-checked (form, lemma) for the regular first/second-
+# declension nominal and thematic-verb paradigms. This is the correctness guard for the claim
+# that the default lemmatizer generalizes rather than only looking up a seed table.
+@pytest.mark.parametrize(
+    ("form", "lemma"),
+    [
+        ("νόμου", "νόμος"),       # 2nd-decl noun, genitive sg, accent on the stem
+        ("ἀγαθόν", "ἀγαθός"),     # 2nd-decl adjective, accusative sg, oxytone
+        ("ἀγαθῷ", "ἀγαθός"),      # 2nd-decl dative sg (iota subscript), oxytone
+        ("ἀδελφοί", "ἀδελφός"),   # 2nd-decl nominative pl, oxytone
+        ("ἀγάπην", "ἀγάπη"),      # 1st-decl feminine, accusative sg
+        ("ψυχῇ", "ψυχή"),         # 1st-decl feminine, dative sg (iota subscript), oxytone
+        ("λύομεν", "λύω"),        # thematic verb, present 1pl
+        ("γράφεις", "γράφω"),     # thematic verb, present 2sg
+        ("λύει", "λύω"),          # thematic verb, present 3sg
+        ("πιστεύειν", "πιστεύω"), # present active infinitive
+    ],
+)
+def test_rule_layer_lemmatizes_unseen_regular_forms(form: str, lemma: str):
+    from aegean.greek.lemmatize import _lemma_table, rule_lemma_verbose
+
+    assert form not in _lemma_table()  # genuinely held out from the seed table
+    out, recovered = rule_lemma_verbose(form)
+    assert (out, recovered) == (lemma, True)
+    # and it flows through the public default lemmatizer too
+    assert lemmatize(form) == lemma
+
+
+def test_rule_layer_does_not_overfire_on_irregular_or_indeclinable():
+    # Forms outside the regular paradigms must be left unchanged, not force-fit to a rule:
+    # a third-declension genitive (lemma not recoverable from the ending) and an indeclinable
+    # adverb that merely looks like a 2nd-declension accusative.
+    for surface in ("γυναικός", "μᾶλλον"):
+        out, recovered = lemmatize_verbose(surface)
+        assert (out, recovered) == (surface, False)

@@ -3,7 +3,7 @@
 The dependency-free core covers ``normalize`` (NFC/NFD + Beta Code ↔ Unicode, with
 a lenient OCR-repair mode), ``tokenize`` (word/sentence), ``syllabify``, accent
 analysis (``accentuation``), ``prosody``/``meter`` scansion, ``phonology`` (IPA),
-a seed ``lemmatize``, baseline ``pos``, and a rule-based ``morphology`` analyzer
+a seed+rule ``lemmatize``, baseline ``pos``, and a rule-based ``morphology`` analyzer
 (``analyze``). ``pipeline`` runs the whole stack over a text in one call.
 
 Opt-in backends layer on richer data and models:
@@ -23,7 +23,7 @@ Opt-in backends layer on richer data and models:
 - ``use_neural_lemmatizer`` (the ``[neural]`` extra) is a GreTa T5 seq2seq model
   served as int8 ONNX without torch; it pairs a gold lookup with seq2seq decoding and
   reaches 76.3% on unseen forms. ``lemmatize`` cascades neural pipeline ->
-  treebank -> neural -> edit-tree -> seed.
+  treebank -> neural -> edit-tree -> seed table -> generalizing ending rules.
 
 Every stage is a plain function so it can be used standalone::
 

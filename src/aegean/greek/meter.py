@@ -32,6 +32,12 @@ Limitations
   ``_SYNIZESIS`` lexicon (contribution-friendly, test-enforced) lists the words
   where it is standard; a line needing synizesis on a word **not** in the lexicon
   still raises `ScansionError` rather than guessing.
+- **Vowel length by nature** of a *dichronon* (α, ι, υ) is not recoverable from
+  the spelling, so it too is **lexical**: a curated ``_LONG_BY_NATURE`` lexicon
+  (contribution-friendly, test-enforced) records the words where a written α/ι/υ
+  is long, which resolves lines (e.g. ψῡ- in ``ψυχάς``, Il. 1.3) the rules would
+  otherwise leave genuinely ambiguous. A dichronon not in the lexicon stays
+  common (heavy or light), never guessed in one direction.
 - Diaeresis (e.g. ``ϊ``) correctly blocks diphthong formation.
 - Meters: dactylic hexameter, elegiac pentameter, **iambic trimeter** (with
   resolution), and the **aeolic lyric lines** (glyconic, pherecratean, the sapphic
@@ -87,6 +93,40 @@ _SYNIZESIS: dict[str, str] = {
 def _synizesis_bigram(word_match: str) -> str:
     """The vowel bigram that coalesces in ``word_match`` by synizesis, or ``""``."""
     return _SYNIZESIS.get(_strip_combining(word_match).lower(), "")
+
+
+# Heavy-by-nature lexicon: words with a *dichronon* (α, ι, υ) that is long by
+# nature here and so cannot be derived from the spelling. Without this knowledge
+# such a vowel reads as `common` (heavy OR light), which leaves an otherwise
+# determinate line genuinely ambiguous and lets the greedy dactyl-first fit pick
+# a non-canonical (wrong) reading rather than the one the line actually has.
+# Keyed on the accent/diacritic-stripped lowercase word; the value is the set of
+# plain base vowels that are long at *every* occurrence in that word (so the
+# override is sound applied to all of them). This is lexical knowledge, not a
+# rule (like `_SYNIZESIS`): each entry must be required by a real verse line that
+# otherwise mis-scans, and is enforced by the test suite. Add a word here the way
+# you would add a syllabification exception.
+_LONG_BY_NATURE: dict[str, frozenset[str]] = {
+    # ψυχάς (Il. 1.3) — ψῡχή has a long υ by nature, and the first-declension
+    # accusative-plural ending -ᾱς is long; both fix the line's third foot.
+    "ψυχας": frozenset("υα"),
+}
+
+
+def _long_by_nature(word_match: str, base_vowel: str) -> bool:
+    """Whether ``base_vowel`` is long by nature in ``word_match`` (lexical)."""
+    return base_vowel in _LONG_BY_NATURE.get(_strip_combining(word_match).lower(), frozenset())
+
+
+def _quantity_is_forced_long(word: str, base_vowel: str) -> bool:
+    """Whether ``base_vowel`` is a *dichronon* that ``word`` actually contains, so
+    the `_LONG_BY_NATURE` override genuinely changes the open-syllable reading from
+    common to long (a dead entry would not). Used to test the lexicon."""
+    return (
+        base_vowel in _DICHRONA
+        and base_vowel in _strip_combining(word).lower()
+        and _long_by_nature(word, base_vowel)
+    )
 
 
 class ScansionError(ValueError):
@@ -241,6 +281,15 @@ def _items(line: str) -> list[_Item]:
     return items
 
 
+def _word_texts(line: str) -> list[str]:
+    """The line's Greek words in order (NFC, apostrophes dropped) — the same word
+    stream `_items` indexes by ``word_idx``."""
+    nfc = unicodedata.normalize("NFC", line)
+    for ap in _APOSTROPHES:
+        nfc = nfc.replace(ap, "")
+    return _GREEK_WORD.findall(nfc)
+
+
 def _consonant_weight(cons: list[_Item]) -> int:
     """Effective consonant count for position (ζ/ξ/ψ count double)."""
     return sum(2 if c.base in _DOUBLE else 1 for c in cons)
@@ -267,6 +316,7 @@ def _analyze(line: str) -> list[_Syllable]:
     nuclei = [k for k, it in enumerate(items) if it.is_vowel]
     if not nuclei:
         return []
+    word_texts = _word_texts(line)
     texts = _partition_text(items, nuclei)
     syllables: list[_Syllable] = []
     for ni, pos in enumerate(nuclei):
@@ -275,6 +325,10 @@ def _analyze(line: str) -> list[_Syllable]:
         following = items[pos + 1: nuclei[ni + 1]] if not is_last else items[pos + 1:]
         weight = _consonant_weight(following)
         category = _nucleus_category(nucleus.text)
+        # Lexical override: a dichronon that is long by nature in this word reads
+        # long, resolving an ambiguity the spelling cannot (e.g. ψῡ- in ψυχάς).
+        if category == "common" and _long_by_nature(word_texts[nucleus.word_idx], nucleus.base):
+            category = "long"
 
         if weight >= 2 and not _is_muta_cum_liquida(following):
             options = {HEAVY}                       # closed → long by position
