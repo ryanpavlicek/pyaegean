@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.13.0
+aegean --version                # pyaegean 0.14.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -682,7 +682,7 @@ full-text index) and search it.
 |---|---|---|---|
 | `build` | Write a corpus to a SQLite DB | `-o/--output --no-fts` | `aegean db build lineara -o lineara.db` |
 | `add` | Upsert another corpus into an existing DB | `-o/--output` | `aegean db add cypriot -o lineara.db` |
-| `search` | Full-text search a corpus DB's tokens | `--limit --json` | `aegean db search lineara.db KU-RO` |
+| `search` | Search a corpus DB's tokens (whole-token by default; --substring to match within tokens) | `--limit --substring --json` | `aegean db search lineara.db KU-RO` |
 
 ```bash
 aegean db build lineara -o lineara.db        # → "wrote 1721 documents to lineara.db"

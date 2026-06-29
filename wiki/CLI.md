@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.13.0
+aegean --version          # pyaegean 0.14.0
 ```
 
 | Group | What's in it |
@@ -1168,6 +1168,13 @@ aegean db search lineara.db KU-RO --limit 3
 │ HT9b  │ 20  │ KU-RO │
 │ HT11a │ 7   │ KU-RO │
 └───────┴─────┴───────┘
+```
+
+`db search` matches a whole token by default: `KU-RO` matches only `KU-RO`, never
+`PO-TO-KU-RO`. Pass `--substring` to match within tokens instead:
+
+```bash
+aegean db search lineara.db KU-RO --substring   # also matches PO-TO-KU-RO, etc.
 ```
 
 `db build` resolves its corpus like anything else — so `aegean db build

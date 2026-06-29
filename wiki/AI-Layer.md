@@ -639,9 +639,11 @@ aegean ai translate "σπεῖρε τὴν ἄρουραν" --script greek --glo
 aegean ai translate "ἦν ὁ λόγος" --script greek --no-glosses                # lemma-only
 ```
 
-Coverage of rare and inflected forms depends on the **active lemmatizer**: the seed table
-misses most oblique forms, so a glossed translation on it leaves much ungrounded. A warning
-fires when only the baseline lemmatizer is loaded, naming the fix (call
+Coverage of rare and inflected forms depends on the **active lemmatizer**: the offline baseline
+now also strips the regular second-declension and thematic-verb endings (a generalizing rule layer),
+so νόμου resolves to νόμος without a lookup, but it still misses irregular and unrecognized forms,
+leaving a glossed translation on it partly ungrounded. The opt-in backends remain more accurate. A
+warning fires when only the baseline lemmatizer is loaded, naming the fix (call
 `greek.use_treebank()`, or `greek.use_neural_lemmatizer()` for the fullest coverage on
 oblique and documentary forms, first). The richer the lemmatizer, the more content words
 resolve to an entry, so both the help on obscure vocabulary and the gloss noise on familiar

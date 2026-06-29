@@ -4,6 +4,51 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.14.0 (2026-06-28)
+
+### Added
+- **Generalizing rule-based lemmatizer (always-offline default).** With no backend loaded,
+  `greek.lemmatize` now strips the regular second-declension and thematic-verb endings to recover the
+  citation form (`νόμου → νόμος`) instead of only consulting a seed table. On the full Nestle 1904 New
+  Testament it lifts the offline baseline from 14.5% to 15.4% (about 1,300 regular forms recovered against
+  28 mis-strips), with conservative guards (contracted nominatives like `Ἰησοῦς`, neuter `-ον` nouns,
+  indeclinables) preventing the regressions a naive stripper introduces. The opt-in treebank and neural
+  backends remain far more accurate for serious work.
+- **Whole-token and substring search modes.** `db.search(..., mode="token")` (the default) matches a
+  whole token literally, so `KU-RO` matches only the token `KU-RO`, never `PO-TO-KU-RO`; `mode="substring"`
+  (CLI `aegean db search --substring`) opts into the within-token search.
+
+### Changed
+- **`db.search` matches whole tokens by default.** The FTS index previously split hyphenated
+  transliterations, so `KU-RO` matched the subsequence inside any longer token (`search("DA-RO")` returned
+  7 hits, none of them the token `DA-RO`). Search now matches an exact whole token; pass `mode="substring"`
+  for the previous within-token behaviour. The call signature is unchanged.
+
+### Fixed
+- **Accentuation:** word-final `-οις` / `-αις` (dative plural) count long, so dative plurals accent on the
+  penult (`ἀνθρώποις`), not the antepenult.
+- **Sandhi:** elided proclitics (`ἀπ'`, `ἐπ'`, `καθ'`, …) now resolve; the accent-keyed entries were
+  unreachable under the accent-blind lookup.
+- **Scansion:** `scan_hexameter` scans Iliad 1.3 to its canonical pattern via a curated long-by-nature
+  lexicon, instead of returning a wrong greedy reading.
+- **Beta Code:** `unicode_to_betacode` / `betacode_to_unicode` round-trip text containing literal
+  `( ) / \ = + |` through a backtick escape.
+- **Lenient OCR normalize:** maps Latin `v` to upsilon (the common misreading) and only repairs
+  Greek-dominated tokens, leaving a mostly-Latin token untouched.
+- **Collocation:** `fishers_exact` returns 1.0 on an impossible 2×2 table instead of raising.
+- **Translation grounding:** the rare-word gloss gate no longer glosses every word on all-common text;
+  `clean_gloss` no longer leaks etymology fragments; and the concise-gloss cascade no longer falls back to
+  LSJ's archaic first sense when no concise dictionary is loaded.
+- **Idioms:** nested sub-idioms are suppressed on the lemma path too (the longest idiom wins).
+- **Clause skeleton:** copular clauses keep the copula and the predicate nominal/adjective, instead of
+  labelling a preposition-phrase-internal noun the predicate.
+- **EpiDoc:** a LOST token round-trips as LOST, distinct from RESTORED, instead of becoming RESTORED.
+
+### Documentation
+- Every public function now ships a correctness test (CONTRIBUTING and the release gate require it).
+- `query(output='words')` counts are documented as document frequency, distinct from
+  `Corpus.word_frequencies()` token frequency.
+
 ## 0.13.0 (2026-06-28)
 
 ### Added

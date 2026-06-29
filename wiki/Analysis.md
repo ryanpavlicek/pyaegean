@@ -1012,8 +1012,9 @@ from aegean import db, Corpus
 
 db.to_sqlite(c, "corpus.db")                # documents + tokens as rows, with an FTS5 index
 again = Corpus.from_sql("corpus.db")        # round-trips: len(again) == 1721
-db.search("corpus.db", "KU-RO")             # full-text search → [(doc_id, position, text), ...]
-# first hit: ('HT9a', 25, 'KU-RO')   — 39 hits across the corpus
+db.search("corpus.db", "KU-RO")             # whole-token search → [(doc_id, position, text), ...]
+# first hit: ('HT9a', 25, 'KU-RO')   — 37 hits across the corpus
+# db.search("corpus.db", "KU-RO", mode="substring") returns 39 (also matches PO-TO-KU-RO)
 for doc in db.stream("corpus.db"):          # iterate without loading the whole corpus
     ...
 ```
