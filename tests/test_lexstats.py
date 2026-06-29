@@ -178,6 +178,13 @@ class TestFitHeaps:
         assert fit_heaps([(0, 0)]) is None
         assert fit_heaps([(0, 0), (10, 8), (20, 14)]) is None
 
+    def test_constant_x_returns_none_not_a_fabricated_fit(self) -> None:
+        # A flat growth curve (all token counts equal) has zero x-variance, so no
+        # power law can be fit. denom is 0 mathematically but ~1e-13 in float, which
+        # an exact-zero guard misses and turns into a fabricated fit; must be None.
+        assert fit_heaps([(100, t) for t in (3, 5, 8, 11, 14)]) is None
+        assert fit_heaps([(100, 100)] * 6) is None
+
 
 class TestFitZipfMandelbrot:
     def test_recovers_synthetic_params(self) -> None:

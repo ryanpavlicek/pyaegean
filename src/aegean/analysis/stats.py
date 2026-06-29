@@ -609,13 +609,17 @@ def fit_heaps(points: Sequence[tuple[float, float]]) -> HeapsFit | None:
         sxy += x * y
         syy += y * y
     denom = n * sxx - sx * sx
-    if denom == 0:
+    # A constant-x curve (no real growth) has denom == 0 mathematically, but float
+    # roundoff leaves a tiny residue (~1e-13) that an exact-zero check misses,
+    # yielding a fabricated fit. Reject relative to the data scale instead.
+    eps = 1e-9
+    if denom <= eps * max(n * sxx, 1.0):
         return None
     beta = (n * sxy - sx * sy) / denom
     log_k = (sy - beta * sx) / n
     ss_tot = syy - (sy * sy) / n
     ss_res = ss_tot - (beta * (n * sxy - sx * sy)) / n
-    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else 0.0
+    r2 = 1 - ss_res / ss_tot if ss_tot > eps * max(syy, 1.0) else 0.0
     return HeapsFit(k=math.exp(log_k), beta=beta, r2=r2)
 
 
