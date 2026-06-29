@@ -4,6 +4,15 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.14.2 (2026-06-29)
+
+### Added
+- **Contested find-spot flag in the gazetteer.** `aegean.geo.SiteCoord` gains an optional
+  `contested` reason string (with an `is_contested` convenience property), and the geo
+  GeoDataFrames carry a matching `contested` column. The bundled Margiana (Turkmenistan) entry is
+  flagged: it is kept for corpus fidelity (and cross-project parity), but no Linear A inscription is
+  accepted from Central Asia, so it is never silently mapped as a genuine find-spot.
+
 ## 0.14.1 (2026-06-29)
 
 ### Fixed
