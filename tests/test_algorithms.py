@@ -175,6 +175,14 @@ def test_wilson_interval_brackets_and_bounds():
     lo, hi = wilson_interval(5, 10)
     assert 0 <= lo < 0.5 < hi <= 1
     assert wilson_interval(0, 0) == (0.0, 1.0)
+    # An out-of-range count must clamp, not raise / return NaN: k>n would make p̂>1
+    # and drive the variance (and the sqrt) negative. k>n behaves like k=n; n<=0 and
+    # negative k fall back to the no-information / k=0 intervals.
+    lo2, hi2 = wilson_interval(15, 10)
+    assert 0 <= lo2 <= hi2 <= 1
+    assert (lo2, hi2) == wilson_interval(10, 10)
+    assert wilson_interval(3, 0) == (0.0, 1.0)
+    assert wilson_interval(-2, 10) == wilson_interval(0, 10)
 
 
 # ── sequence distance / similarity ───────────────────────────────────────────

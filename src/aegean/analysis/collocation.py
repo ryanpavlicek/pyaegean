@@ -132,9 +132,10 @@ def fishers_exact(joint: int, count_a: int, count_b: int, total: int) -> float:
 def wilson_interval(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     """Wilson score interval for a binomial proportion p̂ = k/n. Stays inside
     [0,1] with good coverage even at small/extreme p̂. ``z = 1.96`` ≈ 95%."""
-    if n == 0:
+    if n <= 0:
         return (0.0, 1.0)
-    p = k / n
+    kc = min(max(k, 0), n)  # clamp an out-of-range count: k>n would make p̂>1 and
+    p = kc / n              # drive the variance negative (sqrt of a negative)
     denom = 1 + (z * z) / n
     center = (p + (z * z) / (2 * n)) / denom
     half = (z / denom) * math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))
