@@ -288,7 +288,10 @@ These are deliberate. They're listed here so you can judge them, not so they get
   `Corpus.from_json()`. Reach for the latter whenever round-tripping matters.
 
 - **The gazetteer is mapping-grade** (~1 km site-level coordinates), for
-  distribution maps: not survey work.
+  distribution maps: not survey work. One entry is a **contested** find-spot:
+  Margiana (Turkmenistan) is kept because the upstream corpus carries it, but no
+  Linear A inscription is accepted from Central Asia, so it is flagged
+  (`SiteCoord.contested`) and never silently mapped as genuine.
 
 - **The AI layer is exploratory by construction.** Every generative result is a
   labeled, provenanced hypothesis built on local deterministic grounding: by
