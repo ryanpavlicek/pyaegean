@@ -620,7 +620,11 @@ def geo(
     json_out: bool = JSON_OPT,
 ) -> None:
     """Geographic view: find-site coordinates, or with --word the per-site attestations of one
-    word (GeoJSON needs the [geo] extra; the table does not)."""
+    word (GeoJSON needs the [geo] extra; the table does not).
+
+    Only provenanced inscription corpora yield rows (lineara, linearb, cypriot, cyprominoan,
+    sigla, damos); alphabetic Greek corpora (greek, nt, work ids) carry no find-spot. --word
+    matching is case-insensitive."""
     c = load_corpus(corpus)
     from aegean.geo import site_coordinates
 
@@ -636,8 +640,9 @@ def geo(
         from collections import Counter
 
         counts: Counter[str] = Counter()
+        target = word.casefold()
         for d in c:
-            if d.meta.site in coords and any(t.text == word for t in d.words):
+            if d.meta.site in coords and any(t.text.casefold() == target for t in d.words):
                 counts[d.meta.site] += 1
         wrows = [
             {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}
@@ -645,6 +650,9 @@ def geo(
         ]
         if json_out:
             emit_json(wrows)
+            return
+        if not wrows:
+            print(f"{corpus}: {word!r} is not attested at any mapped find-site.")
             return
         table(
             f"{corpus}: {word!r} attested at {len(wrows)} located site(s)",
@@ -670,6 +678,13 @@ def geo(
     ]
     if json_out:
         emit_json(rows)
+        return
+    if not rows:
+        print(
+            f"{corpus}: no mapped find-sites. geo maps provenanced inscription corpora "
+            "(lineara, linearb, cypriot, cyprominoan, sigla, damos); alphabetic Greek corpora "
+            "carry no find-spot."
+        )
         return
     table(
         f"{corpus}: {len(rows)} located site(s) of {len(sites)}",

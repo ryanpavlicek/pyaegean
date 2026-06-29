@@ -110,13 +110,15 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
 
 def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def]
     """A ``GeoDataFrame`` of the find-sites where ``word`` is attested, with per-site counts — i.e.
-    *where* a given word shows up across the corpus, ready to map. Needs the ``[geo]`` extra."""
+    *where* a given word shows up across the corpus, ready to map. Matching is case-insensitive
+    (``ku-ro`` finds ``KU-RO``). Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
     coords = site_coordinates()
+    target = word.casefold()
     counts: Counter[str] = Counter()
     for d in corpus:
         site = d.meta.site
-        if site in coords and any(t.text == word for t in d.words):
+        if site in coords and any(t.text.casefold() == target for t in d.words):
             counts[site] += 1
     rows = [
         {

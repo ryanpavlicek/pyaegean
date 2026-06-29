@@ -165,6 +165,17 @@ def test_geo_contested_flag(app):
     assert "not a genuine find-spot" in by_site["Margiana"]["contested"]
 
 
+def test_geo_word_case_insensitive(app):
+    # a lowercase query matches the uppercase-stored transliteration (KU-RO)
+    rows = json.loads(ok(app, "geo", "lineara", "--word", "ku-ro", "--json"))
+    assert any(r["site"] == "Haghia Triada" and r["count"] > 0 for r in rows)
+
+
+def test_geo_empty_corpus_hint(app):
+    # a corpus with no find-sites prints a one-line hint instead of an empty grid
+    assert "no mapped find-sites" in ok(app, "geo", "greek")
+
+
 def test_sign_lookup(app):
     data = json.loads(ok(app, "sign", "lineara", "KU", "--json"))
     assert data["phonetic"] == "ku" and data["codepoint"] == "U+10642"
