@@ -4,6 +4,22 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.14.4 (2026-06-29)
+
+### Fixed
+- **Gazetteer coordinates corrected against Pleiades.** A full validation pass of the geo gazetteer
+  against the Pleiades representative points found five find-site coordinates that had drifted from
+  their place: Zominthos (~7.5 km), Kythera (~8.4 km), Pylos (~9.4 km), and the Cyprus and Margiana
+  island centroids. All are now aligned to the Pleiades point.
+
+### Added
+- **Seven more find-sites aligned to Pleiades** (33 → 40 of 56): Ugarit (Ras Shamra), Sitia, the
+  Skotino cave, Fourni and Troullos (Archanes), Poros (the harbour of Knossos), and Pyrgos, which
+  had been mislocated by 39 km and is now corrected to Myrtos-Pyrgos.
+- **`scripts/check_gazetteer.py`** — a repo-only guard (run weekly via `assets.yml`) that fails if a
+  Pleiades-linked find-site drifts more than 6 km from its Pleiades point, so the gazetteer cannot
+  silently rot.
+
 ## 0.14.3 (2026-06-29)
 
 ### Fixed

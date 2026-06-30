@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.14.3 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.14.4 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -98,6 +98,7 @@ time, not of any one change. Run it yourself anytime:
 ```bash
 python scripts/check_assets.py                 # every pinned URL still resolves
 python scripts/check_assets.py --verify-hashes # also sha256-verify the release assets (slow)
+python scripts/check_gazetteer.py              # every Pleiades-linked find-site is near its place
 ```
 
 A quick smoke check that the bundled corpus still loads:
@@ -154,7 +155,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.14.3-py3-none-any.whl: 3063 KB uncompressed, 162 files
+# wheel dist/pyaegean-0.14.4-py3-none-any.whl: 3063 KB uncompressed, 162 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -163,7 +164,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.14.3-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.14.4-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail

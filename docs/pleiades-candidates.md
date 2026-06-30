@@ -2,41 +2,46 @@
 
 The find-site gazetteer (`src/aegean/data/bundled/geo/site_coordinates.json`)
 aligns each site to a [Pleiades](https://pleiades.stoa.org/) place id for
-linked-open-data work. **33 of 56** sites are aligned; every id is **verified by
-coordinate** (the Pleiades representative point is within a few km of ours and
-the place description matches the site), never guessed: the verification caught
-several false near-matches (e.g. Kannia is *not* Gortyn; Ugarit's own name search
-surfaces only neighbouring places).
+linked-open-data work. **40 of 56** sites are aligned; every id is **verified by
+coordinate** (the Pleiades representative point is within a few km of ours and the
+place description matches the site), never guessed, and re-checked weekly by
+`scripts/check_gazetteer.py` so a stray coordinate cannot quietly slip in.
 
-## Recently aligned (2026-06-11)
+## Trust pass (2026-06-29)
 
-Seven sites gained a verified id, taking coverage from 26 to 33:
+A full validation of all 56 sites against their Pleiades representative points:
+
+- **Corrected five drifted coordinates** — Zominthos (~7.5 km), Kythera (~8.4 km),
+  Pylos (~9.4 km), and the Cyprus and Margiana island centroids — each realigned to
+  the Pleiades point.
+- **Aligned seven more sites** (33 → 40), each coordinate-verified:
 
 | Site | Pleiades | Identification |
 | --- | --- | --- |
-| Iouktas (Mt Juktas) | [589826](https://pleiades.stoa.org/places/589826) | "Gioukhtas" mountain + peak sanctuary |
-| Arkhalokhori | [220781958](https://pleiades.stoa.org/places/220781958) | the Arkalochori cave sanctuary (the bronze axes) |
-| Syme sanctuary | [589805](https://pleiades.stoa.org/places/589805) | Hermes & Aphrodite sanctuary, Kato Syme Viannou |
-| Psychro cave | [589675](https://pleiades.stoa.org/places/589675) | Aigaion Antron (the putative Diktaean cave) |
-| Apodoulou | [119143959](https://pleiades.stoa.org/places/119143959) | the Apodoulou tholos tomb |
-| Kardamoutsa | [589839](https://pleiades.stoa.org/places/589839) | BAtlas 60 D2 Kardamoutsa (our coordinate corrected) |
-| Tel Haror | [687907](https://pleiades.stoa.org/places/687907) | Gerar (the standard identification) |
+| Ugarit (Ras Shamra) | [668295](https://pleiades.stoa.org/places/668295) | the Ugarit tell; Pleiades carries the Greek harbour name "Leukos Limen" |
+| Sitia | [590045](https://pleiades.stoa.org/places/590045) | ancient Setaea / Eteia at modern Sitia |
+| Skoteino cave | [14671932](https://pleiades.stoa.org/places/14671932) | the Skotino sacred cave (coordinate corrected ~8 km) |
+| Fourni | [589657](https://pleiades.stoa.org/places/589657) | the Archanes (Acharna) cemetery — a parent-place link |
+| Troullos | [589657](https://pleiades.stoa.org/places/589657) | the easternmost sector of Archanes — same parent place |
+| Pyrgos | [589949](https://pleiades.stoa.org/places/589949) | Myrtos-Pyrgos (the Linear A "PYR" find-spot; a 39 km mislocation corrected) |
+| Poros Herakleion | [589802](https://pleiades.stoa.org/places/589802) | Poros-Katsambas, the harbour of Knossos — a parent-place link |
+
+An earlier pass (2026-06-11) aligned Iouktas, Arkhalokhori, Syme, Psychro,
+Apodoulou, Kardamoutsa, and Tel Haror.
 
 ## Candidates to contribute upstream
 
-These sites returned **no matching Pleiades place** when searched and verified by
-coordinate. Most are minor findspots, peak sanctuaries, or caves that legitimately
-aren't yet in Pleiades: good candidates to **contribute upstream** (a Pleiades
-place submission), which both fills our nulls and improves the shared gazetteer:
+These sites returned **no matching Pleiades place**: minor findspots, peak
+sanctuaries, and caves that legitimately are not yet in Pleiades. They are good
+candidates to **contribute upstream** (a Pleiades place submission), which both
+fills our nulls and improves the shared gazetteer:
 
-- **Crete:** Pyrgos (Myrtos Pyrgos), Vrysinas, Kophinas, Larani, Poros Herakleion,
-  Kannia (the Minoan villa: distinct from nearby Gortyn), Nerokourou, Platanos,
-  Sitia (ancient Eteia), Skoteino cave, Traostalos, Trypiti, Armenoi, Fourni
-  (Knossos cemetery), Troullos, Papoura, Prassa, Selakano, Schinias, Kalo Chorafi.
-- **Mainland:** Hagios Stefanos (Laconia).
-- **Levant:** Ugarit / Ras Shamra: a major site, but its own name search did not
-  surface a distinct Pleiades place; pending manual confirmation rather than a
-  guessed id.
+- **Crete:** Vrysinas, Kophinas, Larani, Kannia (the Minoan villa, distinct from
+  nearby Gortyn), Nerokourou, Platanos, Traostalos, Trypiti, Armenoi, Papoura,
+  Prassa, Selakano, Schinias, Kalo Chorafi.
+- **Mainland:** Hagios Stefanos (Laconia) — a dedicated Pleiades entry could not be
+  confirmed (the only homonym is a Cypriot place ~930 km away), so it is left null
+  pending a manual lookup rather than a guessed id.
 
 "Crete (unspecified)" is a region placeholder, not a place, and is intentionally
 left null.
@@ -46,7 +51,8 @@ id API, so they are out of scope here.
 
 ## Method
 
-For each unaligned site: search Pleiades (`/search_rss?portal_type=Place`),
-fetch each candidate's `/places/<id>/json`, and accept only a place whose
-`reprPoint` is within ~5 km of ours **and** whose title/description matches the
-site. This page records the verified result.
+For each linked site, fetch its Pleiades `/places/<id>/json`, read the `reprPoint`,
+and accept the link only when the point is within a few km of ours **and** the
+title/description matches the site; `scripts/check_gazetteer.py` automates exactly
+this check (fail > 6 km) on a weekly schedule. For an unaligned site, search Pleiades
+(`/search_rss?portal_type=Place`) and apply the same verification before adding an id.
