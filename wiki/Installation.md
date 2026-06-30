@@ -114,7 +114,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.14.3
+# pyaegean 0.14.4
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -128,7 +128,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.14.3
+print(aegean.__version__)                 # 0.14.4
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -145,7 +145,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.14.3
+# pyaegean 0.14.4
 
 aegean info lineara
 #                             aegean corpus: lineara
