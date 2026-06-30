@@ -32,9 +32,25 @@ def test_pleiades_alignment() -> None:
     # coordinate-verified additions: Tel Haror = Gerar, the Arkalochori cave
     assert coords["Tel Haror"].pleiades == 687907
     assert coords["Arkhalkhori"].pleiades == 220781958
+    # ids recovered by the gazetteer trust pass (validated against the Pleiades reprPoint)
+    assert coords["Ugarit"].pleiades == 668295        # Ras Shamra / Leukos Limen
+    assert coords["Pyrgos"].pleiades == 589949        # Myrtos-Pyrgos (was a 39 km mislocation)
     vry = coords["Vrysinas"]  # a peak sanctuary not in Pleiades → left null, honestly
     assert vry.pleiades is None and vry.pleiades_uri is None
-    assert sum(1 for s in coords.values() if s.pleiades) >= 33
+    assert sum(1 for s in coords.values() if s.pleiades) >= 40
+
+
+def test_gazetteer_well_formed() -> None:
+    coords = site_coordinates()
+    regions = {"crete", "aegean", "anatolia", "levant", "mainland", "remote"}
+    for name, sc in coords.items():
+        assert sc.region in regions, name
+        assert 30 < sc.lat < 43, name       # Aegean / East-Mediterranean latitudes
+        assert 20 < sc.lon < 63, name       # west Greece out to the Margiana outlier
+        assert sc.pleiades is None or isinstance(sc.pleiades, int), name
+    # exactly the disputed find-spot carries the contested flag
+    assert coords["Margiana"].is_contested
+    assert [n for n, sc in coords.items() if sc.is_contested] == ["Margiana"]
 
 
 def test_to_geodataframe_inscription_level() -> None:

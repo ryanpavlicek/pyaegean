@@ -253,7 +253,7 @@ sc.region                 # 'crete'
 sc.pleiades               # 589672
 sc.pleiades_uri           # 'https://pleiades.stoa.org/places/589672'
 
-coords["Pyrgos"].pleiades_uri   # None  (not aligned)
+coords["Vrysinas"].pleiades_uri # None  (a peak sanctuary, not in Pleiades)
 coords["Margiana"].is_contested # True  (disputed provenance)
 ```
 
@@ -295,10 +295,11 @@ m.contested               # 'Disputed: no Linear A inscription is accepted from 
 
 ## Pleiades alignment
 
-**33 of the 56** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
+**40 of the 56** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
 linked-open-data work. Every id is **verified by coordinate** (the Pleiades representative point is
 within a few km of ours and its description matches the site), so a match is confirmed, never
-guessed. It lives on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving the full
+guessed, and `scripts/check_gazetteer.py` re-checks each one against its live Pleiades point on a
+weekly schedule, so a stray coordinate can't quietly slip in. It lives on `SiteCoord.pleiades` (an `int`), with `SiteCoord.pleiades_uri` giving the full
 `https://pleiades.stoa.org/places/<id>` URI, and surfaces as a `pleiades` column in the GeoDataFrames
 from `to_geodataframe` / `word_distribution`.
 
@@ -307,7 +308,7 @@ geo.site_coordinates()["Haghia Triada"].pleiades_uri
 # 'https://pleiades.stoa.org/places/589672'
 ```
 
-The remaining 23 sites are mostly minor findspots, peak sanctuaries, and caves not yet in Pleiades,
+The remaining 16 sites are mostly minor findspots, peak sanctuaries, and caves not yet in Pleiades,
 left null, and listed as upstream-contribution candidates in
 [docs/pleiades-candidates.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/pleiades-candidates.md).
 
@@ -443,7 +444,7 @@ find-sites across all four scripts. The few Linear A inscriptions with no row si
   can't infer geometry on no rows). Check the word is attested first.
 - **`pleiades` shows as a float in the GeoDataFrame** because the column mixes ids with nulls; the id
   is still integral. Use `SiteCoord.pleiades` for the clean `int`.
-- **23 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're
+- **16 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're
   tracked as upstream-contribution candidates, not errors.
 - **`word_distribution` matches the surface form case-insensitively.** It won't otherwise normalise
   or fuzzy-match; pass the word as the corpus transliterates it.
