@@ -30,6 +30,8 @@ jobs:
       - run: pip install -e .
       - name: Pinned asset URLs resolve
         run: python scripts/check_assets.py
+      - name: Gazetteer find-sites match their Pleiades points
+        run: python scripts/check_gazetteer.py
       - name: Verify release-asset sha256 (manual dispatch only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_hashes }}
         run: python scripts/check_assets.py --verify-hashes
