@@ -156,8 +156,11 @@ def test_rule_layer_does_not_overfire_on_irregular_or_indeclinable():
     # Forms outside the regular paradigms must be left unchanged, not force-fit to a rule. The
     # conservative guards (added after measuring on the full NT, where a naive stripper regressed
     # ~1,000 tokens) keep these whole: a contracted nominative (Ἰησοῦς, circumflex -οῦς), a neuter
-    # noun whose lemma IS the -ον form (ἔργον), a contracted verb (ζῇ, circumflex -ῇ), perispomenon
-    # adverbs / reflexive pronouns (ποῦ, ἑαυτοῦ), and a third-declension genitive.
-    for surface in ("γυναικός", "μᾶλλον", "Ἰησοῦς", "ἔργον", "ζῇ", "ποῦ", "ἑαυτοῦ", "ἐκεῖ"):
+    # noun whose lemma IS the -ον form (ἔργον), a contracted verb (ζῇ, circumflex -ῇ), a perispomenon
+    # adverb (ποῦ), and a third-declension genitive.
+    for surface in ("γυναικός", "μᾶλλον", "Ἰησοῦς", "ἔργον", "ζῇ", "ποῦ", "ἐκεῖ"):
         out, recovered = lemmatize_verbose(surface)
         assert (out, recovered) == (surface, False), f"{surface} was wrongly altered to {out}"
+    # ἑαυτοῦ is now a genuine closed-class table hit (reflexive pronoun, lemma = itself),
+    # returned known=True, not a fabricated recovery.
+    assert lemmatize_verbose("ἑαυτοῦ") == ("ἑαυτοῦ", True)

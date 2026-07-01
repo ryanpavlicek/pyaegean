@@ -281,7 +281,9 @@ def parse_tei_work(
     Iliad book, a prose chapter run). With ``ref`` (e.g. ``"1"``, ``"1.2"``,
     ``"1.1-1.50"``): the matching textpart or verse line-range is selected —
     nested ``<div>``s are addressed by their ``n``, and a trailing numeric range
-    filters verse ``<l>`` lines. ``<note>``/``<bibl>`` are kept in
+    filters verse ``<l>`` lines. A range must stay within one textpart: a ref
+    whose endpoints resolve to different textparts (``"1.1-2.50"``) raises
+    `ValueError` naming both parts. ``<note>``/``<bibl>`` are kept in
     ``DocumentMeta.notes`` (excluded from the running text, not dropped)."""
     import xml.etree.ElementTree as ET
 
@@ -319,7 +321,22 @@ def parse_tei_work(
     if ref is not None:
         start, end = _parse_ref(ref)
         part, rest = _navigate(edition_div, start)
-        _, end_rest = _navigate(edition_div, end)
+        end_part, end_rest = _navigate(edition_div, end)
+        if end_part is not part:
+            # The two endpoints landed in different <div>s. Collecting across
+            # textparts isn't supported (a Document is one textpart), and
+            # returning the start part labeled with the full range would be a
+            # silent truncation — refuse instead.
+            def where(components: list[str], unmatched: list[str]) -> str:
+                matched = components[: len(components) - len(unmatched)]
+                return f"textpart {'.'.join(matched)}" if matched else "no matching textpart"
+
+            raise ValueError(
+                f"{work}: ref {ref!r} crosses textparts: the range start resolves to "
+                f"{where(start, rest)} but the end to {where(end, end_rest)}. A range "
+                "must stay within one textpart; load each part separately (one "
+                "load_work call per book/chapter) and merge the corpora."
+            )
         lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
         hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
         doc = make_doc(part, ref, ref, lo, hi)
@@ -364,10 +381,13 @@ def load_work(
     ``ref`` selects a sub-section instead of the whole work — a citation address
     matching the work's structure: a textpart number (``"1"`` = Iliad book 1),
     a nested div path (``"1.2"`` = book 1, chapter 2 of a prose work), or a verse
-    line-range (``"1.1-1.50"`` = book 1, lines 1–50). Without it, the corpus is
-    one `Document` per top-level textpart. ``<note>``/``<bibl>`` ride along in
-    ``Document.meta.notes``. Raises `aegean.data.DataNotAvailableError` when the
-    work can't be found/fetched, or `ValueError` when ``ref`` matches nothing."""
+    line-range (``"1.1-1.50"`` = book 1, lines 1–50). A range must stay within a
+    single textpart: ``"1.1-2.50"`` (crossing from book 1 into book 2) raises
+    `ValueError`; load each book separately and `Corpus.merge` the results.
+    Without ``ref``, the corpus is one `Document` per top-level textpart.
+    ``<note>``/``<bibl>`` ride along in ``Document.meta.notes``. Raises
+    `aegean.data.DataNotAvailableError` when the work can't be found/fetched, or
+    `ValueError` when ``ref`` matches nothing."""
     from ...core.corpus import Corpus
 
     blob, src, filename = _fetch_xml(work, source, edition, force)

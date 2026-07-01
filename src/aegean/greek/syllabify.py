@@ -1,11 +1,12 @@
 """Ancient Greek syllabification (rule-based, with a curated exception lexicon).
 
 Standard pedagogical rules: every syllable has one vowel/diphthong nucleus; a
-single consonant between vowels joins the following syllable; a consonant
-cluster splits so that the largest valid Greek onset (a single consonant, a
-stop+liquid/nasal "muta cum liquida", or a known initial cluster) opens the
-following syllable and the rest closes the preceding one; doubled consonants
-split.
+vowel written with a diaeresis (ϊ, ϋ) marks hiatus and is its own nucleus, never
+the second member of a diphthong (Smyth §8: προ-ΐ-στη-μι); a single consonant
+between vowels joins the following syllable; a consonant cluster splits so that
+the largest valid Greek onset (a single consonant, a stop+liquid/nasal "muta cum
+liquida", or a known initial cluster) opens the following syllable and the rest
+closes the preceding one; doubled consonants split.
 
 Pure phonotactics missplits **compounds**, which divide at the point of union
 (Smyth §140): rule-only output gives ``εἰ-σφέ-ρω`` where the correct division is
@@ -30,6 +31,7 @@ _VALID_ONSETS = {
 }
 # Diphthongs (two vowels that share one nucleus). ι/υ subscript handled via base.
 _DIPHTHONGS = {"αι", "ει", "οι", "υι", "αυ", "ευ", "ου", "ηυ", "ωυ"}
+_DIAERESIS = "̈"  # combining diaeresis (dialytika)
 
 # Lexicalised exceptions the phonotactic rules can't capture: compounds divide
 # at the point of union (Smyth §140), so the prefix keeps its final consonant
@@ -67,6 +69,12 @@ def _base(ch: str) -> str:
 
 def _is_vowel(ch: str) -> bool:
     return _base(ch) in _VOWELS
+
+
+def _marks_hiatus(ch: str) -> bool:
+    """Whether ``ch`` carries a diaeresis (ϊ, ϋ, ΐ, ῧ, …): the explicit mark that
+    the vowel does NOT form a diphthong with the preceding one (Smyth §8)."""
+    return _DIAERESIS in unicodedata.normalize("NFD", ch)
 
 
 def _valid_onset(cluster: list[str]) -> bool:
@@ -110,10 +118,15 @@ def _rule_syllabify(word: str) -> list[str]:
     while i < len(chars):
         if _is_vowel(chars[i]):
             nucleus = [chars[i]]
-            # absorb a following vowel if the pair is a diphthong
+            # absorb a following vowel if the pair is a diphthong; a diaeresis on
+            # the second vowel (προΐστημι, πραΰς) marks hiatus and blocks the merge
             if i + 1 < len(chars) and _is_vowel(chars[i + 1]):
                 pair = _base(chars[i]) + _base(chars[i + 1])
-                if pair in _DIPHTHONGS:
+                hiatus = _marks_hiatus(chars[i + 1]) or (
+                    # a combining diaeresis NFC could not fuse into the vowel
+                    i + 2 < len(chars) and chars[i + 2] == _DIAERESIS
+                )
+                if pair in _DIPHTHONGS and not hiatus:
                     nucleus.append(chars[i + 1])
                     i += 1
             units.append(("V", nucleus))

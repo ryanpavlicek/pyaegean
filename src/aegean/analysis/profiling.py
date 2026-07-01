@@ -188,9 +188,10 @@ def _line_commodity(after: list[str]) -> str | None:
 def account_dossiers(corpus: Any) -> list[Dossier]:
     """Gather, per account-head candidate, the counted ledger lines it heads.
 
-    A line's head is its first lexical (syllabic) word; total / grand-total /
-    deficit markers (KU-RO, PO-TO-KU-RO, KI-RO) are excluded — they are
-    accounting operators, not holders. A line counts only if a numeral follows
+    A line's head is its first lexical (syllabic) word; the script's total /
+    grand-total / deficit markers (KU-RO, PO-TO-KU-RO, KI-RO; Linear B's
+    to-so / to-sa / to-so-de, o-pe-ro; matched case-insensitively) are
+    excluded — they are accounting operators, not holders. A line counts only if a numeral follows
     the head; its ``value`` sums the tokens after the head and its commodity is
     the first commodity logogram after it. Sorted by entry count desc, head asc.
 
@@ -201,11 +202,10 @@ def account_dossiers(corpus: Any) -> list[Dossier]:
     heads_by_tablet: dict[str, set[str]] = defaultdict(set)
     for doc in docs:
         markers = markers_for(doc.script_id)
-        excluded = markers.total | markers.grand_total | markers.deficit
         for line in doc.line_tokens:
             texts = [t.text for t in line]
             head = next((tx for tx in texts if is_lexical_word(tx)), None)
-            if head is None or head in excluded:
+            if head is None or markers.is_marker(head):
                 continue
             after = texts[texts.index(head) + 1 :]
             if not any(parse_value(t) is not None for t in after):

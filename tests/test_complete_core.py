@@ -484,11 +484,14 @@ def test_provenance_apa_line_and_nd_fallback() -> None:
 
 # ── register_loader / read_corpus ────────────────────────────────────────────────
 def test_register_loader_makes_corpus_loadable_by_id() -> None:
-    """A registered loader is reachable via aegean.load(id) and returns exactly the object the
-    loader produced (identity)."""
+    """A registered loader is reachable via aegean.load(id) and returns an independent copy of the
+    loader's corpus (isolated so a caller's mutation cannot corrupt a cached loader instance)."""
     c = Corpus.from_records([{"id": "R1", "text": "A-DU"}], script_id="myfind")
     register_loader("complete-core-test", lambda: c)
-    assert aegean.load("complete-core-test") is c
+    loaded = aegean.load("complete-core-test")
+    assert loaded is not c
+    assert loaded.fingerprint() == c.fingerprint()
+    assert [d.id for d in loaded] == [d.id for d in c]
 
 
 def test_read_corpus_inline_json_and_registered_id() -> None:

@@ -6,11 +6,14 @@ are normalized into rows (so SQL and full-text search work over them), with the 
 structure (signs, alternate readings, annotations, line groupings, image refs, notes) kept
 in JSON columns. Provenance and the sign inventory live in a small key/value ``meta`` table.
 ``search`` matches a whole token by default (an FTS5 phrase when available, else an indexed
-exact-match query on ``tokens(text)``); ``mode="substring"`` is the opt-in ``LIKE`` within-token
-search. ``stream`` yields documents lazily for a large DB-backed corpus without materializing it.
+exact-match query on ``tokens(text)``); ``mode="substring"`` is the opt-in within-token search
+(a casefolded Python scan, since SQLite's ``LIKE`` folds ASCII case only). ``stream`` yields
+documents lazily for a large DB-backed corpus without materializing it.
 
 A corpus out of the database cites exactly like a corpus out of JSON — the provenance round-
-trips. ``Corpus.to_sql`` / ``Corpus.from_sql`` are thin wrappers over these functions.
+trips, and a database grown with ``append=True`` records every appended corpus's provenance,
+so the reloaded corpus cites them all. ``Corpus.to_sql`` / ``Corpus.from_sql`` are thin
+wrappers over these functions.
 """
 
 from __future__ import annotations
@@ -31,7 +34,7 @@ from .core.corpus import (
     _provenance_to_dict,
 )
 from .core.model import Document
-from .core.provenance import SCHEMA_VERSION
+from .core.provenance import SCHEMA_VERSION, Provenance
 
 __all__ = ["to_sqlite", "from_sqlite", "search", "stream"]
 
@@ -105,8 +108,10 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
     By default this **overwrites** any existing file. With ``append=True`` it instead
     upserts ``corpus``'s documents into an existing database (by document id — a document
     with a matching id is replaced, others are added), keeping the rest intact; the FTS5
-    index is refreshed. Documents and tokens become queryable rows; provenance and the sign
-    inventory live in a ``meta`` table. Round-trips losslessly via `from_sqlite`."""
+    index is refreshed, and the appended corpus's provenance is recorded alongside the
+    original's, so the reloaded corpus cites every source that went in (see `from_sqlite`).
+    Documents and tokens become queryable rows; provenance and the sign inventory live in
+    a ``meta`` table. Round-trips losslessly via `from_sqlite`."""
     p = str(path)
     if append:
         if p != ":memory:" and not Path(p).exists():
@@ -135,7 +140,12 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
 
 
 def _append_sqlite(corpus: Corpus, p: str) -> None:
-    """Upsert ``corpus``'s documents into the existing DB at ``p`` (by document id)."""
+    """Upsert ``corpus``'s documents into the existing DB at ``p`` (by document id).
+
+    The appended corpus's provenance joins the stored one(s) in ``meta`` (deduplicated),
+    so `from_sqlite` can cite every corpus that went in. The sign inventory follows the
+    `Corpus.merge` rule: a same-script inventory fills an empty slot, and a cross-script
+    append clears it (a mixed corpus has no single-script inventory)."""
     conn = sqlite3.connect(p)
     try:
         has_fts = bool(
@@ -161,8 +171,24 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
         if has_fts:  # rebuild from current tokens so replaced docs leave no stale hits
             conn.execute("DROP TABLE tokens_fts")
             _build_fts(conn)
+        # provenance: keep every distinct source that went in. meta holds one dict for a
+        # single-source DB; the first append of a second source turns it into a list.
+        row = conn.execute("SELECT value FROM meta WHERE key = 'provenance'").fetchone()
+        stored = json.loads(row[0]) if row and row[0] else None
+        provs: list[Any] = stored if isinstance(stored, list) else ([stored] if stored else [])
+        added = _provenance_to_dict(corpus.provenance)
+        if added is not None and added not in provs:
+            provs.append(added)
+            conn.execute(
+                "INSERT OR REPLACE INTO meta(key, value) VALUES ('provenance', ?)",
+                (json.dumps(provs[0] if len(provs) == 1 else provs),),
+            )
         if existing_script and corpus.script_id and existing_script not in ("mixed", corpus.script_id):
             conn.execute("UPDATE meta SET value = 'mixed' WHERE key = 'script_id'")
+            # a mixed database has no single-script sign inventory (the Corpus.merge rule)
+            conn.execute(
+                "INSERT OR REPLACE INTO meta(key, value) VALUES ('sign_inventory', 'null')"
+            )
             import sys
 
             print(
@@ -170,6 +196,15 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
                 "database; the database's script id is now 'mixed'",
                 file=sys.stderr,
             )
+        elif corpus.sign_inventory is not None and existing_script == corpus.script_id:
+            inv_row = conn.execute(
+                "SELECT value FROM meta WHERE key = 'sign_inventory'"
+            ).fetchone()
+            if inv_row is None or not json.loads(inv_row[0] or "null"):
+                conn.execute(
+                    "INSERT OR REPLACE INTO meta(key, value) VALUES ('sign_inventory', ?)",
+                    (json.dumps(_inventory_to_dict(corpus.sign_inventory)),),
+                )
         conn.commit()
     finally:
         conn.close()
@@ -204,14 +239,34 @@ def _document_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Document:
     return _document_from_dict(dd)
 
 
+def _combined_provenance(provs: list[Provenance], n_docs: int) -> Provenance:
+    """A fresh provenance naming every corpus appended into a database, so `cite` on the
+    reloaded corpus stays truthful (the same pattern as ``Corpus.merge``)."""
+    sources = [p.citation or p.source for p in provs]
+    licenses = sorted({p.license for p in provs if p.license})
+    return Provenance(
+        source="Combined corpus (aegean.db)",
+        license="; ".join(licenses) or "mixed",
+        citation="Combined corpus of: " + "; ".join(sources),
+        notes=(f"appended: {len(provs)} corpora → {n_docs} documents",),
+    )
+
+
 def from_sqlite(path: str | Path) -> Corpus:
     """Reconstruct the `Corpus` written by `to_sqlite` — documents, sign inventory, and
-    provenance, byte-for-byte equivalent to the original."""
+    provenance, byte-for-byte equivalent to the original. A database grown with
+    ``to_sqlite(append=True)`` stores one provenance per appended source; those come back
+    as a single combined provenance naming every source, so `Corpus.cite` stays truthful."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     try:
         meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
-        provenance = _provenance_from_dict(json.loads(meta.get("provenance") or "null"))
+        raw = json.loads(meta.get("provenance") or "null")
+        provs = [
+            pv
+            for pv in (_provenance_from_dict(d) for d in (raw if isinstance(raw, list) else [raw]))
+            if pv is not None
+        ]
         inventory = _inventory_from_dict(json.loads(meta.get("sign_inventory") or "null"))
         docs = [
             _document_from_row(conn, r)
@@ -219,6 +274,11 @@ def from_sqlite(path: str | Path) -> Corpus:
         ]
     finally:
         conn.close()
+    provenance: Provenance | None
+    if len(provs) > 1:
+        provenance = _combined_provenance(provs, len(docs))
+    else:
+        provenance = provs[0] if provs else None
     return Corpus(docs, inventory, provenance, meta.get("script_id", ""))
 
 
@@ -229,42 +289,51 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     ``mode="token"`` (default) matches a **whole token literally**: the query must equal the
     token, so a transliteration with hyphens (``KU-RO``, ``A-DU``) matches only that token and
     never a longer token that merely contains it (``KU-RO`` does not match ``PO-TO-KU-RO``). It
-    uses the FTS5 index when present (then confirms the exact match) and an indexed exact-match
-    query otherwise.
+    uses the FTS5 index when present (then confirms the exact match); without FTS5 it falls
+    back to an indexed exact-match query for an ASCII query, or a Python scan for a non-ASCII
+    one (SQLite's ``NOCASE`` folds ASCII case only).
 
     ``mode="substring"`` matches the query as a **substring** of a token, so ``KU-RO`` also
-    finds ``PO-TO-KU-RO`` — useful for tracing every token a sign-group occurs in.
+    finds ``PO-TO-KU-RO`` — useful for tracing every token a sign-group occurs in. It folds
+    case in Python (SQLite's ``LIKE`` also folds ASCII only), scanning the token table: about
+    4 ms on the bundled 1,721-document Linear A corpus, linear in the token count.
 
-    Matching is case-insensitive."""
+    Both modes fold case, Greek included (``ku-ro`` finds ``KU-RO``; ``λόγος`` finds
+    ``ΛΌΓΟΣ``, final sigma folding with the rest). Diacritics still have to match:
+    ``λογος`` does not find ``λόγος``."""
     if mode not in {"token", "substring"}:
         raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
     conn = sqlite3.connect(str(path))
     try:
-        if mode == "substring":
-            esc = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            cur = conn.execute(
-                "SELECT doc_id, position, text FROM tokens WHERE text LIKE ? ESCAPE '\\' LIMIT ?",
-                (f"%{esc}%", limit),
-            )
-            return [(str(r[0]), int(r[1]), str(r[2])) for r in cur]
         target = query.casefold()
+        out: list[tuple[str, int, str]] = []
+        if mode == "substring":
+            for doc_id, position, text in conn.execute(
+                "SELECT doc_id, position, text FROM tokens"
+            ):
+                if target in str(text).casefold():
+                    out.append((str(doc_id), int(position), str(text)))
+                    if len(out) >= limit:
+                        break
+            return out
         has_fts = bool(
             conn.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tokens_fts'"
             ).fetchone()
         )
-        if has_fts:
+        if has_fts:  # unicode61 folds Greek case, so the phrase query finds either case
             phrase = '"' + query.replace('"', '""') + '"'  # a literal FTS5 phrase, not syntax
             cur = conn.execute(
                 "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ?",
                 (phrase,),
             )
-        else:
+        elif query.isascii():  # NOCASE folds ASCII, which is all this query needs
             cur = conn.execute(
                 "SELECT doc_id, position, text FROM tokens WHERE text = ? COLLATE NOCASE",
                 (query,),
             )
-        out: list[tuple[str, int, str]] = []
+        else:  # a Greek (non-ASCII) query: scan, the casefold confirmation below matches
+            cur = conn.execute("SELECT doc_id, position, text FROM tokens")
         for doc_id, position, text in cur:
             if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
                 out.append((str(doc_id), int(position), str(text)))

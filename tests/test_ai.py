@@ -4,6 +4,8 @@ fake client stands in for a provider."""
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 import aegean
@@ -58,8 +60,10 @@ def test_missing_api_key_raises(monkeypatch):
         KeyRequiringClient().complete("hi")
 
 
-def test_provider_not_installed_is_clear():
-    # The optional SDKs aren't installed in CI's base env.
+def test_provider_not_installed_is_clear(monkeypatch):
+    # Simulate the missing SDK regardless of the local env: None in sys.modules
+    # makes ``import anthropic`` raise ImportError, exactly as in CI's base env.
+    monkeypatch.setitem(sys.modules, "anthropic", None)
     with pytest.raises(ai.ProviderNotInstalled, match="anthropic"):
         ai.get_client("anthropic", api_key="x").complete("hi")
 

@@ -204,14 +204,25 @@ model trains on AGDT + Gorman + Pedalion, never on the NT.
 
 | Test set | Lemma | UPOS (reconciled) | scored tokens |
 |---|---|---|---|
-| Nestle 1904 NT (whole) | 87.04 | 87.57 | 137,303 |
+| Nestle 1904 NT (whole) | 87.03 | 86.75 | 137,303 |
 
 Reproduce: `aegean greek eval nt` (or `greek.use_neural_pipeline(); greek.evaluate_on_nt()`).
-Gold-tokenized, all 27 books, ≈10 min on plain CPU.
+Gold-tokenized, all 27 books, ≈1 h on plain CPU. Measured with the shipped quantized
+`grc-joint-v3` bundle against the corrected NT gold (suffixed Robinson closed-class tags
+reconcile to their real UPOS since 0.15.0; they previously fell to `X`).
+
+History of this row, because each generation was measured: the earlier published 87.04 / 87.57
+was recorded (0.8.1) with the **grc-joint-v1** model against the pre-correction gold, and was
+not re-measured when v2 replaced v1 (0.8.7). Decomposed per effect on a fixed book (Mark):
+the v1 → v2 model change costs about 1.8 UPOS out of domain here (the trade that bought v2's
+across-the-board UD Perseus/PROIEL gains); int8 quantization (v3, 0.10.0) costs a further
+~0.1, consistent with its Perseus-lossless gate; the gold correction adds ~+0.35; Unicode
+normalization of the gold has zero effect. Lemma is stable across all three generations
+(87.04 → 87.03).
 
 What is and isn't reported, and why:
 
-- **Lemma** is the clean metric. It sits a few points under the PROIEL-NT lemma (90.6)
+- **Lemma** is the clean metric. It sits a few points under the PROIEL-NT lemma (90.50)
   largely because Nestle 1904's lemma conventions differ from the AGDT the model learned
   (principal-part choice, proper-noun citation form, movable-nu): a real convention gap as
   much as model error; scoring only normalizes NFC + homograph digits, not lemma style.

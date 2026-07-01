@@ -153,8 +153,36 @@ class SignInventory:
         self.signs = signs
         self.script_id = script_id
         self._by_label = {s.label: s for s in signs}
-        self._by_glyph = {s.glyph: s for s in signs if s.glyph}
-        self._by_codepoint = {s.codepoint: s for s in signs if s.codepoint is not None}
+        # Two entries sharing a glyph or codepoint is a data problem worth
+        # surfacing, not silently indexing last-wins (which is how a mislabeled
+        # duplicate hides). Warn and keep the first, mirroring Corpus's
+        # duplicate-id handling.
+        self._by_glyph: dict[str, Sign] = {}
+        self._by_codepoint: dict[int, Sign] = {}
+        dupes: list[str] = []
+        for s in signs:
+            if s.glyph:
+                if s.glyph in self._by_glyph:
+                    dupes.append(f"glyph {s.glyph} ({self._by_glyph[s.glyph].label}/{s.label})")
+                else:
+                    self._by_glyph[s.glyph] = s
+            if s.codepoint is not None:
+                if s.codepoint in self._by_codepoint:
+                    dupes.append(
+                        f"codepoint U+{s.codepoint:04X} "
+                        f"({self._by_codepoint[s.codepoint].label}/{s.label})"
+                    )
+                else:
+                    self._by_codepoint[s.codepoint] = s
+        if dupes:
+            import warnings
+
+            shown = ", ".join(dupes[:5]) + (f" (+{len(dupes) - 5} more)" if len(dupes) > 5 else "")
+            warnings.warn(
+                f"SignInventory: {len(dupes)} duplicate glyph/codepoint mapping(s), "
+                f"keeping the first of each: {shown}",
+                stacklevel=2,
+            )
 
     def __len__(self) -> int:
         return len(self.signs)

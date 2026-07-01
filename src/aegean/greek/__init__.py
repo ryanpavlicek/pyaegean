@@ -10,7 +10,7 @@ Opt-in backends layer on richer data and models:
 
 - ``use_neural_pipeline`` (the ``[neural]`` extra) loads the joint neural model —
   one pass serving UPOS, full morphology (UD FEATS), UD dependency trees, and
-  lemmas, state of the art on the UD Ancient Greek benchmarks (measured numbers
+  lemmas, state of the art on the UD Ancient Greek (Perseus) benchmark (measured numbers
   in ``docs/benchmarks.md``). Once active, ``pos_tag``/``pos_tags``,
   ``lemmatize``, ``parse``, and ``pipeline`` all use it.
 - ``use_treebank`` (Perseus AGDT) supplies attested, correctly-accented lemmas and

@@ -17,6 +17,7 @@ re-derives Aegean token kinds from the transliteration text.)
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -126,14 +127,41 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     A single `Document` is written to the file ``path``; a
     `Corpus` is written as one ``{id}.xml`` file per document into the
     directory ``path`` (created if needed) — the layout
-    `aegean.scripts.linearb.parse_epidoc` reads back."""
+    `aegean.scripts.linearb.parse_epidoc` reads back. Ids are sanitized for
+    the filesystem (anything outside ``[A-Za-z0-9-_.]`` becomes ``_``), which
+    can conflate distinct ids: when two ids sanitize to the same filename, the
+    later ones (in id order) get a ``-2``, ``-3``, ... suffix and a warning
+    names the colliding ids, so no document silently overwrites another."""
     if isinstance(obj, Document):
         Path(path).write_text(to_epidoc(obj), encoding="utf-8")
         return
     out = Path(path)
     out.mkdir(parents=True, exist_ok=True)
+    # Sanitizing can map distinct ids to the same filename ("KN X 1" and "KN,X;1" both become
+    # "KN_X_1"); group by sanitized name and disambiguate deterministically in id order.
+    by_name: dict[str, list[Document]] = {}
     for doc in obj:
-        (out / f"{_safe_name(doc.id)}.xml").write_text(to_epidoc(doc), encoding="utf-8")
+        by_name.setdefault(_safe_name(doc.id), []).append(doc)
+    used = set(by_name)
+    for name, group in by_name.items():
+        group.sort(key=lambda d: d.id)
+        if len(group) > 1:
+            ids = ", ".join(repr(d.id) for d in group)
+            warnings.warn(
+                f"write_epidoc: document ids {ids} all sanitize to the filename {name!r}.xml; "
+                f"keeping the first (in id order) and suffixing the rest with -2, -3, ...",
+                stacklevel=2,
+            )
+        for i, doc in enumerate(group):
+            fname = name
+            if i:
+                n = i + 1
+                fname = f"{name}-{n}"
+                while fname in used:  # a suffixed name can itself be another document's id
+                    n += 1
+                    fname = f"{name}-{n}"
+                used.add(fname)
+            (out / f"{fname}.xml").write_text(to_epidoc(doc), encoding="utf-8")
 
 
 # ── reading EpiDoc TEI back into the corpus model ────────────────────────────────

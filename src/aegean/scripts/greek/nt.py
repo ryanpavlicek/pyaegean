@@ -18,6 +18,7 @@ a chapter range.
 
 from __future__ import annotations
 
+import unicodedata
 from functools import lru_cache
 from typing import Any, Callable
 
@@ -85,12 +86,20 @@ def robinson_to_upos(morph: str) -> str:
         return "PROPN"
     if tag.startswith("A-NUI"):
         return "NUM"
-    return _PREFIX_UPOS.get(tag.split("-", 1)[0], "X")
+    head = tag.split("-", 1)[0]
+    # A suffix on a closed-class tag marks a subtype, never a different word class:
+    # PRT-N (negative particle), CONJ-N, ADV-I, COND-K, ... all keep the bare tag's UPOS.
+    if head in _BARE_UPOS:
+        return _BARE_UPOS[head]
+    return _PREFIX_UPOS.get(head, "X")
+
+
+def _osis_or_none(book: str) -> str | None:
+    return _ALIAS.get(book.strip().lower().replace(" ", "").replace(".", ""))
 
 
 def _resolve_book(book: str) -> str:
-    key = book.strip().lower().replace(" ", "").replace(".", "")
-    osis = _ALIAS.get(key)
+    osis = _osis_or_none(book)
     if osis is None:
         raise ValueError(
             f"unknown NT book {book!r}; use a name or abbreviation like "
@@ -127,10 +136,16 @@ def _parse_ref(ref: str) -> tuple[int, int | None, int, int | None]:
 
 
 def _build_document(rec: dict[str, Any], keep: Callable[[int], bool] | None = None) -> Any:
-    """Build a `Document` from one chapter record, optionally keeping only some verses."""
+    """Build a `Document` from one chapter record, optionally keeping only some verses.
+
+    Greek strings (token text, lemma, normalized form) are NFC-normalized here: the source
+    edition mixes precomposed oxia and tonos codepoints, and the rest of the library emits
+    NFC, so folding once at load time keeps gold strings byte-comparable with pyaegean
+    output."""
     from ...core.model import Document, DocumentMeta, Token, TokenKind
     from ...greek.koine import _strongs_gloss_map
 
+    nfc = unicodedata.normalize
     glosses = _strongs_gloss_map()  # Strong's -> brief Koine gloss (bundled Dodson, CC0)
     book = rec["book"]
     chapter = rec["chapter"]
@@ -141,13 +156,14 @@ def _build_document(rec: dict[str, Any], keep: Callable[[int], bool] | None = No
         if keep is not None and not keep(verse):
             continue
         pos = len(tokens)
+        text = nfc("NFC", td["t"])
         morph = td.get("morph", "")
         strongs = td.get("strongs", "")
         anno = {
-            "lemma": td.get("lemma", ""),
+            "lemma": nfc("NFC", td.get("lemma", "")),
             "morph": morph,
             "strongs": strongs,
-            "normalized": td.get("norm", ""),
+            "normalized": nfc("NFC", td.get("norm", "")),
             "upos": robinson_to_upos(morph),
             "ref": f"{book}.{chapter}.{verse}",
         }
@@ -155,7 +171,7 @@ def _build_document(rec: dict[str, Any], keep: Callable[[int], bool] | None = No
         if gloss:
             anno["gloss"] = gloss
         tokens.append(Token(
-            text=td["t"], kind=TokenKind.WORD, glyphs=td["t"],
+            text=text, kind=TokenKind.WORD, glyphs=text,
             line_no=verse, position=pos, annotations=anno,
         ))
         lines.setdefault(verse, []).append(pos)
@@ -242,7 +258,9 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     ``load_work``: ``'3'`` a chapter, ``'3.16'`` a verse, ``'3.16-3.18'`` / ``'3.16-18'`` a
     verse range, ``'3-5'`` a chapter range. One `Document` per chapter; every token carries
     a gold lemma, Robinson morph, Strong's number, reconciled UD ``upos``, and the
-    normalized form in ``Token.annotations``.
+    normalized form in ``Token.annotations``. Token text, lemmas, and normalized forms are
+    NFC-normalized at load time (the source edition mixes oxia and tonos precomposition),
+    so gold strings compare byte-for-byte with the library's NFC output.
 
     The full 27-book corpus is fetched to cache on first use (sha256-pinned CC0 asset, or
     ``PYAEGEAN_NT_CORPUS_URL``). When that asset is unavailable the bundled one-book sample
@@ -265,10 +283,17 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     try:
         docs = _select(payload["documents"], book, ref)
     except ValueError:
-        if not offline:
+        # Offline we only have the bundled one-book sample: a *valid* book outside it
+        # deserves a fetch-failure explanation, not the generic "no text matched".
+        osis = _osis_or_none(book) if book is not None else None
+        bundled = sorted({rec["book"] for rec in payload["documents"]})
+        if not offline or osis is None or osis in bundled:
             raise
-        # The offline sample is one book; re-raise with guidance only if that book was wanted.
-        raise
+        raise ValueError(
+            f"{book!r} is not in the bundled offline sample (only {', '.join(bundled)} "
+            "is available offline); the full 27-book corpus could not be fetched. Retry "
+            "with network access, or set PYAEGEAN_NT_CORPUS_URL to a local copy."
+        ) from None
     provenance = _provenance(meta, offline=offline)
     return Corpus(docs, sign_inventory=greek_inventory(), provenance=provenance, script_id="greek")
 

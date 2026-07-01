@@ -72,15 +72,28 @@ def _import_geo() -> tuple[Any, Any]:
     return gpd, Point
 
 
+def _as_geodataframe(gpd: Any, rows: list[dict[str, Any]], columns: list[str]):  # type: ignore[no-untyped-def]
+    """Build the EPSG:4326 GeoDataFrame, keeping the schema when ``rows`` is empty.
+
+    A bare empty row list would lose the named columns and the geometry column (geopandas
+    raises on ``geometry="geometry"`` with no such column), so the zero-match case gets an
+    explicit empty frame with the same columns, geometry dtype, and crs as a populated one."""
+    if not rows:
+        return gpd.GeoDataFrame(columns=columns, geometry="geometry", crs="EPSG:4326")
+    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+
+
 def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ignore[no-untyped-def]
     """A geopandas ``GeoDataFrame`` of the corpus's find-sites (EPSG:4326 point geometry).
 
     ``level="inscription"`` gives one row per inscription whose site is in the gazetteer (id, site,
     label, region, period, geometry); ``level="site"`` gives one row per site with its inscription
-    count. Inscriptions whose site isn't mapped are dropped. Needs the ``[geo]`` extra."""
+    count. Inscriptions whose site isn't mapped are dropped; a corpus with no mapped sites yields
+    an empty GeoDataFrame with the same columns and crs. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
     coords = site_coordinates()
     if level == "inscription":
+        cols = ["id", "site", "label", "region", "period", "pleiades", "contested", "geometry"]
         rows = [
             {
                 "id": d.id, "site": d.meta.site, "label": coords[d.meta.site].name,
@@ -93,6 +106,7 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
             if d.meta.site in coords
         ]
     elif level == "site":
+        cols = ["site", "label", "region", "pleiades", "inscriptions", "contested", "geometry"]
         counts = Counter(d.meta.site for d in corpus if d.meta.site in coords)
         rows = [
             {
@@ -105,13 +119,14 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
         ]
     else:
         raise ValueError(f"level must be 'inscription' or 'site'; got {level!r}")
-    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    return _as_geodataframe(gpd, rows, cols)
 
 
 def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def]
     """A ``GeoDataFrame`` of the find-sites where ``word`` is attested, with per-site counts — i.e.
     *where* a given word shows up across the corpus, ready to map. Matching is case-insensitive
-    (``ku-ro`` finds ``KU-RO``). Needs the ``[geo]`` extra."""
+    (``ku-ro`` finds ``KU-RO``). A word attested at no mapped site yields an empty GeoDataFrame
+    with the same columns and crs. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
     coords = site_coordinates()
     target = word.casefold()
@@ -129,4 +144,6 @@ def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def
         }
         for site, n in counts.most_common()
     ]
-    return gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+    return _as_geodataframe(
+        gpd, rows, ["site", "label", "region", "pleiades", "count", "contested", "geometry"]
+    )

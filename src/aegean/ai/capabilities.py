@@ -17,6 +17,10 @@ from typing import Any
 from .client import ExploratoryResult, LLMClient, get_client
 from .grounding import GroundingItem, as_item, evidence_block, wrap_untrusted
 
+# Any iterable is accepted, a generator included. Each capability materializes it once
+# at entry (list()): the evidence is read twice (the prompt's evidence block, then the
+# result's provenance), and a generator would be exhausted by the first read, recording
+# an empty audit trail for a model that was in fact grounded.
 Grounding = Iterable[str | GroundingItem]
 
 # Bump when a prompt's wording changes so cached/sourced results stay traceable.
@@ -71,6 +75,7 @@ def translate(
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Translate source text, grounded in optional lexicon/corpus evidence."""
+    grounding = list(grounding)
     system = _BASE_SYSTEM
     instruction = (
         f"Translate the following {source} into {target}. Give the translation, "
@@ -102,10 +107,12 @@ def verify_translation(
     only clear errors the analysis contradicts (wrong voice, subject/object, case
     relation, a rare word's or idiom's sense, an omission or addition) and
     otherwise keep the draft. This is the repair half of a translate-then-check
-    pass: because the grounding never touches the draft, it can only catch errors,
-    not introduce them. The result is a ``translate``-kind `ExploratoryResult`
-    carrying the grounding, so callers handle it exactly like a `translate` result.
+    pass: the grounding never touches the draft, so it cannot bias it, though a
+    wrong analysis can still mislead the repair. The result is a
+    ``translate``-kind `ExploratoryResult` carrying the grounding, so callers
+    handle it exactly like a `translate` result.
     """
+    grounding = list(grounding)
     instruction = (
         f"Here is a {source} passage, a draft {target} translation, and a "
         "deterministic analysis (morphology, syntax, dictionary glosses for rare "
@@ -139,6 +146,7 @@ def gloss(
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Produce an interlinear, word-by-word gloss of the source text."""
+    grounding = list(grounding)
     instruction = (
         f"Give a word-by-word interlinear gloss of the following {source}: for each "
         "token, its lemma, morphological analysis, and a short English equivalent."
@@ -160,6 +168,7 @@ def decipher_hypotheses(
 ) -> ExploratoryResult:
     """Offer decipherment hypotheses for an undeciphered (Linear A) sequence,
     each tied to cited corpus evidence. Strictly exploratory."""
+    grounding = list(grounding)
     instruction = (
         "This is an UNDECIPHERED Linear A sequence. Propose 2-3 cautious "
         "decipherment hypotheses. For each, cite the corpus evidence it rests on, "
@@ -184,6 +193,7 @@ def nlp_assist(
 ) -> ExploratoryResult:
     """Ask the model to disambiguate an NLP analysis (lemma/POS/parse) where the
     rule-based pipeline is uncertain."""
+    grounding = list(grounding)
     instruction = (
         f"Assist with {task} for the following text. Where multiple analyses are "
         "possible, list them ranked by likelihood with a one-line justification each."
@@ -204,6 +214,7 @@ def ask(
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Answer a question over corpus/commentary grounding."""
+    grounding = list(grounding)
     instruction = (
         "Answer the following question using only the grounding evidence provided. "
         "If the evidence is insufficient, say so plainly."
@@ -222,6 +233,7 @@ def summarize(
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Summarize a corpus excerpt or commentary."""
+    grounding = list(grounding)
     instruction = "Summarize the following faithfully and concisely."
     return _run(
         client,
@@ -290,6 +302,7 @@ def extract(
     >>> r.data                                            # doctest: +SKIP
     {'commodity': 'OLE', 'amount': 1}
     """
+    grounding = list(grounding)
     shape = ""
     if isinstance(schema, Mapping):
         fields = ", ".join(f"{k} ({v})" for k, v in schema.items())

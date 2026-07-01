@@ -23,11 +23,16 @@ Three phenomena, each conservative by design:
   unambiguous inflectional ending; otherwise the clipped stem is kept and flagged
   ``uncertain`` (mirroring the lenient-normalize warning style).
 
-- **Movable nu and the οὐκ/οὐχ/οὐ alternation**: pure context rules, no lexicon.
-  ``ἐστίν``/``ἐστί``, ``-ουσιν``/``-ουσι``, etc. carry an optional final ν before a
-  vowel or at a pause; the negative particle is ``οὐ`` before a consonant, ``οὐκ``
-  before a smooth vowel, ``οὐχ`` before a rough vowel. These are normalised to a
-  single citation form so the lexicon and tagger see one key.
+- **Movable nu and the οὐκ/οὐχ/οὐ alternation**: ``ἐστίν``/``ἐστί``,
+  ``-ουσιν``/``-ουσι``, etc. carry an optional final ν before a vowel or at a
+  pause; the negative particle is ``οὐ`` before a consonant, ``οὐκ`` before a
+  smooth vowel, ``οὐχ`` before a rough vowel. These are normalised to a single
+  citation form so the lexicon and tagger see one key. The -σι(ν) surface shape
+  alone over-matches (a third-declension i-stem accusative singular such as
+  γνῶσιν or πίστιν ends the same way, but its ν is the case morpheme, not
+  movable), so movable-ν is asserted only for the unambiguous ``-ουσι(ν)``
+  ending or a curated host list (`_MOVABLE_NU_HOSTS`); any other -σι(ν) form
+  passes through with no claim.
 
 `resolve_sandhi` analyses one token; `resolve_sentence` maps it over a string's
 words. Neither ever *guesses* an expansion: when the surface form is ambiguous it
@@ -118,6 +123,45 @@ _ELIDED_WORDS: dict[str, str] = {
 }
 
 
+def _fold_key(token: str) -> str:
+    """Lowercase NFC with grave folded to acute (the closed-class key style of
+    `.pos`), so running-text variants (ἐστὶν, Πᾶσιν) match their curated keys.
+    Accents are otherwise kept: they carry real distinctions here (ποσίν dat.
+    pl. vs πόσιν acc. sg.)."""
+    grave, acute = "̀", "́"
+    nfd = unicodedata.normalize("NFD", token.lower()).replace(grave, acute)
+    return unicodedata.normalize("NFC", nfd)
+
+
+# MOVABLE-NU HOSTS: curated high-frequency forms in -σι(ν)/-στι(ν) whose final
+# ν is genuinely movable (Smyth §134: verb third persons and dative plurals in
+# -σι(ν), plus ἐστί(ν)-type copula forms). A lexicon is needed because the
+# surface shape alone is ambiguous: third-declension i-stem accusative
+# singulars (γνῶσιν, φύσιν, κρίσιν, πίστιν) end the same way, but there the ν
+# is the accusative morpheme and a fabricated bare form would be a non-word.
+# Keys are stored lowercased NFC with grave folded to acute (see `_fold_key`),
+# so running-text variants (ἐστὶν, Πᾶσιν) match. Accent placement is
+# significant and disambiguates: dat. pl. ποσίν (πούς) is listed while acc. sg.
+# πόσιν (πόσις) is not, and 3pl φασίν is listed while acc. sg. φάσιν is not.
+# Contributions welcome, like `_CRASIS` above.
+_MOVABLE_NU_HOSTS: frozenset[str] = frozenset(
+    _fold_key(w)
+    for w in (
+        # the copula and its common compounds
+        "ἐστίν", "ἔστιν", "εἰσίν", "ἔξεστιν", "πάρεστιν",
+        # irregular / athematic third persons
+        "φησίν", "φασίν", "ὦσιν",
+        "δίδωσιν", "τίθησιν", "ἵστησιν", "δείκνυσιν", "ἀφίησιν",
+        "διδόασιν", "τιθέασιν", "ἴσασιν",
+        # high-frequency third-declension dative plurals
+        "πᾶσιν", "ἅπασιν", "οὖσιν", "χερσίν", "ποσίν", "ὠσίν",
+        "ἀνδράσιν", "πόλεσιν", "ἔθνεσιν", "σώμασιν",
+        # closed-class numeral / pronoun datives (see `.pos`)
+        "τρισίν", "τισίν", "τίσιν",
+    )
+)
+
+
 @dataclass(frozen=True, slots=True)
 class ResolvedForm:
     """The sandhi analysis of one token.
@@ -197,21 +241,42 @@ def _normalise_movable_nu(token: str) -> ResolvedForm | None:
             note=f"{nfc}: negative-particle sandhi (pre-vowel form), citation οὐ",
         )
 
-    # Movable nu: the characteristic environments are the -σι(ν) endings — verb
-    # 3pl -ουσι(ν)/-ασι(ν) and the dative plural / 3sg -σι(ν), plus ἐστί(ν). The
-    # final ν is optional (licensed before a vowel or at a pause). We normalise to
-    # the with-ν citation form, recording the bare alternant. We deliberately do
-    # NOT treat a bare final -εν as movable (it would mis-fire on particles such
-    # as μέν, ἤν), since a verb 3sg -ε(ν) cannot be told from those by form alone.
+    # Movable nu: the characteristic environments are the -σι(ν) endings (verb
+    # third persons, dative plurals, ἐστί(ν)), where the final ν is optional
+    # (licensed before a vowel or at a pause). The surface shape alone
+    # over-matches: a third-declension i-stem accusative singular (γνῶσιν,
+    # φύσιν, κρίσιν, πίστιν) also ends in -σιν, but its ν is the case morpheme
+    # and stripping it would fabricate a non-word. So the rule asserts
+    # movable-ν only where the host is validated:
+    #
+    # - the -ουσι(ν) ending, the one -σι(ν) shape with no i-stem accusative
+    #   reading (it is a thematic 3pl verb or a present-participle dative
+    #   plural; the rare -ουσις action-noun accusative, e.g. κροῦσιν, is the
+    #   known residual exception), or
+    # - a form in the curated `_MOVABLE_NU_HOSTS` list (copula forms,
+    #   athematic third persons, high-frequency dative plurals).
+    #
+    # Any other -σι(ν) form passes through with no claim, mirroring the
+    # never-guess policy of the crasis and elision rules. Ambiguous shapes
+    # stay unclaimed on purpose: γνῶσιν the noun cannot be told from γνῶσιν
+    # the aorist subjunctive by form. We also deliberately do NOT treat a bare
+    # final -εν as movable (it would mis-fire on particles such as μέν, ἤν),
+    # since a verb 3sg -ε(ν) cannot be told from those by form alone. We
+    # normalise validated hosts to the with-ν citation form, recording the
+    # bare alternant.
     if low.endswith(("σιν", "στιν")) and len(low) >= 4:
-        without = nfc[:-1]
-        return ResolvedForm(
-            surface=nfc,
-            words=(nfc,),
-            kind="movable-nu",
-            note=f"{nfc}: movable-ν (optional before consonant), bare form {without}",
-            alternatives=(without,),
+        validated = (low.endswith("ουσιν") and len(low) >= 6) or (
+            _fold_key(nfc) in _MOVABLE_NU_HOSTS
         )
+        if validated:
+            without = nfc[:-1]
+            return ResolvedForm(
+                surface=nfc,
+                words=(nfc,),
+                kind="movable-nu",
+                note=f"{nfc}: movable-ν (optional before consonant), bare form {without}",
+                alternatives=(without,),
+            )
     return None
 
 
@@ -223,8 +288,10 @@ def resolve_sandhi(token: str) -> ResolvedForm:
     an unlisted coronis form is flagged ``uncertain`` and left intact. Elision is
     restored only where the elided vowel is unambiguous (listed proclitic/particle
     or a clear inflectional ending); otherwise the clipped form is kept and
-    flagged ``uncertain``. The movable-ν and οὐκ/οὐχ/οὐ rules are purely
-    contextual and never need a lexicon.
+    flagged ``uncertain``. The οὐκ/οὐχ/οὐ rule is purely contextual; movable-ν
+    is asserted only for validated hosts (the -ουσι(ν) ending or the curated
+    `_MOVABLE_NU_HOSTS` list), never for the look-alike i-stem accusatives
+    (γνῶσιν, πίστιν), which pass through unclaimed.
 
     Conservative throughout: the resolver never guesses an expansion. When the
     surface form is ambiguous it is returned unchanged with ``uncertain=True`` and
