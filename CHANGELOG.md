@@ -4,6 +4,111 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.15.0 (2026-07-01)
+
+A correctness pass across the toolkit's convention boundaries: the places where a well-tested
+code path meets a second data source with different conventions (upper vs lower transliteration,
+suffixed morphology tags, Leiden apparatus, Unicode normalization, grave vs acute). Every fix
+ships with a regression test pinning the corrected output.
+
+### Fixed
+- **NT gold UPOS: suffixed Robinson tags are reconciled correctly.** `PRT-N`, `CONJ-N`, `ADV-I`,
+  `COND-K` and kin mapped to `X` because only bare tags were looked up, mistagging 3,566 tokens
+  (2.6% of the corpus), among them every negative particle (οὐ, μή). Suffixes never change a
+  closed-class tag's word class; the bare tag now wins (`PRT-*` → PART, `CONJ-*` → CCONJ,
+  `ADV-*` → ADV, `COND-K` → SCONJ), leaving only the ARAM/HEB loanword tags as `X`. The
+  out-of-domain NT benchmark row is re-measured against the corrected gold with the shipped
+  model: lemma 87.03 / UPOS 86.75 (n = 137,303). The previously published 87.57 UPOS dated to
+  the retired grc-joint-v1 model (0.8.1) and had gone stale when v2 shipped; the full
+  decomposition (model generation, quantization, gold correction, normalization) is recorded in
+  `docs/benchmarks.md`.
+- **Offline lemmatizer: grave accents and the closed-class inventory.** Lookups now fold running-text
+  graves to the citation acute (δὲ → δέ) and NFC-normalize, and the closed-class table covers the
+  article's oblique forms, pronouns, and the high-frequency particles; `known=True` now always means
+  a genuine table or rule validation, never a fabricated stem. Measured on the full NT under the
+  recorded protocol (`greek.evaluate_on_nt` scoring): 45.2% → 66.0% lemma accuracy, 28,578 fixes
+  against 12 regressions. This also corrects the 0.14.0 note's "14.5% → 15.4%": that figure was a
+  byte-level comparison against pre-NFC gold, not the protocol score; the docs now carry the
+  protocol-scored number.
+- **Linear B accounting works on DAMOS.** The accounting markers matched uppercase only, so the
+  lowercase DAMOS transliterations yielded zero `balance_check` totals across 5,932 tablets, and
+  `to-so`/`o-pe-ro` leaked into `account_dossiers` as "account holders". Marker matching now folds
+  case, `TO-SO-DE` joins the total markers, and DAMOS yields 130 tablets with stated totals
+  (255 checks, 52 balancing exactly). Bundled Linear A results are unchanged (35 tablets, 39 totals;
+  the README figure is corrected from "≈40" to the measured 35).
+- **Cypriot inscriptions carry their editorial apparatus.** The IG loader emitted every token as
+  CERTAIN and leaked Leiden markup into token text; underdotted (uncertain) readings now load as
+  UNCLEAR and bracketed restorations as RESTORED, with clean text and the apparatus preserved in
+  annotations (118 UNCLEAR + 56 RESTORED across the bundled corpus).
+- **Linear A sign table: `*903` no longer wears the vowel I's glyph.** The entry duplicated
+  U+1061A / 𐘚 (the Unicode block has no `*9xx` codepoints; glyph and codepoint are now empty), and
+  `SignInventory` warns on duplicate glyph/codepoint entries instead of silently letting the last
+  one shadow lookups. The tokenizer also recognizes standalone subscripted signs (PA₃, TA₂) and
+  variant-letter ligatures (VIR+*313b) as logograms (27 bundled tokens regained from UNKNOWN) and
+  `word_to_phonetic` reads subscripted signs as the distinct signs they are, never borrowing the
+  plain series' value (the shared golden fixture value `raro` is corrected to `ra₂ro`; the
+  workbench mirrors this in its next release).
+- **Workbench image server: Windows path traversal closed.** The local facsimile server's guard
+  only rejected forward-slash `..` segments; backslash and percent-encoded forms could escape the
+  imagery directory. Requests are now decoded and separator-normalized, and the resolved path must
+  remain inside the imagery root. The bundled workbench asset pin also moves from 1.5.1 to 1.5.4,
+  picking up the workbench's own sanitizer hardening and gazetteer corrections.
+- **`load_work` refuses to silently truncate.** A citation range crossing textparts (e.g.
+  `1.1-2.50`) returned only the start part while the document id claimed the full range; it now
+  raises a clear error naming the parts involved.
+- **SQLite append keeps every corpus's provenance.** `to_sql(append=True)` dropped the appended
+  corpus's provenance and license; the database now stores all of them, so `from_sql(...).cite()`
+  cites everything that went in.
+- **Empty geo results return empty GeoDataFrames.** `to_geodataframe` and `word_distribution` on a
+  corpus with no mapped sites (or a word with no attestations) crashed with an opaque geometry
+  error; both now return a schema-correct empty GeoDataFrame, matching the CLI's existing hint.
+- **`db.search` case handling is measured and truthful.** Substring mode now matches Greek
+  case-insensitively (SQLite `LIKE` folds ASCII only); the docstring states exactly what each mode
+  folds (FTS5 token mode folds case but not accents).
+- **AI layer provenance and caching.** Grounding passed as a generator was consumed twice, so the
+  model saw it but the provenance recorded none of it: it is materialized once. The response-cache
+  key now includes `max_tokens`, so a truncated completion is never served for a longer request.
+  An unknown grounding mode raises with the valid modes instead of silently degrading to legacy
+  lemma grounding. The verify-mode docs state the honest contract: the analysis cannot bias the
+  draft, though a wrong analysis can still mislead the repair.
+- **EpiDoc export never silently overwrites.** Two document ids sanitizing to the same filename
+  produced one file; colliding names now get deterministic suffixes with a warning naming both ids.
+- **NT loading and fetching hygiene.** `load_nt` NFC-normalizes text, lemma, and normalized forms at
+  load (the source edition mixes oxia and tonos precomposition), and requesting a non-bundled book
+  offline explains what is bundled and how to fetch the corpus instead of a misleading error.
+  Downloads use a 30-second timeout instead of hanging on a stalled connection, and archive
+  extraction validates symlink/hardlink targets before unpacking.
+- **Greek tokenizer: ano teleia and the Greek question mark are punctuation.** The letter class
+  spanned the whole Greek block, so U+0387 and U+037E glued into word tokens (3,330 such tokens
+  when tokenizing the bundled NT's text; now zero). `pos_tag` shares the corrected letter class.
+- **Diaeresis marks hiatus.** `syllabify` and `to_ipa` merged explicitly-marked non-diphthongs
+  (προΐστημι is προ-ΐ-στη-μι, Smyth §8); a diaeresis vowel now never joins the preceding vowel,
+  in precomposed and combining forms alike. Metrical scansion already handled this and is
+  unchanged.
+- **γάρ and οὖν are tagged CCONJ, not SCONJ.** Neither can subordinate a clause; the NT gold is
+  unanimous (γάρ 1038/1038, οὖν 496/496) and AGDT has no conjunction reading for either.
+- **The movable-nu rule only claims what it can validate.** It fires on `-ουσι(ν)` and a curated
+  host lexicon (copula and athematic third persons, high-frequency dative plurals, accent-aware so
+  ποσίν is listed while πόσιν is not); third-declension i-stem accusatives (γνῶσιν, φύσιν, πίστιν)
+  no longer receive a fabricated bare alternative.
+- **Docs carry the re-measured numbers.** The stale v1 PROIEL scores in the wiki are replaced with
+  the shipped model's recorded figures, and "state of the art on the UD Ancient Greek benchmarks"
+  is scoped to the measured claim (the UD Perseus test fold).
+
+### Changed
+- **`aegean.load()` returns an independent copy.** The cached loaders shared one mutable `Corpus`
+  per process, so mutating `corpus.documents` corrupted every later `load()` of the same id. Each
+  call now returns a structural copy (about 3 ms for the bundled Linear A corpus; frozen tokens are
+  shared, containers are fresh), and the new `Corpus.copy()` is public.
+- **`Corpus.fingerprint` covers what analyses consume.** It hashed only document ids and token
+  text, so corpora differing in token kind, reading status, or annotations shared a fingerprint and
+  the opt-in analysis cache could serve results computed for a different corpus. It now hashes
+  kind, status, and annotations (and the data version); all fingerprints rotate once.
+
+### Removed
+- The empty `aegean.adapters` and `aegean.integrations` placeholder packages (0-byte, never
+  documented, nothing imported them).
+
 ## 0.14.4 (2026-06-29)
 
 ### Fixed
