@@ -8,8 +8,8 @@ authors:
     orcid: "https://orcid.org/0009-0009-8303-3644"
 repository-code: "https://github.com/ryanpavlicek/pyaegean"
 license: Apache-2.0
-version: 0.14.4
-date-released: 2026-06-29
+version: 0.15.0
+date-released: 2026-07-01
 keywords:
   - ancient greek
   - linear a
