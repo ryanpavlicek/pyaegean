@@ -126,7 +126,11 @@ def test_from_records_validation():
 def test_register_loader_recipe():
     c = Corpus.from_records([{"id": "R1", "text": "A-DU"}], script_id="myfind")
     register_loader("myfind-test", lambda: c)
-    assert aegean.load("myfind-test") is c
+    # load returns an independent copy (mutation isolation), not the loader's own instance
+    loaded = aegean.load("myfind-test")
+    assert loaded is not c
+    assert loaded.fingerprint() == c.fingerprint()
+    assert [d.id for d in loaded] == [d.id for d in c]
 
 
 # ── variant readings ─────────────────────────────────────────────────────────

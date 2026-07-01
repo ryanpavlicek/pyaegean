@@ -36,7 +36,7 @@ model.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, get_args
 
 if TYPE_CHECKING:
     from ..greek.pipeline import TokenRecord
@@ -230,6 +230,12 @@ def _rare_word_line(text: str) -> str:
 def _greek_grounding(
     text: str, *, mode: GroundingMode = "morphology", glosses: bool = True
 ) -> list[GroundingItem]:
+    # Reject an unknown mode loudly: a typo ("morfology") must never silently fall
+    # through to the legacy lemma branch and change the grounding behavior.
+    if mode not in get_args(GroundingMode):
+        valid = ", ".join(repr(m) for m in get_args(GroundingMode))
+        raise ValueError(f"unknown grounding mode {mode!r}; valid modes: {valid}")
+
     from ..greek import lemmatize_verbose, tokenize_words
 
     if mode == "none":
@@ -312,6 +318,9 @@ def grounding_for(
       default; retained unchanged for back-compatibility). Source tag ``lexicon:LSJ``.
     - ``"none"``: no grounding.
 
+    Any other ``mode`` raises ``ValueError`` naming the valid modes (a typo must not
+    silently change the grounding style).
+
     ``glosses`` is retained for back-compatibility and is **superseded by** ``mode``:
     it only affects the gloss-bearing modes (``"lemma"``, ``"full"``), where
     ``glosses=False`` drops the glosses (lemma-only / morphology-only). It has no effect
@@ -355,7 +364,8 @@ def translate(
     a concise dictionary leads with the common sense and helps most on rare vocabulary,
     whereas an LSJ-first-sense gloss is often the archaic meaning and misleads. Use
     ``mode="lemma"`` for the older lemma-line plus gated LSJ-gloss grounding, or
-    ``mode="none"`` for no grounding.
+    ``mode="none"`` for no grounding. An unrecognized ``mode`` raises ``ValueError``
+    naming the valid modes.
 
     ``glosses`` is retained for back-compatibility and is superseded by ``mode``: it only
     affects the gloss-bearing modes (``"lemma"``, ``"full"``), where ``glosses=False``
@@ -368,11 +378,13 @@ def translate(
     second call that checks the draft against it and corrects only definite contradictions
     (wrong voice, subject or object, case relation, a rare word's or idiom's sense, an
     omission or addition), keeping the draft where it is already right. Because the
-    grounding only ever reaches the checker, it can catch errors but never cause them. This
-    reduces definite errors, most on hard text, at the cost of a second model call, so it
-    is worth reaching for on hard or high-stakes passages and skipping on routine ones. It
-    supersedes ``mode`` for Greek (the checker always sees the full grounding); for
-    non-Greek scripts it has no effect and the normal single call is used.
+    grounding only ever reaches the checker, it cannot bias the initial draft; a wrong
+    analysis can still mislead the repair step, so the pass is only as sound as the
+    grounding it checks against. This reduces definite errors, most on hard text, at the
+    cost of a second model call, so it is worth reaching for on hard or high-stakes
+    passages and skipping on routine ones. It supersedes ``mode`` for Greek (the checker
+    always sees the full grounding); for non-Greek scripts it has no effect and the
+    normal single call is used.
 
     Coverage of rare or inflected forms (and the clause skeleton) depends on the active
     backends, so a warning is raised when only the baseline seed table is loaded (call

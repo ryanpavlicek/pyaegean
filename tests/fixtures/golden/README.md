@@ -2,7 +2,11 @@
 
 Language-neutral expected-value JSON shared with the TypeScript workbench
 (`linearaworkbench`). Both implementations assert against the SAME values so
-the Python port can never silently diverge from the original.
+neither can silently diverge from the other. When a value is found to be wrong,
+the correction lands here (pyaegean) first and the workbench mirrors it, code
+and fixture together, in its next release (e.g. the `RA₂-RO` phonetic
+expectation: subscripted signs are distinct signs, so the old shared value
+`raro` was corrected to `ra₂ro`).
 
 - `algorithms.json`: phonetic distance, phoneme/word alignment, collocation
   statistics, sequence distance, and morphological clustering. Extracted from

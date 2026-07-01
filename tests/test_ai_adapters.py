@@ -191,7 +191,9 @@ def test_gemini_adapter(monkeypatch):
 
 
 # ── error path still holds with the SDK genuinely absent ─────────────────────
-def test_missing_sdk_raises_provider_not_installed():
-    # No fake installed here → the real (absent) SDK import fails clearly.
+def test_missing_sdk_raises_provider_not_installed(monkeypatch):
+    # Simulate the absent SDK regardless of the local env (None in sys.modules
+    # makes the import fail clearly, as in CI's base env).
+    monkeypatch.setitem(sys.modules, "openai", None)
     with pytest.raises(ai.ProviderNotInstalled):
         ai.get_client("openai", api_key="x").complete("hi")

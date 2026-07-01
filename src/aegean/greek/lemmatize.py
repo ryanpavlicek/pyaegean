@@ -2,8 +2,11 @@
 
 Two zero-dependency tiers, tried in order:
 
-1. a small bundled form→lemma table (seeded from the sample corpus), for irregular
-   and high-frequency forms whose lemma is not derivable from the ending;
+1. a small form→lemma table: the bundled seed (from the sample corpus) plus the
+   closed-class function words (article, pronouns, particles, prepositions), for
+   irregular and high-frequency forms whose lemma is not derivable from the ending.
+   Lookup keys fold a grave accent to the acute (the grave is only the running-text
+   notation of a final acute; the citation form never carries one), so δὲ finds δέ;
 2. a **generalizing ending-stripping rule layer** (`rule_lemma_verbose`) that recovers
    the citation form of the *regular* second-declension and thematic-verb paradigms by
    accent-preserving ending substitution: the ``-ου/-ῳ/-ον/-οι/-οις/-ους`` oblique endings back
@@ -14,8 +17,11 @@ Two zero-dependency tiers, tried in order:
    ``νόμου`` lemmatizes to ``νόμος`` without any lookup. Conservative guards, measured on the full
    New Testament (where a blind stripper regressed ~1,000 tokens), skip the forms it would wreck: a
    circumflex on the ending marks a contracted nominative (``Ἰησοῦς``), adverb (``ἐκεῖ``), or
-   contracted verb (``ζῇ``), and a curated list covers the common neuter ``-ον`` nouns (``ἔργον``,
-   whose lemma *is* the ``-ον`` form) and the indeclinables/reflexives.
+   contracted verb (``ζῇ``); a curated list covers the common neuter ``-ον`` nouns (``ἔργον``,
+   whose lemma *is* the ``-ον`` form) and the indeclinables/reflexives; and the closed-class
+   function words are skipped outright (their lemmas are suppletive: an ending swap would
+   turn ``τοῦ`` into a non-word ``τός`` instead of ``ὁ``), as is any match whose stem would
+   be vowel-less (``μου``).
 
 This is the seed/rule tier of the cascade: the treebank, neural, and edit-tree backends
 (opt-in) handle the heavier, ambiguous, and irregular work and take precedence when active.
@@ -41,22 +47,142 @@ _ACCENT_MARKS = frozenset({_ACUTE, _GRAVE, _CIRCUMFLEX})
 _VOWELS = frozenset("αεηιουω")
 
 
+def _fold_key(word: str) -> str:
+    """Lowercase NFC lookup key with any grave folded to the acute: the grave is the
+    running-text notation of a final acute (Smyth §155), never part of a citation form,
+    so δὲ must find the δέ entry. Matches the closed-class key normalization in
+    `.morphology`."""
+    nfd = unicodedata.normalize("NFD", word.lower())
+    return unicodedata.normalize("NFC", nfd.replace(_GRAVE, _ACUTE))
+
+
+# Closed-class function words: the article, the personal/demonstrative/relative/
+# reflexive/reciprocal pronouns, the negations, the accented particles and
+# prepositions, plus the suppletive copula εἰμί and the two textbook irregular
+# adjectives (πολύς, μέγας). These are suppletive or irregular (τοῦ's lemma is ὁ,
+# μου's is ἐγώ): no ending rule can recover them, and a blind ending swap fabricates
+# non-words (τοῦ → τός, πολλοί → πολλός), so they live in the seed table and are
+# guarded from the rule layer. Keys are written in citation accentuation
+# (`_fold_key` maps running-text graves onto them).
+_FUNCTION_WORDS: dict[str, str] = {
+    # the article (Smyth §332)
+    "ὁ": "ὁ", "ἡ": "ὁ", "τό": "ὁ",
+    "τοῦ": "ὁ", "τῆς": "ὁ", "τῷ": "ὁ", "τῇ": "ὁ", "τόν": "ὁ", "τήν": "ὁ",
+    "οἱ": "ὁ", "αἱ": "ὁ", "τά": "ὁ",
+    "τῶν": "ὁ", "τοῖς": "ὁ", "ταῖς": "ὁ", "τούς": "ὁ", "τάς": "ὁ",
+    # personal pronouns (Smyth §325)
+    "ἐγώ": "ἐγώ", "ἐμοῦ": "ἐγώ", "ἐμοί": "ἐγώ", "ἐμέ": "ἐγώ",
+    "μου": "ἐγώ", "μοι": "ἐγώ", "με": "ἐγώ",
+    "ἡμεῖς": "ἐγώ", "ἡμῶν": "ἐγώ", "ἡμῖν": "ἐγώ", "ἡμᾶς": "ἐγώ",
+    "σύ": "σύ", "σοῦ": "σύ", "σοί": "σύ", "σέ": "σύ",
+    "σου": "σύ", "σοι": "σύ", "σε": "σύ",
+    "ὑμεῖς": "σύ", "ὑμῶν": "σύ", "ὑμῖν": "σύ", "ὑμᾶς": "σύ",
+    # possessives ἐμός and σός, only the cells that do not collide with the personal
+    # pronoun (ἐμοῦ/ἐμοί/ἐμέ and σοῦ/σοί/σέ keep their far more frequent personal reading)
+    "ἐμός": "ἐμός", "ἐμή": "ἐμός", "ἐμόν": "ἐμός", "ἐμῷ": "ἐμός", "ἐμῇ": "ἐμός",
+    "ἐμήν": "ἐμός", "ἐμοῖς": "ἐμός", "ἐμαῖς": "ἐμός", "ἐμούς": "ἐμός", "ἐμάς": "ἐμός",
+    "ἐμά": "ἐμός",
+    "σός": "σός", "σή": "σός", "σόν": "σός", "σῷ": "σός", "σῇ": "σός", "σήν": "σός",
+    "σοῖς": "σός", "σαῖς": "σός", "σούς": "σός", "σάς": "σός", "σά": "σός",
+    # αὐτός (the oblique masculine cells are also rule-recoverable; kept here so the
+    # whole paradigm is table-validated, feminine/neuter/genitive-plural included)
+    "αὐτός": "αὐτός", "αὐτή": "αὐτός", "αὐτό": "αὐτός",
+    "αὐτοῦ": "αὐτός", "αὐτῆς": "αὐτός", "αὐτῷ": "αὐτός", "αὐτῇ": "αὐτός",
+    "αὐτόν": "αὐτός", "αὐτήν": "αὐτός",
+    "αὐτοί": "αὐτός", "αὐταί": "αὐτός", "αὐτά": "αὐτός",
+    "αὐτῶν": "αὐτός", "αὐτοῖς": "αὐτός", "αὐταῖς": "αὐτός",
+    "αὐτούς": "αὐτός", "αὐτάς": "αὐτός",
+    # demonstratives οὗτος and ἐκεῖνος (Smyth §333)
+    "οὗτος": "οὗτος", "αὕτη": "οὗτος", "τοῦτο": "οὗτος",
+    "τούτου": "οὗτος", "ταύτης": "οὗτος", "τούτῳ": "οὗτος", "ταύτῃ": "οὗτος",
+    "τοῦτον": "οὗτος", "ταύτην": "οὗτος",
+    "οὗτοι": "οὗτος", "αὗται": "οὗτος", "ταῦτα": "οὗτος",
+    "τούτων": "οὗτος", "τούτοις": "οὗτος", "ταύταις": "οὗτος",
+    "τούτους": "οὗτος", "ταύτας": "οὗτος",
+    "ἐκεῖνος": "ἐκεῖνος", "ἐκείνη": "ἐκεῖνος", "ἐκεῖνο": "ἐκεῖνος",
+    "ἐκείνου": "ἐκεῖνος", "ἐκείνης": "ἐκεῖνος", "ἐκείνῳ": "ἐκεῖνος", "ἐκείνῃ": "ἐκεῖνος",
+    "ἐκεῖνον": "ἐκεῖνος", "ἐκείνην": "ἐκεῖνος",
+    "ἐκεῖνοι": "ἐκεῖνος", "ἐκεῖναι": "ἐκεῖνος", "ἐκεῖνα": "ἐκεῖνος",
+    "ἐκείνων": "ἐκεῖνος", "ἐκείνοις": "ἐκεῖνος", "ἐκείναις": "ἐκεῖνος",
+    "ἐκείνους": "ἐκεῖνος", "ἐκείνας": "ἐκεῖνος",
+    # relative ὅς (Smyth §339; genitive οὗ omitted — it collides with the adverb οὗ
+    # "where", kept an unresolved indeclinable) and the frequent ὅστις cells
+    "ὅς": "ὅς", "ἥ": "ὅς", "ὅ": "ὅς",
+    "ἧς": "ὅς", "ᾧ": "ὅς", "ᾗ": "ὅς", "ὅν": "ὅς", "ἥν": "ὅς",
+    "οἵ": "ὅς", "αἵ": "ὅς", "ἅ": "ὅς",
+    "ὧν": "ὅς", "οἷς": "ὅς", "αἷς": "ὅς", "οὕς": "ὅς", "ἅς": "ὅς",
+    "ὅστις": "ὅστις", "ἥτις": "ὅστις", "οἵτινες": "ὅστις", "αἵτινες": "ὅστις",
+    # reflexives (genitive-lemma convention: they have no nominative) and the reciprocal
+    "ἑαυτοῦ": "ἑαυτοῦ", "ἑαυτῆς": "ἑαυτοῦ", "ἑαυτῷ": "ἑαυτοῦ", "ἑαυτῇ": "ἑαυτοῦ",
+    "ἑαυτόν": "ἑαυτοῦ", "ἑαυτήν": "ἑαυτοῦ", "ἑαυτό": "ἑαυτοῦ",
+    "ἑαυτῶν": "ἑαυτοῦ", "ἑαυτοῖς": "ἑαυτοῦ", "ἑαυταῖς": "ἑαυτοῦ",
+    "ἑαυτούς": "ἑαυτοῦ", "ἑαυτάς": "ἑαυτοῦ",
+    "ἐμαυτοῦ": "ἐμαυτοῦ", "ἐμαυτῷ": "ἐμαυτοῦ", "ἐμαυτόν": "ἐμαυτοῦ",
+    "σεαυτοῦ": "σεαυτοῦ", "σεαυτῷ": "σεαυτοῦ", "σεαυτόν": "σεαυτοῦ",
+    "ἀλλήλων": "ἀλλήλων", "ἀλλήλοις": "ἀλλήλων", "ἀλλήλαις": "ἀλλήλων",
+    "ἀλλήλους": "ἀλλήλων", "ἀλλήλας": "ἀλλήλων",
+    # negative pronouns οὐδείς and μηδείς
+    "οὐδείς": "οὐδείς", "οὐδεμία": "οὐδείς", "οὐδέν": "οὐδείς",
+    "οὐδενός": "οὐδείς", "οὐδεμιᾶς": "οὐδείς", "οὐδενί": "οὐδείς",
+    "οὐδεμιᾷ": "οὐδείς", "οὐδένα": "οὐδείς", "οὐδεμίαν": "οὐδείς",
+    "μηδείς": "μηδείς", "μηδεμία": "μηδείς", "μηδέν": "μηδείς",
+    "μηδενός": "μηδείς", "μηδενί": "μηδείς", "μηδένα": "μηδείς", "μηδεμίαν": "μηδείς",
+    # the copula εἰμί (suppletive throughout; present and imperfect indicative, the
+    # infinitive, and the frequent future cells — the participle is left to morphology)
+    "εἰμί": "εἰμί", "εἶ": "εἰμί", "ἐστίν": "εἰμί", "ἔστιν": "εἰμί", "ἐστιν": "εἰμί",
+    "ἐστί": "εἰμί", "ἐσμέν": "εἰμί", "ἐστέ": "εἰμί", "εἰσίν": "εἰμί", "εἰσί": "εἰμί",
+    "ἤμην": "εἰμί", "ἦς": "εἰμί", "ἦν": "εἰμί", "ἦμεν": "εἰμί", "ἦτε": "εἰμί",
+    "ἦσαν": "εἰμί", "ἔσομαι": "εἰμί", "ἔσται": "εἰμί", "ἔσονται": "εἰμί",
+    "εἶναι": "εἰμί",
+    # the textbook irregular adjectives πολύς and μέγας (Smyth §311): their oblique
+    # stems (πολλ-, μεγαλ-) would ending-swap to the non-words πολλός / μεγάλος
+    "πολύς": "πολύς", "πολλή": "πολύς", "πολύ": "πολύς",
+    "πολλοῦ": "πολύς", "πολλῆς": "πολύς", "πολλῷ": "πολύς", "πολλῇ": "πολύς",
+    "πολύν": "πολύς", "πολλήν": "πολύς",
+    "πολλοί": "πολύς", "πολλαί": "πολύς", "πολλά": "πολύς",
+    "πολλῶν": "πολύς", "πολλοῖς": "πολύς", "πολλαῖς": "πολύς",
+    "πολλούς": "πολύς", "πολλάς": "πολύς",
+    "μέγας": "μέγας", "μεγάλη": "μέγας", "μέγα": "μέγας",
+    "μεγάλου": "μέγας", "μεγάλης": "μέγας", "μεγάλῳ": "μέγας", "μεγάλῃ": "μέγας",
+    "μέγαν": "μέγας", "μεγάλην": "μέγας",
+    "μεγάλοι": "μέγας", "μεγάλαι": "μέγας", "μεγάλα": "μέγας",
+    "μεγάλων": "μέγας", "μεγάλοις": "μέγας", "μεγάλαις": "μέγας",
+    "μεγάλους": "μέγας", "μεγάλας": "μέγας",
+    # negations and the high-frequency accented particles/conjunctions (the enclitics
+    # τε/γε and convention-split lemmas like οὕτως/οὕτω are deliberately left out)
+    "οὐ": "οὐ", "οὐκ": "οὐ", "οὐχ": "οὐ", "μή": "μή",
+    "δέ": "δέ", "γάρ": "γάρ", "ἀλλά": "ἀλλά", "ἤ": "ἤ", "μέν": "μέν",
+    "οὐδέ": "οὐδέ", "μηδέ": "μηδέ", "ἐάν": "ἐάν", "ἄν": "ἄν", "καθώς": "καθώς",
+    # oxytone prepositions (the atonic proclitics εἰς/ἐν/ἐκ are already citation forms;
+    # ἐξ is ἐκ's pre-vowel allomorph)
+    "ἐπί": "ἐπί", "διά": "διά", "ἀπό": "ἀπό", "κατά": "κατά", "μετά": "μετά",
+    "περί": "περί", "παρά": "παρά", "ὑπό": "ὑπό", "ὑπέρ": "ὑπέρ", "ἀντί": "ἀντί",
+    "ἀνά": "ἀνά", "πρό": "πρό", "πρός": "πρός", "σύν": "σύν", "ἐξ": "ἐκ",
+}
+
+# The rule layer skips these forms outright (see `_rule_lemma`): a closed-class form
+# that happens to match an oblique ending must not be ending-stripped.
+_FUNCTION_KEYS = frozenset(_fold_key(k) for k in _FUNCTION_WORDS)
+
+
 @lru_cache(maxsize=1)
 def _lemma_table() -> dict[str, str]:
     raw = load_bundled_json("greek", "lemmata.json")
-    # Normalize keys to lowercase NFC so lookup is robust to input form.
-    return {
-        unicodedata.normalize("NFC", k.lower()): unicodedata.normalize("NFC", v)
-        for k, v in raw.items()
-    }
+    # Keys are normalized with `_fold_key` (lowercase NFC, grave→acute) so lookup is
+    # robust to input form; the bundled seed extends the closed-class function words.
+    table = {_fold_key(k): unicodedata.normalize("NFC", v) for k, v in _FUNCTION_WORDS.items()}
+    table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in raw.items())
+    return table
 
 
 def seed_lemma_verbose(word: str) -> tuple[str, bool]:
-    """The **seed-tier only** lookup: ``(lemma, known)`` from the bundled table, or the
-    NFC-normalized form unchanged with ``known=False``. Never consults the trained
-    backends — the rule-based morphology engine depends on that (its features must not
-    change with backend state, and the backends themselves call back into it)."""
-    key = unicodedata.normalize("NFC", word.lower())
+    """The **seed-tier only** lookup: ``(lemma, known)`` from the bundled table plus the
+    closed-class function words, or the NFC-normalized form unchanged with
+    ``known=False``. The lookup key folds a grave to the acute (δὲ finds δέ). Never
+    consults the trained backends — the rule-based morphology engine depends on that
+    (its features must not change with backend state, and the backends themselves call
+    back into it)."""
+    key = _fold_key(word)
     table = _lemma_table()
     if key in table:
         return table[key], True
@@ -158,12 +284,12 @@ _VERBAL: tuple[tuple[str, str], ...] = (
 # not a 1st-declension accusative). Kept deliberately tiny and only for forms that are NOT also
 # a real inflected paradigm cell, so the guard never suppresses a correct lemmatization.
 _INDECLINABLE = frozenset({
-    "μᾶλλον", "πλήν",
+    "μᾶλλον", "πλήν", "ἐνώπιον", "σήμερον",
     # High-frequency indeclinables whose -ου / -αν / -οῦ ending an oblique rule would otherwise
-    # strip to a spurious -ος / -α (ὅπου → ὅπος, ὅταν → ὅτα, ὁμοῦ → ὁμός). Adverbs, conjunctions,
-    # particles, and the reflexive pronouns (which have no nominative): closed classes, never an
-    # inflected noun cell, so the guard only ever blocks a wrong lemmatization.
-    "ὅπου", "ποῦ", "οὗ", "ὅταν", "ἄν", "ἐάν", "ἤτοι",
+    # strip to a spurious -ος / -α (ὅπου → ὅπος, ὅταν → ὅτα, ὁμοῦ → ὁμός, ἰδού → ἰδός). Adverbs,
+    # conjunctions, particles, and the reflexive pronouns (which have no nominative): closed
+    # classes, never an inflected noun cell, so the guard only ever blocks a wrong lemmatization.
+    "ὅπου", "ποῦ", "οὗ", "ὅταν", "ἄν", "ἐάν", "ἤτοι", "ἰδού",
     "ἑαυτοῦ", "ἐμαυτοῦ", "σεαυτοῦ", "ὁμοῦ", "πανταχοῦ", "ἀλλαχοῦ",
 })
 
@@ -182,9 +308,11 @@ _NEUTER_2ND = frozenset({
 def _rule_lemma(word: str) -> str | None:
     """The citation form recovered by ending substitution, or ``None`` when no regular
     rule applies. Operates on the surface form; the longest matching ending wins."""
-    nfc = unicodedata.normalize("NFC", word)
-    if nfc in _INDECLINABLE or nfc in _NEUTER_2ND:
+    key = _fold_key(word)
+    if key in _INDECLINABLE or key in _NEUTER_2ND:
         return None  # the surface form is already the lemma; no ending rule applies
+    if key in _FUNCTION_KEYS:
+        return None  # closed-class: the lemma is suppletive (τοῦ → ὁ), not rule-derivable
     bare = _bare(word)
     best: tuple[int, str] | None = None  # (ending length, citation ending base)
     for ending, citation in _NOMINAL_SUBSCRIPT:
@@ -220,6 +348,11 @@ def _rule_lemma(word: str) -> str | None:
     if best is None:
         return None
     length, citation = best
+    if not any(c in _VOWELS for c in bare[:-length]):
+        # A vowel-less stem is no Greek stem: the match is a monosyllabic function word
+        # (τοῦ, μου, πᾶν) whose lemma is suppletive; synthesising τ-ός or μ-ος would
+        # fabricate a non-word.
+        return None
     stem = _surface_stem(word, length)
     if _last_n_have(word, length, _ACCENT_MARKS):  # oxytone: accent was on the ending
         citation = _acute_on_last_vowel(citation)
@@ -231,8 +364,10 @@ def rule_lemma_verbose(word: str) -> tuple[str, bool]:
     regular ending rule produced a citation form different from the (normalized) input;
     otherwise the NFC form is returned unchanged with ``recovered=False``.
 
-    Consults only the deterministic ending rules — never the seed table or any trained
-    backend, so it composes cleanly as the generalizing step between them."""
+    Consults only the deterministic ending rules and the curated guard lists (the
+    indeclinables, the common neuters, the closed-class function words) — never the
+    corpus-seeded table or any trained backend, so it composes cleanly as the
+    generalizing step between them."""
     out = _rule_lemma(word)
     norm = unicodedata.normalize("NFC", word)
     if out is not None and out != norm:

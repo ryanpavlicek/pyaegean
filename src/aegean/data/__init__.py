@@ -102,7 +102,7 @@ _REMOTE: dict[str, DataSpec] = {
     # The opt-in [neural] joint Greek pipeline: one GreBerta-based model for UPOS, the
     # 9-position AGDT morphology (rendered as UD FEATS), UD dependency trees (biaffine +
     # MST), and lemmas (edit-script head + train-only lookup). Trained leakage-clean on
-    # AGDT + Gorman + Pedalion; the best published result on every UD Ancient Greek metric
+    # AGDT + Gorman + Pedalion; the best published result on every UD Ancient Greek (Perseus) test metric
     # (docs/benchmarks.md). URL is pinned to the grc-joint-v3 release asset; set
     # PYAEGEAN_GRC_JOINT_URL to fetch from your own mirror instead.
     "grc-joint": DataSpec(
@@ -243,9 +243,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="workbench-app",
         url=(
             "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
-            "workbench-app-v1.5.1/workbench-app.tar.gz"
+            "workbench-app-v1.5.4/workbench-app.tar.gz"
         ),
-        sha256="22d05fd641c6419793b81adea4a658f8961d2916a0c06e357e141f6419dfec8c",
+        sha256="3b18a14127d4b057394832a4fe29b0caaf3b5ac2df2a8fa39930c3416725e838",
         license="Apache-2.0 (Linear A Research Workbench build); embedded Linear A data is GORILA-derived",
         note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
         extract=True,
@@ -336,9 +336,14 @@ def sha256_file(path: pathlib.Path, *, chunk: int = 1 << 20) -> str:
 
 def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
     try:
+        import shutil
         import urllib.request
 
-        urllib.request.urlretrieve(url, dest_part)  # noqa: S310 (registered/overridable url)
+        # A timeout so a stalled connection raises instead of hanging fetch() forever,
+        # and a chunked copy so a 500 MB asset never sits in memory.
+        resp = urllib.request.urlopen(url, timeout=30)  # noqa: S310 (registered/overridable url)
+        with resp, open(dest_part, "wb") as out:
+            shutil.copyfileobj(resp, out, length=1 << 20)
     except Exception as e:  # pragma: no cover - network
         dest_part.unlink(missing_ok=True)
         raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
@@ -368,7 +373,7 @@ def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.
 
 
 def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
-    """Extract a tar archive, refusing any member that escapes ``dest``."""
+    """Extract a tar archive, refusing any member (or link target) that escapes ``dest``."""
     import tarfile
 
     root = dest.resolve()
@@ -377,6 +382,15 @@ def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
             target = (root / member.name).resolve()
             if target != root and root not in target.parents:
                 raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
+            if member.issym() or member.islnk():
+                # A symlink target is relative to the link's own directory; a hard link
+                # (or an absolute target) resolves from the extraction root.
+                base = target.parent if member.issym() else root
+                linked = (base / member.linkname).resolve()
+                if linked != root and root not in linked.parents:
+                    raise DataNotAvailableError(
+                        f"unsafe link target in archive: {member.name!r} -> {member.linkname!r}"
+                    )
         try:
             tf.extractall(root, filter="data")  # py3.12+ hardening
         except TypeError:  # pragma: no cover - older Python

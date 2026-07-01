@@ -136,9 +136,9 @@ def test_relative_pronoun_paradigm() -> None:
     assert _has("οἷς", "PRON", case="dat", number="pl")
     assert all(a.lemma == "ὅς" for a in analyze("ᾧ"))
     # The relative ἥ (rough breathing) is not the article ἡ (smooth): the latter
-    # stays a single DET reading, untouched.
+    # stays a single DET reading, carrying its citation lemma ὁ.
     art = analyze("ἡ")
-    assert art and art[0] == Analysis(lemma="ἡ", pos="DET")
+    assert art and art[0] == Analysis(lemma="ὁ", pos="DET")
 
 
 def test_added_determiners_numerals_ordinals() -> None:

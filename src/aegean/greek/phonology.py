@@ -25,6 +25,7 @@ Period = Literal["attic", "koine"]
 _ROUGH = "̔"      # U+0314 dasia
 _CIRCUMFLEX = "͂"  # U+0342 perispomeni
 _IOTA_SUB = "ͅ"   # U+0345 ypogegrammeni
+_DIAERESIS = "̈"  # U+0308 dialytika
 _VOWELS = set("αεηιουω")
 _VELARS = set("γκχξ")  # γ before one of these is a velar nasal /ŋ/
 
@@ -96,7 +97,12 @@ def _word_ipa(word: str, period: Period) -> str:
         nxt = groups[i + 1][0] if i + 1 < n else ""
         pair = c + nxt
 
-        if c in _VOWELS and nxt in _VOWELS and pair in diph:
+        # A diaeresis on the second vowel (προΐστημι, πραΰς) marks hiatus:
+        # the vowels are separate nuclei, not a diphthong.
+        if (
+            c in _VOWELS and nxt in _VOWELS and pair in diph
+            and _DIAERESIS not in groups[i + 1][1]
+        ):
             parts.append(diph[pair])
             i += 2
             continue

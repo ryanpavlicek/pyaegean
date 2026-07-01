@@ -32,6 +32,22 @@ jobs:
       - name: Tests
         run: pytest --cov=aegean --cov-report=term-missing
 
+  # The [geo] extra (geopandas/shapely) is heavy, so it gets one dedicated cell instead of
+  # widening the whole matrix; [parquet] rides along so the real pyarrow write path runs too.
+  # Without this job every importorskip("geopandas")/importorskip("pyarrow") test skips on
+  # every run; -rs surfaces whatever still skips.
+  geo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev,geo,parquet]"
+      - name: Tests (geo + parquet extras installed, skips reported)
+        run: pytest -rs
+
   notebooks:
     runs-on: ubuntu-latest
     steps:

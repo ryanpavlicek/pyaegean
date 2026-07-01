@@ -221,14 +221,14 @@ class LLMClient(ABC):
         max_tokens: int = 1024,
     ) -> LLMResponse:
         """A cached single-turn completion (cache is keyed on provider/model/
-        system/prompt so re-asking is free and deterministic)."""
+        system/prompt/max_tokens so re-asking is free and deterministic)."""
         if self.cache is not None:
-            hit = self.cache.get(self.provider, self.model, system, prompt)
+            hit = self.cache.get(self.provider, self.model, system, prompt, max_tokens=max_tokens)
             if hit is not None:
                 return LLMResponse(hit, self.provider, self.model)
         resp = self._complete(prompt=prompt, system=system, max_tokens=max_tokens)
         if self.cache is not None:
-            self.cache.set(self.provider, self.model, system, prompt, resp.text)
+            self.cache.set(self.provider, self.model, system, prompt, resp.text, max_tokens=max_tokens)
         return resp
 
 

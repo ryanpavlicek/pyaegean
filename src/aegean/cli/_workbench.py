@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 import posixpath
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -56,17 +57,33 @@ def _prepare_images(*, fetch_images: bool) -> Path | None:
 
 def _resolve_path(path: str, static_dir: Path, images_dir: Path | None) -> str | None:
     """Map a request path to a file under the imagery cache, or ``None`` to use the default
-    static-build handling. Guards against directory traversal out of the imagery dir."""
+    static-build handling. Guards against directory traversal out of the imagery dir: the
+    request is percent-decoded (matching the static handler), backslashes count as
+    separators (they are on Windows), absolute and drive-letter forms are refused, and the
+    mapped file must resolve inside the imagery dir."""
     if images_dir is None:
         return None
     p = path.split("?", 1)[0].split("#", 1)[0]
     prefix = "/upstream/images/"
     if not p.startswith(prefix):
         return None
-    rel = posixpath.normpath(p[len(prefix):]).lstrip("/")
-    if rel.startswith("..") or os.path.isabs(rel):
+    # Percent-decode like SimpleHTTPRequestHandler.translate_path does, then fold
+    # backslashes into forward slashes so a ..\ payload can't sidestep the guard.
+    rel = urllib.parse.unquote(p[len(prefix):], errors="surrogatepass").replace("\\", "/")
+    if rel.startswith("/") or ":" in rel:  # absolute, UNC, or drive-letter form
         return None
-    return os.path.join(str(images_dir), *rel.split("/"))
+    rel = posixpath.normpath(rel)
+    if rel.startswith(".."):
+        return None
+    mapped = os.path.join(str(images_dir), *rel.split("/"))
+    # The authoritative check: the real (symlink-resolved) target must stay inside the
+    # imagery dir, whatever the request looked like.
+    try:
+        if not Path(mapped).resolve().is_relative_to(images_dir.resolve()):
+            return None
+    except (OSError, ValueError):  # unresolvable path (e.g. an embedded NUL)
+        return None
+    return mapped
 
 
 def _make_handler(static_dir: Path, images_dir: Path | None) -> Any:

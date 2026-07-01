@@ -18,11 +18,14 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .tokenize import tokenize
+from .tokenize import _LETTER, tokenize
 
 _GRAVE = "̀"
 _ACUTE = "́"
-_GREEK_LETTER = re.compile(r"[Ͱ-Ͽἀ-῿]")
+# The tokenizer's letter class: Greek + Coptic and Extended Greek, minus the
+# two canonical punctuation code points (U+037E GREEK QUESTION MARK, U+0387
+# GREEK ANO TELEIA), which must fall through to PUNCT below.
+_GREEK_LETTER = re.compile(f"[{_LETTER}]")
 
 
 def _norm(word: str) -> str:
@@ -51,8 +54,17 @@ _LEXICON: dict[str, str] = {
         "ἐν", "εἰς", "ἐκ", "ἐξ", "ἀπό", "πρός", "διά", "κατά", "μετά", "παρά",
         "περί", "ὑπό", "ἐπί", "ἀνά", "σύν", "πρό", "ὑπέρ", "ἀντί", "ἀμφί",
     ),
-    **_entries("CCONJ", "καί", "τε", "δέ", "ἀλλά", "ἤ", "οὐδέ", "μηδέ"),
-    **_entries("SCONJ", "ὅτι", "εἰ", "ἐάν", "ἵνα", "ὡς", "ὅπως", "ἐπεί", "γάρ", "οὖν"),
+    **_entries(
+        "CCONJ",
+        "καί", "τε", "δέ", "ἀλλά", "ἤ", "οὐδέ", "μηδέ",
+        # γάρ and οὖν are postpositive connectives, never subordinators. The
+        # bundled NT gold (reconciled UD upos) tags every occurrence CCONJ
+        # (γάρ 1038/1038, οὖν 496/496), the same as δέ; AGDT never reads
+        # either as a conjunction of any kind (γάρ: 2644 particle / 1197
+        # adverb; οὖν: 437 adverb / 268 particle).
+        "γάρ", "οὖν",
+    ),
+    **_entries("SCONJ", "ὅτι", "εἰ", "ἐάν", "ἵνα", "ὡς", "ὅπως", "ἐπεί"),
     **_entries(
         "PART",
         "μέν", "δή", "γε", "ἄν", "οὐ", "οὐκ", "οὐχ", "μή", "ἄρα", "τοι",

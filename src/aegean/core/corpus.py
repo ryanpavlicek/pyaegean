@@ -91,14 +91,18 @@ class Corpus:
     # ── construction ────────────────────────────────────────────────────
     @classmethod
     def load(cls, script_id: str) -> "Corpus":
-        """Load a bundled corpus by script id, e.g. ``Corpus.load("lineara")``."""
+        """Load a bundled corpus by script id, e.g. ``Corpus.load("lineara")``.
+
+        Loaders may cache one built instance per process (the bundled corpora do),
+        so the result is returned as a `copy`: mutate it freely, and documents
+        added, dropped, or edited never leak into later ``load`` calls."""
         try:
             fn = _LOADERS[script_id]
         except KeyError:
             raise KeyError(
                 f"no bundled corpus for {script_id!r}; available: {sorted(_LOADERS)}"
             ) from None
-        return fn()
+        return fn().copy()
 
     # ── access ──────────────────────────────────────────────────────────
     def __len__(self) -> int:
@@ -112,13 +116,20 @@ class Corpus:
         return self._by_id.get(doc_id)
 
     def fingerprint(self) -> str:
-        """A stable content hash of this corpus — its script, documents (ids and
-        token text), and any ``subset:`` provenance note. Cheap relative to the
-        analyses it keys: one pass over the tokens, no model build. Two corpora
-        with the same fingerprint have the same analysable content, so it's the
-        cache key for `aegean.cache`-memoised analyses."""
+        """A stable content hash of this corpus, covering everything a token-level
+        analysis can see: the script id, the provenance ``data_version``, each
+        document's id, every token's text, `TokenKind`, `ReadingStatus`, and
+        annotations (hashed as sorted key/value pairs), and any ``subset:`` /
+        ``merged:`` / ``appended:`` provenance note. Document metadata (site,
+        period, ...) is deliberately excluded. Cheap relative to the analyses it
+        keys: one pass over the tokens, no model build. Two corpora with the same
+        fingerprint have the same analysable content, so it's the cache key for
+        `aegean.cache`-memoised analyses."""
         h = hashlib.sha256()
         h.update((self.script_id or "").encode("utf-8"))
+        if self.provenance is not None and self.provenance.data_version:
+            h.update(b"\x01")
+            h.update(self.provenance.data_version.encode("utf-8"))
         for d in self.documents:
             h.update(b"\x00")
             h.update(d.id.encode("utf-8"))
@@ -126,6 +137,15 @@ class Corpus:
             for t in d.tokens:
                 h.update(b"\x1f")
                 h.update(t.text.encode("utf-8"))
+                h.update(b"\x1e")
+                h.update(t.kind.value.encode("ascii"))
+                h.update(b"\x1e")
+                h.update(t.status.value.encode("ascii"))
+                for k in sorted(t.annotations):
+                    h.update(b"\x1d")
+                    h.update(k.encode("utf-8"))
+                    h.update(b"\x1c")
+                    h.update(str(t.annotations[k]).encode("utf-8"))
         if self.provenance is not None:
             for note in self.provenance.notes:
                 if note.startswith(("subset:", "merged:", "appended:")):
@@ -159,6 +179,30 @@ class Corpus:
                 f"{len(self.documents) - len(preview)} more documents</div>"
             )
         return card(title, body)
+
+    def copy(self) -> "Corpus":
+        """A structurally independent copy: a fresh document list and, per document,
+        fresh token/line/translation containers, so mutating the copy (or the
+        original) never affects the other. The elements themselves (`Token`,
+        `DocumentMeta`, `Sign`, `Provenance`) are immutable value objects and are
+        shared, which keeps the copy to one cheap pass of container building (a few
+        milliseconds even on the largest bundled corpus). The copy fingerprints
+        identically to the original."""
+        docs = [
+            Document(
+                id=d.id, script_id=d.script_id,
+                tokens=list(d.tokens),
+                lines=[list(line) for line in d.lines],
+                glyphs=d.glyphs, transcription=d.transcription,
+                translations=list(d.translations),
+                meta=d.meta,
+            )
+            for d in self.documents
+        ]
+        inv = self.sign_inventory
+        if inv is not None:
+            inv = SignInventory(list(inv.signs), inv.script_id)
+        return Corpus(docs, inv, self.provenance, self.script_id)
 
     def filter(self, **meta: Any) -> "Corpus":
         """Return a new Corpus whose documents match all given metadata fields

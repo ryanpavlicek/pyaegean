@@ -29,7 +29,12 @@ _RULE = {"—", "–"}  # a ruling/divider line drawn on the tablet
 # `stripErased()` removes it. Standalone runs mean the text here is lost;
 # attached to a word, the reading is damaged at a break.
 _ERASED = "\U0001076B"
-_IDEOGRAM_RE = re.compile(r"^[A-Z*][A-Z0-9*+'\[\]?]*$")
+# Logogram/ligature labels: an uppercase or "*NNN" base with ligature "+" and
+# editorial brackets/queries, plus the GORILA variant marks — subscript ₂₃₄
+# (PA₃) and a single lowercase variant letter after a letter or digit
+# (VIR+*313b, CAPm+KU). Two lowercase letters never run together, so prose
+# strays like "None" stay UNKNOWN.
+_IDEOGRAM_RE = re.compile(r"^[A-Z*](?:[A-Z0-9*+'\[\]?₂₃₄]|(?<=[A-Z0-9])[a-z])*$")
 
 
 def classify(text: str, line_no: int | None, position: int) -> Token:

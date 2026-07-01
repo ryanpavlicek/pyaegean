@@ -826,8 +826,8 @@
   },
   {
     "label": "*903",
-    "glyph": "𐘚",
-    "codepoint": 67098,
+    "glyph": null,
+    "codepoint": null,
     "phonetic": null,
     "sharedWithLinearB": false,
     "linearAOnly": true,

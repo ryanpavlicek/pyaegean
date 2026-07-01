@@ -106,19 +106,43 @@ GRAND_TOTAL_MARKERS = {"PO-TO-KU-RO"}
 DEFICIT_MARKERS = {"KI-RO", "KU-RO₂"}
 
 
+def _folded_in(term: str, lexemes: frozenset[str]) -> bool:
+    t = term.casefold()
+    return any(t == m.casefold() for m in lexemes)
+
+
 @dataclass(frozen=True, slots=True)
 class Markers:
-    """The total / grand-total / deficit lexemes used on one script's accounting tablets."""
+    """The total / grand-total / deficit lexemes used on one script's accounting tablets.
+
+    The canonical lexemes are uppercase; matching is case-insensitive because corpus
+    transliteration case varies (the on-demand DAMOS Linear B corpus is lowercase)."""
 
     total: frozenset[str]
     grand_total: frozenset[str]
     deficit: frozenset[str]
 
+    def is_total(self, term: str) -> bool:
+        return _folded_in(term, self.total)
+
+    def is_grand_total(self, term: str) -> bool:
+        return _folded_in(term, self.grand_total)
+
+    def is_deficit(self, term: str) -> bool:
+        return _folded_in(term, self.deficit)
+
+    def is_marker(self, term: str) -> bool:
+        """Whether ``term`` is any accounting marker (total, grand total, or deficit)."""
+        return self.is_total(term) or self.is_grand_total(term) or self.is_deficit(term)
+
 
 # Linear A is the default (and matches the bundled golden fixtures). Linear B is Mycenaean Greek:
-# to-so / to-sa = τόσος "so much/many" (the total), o-pe-ro = ὄφελος "what is owed" (the deficit).
+# to-so / to-sa = τόσος "so much/many" and to-so-de "and so much" (the total formulas),
+# o-pe-ro = ὄφελος "what is owed" (the deficit).
 LINEAR_A_MARKERS = Markers(frozenset(TOTAL_MARKERS), frozenset(GRAND_TOTAL_MARKERS), frozenset(DEFICIT_MARKERS))
-LINEAR_B_MARKERS = Markers(frozenset({"TO-SO", "TO-SA"}), frozenset(), frozenset({"O-PE-RO", "O-PE-RO-SI"}))
+LINEAR_B_MARKERS = Markers(
+    frozenset({"TO-SO", "TO-SA", "TO-SO-DE"}), frozenset(), frozenset({"O-PE-RO", "O-PE-RO-SI"})
+)
 _MARKERS_BY_SCRIPT = {"lineara": LINEAR_A_MARKERS, "linearb": LINEAR_B_MARKERS}
 
 
@@ -171,11 +195,11 @@ def parse_account_lines(
         has_number = has_value(tokens)
         terms, ideograms = _classify_tokens(tokens)
         role: LineRole = "item"
-        if any(t in markers.grand_total for t in terms):
+        if any(markers.is_grand_total(t) for t in terms):
             role = "grand-total"
-        elif any(t in markers.total for t in terms):
+        elif any(markers.is_total(t) for t in terms):
             role = "total"
-        elif any(t in markers.deficit for t in terms):
+        elif any(markers.is_deficit(t) for t in terms):
             role = "deficit"
         elif not has_number:
             role = "header"
@@ -216,7 +240,7 @@ def check_balances(
             diff = computed - line.value
             marker = next(
                 t for t in line.terms
-                if t in markers.total or t in markers.grand_total
+                if markers.is_total(t) or markers.is_grand_total(t)
             )
             checks.append(
                 BalanceCheck(

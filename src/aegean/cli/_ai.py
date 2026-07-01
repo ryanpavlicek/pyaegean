@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 ai_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Generative (exploratory, key-gated): translate, gloss, hypotheses, ask, extract, eval.",
+    help="Generative (exploratory, key-gated): translate, gloss, summarize, hypotheses, ask, extract, eval, providers.",
     no_args_is_help=True,
 )
 
@@ -131,16 +131,20 @@ def translate(
     (exploratory). The default morphology-first grounding gives the model deterministic
     morphology, case-role, and clause structure rather than auto-selected dictionary
     senses. With --verify (Greek), translate raw then check and repair against the
-    grounding so it can only catch errors, never cause them."""
+    grounding: the analysis cannot bias the draft, though a wrong analysis can still
+    mislead the repair."""
     from aegean import translate as tr
 
     client = _client(provider, model)
-    result = _run(
-        lambda: tr.translate(
-            read_text(text), script=script, target=target,
-            mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
+    try:
+        result = _run(
+            lambda: tr.translate(
+                read_text(text), script=script, target=target,
+                mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
+            )
         )
-    )
+    except ValueError as exc:  # unknown grounding mode, validated before any model call
+        raise fail(str(exc)) from None
     if output is not None:
         _write_ai_result(result, output)
         return

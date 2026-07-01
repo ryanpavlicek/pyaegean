@@ -7,7 +7,7 @@
     {"word": "PA-I-TO", "overrides": {}, "expected": "paito"},
     {"word": "KU-RO", "overrides": {"KU": "gu"}, "expected": "guro"},
     {"word": "KU-???", "overrides": {}, "expected": "ku???"},
-    {"word": "RA₂-RO", "overrides": {}, "expected": "raro"},
+    {"word": "RA₂-RO", "overrides": {}, "expected": "ra₂ro"},
     {"word": "A-DU", "overrides": {}, "expected": "adu"},
     {"word": "ZZZ", "overrides": {}, "expected": "zzz"}
   ],
