@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.14.4
+aegean --version                # pyaegean 0.15.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -746,8 +746,9 @@ aegean ai extract "OLE S 1" --fields commodity,amount     # → {"commodity":"OL
 overrides the model. `--corpus NAME` grounds the answer on that corpus's frequent
 words. `--trace` prints the grounding provenance under the answer, so you can audit
 exactly what the model was (and wasn't) told. `extract` always prints JSON. For Greek,
-`translate` adds gated LSJ glosses to the grounding by default (best on rare or
-documentary vocabulary); pass `--no-glosses` for lemma-only grounding on familiar text.
+`translate` grounds with deterministic morphology by default; `--mode full` adds
+rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy or bare
+paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
 
 `-o FILE` saves the run for later: `.json` keeps the text **plus its provenance and
 grounding** (and the exploratory label is preserved on disk), while `.txt` writes the

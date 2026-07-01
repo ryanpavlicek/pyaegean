@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.14.4
+aegean --version          # pyaegean 0.15.0
 ```
 
 | Group | What's in it |
@@ -1230,7 +1230,8 @@ The commands (each takes `--provider` / `--model`, and most take `--trace`):
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"                      # grounded hybrid translation
-aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --no-glosses         # lemma-only grounding (no LSJ glosses)
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --mode full          # + rare-word glosses in the grounding
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --verify             # draft, then check + repair (2nd call)
 aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered!)
 aegean ai gloss "μῆνιν ἄειδε θεά"                             # interlinear word-by-word gloss
 aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # short, grounded summary
@@ -1244,10 +1245,14 @@ aegean ai eval --provider anthropic                           # grounding-fideli
 prints the grounding provenance under the answer: the local corpus / lexicon /
 analysis facts the model was given, grouped by source, so you can audit exactly
 what it was (and wasn't) told. `extract` always prints JSON, so it pipes straight
-into `jq`. For Greek, `translate` adds gated, content-word LSJ glosses to the grounding
-by default; these help most on rare or documentary vocabulary the model would otherwise
-misread, so pass `--no-glosses` for lemma-only grounding on text a capable model already
-handles well.
+into `jq`. For Greek, `translate` grounds with deterministic **morphology** by default
+(`--mode morphology`): lemma, part of speech, voice, case roles, and the clause skeleton,
+with rare words flagged but no auto-selected dictionary senses. `--mode full` adds concise,
+rarity-gated glosses (a common-sense-first dictionary cascade, best on rare or documentary
+vocabulary); `--mode lemma` is the legacy lemma+LSJ grounding, and `--mode none` sends the
+text ungrounded. `--verify` translates raw first, then checks and repairs the draft against
+the analysis (a second model call: the analysis cannot bias the draft, though a wrong
+analysis can still mislead the repair).
 
 **Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,
 `ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
