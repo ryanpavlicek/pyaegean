@@ -239,7 +239,7 @@ See [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 
 `aegean.greek.use_neural_pipeline()` activates one jointly-trained model serving
 POS, full morphology (UD FEATS), UD dependency trees, and lemmas from a single
-forward pass: state of the art on the UD Ancient Greek benchmarks (see
+forward pass: state of the art on the UD Ancient Greek (Perseus) benchmark (see
 [Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the
 measured numbers). The model bundle (quantized ONNX + tokenizer + label maps + lemma
 scripts/lookup, ~173 MB tar.gz, sha256-pinned) is fetched to the cache, never bundled,
@@ -502,7 +502,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.14.4'  (your installed version)
+v["package"]                                  # '0.15.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -554,7 +554,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.14.4'
+# '0.15.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

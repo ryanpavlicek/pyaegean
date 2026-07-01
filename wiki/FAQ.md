@@ -68,7 +68,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.14.4`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.15.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -518,7 +518,7 @@ when a result is reconstructed (`lemma_certain=False`).
 Several opt-in backends raise accuracy well past that baseline. The strongest is the
 **neural pipeline**: `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
 model for POS, morphology, UD dependency parsing, and lemmatization, state of the art
-on the UD Ancient Greek benchmarks (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
+on the UD Ancient Greek (Perseus) benchmark (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
 85.6 LAS on the Perseus test fold, measured end-to-end from raw text: see
 [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
 `greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,

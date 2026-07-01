@@ -32,7 +32,7 @@ Python, [Meters](Meters) for the metrical scansion in depth, and
 > import, transparent leakage-free evaluation, metrical scansion, and a scriptable data
 > layer. For maximum accuracy, the opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
 > (`use_neural_pipeline`, the `[neural]` extra) is **state of the art on the UD Ancient
-> Greek benchmarks**: measured end-to-end through this package (the full protocol and
+> Greek (Perseus) benchmark**: measured end-to-end through this package (the full protocol and
 > comparison tables live in
 > [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
 
@@ -155,8 +155,8 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 | --- | --- | --- | --- | --- | --- |
 | neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.6** |
 
-Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.6,
-UAS 82.5, UPOS 87.2. Inference is torch-free, at roughly 450 words/second on a plain
+Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.50,
+UAS 82.47, UPOS 86.71. Inference is torch-free, at roughly 450 words/second on a plain
 CPU. The bundle ships **quantized** at about 173 MB (down from 518 MB) with **no loss of
 accuracy**: the scores above are unchanged from the full-precision model. The recipe is
 weight-only int8 (onnxruntime MatMulNBits) plus fp16, keeping activations at full

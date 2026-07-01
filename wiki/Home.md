@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.14.4 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.15.0 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -15,7 +15,7 @@ pluggable multi-provider AI layer.
 > morphology → lemmas), opt-in backends (Perseus AGDT treebank, LSJ glossing, generalizing
 > taggers/lemmatizers), and an opt-in **neural pipeline** (`use_neural_pipeline`): one
 > jointly-trained torch-free model for tagging, morphology, **UD dependency parsing**, and
-> lemmatization that is **state of the art on the UD Ancient Greek benchmarks**
+> lemmatization that is **state of the art on the UD Ancient Greek (Perseus) benchmark**
 > ([measured](Greek-NLP#the-neural-pipeline-opt-in): 97.0 UPOS / 96.0 UFeats / 94.3 lemma /
 > 90.2 UAS / 85.6 LAS on the Perseus test fold, end-to-end from raw text): plus real works
 > on demand (`load_work("tlg0012.tlg001")` → the Iliad), a benchmark harness, and a neutral
@@ -69,7 +69,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`), and a bundled **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge: the script is undeciphered) |
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, **cross-script comparison** (Linear B ↔ Greek by sound), morphology clustering, collocation stats, **corpus statistics** (dispersion, keyness, bootstrap), query engine, structure detection, an opt-in analysis cache |
-| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **lexicon registry** (`use_lexicon`: LSJ, Middle Liddell, Cunliffe, Abbott-Smith) with Logeion deep-links, generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`): joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek benchmarks (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test): plus real works on demand (`load_work`), an offline **discovery catalogue** of ~1,800 loadable works (`greek.catalog()` / `aegean greek catalog`), a **benchmark** harness, **inflection synthesis** (`inflect` / `paradigm`), **terminology rarity** (`terminology_rarity`), **dialect/register** tags (`usage`), and a **PROIEL convention-drift** breakdown (`proiel_drift`) |
+| [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **lexicon registry** (`use_lexicon`: LSJ, Middle Liddell, Cunliffe, Abbott-Smith) with Logeion deep-links, generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`): joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek (Perseus) benchmark (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test): plus real works on demand (`load_work`), an offline **discovery catalogue** of ~1,800 loadable works (`greek.catalog()` / `aegean greek catalog`), a **benchmark** harness, **inflection synthesis** (`inflect` / `paradigm`), **terminology rarity** (`terminology_rarity`), **dialect/register** tags (`usage`), and a **PROIEL convention-drift** breakdown (`proiel_drift`) |
 | [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, and Parquet |
 | [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: corpus commands, the full Greek NLP pipeline, analysis, data fetching, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
@@ -94,7 +94,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.14.4.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
+**Current release: v0.15.0.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
 `aegean-mcp` server, and a grounded multi-provider AI layer. The pages in the sidebar cover every
