@@ -3,8 +3,8 @@
 Stable, pure-Python 0.8.x APIs only — everything here runs entirely client-side: the Greek
 pipeline + scansion + word analysis, the bundled Koine (Dodson) lexicon, the offline Greek
 work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corpus
-(sign search + accounting), the file importer, the stdlib EpiDoc reader, and cross-script
-phonetic comparison. The
+(sign search + accounting), the bundled Cypriot (IG XV 1) inscription corpus, the file importer,
+the stdlib EpiDoc reader, and cross-script phonetic comparison. The
 neural tier is excluded (it needs onnxruntime, which doesn't run in the browser), as are the
 network-only backends (load_work/load_nt, LSJ/treebank) and the generative AI layer. Each
 function returns a JSON string for easy consumption from JavaScript. This module is exercised
@@ -115,6 +115,32 @@ def bridge(script: str, word: str) -> str:
         )
     return json.dumps(
         {"script": script, "word": word, "greek": reading[0], "gloss": gloss(word) or reading[1]},
+        ensure_ascii=False,
+    )
+
+
+def cypriot_inscription(doc_id: str = "IG XV 1, 95") -> str:
+    """Read a real inscription from the bundled Cypriot *Inscriptiones Graecae* XV 1 corpus:
+    its find-place, transliteration line(s), Greek reading (where the text is Greek), and the
+    source-edition link."""
+    import aegean
+
+    doc = aegean.load("cypriot").get(doc_id.strip())
+    if doc is None:
+        return json.dumps({"error": f"no inscription {doc_id!r} in the Cypriot IG XV 1 corpus"})
+    notes = doc.meta.notes or ()
+    source_url = next((n for n in notes if str(n).startswith("http")), "")
+    greek = next((str(n)[len("Greek:"):].strip() for n in notes if str(n).startswith("Greek:")), "")
+    lines = [" ".join(doc.tokens[i].text for i in idxs) for idxs in doc.lines]
+    return json.dumps(
+        {
+            "id": doc.id,
+            "site": doc.meta.site,
+            "name": doc.meta.name,
+            "lines": lines,
+            "greek": greek,
+            "source_url": source_url,
+        },
         ensure_ascii=False,
     )
 

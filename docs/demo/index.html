@@ -43,7 +43,8 @@
     <a href="https://pyodide.org/">Pyodide</a> — no install, no server. Every example below is the
     pure-Python core running client-side: the Greek pipeline, scansion and word analysis, the
     bundled Koine lexicon and the offline work catalogue, the deciphered-syllabary Greek bridge,
-    the bundled Linear A corpus, the file importer, and cross-script comparison. The neural and
+    the bundled Linear A and Cypriot inscription corpora, the file importer, and cross-script
+    comparison. The neural and
     AI layers, and the network-only backends (fetching real works, LSJ), don't run here. First
     load fetches the package, so give it a few seconds.</p>
 
@@ -128,6 +129,19 @@
       <button data-tool="bridge" disabled>Read as Greek</button>
     </div>
     <pre id="bridge-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Cypriot inscription — read from the corpus</h2>
+    <label for="cyins">An inscription id from the bundled <em>Inscriptiones Graecae</em> XV 1 corpus
+      (178 Cypriot-syllabary texts) — its find-place, transliteration, the Greek reading where the
+      text is Greek, and the source edition (try <code>IG XV 1, 95</code>, <code>IG XV 1, 1</code>,
+      or <code>IG XV 1, 2</code>)</label>
+    <input type="text" id="cyins" value="IG XV 1, 95">
+    <div class="row"><button data-tool="cyins" disabled>Read inscription</button></div>
+    <pre id="cyins-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Some texts are Eteocypriot (an undeciphered language in the
+      same syllabary), so they have a transliteration but no Greek reading.</p>
   </div>
 
   <div class="card">
@@ -216,8 +230,9 @@ async function init() {
     const code = await (await fetch("demo.py")).text();
     pyodide.runPython(code);
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
-                        "catalog", "bridge", "lineara_search", "lineara_balance", "import_text",
-                        "phonetic_compare", "lexicon_link", "epidoc_import"]) {
+                        "catalog", "bridge", "cypriot_inscription", "lineara_search",
+                        "lineara_balance", "import_text", "phonetic_compare", "lexicon_link",
+                        "epidoc_import"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -269,6 +284,15 @@ const handlers = {
   },
   bridge: () => { const r = call("bridge", val("brscript"), val("brword"));
     show("bridge-out", r.error ? r.error : `${r.word} → ${r.greek}   (${r.gloss})`); },
+  cyins: () => {
+    const r = call("cypriot_inscription", val("cyins"));
+    if (r.error) return show("cyins-out", r.error);
+    show("cyins-out",
+      `${r.id}${r.site ? "  ·  " + r.site : ""}${r.name ? "\n" + r.name : ""}\n` +
+      `transliteration:\n${r.lines.map(l => "  " + l).join("\n")}` +
+      (r.greek ? `\nGreek: ${r.greek}` : "") +
+      (r.source_url ? `\nsource: ${r.source_url}` : ""));
+  },
   la: () => {
     const r = call("lineara_search", val("la"));
     show("la-out", r.matches && r.matches.length

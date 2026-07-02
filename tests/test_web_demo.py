@@ -76,6 +76,16 @@ def test_demo_bridge() -> None:
     assert "error" in json.loads(demo.bridge("linearb", "zz-zz"))
 
 
+def test_demo_cypriot_inscription() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.cypriot_inscription("IG XV 1, 95"))
+    assert r["id"] == "IG XV 1, 95" and r["site"] == "Kurion"
+    assert r["lines"] and "ta-ma-ti-ri" in r["lines"][0]
+    assert "Δήμητρι" in r["greek"]
+    assert r["source_url"].startswith("https://")
+    assert "error" in json.loads(demo.cypriot_inscription("IG XV 1, 99999"))
+
+
 def test_demo_lineara_balance() -> None:
     demo = _load_demo()
     r = json.loads(demo.lineara_balance("HT9b"))
@@ -152,6 +162,6 @@ def test_demo_html_wiring() -> None:
     # every JS-referenced tool exists in the demo module
     demo = _load_demo()
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
-                 "bridge", "lineara_search", "lineara_balance", "import_text", "phonetic_compare",
-                 "lexicon_link", "epidoc_import"):
+                 "bridge", "cypriot_inscription", "lineara_search", "lineara_balance", "import_text",
+                 "phonetic_compare", "lexicon_link", "epidoc_import"):
         assert hasattr(demo, name) and f'"{name}"' in html
