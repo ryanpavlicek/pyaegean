@@ -62,7 +62,7 @@ aegean info lineara
 # documents          1721
 # words              1381
 # tokens             6406
-# signs_in_inventory 344
+# signs_in_inventory 342
 # source             GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz
 # license            Apache-2.0 (corpus JSON); facsimile imagery © École
 #                    Française d'Athènes, not redistributed
@@ -215,7 +215,7 @@ from aegean.analysis import classify_corpus
 
 buckets = classify_corpus(corpus)
 {k: len(v) for k, v in buckets.items()}
-# {'accounting': 134, 'libation': 15, 'list': 7, 'text': 2, 'other': 1563}
+# {'accounting': 134, 'libation': 18, 'list': 6, 'text': 1, 'other': 1562}
 ```
 
 You've now gone from one tablet's arithmetic to a corpus-wide structural view, in

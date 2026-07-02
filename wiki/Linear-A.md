@@ -34,11 +34,11 @@ shown later on this page:
 | Inscriptions (documents) | **1,721** |
 | Word tokens (all multi-sign; 995 distinct) | **1,381** |
 | Tokens (words, numerals, logograms, separators) | **6,406** |
-| Signs in the inventory | **344** (the full Unicode Linear A block) |
-| Signs with an assigned sound value | **47** |
-| Signs marked shared with Linear B | **67** |
+| Signs in the inventory | **342** (the full Unicode Linear A block) |
+| Signs with an assigned sound value | **48** |
+| Signs marked shared with Linear B | **81** |
 | Documents carrying editorial status | **366** (552 `LOST` + 120 `UNCLEAR` tokens) |
-| Tablets with a checkable `KU-RO` total | **35** (39 total lines) |
+| Tablets with a checkable `KU-RO`/`KU-RA` total | **37** (41 total lines) |
 | Source | GORILA (Godart & Olivier 1976–1985) via `mwenge/lineara.xyz` |
 | License | Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed |
 
@@ -47,7 +47,7 @@ aegean info lineara
 # documents          1721
 # words              1381
 # tokens             6406
-# signs_in_inventory 344
+# signs_in_inventory 342
 # source             GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz
 # license            Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed
 ```
@@ -166,23 +166,23 @@ The document-level frame's columns are: `id`, `script_id`, `site`, `support`,
 
 ## The sign inventory
 
-The inventory is the **full Unicode Linear A repertoire**: 344 signs. Of those,
-**47** carry an assigned sound value (`phonetic`); the rest are carried from the
+The inventory is the **full Unicode Linear A repertoire**: 342 signs. Of those,
+**48** carry an assigned sound value (`phonetic`); the rest are carried from the
 Unicode Character Database with `attrs["source"] == "ucd"` and **no** reading,
 because Linear A is undeciphered and most of its repertoire has no agreed value.
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
-len(inv)                           # 344
-len([s for s in inv if s.phonetic])               # 47  — the read signs
-len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 67  — shared glyphs
+len(inv)                           # 342
+len([s for s in inv if s.phonetic])               # 48  — the read signs
+len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 81  — shared glyphs
 
 sign = inv.by_label("KU")
 sign.phonetic                      # 'ku'
 sign.glyph                         # '𐙂'
 sign.codepoint                     # 67138  (the int; the CLI/JSON render it as 'U+10642')
 
-inv.to_dataframe()                 # (344, 10) — needs [data]
+inv.to_dataframe()                 # (342, 10) — needs [data]
 ```
 
 The inventory DataFrame's columns are: `label`, `glyph`, `codepoint`,
@@ -199,7 +199,7 @@ aegean sign lineara KU
 #  phonetic                ku
 #  attrs.sharedWithLinearB True
 #  attrs.linearAOnly       False
-#  attrs.total             16
+#  attrs.total             29
 #  attrs.confidence        1
 ```
 
@@ -207,7 +207,7 @@ aegean sign lineara KU
 aegean sign lineara KU --json
 # {"label": "KU", "glyph": "𐙂", "codepoint": "U+10642", "phonetic": "ku",
 #  "attrs": {"sharedWithLinearB": true, "linearAOnly": false,
-#            "total": 16, "confidence": 1, "altGlyphs": []}}
+#            "total": 29, "confidence": 1, "altGlyphs": []}}
 ```
 
 The `sign` argument accepts either a label (`KU`, `*301`) or a single glyph
@@ -320,11 +320,11 @@ you can check the stated total against the line items above it: a concrete,
 falsifiable thing to do with an undeciphered script.
 
 > **Exploratory.** Section boundaries are heuristic and Aegean metrology is
-> contested, so a "balance" is evidence, not proof. Only **35** of the 1,721
-> tablets carry a `KU-RO` total that's checkable at all (39 total lines, since a
-> few tablets state more than one); the rest are too fragmentary: that's the
-> nature of the corpus, not a tool limit. Of the 39 checked lines, **8** balance
-> exactly.
+> contested, so a "balance" is evidence, not proof. Only **37** of the 1,721
+> tablets carry a `KU-RO` total (or its variant `KU-RA`) that's checkable at all
+> (41 total lines, since a few tablets state more than one); the rest are too
+> fragmentary: that's the nature of the corpus, not a tool limit. Of the 41
+> checked lines, **8** balance exactly.
 
 Check one tablet:
 
@@ -354,13 +354,13 @@ Omit the document id to check every total line at once:
 
 ```bash
 aegean balance lineara
-# lineara: 39 total line(s) checked
+# lineara: 41 total line(s) checked
 #  HT9a   KU-RO   31.75   31.0    -0.75   NO
 #  HT9b   KU-RO   24.0    24.0     0.0    yes
 #  HT11b  KU-RO   180.0   180.0    0.0    yes
 #  HT13   KU-RO   130.5   131.0    0.5    NO
 #  HT25b  KU-RO   52.0    52.0     0.0    yes
-#  ... (39 lines across 35 documents)
+#  ... (41 lines across 37 documents)
 ```
 
 Add `--strict` to exit non-zero if any checked total fails to balance: handy in
@@ -399,9 +399,11 @@ override individual calls.
 | `text` | Text / Other | Extended hyphenated text, no numerals |
 | `other` | Unclassified | Short or ambiguous |
 
-The known libation-formula words are `A-TA-I-*301-WA-JA`, `JA-SA-SA-RA-ME`, and
-`A-DI-KI-TE-TE-DU`. The precedence is exactly the order above (accounting wins
-over libation, etc.).
+The known libation-formula words are `A-TA-I-*301-WA-JA`, `JA-SA-SA-RA-ME`,
+and the attested a-di-ki-te family forms (`A-DI-KI-TE`, `A-DI-KI-TE-TE`,
+`JA-DI-KI-TE-TE-DU-PU₂-RE`, `JA-DI-KI-TE-TE-*307-PU₂-RE`, per Younger's
+readings of the PK Za vessels). The precedence is exactly the order above
+(accounting wins over libation, etc.).
 
 Census the whole corpus:
 
@@ -409,10 +411,10 @@ Census the whole corpus:
 aegean analyze structure lineara
 # lineara: structure census (heuristic)
 #  accounting   134
-#  libation      15
-#  list           7
-#  text           2
-#  other       1563
+#  libation      18
+#  list           6
+#  text           1
+#  other       1562
 ```
 
 Classify one document:
@@ -597,7 +599,7 @@ aegean cite lineara --site "Haghia Triada"  # cite the exact filtered subset
 - **Undeciphered.** Sound values are a Linear B *convention*; transliterations,
   "totals," structure labels, and commodity glosses are evidence to weigh, never
   ground truth.
-- **Damaged corpus.** Only 35 tablets carry a checkable total; section
+- **Damaged corpus.** Only 37 tablets carry a checkable total; section
   boundaries for reconciliation are heuristic; the full Leiden apparatus isn't in
   the bundled data.
 - **Heuristic structure.** The accounting/libation/list/text labels are

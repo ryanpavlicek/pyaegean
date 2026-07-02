@@ -33,7 +33,7 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Area | The honest limit | Where it's covered |
 | --- | --- | --- |
 | Linear A / Cypro-Minoan readings | Undeciphered; results are **exploratory**, never translations | [Evidence](#limits-of-the-evidence-not-fixable-by-code) |
-| Linear A accounting | Only ~35 of 1,721 tablets carry a checkable total | [Evidence](#limits-of-the-evidence-not-fixable-by-code) |
+| Linear A accounting | Only ~37 of 1,721 tablets carry a checkable total | [Evidence](#limits-of-the-evidence-not-fixable-by-code) |
 | Full Linear B corpus | NonCommercial → fetched, not bundled (`load("damos")`) | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
 | SigLA / UD / PROIEL data | NonCommercial → fetched for research/eval only | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
 | Offline morphology | Misses irregular/3rd-decl./contract paradigms | [Engineering](#engineering-limits-we-plan-to-lift) |
@@ -51,8 +51,8 @@ release.
 
 - **Linear A and Cypro-Minoan are undeciphered.** Linear A's phonetic
   transcription uses Linear B sound values as a *working convention*: in the
-  bundled inventory **47 of the 344 signs** carry an empirical sound value
-  (drawn from the 67 signs shared with the Linear B grid), each with a
+  bundled inventory **48 of the 342 signs** carry an empirical sound value
+  (drawn from the 81 signs shared with the Linear B grid), each with a
   `confidence`; the rest have no agreed reading. Cypro-Minoan goes further: of
   its **99 catalogued signs, none** carries a settled sound value, so pyaegean
   offers no transliteration or lexicon for it. Every analytical or generative
@@ -63,7 +63,7 @@ release.
   import aegean
   inv = aegean.get_script("lineara").sign_inventory
   read = [s for s in inv if s.phonetic]
-  print(len(list(inv)), len(read))     # 344 47
+  print(len(list(inv)), len(read))     # 342 48
   ```
 
   ```bash
@@ -74,8 +74,8 @@ release.
   # {"label": "CM001", "glyph": "𒾐", "phonetic": "", ...}
   ```
 
-- **The corpora are fragmentary.** Only **about 35 of the 1,721** bundled Linear A
-  inscriptions carry a stated, checkable accounting total (`KU-RO`/`TO-SO`); most
+- **The corpora are fragmentary.** Only **about 37 of the 1,721** bundled Linear A
+  inscriptions carry a stated, checkable accounting total (`KU-RO`/`KU-RA`/`TO-SO`); most
   tablets are too damaged to balance. Stricter still, only a handful are *intact
   and balancing*: `accounting.checkable_accounts(corpus)` returns the clean
   drill set. That is the nature of the evidence, not a parser gap.
@@ -85,7 +85,7 @@ release.
   from aegean.analysis import accounting
   la = aegean.load("lineara")
   with_total = [d for d in la if accounting.balance_check(d)]
-  print(len(with_total))                       # 35
+  print(len(with_total))                       # 37
   print(len(accounting.checkable_accounts(la))) # 7  (intact AND balancing)
   ```
 
@@ -122,7 +122,7 @@ The four undeciphered/partly-read scripts at a glance:
 
 | Script | `aegean.load(...)` id | Signs | Signs with a sound value | Lexicon | Status |
 | --- | --- | --- | --- | --- | --- |
-| Linear A | `lineara` | 344 | 47 (working convention) |— | Undeciphered |
+| Linear A | `lineara` | 342 | 48 (working convention) |— | Undeciphered |
 | Linear B | `linearb` | (Linear B grid) | full grid | 150 entries | Deciphered |
 | Cypriot syllabary | `cypriot` | (ICS grid) | full grid | 17 entries | Deciphered |
 | Cypro-Minoan | `cyprominoan` | 99 | 0 |— | Undeciphered |

@@ -11,7 +11,7 @@ what it meant here, this is the page to keep open.
 > the full command reference see the [CLI](CLI) page; for every Greek function see
 > [Greek NLP](Greek-NLP).
 
-The examples below were run against pyaegean 0.15.1 (the `aegean` command-line tool
+The examples below were run against pyaegean 0.16.0 (the `aegean` command-line tool
 and the `aegean` Python package). Where a feature has both a Python call and a
 shell command, both are shown.
 
@@ -43,11 +43,11 @@ aegean.registered_scripts()
 ### Linear A
 The Bronze Age script of Minoan Crete (roughly 1800–1450 BCE), used for the
 still-**undeciphered** Minoan language. pyaegean ships the full GORILA-derived
-Linear A corpus offline (1,721 documents, a 344-sign inventory). See [Linear A](Linear-A).
+Linear A corpus offline (1,721 documents, a 342-sign inventory). See [Linear A](Linear-A).
 
 ```bash
 aegean info lineara
-# documents: 1721 · words: 1381 · signs_in_inventory: 344
+# documents: 1721 · words: 1381 · signs_in_inventory: 342
 # source: GORILA (Godart & Olivier 1976–1985)
 ```
 

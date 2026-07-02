@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.16.0 (2026-07-02)
 
 ### Added
 - **`aegean data remove`** deletes downloaded dataset(s) from the local store (`remove NAME`, or
@@ -17,6 +17,14 @@ All notable changes to pyaegean are documented here. The format follows
   nothing is re-fetched, evicted, or expires until `data remove` deletes it or `fetch --force`
   replaces it. The CLI help, `data cache` output, module documentation, and wiki now state this
   guarantee plainly (the word "cache" had suggested downloads might not persist).
+- **The Linear A sign table carries the corrected alignment data.** The workbench's 1.6.0 corpus
+  rebuild fixed its sign aligner (the upstream damage marker no longer counts as a sign), growing
+  the transliteration-aligned evidence from 127 to 236 inscriptions and the aligned signs from 84
+  to 95 (recovering PU, PU₂, QI and twelve more, each verified against its Unicode chart name);
+  AB-shared classification now follows the Unicode chart (66 AB-shared). The bundled table and
+  manifest mirror it; the cross-project parity checksum is unchanged.
+- **The bundled workbench app pin moves to 1.6.0**, carrying the workbench's stored-XSS fixes and
+  the corrected sign table, so `aegean workbench` serves them.
 
 ### Fixed
 - **CLI tables render square brackets literally.** Cell text was parsed as rich markup, so a value
@@ -28,6 +36,20 @@ All notable changes to pyaegean are documented here. The format follows
   short id is never guessed (the candidates are listed instead), and the not-found error names the
   closest ids and the corpus size. `aegean greek work` now ends with the exact `show` command that
   reads the loaded text.
+- **KU-RA counts as a stated total.** It is KU-RO's variant (two bundled tablets, ZA 20 and
+  ARKH 2); the accounting layer now checks it, moving the measured checkable-total figures from
+  35 tablets / 39 total lines to **37 / 41** (documented everywhere the old numbers appeared).
+  Approximate readings (`≈ ¹⁄₆`) parse at the editor's value instead of dropping from line sums,
+  which also reclassifies 29 fraction-bearing tokens that had been left unclassified.
+- **The libation word list carries only attested forms.** The restoration fragment
+  `A-DI-KI-TE-TE-DU` (zero corpus tokens) is replaced by the four attested a-di-ki-te family forms
+  from Younger's readings of the PK Za vessels; three PK Za inscriptions now classify as libation
+  (census: libation 15 → 18), and a liveness test keeps dead entries out.
+- **Query: `word-contains-sign` matches sign labels as written.** `*301` (or `301`, any case) now
+  finds `*301`-bearing words, and subscripted signs match only themselves (`RA₂` no longer answers
+  for `RA`); a blank min/max-syllables value matches neutrally instead of raising.
+- **Workbench exports re-import faithfully.** The importer reads the export schema's real field
+  spellings (`period`, the nested images block), so dating and imagery survive the round trip.
 
 ## 0.15.1 (2026-07-01)
 

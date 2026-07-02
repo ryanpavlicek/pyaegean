@@ -114,7 +114,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.15.1
+# pyaegean 0.16.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -128,7 +128,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.15.1
+print(aegean.__version__)                 # 0.16.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -145,7 +145,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.15.1
+# pyaegean 0.16.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -155,7 +155,7 @@ aegean info lineara
 # │ documents          │ 1721                                              │
 # │ words              │ 1381                                              │
 # │ tokens             │ 6406                                              │
-# │ signs_in_inventory │ 344                                              │
+# │ signs_in_inventory │ 342                                              │
 # │ source             │ GORILA (Godart & Olivier 1976–1985) …            │
 # │ license            │ Apache-2.0 (corpus JSON); facsimile imagery …    │
 # └────────────────────┴───────────────────────────────────────────────────┘

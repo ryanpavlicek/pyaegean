@@ -711,16 +711,16 @@ Heuristic genre classification by content shape. The five categories are fixed
 from aegean.analysis import classify_structure, classify_corpus
 classify_structure(c.get("HT13"))         # 'accounting'
 {k: len(v) for k, v in classify_corpus(c).items()}
-# {'accounting': 134, 'libation': 15, 'list': 7, 'text': 2, 'other': 1563}
+# {'accounting': 134, 'libation': 18, 'list': 6, 'text': 1, 'other': 1562}
 ```
 
 ```bash
 aegean analyze structure lineara
 # accounting  134
-# libation     15
-# list          7
-# text          2
-# other      1563
+# libation     18
+# list          6
+# text          1
+# other      1562
 
 aegean analyze structure lineara HT13      # one document → 'accounting'
 ```

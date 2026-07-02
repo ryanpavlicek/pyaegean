@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.15.1
+aegean --version                # pyaegean 0.16.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -87,7 +87,7 @@ aegean info lineara --json
   "documents": 1721,
   "words": 1381,
   "tokens": 6406,
-  "signs_in_inventory": 344,
+  "signs_in_inventory": 342,
   "source": "GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz",
   "license": "Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed",
   "citation": "Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz"
@@ -604,7 +604,7 @@ aegean analyze cooccur lineara KU-RO --top 5
 # KI-RO 5 · *306-TU 4 · KU-PA₃-NU 4 · SA-RA₂ 4 · PA-DE 3
 
 aegean analyze structure lineara
-# accounting 134 · libation 15 · list 7 · text 2 · other 1563   (heuristic census)
+# accounting 134 · libation 18 · list 6 · text 1 · other 1562   (heuristic census)
 
 aegean analyze cooccur lineara KU-RO --top 5 -o cooccur.csv   # save the ranking
 ```

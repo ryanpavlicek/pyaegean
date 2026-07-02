@@ -81,7 +81,7 @@ aegean info lineara
  documents          1721
  words              1381
  tokens             6406
- signs_in_inventory 344
+ signs_in_inventory 342
  source             GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz
  license            Apache-2.0 (corpus JSON); facsimile imagery © École
                     Française d'Athènes, not redistributed
@@ -176,7 +176,7 @@ Inventory sizes (signs reported by `info`):
 
 | Script | Signs in inventory | Notes |
 |---|---|---|
-| `lineara` | 344 | GORILA-derived; `attrs` carry `sharedWithLinearB`, `total`, `confidence` |
+| `lineara` | 342 | GORILA-derived; `attrs` carry `sharedWithLinearB`, `total`, `confidence` |
 | `linearb` | 211 | sign data from the Unicode Character Database |
 | `cypriot` | (inventory bundled) | classical Cypriot syllabary |
 | `cyprominoan` | (inventory bundled) | undeciphered; treat readings as exploratory |

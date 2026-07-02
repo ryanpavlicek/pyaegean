@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.15.1
+aegean --version          # pyaegean 0.16.0
 ```
 
 | Group | What's in it |
@@ -153,7 +153,7 @@ aegean info lineara --json
   "documents": 1721,
   "words": 1381,
   "tokens": 6406,
-  "signs_in_inventory": 344,
+  "signs_in_inventory": 342,
   "source": "GORILA (Godart & Olivier 1976–1985) via mwenge/lineara.xyz",
   "license": "Apache-2.0 (corpus JSON); facsimile imagery © École Française d'Athènes, not redistributed",
   "citation": "Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz"

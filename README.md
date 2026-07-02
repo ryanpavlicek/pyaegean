@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.15.1 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.16.0 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -46,7 +46,7 @@ prior programming.
 | **Real texts on demand** | `greek.load_work("tlg0012.tlg001")` fetches a complete work (the Iliad arrives as 24 books / ~127k tokens) from Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) straight into the corpus model. Don't know an id? `greek.catalog(author="Plato")` searches a bundled, offline index of **1,778** Greek works (every `-grc` edition in both repos): author, title (English or Greek), or free text, and every hit's id loads with `load_work`. |
 | **Bring your own text** | `aegean.io.from_text` / `from_text_file` / `from_text_dir` / `from_csv` turn a passage, a folder of `.txt`, or a CSV into a real `Corpus`: `aegean.io.from_text("ἐν ἀρχῇ ἦν ὁ λόγος.")` gives the full filter / query / analyse / export API over your own material, with Greek run through the Greek tokenizer. |
 | **The Greek New Testament, annotated** | `greek.load_nt("John", ref="1.1-18")` loads the Nestle 1904 NT with a gold **lemma**, **morphology**, and **Strong's number** on every token; `greek.use_dodson()` adds Koine glosses (`gloss_strongs("3056") → "a word, speech…"`). So you can lemmatize, gloss, and cite a chapter, offline. Public-domain text + CC0 annotations; one book is bundled, the full 27 fetch on demand. |
-| **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (35 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
+| **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (37 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **schema-valid EpiDoc / CSV / Parquet** export via `aegean.io` (the EpiDoc validates against the official EpiDoc RelaxNG and round-trips editorial status, and any EpiDoc edition **reads back in** with `from_epidoc`). Every corpus carries provenance and a one-line citation. |
 | **A browser UI for any corpus** | `aegean.io.to_workbench(corpus, "my.json")` emits a file the [Linear A Research Workbench](https://linearaworkbench.xyz/) opens via `?corpus=`: your own inscriptions get its 50 analysis modules, maps, and imagery browser with zero setup. `from_workbench_export()` loads the workbench's corpus exports (and its static data API) back into Python. |
@@ -147,7 +147,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.15.1**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.16.0**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, inflection synthesis, terminology-rarity scoring, dialect/register tags, a benchmark
 harness, and a neutral out-of-AGDT evaluation with a convention-drift breakdown); a **pluggable lexicon
@@ -203,7 +203,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.15.1},
+  version = {0.16.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

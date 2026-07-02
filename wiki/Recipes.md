@@ -573,7 +573,7 @@ A heuristic classifier sorts each document into one of five categories:
 
 ```bash
 aegean analyze structure lineara --json | jq 'to_entries | sort_by(-.value)'
-# accounting 134 · libation 15 · list 7 · text 2 · other (the rest)
+# accounting 134 · libation 18 · list 6 · text 1 · other (the rest)
 ```
 
 ```python
@@ -748,7 +748,7 @@ aegean data remove damos          # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.15.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.16.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

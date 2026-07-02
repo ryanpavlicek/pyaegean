@@ -211,7 +211,7 @@ aegean info lineara
 │ documents          │ 1721                                                   │
 │ words              │ 1381                                                   │
 │ tokens             │ 6406                                                   │
-│ signs_in_inventory │ 344                                                    │
+│ signs_in_inventory │ 342                                                    │
 │ source             │ GORILA (Godart & Olivier 1976–1985) via …              │
 │ license            │ Apache-2.0 (corpus JSON); facsimile imagery © …        │
 │ citation           │ Godart, L. & Olivier, J.-P. (1976–1985). …             │
@@ -1038,7 +1038,7 @@ inv = aegean.load("lineara").sign_inventory
 inv.by_label("KU")        # the Sign labelled KU
 inv.by_glyph("𐙂")        # the same Sign by its Unicode glyph
 inv.by_codepoint(0x10642) # …or by codepoint
-len(inv)                  # 344
+len(inv)                  # 342
 ```
 
 ```bash
