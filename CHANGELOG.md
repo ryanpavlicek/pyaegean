@@ -4,6 +4,20 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.0 (2026-07-02)
+
+### Added
+- **`aegean tui` — a terminal UI.** An app-like research cockpit in the terminal (the opt-in
+  `[tui]` extra, built on Textual): browse the corpora, inspect a document with its editorial
+  apparatus and an inline accounting/structure analysis, a live Greek workbench that scans,
+  syllabifies, glosses, and transcribes as you type, and the local data store with one-key
+  dataset fetches. It is a focused view over the highest-value offline reads, not a second
+  front-end for every command, and it never touches the network except when you ask it to fetch
+  a dataset. Undeciphered scripts carry their caveat on screen, as everywhere else. The core stays
+  zero-dependency: `import aegean` loads no part of Textual, and the UI is reached only through
+  `aegean tui`. A shared view layer (`aegean._view`) computes the accounting and pipeline tables
+  once, so the TUI and the CLI can never show different numbers.
+
 ## 0.18.0 (2026-07-02)
 
 The guided release: the CLI learns to explain itself, check itself, and hold a session's context.

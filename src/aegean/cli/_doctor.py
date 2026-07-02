@@ -45,6 +45,7 @@ _EXTRAS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     ("parquet", ("pyarrow",), "Parquet export"),
     ("cli", ("typer", "rich", "prompt_toolkit"), "this command-line interface"),
     ("mcp", ("mcp",), "the aegean-mcp server"),
+    ("tui", ("textual",), "the terminal UI (aegean tui)"),
 )
 
 # The fetchable neural model bundles, surfaced in their own section (they are

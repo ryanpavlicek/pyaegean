@@ -110,6 +110,7 @@ _NON_DATA_PRODUCING = {
     ("plot",),
     ("repl",),
     ("quickstart",),
+    ("tui",),
     ("workbench",),
     ("db", "build"),
     ("db", "add"),

@@ -678,15 +678,18 @@ def pipeline(
         records = greek.pipeline(read_text(text), parse=parse)
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
-    if emit_result(records, json_output=json_out, output=output):
+    from aegean._view import pipeline_rows_from_records
+
+    rows = pipeline_rows_from_records(records)  # the row shape shared with the TUI
+    if emit_result(rows, json_output=json_out, output=output):
         return
     table(
-        f"{len(records)} token(s)",
+        f"{len(rows)} token(s)",
         ["s", "i", "token", "upos", "lemma", "head", "rel", "feats"],
         [
-            [str(r.sentence), str(r.index), r.text, r.upos, r.lemma,
-             "" if r.head is None else str(r.head), r.relation or "", r.feats or ""]
-            for r in records
+            [str(r["sentence"]), str(r["index"]), r["text"], r["upos"], r["lemma"],
+             "" if r["head"] is None else str(r["head"]), r["relation"] or "", r["feats"] or ""]
+            for r in rows
         ],
     )
 

@@ -107,7 +107,7 @@ def test_json_report_shape_and_measured_values(app, store, monkeypatch) -> None:
     extras = {e["extra"]: e for e in payload["extras"]}
     assert set(extras) == {
         "data", "neural", "anthropic", "openai", "gemini", "epidoc", "geo",
-        "viz", "parquet", "cli", "mcp",
+        "viz", "parquet", "cli", "mcp", "tui",
     }
     for e in extras.values():
         assert set(e) == {"extra", "modules", "installed", "missing", "unlocks", "pip"}

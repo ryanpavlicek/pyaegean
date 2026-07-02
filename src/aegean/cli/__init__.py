@@ -8,6 +8,7 @@ The command tree mirrors the public API:
   ``export``, ``combine``, ``import``, ``geo``, ``sign``, ``bridge``, ``plot``,
   plus ``cache`` (the opt-in analysis cache), ``doctor`` (the offline
   environment check), ``quickstart`` (the guided first five minutes),
+  ``tui`` (the interactive terminal UI, the ``[tui]`` extra),
   ``workbench`` (serve the Linear A Workbench locally), and ``repl`` (the
   interactive shell);
 - ``aegean greek …``: the full Greek NLP pipeline (normalize → … → parse,
@@ -54,7 +55,7 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _doctor, _quickstart, _repl, _viz, _workbench
+    from . import _corpus, _doctor, _quickstart, _repl, _tui, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._data import data_app
@@ -92,6 +93,7 @@ def _build_app() -> Any:
     _doctor.register(app)
     _quickstart.register(app)
     _repl.register(app)
+    _tui.register(app)
     _viz.register(app)
     _workbench.register(app)
     app.add_typer(greek_app, name="greek")

@@ -16,7 +16,10 @@ at a time; nothing here can break your computer.
 > command line with `pip install "pyaegean[cli]"` and run **`aegean quickstart`**:
 > a guided first five minutes (eight short steps, each running a real command
 > live on the bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
-> for what it covers.
+> for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
+> **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
+> Greek workbench, and manage the data store, all offline and mouse-or-keyboard
+> driven ([the CLI page](CLI#the-terminal-ui-aegean-tui)).
 
 ## What pyaegean is (in one breath)
 
@@ -110,7 +113,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.18.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.19.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

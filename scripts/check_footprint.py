@@ -27,6 +27,7 @@ import zipfile
 HEAVY = [
     "pandas", "numpy", "scipy", "lxml", "anthropic", "openai", "google",
     "torch", "onnxruntime", "tokenizers", "transformers", "geopandas", "shapely",
+    "textual", "markdown_it",
 ]
 # Stdlib modules Pyodide unvendors (must be loadPackage'd separately). `import aegean` must
 # not pull these at import time, or the package fails to import in the browser demo. sqlite3

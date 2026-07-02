@@ -59,12 +59,12 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.18.0
+aegean --version          # pyaegean 0.19.0
 ```
 
 | Group | What's in it |
 |---|---|
-| **(top level)** | `quickstart` `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
@@ -187,6 +187,66 @@ of prompting, so you can script it (the `use` directive works there too):
 ```bash
 printf 'use lineara\nshow HT13\nstats --top 3\n' | aegean repl
 ```
+
+---
+
+## The terminal UI (`aegean tui`)
+
+Where `repl` is the same commands typed one after another, **`aegean tui`** is a
+full-screen, app-like cockpit for the highest-value offline reads: a scrollable
+corpus browser, a live Greek workbench, and the local data store, all inside your
+terminal. It is built on [Textual](https://textual.textualize.io/) and ships as
+the `[tui]` extra:
+
+```bash
+pip install "pyaegean[tui]"
+aegean tui
+```
+
+If the extra isn't installed, `aegean tui` exits with one line telling you exactly
+that (`the TUI needs the [tui] extra — install it with: pip install
+'pyaegean[tui]'`), the same way `aegean plot` guards `[viz]`. Everything the TUI
+does is **offline and needs no API key**: it is a research reader over the bundled
+and cached data, never the (key-gated, exploratory) AI layer.
+
+### What's on screen
+
+Four screens, switched with a single key from anywhere:
+
+| Screen | Key | What it shows |
+|---|---|---|
+| **Home** | `h` | The landing view: the eight corpora at a glance, the global-key legend, and the permanent undeciphered-script honesty banner. |
+| **Corpus browser** | `c` | Three panes: the corpus list → a filterable document table (search by id, or by sign pattern like `KU-*-RO`) → an apparatus-aware document detail with its accounting reconciliation (`KU-RO` / `to-so` balance) and structure classification inline. |
+| **Greek workbench** | `g` | A text box over live tabs that re-render as you type: the full pipeline (lemma / POS / morphology), metrical scansion (with a hexameter / pentameter / trimeter selector), syllabification, and reconstructed IPA. All zero-dependency and instant. |
+| **Data store** | `d` | The `aegean doctor` environment report and the `aegean data list` table in one place: versions, extras, the data store, and the fetchable datasets, with a per-dataset Fetch action that downloads on a background worker with a progress bar. |
+
+The other global keys work on every screen: `q` quits, `?` returns to Home (where
+the legend lives), and **`ctrl+p`** opens the command palette, a fuzzy-searchable
+list of everything the keys do (open any corpus by name, jump to a screen, fetch a
+dataset). Inside the corpus browser, `/` focuses the search box, `enter` on a
+document row opens its detail, and `tab` cycles the three panes.
+
+### Undeciphered-script honesty, at point of use
+
+The honesty rule the CLI and docstrings carry travels into the TUI: **Linear A and
+Cypro-Minoan are undeciphered, so any structural analysis of them is exploratory,
+not a reading.** That caveat is a permanent banner on the Home screen, and it
+appears again as a dim line in the document-detail pane whenever the open corpus is
+`lineara` or `cyprominoan`, so it is in front of you exactly when you are looking at
+undeciphered material. The deciphered corpora (Greek, Linear B, Cypriot) carry no
+such caveat.
+
+### A focused cockpit, not a second front end
+
+The TUI covers the three highest-value offline areas (browse and analyze a document,
+the Greek workbench, and the data store), which is a deliberate scope: it is a
+research cockpit for the reads you do most, **not a mirror of every command**. The
+full query engine, keyness/dispersion, plots, export/import, geo maps, `db build`,
+the eval reproductions, and the exploratory AI layer stay on the regular command
+line (and in `aegean repl`), which remains the complete surface. On Windows the
+Aegean glyph columns render best with the Aegean fonts from
+[Installation → Set up your terminal](Installation#set-up-your-terminal); run the
+TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 
 ---
 
@@ -746,7 +806,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.18.0                    │
+│ OK │ pyaegean │ 0.19.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.18.0"
+version = "0.19.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,9 +49,10 @@ viz = ["matplotlib>=3.8"]          # one-line plots (aegean.viz / `aegean plot`)
 neural = ["onnxruntime>=1.23", "tokenizers>=0.15", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache (>=1.23: the quantized joint model's int8 weight-only kernel)
 cli = ["typer>=0.12", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean` command-line interface (+ `aegean repl`)
 mcp = ["mcp>=1.0"]                 # the `aegean-mcp` Model Context Protocol server
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.0"]
+tui = ["textual>=8.0"]            # the `aegean tui` terminal UI (Textual; pure-Python deps only)
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.0", "textual>=8.0"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]  # API reference (mkdocs → GitHub Pages); build-time only
-all = ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp]"]
+all = ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp,tui]"]
 
 [project.scripts]
 aegean = "aegean.cli:main"
@@ -72,7 +73,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-aegean = ["py.typed", "data/bundled/**/*.json"]
+aegean = ["py.typed", "data/bundled/**/*.json", "tui/**/*.tcss"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -89,7 +90,7 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*"]
+module = ["pandas.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*", "textual.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

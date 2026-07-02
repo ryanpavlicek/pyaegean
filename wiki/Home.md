@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.18.0 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.19.0 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -33,7 +33,9 @@ pluggable multi-provider AI layer.
   programming assumed.
 - **Prefer the terminal?** `pip install "pyaegean[cli]"`, then **`aegean
   quickstart`** runs the guided first five minutes: eight real commands, live on
-  the bundled data, all offline. See [CLI](CLI).
+  the bundled data, all offline. Want an app-like cockpit? `pip install
+  "pyaegean[tui]"` adds **`aegean tui`**, a full-screen terminal UI to browse a
+  corpus, run the live Greek workbench, and manage the data store. See [CLI](CLI).
 - **Want to learn by doing?** The **[Tutorial](Tutorial)** answers two real
   research questions end to end: one in Linear A, one in Greek.
 - **Something not working?** See the **[FAQ & Troubleshooting](FAQ)**.
@@ -74,7 +76,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Analysis](Analysis) | Accounting reconciliation, sign-pattern search, phonetic distance/alignment, **cross-script comparison** (Linear B ↔ Greek by sound), morphology clustering, collocation stats, **corpus statistics** (dispersion, keyness, bootstrap), query engine, structure detection, an opt-in analysis cache |
 | [Greek NLP](Greek-NLP) | Beta Code↔Unicode, tokenize, syllabify, accent & prosody, **metrical scansion**, reconstructed IPA, POS tagging, **morphological analysis**, lemmatize; **opt-in** Perseus-treebank lemmas/POS (`use_treebank`), a **lexicon registry** (`use_lexicon`: LSJ, Middle Liddell, Cunliffe, Abbott-Smith) with Logeion deep-links, generalizing pure-Python taggers/lemmatizers/parser, and the **neural pipeline** (`use_neural_pipeline`): joint tagging + morphology + **UD parsing** + lemmatization, state of the art on the UD Ancient Greek (Perseus) benchmark (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS, Perseus test): plus real works on demand (`load_work`), an offline **discovery catalogue** of ~1,800 loadable works (`greek.catalog()` / `aegean greek catalog`), a **benchmark** harness, **inflection synthesis** (`inflect` / `paradigm`), **terminology rarity** (`terminology_rarity`), **dialect/register** tags (`usage`), and a **PROIEL convention-drift** breakdown (`proiel_drift`) |
 | [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, and Parquet |
-| [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: a guided `quickstart` tour, an interactive `repl` (persistent history, session corpus), corpus commands, the full Greek NLP pipeline, analysis, data fetching, an offline `doctor` environment check, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
+| [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: a guided `quickstart` tour, an interactive `repl` (persistent history, session corpus), a full-screen `tui` terminal UI (the `[tui]` extra), corpus commands, the full Greek NLP pipeline, analysis, data fetching, an offline `doctor` environment check, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter), grounding, caching, exploratory-labeled capabilities, hybrid translation |
@@ -97,7 +99,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.18.0.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
+**Current release: v0.19.0.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
 `aegean-mcp` server, and a grounded multi-provider AI layer. The pages in the sidebar cover every

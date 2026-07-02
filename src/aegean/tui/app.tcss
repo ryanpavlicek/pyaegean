@@ -1,0 +1,65 @@
+/* pyaegean terminal UI styling. Kept minimal: the screens lay out their own
+   panes; this file holds the app-wide frame and the shared widget looks. */
+
+Screen {
+    background: $surface;
+}
+
+/* Home: the landing view (banner, corpus overview, key legend). */
+#home-banner {
+    dock: top;
+    width: 100%;
+    padding: 1 2;
+    background: $warning-darken-2;
+    color: $text;
+    text-style: bold;
+}
+
+#home-body {
+    padding: 1 2;
+}
+
+#home-corpora {
+    height: auto;
+    margin: 1 0;
+}
+
+#home-keys {
+    color: $text-muted;
+    margin-top: 1;
+}
+
+/* Corpus browser: three panes (list, table, detail). */
+#corpus-list {
+    width: 32;
+    border-right: solid $primary;
+}
+
+#corpus-search {
+    dock: top;
+    width: 100%;
+}
+
+DetailPane {
+    padding: 1 1;
+    height: 1fr;
+    overflow-y: auto;
+}
+
+/* Greek workbench: an input above the live tabs. */
+#greek-input {
+    dock: top;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#greek-summary {
+    color: $text-muted;
+    padding: 0 1;
+}
+
+/* Data store: the doctor and dataset tables stacked. */
+DataTable {
+    height: auto;
+    max-height: 1fr;
+}

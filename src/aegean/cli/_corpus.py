@@ -602,21 +602,14 @@ def balance(
     json_out: bool = JSON_OPT,
 ) -> None:
     """Accounting reconciliation: stated totals (KU-RO / TO-SO) vs summed items."""
-    from aegean.analysis import balance_check
+    from aegean._view import balance_rows
 
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     docs = [resolve_doc(c, corpus, doc_id)] if doc_id else list(c)
     results = []
     for d in docs:
         assert d is not None
-        for chk in balance_check(d):
-            results.append(
-                {
-                    "doc": d.id, "marker": chk.marker, "stated": chk.stated_total,
-                    "computed": chk.computed_sum, "difference": chk.difference,
-                    "items": chk.item_count, "balances": chk.balances,
-                }
-            )
+        results.extend(balance_rows(d))
     if not emit_result(results, json_output=json_out, output=output):
         if not results:
             hint(

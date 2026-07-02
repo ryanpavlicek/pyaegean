@@ -91,8 +91,9 @@ The complete matrix:
 | `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
 | `pyaegean[parquet]` | `pyarrow>=14` | Parquet export (`io.to_parquet`) |
 | `pyaegean[cli]` | `typer>=0.12`, `rich>=13` | the [`aegean` command line](CLI) |
+| `pyaegean[tui]` | `textual>=8.0` | the [`aegean tui`](CLI#the-terminal-ui-aegean-tui) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=1.0` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp` | everything **except** `neural` and `parquet` |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui` | everything **except** `neural` and `parquet` |
 
 A few things worth knowing:
 
@@ -114,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.18.0
+# pyaegean 0.19.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -129,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.18.0
+print(aegean.__version__)                 # 0.19.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -146,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.18.0
+# pyaegean 0.19.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -184,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.18.0                    │
+│ OK │ pyaegean │ 0.19.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -300,6 +301,12 @@ if not you can select the font explicitly per profile under **Settings → your
 profile → Appearance → Font face**. Nothing breaks without the fonts: the
 transliterations (`KU-RO`, `po-me`) are plain text and always display; you only
 miss the glyph rendering.
+
+The fonts matter most in the **[`aegean tui`](CLI#the-terminal-ui-aegean-tui)**
+full-screen terminal UI (`pip install "pyaegean[tui]"`), where whole columns of
+Linear A and Linear B glyphs are on screen at once; the same Windows Terminal +
+Noto Aegean fonts advice applies, and running the TUI with `PYTHONUTF8=1` keeps
+Greek and Linear A displaying correctly.
 
 ### Shell completion
 
