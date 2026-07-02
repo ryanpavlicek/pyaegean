@@ -71,5 +71,5 @@ def test_cli_catalog_save(tmp_path) -> None:
     assert r.exit_code == 0, r.output
     import json
 
-    rows = json.loads(out.read_text(encoding="utf-8"))
-    assert any(w["id"] == "tlg0012.tlg001" for w in rows)
+    saved = json.loads(out.read_text(encoding="utf-8"))
+    assert any(w["id"] == "tlg0012.tlg001" for w in saved["works"])

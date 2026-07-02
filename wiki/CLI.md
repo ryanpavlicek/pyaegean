@@ -26,7 +26,7 @@ Learn these once and every command behaves predictably.
 
 | Convention | What it does | Example |
 |---|---|---|
-| **`--json`** | Print one machine-readable JSON document to stdout and nothing else, so results pipe into `jq`, files, or other programs. Greek stays readable (`ensure_ascii=False`). | `aegean info lineara --json` |
+| **`--json`** | Print one machine-readable JSON document to stdout and nothing else, so results pipe into `jq`, files, or other programs. Greek stays readable (`ensure_ascii=False`). Combines with `--output/-o`: the file is written (a one-line `wrote <path>` confirmation goes to stderr) and the JSON still prints to stdout. | `aegean info lineara --json` |
 | **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, passing `-` reads the text from standard input, so commands compose in pipelines. | `echo "μῆνιν" \| aegean greek lemmatize -` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error (typer's default). `balance --strict` exits `1` when any total fails to balance. | see below |
 
@@ -34,7 +34,7 @@ Here are those exit codes, actually demonstrated:
 
 ```bash
 aegean info lineara --json > /dev/null ; echo "exit=$?"      # exit=0   (success)
-aegean info bogus                                            # aegean: unknown corpus 'bogus'; available: …
+aegean info bogus                                            # aegean: unknown corpus 'bogus'; expected a registered id (…)
                                                             # exit=1   (domain error, message on stderr)
 aegean info                                                  # exit=2   (usage error: missing argument)
 aegean balance lineara HT13 --strict ; echo "exit=$?"        # exit=1   (a total didn't balance)
@@ -56,7 +56,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.16.0
+aegean --version          # pyaegean 0.17.0
 ```
 
 | Group | What's in it |
@@ -64,7 +64,7 @@ aegean --version          # pyaegean 0.16.0
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
-| **`aegean data …`** | `list` `fetch` `remove` `versions` `cache` |
+| **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
@@ -112,12 +112,16 @@ Every corpus command takes a **corpus id** as its first argument. The bundled,
 offline-from-install corpora are `lineara`, `linearb`, `cypriot`, `cyprominoan`,
 and `greek`. Three more download to your cache on first use: `damos` (the full
 ~5,900-tablet DAMOS Linear B corpus), `sigla` (the SigLA Linear A dataset), and
-`nt` (the Greek New Testament). Pass an unknown id and the error lists the valid
-ones:
+`nt` (the Greek New Testament). Registered ids also match case-insensitively as a
+fallback (`aegean info LINEARA` loads `lineara`). Pass an unknown id and the error
+lists the valid ones, and suggests the nearest registered id when your spelling is
+close:
 
 ```bash
 aegean info bogus
-# aegean: unknown corpus 'bogus'; available: cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla
+# aegean: unknown corpus 'bogus'; expected a registered id (cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
+aegean load linera
+# aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (…), …
 ```
 
 > **Any corpus argument is more than just an id now.** Wherever a command takes a
@@ -173,7 +177,8 @@ c.provenance.license   # 'Apache-2.0 (corpus JSON); …'
 
 Filter on `--site`, `--period`, `--scribe`, `--support`; without `-o` it lists
 the matches (capped by `--limit`, default 20), with `-o` it writes a
-round-trippable corpus JSON file.
+round-trippable corpus file (`.json`, or `.db` for the same SQLite database
+`aegean db build` makes).
 
 ```bash
 aegean load lineara --site "Haghia Triada"               # list the first 20 matches
@@ -283,9 +288,10 @@ The saved file records a `subset: query(…) → N documents` provenance note, s
 exact filter behind it travels with the data. (`-o` only writes inscriptions:
 use `--output-kind words --json` if you want the word list instead.)
 
-> **Note:** `--limit` only trims the human-readable table; `--json` always emits
-> the full result set (so a pipeline never silently loses rows). Trim JSON with
-> `jq` instead, e.g. `… --json | jq '.words[:5]'`.
+> **Note:** `--limit` caps the human table and the `--json` lists alike
+> (`--limit 0` lifts the cap and emits everything), and the JSON payload always
+> carries the untruncated totals in `matched` (`{"inscriptions": …, "words": …}`),
+> so a pipeline never silently loses count of the full result set.
 
 ### `stats` — frequency tables
 
@@ -347,13 +353,16 @@ aegean keyness lineara --site "Zakros" --top 5
 └────────────────────┴────────┴───────────┴───────┴───────────┴─────────┘
 ```
 
-> **Save a result straight to a file.** `stats`, `keyness`, `dispersion`, and
-> `search` all take `--output/-o`, and the format follows the extension: `.json`
-> (the same document as `--json`), `.csv` (a plain table: stdlib only, no pandas),
-> or `.txt` (the human view). It writes silently and prints nothing else:
+> **Save a result straight to a file.** `stats`, `keyness`, `dispersion`,
+> `search`, and `balance` all take `--output/-o`, and the format follows the
+> extension: `.json` (the same document as `--json`), `.csv` (a plain table:
+> stdlib only, no pandas), or `.txt` (the human view). A one-line `wrote <path>`
+> confirmation goes to stderr (stdout stays clean), and `-o` combines with
+> `--json`: the file is written and the JSON still prints to stdout:
 >
 > ```bash
 > aegean stats lineara --top 3 -o freq.csv
+> # wrote freq.csv                                  [stderr]
 > # freq.csv:
 > # item,count
 > # KU-RO,37
@@ -429,7 +438,7 @@ A run you can try offline, against the bundled corpora:
 
 ```bash
 aegean combine lineara cypriot -o aegean-mix.json
-# wrote 1723 documents to aegean-mix.json (merged 2 sources)
+# wrote 1901 documents to aegean-mix.json (merged 2 sources)
 ```
 
 The merged corpus keeps a provenance that **names every source**: its citation
@@ -462,6 +471,7 @@ punctuation; any other `--script` splits on whitespace.)
 ```bash
 aegean import john.txt -o john.json --script nt        # one plain-text file → a corpus
 # wrote 1 document(s) to john.json
+# explore it:  aegean stats john.json                   [stderr hint]
 aegean stats john.json --top 5                          # then analyse it like any corpus
 ```
 ```
@@ -571,7 +581,9 @@ aegean geo lineara
 ```
 
 Add `-o sites.geojson` to write GeoJSON instead of printing a table (that path
-needs the `[geo]` extra). More on the map data in [Geography](Geography).
+needs the `[geo]` extra; the extension must be `.json` or `.geojson`). The shared
+metadata filters (`--site`, `--period`, `--scribe`, `--support`) narrow the corpus
+before mapping. More on the map data in [Geography](Geography).
 
 `--word` maps where a single word is attested, with per-site counts (the table needs
 no extra; `-o` writes GeoJSON):
@@ -620,8 +632,8 @@ aegean bridge linearb po-me
 
 ### `cache` — the opt-in analysis cache
 
-This is the *analysis* memoization cache (distinct from the *data* download cache
-under `aegean data cache`). It's off unless you enable it for the shell:
+This is the *analysis* memoization cache (distinct from the permanent *data*
+store under `aegean data store`). It's off unless you enable it for the shell:
 
 ```bash
 aegean cache
@@ -660,7 +672,7 @@ every other kind it's a corpus name.
 ```bash
 aegean workbench                 # fetch the build (~3 MB, first use) and open it in your browser
 aegean workbench --fetch-images  # also download the facsimile imagery (~116 MB) so pictures show
-aegean workbench --port 9000     # choose a port (default 8000); --no-browser to not open one
+aegean workbench --port 9000     # choose a port (1-65535, default 8000); --no-browser to not open one
 ```
 
 Fetches the sha256-pinned static build to the cache, then serves the browser UI (
@@ -678,7 +690,9 @@ The full Ancient Greek pipeline from the shell. The zero-dependency stages run t
 moment you install; the heavier backends are opt-in flags (next section). Full
 explanations live on [Greek NLP](Greek-NLP); metre is on [Meters](Meters).
 
-Every text argument accepts `-` for stdin, and every command takes `--json`.
+Every text argument accepts `-` for stdin, and every data-producing command takes
+`--json` (the plain text transforms `normalize`, `betacode`, `strip`, and `ipa`
+just print the converted text, ready for the next pipe).
 
 ### The stages that work immediately
 
@@ -995,34 +1009,38 @@ Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10
 The bare `QUERY` argument is a catch-all substring over id, author, English title,
 and Greek title; `--author/-a`, `--title/-t` (matches English **or** Greek), and
 `--source perseus|first1k` are the targeted filters (all case-insensitive, all
-combine with AND). `--limit/-n` caps the table (0 = all), `--json` emits the full
-result set, and `--output/-o` saves it (`.json`/`.csv`/`.txt` by extension):
+combine with AND). `--limit/-n` caps the table, the `--json` list, and what
+`--output/-o` saves alike (0 = all; the JSON keeps the untruncated total in
+`matched`); `-o` picks its format by extension (`.json`/`.csv`/`.txt`):
 
 ```bash
 aegean greek catalog herodotus --json
 ```
 ```json
-[
-  {
-    "id": "tlg0016.tlg001",
-    "author": "Herodotus",
-    "title": "Histories",
-    "greek_title": "Ἱστορίαι",
-    "source": "perseus"
-  },
-  {
-    "id": "tlg0062.tlg056",
-    "author": "Lucian of Samosata",
-    "title": "Herodotus",
-    "greek_title": "Ἡρόδοτος ἢ Ἀετίων",
-    "source": "perseus"
-  }
-]
+{
+  "matched": 2,
+  "works": [
+    {
+      "id": "tlg0016.tlg001",
+      "author": "Herodotus",
+      "title": "Histories",
+      "greek_title": "Ἱστορίαι",
+      "source": "perseus"
+    },
+    {
+      "id": "tlg0062.tlg056",
+      "author": "Lucian of Samosata",
+      "title": "Herodotus",
+      "greek_title": "Ἡρόδοτος ἢ Ἀετίων",
+      "source": "perseus"
+    }
+  ]
+}
 ```
 
 ```bash
 aegean greek catalog --author aristophanes --source perseus -o aristophanes.csv
-# wrote 11 works to aristophanes.csv     (id,author,title,greek_title,source — one row per work)
+# wrote aristophanes.csv     (id,author,title,greek_title,source — one row per work)
 ```
 
 Coverage is exactly what those open repositories hold at the pinned commit, so some
@@ -1046,11 +1064,16 @@ heavy, but it reproduces pyaegean's measured accuracy. Targets: `ud`, `proiel`,
 
 ```bash
 # heavy: fetches gold data and the model
-aegean greek eval ud --treebank perseus --split test --neural
+aegean greek eval ud --fold perseus --split test --neural
 aegean greek eval ud --neural --bootstrap          # percentile CIs over the fold's sentences
 aegean greek eval proiel --drift                   # where the out-of-AGDT PROIEL gap comes from
 ```
 
+`--fold` picks the UD Ancient Greek fold (`perseus` or `proiel`) and `--split` the
+split (`dev` or `test`); both are validated before anything is fetched. (The old
+`--treebank` spelling for the fold selector is a deprecated alias: it still works
+but warns, naming `--fold`.) The measured numbers save with `--output/-o` like any
+other result table.
 `--bootstrap` (ud only) reports each metric as `estimate [low, high]` instead of a
 single point. `--drift` (proiel only) replaces the bare accuracy numbers with a
 breakdown of *where* the out-of-AGDT gap comes from: a gold→predicted POS-confusion
@@ -1123,9 +1146,13 @@ aegean analyze hands damos --hand "Knossos 103"   # one hand's characteristic vo
 `hands` needs a corpus that records a scribe per document: DAMOS does, so it
 fetches on first use; the bundled `lineara` records HT scribes too.
 
-> **Save any of these to a file.** `assoc`, `cooccur`, `clusters`, and `hands` all
-> take `--output/-o`, with the format set by the extension: `.json`, `.csv`
-> (stdlib, no pandas), or `.txt`:
+> **Save any of these to a file.** `assoc`, `cooccur`, `clusters`, `structure`,
+> `hands`, and `nearest` all take `--output/-o`, with the format set by the
+> extension: `.json`, `.csv` (stdlib, no pandas), or `.txt`; each prints a
+> one-line `wrote <path>` confirmation to stderr and combines with `--json`.
+> `structure` and `hands` also take the shared metadata filters (`--site`,
+> `--period`, `--scribe`, `--support`), and `--top 0` lifts the cap on the
+> ranked tables:
 >
 > ```bash
 > aegean analyze cooccur lineara KU-RO -o ku-ro-neighbours.json
@@ -1147,8 +1174,11 @@ aegean data list                                   # the fetchable datasets + do
 aegean data fetch grc-joint                         # one-time download (a no-op when already present)
 aegean data remove grc-joint                        # delete a downloaded dataset (--all clears everything)
 aegean data versions --json > data-versions.json    # pin every dataset's sha256 for reproducibility
-aegean data cache                                   # store location + contents (override: PYAEGEAN_CACHE)
+aegean data store                                   # store location + contents (override: PYAEGEAN_CACHE)
 ```
+
+(`aegean data cache` remains a deprecated alias for `data store` this minor: it
+still works but warns, naming the replacement.)
 
 `aegean data list` shows the full registry, with a **downloaded** column giving
 each present dataset's actual on-disk size. The fetchable datasets (all
@@ -1180,6 +1210,7 @@ full-text index) and search it.
 
 ```bash
 aegean db build lineara -o lineara.db        # → "wrote 1721 documents to lineara.db"
+                                             #    search it:  aegean db search lineara.db KU-RO
 aegean db search lineara.db KU-RO --limit 3
 ```
 ```
@@ -1200,6 +1231,17 @@ aegean db search lineara.db KU-RO --limit 3
 aegean db search lineara.db KU-RO --substring   # also matches PO-TO-KU-RO, etc.
 ```
 
+`db search` opens the database **read-only**, so a typoed path can never create
+or modify a file: a missing path is a one-line error naming `aegean db build`.
+`--limit 0` returns every match, `--output/-o` saves the hits (`.json`, `.csv`,
+or `.txt` by extension), and a whole-token search that finds nothing says so
+with the fix:
+
+```bash
+aegean db search lineara.db KU-RO-ZZ
+# no matches (whole-token) — pass --substring to match within tokens
+```
+
 `db build` resolves its corpus like anything else — so `aegean db build
 tlg0012.tlg001 -o iliad.db` builds a database straight from a Greek work id.
 `--no-fts` skips the full-text index. `aegean export CORPUS -f sqlite -o file.db`
@@ -1214,7 +1256,7 @@ The source resolves like any corpus argument (id, `.json`/`.db`, work id, or `-`
 
 ```bash
 aegean db build lineara -o aegean.db         # → "wrote 1721 documents to aegean.db"
-aegean db add cypriot -o aegean.db           # → "added/updated 2 documents in aegean.db"
+aegean db add cypriot -o aegean.db           # → "added/updated 180 documents in aegean.db"
 ```
 
 Mixing scripts is allowed and noted on stderr (the database's script id becomes
@@ -1276,7 +1318,8 @@ analysis can still mislead the repair).
 `ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
 and grounding evidence; a `.txt` file is the labeled text. The exploratory label
 stays attached on disk: a saved result never loses the "this is a hypothesis, not
-a finding" framing:
+a finding" framing. (`ai eval` takes `--output/-o` too, saving its case table as
+`.json`, `.csv`, or `.txt`.)
 
 ```bash
 aegean ai gloss "μῆνιν ἄειδε θεά" -o gloss.json        # text + provenance + grounding
@@ -1301,9 +1344,16 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers a small set of read/analysis tools: list and inspect corpora, wildcard
-sign search, accounting reconciliation, the Greek pipeline, verse scansion, and
-Koine glossing.
+It offers fourteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+`show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
+(accounting reconciliation), `query_corpus` (the compound query engine),
+`cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
+coordinates and per-site word attestations), and `data_status` (the local data
+store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
+`greek_catalog` (the ~1,800-work discovery catalogue), `greek_gloss` (the
+registry dictionaries), and `koine_gloss` (the bundled Dodson NT lexicon).
+Corpora are addressed by registry name only (never a filesystem path), and a
+domain miss returns a structured error with a did-you-mean hint.
 
 ---
 
@@ -1364,7 +1414,9 @@ More worked pipelines are on [Recipes](Recipes).
   data to the cache the first time, with a note on stderr; afterwards it's offline.
   Pre-fetch with `aegean data fetch` before going offline.
 - **`--json` is the contract; the table view is for humans.** Don't parse the
-  rich tables: pass `--json` and use `jq`. `--limit` trims only the human view.
+  rich tables: pass `--json` and use `jq`. `--limit`/`--top` cap the JSON lists
+  too (`0` lifts the cap); where a payload carries totals (`matched`), they stay
+  untruncated.
 - **Metre and accuracy are bounded.** Lyric metres beyond the fixed aeolic
   templates are out of scope, and the trainable backends have measured ceilings:
   both documented on [Meters](Meters) and

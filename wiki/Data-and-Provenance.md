@@ -394,9 +394,13 @@ greek.catalog(author="plato")[1]
 
 ```bash
 aegean greek catalog --author homer --source perseus --limit 2 --json
-# [{"id": "tlg0012.tlg001", "author": "Homer", "title": "Iliad",
-#   "greek_title": "Ἰλιάς", "source": "perseus"}, ...]
+# {"matched": 36, "works": [
+#   {"id": "tlg0012.tlg001", "author": "Homer", "title": "Iliad",
+#    "greek_title": "Ἰλιάς", "source": "perseus"}, ...]}
 ```
+
+(`--limit` caps the `works` list in `--json` and `-o` output too; the untruncated
+match count is always in `matched`.)
 
 Coverage is exactly what the open repos hold at the pinned commit, so some
 authors are genuinely absent upstream (e.g. Sappho, `tlg0009`) and thus absent
@@ -439,12 +443,13 @@ subcommands:
 | `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `-h/--help` |
 | `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data cache` | Show the store location and its current contents (entries are permanent until removed) | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data store` | Show the store location and its current contents (entries are permanent until removed). `aegean data cache` remains a deprecated alias this minor: it warns, naming the replacement | `--json` (machine-readable on stdout), `-h/--help` |
 
 ```bash
-aegean data cache
-#                cache:
-# C:\Users\you\.cache\pyaegean (override with PYAEGEAN_CACHE)
+aegean data store
+#          local data store:
+# C:\Users\you\.cache\pyaegean
+#  (override with PYAEGEAN_CACHE)
 # ┌───────────────────────────┬───────┐
 # │ entry                     │ MB    │
 # ├───────────────────────────┼───────┤
@@ -460,6 +465,12 @@ aegean data fetch lineara-images --force   # re-download even if cached
 aegean data remove nt-corpus           # delete one downloaded dataset (prints what + how much)
 aegean data remove --all               # clear every downloaded dataset
 ```
+
+The same store is visible to AI agents over MCP (`aegean-mcp`, the `[mcp]` extra):
+the `data_status` tool exposes this listing read-only (downloaded state, on-disk
+size, license note), so an agent can see what a corpus load would fetch before
+triggering it, and the `cite_corpus` / `query_corpus` tools carry the exact-subset
+citation (below) over MCP too.
 
 ---
 
@@ -516,7 +527,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.16.0'  (your installed version)
+v["package"]                                  # '0.17.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -568,7 +579,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.16.0'
+# '0.17.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

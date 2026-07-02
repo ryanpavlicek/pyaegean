@@ -1,24 +1,87 @@
 """An MCP server exposing pyaegean to agents (Claude Code and other MCP clients).
 
 The ``[mcp]`` extra installs the Model Context Protocol SDK; ``aegean-mcp`` then runs a
-stdio MCP server that wraps the toolkit's read/analysis surface as tools — load and inspect
-corpora, wildcard sign search, accounting reconciliation, the Greek pipeline, verse scansion,
-and Koine glossing — so an agent can use pyaegean without writing Python.
+stdio MCP server that wraps the toolkit's read/analysis surface as tools, so an agent can
+use pyaegean without writing Python:
 
-The tool functions are plain, JSON-returning callables (independently testable); ``build_server``
-registers them with FastMCP, imported lazily so ``import aegean`` never pulls the MCP SDK.
+* corpora: ``list_corpora``, ``corpus_info``, ``show_document``, ``search_signs``,
+  ``balance_accounts``, ``query_corpus`` (the compound query engine), ``cite_corpus``
+  (plain / BibTeX / APA, exact subsets included), ``geo_sites`` (find-site coordinates,
+  Pleiades ids, per-site word attestations), and ``data_status`` (the local data store);
+* Greek: ``greek_pipeline``, ``greek_scan``, ``greek_catalog`` (the ~1,800-work
+  discovery catalogue), ``greek_gloss`` (the registry dictionaries), and ``koine_gloss``
+  (the bundled Dodson NT lexicon).
+
+Two conventions hold across every tool. Corpora are addressed by **registry name only**:
+no tool accepts a filesystem path, so the server never reads or writes arbitrary local
+files (a deliberate invariant, not an omission). Domain misses (an unknown corpus,
+document, dictionary, style, or query field) return a structured ``{"error": ...}``
+payload carrying a did-you-mean hint instead of raising, so an agent can recover in one
+step; raised exceptions are reserved for genuine faults. Loading work texts
+(``greek.load_work``) is deliberately not a tool: it fetches TEI over the network at
+call time, a side effect an MCP client cannot anticipate. ``greek_catalog`` covers
+discovery; the Python API or CLI loads the text itself.
+
+The tool functions are plain, JSON-returning callables (independently testable);
+``build_server`` registers them with FastMCP, imported lazily so ``import aegean`` never
+pulls the MCP SDK.
 """
 
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Iterable
 from typing import Any
 
 __all__ = ["build_server", "main"]
 
 
+def _did_you_mean(name: str, candidates: Iterable[str]) -> str:
+    """A parenthetical did-you-mean fragment for an unknown-name error, or ``""``."""
+    from .core.resolve import suggest
+
+    close = suggest(name, candidates, n=2)
+    if not close:
+        return ""
+    return f" (did you mean {' or '.join(repr(c) for c in close)}?)"
+
+
+def _load_corpus(corpus: str) -> tuple[Any, dict[str, Any] | None]:
+    """Load a registry corpus, forgiving case; ``(None, {"error": ...})`` when unknown."""
+    import aegean
+    from .core.corpus import _LOADERS
+
+    ids = sorted(_LOADERS)
+    if corpus not in _LOADERS:
+        by_fold = {k.casefold(): k for k in ids}
+        folded = by_fold.get(corpus.casefold())
+        if folded is None:
+            return None, {
+                "error": f"unknown corpus {corpus!r}{_did_you_mean(corpus, ids)}; "
+                f"available: {', '.join(ids)}"
+            }
+        corpus = folded
+    return aegean.load(corpus), None
+
+
+def _find_doc(c: Any, corpus: str, doc_id: str) -> tuple[Any, dict[str, Any] | None]:
+    """Resolve a document forgivingly; ``(None, {"error": ...})`` with near hints on a miss."""
+    from .core.resolve import resolve_document
+
+    doc, near = resolve_document(c, doc_id)
+    if doc is not None:
+        return doc, None
+    msg = f"no document {doc_id!r} in {corpus!r}"
+    if near:
+        msg += f"; close: {', '.join(near)}"
+    return None, {"error": f"{msg} ({len(c)} documents)"}
+
+
 def list_corpora() -> list[str]:
-    """List the corpora that can be loaded by name (bundled, or fetched on demand)."""
+    """List the corpora that can be loaded by name.
+
+    Most are bundled and load offline; 'damos', 'nt', and 'sigla' download into the
+    local data store on first use (``data_status`` shows what is already stored)."""
     from .core.corpus import _LOADERS
 
     return sorted(_LOADERS)
@@ -27,10 +90,12 @@ def list_corpora() -> list[str]:
 def corpus_info(corpus: str) -> dict[str, Any]:
     """Overview of a corpus: script, document count, source, license, and a citation.
 
-    ``corpus`` is a name from ``list_corpora`` (e.g. 'lineara', 'damos', 'nt')."""
-    import aegean
-
-    c = aegean.load(corpus)
+    ``corpus`` is a name from ``list_corpora`` (e.g. 'lineara', 'damos', 'nt'). Loading
+    'damos', 'nt', or 'sigla' downloads the corpus on first use (a one-time fetch into
+    the local data store); check ``data_status`` first to see what is already stored."""
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
     prov = c.provenance
     return {
         "corpus": corpus,
@@ -43,13 +108,16 @@ def corpus_info(corpus: str) -> dict[str, Any]:
 
 
 def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
-    """One document's metadata and text, line by line. ``doc_id`` is e.g. 'HT13'."""
-    import aegean
+    """One document's metadata and text, line by line.
 
-    c = aegean.load(corpus)
-    doc = c.get(doc_id)
-    if doc is None:
-        return {"error": f"no document {doc_id!r} in {corpus!r}"}
+    ``doc_id`` is e.g. 'HT13'; case and spacing are forgiven ('ht13', 'py ta 641'
+    resolve), and a miss reports the closest ids."""
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    doc, err = _find_doc(c, corpus, doc_id)
+    if err is not None:
+        return err
     return {
         "id": doc.id,
         "site": doc.meta.site,
@@ -61,42 +129,262 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
     }
 
 
-def search_signs(corpus: str, pattern: str, limit: int = 50) -> list[dict[str, Any]]:
-    """Words matching a wildcard sign pattern (e.g. 'KU-*-RO'), with frequencies."""
-    import aegean
+def search_signs(
+    corpus: str, pattern: str, limit: int = 50
+) -> list[dict[str, Any]] | dict[str, Any]:
+    """Words matching a wildcard sign pattern (e.g. 'KU-*-RO'), with frequencies.
 
+    ``limit`` caps the matches; limit <= 0 returns every match."""
     from .analysis import word_matches_sign_pattern
 
-    c = aegean.load(corpus)
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
     out: list[dict[str, Any]] = []
     for word, count in c.word_frequencies():
         if word_matches_sign_pattern(word, pattern):
             out.append({"word": word, "count": count})
-            if len(out) >= limit:
+            if limit > 0 and len(out) >= limit:
                 break
     return out
 
 
-def balance_accounts(corpus: str, doc_id: str | None = None) -> list[dict[str, Any]]:
+def balance_accounts(
+    corpus: str, doc_id: str | None = None
+) -> list[dict[str, Any]] | dict[str, Any]:
     """Accounting reconciliation: each stated total (KU-RO / TO-SO) vs the summed items.
 
-    Returns one row per total marker (whole corpus, or one ``doc_id``), each with the stated
-    total, computed sum, difference, and whether it balances."""
-    import aegean
-
+    Returns one row per total marker (whole corpus, or one ``doc_id``, forgivingly
+    matched), each with the stated total, computed sum, difference, and whether it
+    balances. An empty list means the document(s) carry no total markers."""
     from .analysis import balance_check
 
-    c = aegean.load(corpus)
-    docs = [c.get(doc_id)] if doc_id is not None else list(c.documents)
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    if doc_id is not None:
+        doc, err = _find_doc(c, corpus, doc_id)
+        if err is not None:
+            return err
+        docs = [doc]
+    else:
+        docs = list(c.documents)
     rows: list[dict[str, Any]] = []
     for doc in docs:
-        if doc is None:
-            continue
         for bc in balance_check(doc):
             row = dataclasses.asdict(bc)
             row["doc_id"] = doc.id
             rows.append(row)
     return rows
+
+
+def query_corpus(
+    corpus: str,
+    where: list[dict[str, Any]],
+    output_kind: str = "inscriptions",
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Run the compound query engine over a corpus and cite the exact result set.
+
+    Each ``where`` row is ``{"field", "value"}`` plus optional ``"connector"``
+    ('and'/'or', default 'and') and ``"negate"`` (default false); rows chain in order,
+    and an empty list matches the whole corpus. Fields: id-contains, site-is, scribe-is,
+    period-is, support-is, has-image, has-annotation, ins-contains-word (inscription
+    scope); word-contains, word-prefix, word-suffix, word-min-syllables,
+    word-max-syllables, word-contains-sign, word-cooccurs-with, word-sign-pattern (word
+    scope). ``output_kind`` is 'inscriptions' or 'words'; a word's count is its document
+    frequency (how many distinct inscriptions carry it), not its token frequency.
+    ``limit`` caps the returned id/word lists (limit <= 0 returns all); the totals are
+    always the full counts. ``citation`` cites exactly this result set."""
+    from .analysis import FIELDS, FilterRow
+
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    if output_kind not in ("inscriptions", "words"):
+        return {
+            "error": f"unknown output_kind {output_kind!r}; choose 'inscriptions' or 'words'"
+        }
+    rows: list[FilterRow] = []
+    for spec in where:
+        if not isinstance(spec, dict) or "field" not in spec or "value" not in spec:
+            return {
+                "error": "each where row needs 'field' and 'value' "
+                "(optional 'connector' and 'negate')"
+            }
+        field = str(spec["field"])
+        if field not in FIELDS:
+            return {
+                "error": f"unknown field {field!r}{_did_you_mean(field, FIELDS)}; "
+                f"fields: {', '.join(FIELDS)}"
+            }
+        connector = spec.get("connector") or "and"
+        if connector not in ("and", "or"):
+            return {"error": f"unknown connector {connector!r}; choose 'and' or 'or'"}
+        value: Any = spec["value"]
+        kind = FIELDS[field].kind
+        if kind == "number":
+            try:
+                value = int(value)
+            except (TypeError, ValueError):
+                return {"error": f"field {field!r} takes a number; got {spec['value']!r}"}
+        elif kind == "boolean":
+            value = value if isinstance(value, bool) else str(value).lower() in ("1", "true", "yes")
+        elif not isinstance(value, str):
+            value = str(value)
+        rows.append(
+            FilterRow(
+                field,
+                value,
+                connector="or" if connector == "or" else "and",
+                negate=bool(spec.get("negate", False)),
+            )
+        )
+    res = c.query(rows, output_kind)
+    cap = None if limit <= 0 else limit
+    return {
+        "description": res.description or "all",
+        "total_inscriptions": len(res.inscriptions),
+        "total_words": len(res.words),
+        "inscriptions": [d.id for d in res.inscriptions[:cap]],
+        "words": [{"word": w, "count": n} for w, n in res.words[:cap]],
+        "citation": res.cite() if res.provenance else "",
+    }
+
+
+def cite_corpus(
+    corpus: str,
+    style: str = "plain",
+    site: str | None = None,
+    period: str | None = None,
+    scribe: str | None = None,
+    support: str | None = None,
+) -> dict[str, Any]:
+    """Cite a corpus (or, with metadata filters, the exact subset) for a paper.
+
+    ``style`` is 'plain' (one line), 'bibtex' (a @misc entry), or 'apa'. Any of ``site``,
+    ``period``, ``scribe``, ``support`` filters the corpus first (exact match, combined
+    with AND); the citation then names the subset, so it states exactly what was used.
+    ``documents`` is the cited document count."""
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    meta = {
+        k: v
+        for k, v in (("site", site), ("period", period), ("scribe", scribe), ("support", support))
+        if v is not None
+    }
+    if meta:
+        c = c.filter(**meta)
+    try:
+        citation = c.cite(style)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    return {
+        "corpus": corpus,
+        "style": style,
+        "filters": meta,
+        "documents": len(c),
+        "citation": citation,
+    }
+
+
+def geo_sites(corpus: str, word: str | None = None) -> dict[str, Any]:
+    """Find-site geography for a corpus: coordinates (WGS84), Pleiades ids, and the
+    contested-provenance flag; with ``word``, the per-site attestation counts of that
+    word (case-insensitive) instead.
+
+    Bundled gazetteer, offline. Only provenanced inscription corpora yield sites
+    (lineara, linearb, cypriot, cyprominoan, sigla, damos); alphabetic Greek corpora
+    (greek, nt) carry no find-spot. A non-empty ``contested`` value is the reason a
+    find-spot is disputed; treat such sites as unverified provenance."""
+    from .geo import site_coordinates
+
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    coords = site_coordinates()
+    if word is not None:
+        from collections import Counter
+
+        counts: Counter[str] = Counter()
+        target = word.casefold()
+        for d in c:
+            if d.meta.site in coords and any(t.text.casefold() == target for t in d.words):
+                counts[d.meta.site] += 1
+        wrows = [
+            {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}
+            for s, n in counts.most_common()
+        ]
+        payload: dict[str, Any] = {"corpus": corpus, "word": word, "sites": wrows}
+        if not wrows:
+            payload["note"] = f"{word!r} is not attested at any mapped find-site"
+        return payload
+    sites = {d.meta.site for d in c if d.meta.site}
+    rows = [
+        {
+            "site": s,
+            "lat": coords[s].lat,
+            "lon": coords[s].lon,
+            "pleiades": coords[s].pleiades,
+            "pleiades_uri": coords[s].pleiades_uri,
+            "contested": coords[s].contested,
+        }
+        for s in sorted(sites)
+        if s in coords
+    ]
+    payload = {"corpus": corpus, "sites": rows, "total_sites": len(sites), "located": len(rows)}
+    if not rows:
+        payload["note"] = (
+            "geo maps provenanced inscription corpora (lineara, linearb, cypriot, "
+            "cyprominoan, sigla, damos); alphabetic Greek corpora carry no find-spot"
+        )
+    return payload
+
+
+def data_status() -> dict[str, Any]:
+    """The local data store: every fetchable dataset with its downloaded state, on-disk
+    size, size note, and license.
+
+    Read-only (nothing is downloaded or deleted here). The corpora that load by name
+    over MCP appear as 'damos-corpus' / 'nt-corpus' / 'sigla-corpus'; a dataset that is
+    not downloaded is fetched automatically (sha256-verified) the first time something
+    needs it, or explicitly from the shell with `aegean data fetch NAME`."""
+    from .data import _REMOTE, cache_dir
+
+    root = cache_dir()
+    datasets: list[dict[str, Any]] = []
+    for name, spec in sorted(_REMOTE.items()):
+        entry = root / name
+        size = _on_disk_bytes(entry) if entry.exists() else None
+        datasets.append(
+            {
+                "name": name,
+                "downloaded": size is not None,
+                "bytes": size,
+                "size": _human_size(size) if size is not None else "",
+                "note": spec.note,
+                "license": spec.license,
+            }
+        )
+    return {"store": str(root), "datasets": datasets}
+
+
+def _on_disk_bytes(path: Any) -> int:
+    """Actual bytes a store entry occupies (recursive for extracted directories)."""
+    if path.is_dir():
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    return int(path.stat().st_size)
+
+
+def _human_size(n: int) -> str:
+    if n >= 1e9:
+        return f"{n / 1e9:.1f} GB"
+    if n >= 1e6:
+        return f"{n / 1e6:.1f} MB"
+    if n >= 1e3:
+        return f"{n / 1e3:.1f} kB"
+    return f"{n} B"
 
 
 def greek_pipeline(text: str) -> list[dict[str, Any]]:
@@ -128,14 +416,80 @@ def greek_scan(text: str, meter: str = "hexameter") -> dict[str, Any]:
     }
 
 
-def koine_gloss(word: str) -> dict[str, Any] | None:
-    """Koine (NT) gloss for a Greek word via the bundled Dodson lexicon, or ``None``."""
+def greek_catalog(
+    query: str | None = None,
+    author: str | None = None,
+    title: str | None = None,
+    source: str | None = None,
+    limit: int = 40,
+) -> dict[str, Any]:
+    """Search the bundled catalogue of ~1,800 loadable Greek works (Perseus
+    canonical-greekLit + First1KGreek): id, author, English and Greek title.
+
+    All filters are case-insensitive substrings combined with AND; ``query`` matches
+    across id, author, and both titles; ``source`` limits to 'perseus' or 'first1k'.
+    ``limit`` caps the returned rows (limit <= 0 returns all; ``total`` is always the
+    full match count). Bundled metadata: offline and instant. Loading a work's text is
+    deliberately not an MCP tool (it fetches over the network at call time); load an id
+    with aegean.greek.load_work(id) or `aegean greek work ID` instead."""
+    from .greek import catalog
+
+    if source not in (None, "perseus", "first1k"):
+        return {"error": f"unknown source {source!r}; choose 'perseus' or 'first1k'"}
+    works = catalog(query, author=author, title=title, source=source)
+    cap = None if limit <= 0 else limit
+    return {"total": len(works), "works": works[:cap]}
+
+
+def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[str, Any]:
+    """Gloss a Greek word from a registry dictionary: lsj (classical, the default),
+    middle-liddell, cunliffe (Homeric), abbott-smith, or dodson (Koine NT).
+
+    The word is looked up as given and lemmatized on a miss, so inflected forms resolve.
+    The first use of a dictionary other than dodson downloads and builds its index (a
+    one-time fetch into the local data store, roughly 0.1 to 15 MB depending on the
+    dictionary); later calls are offline. ``full`` adds the complete entry body, not
+    just the concise gloss."""
+    from . import greek
+
+    infos = {i.id: i for i in greek.lexica()}
+    hosted = sorted(i for i, info in infos.items() if info.hosted)
+    if dictionary not in infos:
+        return {
+            "error": f"unknown dictionary {dictionary!r}{_did_you_mean(dictionary, hosted)}; "
+            f"dictionaries: {', '.join(hosted)}"
+        }
+    if not infos[dictionary].hosted:
+        return {
+            "error": f"{dictionary!r} is deep-link only (not hosted); "
+            f"hosted dictionaries: {', '.join(hosted)}"
+        }
+    greek.use_lexicon(dictionary)
+    e = greek.entry(word, dictionary=dictionary)
+    if e is None:
+        return {"error": f"no {dictionary} entry for {word!r}"}
+    out: dict[str, Any] = {
+        "word": word,
+        "dictionary": dictionary,
+        "headword": e.headword,
+        "gloss": e.gloss,
+    }
+    if full:
+        out["definition"] = e.body
+    return out
+
+
+def koine_gloss(word: str) -> dict[str, Any]:
+    """Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0)."""
     from . import greek
 
     greek.use_dodson()
     entry = greek.lookup_nt(word)
     if entry is None:
-        return None
+        return {
+            "error": f"no Dodson (Koine NT) entry for {word!r}; "
+            "greek_gloss reaches the classical dictionaries"
+        }
     return {
         "word": word,
         "lemma": entry.lemma,
@@ -152,8 +506,14 @@ TOOLS = (
     show_document,
     search_signs,
     balance_accounts,
+    query_corpus,
+    cite_corpus,
+    geo_sites,
+    data_status,
     greek_pipeline,
     greek_scan,
+    greek_catalog,
+    greek_gloss,
     koine_gloss,
 )
 

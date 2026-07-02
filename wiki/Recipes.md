@@ -725,7 +725,7 @@ The corpus sizes that ship in the wheel, for reference:
 |-----------|--------------------|-----------|
 | `lineara` | 1721 documents | full GORILA Linear A (bundled, Apache-2.0) |
 | `linearb` | 18 documents | a small bundled Linear B sample; load `damos` for the full corpus |
-| `cypriot` | 2 documents | bundled Cypriot syllabic sample |
+| `cypriot` | 180 documents | bundled Cypriot syllabic corpus |
 | `cyprominoan` | 2 documents | bundled Cypro-Minoan sample |
 | `greek` |— | the Greek NLP track, not a fixed corpus (`load_work` / `load_nt`) |
 
@@ -740,15 +740,15 @@ sha256-verified; the manifest is one command:
 ```bash
 aegean data list                  # everything fetchable, with a downloaded column + sizes
 aegean data versions              # the reproducibility manifest: version + sha256 each
-aegean data cache                 # where the local store lives and what's in it now
-aegean data fetch damos           # one-time download (a no-op once stored)
-aegean data remove damos          # delete a downloaded dataset (--all clears everything)
+aegean data store                 # where the local store lives and what's in it now
+aegean data fetch damos-corpus    # one-time download (a no-op once stored)
+aegean data remove damos-corpus   # delete a downloaded dataset (--all clears everything)
 ```
 
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.16.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.17.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

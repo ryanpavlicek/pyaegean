@@ -4,13 +4,70 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.17.0 (2026-07-02)
+
+The friendliness release: a systematic pass over every command's failure modes, dead ends, and
+inconsistencies; all 74 commands now fail cleanly on bad input.
 
 ### Added
+- **Did-you-mean, everywhere names are typed.** A misspelled corpus id suggests the close ones
+  (`aegean load linera` → "did you mean 'lineara' or 'linearb'?"), and registered ids match
+  case-insensitively as a fallback (`aegean info LINEARA` works). The same suggestions cover
+  dataset names (`data fetch`/`remove`), query `--where` fields, NT book names, sign labels, and
+  import `--script` values, in the CLI, the REPL, Python, and over MCP alike.
+- **Six new MCP tools** (8 → 14), so an agent can do what the CLI can: `cite_corpus` (plain,
+  BibTeX, or APA, with metadata filters citing the exact subset), `query_corpus` (the compound
+  query engine), `data_status` (the local store: downloaded state and sizes), `greek_catalog`
+  (search the ~1,800-work catalogue), `geo_sites` (coordinates, Pleiades ids, contested flags,
+  per-site word attestations), and `greek_gloss` (the registry dictionaries). All fourteen tools
+  now share one error convention: a structured `error` payload with suggestions, never a raised
+  exception, and document ids are resolved as forgivingly as the CLI resolves them.
+- **Hints at dead ends.** Empty search/query/load results, a fetched work, an imported file, and
+  a built database each end with one dim line naming the next command; the bare `aegean` help
+  points to a quickstart and the documentation.
+- **Wider `--json` and `-o` coverage.** `cite`, `combine`, `import`, and `data fetch` emit
+  `--json`; `balance`, `greek pipeline`, `analyze structure`, `analyze hands`, `db search`, and
+  `ai eval` save with `-o`; `stats`, `dispersion`, `balance`, `geo`, `structure`, and `hands`
+  accept the shared metadata filters (`--site`/`--period`/`--scribe`/`--support`).
 - **The web demo reads Cypriot inscriptions.** A new card loads a bundled *Inscriptiones
   Graecae* XV 1 inscription entirely in the browser: find-place, transliteration lines, the
   Greek reading where the text is Greek, and the source-edition link. The demo now covers all
   four Aegean scripts.
+
+### Changed
+- **Saving is uniform.** Every `-o` creates missing parent directories, prints one
+  `wrote <path>` confirmation to stderr (stdout stays clean for data), and combines with
+  `--json` instead of silently overriding it; corpus-writing commands dispatch by extension, so
+  `-o corpus.db` writes real SQLite everywhere.
+- **`aegean data store`** is the new name of `aegean data cache` (the old name remains as a
+  deprecated alias): it is a permanent store, not an evicting cache, and the analysis cache
+  (`aegean cache`) is now clearly a different thing.
+- **`greek eval --fold`** replaces the fold-selector meaning of `--treebank` (deprecated alias
+  kept; the backend-activation `--treebank` on tag/lemmatize/morph is unchanged).
+- **`db search` opens databases read-only** (searching a missing or non-database path can no
+  longer create an empty file as a side effect), and `--limit 0` means unlimited there, in
+  `aegean.db.search`, and in the MCP `search_signs`.
+
+### Fixed
+- **The file-writing traceback class.** Thirteen `-o` paths (load, query, export in every
+  format, geo, db build, plot, stats and its siblings, ai results) crashed with a raw traceback
+  when the target directory didn't exist or wasn't writable; all now share one guard and fail in
+  one line.
+- **Validation before work, in one line.** Non-numeric `--where` values, unknown `export`/`geo`
+  `--level`s (including geo's silently-ignored one), bad `greek eval --fold/--split`, malformed
+  or out-of-range `workbench --port`, unknown `work`/`catalog --source`, invalid `inflect`
+  feature values, and malformed NT refs all fail with a clean message instead of a traceback or
+  a silent no-op; a `--ref` that selects nothing in a fetched work errors instead of returning
+  the whole work mislabeled.
+- **Missing optional extras surface their install command** (`export -f csv` without pandas,
+  `geo` without geopandas) instead of a traceback; help text renders bracketed extras
+  literally, so `aegean plot --help` no longer instructs `pip install 'pyaegean'` with the
+  `[viz]` eaten by markup.
+- **`greek rarity --corpus`** goes through the standard corpus resolver (`.db` files and clean
+  errors) instead of a raw JSON load; the four neural-backend activation paths share the
+  standard activation errors; `ai translate`'s grounding-quality warning prints as a visible
+  stderr line instead of a swallowed Python warning; `greek nt-books` and group help maps name
+  every command and end with CLI (not Python) follow-ups.
 
 ## 0.16.0 (2026-07-02)
 

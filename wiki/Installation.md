@@ -114,12 +114,13 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.16.0
+# pyaegean 0.17.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
-`corpus_info`, `show_document`, `search_signs`, `balance_accounts`,
-`greek_pipeline`, `greek_scan`, and `koine_gloss`.
+`corpus_info`, `show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
+`cite_corpus`, `geo_sites`, `data_status`, `greek_pipeline`, `greek_scan`,
+`greek_catalog`, `greek_gloss`, and `koine_gloss`.
 
 ## Verify
 
@@ -128,7 +129,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.16.0
+print(aegean.__version__)                 # 0.17.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -145,7 +146,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.16.0
+# pyaegean 0.17.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -211,12 +212,13 @@ models above are only used by the `[neural]` extra's
 
 ### Where the cache lives, and how to move it
 
-`aegean data cache` prints the location and what's currently in it:
+`aegean data store` prints the location and what's currently in it:
 
 ```bash
-aegean data cache
-#                cache:
-# C:\Users\<you>\.cache\pyaegean  (override with PYAEGEAN_CACHE)
+aegean data store
+#          local data store:
+# C:\Users\<you>\.cache\pyaegean
+#  (override with PYAEGEAN_CACHE)
 ```
 
 The default is your OS user-cache directory (e.g. `~/.cache/pyaegean` on
@@ -276,7 +278,7 @@ pip uninstall pyaegean                  # remove the package
 Uninstalling does **not** delete the downloaded datasets (they are permanent
 local copies, kept so a reinstall never re-downloads). To reclaim that space,
 run `aegean data remove --all` first (or `aegean data remove NAME` for one
-dataset), or delete the directory shown by `aegean data cache` yourself.
+dataset), or delete the directory shown by `aegean data store` yourself.
 
 ## From source
 

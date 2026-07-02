@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import typer
 
-from ._common import apply_meta_filters, fail, load_corpus, read_text
+from ._common import apply_meta_filters, fail, load_corpus, read_text, writing
 from ._corpus import PERIOD_OPT, SCRIBE_OPT, SITE_OPT, SUPPORT_OPT
 
 _KINDS = ("freq", "dispersion", "keyness", "network", "balance", "scansion")
+
+# Kept word-for-word in step with `aegean greek scan --meter`: plot's scansion meter is
+# passed straight to greek.scan_line, so the two helps must name the same meters.
+_METER_HELP = (
+    "Scansion: hexameter, pentameter, trimeter, or an aeolic line "
+    "(glyconic, pherecratean, sapphic_hendecasyllable, adonean, "
+    "alcaic_hendecasyllable, alcaic_enneasyllable, alcaic_decasyllable)."
+)
 
 
 def register(app: typer.Typer) -> None:
@@ -33,13 +42,13 @@ def plot(
     ),
     word: str | None = typer.Option(None, "--word", help="Network: this word's ego network."),
     min_count: int = typer.Option(2, "--min-count", help="Network: minimum shared documents."),
-    meter: str = typer.Option("hexameter", "--meter", help="Scansion: hexameter or pentameter."),
+    meter: str = typer.Option("hexameter", "--meter", help=_METER_HELP),
     dpi: int = typer.Option(150, "--dpi", help="Raster resolution for .png output."),
 ) -> None:
     """Draw one figure (frequencies, dispersion, keyness, co-occurrence network,
     accounting balance, or a scansion grid) and write it to --output.
 
-    Needs the [viz] extra: pip install 'pyaegean[viz]'.
+    Needs the viz extra: pip install 'pyaegean\\[viz]'.
     """
     if kind not in _KINDS:
         raise fail(f"unknown plot kind {kind!r}; one of: {', '.join(_KINDS)}")
@@ -81,9 +90,12 @@ def plot(
                 ax = viz.plot_collocation_network(filtered, word, min_count=min_count)
             else:  # balance
                 ax = viz.plot_balance(filtered)
-    except ValueError as e:
+        with writing(output):  # parent dirs + one-line OSError failures
+            ax.figure.savefig(output, dpi=dpi, bbox_inches="tight")
+    except typer.Exit:  # an inner fail() already printed its one line — pass it through
+        raise
+    except ValueError as e:  # bad meter/dpi/format — matplotlib's message is readable
         raise fail(str(e)) from None
     except Exception as e:  # ScansionError etc. — one readable line, not a traceback
         raise fail(f"{type(e).__name__}: {e}") from None
-    ax.figure.savefig(output, dpi=dpi, bbox_inches="tight")
-    print(f"wrote {output}")
+    print(f"wrote {output}", file=sys.stderr)

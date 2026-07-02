@@ -104,7 +104,7 @@ def _make_handler(static_dir: Path, images_dir: Path | None) -> Any:
 
 
 def workbench(
-    port: int = typer.Option(8000, "--port", "-p", help="Port to serve on."),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to serve on (1-65535)."),
     no_browser: bool = typer.Option(False, "--no-browser", help="Don't open a web browser."),
     force: bool = typer.Option(False, "--force", help="Re-download the app build."),
     fetch_images: bool = typer.Option(
@@ -123,6 +123,9 @@ def workbench(
     import webbrowser
 
     from ._common import fail
+
+    if not 1 <= port <= 65535:
+        raise fail(f"--port must be between 1 and 65535, got {port}")
 
     try:
         static_dir = _workbench_dir(force=force)

@@ -68,7 +68,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.16.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.17.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -246,7 +246,7 @@ aegean greek work tlg0012.tlg001 --ref 1.1-1.10
 | `--ref` | section to load: `1` (book), `1.2` (chapter), `1.1-1.50` (lines) |
 | `--source` | `auto` (default), `perseus`, or `first1k` |
 | `--edition` | pick a specific edition file when a work has several |
-| `--output` / `-o` | write the corpus to a JSON file |
+| `--output` / `-o` | write the corpus to a file (`.json`, or `.db` for SQLite) |
 | `--json` | machine-readable JSON on stdout |
 
 **The Greek New Testament** has its own loader, `greek.load_nt(book, ref=...)`,
@@ -271,7 +271,7 @@ aegean greek nt-books
 # │ Rev    │ revelation, rev, rv, apocalypse │
 # │ …      │ …                               │
 # └────────┴─────────────────────────────────┘
-# Load one in Python:  greek.load_nt('John', ref='1.1-18')
+# Load one:  aegean greek nt John --ref 1.1-1.18
 ```
 
 Any name or alias works as the `book` argument; `ref` mirrors `load_work`
@@ -479,7 +479,7 @@ From the CLI you can see the location and what's in it, list what's fetchable, a
 record exact versions for reproducibility:
 
 ```bash
-aegean data cache       # store location + per-entry sizes
+aegean data store       # store location + per-entry sizes
 aegean data list        # the fetchable datasets, with a downloaded column + real sizes
 aegean data remove NAME # delete one downloaded dataset (--all clears everything)
 aegean data versions    # the reproducibility manifest: each dataset's version + sha256

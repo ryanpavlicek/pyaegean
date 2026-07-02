@@ -21,15 +21,18 @@ from ._common import (
     RESULT_OPT,
     console,
     emit_json,
+    emit_result,
     fail,
+    load_corpus,
     read_text,
     table,
-    write_result,
+    write_corpus,
 )
 
 greek_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Greek NLP: normalize → tokenize → … → parse.",
+    help="Greek NLP (normalize → … → parse), dictionaries, real works (Perseus/NT), "
+    "and the eval reproductions.",
     no_args_is_help=True,
 )
 
@@ -39,8 +42,8 @@ WORD_ARG = typer.Argument(..., help="One Greek word.")
 TREEBANK_OPT = typer.Option(False, "--treebank", help="Activate the Perseus AGDT lexicon (~75 MB fetch on first use).")
 TAGGER_OPT = typer.Option(False, "--tagger", help="Activate the generalizing POS tagger (trains from the AGDT on first use).")
 LEMMATIZER_OPT = typer.Option(False, "--lemmatizer", help="Activate the edit-tree lemmatizer (trains from the AGDT on first use).")
-NEURAL_LEMM_OPT = typer.Option(False, "--neural-lemmatizer", help="Activate the seq2seq lemmatizer (~232 MB model, [neural] extra).")
-NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~173 MB model, [neural] extra).")
+NEURAL_LEMM_OPT = typer.Option(False, "--neural-lemmatizer", help="Activate the seq2seq lemmatizer (~232 MB model, \\[neural] extra).")
+NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~173 MB model, \\[neural] extra).")
 LSJ_OPT = typer.Option(False, "--lsj", help="Activate LSJ glossing (~270 MB fetch on first use).")
 
 
@@ -52,6 +55,7 @@ def _activate(
     neural_lemmatizer: bool = False,
     neural: bool = False,
     lsj: bool = False,
+    parser: bool = False,
 ) -> None:
     """Run the requested use_* activations, with a stderr note for slow ones."""
     from collections.abc import Callable
@@ -65,6 +69,7 @@ def _activate(
         (neural_lemmatizer, "neural lemmatizer", greek.use_neural_lemmatizer),
         (neural, "neural joint pipeline", greek.use_neural_pipeline),
         (lsj, "LSJ lexicon", greek.use_lsj),
+        (parser, "dependency parser", greek.use_parser),
     ]
     for wanted, name, fn in steps:
         if not wanted:
@@ -232,7 +237,10 @@ def scan(
 @greek_app.command()
 def ipa(
     text: str = TEXT_ARG,
-    period: str = typer.Option("attic", "--period", help="attic or koine."),
+    period: str = typer.Option(
+        "attic", "--period",
+        help="attic or koine (the pronunciation period, not the find-context --period filter).",
+    ),
 ) -> None:
     """Reconstructed IPA pronunciation."""
     from aegean import greek
@@ -362,6 +370,21 @@ def morph(
         print(str(a))
 
 
+# The closed value set of each inflection feature (the AGDT postag vocabulary); a value
+# outside its set is a typo, distinct from a valid-but-unattested paradigm cell.
+_INFLECT_VALUES: dict[str, tuple[str, ...]] = {
+    "case": ("nom", "gen", "dat", "acc", "voc", "loc"),
+    "number": ("sg", "pl", "du"),
+    "gender": ("masc", "fem", "neut"),
+    "tense": ("pres", "impf", "aor", "perf", "plup", "fut", "futperf"),
+    "voice": ("act", "mid", "pass", "mp"),
+    "mood": ("ind", "subj", "opt", "inf", "imp", "part"),
+    "person": ("1", "2", "3"),
+    "pos": ("NOUN", "VERB", "ADJ", "ADV", "DET", "PART", "CCONJ", "ADP",
+            "PRON", "NUM", "INTJ", "PUNCT", "X"),
+}
+
+
 @greek_app.command()
 def inflect(
     lemma: str = typer.Argument(..., help="Greek lemma (dictionary form)."),
@@ -379,6 +402,20 @@ def inflect(
     """Inflection synthesis (inverse lemmatizer): attested form(s) of a lemma for the
     given features, from the AGDT. With --paradigm, list every attested cell."""
     from aegean import greek
+
+    want = {
+        "case": case, "number": number, "gender": gender, "tense": tense,
+        "voice": voice, "mood": mood, "person": person, "pos": pos,
+    }
+    for name, value in want.items():
+        if not value:
+            continue
+        canonical = value.upper() if name == "pos" else value.lower()
+        if canonical not in _INFLECT_VALUES[name]:
+            raise fail(
+                f"--{name} must be one of {', '.join(_INFLECT_VALUES[name])}; got {value!r}"
+            )
+        want[name] = canonical
 
     print("aegean: activating inflection synthesis (first use may download/build)…", file=sys.stderr)
     try:
@@ -398,10 +435,6 @@ def inflect(
             print(f"{form}\t{' '.join(f'{k}={v}' for k, v in feats.items())}")
         return
 
-    want = {
-        "case": case, "number": number, "gender": gender, "tense": tense,
-        "voice": voice, "mood": mood, "person": person, "pos": pos,
-    }
     forms = greek.inflect(lemma, **{k: v for k, v in want.items() if v})
     if json_out:
         emit_json(list(forms))
@@ -413,7 +446,9 @@ def inflect(
 def rarity(
     text: str = TEXT_ARG,
     corpus: str = typer.Option(
-        "nt", "--corpus", help="Reference corpus: 'nt' (the Greek NT) or a path to a corpus JSON."
+        "nt", "--corpus",
+        help="Reference corpus: a corpus id (default nt, the Greek NT), a Greek work id, "
+        "a path to a .json/.db corpus, or '-' for JSON on stdin.",
     ),
     top: int = typer.Option(5, "--top", help="Show the N rarest words."),
     treebank: bool = TREEBANK_OPT,
@@ -423,17 +458,11 @@ def rarity(
 
     Rarity is relative to the chosen corpus's vocabulary; rare/technical terms score high."""
     from aegean import greek
-    from aegean.core.corpus import Corpus
 
     _activate(treebank=treebank)
     if corpus == "nt":
         print("aegean: loading the Greek NT reference corpus (first use may download)…", file=sys.stderr)
-        try:
-            ref: object = greek.load_nt()
-        except Exception as exc:
-            raise fail(f"could not load the NT corpus: {exc}") from None
-    else:
-        ref = Corpus.from_json(corpus)
+    ref = load_corpus(corpus)
     r = greek.terminology_rarity(read_text(text), ref)
     if json_out:
         emit_json({
@@ -455,7 +484,7 @@ def usage(
     word: str = WORD_ARG,
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Dialect and register tags for a word, mined from its LSJ entry (--lsj fetch on first use)."""
+    """Dialect and register tags for a word, mined from its LSJ entry (fetches the LSJ index on first use)."""
     from aegean import greek
 
     _activate(lsj=True)
@@ -478,10 +507,7 @@ def parse(
     """Dependency-parse a sentence (UD relations with --neural; AGDT with --parser)."""
     from aegean import greek
 
-    _activate(neural=neural)
-    if parser:
-        print("aegean: activating the dependency parser (first use trains from the AGDT)…", file=sys.stderr)
-        greek.use_parser()
+    _activate(neural=neural, parser=parser)
     try:
         tree = greek.parse(read_text(sentence))
     except greek.ParserNotLoadedError:
@@ -528,7 +554,9 @@ def gloss(
     try:
         greek.use_lexicon(dictionary)
     except ValueError as exc:  # a deep-link-only lexicon
-        raise fail(str(exc)) from None
+        # the library error names the Python call; the CLI user has `lexicon-link`
+        msg = str(exc).replace("greek.lexicon_link(word)", "`aegean greek lexicon-link`")
+        raise fail(msg) from None
     except KeyError:
         raise fail(f"unknown dictionary {dictionary!r}; see `aegean greek lexica`") from None
     except Exception as exc:
@@ -618,8 +646,8 @@ def lexicon_link(
 
     try:
         url = greek.lexicon_link(word, service=service, lemmatize=not no_lemmatize)
-    except KeyError as exc:
-        raise fail(str(exc)) from None
+    except KeyError as exc:  # str(KeyError) is a repr — it would double the quotes
+        raise fail(exc.args[0] if exc.args else str(exc)) from None
     if json_out:
         emit_json({"word": word, "service": service, "url": url})
     else:
@@ -636,6 +664,7 @@ def pipeline(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """The one-call pipeline: per-token records for a whole text."""
@@ -643,17 +672,13 @@ def pipeline(
 
     _activate(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
-        neural_lemmatizer=neural_lemmatizer, neural=neural,
+        neural_lemmatizer=neural_lemmatizer, neural=neural, parser=parser,
     )
-    if parser:
-        print("aegean: activating the dependency parser (first use trains from the AGDT)…", file=sys.stderr)
-        greek.use_parser()
     try:
         records = greek.pipeline(read_text(text), parse=parse)
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
-    if json_out:
-        emit_json(records)
+    if emit_result(records, json_output=json_out, output=output):
         return
     table(
         f"{len(records)} token(s)",
@@ -668,13 +693,18 @@ def pipeline(
 
 @greek_app.command()
 def work(
-    work_id: str = typer.Argument(..., help="CTS-style work id, e.g. tlg0012.tlg001 (Iliad)."),
+    work_id: str | None = typer.Argument(
+        None, help="CTS-style work id, e.g. tlg0012.tlg001 (Iliad)."
+    ),
     ref: str | None = typer.Option(
         None, "--ref", help="Select a section: '1' (book), '1.2' (chapter), '1.1-1.50' (lines)."
     ),
     source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
     edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
-    out_path: str | None = typer.Option(None, "--output", "-o", help="Write the corpus as JSON."),
+    output: Path | None = typer.Option(
+        None, "--output", "-o",
+        help="Save the corpus to a .json or .db/.sqlite file (by extension).",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Fetch a real Greek work (Perseus canonical-greekLit / First1KGreek, CC BY-SA).
@@ -688,13 +718,24 @@ def work(
     from aegean.data import DataNotAvailableError
     from aegean.greek import load_work
 
+    if work_id is None:
+        raise fail(
+            "give a work id (e.g. tlg0012.tlg001) — `aegean greek works` lists "
+            "well-known ids; `aegean greek catalog NAME` searches ~1,800"
+        )
+    if source not in ("auto", "perseus", "first1k"):
+        raise fail("--source must be auto, perseus, or first1k")
     try:
         c = load_work(work_id, ref=ref, source=source, edition=edition)
     except (DataNotAvailableError, ValueError) as exc:
-        raise fail(str(exc)) from None
-    if out_path:
-        c.to_json(out_path)
-        print(f"wrote {len(c)} documents to {out_path}")
+        exit1 = fail(str(exc))
+        if "." not in work_id or "tlg" not in work_id.lower():
+            # the id isn't even work-shaped: the catalog searches by name
+            print(f"search it by name:  aegean greek catalog {work_id}", file=sys.stderr)
+        raise exit1 from None
+    if output is not None:
+        write_corpus(c, output)
+        print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
         return
     summary = {
         "work": work_id,
@@ -722,7 +763,10 @@ def nt(
     ref: str | None = typer.Option(
         None, "--ref", help="Select a passage: '1' (chapter) or '1.1-1.18' (verses)."
     ),
-    out_path: str | None = typer.Option(None, "--output", "-o", help="Write the corpus as JSON."),
+    output: Path | None = typer.Option(
+        None, "--output", "-o",
+        help="Save the corpus to a .json or .db/.sqlite file (by extension).",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Load the Greek New Testament (Nestle 1904): gold lemma / morph / Strong's + Koine gloss.
@@ -736,10 +780,14 @@ def nt(
     try:
         c = load_nt(book, ref=ref)
     except (DataNotAvailableError, ValueError, KeyError, LookupError) as exc:
-        raise fail(str(exc)) from None
-    if out_path:
-        c.to_json(out_path)
-        print(f"wrote {len(c)} documents to {out_path}")
+        # the library speaks Python (greek.nt_books()); the CLI speaks CLI
+        msg = str(exc).replace(
+            "greek.nt_books() lists all 27", "`aegean greek nt-books` lists all 27"
+        )
+        raise fail(msg) from None
+    if output is not None:
+        write_corpus(c, output)
+        print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
         return
     summary = {
         "scope": book or "whole NT",
@@ -754,6 +802,8 @@ def nt(
         emit_json(summary)
         return
     table("Greek NT", ["field", "value"], [[k, str(v)] for k, v in summary.items()])
+    if len(c):
+        print(f"read it:  aegean show nt \"{summary['first']}\"")
 
 
 @greek_app.command()
@@ -782,7 +832,10 @@ def catalog(
     author: str | None = typer.Option(None, "--author", "-a", help="Filter by author (substring)."),
     title: str | None = typer.Option(None, "--title", "-t", help="Filter by title (English or Greek)."),
     source: str | None = typer.Option(None, "--source", help="Limit to 'perseus' or 'first1k'."),
-    limit: int = typer.Option(40, "--limit", "-n", help="Max rows to show (0 = all)."),
+    limit: int = typer.Option(
+        40, "--limit", "-n",
+        help="Max rows (0 = all); --json and -o keep the untruncated count in 'matched'.",
+    ),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -795,19 +848,16 @@ def catalog(
     Examples:  aegean greek catalog sappho   |   aegean greek catalog --author plato"""
     from aegean.greek import catalog as greek_catalog
 
+    if source is not None and source not in ("perseus", "first1k"):
+        raise fail("--source must be perseus or first1k")
     rows = greek_catalog(query, author=author, title=title, source=source)
-    if output is not None:
-        write_result(rows, output)
-        print(f"wrote {len(rows)} works to {output}")
-        return
-    if json_out:
-        emit_json(rows)
-        return
     total = len(rows)
+    shown = rows if limit <= 0 else rows[:limit]
+    if emit_result({"matched": total, "works": shown}, json_output=json_out, output=output):
+        return
     if not total:
         print("No works match. Try a looser filter, or browse https://scaife.perseus.org")
         return
-    shown = rows if limit <= 0 else rows[:limit]
     table(
         f"Greek works ({total} match{'' if total == 1 else 'es'})",
         ["id", "author", "title", "greek", "src"],
@@ -829,7 +879,7 @@ def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
         return
     table("New Testament books (Nestle 1904)", ["book", "accepted names"],
           [[b["name"], ", ".join(b["aliases"])] for b in books])
-    print("\nLoad one in Python:  greek.load_nt('John', ref='1.1-18')")
+    print("\nLoad one:  aegean greek nt John --ref 1.1-1.18")
 
 
 @greek_app.command("eval")
@@ -837,7 +887,12 @@ def evaluate(
     target: str = typer.Argument(
         ..., help="ud, proiel, nt, tagger, lemmatizer, or parser (heavy: fetches/trains)."
     ),
-    treebank_fold: str = typer.Option("perseus", "--treebank", help="For ud: perseus or proiel."),
+    fold: str = typer.Option(
+        "perseus", "--fold", help="For ud: which UD Ancient Greek fold, perseus or proiel."
+    ),
+    fold_alias: str | None = typer.Option(
+        None, "--treebank", hidden=True, help="Deprecated alias for --fold."
+    ),
     split: str = typer.Option("test", "--split", help="For ud: dev or test."),
     bootstrap: bool = typer.Option(
         False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
@@ -849,6 +904,7 @@ def evaluate(
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Reproduce pyaegean's measured numbers (official evaluators, fetched gold data).
@@ -858,6 +914,15 @@ def evaluate(
     are the leakage-free held-out evaluations of the trainable backends."""
     from aegean import greek
 
+    if fold_alias is not None:
+        # On every other greek command --treebank is the boolean AGDT activation;
+        # here it was the fold selector. Deprecated in 0.17, removal per policy.
+        print("aegean: `greek eval --treebank` is deprecated; use --fold", file=sys.stderr)
+        fold = fold_alias
+    if fold not in ("perseus", "proiel"):
+        raise fail("--fold must be perseus or proiel")
+    if split not in ("dev", "test"):
+        raise fail("--split must be dev or test")
     _activate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
@@ -865,41 +930,40 @@ def evaluate(
     result: object
     if target == "ud":
         if bootstrap:
-            cis = greek.bootstrap_ud(treebank=treebank_fold, split=split)
+            cis = greek.bootstrap_ud(treebank=fold, split=split)
             result = {
                 k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]" for k, ci in cis.items()
             }
         else:
-            result = greek.evaluate_on_ud(treebank=treebank_fold, split=split)
+            result = greek.evaluate_on_ud(treebank=fold, split=split)
     elif target == "proiel":
         if drift:
             report = greek.proiel_drift()
-            if json_out:
-                emit_json({
-                    "pos_scored": report.pos_scored, "pos_errors": report.pos_errors,
-                    "lemma_errors": report.lemma_errors, "top_share": round(report.top_share, 3),
-                    "pos_confusions": [
-                        {"gold": g, "predicted": p, "count": c} for g, p, c in report.pos_confusions
-                    ],
-                })
-            else:
-                print(report.summary())
+            payload = {
+                "pos_scored": report.pos_scored, "pos_errors": report.pos_errors,
+                "lemma_errors": report.lemma_errors, "top_share": round(report.top_share, 3),
+                "pos_confusions": [
+                    {"gold": g, "predicted": p, "count": c} for g, p, c in report.pos_confusions
+                ],
+            }
+            if emit_result(payload, json_output=json_out, output=output):
+                return
+            print(report.summary())
             return
         result = greek.evaluate_on_proiel()
     elif target == "nt":
-        greek.use_neural_pipeline()  # the NT fold reports the shipped neural model's number
+        _activate(neural=True)  # the NT fold reports the shipped neural model's number
         result = greek.evaluate_on_nt()
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":
         result = greek.evaluate_lemmatizer()
     elif target == "parser":
-        greek.use_parser()
+        _activate(parser=True)
         result = greek.evaluate_parser()
     else:
         raise fail("target must be ud, proiel, nt, tagger, lemmatizer, or parser")
-    if json_out:
-        emit_json(result)
+    if emit_result(result, json_output=json_out, output=output):
         return
     if isinstance(result, dict):
         table(f"eval: {target}", ["metric", "value"], [[k, str(v)] for k, v in result.items()])

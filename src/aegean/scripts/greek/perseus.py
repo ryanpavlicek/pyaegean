@@ -337,10 +337,7 @@ def parse_tei_work(
                 "must stay within one textpart; load each part separately (one "
                 "load_work call per book/chapter) and merge the corpora."
             )
-        lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
-        hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
-        doc = make_doc(part, ref, ref, lo, hi)
-        if doc is None:
+        def selected_no_text(lo: "int | None") -> ValueError:
             avail = [d.get("n") for d in part.iterfind(f"{_TEI}div") if d.get("n")]
             if avail:
                 hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
@@ -349,7 +346,20 @@ def parse_tei_work(
                 hint = f"; lines present: {min(nums)}–{max(nums)}" if nums else ""
             else:
                 hint = ""
-            raise ValueError(f"{work}: ref {ref!r} selected no text{hint}")
+            return ValueError(f"{work}: ref {ref!r} selected no text{hint}")
+
+        # After navigation, the only legitimate leftover is a single numeric verse-line
+        # selector. Anything else (a non-numeric component like "abc", or several
+        # unmatched components) means the ref did not resolve: refuse, instead of
+        # silently falling back to the whole part mislabeled with the ref.
+        for leftover in (rest, end_rest):
+            if leftover and (not leftover[-1].isdigit() or len(leftover) > 1):
+                raise selected_no_text(None)
+        lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
+        hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
+        doc = make_doc(part, ref, ref, lo, hi)
+        if doc is None:
+            raise selected_no_text(lo)
         return title, author, [doc]
 
     parts = [d for d in edition_div.iterfind(f"{_TEI}div")] or [edition_div]

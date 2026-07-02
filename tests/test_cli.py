@@ -27,7 +27,9 @@ def app():  # type: ignore[no-untyped-def]
 def ok(app, *args: str) -> str:  # type: ignore[no-untyped-def]
     res = runner.invoke(app, list(args))
     assert res.exit_code == 0, res.output
-    return res.output
+    # stdout only: legitimate stderr lines (wrote-confirmations, deprecation
+    # notices, dim warnings) must never corrupt --json assertions.
+    return res.stdout
 
 
 def err(app, *args: str) -> str:  # type: ignore[no-untyped-def]
@@ -62,8 +64,9 @@ def test_info_unknown_corpus(app):
 
 def test_load_filter_and_export(app, tmp_path):
     out = tmp_path / "ht.json"
-    msg = ok(app, "load", "lineara", "--site", "Haghia Triada", "--output", str(out))
-    assert "1110 documents" in msg
+    res = runner.invoke(app, ["load", "lineara", "--site", "Haghia Triada", "--output", str(out)])
+    assert res.exit_code == 0, res.output
+    assert "1110 documents" in res.output  # the wrote confirmation lives on stderr
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["_meta"]["scriptId"] == "lineara" and len(data["documents"]) == 1110
 
@@ -132,16 +135,18 @@ def test_export_import_workbench_roundtrip(app, tmp_path):
     ok(app, "export", "lineara", "--site", "Zakros", "-f", "workbench", "-o", str(wb))
     assert wb.exists()
     back = tmp_path / "back.json"
-    msg = ok(app, "import", str(wb), "--workbench", "-o", str(back))
-    assert "document" in msg and back.exists()
+    res = runner.invoke(app, ["import", str(wb), "--workbench", "-o", str(back)])
+    assert res.exit_code == 0, res.output
+    assert "document" in res.output and back.exists()
 
 
 def test_import_epidoc_roundtrip(app, tmp_path):
     epi = tmp_path / "epi"
     ok(app, "export", "lineara", "--site", "Zakros", "-f", "epidoc", "-o", str(epi))
     back = tmp_path / "back.json"
-    msg = ok(app, "import", str(epi), "--epidoc", "--script", "lineara", "-o", str(back))
-    assert "document" in msg and back.exists()
+    res = runner.invoke(app, ["import", str(epi), "--epidoc", "--script", "lineara", "-o", str(back)])
+    assert res.exit_code == 0, res.output
+    assert "document" in res.output and back.exists()
 
 
 def test_geo_table(app):
@@ -196,8 +201,10 @@ def test_bridge(app):
 def test_data_list_and_cache(app):
     names = [d["name"] for d in json.loads(ok(app, "data", "list", "--json"))]
     assert "grc-joint" in names and "lineara-images" in names
-    cache = json.loads(ok(app, "data", "cache", "--json"))
-    assert "cache_dir" in cache
+    store = json.loads(ok(app, "data", "store", "--json"))
+    assert "cache_dir" in store
+    # the deprecated alias keeps working while the policy window is open
+    assert "cache_dir" in json.loads(ok(app, "data", "cache", "--json"))
     assert "unknown dataset" in err(app, "data", "fetch", "not-a-dataset")
 
 
@@ -453,7 +460,7 @@ def test_ai_translate_with_fake_client(app, monkeypatch):
     monkeypatch.setattr(ai, "get_client", lambda *a, **k: FakeClient("fake-1"))
     res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--json"])
     assert res.exit_code == 0, res.output
-    data = json.loads(res.output)
+    data = json.loads(res.stdout)
     assert data["text"] == "A TRANSLATION" and data["exploratory"] is True
     assert data["kind"] == "translate"
 
@@ -503,7 +510,7 @@ def test_ai_translate_verify_flag_runs_check_and_repair(app, monkeypatch):
     res = runner.invoke(app, ["ai", "translate", "ἐν ἀρχῇ ἦν ὁ λόγος", "--verify", "--json"])
     assert res.exit_code == 0, res.output
     assert len(prompts) == 2                 # draft + repair
-    data = json.loads(res.output)
+    data = json.loads(res.stdout)
     assert data["text"] == "TRANSLATION 2"   # the repaired translation is returned
     assert data["kind"] == "translate" and data["exploratory"] is True
     assert "= εἰμί (verb" not in prompts[0]  # the draft is grounding-free

@@ -1,23 +1,28 @@
-﻿"""The `aegean` command-line interface — the whole toolkit without writing Python.
+﻿"""The `aegean` command-line interface: the whole toolkit without writing Python.
 
 Installed by the ``[cli]`` extra (``pip install "pyaegean[cli]"``; typer + rich).
 The command tree mirrors the public API:
 
 - corpus commands at the top level: ``info``, ``load``, ``show``, ``search``,
   ``query``, ``stats``, ``dispersion``, ``keyness``, ``balance``, ``cite``,
-  ``export``, ``geo``, ``sign``, ``bridge``, ``plot``;
-- ``aegean greek …`` — the full Greek NLP pipeline (normalize → … → parse,
+  ``export``, ``combine``, ``import``, ``geo``, ``sign``, ``bridge``, ``plot``,
+  plus ``cache`` (the opt-in analysis cache), ``workbench`` (serve the Linear A
+  Workbench locally), and ``repl`` (the interactive shell);
+- ``aegean greek …``: the full Greek NLP pipeline (normalize → … → parse,
   plus ``pipeline`` and the ``eval`` reproductions), with ``--neural`` /
   ``--treebank`` / … flags standing in for the ``use_*()`` activations;
-- ``aegean analyze …`` — distance, alignment, cross-script comparison,
+- ``aegean analyze …``: distance, alignment, cross-script comparison,
   association statistics, morphological clusters, structure census;
-- ``aegean data …`` — the fetch-to-cache layer;
-- ``aegean ai …`` — the generative layer (exploratory-labeled, key-gated).
+- ``aegean data …``: the fetch-to-store data layer (``fetch``, ``list``,
+  ``store``, ``versions``, ``remove``);
+- ``aegean db …``: SQLite persistence (``build``, ``add``, ``search``);
+- ``aegean ai …``: the generative layer (exploratory-labeled, key-gated).
 
-Conventions: ``--json`` on every command for machine-readable output; a TEXT
-argument of ``-`` reads stdin; errors are one line on stderr with exit code 1.
-This module is imported only by the console script — ``import aegean`` never
-pulls typer/rich, so the zero-dependency core stays clean.
+Conventions: ``--json`` on every data-producing command for machine-readable
+output; a TEXT argument of ``-`` reads stdin; errors are one line on stderr
+with exit code 1. This module is imported only by the console script:
+``import aegean`` never pulls typer/rich, so the zero-dependency core stays
+clean.
 """
 
 from __future__ import annotations
@@ -58,7 +63,11 @@ def _build_app() -> Any:
         pretty_exceptions_show_locals=False,
         help=(
             "pyaegean from the shell: corpora, Greek NLP, analysis, data, and the "
-            "(exploratory) AI layer. Every command takes --json."
+            "(exploratory) AI layer. Every data-producing command takes --json."
+        ),
+        epilog=(
+            "Start with: aegean info lineara · aegean greek works · aegean repl "
+            "— docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
         no_args_is_help=True,
         context_settings={"help_option_names": ["-h", "--help"]},

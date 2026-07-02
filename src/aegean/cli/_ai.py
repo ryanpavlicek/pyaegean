@@ -13,7 +13,17 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from ._common import JSON_OPT, console, emit_json, fail, load_corpus, read_text
+from ._common import (
+    JSON_OPT,
+    RESULT_OPT,
+    console,
+    emit_json,
+    emit_result,
+    fail,
+    load_corpus,
+    read_text,
+    writing,
+)
 
 if TYPE_CHECKING:
     from aegean.ai import GroundingItem
@@ -81,13 +91,24 @@ def _write_ai_result(result: object, output: Path) -> None:
     if suffix == ".json":
         to_dict = getattr(result, "to_dict", None)
         payload = to_dict() if callable(to_dict) else {"text": getattr(result, "text", str(result))}
-        output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        with writing(output):
+            output.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
     elif suffix in (".txt", ""):
         labeled = getattr(result, "labeled", None)
         text = labeled() if callable(labeled) else getattr(result, "text", str(result))
-        output.write_text(text + "\n", encoding="utf-8")
+        with writing(output):
+            output.write_text(text + "\n", encoding="utf-8")
     else:
         raise fail(f"AI --output {output.name!r}: use a .json or .txt extension")
+
+
+def _warn(message: str) -> None:
+    """One dim line to stderr — the CLI's warning surface (stdout stays clean for --json)."""
+    from rich.console import Console
+
+    Console(stderr=True).print(f"aegean: {message}", style="dim", markup=False, highlight=False)
 
 
 AI_OUTPUT_OPT = typer.Option(
@@ -133,18 +154,25 @@ def translate(
     senses. With --verify (Greek), translate raw then check and repair against the
     grounding: the analysis cannot bias the draft, though a wrong analysis can still
     mislead the repair."""
+    import warnings
+
     from aegean import translate as tr
 
     client = _client(provider, model)
     try:
-        result = _run(
-            lambda: tr.translate(
-                read_text(text), script=script, target=target,
-                mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = _run(
+                lambda: tr.translate(
+                    read_text(text), script=script, target=target,
+                    mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
+                )
             )
-        )
     except ValueError as exc:  # unknown grounding mode, validated before any model call
         raise fail(str(exc)) from None
+    for w in caught:  # e.g. the lemmatizer-quality note — surface it, not a raw UserWarning
+        if issubclass(w.category, UserWarning):
+            _warn(str(w.message))
     if output is not None:
         _write_ai_result(result, output)
         return
@@ -200,7 +228,7 @@ def summarize(
 
 @ai_app.command()
 def hypotheses(
-    text: str = typer.Argument(..., help="An undeciphered (Linear A) sequence."),
+    text: str = typer.Argument(..., help="An undeciphered (Linear A) sequence ('-' reads stdin)."),
     corpus: str | None = typer.Option(
         None, "--corpus", help="Ground on this corpus's frequent words (e.g. lineara)."
     ),
@@ -228,7 +256,9 @@ def hypotheses(
 
 @ai_app.command()
 def ask(
-    question: str = typer.Argument(..., help="A question to answer over corpus grounding."),
+    question: str = typer.Argument(
+        ..., help="A question to answer over corpus grounding ('-' reads stdin)."
+    ),
     corpus: str | None = typer.Option(
         None, "--corpus", help="Ground on this corpus's frequent words."
     ),
@@ -302,6 +332,7 @@ def extract(
 def eval(
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Grounded-generation eval: score the built-in cases for grounding fidelity.
@@ -313,8 +344,7 @@ def eval(
 
     client = _client(provider, model)
     report = _run(lambda: ai.run_eval(ai.DEFAULT_CASES, client))  # type: ignore[arg-type]
-    if json_out:
-        emit_json(report)
+    if emit_result(report, json_output=json_out, output=output):
         return
     from ._common import table
 

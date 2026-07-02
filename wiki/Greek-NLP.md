@@ -1492,7 +1492,7 @@ evaluators and the fetched gold data. The targets:
 
 | `eval` target | What it measures |
 | --- | --- |
-| `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--treebank perseus|proiel`, `--split dev|test` |
+| `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--fold perseus|proiel`, `--split dev|test` |
 | `proiel` | the neutral out-of-AGDT check (lemma + POS); `--drift` for the convention-vs-error breakdown |
 | `nt` | the neural pipeline against the Nestle 1904 gold |
 | `tagger` | the held-out AGDT POS evaluation |

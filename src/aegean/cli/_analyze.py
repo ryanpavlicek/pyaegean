@@ -14,17 +14,20 @@ from ._common import (
     CORPUS_ARG,
     JSON_OPT,
     RESULT_OPT,
+    apply_meta_filters,
     emit_json,
+    emit_result,
     fail,
     load_corpus,
     resolve_doc,
     table,
-    write_result,
 )
+from ._corpus import PERIOD_OPT, SCRIBE_OPT, SITE_OPT, SUPPORT_OPT
 
 analyze_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Analysis: distance, alignment, cross-script compare/nearest, association stats, clusters, structure.",
+    help="Analysis: distance, alignment, cross-script compare/nearest, association stats, "
+    "co-occurrence, clusters, structure, scribal hands.",
     no_args_is_help=True,
 )
 
@@ -121,7 +124,8 @@ def nearest(
     corpus: str = typer.Argument(..., help="Corpus whose words are the candidates (e.g. greek)."),
     script_a: str = _SCRIPT_OPT,
     fold_aspiration: bool = _FOLD_OPT,
-    top: int = typer.Option(10, "--top", help="How many nearest candidates."),
+    top: int = typer.Option(10, "--top", help="How many nearest candidates (0 = all)."),
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Rank a corpus's words by phonetic closeness to WORD across scripts.
@@ -140,8 +144,8 @@ def nearest(
         )
     except ValueError as e:
         raise fail(str(e)) from None
-    if json_out:
-        emit_json([{"candidate": w, "distance": d} for w, d in ranked])
+    payload = [{"candidate": w, "distance": d} for w, d in ranked]
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(
         f"nearest in {corpus} [{cand_script}] to {word} [{script_a}]",
@@ -187,11 +191,7 @@ def assoc(
         "fisher_p": fishers_exact(joint, count1, count2, total),
         "pmi_interval": list(pmi_interval(joint, count1, count2, total)),
     }
-    if output is not None:
-        write_result(data, output)
-        return
-    if json_out:
-        emit_json(data)
+    if emit_result(data, json_output=json_out, output=output):
         return
     table(
         f"{word1} ~ {word2} over {total} documents",
@@ -206,7 +206,7 @@ def assoc(
 def cooccur(
     corpus: str = CORPUS_ARG,
     word: str = typer.Argument(..., help="A multi-sign word, e.g. KU-RO."),
-    top: int = typer.Option(20, "--top", help="How many co-occurring words."),
+    top: int = typer.Option(20, "--top", help="How many co-occurring words (0 = all)."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -227,11 +227,7 @@ def cooccur(
     ranked = sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
     pairs = ranked if top <= 0 else ranked[:top]
     payload = [{"word": w, "shared_documents": n} for w, n in pairs]
-    if output is not None:
-        write_result(payload, output)
-        return
-    if json_out:
-        emit_json(payload)
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(f"co-occurs with {word}", ["word", "shared docs"], [[w, str(n)] for w, n in pairs])
 
@@ -240,7 +236,7 @@ def cooccur(
 def clusters(
     corpus: str = CORPUS_ARG,
     min_size: int = typer.Option(2, "--min-size", help="Minimum cluster size."),
-    top: int = typer.Option(15, "--top", help="How many clusters."),
+    top: int = typer.Option(15, "--top", help="How many clusters (0 = all)."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -250,11 +246,7 @@ def clusters(
     c = load_corpus(corpus)
     found = find_morphological_clusters(c.word_frequencies(), min_cluster_size=min_size)
     shown = found[: top if top > 0 else None]
-    if output is not None:
-        write_result(shown, output)
-        return
-    if json_out:
-        emit_json(shown)
+    if emit_result(shown, json_output=json_out, output=output):
         return
     table(
         f"{corpus}: {len(found)} cluster(s) (exploratory; showing {len(shown)})",
@@ -270,28 +262,32 @@ def clusters(
 def structure(
     corpus: str = CORPUS_ARG,
     doc_id: str | None = typer.Argument(None, help="One document; omit for the corpus census."),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Heuristic document categories: accounting / libation / list / text / other."""
     from aegean.analysis import classify_corpus, classify_structure
 
-    c = load_corpus(corpus)
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     if doc_id is not None:
         doc = resolve_doc(c, corpus, doc_id)
         category = classify_structure(doc)
-        if json_out:
-            emit_json({"doc": doc_id, "category": category})
-        else:
-            print(f"{doc_id}: {category}")
+        if emit_result({"doc": doc_id, "category": category}, json_output=json_out, output=output):
+            return
+        print(f"{doc_id}: {category}")
         return
     buckets = classify_corpus(c)
-    if json_out:
-        emit_json({k: len(v) for k, v in buckets.items()})
+    census = {k: len(v) for k, v in buckets.items()}
+    if emit_result(census, json_output=json_out, output=output):
         return
     table(
         f"{corpus}: structure census (heuristic)",
         ["category", "documents"],
-        [[k, str(len(v))] for k, v in buckets.items()],
+        [[k, str(n)] for k, n in census.items()],
     )
 
 
@@ -301,9 +297,13 @@ def hands(
     hand: str | None = typer.Option(
         None, "--hand", help="Keyness for one hand vs the rest; omit to profile every hand."
     ),
-    top: int = typer.Option(20, "--top", help="Rows to show."),
+    top: int = typer.Option(20, "--top", help="Rows to show (0 = all)."),
     min_docs: int = typer.Option(1, "--min-docs", help="Minimum tablets for a hand to be listed."),
     signs: bool = typer.Option(False, "--signs", help="For --hand: key signs instead of words."),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -313,10 +313,11 @@ def hands(
     what is characteristic of that hand versus all the others (log-likelihood keyness)."""
     from aegean.analysis import hand_keyness, scribal_hands
 
-    c = load_corpus(corpus)
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
+    cap = top if top > 0 else None
     if hand is not None:
         try:
-            rows = hand_keyness(c, hand, kind="signs" if signs else "words")[:top]
+            rows = hand_keyness(c, hand, kind="signs" if signs else "words")[:cap]
         except ValueError as exc:
             raise fail(str(exc)) from None
         payload = [
@@ -324,11 +325,7 @@ def hands(
              "log_likelihood": r.log_likelihood, "log_ratio": r.log_ratio}
             for r in rows
         ]
-        if output is not None:
-            write_result(payload, output)
-            return
-        if json_out:
-            emit_json(payload)
+        if emit_result(payload, json_output=json_out, output=output):
             return
         table(
             f"hand {hand}: characteristic {'signs' if signs else 'words'} vs the rest",
@@ -337,7 +334,7 @@ def hands(
               f"{r.log_likelihood:.4g}", f"{r.log_ratio:+.2f}"] for r in rows],
         )
         return
-    profiles = scribal_hands(c, min_docs=min_docs)[:top]
+    profiles = scribal_hands(c, min_docs=min_docs)[:cap]
     if not profiles:
         raise fail(f"no scribal hands recorded in {corpus!r} (needs meta.scribe)")
     payload = [
@@ -345,11 +342,7 @@ def hands(
          "word_count": p.word_count, "sites": p.sites, "top_words": p.top_words}
         for p in profiles
     ]
-    if output is not None:
-        write_result(payload, output)
-        return
-    if json_out:
-        emit_json(payload)
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(
         f"scribal hands in {corpus}",

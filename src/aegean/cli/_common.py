@@ -4,6 +4,9 @@ Conventions every command follows:
 
 - ``--json`` prints one machine-readable JSON document to stdout (nothing else);
   without it, output is a human-readable rich rendering.
+- ``-o``/``--output`` saves to a file, creating missing parent directories; the
+  ``wrote <path>`` confirmation goes to stderr so stdout stays clean for data.
+  ``-o`` and ``--json`` combine (the file is written and JSON still prints).
 - A positional ``TEXT`` argument of ``-`` reads the text from stdin (pipeable).
 - Errors print one line to stderr and exit with code 1; usage errors exit 2
   (typer's default). Success is exit 0.
@@ -15,6 +18,8 @@ import dataclasses
 import enum
 import json
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -79,13 +84,45 @@ def load_corpus(name: str) -> Any:
         raise fail(f"could not load corpus {name!r}: {exc}") from None
 
 
+@contextmanager
+def writing(path: Path) -> Iterator[Path]:
+    """Guard a file write: create missing parent directories (the epidoc precedent), and
+    turn any OSError (or sqlite error) raised inside the block into the one-line
+    ``cannot write`` failure, exit 1.
+
+    ``write_corpus`` and ``write_result`` use it; every -o path that writes some other
+    format directly (export formats, db build, geo GeoJSON, plot images, ai results)
+    should wrap its write the same way::
+
+        with writing(output):
+            gdf.to_file(output)
+    """
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise fail(f"cannot write {path}: {exc}") from None
+    try:
+        yield path
+    except OSError as exc:
+        raise fail(f"cannot write {path}: {exc}") from None
+    except Exception as exc:
+        import sqlite3
+
+        if isinstance(exc, sqlite3.Error):
+            raise fail(f"cannot write {path}: {exc}") from None
+        raise
+
+
 def write_corpus(corpus: Any, path: Path) -> None:
-    """Write a corpus to ``.json`` (lossless JSON) or ``.db``/``.sqlite`` (SQLite) by extension."""
+    """Write a corpus to ``.json`` (lossless JSON) or ``.db``/``.sqlite`` (SQLite) by
+    extension. Parent directories are created; write failures become one clean line."""
     suffix = path.suffix.lower()
     if suffix == ".json":
-        corpus.to_json(path)
+        with writing(path):
+            corpus.to_json(path)
     elif suffix in (".db", ".sqlite", ".sqlite3"):
-        corpus.to_sql(path)
+        with writing(path):
+            corpus.to_sql(path)
     else:
         raise fail(f"output {path.name!r}: use a .json or .db/.sqlite extension")
 
@@ -93,22 +130,47 @@ def write_corpus(corpus: Any, path: Path) -> None:
 def write_result(data: Any, output: Path) -> None:
     """Save a command result by extension: ``.json`` (same shape as ``--json``), ``.csv``
     (tabular rows, via the stdlib ``csv`` — no pandas), or ``.txt`` (a tab-separated/plain
-    rendering). Lets non-Python users keep results without shell redirection."""
+    rendering). Lets non-Python users keep results without shell redirection.
+
+    Parent directories are created; write failures become one clean line; on success the
+    single ``wrote <path>`` confirmation prints to stderr (stdout stays clean for
+    ``--json``), so per-command messages cannot diverge."""
     suffix = output.suffix.lower()
     plain = to_plain(data)
     if suffix == ".json":
-        output.write_text(json.dumps(plain, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        return
-    rows = _result_rows(plain)
-    if suffix == ".csv":
-        if rows is None:
-            raise fail("this result isn't a table; save it as .json")
-        _write_csv(rows, output)
-        return
-    if suffix in (".txt", ""):
-        output.write_text(_result_text(plain, rows), encoding="utf-8")
-        return
-    raise fail(f"output {output.name!r}: use a .json, .csv, or .txt extension")
+        with writing(output):
+            output.write_text(
+                json.dumps(plain, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+            )
+    else:
+        rows = _result_rows(plain)
+        if suffix == ".csv":
+            if rows is None:
+                raise fail("this result isn't a table; save it as .json")
+            with writing(output):
+                _write_csv(rows, output)
+        elif suffix in (".txt", ""):
+            with writing(output):
+                output.write_text(_result_text(plain, rows), encoding="utf-8")
+        else:
+            raise fail(f"output {output.name!r}: use a .json, .csv, or .txt extension")
+    print(f"wrote {output}", file=sys.stderr)
+
+
+def emit_result(data: Any, *, json_output: bool, output: Path | None) -> bool:
+    """The shared ``-o``/``--json`` epilogue: write the file when ``-o`` was given, then
+    emit JSON to stdout when ``--json`` was given. The two flags combine rather than
+    conflict (the file is written and JSON still prints). Returns True when either flag
+    handled the output, so callers skip their human rendering::
+
+        if emit_result(payload, json_output=json_out, output=output):
+            return
+    """
+    if output is not None:
+        write_result(data, output)
+    if json_output:
+        emit_json(data)
+    return output is not None or json_output
 
 
 def _result_rows(plain: Any) -> "list[dict[str, Any]] | None":
@@ -162,7 +224,11 @@ def _result_text(plain: Any, rows: "list[dict[str, Any]] | None") -> str:
 
 
 RESULT_OPT = typer.Option(
-    None, "--output", "-o", help="Save the result to a file (.json, .csv, or .txt by extension)."
+    None,
+    "--output",
+    "-o",
+    help="Save the result to a file (.json, .csv, or .txt by extension); combines with "
+    "--json, which still prints to stdout.",
 )
 
 
@@ -198,24 +264,14 @@ def table(title: str, columns: list[str], rows: list[list[str]]) -> None:
 def resolve_doc(c: Any, corpus: str, doc_id: str) -> Any:
     """Resolve a document id forgivingly, or exit naming the closest matches.
 
-    Exact id first; then the section alone for prefixed ids, so a Greek work's
-    book addresses without repeating the work id (``aegean show tlg0012.tlg001
-    1`` finds ``tlg0012.tlg001:1``); then a unique case- and space-insensitive
-    match (``ht13``, ``py ta 641``)."""
+    A thin wrapper over :func:`aegean.core.resolve.resolve_document`, which holds the
+    matching rule (exact id, then section tail, then a unique case- and space-insensitive
+    match) so the MCP server and Python callers forgive the same inputs the CLI does."""
+    from aegean.core.resolve import resolve_document
 
-    def _fold(s: str) -> str:
-        return "".join(s.split()).casefold()
-
-    doc = c.get(doc_id)
+    doc, near = resolve_document(c, doc_id)
     if doc is not None:
         return doc
-    tails = [d for d in c if ":" in d.id and d.id.split(":", 1)[1] == doc_id]
-    if len(tails) == 1:
-        return tails[0]
-    folded = [d for d in c if _fold(d.id) == _fold(doc_id)]
-    if len(folded) == 1:
-        return folded[0]
-    near = sorted({d.id for d in c if _fold(doc_id) and _fold(doc_id) in _fold(d.id)})[:5]
     hint = f" close: {', '.join(near)}." if near else ""
     raise fail(
         f"no document {doc_id!r} in {corpus!r}.{hint} "

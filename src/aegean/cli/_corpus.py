@@ -1,8 +1,9 @@
 """Top-level corpus commands: info, load, show, search, query, stats, dispersion,
-keyness, balance, cite, export, geo, sign, bridge."""
+keyness, cache, balance, cite, export, combine, import, geo, sign, bridge."""
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import typer
@@ -14,13 +15,20 @@ from ._common import (
     apply_meta_filters,
     console,
     emit_json,
+    emit_result,
     fail,
     load_corpus,
     resolve_doc,
     table,
     write_corpus,
-    write_result,
+    writing,
 )
+
+
+def hint(message: str) -> None:
+    """Print a one-line dim hint naming the next command (the `aegean geo` model)."""
+    console().print(message, style="dim", markup=False)
+
 
 SITE_OPT = typer.Option(None, "--site", help="Keep documents from this find-site.")
 PERIOD_OPT = typer.Option(None, "--period", help="Keep documents from this period.")
@@ -57,6 +65,7 @@ def combine(
         "error", "--on-conflict",
         help="Duplicate document ids across sources: error, first, last, or suffix.",
     ),
+    json_out: bool = JSON_OPT,
 ) -> None:
     """Merge several corpora into one and save it; each source is resolved like any corpus
     argument (id, .json/.db file, Greek work id, or '-').
@@ -65,13 +74,23 @@ def combine(
     aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db"""
     import aegean
 
+    if on_conflict not in ("error", "first", "last", "suffix"):
+        raise fail("--on-conflict must be 'error', 'first', 'last', or 'suffix'")
     loaded = [load_corpus(s) for s in sources]
     try:
         merged = aegean.combine(loaded, dedupe=on_conflict)
     except ValueError as exc:
-        raise fail(str(exc)) from None
+        # the library error names the Python keyword; the CLI user has --on-conflict
+        msg = str(exc).replace(
+            "pass dedupe='first', 'last', or 'suffix'",
+            "pass --on-conflict first, last, or suffix",
+        )
+        raise fail(msg) from None
     write_corpus(merged, output)
-    print(f"wrote {len(merged)} documents to {output} (merged {len(loaded)} sources)")
+    print(f"wrote {len(merged)} documents to {output} (merged {len(loaded)} sources)",
+          file=sys.stderr)
+    if json_out:
+        emit_json({"written": len(merged), "path": str(output), "sources": len(loaded)})
 
 
 def import_(
@@ -97,6 +116,7 @@ def import_(
     epidoc: bool = typer.Option(
         False, "--epidoc", help="Treat SOURCE as EpiDoc TEI (a file or a folder of .xml) and import it."
     ),
+    json_out: bool = JSON_OPT,
 ) -> None:
     """Import your OWN text into a corpus you can then analyse, search, and export.
 
@@ -107,8 +127,18 @@ def import_(
       aegean import poems/ -o corpus.db --split line
       aegean import rows.csv -o corpus.json --text-col line --id-col id
       aegean import inscriptions/ -o ins.json --epidoc --script greek   # any EpiDoc TEI edition"""
-    from aegean import io as aegean_io
+    import json
 
+    from aegean import io as aegean_io
+    from aegean.core.script import registered_scripts
+
+    known_scripts = sorted(set(registered_scripts()) | {"nt"})
+    if script not in known_scripts:
+        from aegean.core.resolve import suggest
+
+        close = suggest(script, known_scripts, n=1)
+        did = f" — did you mean {close[0]!r}?" if close else ""
+        raise fail(f"unknown script {script!r}{did} (one of: {', '.join(known_scripts)})")
     p = Path(source)
     try:
         if workbench:
@@ -120,6 +150,16 @@ def import_(
                 p, script_id=script, glob=glob, split=split, encoding=encoding
             )
         elif p.suffix.lower() == ".csv":
+            if id_col is not None:
+                import csv as _csv
+
+                with p.open(encoding=encoding, newline="") as fh:
+                    header = next(_csv.reader(fh), [])
+                if id_col not in header:
+                    raise fail(
+                        f"--id-col {id_col!r} is not a column of {p.name}; "
+                        f"columns: {', '.join(header)}"
+                    )
             corpus = aegean_io.from_csv(
                 p, text_col=text_col, id_col=id_col, script_id=script, encoding=encoding
             )
@@ -127,10 +167,21 @@ def import_(
             corpus = aegean_io.from_text_file(
                 p, script_id=script, split=split, doc_id=doc_id, encoding=encoding
             )
+    except json.JSONDecodeError as exc:
+        raise fail(f"{source}: invalid JSON — {exc}") from None
+    except UnicodeDecodeError as exc:
+        raise fail(
+            f"cannot decode {source} with encoding {encoding!r} ({exc}); "
+            "try another --encoding (e.g. --encoding latin-1)"
+        ) from None
     except (FileNotFoundError, NotADirectoryError, ValueError, LookupError) as exc:
         raise fail(str(exc)) from None
     write_corpus(corpus, output)
-    print(f"wrote {len(corpus)} document(s) to {output}")
+    print(f"wrote {len(corpus)} document(s) to {output}", file=sys.stderr)
+    if json_out:
+        emit_json({"written": len(corpus), "path": str(output), "source": source})
+        return
+    hint(f"explore it:  aegean stats {output}")
 
 
 def info(corpus: str = CORPUS_ARG, json_out: bool = JSON_OPT) -> None:
@@ -164,16 +215,19 @@ def load(
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
     output: Path | None = typer.Option(
-        None, "--output", "-o", help="Write the (filtered) corpus as round-trippable JSON."
+        None, "--output", "-o",
+        help="Save the (filtered) corpus to a .json or .db/.sqlite file (by extension).",
     ),
-    limit: int = typer.Option(20, "--limit", help="Documents listed without --output."),
+    limit: int = typer.Option(20, "--limit", help="Documents listed without --output (0 = all)."),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Filter a corpus by metadata; list matches or export them as JSON."""
+    """Filter a corpus by metadata; list matches or save them as a reusable corpus."""
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     if output is not None:
-        c.to_json(output)
-        print(f"wrote {len(c)} documents to {output}")
+        write_corpus(c, output)
+        print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
+        if json_out:
+            emit_json({"written": len(c), "path": str(output)})
         return
     rows = [
         {"id": d.id, "site": d.meta.site, "period": d.meta.period, "words": len(d.words)}
@@ -181,6 +235,12 @@ def load(
     ]
     if json_out:
         emit_json({"matched": len(c), "documents": rows})
+        return
+    if not rows and any(v is not None for v in (site, period, scribe, support)):
+        hint(
+            f"0 matches — filters are exact; 'aegean load {corpus}' without filters "
+            "shows the site/period values"
+        )
         return
     table(
         f"{corpus}: {len(c)} matching document(s)" + (f" (showing {len(rows)})" if len(rows) < len(c) else ""),
@@ -241,11 +301,13 @@ def search(
     c = load_corpus(corpus)
     hits = [(w, n) for w, n in c.word_frequencies() if word_matches_sign_pattern(w, pattern)]
     payload = {"pattern": pattern, "matches": [{"word": w, "count": n} for w, n in hits]}
-    if output is not None:
-        write_result(payload, output)
+    if emit_result(payload, json_output=json_out, output=output):
         return
-    if json_out:
-        emit_json(payload)
+    if not hits:
+        hint(
+            f"no matches — '*' is one sign ('KU-*-RO'); "
+            f"'aegean stats {corpus}' lists frequent words"
+        )
         return
     table(f"{pattern!r}: {len(hits)} word(s)", ["word", "count"], [[w, str(n)] for w, n in hits])
 
@@ -267,7 +329,11 @@ def query(
         help="Save the matched inscriptions as a reusable corpus (.json or .db); "
         "inscriptions output only.",
     ),
-    limit: int = typer.Option(25, "--limit", help="Rows shown in human output."),
+    limit: int = typer.Option(
+        25, "--limit",
+        help="Rows listed, human and JSON alike (0 = all); JSON always carries the "
+        "untruncated matched totals.",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Run the compound-query engine (text/prefix/sign-pattern/co-occurrence predicates)."""
@@ -294,11 +360,22 @@ def query(
         if field.startswith("!"):
             negate, field = True, field[1:]
         if field not in FIELDS:
+            from aegean.core.resolve import suggest
+
+            close = suggest(field, FIELDS, n=1)
+            if close:
+                raise fail(
+                    f"unknown field {field!r} — did you mean {close[0]!r}? "
+                    f"(`aegean query {corpus} --fields` lists all)"
+                )
             raise fail(f"unknown field {field!r}; see `aegean query {corpus} --fields`")
         kind = FIELDS[field].kind
         parsed: object = value
         if kind == "number":
-            parsed = int(value)
+            try:
+                parsed = int(value)
+            except ValueError:
+                raise fail(f"--where {field} expects a number, got {value!r}") from None
         elif kind == "boolean":
             parsed = value.lower() in ("1", "true", "yes")
         rows.append(FilterRow(field, parsed, connector="or" if connector == "or" else "and", negate=negate))
@@ -308,27 +385,35 @@ def query(
         if output_kind != "inscriptions":
             raise fail("--output saves inscriptions; drop --output-kind words")
         write_corpus(res.to_corpus(c), output)
-        print(f"wrote {len(res.inscriptions)} inscriptions to {output}")
+        print(f"wrote {len(res.inscriptions)} inscriptions to {output}", file=sys.stderr)
         return
+    cap = limit if limit > 0 else None
     if json_out:
         emit_json(
             {
                 "description": res.description,
-                "inscriptions": [d.id for d in res.inscriptions],
-                "words": [{"word": w, "count": n} for w, n in res.words],
+                "matched": {"inscriptions": len(res.inscriptions), "words": len(res.words)},
+                "inscriptions": [d.id for d in res.inscriptions[:cap]],
+                "words": [{"word": w, "count": n} for w, n in res.words[:cap]],
                 "citation": res.cite() if res.provenance else "",
             }
         )
         return
+    if not (res.inscriptions if output_kind == "inscriptions" else res.words):
+        hint(
+            "0 matches — values are exact ('site-is=Haghia Triada'); "
+            f"'aegean query {corpus} --fields' lists the fields"
+        )
+        return
     if output_kind == "inscriptions":
-        shown = res.inscriptions[: limit if limit > 0 else None]
+        shown = res.inscriptions[:cap]
         table(
             f"{res.description or 'all'} → {len(res.inscriptions)} inscription(s)",
             ["id", "site", "words"],
             [[d.id, d.meta.site, str(len(d.words))] for d in shown],
         )
     else:
-        shown_w = res.words[: limit if limit > 0 else None]
+        shown_w = res.words[:cap]
         table(
             f"{res.description or 'all'} → {len(res.words)} word(s)",
             ["word", "count"],
@@ -340,12 +425,16 @@ def query(
 def stats(
     corpus: str = CORPUS_ARG,
     signs: bool = typer.Option(False, "--signs", help="Sign frequencies instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows."),
+    top: int = typer.Option(20, "--top", help="How many rows (0 = all)."),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Frequency tables: words (default) or individual signs."""
-    c = load_corpus(corpus)
+    """Frequency tables: words (default) or individual signs, optionally metadata-filtered."""
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     if signs:
         from collections import Counter
 
@@ -360,11 +449,7 @@ def stats(
         pairs = c.word_frequencies()[: top if top > 0 else None]
         title = f"{corpus}: top {len(pairs)} words"
     payload = [{"item": w, "count": n} for w, n in pairs]
-    if output is not None:
-        write_result(payload, output)
-        return
-    if json_out:
-        emit_json(payload)
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(title, ["item", "count"], [[w, str(n)] for w, n in pairs])
 
@@ -373,15 +458,19 @@ def dispersion(
     corpus: str = CORPUS_ARG,
     item: str | None = typer.Argument(None, help="One item; omit to rank the whole corpus."),
     signs: bool = typer.Option(False, "--signs", help="Sign dispersion instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows (ranking mode)."),
+    top: int = typer.Option(20, "--top", help="How many rows (ranking mode; 0 = all)."),
     min_frequency: int = typer.Option(2, "--min-frequency", help="Skip rarer items (ranking mode)."),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """How evenly items spread across documents (Gries' DP; 0 = even, 1 = concentrated)."""
     from ..analysis import stats as _stats
 
-    c = load_corpus(corpus)
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     kind = "signs" if signs else "words"
     try:
         rows = (
@@ -392,11 +481,7 @@ def dispersion(
     except ValueError as e:
         raise fail(str(e)) from None
     payload = [vars(r) for r in rows]
-    if output is not None:
-        write_result(payload, output)
-        return
-    if json_out:
-        emit_json(payload)
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(
         f"{corpus}: dispersion ({kind})",
@@ -418,7 +503,7 @@ def keyness(
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
     signs: bool = typer.Option(False, "--signs", help="Sign keyness instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows."),
+    top: int = typer.Option(20, "--top", help="How many rows (0 = all)."),
     min_target: int = typer.Option(2, "--min-target", help="Skip items rarer than this in both."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
@@ -452,11 +537,7 @@ def keyness(
     except ValueError as e:
         raise fail(str(e)) from None
     payload = [vars(r) for r in rows]
-    if output is not None:
-        write_result(payload, output)
-        return
-    if json_out:
-        emit_json(payload)
+    if emit_result(payload, json_output=json_out, output=output):
         return
     table(
         f"{corpus}: keyness vs {ref_label} ({kind})",
@@ -483,7 +564,8 @@ def cache_cmd(
 
     The cache is off by default; enable it per shell with PYAEGEAN_ANALYSIS_CACHE=1
     (or a path) so expensive analyses (dispersion, keyness, clustering) are reused
-    across runs."""
+    across runs. Not the store of fetched corpora and models: that is
+    `aegean data store`."""
     from ..cache import clear as _clear
     from ..cache import stats as _stats
 
@@ -512,12 +594,17 @@ def balance(
     strict: bool = typer.Option(
         False, "--strict", help="Exit 1 if any checked total fails to balance."
     ),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
+    output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Accounting reconciliation: stated totals (KU-RO / TO-SO) vs summed items."""
     from aegean.analysis import balance_check
 
-    c = load_corpus(corpus)
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     docs = [resolve_doc(c, corpus, doc_id)] if doc_id else list(c)
     results = []
     for d in docs:
@@ -530,18 +617,22 @@ def balance(
                     "items": chk.item_count, "balances": chk.balances,
                 }
             )
-    if json_out:
-        emit_json(results)
-    else:
-        table(
-            f"{corpus}: {len(results)} total line(s) checked",
-            ["doc", "marker", "stated", "computed", "diff", "balances"],
-            [
-                [str(r["doc"]), str(r["marker"]), str(r["stated"]), str(r["computed"]),
-                 str(r["difference"]), "yes" if r["balances"] else "NO"]
-                for r in results
-            ],
-        )
+    if not emit_result(results, json_output=json_out, output=output):
+        if not results:
+            hint(
+                "no stated totals — balance reads accounting tablets (KU-RO / TO-SO): "
+                "lineara, linearb, damos"
+            )
+        else:
+            table(
+                f"{corpus}: {len(results)} total line(s) checked",
+                ["doc", "marker", "stated", "computed", "diff", "balances"],
+                [
+                    [str(r["doc"]), str(r["marker"]), str(r["stated"]), str(r["computed"]),
+                     str(r["difference"]), "yes" if r["balances"] else "NO"]
+                    for r in results
+                ],
+            )
     if strict and any(not r["balances"] for r in results):
         raise typer.Exit(code=1)
 
@@ -553,13 +644,18 @@ def cite(
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
+    json_out: bool = JSON_OPT,
 ) -> None:
     """Cite the corpus — or, with filters, the exact subset — in one line."""
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     try:
-        print(c.cite(style))
+        citation = c.cite(style)
     except ValueError as exc:
         raise fail(str(exc)) from None
+    if json_out:
+        emit_json({"corpus": corpus, "style": style, "citation": citation})
+        return
+    print(citation)
 
 
 def export(
@@ -581,32 +677,38 @@ def export(
 
     ``--level token`` (csv/parquet) emits one row per token, spreading any per-token
     annotations — the Greek NT's lemma/morph/Strong's/gloss — into columns."""
-    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
-    if fmt == "json":
-        c.to_json(output)
-    elif fmt == "csv":
-        from aegean.io import to_csv
-
-        to_csv(c, output, level=level)
-    elif fmt == "parquet":
-        from aegean.io import to_parquet
-
-        to_parquet(c, output, level=level)
-    elif fmt == "epidoc":
-        from aegean.io import write_epidoc
-
-        write_epidoc(c, output)
-    elif fmt == "sqlite":
-        from aegean.db import to_sqlite
-
-        to_sqlite(c, output)
-    elif fmt == "workbench":
-        from aegean.io import to_workbench
-
-        to_workbench(c, output)
-    else:
+    if fmt not in ("json", "csv", "parquet", "epidoc", "sqlite", "workbench"):
         raise fail(f"unknown format {fmt!r}; use json, csv, parquet, epidoc, sqlite, or workbench")
-    print(f"wrote {len(c)} documents to {output} ({fmt})")
+    if level not in ("document", "token", "word"):
+        raise fail(f"--level must be 'document', 'token', or 'word'; got {level!r}")
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
+    try:
+        with writing(output):
+            if fmt == "json":
+                c.to_json(output)
+            elif fmt == "csv":
+                from aegean.io import to_csv
+
+                to_csv(c, output, level=level)
+            elif fmt == "parquet":
+                from aegean.io import to_parquet
+
+                to_parquet(c, output, level=level)
+            elif fmt == "epidoc":
+                from aegean.io import write_epidoc
+
+                write_epidoc(c, output)
+            elif fmt == "sqlite":
+                from aegean.db import to_sqlite
+
+                to_sqlite(c, output)
+            else:
+                from aegean.io import to_workbench
+
+                to_workbench(c, output)
+    except (ImportError, ValueError) as exc:  # a missing extra's pip hint, or a bad value
+        raise fail(str(exc)) from None
+    print(f"wrote {len(c)} documents to {output} ({fmt})", file=sys.stderr)
 
 
 def geo(
@@ -614,29 +716,44 @@ def geo(
     word: str | None = typer.Option(
         None, "--word", help="Map where this word is attested (per-site counts) instead of every site."
     ),
-    level: str = typer.Option("site", "--level", help="site or inscription."),
+    level: str = typer.Option(
+        "site", "--level", help="GeoJSON granularity (with --output): site or inscription."
+    ),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
     output: Path | None = typer.Option(
-        None, "--output", "-o", help="Write GeoJSON here instead of printing a table."
+        None, "--output", "-o",
+        help="Write GeoJSON (.json or .geojson) here instead of printing a table.",
     ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Geographic view: find-site coordinates, or with --word the per-site attestations of one
-    word (GeoJSON needs the [geo] extra; the table does not).
+    word (GeoJSON needs the \\[geo] extra; the table does not).
 
     Only provenanced inscription corpora yield rows (lineara, linearb, cypriot, cyprominoan,
     sigla, damos); alphabetic Greek corpora (greek, nt, work ids) carry no find-spot. --word
     matching is case-insensitive."""
-    c = load_corpus(corpus)
+    if level not in ("site", "inscription"):
+        raise fail(f"--level must be 'site' or 'inscription'; got {level!r}")
+    if output is not None and output.suffix.lower() not in (".json", ".geojson"):
+        raise fail(f"output {output.name!r}: GeoJSON takes a .json or .geojson extension")
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
     from aegean.geo import site_coordinates
 
     coords = site_coordinates()
     if word is not None:
         if output is not None:
-            from aegean.geo import word_distribution
+            try:
+                from aegean.geo import word_distribution
 
-            gdf = word_distribution(c, word)
-            output.write_text(gdf.to_json(), encoding="utf-8")
-            print(f"wrote {len(gdf)} features to {output}")
+                gdf = word_distribution(c, word)
+            except ImportError as exc:  # the missing extra's own pip-install one-liner
+                raise fail(str(exc)) from None
+            with writing(output):
+                output.write_text(gdf.to_json(), encoding="utf-8")
+            print(f"wrote {len(gdf)} features to {output}", file=sys.stderr)
             return
         from collections import Counter
 
@@ -662,11 +779,15 @@ def geo(
         )
         return
     if output is not None:
-        from aegean.geo import to_geodataframe
+        try:
+            from aegean.geo import to_geodataframe
 
-        gdf = to_geodataframe(c, level=level)
-        output.write_text(gdf.to_json(), encoding="utf-8")
-        print(f"wrote {len(gdf)} features to {output}")
+            gdf = to_geodataframe(c, level=level)
+        except (ImportError, ValueError) as exc:  # missing extra, or a library-level bad value
+            raise fail(str(exc)) from None
+        with writing(output):
+            output.write_text(gdf.to_json(), encoding="utf-8")
+        print(f"wrote {len(gdf)} features to {output}", file=sys.stderr)
         return
     sites = {d.meta.site for d in c if d.meta.site}
     rows = [
@@ -715,7 +836,19 @@ def sign(
         norm = label.upper()
         s = next((x for x in inv if x.label.upper() == norm), None)
     if s is None:
-        raise fail(f"no sign {label!r} in the {script} inventory ({len(inv)} signs)")
+        from aegean.core.resolve import suggest
+
+        labels = [x.label for x in inv]
+        near = suggest(label, labels, n=5)
+        folded = label.casefold()
+        if folded:  # widen with case-folded prefix/substring candidates (the resolve_doc model)
+            for cand in sorted(labels):
+                if len(near) >= 5:
+                    break
+                if cand not in near and (folded in cand.casefold() or cand.casefold() in folded):
+                    near.append(cand)
+        close = f" close: {', '.join(near[:5])}." if near else ""
+        raise fail(f"no sign {label!r} in the {script} inventory ({len(inv)} signs).{close}")
     data = {
         "label": s.label, "glyph": s.glyph or "",
         "codepoint": f"U+{s.codepoint:04X}" if s.codepoint is not None else "",

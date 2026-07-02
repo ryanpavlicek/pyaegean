@@ -300,10 +300,16 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
 
     Both modes fold case, Greek included (``ku-ro`` finds ``KU-RO``; ``λόγος`` finds
     ``ΛΌΓΟΣ``, final sigma folding with the rest). Diacritics still have to match:
-    ``λογος`` does not find ``λόγος``."""
+    ``λογος`` does not find ``λόγος``.
+
+    ``limit`` caps the number of hits (default 50); zero or a negative value returns
+    every match. The database is opened **read-only** (a sqlite ``mode=ro`` URI), so a
+    search can never create or modify a file: a missing path or a non-SQLite file raises
+    ``sqlite3.OperationalError`` / ``sqlite3.DatabaseError`` instead of leaving an empty
+    database behind."""
     if mode not in {"token", "substring"}:
         raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
-    conn = sqlite3.connect(str(path))
+    conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
     try:
         target = query.casefold()
         out: list[tuple[str, int, str]] = []
@@ -313,7 +319,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
             ):
                 if target in str(text).casefold():
                     out.append((str(doc_id), int(position), str(text)))
-                    if len(out) >= limit:
+                    if 0 < limit <= len(out):
                         break
             return out
         has_fts = bool(
@@ -337,7 +343,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
         for doc_id, position, text in cur:
             if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
                 out.append((str(doc_id), int(position), str(text)))
-                if len(out) >= limit:
+                if 0 < limit <= len(out):
                     break
         return out
     finally:

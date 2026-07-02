@@ -666,8 +666,8 @@ An unrecognised name gives a helpful error:
 
 ```python
 greek.load_nt("Genesis")
-# ValueError: unknown NT book 'Genesis'; use a name or abbreviation like
-# 'John', 'Jn', 'Matthew', '1Cor', 'Rev'
+# ValueError: unknown NT book 'Genesis' — did you mean 'Eph'? (greek.nt_books()
+# lists all 27)
 ```
 
 (Genesis is in the Hebrew Bible, not the Greek NT: `load_nt` covers the 27 NT

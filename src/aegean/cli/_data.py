@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,43 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
         root / (name + ".part.info"),
         root / (name + ".extract"),
     ]
+
+
+def _unknown_dataset(name: str) -> str:
+    """The one-line unknown-name message shared by fetch and remove, with a
+    did-you-mean over the registered names and their stems (so a typo of the
+    short form still finds it: 'damso' suggests 'damos-corpus')."""
+    from aegean.core.resolve import suggest
+    from aegean.data import _REMOTE
+
+    stems: dict[str, str] = {}
+    for full in _REMOTE:
+        stems.setdefault(full, full)
+        for suffix in ("-corpus", "-index", "-app"):
+            if full.endswith(suffix):
+                stems.setdefault(full[: -len(suffix)], full)
+    close: list[str] = []
+    for m in suggest(name, stems, n=3):
+        if stems[m] not in close:
+            close.append(stems[m])
+    if close:
+        maybe = " or ".join(repr(m) for m in close[:2])
+        return (
+            f"unknown dataset {name!r} — did you mean {maybe}? "
+            f"(`aegean data list` shows all {len(_REMOTE)})"
+        )
+    return f"unknown dataset {name!r}; `aegean data list` shows the registered names"
+
+
+# The natural next command after a fetch, per asset (stdout keeps the bare path
+# for scripting; the hint goes to stderr, the 0.14.3 geo-hint pattern).
+_FETCH_HINTS = {
+    "damos-corpus": "load it:  aegean info damos",
+    "linearb-corpus": "load it:  aegean info linearb",
+    "sigla-corpus": "load it:  aegean info sigla",
+    "nt-corpus": "load it:  aegean info nt",
+    "lineara-images": "serve it:  aegean workbench",
+}
 
 
 @data_app.command("list")
@@ -103,13 +141,18 @@ def fetch(
     no-op, and an interrupted transfer resumes from its partial file on the
     next attempt instead of restarting. The result stays until `aegean data
     remove` deletes it."""
-    from aegean.data import DataNotAvailableError, fetch as _fetch
+    from aegean.data import _REMOTE, DataNotAvailableError, fetch as _fetch
 
+    if name not in _REMOTE:
+        raise fail(_unknown_dataset(name))
     try:
         path = _fetch(name, force=force)
-    except DataNotAvailableError as exc:
-        raise typer.BadParameter(str(exc)) from None
+    except DataNotAvailableError as exc:  # a known name that cannot be fetched (network, …)
+        raise fail(str(exc)) from None
     print(path)
+    hint = _FETCH_HINTS.get(name)
+    if hint is not None:
+        print(hint, file=sys.stderr)
 
 
 @data_app.command()
@@ -131,7 +174,7 @@ def remove(
     if name is None and not remove_all:
         raise fail("name a dataset to remove, or pass --all (see `aegean data list`)")
     if name is not None and name not in _REMOTE:
-        raise fail(f"unknown dataset {name!r}; `aegean data list` shows the registered names")
+        raise fail(_unknown_dataset(name))
 
     root = cache_dir()
     names = sorted(_REMOTE) if remove_all else [name or ""]
@@ -194,12 +237,13 @@ def versions(json_out: bool = JSON_OPT) -> None:
 
 
 @data_app.command()
-def cache(json_out: bool = JSON_OPT) -> None:
+def store(json_out: bool = JSON_OPT) -> None:
     """Show the local store: its location and every downloaded entry.
 
     The store is permanent: entries are complete downloads that are never
     re-fetched, evicted, or expired; they stay until `aegean data remove`
-    deletes them or `aegean data fetch --force` replaces one."""
+    deletes them or `aegean data fetch --force` replaces one. (Not the opt-in
+    analysis cache: that is the top-level `aegean cache`.)"""
     from aegean.data import cache_dir
 
     root = cache_dir()
@@ -213,7 +257,7 @@ def cache(json_out: bool = JSON_OPT) -> None:
             )
             entries.append({"name": child.name, "mb": round(size / 1e6, 1)})
     if json_out:
-        emit_json({"cache_dir": str(root), "entries": entries})
+        emit_json({"store": str(root), "cache_dir": str(root), "entries": entries})
         return
     table(
         f"local data store: {root} (override with PYAEGEAN_CACHE)",
@@ -224,3 +268,15 @@ def cache(json_out: bool = JSON_OPT) -> None:
         "entries are permanent local downloads: nothing is re-fetched, evicted, or "
         "expires; delete with `aegean data remove NAME` (or --all)."
     )
+
+
+@data_app.command(deprecated=True)
+def cache(json_out: bool = JSON_OPT) -> None:
+    """Deprecated alias for `aegean data store` (this is the permanent data store,
+    not the opt-in analysis cache at `aegean cache`); removal no sooner than the
+    next minor."""
+    print(
+        "aegean: `aegean data cache` is deprecated; use `aegean data store`",
+        file=sys.stderr,
+    )
+    store(json_out=json_out)

@@ -491,7 +491,8 @@ pyaegean's token convention.
 
 ## Reference: Linear B CLI commands
 
-Every command takes `--json` for machine-readable output. `corpus` accepts `linearb` (the sample) or
+Every data-producing command takes `--json` for machine-readable output (`export` writes the
+file itself). `corpus` accepts `linearb` (the sample) or
 `damos` (the full fetched corpus), among others.
 
 | Command | What it does |

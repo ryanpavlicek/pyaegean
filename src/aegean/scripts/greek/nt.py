@@ -100,24 +100,47 @@ def _osis_or_none(book: str) -> str | None:
 
 def _resolve_book(book: str) -> str:
     osis = _osis_or_none(book)
-    if osis is None:
+    if osis is not None:
+        return osis
+    from ...core.resolve import suggest
+
+    # match against names AND aliases, but always answer with the canonical name
+    # (a 'Jhon' typo is closest to the alias 'jhn'; the user should read 'John')
+    names = [o for o, _ in _OSIS] + [a for _, aliases in _OSIS for a in aliases]
+    close = suggest(book, names, n=1)
+    if close:
+        canonical = _ALIAS.get(close[0].lower(), close[0])
         raise ValueError(
-            f"unknown NT book {book!r}; use a name or abbreviation like "
-            "'John', 'Jn', 'Matthew', '1Cor', 'Rev'"
+            f"unknown NT book {book!r} — did you mean {canonical!r}? "
+            "(greek.nt_books() lists all 27)"
         )
-    return osis
+    raise ValueError(
+        f"unknown NT book {book!r}; use a name or abbreviation like "
+        "'John', 'Jn', 'Matthew', '1Cor', 'Rev' (greek.nt_books() lists all 27)"
+    )
 
 
 def _parse_ref(ref: str) -> tuple[int, int | None, int, int | None]:
     """``'3'``/``'3.16'``/``'3.16-3.18'``/``'3.16-18'``/``'3-5'`` ->
-    (start_chapter, start_verse|None, end_chapter, end_verse|None)."""
+    (start_chapter, start_verse|None, end_chapter, end_verse|None).
+
+    A component that is not a plain number raises `ValueError` naming the accepted
+    shapes (never the raw ``int()`` message)."""
+
+    def num(s: str) -> int:
+        s = s.strip()
+        if not s.isdigit():
+            raise ValueError(
+                f"malformed NT ref {ref!r}: use '1' (chapter) or '1.1-1.18' (verses)"
+            )
+        return int(s)
 
     def part(s: str) -> tuple[int, int | None]:
         s = s.strip()
         if "." in s:
             c, v = s.split(".", 1)
-            return int(c), int(v)
-        return int(s), None
+            return num(c), num(v)
+        return num(s), None
 
     ref = ref.strip()
     if "-" in ref:
@@ -127,9 +150,9 @@ def _parse_ref(ref: str) -> tuple[int, int | None, int, int | None]:
         if "." in hi:
             ec, ev = part(hi)
         elif sv is not None:          # bare hi after a verse lo -> verse in lo's chapter
-            ec, ev = sc, int(hi)
+            ec, ev = sc, num(hi)
         else:                          # bare hi after a chapter lo -> chapter
-            ec, ev = int(hi), None
+            ec, ev = num(hi), None
         return sc, sv, ec, ev
     sc, sv = part(ref)
     return sc, sv, sc, sv
