@@ -183,3 +183,30 @@ def test_first_rows_trims_and_counts() -> None:
 def test_first_rows_leaves_short_tables_and_plain_text_alone() -> None:
     assert _first_rows(SYNTHETIC_TABLE, 3) == (SYNTHETIC_TABLE, 0)
     assert _first_rows("no table here\n", 2) == ("no table here\n", 0)
+
+
+@pytest.mark.parametrize("safe_box", [True, False])
+def test_first_rows_trims_across_box_styles(safe_box) -> None:
+    # rich's default heavy-head box separates the header with ┡━┩ while the
+    # light/safe box uses ├─┤; the row trim must work for both (a terminal that
+    # renders heavy-head made a full untrimmed table leak in CI once).
+    import io
+
+    from rich.console import Console
+    from rich.table import Table
+    from rich.text import Text
+
+    from aegean.cli._quickstart import _first_rows
+
+    buf = io.StringIO()
+    con = Console(file=buf, width=100, safe_box=safe_box)
+    t = Table(title="datasets")
+    for col in ("name", "note"):
+        t.add_column(col)
+    for i in range(12):
+        t.add_row(Text(f"row-{i:02d}"), Text("a note that may wrap at narrow widths " * 2))
+    con.print(t)
+    trimmed, elided = _first_rows(buf.getvalue(), 4)
+    assert elided == 8  # 12 rows, first 4 kept
+    assert "row-00" in trimmed and "row-03" in trimmed
+    assert "row-04" not in trimmed and "row-11" not in trimmed

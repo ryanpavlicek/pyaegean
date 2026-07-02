@@ -196,22 +196,43 @@ def _run_step(group: click.Group, args: tuple[str, ...]) -> tuple[int, str]:
     return code, buf.getvalue()
 
 
+# A box border/rule line is drawn entirely from Unicode box-drawing glyphs
+# (U+2500-257F) or the ASCII fallbacks, never letters. A body-row line opens
+# with a vertical bar. Matching the character *class* rather than one glyph
+# keeps the trim working across rich's box styles: the default heavy-head box
+# separates the header with ``┡...┩`` where the light box uses ``├...┤``, and
+# a terminal that can't render either falls back to ``+---+`` / ``|``.
+_VBAR = "│┃|"
+_BOXCHARS = frozenset("│┃|+=") | frozenset(chr(c) for c in range(0x2500, 0x2580))
+
+
+def _is_rule(ln: str) -> bool:
+    """A horizontal border/separator line: box-drawing only, at least one dash."""
+    s = ln.strip()
+    return bool(s) and all(ch in _BOXCHARS or ch == " " for ch in s) and s[0] not in _VBAR
+
+
 def _first_rows(rendered: str, max_rows: int) -> tuple[str, int]:
     """Cut a rich table to its first ``max_rows`` body rows, keeping the bottom
     border (and anything after it), and return (trimmed text, elided row count).
 
-    A body row starts where the first cell has content at its left edge; wrapped
-    continuation lines have a blank first column and stay with their row. Text
-    that does not look like a boxed table passes through untouched."""
+    Box-agnostic: the header separator is the second rule line (after the top
+    border) and the footer is the last rule line, whatever glyphs the active box
+    style uses. A body row opens with a vertical bar and has content in its first
+    cell; wrapped continuation lines have a blank first column and stay with
+    their row. Text that does not look like a boxed table passes through
+    untouched."""
     lines = rendered.splitlines()
-    head = next((i for i, ln in enumerate(lines) if ln.startswith("├")), None)
-    foot = next((i for i, ln in enumerate(lines) if ln.startswith("└")), None)
-    if head is None or foot is None or foot < head:
+    rules = [i for i, ln in enumerate(lines) if _is_rule(ln)]
+    if len(rules) < 2:  # need at least a header separator and a bottom border
+        return rendered, 0
+    head, foot = rules[1], rules[-1]
+    if foot <= head:
         return rendered, 0
     starts = [
         i
         for i in range(head + 1, foot)
-        if lines[i].startswith("│ ") and len(lines[i]) > 2 and lines[i][2] != " "
+        if lines[i][:1] in _VBAR and len(lines[i]) > 2 and lines[i][2] != " "
     ]
     if len(starts) <= max_rows:
         return rendered, 0
