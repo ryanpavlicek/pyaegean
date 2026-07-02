@@ -4,6 +4,14 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **The web demo reads Cypriot inscriptions.** A new card loads a bundled *Inscriptiones
+  Graecae* XV 1 inscription entirely in the browser: find-place, transliteration lines, the
+  Greek reading where the text is Greek, and the source-edition link. The demo now covers all
+  four Aegean scripts.
+
 ## 0.16.0 (2026-07-02)
 
 ### Added
