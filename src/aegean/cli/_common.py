@@ -195,6 +195,34 @@ def table(title: str, columns: list[str], rows: list[list[str]]) -> None:
     console().print(t)
 
 
+def resolve_doc(c: Any, corpus: str, doc_id: str) -> Any:
+    """Resolve a document id forgivingly, or exit naming the closest matches.
+
+    Exact id first; then the section alone for prefixed ids, so a Greek work's
+    book addresses without repeating the work id (``aegean show tlg0012.tlg001
+    1`` finds ``tlg0012.tlg001:1``); then a unique case- and space-insensitive
+    match (``ht13``, ``py ta 641``)."""
+
+    def _fold(s: str) -> str:
+        return "".join(s.split()).casefold()
+
+    doc = c.get(doc_id)
+    if doc is not None:
+        return doc
+    tails = [d for d in c if ":" in d.id and d.id.split(":", 1)[1] == doc_id]
+    if len(tails) == 1:
+        return tails[0]
+    folded = [d for d in c if _fold(d.id) == _fold(doc_id)]
+    if len(folded) == 1:
+        return folded[0]
+    near = sorted({d.id for d in c if _fold(doc_id) and _fold(doc_id) in _fold(d.id)})[:5]
+    hint = f" close: {', '.join(near)}." if near else ""
+    raise fail(
+        f"no document {doc_id!r} in {corpus!r}.{hint} "
+        f"({len(c)} documents; `aegean load {corpus}` lists them)"
+    )
+
+
 CORPUS_ARG = typer.Argument(
     ..., help="A corpus id (lineara, linearb, cypriot, cyprominoan, greek, nt, damos, sigla), "
               "a Greek work id (tlg0012.tlg001), a path to a .json/.db corpus, or '-' for JSON "

@@ -16,6 +16,7 @@ from ._common import (
     emit_json,
     fail,
     load_corpus,
+    resolve_doc,
     table,
     write_corpus,
     write_result,
@@ -190,14 +191,16 @@ def load(
 
 def show(
     corpus: str = CORPUS_ARG,
-    doc_id: str = typer.Argument(..., help="Document id, e.g. HT13."),
+    doc_id: str = typer.Argument(
+        ...,
+        help="Document id (HT13; for a Greek work the book/section alone works: 1, "
+        "or 1.1-1.50). Case and spacing are forgiven.",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Display one document: metadata and line-by-line tokens."""
     c = load_corpus(corpus)
-    doc = c.get(doc_id)
-    if doc is None:
-        raise fail(f"no document {doc_id!r} in {corpus!r}")
+    doc = resolve_doc(c, corpus, doc_id)
     lines = [[doc.tokens[i].text for i in line] for line in doc.lines]
     if json_out:
         emit_json(
@@ -515,9 +518,7 @@ def balance(
     from aegean.analysis import balance_check
 
     c = load_corpus(corpus)
-    docs = [c.get(doc_id)] if doc_id else list(c)
-    if doc_id and docs[0] is None:
-        raise fail(f"no document {doc_id!r} in {corpus!r}")
+    docs = [resolve_doc(c, corpus, doc_id)] if doc_id else list(c)
     results = []
     for d in docs:
         assert d is not None

@@ -523,3 +523,51 @@ def test_table_cells_render_square_brackets_literally(monkeypatch):
     monkeypatch.setattr(_common, "console", lambda: Console(file=buf, width=200))
     _common.table("datasets", ["name", "note"], [["grc-joint", "the [neural] extra"]])
     assert "[neural]" in buf.getvalue()
+
+
+def test_show_resolves_doc_ids_forgivingly(app, tmp_path):
+    # Case and spacing are forgiven for real corpus ids...
+    assert "KA-U-DE-TA" in ok(app, "show", "lineara", "ht13")
+    assert "TI-RI-PO-DE" in ok(app, "show", "linearb", "py ta 641")
+    # ...and a Greek-work section addresses without repeating the work id.
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
+
+    def doc(did, word):
+        toks = [Token(text=word, kind=TokenKind.WORD)]
+        return Document(id=did, script_id="greek", tokens=toks, lines=[[0]])
+
+    ref = tmp_path / "work.json"
+    Corpus(documents=[doc("tlg0099.tlg001:1", "μῆνιν"), doc("tlg0099.tlg001:2", "ἄειδε")],
+           script_id="greek").to_json(ref)
+    out = ok(app, "show", str(ref), "1")
+    assert "tlg0099.tlg001:1" in out and "μῆνιν" in out
+
+
+def test_show_unknown_doc_error_names_close_ids_and_the_count(app):
+    res = runner.invoke(app, ["show", "lineara", "HT99999"])
+    assert res.exit_code == 1
+    err = res.output + (res.stderr or "")
+    assert "no document" in err and "1721 documents" in err
+
+
+def test_show_ambiguous_section_is_not_guessed(app, tmp_path):
+    # Two works sharing a section tail: bare "1" must not silently pick one.
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
+
+    def doc(did):
+        return Document(id=did, script_id="greek",
+                        tokens=[Token(text="χ", kind=TokenKind.WORD)], lines=[[0]])
+
+    ref = tmp_path / "two.json"
+    Corpus(documents=[doc("a:1"), doc("b:1")], script_id="greek").to_json(ref)
+    res = runner.invoke(app, ["show", str(ref), "1"])
+    assert res.exit_code == 1
+    err = res.output + (res.stderr or "")
+    assert "a:1" in err and "b:1" in err  # both offered, neither guessed
+
+
+def test_balance_and_structure_share_the_forgiving_resolver(app):
+    assert "KU-RO" in ok(app, "balance", "lineara", "ht13")
+    assert ok(app, "analyze", "structure", "lineara", "ht13")

@@ -197,6 +197,19 @@ HT13  site=Haghia Triada  period=LMIB  scribe=HT Scribe 8  support=Tablet
   8: KU-RO 130 ¹⁄₂
 ```
 
+Document ids are resolved forgivingly: case and spacing don't matter (`ht13`,
+`py ta 641`), and for a fetched Greek work the book or section alone is enough,
+no need to repeat the work id:
+
+```bash
+aegean greek work tlg0012.tlg001     # fetch the Iliad (prints the summary)
+aegean show tlg0012.tlg001 1         # read Book 1
+aegean show tlg0012.tlg001 2         # read Book 2
+```
+
+An ambiguous short id is never guessed: the candidates are listed, and an
+unknown id's error names the closest matches.
+
 `--json` gives the full metadata block plus `lines` as nested token lists.
 
 ### `search` — wildcard sign-pattern word search

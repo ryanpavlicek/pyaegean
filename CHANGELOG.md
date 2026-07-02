@@ -22,6 +22,12 @@ All notable changes to pyaegean are documented here. The format follows
 - **CLI tables render square brackets literally.** Cell text was parsed as rich markup, so a value
   like `[neural]` in a dataset note silently vanished from `aegean data list`; cells are data, not
   markup, and now render as written.
+- **`aegean show` (and `balance`, `analyze structure`) resolve document ids forgivingly.** A Greek
+  work's book or section addresses without repeating the work id (`aegean show tlg0012.tlg001 1`,
+  not `... tlg0012.tlg001:1`), case and spacing are forgiven (`ht13`, `py ta 641`), an ambiguous
+  short id is never guessed (the candidates are listed instead), and the not-found error names the
+  closest ids and the corpus size. `aegean greek work` now ends with the exact `show` command that
+  reads the loaded text.
 
 ## 0.15.1 (2026-07-01)
 

@@ -709,6 +709,9 @@ def work(
         emit_json(summary)
         return
     table(f"{work_id}", ["field", "value"], [[k, str(v)] for k, v in summary.items() if k != "work"])
+    if len(c):
+        section = str(summary["first"]).split(":", 1)[-1]
+        print(f"read it:  aegean show {work_id} {section}")
 
 
 @greek_app.command()

@@ -17,6 +17,7 @@ from ._common import (
     emit_json,
     fail,
     load_corpus,
+    resolve_doc,
     table,
     write_result,
 )
@@ -276,9 +277,7 @@ def structure(
 
     c = load_corpus(corpus)
     if doc_id is not None:
-        doc = c.get(doc_id)
-        if doc is None:
-            raise fail(f"no document {doc_id!r} in {corpus!r}")
+        doc = resolve_doc(c, corpus, doc_id)
         category = classify_structure(doc)
         if json_out:
             emit_json({"doc": doc_id, "category": category})
