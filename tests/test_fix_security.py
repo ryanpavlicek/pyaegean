@@ -137,9 +137,9 @@ def test_workbench_app_pin_is_at_least_the_sanitizer_fixed_build() -> None:
     m = re.search(r"workbench-app-v(\d+)\.(\d+)\.(\d+)/", spec.url)
     assert m is not None, spec.url
     version = tuple(int(g) for g in m.groups())
-    # 1.5.2 fixed the HTML sanitizer; 1.5.5 carries the sign-table and phonetic
-    # values the shared golden fixtures pin, so the floor tracks it.
-    assert version >= (1, 5, 5)
+    # 1.5.2 fixed the HTML sanitizer; 1.6.0 closes the stored-XSS in note
+    # previews and the unsanitized report export, so the floor tracks it.
+    assert version >= (1, 6, 0)
     assert len(spec.sha256) == 64
     # the 1.5.1 digest must be gone with the tag (guards a tag-only bump)
     assert spec.sha256 != "22d05fd641c6419793b81adea4a658f8961d2916a0c06e357e141f6419dfec8c"

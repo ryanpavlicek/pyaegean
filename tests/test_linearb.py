@@ -119,7 +119,7 @@ def test_accounting_to_so_total() -> None:
     )
 
     assert markers_for("linearb").total == frozenset({"TO-SO", "TO-SA", "TO-SO-DE"})
-    assert markers_for("lineara").total == frozenset({"KU-RO"})  # Linear A unchanged
+    assert markers_for("lineara").total == frozenset({"KU-RO", "KU-RA"})  # KU-RA is KU-RO's variant
     rows = [["A-KO-SO-TA", "OVIS", "50"], ["TU-RI-SI-JO", "OVIS", "30"], ["TO-SO", "OVIS", "80"]]
     lines = parse_account_lines(rows, LINEAR_B_MARKERS)
     assert [li.role for li in lines] == ["item", "item", "total"]

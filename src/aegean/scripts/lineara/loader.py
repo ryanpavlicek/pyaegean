@@ -55,6 +55,9 @@ def classify(text: str, line_no: int | None, position: int) -> Token:
     if bare in _RULE:
         return Token(text, TokenKind.SEPARATOR, (bare,), None, line_no, position, status=status)
     if parse_value(bare) is not None:
+        # Covers approximate readings ("≈ ¹⁄₆"): the editor's estimated value of a
+        # damaged or unclear quantity is still a numeral (the ≈ is editorial
+        # apparatus). A bare "≈" with nothing legible after it stays UNKNOWN.
         return Token(text, TokenKind.NUMERAL, (bare,), None, line_no, position, status=status)
     if "-" in bare:
         # sign labels come from the preserved reading; the marker is not a sign

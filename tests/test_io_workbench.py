@@ -86,7 +86,7 @@ def test_from_workbench_export_accepts_schema_v1_object(tmp_path) -> None:
             {
                 "id": "HT13",
                 "site": "Haghia Triada",
-                "context": "LMIB",
+                "period": "LMIB",
                 "words": ["KA-U-DE-TA", "KU-RO"],
                 "glyphs": "\U00010613",
                 "transcription": "KA-U-DE-TA KU-RO",

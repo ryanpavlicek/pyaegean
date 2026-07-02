@@ -90,6 +90,12 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
     parseability, everything else a word); glyphs, transcription, and image
     references are carried onto the documents. The export's own metadata
     (app version, generation time, scope) lands in the corpus provenance.
+
+    Both field spellings the workbench has used are read: the schema-v1
+    export writes the dating period as ``period`` and nests imagery under an
+    ``images`` object (``facsimile``/``photograph``/``rights``/``rightsUrl``),
+    while the plain-array shape (and `to_workbench`) uses ``context`` and the
+    flat ``facsimileImages``/``images`` lists.
     """
     from ..core.corpus import Corpus
 
@@ -135,11 +141,19 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
             "support": rec.get("support", ""),
             "scribe": rec.get("scribe", ""),
             "findspot": rec.get("findspot", ""),
-            "period": rec.get("context", ""),
+            # The schema-v1 export calls the dating period "period"; the
+            # plain-array shape (and the bundled corpus) calls it "context".
+            "period": rec.get("context") or rec.get("period") or "",
             "name": rec.get("name", ""),
         }
         records.append(body)
-        images = tuple(rec.get("facsimileImages") or ()) + tuple(rec.get("images") or ())
+        img = rec.get("images")
+        if isinstance(img, dict):
+            # The schema-v1 export nests imagery under an "images" object
+            # (facsimile/photograph/rights/rightsUrl).
+            images = tuple(img.get("facsimile") or ()) + tuple(img.get("photograph") or ())
+        else:
+            images = tuple(rec.get("facsimileImages") or ()) + tuple(img or ())
         extras.append((rec.get("glyphs", ""), rec.get("transcription", ""), images))
 
     source_bits = [str(meta.get("tool") or "linearaworkbench corpus export")]

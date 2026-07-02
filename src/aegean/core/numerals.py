@@ -41,8 +41,16 @@ def _map_digits(s: str, table: dict[str, str]) -> str | None:
 
 
 def parse_value(token: str) -> float | None:
-    """Parse a single token into a number, or ``None`` if it isn't a numeral."""
-    t = token.strip()
+    """Parse a single token into a number, or ``None`` if it isn't a numeral.
+
+    Handles plain integers, built-up fractions (³⁄₄), precomposed vulgar
+    fractions (¾), and approximate readings ("≈ ¹⁄₆"): the "≈" prefixes an
+    editor-estimated reading of a damaged or unclear quantity, so the value is
+    the editor's best reading and sums at face value. The ≈ qualifier is
+    editorial apparatus (like the marks the account-line classifier skips) and
+    is not propagated; a bare "≈" with nothing legible after it is not a value.
+    """
+    t = re.sub(r"^≈\s*", "", token.strip())
     if not t:
         return None
     if re.fullmatch(r"\d+", t):
@@ -101,7 +109,8 @@ def format_value(v: float) -> str:
 
 # Total-marker recognition — among the most secure lexical identifications in
 # Aegean accounting. Linear A: KU-RO (total), PO-TO-KU-RO (grand total), KI-RO (owed).
-TOTAL_MARKERS = {"KU-RO"}
+# KU-RA (ZA20, ARKH2) is read as a variant of KU-RO and closes a list the same way.
+TOTAL_MARKERS = {"KU-RO", "KU-RA"}
 GRAND_TOTAL_MARKERS = {"PO-TO-KU-RO"}
 DEFICIT_MARKERS = {"KI-RO", "KU-RO₂"}
 

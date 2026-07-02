@@ -17,9 +17,26 @@ from dataclasses import dataclass
 
 from ..core.model import Document
 
-# Known libation-formula words (the "Libation" signal).
+# Known libation-formula words (the "Libation" signal). Matched against exact
+# token text, so every entry must be spelled as the corpus writes it
+# (subscripts included). The a-di-ki-te family is listed as the corpus
+# actually attests it: the earlier entry "A-DI-KI-TE-TE-DU" matched zero
+# bundled tokens (it is a fragment of Younger's restored reading of the
+# damaged word on PK Za 11, A-DI-KI-TE-TE-DU-PU-RE, not a word any
+# inscription carries). Attested forms, per Younger's readings: A-DI-KI-TE
+# (PK Za 12), A-DI-KI-TE-TE (PK Za 11), and the ja-prefixed
+# JA-DI-KI-TE-TE-DU-PU₂-RE (PK Za 15) / JA-DI-KI-TE-TE-*307-PU₂-RE (PK Za 8).
+# Whether these are variants of one word (often connected to Mt. Dikte) is
+# contested; treat the grouping as exploratory.
 LIBATION_WORDS = frozenset(
-    {"A-TA-I-*301-WA-JA", "JA-SA-SA-RA-ME", "A-DI-KI-TE-TE-DU"}
+    {
+        "A-TA-I-*301-WA-JA",
+        "JA-SA-SA-RA-ME",
+        "A-DI-KI-TE",
+        "A-DI-KI-TE-TE",
+        "JA-DI-KI-TE-TE-DU-PU₂-RE",
+        "JA-DI-KI-TE-TE-*307-PU₂-RE",
+    }
 )
 
 

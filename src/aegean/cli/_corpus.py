@@ -193,8 +193,8 @@ def show(
     corpus: str = CORPUS_ARG,
     doc_id: str = typer.Argument(
         ...,
-        help="Document id (HT13; for a Greek work the book/section alone works: 1, "
-        "or 1.1-1.50). Case and spacing are forgiven.",
+        help="Document id (HT13; for a Greek work the book alone works: 1). "
+        "Case and spacing are forgiven.",
     ),
     json_out: bool = JSON_OPT,
 ) -> None:

@@ -36,7 +36,7 @@ def test_real_corpus_has_reconcilable_tablets():
     for d in c:
         for ch in balance_check(d):
             total_checks += 1
-            assert ch.marker in ("KU-RO", "PO-TO-KU-RO")
+            assert ch.marker in ("KU-RO", "KU-RA", "PO-TO-KU-RO")
             if ch.balances:
                 balanced += 1
     # The real corpus contains many KU-RO tablets, and some genuinely balance.

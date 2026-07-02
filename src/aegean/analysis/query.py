@@ -217,16 +217,19 @@ def _word_row_match(word: str, f: FilterRow, cooccur_map: dict[str, set[str]]) -
     if fld == "word-suffix":
         return not v or upper.endswith(str(v).upper())
     if fld == "word-min-syllables":
-        return len(parts) >= int(v)
+        # A blank value is neutral (matches everything), like the workbench.
+        return not str(v or "").strip() or len(parts) >= int(v)
     if fld == "word-max-syllables":
-        return len(parts) <= int(v)
+        return not str(v or "").strip() or len(parts) <= int(v)
     if fld == "word-contains-sign":
         if not v:
             return True
-        target = str(v).upper()
-        return any(
-            p.translate(_SIGN_CLEAN).upper() == target for p in parts
-        )
+        # Both sides share the sign key: only the "*" of unread labels is
+        # stripped (so "*301" and "301" both find *301-bearing words) and the
+        # query folds to the corpus's uppercase convention. Subscripted signs
+        # stay distinct: RA₂ matches only RA₂, never plain RA, and vice versa.
+        target = _sign_key(str(v)).upper()
+        return any(_sign_key(p).upper() == target for p in parts)
     if fld == "word-cooccurs-with":
         return not v or str(v) in cooccur_map.get(word, set())
     if fld == "word-sign-pattern":
@@ -234,8 +237,13 @@ def _word_row_match(word: str, f: FilterRow, cooccur_map: dict[str, set[str]]) -
     return True
 
 
-# Fold the same sign-notation marks the workbench strips (subscripts ₂₃₄, *).
-_SIGN_CLEAN = {ord(c): None for c in "₂₃₄*"}
+def _sign_key(sign: str) -> str:
+    """The shared sign-key rule (the workbench's ``signKeys.ts``; the same rule
+    the lineara ``phonetic.py`` lookup applies): strip only the "*" of unread
+    sign labels (*118, *301). Subscripted signs (RA₂, PA₃, TA₂, PU₂) are
+    distinct signs, not variants of their plain series, so subscripts are
+    preserved."""
+    return sign.replace("*", "")
 
 
 def word_matches(

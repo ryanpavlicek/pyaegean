@@ -138,9 +138,12 @@ def remove(
     removed: list[dict[str, Any]] = []
     for n in names:
         entry = root / n
-        if not entry.exists():
-            continue
+        # Gate on the full target set, not the main entry: an interrupted
+        # first fetch leaves only .part/.part.info orphans, and those must be
+        # removable too.
         targets = [p for p in _entry_paths(root, n) if p.exists()]
+        if not targets:
+            continue
         size = sum(_on_disk_bytes(p) for p in targets)
         for p in targets:
             if p.is_dir():

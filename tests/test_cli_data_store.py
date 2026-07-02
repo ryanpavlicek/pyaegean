@@ -213,3 +213,19 @@ def test_second_fetch_of_a_stored_dataset_performs_no_download(
     # stored copy survives the failed attempt.
     err(app, "data", "fetch", "blob", "--force")
     assert (store / "blob").read_bytes() == PAYLOAD
+
+
+def test_remove_reclaims_an_orphaned_partial_download(app, tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    # An interrupted FIRST fetch leaves only .part/.part.info files (no main
+    # entry); remove must still find and reclaim them.
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    from aegean.data import cache_dir
+
+    root = cache_dir()
+    (root / "nt-corpus.part").write_bytes(b"x" * 2048)
+    (root / "nt-corpus.part.info").write_text("{}", encoding="utf-8")
+    res = runner.invoke(app, ["data", "remove", "nt-corpus"])
+    assert res.exit_code == 0, res.output
+    assert "removed nt-corpus" in res.output
+    assert not (root / "nt-corpus.part").exists()
+    assert not (root / "nt-corpus.part.info").exists()

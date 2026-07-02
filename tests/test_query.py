@@ -100,6 +100,31 @@ def test_word_contains_sign_pattern_cooccurs():
     assert word_matches("KU-RO", [row("word-cooccurs-with", "ZZ")], COOC) is False
 
 
+def test_word_contains_sign_normalizes_both_sides_with_sign_key():
+    """Both sides share the sign key: only the "*" of unread labels is
+    stripped, and the query folds to the corpus's uppercase convention."""
+    # The unread-label placeholder form matches its attested words whether
+    # or not the query carries the "*" (the word side keeps its "*" too).
+    assert word_matches("TE-*301", [row("word-contains-sign", "*301")], COOC) is True
+    assert word_matches("TE-*301", [row("word-contains-sign", "301")], COOC) is True
+    assert word_matches("KU-RO", [row("word-contains-sign", "*301")], COOC) is False
+    # The query side folds to the corpus's uppercase convention.
+    assert word_matches("KU-NE-RO", [row("word-contains-sign", "ne")], COOC) is True
+
+
+def test_word_contains_sign_keeps_subscripted_signs_distinct():
+    """Subscripted signs are distinct signs, not variants of the plain series."""
+    # RA₂ matches only RA₂-bearing words…
+    assert word_matches("SA-RA₂", [row("word-contains-sign", "RA₂")], COOC) is True
+    assert word_matches("KU-RA", [row("word-contains-sign", "RA₂")], COOC) is False
+    # …and plain RA does not match RA₂-only words.
+    assert word_matches("SA-RA₂", [row("word-contains-sign", "RA")], COOC) is False
+    assert word_matches("KU-RA", [row("word-contains-sign", "RA")], COOC) is True
+    # Case-folding preserves the subscript (Python-side check: subscript
+    # digits are caseless, so "ra₂" uppercases to RA₂, never RA).
+    assert word_matches("SA-RA₂", [row("word-contains-sign", "ra₂")], COOC) is True
+
+
 # ── evalQuery ────────────────────────────────────────────────────────────────
 def _eval_corpus():
     corpus = [
@@ -189,3 +214,22 @@ def test_summarize_filters():
     assert summarize_filters([row("has-image", True)]) == "Has facsimile image: yes"
     assert summarize_filters([row("site-is", "ZA", negate=True)]) == "NOT Site is: ZA"
     assert summarize_filters([]) == "(no filters)"
+
+
+def test_blank_syllable_bounds_are_neutral():
+    # A blank min/max-syllables value matches everything instead of raising,
+    # matching the workbench's blank-value guard.
+    import aegean
+    from aegean.analysis.query import FilterRow, run_query
+
+    c = aegean.load("lineara")
+    # A word-level predicate matches inscriptions having at least one word that
+    # passes; "neutral" therefore means "same result as a tautological bound"
+    # (every word passes), not "every inscription".
+    baseline = run_query(c, [FilterRow(field="word-min-syllables", value="1")])
+    assert len(baseline.inscriptions) > 0
+    for value in ("", "  ", None):
+        res = run_query(c, [FilterRow(field="word-min-syllables", value=value)])
+        assert len(res.inscriptions) == len(baseline.inscriptions)
+        res = run_query(c, [FilterRow(field="word-max-syllables", value=value)])
+        assert len(res.inscriptions) == len(baseline.inscriptions)
