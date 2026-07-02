@@ -179,14 +179,19 @@ def apply_meta_filters(
 
 
 def table(title: str, columns: list[str], rows: list[list[str]]) -> None:
-    """Render a rich table to the console."""
+    """Render a rich table to the console.
+
+    Cell content is data, never rich markup: square brackets in values (an
+    extra name like ``[neural]``, a bracketed apparatus reading) must render
+    literally, so cells are wrapped in ``Text`` to disable markup parsing."""
     from rich.table import Table
+    from rich.text import Text
 
     t = Table(title=title)
     for c in columns:
         t.add_column(c)
     for r in rows:
-        t.add_row(*r)
+        t.add_row(*(Text(cell) for cell in r))
     console().print(t)
 
 

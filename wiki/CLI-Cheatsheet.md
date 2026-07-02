@@ -635,15 +635,17 @@ aegean analyze hands damos --hand "Knossos 103"  # one hand's characteristic wor
 
 ## Data — `aegean data …`
 
-The fetch-to-cache layer. Nothing here is bundled; everything downloads on demand
-and is sha256-verified.
+The fetch-to-store layer. Nothing here is bundled; everything downloads on demand,
+sha256-verified, into a permanent local store: a fetched dataset is never
+re-fetched, evicted, or expired, and stays until `remove` deletes it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `list` | The fetchable datasets (name, size note, license) | `--json` | `aegean data list` |
-| `fetch` | Fetch a dataset into the cache (idempotent) | `--force` | `aegean data fetch grc-joint` |
+| `list` | The fetchable datasets + downloaded status and on-disk size | `--json` | `aegean data list` |
+| `fetch` | One-time download into the store (idempotent; resumes) | `--force` | `aegean data fetch grc-joint` |
+| `remove` | Delete downloaded dataset(s), reclaiming the space | `--all` `--json` | `aegean data remove nt-corpus` |
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
-| `cache` | Cache location + current contents | `--json` | `aegean data cache` |
+| `cache` | Store location + current contents | `--json` | `aegean data cache` |
 
 The fetchable datasets (`aegean data list`):
 
@@ -662,12 +664,14 @@ The fetchable datasets (`aegean data list`):
 
 ```bash
 aegean data fetch grc-joint                       # pre-fetch before going offline
+aegean data remove lineara-images                 # delete a downloaded dataset (--all clears all)
 aegean data versions --json > data-versions.json  # pin every dataset's sha256 for a paper
-aegean data cache                                 # cache path + contents (override: PYAEGEAN_CACHE)
+aegean data cache                                 # store path + contents (override: PYAEGEAN_CACHE)
 ```
 
-There are **two** caches: this **data** download cache (`aegean data cache`,
-override with `PYAEGEAN_CACHE`) and the opt-in **analysis** memoization cache
+There are **two** caches: this **data** download store (`aegean data cache`,
+permanent until `aegean data remove`, override with `PYAEGEAN_CACHE`) and the
+opt-in **analysis** memoization cache
 (`aegean cache`, enabled with `PYAEGEAN_ANALYSIS_CACHE=1`). Licensing details are
 on [Data & Provenance](Data-and-Provenance).
 

@@ -479,8 +479,9 @@ From the CLI you can see the location and what's in it, list what's fetchable, a
 record exact versions for reproducibility:
 
 ```bash
-aegean data cache       # cache location + per-entry sizes
-aegean data list        # the fetchable datasets (name, size note, license)
+aegean data cache       # store location + per-entry sizes
+aegean data list        # the fetchable datasets, with a downloaded column + real sizes
+aegean data remove NAME # delete one downloaded dataset (--all clears everything)
 aegean data versions    # the reproducibility manifest: each dataset's version + sha256
 ```
 

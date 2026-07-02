@@ -64,7 +64,7 @@ aegean --version          # pyaegean 0.15.1
 | **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
-| **`aegean data …`** | `list` `fetch` `versions` `cache` |
+| **`aegean data …`** | `list` `fetch` `remove` `versions` `cache` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
@@ -1123,17 +1123,22 @@ fetches on first use; the bundled `lineara` records HT scribes too.
 
 ## Data — `aegean data …`
 
-The fetch-to-cache layer: list what can be downloaded, fetch it (sha256-verified),
-pin versions for a paper, and inspect the cache.
+The fetch-to-store layer: list what can be downloaded (and what already is),
+fetch it (sha256-verified), delete it, pin versions for a paper, and inspect the
+store. A fetched dataset is a complete one-time local download: nothing is
+re-fetched, evicted, or expires; it stays on disk until `aegean data remove`
+deletes it (or `fetch --force` replaces it).
 
 ```bash
-aegean data list                                   # the fetchable datasets (sizes, licenses)
-aegean data fetch grc-joint                         # pre-fetch (e.g. before going offline)
+aegean data list                                   # the fetchable datasets + downloaded status/size
+aegean data fetch grc-joint                         # one-time download (a no-op when already present)
+aegean data remove grc-joint                        # delete a downloaded dataset (--all clears everything)
 aegean data versions --json > data-versions.json    # pin every dataset's sha256 for reproducibility
-aegean data cache                                   # cache location + contents (override: PYAEGEAN_CACHE)
+aegean data cache                                   # store location + contents (override: PYAEGEAN_CACHE)
 ```
 
-`aegean data list` shows the full registry. The fetchable datasets (all
+`aegean data list` shows the full registry, with a **downloaded** column giving
+each present dataset's actual on-disk size. The fetchable datasets (all
 downloaded on demand, never bundled):
 
 | name | what | license |

@@ -4,6 +4,9 @@ Compact text data ships in the wheel (read via importlib.resources). Large or
 license-restricted assets — notably the Linear A facsimile mirror (~116 MB) — are
 NOT bundled; they are fetched on demand from upstream into a user cache. This
 is how the package stays small regardless of how large the source corpora are.
+The "cache" is a permanent local store, not an evicting one: a fetched dataset
+is downloaded once in full and stays on disk (never re-fetched, evicted, or
+expired) until you remove it (``aegean data remove``).
 
 Downloads are sha256-verified (when a checksum is pinned), atomic (written to a
 ``.part`` file then renamed), idempotent (a present, valid cache file is a
@@ -42,7 +45,10 @@ def load_bundled_json(*parts: str) -> Any:
 
 
 def cache_dir() -> pathlib.Path:
-    """Where fetched datasets are cached (override with ``PYAEGEAN_CACHE``)."""
+    """Where fetched datasets are stored (override with ``PYAEGEAN_CACHE``).
+
+    A permanent local store, not an evicting cache: entries stay until
+    explicitly removed (``aegean data remove``, or deleting this directory)."""
     base = (
         os.environ.get("PYAEGEAN_CACHE")
         or os.environ.get("XDG_CACHE_HOME")

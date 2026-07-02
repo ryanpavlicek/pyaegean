@@ -273,9 +273,10 @@ pip install --upgrade "pyaegean[all]"   # keep your extras when upgrading
 pip uninstall pyaegean                  # remove the package
 ```
 
-Uninstalling does **not** delete the data cache. To reclaim that space, clear it
-yourself: delete the directory shown by `aegean data cache`, or remove the folder
-at `PYAEGEAN_CACHE` if you set one.
+Uninstalling does **not** delete the downloaded datasets (they are permanent
+local copies, kept so a reinstall never re-downloads). To reclaim that space,
+run `aegean data remove --all` first (or `aegean data remove NAME` for one
+dataset), or delete the directory shown by `aegean data cache` yourself.
 
 ## From source
 

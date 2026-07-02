@@ -508,3 +508,18 @@ def test_ai_translate_verify_flag_runs_check_and_repair(app, monkeypatch):
     assert data["kind"] == "translate" and data["exploratory"] is True
     assert "= εἰμί (verb" not in prompts[0]  # the draft is grounding-free
     assert "= εἰμί (verb" in prompts[1]      # the checker sees the full grounding
+
+
+def test_table_cells_render_square_brackets_literally(monkeypatch):
+    # Cell content is data, not rich markup: "[neural]" in a dataset note must
+    # survive to the terminal instead of being parsed as a style tag and dropped.
+    from io import StringIO
+
+    from rich.console import Console
+
+    from aegean.cli import _common
+
+    buf = StringIO()
+    monkeypatch.setattr(_common, "console", lambda: Console(file=buf, width=200))
+    _common.table("datasets", ["name", "note"], [["grc-joint", "the [neural] extra"]])
+    assert "[neural]" in buf.getvalue()

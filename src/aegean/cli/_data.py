@@ -1,43 +1,108 @@
-﻿"""The `aegean data` group: the fetch-to-cache layer from the shell."""
+"""The `aegean data` group: the fetch-to-store layer from the shell."""
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 import typer
 
-from ._common import JSON_OPT, emit_json, table
+from ._common import JSON_OPT, emit_json, fail, table
 
 data_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Fetched datasets and the local cache.",
+    help=(
+        "Fetched datasets and the local store. A fetched dataset is a complete local "
+        "download: nothing is re-fetched, evicted, or expires; it stays until "
+        "`aegean data remove` deletes it or `aegean data fetch --force` replaces it."
+    ),
     no_args_is_help=True,
 )
 
 
+def _on_disk_bytes(path: Path) -> int:
+    """Actual bytes a store entry occupies (recursive for extracted directories)."""
+    if path.is_dir():
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    return path.stat().st_size
+
+
+def _human_size(n: int) -> str:
+    if n >= 1e9:
+        return f"{n / 1e9:.1f} GB"
+    if n >= 1e6:
+        return f"{n / 1e6:.1f} MB"
+    if n >= 1e3:
+        return f"{n / 1e3:.1f} kB"
+    return f"{n} B"
+
+
+def _entry_paths(root: Path, name: str) -> list[Path]:
+    """Everything in the store belonging to one dataset: the entry itself plus
+    any leftover partial-download or extraction files."""
+    return [
+        root / name,
+        root / (name + ".part"),
+        root / (name + ".part.info"),
+        root / (name + ".extract"),
+    ]
+
+
 @data_app.command("list")
 def list_datasets(json_out: bool = JSON_OPT) -> None:
-    """List the fetchable datasets (name, size note, license)."""
-    from aegean.data import _REMOTE
+    """List the fetchable datasets and whether each is downloaded.
 
-    rows = [
-        {"name": name, "note": spec.note, "license": spec.license, "extract": spec.extract}
-        for name, spec in sorted(_REMOTE.items())
-    ]
+    Columns: name, downloaded (with the actual on-disk size, directory-recursive
+    for extracted datasets), size note, and license."""
+    from aegean.data import _REMOTE, cache_dir
+
+    root = cache_dir()
+    rows: list[dict[str, Any]] = []
+    display: list[list[str]] = []
+    for name, spec in sorted(_REMOTE.items()):
+        entry = root / name
+        size = _on_disk_bytes(entry) if entry.exists() else None
+        rows.append(
+            {
+                "name": name,
+                "note": spec.note,
+                "license": spec.license,
+                "extract": spec.extract,
+                "downloaded": size is not None,
+                "bytes": size,
+            }
+        )
+        display.append(
+            [
+                name,
+                f"yes ({_human_size(size)})" if size is not None else "no",
+                spec.note,
+                spec.license,
+            ]
+        )
     if json_out:
         emit_json(rows)
         return
     table(
-        "fetchable datasets (downloaded to the cache on demand, never bundled)",
-        ["name", "note", "license"],
-        [[str(r["name"]), str(r["note"]), str(r["license"])] for r in rows],
+        "fetchable datasets (a fetch is a one-time download into the local store)",
+        ["name", "downloaded", "note", "license"],
+        display,
     )
 
 
 @data_app.command()
 def fetch(
     name: str = typer.Argument(..., help="Dataset name (see `aegean data list`)."),
-    force: bool = typer.Option(False, "--force", help="Re-download even if cached."),
+    force: bool = typer.Option(
+        False, "--force", help="Replace the stored copy with a fresh download."
+    ),
 ) -> None:
-    """Fetch a dataset into the cache (sha256-verified); idempotent when cached."""
+    """Download a dataset into the local store (sha256-verified).
+
+    A one-time download: when a valid copy is already stored the call is a
+    no-op, and an interrupted transfer resumes from its partial file on the
+    next attempt instead of restarting. The result stays until `aegean data
+    remove` deletes it."""
     from aegean.data import DataNotAvailableError, fetch as _fetch
 
     try:
@@ -45,6 +110,60 @@ def fetch(
     except DataNotAvailableError as exc:
         raise typer.BadParameter(str(exc)) from None
     print(path)
+
+
+@data_app.command()
+def remove(
+    name: str | None = typer.Argument(
+        None, help="Downloaded dataset to delete (see `aegean data list`)."
+    ),
+    remove_all: bool = typer.Option(False, "--all", help="Delete every downloaded dataset."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Delete downloaded dataset(s) from the local store, reclaiming the space.
+
+    This is the only way stored data leaves disk (nothing is evicted or expires
+    on its own); `aegean data fetch NAME` downloads a removed dataset again."""
+    import shutil
+
+    from aegean.data import _REMOTE, cache_dir
+
+    if name is None and not remove_all:
+        raise fail("name a dataset to remove, or pass --all (see `aegean data list`)")
+    if name is not None and name not in _REMOTE:
+        raise fail(f"unknown dataset {name!r}; `aegean data list` shows the registered names")
+
+    root = cache_dir()
+    names = sorted(_REMOTE) if remove_all else [name or ""]
+    removed: list[dict[str, Any]] = []
+    for n in names:
+        entry = root / n
+        if not entry.exists():
+            continue
+        targets = [p for p in _entry_paths(root, n) if p.exists()]
+        size = sum(_on_disk_bytes(p) for p in targets)
+        for p in targets:
+            if p.is_dir():
+                shutil.rmtree(p)
+            else:
+                p.unlink()
+        removed.append({"name": n, "path": str(entry), "bytes": size})
+
+    if not remove_all and not removed:
+        raise fail(
+            f"dataset {name!r} is not downloaded; `aegean data list` shows what is"
+        )
+    total = sum(int(r["bytes"]) for r in removed)
+    if json_out:
+        emit_json({"removed": removed, "reclaimed_bytes": total})
+        return
+    if not removed:
+        print("nothing to remove: no datasets are downloaded")
+        return
+    for r in removed:
+        print(f"removed {r['name']}: {r['path']} ({_human_size(int(r['bytes']))} reclaimed)")
+    if len(removed) > 1:
+        print(f"reclaimed {_human_size(total)} across {len(removed)} datasets")
 
 
 @data_app.command()
@@ -73,7 +192,11 @@ def versions(json_out: bool = JSON_OPT) -> None:
 
 @data_app.command()
 def cache(json_out: bool = JSON_OPT) -> None:
-    """Show the cache location and its current contents."""
+    """Show the local store: its location and every downloaded entry.
+
+    The store is permanent: entries are complete downloads that are never
+    re-fetched, evicted, or expired; they stay until `aegean data remove`
+    deletes them or `aegean data fetch --force` replaces one."""
     from aegean.data import cache_dir
 
     root = cache_dir()
@@ -90,7 +213,11 @@ def cache(json_out: bool = JSON_OPT) -> None:
         emit_json({"cache_dir": str(root), "entries": entries})
         return
     table(
-        f"cache: {root} (override with PYAEGEAN_CACHE)",
+        f"local data store: {root} (override with PYAEGEAN_CACHE)",
         ["entry", "MB"],
         [[str(e["name"]), str(e["mb"])] for e in entries],
+    )
+    print(
+        "entries are permanent local downloads: nothing is re-fetched, evicted, or "
+        "expires; delete with `aegean data remove NAME` (or --all)."
     )

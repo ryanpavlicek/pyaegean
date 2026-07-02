@@ -738,10 +738,11 @@ the next recipe and [Data & Provenance](Data-and-Provenance).
 sha256-verified; the manifest is one command:
 
 ```bash
-aegean data list                  # name · size note · license, for everything fetchable
+aegean data list                  # everything fetchable, with a downloaded column + sizes
 aegean data versions              # the reproducibility manifest: version + sha256 each
-aegean data cache                 # where the cache lives and what's in it now
-aegean data fetch damos           # pre-fetch a dataset (idempotent when cached)
+aegean data cache                 # where the local store lives and what's in it now
+aegean data fetch damos           # one-time download (a no-op once stored)
+aegean data remove damos          # delete a downloaded dataset (--all clears everything)
 ```
 
 ```python

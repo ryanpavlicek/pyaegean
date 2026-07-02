@@ -81,6 +81,13 @@ Archive datasets (`extract=True`, e.g. `lineara-images`) are **unpacked** into
 a cache directory, safely (members that escape the directory are rejected),
 and `fetch()` returns that directory.
 
+> **A fetched dataset is permanent until you delete it.** The "cache" is a
+> permanent local store, not an evicting one: `fetch()` performs a complete
+> one-time download, and nothing ever re-fetches, evicts, or expires the
+> result. An entry stays on disk until you remove it (`aegean data remove
+> NAME`, or `aegean data remove --all` to clear every downloaded dataset) or
+> replace it with `fetch(name, force=True)`.
+
 ```python
 from aegean import data
 
@@ -428,10 +435,11 @@ subcommands:
 
 | Command | What it does | Flags |
 |---|---|---|
-| `aegean data list` | List the fetchable datasets (name, size note, license) | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data fetch NAME` | Fetch a dataset into the cache (sha256-verified); idempotent when cached | `--force` (re-download even if cached), `-h/--help` |
+| `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `-h/--help` |
+| `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data cache` | Show the cache location and its current contents | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data cache` | Show the store location and its current contents (entries are permanent until removed) | `--json` (machine-readable on stdout), `-h/--help` |
 
 ```bash
 aegean data cache
@@ -449,6 +457,8 @@ aegean data cache
 ```bash
 aegean data fetch nt-corpus            # downloads + verifies; a no-op if already cached
 aegean data fetch lineara-images --force   # re-download even if cached
+aegean data remove nt-corpus           # delete one downloaded dataset (prints what + how much)
+aegean data remove --all               # clear every downloaded dataset
 ```
 
 ---

@@ -4,6 +4,25 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+- **`aegean data remove`** deletes downloaded dataset(s) from the local store (`remove NAME`, or
+  `--all`), printing exactly what was removed and the space reclaimed; partial-download leftovers
+  are cleaned with it. `aegean data list` gains a **downloaded** column showing what is actually on
+  disk, with real sizes.
+
+### Changed
+- **The data store says what it is.** A fetched dataset is a complete, permanent local download:
+  nothing is re-fetched, evicted, or expires until `data remove` deletes it or `fetch --force`
+  replaces it. The CLI help, `data cache` output, module documentation, and wiki now state this
+  guarantee plainly (the word "cache" had suggested downloads might not persist).
+
+### Fixed
+- **CLI tables render square brackets literally.** Cell text was parsed as rich markup, so a value
+  like `[neural]` in a dataset note silently vanished from `aegean data list`; cells are data, not
+  markup, and now render as written.
+
 ## 0.15.1 (2026-07-01)
 
 ### Added
