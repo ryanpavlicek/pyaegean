@@ -72,10 +72,14 @@ hashed straight out of the installed wheel. Sizes are bytes.
 
 `fetch(name)` downloads a registered remote dataset into the cache and returns
 its path. Downloads are **sha256-verified** (when a checksum is pinned),
-**atomic** (written to a `.part` file then renamed), and **idempotent** (a
-present, valid cache entry is a no-op). Archive datasets (`extract=True`, e.g.
-`lineara-images`) are **unpacked** into a cache directory, safely (members that
-escape the directory are rejected), and `fetch()` returns that directory.
+**atomic** (written to a `.part` file then renamed), **idempotent** (a
+present, valid cache entry is a no-op), and **resumable**: an interrupted
+download keeps its `.part` file, and the next attempt continues from where it
+stopped with an HTTP `Range` request instead of restarting a multi-hundred-MB
+asset from zero (a republished asset is detected and restarted cleanly).
+Archive datasets (`extract=True`, e.g. `lineara-images`) are **unpacked** into
+a cache directory, safely (members that escape the directory are rejected),
+and `fetch()` returns that directory.
 
 ```python
 from aegean import data
@@ -502,7 +506,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.15.0'  (your installed version)
+v["package"]                                  # '0.15.1'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -554,7 +558,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.15.0'
+# '0.15.1'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

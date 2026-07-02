@@ -1,14 +1,21 @@
 """Linear A data/loader/phonetic regressions.
 
 Pins four fixes: the *903 sign-table entry no longer duplicates the vowel I's
-glyph/codepoint (U+1061A, LINEAR A SIGN AB028; the Unicode Linear A block has
-no *9xx codepoints), the SignInventory glyph/codepoint indexes warn on
+glyph/codepoint (U+1061A, LINEAR A SIGN AB028; the upstream corpus renders
+*903 with the Aegean check mark U+10102, whose skip drifted the sign-table
+alignment by one glyph), the SignInventory glyph/codepoint indexes warn on
 duplicates and keep the first entry instead of silently shadowing, the
 tokenizer classifies subscripted signs (PA₃) and variant-letter ligatures
 (VIR+*313b) as logograms, and ``word_to_phonetic`` no longer reads the
 distinct signs RA₂/PA₃/TA₂/PU₂ as plain ra/pa/ta/pu. The corrected phonetic
-behavior is also pinned in the shared golden fixture (the workbench mirrors it
-on its next release).
+behavior is also pinned in the shared golden fixture (the workbench carries
+the same values as of 1.5.5).
+
+NOT errors, verified against Younger's readings and the upstream mapping: the
+*904 and *905 entries carry genuine glyphs under upstream alias labels — *904
+is GORILA *319 (U+1066B, the I-beam sign in HT 132 / HT Zd 155 / HT Zd 157+156)
+and *905 is the fraction sign J (U+10746) used as a sign-group member on
+HT Wa 1025. Do not re-flag them for wearing "someone else's" codepoint.
 """
 
 from __future__ import annotations

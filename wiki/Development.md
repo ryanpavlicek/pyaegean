@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.15.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.15.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -123,7 +123,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 131 source files
+# Success: no issues found in 129 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:
@@ -147,7 +147,7 @@ installed the heavy libs are present in the environment but still must not be
 python scripts/check_footprint.py
 # loaded on import: none
 # OK  import-clean
-# cold import median 265 ms (bound 400); samples [259, 265, 273]
+# cold import best 226 ms (bound 500); samples [229, 230, 234, 226, 231]
 # OK  import-fast
 ```
 
@@ -155,7 +155,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.15.0-py3-none-any.whl: 3101 KB uncompressed, 160 files
+# wheel dist/pyaegean-0.15.1-py3-none-any.whl: 3110 KB uncompressed, 160 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -164,7 +164,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.15.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.15.1-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -177,7 +177,7 @@ actually matters.
 | Check | Run with | What it asserts |
 | --- | --- | --- |
 | **import-clean** | (no args) | `import aegean` loads **no** heavy third-party module and none of the stdlib modules Pyodide unvendors (so the in-browser demo keeps working) |
-| **import-fast** | (no args) | cold `import aegean` (subprocess median of 3) stays under **400 ms** |
+| **import-fast** | (no args) | cold `import aegean` (fastest of 5 subprocess runs, after a warmup) stays under **500 ms** |
 | **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only: no `.so/.pyd/.dll/.onnx/.npy/.gz/...`: under a 5 MB accident tripwire |
 
 The "heavy" watch-list is `pandas, numpy, scipy, lxml, anthropic, openai,

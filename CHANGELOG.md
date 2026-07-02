@@ -4,6 +4,23 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.15.1 (2026-07-01)
+
+### Added
+- **Resumable downloads.** A dropped or stalled connection no longer costs the whole download:
+  `fetch()` keeps the partial file on network failures, retries up to twice within the call, and
+  resumes with an HTTP `Range` request (guarded by `If-Range` and a recorded-length check, so a
+  republished asset restarts cleanly from zero instead of splicing). A truncated response body is
+  detected against the declared length rather than trusted. The sha256 verification of the
+  completed file is unchanged and remains the final arbiter.
+
+### Changed
+- **The bundled workbench app pin moves to 1.5.5**, picking up the workbench's mirrored sign-table
+  and phonetic corrections (the `*903` glyph fix and subscripted-sign reading that shipped here in
+  0.15.0), so `aegean workbench` serves the same data conventions this library uses. The `*904`
+  and `*905` sign entries are genuine, verified against Younger's readings: alias labels for
+  GORILA `*319` and the fraction sign J.
+
 ## 0.15.0 (2026-07-01)
 
 A correctness pass across the toolkit's convention boundaries: the places where a well-tested
