@@ -134,6 +134,7 @@ def fetch(
     force: bool = typer.Option(
         False, "--force", help="Replace the stored copy with a fresh download."
     ),
+    json_out: bool = JSON_OPT,
 ) -> None:
     """Download a dataset into the local store (sha256-verified).
 
@@ -149,6 +150,9 @@ def fetch(
         path = _fetch(name, force=force)
     except DataNotAvailableError as exc:  # a known name that cannot be fetched (network, …)
         raise fail(str(exc)) from None
+    if json_out:
+        emit_json({"name": name, "path": str(path), "bytes": _on_disk_bytes(path)})
+        return
     print(path)
     hint = _FETCH_HINTS.get(name)
     if hint is not None:

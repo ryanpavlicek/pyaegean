@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.17.0 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.18.0 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -116,6 +116,8 @@ Or skip Python entirely: the **`aegean` CLI** (`[cli]` extra) covers the whole t
 with `--json` on every data-producing command and stdin piping:
 
 ```bash
+aegean quickstart                              # the guided first five minutes, offline
+aegean doctor                                  # check the environment (extras, data store, models)
 aegean repl                                    # interactive shell: run commands without the `aegean` prefix
 aegean show lineara HT13                       # one tablet, line by line
 aegean balance lineara --strict                # reconcile every stated total
@@ -147,7 +149,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.17.0**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.18.0**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, inflection synthesis, terminology-rarity scoring, dialect/register tags, a benchmark
 harness, and a neutral out-of-AGDT evaluation with a convention-drift breakdown); a **pluggable lexicon
@@ -203,7 +205,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.17.0},
+  version = {0.18.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

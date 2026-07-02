@@ -9,18 +9,20 @@ use pyaegean without writing Python:
   (plain / BibTeX / APA, exact subsets included), ``geo_sites`` (find-site coordinates,
   Pleiades ids, per-site word attestations), and ``data_status`` (the local data store);
 * Greek: ``greek_pipeline``, ``greek_scan``, ``greek_catalog`` (the ~1,800-work
-  discovery catalogue), ``greek_gloss`` (the registry dictionaries), and ``koine_gloss``
+  discovery catalogue), ``greek_work`` (a work's text by catalogue id, summarized with
+  a capped preview), ``greek_gloss`` (the registry dictionaries), and ``koine_gloss``
   (the bundled Dodson NT lexicon).
 
-Two conventions hold across every tool. Corpora are addressed by **registry name only**:
-no tool accepts a filesystem path, so the server never reads or writes arbitrary local
-files (a deliberate invariant, not an omission). Domain misses (an unknown corpus,
-document, dictionary, style, or query field) return a structured ``{"error": ...}``
-payload carrying a did-you-mean hint instead of raising, so an agent can recover in one
-step; raised exceptions are reserved for genuine faults. Loading work texts
-(``greek.load_work``) is deliberately not a tool: it fetches TEI over the network at
-call time, a side effect an MCP client cannot anticipate. ``greek_catalog`` covers
-discovery; the Python API or CLI loads the text itself.
+Two conventions hold across every tool. Corpora and works are addressed by **registry
+name or catalogue work id only**: no tool accepts a filesystem path, so the server
+never reads or writes arbitrary local files (a deliberate invariant, not an omission).
+Domain misses (an unknown corpus, document, work, dictionary, style, or query field)
+return a structured ``{"error": ...}`` payload carrying a did-you-mean hint (for a
+work, a pointer to ``greek_catalog``) instead of raising, so an agent can recover in
+one step; raised exceptions are reserved for genuine faults. A tool that may need
+remote data says so in its description: ``greek_work`` texts and the non-bundled
+``greek_gloss`` dictionaries download into the local data store on first use and are
+offline after (``data_status`` shows the store).
 
 The tool functions are plain, JSON-returning callables (independently testable);
 ``build_server`` registers them with FastMCP, imported lazily so ``import aegean`` never
@@ -429,9 +431,9 @@ def greek_catalog(
     All filters are case-insensitive substrings combined with AND; ``query`` matches
     across id, author, and both titles; ``source`` limits to 'perseus' or 'first1k'.
     ``limit`` caps the returned rows (limit <= 0 returns all; ``total`` is always the
-    full match count). Bundled metadata: offline and instant. Loading a work's text is
-    deliberately not an MCP tool (it fetches over the network at call time); load an id
-    with aegean.greek.load_work(id) or `aegean greek work ID` instead."""
+    full match count). Bundled metadata: offline and instant. Pass an id to
+    ``greek_work`` to load the text itself (fetched into the local data store on its
+    first use)."""
     from .greek import catalog
 
     if source not in (None, "perseus", "first1k"):
@@ -439,6 +441,53 @@ def greek_catalog(
     works = catalog(query, author=author, title=title, source=source)
     cap = None if limit <= 0 else limit
     return {"total": len(works), "works": works[:cap]}
+
+
+def greek_work(work_id: str, ref: str | None = None, preview_lines: int = 10) -> dict[str, Any]:
+    """Load a real Greek work by its CTS-style catalogue id (e.g. 'tlg0012.tlg001',
+    the Iliad), whole or one section, and summarize it with a short text preview.
+
+    ``work_id`` is an id from ``greek_catalog`` (Perseus canonical-greekLit /
+    First1KGreek), never a filesystem path. ``ref`` selects a section by citation
+    address: '1' (a book), '1.2' (a chapter), or '1.1-1.50' (a verse line-range).
+    The first use of a work downloads its TEI file into the local data store (a
+    one-time, commit-pinned network fetch); later calls are offline, exactly like
+    ``greek_gloss``'s dictionaries. Returns the work summary (documents, tokens,
+    first document id, name, source, data_version) plus ``preview``: the first
+    ``preview_lines`` lines of the first document (preview_lines <= 0 sends none).
+    An unknown or malformed id returns a structured error pointing at the catalog."""
+    from .data import DataNotAvailableError
+    from .greek import load_work
+
+    pointer = "greek_catalog searches the ~1,800 loadable ids by author or title"
+    wid = work_id.strip()
+    if any(sep in wid for sep in ("/", "\\")) or wid.lower().endswith(
+        (".json", ".db", ".sqlite", ".xml")
+    ):
+        return {
+            "error": f"{work_id!r} looks like a filesystem path; greek_work takes a "
+            f"CTS-style work id such as 'tlg0012.tlg001' ({pointer})"
+        }
+    try:
+        c = load_work(wid, ref=ref)
+    except (DataNotAvailableError, ValueError) as exc:
+        return {"error": f"{exc} ({pointer})"}
+    first = c.documents[0] if len(c) else None
+    preview: list[str] = []
+    if first is not None and preview_lines > 0:
+        preview = [
+            " ".join(t.text for t in line) for line in first.line_tokens[:preview_lines]
+        ]
+    return {
+        "work": wid,
+        "documents": len(c),
+        "tokens": sum(len(d.tokens) for d in c),
+        "first": first.id if first is not None else "",
+        "name": first.meta.name if first is not None else "",
+        "source": c.provenance.source if c.provenance else "",
+        "data_version": c.provenance.data_version if c.provenance else "",
+        "preview": preview,
+    }
 
 
 def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[str, Any]:
@@ -513,6 +562,7 @@ TOOLS = (
     greek_pipeline,
     greek_scan,
     greek_catalog,
+    greek_work,
     greek_gloss,
     koine_gloss,
 )

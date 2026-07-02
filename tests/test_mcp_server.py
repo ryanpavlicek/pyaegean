@@ -2,9 +2,9 @@
 
 The tool functions are plain callables, tested directly here (no MCP runtime needed); the
 FastMCP build and wire-level contract are gated behind the [mcp] dependency. The shared
-error convention across every tool: a domain miss (unknown corpus / document / dictionary /
-style / query field) returns a ``{"error": ...}`` payload with a did-you-mean hint and
-never raises."""
+error convention across every tool: a domain miss (unknown corpus / document / work /
+dictionary / style / query field) returns a ``{"error": ...}`` payload with a did-you-mean
+hint (for a work, the greek_catalog pointer) and never raises."""
 
 from __future__ import annotations
 
@@ -285,6 +285,87 @@ def test_greek_catalog_bad_source() -> None:
     assert "'perseus' or 'first1k'" in res["error"]
 
 
+# ── greek_work ───────────────────────────────────────────────────────────────
+
+
+def _iliad_cached() -> bool:
+    """True when the Iliad's directory listing and TEI edition are both in the local
+    data store at the pinned commit, so ``greek_work`` loads it with zero network."""
+    import json
+
+    from aegean.data import cache_dir
+    from aegean.scripts.greek import perseus
+
+    repo = perseus._SOURCES["perseus"][0]
+    commit = perseus._ref("perseus")
+    listing = (
+        cache_dir() / "greek-works" / "listings"
+        / f"{repo.replace('/', '--')}@{commit[:12]}--data--tlg0012--tlg001.json"
+    )
+    if not listing.exists():
+        return False
+    chosen = perseus.pick_edition(json.loads(listing.read_text(encoding="utf-8")))
+    if chosen is None:
+        return False
+    return (cache_dir() / "greek-works" / "perseus" / commit[:12] / chosen).exists()
+
+
+iliad_cached = pytest.mark.skipif(
+    not _iliad_cached(),
+    reason="tlg0012.tlg001 (Iliad) is not in the local data store; "
+    "`aegean greek work tlg0012.tlg001` caches it",
+)
+
+
+@iliad_cached
+def test_greek_work_loads_a_cached_work() -> None:
+    """The summary mirrors the CLI's `greek work` fields, plus the line preview."""
+    res = m.greek_work("tlg0012.tlg001", ref="1.1-1.10")
+    assert res["work"] == "tlg0012.tlg001"
+    assert res["documents"] == 1
+    assert res["tokens"] == 78  # Iliad 1.1-1.10, Perseus grc2 edition
+    assert res["first"] == "tlg0012.tlg001:1.1-1.10"
+    assert "Ἰλιάς" in res["name"]
+    assert "canonical-greekLit" in res["source"]
+    assert res["data_version"].startswith("PerseusDL/canonical-greekLit@")
+    assert len(res["preview"]) == 10
+    assert res["preview"][0].startswith("μῆνιν ἄειδε θεὰ")
+
+
+@iliad_cached
+def test_greek_work_preview_is_capped() -> None:
+    three = m.greek_work("tlg0012.tlg001", ref="1.1-1.10", preview_lines=3)
+    assert len(three["preview"]) == 3
+    assert three["preview"][0].startswith("μῆνιν")
+    none = m.greek_work("tlg0012.tlg001", ref="1.1-1.10", preview_lines=0)
+    assert none["preview"] == []
+    assert none["tokens"] == 78  # the summary itself is unaffected by the cap
+
+
+@iliad_cached
+def test_greek_work_bad_ref_is_a_structured_error() -> None:
+    res = m.greek_work("tlg0012.tlg001", ref="99.99")
+    assert "selected no text" in res["error"]
+    assert "greek_catalog" in res["error"]
+
+
+def test_greek_work_unknown_id_error_shape() -> None:
+    """A non-work id fails offline with the id-shape example and the catalog pointer."""
+    res = m.greek_work("not-a-work")
+    assert isinstance(res, dict) and set(res) == {"error"}
+    assert "not-a-work" in res["error"]
+    assert "tlg0012.tlg001" in res["error"]  # what a work id looks like
+    assert "greek_catalog" in res["error"]  # the catalog pointer
+
+
+def test_greek_work_rejects_filesystem_paths() -> None:
+    """Work ids only, never paths: the registry-name invariant extends to works."""
+    for bad in ("docs/demo/demo.py", "..\\evil.xml", "corpus.json", "C:/data/x.db"):
+        res = m.greek_work(bad)
+        assert set(res) == {"error"}, bad
+        assert "work id" in res["error"] and "greek_catalog" in res["error"]
+
+
 def test_greek_gloss_dodson() -> None:
     res = m.greek_gloss("λόγος", dictionary="dodson")
     assert res["headword"] == "λόγος"
@@ -324,7 +405,7 @@ def test_build_server_registers_tools() -> None:
 
     server = m.build_server()
     assert server is not None
-    assert len(m.TOOLS) == 14  # the registered tool surface
+    assert len(m.TOOLS) == 15  # the registered tool surface
     registered = {t.name for t in asyncio.run(server.list_tools())}
     assert registered == {fn.__name__ for fn in m.TOOLS}
 
@@ -351,3 +432,4 @@ def test_wire_level_input_schema() -> None:
     tools = {t.name: t for t in asyncio.run(m.build_server().list_tools())}
     assert tools["show_document"].inputSchema["required"] == ["corpus", "doc_id"]
     assert "where" in tools["query_corpus"].inputSchema["required"]
+    assert tools["greek_work"].inputSchema["required"] == ["work_id"]

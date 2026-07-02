@@ -218,7 +218,7 @@ def load(
         None, "--output", "-o",
         help="Save the (filtered) corpus to a .json or .db/.sqlite file (by extension).",
     ),
-    limit: int = typer.Option(20, "--limit", help="Documents listed without --output (0 = all)."),
+    limit: int = typer.Option(20, "--limit", "--top", help="Documents listed without --output (0 = all)."),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Filter a corpus by metadata; list matches or save them as a reusable corpus."""
@@ -330,7 +330,7 @@ def query(
         "inscriptions output only.",
     ),
     limit: int = typer.Option(
-        25, "--limit",
+        25, "--limit", "--top",
         help="Rows listed, human and JSON alike (0 = all); JSON always carries the "
         "untruncated matched totals.",
     ),
@@ -425,7 +425,7 @@ def query(
 def stats(
     corpus: str = CORPUS_ARG,
     signs: bool = typer.Option(False, "--signs", help="Sign frequencies instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows (0 = all)."),
+    top: int = typer.Option(20, "--top", "--limit", help="How many rows (0 = all)."),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
@@ -458,7 +458,7 @@ def dispersion(
     corpus: str = CORPUS_ARG,
     item: str | None = typer.Argument(None, help="One item; omit to rank the whole corpus."),
     signs: bool = typer.Option(False, "--signs", help="Sign dispersion instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows (ranking mode; 0 = all)."),
+    top: int = typer.Option(20, "--top", "--limit", help="How many rows (ranking mode; 0 = all)."),
     min_frequency: int = typer.Option(2, "--min-frequency", help="Skip rarer items (ranking mode)."),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
@@ -503,7 +503,7 @@ def keyness(
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
     signs: bool = typer.Option(False, "--signs", help="Sign keyness instead of words."),
-    top: int = typer.Option(20, "--top", help="How many rows (0 = all)."),
+    top: int = typer.Option(20, "--top", "--limit", help="How many rows (0 = all)."),
     min_target: int = typer.Option(2, "--min-target", help="Skip items rarer than this in both."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,

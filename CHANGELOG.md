@@ -4,6 +4,39 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.18.0 (2026-07-02)
+
+The guided release: the CLI learns to explain itself, check itself, and hold a session's context.
+
+### Added
+- **`aegean doctor`** — a one-command, fully-offline environment check: Python and package
+  versions, which optional extras are installed (with the install line for the ones that aren't),
+  the local data store (size, what's downloaded, leftover partial downloads named with their
+  `aegean data remove` fix, and whether the store is writable), downloaded models, and the
+  analysis cache. `--json` for the machine report; exit 1 when it finds a real problem. The first
+  thing to run when something isn't working.
+- **`aegean quickstart`** — the guided first five minutes, running eight real commands (all
+  offline, all on bundled data): a corpus overview, a tablet, an accounting check, a sign search,
+  the Greek pipeline, a hexameter scan, the data store, and where to go next. `--no-run` prints
+  the tour without executing it.
+- **A session corpus in the REPL.** `use lineara` sets a default corpus, so afterward `show HT13`,
+  `balance ht13`, and `stats` need no corpus argument; `:examples` lists runnable one-liners across
+  the toolkit, and command history persists between sessions where the platform supports it.
+- **Shell completion, now documented.** `aegean --install-completion` (typer's built-in) was always
+  there but unmentioned; the install and terminal-setup docs now cover it, along with a
+  **"Set up your terminal"** guide (Windows Terminal over the legacy console, and the font needed
+  for Linear A/B glyphs to render instead of showing as boxes).
+- **A fifteenth MCP tool, `greek_work`** — load a Greek work by catalogue id (fetched to the store
+  on first use), so an agent can reach the ~1,800-work corpus, not only the bundled registry.
+- **`aegean data fetch --json`** emits `{name, path, bytes}`, completing the `--json` coverage the
+  0.17.0 notes described (it had been added to `cite`, `combine`, and `import` but not `fetch`).
+
+### Changed
+- **`--top` and `--limit` are interchangeable** on every command that ranks or caps rows; the
+  primary name each command showed still shows first, and a guard test keeps any future command
+  from offering only one of the pair. A drift guard likewise keeps every MCP tool named in the
+  documentation.
+
 ## 0.17.0 (2026-07-02)
 
 The friendliness release: a systematic pass over every command's failure modes, dead ends, and
@@ -25,8 +58,8 @@ inconsistencies; all 74 commands now fail cleanly on bad input.
 - **Hints at dead ends.** Empty search/query/load results, a fetched work, an imported file, and
   a built database each end with one dim line naming the next command; the bare `aegean` help
   points to a quickstart and the documentation.
-- **Wider `--json` and `-o` coverage.** `cite`, `combine`, `import`, and `data fetch` emit
-  `--json`; `balance`, `greek pipeline`, `analyze structure`, `analyze hands`, `db search`, and
+- **Wider `--json` and `-o` coverage.** `cite`, `combine`, and `import` emit `--json`;
+  `balance`, `greek pipeline`, `analyze structure`, `analyze hands`, `db search`, and
   `ai eval` save with `-o`; `stats`, `dispersion`, `balance`, `geo`, `structure`, and `hands`
   accept the shared metadata filters (`--site`/`--period`/`--scribe`/`--support`).
 - **The web demo reads Cypriot inscriptions.** A new card loads a bundled *Inscriptiones

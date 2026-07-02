@@ -114,13 +114,13 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.17.0
+# pyaegean 0.18.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
 `corpus_info`, `show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
 `cite_corpus`, `geo_sites`, `data_status`, `greek_pipeline`, `greek_scan`,
-`greek_catalog`, `greek_gloss`, and `koine_gloss`.
+`greek_catalog`, `greek_work`, `greek_gloss`, and `koine_gloss`.
 
 ## Verify
 
@@ -129,7 +129,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.17.0
+print(aegean.__version__)                 # 0.18.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -146,7 +146,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.17.0
+# pyaegean 0.18.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -165,6 +165,36 @@ aegean info lineara
 > The bundled Greek corpus is a tiny five-document public-domain sample (Homer,
 > Herodotus, Heraclitus, Sappho, Gospel of John). To work with full texts, fetch
 > them by id: see [Greek NLP](Greek-NLP).
+
+### One-command check: `aegean doctor`
+
+With `[cli]` installed, `aegean doctor` verifies the whole environment in one
+run, entirely offline (no network, nothing downloaded): Python and pyaegean
+versions, which optional extras are importable, the data store (location, size,
+per-dataset state, leftover partial downloads, writability), the neural model
+bundles, and the analysis cache. Exit code `0` means healthy; any issue prints
+with its fix and the command exits `1`:
+
+```bash
+aegean doctor
+```
+```
+                  versions
+┌────┬──────────┬───────────────────────────┐
+│    │ check    │ value                     │
+├────┼──────────┼───────────────────────────┤
+│ OK │ python   │ 3.14.4                    │
+│ OK │ pyaegean │ 0.18.0                    │
+│ OK │ platform │ Windows-11-10.0.26200-SP0 │
+└────┴──────────┴───────────────────────────┘
+…four more tables: optional extras, data store, neural model bundles, analysis cache…
+doctor: all checks passed
+```
+
+A missing extra is informational (its row shows the `pip install` line), never
+an issue: the zero-dependency core is a supported configuration. `--json` emits
+the whole report as one machine-readable document. See
+[CLI → doctor](CLI#doctor--the-offline-environment-check).
 
 ## Offline & data
 
@@ -239,6 +269,53 @@ To pre-download a dataset (for example, before going offline) use
 `aegean data versions` prints the reproducibility manifest (every dataset's
 version + sha256). See [Data & Provenance](Data-and-Provenance) for the full
 story on sources, licenses, and citation.
+
+## Set up your terminal
+
+Three small upgrades make the command line noticeably nicer, especially on
+Windows. (This is about the terminal *application*; the UTF-8 *encoding* fix for
+classic-console Greek is the next section.)
+
+### Use Windows Terminal, not the legacy console
+
+On Windows, run the CLI in **Windows Terminal** (the default terminal on
+Windows 11; free from the Microsoft Store on Windows 10) rather than the legacy
+console host, the bare `conhost.exe` window older setups open. Windows Terminal
+renders Unicode properly, falls back across installed fonts for glyphs the
+selected font lacks, and defaults to fonts with polytonic Greek coverage; the
+legacy console predates all of that. On macOS (Terminal, iTerm2) and Linux the
+stock terminals are fine as they are.
+
+### A font for the Aegean scripts
+
+Polytonic Greek (μῆνιν ἄειδε θεά) displays correctly in the default fonts of
+every modern terminal: nothing to install. The Aegean **glyphs** are different:
+signs like 𐘇 (Linear A) or 𐀀 (Linear B) live in Unicode's Supplementary
+Multilingual Plane, which most monospace fonts don't cover, so commands that
+print glyph columns (`aegean stats lineara --signs`, `aegean sign lineara KU`)
+can show boxes where the signs should be. Install **Noto Sans Linear A** and
+**Noto Sans Linear B** (free, from [Google's Noto fonts](https://fonts.google.com/noto)):
+Windows Terminal then usually finds the glyphs by automatic font fallback, and
+if not you can select the font explicitly per profile under **Settings → your
+profile → Appearance → Font face**. Nothing breaks without the fonts: the
+transliterations (`KU-RO`, `po-me`) are plain text and always display; you only
+miss the glyph rendering.
+
+### Shell completion
+
+`aegean --install-completion` installs Tab-completion for the shell you run it
+from (detected automatically); open a new shell afterward and
+`aegean gre<Tab>`, `aegean greek syl<Tab>` complete. `aegean --show-completion`
+prints the completion script instead, to inspect or wire in yourself. One line
+per supported shell family:
+
+- **bash**: writes `~/.bash_completions/aegean.sh` and sources it from `~/.bashrc`
+- **zsh**: writes `~/.zfunc/_aegean` and wires it into `~/.zshrc`
+- **fish**: writes `~/.config/fish/completions/aegean.fish`
+- **PowerShell / pwsh**: appends the completer to your PowerShell `$PROFILE`
+
+(Inside `aegean repl` you get Tab-completion of commands and options with no
+setup at all: it's built into the shell.)
 
 ## Windows: seeing Greek correctly (UTF-8)
 

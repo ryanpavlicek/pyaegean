@@ -100,17 +100,17 @@ def test_group_one_liners_in_root_help_name_every_group(app, root) -> None:  # t
 # ── 2. the top-level --json claim ────────────────────────────────────────────
 # Commands that legitimately have no --json, by reason:
 #   file/DB/image writers whose output IS the file .... export, plot, db build,
-#                                                       db add, data fetch
+#                                                       db add
 #   plain text transforms (stdout is the datum) ....... greek normalize,
 #                                                       greek betacode,
 #                                                       greek strip, greek ipa
-#   interactive / long-running server ................. repl, workbench
+#   interactive / guided / long-running ............... repl, quickstart, workbench
 _NON_DATA_PRODUCING = {
     ("export",),
     ("plot",),
     ("repl",),
+    ("quickstart",),
     ("workbench",),
-    ("data", "fetch"),
     ("db", "build"),
     ("db", "add"),
     ("greek", "normalize"),

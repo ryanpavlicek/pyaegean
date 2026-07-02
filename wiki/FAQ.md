@@ -16,6 +16,27 @@ Start with [Getting Started](Getting-Started).
 
 ## Installing & running
 
+### Something isn't working — where do I start?
+
+Run **`aegean doctor`** (with the `[cli]` extra installed). It checks the whole
+environment in one offline pass and prints every problem *with its fix*: a
+missing optional extra shows its exact `pip install "pyaegean[…]"` line, a
+leftover partial download from an interrupted fetch shows the
+`aegean data remove NAME` that reclaims it, and an unusable or unwritable
+`PYAEGEAN_CACHE` store is caught and named rather than surfacing later as a
+confusing download error. It exits `0` when everything is healthy and `1` when
+any issue was found (`--json` for the machine-readable report):
+
+```bash
+aegean doctor
+# …five tables: versions, optional extras, data store, model bundles, analysis cache…
+# doctor: all checks passed
+```
+
+Missing extras and un-downloaded datasets are informational, not failures: the
+zero-dependency core is a supported configuration. Most of the questions below
+are things doctor will point out directly.
+
 ### `ModuleNotFoundError: No module named 'aegean'`
 
 Python can't find the library. Almost always one of:
@@ -68,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.17.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.18.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -99,7 +120,10 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `docs` | the documentation toolchain (contributors) |
 | `all` | everything above |
 
-See [Installation](Installation) for the full breakdown.
+See [Installation](Installation) for the full breakdown. `aegean doctor` reports
+which of the runtime extras are importable in your environment, with the install
+line for each one that isn't (`grok` and `openrouter` ride the `openai` row,
+since they share its SDK).
 
 ### Which Python versions are supported?
 
@@ -488,7 +512,10 @@ aegean data versions    # the reproducibility manifest: each dataset's version +
 Upgrading the package never wipes this cache, so you don't re-download after a
 `pip install --upgrade`. To reclaim space, clear the analysis cache with
 `aegean cache --clear` (that's the computed-results cache, separate from the
-fetched datasets).
+fetched datasets). `aegean doctor` health-checks the store itself: it reports
+the location, the live total size, per-dataset state, whether the directory is
+writable, and any leftover partial download from an interrupted fetch (with the
+`aegean data remove NAME` fix).
 
 ---
 

@@ -450,7 +450,7 @@ def rarity(
         help="Reference corpus: a corpus id (default nt, the Greek NT), a Greek work id, "
         "a path to a .json/.db corpus, or '-' for JSON on stdin.",
     ),
-    top: int = typer.Option(5, "--top", help="Show the N rarest words."),
+    top: int = typer.Option(5, "--top", "--limit", help="Show the N rarest words."),
     treebank: bool = TREEBANK_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -833,7 +833,7 @@ def catalog(
     title: str | None = typer.Option(None, "--title", "-t", help="Filter by title (English or Greek)."),
     source: str | None = typer.Option(None, "--source", help="Limit to 'perseus' or 'first1k'."),
     limit: int = typer.Option(
-        40, "--limit", "-n",
+        40, "--limit", "--top", "-n",
         help="Max rows (0 = all); --json and -o keep the untruncated count in 'matched'.",
     ),
     output: Path | None = RESULT_OPT,

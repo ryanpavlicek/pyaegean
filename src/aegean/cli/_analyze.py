@@ -124,7 +124,7 @@ def nearest(
     corpus: str = typer.Argument(..., help="Corpus whose words are the candidates (e.g. greek)."),
     script_a: str = _SCRIPT_OPT,
     fold_aspiration: bool = _FOLD_OPT,
-    top: int = typer.Option(10, "--top", help="How many nearest candidates (0 = all)."),
+    top: int = typer.Option(10, "--top", "--limit", help="How many nearest candidates (0 = all)."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -206,7 +206,7 @@ def assoc(
 def cooccur(
     corpus: str = CORPUS_ARG,
     word: str = typer.Argument(..., help="A multi-sign word, e.g. KU-RO."),
-    top: int = typer.Option(20, "--top", help="How many co-occurring words (0 = all)."),
+    top: int = typer.Option(20, "--top", "--limit", help="How many co-occurring words (0 = all)."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -236,7 +236,7 @@ def cooccur(
 def clusters(
     corpus: str = CORPUS_ARG,
     min_size: int = typer.Option(2, "--min-size", help="Minimum cluster size."),
-    top: int = typer.Option(15, "--top", help="How many clusters (0 = all)."),
+    top: int = typer.Option(15, "--top", "--limit", help="How many clusters (0 = all)."),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -297,7 +297,7 @@ def hands(
     hand: str | None = typer.Option(
         None, "--hand", help="Keyness for one hand vs the rest; omit to profile every hand."
     ),
-    top: int = typer.Option(20, "--top", help="Rows to show (0 = all)."),
+    top: int = typer.Option(20, "--top", "--limit", help="Rows to show (0 = all)."),
     min_docs: int = typer.Option(1, "--min-docs", help="Minimum tablets for a hand to be listed."),
     signs: bool = typer.Option(False, "--signs", help="For --hand: key signs instead of words."),
     site: str | None = SITE_OPT,

@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.17.0
+aegean --version                # pyaegean 0.18.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -21,6 +21,7 @@ isn't installed until you add the `[cli]` extra.
 | **`--json`** | Print one machine-readable JSON document and nothing else, so results pipe into `jq`, files, or programs. Greek stays readable (`ensure_ascii=False`). Combines with `-o/--output`: the file is written (`wrote <path>` on stderr) and the JSON still prints. | `aegean info lineara --json` |
 | **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, `-` reads it from standard input, so commands compose. | `echo "μῆνιν" \| aegean greek lemmatize -` |
 | **A corpus arg is flexible** | Every corpus argument resolves the same way: a registered id, a **Greek work id** (`tlg0012.tlg001` → fetched & parsed), a path to a saved **`.json` or `.db`** corpus, or `-` for a `Corpus.to_json()` document on stdin. So `aegean stats iliad.json` and `aegean export tlg0012.tlg002 -f csv -o odyssey.csv` work with no Python. | `aegean stats lineara.json` |
+| **`--top` / `--limit`** | Interchangeable spellings of the same cap on every command that caps a ranked table or result list (only `plot` still takes `--top` alone). `0` lifts the cap wherever the help says `0 = all` (the one exception is `greek rarity`, whose `--top` is a plain slice). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error. | `aegean greek scan "λόγος"` → exit `1` |
 
 Every command and group answers `-h` / `--help`. The bundled, **offline-from-install**
@@ -34,7 +35,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
@@ -56,7 +57,9 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `repl` | Interactive shell: run commands without the `aegean` prefix (Tab-completion + history) |— | `aegean repl` |
+| `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
+| `repl` | Interactive shell: run commands without the `aegean` prefix (Tab-completion + a history that persists across sessions). Shell-only directives: `use CORPUS` sets a session corpus for corpus-first commands (`use off` clears) · `:examples` prints starter lines · `:help` · `:exit` |— | `aegean repl` |
+| `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
 | `show` | One document: metadata + line-by-line tokens | `--json` | `aegean show lineara HT13` |
@@ -796,15 +799,17 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers fourteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+It offers fifteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
 (accounting reconciliation), `query_corpus` (the compound query engine),
 `cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
 coordinates and per-site word attestations), and `data_status` (the local data
 store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
-`greek_catalog` (the ~1,800-work discovery catalogue), `greek_gloss` (the
-registry dictionaries), and `koine_gloss` (the bundled Dodson NT lexicon).
-Corpora are addressed by registry name only (never a filesystem path), and a
+`greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
+work's text by catalogue id; the first use fetches it into the local data store,
+cached and offline after), `greek_gloss` (the registry dictionaries), and
+`koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 
 ---

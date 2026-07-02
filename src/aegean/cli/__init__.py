@@ -6,8 +6,10 @@ The command tree mirrors the public API:
 - corpus commands at the top level: ``info``, ``load``, ``show``, ``search``,
   ``query``, ``stats``, ``dispersion``, ``keyness``, ``balance``, ``cite``,
   ``export``, ``combine``, ``import``, ``geo``, ``sign``, ``bridge``, ``plot``,
-  plus ``cache`` (the opt-in analysis cache), ``workbench`` (serve the Linear A
-  Workbench locally), and ``repl`` (the interactive shell);
+  plus ``cache`` (the opt-in analysis cache), ``doctor`` (the offline
+  environment check), ``quickstart`` (the guided first five minutes),
+  ``workbench`` (serve the Linear A Workbench locally), and ``repl`` (the
+  interactive shell);
 - ``aegean greek …``: the full Greek NLP pipeline (normalize → … → parse,
   plus ``pipeline`` and the ``eval`` reproductions), with ``--neural`` /
   ``--treebank`` / … flags standing in for the ``use_*()`` activations;
@@ -52,7 +54,7 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _repl, _viz, _workbench
+    from . import _corpus, _doctor, _quickstart, _repl, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._data import data_app
@@ -66,8 +68,8 @@ def _build_app() -> Any:
             "(exploratory) AI layer. Every data-producing command takes --json."
         ),
         epilog=(
-            "Start with: aegean info lineara · aegean greek works · aegean repl "
-            "— docs: https://github.com/ryanpavlicek/pyaegean/wiki"
+            "Start with: aegean quickstart · aegean info lineara · aegean greek works "
+            "· aegean repl — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
         no_args_is_help=True,
         context_settings={"help_option_names": ["-h", "--help"]},
@@ -87,6 +89,8 @@ def _build_app() -> Any:
         """pyaegean — Ancient Greek + Aegean scripts, from the command line."""
 
     _corpus.register(app)
+    _doctor.register(app)
+    _quickstart.register(app)
     _repl.register(app)
     _viz.register(app)
     _workbench.register(app)

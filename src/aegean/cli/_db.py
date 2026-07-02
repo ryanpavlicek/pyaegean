@@ -74,7 +74,7 @@ def add(
 def search(
     path: Path = typer.Argument(..., help="A SQLite corpus DB (from `aegean db build`)."),
     query: str = typer.Argument(..., help="Text to find — a whole token by default (e.g. KU-RO)."),
-    limit: int = typer.Option(50, "--limit", help="Max hits; 0 = all."),
+    limit: int = typer.Option(50, "--limit", "--top", help="Max hits; 0 = all."),
     substring: bool = typer.Option(
         False, "--substring",
         help="Match the query within tokens (KU-RO also finds PO-TO-KU-RO) instead of the "

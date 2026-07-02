@@ -20,7 +20,7 @@ If you only ran `pip install pyaegean`, the library works but the `aegean`
 command isn't installed yet. The `[cli]` extra adds it. (If you run `aegean`
 without it, you get one line telling you exactly that.)
 
-## Three conventions that hold everywhere
+## Conventions that hold everywhere
 
 Learn these once and every command behaves predictably.
 
@@ -28,6 +28,7 @@ Learn these once and every command behaves predictably.
 |---|---|---|
 | **`--json`** | Print one machine-readable JSON document to stdout and nothing else, so results pipe into `jq`, files, or other programs. Greek stays readable (`ensure_ascii=False`). Combines with `--output/-o`: the file is written (a one-line `wrote <path>` confirmation goes to stderr) and the JSON still prints to stdout. | `aegean info lineara --json` |
 | **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, passing `-` reads the text from standard input, so commands compose in pipelines. | `echo "μῆνιν" \| aegean greek lemmatize -` |
+| **`--top` / `--limit`** | Interchangeable spellings of the same cap: every command that caps a ranked table or result list accepts both (only `plot` still takes `--top` alone). `0` lifts the cap wherever the help says `0 = all` (`greek rarity` is the one exception: its `--top` is a plain slice, so `0` shows nothing). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error (typer's default). `balance --strict` exits `1` when any total fails to balance. | see below |
 
 Here are those exit codes, actually demonstrated:
@@ -52,16 +53,18 @@ aegean greek scan --help
 > terminal font, not pyaegean. Set `PYTHONUTF8=1` and run `chcp 65001` once to
 > switch the console to UTF-8, or just use the `--json` output, which is always
 > correct, and view it in an editor. See [Getting Started](Getting-Started#seeing-greek-correctly).
+> The Linear A/B glyph columns (𐝫, 𐙂) additionally need a font that covers the
+> Aegean scripts: see [Installation → Set up your terminal](Installation#set-up-your-terminal).
 
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.17.0
+aegean --version          # pyaegean 0.18.0
 ```
 
 | Group | What's in it |
 |---|---|
-| **(top level)** | `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
@@ -71,37 +74,118 @@ aegean --version          # pyaegean 0.17.0
 
 ---
 
+## The guided tour (`aegean quickstart`)
+
+New to the toolkit? `aegean quickstart` runs the first five minutes for you:
+eight short steps, each printing one dim line of context, the command as you
+would type it, and then that command's **real output**, live on the bundled data.
+All offline, no keys, nothing downloaded. It reads a Linear A tablet, audits its
+accounting arithmetic, searches by sign pattern, runs the Greek pipeline, scans
+the Iliad's first line as a hexameter, shows the fetchable datasets, and closes
+with pointers for where to go next. Two of the eight steps, as they actually
+print:
+
+```text
+$ aegean quickstart
+aegean quickstart: the first five minutes, live on bundled data, all offline.
+…
+[4/8] Search words by sign pattern: * stands for exactly one sign.
+$ aegean search lineara "KU-*-RO"
+'KU-*-RO': 1 word(s)
+┌──────────┬───────┐
+│ word     │ count │
+├──────────┼───────┤
+│ KU-MA-RO │ 1     │
+└──────────┴───────┘
+…
+[8/8] Where next:
+  aegean repl                   every command, interactive, with completion
+  aegean doctor                 check the install and cached data
+  aegean --install-completion   tab-completion for your shell
+  docs:                         https://github.com/ryanpavlicek/pyaegean/wiki
+
+That was 7 real commands in 0.2s, all offline, all bundled data.
+```
+
+`--no-run` prints the tour script without executing anything, so you can read
+the eight commands first. Because the outputs are live, what you see is exactly
+what your install does.
+
+---
+
 ## Interactive shell (`aegean repl`)
 
 If you're running several commands in a row, `aegean repl` opens an interactive
 shell so you don't retype `aegean` each time. Inside it you type the subcommand
-directly, with **Tab-completion** of commands and options and an **arrow-key
-history**:
+directly, with **Tab-completion** of commands and options and a **history that
+persists across sessions**:
 
 ```text
 $ aegean repl
 aegean interactive shell — commands without the 'aegean' prefix.
-Tab completes, :help lists commands, :exit or Ctrl-D quits.
+Tab completes, history persists, :help lists commands, :exit or Ctrl-D quits.
+:examples shows starter lines; 'aegean --install-completion' (outside the shell) adds completion to your regular shell.
 aegean> info lineara
 …the same table aegean info lineara prints…
 aegean> greek syllabify Ποσειδῶνι
 Ποσειδῶνι → Πο-σει-δῶ-νι
-aegean> stats lineara --top 3
-…
+aegean> use lineara
+aegean: session corpus: lineara — corpus-first commands (show, stats, search, …) now default to it; 'use off' clears.
+aegean> stats --top 3
+…the lineara frequency table, no corpus argument needed…
 aegean> :exit
 ```
 
 Every line is dispatched through the same command tree, so a command behaves
 exactly as it does on the regular command line: `--json`, `-o`, corpus files and
 work ids, all of it. A mistyped command just prints its error and leaves the shell
-open. `:help` (or `help`) prints the command list; `:exit`, `quit`, or **Ctrl-D**
-leaves. The shell needs the `[cli]` extra (it ships `prompt_toolkit`).
+open. The shell needs the `[cli]` extra (it ships `prompt_toolkit`).
+
+### Shell-only directives
+
+Three things exist only inside the shell (they are session sugar, never
+dispatched as commands):
+
+- **`use CORPUS`** sets a **session corpus**: the corpus-first commands (`info`,
+  `load`, `show`, `search`, `query`, `stats`, `dispersion`, `keyness`, `balance`,
+  `cite`, `export`, `geo`, `sign`, `db build`, and the corpus-taking `analyze`
+  subcommands) then default to it whenever a line names no corpus, so
+  `show HT13` works after `use lineara`. A line that names its own corpus always
+  wins (`info linearb` still reads `linearb`), `use` alone reports the current
+  setting, and `use off` clears it. The target is validated when you set it, with
+  the standard did-you-mean, and must be re-loadable (a registered id, a Greek
+  work id, or a `.json`/`.db` file; not stdin JSON):
+
+  ```text
+  aegean> use linera
+  aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, or a path to a .json or .db corpus
+  ```
+
+  One deliberate limit: with a session corpus set, options written *before* an
+  explicit corpus (`stats --top 5 linearb`) fail with a clean usage error rather
+  than silently reading the wrong corpus. Put the corpus first, as usual.
+- **`:examples`** (or `examples`) prints copyable starter lines spanning the
+  command groups: thirteen real commands, each with a one-line description,
+  ending with a `use lineara` / `show HT13` pair that demonstrates the directive.
+- **`:help`** (or `help`) prints a one-line reminder of these directives and then
+  the full command list; `:exit`, `quit`, or **Ctrl-D** leaves.
+
+### History
+
+The arrow-key history **persists across sessions** in
+`~/.config/pyaegean/repl_history` (`XDG_CONFIG_HOME` is honored; on Windows that
+is `%USERPROFILE%\.config\pyaegean\repl_history`). It works on every platform,
+Windows included: `prompt_toolkit` ships with the `[cli]` extra, no readline
+needed. The file lives on the config side, deliberately **not** in the
+`PYAEGEAN_CACHE` data store, so `aegean data store` keeps listing downloads only;
+if the location isn't writable the shell falls back to a session-only history
+rather than failing to start. Piped (scripted) sessions are not recorded.
 
 When standard input isn't a terminal, the shell reads one command per line instead
-of prompting, so you can script it:
+of prompting, so you can script it (the `use` directive works there too):
 
 ```bash
-printf 'info lineara\nstats lineara --top 5\n' | aegean repl
+printf 'use lineara\nshow HT13\nstats --top 3\n' | aegean repl
 ```
 
 ---
@@ -643,6 +727,42 @@ aegean cache
 Set `PYAEGEAN_ANALYSIS_CACHE=1` (or a directory path) and expensive analyses
 (dispersion, keyness, clustering) are reused across runs; `aegean cache --clear`
 wipes it.
+
+### `doctor` — the offline environment check
+
+One command that answers "why doesn't X work": Python and pyaegean versions,
+which optional extras are importable, the state of the data store (location,
+live size, per-dataset downloaded state, leftover partial downloads,
+writability), whether the neural model bundles are downloaded, and the analysis
+cache. Entirely offline: no network is touched, nothing is downloaded, and every
+value is measured live from your machine.
+
+```bash
+aegean doctor
+```
+```
+                  versions
+┌────┬──────────┬───────────────────────────┐
+│    │ check    │ value                     │
+├────┼──────────┼───────────────────────────┤
+│ OK │ python   │ 3.14.4                    │
+│ OK │ pyaegean │ 0.18.0                    │
+│ OK │ platform │ Windows-11-10.0.26200-SP0 │
+└────┴──────────┴───────────────────────────┘
+…four more tables: optional extras, data store, neural model bundles, analysis cache…
+doctor: all checks passed
+```
+
+A missing extra or an un-downloaded dataset is **informational**, never an issue
+(the zero-dependency core is a supported configuration): those rows carry their
+`pip install "pyaegean[…]"` or `aegean data fetch` line. Issues are things that
+break an advertised behavior, each printed with its fix: a Python below the 3.10
+floor, an unusable or unwritable store (the fix names `PYAEGEAN_CACHE`), or a
+leftover partial download from an interrupted fetch (the fix names
+`aegean data remove NAME`). Exit `0` when healthy, `1` when any issue is found,
+in both the human and `--json` views; `--json` emits the whole report as one
+stable document (`{ok, issues, versions, extras, data_store, models,
+analysis_cache}`), and `-o` saves it like any other result.
 
 ### `plot` — one figure to a file
 
@@ -1344,15 +1464,17 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers fourteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+It offers fifteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
 (accounting reconciliation), `query_corpus` (the compound query engine),
 `cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
 coordinates and per-site word attestations), and `data_status` (the local data
 store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
-`greek_catalog` (the ~1,800-work discovery catalogue), `greek_gloss` (the
-registry dictionaries), and `koine_gloss` (the bundled Dodson NT lexicon).
-Corpora are addressed by registry name only (never a filesystem path), and a
+`greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
+work's text by catalogue id; the first use fetches it into the local data store,
+cached and offline after), `greek_gloss` (the registry dictionaries), and
+`koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 
 ---

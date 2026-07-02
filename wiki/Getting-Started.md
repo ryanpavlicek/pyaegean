@@ -12,6 +12,12 @@ at a time; nothing here can break your computer.
 > **Just want to try it first?** The core pipeline runs **in your browser**, nothing to
 > install: [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/) (Pyodide).
 
+> **Prefer the terminal to Python?** Once you're installed (Steps 1–4), add the
+> command line with `pip install "pyaegean[cli]"` and run **`aegean quickstart`**:
+> a guided first five minutes (eight short steps, each running a real command
+> live on the bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
+> for what it covers.
+
 ## What pyaegean is (in one breath)
 
 It's a free toolkit, written in the Python language, for working with Ancient
@@ -39,11 +45,17 @@ To confirm it worked, open a terminal (next step) and type `python --version`
 
 A "terminal" is just a window where you type commands instead of clicking.
 
-- **Windows:** press the Start key, type **PowerShell**, and open it.
+- **Windows:** press the Start key, type **Windows Terminal** (or just
+  **Terminal**), and open it; a PowerShell tab appears. It's the default on
+  Windows 11 and free from the Microsoft Store on Windows 10, and it renders
+  Greek (and the Aegean scripts) far better than the legacy console window.
 - **macOS:** press ⌘+Space, type **Terminal**, and open it.
 - **Linux:** open your **Terminal** app.
 
-You'll see a prompt waiting for input. That's all a terminal is.
+You'll see a prompt waiting for input. That's all a terminal is. (Later, when
+you install the command line, [Installation → Set up your terminal](Installation#set-up-your-terminal)
+has three small upgrades: Windows Terminal, fonts for the Linear A/B glyphs, and
+Tab-completion.)
 
 ## Step 3 — Make a project folder with its own environment
 
@@ -90,13 +102,15 @@ treebank lookup, dictionary glossing, and the **neural pipeline** (the most accu
 tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away): are opt-in:
 each is fetched to a local cache the first time you turn it on, never bundled. See the
 [Greek NLP](Greek-NLP) page when you want them. If you'd rather not write Python at
-all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`.
+all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`,
+and `aegean quickstart` then gives you the guided terminal-side tour (eight real
+commands, live on the bundled data, all offline).
 
 Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.17.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.18.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code
@@ -232,8 +246,11 @@ import a raw `.txt`/`.csv` first, as above.)
 Polytonic Greek (with breathings and accents) displays fine in Jupyter and in
 modern editors like VS Code. If accents look like boxes or question marks in a
 plain Windows terminal, that's just the terminal font: use Jupyter or an editor,
-or run `chcp 65001` first to switch the terminal to UTF-8. You never need a Greek
-keyboard: type in [Beta Code](Greek-NLP#normalization--beta-code) and convert.
+or run `chcp 65001` first to switch the terminal to UTF-8. The Linear A/B
+*glyphs* (𐙂, 𐀀) are a separate matter: they need a font that covers the Aegean
+scripts, which [Installation → Set up your terminal](Installation#set-up-your-terminal)
+walks through. You never need a Greek keyboard: type in
+[Beta Code](Greek-NLP#normalization--beta-code) and convert.
 
 ## Where to go next
 

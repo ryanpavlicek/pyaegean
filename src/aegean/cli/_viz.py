@@ -32,7 +32,7 @@ def plot(
     ),
     output: Path = typer.Option(..., "--output", "-o", help="Image file (.png/.svg/.pdf)."),
     signs: bool = typer.Option(False, "--signs", help="Sign-level (freq/dispersion/keyness)."),
-    top: int = typer.Option(20, "--top", help="How many items (freq/dispersion/keyness)."),
+    top: int = typer.Option(20, "--top", "--limit", help="How many items (freq/dispersion/keyness)."),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
