@@ -6,8 +6,12 @@ NOT bundled; they are fetched on demand from upstream into a user cache. This
 is how the package stays small regardless of how large the source corpora are.
 
 Downloads are sha256-verified (when a checksum is pinned), atomic (written to a
-``.part`` file then renamed), and idempotent (a present, valid cache file is a
-no-op). A dataset's URL can be overridden without a code change via
+``.part`` file then renamed), idempotent (a present, valid cache file is a
+no-op), and resumable: a transfer cut off by a network failure keeps its
+``.part`` file, and the next attempt (an in-call retry, or a later ``fetch``)
+continues from the bytes already on disk via an HTTP Range request rather than
+restarting a multi-hundred-MB asset from zero. A dataset's URL can be
+overridden without a code change via
 ``PYAEGEAN_<NAME>_URL`` (e.g. ``PYAEGEAN_LINEARA_IMAGES_URL``), so a researcher
 can point at their own mirror before an official release is pinned.
 """
@@ -20,7 +24,7 @@ import os
 import pathlib
 from dataclasses import dataclass
 from importlib.resources import files
-from typing import Any
+from typing import IO, Any
 
 
 class DataNotAvailableError(RuntimeError):
@@ -243,9 +247,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="workbench-app",
         url=(
             "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
-            "workbench-app-v1.5.4/workbench-app.tar.gz"
+            "workbench-app-v1.5.5/workbench-app.tar.gz"
         ),
-        sha256="3b18a14127d4b057394832a4fe29b0caaf3b5ac2df2a8fa39930c3416725e838",
+        sha256="00c3400b6c01431516dbf0bda66c44e525e7e13460f0cb14f25a90647c82af1f",
         license="Apache-2.0 (Linear A Research Workbench build); embedded Linear A data is GORILA-derived",
         note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
         extract=True,
@@ -334,19 +338,215 @@ def sha256_file(path: pathlib.Path, *, chunk: int = 1 << 20) -> str:
     return h.hexdigest()
 
 
-def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
-    try:
-        import shutil
-        import urllib.request
+_DOWNLOAD_TIMEOUT = 30  # seconds per socket operation: a stall raises instead of hanging
+_DOWNLOAD_ATTEMPTS = 3  # one initial transfer plus two in-call resume retries
 
-        # A timeout so a stalled connection raises instead of hanging fetch() forever,
-        # and a chunked copy so a 500 MB asset never sits in memory.
-        resp = urllib.request.urlopen(url, timeout=30)  # noqa: S310 (registered/overridable url)
-        with resp, open(dest_part, "wb") as out:
-            shutil.copyfileobj(resp, out, length=1 << 20)
-    except Exception as e:  # pragma: no cover - network
-        dest_part.unlink(missing_ok=True)
-        raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
+
+def _part_info_path(dest_part: pathlib.Path) -> pathlib.Path:
+    """The sidecar recording what a resume needs to validate a kept ``.part``."""
+    return dest_part.with_name(dest_part.name + ".info")
+
+
+def _read_part_info(dest_part: pathlib.Path) -> dict[str, Any]:
+    try:
+        raw = json.loads(_part_info_path(dest_part).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _record_part_info(dest_part: pathlib.Path, headers: Any, *, total: int | None) -> None:
+    """Persist the remote's full byte length and validators next to the ``.part``,
+    so a later resume can tell a continuable download from a stale one (the
+    remote was republished under the same URL)."""
+    info = {
+        "length": total,
+        "etag": headers.get("ETag") if headers is not None else None,
+        "last_modified": headers.get("Last-Modified") if headers is not None else None,
+    }
+    try:
+        if all(v is None for v in info.values()):
+            # Nothing to validate a resume against: drop any sidecar from an
+            # earlier transfer so it can never describe bytes it did not watch
+            # being written.
+            _part_info_path(dest_part).unlink(missing_ok=True)
+            return
+        _part_info_path(dest_part).write_text(json.dumps(info), encoding="utf-8")
+    except OSError:  # the sidecar is best-effort; never fail a download over it
+        pass
+
+
+def _discard_part(dest_part: pathlib.Path) -> None:
+    dest_part.unlink(missing_ok=True)
+    _part_info_path(dest_part).unlink(missing_ok=True)
+
+
+def _parse_content_range(value: str | None) -> tuple[int | None, int | None]:
+    """``(start, total)`` from a Content-Range header, e.g. ``bytes 500-999/1000``
+    or ``bytes */1000``; ``None`` where absent or unknown (``*``)."""
+    if not value:
+        return None, None
+    parts = value.strip().split(None, 1)
+    if len(parts) != 2 or parts[0].lower() != "bytes":
+        return None, None
+    range_part, _, total_part = parts[1].partition("/")
+    total = int(total_part) if total_part.strip().isdigit() else None
+    start_str = range_part.strip().partition("-")[0].strip()
+    start = int(start_str) if start_str.isdigit() else None
+    return start, total
+
+
+def _expected_length(headers: Any) -> int | None:
+    value = headers.get("Content-Length") if headers is not None else None
+    try:
+        return int(str(value).strip()) if value is not None else None
+    except ValueError:
+        return None
+
+
+def _stream_body(resp: Any, out: IO[bytes]) -> None:
+    """Chunked copy (a 500 MB asset never sits in memory) that raises when the
+    body ends short of its declared Content-Length. ``read(amt)`` returns short
+    silently when the connection drops, so without this check a truncated
+    transfer would look complete and be thrown away at sha256 verification
+    instead of kept for resume."""
+    import http.client
+
+    expected = _expected_length(getattr(resp, "headers", None))
+    written = 0
+    while True:
+        chunk = resp.read(1 << 20)
+        if not chunk:
+            break
+        out.write(chunk)
+        written += len(chunk)
+    if expected is not None and written < expected:
+        raise http.client.IncompleteRead(b"", expected - written)
+
+
+def _write_from_zero(resp: Any, dest_part: pathlib.Path) -> None:
+    """Stream a full-body response into a fresh ``.part``, recording resume
+    metadata first so a mid-stream failure leaves a continuable file behind."""
+    headers = getattr(resp, "headers", None)
+    _record_part_info(dest_part, headers, total=_expected_length(headers))
+    with open(dest_part, "wb") as out:
+        _stream_body(resp, out)
+
+
+def _download_full(url: str, dest_part: pathlib.Path) -> None:
+    import urllib.request
+
+    resp = urllib.request.urlopen(url, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310 (registered/overridable url)
+    with resp:
+        _write_from_zero(resp, dest_part)
+
+
+def _download_once(url: str, dest_part: pathlib.Path) -> None:
+    """One transfer attempt: resume an existing ``.part`` with an HTTP Range
+    request when the scheme supports it (GitHub's release CDN does), falling
+    back to a clean restart from byte zero on any staleness signal: the server
+    ignored Range, the offset is not satisfiable, or the remote's size or
+    validators no longer match what the ``.part`` was downloaded from."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    offset = 0
+    if urllib.parse.urlsplit(url).scheme.lower() in ("http", "https") and dest_part.exists():
+        offset = dest_part.stat().st_size
+    if offset <= 0:
+        # Nothing to resume, or a file:// URL (the env-override / test path),
+        # where Range is not meaningful and a restart is cheap.
+        _download_full(url, dest_part)
+        return
+
+    info = _read_part_info(dest_part)
+    req_headers = {"Range": f"bytes={offset}-"}
+    validator = info.get("etag") or info.get("last_modified")
+    if isinstance(validator, str) and validator and not validator.startswith("W/"):
+        # If the remote changed since the .part was written, If-Range makes the
+        # server answer 200 with the full new body instead of a mismatched 206.
+        req_headers["If-Range"] = validator
+    req = urllib.request.Request(url, headers=req_headers)  # noqa: S310 (registered/overridable url)
+    try:
+        resp = urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310
+    except urllib.error.HTTPError as e:
+        if e.code != 416:
+            raise
+        # 416 Range Not Satisfiable: the .part is either already complete or
+        # stale (a remote that shrank). Complete means our offset equals the
+        # total the server reports; anything else restarts from zero.
+        hdrs = getattr(e, "headers", None)
+        _, total = _parse_content_range(hdrs.get("Content-Range") if hdrs is not None else None)
+        if total is not None and total == offset:
+            return  # fully downloaded; sha256 verification has the final word
+        _discard_part(dest_part)
+        _download_full(url, dest_part)
+        return
+
+    with resp:
+        if getattr(resp, "status", None) == 206:
+            start, total = _parse_content_range(resp.headers.get("Content-Range"))
+            recorded = info.get("length")
+            consistent = (
+                start == offset
+                and not (total is not None and total < offset)
+                and not (isinstance(recorded, int) and total is not None and recorded != total)
+            )
+            if consistent:
+                _record_part_info(dest_part, resp.headers, total=total)
+                with open(dest_part, "ab") as out:
+                    _stream_body(resp, out)
+                return
+            # The remote changed under the .part (its total drifted from what
+            # was recorded, or the server answered a different offset): fall
+            # through to a clean restart from byte zero.
+        else:
+            # 200: the server ignored Range, or If-Range flagged a changed
+            # remote, and it is sending the whole file. Write from byte zero.
+            _write_from_zero(resp, dest_part)
+            return
+    _discard_part(dest_part)
+    _download_full(url, dest_part)
+
+
+def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
+    """Download ``url`` to ``dest_part``, resuming interrupted transfers.
+
+    A transient network failure (a stall past the timeout, a dropped or
+    truncated connection) keeps the ``.part`` file and is retried up to two
+    more times within this call, each retry resuming from the bytes already on
+    disk; a ``.part`` left behind by an exhausted call is picked up the same
+    way by the next `fetch`. Failures that mean the content itself is wrong
+    (an HTTP status error here, a checksum mismatch downstream) discard the
+    ``.part`` instead. The caller verifies the assembled file's sha256 and
+    performs the atomic rename, so nothing partial is ever visible at the
+    final path.
+    """
+    import http.client
+    import urllib.error
+
+    last_exc: Exception | None = None
+    for _ in range(_DOWNLOAD_ATTEMPTS):
+        try:
+            _download_once(url, dest_part)
+        except urllib.error.HTTPError as e:
+            # A status error (403, 404, ...) means the resource is wrong or
+            # gone; no kept .part could assemble into the right file.
+            _discard_part(dest_part)
+            raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
+        except (http.client.HTTPException, OSError) as e:
+            last_exc = e  # network-class: keep the .part and resume
+        except Exception as e:
+            _discard_part(dest_part)
+            raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
+        else:
+            _part_info_path(dest_part).unlink(missing_ok=True)
+            return
+    raise DataNotAvailableError(
+        f"could not fetch {name!r} from {url} after {_DOWNLOAD_ATTEMPTS} attempts "
+        f"(partial download kept; retrying will resume it): {last_exc}"
+    ) from last_exc
 
 
 def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
@@ -361,9 +561,11 @@ def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
 
 def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.Path:
     """Download a single URL to ``dest`` atomically (a ``.part`` temp then rename),
-    optionally sha256-verified. Returns ``dest``; raises `DataNotAvailableError`
-    on a network failure or checksum mismatch. Shared by `fetch` and the
-    on-demand dataset downloaders (e.g. the Greek treebank)."""
+    optionally sha256-verified. A transfer cut off by a network failure keeps
+    its ``.part``, and the next call resumes it with an HTTP Range request.
+    Returns ``dest``; raises `DataNotAvailableError` on a network failure or
+    checksum mismatch. Shared by `fetch` and the on-demand dataset downloaders
+    (e.g. the Greek treebank)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".part")
     _download(url, tmp, dest.name)
@@ -401,7 +603,9 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     """Download a registered remote dataset into the cache and return its path.
 
     Verifies the sha256 when one is pinned, downloads atomically, and is a no-op
-    when the cache already holds it. For ``extract`` datasets the download is a
+    when the cache already holds it. An interrupted download keeps its ``.part``
+    file and the next call resumes from it (an HTTP Range request) instead of
+    restarting from zero. For ``extract`` datasets the download is a
     tar archive that is unpacked into a cache directory (returned); otherwise the
     downloaded file path is returned. Raises `DataNotAvailableError` for
     unknown datasets, un-pinned URLs, checksum mismatches, unsafe archives, or
