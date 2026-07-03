@@ -78,21 +78,21 @@ The complete matrix:
 
 | Extra | Pulls in | What it unlocks |
 | --- | --- | --- |
-| `pyaegean[data]` | `pandas>=2.0` | DataFrame interop (`corpus.to_dataframe()`) |
-| `pyaegean[neural]` | `onnxruntime`, `tokenizers`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
-| `pyaegean[anthropic]` | `anthropic>=0.39` | Anthropic (the default) AI provider |
-| `pyaegean[openai]` | `openai>=1.30` | OpenAI provider |
-| `pyaegean[grok]` | `openai>=1.30` | xAI Grok (OpenAI-API-compatible) |
-| `pyaegean[openrouter]` | `openai>=1.30` | OpenRouter (OpenAI-API-compatible gateway to many models) |
+| `pyaegean[data]` | `pandas>=2.2.2` | DataFrame interop (`corpus.to_dataframe()`) |
+| `pyaegean[neural]` | `onnxruntime>=1.23`, `tokenizers>=0.20`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
+| `pyaegean[anthropic]` | `anthropic>=0.40` | Anthropic (the default) AI provider |
+| `pyaegean[openai]` | `openai>=1.55.3` | OpenAI provider |
+| `pyaegean[grok]` | `openai>=1.55.3` | xAI Grok (OpenAI-API-compatible) |
+| `pyaegean[openrouter]` | `openai>=1.55.3` | OpenRouter (OpenAI-API-compatible gateway to many models) |
 | `pyaegean[gemini]` | `google-genai>=0.3` | Google Gemini provider |
 | `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | the full AI layer (all providers) |
 | `pyaegean[epidoc]` | `lxml>=5.0` | the Linear B DAMOS EpiDoc reader + schema validation (writing, and the generic `io.from_epidoc` reader, use the stdlib) |
-| `pyaegean[geo]` | `geopandas`, `shapely` | geographic analysis / GeoJSON |
+| `pyaegean[geo]` | `geopandas>=0.14`, `shapely>=2.0.4` | geographic analysis / GeoJSON |
 | `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
-| `pyaegean[parquet]` | `pyarrow>=14` | Parquet export (`io.to_parquet`) |
-| `pyaegean[cli]` | `typer>=0.12`, `rich>=13` | the [`aegean` command line](CLI) |
-| `pyaegean[tui]` | `textual>=8.0` | the [`aegean tui`](CLI#the-terminal-ui-aegean-tui) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
-| `pyaegean[mcp]` | `mcp>=1.0` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
+| `pyaegean[parquet]` | `pyarrow>=16.1` | Parquet export (`io.to_parquet`) |
+| `pyaegean[cli]` | `typer>=0.16`, `rich>=13` | the [`aegean` command line](CLI) |
+| `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](CLI#the-terminal-ui-aegean-tui) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
+| `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
 | `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui` | everything **except** `neural` and `parquet` |
 
 A few things worth knowing:
@@ -115,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.19.5
+# pyaegean 0.19.6
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.19.5
+print(aegean.__version__)                 # 0.19.6
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.19.5
+# pyaegean 0.19.6
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.5                    │
+│ OK │ pyaegean │ 0.19.6                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

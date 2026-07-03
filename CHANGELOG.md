@@ -4,6 +4,49 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.6 (2026-07-03)
+
+A compatibility, dependency-floor, and performance pass: artifacts were cross-tested against
+earlier released versions, every declared dependency minimum was install-tested at its exact
+floor, and the quantified performance statements were re-measured. Each code fix is pinned by a
+regression test.
+
+### Fixed
+- **Every declared dependency floor is now a verified floor.** Several extras declared minimums
+  that failed outright in a freshly resolved environment: typer 0.12–0.15 crashes with today's
+  click (the CLI floor is now `typer>=0.16`); tokenizers below 0.20 cannot load the shipped
+  neural models' tokenizer files (`tokenizers>=0.20`, and the loader now names that fix instead
+  of surfacing a bare parser error); mcp below 1.2 lacks the server API (`mcp>=1.2`, and
+  `aegean-mcp` now says "upgrade mcp" rather than pointing at an extra that is already
+  installed); pandas, pyarrow, shapely, anthropic, and openai floors predated the numpy 2 /
+  httpx 0.28 era and could not even import as resolved today (raised to `pandas>=2.2.2`,
+  `pyarrow>=16.1`, `shapely>=2.0.4`, `anthropic>=0.40`, `openai>=1.55.3`).
+- **`pip install "pyaegean[tui]"` now installs a working `aegean tui`.** The extra omitted the
+  CLI dependencies the documented two-line quickstart needs; it now carries them. Independently,
+  the environment report the TUI's data screen renders moved to a CLI-free module
+  (`aegean._doctor`), so a Python-API launch without the CLI installed degrades gracefully
+  instead of crashing the screen.
+- **Word queries no longer pay for co-occurrence they don't use.** `run_query` built the full
+  word co-occurrence map on every call; on the New Testament corpus that was ~4 s and over a
+  gigabyte of allocations per query. The map is now built only when a `word-cooccurs-with`
+  filter is present, with identical results.
+- **Corpus-wide dispersion is now a single pass.** `dispersions()` recomputed Gries' DP with a
+  full corpus scan per vocabulary item; on the DAMOS corpus that was ~11 s. A postings-based
+  formulation with identical values brings it to well under a second.
+- **Schema versions are now checked on load.** Every corpus artifact records a schema version
+  that no reader ever consulted; `from_json`/`from_sqlite`/`stream` now refuse a file written
+  by a newer schema with the fix named ("upgrade pyaegean"), while missing or older versions
+  load normally.
+
+### Documentation
+- **Corrected the neural pipeline's CPU throughput.** The published ~450 words/s was measured
+  on the earlier full-precision model; the shipped quantized bundle measures roughly
+  20–70 words/s (sentence-length dependent). The quantization section now states the real
+  trade-off — the ~3× size reduction costs CPU throughput, with the fp32 asset available where
+  speed matters — and the figures are pinned in the claims registry.
+- The extras table carries the corrected floors, and the `tui` row notes the CLI dependencies
+  ride along.
+
 ## 0.19.5 (2026-07-03)
 
 ### Fixed

@@ -208,15 +208,21 @@ Three things keep these honest:
   and PROIEL XPOS is a different tagset entirely).
 - **Raw text, end to end.** From each sentence's raw text through pyaegean's own tokenizer
   (tokens F1 99.97) to the evaluator, the scores track the gold-tokenization figures above
-  closely, so tokenization is not a bottleneck on this fold. Throughput is ≈450 words/s on
-  plain CPU.
+  closely, so tokenization is not a bottleneck on this fold. Throughput of the shipped
+  quantized model is roughly **20–70 words/s on plain CPU** (sentence-length dependent,
+  measured on the development machine); the fp32 `grc-joint-v2` bundle reaches roughly
+  300 words/s on the same machine — see the quantization trade-off below.
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
-about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless:
-UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 /
-UAS 90.2 / LAS 85.6). The measured file sizes and this lossless comparison are recorded in
-`training/results/v3-quantize-report.json` (the rejected full-int8 recipe in `gate-report.json`).
-The recipe is **weight-only int8 + fp16, activations kept fp32**:
+about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless on
+**accuracy**: UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 /
+lemma 94.3 / UAS 90.2 / LAS 85.6). The trade-off is **CPU throughput**: the int8 MatMulNBits
+kernels run several times slower than fp32 MatMul on this workload (roughly 20–70 words/s
+quantized vs roughly 300 words/s fp32 on the development machine), so the quantized default
+optimizes download size and disk, not speed — throughput-sensitive work can fetch the fp32
+`grc-joint-v2` asset instead. The measured file sizes and the lossless comparison are recorded
+in `training/results/v3-quantize-report.json` (the rejected full-int8 recipe in
+`gate-report.json`). The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
 else (crucially the 160 MB word-embedding table). Activations stay fp32 by design.
 

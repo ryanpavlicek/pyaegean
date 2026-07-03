@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.19.5 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.19.6 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -124,7 +124,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 142 source files
+# Success: no issues found in 143 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:
@@ -156,7 +156,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.19.5-py3-none-any.whl: 3297 KB uncompressed, 174 files
+# wheel dist/pyaegean-0.19.6-py3-none-any.whl: 3303 KB uncompressed, 175 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -165,7 +165,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.19.5-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.19.6-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
