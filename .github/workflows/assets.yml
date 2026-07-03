@@ -5,6 +5,9 @@ name: Asset integrity
 # commit-pinned upstream sources. Link rot, a deleted release, or a re-tagged asset silently
 # breaks a pin. This job verifies every pinned URL still resolves, on a schedule — not per-PR,
 # because it concerns external drift over time and must not make PRs depend on third-party uptime.
+# It also re-measures the offline-stack benchmark rows against the published-claims registry
+# (scripts/check_benchmarks.py): those numbers drift with ordinary code changes, and the weekly
+# re-run plus the pre-cut gate catches that without adding minutes of fetches to every PR.
 
 on:
   schedule:
@@ -32,6 +35,8 @@ jobs:
         run: python scripts/check_assets.py
       - name: Gazetteer find-sites match their Pleiades points
         run: python scripts/check_gazetteer.py
+      - name: Published offline-benchmark numbers still reproduce
+        run: python scripts/check_benchmarks.py
       - name: Verify release-asset sha256 (manual dispatch only)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.verify_hashes }}
         run: python scripts/check_assets.py --verify-hashes

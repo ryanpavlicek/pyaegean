@@ -1,0 +1,66 @@
+{
+  "_comment": "The canonical registry of every measured number docs/benchmarks.md publishes. tests/test_benchmark_claims.py asserts the docs (and their README/wiki echoes) carry exactly these values, so a doc edit and a re-measurement can only land together; scripts/check_benchmarks.py --measure re-runs the offline-stack rows against this registry (the neural rows are pinned by the immutable sha256 release asset plus the evidence files named in source_evidence). To change a number: re-measure, update this file, the docs, and the evidence file in the same commit.",
+  "neural_ud_perseus_test": {
+    "lemma": 94.29,
+    "uas": 90.23,
+    "las": 85.64,
+    "upos": 97.04,
+    "ufeats": 96.04,
+    "xpos": 93.48,
+    "source_evidence": "training/results/v3-quantize-report.json (ud_perseus_test_shipped_v3)",
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator"
+  },
+  "neural_ud_proiel_test": {
+    "lemma": 90.50,
+    "uas": 82.47,
+    "las": 63.47,
+    "upos": 86.71,
+    "ufeats": 59.43,
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain (never trained on PROIEL)"
+  },
+  "neural_seed_replicates": {
+    "las_mean": 85.58,
+    "las_std": 0.10,
+    "uas_mean": 90.15,
+    "uas_std": 0.12,
+    "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
+  },
+  "neural_nt": {
+    "lemma": 87.03,
+    "upos_reconciled": 86.75,
+    "n_tokens": 137303,
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
+  },
+  "offline_baseline_ud": {
+    "perseus_test": { "upos": 86.73, "lemma": 97.65, "uas": 37.43 },
+    "proiel_test": { "upos": 78.83, "lemma": 85.63, "uas": 35.41 },
+    "proiel_lemma_with_neural_lemmatizer": 90.38,
+    "measured": "2026-07-03",
+    "protocol": "use_treebank()+use_tagger()+use_lemmatizer()+use_parser(); greek.evaluate_on_ud(fold,'test'); deterministic",
+    "note": "the offline stack changes with the code, so these are re-measured by scripts/check_benchmarks.py --measure (weekly CI + the pre-cut gate); the Perseus cells are an in-training upper bound by design"
+  },
+  "offline_nt_lemma": {
+    "lemma": 66.16,
+    "n_tokens": 137303,
+    "measured": "2026-07-03",
+    "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
+    "doc_claim": "wiki/Limitations.md states ~66% on the full NT"
+  },
+  "quantization": {
+    "tar_gz_bytes": 173068548,
+    "onnx_bytes": 182121265,
+    "fp32_tar_gz_bytes": 518437922,
+    "fp32_onnx_bytes": 556555703,
+    "source_evidence": "training/results/v3-quantize-report.json"
+  },
+  "bootstrap": {
+    "n_resamples": 999,
+    "note": "greek.bootstrap_ud's default; docs/benchmarks.md states the same so the reproduction command matches"
+  },
+  "out_of_domain_lead": {
+    "pyaegean_proiel_uas": 82.47,
+    "stanza_perseus_proiel_uas": 59.00,
+    "stated_lead": 23,
+    "note": "~23 = round(82.47 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
+  }
+}
