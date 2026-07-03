@@ -1,6 +1,6 @@
 """Build the Linear A SignInventory from the bundled sign table.
 
-Coverage is the full Unicode Linear A block — the complete attested repertoire. The 48 signs
+Coverage is the full Unicode Linear A block — the complete attested repertoire. The 50 signs
 with an assigned **sound value** (``phonetic``) come from aligning the upstream transliterations
 with parsed glyph strings: an *empirical* mapping, each carrying a ``confidence`` — treat it as
 evidence, not canon. The rest are carried from the Unicode Character Database (``source="ucd"``)

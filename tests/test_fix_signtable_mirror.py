@@ -7,12 +7,15 @@ inscriptions and the aligned table from 84 to 95 signs, with AB-shared
 classification now following the Unicode 16.0 code chart):
 
 * the bundled ``lineara/signs.json`` aligned section equals the corrected
-  workbench table: 95 transliteration-aligned signs (15 recovered, incl. QI,
-  PU, PU2), re-tallied totals/confidence, chart-rule ``sharedWithLinearB``,
-  and the four old entries whose "glyphs" were unassigned codepoints (VS,
-  *408, *409, *810 - U+1076B/U+106A8-as-drifted/U+1076D) dropped, with the
-  released assigned codepoints back-filled as UCD entries;
-* the ``workbench-app`` asset pin moves to 1.6.0 (the stored-XSS-fixed build);
+  workbench table: 97 read signs = 95 transliteration-aligned signs (15
+  recovered, incl. QI, PU, PU2), re-tallied totals/confidence, chart-rule
+  ``sharedWithLinearB``, and the four old entries whose "glyphs" were
+  unassigned codepoints (VS, *408, *409, *810 - U+1076B/U+106A8-as-drifted/
+  U+1076D) dropped, plus ZE (AB074) and ZO (AB020), which occur only as
+  standalone single-sign words the aligner never walks and are added from
+  their attestations (dze/dzo);
+* the ``workbench-app`` asset pin moves to 1.6.1 (the stored-XSS-fixed build,
+  rebuilt on the 97-sign table);
 * `from_workbench_export` reads the schema-v1 export's real field spellings:
   the dating period as ``period`` and imagery nested under an ``images``
   object (``facsimile``/``photograph``), not only the plain-array shape's
@@ -67,15 +70,32 @@ def _aligned(inv):
     return [s for s in inv if s.attrs.get("source") != "ucd"]
 
 
-def test_aligned_sign_count_is_95_and_manifest_matches():
+def test_aligned_sign_count_is_97_and_manifest_matches():
     inv = linear_a_inventory()
     aligned = _aligned(inv)
-    assert len(aligned) == 95
+    # 97 = the 95 hyphenated-word-aligned signs + ZE and ZO, which occur only as
+    # standalone single-sign words the aligner never walks (mirrored from the
+    # workbench, which adds them from their attestations).
+    assert len(aligned) == 97
     manifest = load_bundled_json("lineara", "manifest.json")
-    assert manifest["signCount"] == 95
+    assert manifest["signCount"] == 97
     # every aligned sign carries real alignment evidence (or is *903, kept
     # unrendered on purpose)
     assert all(s.attrs.get("total", 0) >= 1 for s in aligned)
+
+
+def test_ze_and_zo_are_read_signs():
+    """The z-series standalone signs carry their conventional readings (mirrored
+    from the workbench); by_label resolves the corpus-printed transliteration."""
+    inv = linear_a_inventory()
+    ze = inv.by_label("ZE")
+    assert ze is not None and ze.phonetic == "dze" and ze.codepoint == 0x1063C
+    assert ze.attrs["sharedWithLinearB"] is True and ze.attrs["total"] == 46
+    zo = inv.by_label("ZO")
+    assert zo is not None and zo.phonetic == "dzo" and zo.codepoint == 0x1060E
+    assert zo.attrs["sharedWithLinearB"] is True and zo.attrs["total"] == 2
+    # the old UCD labels are gone
+    assert inv.by_label("AB074") is None and inv.by_label("AB020") is None
 
 
 def test_manifest_parity_sha_unchanged_by_the_sign_mirror():
@@ -99,8 +119,8 @@ def test_recovered_signs_carry_alignment_attrs():
     # PU is the one recovered sign with a shared Linear B sound value
     pu = inv.by_label("PU")
     assert pu.phonetic == "pu"
-    # 48 aligned signs now carry a sound value (was 47 before PU)
-    assert sum(1 for s in _aligned(inv) if s.phonetic) == 48
+    # 50 aligned signs now carry a sound value (48 + ZE/ZO's dze/dzo)
+    assert sum(1 for s in _aligned(inv) if s.phonetic) == 50
 
 
 def test_realigned_totals_match_the_grown_evidence_base():
@@ -168,19 +188,20 @@ def test_inventory_covers_the_assigned_block_exactly_once():
 
 
 # ---------------------------------------------------------------------------
-# the workbench-app 1.6.0 pin
+# the workbench-app 1.6.1 pin
 # ---------------------------------------------------------------------------
 
 
-def test_workbench_app_pin_is_the_1_6_0_build():
-    """1.6.0 carries the workbench's stored-XSS fixes (and the regenerated
-    95-sign table this bundled mirror matches)."""
+def test_workbench_app_pin_is_the_1_6_1_build():
+    """1.6.1 rebuilds the served app on the 97-sign table (ZE/ZO added); it
+    carries the workbench's stored-XSS fixes and the sign table this bundled
+    mirror now matches."""
     spec = data._REMOTE["workbench-app"]
     m = re.search(r"workbench-app-v(\d+)\.(\d+)\.(\d+)/", spec.url)
     assert m is not None
-    assert tuple(int(g) for g in m.groups()) == (1, 6, 0)
+    assert tuple(int(g) for g in m.groups()) == (1, 6, 1)
     assert spec.sha256 == (
-        "caf00eabd61332683b758e154cd3c2d8a431f468f221ee2a714953e3fc08fdf6"
+        "19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870"
     )
 
 

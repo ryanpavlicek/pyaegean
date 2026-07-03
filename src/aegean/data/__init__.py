@@ -279,9 +279,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="workbench-app",
         url=(
             "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
-            "workbench-app-v1.6.0/workbench-app.tar.gz"
+            "workbench-app-v1.6.1/workbench-app.tar.gz"
         ),
-        sha256="caf00eabd61332683b758e154cd3c2d8a431f468f221ee2a714953e3fc08fdf6",
+        sha256="19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870",
         license="Apache-2.0 (Linear A Research Workbench build); embedded Linear A data is GORILA-derived",
         note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
         extract=True,

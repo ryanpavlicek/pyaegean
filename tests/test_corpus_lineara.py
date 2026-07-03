@@ -54,11 +54,12 @@ def test_load_count_and_inventory():
     assert c.script_id == "lineara"
     inv = c.sign_inventory
     assert inv is not None
-    # The inventory covers the full Unicode Linear A repertoire (~340 signs); 95 of them are
-    # transliteration-aligned (source != "ucd"), of which 48 carry an assigned sound value
-    # (66 are AB-shared by the Unicode chart); the rest are UCD-derived.
+    # The inventory covers the full Unicode Linear A repertoire (~340 signs); 97 of them are
+    # read signs (source != "ucd"): 95 transliteration-aligned + the standalone-attested ZE/ZO,
+    # of which 50 carry an assigned sound value (68 are AB-shared by the Unicode chart); the
+    # rest are UCD-derived.
     assert len(inv) > 300
-    assert sum(1 for s in inv if s.attrs.get("source") != "ucd") == 95
+    assert sum(1 for s in inv if s.attrs.get("source") != "ucd") == 97
     assert all(s.phonetic is None for s in inv if s.attrs.get("source") == "ucd")
 
 

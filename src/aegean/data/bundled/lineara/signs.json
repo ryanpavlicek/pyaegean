@@ -1045,13 +1045,15 @@
     "altGlyphs": []
   },
   {
-    "label": "AB020",
+    "label": "ZO",
     "glyph": "𐘎",
     "codepoint": 67086,
-    "phonetic": null,
+    "phonetic": "dzo",
     "sharedWithLinearB": true,
     "linearAOnly": false,
-    "source": "ucd"
+    "total": 2,
+    "confidence": 0,
+    "altGlyphs": []
   },
   {
     "label": "AB021M",
@@ -1117,13 +1119,15 @@
     "source": "ucd"
   },
   {
-    "label": "AB074",
+    "label": "ZE",
     "glyph": "𐘼",
     "codepoint": 67132,
-    "phonetic": null,
+    "phonetic": "dze",
     "sharedWithLinearB": true,
     "linearAOnly": false,
-    "source": "ucd"
+    "total": 46,
+    "confidence": 1,
+    "altGlyphs": []
   },
   {
     "label": "AB082",
