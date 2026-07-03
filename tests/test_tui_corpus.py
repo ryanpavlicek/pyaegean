@@ -7,10 +7,10 @@ accounting balance (KU-RO stated 130.5 vs computed 131.0), and the
 undeciphered-script caveat; and the search box filters the table by id and
 surfaces a sign pattern's matching words.
 
-Per the feasibility probes (textual 8.2.8, no pytest-asyncio in the dev env),
-each async body runs in a fresh event loop rather than via a pytest-asyncio
-marker; a Static's rendered text is read via ``.content`` (textual 8.x has no
-``.renderable``). Run with ``PYTHONUTF8=1`` so the Greek/Linear A signs render.
+The dev env has no pytest-asyncio (textual 8.2.8), so each async body runs in a
+fresh event loop rather than via a pytest-asyncio marker; a Static's rendered
+text is read via ``.content`` (textual 8.x has no ``.renderable``). Run with
+``PYTHONUTF8=1`` so the Greek/Linear A signs render.
 """
 
 from __future__ import annotations
@@ -156,11 +156,91 @@ def test_search_box_surfaces_sign_pattern_word_matches() -> None:
             await pilot.pause()
             search = screen.query_one("#corpus-search", Input)
             # a wildcard sign pattern runs the corpus-wide word search and shows
-            # the matches in the status line (KU-MA-RO is the one KU-*-RO word)
+            # the matches in the status line (KU-MA-RO is the one KU-*-RO word).
+            # The search runs on a background worker so the UI never blocks, so we
+            # wait for it to finish before reading the status.
             search.value = "KU-*-RO"
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             status = str(screen.query_one("#corpus-status", Static).content)
             assert "KU-MA-RO" in status
+
+    _run(body())
+
+
+def test_sign_search_is_dispatched_to_a_worker_not_run_inline() -> None:
+    """The corpus-wide sign search method is a Textual ``@work`` worker, so a
+    keystroke returns without running the (potentially large-corpus) scan on the
+    UI thread. Calling it yields a Worker rather than the search result, and the
+    matches land in the status only after the worker completes."""
+    from textual.worker import Worker
+
+    # the method is worker-wrapped: it does not run the scan inline
+    assert hasattr(CorpusBrowserScreen._sign_search, "__wrapped__")
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            screen = _open_lineara(app)
+            await pilot.pause()
+            # calling the decorated method dispatches a worker (returns a Worker),
+            # rather than blocking to return the search result
+            result = screen._sign_search("KU-*-RO", "base")
+            assert isinstance(result, Worker)
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            status = str(screen.query_one("#corpus-status", Static).content)
+            assert "KU-MA-RO" in status
+
+    _run(body())
+
+
+def test_sign_search_via_the_search_box_lands_after_the_worker() -> None:
+    """End to end: typing a sign pattern shows the immediate id-filter status,
+    then the corpus word matches after the background search completes."""
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            screen = _open_lineara(app)
+            await pilot.pause()
+            search = screen.query_one("#corpus-search", Input)
+            search.value = "KU-*-RO"
+            await pilot.pause()
+            # the immediate status carries the id-filter line
+            interim = str(screen.query_one("#corpus-status", Static).content)
+            assert "KU-*-RO" in interim
+            # after the worker finishes the word matches are appended
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            final = str(screen.query_one("#corpus-status", Static).content)
+            assert "KU-MA-RO" in final
+
+    _run(body())
+
+
+def test_plain_id_filter_does_not_spawn_a_sign_search_worker() -> None:
+    """A plain id filter (no hyphen or wildcard) is not a sign pattern, so it runs
+    inline and never dispatches the corpus-wide search worker."""
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            screen = _open_lineara(app)
+            await pilot.pause()
+            search = screen.query_one("#corpus-search", Input)
+            # 'HT1' has no '-' or '*', so it is an id filter, not a sign pattern
+            search.value = "HT1"
+            await pilot.pause()
+            assert len(app.workers) == 0
+            status = str(screen.query_one("#corpus-status", Static).content)
+            # a pure id filter, no word-match clause appended
+            assert "documents match id" in status
+            assert "words matching" not in status
 
     _run(body())
 

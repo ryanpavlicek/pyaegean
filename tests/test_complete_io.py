@@ -141,8 +141,12 @@ def test_versions_fetched_entries_carry_pinned_metadata() -> None:
     flag; with our isolated empty cache it must be uncached."""
     v = versions()
     li = v["fetched"]["lineara-images"]
-    assert set(li.keys()) == {"url", "sha256", "license", "cached"}
+    assert set(li.keys()) == {
+        "url", "sha256", "license", "cached", "sha256_enforced", "url_overridden"
+    }
     assert len(li["sha256"]) == 64
+    # a pinned (non-overridden) URL enforces its sha256, so the manifest is honest
+    assert li["url_overridden"] is False and li["sha256_enforced"] is True
     assert li["url"].endswith("lineara-images-v1/lineara-images.tar.gz")
     assert li["cached"] is False  # isolated tmp cache holds nothing yet
 

@@ -67,6 +67,15 @@ class DataSpec:
     sha256: str = ""
     note: str = ""
     extract: bool = False  # when True, the download is a tar archive to unpack
+    # The cache-relative name(s) a present copy of this dataset actually occupies
+    # on disk. Empty means the default: one entry at ``cache_dir()/name`` (a file,
+    # or a directory for ``extract`` datasets). Some datasets land elsewhere: the
+    # prebuilt lexicon indexes are fetched then written under their built-index
+    # filename (``lsj-perseus-index.json.gz``, not ``lsj-index``), and the
+    # ``agdt-derived`` bundle's members are copied out to their own filenames
+    # (``agdt-postagger.json.gz`` etc.). Listing those real names here is what lets
+    # ``aegean data list`` / ``aegean doctor`` see a dataset that a backend fetched.
+    on_disk: tuple[str, ...] = ()
 
 
 # Remote datasets, all fetched to the user cache on demand — never bundled in the
@@ -139,6 +148,8 @@ _REMOTE: dict[str, DataSpec] = {
         license="CC BY-SA 4.0 (Perseus Digital Library); derived index, fetched, never bundled",
         note="prebuilt LSJ lemma→entry index (~15 MB); use_lsj() prefers it over the 270 MB build.",
         extract=False,
+        # use_lsj() writes the fetched index under greek.lexicon's built-index name.
+        on_disk=("lsj-perseus-index.json.gz",),
     ),
     "middle-liddell-index": DataSpec(
         name="middle-liddell-index",
@@ -150,6 +161,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="public domain (1889); Perseus digitization CC BY-SA, Scaife data MIT; derived index, fetched, never bundled",
         note="prebuilt Middle Liddell lemma→entry index (~2.3 MB); use_lexicon('middle-liddell') prefers it.",
         extract=False,
+        on_disk=("middle-liddell-index.json.gz",),
     ),
     "cunliffe-index": DataSpec(
         name="cunliffe-index",
@@ -161,6 +173,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="public domain (1924); Scaife structured data MIT; derived index, fetched, never bundled",
         note="prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB); use_lexicon('cunliffe') prefers it.",
         extract=False,
+        on_disk=("cunliffe-index.json.gz",),
     ),
     "abbott-smith-index": DataSpec(
         name="abbott-smith-index",
@@ -172,6 +185,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="public domain (1922); derived index, fetched, never bundled",
         note="prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB); use_lexicon('abbott-smith') prefers it.",
         extract=False,
+        on_disk=("abbott-smith-index.json.gz",),
     ),
     # Prebuilt AGDT-derived artifacts: the treebank lexicon + the trained POS
     # tagger / lemmatizer / arc-eager parser. Hosting them lets the use_treebank/
@@ -188,6 +202,17 @@ _REMOTE: dict[str, DataSpec] = {
         note="prebuilt AGDT lexicon + tagger/lemmatizer/parser models; the opt-in "
              "Greek backends prefer these over downloading the AGDT and training.",
         extract=True,
+        # fetch() unpacks the bundle to cache_dir()/agdt-derived, but the
+        # use_treebank/use_tagger/use_lemmatizer/use_parser backends copy each
+        # member out to its own working filename; any of these means the bundle
+        # is present. (agdt-greek/ is the raw-AGDT build subdir, kept separate.)
+        on_disk=(
+            "agdt-derived",
+            "agdt-greek-lexicon.json",
+            "agdt-postagger.json.gz",
+            "agdt-lemmatizer.json.gz",
+            "agdt-parser-model.json.gz",
+        ),
     ),
     # The SigLA-derived Linear A dataset (Salgarella & Castellan, sigla.phis.me):
     # decoded from the published web-app payload into the JSON the SigLA paper
@@ -274,6 +299,43 @@ _REMOTE: dict[str, DataSpec] = {
 }
 
 
+def _dir_bytes(path: pathlib.Path) -> int:
+    """Recursive size of a store path (a file's own size, or a directory's files)."""
+    if path.is_dir():
+        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    return path.stat().st_size
+
+
+def on_disk_paths(spec: DataSpec, root: pathlib.Path) -> list[pathlib.Path]:
+    """The cache paths that would exist if ``spec`` is present, whether or not
+    they do. Defaults to a single ``root/name`` entry (the ``fetch`` path); a
+    ``spec.on_disk`` override lists the real artifact names for datasets a
+    backend writes under a different filename (the prebuilt lexicon indexes,
+    the ``agdt-derived`` members). See `DataSpec.on_disk`."""
+    names = spec.on_disk or (spec.name,)
+    return [root / n for n in names]
+
+
+def present_paths(spec: DataSpec, root: pathlib.Path) -> list[pathlib.Path]:
+    """Which of ``spec``'s on-disk artifacts actually exist under ``root``."""
+    return [p for p in on_disk_paths(spec, root) if p.exists()]
+
+
+def is_downloaded(spec: DataSpec, root: pathlib.Path) -> bool:
+    """Whether any real on-disk artifact of ``spec`` is present under ``root``.
+
+    This is the corrected downloaded-probe: a dataset a backend fetched under a
+    different filename (``lsj-index`` -> ``lsj-perseus-index.json.gz``, an
+    ``agdt-derived`` member) counts as downloaded, where a bare
+    ``(root/name).exists()`` check missed it."""
+    return bool(present_paths(spec, root))
+
+
+def downloaded_bytes(spec: DataSpec, root: pathlib.Path) -> int:
+    """Total real on-disk size of ``spec``'s present artifacts (0 if none)."""
+    return sum(_dir_bytes(p) for p in present_paths(spec, root))
+
+
 def bundled_data_version() -> str:
     """The version of the bundled datasets.
 
@@ -299,7 +361,13 @@ def versions() -> dict[str, Any]:
     (e.g. ``json.dump(aegean.data.versions(), f)``) alongside your results;
     anyone with the same package version and matching sha256s is analyzing
     byte-identical data. Fetched assets are sha256-verified on download, so a
-    matching pin in this manifest *is* the byte-level guarantee."""
+    matching pin in this manifest *is* the byte-level guarantee.
+
+    When a dataset's URL is env-overridden (``PYAEGEAN_<NAME>_URL``, a user's own
+    mirror), ``fetch`` does not enforce the pinned sha256 against that other
+    source, so the manifest reports ``sha256_enforced: false`` and blanks the
+    ``sha256`` for that entry: it would be dishonest to advertise a checksum the
+    download did not verify."""
     import hashlib
 
     bundled: dict[str, dict[str, Any]] = {}
@@ -314,15 +382,22 @@ def versions() -> dict[str, Any]:
                     "sha256": hashlib.sha256(blob).hexdigest(),
                     "bytes": len(blob),
                 }
-    fetched = {
-        name: {
+    root = cache_dir()
+    fetched: dict[str, dict[str, Any]] = {}
+    for name, spec in sorted(_REMOTE.items()):
+        # fetch() disables sha256 verification when the URL is env-overridden, so
+        # the pinned sha describes the pinned URL only. Report it as unenforced
+        # (and blank the value) rather than advertise a sha the download skipped.
+        overridden = bool(os.environ.get(_env_url_var(name)))
+        enforced = bool(spec.sha256) and not overridden
+        fetched[name] = {
             "url": _resolve_url(spec),
-            "sha256": spec.sha256,
+            "sha256": spec.sha256 if enforced else "",
+            "sha256_enforced": enforced,
+            "url_overridden": overridden,
             "license": spec.license,
-            "cached": (cache_dir() / name).exists(),
+            "cached": is_downloaded(spec, root),
         }
-        for name, spec in sorted(_REMOTE.items())
-    }
     return {"package": bundled_data_version(), "bundled": bundled, "fetched": fetched}
 
 

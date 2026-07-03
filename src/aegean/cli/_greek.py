@@ -1,4 +1,4 @@
-﻿"""The `aegean greek` group: the full Greek NLP pipeline from the shell, plus
+"""The `aegean greek` group: the full Greek NLP pipeline from the shell, plus
 dictionary glossing.
 
 Backend flags mirror the `use_*` activation functions: ``--treebank``,

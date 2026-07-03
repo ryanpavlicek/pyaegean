@@ -26,12 +26,7 @@ DDSDDS = "—⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×"
 def app():  # type: ignore[no-untyped-def]
     from aegean.cli import _build_app
 
-    a = _build_app()
-    # Until the integrator wires _quickstart.register into _build_app, add it here;
-    # once wired, registering again would shadow-duplicate, so probe first.
-    cmd = typer.main.get_command(a)
-    if "quickstart" not in getattr(cmd, "commands", {}):
-        _quickstart.register(a)
+    a = _build_app()  # quickstart is registered in _build_app
     return a
 
 

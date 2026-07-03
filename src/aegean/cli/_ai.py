@@ -1,4 +1,4 @@
-﻿"""The `aegean ai` group: the generative layer from the shell.
+"""The `aegean ai` group: the generative layer from the shell.
 
 Every result here is **exploratory** — a labeled model hypothesis with its
 grounding evidence, never a citable fact. Requires a provider SDK (an extra

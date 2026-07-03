@@ -4,9 +4,13 @@ A faithful Python port of the workbench's ``src/lib/numerals.ts``: parse the
 decimal numerals and metrological fractions that appear in Linear A tablets,
 and verify KU-RO / PO-TO-KU-RO totals against the summed line items.
 
-Ported verbatim so results match the TypeScript workbench (see the shared
-golden fixtures); the accounting reconciliation is an *exploratory* reading —
-section boundaries are heuristic and the metrology is scholarly-contested.
+Ported to match the TypeScript workbench (see the shared golden fixtures): a
+KU-RO subtotal reconciles against the items since the previous total, and a
+PO-TO-KU-RO grand total against the stated subtotals that precede it. One
+intentional divergence: every stated total yields a check here, so a leading or
+otherwise item-less total surfaces as an explicit zero-item section rather than
+being silently dropped. The accounting reconciliation is an *exploratory*
+reading: section boundaries are heuristic and the metrology is scholarly-contested.
 """
 
 from __future__ import annotations
@@ -96,14 +100,20 @@ _FRACTION_GLYPHS: list[tuple[float, str]] = [
 
 
 def format_value(v: float) -> str:
-    """Render a value with a metrological fraction glyph when recognised."""
+    """Render a value with a metrological fraction glyph when recognised.
+
+    Works on the magnitude so a negative mixed number keeps its sign and its whole
+    part (-1.5 renders "-1½", not "½"); math.floor alone would round -1.5 down to -2.
+    """
     if float(v).is_integer():
         return str(int(v))
-    whole = math.floor(v)
-    frac = v - whole
+    sign = "-" if v < 0 else ""
+    mag = abs(v)
+    whole = math.floor(mag)
+    frac = mag - whole
     for f, glyph in _FRACTION_GLYPHS:
         if abs(frac - f) < 1e-6:
-            return f"{whole}{glyph}" if whole > 0 else glyph
+            return f"{sign}{whole}{glyph}" if whole > 0 else f"{sign}{glyph}"
     return f"{v:.3f}".rstrip("0").rstrip(".")
 
 
@@ -234,33 +244,51 @@ class BalanceCheck:
 def check_balances(
     lines: list[AccountLine], markers: Markers = LINEAR_A_MARKERS
 ) -> list[BalanceCheck]:
-    """Verify each total line against the item lines feeding it.
+    """Verify each total line against the lines feeding it.
 
-    Deficit and header lines are excluded from the sum. Section boundaries reset at each
-    total — heuristic, mirroring the standard reading.
+    A KU-RO subtotal is checked against the item lines since the previous total. A
+    PO-TO-KU-RO grand total is checked against the stated KU-RO subtotals that precede it
+    (plus any trailing items that never got their own subtotal): the standard reading of a
+    Linear A account, where the grand total sums the subtotals rather than re-summing the
+    raw items. Deficit and header lines are excluded from the sums. Section boundaries are
+    heuristic, mirroring the standard reading.
     """
     checks: list[BalanceCheck] = []
     running: list[AccountLine] = []
+    subtotals: list[float] = []
     for line in lines:
         if line.role == "item" and line.has_number:
             running.append(line)
-        elif line.role in ("total", "grand-total"):
+            continue
+        if line.role == "total":
             computed = sum(item.value for item in running)
-            diff = computed - line.value
-            marker = next(
-                t for t in line.terms
-                if markers.is_total(t) or markers.is_grand_total(t)
-            )
-            checks.append(
-                BalanceCheck(
-                    stated_total=line.value,
-                    computed_sum=computed,
-                    item_count=len(running),
-                    difference=diff,
-                    balances=abs(diff) < 1e-6,
-                    marker=marker,
-                    total_line_index=line.index,
-                )
-            )
+            count = len(running)
+            # The stated subtotal feeds any later grand total, whether or not it
+            # balanced itself; the raw items it covered do not (they are already
+            # accounted for in the subtotal).
+            subtotals.append(line.value)
             running = []
+        elif line.role == "grand-total":
+            computed = sum(subtotals) + sum(item.value for item in running)
+            count = len(subtotals) + len(running)
+            subtotals = []
+            running = []
+        else:
+            continue
+        diff = computed - line.value
+        marker = next(
+            t for t in line.terms
+            if markers.is_total(t) or markers.is_grand_total(t)
+        )
+        checks.append(
+            BalanceCheck(
+                stated_total=line.value,
+                computed_sum=computed,
+                item_count=count,
+                difference=diff,
+                balances=abs(diff) < 1e-6,
+                marker=marker,
+                total_line_index=line.index,
+            )
+        )
     return checks

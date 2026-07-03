@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
@@ -38,7 +39,6 @@ from ..widgets import CorpusList, DetailPane, DocTable
 
 if TYPE_CHECKING:
     from ...core.corpus import Corpus
-    from ..app import CorpusChanged
     from ..data import DocRow
 
 __all__ = ["CorpusBrowserScreen"]
@@ -128,11 +128,6 @@ class CorpusBrowserScreen(Screen[None]):
             self.app.set_corpus(corpus_id)  # type: ignore[attr-defined]
             self._open_corpus(corpus_id)
 
-    def on_corpus_changed(self, message: "CorpusChanged") -> None:
-        """React to a corpus change (the shared :class:`CorpusChanged` message),
-        when it reaches this screen, by loading the new corpus."""
-        self._open_corpus(message.corpus_id)
-
     def _open_corpus(self, corpus_id: str) -> None:
         """Load ``corpus_id`` into the document table (or show a clean error)."""
         status = self.query_one("#corpus-status", Static)
@@ -179,7 +174,12 @@ class CorpusBrowserScreen(Screen[None]):
         A document matches when its id contains the query (case-insensitive). For
         a sign pattern (``KU-*-RO``), the words in the corpus that match are also
         surfaced in the status line, keeping the corpus-wide sign search reachable
-        from the same box."""
+        from the same box.
+
+        The id filter is a fast in-memory pass and runs inline. The corpus-wide
+        sign search scans every word in the corpus, so it is dispatched to an
+        exclusive background worker: a keystroke never blocks the UI, and a fresh
+        keystroke cancels the previous still-running search before its own."""
         if event.input.id != "corpus-search":
             return
         query = event.value.strip()
@@ -197,14 +197,33 @@ class CorpusBrowserScreen(Screen[None]):
         self._render_rows(filtered)
         status = f"{len(filtered)} of {len(self._all_rows)} documents match id {query!r}"
         if self._looks_like_pattern(query):
-            matches = adapter.search_corpus(corpus, query)
-            if matches:
-                shown = ", ".join(f"{w} ({n})" for w, n in matches[:6])
-                more = "" if len(matches) <= 6 else f", +{len(matches) - 6} more"
-                status += f"  ·  words matching {query}: {shown}{more}"
-            else:
-                status += f"  ·  no words match {query}"
-        self.query_one("#corpus-status", Static).update(status)
+            self.query_one("#corpus-status", Static).update(f"{status}  ·  searching {query}…")
+            self._sign_search(query, status)
+        else:
+            self.query_one("#corpus-status", Static).update(status)
+
+    @work(exclusive=True, thread=True, group="sign-search")
+    def _sign_search(self, query: str, base_status: str) -> None:
+        """Run the corpus-wide sign search off the UI thread and append its result
+        to ``base_status``.
+
+        A thread worker so a large-corpus scan never freezes the UI; ``exclusive``
+        so a newer keystroke cancels this search before starting its own, and only
+        the latest query writes the status. Widget updates hop back to the UI
+        thread via :meth:`call_from_thread`."""
+        corpus = self._corpus
+        if corpus is None:
+            return
+        matches = adapter.search_corpus(corpus, query)
+        if matches:
+            shown = ", ".join(f"{w} ({n})" for w, n in matches[:6])
+            more = "" if len(matches) <= 6 else f", +{len(matches) - 6} more"
+            status = f"{base_status}  ·  words matching {query}: {shown}{more}"
+        else:
+            status = f"{base_status}  ·  no words match {query}"
+        self.app.call_from_thread(
+            self.query_one("#corpus-status", Static).update, status
+        )
 
     @staticmethod
     def _looks_like_pattern(query: str) -> bool:

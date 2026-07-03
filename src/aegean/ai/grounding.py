@@ -62,11 +62,19 @@ _MEANING_LEAD = re.compile(
 # salvageable gloss, so `clean_gloss` returns ``""`` for it rather than a dangling fragment
 # (``from a root meaning to look``). The original code stripped only ``from``/``prop.`` and so
 # leaked ``prob.``/``perh.``/``akin``/``cogn.`` origin notes through as glosses.
+#
+# ``from`` is the tricky one: a bare ``from …`` is usually a real ablative/directional *sense*
+# (a preposition or adverb glossed ``from, away from``, ``from above``), which must survive.
+# Only an *origin* ``from`` is an etymology lead, and it names a root/stem/form or a source
+# language, so it is matched narrowly (``from a root``, ``from the stem``, ``from PIE``,
+# ``from Latin …``) rather than by a bare ``from``, letting the directional sense through.
 _ETYM_LEAD = re.compile(
     r"^(?:"
     r"prob\.|perh\.|cogn\.|orig\.|"  # abbreviations: no trailing \b after the period
-    r"(?:probably|perhaps|akin|cognate|originally|from the root|from|"
+    r"(?:probably|perhaps|akin|cognate|originally|"
     r"a form of|another form of|lengthened form of|strengthened form of)\b"
+    r"|from\s+(?:the\s+|a\s+|an\s+|its\s+|same\s+)*"
+    r"(?:root|stem|base|form|PIE|proto-|Skt|Sanskrit|Latin|Lat\.|Gk|Greek|Heb|Hebrew)\b"
     r")",
     re.IGNORECASE,
 )

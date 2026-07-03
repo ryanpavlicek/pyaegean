@@ -1,4 +1,4 @@
-﻿"""Load the bundled Greek sample corpus into the script-agnostic model and
+"""Load the bundled Greek sample corpus into the script-agnostic model and
 register it so ``Corpus.load("greek")`` works.
 
 The seed is a handful of short, public-domain Ancient Greek passages spanning

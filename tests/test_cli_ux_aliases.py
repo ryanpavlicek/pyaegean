@@ -72,7 +72,6 @@ _SWEPT = _capped_row_options()
 # plot's --top is the one capped-rows option not yet aliased (it sits outside the
 # option-declaration pass that introduced the aliases). Remove it from this set once
 # it gains --limit and the sweep enforces it like the rest.
-_NOT_YET_ALIASED: set[str] = set()  # every --top/--limit command is now aliased
 
 # The primary (help-leading) spelling each command had before the alias existed:
 # the alias must never displace it.
@@ -111,8 +110,6 @@ def test_the_sweep_sees_the_known_surface() -> None:
 def test_every_top_or_limit_option_spells_both(
     path: str, opts: tuple[str, ...], names: frozenset[str]
 ) -> None:
-    if path in _NOT_YET_ALIASED:
-        pytest.xfail(f"`aegean {path}` does not carry the alias yet")
     assert {"--top", "--limit"} <= names, (
         f"`aegean {path}` declares {sorted(names & {'--top', '--limit'})} without the "
         "other spelling; add it to the same typer.Option"

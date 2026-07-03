@@ -41,11 +41,32 @@ def test_bundled_corpora_are_downloaded_and_lineara_is_flagged_undeciphered() ->
     assert by_id["nt"].undeciphered is False
 
 
-def test_is_undeciphered_matches_the_two_undeciphered_scripts() -> None:
+def test_sigla_is_flagged_undeciphered_in_the_overview() -> None:
+    """SigLA is the Salgarella & Castellan Linear A dataset; Linear A is
+    undeciphered, so the corpus overview must flag it (like ``lineara`` and
+    ``cyprominoan``) so the honesty caption is not dropped for it. Before the fix
+    only ``lineara`` and ``cyprominoan`` were flagged and SigLA read as decipherable."""
+    # sigla is registered as a Linear A corpus: its loader lives under the
+    # lineara script package, so its script (undeciphered) is Linear A.
+    from aegean.scripts.lineara.sigla import load_sigla  # noqa: F401
+
+    # the adapter's undeciphered set and per-corpus flag both include sigla
+    assert "sigla" in adapter.UNDECIPHERED
+    assert adapter.is_undeciphered("sigla") is True
+    by_id = {e.id: e for e in adapter.list_corpora()}
+    assert by_id["sigla"].undeciphered is True
+
+
+def test_is_undeciphered_matches_the_undeciphered_corpora() -> None:
+    # Linear A (both bundled lineara and the SigLA dataset) and Cypro-Minoan
     assert adapter.is_undeciphered("lineara") is True
+    assert adapter.is_undeciphered("sigla") is True
     assert adapter.is_undeciphered("cyprominoan") is True
+    # deciphered corpora are not flagged
     assert adapter.is_undeciphered("linearb") is False
+    assert adapter.is_undeciphered("cypriot") is False
     assert adapter.is_undeciphered("nt") is False
+    assert adapter.is_undeciphered("greek") is False
 
 
 def test_load_corpus_loads_a_bundled_corpus() -> None:

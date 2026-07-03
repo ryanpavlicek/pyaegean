@@ -31,7 +31,6 @@ pulls the MCP SDK.
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Iterable
 from typing import Any
 
@@ -157,9 +156,12 @@ def balance_accounts(
     """Accounting reconciliation: each stated total (KU-RO / TO-SO) vs the summed items.
 
     Returns one row per total marker (whole corpus, or one ``doc_id``, forgivingly
-    matched), each with the stated total, computed sum, difference, and whether it
-    balances. An empty list means the document(s) carry no total markers."""
-    from .analysis import balance_check
+    matched): ``doc``, ``marker``, ``stated`` (the written total), ``computed`` (the summed
+    items or subtotals), ``difference`` (computed minus stated), ``items`` (the count fed
+    into the sum), and ``balances``. An empty list means the document(s) carry no total
+    markers. The rows are the shared :func:`aegean._view.balance_rows` mapping, so this
+    tool, the ``aegean balance`` command, and the terminal UI cannot disagree."""
+    from ._view import balance_rows
 
     c, err = _load_corpus(corpus)
     if err is not None:
@@ -173,10 +175,7 @@ def balance_accounts(
         docs = list(c.documents)
     rows: list[dict[str, Any]] = []
     for doc in docs:
-        for bc in balance_check(doc):
-            row = dataclasses.asdict(bc)
-            row["doc_id"] = doc.id
-            rows.append(row)
+        rows.extend(balance_rows(doc))
     return rows
 
 
@@ -358,7 +357,7 @@ def data_status() -> dict[str, Any]:
     datasets: list[dict[str, Any]] = []
     for name, spec in sorted(_REMOTE.items()):
         entry = root / name
-        size = _on_disk_bytes(entry) if entry.exists() else None
+        size = _on_disk_bytes(entry)
         datasets.append(
             {
                 "name": name,
@@ -372,11 +371,35 @@ def data_status() -> dict[str, Any]:
     return {"store": str(root), "datasets": datasets}
 
 
-def _on_disk_bytes(path: Any) -> int:
-    """Actual bytes a store entry occupies (recursive for extracted directories)."""
-    if path.is_dir():
-        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
-    return int(path.stat().st_size)
+def _on_disk_bytes(path: Any) -> int | None:
+    """Actual bytes a store entry occupies (recursive for extracted directories), or
+    ``None`` when the entry is absent or unreadable.
+
+    A store entry can be a dangling symlink or vanish mid-scan (a racing fetch/remove);
+    either surfaces as "not downloaded" rather than propagating an ``OSError``. A file
+    that disappears while a directory is being walked is skipped, so the directory's other
+    files still count."""
+    try:
+        is_dir = path.is_dir()
+    except OSError:
+        return None
+    if is_dir:
+        total = 0
+        try:
+            files = list(path.rglob("*"))
+        except OSError:
+            return None
+        for f in files:
+            try:
+                if f.is_file():
+                    total += f.stat().st_size
+            except OSError:
+                continue
+        return total
+    try:
+        return int(path.stat().st_size)
+    except OSError:
+        return None
 
 
 def _human_size(n: int) -> str:
@@ -390,13 +413,16 @@ def _human_size(n: int) -> str:
 
 
 def greek_pipeline(text: str) -> list[dict[str, Any]]:
-    """Run the (baseline, offline) Greek NLP pipeline: per-token text, UPOS, and lemma."""
-    from . import greek
+    """Run the (baseline, offline) Greek NLP pipeline: one row per token.
 
-    return [
-        {"text": r.text, "upos": r.upos, "lemma": r.lemma, "relation": r.relation}
-        for r in greek.pipeline(text)
-    ]
+    Each row carries ``text``, ``upos``, ``lemma``, ``lemma_known``, sentence/index
+    position, and the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``;
+    ``None`` under the baseline). The rows are the shared
+    :func:`aegean._view.pipeline_rows` mapping, so this tool, the ``aegean greek pipeline``
+    command, and the terminal UI emit identical rows."""
+    from ._view import pipeline_rows
+
+    return pipeline_rows(text)
 
 
 def greek_scan(text: str, meter: str = "hexameter") -> dict[str, Any]:

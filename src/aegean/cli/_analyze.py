@@ -1,4 +1,4 @@
-﻿"""The `aegean analyze` group: the workbench analysis methods from the shell.
+"""The `aegean analyze` group: the workbench analysis methods from the shell.
 
 The Linear A material is undeciphered — these are **exploratory** surface
 analyses (evidence to weigh, not conclusions), exactly as in the Python API.

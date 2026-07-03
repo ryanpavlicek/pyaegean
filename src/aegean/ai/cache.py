@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import pathlib
 
 # Mirrors the ``max_tokens`` default of `LLMClient.complete`, so a caller that
@@ -37,9 +38,27 @@ class ResponseCache:
 
     def __init__(self, path: str | pathlib.Path | None = None) -> None:
         self.path = pathlib.Path(path) if path else None
-        self._store: dict[str, str] = {}
-        if self.path and self.path.exists():
-            self._store = json.loads(self.path.read_text(encoding="utf-8"))
+        self._store: dict[str, str] = self._load()
+
+    def _load(self) -> dict[str, str]:
+        """Read the persisted store, treating any unreadable/malformed file as empty.
+
+        A cache file can be truncated or corrupt (a process killed mid-write, a full
+        disk, a stale concurrent writer). Such a file must degrade to a cold cache, not
+        an exception: a cache is an optimization, and the model recomputes on a miss. So
+        a missing file, an OS read error, or non-JSON / non-object content all yield an
+        empty store rather than propagating, and only a well-formed JSON object of string
+        values is trusted (a malformed entry cannot masquerade as a cached completion).
+        """
+        if not self.path or not self.path.exists():
+            return {}
+        try:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return {k: v for k, v in raw.items() if isinstance(k, str) and isinstance(v, str)}
 
     def get(
         self,
@@ -64,8 +83,30 @@ class ResponseCache:
     ) -> None:
         self._store[_key(provider, model, system, prompt, max_tokens)] = text
         if self.path is not None:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(json.dumps(self._store), encoding="utf-8")
+            self._write_atomic()
+
+    def _write_atomic(self) -> None:
+        """Persist the store so a reader never sees a half-written file.
+
+        The store is serialized to a sibling temp file in the same directory (so
+        ``os.replace`` is an atomic same-filesystem rename), then swapped into place. A
+        process killed during the write leaves either the old complete file or the
+        untouched target, never a truncated one, so a concurrent or later ``_load`` always
+        reads a whole JSON document. The temp file is cleaned up if the write itself fails.
+        """
+        assert self.path is not None
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        data = json.dumps(self._store)
+        tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
+        try:
+            tmp.write_text(data, encoding="utf-8")
+            os.replace(tmp, self.path)
+        except OSError:
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+            raise
 
     def __len__(self) -> int:
         return len(self._store)

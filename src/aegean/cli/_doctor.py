@@ -177,7 +177,7 @@ def _probe_writable(root: Path) -> bool:
 
 
 def _store_section(issues: list[dict[str, Any]]) -> dict[str, Any]:
-    from aegean.data import _REMOTE
+    from aegean.data import _REMOTE, downloaded_bytes, is_downloaded
 
     from ._data import _on_disk_bytes
 
@@ -233,13 +233,16 @@ def _store_section(issues: list[dict[str, Any]]) -> dict[str, Any]:
 
     datasets = []
     for name in sorted(_REMOTE):  # the same per-dataset state `aegean data list` reports
-        entry = root / name
-        downloaded = entry.exists()
+        spec = _REMOTE[name]
+        # Probe the real on-disk footprint (prebuilt indexes land under their
+        # built-index filename, agdt-derived members are copied out), matching
+        # `aegean data list`; a bare root/name check missed those.
+        downloaded = is_downloaded(spec, root)
         datasets.append(
             {
                 "name": name,
                 "downloaded": downloaded,
-                "bytes": _on_disk_bytes(entry) if downloaded else None,
+                "bytes": downloaded_bytes(spec, root) if downloaded else None,
             }
         )
     return {

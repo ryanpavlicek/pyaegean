@@ -1,4 +1,4 @@
-﻿"""Build the bundled Linear B sample corpus into the script-agnostic model and register it so
+"""Build the bundled Linear B sample corpus into the script-agnostic model and register it so
 ``Corpus.load("linearb")`` works.
 
 The bundled corpus is a small illustrative sample of canonical tablets — the zero-network

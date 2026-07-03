@@ -19,9 +19,10 @@ Design rules this file obeys:
   :func:`aegean._view.pipeline_rows`, the same functions the CLI uses, so the two
   surfaces cannot drift.
 
-Undeciphered-script honesty: Linear A and Cypro-Minoan are undeciphered, so any
-structural analysis the adapter returns for them is exploratory, not a reading.
-:func:`is_undeciphered` flags the corpora a screen must caption that way.
+Undeciphered-script honesty: Linear A (both the bundled ``lineara`` corpus and
+the SigLA dataset) and Cypro-Minoan are undeciphered, so any structural analysis
+the adapter returns for them is exploratory, not a reading. :func:`is_undeciphered`
+flags the corpora a screen must caption that way.
 """
 
 from __future__ import annotations
@@ -82,10 +83,12 @@ CORPUS_IDS: tuple[str, ...] = (
     "sigla",
 )
 
-# The undeciphered scripts: any structural analysis of these corpora is
-# exploratory, never a reading. The same honesty rule the CLI and docstrings
-# carry, enforced here at the adapter so every screen inherits it.
-UNDECIPHERED: frozenset[str] = frozenset({"lineara", "cyprominoan"})
+# The undeciphered corpora: any structural analysis of these is exploratory,
+# never a reading. The same honesty rule the CLI and docstrings carry, enforced
+# here at the adapter so every screen inherits it. Both ``lineara`` and ``sigla``
+# are Linear A (SigLA is the Salgarella & Castellan Linear A dataset), which is
+# undeciphered; ``cyprominoan`` is the undeciphered Cypro-Minoan sign corpus.
+UNDECIPHERED: frozenset[str] = frozenset({"lineara", "sigla", "cyprominoan"})
 
 # One-line descriptions for the corpus overview (offline, no load needed).
 _CORPUS_BLURB: dict[str, str] = {
@@ -110,8 +113,9 @@ _CORPUS_ASSET: dict[str, str] = {
 
 
 def is_undeciphered(corpus_id: str) -> bool:
-    """Whether ``corpus_id`` is an undeciphered script (Linear A / Cypro-Minoan),
-    so a screen must caption its analysis as exploratory, not a reading."""
+    """Whether ``corpus_id`` is an undeciphered corpus (Linear A, as both
+    ``lineara`` and the SigLA dataset, or Cypro-Minoan), so a screen must caption
+    its analysis as exploratory, not a reading."""
     return corpus_id in UNDECIPHERED
 
 

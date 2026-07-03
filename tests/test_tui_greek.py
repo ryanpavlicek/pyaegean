@@ -1,6 +1,6 @@
 """Content-asserting Pilot tests for the Greek workbench screen.
 
-Textual 8.2.8 gotchas obeyed (per the build's proven patterns):
+Textual 8.2.8 constraints these tests work within:
 
 - no pytest-asyncio in the dev env, so each async body is wrapped in
   ``asyncio.new_event_loop().run_until_complete(_run())``;
@@ -11,8 +11,8 @@ Textual 8.2.8 gotchas obeyed (per the build's proven patterns):
 The assertions check real CONTENT: the known Iliad 1.1 hexameter foot pattern in
 the scansion tab, the hyphenated syllable split of a typed word, a token's lemma
 in the pipeline tab, the IPA transcription, and that a non-scanning line shows
-the friendly adapter error rather than crashing. Each pinned string was captured
-from a live ``aegean.tui.data`` call, not from memory.
+the friendly adapter error rather than crashing. Each pinned string is the live
+``aegean.tui.data`` output, re-checked against it by ``_pinned_strings_sanity``.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ ILIAD_SCAN_PATTERN = "—⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×"
 
 
 def _run(coro) -> None:
-    """Drive an async Pilot body without pytest-asyncio (the proven pattern)."""
+    """Drive an async Pilot body without pytest-asyncio (a fresh event loop)."""
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(coro)
@@ -161,6 +161,40 @@ def test_pipeline_tab_shows_lemma() -> None:
             assert "μῆνις" in content
             assert "NOUN" in content
             assert "μῆνιν" in content
+
+    _run(body())
+
+
+def test_pipeline_tab_shows_sentence_number_for_multi_sentence_input() -> None:
+    """The pipeline tab prefixes each token with its sentence number, so a
+    multi-sentence line stays unambiguous: the per-token index restarts at each
+    sentence, so two tokens both at index 1 are distinguished by ``0:`` vs ``1:``.
+    Without the sentence prefix the two first-tokens would be indistinguishable."""
+
+    async def body() -> None:
+        from textual.widgets import Static
+
+        # two sentences: the index restarts, so only the sentence number tells
+        # 'θεός' (sentence 0) apart from 'λόγος' (sentence 1), both at index 1.
+        line = "θεός. λόγος καὶ ἀρετή."
+        rows = adapter.greek_pipeline(line).rows
+        assert rows[0]["sentence"] == 0 and rows[0]["index"] == 1
+        second_sentence = [r for r in rows if r["sentence"] == 1]
+        assert second_sentence and second_sentence[0]["index"] == 1
+
+        app = AegeanApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.press("g")
+            await pilot.pause()
+            await _type(pilot, "#greek-input", line)
+            content = app.screen.query_one("#greek-pipeline", Static).content
+            # both sentence prefixes appear, on their respective first tokens
+            assert "0:1" in content
+            assert "1:1" in content
+            # the first token of each sentence is rendered on its prefixed line
+            lines = content.splitlines()
+            assert any(ln.startswith("0:1") and "θεός" in ln for ln in lines)
+            assert any(ln.startswith("1:1") and "λόγος" in ln for ln in lines)
 
     _run(body())
 

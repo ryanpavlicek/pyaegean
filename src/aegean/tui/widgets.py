@@ -3,8 +3,8 @@
 Four small widgets over Textual's `ListView` / `DataTable` / `Static` that hold
 the presentation the screens compose. Each is a thin adapter from the plain
 dataclasses :mod:`aegean.tui.data` returns to a Textual view, so a screen never
-formats a row itself. Keeping them here (and stable) is what lets the screen
-agents build against a fixed widget API.
+formats a row itself. Centralizing them here gives every screen one stable
+widget API and keeps row formatting in a single place.
 
 The library boundary stays in :mod:`aegean.tui.data`: these widgets take already-
 shaped rows and render them. They import Textual (this file lives under

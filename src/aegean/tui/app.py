@@ -8,9 +8,9 @@ command palette.
   name, with no other file changes (a small plugin pattern);
 - :class:`AppState`, the shared selection (``selected_corpus`` /
   ``selected_doc_id``) that screens read from ``self.app.state`` and mutate only
-  through :meth:`AegeanApp.set_corpus` / :meth:`AegeanApp.set_doc`, each of which
-  posts a :class:`CorpusChanged` / :class:`DocChanged` message so other screens
-  can react;
+  through :meth:`AegeanApp.set_corpus` / :meth:`AegeanApp.set_doc`; a screen
+  reconciles to the current selection when it is shown (the corpus browser does
+  this in ``on_screen_resume``), so there is no cross-screen message to route;
 - the global key bindings (quit, the four screen switches, help, and the command
   palette) and :class:`CorpusCommands`, the palette provider that exposes the
   same navigation as searchable commands.
@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any, Callable
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.command import Hit, Hits, Provider
-from textual.message import Message
 from textual.widgets import Footer, Header
 
 from . import data as adapter
@@ -38,33 +37,17 @@ from . import data as adapter
 if TYPE_CHECKING:
     from textual.screen import Screen
 
-__all__ = ["AegeanApp", "AppState", "CorpusChanged", "DocChanged", "run_tui"]
+__all__ = ["AegeanApp", "AppState", "run_tui"]
 
 
 @dataclass
 class AppState:
     """The selection shared across screens: the corpus a user is browsing and the
     document they have opened in it. Mutated only through the app's ``set_corpus``
-    / ``set_doc`` helpers so the change messages always fire."""
+    / ``set_doc`` helpers; a screen reads it back when it is shown."""
 
     selected_corpus: str | None = None
     selected_doc_id: str | None = None
-
-
-class CorpusChanged(Message):
-    """Posted when the selected corpus changes (carries the new id)."""
-
-    def __init__(self, corpus_id: str) -> None:
-        self.corpus_id = corpus_id
-        super().__init__()
-
-
-class DocChanged(Message):
-    """Posted when the selected document changes (carries the new id)."""
-
-    def __init__(self, doc_id: str) -> None:
-        self.doc_id = doc_id
-        super().__init__()
 
 
 # The screens the app registers, each ``(name, module, class)``. Registration
@@ -91,7 +74,11 @@ def _load_screens() -> dict[str, "type[Screen[Any]]"]:
     for name, module_tail, class_name in _SCREEN_SPECS:
         try:
             module = importlib.import_module(f"{__package__}.{module_tail}")
-        except ModuleNotFoundError:
+        except Exception:
+            # Any failure importing a screen module (absent, a broken import, or
+            # an error at module top level) is skipped so the shell still runs
+            # with whatever screens do import. Home is the shell's landing view,
+            # so its failure is fatal and re-raised rather than swallowed.
             if name == "home":
                 raise
             continue
@@ -203,16 +190,15 @@ class AegeanApp(App[None]):
 
     # ── shared state ────────────────────────────────────────────────────────
     def set_corpus(self, corpus_id: str) -> None:
-        """Set the selected corpus, clear any open document, and post
-        :class:`CorpusChanged` so screens can react."""
+        """Set the selected corpus and clear any open document. A screen picks up
+        the change when it is shown (the corpus browser reconciles in
+        ``on_screen_resume``)."""
         self.state.selected_corpus = corpus_id
         self.state.selected_doc_id = None
-        self.post_message(CorpusChanged(corpus_id))
 
     def set_doc(self, doc_id: str) -> None:
-        """Set the selected document and post :class:`DocChanged`."""
+        """Set the selected document."""
         self.state.selected_doc_id = doc_id
-        self.post_message(DocChanged(doc_id))
 
 
 def run_tui() -> None:

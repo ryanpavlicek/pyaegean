@@ -179,6 +179,8 @@ def paired_bootstrap(
     n = len(scores_a)
     if n < 2:
         raise ValueError("paired bootstrap needs at least 2 items")
+    if n_resamples < 1:
+        raise ValueError("n_resamples must be at least 1")
     if not 0 < level < 1:
         raise ValueError("level must be in (0, 1)")
     diffs = [float(a) - float(bb) for a, bb in zip(scores_a, scores_b, strict=True)]

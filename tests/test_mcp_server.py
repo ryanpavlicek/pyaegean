@@ -87,8 +87,14 @@ def test_search_signs_limit_zero_is_unlimited() -> None:
 def test_balance_accounts() -> None:
     rows = m.balance_accounts("lineara", "HT13")
     assert isinstance(rows, list)
-    assert rows and rows[0]["doc_id"] == "HT13"
-    assert {"stated_total", "computed_sum", "balances"} <= set(rows[0])
+    # The MCP tool shares aegean._view's row shape with the CLI and TUI, so the
+    # three surfaces cannot drift (parity guardrail).
+    assert rows and rows[0]["doc"] == "HT13"
+    assert {"doc", "marker", "stated", "computed", "difference", "items", "balances"} == set(rows[0])
+    import aegean
+    from aegean._view import balance_rows
+
+    assert rows == balance_rows(aegean.load("lineara").get("HT13"))
     # Forgiving doc resolution reaches this tool too.
     assert m.balance_accounts("lineara", "ht13") == rows
 

@@ -4,8 +4,9 @@ A single text :class:`~textual.widgets.Input` at the top drives four tabs that
 update as the user types (each keystroke, no debounce, because every backend is
 zero-dep, offline, and instant):
 
-- **pipeline** — per-token analysis (index, text, UPOS, lemma) from
-  :func:`aegean.tui.data.greek_pipeline`;
+- **pipeline** — per-token analysis (sentence:index, text, UPOS, lemma) from
+  :func:`aegean.tui.data.greek_pipeline`, the sentence number kept so a
+  multi-sentence line stays unambiguous;
 - **scansion** — the metrical scan against a meter chosen in a small selector
   (hexameter / pentameter / trimeter), the foot glyphs and caesura, or the
   friendly "does not scan" message when the line does not fit the meter;
@@ -130,7 +131,12 @@ class GreekWorkbenchScreen(Screen[None]):
         if not result.ok:
             target.update(result.error)
             return
-        lines = [f"{r['index']:>3}  {r['text']}  {r['upos']}  {r['lemma']}" for r in result.rows]
+        # Prefix each token with sentence:index so multi-sentence input is
+        # unambiguous (the pipeline restarts the index at each new sentence).
+        lines = [
+            f"{r['sentence']}:{r['index']:<3}  {r['text']}  {r['upos']}  {r['lemma']}"
+            for r in result.rows
+        ]
         target.update("\n".join(lines) if lines else "no tokens")
 
     def _render_scansion(self, text: str) -> None:

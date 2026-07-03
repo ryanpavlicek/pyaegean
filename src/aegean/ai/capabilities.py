@@ -17,6 +17,30 @@ from typing import Any
 from .client import ExploratoryResult, LLMClient, get_client
 from .grounding import GroundingItem, as_item, evidence_block, wrap_untrusted
 
+# Grounding evidence is assembled by the toolkit, but its *content* can carry corpus or
+# lexicon text (corpus_context, cooccurrence_evidence, and lexicon glosses all splice
+# inscription words into the evidence lines). That text is as untrusted as the primary
+# source passage, so the evidence is fenced the same way the source is: a directive smuggled
+# into a corpus word cannot then reach the model as an instruction. Defense in depth: the
+# toolkit never emits directives itself, but the material it quotes is not under its control.
+_GROUNDED_HEADER = "Corpus/lexicon evidence (grounding):"
+
+
+def _grounded_block(grounding: Grounding) -> str:
+    """Render grounding as a labeled, untrusted-wrapped evidence block, or ``""``.
+
+    Keeps the human-readable ``Corpus/lexicon evidence (grounding):`` header, then fences
+    the evidence lines in the same do-not-follow markers as untrusted source text so quoted
+    corpus/lexicon content can't be read as instructions. Empty grounding yields ``""`` so
+    no header or fence is emitted when there is nothing to ground on.
+    """
+    block = evidence_block(grounding)
+    if not block:
+        return ""
+    body = block[len(_GROUNDED_HEADER):].lstrip("\n")
+    return f"{_GROUNDED_HEADER}\n{wrap_untrusted(body, 'EVIDENCE')}"
+
+
 # Any iterable is accepted, a generator included. Each capability materializes it once
 # at entry (list()): the evidence is read twice (the prompt's evidence block, then the
 # result's provenance), and a generator would be exhausted by the first read, recording
@@ -60,7 +84,7 @@ def _run(
 
 def _compose(instruction: str, text: str, grounding: Grounding) -> str:
     parts = [instruction, wrap_untrusted(text)]
-    ev = evidence_block(grounding)
+    ev = _grounded_block(grounding)
     if ev:
         parts.append(ev)
     return "\n\n".join(parts)
@@ -126,7 +150,7 @@ def verify_translation(
     prompt = "\n\n".join(
         [instruction, wrap_untrusted(text, "GREEK"), wrap_untrusted(draft, "DRAFT")]
     )
-    ev = evidence_block(grounding)
+    ev = _grounded_block(grounding)
     if ev:
         prompt = f"{prompt}\n\n{ev}"
     return _run(
@@ -220,7 +244,7 @@ def ask(
         "If the evidence is insufficient, say so plainly."
     )
     prompt = f"{instruction}\n\nQuestion: {question}"
-    ev = evidence_block(grounding)
+    ev = _grounded_block(grounding)
     if ev:
         prompt = f"{prompt}\n\n{ev}"
     return _run(client, kind="ask", system=_BASE_SYSTEM, prompt=prompt, grounding=grounding)

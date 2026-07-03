@@ -92,21 +92,24 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
 
     Columns: name, downloaded (with the actual on-disk size, directory-recursive
     for extracted datasets), size note, and license."""
-    from aegean.data import _REMOTE, cache_dir
+    from aegean.data import _REMOTE, cache_dir, downloaded_bytes, is_downloaded
 
     root = cache_dir()
     rows: list[dict[str, Any]] = []
     display: list[list[str]] = []
     for name, spec in sorted(_REMOTE.items()):
-        entry = root / name
-        size = _on_disk_bytes(entry) if entry.exists() else None
+        # The real on-disk footprint, not a bare root/name probe: index datasets
+        # land under their built-index filename and agdt-derived members are
+        # copied out, so those would read "not downloaded" otherwise.
+        downloaded = is_downloaded(spec, root)
+        size = downloaded_bytes(spec, root) if downloaded else None
         rows.append(
             {
                 "name": name,
                 "note": spec.note,
                 "license": spec.license,
                 "extract": spec.extract,
-                "downloaded": size is not None,
+                "downloaded": downloaded,
                 "bytes": size,
             }
         )
@@ -232,11 +235,17 @@ def versions(json_out: bool = JSON_OPT) -> None:
         [f"bundled/{name}", str(info["sha256"])[:16] + "…", f"{info['bytes']} B"]
         for name, info in manifest["bundled"].items()
     ]
-    rows += [
-        [f"fetched/{name}", str(info["sha256"])[:16] + "…" if info["sha256"] else "(unpinned)",
-         "cached" if info["cached"] else "not cached"]
-        for name, info in manifest["fetched"].items()
-    ]
+    for name, info in manifest["fetched"].items():
+        if info["sha256"]:
+            sha = str(info["sha256"])[:16] + "…"
+        elif info.get("url_overridden"):
+            # A pinned sha exists but fetch skips it for the env-override URL.
+            sha = "(overridden: sha not enforced)"
+        else:
+            sha = "(unpinned)"
+        rows.append(
+            [f"fetched/{name}", sha, "cached" if info["cached"] else "not cached"]
+        )
     table("data versions (pin with --json for papers)", ["dataset", "sha256", "status"], rows)
 
 

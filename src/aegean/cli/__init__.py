@@ -1,4 +1,4 @@
-﻿"""The `aegean` command-line interface: the whole toolkit without writing Python.
+"""The `aegean` command-line interface: the whole toolkit without writing Python.
 
 Installed by the ``[cli]`` extra (``pip install "pyaegean[cli]"``; typer + rich).
 The command tree mirrors the public API:

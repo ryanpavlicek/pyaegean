@@ -1,7 +1,7 @@
 """Provider-agnostic LLM client contract + result/labeling types.
 
 The AI layer is **multi-provider** (Anthropic default, plus OpenAI, xAI Grok,
-Google Gemini) and **optional**: provider SDKs are extras, imported lazily inside
+Google Gemini, and OpenRouter) and **optional**: provider SDKs are extras, imported lazily inside
 each adapter, so ``import aegean`` never requires them. Every generative output
 is wrapped in an `ExploratoryResult` carrying provenance (provider, model,
 prompt version) and an ``exploratory`` flag — generative readings of this

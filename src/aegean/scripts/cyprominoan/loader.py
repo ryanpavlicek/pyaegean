@@ -1,4 +1,4 @@
-﻿"""Build the bundled Cypro-Minoan sample corpus into the script-agnostic model and register it so
+"""Build the bundled Cypro-Minoan sample corpus into the script-agnostic model and register it so
 ``Corpus.load("cyprominoan")`` works.
 
 The script is undeciphered, so a "word" is a sequence of sign numbers (``CM005-CM023-…``) with no

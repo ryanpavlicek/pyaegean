@@ -1,4 +1,4 @@
-﻿"""Build the bundled Linear A corpus into the script-agnostic model and
+"""Build the bundled Linear A corpus into the script-agnostic model and
 register it so ``Corpus.load("lineara")`` works.
 
 The loader also *interprets the apparatus the data carries*: the upstream

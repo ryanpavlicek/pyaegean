@@ -1,4 +1,4 @@
-﻿"""Build the bundled Cypriot corpus into the script-agnostic model and register it so
+"""Build the bundled Cypriot corpus into the script-agnostic model and register it so
 ``Corpus.load("cypriot")`` works.
 
 The corpus bundles the **Cypriot syllabic inscriptions of Inscriptiones Graecae XV 1** (the
