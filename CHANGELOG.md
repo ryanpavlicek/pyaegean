@@ -4,6 +4,46 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.7 (2026-07-03)
+
+A concurrency and thread-safety pass: the surfaces real concurrent use touches (worker
+threads, overlapping MCP calls, parallel CLI processes, shared caches) were driven under
+aligned concurrent workloads and every reproducible failure fixed, each pinned by a
+regression test.
+
+### Fixed
+- **The analysis cache is thread-safe.** Enabling it (`cache.enable()` or
+  `PYAEGEAN_ANALYSIS_CACHE`) made every memoized analysis call from any other thread crash
+  with a SQLite thread-identity error — including cache hits and even `cache.disable()`.
+  The connection is now shared safely behind a lock, so threaded code behaves identically
+  with the cache on or off, as the cache's contract promises.
+- **A paid AI response can no longer be lost to a cache-write collision.** Concurrent
+  `set()` calls on a shared persistent `ResponseCache` collided on one temp file (crashing
+  on Windows with the response already received, discarding it). Each persist now uses a
+  unique temp name behind a lock, and a failing disk write degrades to memory-only instead
+  of raising out of `complete()`.
+- **SQLite reads can no longer be torn by a concurrent append.** `from_sqlite` and
+  `stream()` read each document's row and tokens in separate statements, so an
+  `append=True` writer committing in between could yield a document whose metadata and
+  tokens came from different versions — silently. Reads now run inside transactions
+  (whole-load for `from_sqlite`, per-document for `stream`), two simultaneous appenders
+  take the write lock before their bookkeeping reads, and a `search()` that lands in the
+  append's FTS-rebuild window falls back to the exact-match path instead of raising.
+- **Concurrent fetches of one dataset are serialized.** Two `fetch()` calls for the same
+  dataset (threads or processes) shared one partial-download file and one extraction
+  staging directory, corrupting each other; a per-dataset lock now serializes them — the
+  later caller waits, then returns the completed artifact. `aegean data remove` refuses
+  cleanly while a fetch holds the lock (and reports a file-in-use error as one line, not a
+  traceback).
+- **A TUI download can actually be cancelled.** `fetch()` gained an abort hook, polled
+  between transfer chunks, and the TUI's download worker is wired to it: quitting the app
+  no longer blocks until the download completes (the partial file stays resumable), a
+  second fetch press while one runs is refused instead of starting a duplicate transfer,
+  and a superseded corpus search no longer writes its stale result over the newer query's
+  status line.
+- **`aegean workbench` stops cleanly on Ctrl+C** even when a client holds an in-flight
+  request it has stopped reading (handler threads no longer block shutdown).
+
 ## 0.19.6 (2026-07-03)
 
 A compatibility, dependency-floor, and performance pass: artifacts were cross-tested against
