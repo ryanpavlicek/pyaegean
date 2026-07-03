@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.1
+aegean --version          # pyaegean 0.19.2
 ```
 
 | Group | What's in it |
@@ -77,8 +77,8 @@ aegean --version          # pyaegean 0.19.1
 ## The guided tour (`aegean quickstart`)
 
 New to the toolkit? `aegean quickstart` runs the first five minutes for you:
-eight short steps, each printing one dim line of context, the command as you
-would type it, and then that command's **real output**, live on the bundled data.
+eight short steps, each printing one dim line of context; seven of them run a real
+command and show its **real output**, live on the bundled data (the last points onward).
 All offline, no keys, nothing downloaded. It reads a Linear A tablet, audits its
 accounting arithmetic, searches by sign pattern, runs the Greek pipeline, scans
 the Iliad's first line as a hexameter, shows the fetchable datasets, and closes
@@ -108,7 +108,7 @@ That was 7 real commands in 0.2s, all offline, all bundled data.
 ```
 
 `--no-run` prints the tour script without executing anything, so you can read
-the eight commands first. Because the outputs are live, what you see is exactly
+the seven commands first. Because the outputs are live, what you see is exactly
 what your install does.
 
 ---
@@ -806,7 +806,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.1                    │
+│ OK │ pyaegean │ 0.19.2                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

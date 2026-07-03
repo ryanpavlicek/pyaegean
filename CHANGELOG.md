@@ -4,6 +4,71 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.2 (2026-07-03)
+
+A deep correctness pass: a fresh adversarial audit surfaced 28 confirmed defects across the
+Greek, Aegean-script, data, and interface layers, each reproduced and then fixed with an
+output-verifying regression test.
+
+### Fixed
+- **Loaded corpora no longer share mutable per-token state.** Editing a token's `annotations`
+  (or a sign's `attrs`) on one loaded corpus leaked into every other copy and every later
+  `load()` of the same bundled corpus, and silently changed a fresh load's fingerprint (the
+  analysis-cache key). `Corpus.copy()` now gives each token and sign an independent dict, so an
+  edit stays isolated and the copy still fingerprints identically to the original.
+- **The offline lemmatizer stops fabricating verbs.** The thematic `-ει/-εις → -ω` rule invented
+  non-existent `-ω` verbs for third-declension noun datives (`πόλει → *πόλω`), sigmatic futures
+  (`δώσει`), aorist-passive participles (`ἀποκριθείς`), and `-εί` indeclinables (`ἐπεί`), and
+  marked them as confidently recovered. It is now held back from those look-alike classes and the
+  frequent third-declension datives are read to their correct noun lemma (`πόλει → πόλις`). Net
+  effect on the full New Testament: accuracy up slightly and ~780 fewer fabricated lemmas, with
+  every genuine present verb (`λέγει → λέγω`) still recovered.
+- **Elegiac pentameter accepts a short final syllable** (brevis in longo): the closing anceps
+  position no longer rejects a line ending in a naturally short open vowel.
+- **Case-insensitive syllabic transcription.** `word_to_phonetic` for Linear B and Cypriot now
+  folds case before lookup, so the standard lowercase (DAMOS / IG XV) transliteration reads the
+  Q-, Z-, and X-series signs correctly instead of falling through to raw text.
+- **Subscript sign labels resolve.** A sign the corpus prints with a Unicode subscript (`RA₂`)
+  now resolves in the inventory whether it is stored as `RA₂` or `RA2`.
+- **The Leiden underdot is a known reading.** The Cypriot and Linear B Greek-reading bridges now
+  strip the combining underdot (damaged but legible) before lexicon lookup, so a legible damaged
+  token resolves like its clean form.
+- **Word-scope corpus queries work on alphabetic Greek.** `word-contains` / `word-prefix` /
+  `word-suffix` and the other word predicates were gated on a hyphen and so matched nothing on
+  Greek (and on single-sign Aegean) words; they now operate on every word token.
+- **Full-text search finds punctuation tokens.** A token that the SQLite tokenizer reduces to
+  empty (a standalone `·` or `—`) is now found in the default token-mode search.
+- **CSV import tolerates an Excel byte-order mark.** `from_csv` defaults to a BOM-stripping
+  encoding, so a spreadsheet-exported file no longer loses its id column or fails to find its
+  text column.
+- **EpiDoc export stays well-formed.** Token text carrying XML-invalid control characters is
+  cleaned on export, so the document always re-parses.
+- **Sandhi coverage.** A sentence-initial capitalized elision (`Ταῦτ' → Ταῦτα`) is now restored,
+  and the unaccented enclitic copula forms (`ἐστιν`, `εἰσιν`, `φασιν`) are recognized as
+  movable-nu, while the look-alike i-stem accusatives still pass through unclaimed.
+- **Tokenizer consistency.** A leading prodelision apostrophe (`'στι` for `ἐστι`) is now
+  classified as a word by both `tokenize` and `tokenize_words`, so `pipeline()` no longer drops
+  it.
+- **Morphology of the demonstratives.** The oblique forms of `οὗτος` / `ἐκεῖνος` (`τούτου`,
+  `ταύτην`, `ἐκείνων`) now analyze as pronouns with case/number/gender instead of falling through
+  to spurious noun readings; the smooth intensive `αὐτή` is unaffected.
+- **Capital lunate sigma** (`Ϲ`) converts to Beta Code instead of leaking through untransliterated.
+- **Cleaner glosses for translation grounding.** A dictionary line that is only a
+  grammatical-derivation pointer (`adverb of …`, `comp. of …`, `a strengthd. form of …`) now
+  yields no gloss rather than an `"adverb of"` fragment, while a real meaning that merely contains
+  `of` / `from` is kept.
+- **Data-store visibility reaches every surface.** The MCP `data_status` tool and the terminal
+  UI's data screen now report a dataset fetched under a different filename as downloaded, matching
+  `aegean data list` and `aegean doctor`.
+- **MCP `query_corpus` no longer inverts on a string.** A `negate` value of `"false"` / `"no"` /
+  `"0"` was read by a raw boolean conversion as true and silently returned the opposite result
+  set; it is now coerced the same forgiving way as the boolean filter values.
+- Smaller correctness fixes: the accounting balance no longer raises on a marker-set mismatch;
+  `format_value` never renders a tiny negative as `-0`; the rarity heuristic counts the ordinary
+  letter phi; a corpus doc-store size scan skips a file that vanishes mid-walk. Documentation:
+  the quickstart command count (seven commands across eight steps) and the DAMOS/SigLA fetch
+  sizes are stated consistently across the wiki.
+
 ## 0.19.1 (2026-07-02)
 
 A full-program audit pass: three confirmed defects fixed, each pinned by a regression test.

@@ -99,7 +99,7 @@ ku = inv.by_label("KU")
 print(ku.label, ku.glyph, hex(ku.codepoint), ku.phonetic)
 print(ku.attrs)
 # KU 𐙂 0x10642 ku
-# {'sharedWithLinearB': True, 'linearAOnly': False, 'total': 16, 'confidence': 1, 'altGlyphs': []}
+# {'sharedWithLinearB': True, 'linearAOnly': False, 'total': 29, 'confidence': 1, 'altGlyphs': []}
 ```
 
 ### `Token` and `TokenKind`

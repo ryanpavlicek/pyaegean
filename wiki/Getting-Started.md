@@ -14,8 +14,8 @@ at a time; nothing here can break your computer.
 
 > **Prefer the terminal to Python?** Once you're installed (Steps 1–4), add the
 > command line with `pip install "pyaegean[cli]"` and run **`aegean quickstart`**:
-> a guided first five minutes (eight short steps, each running a real command
-> live on the bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
+> a guided first five minutes (eight short steps, seven of them running a real
+> command live on the bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
 > for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
 > **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
 > Greek workbench, and manage the data store, all offline and mouse-or-keyboard
@@ -106,14 +106,14 @@ tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away): are opt-
 each is fetched to a local cache the first time you turn it on, never bundled. See the
 [Greek NLP](Greek-NLP) page when you want them. If you'd rather not write Python at
 all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`,
-and `aegean quickstart` then gives you the guided terminal-side tour (eight real
-commands, live on the bundled data, all offline).
+and `aegean quickstart` then gives you the guided terminal-side tour (seven real
+commands across eight steps, live on the bundled data, all offline).
 
 Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.19.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.19.2 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

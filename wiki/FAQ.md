@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.19.1`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.19.2`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -151,8 +151,8 @@ sorted(_LOADERS)
 | `greek` | a 5-passage Ancient Greek sample | yes, bundled |
 | `cypriot` | the Cypriot Syllabary corpus | yes, bundled |
 | `cyprominoan` | the Cypro-Minoan corpus | yes, bundled |
-| `damos` | the full DAMOS Linear B corpus (~5,900 tablets, ~2 MB) | fetched on first use |
-| `sigla` | the SigLA Linear A dataset (~1 MB) | fetched on first use |
+| `damos` | the full DAMOS Linear B corpus (~5,900 tablets, ~3 MB) | fetched on first use |
+| `sigla` | the SigLA Linear A dataset (~1.2 MB) | fetched on first use |
 | `nt` | the Greek New Testament (Nestle 1904); one book bundled offline, the rest fetched | mostly fetched |
 
 ```python
@@ -472,7 +472,7 @@ see [Metrical scansion](Greek-NLP#metrical-scansion).
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 the fetched corpora: `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
-~2 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1 MB):
+~3 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.2 MB):
 `greek.load_work(...)` / `greek.load_nt(...)` (real Greek texts, pinned to a commit),
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends. The treebank/LSJ/tagger/lemmatizer/parser backends now
