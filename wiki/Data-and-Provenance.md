@@ -20,9 +20,9 @@ third-party dependencies:
 
 - **Linear A**: `inscriptions.json`, `signs.json`, `phonetic_map.json`, `manifest.json`
 - **Linear B**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
-- **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
+- **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json`, `ig_inscriptions.json` (the bundled 178-inscription IG XV 1 corpus, CC BY 4.0)
 - **Cypro-Minoan**: `signs.json`, `sample_inscriptions.json` (undeciphered: no phonetic map or lexicon)
-- **Greek**: `sample_texts.json`, `lemmata.json`, `benchmark_gold.json`, `nt_sample.json` (one NT book), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts)
+- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (one NT book), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts)
 - **Geo**: `site_coordinates.json` (approximate find-site lat/long)
 
 Large or license-restricted assets are **never bundled**: they are fetched on
@@ -44,15 +44,17 @@ hashed straight out of the installed wheel. Sizes are bytes.
 
 | File | Bytes | Source |
 |---|---|---|
+| `cypriot/ig_inscriptions.json` | 75,677 | *Inscriptiones Graecae* XV 1 (BBAW, CC BY 4.0) |
 | `cypriot/lexicon.json` | 1,377 | Unicode UCD + scholarly excerpts |
 | `cypriot/phonetic_map.json` | 712 | Unicode UCD |
 | `cypriot/sample_inscriptions.json` | 465 | scholarly excerpts (Masson; Chadwick) |
 | `cypriot/signs.json` | 7,032 | Unicode UCD (Cypriot Syllabary) |
 | `cyprominoan/sample_inscriptions.json` | 389 | scholarly excerpts (Ferrara) |
 | `cyprominoan/signs.json` | 12,681 | Unicode UCD (Cypro-Minoan block) |
-| `geo/site_coordinates.json` | 5,872 | GORILA / Younger / public gazetteers |
-| `greek/benchmark_gold.json` | 5,974 | gold benchmark fixtures |
+| `geo/site_coordinates.json` | 6,218 | GORILA / Younger / public gazetteers |
+| `greek/benchmark_gold.json` | 6,550 | gold benchmark fixtures |
 | `greek/dodson.json` | 712,301 | Dodson Greek Lexicon (CC0) |
+| `greek/idioms.json` | 6,675 | bundled idiom / MWE gloss lexicon |
 | `greek/lemmata.json` | 1,545 | bundled gold lemma seed |
 | `greek/nt_sample.json` | 38,846 | Nestle 1904: one book (CC0) |
 | `greek/sample_texts.json` | 1,054 | public-domain Greek snippets |
@@ -137,7 +139,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
-| `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, SigLA's word division (1,376 words) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
+| `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, 1,376 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
@@ -534,7 +536,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.19.2'  (your installed version)
+v["package"]                                  # '0.19.3'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -586,7 +588,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.19.2'
+# '0.19.3'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

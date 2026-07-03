@@ -6,11 +6,15 @@ bundled. The evaluation protocol and all benchmark numbers are in `docs/benchmar
 
 ## Shipped model
 
-`grc-joint-v2` is the combined-corpus checkpoint: one GreBerta encoder serving UPOS, XPOS,
-UD FEATS, dependency trees, and lemmas. On the UD Ancient Greek (Perseus) test fold it
-scores lemma 94.29 / UAS 90.23 / LAS 85.64 / UPOS 97.04 / UFeats 96.04 / XPOS 93.48, and
-lemma 90.50 on PROIEL (out of domain). Across five training seeds the recipe averages
-LAS 85.58 ± 0.10 / UAS 90.15 ± 0.12.
+The shipped release asset is **`grc-joint-v3`**: the combined-corpus checkpoint quantized
+weight-only (int8 MatMulNBits, block 128, symmetric on the MatMul weights; fp16 elsewhere,
+including the word-embedding table; activations kept fp32), ~173 MB, produced from the fp32
+`grc-joint-v2` checkpoint by `quantize_grc_joint.py`. The fp32 `grc-joint-v2` (~518 MB) is
+retained for reproducibility. One GreBerta encoder serves UPOS, XPOS, UD FEATS, dependency
+trees, and lemmas. On the UD Ancient Greek (Perseus) test fold it scores lemma 94.29 /
+UAS 90.23 / LAS 85.64 / UPOS 97.04 / UFeats 96.04 / XPOS 93.48, and lemma 90.50 on PROIEL
+(out of domain); quantization is lossless within ±0.02 on those metrics. Across five training
+seeds the recipe averages LAS 85.58 ± 0.10 / UAS 90.15 ± 0.12.
 
 ## Pipeline
 
@@ -30,9 +34,13 @@ replicates, the export gate report, and bootstrap CIs).
 - **Stage D — lemmas.** A word-level edit-script classifier (Chrupała edit trees) plus a
   train-only lookup, on the same checkpoint. The result is one model serving tags, trees,
   and lemmas.
-- **Stage E — export.** Export the checkpoint to ONNX (fp32, torch-free at inference) and
-  package it as the `grc-joint` release asset. int8 dynamic quantization was gated on a
-  ≤0.3-point accuracy drop, which it failed; the shipped model is fp32.
+- **Stage E — export and quantize.** Export the checkpoint to ONNX (fp32, torch-free at
+  inference; this is the reproducibility `grc-joint-v2` asset), then quantize weight-only
+  (int8 MatMulNBits + fp16) with `quantize_grc_joint.py` to produce the shipped `grc-joint-v3`
+  asset (~173 MB, lossless within ±0.02 on the UD Perseus metrics). The alternative full int8
+  with *quantized activations* was gated on a ≤0.3-point drop and rejected: the GreBerta
+  encoder's activation outliers collapse under 8-bit activations (UPOS 97→16–32). Keeping
+  activations fp32 and quantizing only the weights ships the size win at no accuracy cost.
 
 ## Data protocol
 

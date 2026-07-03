@@ -4,6 +4,58 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.3 (2026-07-03)
+
+A methodology-and-provenance audit: a third adversarial pass focused on the parts the earlier
+sweeps did not reach, the correctness of the measured numbers, the evaluation methodology, and
+the limitations documentation, plus live testing of the bring-your-own-AI providers. Every code
+fix is pinned by an output-verifying regression test.
+
+### Fixed
+- **A provider API error now surfaces as the library's clean error.** A failed AI call (a bad
+  model id, an invalid key, a rate limit, a network drop) leaked the underlying SDK exception as
+  a raw traceback out of `translate()` / `ask()`. All provider adapters (Anthropic, the
+  OpenAI-compatible OpenAI/Grok/OpenRouter path, and Gemini) now wrap the SDK error in a single
+  `ProviderCallError` (an `AIError`), preserving the original as its cause.
+- **The corpus fingerprint covers `signs`, `glyphs`, and `alt`.** The content hash that keys the
+  analysis cache hashed each token's text, kind, status, and annotations but not its decomposed
+  `signs`, so two corpora differing only in their sign labels hashed identically and a cached
+  sign-level `dispersions()` / `keyness()` could return the first corpus's result for the second.
+  All three fields now vary the hash.
+- **BibTeX citations are LaTeX-safe.** `Provenance.bibtex()` emitted field values (a title, a URL
+  with `&`/`%`, a subset note) without escaping, so the entry broke at compile (`%` comments out
+  the line, `&` is an alignment error). Field values are now escaped.
+- Removed an unused constant in the neural pipeline (`joint._TAG_HEADS`).
+
+### Documentation — measured numbers and methodology
+- **Re-measured the pure-Python baseline table** in `docs/benchmarks.md`: five of its six UD/PROIEL
+  cells had drifted since the offline tagger/lemmatizer changed and were never re-measured (PROIEL
+  UPOS was off by ~3.8 points). Updated to the current stack (Perseus UPOS 86.73 / UAS 37.43;
+  PROIEL UPOS 78.83 / lemma 85.63 / UAS 35.41).
+- **Corrected the UD lemma-scoring description:** on the UD folds lemmas are scored by exact string
+  match with no normalization (the UD gold is already NFC and homograph-free); the NFC +
+  homograph-digit clean-up applies only to the native-corpus NT/PROIEL checks.
+- **Fixed unreconstructible or mismatched benchmark statements:** the out-of-domain parsing lead
+  over a Perseus-trained baseline is ~23 UAS (82.47 vs 59.00), not ~17; the bootstrap CIs use 999
+  resamples (the reproducible default); and the bring-your-own quantization evidence is recorded in
+  a new `training/results/v3-quantize-report.json` (measured sizes and the lossless comparison).
+- **`training/README.md` now describes what actually ships:** the release asset is the quantized
+  `grc-joint-v3` (weight-only int8 + fp16, ~173 MB), produced from the fp32 `grc-joint-v2`
+  reproducibility checkpoint; the "int8 failed the gate" note refers to the rejected full-int8
+  activation recipe.
+- **New plain-language metric definitions** in `docs/benchmarks.md`: what UPOS, XPOS, UFeats, Lemma,
+  UAS, and LAS each measure, so the tables read without prior NLP background.
+
+### Documentation — corpus and packaging facts
+- Corrected stale limitations: the Cypriot corpus is the bundled 178-inscription IG XV 1 (not "two
+  illustrative inscriptions"); Linear B accounting `balance_check` folds case and fires over the
+  lowercase DAMOS corpus (since 0.15.0).
+- The extras table gains the `tui` extra and the `all` extra is corrected to
+  `ai,epidoc,geo,data,cli,viz,mcp,tui`.
+- The bundled-JSON provenance table adds the two files it omitted (`cypriot/ig_inscriptions.json`,
+  `greek/idioms.json`) and corrects two byte sizes, so it again matches `data.versions()`.
+- Clarified the SigLA figure: 1,376 word-division groups load as ~1,868 WORD tokens.
+
 ## 0.19.2 (2026-07-03)
 
 A deep correctness pass: a fresh adversarial audit surfaced 28 confirmed defects across the

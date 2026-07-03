@@ -30,10 +30,13 @@ the cross-tool tables live here, with citations.
   quantization gate (weight-only int8 + fp16 passes losslessly; full int8 activations are
   rejected there, see below); the **test** folds are scored once on the finished model and never used
   for any selection. Full protocol in `training/README.md`.
-- **Lemma scoring.** Lemmas use the evaluator's exact string match, NFC-normalized with
-  homograph-index digits stripped, and **no** case- or diacritic-folding. Convention
-  differences (principal-part choice, movable-nu, proper-noun citation form) therefore count
-  as errors rather than being normalized away.
+- **Lemma scoring.** On the UD folds, lemmas use the evaluator's exact string match with
+  **no** added normalization: the UD-Ancient-Greek gold is already NFC and carries no
+  homograph-index digits, so none is stripped, and there is no case- or diacritic-folding.
+  Convention differences (principal-part choice, movable-nu, proper-noun citation form)
+  therefore count as errors rather than being normalized away. (The native-corpus checks
+  `evaluate_on_nt` / `evaluate_on_proiel` do apply a light lemma clean-up, NFC plus
+  homograph-digit stripping, since those golds are not pre-normalized.)
 - **Reproduce** the shipped pipeline with:
 
   ```python
@@ -65,6 +68,35 @@ tagger, edit-tree lemmatizer, arc-eager parser, and treebank lookup are built fr
 *full* AGDT, which contains the UD-Perseus test sentences. Their Perseus-fold scores are
 therefore an in-training upper bound, reported for orientation; the PROIEL fold is their
 honest number.
+
+## What the metrics mean
+
+The tables below score six things a pipeline does to each word (and to the sentence as a
+whole). All are percentages: higher is better, and each is the fraction the system got right
+against the human-annotated gold standard.
+
+- **UPOS** — *Universal Part Of Speech.* The basic word class (noun, verb, adjective,
+  preposition, ...) from Universal Dependencies' 17-tag set. "Did it identify what kind of
+  word this is?"
+- **XPOS** — the *language-specific* part-of-speech tag: the treebank's own finer-grained
+  tagset (more categories than UPOS). Not comparable across treebanks that use different
+  tagsets, so it is sometimes marked n/a.
+- **UFeats** — *Universal Features:* the full morphology of the word — case, number, gender,
+  tense, mood, voice, person. A word counts only if *every* feature is right, so this is the
+  strictest word-level tag. "Did it get the complete grammatical parse of the word?"
+- **Lemma** — the dictionary/citation form you would look up: `λέγει` → `λέγω`, `ἀνθρώπους`
+  → `ἄνθρωπος`. "Did it recover the headword?"
+- **UAS** — *Unlabeled Attachment Score:* the fraction of words hooked to the correct
+  syntactic parent (which other word each word grammatically depends on). It measures the
+  shape of the sentence's dependency tree, ignoring the name of each link.
+- **LAS** — *Labeled Attachment Score:* UAS, but the link must *also* carry the right relation
+  label (subject, object, modifier, ...). Stricter than UAS (right parent **and** right
+  relation), and the usual headline number for parsing quality.
+
+Two supporting terms: the scorer reports **F1** (the balance of precision and recall) per
+metric, and a **bootstrap confidence interval** (e.g. `[89.6, 90.9]`) is the range a score
+would plausibly fall in on similar data, estimated by re-sampling the fold's sentences — a
+narrow interval means the number is stable, not a lucky fold.
 
 ## The field's published numbers
 
@@ -157,7 +189,8 @@ clears both that seed spread and a within-fold bootstrap confidence interval:
 | UAS | 90.23 | [89.56, 90.80] | 88.20 (2024) | +2.03 |
 | LAS | 85.64 | [84.91, 86.29] | 83.98 (2024) | +1.66 |
 
-(CIs are percentile bootstrap over the fold's sentences, 500 resamples, via `greek.bootstrap_ud`.)
+(CIs are percentile bootstrap over the fold's sentences, 999 resamples: `greek.bootstrap_ud`'s
+default, so the reproduction command matches; the 2-decimal bounds are stable across resample counts.)
 
 Three things keep these honest:
 
@@ -167,8 +200,9 @@ Three things keep these honest:
   had a thin, within-noise LAS lead; the converter comma fix and the predicted-arc relation
   training above turned it into a robust one (and tightened the seed spread fourfold).
 - **PROIEL is out of domain.** The in-domain published systems train on the PROIEL fold
-  itself; pyaegean never does. Against the *Perseus-trained* published systems: the
-  like-for-like out-of-domain comparison: pyaegean leads by ~17 UAS. The remaining PROIEL
+  itself; pyaegean never does. Against a *Perseus-trained* published system, the like-for-like
+  out-of-domain comparison, pyaegean leads by ~23 UAS (82.47 vs the Perseus-trained Stanza
+  baseline's 59.00 on this fold). The remaining PROIEL
   LAS and UFeats gaps are largely deprel- and feature-convention divergence between the two
   treebanks' UD conversions (PROIEL annotates five feature types the Perseus scheme lacks,
   and PROIEL XPOS is a different tagset entirely).
@@ -180,7 +214,9 @@ Three things keep these honest:
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
 about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless:
 UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 /
-UAS 90.2 / LAS 85.6). The recipe is **weight-only int8 + fp16, activations kept fp32**:
+UAS 90.2 / LAS 85.6). The measured file sizes and this lossless comparison are recorded in
+`training/results/v3-quantize-report.json` (the rejected full-int8 recipe in `gate-report.json`).
+The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
 else (crucially the 160 MB word-embedding table). Activations stay fp32 by design.
 
@@ -241,8 +277,8 @@ use_parser()`) is the offline, no-heavy-deps path. It is a baseline, and reads l
 
 | Fold | UPOS | Lemma | UAS |
 |---|---|---|---|
-| Perseus test ⚠ | 87.05 | 97.65 ⚠ | 37.89 |
-| PROIEL test | 75.03 | 85.26 (90.38 with the neural lemmatizer) | 33.51 |
+| Perseus test ⚠ | 86.73 | 97.65 ⚠ | 37.43 |
+| PROIEL test | 78.83 | 85.63 (90.38 with the neural lemmatizer) | 35.41 |
 
 ⚠ = in-training upper bound (see Leakage controls); the 97.65 Perseus lemma is the lookup
 memorizing the fold. LAS is not comparable here: the arc-eager parser emits Prague labels,

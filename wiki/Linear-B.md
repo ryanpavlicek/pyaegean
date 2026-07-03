@@ -517,8 +517,8 @@ file itself). `corpus` accepts `linearb` (the sample) or
   an arbitrary unattested word. Words outside the lexicon return `None`. That's by design: every
   reading is source-attested.
 - **Accounting is heuristic.** Section boundaries are inferred and Aegean metrology is contested; a
-  balance is evidence, not proof. And it expects uppercase markers, so it doesn't fire over the raw
-  (lowercase) DAMOS corpus: see the case note above.
+  balance is evidence, not proof. Marker matching folds case (since 0.15.0), so it fires over the
+  lowercase DAMOS corpus (130 tablets carry a stated total, 52 balance exactly).
 - **DAMOS is NonCommercial.** The CC BY-NC-SA 4.0 obligations pass through to you, and the asset is
   never bundled in the wheel. Cite Aurora 2015.
 - **Some tablets are fragmentary.** Many DAMOS transliterations carry brackets and damage markers

@@ -11,7 +11,7 @@ what it meant here, this is the page to keep open.
 > the full command reference see the [CLI](CLI) page; for every Greek function see
 > [Greek NLP](Greek-NLP).
 
-The examples below were run against pyaegean 0.19.2 (the `aegean` command-line tool
+The examples below were run against pyaegean 0.19.3 (the `aegean` command-line tool
 and the `aegean` Python package). Where a feature has both a Python call and a
 shell command, both are shown.
 
@@ -426,8 +426,9 @@ model. See [AI Layer](AI-Layer).
   hypotheses are explicitly speculative.
 - **Sound values are provisional** for undeciphered scripts, and even for deciphered
   ones the bridge only returns *attested* readings: it won't invent one.
-- **The Cypriot and Cypro-Minoan corpora are illustrative samples**, not complete
-  transcribed corpora; the sign inventories, however, are full.
+- **Cypriot ships the 178-inscription IG XV 1 corpus** (CC BY 4.0) plus a couple of
+  illustrative samples; **Cypro-Minoan is an illustrative sample only** (undeciphered).
+  Neither is the complete transcribed corpus, but both sign inventories are full.
 - **The richer Greek backends and gold datasets are opt-in downloads**, not bundled:
   the core install works offline.
 

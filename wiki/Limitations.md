@@ -279,9 +279,10 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `geo` | geopandas, shapely | GeoJSON / GeoDataFrames |
   | `viz` | matplotlib | the `plot` figures |
   | `mcp` | mcp | the Model Context Protocol server (e.g. for Claude Code) |
+  | `tui` | textual | the `aegean tui` terminal UI |
   | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` | one provider SDK | the AI layer |
   | `ai` | all providers | the AI layer, any provider |
-  | `all` | `ai,epidoc,geo,data,cli,viz,mcp` | everything except `neural` |
+  | `all` | `ai,epidoc,geo,data,cli,viz,mcp,tui` | everything except `neural` and `parquet` |
 
 - **`to_dict()` is a lossy summary** on purpose (words + metadata, for quick
   interop); the lossless, reversible path is `Corpus.to_json()` /

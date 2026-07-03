@@ -1,0 +1,30 @@
+{
+  "_comment": "Evidence for the shipped grc-joint-v3 weight-only quantization: the size win and the lossless-on-UD-Perseus claim in docs/benchmarks.md. The fp32 reference is grc-joint-v2 (seed replicates in seed-grc-joint-v2/summary.json); the rejected full-int8-activation recipe is in gate-report.json.",
+  "asset": "grc-joint-v3",
+  "recipe": "weight-only int8 (MatMulNBits, block 128, symmetric on MatMul weights) + fp16 elsewhere (including the word-embedding table); activations kept fp32",
+  "requires": "onnxruntime>=1.23 (8-bit MatMulNBits CPU kernel)",
+  "shipped_bytes": {
+    "model.onnx": 182121265,
+    "tar_gz": 173068548,
+    "fp32_reference": {
+      "asset": "grc-joint-v2",
+      "tar_gz": 518437922,
+      "fp32_onnx": 556555703
+    }
+  },
+  "size_reduction": "173.1 MB vs 518.4 MB tar.gz (~3.0x); 182.1 MB vs 556.6 MB uncompressed onnx",
+  "ud_perseus_test_shipped_v3": {
+    "upos": 97.04,
+    "ufeats": 96.04,
+    "lemma": 94.29,
+    "uas": 90.23,
+    "las": 85.64,
+    "xpos": 93.48,
+    "note": "measured through the package's own inference code fetching the grc-joint-v3 release asset (onnxruntime CPU)"
+  },
+  "lossless_gate": {
+    "threshold_points": 0.3,
+    "result": "weight-only int8 + fp16 changes every UD Perseus test metric by <=0.02 points vs the fp32 grc-joint-v2 export (well within the 0.3-point gate); full int8 with quantized activations was rejected (see gate-report.json: UPOS 98.30 -> 23.34 on the gate set)",
+    "reproduce": "score aegean.data.fetch('grc-joint') (v3) and the fp32 grc-joint-v2 asset with greek.evaluate_on_ud('perseus','test') and diff per metric"
+  }
+}

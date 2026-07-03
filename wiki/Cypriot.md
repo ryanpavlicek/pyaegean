@@ -381,8 +381,10 @@ corpus cites Masson, O. (1983), *Les inscriptions chypriotes syllabiques* (2nd e
 
 ## Limitations and notes
 
-- **Sample, not a corpus.** Only two illustrative inscriptions ship; the real ICS corpus is not
-  openly redistributable. The sign inventory and the bridge are the durable parts.
+- **The bundled corpus is IG XV 1, not the full ICS.** The 178-inscription *Inscriptiones
+  Graecae* XV 1 corpus (BBAW, CC BY 4.0) ships bundled, plus two illustrative samples (180
+  documents in all); the larger ICS/Masson corpus is not openly redistributable. The sign
+  inventory and the Greek-reading bridge are the durable parts.
 - **The lexicon is small and curated** (17 entries). A word outside it returns `None`
   (`greek_reading`) or fails the `bridge` command; that is by design, not a bug. It seeds your
   own work; it is not a Cypriot dictionary.
