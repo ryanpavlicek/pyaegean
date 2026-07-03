@@ -19,7 +19,8 @@ from typer.testing import CliRunner  # noqa: E402
 
 import aegean  # noqa: E402
 from aegean import data  # noqa: E402
-from aegean.cli import _build_app, _doctor  # noqa: E402
+from aegean import _doctor  # noqa: E402
+from aegean.cli import _build_app  # noqa: E402
 
 runner = CliRunner()
 

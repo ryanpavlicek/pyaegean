@@ -105,7 +105,15 @@ class _JointModel:
         self._sess = ort.InferenceSession(
             str(model_dir / "model.onnx"), opts, providers=["CPUExecutionProvider"]
         )
-        self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        try:
+            self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        except Exception as e:
+            # an old tokenizers release fails on the shipped tokenizer.json format with a
+            # bare Rust serde error that names nothing actionable; say what fixes it.
+            raise NeuralPipelineNotLoadedError(
+                "could not load the model's tokenizer.json — usually an outdated "
+                "tokenizers package: pip install 'tokenizers>=0.20'"
+            ) from e
         spec = json.loads((model_dir / "labels.json").read_text(encoding="utf-8"))
         maps: dict[str, dict[str, int]] = spec["maps"]
         self.inv = {h: {i: lab for lab, i in m.items()} for h, m in maps.items()}

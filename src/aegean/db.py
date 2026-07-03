@@ -213,6 +213,23 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
         conn.close()
 
 
+def _check_schema_version(meta: dict[str, Any]) -> None:
+    """Refuse a database written by a NEWER pyaegean schema, with the fix named; a
+    missing or older version reads normally (the reader carries fallbacks for those)."""
+    from .core.provenance import SCHEMA_VERSION
+
+    raw = meta.get("schema_version")
+    try:
+        stored = int(raw) if raw is not None else None
+    except (TypeError, ValueError):
+        return  # unreadable marker: treat as legacy rather than refuse a real file
+    if stored is not None and stored > SCHEMA_VERSION:
+        raise ValueError(
+            f"this database uses schema version {stored}, but this pyaegean understands "
+            f"up to {SCHEMA_VERSION} — upgrade pyaegean to read it"
+        )
+
+
 def _has_token_order(conn: sqlite3.Connection) -> bool:
     """Whether the tokens table carries the explicit ``token_order`` column (databases
     written before it existed order by ``position`` — the best available for old files)."""
@@ -296,6 +313,7 @@ def from_sqlite(path: str | Path) -> Corpus:
     conn.row_factory = sqlite3.Row
     try:
         meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
+        _check_schema_version(meta)
         raw = json.loads(meta.get("provenance") or "null")
         provs = [
             pv
@@ -401,6 +419,9 @@ def stream(path: str | Path) -> Iterator[Document]:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     try:
+        _check_schema_version(
+            {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
+        )
         order_col = "token_order" if _has_token_order(conn) else "position"
         ids = [r["id"] for r in conn.execute("SELECT id FROM documents ORDER BY doc_order")]
         for doc_id in ids:

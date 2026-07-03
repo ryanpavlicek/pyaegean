@@ -213,9 +213,9 @@ class Corpus:
         dicts, keeping a per-token annotation edit (or a per-sign attr edit) from
         leaking into the original, a sibling copy, or a later `load` of the same
         cached corpus. The remaining fields (`DocumentMeta`, `Provenance`, the
-        immutable Token/Sign scalars) are shared. One pass over the tokens (on the
-        order of 100–200 ms for the largest corpora, well under that for typical
-        ones); the copy fingerprints identically to the original."""
+        immutable Token/Sign scalars) are shared. One pass over the tokens — a
+        fraction of a second even for the largest corpora (the annotation-rich NT
+        is the slowest); the copy fingerprints identically to the original."""
         docs = [
             Document(
                 id=d.id, script_id=d.script_id,
@@ -570,8 +570,18 @@ class Corpus:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Corpus":
-        """Reconstruct a Corpus from the dict `to_json` serializes (its ``json.loads``)."""
+        """Reconstruct a Corpus from the dict `to_json` serializes (its ``json.loads``).
+
+        Raises ``ValueError`` when the file records a schema version newer than this
+        release understands (a file from a future pyaegean), naming the fix; a missing
+        or older version loads normally."""
         meta = data.get("_meta") or {}
+        stored = meta.get("schemaVersion")
+        if isinstance(stored, int) and stored > SCHEMA_VERSION:
+            raise ValueError(
+                f"this corpus file uses schema version {stored}, but this pyaegean "
+                f"understands up to {SCHEMA_VERSION} — upgrade pyaegean to read it"
+            )
         return cls(
             [_document_from_dict(d) for d in data.get("documents", [])],
             sign_inventory=_inventory_from_dict(data.get("signInventory")),

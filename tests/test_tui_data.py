@@ -240,7 +240,7 @@ def test_greek_helpers_return_empty_for_blank_input() -> None:
 
 # ── data store ────────────────────────────────────────────────────────────────
 def test_doctor_report_is_the_build_report_verbatim() -> None:
-    from aegean.cli._doctor import build_report
+    from aegean._doctor import build_report
 
     report = adapter.doctor_report()
     assert report["versions"]["pyaegean"] == aegean.__version__

@@ -171,14 +171,35 @@ def dispersions(
     (a formulaic or genre/site-bound term) — on Aegean material often the more
     interesting case."""
     shares, per_doc, _ = _dispersion_tables(_documents(corpus), kind)
+    # One pass over the postings (item, doc, count) instead of one full corpus scan per
+    # item: a document the item does not occur in contributes |0 − sᵢ| = sᵢ to DP, so
+    # its share can be folded in as (Σs − Σs_present) without visiting it.
     totals: Counter[str] = Counter()
-    for c in per_doc:
+    postings: dict[str, list[tuple[int, int]]] = {}
+    for i, c in enumerate(per_doc):
         totals.update(c)
-    rows = [
-        _dp(item, shares, per_doc)
-        for item, n in totals.items()
-        if n >= min_frequency
-    ]
+        for item, n in c.items():
+            postings.setdefault(item, []).append((i, n))
+    share_sum = math.fsum(shares)
+    max_dp = 1.0 - min(shares)
+    parts = len(per_doc)
+    rows = []
+    for item, freq in totals.items():
+        if freq < min_frequency:
+            continue
+        plist = postings[item]
+        present = 0.0
+        acc = 0.0
+        for i, n in plist:
+            acc += abs(n / freq - shares[i])
+            present += shares[i]
+        dp = 0.5 * (acc + (share_sum - present))
+        rows.append(
+            Dispersion(
+                item=item, frequency=freq, range=len(plist), parts=parts,
+                dp=dp, dp_norm=dp / max_dp if max_dp > 0 else 0.0,
+            )
+        )
     rows.sort(key=lambda r: (r.dp_norm, -r.frequency, r.item))
     return rows[:top] if top > 0 else rows
 

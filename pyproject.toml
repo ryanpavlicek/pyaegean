@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.19.5"
+version = "0.19.6"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,23 +34,27 @@ classifiers = [
 # statistics are pure stdlib. Corpora and trained models fetch to cache, never bundled.
 dependencies = []
 
+# Every floor below is a VERIFIED floor: the exact pinned version installs on a supported
+# Python alongside what pip resolves for its own dependencies today, and the feature works.
+# When raising or adding one, verify the pin the same way (throwaway venv, floor-pinned,
+# feature smoke) — a floor nobody has run is a claim, not a constraint.
 [project.optional-dependencies]
-data = ["pandas>=2.0"]             # DataFrame interop (to_dataframe); the core is pandas-free
-anthropic = ["anthropic>=0.39"]
-openai = ["openai>=1.30"]
+data = ["pandas>=2.2.2"]           # DataFrame interop (to_dataframe); >=2.2.2: first numpy-2-compatible
+anthropic = ["anthropic>=0.40"]    # >=0.40: first compatible with httpx>=0.28 (proxies kwarg removal)
+openai = ["openai>=1.55.3"]        # >=1.55.3: first compatible with httpx>=0.28
 gemini = ["google-genai>=0.3"]
-grok = ["openai>=1.30"]            # xAI Grok is OpenAI-API-compatible
-openrouter = ["openai>=1.30"]      # OpenRouter is an OpenAI-API-compatible gateway
-ai = ["anthropic>=0.39", "openai>=1.30", "google-genai>=0.3"]
+grok = ["openai>=1.55.3"]          # xAI Grok is OpenAI-API-compatible
+openrouter = ["openai>=1.55.3"]    # OpenRouter is an OpenAI-API-compatible gateway
+ai = ["anthropic>=0.40", "openai>=1.55.3", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
-parquet = ["pyarrow>=14"]
-geo = ["geopandas>=0.14", "shapely>=2.0"]
+parquet = ["pyarrow>=16.1"]        # >=16.1: first numpy-2-compatible
+geo = ["geopandas>=0.14", "shapely>=2.0.4"]  # shapely >=2.0.4: first with numpy-2-safe wheels/metadata
 viz = ["matplotlib>=3.8"]          # one-line plots (aegean.viz / `aegean plot`); the core is matplotlib-free
-neural = ["onnxruntime>=1.23", "tokenizers>=0.15", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache (>=1.23: the quantized joint model's int8 weight-only kernel)
-cli = ["typer>=0.12", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean` command-line interface (+ `aegean repl`)
-mcp = ["mcp>=1.0"]                 # the `aegean-mcp` Model Context Protocol server
-tui = ["textual>=8.0"]            # the `aegean tui` terminal UI (Textual; pure-Python deps only)
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.0", "typer>=0.12", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.0", "textual>=8.0"]
+neural = ["onnxruntime>=1.23", "tokenizers>=0.20", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache (onnxruntime>=1.23: the quantized joint model's int8 weight-only kernel; tokenizers>=0.20: loads the shipped tokenizer.json format)
+cli = ["typer>=0.16", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean` command-line interface (+ `aegean repl`); typer>=0.16: first compatible with click>=8.2
+mcp = ["mcp>=1.2"]                 # the `aegean-mcp` Model Context Protocol server; >=1.2: mcp.server.fastmcp
+tui = ["textual>=8.0", "typer>=0.16", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean tui` terminal UI (Textual); `aegean tui` is a CLI subcommand, so the CLI deps ride along
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.2.2", "typer>=0.16", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.2", "textual>=8.0"]
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]  # API reference (mkdocs → GitHub Pages); build-time only
 all = ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp,tui]"]
 

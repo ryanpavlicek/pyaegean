@@ -476,9 +476,10 @@ def greek_ipa(text: str, period: str = "attic") -> GreekResult:
 # ── data store ─────────────────────────────────────────────────────────────────
 def doctor_report() -> dict[str, Any]:
     """The full offline environment report, verbatim from
-    :func:`aegean.cli._doctor.build_report` (versions, extras, data store,
-    models, analysis cache). No network is touched."""
-    from ..cli._doctor import build_report
+    :func:`aegean._doctor.build_report` (versions, extras, data store,
+    models, analysis cache). No network is touched, and no CLI dependency
+    is imported: the report builds in a ``[tui]``-only environment."""
+    from .._doctor import build_report
 
     return build_report()
 

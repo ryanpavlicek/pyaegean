@@ -4,7 +4,7 @@ Two read-only reports plus one action, all offline until the user asks for a
 download:
 
 1. the environment report, verbatim from :func:`aegean.tui.data.doctor_report`
-   (the same :func:`aegean.cli._doctor.build_report` the ``aegean doctor``
+   (the same :func:`aegean._doctor.build_report` the ``aegean doctor``
    command renders): the Python and pyaegean versions, which optional extras are
    importable, the local data store's location and size, the neural model
    bundles, and the opt-in analysis cache, each as a two-column

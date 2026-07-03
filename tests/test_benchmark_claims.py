@@ -88,6 +88,17 @@ def test_benchmarks_doc_quantization_sizes_match_evidence() -> None:
         assert int(label.split()[0]) == round(b / 1e6) or int(label.split()[0]) == b // 10**6, label
 
 
+def test_throughput_claims_match_the_registry() -> None:
+    """The CPU-throughput figures (quantized range + fp32 comparison) must match the
+    registry wherever they are stated — the 450-words/s figure drifted for two model
+    generations before this pin."""
+    t = _claims()["throughput_cpu"]
+    rng = t["quantized_words_per_s"]
+    for rel in ("docs/benchmarks.md", "wiki/Greek-NLP.md"):
+        assert f"{rng} words/s" in _read(rel).replace("words/second", "words/s"), rel
+    assert f"{t['fp32_words_per_s_approx']} words/s" in _read("docs/benchmarks.md")
+
+
 def test_benchmarks_doc_bootstrap_count_matches_the_default() -> None:
     """The stated resample count must be bootstrap_ud's actual default, so the
     documented reproduction command runs the documented protocol."""

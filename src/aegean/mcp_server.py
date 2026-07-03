@@ -587,12 +587,16 @@ def main() -> None:
     try:
         server = build_server()
     except ModuleNotFoundError as exc:
+        import importlib.util
         import sys
 
-        print(
-            f"aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'  ({exc})",
-            file=sys.stderr,
-        )
+        # distinguish "mcp not installed" from "mcp installed but too old for
+        # mcp.server.fastmcp (added in 1.2)": the printed fix must actually fix it.
+        if importlib.util.find_spec("mcp") is not None:
+            msg = "aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=1.2'"
+        else:
+            msg = "aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'"
+        print(f"{msg}  ({exc})", file=sys.stderr)
         raise SystemExit(1) from None
     server.run()
 

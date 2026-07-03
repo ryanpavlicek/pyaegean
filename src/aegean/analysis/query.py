@@ -364,13 +364,17 @@ def run_query(
     via `QueryResults.cite`.
     """
     documents = list(corpus)
+    # The co-occurrence map is quadratic-ish in per-document vocabulary and is only read
+    # by the word-cooccurs-with predicate, so build it only when a filter needs it
+    # (eval_query treats a missing word as no co-occurrences).
+    needs_cooccur = any(f.field == "word-cooccurs-with" for f in filters)
     results = eval_query(
         filters,
         output,
         documents,
         build_word_index(documents),
         annotated_ids or set(),
-        build_cooccurrence_map(documents),
+        build_cooccurrence_map(documents) if needs_cooccur else {},
     )
     return replace(
         results,

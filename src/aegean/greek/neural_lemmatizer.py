@@ -76,7 +76,15 @@ class _NeuralModel:
         self._enc = ort.InferenceSession(str(model_dir / "encoder_model.onnx"), opts, providers=prov)
         self._dec = ort.InferenceSession(str(model_dir / "decoder_model.onnx"), opts, providers=prov)
         self._dec_in = {i.name for i in self._dec.get_inputs()}
-        self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        try:
+            self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        except Exception as e:
+            # an old tokenizers release fails on the shipped tokenizer.json format with a
+            # bare Rust serde error that names nothing actionable; say what fixes it.
+            raise NeuralLemmatizerNotLoadedError(
+                "could not load the model's tokenizer.json — usually an outdated "
+                "tokenizers package: pip install 'tokenizers>=0.20'"
+            ) from e
         with gzip.open(model_dir / "lookup.json.gz", "rt", encoding="utf-8") as f:
             self._lookup: Mapping[str, str] = json.load(f)
 
