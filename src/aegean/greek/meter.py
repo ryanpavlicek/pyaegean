@@ -72,7 +72,7 @@ _CIRCUMFLEX = "͂"
 _IOTA_SUBSCRIPT = "ͅ"
 _DIAERESIS = "̈"
 _APOSTROPHES = "'’ʼ᾽"
-_GREEK_WORD = re.compile(r"[Ͱ-Ͽἀ-῿]+")
+_GREEK_WORD = re.compile(r"[Ͱ-Ͽ̀-ͯἀ-῿]+")  # includes combining marks (U+0300–036F)
 
 # Synizesis lexicon: words where two written vowels are standardly read as ONE
 # metrical syllable. Keyed on the accent/diacritic-stripped lowercase word; the

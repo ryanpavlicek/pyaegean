@@ -74,7 +74,13 @@ def to_epidoc(document: Document) -> str:
     `aegean.ReadingStatus` is not ``CERTAIN`` is wrapped in the matching EpiDoc apparatus
     element (``<unclear>`` or ``<supplied>``), so editorial certainty survives the round trip
     through `aegean.scripts.linearb.parse_epidoc`. The output validates against the EpiDoc
-    RelaxNG schema (see ``tests/test_io.py``)."""
+    RelaxNG schema (see ``tests/test_io.py``).
+
+    Token *text* round-trips subject to standard XML text normalization: a carriage
+    return becomes a line feed, leading/trailing whitespace on a token is trimmed, and a
+    token (or alternate reading) whose text is only whitespace does not survive the parse.
+    Real transliteration tokens are never whitespace-only, so this affects only synthetic
+    input; the transliteration content itself is preserved."""
     import xml.etree.ElementTree as ET  # lazy: keep `import aegean` free of the XML parser
 
     def q(tag: str) -> str:

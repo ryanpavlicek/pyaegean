@@ -127,41 +127,53 @@ class Corpus:
         same analysable content, so it's the cache key for `aegean.cache`-memoised
         analyses (including the sign-level dispersion/keyness that read ``signs``)."""
         h = hashlib.sha256()
-        h.update((self.script_id or "").encode("utf-8"))
-        if self.provenance is not None and self.provenance.data_version:
-            h.update(b"\x01")
-            h.update(self.provenance.data_version.encode("utf-8"))
+
+        def field(value: str) -> None:
+            # Length-prefix every variable-length field so the serialization is injective:
+            # a separator-byte scheme collides if the data itself contains the separator
+            # (a control char in a doc id, sign label, or annotation value).
+            b = value.encode("utf-8")
+            h.update(len(b).to_bytes(8, "big"))
+            h.update(b)
+
+        def count(n: int) -> None:
+            h.update(n.to_bytes(8, "big"))
+
+        field(self.script_id or "")
+        field(
+            self.provenance.data_version
+            if self.provenance is not None and self.provenance.data_version
+            else ""
+        )
+        count(len(self.documents))
         for d in self.documents:
-            h.update(b"\x00")
-            h.update(d.id.encode("utf-8"))
-            h.update(str(len(d.tokens)).encode("ascii"))
+            field(d.id)
+            count(len(d.tokens))
             for t in d.tokens:
-                h.update(b"\x1f")
-                h.update(t.text.encode("utf-8"))
-                h.update(b"\x1e")
-                h.update(t.kind.value.encode("ascii"))
-                h.update(b"\x1e")
-                h.update(t.status.value.encode("ascii"))
+                field(t.text)
+                field(t.kind.value)
+                field(t.status.value)
                 # signs / glyphs / alt are independent stored fields an analysis reads
-                # (sign-level dispersion & keyness key on `signs`), so they must vary the hash.
+                # (sign-level dispersion & keyness key on `signs`), so they vary the hash.
+                field(t.glyphs or "")
+                count(len(t.signs))
                 for s in t.signs:
-                    h.update(b"\x1a")
-                    h.update(s.encode("utf-8"))
-                if t.glyphs:
-                    h.update(b"\x19")
-                    h.update(t.glyphs.encode("utf-8"))
+                    field(s)
+                count(len(t.alt))
                 for a in t.alt:
-                    h.update(b"\x18")
-                    h.update(a.encode("utf-8"))
+                    field(a)
+                count(len(t.annotations))
                 for k in sorted(t.annotations):
-                    h.update(b"\x1d")
-                    h.update(k.encode("utf-8"))
-                    h.update(b"\x1c")
-                    h.update(str(t.annotations[k]).encode("utf-8"))
-        if self.provenance is not None:
-            for note in self.provenance.notes:
-                if note.startswith(("subset:", "merged:", "appended:")):
-                    h.update(note.encode("utf-8"))
+                    field(k)
+                    field(str(t.annotations[k]))
+        notes = [
+            n
+            for n in (self.provenance.notes if self.provenance is not None else ())
+            if n.startswith(("subset:", "merged:", "appended:"))
+        ]
+        count(len(notes))
+        for n in notes:
+            field(n)
         return h.hexdigest()
 
     def cache_key(self) -> str:

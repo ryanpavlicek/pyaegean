@@ -68,8 +68,14 @@ def _resolve_path(path: str, static_dir: Path, images_dir: Path | None) -> str |
     if not p.startswith(prefix):
         return None
     # Percent-decode like SimpleHTTPRequestHandler.translate_path does, then fold
-    # backslashes into forward slashes so a ..\ payload can't sidestep the guard.
-    rel = urllib.parse.unquote(p[len(prefix):], errors="surrogatepass").replace("\\", "/")
+    # backslashes into forward slashes so a ..\ payload can't sidestep the guard. An
+    # invalid-UTF-8 percent byte (e.g. %FF) must not crash the handler: fall back to
+    # errors="replace" (CPython's translate_path default) so it resolves to a clean 404.
+    encoded = p[len(prefix):]
+    try:
+        rel = urllib.parse.unquote(encoded, errors="surrogatepass").replace("\\", "/")
+    except UnicodeDecodeError:
+        rel = urllib.parse.unquote(encoded, errors="replace").replace("\\", "/")
     if rel.startswith("/") or ":" in rel:  # absolute, UNC, or drive-letter form
         return None
     rel = posixpath.normpath(rel)

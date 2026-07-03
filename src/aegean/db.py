@@ -46,8 +46,8 @@ CREATE TABLE documents (
     name TEXT, images TEXT, notes TEXT, lines TEXT
 );
 CREATE TABLE tokens (
-    doc_id TEXT, position INTEGER, line_no INTEGER, text TEXT, kind TEXT, glyphs TEXT,
-    status TEXT, signs TEXT, alt TEXT, annotations TEXT
+    doc_id TEXT, token_order INTEGER, position INTEGER, line_no INTEGER, text TEXT, kind TEXT,
+    glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT
 );
 CREATE INDEX idx_tokens_doc ON tokens(doc_id);
 CREATE INDEX idx_tokens_text ON tokens(text);
@@ -88,16 +88,18 @@ def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -
         ),
     )
     conn.executemany(
-        "INSERT INTO tokens(doc_id, position, line_no, text, kind, glyphs, status, "
-        "signs, alt, annotations) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO tokens(doc_id, token_order, position, line_no, text, kind, glyphs, "
+        "status, signs, alt, annotations) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
-                dd["id"], t["position"], t["line_no"], t["text"], t["kind"],
+                # token_order is the token's index in the document's list, so the round trip
+                # preserves list order even when `position` is None or does not match order.
+                dd["id"], i, t["position"], t["line_no"], t["text"], t["kind"],
                 t.get("glyphs"), t.get("status", "certain"),
                 json.dumps(t.get("signs", [])), json.dumps(t.get("alt", [])),
                 json.dumps(t.get("annotations", {})),
             )
-            for t in dd["tokens"]
+            for i, t in enumerate(dd["tokens"])
         ],
     )
 
@@ -213,7 +215,7 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
 def _document_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Document:
     tokens: list[dict[str, Any]] = []
     for t in conn.execute(
-        "SELECT * FROM tokens WHERE doc_id = ? ORDER BY position", (row["id"],)
+        "SELECT * FROM tokens WHERE doc_id = ? ORDER BY token_order", (row["id"],)
     ):
         td: dict[str, Any] = {
             "text": t["text"], "kind": t["kind"], "position": t["position"],
@@ -329,8 +331,10 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
         )
         # unicode61 drops everything that is not a letter/digit, so a query that is all
         # separators (a punctuation token like "·" or "—") tokenizes to an empty FTS phrase
-        # and would match nothing; route those to the exact path, which finds the token.
-        fts_usable = has_fts and any(ch.isalnum() for ch in query)
+        # and would match nothing; route those to the exact path, which finds the token. A
+        # NUL in the query makes the FTS5 phrase parser raise ("unterminated string"), so it
+        # is routed the same way (the token itself stores and matches fine on the exact path).
+        fts_usable = has_fts and "\x00" not in query and any(ch.isalnum() for ch in query)
         if fts_usable:  # unicode61 folds Greek case, so the phrase query finds either case
             phrase = '"' + query.replace('"', '""') + '"'  # a literal FTS5 phrase, not syntax
             cur = conn.execute(

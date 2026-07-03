@@ -198,8 +198,20 @@ def strip_diacritics(text: str) -> str:
     return unicodedata.normalize("NFC", bare)
 
 
+def _is_greek_letter(ch: str) -> bool:
+    """A letter in the Greek or Greek-Extended block (includes digamma ϝ and other
+    archaic/epigraphic letters that Beta Code's 24-letter alphabet does not map)."""
+    return ("Ͱ" <= ch <= "Ͽ" or "ἀ" <= ch <= "῿") and unicodedata.category(
+        ch
+    ).startswith("L")
+
+
 def _is_word_break(ch: str) -> bool:
-    return not (ch.lower() in _BETA_TO_GREEK or ch in _BETA_TO_MARK or ch == "*")
+    if ch.lower() in _BETA_TO_GREEK or ch in _BETA_TO_MARK or ch == "*":
+        return False
+    # An unmapped Greek-block letter (digamma ϝ, archaic/epigraphic letters) still
+    # continues the word, so a medial σ before it stays medial rather than folding to ς.
+    return not _is_greek_letter(ch)
 
 
 def betacode_to_unicode(text: str) -> str:
@@ -275,7 +287,11 @@ def unicode_to_betacode(text: str) -> str:
 
     Lunate sigma (ϲ U+03F2 / Ϲ U+03F9) is a display variant of sigma and is
     normalized to a standard sigma (``s``) here, so it converts cleanly but does
-    not round-trip back to the lunate glyph."""
+    not round-trip back to the lunate glyph. The combining length marks (macron
+    U+0304, breve U+0306, the lexicon vowel-quantity notation) have no Beta Code
+    representation: text carrying them does not round-trip and, next to an accent,
+    can perturb the accent's placement, so keep them out of Beta Code round-trips
+    (the analysis functions, syllabify/scansion, handle them directly)."""
     out: list[str] = []
     last_was_sigma = False
     for ch in unicodedata.normalize("NFD", text):

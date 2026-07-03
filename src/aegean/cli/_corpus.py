@@ -109,7 +109,10 @@ def import_(
     glob: str = typer.Option("*.txt", "--glob", help="For a folder: which files to import."),
     text_col: str = typer.Option("text", "--text-col", help="For CSV: the column holding the text."),
     id_col: str | None = typer.Option(None, "--id-col", help="For CSV: the column holding the id."),
-    encoding: str = typer.Option("utf-8", "--encoding", help="Text encoding to read with."),
+    encoding: str = typer.Option(
+        "utf-8-sig", "--encoding",
+        help="Text encoding to read with (default strips a leading UTF-8 BOM, e.g. Excel CSVs).",
+    ),
     workbench: bool = typer.Option(
         False, "--workbench", help="Treat SOURCE as a Linear A Workbench export (JSON) and import that."
     ),
@@ -128,6 +131,7 @@ def import_(
       aegean import rows.csv -o corpus.json --text-col line --id-col id
       aegean import inscriptions/ -o ins.json --epidoc --script greek   # any EpiDoc TEI edition"""
     import json
+    import xml.etree.ElementTree as ET
 
     from aegean import io as aegean_io
     from aegean.core.script import registered_scripts
@@ -169,6 +173,8 @@ def import_(
             )
     except json.JSONDecodeError as exc:
         raise fail(f"{source}: invalid JSON — {exc}") from None
+    except ET.ParseError as exc:
+        raise fail(f"{source}: not well-formed EpiDoc/TEI XML — {exc}") from None
     except UnicodeDecodeError as exc:
         raise fail(
             f"cannot decode {source} with encoding {encoding!r} ({exc}); "

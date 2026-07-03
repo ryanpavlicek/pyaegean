@@ -39,9 +39,24 @@ def tokenize(text: str) -> list[Token]:
     pos = 0
     for m in _TOKEN_RE.finditer(text):
         s = m.group(0)
-        kind = TokenKind.WORD if _WORD_RE.fullmatch(s) else TokenKind.PUNCT
-        tokens.append(Token(s, kind, position=pos))
-        pos += 1
+        if _WORD_RE.fullmatch(s):
+            tokens.append(Token(s, TokenKind.WORD, position=pos))
+            pos += 1
+            continue
+        # A letter-bearing chunk that is not one clean word (e.g. a doubled leading
+        # apostrophe, ''στι): split it into PUNCT / WORD / PUNCT pieces so the WORD is
+        # realized the same way `tokenize_words` sees it, not swallowed as one PUNCT blob.
+        idx = 0
+        for wm in _WORD_RE.finditer(s):
+            if wm.start() > idx:
+                tokens.append(Token(s[idx:wm.start()], TokenKind.PUNCT, position=pos))
+                pos += 1
+            tokens.append(Token(wm.group(0), TokenKind.WORD, position=pos))
+            pos += 1
+            idx = wm.end()
+        if idx < len(s):  # trailing punctuation, or the whole chunk when it holds no word
+            tokens.append(Token(s[idx:], TokenKind.PUNCT, position=pos))
+            pos += 1
     return tokens
 
 

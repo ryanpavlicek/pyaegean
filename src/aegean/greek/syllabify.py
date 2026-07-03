@@ -130,6 +130,11 @@ def _rule_syllabify(word: str) -> list[str]:
                     nucleus.append(chars[i + 1])
                     i += 1
             units.append(("V", nucleus))
+        elif unicodedata.combining(chars[i]) and units:
+            # A combining mark that could not NFC-precompose onto its vowel (an acute
+            # after a macron/breve: ῡ́, ᾱ́) stays with the preceding unit rather than
+            # becoming its own consonant, so the accent's syllable is read correctly.
+            units[-1][1].append(chars[i])
         else:
             units.append(("C", [chars[i]]))
         i += 1

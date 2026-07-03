@@ -47,7 +47,31 @@ def main() -> None:
             file=sys.stderr,
         )
         raise SystemExit(1) from None
-    _build_app()()
+    try:
+        _build_app()()
+    except BrokenPipeError:
+        _exit_on_broken_pipe()
+    except OSError as exc:
+        # Windows surfaces a closed downstream pipe (e.g. ``... | head``) as
+        # OSError EINVAL/EPIPE rather than BrokenPipeError; exit quietly like a normal
+        # SIGPIPE instead of dumping a traceback for a reader that simply stopped reading.
+        import errno
+
+        if exc.errno in (errno.EPIPE, errno.EINVAL):
+            _exit_on_broken_pipe()
+        raise
+
+
+def _exit_on_broken_pipe() -> None:
+    """Silence the downstream-closed-pipe error and exit, without a flush-time traceback."""
+    import os
+
+    try:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+    except OSError:
+        pass
+    raise SystemExit(0) from None
 
 
 def _build_app() -> Any:

@@ -58,7 +58,14 @@ def parse_value(token: str) -> float | None:
     if not t:
         return None
     if re.fullmatch(r"\d+", t):
-        return int(t)
+        iv = int(t)
+        try:
+            float(iv)  # probe: an absurd (300+ digit) reading overflows the float domain
+        except OverflowError:
+            # corrupt input: return inf so the accounting sum stays a float and reports
+            # non-balancing instead of crashing line_value with an OverflowError.
+            return math.inf
+        return iv
     if t in _PRECOMPOSED:
         return _PRECOMPOSED[t]
     parts = re.split(r"[⁄/]", t)  # fraction slash or ASCII slash

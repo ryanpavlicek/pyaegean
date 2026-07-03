@@ -37,7 +37,8 @@ class ResponseCache:
     """Get/set completions by content hash, optionally persisted to JSON."""
 
     def __init__(self, path: str | pathlib.Path | None = None) -> None:
-        self.path = pathlib.Path(path) if path else None
+        # expanduser so a "~/..." path lands under the user's home, not a literal "./~".
+        self.path = pathlib.Path(path).expanduser() if path else None
         self._store: dict[str, str] = self._load()
 
     def _load(self) -> dict[str, str]:
