@@ -150,6 +150,7 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
     append clears it (a mixed corpus has no single-script inventory)."""
     conn = sqlite3.connect(p)
     try:
+        _ensure_token_order(conn)
         has_fts = bool(
             conn.execute(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tokens_fts'"
@@ -212,10 +213,42 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
         conn.close()
 
 
-def _document_from_row(conn: sqlite3.Connection, row: sqlite3.Row) -> Document:
+def _has_token_order(conn: sqlite3.Connection) -> bool:
+    """Whether the tokens table carries the explicit ``token_order`` column (databases
+    written before it existed order by ``position`` — the best available for old files)."""
+    return any(
+        r[1] == "token_order" for r in conn.execute("PRAGMA table_info(tokens)")
+    )
+
+
+def _ensure_token_order(conn: sqlite3.Connection) -> None:
+    """Migrate a legacy database in place: add ``token_order`` and backfill it from the
+    stored ``position``/insertion order, so appends into an old file keep working."""
+    if _has_token_order(conn):
+        return
+    conn.execute("ALTER TABLE tokens ADD COLUMN token_order INTEGER")
+    doc_ids = [r[0] for r in conn.execute("SELECT DISTINCT doc_id FROM tokens")]
+    for doc_id in doc_ids:
+        rowids = [
+            r[0]
+            for r in conn.execute(
+                "SELECT rowid FROM tokens WHERE doc_id = ? ORDER BY position, rowid",
+                (doc_id,),
+            )
+        ]
+        conn.executemany(
+            "UPDATE tokens SET token_order = ? WHERE rowid = ?",
+            [(i, rid) for i, rid in enumerate(rowids)],
+        )
+
+
+def _document_from_row(
+    conn: sqlite3.Connection, row: sqlite3.Row, *, order_col: str = "token_order"
+) -> Document:
     tokens: list[dict[str, Any]] = []
+    # order_col is one of two module literals ("token_order" / "position"), never user input.
     for t in conn.execute(
-        "SELECT * FROM tokens WHERE doc_id = ? ORDER BY token_order", (row["id"],)
+        f"SELECT * FROM tokens WHERE doc_id = ? ORDER BY {order_col}", (row["id"],)
     ):
         td: dict[str, Any] = {
             "text": t["text"], "kind": t["kind"], "position": t["position"],
@@ -270,8 +303,9 @@ def from_sqlite(path: str | Path) -> Corpus:
             if pv is not None
         ]
         inventory = _inventory_from_dict(json.loads(meta.get("sign_inventory") or "null"))
+        order_col = "token_order" if _has_token_order(conn) else "position"
         docs = [
-            _document_from_row(conn, r)
+            _document_from_row(conn, r, order_col=order_col)
             for r in conn.execute("SELECT * FROM documents ORDER BY doc_order")
         ]
     finally:
@@ -367,9 +401,10 @@ def stream(path: str | Path) -> Iterator[Document]:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     try:
+        order_col = "token_order" if _has_token_order(conn) else "position"
         ids = [r["id"] for r in conn.execute("SELECT id FROM documents ORDER BY doc_order")]
         for doc_id in ids:
             row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
-            yield _document_from_row(conn, row)
+            yield _document_from_row(conn, row, order_col=order_col)
     finally:
         conn.close()

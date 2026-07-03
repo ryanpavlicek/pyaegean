@@ -213,8 +213,9 @@ class Corpus:
         dicts, keeping a per-token annotation edit (or a per-sign attr edit) from
         leaking into the original, a sibling copy, or a later `load` of the same
         cached corpus. The remaining fields (`DocumentMeta`, `Provenance`, the
-        immutable Token/Sign scalars) are shared. One cheap pass of container
-        building; the copy fingerprints identically to the original."""
+        immutable Token/Sign scalars) are shared. One pass over the tokens (on the
+        order of 100–200 ms for the largest corpora, well under that for typical
+        ones); the copy fingerprints identically to the original."""
         docs = [
             Document(
                 id=d.id, script_id=d.script_id,

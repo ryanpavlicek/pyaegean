@@ -50,6 +50,68 @@ def test_sqlite_roundtrip_preserves_out_of_order_positions() -> None:
     assert [t.text for t in db.from_sqlite(p).documents[0].tokens] == ["B", "A"]
 
 
+def _make_legacy_db(p: Path) -> None:
+    """A database in the pre-token_order schema, as written by earlier releases."""
+    import sqlite3
+
+    conn = sqlite3.connect(p)
+    conn.executescript(
+        """
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE documents (
+    doc_order INTEGER, id TEXT PRIMARY KEY, script_id TEXT, glyphs TEXT, transcription TEXT,
+    translations TEXT, site TEXT, support TEXT, scribe TEXT, findspot TEXT, period TEXT,
+    name TEXT, images TEXT, notes TEXT, lines TEXT
+);
+CREATE TABLE tokens (
+    doc_id TEXT, position INTEGER, line_no INTEGER, text TEXT, kind TEXT, glyphs TEXT,
+    status TEXT, signs TEXT, alt TEXT, annotations TEXT
+);
+"""
+    )
+    conn.execute(
+        "INSERT INTO documents VALUES "
+        "(0,'D1','greek','', '', '[]','','','','','','','[]','[]','[[0,1]]')"
+    )
+    conn.execute(
+        "INSERT INTO tokens VALUES ('D1',0,0,'λόγος','word',NULL,'certain','[]','[]','{}')"
+    )
+    conn.execute(
+        "INSERT INTO tokens VALUES ('D1',1,0,'καί','word',NULL,'certain','[]','[]','{}')"
+    )
+    conn.execute("INSERT INTO meta VALUES ('schema_version','1')")
+    conn.commit()
+    conn.close()
+
+
+def test_sqlite_reads_a_database_written_by_an_earlier_release() -> None:
+    """A database in the pre-token_order schema loads (ordering by position, the best
+    an old file carries) instead of raising 'no such column'."""
+    from aegean import db
+
+    p = Path(tempfile.mkdtemp()) / "legacy.db"
+    _make_legacy_db(p)
+    c = db.from_sqlite(p)
+    assert [t.text for t in c.documents[0].tokens] == ["λόγος", "καί"]
+    assert [t.text for t in next(iter(db.stream(p))).tokens] == ["λόγος", "καί"]
+
+
+def test_sqlite_append_migrates_a_legacy_database_in_place() -> None:
+    from aegean import db
+
+    p = Path(tempfile.mkdtemp()) / "legacy.db"
+    _make_legacy_db(p)
+    newdoc = Document(id="D2", script_id="greek",
+                      tokens=[Token("B", TokenKind.WORD, position=1),
+                              Token("A", TokenKind.WORD, position=0)], lines=[[0, 1]])
+    db.to_sqlite(Corpus([newdoc], script_id="greek"), p, append=True)  # must not raise
+    back = db.from_sqlite(p)
+    d1 = next(d for d in back.documents if d.id == "D1")
+    d2 = next(d for d in back.documents if d.id == "D2")
+    assert [t.text for t in d1.tokens] == ["λόγος", "καί"]  # old rows keep their order
+    assert [t.text for t in d2.tokens] == ["B", "A"]  # new rows keep list order
+
+
 # ── [35] fingerprint is injective — a control char can't forge a collision ──
 
 
