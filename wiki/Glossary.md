@@ -11,7 +11,7 @@ what it meant here, this is the page to keep open.
 > the full command reference see the [CLI](CLI) page; for every Greek function see
 > [Greek NLP](Greek-NLP).
 
-The examples below were run against pyaegean 0.19.3 (the `aegean` command-line tool
+The examples below were run against pyaegean 0.19.4 (the `aegean` command-line tool
 and the `aegean` Python package). Where a feature has both a Python call and a
 shell command, both are shown.
 
@@ -389,10 +389,11 @@ aegean geo lineara
 # ...  (52 located sites)
 ```
 
-You can export to EpiDoc TEI (and other formats) from the [CLI](CLI):
+You can export to EpiDoc TEI (and other formats) from the [CLI](CLI). EpiDoc export
+writes one TEI file per document, so point `--output` at a directory:
 
 ```bash
-aegean export lineara --format epidoc --output lineara_tei.xml
+aegean export lineara --format epidoc --output lineara_tei/   # one file per doc
 ```
 
 ---

@@ -240,7 +240,7 @@ aegean cite lineara
 
 aegean cite lineara --style bibtex
 # @misc{lineara-corpus,
-#   title = {Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.},
+#   title = {Godart, L. \& Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.},
 #   year = {1976},
 #   url = {https://github.com/mwenge/lineara.xyz},
 #   note = {License: Apache-2.0 (corpus JSON); … . Accessed via pyaegean},
@@ -290,23 +290,24 @@ you can audit three ways.
 | Decipher | `ai.decipher_hypotheses(seq, …)` | `aegean ai hypotheses` | cautious Linear A hypotheses, each tied to evidence |
 | NLP assist | `ai.nlp_assist(text, …)` |— | disambiguate lemma/POS where the rules are unsure |
 | Ask | `ai.ask(q, grounding=…)` | `aegean ai ask` | answer **only** from supplied grounding |
-| Summarize | `ai.summarize(text, …)` |— | faithful summary of an excerpt |
+| Summarize | `ai.summarize(text, …)` | `aegean ai summarize` | faithful summary of an excerpt |
 | Extract | `ai.extract(text, schema=…)` | `aegean ai extract` | structured JSON into `result.data` |
 
 Providers are optional extras, key-gated; the registered set is fixed:
 
 ```bash
 aegean ai providers
-# anthropic   (default)
+# anthropic
 # gemini
 # grok
 # openai
 # openrouter
 ```
 
-Pick one with `--provider`; the model is `--model` or a `<PROVIDER>_MODEL` env
-var (point `ANTHROPIC_MODEL` at the latest flagship). See [AI Layer](AI-Layer)
-for keys and the [anthropic] / [openai] / [grok] / [gemini] / [openrouter] extras.
+Pick one with `--provider` (`anthropic` is the default); the model is `--model`
+or a `<PROVIDER>_MODEL` env var (point `ANTHROPIC_MODEL` at the latest flagship).
+See [AI Layer](AI-Layer) for keys and the [anthropic] / [openai] / [grok] /
+[gemini] / [openrouter] extras.
 
 ### Audit #1 — the exploratory label travels with the text
 

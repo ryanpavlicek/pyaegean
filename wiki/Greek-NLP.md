@@ -1333,12 +1333,13 @@ engine, which is what makes the comparison below fair.
 from aegean.greek import benchmark
 for stage, s in benchmark.run_benchmark().items():
     print(s)
+# betacode:   100% (9/9)
 # tokenize:   100% (5/5)
 # syllabify:  100% (6/6)
 # accent:     100% (6/6)
-# scansion:   100% (5/5)
 # lemma:       28% (5/18)    ← seed table only; misses irregular / 3rd-declension forms
 # pos:         50% (10/20)   ← suffix heuristic misses open-class words
+# scansion:   100% (5/5)
 # morphology:  73% (8/11)
 ```
 

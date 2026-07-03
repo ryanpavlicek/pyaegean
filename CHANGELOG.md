@@ -4,6 +4,53 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.4 (2026-07-03)
+
+An executable-documentation, robustness, and property-testing pass: every code example in the
+README and wiki was executed and compared to its shown output, the exposed input surfaces
+(importers, CLI, the local workbench server, search) were probed with adversarial input, and the
+round-trip invariants (JSON, SQLite, EpiDoc, Beta Code, tokenize/syllabify) were property-tested.
+15 code defects fixed, each pinned by a regression test; 33 documentation examples re-measured
+against the current code.
+
+### Fixed
+- **The SQLite round-trip preserves token order.** A token whose `position` was `None` (for
+  example one appended to a document) moved to the front of the document on reload, and
+  out-of-order positions were silently re-sorted, corrupting the document against the stored
+  line structure. Tokens now carry an explicit order column, so `from_sqlite` returns exactly
+  the list `to_sqlite` was given (`position` stays pure data).
+- **The corpus fingerprint is collision-proof.** The content hash serialized fields with
+  separator bytes, so a control character embedded in the data could make two different corpora
+  hash identically (a wrong-answer risk for the analysis cache). Every field is now
+  length-prefixed, making the serialization injective.
+- **Robust input handling.** `db.search` no longer raises on a query containing a NUL (the
+  token itself already stored fine); a 300-digit numeral no longer crashes the accounting sum
+  (it reads as infinite and reports non-balancing); `aegean import --epidoc` reports malformed
+  XML as a clean one-line error instead of a traceback; the import CLI's default encoding now
+  strips an Excel byte-order mark, matching `from_csv`; piping a table-printing command into a
+  reader that exits early (such as `| head`) no longer dumps a traceback on Windows; the local
+  workbench server returns a clean 404 for a request with invalid percent-encoding instead of
+  dropping the connection.
+- **Greek edge cases.** A word with a doubled leading apostrophe now tokenizes consistently
+  between `tokenize` and `tokenize_words`; a medial sigma before an epigraphic letter outside
+  the Beta Code alphabet (digamma) no longer folds to final sigma on the round trip; a
+  combining accent that cannot precompose onto a macron- or breve-marked vowel now stays with
+  its vowel in syllabification and scansion instead of splitting the word. The Beta Code and
+  EpiDoc round-trip caveats (combining length marks; XML whitespace normalization) are now
+  documented where the round-trip claims are made.
+- `ResponseCache` expands a leading `~` in its path, so a home-relative cache file lands under
+  the user's home directory.
+
+### Documentation
+- **Every shown example output in the wiki was re-run against the current code** and corrected
+  where it had drifted: the cross-script comparison and nearest-neighbour figures (the
+  labiovelar `qa → kwa` romanization), corpus fingerprints, the Linear A metrology, dossier,
+  and balance tables, the IG XV 1 corpus example, geography coordinates and GeoDataFrame
+  shapes, the fetchable-assets list (three lexicon indexes were missing), the FAQ extras table,
+  the `usage`/`rarity`/`nearest`/keyness CLI outputs, the plot-scansion example (its input now
+  actually scans), and the Tutorial's morphology walk-through, which now shows the output a
+  reader actually gets when following the page in order.
+
 ## 0.19.3 (2026-07-03)
 
 A methodology-and-provenance audit: a third adversarial pass focused on the parts the earlier

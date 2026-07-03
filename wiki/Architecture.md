@@ -243,13 +243,15 @@ next(iter(c.iter_words()))             # 'QE-RA₂-U'
 ```
 
 A corpus has a cheap, stable **fingerprint**: a content hash over its script,
-document ids, and token text (plus any `subset:` note). It's one pass over the
-tokens with no model build, which makes it the cache key for the opt-in
+document ids, and everything a token-level analysis can see (each token's text,
+kind, editorial status, decomposed signs, glyphs, alternate readings, and
+annotations, plus any `subset:` note). It's one pass over the tokens with no
+model build, which makes it the cache key for the opt-in
 [analysis cache](Analysis):
 
 ```python
 c = aegean.load("lineara")
-c.fingerprint()[:16]                   # '288e80c493eb478b'
+c.fingerprint()[:16]                   # '4daad66c2130beb1'
 c.cache_key() == c.fingerprint()       # True (cache_key is an alias)
 ```
 
@@ -438,7 +440,7 @@ c = aegean.load("lineara")
 
 # in-memory string (indent defaults to 2; pass indent=None for compact)
 js = c.to_json()
-len(js)                                # 2661490
+len(js)                                # 2661529
 
 # round-trip and verify it's lossless
 c2 = aegean.Corpus.from_json(js)
@@ -967,7 +969,7 @@ print(c.cite("plain"))
 
 print(c.cite("bibtex"))
 # @misc{lineara-corpus,
-#   title = {Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.},
+#   title = {Godart, L. \& Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A.},
 #   year = {1976},
 #   url = {https://github.com/mwenge/lineara.xyz},
 #   note = {License: Apache-2.0 …. Accessed via pyaegean},

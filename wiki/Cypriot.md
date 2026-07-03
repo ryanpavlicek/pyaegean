@@ -313,8 +313,13 @@ c = aegean.load("cypriot")
 len(c)                                # 180 (178 IG XV 1 + 2 illustrative samples)
 d = next(x for x in c if x.id == "IG XV 1, 1")
 print(d.id, d.meta.site, [t.text for t in d.tokens][:4])
-# IG XV 1, 1 Amathus ['ị-te-ọ-..-..-..-j̣ạ']
+# IG XV 1, 1 Amathus ['i-te-o-..-..-..-ja']
 ```
+
+The token text reads plainly, without the edition's underdots: the loader lifts a
+Leiden underdot out of the letters and records it as the token's editorial status
+(`d.tokens[0].status` is `ReadingStatus.UNCLEAR` here), so the uncertainty is
+queryable rather than buried in the string.
 
 From the shell:
 
@@ -330,8 +335,8 @@ aegean info cypriot
 #                    digital edition, https://telota.bbaw.de/ig (CC BY 4.0).
 
 aegean show cypriot "IG XV 1, 1"
-# IG XV 1, 1  site=Amathus  support=Basis ( Marmor )
-#   1: ị-te-ọ-..-..-..-j̣ạ
+# IG XV 1, 1  site=Amathus  period=330-310  support=Basis (Marmor)
+#   1: i-te-o-..-..-..-ja
 ```
 
 Each IG XV 1 document keeps its source URL (`doc.meta.notes`) for the CC-BY link-back, and the

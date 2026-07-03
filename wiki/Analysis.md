@@ -156,13 +156,13 @@ from aegean.analysis import phonetic_compare, nearest, romanize_greek
 
 romanize_greek("βασιλεύς")                       # 'basileus'  (accents/breathings dropped)
 cmp = phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek", fold_aspiration=True)
-cmp.similarity                                   # 0.688
-[(c.a, c.b, c.op) for c in cmp.alignment][:1]    # [('q', 'b', 'sub-far')] — the qʷ→b reflex
+cmp.similarity                                   # 0.5625
+[(c.a, c.b, c.op) for c in cmp.alignment][:2]    # [('k', '', 'del'), ('w', 'b', 'sub-far')] — the qʷ→b reflex
 
 # triage: which Greek words sound closest to a Linear B form?
 nearest("qa-si-re-u", "linearb",
         ["ποιμήν", "βασιλεύς", "πατήρ", "θεός"], "greek", fold_aspiration=True)
-# [('βασιλεύς', 0.3125), ('πατήρ', 0.614), ('ποιμήν', 0.657), ('θεός', 0.8)]
+# [('βασιλεύς', 0.4375), ('πατήρ', 0.6625), ('ποιμήν', 0.7), ('θεός', 0.7875)]
 #  → the true cognate ranks first
 ```
 
@@ -783,7 +783,7 @@ entry_count, tablet_count, total_value, commodities, sites, co_listed)`):
 ```python
 from aegean.analysis import account_dossiers
 doss = account_dossiers(c)
-len(doss)                                                    # 425
+len(doss)                                                    # 427
 [(x.word, x.tablet_count, x.total_value) for x in doss[:3]]
 # [('SA-RA₂', 15, 1354.75), ('KU-PA₃-NU', 7, 118.0), ('DA-RE', 6, 97.5)]
 ```
@@ -796,11 +796,11 @@ fraction_tokens, integer_tokens, distinct_fraction_values)`):
 ```python
 from aegean.analysis import metrology_profile
 mp = metrology_profile(c)
-mp.numeral_tokens, mp.fraction_tokens, mp.distinct_fraction_values    # (1592, 295, 10)
+mp.numeral_tokens, mp.fraction_tokens, mp.distinct_fraction_values    # (1621, 324, 11)
 [(r.display, r.count) for r in mp.fraction_rows[:5]]
-# [('1/2', 121), ('1/4', 56), ('3/4', 27), ('1/16', 26), ('1/3', 24)]
+# [('1/2', 121), ('1/4', 57), ('1/6', 28), ('3/4', 27), ('1/16', 26)]
 [(cm.head, cm.gloss, cm.entries) for cm in mp.commodity_profiles[:3]]
-# [('OLE', 'olive oil', 99), ('GRA', 'grain / wheat', 86), ('CYP', 'cyperus (sedge / spice)', 60)]
+# [('OLE', 'olive oil', 106), ('GRA', 'grain / wheat', 86), ('CYP', 'cyperus (sedge / spice)', 61)]
 ```
 
 ## Commodity & ideogram line statistics
@@ -844,6 +844,7 @@ aegean balance lineara
 # doc    marker  stated  computed  diff    balances
 # HT9a   KU-RO   31.75   31.0      -0.75   NO
 # HT9b   KU-RO   24.0    24.0      0.0     yes
+# HT11a  KU-RO   10.0    6.0       -4.0    NO
 # HT11b  KU-RO   180.0   180.0     0.0     yes
 # HT13   KU-RO   130.5   131.0     0.5     NO
 # ...
@@ -999,7 +1000,7 @@ own to tell whether two corpora (or a corpus and a filtered subset) have the
 same analysable content):
 
 ```python
-aegean.load("lineara").fingerprint()[:16]          # '288e80c493eb478b'
+aegean.load("lineara").fingerprint()[:16]          # '4daad66c2130beb1'
 ```
 
 ## SQLite persistence & full-text search (`aegean.db`)

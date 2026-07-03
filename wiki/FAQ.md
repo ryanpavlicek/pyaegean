@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.19.3`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.19.4`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -110,15 +110,17 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `viz` | plotting (`matplotlib`): figures and the scansion grid |
 | `neural` | the neural pipeline + neural lemmatizer (most accurate Greek NLP) |
 | `cli` | the `aegean` command-line interface |
+| `tui` | the `aegean tui` full-screen terminal UI (`textual`) |
 | `mcp` | the MCP server, to drive pyaegean from an MCP client (e.g. Claude Code) |
 | `anthropic` | the [AI Layer](AI-Layer) via Anthropic |
 | `openai` | the AI Layer via OpenAI |
 | `gemini` | the AI Layer via Google Gemini |
-| `grok` | the AI Layer via xAI Grok |
-| `ai` | the AI Layer core (provider-agnostic) |
+| `grok` | the AI Layer via xAI Grok (OpenAI-API-compatible) |
+| `openrouter` | the AI Layer via OpenRouter (OpenAI-API-compatible gateway) |
+| `ai` | the AI Layer with all three provider SDKs (anthropic, openai, google-genai) |
 | `dev` | the test/lint/type toolchain (contributors) |
 | `docs` | the documentation toolchain (contributors) |
-| `all` | everything above |
+| `all` | everything except `neural` and `parquet` (`dev`/`docs` are the contributor toolchains) |
 
 See [Installation](Installation) for the full breakdown. `aegean doctor` reports
 which of the runtime extras are importable in your environment, with the install

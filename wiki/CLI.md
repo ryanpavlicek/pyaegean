@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.3
+aegean --version          # pyaegean 0.19.4
 ```
 
 | Group | What's in it |
@@ -806,7 +806,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.3                    │
+│ OK │ pyaegean │ 0.19.4                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -841,7 +841,7 @@ the `[viz]` extra. The first argument is the figure kind:
 ```bash
 pip install "pyaegean[viz]"
 aegean plot keyness lineara --site Zakros -o zakros.png      # → "wrote zakros.png"
-aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον" -o scan.svg --meter hexameter
+aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ" -o scan.svg --meter hexameter   # → "wrote scan.svg"
 ```
 
 For `scansion` the second argument is the Greek line itself (`-` reads stdin); for
@@ -892,7 +892,7 @@ aegean greek ipa "λόγος" --period koine          # loɣos  (--period attic|
 aegean greek gloss-nt λόγος                        # Koine gloss, bundled Dodson lexicon (no download)
 aegean greek gloss μῆνις --dict cunliffe           # gloss from a chosen dictionary (LSJ, Middle Liddell, Cunliffe, Abbott-Smith)
 aegean greek lexica                                # list the available dictionaries
-aegean greek lexicon-link μήνιδος                  # a Logeion deep-link to the lemma (for dictionaries we don't host)
+aegean greek lexicon-link λόγον                    # a Logeion deep-link (→ …/λόγος when the offline lemmatizer resolves the form, else the word as typed)
 ```
 
 Real runs:
@@ -1065,7 +1065,7 @@ resolving every nuance; a word with no entry or no recognised tags prints dashes
 
 ```bash
 aegean greek usage μῆνις
-# μῆνις: dialects=epic  registers=poetic
+# μῆνις: dialects=doric, aeolic  registers=lyric
 ```
 
 `--json` returns `{word, dialects, registers}` (each a list). The same in Python is
@@ -1084,9 +1084,10 @@ a corpus JSON of your own register instead.
 
 ```bash
 aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt
-# overall rarity 0.42  (vs … lemmas / … tokens)
-#   μῆνιν	uncommon	0.55  (lemma μῆνις, ×…)
-#   …
+# overall rarity 0.98  (vs 5395 lemmas / 137779 tokens)
+#   μῆνιν	absent	1.00  (lemma μῆνις, ×0)
+#   ἄειδε	absent	1.00  (lemma ἀείδω, ×0)
+#   θεά	hapax	0.93  (lemma θεά, ×1)
 ```
 
 `--top` sets how many of the rarest words to list; `--treebank` activates the AGDT
@@ -1298,7 +1299,7 @@ aegean analyze compare po-me ποιμήν
 
 ```bash
 aegean analyze nearest qa-si-re-u greek --top 5 --json
-# [{"candidate": "ἱστορίης", "distance": 0.525}, {"candidate": "ἄειδε", "distance": 0.571}, …]
+# [{"candidate": "Ἡροδότου", "distance": 0.612}, {"candidate": "καὶ", "distance": 0.625}, {"candidate": "ἄειδε", "distance": 0.625}, …]
 ```
 
 `--script-a`/`--script-b` choose the scripts (`greek` · `lineara` · `linearb` ·
@@ -1320,7 +1321,7 @@ aegean analyze clusters lineara             # stem + productive-suffix clusters 
 aegean analyze structure lineara            # accounting / libation / list / text / other census
 aegean analyze structure lineara HT13       # classify one document
 aegean analyze hands damos                  # scribal-hand profiles (needs a hand per document)
-aegean analyze hands damos --hand "Knossos 103"   # one hand's characteristic vocabulary (keyness)
+aegean analyze hands damos --hand 103             # one hand's characteristic vocabulary (keyness)
 ```
 
 `hands` needs a corpus that records a scribe per document: DAMOS does, so it

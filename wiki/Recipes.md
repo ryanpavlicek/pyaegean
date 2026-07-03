@@ -235,12 +235,12 @@ distance:
 from aegean.analysis import nearest, phonetic_compare
 
 cmp = phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek")
-print(round(cmp.similarity, 2))                    # 0.69
-print([(c.a, c.b, c.op) for c in cmp.alignment][0])  # ('q', 'b', 'sub-far') — the qʷ→b reflex
+print(round(cmp.similarity, 2))                    # 0.56
+print([(c.a, c.b, c.op) for c in cmp.alignment][:2])  # [('k', '', 'del'), ('w', 'b', 'sub-far')] — the qʷ→b reflex
 
 candidates = ["ποιμήν", "βασιλεύς", "πατήρ", "θεός", "δοῦλος"]
 print(nearest("qa-si-re-u", "linearb", candidates, "greek", top=2, fold_aspiration=True))
-# [('βασιλεύς', 0.31), ('πατήρ', 0.61)] — the true cognate first, by a clear margin
+# [('βασιλεύς', 0.4375), ('πατήρ', 0.6625)] — the true cognate first, by a clear margin
 ```
 
 ```bash
@@ -465,8 +465,12 @@ aegean query lineara --where word-prefix=KU --output-kind words --limit 6
 
 # AND two rows; OR with the "or:" prefix; negate with "!":
 aegean query lineara --where site-is="Haghia Triada" --where or:word-prefix=KU --json \
-  | jq '.inscriptions | length'        # 55
+  | jq '.matched.inscriptions'         # 55
 ```
+
+`--json` respects `--limit` for the listed `inscriptions` array (default 25), so
+read the full match count from `.matched.inscriptions`; pass `--limit 0` to list
+every matched inscription.
 
 The fields available depend on the corpus (`aegean query CORPUS --fields`); for
 Linear A they include `site-is`, `scribe-is`, `period-is`, `support-is`,
@@ -597,10 +601,11 @@ morphology, Strong's number, and a gloss: ready for pandas or a spreadsheet.*
 
 ```bash
 aegean export nt -f csv -o nt_tokens.csv --level token
-# wrote 260 documents → 137,779 token rows
+# wrote 260 documents to nt_tokens.csv (csv)
 ```
 
-The token-level columns are:
+This writes the 260 NT chapters as 137,779 token rows (one per token). The
+token-level columns are:
 
 | column | example | meaning |
 |--------|---------|---------|
@@ -748,7 +753,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.19.3 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.19.4 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

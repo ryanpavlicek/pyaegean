@@ -64,15 +64,15 @@ from aegean import geo
 corpus = aegean.load("lineara")
 gdf = geo.to_geodataframe(corpus)            # level="inscription" is the default
 
-gdf.shape        # (1718, 7)
+gdf.shape        # (1718, 8)
 list(gdf.columns)
-# ['id', 'site', 'label', 'region', 'period', 'pleiades', 'geometry']
+# ['id', 'site', 'label', 'region', 'period', 'pleiades', 'contested', 'geometry']
 gdf.crs          # <Geographic 2D CRS: EPSG:4326> ...
 gdf.head(3)
-#     id           site          label region period  pleiades             geometry
-# 0  HT1  Haghia Triada  Haghia Triada  crete   LMIB  589672.0  POINT (24.79 35.06)
-# 1  HT2  Haghia Triada  Haghia Triada  crete   LMIB  589672.0  POINT (24.79 35.06)
-# 2  HT3  Haghia Triada  Haghia Triada  crete   LMIB  589672.0  POINT (24.79 35.06)
+#     id           site          label region period  pleiades contested             geometry
+# 0  HT1  Haghia Triada  Haghia Triada  crete   LMIB  589672.0       NaN  POINT (24.79 35.06)
+# 1  HT2  Haghia Triada  Haghia Triada  crete   LMIB  589672.0       NaN  POINT (24.79 35.06)
+# 2  HT3  Haghia Triada  Haghia Triada  crete   LMIB  589672.0       NaN  POINT (24.79 35.06)
 ```
 
 (1721 inscriptions in the Linear A corpus, 1718 of them with a site in the gazetteer.)
@@ -82,19 +82,19 @@ gdf.head(3)
 ```python
 gdf = geo.to_geodataframe(corpus, level="site")
 
-gdf.shape        # (52, 6)
+gdf.shape        # (52, 7)
 list(gdf.columns)
-# ['site', 'label', 'region', 'pleiades', 'inscriptions', 'geometry']
+# ['site', 'label', 'region', 'pleiades', 'inscriptions', 'contested', 'geometry']
 gdf.head(8)
-#             site             label  region     pleiades  inscriptions             geometry
-# 0  Haghia Triada     Haghia Triada   crete     589672.0          1110  POINT (24.79 35.06)
-# 1         Khania            Khania   crete     589886.0           226  POINT (24.02 35.51)
-# 2       Phaistos          Phaistos   crete     589987.0            66  POINT (24.81 35.05)
-# 3        Knossos           Knossos   crete  781961476.0            59   POINT (25.16 35.3)
-# 4         Zakros            Zakros   crete  650881089.0            53   POINT (26.26 35.1)
-# 5    Palaikastro       Palaikastro   crete  213924739.0            25   POINT (26.27 35.2)
-# 6          Malia             Malia   crete     589922.0            22  POINT (25.49 35.29)
-# 7          Thera  Thera (Akrotiri)  aegean     599478.0            18   POINT (25.4 36.36)
+#             site             label  region     pleiades  inscriptions contested             geometry
+# 0  Haghia Triada     Haghia Triada   crete     589672.0          1110       NaN  POINT (24.79 35.06)
+# 1         Khania            Khania   crete     589886.0           226       NaN  POINT (24.02 35.51)
+# 2       Phaistos          Phaistos   crete     589987.0            66       NaN  POINT (24.81 35.05)
+# 3        Knossos           Knossos   crete  781961476.0            59       NaN   POINT (25.16 35.3)
+# 4         Zakros            Zakros   crete  650881089.0            53       NaN   POINT (26.26 35.1)
+# 5    Palaikastro       Palaikastro   crete  213924739.0            25       NaN   POINT (26.27 35.2)
+# 6          Malia             Malia   crete     589922.0            22       NaN  POINT (25.49 35.29)
+# 7          Thera  Thera (Akrotiri)  aegean     599478.0            18       NaN   POINT (25.4 36.36)
 ```
 
 Site rows come back sorted by inscription count (most prolific first). The total here (52) is the
@@ -151,7 +151,7 @@ aegean geo linearb
 # ├─────────┼───────┼───────┼───────────┼───────────┤
 # │ Knossos │ 35.3  │ 25.16 │ 781961476 │           │
 # │ Mycenae │ 37.73 │ 22.75 │ 570491    │           │
-# │ Pylos   │ 37.03 │ 21.7  │ 570640    │           │
+# │ Pylos   │ 36.952 │ 21.66 │ 570640    │           │
 # └─────────┴───────┴───────┴───────────┴───────────┘
 ```
 
@@ -194,22 +194,22 @@ from aegean import geo
 corpus = aegean.load("lineara")
 wd = geo.word_distribution(corpus, "KU-RO")      # the LA "total" word
 
-wd.shape         # (3, 6)
-list(wd.columns) # ['site', 'label', 'region', 'pleiades', 'count', 'geometry']
+wd.shape         # (3, 7)
+list(wd.columns) # ['site', 'label', 'region', 'pleiades', 'count', 'contested', 'geometry']
 wd
-#             site          label region   pleiades  count             geometry
-# 0  Haghia Triada  Haghia Triada  crete     589672     32  POINT (24.79 35.06)
-# 1       Phaistos       Phaistos  crete     589987      1  POINT (24.81 35.05)
-# 2         Zakros         Zakros  crete  650881089      1   POINT (26.26 35.1)
+#             site          label region   pleiades  count contested             geometry
+# 0  Haghia Triada  Haghia Triada  crete     589672     32      None  POINT (24.79 35.06)
+# 1       Phaistos       Phaistos  crete     589987      1      None  POINT (24.81 35.05)
+# 2         Zakros         Zakros  crete  650881089      1      None   POINT (26.26 35.1)
 ```
 
 The match is on the word token's surface form, folded for case (`ku-ro` finds `KU-RO`), so use the
 corpus's own transliteration (here, dash-joined sign sequences like `KU-RO`). See [Linear A](Linear-A) and
 [Analysis](Analysis) for how to find the words worth mapping.
 
-> Edge case: if a word has **zero** hits the result has no rows, and geopandas can't infer the
-> geometry column on an empty frame, so the call raises rather than returning an empty GeoDataFrame.
-> Check that the word is attested first (e.g. with the corpus's concordance / counts).
+> Edge case: if a word has **zero** hits the call returns an empty (0-row) GeoDataFrame with the
+> normal column schema (shape `(0, 7)`), not an error. You can check `wd.empty` to distinguish a
+> word that turns up nowhere from one you simply haven't mapped yet.
 
 There's no dedicated CLI subcommand for `word_distribution`: it's a Python-only helper.
 
@@ -228,7 +228,7 @@ from aegean import geo
 coords = geo.site_coordinates()
 len(coords)                       # 56
 coords["Haghia Triada"]
-# SiteCoord(name='Haghia Triada', lat=35.06, lon=24.79, region='crete', pleiades=589672)
+# SiteCoord(name='Haghia Triada', lat=35.06, lon=24.79, region='crete', pleiades=589672, contested=None)
 ```
 
 ### `SiteCoord`
@@ -423,7 +423,7 @@ anything else is dropped. Per corpus:
 |---|---|---|---|
 | `lineara` | 1721 | 52 of 52 site labels | 1718 docs have a mapped site; the rest have no/unknown site |
 | `linearb` | 18 | 3 of 3 (Knossos, Mycenae, Pylos) | the bundled Linear B sample |
-| `cypriot` | 2 | 1 of 1 | small bundled sample |
+| `cypriot` | 180 | 1 of 5 | bundled IG XV 1 corpus + samples (only the generic Cyprus label is in the gazetteer) |
 | `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | small bundled sample |
 
 The gazetteer holds 56 sites total — more than any single corpus uses — so it already covers
@@ -440,8 +440,8 @@ find-sites across all four scripts. The few Linear A inscriptions with no row si
 - **Unmapped inscriptions are dropped silently** in `to_geodataframe` / `word_distribution`. Compare
   `len(corpus)` against the GeoDataFrame's row count if you need to know how many were excluded; the
   CLI table prints "*N* located site(s) of *M*" so you can see the gap directly.
-- **`word_distribution` raises on a zero-hit word** rather than returning an empty frame (geopandas
-  can't infer geometry on no rows). Check the word is attested first.
+- **`word_distribution` returns an empty (0-row) GeoDataFrame on a zero-hit word**, with the normal
+  column schema intact. Test `wd.empty` to tell "attested nowhere" apart from a mapping gap.
 - **`pleiades` shows as a float in the GeoDataFrame** because the column mixes ids with nulls; the id
   is still integral. Use `SiteCoord.pleiades` for the clean `int`.
 - **16 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're

@@ -318,46 +318,6 @@ The aeolic line templates available to `scan_aeolic` / `--meter` are in
 spondees, the penthemimeral caesura, synizesis handling, and the (deliberate)
 limits.
 
-### Tag parts of speech
-
-```python
-greek.pos_tags(line)
-# [('ἄνδρα', 'NOUN'), ('μοι', 'NOUN'), ('ἔννεπε', 'NOUN'), (',', 'PUNCT'),
-#  ('Μοῦσα', 'NOUN'), (',', 'PUNCT'), ('πολύτροπον', 'NOUN'), (',', 'PUNCT'),
-#  ('ὃς', 'PRON'), ('μάλα', 'NOUN'), ('πολλὰ', 'NOUN')]
-```
-
-```bash
-aegean greek tag "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
-# ἄνδρα	NOUN
-# μοι	NOUN
-# ἔννεπε	NOUN
-# ,	PUNCT
-# ...
-```
-
-The closed-class word `ὃς` is correctly tagged **PRON**. But notice `ἔννεπε` (a
-verb) and `μάλα` (an adverb) both come back as **NOUN**. The baseline is reliable
-on closed classes; open-class words fall back to NOUN.
-
-You can fix this for *attested* forms by switching on the
-[treebank backend](Greek-NLP#treebank-backed-mode-opt-in): it uses gold tags from
-the Perseus treebank (a one-time fetch to cache, then offline):
-
-```python
-greek.use_treebank()        # one-time download + build, then cached
-greek.pos_tags(line)
-# [('ἄνδρα','NOUN'), ('μοι','PRON'), ('ἔννεπε','VERB'), (',','PUNCT'),
-#  ('Μοῦσα','NOUN'), (',','PUNCT'), ('πολύτροπον','ADJ'), (',','PUNCT'),
-#  ('ὃς','PRON'), ('μάλα','ADV'), ('πολλὰ','ADJ')]
-```
-
-Now every word is tagged correctly. The treebank covers known forms; unattested
-ones still use the baseline, so it's always worth knowing which mode you're in.
-The most accurate option is the **neural pipeline** (`greek.use_neural_pipeline()`,
-the `[neural]` extra), which tags, lemmatizes, and parses in one pass and
-generalizes to unseen forms; see [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in).
-
 ### Analyse morphology
 
 `analyze` returns the candidate readings an ending implies. On a **regular** form
@@ -400,10 +360,55 @@ These are all *wrong*: `ἄνδρα` is the accusative singular of `ἀνήρ` (
 declension noun with an irregular stem). The lemma even comes back unaccented
 (`ανδρα`): the engine's signal that it **reconstructed** the form rather than
 recognising it (`lemma_certain` is `False`). Irregular and third-declension forms
-are exactly what the rule-based baseline can't resolve, but switch on the
-[treebank backend](Greek-NLP#treebank-backed-mode-opt-in) (`greek.use_treebank()`) and
-`analyze("ἄνδρα")` correctly returns `ἀνήρ [NOUN acc sg masc]` (`lemma_certain=True`).
-See [Morphological analysis](Greek-NLP#morphological-analysis) for the full scope.
+are exactly what the rule-based baseline can't resolve. Switching on the
+[treebank backend](Greek-NLP#treebank-backed-mode-opt-in) (below) recovers the
+gold reading: with the treebank on, `analyze("ἄνδρα")` leads with
+`ἀνήρ [NOUN acc sg masc]` (`lemma_certain=True`), the correct one. It also carries
+along a second gold-derived reading, `ὁ [DET acc sg masc]`, an annotation artefact
+from the source treebank rather than a real parse of `ἄνδρα`, so treat the first
+reading as the answer. See [Morphological analysis](Greek-NLP#morphological-analysis)
+for the full scope.
+
+### Tag parts of speech
+
+```python
+greek.pos_tags(line)
+# [('ἄνδρα', 'NOUN'), ('μοι', 'NOUN'), ('ἔννεπε', 'NOUN'), (',', 'PUNCT'),
+#  ('Μοῦσα', 'NOUN'), (',', 'PUNCT'), ('πολύτροπον', 'NOUN'), (',', 'PUNCT'),
+#  ('ὃς', 'PRON'), ('μάλα', 'NOUN'), ('πολλὰ', 'NOUN')]
+```
+
+```bash
+aegean greek tag "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
+# ἄνδρα	NOUN
+# μοι	NOUN
+# ἔννεπε	NOUN
+# ,	PUNCT
+# ...
+```
+
+The closed-class word `ὃς` is correctly tagged **PRON**. But notice `ἔννεπε` (a
+verb) and `μάλα` (an adverb) both come back as **NOUN**. The baseline is reliable
+on closed classes; open-class words fall back to NOUN.
+
+You can fix this for *attested* forms by switching on the
+[treebank backend](Greek-NLP#treebank-backed-mode-opt-in): it uses gold tags from
+the Perseus treebank (a one-time fetch to cache, then offline):
+
+```python
+greek.use_treebank()        # one-time download + build, then cached
+greek.pos_tags(line)
+# [('ἄνδρα','NOUN'), ('μοι','PRON'), ('ἔννεπε','VERB'), (',','PUNCT'),
+#  ('Μοῦσα','NOUN'), (',','PUNCT'), ('πολύτροπον','ADJ'), (',','PUNCT'),
+#  ('ὃς','PRON'), ('μάλα','ADV'), ('πολλὰ','ADJ')]
+```
+
+Now every word is tagged correctly. The treebank covers known forms, and it is
+also what turns the earlier `analyze("ἄνδρα")` into its gold reading; unattested
+forms still use the baseline, so it's always worth knowing which mode you're in.
+The most accurate option is the **neural pipeline** (`greek.use_neural_pipeline()`,
+the `[neural]` extra), which tags, lemmatizes, and parses in one pass and
+generalizes to unseen forms; see [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in).
 
 ### The whole stack in one call
 
@@ -610,7 +615,9 @@ Two real differences from the *Odyssey*'s opening: the *Iliad*'s third foot is a
 Same metre, different texture: exactly the kind of comparison this loader makes
 easy.
 
-And the one-call pipeline tags and lemmatizes it:
+And the one-call pipeline tags and lemmatizes it (the output below is the baseline,
+i.e. a fresh session; if you enabled the treebank back in Tutorial 2 it's still
+active and you'll already see `ἄειδε VERB` here):
 
 ```python
 for r in greek.pipeline(line0)[:3]:
@@ -620,7 +627,7 @@ for r in greek.pipeline(line0)[:3]:
 # θεὰ NOUN θεά True
 ```
 
-(`ἄειδε` is a verb mis-tagged NOUN by the baseline; turn on the treebank or
+(`ἄειδε` is a verb the baseline mis-tags NOUN; turn on the treebank or
 [neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the correct tag, as in
 Tutorial 2.)
 

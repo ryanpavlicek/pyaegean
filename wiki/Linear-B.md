@@ -279,6 +279,9 @@ aegean stats damos --top 8     # most frequent words
 # │ pe-mo    │ 173   │
 # │ o-na-to  │ 154   │
 # │ e-ke     │ 143   │
+# │ to-so-de │ 143   │
+# │ ko-to-na │ 130   │
+# │ ko-wa    │ 113   │
 # └──────────┴───────┘
 
 aegean search damos "po-*"     # words matching a wildcard sign pattern (po-me ×8, po-si ×5, …)

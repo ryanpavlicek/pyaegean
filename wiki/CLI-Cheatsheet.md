@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.19.3
+aegean --version                # pyaegean 0.19.4
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -274,7 +274,7 @@ In Python: `aegean.io.from_text(s)`, `from_text_file(path)`, `from_text_dir(path
 ```bash
 pip install "pyaegean[viz]"
 aegean plot keyness lineara --site Zakros -o zakros.png
-aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον" -o scan.svg --meter hexameter
+aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ" -o scan.svg --meter hexameter
 ```
 
 | `KIND` | what it draws | relevant flags |
@@ -605,8 +605,8 @@ aegean analyze compare po-me ποιμήν
 # similarity 0.62  (distance 0.383)   [+ a per-position alignment table]
 
 aegean analyze nearest qa-si-re-u greek --top 3 --json
-# [{"candidate":"ἱστορίης","distance":0.525},{"candidate":"ἄειδε","distance":0.571},
-#  {"candidate":"Ἡροδότου","distance":0.612}]
+# [{"candidate":"Ἡροδότου","distance":0.612},{"candidate":"καὶ","distance":0.625},
+#  {"candidate":"ἄειδε","distance":0.625}]
 
 aegean analyze assoc lineara KU-RO KI-RO
 # joint/w1/w2/docs 5/34/12/1721 · chi_squared 78.75 · log_likelihood 23.94 · fisher_p 1.6e-06
@@ -642,7 +642,7 @@ analysis.phonetic_distance("KU-RO", "KI-RO")    # 0.2
 
 ```bash
 aegean analyze hands damos                       # profile every hand
-aegean analyze hands damos --hand "Knossos 103"  # one hand's characteristic words (keyness)
+aegean analyze hands damos --hand 103            # one hand's characteristic words (keyness)
 ```
 
 ---
