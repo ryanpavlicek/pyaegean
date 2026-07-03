@@ -233,7 +233,9 @@ def _heuristic_rarity(content: list[str]) -> float:
     mean_len = sum(len(w) for w in content) / len(content)
     # Map mean length ~5 → 0, ~11 → 1 (Greek content words average ~6-7 chars).
     length_signal = max(0.0, min(1.0, (mean_len - 5.0) / 6.0))
-    rare_letters = sum(1 for w in content for ch in w if ch in "ξψϕῥ") / max(1, len(content))
+    # φ is the ordinary GREEK SMALL LETTER PHI (U+03C6) that real text uses, not the
+    # PHI SYMBOL (U+03D5); ξ ψ φ and rough-breathing ῥ are the marked/rare consonants.
+    rare_letters = sum(1 for w in content for ch in w if ch in "ξψφῥ") / max(1, len(content))
     return max(0.0, min(1.0, 0.7 * length_signal + 0.3 * min(1.0, rare_letters)))
 
 

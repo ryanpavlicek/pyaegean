@@ -23,6 +23,22 @@ from typing import TYPE_CHECKING
 
 from ..core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
 
+# Characters XML 1.0 forbids in text: control chars other than tab/newline/CR, plus the
+# non-character code points. Emitting them raw yields output that cannot be re-parsed.
+_XML_OK_WS = frozenset((0x09, 0x0A, 0x0D))  # tab, newline, carriage return
+
+
+def _xml_clean(text: str) -> str:
+    """Drop XML-1.0-invalid characters so the serialized document stays well-formed."""
+    return "".join(
+        c
+        for c in text
+        if ord(c) in _XML_OK_WS
+        or 0x20 <= ord(c) <= 0xD7FF
+        or 0xE000 <= ord(c) <= 0xFFFD
+        or ord(c) >= 0x10000
+    )
+
 if TYPE_CHECKING:
     import xml.etree.ElementTree as ET
 
@@ -67,7 +83,7 @@ def to_epidoc(document: Document) -> str:
     def sub(parent: ET.Element, tag: str, text: str | None = None) -> ET.Element:
         el = ET.SubElement(parent, q(tag))
         if text is not None:
-            el.text = text
+            el.text = _xml_clean(text)
         return el
 
     ET.register_namespace("", _TEI)  # emit the TEI namespace as the default (xmlns="…")
@@ -106,7 +122,7 @@ def to_epidoc(document: Document) -> str:
             else:
                 el = sub(ab, carrier)
             if wrap is None:
-                el.text = tok.text
+                el.text = _xml_clean(tok.text)
             else:  # editorial markup, e.g. <w><supplied reason="lost">…</supplied></w>, <seg><unclear>…</unclear></seg>
                 tag, attrs = wrap
                 inner = sub(el, tag, tok.text)

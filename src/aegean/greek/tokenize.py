@@ -1,7 +1,9 @@
 """Word and sentence tokenization for Greek text.
 
-A word is a run of Greek letters (with their combining diacritics) plus internal
-elision apostrophes; everything else is punctuation or whitespace. Sentence
+A word is a run of Greek letters (with their combining diacritics) plus edge and
+internal elision apostrophes: a trailing one for ordinary elision (``δ'``) and a
+leading one for prodelision / aphaeresis (``'στι`` for ``ἐστι`` after a long vowel).
+Everything else is punctuation or whitespace. Sentence
 boundaries are the Greek full stop ``.``, the question mark ``;`` / ``;``,
 and the ano teleia ``·`` / ``·``.
 """
@@ -21,7 +23,7 @@ from ..core.model import Token, TokenKind
 _LETTER = r"Ͱ-ͽͿ-ΆΈ-Ͽἀ-῿"
 _MARK = r"̀-ͯ"
 _APOS = r"'’᾽ʼ"  # straight ', right single quote, koronis, modifier
-_WORD_RE = re.compile(rf"[{_LETTER}{_MARK}]+(?:[{_APOS}][{_LETTER}{_MARK}]*)*")
+_WORD_RE = re.compile(rf"[{_APOS}]?[{_LETTER}{_MARK}]+(?:[{_APOS}][{_LETTER}{_MARK}]*)*")
 _TOKEN_RE = re.compile(rf"([{_LETTER}{_MARK}{_APOS}]+|[^\s{_LETTER}{_MARK}{_APOS}]+)")
 _SENTENCE_SPLIT_RE = re.compile(r"[.;;··]+")
 

@@ -487,18 +487,19 @@ def dataset_rows() -> list[DatasetRow]:
     """Every fetchable dataset and whether it is downloaded (with its on-disk
     size), for the data-store table. The same per-dataset state ``aegean data
     list`` reports; offline."""
-    from ..cli._data import _on_disk_bytes
-    from ..data import _REMOTE
+    from ..data import _REMOTE, downloaded_bytes, is_downloaded
 
     root = _store_root()
     rows: list[DatasetRow] = []
     for name, spec in sorted(_REMOTE.items()):
-        entry = None if root is None else root / name
-        size = _on_disk_bytes(entry) if entry is not None and entry.exists() else None
+        # is_downloaded/downloaded_bytes (not a bare root/name probe) so a dataset
+        # fetched under a different filename via index/extract is seen, matching the CLI.
+        downloaded = is_downloaded(spec, root) if root is not None else False
+        size = downloaded_bytes(spec, root) if (downloaded and root is not None) else None
         rows.append(
             DatasetRow(
                 name=name,
-                downloaded=size is not None,
+                downloaded=downloaded,
                 bytes=size,
                 note=spec.note,
                 license=spec.license,

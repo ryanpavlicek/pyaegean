@@ -16,7 +16,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field as _field, replace
 from typing import TYPE_CHECKING, Any, Literal
 
-from ..core.model import Document
+from ..core.model import Document, TokenKind
 from ..core.provenance import Provenance
 from .patterns import word_matches_sign_pattern
 
@@ -279,7 +279,7 @@ def eval_query(
             d
             for d in matching
             if any(
-                "-" in t.text and word_matches(t.text, filters, cooccur_map)
+                t.kind == TokenKind.WORD and word_matches(t.text, filters, cooccur_map)
                 for t in d.tokens
             )
         ]
@@ -288,8 +288,6 @@ def eval_query(
     matched_ids = {d.id for d in matching}
     word_counts: dict[str, int] = {}
     for w, entry in word_index.items():
-        if "-" not in w:
-            continue
         if not word_matches(w, filters, cooccur_map):
             continue
         cnt = sum(1 for doc_id in entry.inscription_ids if doc_id in matched_ids)
@@ -315,7 +313,11 @@ def summarize_filters(filters: list[FilterRow]) -> str:
 
 # ── Index builders + corpus-level convenience ────────────────────────────────
 def build_word_index(documents: Iterable[Document]) -> dict[str, WordEntry]:
-    """Index every multi-sign word to the documents it appears in."""
+    """Index every word token to the documents it appears in.
+
+    A word is any ``TokenKind.WORD`` token: a hyphen-joined multi-sign Aegean word
+    (KU-RO), a single-sign Aegean word, or an alphabetic-Greek word (λόγος). Numerals,
+    logograms, and punctuation are not words and are skipped."""
     ids: dict[str, list[str]] = {}
     counts: dict[str, int] = {}
     sites: dict[str, set[str]] = {}
@@ -323,7 +325,7 @@ def build_word_index(documents: Iterable[Document]) -> dict[str, WordEntry]:
         seen: set[str] = set()
         for t in doc.tokens:
             w = t.text
-            if "-" not in w:
+            if t.kind != TokenKind.WORD:
                 continue
             counts[w] = counts.get(w, 0) + 1
             if w not in seen:
@@ -340,7 +342,7 @@ def build_cooccurrence_map(documents: Iterable[Document]) -> dict[str, set[str]]
     document with."""
     cooccur: dict[str, set[str]] = {}
     for doc in documents:
-        words = sorted({t.text for t in doc.tokens if "-" in t.text})
+        words = sorted({t.text for t in doc.tokens if t.kind == TokenKind.WORD})
         for w in words:
             bucket = cooccur.setdefault(w, set())
             for other in words:

@@ -21,15 +21,22 @@ Two zero-dependency tiers, tried in order:
    whose lemma *is* the ``-ον`` form) and the indeclinables/reflexives; and the closed-class
    function words are skipped outright (their lemmas are suppletive: an ending swap would
    turn ``τοῦ`` into a non-word ``τός`` instead of ``ὁ``), as is any match whose stem would
-   be vowel-less (``μου``).
+   be vowel-less (``μου``). The thematic ``-ει/-εις`` strip is further held back from the two
+   look-alike classes it cannot otherwise tell from a present verb: the sigmatic future/aorist
+   (a single ``σ`` before the ending: ``δώσει`` is not stripped to a non-word ``*δώσω``, while the
+   genuine double-``σ`` present ``πράσσει → πράσσω`` still is) and the aorist-passive participle /
+   ``-εί`` adverb whose accent sits on the diphthong (``ἀποκριθείς``). The frequent third-declension
+   i-stem/s-stem datives and plurals whose ending collides with that verb rule (``πόλει``, ``πίστει``,
+   ``δυνάμει``) are seeded to their attested noun lemma, so they resolve correctly rather than
+   fabricating ``*πόλω``.
 
 This is the seed/rule tier of the cascade: the treebank, neural, and edit-tree backends
 (opt-in) handle the heavier, ambiguous, and irregular work and take precedence when active.
-Forms outside this scope (the ambiguous first-declension ``-η`` series, third-declension stems,
-indeclinables, suppletives) are returned normalized (NFC) unchanged, flagged via
-`lemmatize_verbose`. The rule layer also cannot restore an accent that *recedes* between the
-inflected form and the lemma (``κυρίῳ`` → ``κύριος``, ``δούλοις`` → ``δοῦλος``): it preserves the
-surface stem accent, so those need the opt-in backends.
+Forms outside this scope (the ambiguous first-declension ``-η`` series, most third-declension
+stems, augmented past tenses, indeclinables, suppletives) are returned normalized (NFC)
+unchanged, flagged via `lemmatize_verbose`. The rule layer also cannot restore an accent that
+*recedes* between the inflected form and the lemma (``κυρίῳ`` → ``κύριος``, ``δούλοις`` → ``δοῦλος``):
+it preserves the surface stem accent, so those need the opt-in backends.
 """
 
 from __future__ import annotations
@@ -164,6 +171,22 @@ _FUNCTION_WORDS: dict[str, str] = {
 # that happens to match an oblique ending must not be ending-stripped.
 _FUNCTION_KEYS = frozenset(_fold_key(k) for k in _FUNCTION_WORDS)
 
+# Third-declension i-stem / s-stem datives (-ει) and nom/acc plurals (-εις): their bare
+# ending collides with the thematic 2sg/3sg verb rule, which alone fabricates a non-word
+# -ω (πόλει → *πόλω). Seeded to the attested noun lemma so these resolve correctly (and
+# known=True) instead. Textbook/NT-frequency forms; the stem is unambiguous (no verb
+# shares the surface), so the seed only ever replaces a wrong answer with the right one.
+_THIRD_DECL: dict[str, str] = {
+    "πίστει": "πίστις", "πόλει": "πόλις", "πόλεις": "πόλις",
+    "δυνάμει": "δύναμις", "δυνάμεις": "δύναμις",
+    "ὄρει": "ὄρος", "θλίψει": "θλῖψις", "ἔθνει": "ἔθνος",
+    "ἀποκαλύψει": "ἀποκάλυψις", "μέρει": "μέρος", "σκότει": "σκότος",
+    "τάχει": "τάχος", "ἔτει": "ἔτος", "εἴδει": "εἶδος",
+    "πράξει": "πρᾶξις", "πράξεις": "πρᾶξις", "τάξει": "τάξις",
+    "πλήρεις": "πλήρης", "ὄφεις": "ὄφις", "σκεύει": "σκεῦος",
+    "νήστεις": "νῆστις", "πελάγει": "πέλαγος",
+}
+
 
 @lru_cache(maxsize=1)
 def _lemma_table() -> dict[str, str]:
@@ -171,6 +194,7 @@ def _lemma_table() -> dict[str, str]:
     # Keys are normalized with `_fold_key` (lowercase NFC, grave→acute) so lookup is
     # robust to input form; the bundled seed extends the closed-class function words.
     table = {_fold_key(k): unicodedata.normalize("NFC", v) for k, v in _FUNCTION_WORDS.items()}
+    table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in _THIRD_DECL.items())
     table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in raw.items())
     return table
 
@@ -218,6 +242,34 @@ def _last_n_have(word: str, n: int, marks: frozenset[str]) -> bool:
         if bases >= n:
             break
     return False
+
+
+_TONOS = (_ACUTE, _GRAVE, _CIRCUMFLEX)
+
+
+def _final_ei_accented(word: str) -> bool:
+    """Whether a tonos sits on the terminal ``-ει`` (or ``-εις``) diphthong.
+
+    Marks an aorist-passive participle (``-θείς``/``-είς``: ἀποκριθείς, στραφείς) or an
+    ``-εί`` adverb, where the accent falls on the diphthong itself, as opposed to a
+    thematic 2sg/3sg present (λέγεις, λύει) whose accent sits earlier. Used to keep the
+    verbal ``-ει/-εις → -ω`` strip from fabricating a non-word ``-ω`` on those forms."""
+    groups: list[tuple[str, str]] = []
+    for ch in unicodedata.normalize("NFD", word):
+        if unicodedata.combining(ch):
+            if groups:
+                base, marks = groups[-1]
+                groups[-1] = (base, marks + ch)
+        else:
+            groups.append((ch, ""))
+    if groups and groups[-1][0] in ("ς", "σ"):
+        groups = groups[:-1]
+    if len(groups) < 2:
+        return False
+    (e_base, e_marks), (i_base, i_marks) = groups[-2], groups[-1]
+    if e_base.lower() != "ε" or i_base.lower() != "ι":
+        return False
+    return any(m in _TONOS for m in e_marks + i_marks)
 
 
 def _surface_stem(word: str, n: int) -> str:
@@ -291,6 +343,9 @@ _INDECLINABLE = frozenset({
     # classes, never an inflected noun cell, so the guard only ever blocks a wrong lemmatization.
     "ὅπου", "ποῦ", "οὗ", "ὅταν", "ἄν", "ἐάν", "ἤτοι", "ἰδού",
     "ἑαυτοῦ", "ἐμαυτοῦ", "σεαυτοῦ", "ὁμοῦ", "πανταχοῦ", "ἀλλαχοῦ",
+    # -ει conjunctions/adverbs an ending rule would strip to a spurious -ω verb
+    # (ἐπεί → ἐπώ, ὡσεί → ὡσώ): indeclinable, never a thematic present.
+    "ἐπεί", "ὡσεί", "ἐπειδή",
 })
 
 # Common second-declension NEUTER nouns, whose nominative/accusative is -ον (the citation form):
@@ -303,6 +358,22 @@ _NEUTER_2ND = frozenset({
     "εἴδωλον", "ἄστρον", "θηρίον", "δένδρον", "μέτρον", "ὅπλον", "ἱερόν", "πρόσωπον", "μυστήριον",
     "βραβεῖον", "ταμεῖον", "ἄροτρον", "ἄκρον", "ἔριον",
 })
+
+
+def _ei_strip_unsafe(word: str, bare: str) -> bool:
+    """Whether the thematic ``-ει/-εις → -ω`` strip must NOT fire on this form.
+
+    The flat swap correctly recovers thematic 2sg/3sg presents (λέγει → λέγω) but
+    fabricates a non-word ``-ω`` on two look-alike classes it cannot otherwise tell
+    apart: the sigmatic future/aorist (δώσει → *δώσω, its lemma is the present δίδωμι;
+    a *single* σ before -ει, not the genuine double-σ present πράσσει → πράσσω), and
+    the aorist-passive participle / -εί adverb whose accent sits on the diphthong
+    (ἀποκριθείς → *ἀποκριθώ). Both are left to the seed table or a backend."""
+    if (bare.endswith("σει") and not bare.endswith("σσει")) or (
+        bare.endswith("σεισ") and not bare.endswith("σσεισ")
+    ):
+        return True
+    return _final_ei_accented(word)
 
 
 def _rule_lemma(word: str) -> str | None:
@@ -342,6 +413,7 @@ def _rule_lemma(word: str) -> str | None:
             # A circumflex on a verbal ending is a *contracted* verb (ποιεῖ) the flat swap
             # cannot resolve, or a perispomenon adverb (ἐκεῖ); skip rather than mis-stem it.
             and not _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX}))
+            and not (ending in ("ει", "εισ") and _ei_strip_unsafe(word, bare))
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)

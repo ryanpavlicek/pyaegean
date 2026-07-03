@@ -149,10 +149,18 @@ class Document:
 class SignInventory:
     """The set of signs for a script, indexed by label / glyph / codepoint."""
 
+    _SUBSCRIPT_DIGITS = str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")
+
     def __init__(self, signs: list[Sign], script_id: str = "") -> None:
         self.signs = signs
         self.script_id = script_id
         self._by_label = {s.label: s for s in signs}
+        # A second index folding subscript sign-numbers to ASCII digits, so a label
+        # the corpus prints with a Unicode subscript (RA₂) resolves against an
+        # inventory that stores the ASCII form (RA2), and vice versa. First wins.
+        self._by_label_fold: dict[str, Sign] = {}
+        for s in signs:
+            self._by_label_fold.setdefault(s.label.translate(self._SUBSCRIPT_DIGITS), s)
         # Two entries sharing a glyph or codepoint is a data problem worth
         # surfacing, not silently indexing last-wins (which is how a mislabeled
         # duplicate hides). Warn and keep the first, mirroring Corpus's
@@ -191,7 +199,10 @@ class SignInventory:
         return iter(self.signs)
 
     def by_label(self, label: str) -> Sign | None:
-        return self._by_label.get(label)
+        hit = self._by_label.get(label)
+        if hit is not None:
+            return hit
+        return self._by_label_fold.get(label.translate(self._SUBSCRIPT_DIGITS))
 
     def by_glyph(self, glyph: str) -> Sign | None:
         return self._by_glyph.get(glyph)

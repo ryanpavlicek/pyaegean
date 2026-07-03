@@ -246,34 +246,32 @@ def test_mcp_greek_pipeline_equals_view_pipeline_rows() -> None:
 # ── 4. data_status guards a broken / racing store entry ───────────────────────
 
 
-def test_on_disk_bytes_handles_absent_and_present_entries(tmp_path) -> None:  # type: ignore[no-untyped-def]
-    """_on_disk_bytes returns None for an absent entry and the true byte count for
-    a file and for a directory (recursively)."""
-    from aegean.mcp_server import _on_disk_bytes
+def test_dir_bytes_handles_absent_and_present_entries(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """_dir_bytes (the store-size helper behind downloaded_bytes) returns 0 for an
+    absent entry and the true byte count for a file and for a directory (recursively)."""
+    from aegean.data import _dir_bytes
 
-    assert _on_disk_bytes(tmp_path / "missing") is None
+    assert _dir_bytes(tmp_path / "missing") == 0
 
     f = tmp_path / "one.bin"
     f.write_bytes(b"x" * 100)
-    assert _on_disk_bytes(f) == 100
+    assert _dir_bytes(f) == 100
 
     d = tmp_path / "extracted"
     d.mkdir()
     (d / "a").write_bytes(b"x" * 10)
     (d / "b").write_bytes(b"x" * 20)
-    assert _on_disk_bytes(d) == 30
+    assert _dir_bytes(d) == 30
 
 
-def test_on_disk_bytes_returns_none_for_a_dangling_entry(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_dir_bytes_returns_zero_for_a_dangling_entry(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """A store path that raises OSError on stat() (a dangling symlink, a racing
-    remove) yields None instead of propagating: data_status stays a clean result."""
+    remove) totals 0 instead of propagating: downloaded_bytes stays a clean result."""
     from pathlib import Path
 
-    from aegean.mcp_server import _on_disk_bytes
+    from aegean.data import _dir_bytes
 
     dangling = tmp_path / "dangling"
-
-    # simulate a path that exists to is_dir() as a file yet raises on stat()
     real_stat = Path.stat
 
     def broken_stat(self, *a, **k):  # type: ignore[no-untyped-def]
@@ -282,22 +280,20 @@ def test_on_disk_bytes_returns_none_for_a_dangling_entry(tmp_path, monkeypatch) 
         return real_stat(self, *a, **k)
 
     monkeypatch.setattr(Path, "stat", broken_stat)
-    assert _on_disk_bytes(dangling) is None
+    assert _dir_bytes(dangling) == 0
 
 
-def test_on_disk_bytes_skips_a_file_that_vanishes_mid_walk(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_dir_bytes_skips_a_file_that_vanishes_mid_walk(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
     """A directory whose file disappears between rglob and stat still totals the
     survivors rather than raising."""
     from pathlib import Path
 
-    from aegean.mcp_server import _on_disk_bytes
+    from aegean.data import _dir_bytes
 
     d = tmp_path / "extracted"
     d.mkdir()
-    good = d / "good"
-    good.write_bytes(b"x" * 42)
-    gone = d / "gone"
-    gone.write_bytes(b"x" * 999)
+    (d / "good").write_bytes(b"x" * 42)
+    (d / "gone").write_bytes(b"x" * 999)
 
     real_stat = Path.stat
 
@@ -307,7 +303,7 @@ def test_on_disk_bytes_skips_a_file_that_vanishes_mid_walk(tmp_path, monkeypatch
         return real_stat(self, *a, **k)
 
     monkeypatch.setattr(Path, "stat", racing_stat)
-    assert _on_disk_bytes(d) == 42  # only the survivor counts
+    assert _dir_bytes(d) == 42  # only the survivor counts
 
 
 def test_data_status_is_a_clean_dict_over_the_real_store() -> None:

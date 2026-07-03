@@ -114,7 +114,10 @@ def format_value(v: float) -> str:
     for f, glyph in _FRACTION_GLYPHS:
         if abs(frac - f) < 1e-6:
             return f"{sign}{whole}{glyph}" if whole > 0 else f"{sign}{glyph}"
-    return f"{v:.3f}".rstrip("0").rstrip(".")
+    # Format the magnitude, then re-attach the sign only if it survives rounding:
+    # a tiny negative that rounds to "0" must not render as the malformed "-0".
+    s = f"{mag:.3f}".rstrip("0").rstrip(".")
+    return f"{sign}{s}" if sign and float(s) != 0 else s
 
 
 # Total-marker recognition — among the most secure lexical identifications in
@@ -276,9 +279,12 @@ def check_balances(
         else:
             continue
         diff = computed - line.value
+        # A line's role may have been assigned by a different marker set than the
+        # one passed here; fall back to no marker rather than raising StopIteration.
         marker = next(
-            t for t in line.terms
-            if markers.is_total(t) or markers.is_grand_total(t)
+            (t for t in line.terms
+             if markers.is_total(t) or markers.is_grand_total(t)),
+            "",
         )
         checks.append(
             BalanceCheck(

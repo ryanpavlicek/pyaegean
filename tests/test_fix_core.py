@@ -109,8 +109,11 @@ def test_copy_is_structurally_independent_and_content_equal() -> None:
     assert d2.lines is not d.lines and d2.lines == d.lines
     assert all(a is not b for a, b in zip(d2.lines, d.lines))  # nested lists fresh too
     assert d2.translations is not d.translations
-    # frozen value objects are shared, per the documented contract
-    assert d2.tokens[0] is d.tokens[0]
+    # A Token is rebuilt with an independent annotations dict (so a per-token annotation
+    # edit stays isolated) — equal in content, but not the same object.
+    assert d2.tokens[0] is not d.tokens[0] and d2.tokens[0] == d.tokens[0]
+    assert d2.tokens[0].annotations is not d.tokens[0].annotations
+    # DocumentMeta and Provenance carry no mutable per-element state, so they stay shared.
     assert d2.meta is d.meta
     assert c2.provenance is c.provenance
     # the id lookup works on the copy and resolves to the copy's document
@@ -125,7 +128,10 @@ def test_copy_sign_inventory_is_independent_but_equivalent() -> None:
     assert c2.sign_inventory.signs is not c.sign_inventory.signs
     assert len(c2.sign_inventory) == len(c.sign_inventory)
     label = c.sign_inventory.signs[0].label
-    assert c2.sign_inventory.by_label(label) is c.sign_inventory.by_label(label)
+    # A Sign is rebuilt with an independent attrs dict — equal in content, not the same object.
+    s2, s1 = c2.sign_inventory.by_label(label), c.sign_inventory.by_label(label)
+    assert s2 is not s1 and s2 == s1
+    assert s2 is not None and s1 is not None and s2.attrs is not s1.attrs
 
 
 def test_load_returns_isolated_corpus_documents() -> None:

@@ -26,4 +26,6 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     sign values.
     """
     m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
-    return "".join(m.get(_STRIP.sub("", s), s.lower()) for s in word.split("-"))
+    # Keyed uppercase; the IG XV convention writes signs lowercase, so fold to upper
+    # before lookup or signs like XA/XE fall through as raw 'xa'/'xe' instead of ksa/kse.
+    return "".join(m.get(_STRIP.sub("", s).upper(), s.lower()) for s in word.split("-"))

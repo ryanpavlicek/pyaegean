@@ -183,15 +183,18 @@ class Corpus:
     def copy(self) -> "Corpus":
         """A structurally independent copy: a fresh document list and, per document,
         fresh token/line/translation containers, so mutating the copy (or the
-        original) never affects the other. The elements themselves (`Token`,
-        `DocumentMeta`, `Sign`, `Provenance`) are immutable value objects and are
-        shared, which keeps the copy to one cheap pass of container building (a few
-        milliseconds even on the largest bundled corpus). The copy fingerprints
-        identically to the original."""
+        original) never affects the other. `Token` and `Sign` are frozen value
+        objects but each carries a mutable per-element dict (`annotations` /
+        `attrs`) for user analysis, so the copy rebuilds those with independent
+        dicts, keeping a per-token annotation edit (or a per-sign attr edit) from
+        leaking into the original, a sibling copy, or a later `load` of the same
+        cached corpus. The remaining fields (`DocumentMeta`, `Provenance`, the
+        immutable Token/Sign scalars) are shared. One cheap pass of container
+        building; the copy fingerprints identically to the original."""
         docs = [
             Document(
                 id=d.id, script_id=d.script_id,
-                tokens=list(d.tokens),
+                tokens=[replace(t, annotations=dict(t.annotations)) for t in d.tokens],
                 lines=[list(line) for line in d.lines],
                 glyphs=d.glyphs, transcription=d.transcription,
                 translations=list(d.translations),
@@ -201,7 +204,8 @@ class Corpus:
         ]
         inv = self.sign_inventory
         if inv is not None:
-            inv = SignInventory(list(inv.signs), inv.script_id)
+            signs = [replace(s, attrs=dict(s.attrs)) for s in inv.signs]
+            inv = SignInventory(signs, inv.script_id)
         return Corpus(docs, inv, self.provenance, self.script_id)
 
     def filter(self, **meta: Any) -> "Corpus":

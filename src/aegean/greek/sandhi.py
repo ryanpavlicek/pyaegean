@@ -149,6 +149,9 @@ _MOVABLE_NU_HOSTS: frozenset[str] = frozenset(
     for w in (
         # the copula and its common compounds
         "ἐστίν", "ἔστιν", "εἰσίν", "ἔξεστιν", "πάρεστιν",
+        # the same forms as unaccented enclitics (they lose their accent in running
+        # text: ἐστιν, εἰσιν, φασιν), whose fold-key differs from the accented citation
+        "ἐστιν", "εἰσιν", "φασιν", "φησιν",
         # irregular / athematic third persons
         "φησίν", "φασίν", "ὦσιν",
         "δίδωσιν", "τίθησιν", "ἵστησιν", "δείκνυσιν", "ἀφίησιν",
@@ -323,7 +326,13 @@ def resolve_sandhi(token: str) -> ResolvedForm:
     stem, apos = _strip_apostrophe(nfc)
     if apos is not None and stem:
         # Exact-form lexicon first (accent-preserving), then accent-blind proclitics.
-        exact = _ELIDED_WORDS.get(unicodedata.normalize("NFC", stem))
+        # The exact lookup also tries the lowercased stem so a sentence-initial
+        # capitalized elision (Ταῦτ', Πάντ') restores via its lowercase key, with the
+        # titlecase re-applied below.
+        stem_nfc = unicodedata.normalize("NFC", stem)
+        exact = _ELIDED_WORDS.get(stem_nfc)
+        if exact is None:
+            exact = _ELIDED_WORDS.get(stem_nfc.lower())
         full = exact if exact is not None else _ELISION.get(_bare_lower(stem))
         if full is not None:
             # Restore casing only for the simple lowercase case; titlecase if input was.

@@ -327,7 +327,11 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name='tokens_fts'"
             ).fetchone()
         )
-        if has_fts:  # unicode61 folds Greek case, so the phrase query finds either case
+        # unicode61 drops everything that is not a letter/digit, so a query that is all
+        # separators (a punctuation token like "·" or "—") tokenizes to an empty FTS phrase
+        # and would match nothing; route those to the exact path, which finds the token.
+        fts_usable = has_fts and any(ch.isalnum() for ch in query)
+        if fts_usable:  # unicode61 folds Greek case, so the phrase query finds either case
             phrase = '"' + query.replace('"', '""') + '"'  # a literal FTS5 phrase, not syntax
             cur = conn.execute(
                 "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ?",

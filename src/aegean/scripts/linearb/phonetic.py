@@ -28,6 +28,10 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     sign values.
     """
     m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
+    # The sign table is keyed uppercase; lowercase input is the DAMOS (and general
+    # scholarly) convention, so fold to upper before lookup or the Q-/Z-series and
+    # other signs silently fall through to their raw transliteration.
     return "".join(
-        m.get(_STRIP.sub("", s.translate(_SUBSCRIPT)), s.lower()) for s in word.split("-")
+        m.get(_STRIP.sub("", s.translate(_SUBSCRIPT)).upper(), s.lower())
+        for s in word.split("-")
     )

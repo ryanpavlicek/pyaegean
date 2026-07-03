@@ -271,7 +271,11 @@ def unicode_to_betacode(text: str) -> str:
     sigma digits, plus the backtick escape itself) is backtick-escaped, so Greek
     text with embedded parentheses, arithmetic, or other punctuation survives
     the trip unchanged. (ASCII *letters* are Beta Code's own alphabet, so plain
-    Latin words are read back as Greek; this maps Greek, not mixed prose.)"""
+    Latin words are read back as Greek; this maps Greek, not mixed prose.)
+
+    Lunate sigma (ϲ U+03F2 / Ϲ U+03F9) is a display variant of sigma and is
+    normalized to a standard sigma (``s``) here, so it converts cleanly but does
+    not round-trip back to the lunate glyph."""
     out: list[str] = []
     last_was_sigma = False
     for ch in unicodedata.normalize("NFD", text):
@@ -279,8 +283,12 @@ def unicode_to_betacode(text: str) -> str:
             out.append(_MARK_TO_BETA[ch])
             last_was_sigma = False
             continue
-        if ch in ("ς", "ϲ"):
+        if ch in ("ς", "ϲ"):  # final sigma and lowercase lunate sigma (U+03F2)
             out.append("s")
+            last_was_sigma = True
+            continue
+        if ch == "Ϲ":  # capital lunate sigma (U+03F9): emit *s, not the raw glyph
+            out.append("*s")
             last_was_sigma = True
             continue
         low = ch.lower()

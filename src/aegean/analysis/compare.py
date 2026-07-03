@@ -10,9 +10,10 @@ form — can be scored and aligned segment by segment.
 
     >>> round(phonetic_compare("po-me", "linearb", "ποιμήν", "greek").similarity, 2)
     0.62
+    >>> # labiovelar qa → kwa: the k drops (del) and w → b shows as a far substitution
     >>> [c.op for c in phonetic_compare("qa-si-re-u", "linearb",
     ...                                 "βασιλεύς", "greek").alignment][:3]
-    ['sub-far', 'match', 'match']        # the qʷ → b labiovelar reflex shows as a far sub
+    ['del', 'sub-far', 'match']
 
 **Exploratory, and doubly so here.** Two cautions stack: the distance metric's
 phoneme classes are a linguistic judgement (see ``distance``), *and* the

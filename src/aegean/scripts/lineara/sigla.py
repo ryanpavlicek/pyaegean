@@ -256,11 +256,12 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
     Each attestation carries a ``kind`` (syllable / logogram / fraction / blank)
     and a ``word`` index (None = standalone). Consecutive ``syllable``
     attestations sharing a word index become one multi-sign `WORD` token
-    (``KA-U-DE-TA``); ``logogram`` attestations become `LOGOGRAM` tokens;
-    fraction/blank attestations carry no resolved value and are skipped (SigLA
-    records no cardinal-number values). Each word/standalone item is its own
-    line. Falls back to one `UNKNOWN` token per sign for a v1 asset (no
-    ``word``/``kind`` keys)."""
+    (``KA-U-DE-TA``); ``logogram`` attestations become `LOGOGRAM` tokens. A
+    ``blank`` inside a word (its ``word`` index is set) is kept as ``*?`` so the
+    word stays contiguous (KU-*?-NI); only a *standalone* fraction/blank (``word``
+    is None) is skipped, as SigLA records no cardinal-number value for it. Each
+    word/standalone item is its own line. Falls back to one `UNKNOWN` token per
+    sign for a v1 asset (no ``word``/``kind`` keys)."""
     from ...core.model import Token, TokenKind
 
     tokens: list[Any] = []

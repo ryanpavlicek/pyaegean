@@ -401,8 +401,44 @@ _RELATIVE = _pron(
     ("οὕς", "acc", "pl", "masc"), ("ἅς", "acc", "pl", "fem"), ("ἅ", "acc", "pl", "neut"),
 )
 
+# Demonstratives οὗτος and ἐκεῖνος (Smyth §333, §329). Closed class, but the oblique
+# stems (τουτ-/ταυτ-, ἐκειν-) are not derivable from the ending, so without the
+# paradigm they fall through to the open-class nominal rules and read as spurious
+# nouns (τούτου → NOUN gen sg). The feminine αὕτη keeps its rough breathing, so it
+# does not collide with the smooth intensive αὐτή.
+_DEMONSTRATIVE = _pron(
+    "οὗτος",
+    ("οὗτος", "nom", "sg", "masc"), ("τούτου", "gen", "sg", "masc"),
+    ("τούτῳ", "dat", "sg", "masc"), ("τοῦτον", "acc", "sg", "masc"),
+    ("οὗτοι", "nom", "pl", "masc"), ("τούτων", "gen", "pl", "masc"),
+    ("τούτοις", "dat", "pl", "masc"), ("τούτους", "acc", "pl", "masc"),
+    ("αὕτη", "nom", "sg", "fem"), ("ταύτης", "gen", "sg", "fem"),
+    ("ταύτῃ", "dat", "sg", "fem"), ("ταύτην", "acc", "sg", "fem"),
+    ("αὗται", "nom", "pl", "fem"), ("τούτων", "gen", "pl", "fem"),
+    ("ταύταις", "dat", "pl", "fem"), ("ταύτας", "acc", "pl", "fem"),
+    ("τοῦτο", "nom", "sg", "neut"), ("τούτου", "gen", "sg", "neut"),
+    ("τούτῳ", "dat", "sg", "neut"), ("τοῦτο", "acc", "sg", "neut"),
+    ("ταῦτα", "nom", "pl", "neut"), ("τούτων", "gen", "pl", "neut"),
+    ("τούτοις", "dat", "pl", "neut"), ("ταῦτα", "acc", "pl", "neut"),
+)
+_DEMONSTRATIVE_EKEINOS = _pron(
+    "ἐκεῖνος",
+    ("ἐκεῖνος", "nom", "sg", "masc"), ("ἐκείνου", "gen", "sg", "masc"),
+    ("ἐκείνῳ", "dat", "sg", "masc"), ("ἐκεῖνον", "acc", "sg", "masc"),
+    ("ἐκεῖνοι", "nom", "pl", "masc"), ("ἐκείνων", "gen", "pl", "masc"),
+    ("ἐκείνοις", "dat", "pl", "masc"), ("ἐκείνους", "acc", "pl", "masc"),
+    ("ἐκείνη", "nom", "sg", "fem"), ("ἐκείνης", "gen", "sg", "fem"),
+    ("ἐκείνῃ", "dat", "sg", "fem"), ("ἐκείνην", "acc", "sg", "fem"),
+    ("ἐκεῖναι", "nom", "pl", "fem"), ("ἐκείνων", "gen", "pl", "fem"),
+    ("ἐκείναις", "dat", "pl", "fem"), ("ἐκείνας", "acc", "pl", "fem"),
+    ("ἐκεῖνο", "nom", "sg", "neut"), ("ἐκείνου", "gen", "sg", "neut"),
+    ("ἐκείνῳ", "dat", "sg", "neut"), ("ἐκεῖνο", "acc", "sg", "neut"),
+    ("ἐκεῖνα", "nom", "pl", "neut"), ("ἐκείνων", "gen", "pl", "neut"),
+    ("ἐκείνοις", "dat", "pl", "neut"), ("ἐκεῖνα", "acc", "pl", "neut"),
+)
+
 _CLOSED_PARADIGM: dict[str, tuple[Analysis, ...]] = _merge(
-    _INTERROGATIVE, _INDEFINITE, _RELATIVE
+    _INTERROGATIVE, _INDEFINITE, _RELATIVE, _DEMONSTRATIVE, _DEMONSTRATIVE_EKEINOS
 )
 
 

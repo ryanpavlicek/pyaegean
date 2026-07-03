@@ -185,12 +185,16 @@ def from_csv(
     id_col: str | None = None,
     script_id: str = "greek",
     meta_cols: Sequence[str] = (),
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
 ) -> "Corpus":
     """Build a `Corpus` from a CSV file. ``text_col`` holds each row's text; ``id_col``
     (optional) holds its document id (otherwise ids are ``<stem>:<row>``). ``meta_cols``
     names columns to carry into document metadata (recognized: site/period/scribe/support/
-    findspot/name). Raises `ValueError` if ``text_col`` is absent."""
+    findspot/name). Raises `ValueError` if ``text_col`` is absent.
+
+    The default ``utf-8-sig`` encoding transparently strips a leading UTF-8 BOM (Excel
+    writes one), so the first column name is not silently prefixed with it; it reads a
+    BOM-less UTF-8 file identically."""
     import csv
 
     from ..core.corpus import Corpus

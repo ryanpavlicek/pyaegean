@@ -606,8 +606,9 @@ def _scan_pentameter(syllables: list[_Syllable]) -> list[tuple[str, list[str]]] 
         if not (_fits(opts[base], HEAVY) and _fits(opts[base + 1], LIGHT) and _fits(opts[base + 2], LIGHT)):
             return None
         result.append(("dactyl", [HEAVY, LIGHT, LIGHT]))
-    if not _fits(opts[mid + 6], HEAVY):
-        return None
+    # The final element is anceps (brevis in longo): a naturally short open final
+    # vowel closes the pentameter, so accept whatever the last syllable's quantity is.
+    # (mid + 7 == n, checked above, guarantees the syllable exists.)
     result.append(("longum", [ANCEPS]))
     return result
 
@@ -639,8 +640,9 @@ def _count_pentameter(syllables: list[_Syllable]) -> int:
             base = mid + d * 3
             if not (_fits(opts[base], HEAVY) and _fits(opts[base + 1], LIGHT) and _fits(opts[base + 2], LIGHT)):
                 return
-        if _fits(opts[mid + 6], HEAVY):
-            found += 1
+        # Final element is anceps (brevis in longo): mid + 7 == n already fixes its
+        # position, so any final-syllable quantity completes the pentameter.
+        found += 1
 
     first_half(0, 0)
     return found

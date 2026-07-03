@@ -300,10 +300,31 @@ _REMOTE: dict[str, DataSpec] = {
 
 
 def _dir_bytes(path: pathlib.Path) -> int:
-    """Recursive size of a store path (a file's own size, or a directory's files)."""
-    if path.is_dir():
-        return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
-    return path.stat().st_size
+    """Recursive size of a store path (a file's own size, or a directory's files).
+
+    A file that vanishes between the directory walk and its ``stat`` (a racing
+    fetch/remove) is skipped rather than raising, so the other files still count."""
+    try:
+        is_dir = path.is_dir()
+    except OSError:
+        return 0
+    if is_dir:
+        total = 0
+        try:
+            children = list(path.rglob("*"))
+        except OSError:
+            return 0
+        for f in children:
+            try:
+                if f.is_file():
+                    total += f.stat().st_size
+            except OSError:
+                continue  # vanished mid-walk
+        return total
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
 
 
 def on_disk_paths(spec: DataSpec, root: pathlib.Path) -> list[pathlib.Path]:

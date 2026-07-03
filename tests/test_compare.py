@@ -67,10 +67,12 @@ def test_compare_linearb_to_greek_bridge():
 
 
 def test_compare_labiovelar_reflex_is_a_far_sub():
-    # qa-si-re-u 'basileus': the qʷ → b reflex is a "far" substitution at position 0
+    # qa-si-re-u 'basileus': qa romanizes to the labiovelar cluster "kwa"; the qʷ → b
+    # reflex shows as the k dropping (del) and the w → b far substitution.
     cmp = compare.phonetic_compare("qa-si-re-u", "linearb", "βασιλεύς", "greek")
-    assert cmp.alignment[0].a == "q" and cmp.alignment[0].b == "b"
-    assert cmp.alignment[0].op == "sub-far"
+    assert cmp.alignment[0].a == "k" and cmp.alignment[0].op == "del"
+    assert cmp.alignment[1].a == "w" and cmp.alignment[1].b == "b"
+    assert cmp.alignment[1].op == "sub-far"
 
 
 def test_compare_cypriot_to_greek():

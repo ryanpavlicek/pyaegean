@@ -233,12 +233,18 @@ def query_corpus(
             value = value if isinstance(value, bool) else str(value).lower() in ("1", "true", "yes")
         elif not isinstance(value, str):
             value = str(value)
+        neg_raw = spec.get("negate", False)
+        # Forgiving bool, like the boolean value coercion above: a raw bool() would
+        # read the JSON string "false"/"no"/"0" as True and silently invert the query.
+        negate = neg_raw if isinstance(neg_raw, bool) else str(neg_raw).strip().lower() in (
+            "1", "true", "yes",
+        )
         rows.append(
             FilterRow(
                 field,
                 value,
                 connector="or" if connector == "or" else "and",
-                negate=bool(spec.get("negate", False)),
+                negate=negate,
             )
         )
     res = c.query(rows, output_kind)
@@ -351,17 +357,20 @@ def data_status() -> dict[str, Any]:
     over MCP appear as 'damos-corpus' / 'nt-corpus' / 'sigla-corpus'; a dataset that is
     not downloaded is fetched automatically (sha256-verified) the first time something
     needs it, or explicitly from the shell with `aegean data fetch NAME`."""
-    from .data import _REMOTE, cache_dir
+    from .data import _REMOTE, cache_dir, downloaded_bytes, is_downloaded
 
     root = cache_dir()
     datasets: list[dict[str, Any]] = []
     for name, spec in sorted(_REMOTE.items()):
-        entry = root / name
-        size = _on_disk_bytes(entry)
+        # Route through is_downloaded/downloaded_bytes (not a bare root/name probe) so a
+        # dataset that lands under a different filename via an index/extract fetch is seen
+        # as downloaded, matching `aegean data list` / `aegean doctor`.
+        downloaded = is_downloaded(spec, root)
+        size = downloaded_bytes(spec, root) if downloaded else None
         datasets.append(
             {
                 "name": name,
-                "downloaded": size is not None,
+                "downloaded": downloaded,
                 "bytes": size,
                 "size": _human_size(size) if size is not None else "",
                 "note": spec.note,
@@ -369,37 +378,6 @@ def data_status() -> dict[str, Any]:
             }
         )
     return {"store": str(root), "datasets": datasets}
-
-
-def _on_disk_bytes(path: Any) -> int | None:
-    """Actual bytes a store entry occupies (recursive for extracted directories), or
-    ``None`` when the entry is absent or unreadable.
-
-    A store entry can be a dangling symlink or vanish mid-scan (a racing fetch/remove);
-    either surfaces as "not downloaded" rather than propagating an ``OSError``. A file
-    that disappears while a directory is being walked is skipped, so the directory's other
-    files still count."""
-    try:
-        is_dir = path.is_dir()
-    except OSError:
-        return None
-    if is_dir:
-        total = 0
-        try:
-            files = list(path.rglob("*"))
-        except OSError:
-            return None
-        for f in files:
-            try:
-                if f.is_file():
-                    total += f.stat().st_size
-            except OSError:
-                continue
-        return total
-    try:
-        return int(path.stat().st_size)
-    except OSError:
-        return None
 
 
 def _human_size(n: int) -> str:

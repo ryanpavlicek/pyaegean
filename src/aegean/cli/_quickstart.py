@@ -103,8 +103,9 @@ def quickstart(
         False, "--no-run", help="Print the tour script without executing the commands."
     ),
 ) -> None:
-    """A guided first five minutes: eight short steps, each running a real command
-    live on the bundled data (offline, no keys, nothing to download).
+    """A guided first five minutes: eight short steps, seven of them running a real
+    command live on the bundled data (offline, no keys, nothing to download); the last
+    step points to where to go next.
 
     Every step prints one line of context, the command as you would type it, and
     the command's real output; --no-run prints the script without executing it.

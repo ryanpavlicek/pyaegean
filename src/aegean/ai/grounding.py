@@ -68,6 +68,20 @@ _MEANING_LEAD = re.compile(
 # Only an *origin* ``from`` is an etymology lead, and it names a root/stem/form or a source
 # language, so it is matched narrowly (``from a root``, ``from the stem``, ``from PIE``,
 # ``from Latin …``) rather than by a bare ``from``, letting the directional sense through.
+# A residue that is ENTIRELY a grammatical-derivation pointer (the Greek base it points to
+# has been cut): "adverb of", "comp. of", "a strengthd. form of", "as if contr. from". These
+# name a relation to another form, not a meaning, so `clean_gloss` returns "" for them.
+# Matched only when the pointer is the whole residue (ends in of/from/for), so a genuine gloss
+# that merely contains "of" ("fond of", "born of") is untouched.
+_DERIVATION_ONLY = re.compile(
+    r"^(?:a|an|the|as\s+if)?\s*"
+    r"(?:adv\.?|adverb|comp\.?|compar\.?|comparative|superl\.?|superlative|"
+    r"contr\.?|contracted|collat\.?|collateral|shortened|"
+    r"strengthd\.?|strengthened|lengthd\.?|lengthened)"
+    r"[\w.\s]*?\s(?:of|from|for)$",
+    re.IGNORECASE,
+)
+
 _ETYM_LEAD = re.compile(
     r"^(?:"
     r"prob\.|perh\.|cogn\.|orig\.|"  # abbreviations: no trailing \b after the period
@@ -117,6 +131,11 @@ def clean_gloss(text: str, *, limit: int = 60) -> str:
     g = _trim_dangling_paren(g)
     g = re.split(r"[;:]", g)[0]
     g = _trim_dangling_paren(g).strip(" ,.·—-()[]")
+    # A residue that is only a grammatical-derivation pointer whose base (the Greek
+    # form it points at) was just cut ("adverb of", "comp. of", "a strengthd. form of",
+    # "as if contr. from") is not a meaning; drop it rather than inject the fragment.
+    if _DERIVATION_ONLY.match(g):
+        return ""
     return g[:limit] if len(g) >= 3 else ""
 
 

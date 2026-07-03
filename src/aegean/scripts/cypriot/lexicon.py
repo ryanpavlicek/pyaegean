@@ -9,11 +9,13 @@ equations; pass a returned lemma to `aegean.greek.gloss` / `aegean.greek.lookup`
 from __future__ import annotations
 
 import re
+import unicodedata
 from functools import lru_cache
 
 from ...data import load_bundled_json
 
 _STRIP = re.compile(r"[\[\]?]")  # editorial markers
+_UNDERDOT = "̣"  # COMBINING DOT BELOW (Leiden: damaged but legible reading)
 
 
 @lru_cache(maxsize=1)
@@ -22,7 +24,10 @@ def _lexicon() -> dict[str, dict[str, str]]:
 
 
 def _norm(word: str) -> str:
-    return _STRIP.sub("", word.upper())
+    # Drop the Leiden underdot (a damaged-but-legible sign is still a known reading, so
+    # PẠ-SI-LE-U-SE must resolve like PA-SI-LE-U-SE) along with the bracket markers.
+    decomposed = unicodedata.normalize("NFD", word).replace(_UNDERDOT, "")
+    return _STRIP.sub("", unicodedata.normalize("NFC", decomposed).upper())
 
 
 def greek_reading(word: str) -> tuple[str, str] | None:
