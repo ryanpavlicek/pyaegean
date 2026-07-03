@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.19.7 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.19.8 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -69,7 +69,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | Module | What it does |
 | --- | --- |
 | [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()` |
-| [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (342 signs; 48 carry conventional sound values), sign→sound map, transliteration |
+| [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (342 signs; 50 carry conventional sound values), sign→sound map, transliteration |
 | [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, the full DAMOS corpus on demand (`aegean.load("damos")`, ~5,900 tablets) |
 | [Cypriot](Cypriot) | Arcado-Cypriot Greek: 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`), and a bundled **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge: the script is undeciphered) |
@@ -99,7 +99,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.19.7.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
+**Current release: v0.19.8.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
 `aegean-mcp` server, and a grounded multi-provider AI layer. The pages in the sidebar cover every

@@ -35,7 +35,7 @@ shown later on this page:
 | Word tokens (all multi-sign; 995 distinct) | **1,381** |
 | Tokens (words, numerals, logograms, separators) | **6,406** |
 | Signs in the inventory | **342** (the full Unicode Linear A block) |
-| Signs with an assigned sound value | **48** |
+| Signs with an assigned sound value | **50** |
 | Signs marked shared with Linear B | **81** |
 | Documents carrying editorial status | **366** (552 `LOST` + 120 `UNCLEAR` tokens) |
 | Tablets with a checkable `KU-RO`/`KU-RA` total | **37** (41 total lines) |
@@ -167,14 +167,14 @@ The document-level frame's columns are: `id`, `script_id`, `site`, `support`,
 ## The sign inventory
 
 The inventory is the **full Unicode Linear A repertoire**: 342 signs. Of those,
-**48** carry an assigned sound value (`phonetic`); the rest are carried from the
+**50** carry an assigned sound value (`phonetic`); the rest are carried from the
 Unicode Character Database with `attrs["source"] == "ucd"` and **no** reading,
 because Linear A is undeciphered and most of its repertoire has no agreed value.
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
 len(inv)                           # 342
-len([s for s in inv if s.phonetic])               # 48  — the read signs
+len([s for s in inv if s.phonetic])               # 50  — the read signs
 len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 81  — shared glyphs
 
 sign = inv.by_label("KU")

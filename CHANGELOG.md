@@ -4,6 +4,26 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.8 (2026-07-03)
+
+A cross-repo sign-table reconciliation: the Linear A z-series signs **ZE** and **ZO** now read as
+signs in both the bundled inventory and the Linear A Research Workbench, closing the last standing
+data discrepancy between the two projects.
+
+### Fixed
+- **ZE and ZO now read as Linear A signs.** Both are securely attested z-series syllabograms
+  (ZE 46 times, ZO twice in the bundled corpus), but each occurs only as a standalone single-sign
+  word, so the workbench's hyphenated-word sign aligner never walked them and both projects had
+  carried them as unreadable Unicode-chart entries with no sound value. They are now read from
+  their own attestations: ZE maps to U+1063C (dze, confidence 1, unanimous across its 46
+  attestations); ZO maps to U+1060E (dzo, confidence 0, the chart identity, its 2 attestations
+  too short to align). The aligned/read-sign count moves 95 to 97 (manifest `signCount` 95 to 97),
+  and the count of signs carrying an assigned sound value moves 48 to 50. The inscription-level
+  parity contract (`paritySha256`) is unchanged, as it hashes the shared text fields and not sign
+  phonetics, so the corpus the two projects share does not drift. Mirrored in the Linear A
+  Research Workbench 1.6.1, whose rebuilt served app (`aegean workbench`) now embeds the 97-sign
+  table.
+
 ## 0.19.7 (2026-07-03)
 
 A concurrency and thread-safety pass: the surfaces real concurrent use touches (worker
