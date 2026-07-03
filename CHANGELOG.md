@@ -4,6 +4,17 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.5 (2026-07-03)
+
+### Fixed
+- **Databases written by earlier releases load again.** 0.19.4's token-order fix added a column
+  that the reader then required, so a `.db` file written by 0.19.3 or earlier failed with
+  "no such column: token_order". Reading an old file now orders by its stored `position` (the
+  best an old file carries), and appending into one migrates it in place (the column is added
+  and backfilled), so existing corpus databases keep working unchanged.
+- The `Corpus.copy` docstring states the measured cost honestly (one pass over the tokens, on
+  the order of 100–200 ms for the largest corpora), replacing a stale "a few milliseconds" claim.
+
 ## 0.19.4 (2026-07-03)
 
 An executable-documentation, robustness, and property-testing pass: every code example in the
