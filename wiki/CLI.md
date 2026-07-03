@@ -28,7 +28,7 @@ Learn these once and every command behaves predictably.
 |---|---|---|
 | **`--json`** | Print one machine-readable JSON document to stdout and nothing else, so results pipe into `jq`, files, or other programs. Greek stays readable (`ensure_ascii=False`). Combines with `--output/-o`: the file is written (a one-line `wrote <path>` confirmation goes to stderr) and the JSON still prints to stdout. | `aegean info lineara --json` |
 | **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, passing `-` reads the text from standard input, so commands compose in pipelines. | `echo "μῆνιν" \| aegean greek lemmatize -` |
-| **`--top` / `--limit`** | Interchangeable spellings of the same cap: every command that caps a ranked table or result list accepts both (only `plot` still takes `--top` alone). `0` lifts the cap wherever the help says `0 = all` (`greek rarity` is the one exception: its `--top` is a plain slice, so `0` shows nothing). | `aegean stats lineara --limit 3` |
+| **`--top` / `--limit`** | Interchangeable spellings of the same cap: every command that caps a ranked table or result list accepts both, `plot` included. `0` lifts the cap wherever the help says `0 = all` (`greek rarity` is the one exception: its cap is a plain slice, so `0` shows nothing). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error (typer's default). `balance --strict` exits `1` when any total fails to balance. | see below |
 
 Here are those exit codes, actually demonstrated:
@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.0
+aegean --version          # pyaegean 0.19.1
 ```
 
 | Group | What's in it |
@@ -760,7 +760,7 @@ aegean sign lineara KU --json
   "glyph": "𐙂",
   "codepoint": "U+10642",
   "phonetic": "ku",
-  "attrs": { "sharedWithLinearB": true, "total": 16, "confidence": 1, "altGlyphs": [] }
+  "attrs": { "sharedWithLinearB": true, "linearAOnly": false, "total": 29, "confidence": 1, "altGlyphs": [] }
 }
 ```
 
@@ -806,7 +806,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.0                    │
+│ OK │ pyaegean │ 0.19.1                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

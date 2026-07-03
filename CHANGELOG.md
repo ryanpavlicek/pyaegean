@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.1 (2026-07-02)
+
+A full-program audit pass: three confirmed defects fixed, each pinned by a regression test.
+
+### Fixed
+- **Grand-total accounting reconciles correctly.** A `PO-TO-KU-RO` grand total that follows one or
+  more `KU-RO` subtotals was summed against an empty running list, so it reported a computed sum of
+  0 (on the bundled HT122b: stated 97, computed 0 instead of 65). It now sums the subtotals the way
+  the reference implementation does (HT122b reconciles to 65, difference -32). The fix reaches
+  `aegean balance`, the MCP tool, and the terminal UI, which now all route the accounting and
+  pipeline tables through the shared `aegean._view` layer, so the three surfaces cannot disagree.
+- **The AI response cache survives a corrupt file.** A truncated or garbage cache file (from a
+  killed process or a full disk) is now treated as a cache miss rather than raising, and writes are
+  atomic so no partial file is ever observable.
+- **The data store reports what is actually downloaded.** Datasets fetched as an unpacked archive
+  or a prebuilt index (the LSJ index, the AGDT models) were shown as "not downloaded" by
+  `aegean data list` and `aegean doctor` even when present; the on-disk probe now checks each
+  dataset's real footprint. The reproducibility manifest also marks a mirror-overridden URL's
+  checksum as unenforced, since verification is skipped for a user's own mirror.
+- **Smaller corrections.** Negative accounting quantities keep their sign; the Linear A
+  sound-value count is corrected to 48 in the docs and inventory docstring; the terminal UI flags
+  SigLA as undeciphered, runs its corpus search off the UI thread, and no longer carries a dead
+  cross-screen message subsystem; `paired_bootstrap` validates `n_resamples`.
+
 ## 0.19.0 (2026-07-02)
 
 ### Added

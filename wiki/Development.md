@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.19.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.19.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -156,7 +156,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.19.0-py3-none-any.whl: 3261 KB uncompressed, 174 files
+# wheel dist/pyaegean-0.19.1-py3-none-any.whl: 3274 KB uncompressed, 174 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -165,7 +165,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.19.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.19.1-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -459,7 +459,7 @@ inventory builder maps the known keys onto a `Sign` and carries the rest into
   "phonetic": "a",
   "sharedWithLinearB": true,
   "linearAOnly": false,
-  "total": 35,
+  "total": 74,
   "confidence": 1,
   "altGlyphs": []
 }
@@ -486,7 +486,7 @@ import aegean
 s = aegean.load("lineara").sign_inventory.by_label("DA")
 print(s.label, s.glyph, s.codepoint, s.phonetic)   # DA 𐘀 67072 da
 print(s.attrs)
-# {'sharedWithLinearB': True, 'linearAOnly': False, 'total': 23,
+# {'sharedWithLinearB': True, 'linearAOnly': False, 'total': 40,
 #  'confidence': 1, 'altGlyphs': []}
 ```
 
@@ -502,7 +502,7 @@ aegean sign lineara DA
 # │ phonetic                │ da      │
 # │ attrs.sharedWithLinearB │ True    │
 # │ attrs.linearAOnly       │ False   │
-# │ attrs.total             │ 23      │
+# │ attrs.total             │ 40      │
 # │ attrs.confidence        │ 1       │
 # │ attrs.altGlyphs         │ []      │
 # └─────────────────────────┴─────────┘

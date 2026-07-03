@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.19.0
+aegean --version                # pyaegean 0.19.1
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -21,7 +21,7 @@ isn't installed until you add the `[cli]` extra.
 | **`--json`** | Print one machine-readable JSON document and nothing else, so results pipe into `jq`, files, or programs. Greek stays readable (`ensure_ascii=False`). Combines with `-o/--output`: the file is written (`wrote <path>` on stderr) and the JSON still prints. | `aegean info lineara --json` |
 | **`-` reads stdin** | Anywhere a command takes a `TEXT` argument, `-` reads it from standard input, so commands compose. | `echo "μῆνιν" \| aegean greek lemmatize -` |
 | **A corpus arg is flexible** | Every corpus argument resolves the same way: a registered id, a **Greek work id** (`tlg0012.tlg001` → fetched & parsed), a path to a saved **`.json` or `.db`** corpus, or `-` for a `Corpus.to_json()` document on stdin. So `aegean stats iliad.json` and `aegean export tlg0012.tlg002 -f csv -o odyssey.csv` work with no Python. | `aegean stats lineara.json` |
-| **`--top` / `--limit`** | Interchangeable spellings of the same cap on every command that caps a ranked table or result list (only `plot` still takes `--top` alone). `0` lifts the cap wherever the help says `0 = all` (the one exception is `greek rarity`, whose `--top` is a plain slice). | `aegean stats lineara --limit 3` |
+| **`--top` / `--limit`** | Interchangeable spellings of the same cap on every command that caps a ranked table or result list, `plot` included. `0` lifts the cap wherever the help says `0 = all` (the one exception is `greek rarity`, whose cap is a plain slice). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error. | `aegean greek scan "λόγος"` → exit `1` |
 
 Every command and group answers `-h` / `--help`. The bundled, **offline-from-install**
@@ -35,7 +35,7 @@ in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `quickstart` `repl` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
@@ -59,6 +59,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 |---|---|---|---|
 | `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
 | `repl` | Interactive shell: run commands without the `aegean` prefix (Tab-completion + a history that persists across sessions). Shell-only directives: `use CORPUS` sets a session corpus for corpus-first commands (`use off` clears) · `:examples` prints starter lines · `:help` · `:exit` |— | `aegean repl` |
+| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): a corpus browser, the live Greek workbench, and the local data store; keys `h`/`c`/`g`/`d` switch screens, `ctrl+p` opens the command palette. Offline, no API key | — | `aegean tui` |
 | `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |

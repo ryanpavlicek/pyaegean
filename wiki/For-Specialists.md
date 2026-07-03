@@ -155,7 +155,7 @@ aegean sign lineara DA --json
   "attrs": {
     "sharedWithLinearB": true,
     "linearAOnly": false,
-    "total": 23,
+    "total": 40,
     "confidence": 1,
     "altGlyphs": []
   }
