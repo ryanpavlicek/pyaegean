@@ -46,7 +46,6 @@ __all__ = [
 # Registered in aegean.data._REMOTE; fetched + extracted to the cache on first use.
 _DATASET = "grc-joint"
 _MAX_LEN = 256
-_TAG_HEADS = ("upos", "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8")
 
 
 class NeuralPipelineNotLoadedError(RuntimeError):

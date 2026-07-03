@@ -118,13 +118,14 @@ class Corpus:
     def fingerprint(self) -> str:
         """A stable content hash of this corpus, covering everything a token-level
         analysis can see: the script id, the provenance ``data_version``, each
-        document's id, every token's text, `TokenKind`, `ReadingStatus`, and
-        annotations (hashed as sorted key/value pairs), and any ``subset:`` /
-        ``merged:`` / ``appended:`` provenance note. Document metadata (site,
-        period, ...) is deliberately excluded. Cheap relative to the analyses it
-        keys: one pass over the tokens, no model build. Two corpora with the same
-        fingerprint have the same analysable content, so it's the cache key for
-        `aegean.cache`-memoised analyses."""
+        document's id, every token's text, `TokenKind`, `ReadingStatus`, decomposed
+        ``signs``, Unicode ``glyphs``, alternate readings (``alt``), and annotations
+        (hashed as sorted key/value pairs), and any ``subset:`` / ``merged:`` /
+        ``appended:`` provenance note. Document metadata (site, period, ...) is
+        deliberately excluded. Cheap relative to the analyses it keys: one pass over
+        the tokens, no model build. Two corpora with the same fingerprint have the
+        same analysable content, so it's the cache key for `aegean.cache`-memoised
+        analyses (including the sign-level dispersion/keyness that read ``signs``)."""
         h = hashlib.sha256()
         h.update((self.script_id or "").encode("utf-8"))
         if self.provenance is not None and self.provenance.data_version:
@@ -141,6 +142,17 @@ class Corpus:
                 h.update(t.kind.value.encode("ascii"))
                 h.update(b"\x1e")
                 h.update(t.status.value.encode("ascii"))
+                # signs / glyphs / alt are independent stored fields an analysis reads
+                # (sign-level dispersion & keyness key on `signs`), so they must vary the hash.
+                for s in t.signs:
+                    h.update(b"\x1a")
+                    h.update(s.encode("utf-8"))
+                if t.glyphs:
+                    h.update(b"\x19")
+                    h.update(t.glyphs.encode("utf-8"))
+                for a in t.alt:
+                    h.update(b"\x18")
+                    h.update(a.encode("utf-8"))
                 for k in sorted(t.annotations):
                     h.update(b"\x1d")
                     h.update(k.encode("utf-8"))

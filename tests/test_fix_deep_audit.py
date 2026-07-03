@@ -331,3 +331,55 @@ def test_format_value_never_renders_negative_zero() -> None:
     assert format_value(-0.0001) == "0"
     assert format_value(-1.5) == "-1½"
     assert format_value(-2.75) == "-2¾"
+
+
+# ── (3rd audit) fingerprint covers Token.signs, so sign-level cached analyses don't collide ──
+
+
+def test_fingerprint_distinguishes_tokens_differing_only_in_signs() -> None:
+    from aegean import Corpus
+
+    def mk(sa, sb):
+        return Corpus(
+            [Document(id="d", script_id="lineara", tokens=[
+                Token("XY", TokenKind.WORD, signs=sa, position=0),
+                Token("XY", TokenKind.WORD, signs=sb, position=1)], lines=[[0, 1]])],
+            script_id="lineara",
+        )
+    # identical token .text but different decomposed signs → different fingerprint
+    a = mk(("KA", "PA"), ("KA", "TA"))
+    b = mk(("ZO", "PA"), ("ZO", "TA"))
+    assert a.fingerprint() != b.fingerprint()
+    assert a.fingerprint() == mk(("KA", "PA"), ("KA", "TA")).fingerprint()  # still stable
+
+
+def test_fingerprint_distinguishes_glyphs_and_alt() -> None:
+    from aegean import Corpus
+
+    def one(**kw):
+        return Corpus([Document(id="d", script_id="lineara",
+                                tokens=[Token("X", TokenKind.WORD, position=0, **kw)],
+                                lines=[[0]])], script_id="lineara")
+    assert one(glyphs="𐘇").fingerprint() != one(glyphs="𐘈").fingerprint()
+    assert one(alt=("a",)).fingerprint() != one(alt=("b",)).fingerprint()
+
+
+# ── (3rd audit) BibTeX field values are LaTeX-escaped so the .bib compiles ──
+
+
+def test_bibtex_escapes_latex_specials_in_field_values() -> None:
+    from aegean.core.provenance import Provenance
+
+    prov = Provenance(
+        source="Test & Co.",
+        citation="A 100% valid_title & more",
+        url="https://example.org/q?a=1&b=2&pct=%3D",
+        license="CC BY 4.0",
+        notes=("subset: filter(site='HT') → 3 of 5",),
+    )
+    bib = prov.bibtex("k")
+    # every % and & must be backslash-escaped; braces balanced (a compilable entry)
+    assert all(bib[m - 1] == "\\" for m in range(1, len(bib)) if bib[m] == "%")
+    assert all(bib[m - 1] == "\\" for m in range(1, len(bib)) if bib[m] == "&")
+    assert bib.count("{") == bib.count("}")
+    assert r"\%" in bib and r"\&" in bib and r"\_" in bib

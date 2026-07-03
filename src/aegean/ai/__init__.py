@@ -33,6 +33,7 @@ from .client import (
     LLMClient,
     LLMResponse,
     MissingAPIKey,
+    ProviderCallError,
     ProviderNotInstalled,
     UnknownProvider,
     get_client,
@@ -111,4 +112,5 @@ __all__ = [
     "ProviderNotInstalled",
     "MissingAPIKey",
     "UnknownProvider",
+    "ProviderCallError",
 ]

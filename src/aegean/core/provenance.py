@@ -11,6 +11,26 @@ SCHEMA_VERSION = 1
 
 _YEAR_RE = re.compile(r"\b(1[5-9]\d{2}|20\d{2})\b")
 
+# LaTeX/BibTeX special characters, mapped to their safe forms. `%` starts a comment and
+# `&` is an alignment error, so an unescaped value (a URL with `&`/`%`, a title with `_`)
+# corrupts the .bib at compile. Backslash is not remapped here: it is handled first below
+# so the replacement text's own backslashes are not re-escaped.
+_LATEX_ESCAPES = {
+    "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#", "_": r"\_",
+    "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}", "^": r"\textasciicircum{}",
+}
+
+
+def _bibtex_escape(value: str) -> str:
+    """Escape LaTeX/BibTeX special characters in a field value."""
+    out: list[str] = []
+    for ch in value:
+        if ch == "\\":
+            out.append(r"\textbackslash{}")
+        else:
+            out.append(_LATEX_ESCAPES.get(ch, ch))
+    return "".join(out)
+
 
 @dataclass(frozen=True, slots=True)
 class Provenance:
@@ -53,7 +73,7 @@ class Provenance:
         note_bits.extend(self.notes)
         note_bits.append("Accessed via pyaegean")
         fields.append(("note", ". ".join(note_bits)))
-        body = ",\n".join(f"  {k} = {{{v}}}" for k, v in fields)
+        body = ",\n".join(f"  {k} = {{{_bibtex_escape(v)}}}" for k, v in fields)
         return f"@misc{{{key},\n{body},\n}}"
 
     def apa(self) -> str:

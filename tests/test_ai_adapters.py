@@ -164,14 +164,22 @@ def _fake_google() -> tuple[dict[str, types.ModuleType], dict]:
             rec["api_key"] = api_key
             self.models = _Models()
 
+    errors_mod = types.ModuleType("google.genai.errors")
+
+    class APIError(Exception):
+        pass
+
+    errors_mod.APIError = APIError  # type: ignore[attr-defined]
     types_mod.GenerateContentConfig = GenerateContentConfig  # type: ignore[attr-defined]
     genai.Client = Client  # type: ignore[attr-defined]
     genai.types = types_mod  # type: ignore[attr-defined]
+    genai.errors = errors_mod  # type: ignore[attr-defined]
     google.genai = genai  # type: ignore[attr-defined]
     return {
         "google": google,
         "google.genai": genai,
         "google.genai.types": types_mod,
+        "google.genai.errors": errors_mod,
     }, rec
 
 
@@ -197,3 +205,83 @@ def test_missing_sdk_raises_provider_not_installed(monkeypatch):
     monkeypatch.setitem(sys.modules, "openai", None)
     with pytest.raises(ai.ProviderNotInstalled):
         ai.get_client("openai", api_key="x").complete("hi")
+
+
+# ── a provider's SDK API error surfaces as the clean ProviderCallError ────────
+# (a bad model id, authentication failure, rate limit, or network error at call
+# time must not leak the SDK's own exception as a raw traceback).
+
+
+def test_openai_compatible_call_error_becomes_provider_call_error(monkeypatch):
+    mod = types.ModuleType("openai")
+
+    class APIError(Exception):
+        pass
+
+    class _Completions:
+        def create(self, **kwargs):
+            raise APIError("Error code: 400 - not a valid model ID")
+
+    class _Chat:
+        def __init__(self) -> None:
+            self.completions = _Completions()
+
+    class OpenAI:
+        def __init__(self, api_key=None, base_url=None):
+            self.chat = _Chat()
+
+    mod.OpenAI = OpenAI  # type: ignore[attr-defined]
+    mod.APIError = APIError  # type: ignore[attr-defined]
+    _install(monkeypatch, "openai", mod)
+
+    client = ai.get_client("openrouter", api_key="sk-test", model="bad/model")
+    with pytest.raises(ai.ProviderCallError) as exc:
+        client.complete("hi")
+    assert isinstance(exc.value, ai.AIError)
+    assert isinstance(exc.value.__cause__, APIError)  # the SDK error is preserved as the cause
+    # the clean message names the provider and model, not a raw SDK traceback
+    assert "openrouter" in str(exc.value) and "bad/model" in str(exc.value)
+
+
+def test_anthropic_call_error_becomes_provider_call_error(monkeypatch):
+    mod = types.ModuleType("anthropic")
+
+    class APIError(Exception):
+        pass
+
+    class _Messages:
+        def create(self, **kwargs):
+            raise APIError("overloaded")
+
+    class Anthropic:
+        def __init__(self, api_key=None):
+            self.messages = _Messages()
+
+    mod.Anthropic = Anthropic  # type: ignore[attr-defined]
+    mod.APIError = APIError  # type: ignore[attr-defined]
+    _install(monkeypatch, "anthropic", mod)
+
+    client = ai.get_client("anthropic", api_key="sk-test", model="claude-x")
+    with pytest.raises(ai.ProviderCallError) as exc:
+        client.complete("hi")
+    assert isinstance(exc.value.__cause__, APIError)
+    assert "anthropic" in str(exc.value)
+
+
+def test_gemini_call_error_becomes_provider_call_error(monkeypatch):
+    mods, _rec = _fake_google()
+    api_error = mods["google.genai.errors"].APIError
+
+    class _Models:
+        def generate_content(self, **kwargs):
+            raise api_error("quota exceeded")
+
+    mods["google.genai"].Client = lambda api_key=None: types.SimpleNamespace(models=_Models())
+    for name, mod in mods.items():
+        _install(monkeypatch, name, mod)
+
+    client = ai.get_client("gemini", api_key="gem-key", model="gemini-x")
+    with pytest.raises(ai.ProviderCallError) as exc:
+        client.complete("hi")
+    assert isinstance(exc.value.__cause__, api_error)
+    assert "gemini" in str(exc.value)

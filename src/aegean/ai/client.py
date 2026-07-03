@@ -38,6 +38,12 @@ class UnknownProvider(AIError):
     """Raised for an unregistered provider id."""
 
 
+class ProviderCallError(AIError):
+    """Raised when a provider's API call fails (bad model id, authentication, rate
+    limit, network). Wraps the SDK's exception so callers see one `AIError` type
+    instead of a provider-specific traceback; the underlying error is the ``__cause__``."""
+
+
 @dataclass(frozen=True, slots=True)
 class LLMResponse:
     """A raw completion from a provider."""

@@ -17,6 +17,7 @@ from __future__ import annotations
 from .client import (
     LLMClient,
     LLMResponse,
+    ProviderCallError,
     ProviderNotInstalled,
     register_provider,
 )
@@ -44,7 +45,12 @@ class AnthropicClient(LLMClient):
         }
         if system:
             kwargs["system"] = system
-        msg = client.messages.create(**kwargs)  # type: ignore[call-overload]
+        try:
+            msg = client.messages.create(**kwargs)  # type: ignore[call-overload]
+        except anthropic.APIError as e:
+            raise ProviderCallError(
+                f"anthropic request failed (model {self.model!r}): {e}"
+            ) from e
         text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
         return LLMResponse(text, self.provider, self.model, raw=msg)
 
@@ -66,9 +72,14 @@ class _OpenAICompatibleClient(LLMClient):
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": prompt})
-        resp = client.chat.completions.create(
-            model=self.model, max_tokens=max_tokens, messages=messages  # type: ignore[arg-type]
-        )
+        try:
+            resp = client.chat.completions.create(
+                model=self.model, max_tokens=max_tokens, messages=messages  # type: ignore[arg-type]
+            )
+        except openai.APIError as e:
+            raise ProviderCallError(
+                f"{self.provider} request failed (model {self.model!r}): {e}"
+            ) from e
         text = resp.choices[0].message.content or ""
         return LLMResponse(text, self.provider, self.model, raw=resp)
 
@@ -109,6 +120,7 @@ class GeminiClient(LLMClient):
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         try:
             from google import genai
+            from google.genai import errors as genai_errors
             from google.genai import types
         except ImportError as e:  # pragma: no cover
             raise ProviderNotInstalled(
@@ -118,7 +130,12 @@ class GeminiClient(LLMClient):
         config = types.GenerateContentConfig(
             system_instruction=system or None, max_output_tokens=max_tokens
         )
-        resp = client.models.generate_content(
-            model=self.model, contents=prompt, config=config
-        )
+        try:
+            resp = client.models.generate_content(
+                model=self.model, contents=prompt, config=config
+            )
+        except genai_errors.APIError as e:
+            raise ProviderCallError(
+                f"gemini request failed (model {self.model!r}): {e}"
+            ) from e
         return LLMResponse(resp.text or "", self.provider, self.model, raw=resp)
