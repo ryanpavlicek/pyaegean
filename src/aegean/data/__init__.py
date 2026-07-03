@@ -25,6 +25,7 @@ import hashlib
 import json
 import os
 import pathlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.resources import files
 from typing import IO, Any
@@ -506,17 +507,26 @@ def _expected_length(headers: Any) -> int | None:
         return None
 
 
-def _stream_body(resp: Any, out: IO[bytes]) -> None:
+class FetchAborted(DataNotAvailableError):
+    """Raised when a fetch is canceled through its ``abort`` hook (e.g. the TUI's
+    download worker being cancelled). The ``.part`` file is kept, so a later fetch
+    resumes instead of restarting."""
+
+
+def _stream_body(resp: Any, out: IO[bytes], abort: Callable[[], bool] | None = None) -> None:
     """Chunked copy (a 500 MB asset never sits in memory) that raises when the
     body ends short of its declared Content-Length. ``read(amt)`` returns short
     silently when the connection drops, so without this check a truncated
     transfer would look complete and be thrown away at sha256 verification
-    instead of kept for resume."""
+    instead of kept for resume. ``abort`` is polled between chunks; when it goes
+    true the transfer stops with `FetchAborted` (the ``.part`` stays resumable)."""
     import http.client
 
     expected = _expected_length(getattr(resp, "headers", None))
     written = 0
     while True:
+        if abort is not None and abort():
+            raise FetchAborted("fetch canceled")
         chunk = resp.read(1 << 20)
         if not chunk:
             break
@@ -526,24 +536,30 @@ def _stream_body(resp: Any, out: IO[bytes]) -> None:
         raise http.client.IncompleteRead(b"", expected - written)
 
 
-def _write_from_zero(resp: Any, dest_part: pathlib.Path) -> None:
+def _write_from_zero(
+    resp: Any, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+) -> None:
     """Stream a full-body response into a fresh ``.part``, recording resume
     metadata first so a mid-stream failure leaves a continuable file behind."""
     headers = getattr(resp, "headers", None)
     _record_part_info(dest_part, headers, total=_expected_length(headers))
     with open(dest_part, "wb") as out:
-        _stream_body(resp, out)
+        _stream_body(resp, out, abort)
 
 
-def _download_full(url: str, dest_part: pathlib.Path) -> None:
+def _download_full(
+    url: str, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+) -> None:
     import urllib.request
 
     resp = urllib.request.urlopen(url, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310 (registered/overridable url)
     with resp:
-        _write_from_zero(resp, dest_part)
+        _write_from_zero(resp, dest_part, abort)
 
 
-def _download_once(url: str, dest_part: pathlib.Path) -> None:
+def _download_once(
+    url: str, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+) -> None:
     """One transfer attempt: resume an existing ``.part`` with an HTTP Range
     request when the scheme supports it (GitHub's release CDN does), falling
     back to a clean restart from byte zero on any staleness signal: the server
@@ -559,7 +575,7 @@ def _download_once(url: str, dest_part: pathlib.Path) -> None:
     if offset <= 0:
         # Nothing to resume, or a file:// URL (the env-override / test path),
         # where Range is not meaningful and a restart is cheap.
-        _download_full(url, dest_part)
+        _download_full(url, dest_part, abort)
         return
 
     info = _read_part_info(dest_part)
@@ -583,7 +599,7 @@ def _download_once(url: str, dest_part: pathlib.Path) -> None:
         if total is not None and total == offset:
             return  # fully downloaded; sha256 verification has the final word
         _discard_part(dest_part)
-        _download_full(url, dest_part)
+        _download_full(url, dest_part, abort)
         return
 
     with resp:
@@ -598,7 +614,7 @@ def _download_once(url: str, dest_part: pathlib.Path) -> None:
             if consistent:
                 _record_part_info(dest_part, resp.headers, total=total)
                 with open(dest_part, "ab") as out:
-                    _stream_body(resp, out)
+                    _stream_body(resp, out, abort)
                 return
             # The remote changed under the .part (its total drifted from what
             # was recorded, or the server answered a different offset): fall
@@ -606,13 +622,18 @@ def _download_once(url: str, dest_part: pathlib.Path) -> None:
         else:
             # 200: the server ignored Range, or If-Range flagged a changed
             # remote, and it is sending the whole file. Write from byte zero.
-            _write_from_zero(resp, dest_part)
+            _write_from_zero(resp, dest_part, abort)
             return
     _discard_part(dest_part)
-    _download_full(url, dest_part)
+    _download_full(url, dest_part, abort)
 
 
-def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
+def _download(
+    url: str,
+    dest_part: pathlib.Path,
+    name: str,
+    abort: Callable[[], bool] | None = None,
+) -> None:
     """Download ``url`` to ``dest_part``, resuming interrupted transfers.
 
     A transient network failure (a stall past the timeout, a dropped or
@@ -631,7 +652,9 @@ def _download(url: str, dest_part: pathlib.Path, name: str) -> None:
     last_exc: Exception | None = None
     for _ in range(_DOWNLOAD_ATTEMPTS):
         try:
-            _download_once(url, dest_part)
+            _download_once(url, dest_part, abort)
+        except FetchAborted:
+            raise  # deliberate cancel: keep the .part so a later fetch resumes it
         except urllib.error.HTTPError as e:
             # A status error (403, 404, ...) means the resource is wrong or
             # gone; no kept .part could assemble into the right file.
@@ -701,7 +724,48 @@ def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
             tf.extractall(root)
 
 
-def fetch(name: str, *, force: bool = False) -> pathlib.Path:
+# Concurrent fetches of the SAME dataset (two threads, two processes, a doctor/TUI
+# poll racing a CLI fetch) must not share the .part file or the .extract staging dir:
+# a second writer appending at a moving EOF corrupts the transfer, and a second
+# extractor rmtree-ing the staging mid-extraction breaks the first. One advisory
+# lock file per dataset serializes them; the loser waits, then finds the winner's
+# artifact via the normal idempotence check.
+_LOCK_STALE_S = 3600.0  # a holder that has been silent this long is presumed dead
+_LOCK_POLL_S = 0.5
+
+
+class _DatasetLock:
+    def __init__(self, name: str) -> None:
+        self._path = cache_dir() / (name + ".lock")
+
+    def __enter__(self) -> "_DatasetLock":
+        import time
+
+        while True:
+            try:
+                fd = os.open(self._path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                try:
+                    age = time.time() - self._path.stat().st_mtime
+                except OSError:
+                    continue  # the holder released between exists and stat: retry
+                if age > _LOCK_STALE_S:
+                    # the holder died without releasing: break the stale lock
+                    self._path.unlink(missing_ok=True)
+                    continue
+                time.sleep(_LOCK_POLL_S)
+                continue
+            os.write(fd, f"{os.getpid()}\n".encode("ascii"))
+            os.close(fd)
+            return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._path.unlink(missing_ok=True)
+
+
+def fetch(
+    name: str, *, force: bool = False, abort: Callable[[], bool] | None = None
+) -> pathlib.Path:
     """Download a registered remote dataset into the cache and return its path.
 
     Verifies the sha256 when one is pinned, downloads atomically, and is a no-op
@@ -709,7 +773,12 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     file and the next call resumes from it (an HTTP Range request) instead of
     restarting from zero. For ``extract`` datasets the download is a
     tar archive that is unpacked into a cache directory (returned); otherwise the
-    downloaded file path is returned. Raises `DataNotAvailableError` for
+    downloaded file path is returned. Concurrent fetches of the same dataset
+    (other threads or processes) are serialized on a per-dataset lock: the later
+    caller waits, then returns the completed artifact. ``abort`` is an optional
+    zero-argument callable polled during the transfer; when it returns true the
+    fetch stops with `FetchAborted`, keeping the partial file resumable (how the
+    TUI cancels a download worker). Raises `DataNotAvailableError` for
     unknown datasets, un-pinned URLs, checksum mismatches, unsafe archives, or
     network failures — never silently, and never blocking ``import``.
     """
@@ -726,18 +795,19 @@ def fetch(name: str, *, force: bool = False) -> pathlib.Path:
     # via the env var (a user's own licensed copy), don't enforce it.
     sha256 = "" if os.environ.get(_env_url_var(name)) else spec.sha256
 
-    if spec.extract:
-        return _fetch_and_extract(url, name, force, sha256)
+    with _DatasetLock(name):
+        if spec.extract:
+            return _fetch_and_extract(url, name, force, sha256, abort)
 
-    dest = cache_dir() / name
-    if dest.exists() and not force:
-        if not sha256 or sha256_file(dest) == sha256:
-            return dest  # present and valid → idempotent no-op
-    tmp = dest.with_name(dest.name + ".part")
-    _download(url, tmp, name)
-    _verify(tmp, sha256, name)
-    tmp.replace(dest)  # atomic within the cache dir
-    return dest
+        dest = cache_dir() / name
+        if dest.exists() and not force:
+            if not sha256 or sha256_file(dest) == sha256:
+                return dest  # present and valid → idempotent no-op
+        tmp = dest.with_name(dest.name + ".part")
+        _download(url, tmp, name, abort)
+        _verify(tmp, sha256, name)
+        tmp.replace(dest)  # atomic within the cache dir
+        return dest
 
 
 def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) -> bool:
@@ -766,7 +836,7 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
 
 
 def _fetch_and_extract(
-    url: str, name: str, force: bool, sha256: str
+    url: str, name: str, force: bool, sha256: str, abort: Callable[[], bool] | None = None
 ) -> pathlib.Path:
     import shutil
 
@@ -775,7 +845,7 @@ def _fetch_and_extract(
         return target  # already unpacked → idempotent no-op
 
     archive = cache_dir() / (name + ".part")
-    _download(url, archive, name)
+    _download(url, archive, name, abort)
     _verify(archive, sha256, name)  # removes the archive on mismatch + raises
 
     staging = cache_dir() / (name + ".extract")

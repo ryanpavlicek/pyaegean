@@ -55,24 +55,37 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 class DiskCache:
     """A sqlite-backed key→value store. Values are pickled; unpicklable values
-    are silently not cached, and unreadable rows are treated as misses."""
+    are silently not cached, and unreadable rows are treated as misses.
+
+    Thread-safe: memoized analyses are routinely called from worker threads (a
+    ThreadPoolExecutor mapping over corpora, the TUI's workers), so the single
+    connection is opened with ``check_same_thread=False`` and every use of it is
+    serialized behind a lock — otherwise enabling the cache would turn working
+    multithreaded code into a crash, which the never-changes-a-result contract
+    forbids."""
 
     def __init__(self, path: str | Path) -> None:
         # Lazy import: the cache is opt-in, so only require sqlite3 once it's actually
         # used. This keeps `import aegean` working where sqlite3 is unvendored from the
         # stdlib (e.g. Pyodide / the in-browser demo) or a Python built without it.
         import sqlite3
+        import threading
 
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self.path))
-        self._conn.execute(
-            "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB)"
-        )
-        self._conn.commit()
+        self._lock = threading.Lock()
+        self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        with self._lock:
+            self._conn.execute(
+                "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB)"
+            )
+            self._conn.commit()
 
     def get(self, key: str) -> Any:
-        row = self._conn.execute("SELECT value FROM cache WHERE key = ?", (key,)).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT value FROM cache WHERE key = ?", (key,)
+            ).fetchone()
         if row is None:
             return _MISS
         try:
@@ -85,20 +98,24 @@ class DiskCache:
             blob = pickle.dumps(value)
         except Exception:  # unpicklable result → just don't cache it
             return
-        self._conn.execute(
-            "INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)", (key, blob)
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)", (key, blob)
+            )
+            self._conn.commit()
 
     def clear(self) -> None:
-        self._conn.execute("DELETE FROM cache")
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute("DELETE FROM cache")
+            self._conn.commit()
 
     def __len__(self) -> int:
-        return int(self._conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0])
+        with self._lock:
+            return int(self._conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0])
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._conn.close()
 
 
 # ── module-global opt-in state ───────────────────────────────────────────────

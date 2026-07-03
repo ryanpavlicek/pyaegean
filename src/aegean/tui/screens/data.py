@@ -216,7 +216,7 @@ class DataStoreScreen(Screen[None]):
 
     def action_fetch(self) -> None:
         """Fetch the highlighted dataset on a worker (a no-op if it is already
-        downloaded or nothing is selected)."""
+        downloaded, one is already being fetched, or nothing is selected)."""
         name = self._selected_dataset()
         if name is None:
             self._set_status("select a dataset to fetch")
@@ -224,22 +224,46 @@ class DataStoreScreen(Screen[None]):
         if self._is_downloaded(name):
             self._set_status(f"{name} is already downloaded")
             return
+        if self._fetching is not None:
+            # A second press must not start a second real download racing the first
+            # on the same partial file; the running worker owns the transfer.
+            self._set_status(f"already fetching {self._fetching}")
+            return
+        self._fetching = name
         self._start_progress()
         self._fetch_worker(name)
+
+    _fetching: str | None = None
 
     @work(thread=True, exclusive=True, group="fetch")
     def _fetch_worker(self, name: str) -> None:
         """Download ``name`` off the UI thread, marshalling every UI touch back
-        through :meth:`App.call_from_thread` so the screen stays responsive."""
+        through :meth:`App.call_from_thread` so the screen stays responsive. The
+        worker's cancellation flag is wired into the transfer itself (Textual's
+        thread-worker cancel is cooperative), so quitting the app or cancelling
+        the worker interrupts the download within one chunk instead of blocking
+        shutdown until the file completes; the partial download stays resumable."""
+        from textual.worker import get_current_worker
+
+        worker = get_current_worker()
 
         def progress(message: str) -> None:
-            self.app.call_from_thread(self._set_status, message)
+            if not worker.is_cancelled:
+                self.app.call_from_thread(self._set_status, message)
 
         try:
-            adapter.fetch_dataset(name, on_progress=progress)
+            adapter.fetch_dataset(
+                name, on_progress=progress, abort=lambda: worker.is_cancelled
+            )
+        except adapter.FetchCanceled:
+            if not worker.is_cancelled:  # user-visible only if the app is still alive
+                self.app.call_from_thread(self._fetch_failed, name, "canceled")
+            return
         except adapter.TuiError as exc:
             self.app.call_from_thread(self._fetch_failed, name, str(exc))
             return
+        finally:
+            self._fetching = None
         self.app.call_from_thread(self._fetch_done, name)
 
     # ── worker callbacks (run on the UI thread) ───────────────────────────────

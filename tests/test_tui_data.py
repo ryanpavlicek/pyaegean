@@ -272,7 +272,7 @@ def test_fetch_dataset_delegates_to_the_library_fetch_and_reports_progress(monke
     calls: list[str] = []
     progress: list[str] = []
 
-    def fake_fetch(name: str, *, force: bool = False) -> pathlib.Path:
+    def fake_fetch(name: str, *, force: bool = False, abort=None) -> pathlib.Path:  # type: ignore[no-untyped-def]
         calls.append(name)
         return pathlib.Path("/fake/store") / name
 

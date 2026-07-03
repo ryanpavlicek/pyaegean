@@ -509,7 +509,16 @@ def dataset_rows() -> list[DatasetRow]:
     return rows
 
 
-def fetch_dataset(name: str, on_progress: Callable[[str], None] | None = None) -> "Path":
+class FetchCanceled(TuiError):
+    """The fetch's ``abort`` hook fired (the worker was cancelled): the partial
+    download is kept on disk, so a later fetch resumes it."""
+
+
+def fetch_dataset(
+    name: str,
+    on_progress: Callable[[str], None] | None = None,
+    abort: Callable[[], bool] | None = None,
+) -> "Path":
     """Download a dataset into the local store, reporting progress lines through
     ``on_progress`` (a screen runs this on a Textual worker so the UI stays live).
 
@@ -517,8 +526,10 @@ def fetch_dataset(name: str, on_progress: Callable[[str], None] | None = None) -
     no-op when the dataset is already stored. An unknown name or a network
     failure becomes a :class:`TuiError` the screen can show. ``on_progress`` is
     invoked with a short status before and after the transfer (the underlying
-    fetch reports no byte-level progress)."""
-    from ..data import _REMOTE, DataNotAvailableError
+    fetch reports no byte-level progress). ``abort`` is polled during the
+    transfer; when it returns true the download stops with :class:`FetchCanceled`
+    (how a cancelled worker actually interrupts the transfer, e.g. on quit)."""
+    from ..data import _REMOTE, DataNotAvailableError, FetchAborted
     from ..data import fetch as _fetch
 
     if name not in _REMOTE:
@@ -526,7 +537,9 @@ def fetch_dataset(name: str, on_progress: Callable[[str], None] | None = None) -
     if on_progress is not None:
         on_progress(f"fetching {name}…")
     try:
-        path = _fetch(name)
+        path = _fetch(name, abort=abort)
+    except FetchAborted:
+        raise FetchCanceled(f"fetch of {name} canceled (partial download kept)") from None
     except DataNotAvailableError as exc:
         raise TuiError(str(exc)) from None
     except Exception as exc:  # network / disk failure

@@ -147,6 +147,10 @@ def workbench(
     url = f"http://localhost:{port}/"
     try:
         server = socketserver.ThreadingTCPServer(("127.0.0.1", port), handler)
+        # Ctrl+C must stop the server even when a client holds an in-flight request it
+        # has stopped reading (a handler blocked in sendall would otherwise be joined
+        # forever by server_close): handler threads are daemons, shutdown never waits.
+        server.daemon_threads = True
     except OSError as exc:
         raise fail(f"could not bind port {port} ({exc}); try --port <n>") from exc
     with server:

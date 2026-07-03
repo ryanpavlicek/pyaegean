@@ -150,6 +150,12 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
     append clears it (a mixed corpus has no single-script inventory)."""
     conn = sqlite3.connect(p)
     try:
+        # Take the write lock BEFORE the pre-insert reads (MAX(doc_order), the per-doc
+        # existence checks): with sqlite's deferred implicit BEGIN those reads would see
+        # stale state when two appenders race, minting duplicate doc_order values. A
+        # second simultaneous appender now waits (sqlite's busy timeout) or gets a clean
+        # "database is locked" instead of silently corrupting the ordering.
+        conn.execute("BEGIN IMMEDIATE")
         _ensure_token_order(conn)
         has_fts = bool(
             conn.execute(
@@ -312,6 +318,10 @@ def from_sqlite(path: str | Path) -> Corpus:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     try:
+        # One read transaction for the whole load: a concurrent append committing between
+        # this reader's statements could otherwise yield a torn corpus (a document's row
+        # from before the append, its tokens from after).
+        conn.execute("BEGIN")
         meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
         _check_schema_version(meta)
         raw = json.loads(meta.get("provenance") or "null")
@@ -327,6 +337,10 @@ def from_sqlite(path: str | Path) -> Corpus:
             for r in conn.execute("SELECT * FROM documents ORDER BY doc_order")
         ]
     finally:
+        try:
+            conn.rollback()  # end the read transaction (read-only: nothing to write)
+        except sqlite3.Error:
+            pass
         conn.close()
     provenance: Provenance | None
     if len(provs) > 1:
@@ -389,18 +403,27 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
         fts_usable = has_fts and "\x00" not in query and any(ch.isalnum() for ch in query)
         if fts_usable:  # unicode61 folds Greek case, so the phrase query finds either case
             phrase = '"' + query.replace('"', '""') + '"'  # a literal FTS5 phrase, not syntax
-            cur = conn.execute(
-                "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ?",
-                (phrase,),
-            )
+            try:
+                cur = conn.execute(
+                    "SELECT doc_id, position, text FROM tokens_fts WHERE tokens_fts MATCH ?",
+                    (phrase,),
+                )
+                rows = cur.fetchall()
+            except sqlite3.OperationalError:
+                # A concurrent append rebuilds the FTS index by dropping and recreating
+                # it; a reader landing in that window cannot construct the vtable. The
+                # exact-match paths below answer the same question, just slower.
+                fts_usable = False
+        if fts_usable:
+            source: Any = rows
         elif query.isascii():  # NOCASE folds ASCII, which is all this query needs
-            cur = conn.execute(
+            source = conn.execute(
                 "SELECT doc_id, position, text FROM tokens WHERE text = ? COLLATE NOCASE",
                 (query,),
             )
         else:  # a Greek (non-ASCII) query: scan, the casefold confirmation below matches
-            cur = conn.execute("SELECT doc_id, position, text FROM tokens")
-        for doc_id, position, text in cur:
+            source = conn.execute("SELECT doc_id, position, text FROM tokens")
+        for doc_id, position, text in source:
             if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
                 out.append((str(doc_id), int(position), str(text)))
                 if 0 < limit <= len(out):
@@ -425,7 +448,19 @@ def stream(path: str | Path) -> Iterator[Document]:
         order_col = "token_order" if _has_token_order(conn) else "position"
         ids = [r["id"] for r in conn.execute("SELECT id FROM documents ORDER BY doc_order")]
         for doc_id in ids:
-            row = conn.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
-            yield _document_from_row(conn, row, order_col=order_col)
+            # Each document's row + tokens are read inside one short transaction, so a
+            # concurrent append committing between the two statements cannot yield a
+            # torn Document (old metadata with new tokens). Per-document, not one big
+            # transaction: a long streaming pass must not hold the read lock throughout.
+            conn.execute("BEGIN")
+            try:
+                row = conn.execute(
+                    "SELECT * FROM documents WHERE id = ?", (doc_id,)
+                ).fetchone()
+                doc = _document_from_row(conn, row, order_col=order_col) if row else None
+            finally:
+                conn.rollback()
+            if doc is not None:  # dropped by a concurrent append between listing and read
+                yield doc
     finally:
         conn.close()

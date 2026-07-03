@@ -17,6 +17,8 @@ import hashlib
 import json
 import os
 import pathlib
+import threading
+import uuid
 
 # Mirrors the ``max_tokens`` default of `LLMClient.complete`, so a caller that
 # doesn't thread the limit through still keys consistently with default calls.
@@ -39,6 +41,7 @@ class ResponseCache:
     def __init__(self, path: str | pathlib.Path | None = None) -> None:
         # expanduser so a "~/..." path lands under the user's home, not a literal "./~".
         self.path = pathlib.Path(path).expanduser() if path else None
+        self._write_lock = threading.Lock()  # serialize in-process persists
         self._store: dict[str, str] = self._load()
 
     def _load(self) -> dict[str, str]:
@@ -84,7 +87,14 @@ class ResponseCache:
     ) -> None:
         self._store[_key(provider, model, system, prompt, max_tokens)] = text
         if self.path is not None:
-            self._write_atomic()
+            # A failed persist must not lose the response the caller just paid a
+            # provider call for: the entry is already in the in-memory store, and a
+            # cache is an optimization (the same philosophy _load applies to a corrupt
+            # file), so a disk error here degrades to memory-only instead of raising.
+            try:
+                self._write_atomic()
+            except OSError:
+                pass
 
     def _write_atomic(self) -> None:
         """Persist the store so a reader never sees a half-written file.
@@ -93,21 +103,25 @@ class ResponseCache:
         ``os.replace`` is an atomic same-filesystem rename), then swapped into place. A
         process killed during the write leaves either the old complete file or the
         untouched target, never a truncated one, so a concurrent or later ``_load`` always
-        reads a whole JSON document. The temp file is cleaned up if the write itself fails.
+        reads a whole JSON document. The temp name is unique per write (not shared by the
+        process's threads — a shared name let concurrent writers collide on Windows and
+        interleave on POSIX), and in-process writers are serialized behind a lock. The
+        temp file is cleaned up if the write itself fails.
         """
         assert self.path is not None
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        data = json.dumps(self._store)
-        tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.tmp")
-        try:
-            tmp.write_text(data, encoding="utf-8")
-            os.replace(tmp, self.path)
-        except OSError:
+        with self._write_lock:
+            data = json.dumps(self._store)
+            tmp = self.path.with_name(f"{self.path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
             try:
-                tmp.unlink()
+                tmp.write_text(data, encoding="utf-8")
+                os.replace(tmp, self.path)
             except OSError:
-                pass
-            raise
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
+                raise
 
     def __len__(self) -> int:
         return len(self._store)

@@ -155,7 +155,7 @@ def test_fetch_runs_on_a_worker_and_refreshes_the_row(monkeypatch: pytest.Monkey
             )
         ]
 
-    def fake_fetch(name, on_progress=None):  # type: ignore[no-untyped-def]
+    def fake_fetch(name, on_progress=None, abort=None):  # type: ignore[no-untyped-def]
         assert name == "fake-corpus"
         if on_progress is not None:
             on_progress(f"fetching {name}…")
@@ -210,7 +210,7 @@ def test_fetch_failure_notifies_and_leaves_the_row_unchanged(
             )
         ]
 
-    def failing_fetch(name, on_progress=None):  # type: ignore[no-untyped-def]
+    def failing_fetch(name, on_progress=None, abort=None):  # type: ignore[no-untyped-def]
         raise adapter.TuiError("network is down")
 
     monkeypatch.setattr(adapter, "dataset_rows", fake_rows)
@@ -263,7 +263,7 @@ def test_fetch_is_a_no_op_when_the_dataset_is_already_downloaded(
 
     called = {"fetch": False}
 
-    def fetch_should_not_run(name, on_progress=None):  # type: ignore[no-untyped-def]
+    def fetch_should_not_run(name, on_progress=None, abort=None):  # type: ignore[no-untyped-def]
         called["fetch"] = True
         return Path("/tmp/have-it")
 

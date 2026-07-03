@@ -208,9 +208,14 @@ class CorpusBrowserScreen(Screen[None]):
         to ``base_status``.
 
         A thread worker so a large-corpus scan never freezes the UI; ``exclusive``
-        so a newer keystroke cancels this search before starting its own, and only
-        the latest query writes the status. Widget updates hop back to the UI
-        thread via :meth:`call_from_thread`."""
+        so a newer keystroke supersedes this search. Cancellation of a running
+        thread is cooperative, so a superseded search can still FINISH its scan —
+        the ``is_cancelled`` check below is what keeps its stale result from
+        overwriting the newer query's status line. Widget updates hop back to the
+        UI thread via :meth:`call_from_thread`."""
+        from textual.worker import get_current_worker
+
+        worker = get_current_worker()
         corpus = self._corpus
         if corpus is None:
             return
@@ -221,6 +226,8 @@ class CorpusBrowserScreen(Screen[None]):
             status = f"{base_status}  ·  words matching {query}: {shown}{more}"
         else:
             status = f"{base_status}  ·  no words match {query}"
+        if worker.is_cancelled:  # superseded by a newer keystroke: discard, don't render
+            return
         self.app.call_from_thread(
             self.query_one("#corpus-status", Static).update, status
         )

@@ -188,6 +188,13 @@ def remove(
     removed: list[dict[str, Any]] = []
     for n in names:
         entry = root / n
+        if (root / (n + ".lock")).exists():
+            # a fetch of this dataset is running (its per-dataset lock is held);
+            # removing under it would corrupt the transfer or be silently undone
+            raise fail(
+                f"a fetch of {n!r} appears to be in progress — let it finish "
+                f"(or delete {n}.lock in the store if it is stale) and retry"
+            )
         # Gate on the full target set, not the main entry: an interrupted
         # first fetch leaves only .part/.part.info orphans, and those must be
         # removable too.
@@ -195,11 +202,19 @@ def remove(
         if not targets:
             continue
         size = sum(_on_disk_bytes(p) for p in targets)
-        for p in targets:
-            if p.is_dir():
-                shutil.rmtree(p)
-            else:
-                p.unlink()
+        try:
+            for p in targets:
+                if p.is_dir():
+                    shutil.rmtree(p)
+                else:
+                    p.unlink()
+        except OSError as exc:
+            # a file held open by another process (a concurrent fetch, an open reader):
+            # one clean line, not a traceback, and no false "removed" claim
+            raise fail(
+                f"could not remove {n!r}: a file is in use ({exc}); "
+                "if a fetch is running, retry after it finishes"
+            ) from None
         removed.append({"name": n, "path": str(entry), "bytes": size})
 
     if not remove_all and not removed:
