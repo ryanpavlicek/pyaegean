@@ -52,8 +52,8 @@
   "gloss": "attendant"
  },
  "A-PI-QO-TO": {
-  "lemma": "ἀμφίβροτος",
-  "gloss": "table adjective meaning round or with a rim"
+  "lemma": "a-pi-qo-to",
+  "gloss": "round, with a rim (of a table); ἀμφί- with the root of βαίνω (go round), no attested Classical form"
  },
  "A-PU-DU-SI": {
   "lemma": "ἀπόδοσις",
@@ -350,10 +350,6 @@
  "NA-U-DO-MO": {
   "lemma": "ναῦς",
   "gloss": "shipbuilders"
- },
- "O-KA": {
-  "lemma": "ἔχω",
-  "gloss": "to hold"
  },
  "O-NO": {
   "lemma": "ὄνος",

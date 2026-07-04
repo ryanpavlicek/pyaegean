@@ -48,7 +48,7 @@ def test_expanded_lexicon_and_samples() -> None:
         (Path(__file__).parents[1] / "src/aegean/data/bundled/linearb/lexicon.json")
         .read_text(encoding="utf-8")
     )
-    assert len(lex) == 150
+    assert len(lex) == 149  # 0.19.16 removed the fabricated O-KA=ἔχω (ἔχω is written e-ke)
     assert all(v["lemma"] and v["gloss"] for v in lex.values())
     # extracted equations alongside the original curated ones
     assert greek_reading("e-ra-wo") == ("ἔλαιον", "olive oil")

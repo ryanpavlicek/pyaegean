@@ -8,8 +8,8 @@ CoNLL 2018 shared-task evaluator** — the protocol behind the published cross-t
 future trained model must honour.
 
 Data: ``UD_Ancient_Greek-Perseus`` / ``UD_Ancient_Greek-PROIEL``, pinned to commits,
-licensed **CC BY-NC-SA 3.0** — fetched to the cache for **evaluation only**, never bundled
-and never trained on (the PROIEL handling). The evaluator (``conll18_ud_eval.py``, Mozilla
+licensed **CC BY-NC-SA** (Perseus 2.5, PROIEL 3.0) — fetched to the cache for **evaluation
+only**, never bundled and never trained on (the PROIEL handling). The evaluator (``conll18_ud_eval.py``, Mozilla
 Public License 2.0) is fetched to the cache pinned by sha256 and imported from there.
 
 Protocol (spelled out in ``docs/benchmarks.md``):
@@ -59,10 +59,19 @@ __all__ = [
 
 _CACHE_SUBDIR = "ud-grc"
 
-# UD Ancient Greek treebanks, pinned for reproducibility (CC BY-NC-SA 3.0 — eval only).
+# UD Ancient Greek treebanks, pinned for reproducibility (CC BY-NC-SA: Perseus 2.5, PROIEL 3.0
+# — per each treebank's README; eval only).
 _UD_REPO: dict[str, tuple[str, str]] = {
     "perseus": ("UD_Ancient_Greek-Perseus", "331ddef91411d0e6549744ee889e05549e6da77d"),
     "proiel": ("UD_Ancient_Greek-PROIEL", "a4ab8d436de97d4598d410d91ea20b4127d04a5f"),
+}
+# The two UD folds carry DIFFERENT Creative-Commons versions (each treebank's own README at the
+# pinned commit): UD-Perseus is 2.5, UD-PROIEL is 3.0. Both are NonCommercial + ShareAlike, so
+# both are evaluation-only, never bundled, never trained on — but the version differs, so it is
+# recorded per treebank rather than blanket-stated.
+_UD_LICENSE: dict[str, str] = {
+    "perseus": "CC BY-NC-SA 2.5",
+    "proiel": "CC BY-NC-SA 3.0",
 }
 _SPLITS = ("train", "dev", "test")
 
@@ -100,7 +109,8 @@ def ud_path(treebank: str = "perseus", split: str = "test", *, download: bool = 
     """The cached path of a UD Ancient Greek fold, fetching it on first use.
 
     ``treebank`` is ``"perseus"`` or ``"proiel"``; ``split`` is ``"train"``/``"dev"``/
-    ``"test"``. The data is CC BY-NC-SA 3.0 — cached for evaluation only, never bundled."""
+    ``"test"``. The data is CC BY-NC-SA (Perseus 2.5, PROIEL 3.0) — cached for evaluation
+    only, never bundled."""
     repo, commit = _UD_REPO[treebank]
     if split not in _SPLITS:
         raise ValueError(f"split must be one of {_SPLITS}; got {split!r}")

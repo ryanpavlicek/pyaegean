@@ -125,8 +125,9 @@ def test_negation_allomorphs() -> None:
 
 
 def test_neuter_guard_covers_grave_and_capitalized_variants() -> None:
-    # The guard lists now match under the folded key: the graved neuter ἱερὸν used to
-    # slip past the ἱερόν guard and get stripped to ἱερός.
-    assert lemmatize("ἱερὸν") == "ἱερὸν"
-    assert rule_lemma_verbose("ἱερὸν") == ("ἱερὸν", False)
+    # The neuter guard matches accent-blind, so the graved neuter ἱερὸν is never stripped to the
+    # non-word *ἱερός; since 0.19.16 it also normalises to its citation form ἱερόν (the dictionary
+    # neuter is recovered from any accent variant), rather than being returned graved.
+    assert lemmatize("ἱερὸν") == "ἱερόν"
+    assert rule_lemma_verbose("ἱερὸν") == ("ἱερόν", True)
     assert lemmatize_verbose("ἂν")[0] == "ἄν"  # graved ἄν folds onto its entry

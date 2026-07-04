@@ -377,6 +377,27 @@ _AORIST_2ND_ON = frozenset(
 # ἔργου/δώρου is recognized as an oblique neuter (accent-blind: δῶρον vs δώρου) and not stripped
 # to a masculine *ἔργος/*δώρος.
 _NEUTER_2ND_STEMS = frozenset(_bare(w)[:-2] for w in _NEUTER_2ND)
+# The common neuters keyed by their accent-blind bare form, so an enclitic/oblique variant maps
+# back to the dictionary nominative: δῶρόν, carrying the acute an enclitic throws onto its ultima
+# (δῶρόν ἐστιν, Smyth §183), is the neuter δῶρον, NOT a fabricated *δῶρός — and the -ον→-ος strip
+# must not fire on it. (Matched accent-blind, mirroring the sibling aorist guard.)
+_NEUTER_2ND_BY_BARE = {_bare(w): w for w in _NEUTER_2ND}
+
+# Common first-declension MASCULINE nouns in -ης. Their genitive singular is -ου (προφήτου,
+# Ἰωάνου), homographic with the 2nd-declension -ος genitive (λόγου → λόγος) but yielding the -ης
+# nominative as the lemma (προφήτου → προφήτης, NOT a fabricated *προφήτος; Smyth §227, §230). The
+# -ου ending alone cannot tell the two declensions apart, so for these curated stems the -ου→-ος
+# strip is suppressed and the layer returns an honest miss rather than a confident non-word. Stems
+# are accent/breathing-blind (the -ης dropped); NT-text spelling variants are listed explicitly
+# (Ἰωάνης for the gold's Ἰωάννης, Ἅιδης for ᾅδης).
+_MASC_1ST_ES = frozenset({
+    "προφήτης", "ψευδοπροφήτης", "μαθητής", "στρατιώτης", "πολίτης", "τελώνης", "δεσπότης",
+    "οἰκοδεσπότης", "ἰδιώτης", "ὑποκριτής", "βαπτιστής", "κριτής", "ναύτης", "πρεσβύτης",
+    "ἐργάτης", "χάρτης", "κλέπτης", "λῃστής", "οἰκέτης", "δικαστής", "προδότης", "πλανήτης",
+    "ἑκατοντάρχης", "πατριάρχης", "τετραάρχης", "χιλίαρχης", "πολιτάρχης",
+    "Ἰωάννης", "Ἰωάνης", "Ἡρῴδης", "ᾅδης", "Ἅιδης", "Ἰορδάνης", "Ἰσκαριώτης",
+})
+_MASC_1ST_ES_STEMS = frozenset(_bare(w)[:-2] for w in _MASC_1ST_ES)
 
 
 def _ei_strip_unsafe(word: str, bare: str) -> bool:
@@ -415,11 +436,17 @@ def _rule_lemma(word: str) -> str | None:
     """The citation form recovered by ending substitution, or ``None`` when no regular
     rule applies. Operates on the surface form; the longest matching ending wins."""
     key = _fold_key(word)
-    if key in _INDECLINABLE or key in _NEUTER_2ND:
+    if key in _INDECLINABLE:
         return None  # the surface form is already the lemma; no ending rule applies
     if key in _FUNCTION_KEYS:
         return None  # closed-class: the lemma is suppletive (τοῦ → ὁ), not rule-derivable
     bare = _bare(word)
+    neuter = _NEUTER_2ND_BY_BARE.get(bare)
+    if neuter is not None:
+        # a common 2nd-declension neuter: its dictionary nominative is the lemma. This blocks the
+        # -ον→-ος strip and normalises an enclitic-throwback acute (δῶρόν → δῶρον), so the layer
+        # never fabricates *δῶρός; the plain nominative δῶρον maps to itself unchanged.
+        return neuter
     best: tuple[int, str] | None = None  # (ending length, citation ending base)
     for ending, citation in _NOMINAL_SUBSCRIPT:
         if (
@@ -446,6 +473,11 @@ def _rule_lemma(word: str) -> str | None:
             # The genitive/dative of a common 2nd-declension neuter (ἔργου, δώρου) is not a
             # masculine -ος: block the strip rather than fabricate ἔργος/δώρος.
             and not (ending in ("ου", "οισ") and _bare(word)[: -len(ending)] in _NEUTER_2ND_STEMS)
+            # A first-declension MASCULINE -ης genitive (προφήτου, Ἰωάνου) is homographic with the
+            # 2nd-decl -ος genitive but its lemma is the -ης nominative: block the strip (honest
+            # miss) rather than fabricate *προφήτος (Smyth §227). Curated stems only, so a genuine
+            # 2nd-decl -ος genitive on the same shape (πλούτου → πλοῦτος) is untouched.
+            and not (ending == "ου" and _bare(word)[:-2] in _MASC_1ST_ES_STEMS)
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)
