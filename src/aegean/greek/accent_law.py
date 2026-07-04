@@ -189,7 +189,15 @@ def persistent_accent(form: str, lemma: str, *, ultima_length: str | None = None
     u, p = _lengths(syllables, ultima_length, penult_length)
     certain, note = True, "persistent"
 
-    pos = min(home, n)  # the form may have fewer syllables than the lemma
+    # Persistent accent stays on the same STEM syllable, tracked from the START of
+    # the word. A from-the-end anchor (min(home, n)) is wrong for an imparisyllabic
+    # noun that gains a syllable in the oblique cases (σῶμα -> σώματος): it keeps the
+    # accent on the penult, where the accent must recede to the antepenult. Counting
+    # the home syllable from the start and re-projecting onto this form fixes that.
+    lemma_syllables = len(syllabify(_strip_accents(lemma)))
+    home_from_start = max(1, lemma_syllables - home + 1)
+    pos = n - home_from_start + 1  # the same stem syllable, now counted from the end
+    pos = max(1, min(pos, 3, n))   # law of limitation: no further than the antepenult
     if pos == 3 and u == LONG:
         pos = 2  # σωτῆρα law: a long ultima pulls the accent off the antepenult
         note = "persistent; σωτῆρα law moved the accent to the penult"

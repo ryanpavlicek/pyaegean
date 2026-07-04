@@ -123,7 +123,10 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
         raise ValueError("expected a workbench export object or an array of records")
 
     records: list[dict[str, Any]] = []
-    extras: list[tuple[str, str, tuple[str, ...]]] = []  # glyphs, transcription, images
+    # Keyed by id, NOT positional: from_records collapses duplicate ids to one
+    # document (last wins), so a positional zip would shift every later document's
+    # extras onto the wrong id and drop the tail. Last-wins here matches that.
+    extras: dict[str, tuple[str, str, tuple[str, ...]]] = {}  # id -> glyphs, transcription, images
     for rec in raw:
         if not isinstance(rec, dict) or not rec.get("id"):
             raise ValueError(f"inscription record without an id: {rec!r}")
@@ -154,7 +157,7 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
             images = tuple(img.get("facsimile") or ()) + tuple(img.get("photograph") or ())
         else:
             images = tuple(rec.get("facsimileImages") or ()) + tuple(img or ())
-        extras.append((rec.get("glyphs", ""), rec.get("transcription", ""), images))
+        extras[rec["id"]] = (rec.get("glyphs", ""), rec.get("transcription", ""), images)
 
     source_bits = [str(meta.get("tool") or "linearaworkbench corpus export")]
     if meta.get("schemaVersion"):
@@ -175,7 +178,11 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
     # from_records covers the tokenized text; carry the workbench's extra
     # surface forms onto the documents it built (DocumentMeta is frozen, so
     # images go on via replacement).
-    for doc, (glyphs, transcription, images) in zip(corpus, extras):
+    for doc in corpus:
+        extra = extras.get(doc.id)
+        if extra is None:
+            continue
+        glyphs, transcription, images = extra
         doc.glyphs = glyphs
         doc.transcription = transcription
         if images:

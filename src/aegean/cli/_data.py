@@ -39,14 +39,30 @@ def _human_size(n: int) -> str:
 
 
 def _entry_paths(root: Path, name: str) -> list[Path]:
-    """Everything in the store belonging to one dataset: the entry itself plus
-    any leftover partial-download or extraction files."""
-    return [
-        root / name,
+    """Everything in the store belonging to one dataset: the real artifact(s) plus
+    any leftover partial-download or extraction files.
+
+    Uses the same on_disk-aware paths as ``data list`` / ``doctor`` (via
+    ``on_disk_paths``), so a dataset a backend writes under a different filename
+    (a prebuilt lexicon index -> ``lsj-perseus-index.json.gz``, an ``agdt-derived``
+    member) is actually found and removed, not just the empty ``root/name`` probe
+    (which left ``list`` reporting it downloaded while ``remove`` refused it)."""
+    from aegean.data import _REMOTE, on_disk_paths
+
+    spec = _REMOTE.get(name)
+    paths = list(on_disk_paths(spec, root)) if spec is not None else [root / name]
+    paths += [
         root / (name + ".part"),
         root / (name + ".part.info"),
         root / (name + ".extract"),
     ]
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for p in paths:  # de-dup: on_disk defaults to [root/name], which may repeat
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
 
 
 def _unknown_dataset(name: str) -> str:
@@ -187,7 +203,6 @@ def remove(
     names = sorted(_REMOTE) if remove_all else [name or ""]
     removed: list[dict[str, Any]] = []
     for n in names:
-        entry = root / n
         if (root / (n + ".lock")).exists():
             # a fetch of this dataset is running (its per-dataset lock is held);
             # removing under it would corrupt the transfer or be silently undone
@@ -201,6 +216,7 @@ def remove(
         targets = [p for p in _entry_paths(root, n) if p.exists()]
         if not targets:
             continue
+        entry = targets[0]  # the real artifact removed (root/name for most; the index file otherwise)
         size = sum(_on_disk_bytes(p) for p in targets)
         try:
             for p in targets:

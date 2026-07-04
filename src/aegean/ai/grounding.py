@@ -75,10 +75,15 @@ _MEANING_LEAD = re.compile(
 # that merely contains "of" ("fond of", "born of") is untouched.
 _DERIVATION_ONLY = re.compile(
     r"^(?:a|an|the|as\s+if)?\s*"
-    r"(?:adv\.?|adverb|comp\.?|compar\.?|comparative|superl\.?|superlative|"
-    r"contr\.?|contracted|collat\.?|collateral|shortened|"
-    r"strengthd\.?|strengthened|lengthd\.?|lengthened)"
-    r"[\w.\s]*?\s(?:of|from|for)$",
+    r"(?:adv|adverb|comp|compar|comparative|superl|superlative|"
+    r"contr|contracted|collat|collateral|shortened|"
+    r"strengthd|strengthened|lengthd|lengthened)"
+    # The abbreviation must be a WHOLE token: an abbreviation period or a word
+    # boundary. Without this, `comp`/`adv`/`contr` matched the PREFIX of a real
+    # gloss ("composed of", "advantage of", "control of") and clean_gloss wrongly
+    # discarded the meaning as a bare derivation pointer.
+    r"(?:\.|\b)"
+    r"(?:\s+form)?\s+(?:of|from|for)$",
     re.IGNORECASE,
 )
 

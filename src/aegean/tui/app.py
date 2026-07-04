@@ -161,6 +161,7 @@ class AegeanApp(App[None]):
     def __init__(self) -> None:
         super().__init__()
         self.state = AppState()
+        self._current_screen_name: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -168,6 +169,7 @@ class AegeanApp(App[None]):
 
     def on_mount(self) -> None:
         self.push_screen("home")
+        self._current_screen_name = "home"
 
     # ── navigation ──────────────────────────────────────────────────────────
     def action_switch(self, name: str) -> None:
@@ -175,9 +177,22 @@ class AegeanApp(App[None]):
         self.goto(name)
 
     def goto(self, name: str) -> None:
-        """Show screen ``name`` if it is registered (a no-op otherwise)."""
-        if name in self.SCREENS:
-            self.switch_screen(name)
+        """Show screen ``name`` if it is registered (a no-op otherwise).
+
+        When ``name`` is already the current screen, ``switch_screen`` is a no-op
+        and does not post ``ScreenResume``, so a screen that reconciles to the
+        shared selection in ``on_screen_resume`` (the corpus browser) would keep
+        showing the old selection after ``open_corpus`` from the palette. Drive
+        that reconcile directly in the already-current case."""
+        if name not in self.SCREENS:
+            return
+        if name == self._current_screen_name:
+            resume = getattr(self.get_screen(name), "on_screen_resume", None)
+            if callable(resume):
+                resume()
+            return
+        self._current_screen_name = name
+        self.switch_screen(name)
 
     def action_help(self) -> None:
         """Return to Home, where the global-key legend and honesty banner live."""

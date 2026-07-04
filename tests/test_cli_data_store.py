@@ -153,6 +153,29 @@ def test_remove_of_an_extracted_dataset_deletes_the_directory(
     assert not (store / "arch").exists()
 
 
+def test_remove_deletes_an_on_disk_dataset_and_agrees_with_list(
+    app, store, tmp_path, monkeypatch
+):
+    """Regression (0.19.10): a dataset whose real artifact lands under a different
+    filename (a prebuilt lexicon index, an agdt-derived member; DataSpec.on_disk)
+    must be removable, and ``list`` and ``remove`` must agree it is downloaded.
+    0.19.1 made list/doctor on_disk-aware but left ``remove`` probing only
+    root/name, so ``list`` reported the index downloaded while ``remove`` refused
+    it as "not downloaded" and its disk space was never reclaimable."""
+    monkeypatch.setitem(
+        data._REMOTE, "idx", data.DataSpec(name="idx", url="", license="x",
+                                           on_disk=("idx-built.json.gz",))
+    )
+    store.mkdir(parents=True, exist_ok=True)
+    (store / "idx-built.json.gz").write_bytes(PAYLOAD)
+
+    assert _list_row(app, "idx")["downloaded"] is True  # list sees the on_disk artifact
+    payload = json.loads(ok(app, "data", "remove", "idx", "--json"))
+    assert payload["reclaimed_bytes"] == len(PAYLOAD)  # remove finds and deletes it
+    assert not (store / "idx-built.json.gz").exists()
+    assert _list_row(app, "idx")["downloaded"] is False  # and now both agree it is gone
+
+
 # ── (c) remove errors ────────────────────────────────────────────────────────
 def test_remove_unknown_name_exits_nonzero_naming_data_list(app, store):
     out = err(app, "data", "remove", "definitely-not-a-dataset")

@@ -74,6 +74,7 @@ class DiskCache:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
+        self._sqlite3 = sqlite3  # kept so the ops can catch a concurrent-close error
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
         with self._lock:
             self._conn.execute(
@@ -82,10 +83,17 @@ class DiskCache:
             self._conn.commit()
 
     def get(self, key: str) -> Any:
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT value FROM cache WHERE key = ?", (key,)
-            ).fetchone()
+        try:
+            with self._lock:
+                row = self._conn.execute(
+                    "SELECT value FROM cache WHERE key = ?", (key,)
+                ).fetchone()
+        except self._sqlite3.ProgrammingError:
+            # The connection was closed under us (enable()/disable() from another
+            # thread while this worker held the cache): a miss, not a crash. A cache
+            # is an optimization, so the caller recomputes — the never-changes-a-
+            # result contract holds.
+            return _MISS
         if row is None:
             return _MISS
         try:
@@ -98,20 +106,29 @@ class DiskCache:
             blob = pickle.dumps(value)
         except Exception:  # unpicklable result → just don't cache it
             return
-        with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)", (key, blob)
-            )
-            self._conn.commit()
+        try:
+            with self._lock:
+                self._conn.execute(
+                    "INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)", (key, blob)
+                )
+                self._conn.commit()
+        except self._sqlite3.ProgrammingError:  # closed concurrently: skip persisting
+            return
 
     def clear(self) -> None:
-        with self._lock:
-            self._conn.execute("DELETE FROM cache")
-            self._conn.commit()
+        try:
+            with self._lock:
+                self._conn.execute("DELETE FROM cache")
+                self._conn.commit()
+        except self._sqlite3.ProgrammingError:  # closed concurrently: nothing to clear
+            return
 
     def __len__(self) -> int:
-        with self._lock:
-            return int(self._conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0])
+        try:
+            with self._lock:
+                return int(self._conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0])
+        except self._sqlite3.ProgrammingError:  # closed concurrently
+            return 0
 
     def close(self) -> None:
         with self._lock:

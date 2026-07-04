@@ -51,7 +51,7 @@ release.
 
 - **Linear A and Cypro-Minoan are undeciphered.** Linear A's phonetic
   transcription uses Linear B sound values as a *working convention*: in the
-  bundled inventory **48 of the 342 signs** carry an empirical sound value
+  bundled inventory **50 of the 342 signs** carry an empirical sound value
   (drawn from the 81 signs shared with the Linear B grid), each with a
   `confidence`; the rest have no agreed reading. Cypro-Minoan goes further: of
   its **99 catalogued signs, none** carries a settled sound value, so pyaegean
