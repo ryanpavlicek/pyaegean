@@ -4,6 +4,42 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.10 (2026-07-04)
+
+A regression audit of the recent fix churn: the areas most changed across 0.19.1 through
+0.19.9 were re-examined for defects those changes introduced, alongside the code no prior pass
+had touched. Five regressions and two pre-existing bugs fixed, each pinned by a regression test.
+
+### Fixed
+- **`aegean data remove` can delete every downloaded dataset again.** 0.19.1 taught `data list`
+  and `doctor` to recognize a dataset stored under a different filename (a prebuilt lexicon
+  index, an `agdt-derived` member) but left `remove` probing only the default location, so those
+  five datasets showed as downloaded yet refused removal, and their disk space could not be
+  reclaimed. `remove` now uses the same on-disk-aware lookup, so the two commands agree.
+- **Opening a corpus from the command palette works while the corpus browser is already open.**
+  A 0.19.1 cleanup removed the message the browser used to reload on an in-place selection change,
+  so selecting a different corpus from the palette while already on that screen silently kept the
+  old one displayed. The browser now reconciles to the new selection in that case too.
+- **`clean_gloss` keeps a real meaning that begins with a derivation abbreviation.** The 0.19.2
+  guard that drops bare grammatical-derivation pointers ("adverb of", "comp. of") was too broad
+  and also discarded genuine glosses like "composed of", "control of", "advantage of", leaving
+  those words ungrounded. The guard now matches only when the abbreviation is a whole token.
+- **The analysis cache no longer crashes a worker mid-call when it is reconfigured.** After
+  0.19.7 made the cache usable from worker threads, calling `cache.enable`/`cache.disable` from
+  one thread could raise a "closed database" error in a memoized call running on another. A
+  concurrent close now degrades to a cache miss (the value is recomputed), honoring the
+  cache's never-changes-a-result contract.
+- **`persistent_accent` places the accent correctly on imparisyllabic third-declension nouns.**
+  A noun that gains a syllable in the oblique cases (σῶμα → σώματος, ῥήτωρ → ῥήτορος) had its
+  accent anchored from the end of the word, landing it on the penult; it now tracks the stem
+  syllable from the start and recedes to the antepenult as required.
+- **Workbench import attaches each document's surface forms by id.** `from_workbench_export`
+  paired glyphs/transcription/images to documents positionally, but a repeated id (e.g. two
+  tablet sides labeled the same) collapses to one document, which shifted every later document's
+  extras onto the wrong id and dropped the last one. Extras are now keyed by id.
+- The stale "48 signs carry a sound value" figure on the Limitations page is corrected to 50
+  (the ZE/ZO reading in 0.19.8), matching the rest of the documentation.
+
 ## 0.19.9 (2026-07-03)
 
 A correctness pass over the surfaces the prior audit sweeps had covered least: the AI provider
