@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.19.12
+aegean --version                # pyaegean 0.19.13
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -612,7 +612,7 @@ aegean analyze assoc lineara KU-RO KI-RO
 # joint/w1/w2/docs 5/34/12/1721 · chi_squared 78.75 · log_likelihood 23.94 · fisher_p 1.6e-06
 
 aegean analyze cooccur lineara KU-RO --top 5
-# KI-RO 5 · *306-TU 4 · KU-PA₃-NU 4 · SA-RA₂ 4 · PA-DE 3
+# KI-RO 5 · *306-TU 4 · KU-PA₃-NU 4 · SA-RA₂ 4 · *324-DI-RA 3
 
 aegean analyze structure lineara
 # accounting 134 · libation 18 · list 6 · text 1 · other 1562   (heuristic census)

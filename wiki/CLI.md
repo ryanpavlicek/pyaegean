@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.12
+aegean --version          # pyaegean 0.19.13
 ```
 
 | Group | What's in it |
@@ -470,8 +470,8 @@ aegean dispersion lineara --top 5
 ├───────────┼──────┼─────────────┼───────┼────────┤
 │ KU-RO     │ 37   │ 34/559      │ 0.850 │ 0.851  │
 │ KI-RO     │ 16   │ 12/559      │ 0.938 │ 0.938  │
-│ KU-PA₃-NU │ 8    │ 7/559       │ 0.948 │ 0.949  │
 │ SA-RA₂    │ 20   │ 20/559      │ 0.948 │ 0.949  │
+│ KU-PA₃-NU │ 8    │ 7/559       │ 0.948 │ 0.949  │
 │ A-DU      │ 10   │ 10/559      │ 0.963 │ 0.964  │
 └───────────┴──────┴─────────────┴───────┴────────┘
 ```
@@ -810,7 +810,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.12                    │
+│ OK │ pyaegean │ 0.19.13                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

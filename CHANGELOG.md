@@ -4,6 +4,22 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.13 (2026-07-04)
+
+A documentation-freshness pass: every documentation code block was re-run against the current
+code and the shown outputs that had drifted were corrected. No library behaviour changed.
+
+### Fixed
+- **Corrected drifted example outputs in the wiki.** Several shown results were stale after
+  earlier releases: the Linear A assigned-sound-value count (now 50, after ZE/ZO were read in
+  0.19.8) on the Limitations page, the bundled `signs.json` byte size and the corpus JSON length
+  on the Data-and-Provenance and Architecture pages, and the tie-order of the `dispersion` and
+  `cooccur` example tables (both are deterministic; the docs showed the pre-0.19.6 order). The
+  documented outputs now match the current code.
+- Added regression guards that pin the documented `dispersion` and `cooccur` outputs and the
+  Linear A sound-value count, so a future change that alters them fails a test and the
+  documentation is updated in the same commit.
+
 ## 0.19.12 (2026-07-04)
 
 A security and robustness pass over the untrusted-input surfaces: the parsers, importers, the

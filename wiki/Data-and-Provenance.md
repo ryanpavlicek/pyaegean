@@ -62,7 +62,7 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `lineara/inscriptions.json` | 720,766 | GORILA via mwenge/lineara.xyz |
 | `lineara/manifest.json` | 454 | corpus manifest |
 | `lineara/phonetic_map.json` | 648 | Linear A sound values |
-| `lineara/signs.json` | 63,201 | Linear A sign inventory |
+| `lineara/signs.json` | 63,272 | Linear A sign inventory |
 | `linearb/lexicon.json` | 12,058 | Unicode UCD + Wiktionary/kaikki excerpts |
 | `linearb/phonetic_map.json` | 986 | Unicode UCD |
 | `linearb/sample_inscriptions.json` | 7,198 | scholarly excerpts (Ventris & Chadwick) |
@@ -536,7 +536,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.19.12'  (your installed version)
+v["package"]                                  # '0.19.13'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -588,7 +588,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.19.12'
+# '0.19.13'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
