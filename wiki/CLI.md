@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.11
+aegean --version          # pyaegean 0.19.12
 ```
 
 | Group | What's in it |
@@ -786,7 +786,11 @@ aegean cache
 
 Set `PYAEGEAN_ANALYSIS_CACHE=1` (or a directory path) and expensive analyses
 (dispersion, keyness, clustering) are reused across runs; `aegean cache --clear`
-wipes it.
+wipes it. Cached values are stored with `pickle` and unpickled on read, so point
+it only at a directory **you** control, never a shared or group-writable one, and
+don't reuse a cache file from someone else (loading a cache is a code-execution
+trust boundary, the same as a pip or pytest cache). The file is created owner-only,
+and enabling a cache in an others-writable directory warns.
 
 ### `doctor` — the offline environment check
 
@@ -806,7 +810,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.11                    │
+│ OK │ pyaegean │ 0.19.12                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

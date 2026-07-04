@@ -4,6 +4,36 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.12 (2026-07-04)
+
+A security and robustness pass over the untrusted-input surfaces: the parsers, importers, the
+fetch/cache layer, and the work-fetch path handling of a hostile file or a crafted argument.
+Six hardening fixes, each pinned by a regression test.
+
+### Fixed
+- **EpiDoc import is linear, not quadratic.** A deeply nested TEI document made the importer
+  O(tokens x depth), so a small hostile-but-well-formed file could hang `aegean import --epidoc`
+  for minutes on one CPU. The apparatus-membership and reading-status lookups are now
+  precomputed in single passes, so parsing is linear (a large nesting that took seconds now
+  takes a fraction of a second) with identical output.
+- **Loading a prebuilt index caps its decompressed size.** A `.json.gz` lexicon/model index is
+  decompressed with a size limit, so a swapped mirror (when a `PYAEGEAN_<NAME>_URL` override
+  disables the checksum) cannot inflate a tiny file into gigabytes and exhaust memory.
+- **`load_work` rejects a path-like work id.** A work id containing a path separator or `..` is
+  refused, so a crafted id cannot escape the pinned Perseus repository and fetch a forged
+  edition from an arbitrary source. (The MCP tool already did this; the guard now covers the
+  CLI and the Python API too.)
+- **A malformed corpus file fails cleanly at load.** `Corpus.from_json` / `from_dict` now
+  validate that each line's token indices are in range and raise a clear error naming the
+  document, instead of loading a corrupt object that crashes later with a bare `IndexError`.
+- **The analysis cache is hardened.** Its file is created owner-only, and enabling a cache in a
+  directory writable by other users warns that a cached value is unpickled on read (a shared
+  cache is a code-execution trust boundary); the documentation states this for the
+  `PYAEGEAN_ANALYSIS_CACHE` redirect.
+- **EpiDoc import records only the file name in provenance.** The importer stamped the full
+  absolute import path into the corpus provenance and every citation, leaking the user's
+  directory layout into a shared export; it now uses the basename, like the other importers.
+
 ## 0.19.11 (2026-07-04)
 
 A propagation audit: for each bug class already fixed at one site, every sibling site was
