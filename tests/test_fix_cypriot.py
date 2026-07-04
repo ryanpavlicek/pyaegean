@@ -1,9 +1,10 @@
 """Regression tests: the Cypriot loader decodes the IG Leiden apparatus.
 
-The IG XV 1 edition marks damaged-but-legible signs with a combining underdot and
-editorially supplied text with square lacuna brackets. The loader must map them to
-`ReadingStatus.UNCLEAR` / `RESTORED`, strip the markers from the emitted token text,
-and keep the marked form in ``annotations["leiden"]``. The pinned examples below are
+The IG XV 1 edition marks damaged-but-legible signs with a combining underdot, erasures
+with ⟦⟧, editor-supplied text with square lacuna brackets or angle brackets, and
+abbreviation expansions with parentheses. The loader maps them to `ReadingStatus`
+(UNCLEAR / RESTORED / CERTAIN), strips every bracket from the emitted token text and
+signs, and keeps the marked form in ``annotations["leiden"]``. The pinned examples below are
 verified against the raw bundled source strings (which store the underdot as the
 combining U+0323, so the expected marked forms are spelled with explicit escapes).
 """
@@ -86,16 +87,17 @@ def test_corpus_status_distribution() -> None:
     corpus = aegean.load("cypriot")
     tokens = [t for d in corpus for t in d.tokens]
     counts = {s: sum(1 for t in tokens if t.status is s) for s in ReadingStatus}
-    # 131 tokens carry underdots and 56 fall in restoration spans in the bundled IG
-    # source; 13 carry both and land in RESTORED.
-    assert counts[ReadingStatus.RESTORED] == 56
-    assert counts[ReadingStatus.UNCLEAR] == 118
+    # UNCLEAR = underdotted (damaged but legible) + ⟦⟧ erasures; RESTORED = square-bracket
+    # lacuna restorations + <> editorial insertions; a token carrying both a restoration
+    # bracket and an underdot lands in RESTORED.
+    assert counts[ReadingStatus.RESTORED] == 57
+    assert counts[ReadingStatus.UNCLEAR] == 119
     assert counts[ReadingStatus.LOST] == 0
-    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 174
-    # no apparatus characters leak into emitted text or sign labels
+    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 176
+    # no apparatus bracket leaks into emitted text or sign labels
     for t in tokens:
-        assert "[" not in t.text and "]" not in t.text and _UNDERDOT not in t.text
-        assert all(s and "[" not in s and "]" not in s for s in t.signs)
+        assert not any(ch in t.text for ch in "[]⟦⟧<>()") and _UNDERDOT not in t.text
+        assert all(s and not any(ch in s for ch in "[]⟦⟧<>()") for s in t.signs)
 
 
 def test_leiden_annotation_round_trips_to_the_clean_text() -> None:
@@ -111,8 +113,10 @@ def test_leiden_annotation_round_trips_to_the_clean_text() -> None:
             seen += 1
             nfd = unicodedata.normalize("NFD", raw)
             bare = unicodedata.normalize("NFC", nfd.replace(_UNDERDOT, ""))
-            assert bare.replace("[", "").replace("]", "") == t.text
-    assert seen == 165  # every marker-carrying token keeps its marked form
+            for ch in "[]⟦⟧<>()":
+                bare = bare.replace(ch, "")
+            assert bare == t.text
+    assert seen == 169  # every marker-carrying token keeps its marked form
 
 
 def test_status_survives_the_json_round_trip() -> None:

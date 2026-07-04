@@ -93,14 +93,20 @@ def _document(root: Any) -> Document | None:
         elif tag == "app":
             # one token with alternate readings: <app><lem>…</lem><rdg>…</rdg>…</app>
             lem = el.find(f"{_TEI}lem")
+            rdgs = tuple(_text(r).upper() for r in el.findall(f"{_TEI}rdg") if _text(r))
             text = _text(lem) if lem is not None else ""
             if text:
                 tok = classify(text.upper(), len(lines), pos)
-                alts = tuple(
-                    _text(r).upper() for r in el.findall(f"{_TEI}rdg") if _text(r)
-                )
-                status = _status_of(lem)
-                tok = replace(tok, status=status, alt=alts)
+                tok = replace(tok, status=_status_of(lem), alt=rdgs)
+                tokens.append(tok)
+                cur.append(pos)
+                pos += 1
+            elif rdgs:
+                # a fully-uncertain word: variant <rdg> readings but no editor-preferred
+                # <lem>. Keep it (reading the first variant, flagged UNCLEAR, the rest as
+                # alts) rather than dropping the token and losing the word entirely.
+                tok = classify(rdgs[0], len(lines), pos)
+                tok = replace(tok, status=ReadingStatus.UNCLEAR, alt=rdgs[1:])
                 tokens.append(tok)
                 cur.append(pos)
                 pos += 1

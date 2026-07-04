@@ -110,5 +110,5 @@ def search(
     table(
         f"'{query}' in {path.name}",
         ["doc", "pos", "text"],
-        [[d, str(p), t] for d, p, t in hits],
+        [[d, str(p) if p is not None else "-", t] for d, p, t in hits],
     )

@@ -30,8 +30,15 @@ def _key(
 ) -> str:
     h = hashlib.sha256()
     for part in (provider, model, system or "", prompt, str(max_tokens)):
-        h.update(part.encode("utf-8"))
-        h.update(b"\x00")
+        # Length-prefix every field so the serialization is injective. A bare separator
+        # byte collides when the text itself contains that byte: a NUL ending the system
+        # prompt is indistinguishable from one beginning the prompt, so two logically
+        # distinct requests would hash alike and one would be served the other's cached
+        # completion. Source text and grounding content can carry control chars, so this
+        # is reachable; it is the same fix Corpus.fingerprint uses (core/corpus.py).
+        b = part.encode("utf-8")
+        h.update(len(b).to_bytes(8, "big"))
+        h.update(b)
     return h.hexdigest()
 
 

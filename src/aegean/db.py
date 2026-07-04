@@ -351,8 +351,11 @@ def from_sqlite(path: str | Path) -> Corpus:
 
 
 def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
-           ) -> list[tuple[str, int, str]]:
+           ) -> list[tuple[str, int | None, str]]:
     """Search a SQLite corpus's tokens; returns ``(doc_id, position, text)`` hits.
+
+    ``position`` is the token's stored position, or ``None`` for a token saved without
+    one (a supported state since 0.19.4: an appended token keeps ``position=None``).
 
     ``mode="token"`` (default) matches a **whole token literally**: the query must equal the
     token, so a transliteration with hyphens (``KU-RO``, ``A-DU``) matches only that token and
@@ -380,13 +383,15 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
     try:
         target = query.casefold()
-        out: list[tuple[str, int, str]] = []
+        out: list[tuple[str, int | None, str]] = []
+        # position is an int, or None for a token stored without one (SQL NULL); keep it
+        # as-is rather than int()-coercing, which would crash on the None case (0.19.9).
         if mode == "substring":
             for doc_id, position, text in conn.execute(
                 "SELECT doc_id, position, text FROM tokens"
             ):
                 if target in str(text).casefold():
-                    out.append((str(doc_id), int(position), str(text)))
+                    out.append((str(doc_id), position, str(text)))
                     if 0 < limit <= len(out):
                         break
             return out
@@ -425,7 +430,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
             source = conn.execute("SELECT doc_id, position, text FROM tokens")
         for doc_id, position, text in source:
             if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
-                out.append((str(doc_id), int(position), str(text)))
+                out.append((str(doc_id), position, str(text)))
                 if 0 < limit <= len(out):
                     break
         return out

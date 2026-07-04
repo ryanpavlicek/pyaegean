@@ -31,6 +31,12 @@ from .inventory import cypriot_inventory
 _SEP = {"\U00010100", "\U00010101"}  # 𐄀 𐄁 — Aegean word dividers
 _IDEOGRAM_RE = re.compile(r"^[A-Z*][A-Z0-9*+'\[\]?]*$")
 _UNDERDOT = "̣"  # combining dot below — Leiden: damaged but legible
+_ERASED = ("⟦", "⟧")     # Leiden: text deleted by the ancient scribe, still legible
+_INSERTED = ("<", ">")   # Leiden: editorial insertion of a sign the scribe omitted
+_EXPANDED = ("(", ")")   # Leiden: editorial expansion of an abbreviation
+# every apparatus bracket stripped from the emitted token (the raw form is kept in
+# annotations["leiden"]); these are notation, never Cypriot syllabograms.
+_BRACKETS = ("[", "]", *_ERASED, *_INSERTED, *_EXPANDED)
 
 
 def classify(
@@ -38,31 +44,36 @@ def classify(
 ) -> Token:
     """Tag a transliterated Cypriot token by role and editorial status (Leiden conventions).
 
-    The IG edition marks a damaged-but-legible sign with a combining underdot
-    (-> ``UNCLEAR``) and editorially supplied text with square lacuna brackets
-    (-> ``RESTORED``). Both markers are stripped from the emitted token; the marked form is
-    kept in ``annotations["leiden"]``. ``restored=True`` flags a token inside a bracket span
-    opened by an earlier token (spans run across word dividers and line breaks;
-    `_build_document` tracks them).
+    The IG edition's apparatus is interpreted: a combining underdot (damaged but legible)
+    and erasure brackets ``⟦⟧`` (deleted by the scribe, still legible) both read as
+    ``UNCLEAR``; square lacuna brackets ``[]`` and angle brackets ``<>`` (editor-supplied
+    text) read as ``RESTORED``; parenthesized abbreviation expansions ``()`` read as a
+    secure ``CERTAIN`` reading. Every bracket is stripped from the emitted token and its
+    signs (they are not syllabograms); the marked form is kept in ``annotations["leiden"]``.
+    ``restored=True`` flags a token inside a bracket span opened by an earlier token (spans
+    run across word dividers and line breaks; `_build_document` tracks them).
     """
     nfd = unicodedata.normalize("NFD", text)
     bare = text
-    if _UNDERDOT in nfd:
+    underdotted = _UNDERDOT in nfd
+    if underdotted:
         bare = unicodedata.normalize("NFC", nfd.replace(_UNDERDOT, ""))
-    bracketed = "[" in bare or "]" in bare
-    if bracketed:
-        bare = bare.replace("[", "").replace("]", "")
-    if not bare:  # nothing outside the lacuna brackets: the text here is not preserved
+    lacuna = "[" in bare or "]" in bare
+    inserted = any(m in bare for m in _INSERTED)
+    erased = any(m in bare for m in _ERASED)
+    for m in _BRACKETS:
+        bare = bare.replace(m, "")
+    if not bare:  # nothing outside the brackets: the text here is not preserved
         return Token(
             text, TokenKind.UNKNOWN, (text,), None, line_no, position,
             status=ReadingStatus.LOST,
         )
-    if restored or bracketed:
-        status = ReadingStatus.RESTORED  # wholly or partly editor-supplied at a lacuna
-    elif bare != text:
-        status = ReadingStatus.UNCLEAR  # underdotted: damaged but read
+    if restored or lacuna or inserted:
+        status = ReadingStatus.RESTORED  # editor-supplied at a lacuna, or an inserted sign
+    elif erased or underdotted:
+        status = ReadingStatus.UNCLEAR  # erased-but-legible, or damaged-but-read
     else:
-        status = ReadingStatus.CERTAIN
+        status = ReadingStatus.CERTAIN  # includes abbreviation expansions (a secure reading)
     ann = {"leiden": text} if bare != text else {}
     if bare in _SEP:
         return Token(

@@ -57,7 +57,7 @@
     "quantized_words_per_s": "20–70",
     "fp32_words_per_s_approx": 300,
     "measured": "2026-07-03",
-    "note": "development machine, plain CPU, sentence-length dependent; the quantized MatMulNBits kernels trade CPU throughput for the 3x size win. Stated in docs/benchmarks.md and wiki/Greek-NLP.md; re-measure on the same machine class before changing."
+    "note": "development machine, plain CPU, sentence-length dependent; the quantized MatMulNBits kernels trade CPU throughput for the 3x size win. Hardware-dependent and illustrative, NOT a pinned benchmark like the accuracy rows: check_benchmarks.py does not re-measure it (CI runners differ). Stated in docs/benchmarks.md and wiki/Greek-NLP.md. Dependency-drift trigger: re-measure on the same machine class only when the grc-joint model or the onnxruntime floor changes."
   },
   "bootstrap": {
     "n_resamples": 999,

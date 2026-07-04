@@ -517,8 +517,16 @@ def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[
             "error": f"{dictionary!r} is deep-link only (not hosted); "
             f"hosted dictionaries: {', '.join(hosted)}"
         }
-    greek.use_lexicon(dictionary)
-    e = greek.entry(word, dictionary=dictionary)
+    # The first use of a hosted dictionary fetches and builds its index; a cold-cache
+    # offline call (or a network / HTTP / sha256 failure) raises out of use_lexicon.
+    # Return the surface's structured error instead of leaking a raw traceback.
+    from .data import DataNotAvailableError
+
+    try:
+        greek.use_lexicon(dictionary)
+        e = greek.entry(word, dictionary=dictionary)
+    except (DataNotAvailableError, ValueError) as exc:
+        return {"error": f"could not load the {dictionary} dictionary: {exc}"}
     if e is None:
         return {"error": f"no {dictionary} entry for {word!r}"}
     out: dict[str, Any] = {

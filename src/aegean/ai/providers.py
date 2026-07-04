@@ -80,6 +80,17 @@ class _OpenAICompatibleClient(LLMClient):
             raise ProviderCallError(
                 f"{self.provider} request failed (model {self.model!r}): {e}"
             ) from e
+        # An OpenAI-compatible gateway (notably OpenRouter) can return HTTP 200 with an
+        # empty ``choices`` list when the upstream vendor errors or a moderation filter
+        # fires — no APIError is raised, so ``resp.choices[0]`` would blow up with a raw
+        # IndexError that escapes the ProviderCallError wrapping the 0.19.3 pass established.
+        # Surface it as a clean provider error instead (any ``error`` payload appended).
+        if not resp.choices:
+            detail = getattr(resp, "error", None)
+            raise ProviderCallError(
+                f"{self.provider} returned no choices (model {self.model!r})"
+                + (f": {detail}" if detail else "")
+            )
         text = resp.choices[0].message.content or ""
         return LLMResponse(text, self.provider, self.model, raw=resp)
 

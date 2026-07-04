@@ -211,7 +211,12 @@ Three things keep these honest:
   closely, so tokenization is not a bottleneck on this fold. Throughput of the shipped
   quantized model is roughly **20–70 words/s on plain CPU** (sentence-length dependent,
   measured on the development machine); the fp32 `grc-joint-v2` bundle reaches roughly
-  300 words/s on the same machine — see the quantization trade-off below.
+  300 words/s on the same machine — see the quantization trade-off below. Unlike the
+  accuracy figures above (deterministic given the model and gold data, and re-measured by
+  `scripts/check_benchmarks.py`), throughput is **hardware-dependent and illustrative, not a
+  pinned benchmark**: it scales with the CPU, core count, and workload, so read it as an
+  order-of-magnitude guide. It is re-measured only when the model or the `onnxruntime` floor
+  changes (a dependency-drift trigger), not automatically per release.
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
 about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless on
