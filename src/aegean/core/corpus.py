@@ -464,7 +464,10 @@ class Corpus:
         text = json.dumps(data, ensure_ascii=False, indent=indent)
         if path is None:
             return text
-        Path(path).write_text(text, encoding="utf-8")
+        from .._atomic import atomic_path  # temp+replace: a failed write keeps the prior export
+
+        with atomic_path(path) as tmp:
+            tmp.write_text(text, encoding="utf-8")
         return None
 
     @classmethod

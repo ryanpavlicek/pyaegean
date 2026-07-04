@@ -62,7 +62,15 @@ def _load_corpus(corpus: str) -> tuple[Any, dict[str, Any] | None]:
                 f"available: {', '.join(ids)}"
             }
         corpus = folded
-    return aegean.load(corpus), None
+    # A fetch-on-demand corpus (damos, sigla) is downloaded on first load; a cold-cache
+    # offline/HTTP/checksum failure must surface as the structured error every tool that
+    # routes through this helper already handles, not a raw exception.
+    from .data import DataNotAvailableError
+
+    try:
+        return aegean.load(corpus), None
+    except DataNotAvailableError as exc:
+        return None, {"error": f"corpus {corpus!r} is not available: {exc}"}
 
 
 def _find_doc(c: Any, corpus: str, doc_id: str) -> tuple[Any, dict[str, Any] | None]:

@@ -28,7 +28,7 @@ class Greek(Script):
 
     @property
     def sign_inventory(self) -> SignInventory:
-        return greek_inventory()
+        return greek_inventory().copy()  # independent copy: a caller's attrs edit must not leak
 
     def tokenize(self, raw: str) -> list[Token]:
         from ...greek.tokenize import tokenize as _tokenize

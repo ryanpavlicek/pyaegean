@@ -23,7 +23,7 @@ class CyproMinoan(Script):
 
     @property
     def sign_inventory(self) -> SignInventory:
-        return cyprominoan_inventory()
+        return cyprominoan_inventory().copy()  # independent copy: a caller's attrs edit must not leak
 
     def tokenize(self, raw: str) -> list[Token]:
         return [classify(w, None, i) for i, w in enumerate(raw.split())]

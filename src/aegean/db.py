@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+from ._atomic import atomic_path
 from .core.corpus import (
     Corpus,
     _document_from_dict,
@@ -120,25 +121,35 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
             raise FileNotFoundError(f"no database to append to: {p} (build it first)")
         _append_sqlite(corpus, p)
         return
-    if p != ":memory:":
-        Path(p).unlink(missing_ok=True)
-    conn = sqlite3.connect(p)
-    try:
-        conn.executescript(_SCHEMA)
-        meta = {
-            "schema_version": str(SCHEMA_VERSION),
-            "script_id": corpus.script_id,
-            "provenance": json.dumps(_provenance_to_dict(corpus.provenance)),
-            "sign_inventory": json.dumps(_inventory_to_dict(corpus.sign_inventory)),
-        }
-        conn.executemany("INSERT INTO meta(key, value) VALUES (?, ?)", list(meta.items()))
-        for i, doc in enumerate(corpus.documents):
-            _insert_document(conn, _document_to_dict(doc), i)
-        if fts:
-            _build_fts(conn)
-        conn.commit()
-    finally:
-        conn.close()
+
+    def _build(target: str) -> None:
+        conn = sqlite3.connect(target)
+        try:
+            conn.executescript(_SCHEMA)
+            meta = {
+                "schema_version": str(SCHEMA_VERSION),
+                "script_id": corpus.script_id,
+                "provenance": json.dumps(_provenance_to_dict(corpus.provenance)),
+                "sign_inventory": json.dumps(_inventory_to_dict(corpus.sign_inventory)),
+            }
+            conn.executemany("INSERT INTO meta(key, value) VALUES (?, ?)", list(meta.items()))
+            for i, doc in enumerate(corpus.documents):
+                _insert_document(conn, _document_to_dict(doc), i)
+            if fts:
+                _build_fts(conn)
+            conn.commit()
+        finally:
+            conn.close()
+
+    if p == ":memory:":
+        _build(p)
+        return
+    # Build into a temp database then atomically replace, so a failed or interrupted
+    # rebuild (full disk, Ctrl+C) never destroys the user's existing .db — the prior
+    # unlink-then-rebuild-in-place left no recoverable file. Same temp+replace the
+    # caches and the .part download use.
+    with atomic_path(Path(p)) as tmp:
+        _build(str(tmp))
 
 
 def _append_sqlite(corpus: Corpus, p: str) -> None:

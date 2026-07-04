@@ -145,8 +145,17 @@ class GeminiClient(LLMClient):
             resp = client.models.generate_content(
                 model=self.model, contents=prompt, config=config
             )
+            text = resp.text or ""
         except genai_errors.APIError as e:
             raise ProviderCallError(
                 f"gemini request failed (model {self.model!r}): {e}"
             ) from e
-        return LLMResponse(resp.text or "", self.provider, self.model, raw=resp)
+        except Exception as e:
+            # A network-transport failure (httpx ConnectError/Timeout) or a blocked-
+            # response access is NOT a genai APIError subclass (unlike Anthropic's and
+            # OpenAI's connection errors), so it would leak raw out of the public call.
+            # Wrap it like the other adapters (the 0.19.3 ProviderCallError contract).
+            raise ProviderCallError(
+                f"gemini request failed (model {self.model!r}): {e}"
+            ) from e
+        return LLMResponse(text, self.provider, self.model, raw=resp)

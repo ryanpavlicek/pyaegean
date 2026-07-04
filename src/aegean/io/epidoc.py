@@ -21,6 +21,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .._atomic import atomic_path
 from ..core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
 
 # Characters XML 1.0 forbids in text: control chars other than tab/newline/CR, plus the
@@ -155,7 +156,8 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     later ones (in id order) get a ``-2``, ``-3``, ... suffix and a warning
     names the colliding ids, so no document silently overwrites another."""
     if isinstance(obj, Document):
-        Path(path).write_text(to_epidoc(obj), encoding="utf-8")
+        with atomic_path(path) as tmp:  # temp+replace: a failed write keeps the prior file
+            tmp.write_text(to_epidoc(obj), encoding="utf-8")
         return
     out = Path(path)
     out.mkdir(parents=True, exist_ok=True)
@@ -183,7 +185,8 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
                     n += 1
                     fname = f"{name}-{n}"
                 used.add(fname)
-            (out / f"{fname}.xml").write_text(to_epidoc(doc), encoding="utf-8")
+            with atomic_path(out / f"{fname}.xml") as tmp:
+                tmp.write_text(to_epidoc(doc), encoding="utf-8")
 
 
 # ── reading EpiDoc TEI back into the corpus model ────────────────────────────────

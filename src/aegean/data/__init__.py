@@ -831,7 +831,15 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
         return False
     if src.resolve() != dest.resolve():
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(src, dest)
+        if member is None:
+            # A single-file dataset: fetch() wrote it to cache_dir()/name, but the real
+            # artifact lives under dest (the built-index filename). MOVE it there rather
+            # than copy, or the raw cache_dir()/name lingers uncounted and unremovable
+            # (its on_disk override lists only dest). For a member (an extract dataset),
+            # cache_dir()/name is the tracked unpacked directory, so copy and keep it.
+            os.replace(src, dest)
+        else:
+            shutil.copyfile(src, dest)
     return True
 
 

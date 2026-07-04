@@ -376,6 +376,18 @@ def _ei_strip_unsafe(word: str, bare: str) -> bool:
     return _final_ei_accented(word)
 
 
+def _sigmatic_before(bare: str, ending: str) -> bool:
+    """Whether a *single* σ sits immediately before a thematic personal ending.
+
+    That marks a sigmatic future/aorist (δώσομεν, δώσετε, δώσουσιν), whose lemma is
+    the present (δίδωμι), NOT the fabricated ``-ω`` the flat swap would invent. A genuine
+    thematic present has no σ (λέγομεν) or a double σ (πράσσομεν) before the ending, so it
+    is left to strip normally. This generalizes the ``-ει/-εις`` guard to the other
+    thematic endings (``-ομεν``/``-ετε``/``-ουσι(ν)``), which had no such guard."""
+    stem = bare[: -len(ending)]
+    return stem.endswith("σ") and not stem.endswith("σσ")
+
+
 def _rule_lemma(word: str) -> str | None:
     """The citation form recovered by ending substitution, or ``None`` when no regular
     rule applies. Operates on the surface form; the longest matching ending wins."""
@@ -414,6 +426,8 @@ def _rule_lemma(word: str) -> str | None:
             # cannot resolve, or a perispomenon adverb (ἐκεῖ); skip rather than mis-stem it.
             and not _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX}))
             and not (ending in ("ει", "εισ") and _ei_strip_unsafe(word, bare))
+            # the same sigmatic-future look-alike on the other thematic endings
+            and not (ending in ("ομεν", "ετε", "ουσι", "ουσιν") and _sigmatic_before(bare, ending))
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)

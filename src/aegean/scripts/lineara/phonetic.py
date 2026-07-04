@@ -28,4 +28,7 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     test alternative sign values (hypothesis testing).
     """
     m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
-    return "".join(m.get(_CLEAN.sub("", s), s.lower()) for s in word.split("-"))
+    # Fold to upper before lookup (the table is keyed uppercase): the standard lowercase
+    # transliteration (qa-de, za-ku) must read the Q-/Z-series correctly instead of falling
+    # through to raw text, matching the Linear B and Cypriot bridges.
+    return "".join(m.get(_CLEAN.sub("", s).upper(), s.lower()) for s in word.split("-"))

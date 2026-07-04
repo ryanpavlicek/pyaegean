@@ -11,7 +11,7 @@ the model stays instant and dependency-free.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
 
@@ -209,6 +209,15 @@ class SignInventory:
 
     def by_codepoint(self, codepoint: int) -> Sign | None:
         return self._by_codepoint.get(codepoint)
+
+    def copy(self) -> "SignInventory":
+        """An independent copy: each `Sign` is rebuilt with its own ``attrs`` dict.
+
+        `Sign` is a frozen value object but its ``attrs`` is a mutable per-sign dict for
+        user analysis; a shared/cached inventory (the ``@lru_cache``-d ``*_inventory()``
+        accessors) would otherwise let one caller's ``attrs`` edit leak into every later
+        reader and into a subsequent corpus load. Mirrors `Corpus.copy` for the sign layer."""
+        return SignInventory([replace(s, attrs=dict(s.attrs)) for s in self.signs], self.script_id)
 
     def to_dataframe(self):  # type: ignore[no-untyped-def]
         try:
