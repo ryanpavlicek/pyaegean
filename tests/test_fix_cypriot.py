@@ -87,17 +87,20 @@ def test_corpus_status_distribution() -> None:
     corpus = aegean.load("cypriot")
     tokens = [t for d in corpus for t in d.tokens]
     counts = {s: sum(1 for t in tokens if t.status is s) for s in ReadingStatus}
-    # UNCLEAR = underdotted (damaged but legible) + ⟦⟧ erasures; RESTORED = square-bracket
-    # lacuna restorations + <> editorial insertions; a token carrying both a restoration
-    # bracket and an underdot lands in RESTORED.
-    assert counts[ReadingStatus.RESTORED] == 57
-    assert counts[ReadingStatus.UNCLEAR] == 119
-    assert counts[ReadingStatus.LOST] == 0
-    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 176
-    # no apparatus bracket leaks into emitted text or sign labels
+    # UNCLEAR = underdotted (damaged but legible) + ⟦⟧ erasures + tokens with an illegibly-read
+    # sign (a Leiden dot "..", a figure-dash "‒", an unread "?"); RESTORED = square-bracket
+    # lacuna restorations + <> editorial insertions; LOST = a token that is entirely apparatus
+    # (only illegible marks, nothing legibly read).
+    assert counts[ReadingStatus.RESTORED] == 51
+    assert counts[ReadingStatus.UNCLEAR] == 188
+    assert counts[ReadingStatus.LOST] == 19
+    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 258
+    # brackets/underdot never survive in the emitted text; NO apparatus marker (bracket,
+    # illegible dot/dash, unread ?, direction ↓) survives in a sign label (illegible dots stay
+    # in the token text to show a lost-sign position, but are never syllabograms)
     for t in tokens:
         assert not any(ch in t.text for ch in "[]⟦⟧<>()") and _UNDERDOT not in t.text
-        assert all(s and not any(ch in s for ch in "[]⟦⟧<>()") for s in t.signs)
+        assert all(s and not any(ch in s for ch in "[]⟦⟧<>().‒?↓") for s in t.signs)
 
 
 def test_leiden_annotation_round_trips_to_the_clean_text() -> None:
@@ -133,3 +136,44 @@ def test_tokenize_decodes_the_apparatus_too() -> None:
     toks = get_script("cypriot").tokenize("wi-ti-ḷẹ-ra-nu [ta]")
     assert toks[0].text == "wi-ti-le-ra-nu" and toks[0].status is ReadingStatus.UNCLEAR
     assert toks[1].text == "ta" and toks[1].status is ReadingStatus.RESTORED
+
+
+# ── the illegible-sign / notation apparatus (IG XV 1 Leiden conventions) ──────
+def test_illegible_dots_are_not_signs_and_read_unclear() -> None:
+    from aegean.core.model import TokenKind
+    from aegean.scripts.cypriot.loader import classify
+
+    # a Leiden dot on the line marks an illegible sign (a dot-run "..-.." = several); the dots
+    # are kept in the token text (to show a lost-sign position) but are never syllabograms, and
+    # the token reads UNCLEAR, not CERTAIN.
+    t = classify("i-te-o-..-..-..-ja", 0, 0)
+    assert t.kind is TokenKind.WORD
+    assert t.signs == ("i", "te", "o", "ja")           # the "..".. are not signs
+    assert t.text == "i-te-o-..-..-..-ja"               # kept in the text
+    assert t.status is ReadingStatus.UNCLEAR
+    # a token that is only illegible dots is LOST, with no signs
+    lost = classify("..", 0, 0)
+    assert lost.signs == () and lost.status is ReadingStatus.LOST
+
+
+def test_figure_dash_and_trailing_period_are_not_signs() -> None:
+    from aegean.scripts.cypriot.loader import classify
+
+    # the figure-dash "‒" fills a lost-sign slot (here inside a lacuna) — not a syllabogram
+    t = classify("‒]-se", 0, 0)
+    assert "se" in t.signs and all("‒" not in s for s in t.signs)
+    # a trailing period is stripped off the sign label (se. -> se)
+    assert classify("ti-ma-ko-ra-se.", 0, 0).signs == ("ti", "ma", "ko", "ra", "se")
+
+
+def test_direction_arrow_and_unread_marker() -> None:
+    from aegean.core.model import TokenKind
+    from aegean.scripts.cypriot.loader import classify
+
+    # ↓ is a writing-direction marker, not a sign: no signs, flagged as notation
+    arrow = classify("↓", 0, 0)
+    assert arrow.kind is TokenKind.UNKNOWN and arrow.signs == ()
+    assert arrow.annotations.get("note") == "writing-direction marker"
+    # a bare "?" is an unread sign: no legible reading -> LOST, no signs
+    q = classify("?", 0, 0)
+    assert q.signs == () and q.status is ReadingStatus.LOST

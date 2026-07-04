@@ -37,6 +37,27 @@ _EXPANDED = ("(", ")")   # Leiden: editorial expansion of an abbreviation
 # every apparatus bracket stripped from the emitted token (the raw form is kept in
 # annotations["leiden"]); these are notation, never Cypriot syllabograms.
 _BRACKETS = ("[", "]", *_ERASED, *_INSERTED, *_EXPANDED)
+# Apparatus that marks a sign as not-legibly-read (so it is NOT a syllabogram label): a Leiden
+# dot on the line "." for an illegible sign, the figure-dash "‒" filling a sign-slot in a
+# lacuna, and "?" for an unread/uncertain sign. Each occupies one sign position (a dot-run
+# ".." = two illegible signs) and is kept in the emitted text (to show where signs are
+# missing) but dropped from the sign list. The retrograde arrow "↓" is writing-direction
+# notation, not a sign at all.
+_ILLEGIBLE = (".", "‒", "?")
+_DIRECTION = "↓"
+_NON_SIGN = frozenset(".‒?↓")
+
+
+_NON_SIGN_STR = "".join(_NON_SIGN)
+
+
+def _real_signs(bare: str) -> tuple[str, ...]:
+    """The syllabogram labels of a hyphenated word: the preserved reading only. A
+    hyphen-segment that is entirely apparatus (illegible dots ``..``, a figure-dash
+    ``‒``, an unread ``?``) marks a sign whose reading is not preserved, so it is dropped;
+    a marker attached to a legible sign (a trailing period ``se.``, an ``?`` of uncertainty)
+    is stripped off the label. Markers stay in the token text to show the position."""
+    return tuple(seg for s in bare.split("-") if (seg := s.strip(_NON_SIGN_STR)))
 
 
 def classify(
@@ -48,10 +69,13 @@ def classify(
     and erasure brackets ``⟦⟧`` (deleted by the scribe, still legible) both read as
     ``UNCLEAR``; square lacuna brackets ``[]`` and angle brackets ``<>`` (editor-supplied
     text) read as ``RESTORED``; parenthesized abbreviation expansions ``()`` read as a
-    secure ``CERTAIN`` reading. Every bracket is stripped from the emitted token and its
-    signs (they are not syllabograms); the marked form is kept in ``annotations["leiden"]``.
-    ``restored=True`` flags a token inside a bracket span opened by an earlier token (spans
-    run across word dividers and line breaks; `_build_document` tracks them).
+    secure ``CERTAIN`` reading. A Leiden dot ``.``, a figure-dash ``‒``, or ``?`` marks a
+    sign that is not legibly read (``UNCLEAR``; a whole token of such marks is ``LOST``): it
+    is kept in the token text but never counted as a syllabogram. A retrograde arrow ``↓`` is
+    writing-direction notation, not a sign. Every bracket is stripped from the emitted token
+    and its signs; the marked form is kept in ``annotations["leiden"]``. ``restored=True``
+    flags a token inside a bracket span opened by an earlier token (spans run across word
+    dividers and line breaks; `_build_document` tracks them).
     """
     nfd = unicodedata.normalize("NFD", text)
     bare = text
@@ -63,43 +87,46 @@ def classify(
     erased = any(m in bare for m in _ERASED)
     for m in _BRACKETS:
         bare = bare.replace(m, "")
+    illegible = any(m in bare for m in _ILLEGIBLE)  # a not-legibly-read sign is present
+    # the legibly-read content, apparatus and dividers removed, decides if anything survives
+    legible = "".join(c for c in bare if c not in _NON_SIGN and c != "-")
+    ann = {"leiden": text} if bare != text else {}
+
     if not bare:  # nothing outside the brackets: the text here is not preserved
-        return Token(
-            text, TokenKind.UNKNOWN, (text,), None, line_no, position,
-            status=ReadingStatus.LOST,
-        )
+        return Token(text, TokenKind.UNKNOWN, (text,), None, line_no, position,
+                     status=ReadingStatus.LOST)
+    if _DIRECTION in bare and not legible:
+        # a bare writing-direction marker (↓, ↓?): editorial notation, not a reading
+        return Token(bare, TokenKind.UNKNOWN, (), None, line_no, position,
+                     status=ReadingStatus.UNCLEAR,
+                     annotations={**ann, "note": "writing-direction marker"})
+    if not legible:
+        # only apparatus (illegible dots, a figure-dash, an unread ?): reading not preserved
+        return Token(bare, TokenKind.UNKNOWN, (), None, line_no, position,
+                     status=ReadingStatus.LOST, annotations=ann)
+
     if restored or lacuna or inserted:
         status = ReadingStatus.RESTORED  # editor-supplied at a lacuna, or an inserted sign
-    elif erased or underdotted:
-        status = ReadingStatus.UNCLEAR  # erased-but-legible, or damaged-but-read
+    elif erased or underdotted or illegible:
+        status = ReadingStatus.UNCLEAR   # erased/damaged/illegibly-read signs present
     else:
-        status = ReadingStatus.CERTAIN  # includes abbreviation expansions (a secure reading)
-    ann = {"leiden": text} if bare != text else {}
+        status = ReadingStatus.CERTAIN   # includes abbreviation expansions (a secure reading)
     if bare in _SEP:
-        return Token(
-            bare, TokenKind.SEPARATOR, (bare,), None, line_no, position,
-            status=status, annotations=ann,
-        )
+        return Token(bare, TokenKind.SEPARATOR, (bare,), None, line_no, position,
+                     status=status, annotations=ann)
     if parse_value(bare) is not None:
-        return Token(
-            bare, TokenKind.NUMERAL, (bare,), None, line_no, position,
-            status=status, annotations=ann,
-        )
+        return Token(bare, TokenKind.NUMERAL, (bare,), None, line_no, position,
+                     status=status, annotations=ann)
     if "-" in bare:
-        # sign labels come from the preserved reading; the markers are not signs
-        return Token(
-            bare, TokenKind.WORD, tuple(s for s in bare.split("-") if s), None,
-            line_no, position, status=status, annotations=ann,
-        )
+        return Token(bare, TokenKind.WORD, _real_signs(bare), None,
+                     line_no, position, status=status, annotations=ann)
+    # a single-sign token: strip a trailing/leading marker (a period, an ?) off the label
+    label = bare.strip(_NON_SIGN_STR) or bare
     if _IDEOGRAM_RE.match(bare):
-        return Token(
-            bare, TokenKind.LOGOGRAM, (bare,), None, line_no, position,
-            status=status, annotations=ann,
-        )
-    return Token(
-        bare, TokenKind.UNKNOWN, (bare,), None, line_no, position,
-        status=status, annotations=ann,
-    )
+        return Token(bare, TokenKind.LOGOGRAM, (label,), None, line_no, position,
+                     status=status, annotations=ann)
+    return Token(bare, TokenKind.UNKNOWN, (label,), None, line_no, position,
+                 status=status, annotations=ann)
 
 
 def _build_document(rec: dict[str, Any]) -> Document:
