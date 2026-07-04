@@ -4,6 +4,45 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.14 (2026-07-04)
+
+An Ancient Greek scholarly-correctness pass, verifying the Greek against the standard
+references (Smyth, LSJ, West, Ventris-Chadwick) and correcting ten confirmed errors. Metrical
+scansion, reconstructed pronunciation, Beta Code, and the Greek examples shown in the
+documentation were all checked and found correct.
+
+### Fixed
+- **Accent placement.** An oxytone noun/adjective now takes the circumflex in the genitive and
+  dative when the ultima is long (θεός → gen. θεοῦ, dat. θεῷ; τιμή → τιμῆς, τιμῇ), per Smyth
+  §163a; and the πόλις/πῆχυς type keeps its antepenult accent in the -εως/-εων genitive
+  (πόλεως, not πολέως), per Smyth §275.
+- **Syllable quantity.** A vowel before a double consonant ζ/ξ/ψ is now correctly heavy by
+  position (ὄζος, τάξις; Smyth §144); the word-level prosody agrees with the line-level
+  metrical scanner, which already applied the rule.
+- **The offline lemmatizer no longer fabricates a non-word.** The augmented thematic aorist/
+  imperfect in -ον (εἶπον, ἦλθον, ἔλαβον), the -όω contract verb 3sg in circumflexed -οῖ
+  (δηλοῖ, σταυροῖ), the genitive/dative of a common second-declension neuter (ἔργου, δώρου),
+  and the ψ/ξ sigmatic future (γράψει, διώξει) were each stripped to a confident but spurious
+  -ος/-ω lemma; they now return an honest miss instead. Measured on the full Nestle 1904 New
+  Testament, this removes 618 confidently-wrong lemmas without losing a single correct one.
+- **Two Linear B lexicon readings corrected**: `po-ni-ki-ja` is φοινίκια "crimson" (not the
+  ethnonym Φοίνικες), and `ki-ti-me-na` is the land-tenure participle κτιμένα (not the Homeric
+  compound ἐϋκτίμενος), per Ventris-Chadwick.
+- **Dictionary glossing** strips a leading grammatical/morphological note ("gen.", "Imp. pl.",
+  "Epic also", "Root", "not used in pl.") so the actual English sense surfaces, instead of
+  emitting the note as the meaning (φέρω → "carry", not "Imp. pl").
+
+### Added
+- **Propagation-parity safeguards** (`tests/test_propagation_parity.py`): for each bug class
+  that has recurred as a fix applied to one site but not its siblings, a test now enumerates
+  every sibling and asserts the invariant across all of them (the double-consonant quantity
+  rule shares one source between prosody and meter; every script's phonetic bridge strips the
+  Leiden underdot and folds case; every provider adapter wraps a call failure; every MCP corpus
+  tool returns a structured error; every export is atomic; every cache/hash key is injective).
+  Adding a sibling that lacks the fix now fails a test in the same commit. In passing this made
+  the Anthropic and OpenAI adapters wrap a transport failure and the Linear A phonetic bridge
+  strip the underdot, matching their siblings.
+
 ## 0.19.13 (2026-07-04)
 
 A documentation-freshness pass: every documentation code block was re-run against the current
