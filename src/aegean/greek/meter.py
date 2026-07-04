@@ -52,6 +52,8 @@ import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from .syllabify import DOUBLE_CONSONANTS
+
 HEAVY = "heavy"
 LIGHT = "light"
 ANCEPS = "anceps"
@@ -65,7 +67,7 @@ _DICHRONA = set("αιυ")
 _VOWELS = _LONG_VOWELS | _SHORT_VOWELS | _DICHRONA
 _STOPS = set("πβφτδθκγχ")
 _LIQUIDS_NASALS = set("λρμν")
-_DOUBLE = set("ζξψ")  # count as two consonants ("long by position")
+_DOUBLE = DOUBLE_CONSONANTS  # ζ/ξ/ψ count as two consonants; shared with prosody/syllabify
 _DIPHTHONGS = {"αι", "ει", "οι", "υι", "αυ", "ευ", "ου", "ηυ", "ωυ"}
 
 _CIRCUMFLEX = "͂"

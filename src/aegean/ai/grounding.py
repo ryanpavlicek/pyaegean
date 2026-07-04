@@ -87,6 +87,30 @@ _DERIVATION_ONLY = re.compile(
     re.IGNORECASE,
 )
 
+# A concise dictionary (esp. Middle Liddell / Cunliffe) often opens an entry with a
+# grammatical / morphological / prosodic note before the definition proper ("gen.", "acc.
+# always", "Voc.", "Imp. pl.", "Epic also", "Root !", "Deriv. uncertain.", "not used in
+# pl."). Left in, that note is emitted AS the meaning (φέρω -> "Imp. pl"). Strip a leading run
+# of such notes so the English sense that follows surfaces. Unambiguous case/number/dialect
+# words are matched by word boundary; verb-form abbreviations that collide with real English
+# words (part., act., ind., opt., inf., ...) require the dictionary's abbreviating period.
+_GRAMMAR_LEAD = re.compile(
+    r"^(?:"
+    # case / number / gender / dialect labels (safe as whole words), + a qualifier or two
+    r"(?:gen|dat|acc|nom|voc|pl|sg|dual|masc|fem|neut|neuter|"
+    r"epic|ep|ion|ionic|dor|doric|aeol|aeolic|att|attic|poet|poetic|impf|aor|perf|plpf|contr)"
+    r"\.?(?:\s+(?:also|always|often|only|usually|sometimes|and|later|mostly|form|pl|sg))*"
+    r"[\s,.:;!]+"
+    # verb-form abbreviations that collide with real words: require the period
+    r"|(?:imp|ind|subj|opt|inf|part|pres|fut|med|pass|act)\.(?:\s+(?:pl|sg|also))*[\s,.:;!]+"
+    # named noise phrases
+    r"|root\s*!?[\s,.:;!]+"
+    r"|deriv\.?\s+uncertain\.?[\s,.:;!]*"
+    r"|(?:not\s+used|used\s+only|only)\s+in(?:\s+the)?\s+(?:sg|pl|dual)\.?[\s,.:;!]*"
+    r")+",
+    re.IGNORECASE,
+)
+
 _ETYM_LEAD = re.compile(
     r"^(?:"
     r"prob\.|perh\.|cogn\.|orig\.|"  # abbreviations: no trailing \b after the period
@@ -129,6 +153,7 @@ def clean_gloss(text: str, *, limit: int = 60) -> str:
     if _ETYM_LEAD.match(g):
         return ""
     g = _MEANING_LEAD.sub("", g)  # editorial meaning lead: strip, keep the definition
+    g = _GRAMMAR_LEAD.sub("", g)   # grammatical/morphological preamble: strip, keep the sense
     # Cut at the first inline Greek citation: what precedes it is the English definition.
     m = _GREEK_RUN.search(g)
     if m:

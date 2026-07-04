@@ -23,6 +23,9 @@ import unicodedata
 _VOWELS = set("αεηιουω")
 _STOPS = set("πβφτδθκγχ")
 _LIQUIDS_NASALS = set("λρμν")
+# The double consonants (each = two consonants: ζ = σδ/δσ, ξ = κσ, ψ = πσ), so a vowel
+# before one is long by position (Smyth §144). Shared so prosody and meter agree.
+DOUBLE_CONSONANTS = frozenset("ζξψ")
 # Two-consonant clusters that can begin a Greek word (so they stay together).
 _VALID_ONSETS = {
     "στ", "σπ", "σκ", "σφ", "σθ", "σχ", "σμ", "σβ",

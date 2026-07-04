@@ -51,6 +51,10 @@ class AnthropicClient(LLMClient):
             raise ProviderCallError(
                 f"anthropic request failed (model {self.model!r}): {e}"
             ) from e
+        except Exception as e:  # a transport / non-SDK failure must not leak raw either
+            raise ProviderCallError(
+                f"anthropic request failed (model {self.model!r}): {e}"
+            ) from e
         text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
         return LLMResponse(text, self.provider, self.model, raw=msg)
 
@@ -77,6 +81,10 @@ class _OpenAICompatibleClient(LLMClient):
                 model=self.model, max_tokens=max_tokens, messages=messages  # type: ignore[arg-type]
             )
         except openai.APIError as e:
+            raise ProviderCallError(
+                f"{self.provider} request failed (model {self.model!r}): {e}"
+            ) from e
+        except Exception as e:  # a transport / non-SDK failure must not leak raw either
             raise ProviderCallError(
                 f"{self.provider} request failed (model {self.model!r}): {e}"
             ) from e

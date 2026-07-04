@@ -360,6 +360,25 @@ _NEUTER_2ND = frozenset({
 })
 
 
+# Common thematic second-aorist / imperfect forms in -ον (1sg = 3pl). Their -ον is a verb
+# ending, not a 2nd-declension accusative, so the -ον→-ος noun rule would fabricate a non-word
+# (εἶπον → *εἶπος). These lemmas are suppletive/irregular (εἶπον → λέγω), not rule-derivable, so
+# the guard blocks the strip and the layer returns an honest miss. Matched accent/breathing-blind.
+_AORIST_2ND_ON = frozenset(
+    _bare(w)
+    for w in {
+        "εἶπον", "ἦλθον", "ἔλαβον", "ἔβαλον", "ἔφαγον", "ἔπεσον", "ἔλιπον", "ἔτεκον", "ἤγαγον",
+        "ἔμαθον", "εὗρον", "ἔπαθον", "ἔλαχον", "ἔτυχον", "ἔθανον", "ἔφυγον", "ἔκαμον", "ἤνεγκον",
+        "εἶδον", "ἔσχον", "ἔλεγον", "εἶχον", "ἔφερον", "ἔγραφον", "ἔβλεπον", "ἦγον", "ἔμενον",
+        "ἔπινον", "ἔτρεχον", "εἰσῆλθον", "ἐξῆλθον", "ἀπῆλθον", "προσῆλθον", "παρῆλθον", "ἀνῆλθον",
+    }
+)
+# The accent-stripped stems of the common neuters (the -ον dropped), so a genitive/dative like
+# ἔργου/δώρου is recognized as an oblique neuter (accent-blind: δῶρον vs δώρου) and not stripped
+# to a masculine *ἔργος/*δώρος.
+_NEUTER_2ND_STEMS = frozenset(_bare(w)[:-2] for w in _NEUTER_2ND)
+
+
 def _ei_strip_unsafe(word: str, bare: str) -> bool:
     """Whether the thematic ``-ει/-εις → -ω`` strip must NOT fire on this form.
 
@@ -372,6 +391,10 @@ def _ei_strip_unsafe(word: str, bare: str) -> bool:
     if (bare.endswith("σει") and not bare.endswith("σσει")) or (
         bare.endswith("σεισ") and not bare.endswith("σσεισ")
     ):
+        return True
+    # ψ (=πσ/βσ/φσ) and ξ (=κσ/γσ/χσ) are contracted sigmatic futures too (γράψει, διώξει,
+    # πέμψει): the lemma is the present (γράφω, διώκω, πέμπω), not the fabricated -ω future.
+    if bare.endswith(("ψει", "ξει", "ψεισ", "ξεισ")):
         return True
     return _final_ei_accented(word)
 
@@ -414,6 +437,15 @@ def _rule_lemma(word: str) -> str | None:
             # A circumflex on -ους marks a contracted nominative (Ἰησοῦς, νοῦς), not the
             # accusative plural; do not strip it. The acc. pl. -ους is never perispomenon.
             and not (ending == "ουσ" and _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX})))
+            # A circumflex on -οῖ is a contract verb 3sg (δηλοῖ = δηλόω), never a nom. pl.
+            # -οι (which is short and never circumflexed, Smyth §169): do not strip to -ος.
+            and not (ending == "οι" and _last_n_have(word, len(ending), frozenset({_CIRCUMFLEX})))
+            # -ον is also the augmented thematic aorist/imperfect (εἶπον, ἦλθον): a verb, not
+            # an accusative noun. Do not fabricate a -ος noun for the common such forms.
+            and not (ending == "ον" and _bare(word) in _AORIST_2ND_ON)
+            # The genitive/dative of a common 2nd-declension neuter (ἔργου, δώρου) is not a
+            # masculine -ος: block the strip rather than fabricate ἔργος/δώρος.
+            and not (ending in ("ου", "οισ") and _bare(word)[: -len(ending)] in _NEUTER_2ND_STEMS)
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)

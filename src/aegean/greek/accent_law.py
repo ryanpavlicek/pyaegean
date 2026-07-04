@@ -198,7 +198,11 @@ def persistent_accent(form: str, lemma: str, *, ultima_length: str | None = None
     home_from_start = max(1, lemma_syllables - home + 1)
     pos = n - home_from_start + 1  # the same stem syllable, now counted from the end
     pos = max(1, min(pos, 3, n))   # law of limitation: no further than the antepenult
-    if pos == 3 and u == LONG:
+    # The πόλις/πῆχυς i-/u-stem genitives in -εως/-εων keep the antepenult accent: the long
+    # ω does not count for accentuation (Smyth §275; historically from -ηος by quantitative
+    # metathesis), so the σωτῆρα law must not pull the accent to the penult here.
+    eos_genitive = bare.endswith(("εως", "εων"))
+    if pos == 3 and u == LONG and not eos_genitive:
         pos = 2  # σωτῆρα law: a long ultima pulls the accent off the antepenult
         note = "persistent; σωτῆρα law moved the accent to the penult"
     elif pos == 3 and u == UNDETERMINED:
@@ -210,7 +214,18 @@ def persistent_accent(form: str, lemma: str, *, ultima_length: str | None = None
             certain = False
             note += "; penult acute/circumflex undetermined (dichronon)"
     elif pos == 1:
-        acc = "acute"  # oxytone stays acute (gen/dat circumflex of oxytones is out of scope)
+        # An oxytone nominal takes the CIRCUMFLEX in the genitive and dative of all numbers
+        # when the ultima is long (Smyth §163 a): θεός -> gen θεοῦ, dat θεῷ; τιμή -> τιμῆς,
+        # τιμῇ. Gen sg/pl and dat pl are read off the unambiguous endings; the dative
+        # singular by its iota subscript (θεῷ, τιμῇ, ἀγορᾷ). The bare -ας ending is left
+        # acute: it is gen sg -ᾶς (circumflex) or acc pl -άς (acute), indistinguishable here.
+        dat_sg = "ͅ" in unicodedata.normalize("NFD", syllables[-1])
+        gen_dat = dat_sg or bare.endswith(("ου", "ων", "οις", "ης", "αις", "οιν", "αιν"))
+        if u == LONG and gen_dat:
+            acc = "circumflex"
+            note = "persistent; oxytone circumflex in the genitive/dative"
+        else:
+            acc = "acute"
     else:
         acc = "acute"
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from functools import lru_cache
 
 from ...data import load_bundled_json
@@ -12,11 +13,21 @@ from ...data import load_bundled_json
 # the plain series: they are looked up as written, so they read only where the
 # table attests a value for that exact sign.
 _CLEAN = re.compile(r"\*")
+_UNDERDOT = "̣"  # COMBINING DOT BELOW (Leiden: damaged but legible = a settled reading)
 
 
 @lru_cache(maxsize=1)
 def phonetic_map() -> dict[str, str]:
     return dict(load_bundled_json("lineara", "phonetic_map.json"))
+
+
+def _lookup_key(sign: str) -> str:
+    # Drop the Leiden underdot and fold to upper before the (uppercase-keyed) lookup, so a
+    # standard lowercase transliteration (qa-de) and a damaged-but-legible sign both read
+    # correctly instead of falling through to raw text -- matching the Linear B and Cypriot
+    # bridges (the double consonant / underdot / case-fold are handled the same way in all three).
+    recomposed = unicodedata.normalize("NFC", unicodedata.normalize("NFD", sign).replace(_UNDERDOT, ""))
+    return _CLEAN.sub("", recomposed).upper()
 
 
 def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
@@ -28,7 +39,4 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     test alternative sign values (hypothesis testing).
     """
     m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
-    # Fold to upper before lookup (the table is keyed uppercase): the standard lowercase
-    # transliteration (qa-de, za-ku) must read the Q-/Z-series correctly instead of falling
-    # through to raw text, matching the Linear B and Cypriot bridges.
-    return "".join(m.get(_CLEAN.sub("", s).upper(), s.lower()) for s in word.split("-"))
+    return "".join(m.get(_lookup_key(s), s.lower()) for s in word.split("-"))

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import unicodedata
 
-from .syllabify import syllabify
+from .syllabify import DOUBLE_CONSONANTS, syllabify
 
 _LONG = set("ηω")
 _SHORT = set("εο")
@@ -37,7 +37,17 @@ LIGHT = "light"
 COMMON = "common"
 
 
-def _quantity(syllable: str) -> str:
+def _onset_is_double(syllable: str) -> bool:
+    """Whether the syllable begins with a double consonant (ζ/ξ/ψ), which is two
+    consonants and so makes the preceding open syllable long by position."""
+    for c in unicodedata.normalize("NFD", syllable):
+        if unicodedata.combining(c):
+            continue
+        return c.lower() in DOUBLE_CONSONANTS
+    return False
+
+
+def _quantity(syllable: str, next_syllable: str | None = None) -> str:
     nfd = unicodedata.normalize("NFD", syllable)
     long_mark = _CIRCUMFLEX in nfd or _IOTA_SUBSCRIPT in nfd
     base = [c.lower() for c in nfd if not unicodedata.combining(c)]
@@ -45,7 +55,12 @@ def _quantity(syllable: str) -> str:
     closed = bool(base) and base[-1] not in _VOWELS
 
     if closed:
-        return HEAVY  # long by position
+        return HEAVY  # long by position (a consonant closes this syllable)
+    # Long by position when the next syllable opens with a double consonant (ζ/ξ/ψ): it is
+    # written as one letter, so it does not close this syllable, but it counts as two
+    # consonants (Smyth §144). Without this the vowel before ζ/ξ/ψ was reported short.
+    if next_syllable is not None and _onset_is_double(next_syllable):
+        return HEAVY
     if long_mark or (len(nucleus) == 2 and nucleus in _DIPHTHONGS):
         return HEAVY
     if len(nucleus) == 1:
@@ -59,13 +74,20 @@ def _quantity(syllable: str) -> str:
     return COMMON
 
 
+def _quantities(syllables: list[str]) -> list[str]:
+    return [
+        _quantity(s, syllables[i + 1] if i + 1 < len(syllables) else None)
+        for i, s in enumerate(syllables)
+    ]
+
+
 def syllable_quantities(word: str) -> list[str]:
     """The metrical quantity of each syllable: ``"heavy"`` / ``"light"`` /
     ``"common"`` (in syllable order)."""
-    return [_quantity(s) for s in syllabify(word)]
+    return _quantities(syllabify(word))
 
 
 def scan(word: str) -> list[tuple[str, str]]:
     """``(syllable, quantity)`` pairs for a word."""
     sylls = syllabify(word)
-    return list(zip(sylls, (_quantity(s) for s in sylls)))
+    return list(zip(sylls, _quantities(sylls)))
