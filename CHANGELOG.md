@@ -4,6 +4,56 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.9 (2026-07-03)
+
+A correctness pass over the surfaces the prior audit sweeps had covered least: the AI provider
+and cache layer, the MCP dictionary tool, SQLite search, and the Linear B and Cypriot script
+bridges. Seven defects fixed, each pinned by a regression test that reproduces the failure and
+checks the corrected output.
+
+### Fixed
+- **`db.search` no longer crashes on a token stored without a position.** A token saved with
+  `position=None` (a supported, round-tripped state since 0.19.4) crashed the search with a
+  `TypeError` when it matched, in both token and substring modes, because the position was
+  coerced with `int()`. The position is now returned as-is (`None` stays `None`; the return
+  type is `(doc_id, int | None, text)`).
+- **A provider that returns an empty response no longer leaks a raw `IndexError`.** An
+  OpenAI-compatible gateway (notably OpenRouter) can return HTTP 200 with an empty `choices`
+  list when an upstream vendor errors or a moderation filter fires. The adapter read
+  `choices[0]` outside the error-wrapping block, so this surfaced as a bare `IndexError`
+  instead of the clean `ProviderCallError` the rest of the AI layer raises; it now raises
+  `ProviderCallError` (carrying any `error` payload the gateway sent).
+- **The AI response cache key is injective.** The key joined its fields with a NUL separator
+  and no length prefix, so a NUL in the system prompt or prompt could shift a field boundary
+  and collide two logically distinct requests, serving one the other's cached completion. It
+  now length-prefixes each field, the same fix `Corpus.fingerprint` uses. Cache files written
+  by earlier releases still load; their entries simply miss under the new key and recompute.
+- **The MCP `greek_gloss` tool returns a structured error on a dictionary fetch failure.** A
+  first, cold-cache use of a hosted dictionary while offline (or on a network / HTTP / checksum
+  failure) leaked a raw exception out of the tool instead of the `{"error": ...}` payload the
+  rest of the MCP surface returns; it is now caught and reported in the structured form.
+- **Linear B `word_to_phonetic` reads a damaged-but-legible sign correctly.** A sign carrying
+  the Leiden underdot (U+0323, "damaged but legible") fell through to its raw transliteration
+  instead of its settled phonetic value (so `pọ-me` transcribed as `pọme`, not `pome`). The
+  underdot is now normalized away before the sign lookup, matching the sibling lexicon bridge;
+  this also corrects `analysis.compare.to_phonemes` for such words.
+- **The Cypriot loader decodes more of the IG XV 1 Leiden apparatus.** Erasure brackets `⟦⟧`
+  (deleted by the scribe, still legible), editorial-insertion angle brackets `<>`, and
+  abbreviation-expansion parentheses `()` previously leaked into sign labels and left the token
+  mislabeled `CERTAIN`. They are now stripped from the emitted token and its signs (the marked
+  form is kept in `annotations["leiden"]`) and mapped to the right status: `⟦⟧` reads
+  `UNCLEAR`, `<>` reads `RESTORED`, and `()` reads `CERTAIN` (a secure reading).
+- **Linear B EpiDoc import keeps a fully-uncertain word.** An apparatus `<app>` with variant
+  `<rdg>` readings but no editor-preferred `<lem>` dropped the word entirely. It now emits a
+  token (reading the first variant, flagged `UNCLEAR`, with the remaining variants as
+  alternate readings).
+
+### Changed
+- The published CPU-throughput figure in `docs/benchmarks.md` is now explicitly framed as
+  hardware-dependent and illustrative, not a pinned benchmark like the accuracy rows, with the
+  dependency-drift trigger (a model or `onnxruntime` floor change) that warrants a re-measure
+  named in the claims registry.
+
 ## 0.19.8 (2026-07-03)
 
 A cross-repo sign-table reconciliation: the Linear A z-series signs **ZE** and **ZO** now read as
