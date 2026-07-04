@@ -733,10 +733,23 @@ def _document_from_dict(d: dict[str, Any]) -> Document:
         findspot=m.get("findspot", ""), period=m.get("period", ""), name=m.get("name", ""),
         images=tuple(m.get("images") or ()), notes=tuple(m.get("notes") or ()),
     )
+    tokens = [_token_from_dict(t) for t in d.get("tokens", [])]
+    lines = [list(line) for line in d.get("lines", [])]
+    # Validate the line index lists against the token count up front: an out-of-range index
+    # (a corpus file whose lines got out of sync with tokens) otherwise loads fine and then
+    # crashes with a bare IndexError at a much later, unrelated call (line_tokens, _repr_html_,
+    # an EpiDoc/workbench export). Fail here with a message that names the malformed source.
+    n = len(tokens)
+    for li, line in enumerate(lines):
+        for i in line:
+            if not isinstance(i, int) or isinstance(i, bool) or i < 0 or i >= n:
+                raise ValueError(
+                    f"document {d.get('id', '?')!r}: line {li} references token index {i!r}, "
+                    f"but the document has {n} token(s); the source is malformed"
+                )
     return Document(
         id=d["id"], script_id=d.get("script_id", ""),
-        tokens=[_token_from_dict(t) for t in d.get("tokens", [])],
-        lines=[list(line) for line in d.get("lines", [])],
+        tokens=tokens, lines=lines,
         glyphs=d.get("glyphs", ""), transcription=d.get("transcription", ""),
         translations=list(d.get("translations") or []), meta=meta,
     )

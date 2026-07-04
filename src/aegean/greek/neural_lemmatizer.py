@@ -20,14 +20,12 @@ model is fetched, not bundled.
 
 from __future__ import annotations
 
-import gzip
-import json
 import re
 import unicodedata
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ..data import fetch
+from ..data import fetch, load_gzip_json
 
 if TYPE_CHECKING:  # heavy types, never imported at runtime-base
     from collections.abc import Mapping
@@ -85,8 +83,7 @@ class _NeuralModel:
                 "could not load the model's tokenizer.json — usually an outdated "
                 "tokenizers package: pip install 'tokenizers>=0.20'"
             ) from e
-        with gzip.open(model_dir / "lookup.json.gz", "rt", encoding="utf-8") as f:
-            self._lookup: Mapping[str, str] = json.load(f)
+        self._lookup: Mapping[str, str] = load_gzip_json(model_dir / "lookup.json.gz")
 
     def _generate(self, form: str) -> str:
         """Greedy-decode the lemma for one form (torch-free)."""

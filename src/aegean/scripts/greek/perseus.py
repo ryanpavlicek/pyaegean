@@ -60,6 +60,11 @@ def _work_dir(work: str) -> str:
     group, _, piece = work.partition(".")
     if not (group and piece):
         raise ValueError(f"work must look like 'tlg0012.tlg001', got {work!r}")
+    # The id is spliced into a GitHub URL pinned to PerseusDL/canonical-greekLit@<commit>;
+    # a path separator or ".." would let a crafted id escape that repo/commit and fetch a
+    # forged edition from an arbitrary repository. Reject them (the guard the MCP tool has).
+    if any(bad in work for bad in ("/", "\\", "..")):
+        raise ValueError(f"work id must not contain a path separator or '..', got {work!r}")
     return f"data/{group}/{piece}"
 
 

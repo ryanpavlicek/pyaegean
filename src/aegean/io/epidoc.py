@@ -18,6 +18,7 @@ re-derives Aegean token kinds from the transliteration text.)
 from __future__ import annotations
 
 import warnings
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -213,24 +214,45 @@ def _first_text(root: ET.Element, *tags: str) -> str:
     return ""
 
 
-def _reading_status(el: ET.Element) -> ReadingStatus:
-    """Editorial certainty from any EpiDoc apparatus element the token contains.
+def _status_index(region: ET.Element) -> "Callable[[ET.Element], ReadingStatus]":
+    """Build an O(1) reading-status lookup for every element under ``region``, in one pass.
 
-    ``<supplied>`` carries two distinct statuses by its ``@reason`` (matching the writer):
-    ``reason="undefined"`` (a non-preserved / conjectural reading) is ``LOST``; any other
-    ``<supplied>`` (the editor-supplied ``reason="lost"``) is ``RESTORED``. A bare ``<gap>``
-    (an external edition's empty lacuna marker) is also ``LOST``."""
-    supplied = next((d for d in el.iter() if _local(d.tag) == "supplied"), None)
-    if supplied is not None:
-        if supplied.get("reason") == "undefined":
+    Editorial certainty comes from any EpiDoc apparatus element a token contains:
+    ``<supplied reason="undefined">`` (non-preserved / conjectural) and a bare ``<gap>`` are
+    ``LOST``; any other ``<supplied>`` (editor-supplied, ``reason="lost"``) is ``RESTORED``;
+    ``<unclear>`` is ``UNCLEAR``. Computing this per token by rescanning the token's subtree
+    was O(subtree) each, hence O(n^2) on a deeply-nested document; folding the subtree flags
+    bottom-up once makes it linear. The result matches the old per-token scan: the first
+    ``<supplied>`` in document order (parent before children) sets the supplied reason."""
+    order = list(region.iter())
+    supplied_reason: dict[ET.Element, str | None] = {}
+    has_gap: dict[ET.Element, bool] = {}
+    has_unclear: dict[ET.Element, bool] = {}
+    for el in reversed(order):  # children precede parents, so a fold sees them first
+        loc = _local(el.tag)
+        reason = el.get("reason", "") if loc == "supplied" else None
+        gap = loc == "gap"
+        unclear = loc == "unclear"
+        for child in el:  # children in document order: the first supplied wins
+            if reason is None:
+                reason = supplied_reason.get(child)
+            gap = gap or has_gap.get(child, False)
+            unclear = unclear or has_unclear.get(child, False)
+        supplied_reason[el] = reason
+        has_gap[el] = gap
+        has_unclear[el] = unclear
+
+    def status_of(el: ET.Element) -> ReadingStatus:
+        reason = supplied_reason.get(el)
+        if reason is not None:
+            return ReadingStatus.LOST if reason == "undefined" else ReadingStatus.RESTORED
+        if has_gap.get(el, False):
             return ReadingStatus.LOST
-        return ReadingStatus.RESTORED
-    inner = {_local(d.tag) for d in el.iter()}
-    if "gap" in inner:
-        return ReadingStatus.LOST
-    if "unclear" in inner:
-        return ReadingStatus.UNCLEAR
-    return ReadingStatus.CERTAIN
+        if has_unclear.get(el, False):
+            return ReadingStatus.UNCLEAR
+        return ReadingStatus.CERTAIN
+
+    return status_of
 
 
 def _kind_of(carrier: str, text: str) -> TokenKind:
@@ -258,18 +280,20 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
         if _local(n.tag) in ("note", "bibl") and _node_text(n)
     )
 
-    # stdlib ElementTree has no getparent(); a child→parent map lets us skip token
-    # elements nested inside an <app> (they are consumed at the <app> itself). Stdlib
-    # Element objects are identity-stable, so they are safe dict keys.
-    parents = {child: parent for parent in region.iter() for child in parent}
-
-    def inside_app(el: ET.Element) -> bool:
-        p = parents.get(el)
-        while p is not None:
-            if _local(p.tag) == "app":
-                return True
-            p = parents.get(p)
-        return False
+    # Set of elements nested inside an <app> (consumed at the <app> itself, so skipped
+    # as standalone tokens), and a per-element reading-status, both precomputed in single
+    # passes. A per-token ancestor walk (inside_app) and a per-token subtree rescan
+    # (_reading_status) were each O(tokens x depth) = quadratic, so a deeply-nested hostile
+    # TEI hung the importer; these lookups make the parse linear.
+    in_app: set[ET.Element] = set()
+    for app in region.iter(f"{{{_TEI}}}app"):
+        for desc in app:
+            stack = [desc]
+            while stack:
+                e = stack.pop()
+                in_app.add(e)
+                stack.extend(e)
+    status_of = _status_index(region)
 
     tokens: list[Token] = []
     lines: list[list[int]] = []
@@ -293,19 +317,19 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             alts = tuple(_node_text(r) for r in el.findall(f"{{{_TEI}}}rdg") if _node_text(r))
             tokens.append(Token(
                 text=text, kind=_kind_of(carrier, text),
-                status=ReadingStatus.CERTAIN if lem is None else _reading_status(lem),
+                status=ReadingStatus.CERTAIN if lem is None else status_of(lem),
                 alt=alts, line_no=len(lines), position=pos,
             ))
             cur.append(pos)
             pos += 1
         elif tag in _TOKEN_TAGS:
-            if inside_app(el):
+            if el in in_app:
                 continue
             text = _node_text(el)
             if not text:
                 continue
             tokens.append(Token(
-                text=text, kind=_kind_of(tag, text), status=_reading_status(el),
+                text=text, kind=_kind_of(tag, text), status=status_of(el),
                 line_no=len(lines), position=pos,
             ))
             cur.append(pos)
@@ -345,7 +369,9 @@ def from_epidoc(source: str | Path, *, script_id: str = "greek") -> Corpus:
 
     docs = read_epidoc(source, script_id=script_id)
     provenance = Provenance(
-        source=f"EpiDoc TEI import: {source}",
+        # basename only (like from_text_file/from_csv): the full path would leak the user's
+        # directory layout and username into the shared to_json archive and every citation.
+        source=f"EpiDoc TEI import: {Path(source).name}",
         license="Parsed locally from your EpiDoc; redistribute under the source's terms.",
     )
     return Corpus(docs, provenance=provenance, script_id=script_id)

@@ -21,7 +21,12 @@ same user cache dir as the fetched data (``PYAEGEAN_CACHE`` to relocate).
 directory (same trust boundary as pip/mypy/pytest caches); a stale or corrupt
 entry is treated as a miss and recomputed, and the cache key embeds a format +
 per-function version so a code change never deserialises against a changed class.
-Only enable it for caches you control.
+Because a cached value is unpickled, **anyone who can write to the cache file can
+run code in your process** — so only point ``PYAEGEAN_ANALYSIS_CACHE`` /
+``PYAEGEAN_CACHE`` at a directory you control, never a shared/group-writable one,
+and don't reuse a cache file from someone else. As defense in depth the cache file
+is created ``0600`` (owner-only), and enabling a cache whose directory is writable
+by other users emits a warning.
 """
 
 from __future__ import annotations
@@ -52,6 +57,39 @@ _ENV = "PYAEGEAN_ANALYSIS_CACHE"
 _MISS = object()  # sentinel distinct from a cached ``None``
 F = TypeVar("F", bound=Callable[..., Any])
 
+_warned_dirs: set[str] = set()
+
+
+def _warn_if_dir_writable_by_others(directory: Path) -> None:
+    """Warn once if the cache directory is group/other-writable (POSIX only).
+
+    A cached value is unpickled on read, so a directory another user can write to is a
+    code-execution risk (a planted pickle runs on the next cache hit). We warn rather than
+    refuse, since a same-user shared setup can be legitimate, but the risk should be visible.
+    POSIX only: on Windows the mode bits are synthetic (access is governed by ACLs), so the
+    check would spuriously fire on ordinary directories."""
+    import stat
+
+    if os.name != "posix":
+        return
+    key = str(directory)
+    if key in _warned_dirs:
+        return
+    try:
+        mode = os.stat(directory).st_mode
+    except OSError:
+        return
+    if mode & (stat.S_IWGRP | stat.S_IWOTH):
+        import warnings
+
+        _warned_dirs.add(key)
+        warnings.warn(
+            f"analysis cache directory {key!r} is writable by other users; cached values are "
+            "unpickled on read, so anyone who can write there could run code in this process. "
+            "Point PYAEGEAN_ANALYSIS_CACHE at a directory only you can write.",
+            stacklevel=3,
+        )
+
 
 class DiskCache:
     """A sqlite-backed key→value store. Values are pickled; unpicklable values
@@ -73,9 +111,17 @@ class DiskCache:
 
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        _warn_if_dir_writable_by_others(self.path.parent)
         self._lock = threading.Lock()
         self._sqlite3 = sqlite3  # kept so the ops can catch a concurrent-close error
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        # Values are unpickled on read, so restrict the file to the owner: on a shared host
+        # this stops another user from planting a malicious pickle (code execution on the
+        # next cache hit). Best effort — a no-op where POSIX modes don't apply (Windows).
+        try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
         with self._lock:
             self._conn.execute(
                 "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB)"

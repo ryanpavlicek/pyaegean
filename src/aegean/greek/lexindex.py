@@ -13,6 +13,7 @@ import json
 import unicodedata
 from pathlib import Path
 
+from ..data import load_gzip_json
 from .lexicons import LexEntry, LexiconInfo
 
 
@@ -45,8 +46,7 @@ def write_index(path: Path, index: dict[str, dict[str, str]]) -> None:
 
 def load_index(path: Path) -> dict[str, dict[str, str]]:
     """Load a gzipped lemma→entry index."""
-    with gzip.open(path, "rt", encoding="utf-8") as f:
-        data: dict[str, dict[str, str]] = json.load(f)
+    data: dict[str, dict[str, str]] = load_gzip_json(path)
     return data
 
 

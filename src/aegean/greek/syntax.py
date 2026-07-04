@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
-from ..data import cache_dir
+from ..data import cache_dir, load_gzip_json
 from . import treebank
 
 __all__ = [
@@ -480,8 +480,7 @@ def _load_model(path: Path | str | None = None) -> dict[str, Any]:
     p = Path(path) if path is not None else cache_dir() / _MODEL_NAME
     if not p.exists():
         raise ParserNotLoadedError(f"no parser model at {p}; call use_parser() first")
-    with gzip.open(p, "rt", encoding="utf-8") as f:
-        model: dict[str, Any] = json.load(f)
+    model: dict[str, Any] = load_gzip_json(p)
     return model
 
 

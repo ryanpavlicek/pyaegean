@@ -45,6 +45,35 @@ def load_bundled_json(*parts: str) -> Any:
     return json.loads(_bundled_bytes(*parts).decode("utf-8"))
 
 
+# Comfortably above the largest real index (the LSJ index is ~60 MB uncompressed) and far
+# below what would OOM: a decompression bomb inflates to many GB.
+_MAX_GZIP_JSON_BYTES = 512 * 1024 * 1024
+
+
+def load_gzip_json(path: str | pathlib.Path, *, max_bytes: int = _MAX_GZIP_JSON_BYTES) -> Any:
+    """gzip-decompress and parse a fetched ``.json.gz`` index, capping the decompressed size.
+
+    A prebuilt index is sha256-pinned when fetched from the project release, but a
+    ``PYAEGEAN_<NAME>_URL`` override disables that check, so a swapped mirror could serve a
+    tiny gzip that inflates to gigabytes and exhausts memory. Decompress in chunks and stop
+    with a clear error past ``max_bytes`` instead of loading the whole stream blindly."""
+    import gzip
+
+    buf = bytearray()
+    with gzip.open(path, "rb") as f:
+        while True:
+            chunk = f.read(1 << 20)
+            if not chunk:
+                break
+            buf += chunk
+            if len(buf) > max_bytes:
+                raise DataNotAvailableError(
+                    f"{path} decompresses to more than {max_bytes} bytes; refusing to load it "
+                    "(a possible decompression bomb from an unverified mirror)"
+                )
+    return json.loads(bytes(buf))
+
+
 def cache_dir() -> pathlib.Path:
     """Where fetched datasets are stored (override with ``PYAEGEAN_CACHE``).
 

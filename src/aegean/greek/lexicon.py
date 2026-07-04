@@ -26,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..data import cache_dir, download_file
+from ..data import cache_dir, download_file, load_gzip_json
 from .normalize import betacode_to_unicode
 
 __all__ = [
@@ -276,8 +276,7 @@ class LSJLexicon:
             raise LexiconNotLoadedError(
                 f"no LSJ index at {p}; call build_index() (or use_lsj()) first"
             )
-        with gzip.open(p, "rt", encoding="utf-8") as f:
-            data: dict[str, dict[str, Any]] = json.load(f)
+        data: dict[str, dict[str, Any]] = load_gzip_json(p)
         return cls(data)
 
     def __len__(self) -> int:

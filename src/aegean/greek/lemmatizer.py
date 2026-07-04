@@ -28,7 +28,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from ..data import cache_dir
+from ..data import cache_dir, load_gzip_json
 from . import syntax
 from .morphology import _bare
 from .treebank import _clean_lemma
@@ -289,8 +289,7 @@ def _load_model(path: Path | str | None = None) -> dict[str, Any]:
     p = Path(path) if path is not None else cache_dir() / _MODEL_NAME
     if not p.exists():
         raise LemmatizerNotLoadedError(f"no lemmatizer model at {p}; call use_lemmatizer() first")
-    with gzip.open(p, "rt", encoding="utf-8") as f:
-        model: dict[str, Any] = json.load(f)
+    model: dict[str, Any] = load_gzip_json(p)
     return model
 
 

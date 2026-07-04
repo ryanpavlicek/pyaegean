@@ -20,7 +20,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from ..data import cache_dir
+from ..data import cache_dir, load_gzip_json
 from . import syntax
 from .accent import accentuation
 from .morphology import _bare, best_pos
@@ -151,8 +151,7 @@ def _load_model(path: Path | str | None = None) -> dict[str, Any]:
     p = Path(path) if path is not None else cache_dir() / _MODEL_NAME
     if not p.exists():
         raise TaggerNotLoadedError(f"no POS-tagger model at {p}; call use_tagger() first")
-    with gzip.open(p, "rt", encoding="utf-8") as f:
-        model: dict[str, Any] = json.load(f)
+    model: dict[str, Any] = load_gzip_json(p)
     return model
 
 

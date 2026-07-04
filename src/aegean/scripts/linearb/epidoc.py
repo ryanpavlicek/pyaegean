@@ -158,7 +158,8 @@ def load_epidoc_corpus(source: str | pathlib.Path) -> Corpus:
     from .inventory import linear_b_inventory
 
     provenance = Provenance(
-        source=f"User-supplied Linear B EpiDoc corpus: {source}",
+        # basename only: the full path would leak the user's directory layout into a shared export
+        source=f"User-supplied Linear B EpiDoc corpus: {pathlib.Path(source).name}",
         license="User-supplied (e.g. DAMOS, CC BY-NC-SA 4.0) — parsed locally, not redistributed by pyaegean",
         citation="Aurora, F. DAMOS — Database of Mycenaean at Oslo (if applicable).",
         url="",
