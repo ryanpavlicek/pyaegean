@@ -8,8 +8,8 @@ the cross-tool tables live here, with citations.
 ## Protocol
 
 - **Test sets:** the Universal Dependencies Ancient Greek test folds:
-  `UD_Ancient_Greek-Perseus` (commit `331ddef`) and `UD_Ancient_Greek-PROIEL` (commit
-  `a4ab8d4`), both CC BY-NC-SA 3.0, fetched to the cache for **evaluation only** (never
+  `UD_Ancient_Greek-Perseus` (commit `331ddef`, CC BY-NC-SA 2.5) and `UD_Ancient_Greek-PROIEL`
+  (commit `a4ab8d4`, CC BY-NC-SA 3.0), fetched to the cache for **evaluation only** (never
   bundled, never trained on).
 - **Scorer:** the official CoNLL 2018 shared-task evaluator (`conll18_ud_eval.py`,
   MPL 2.0), fetched sha256-pinned

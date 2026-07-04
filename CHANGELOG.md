@@ -4,6 +4,36 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.16 (2026-07-04)
+
+A scholarly-correctness pass ahead of a review by university professors of Ancient Greek: a
+14-lens philology panel (metrical scansion, accentuation, morphology, reconstructed phonology,
+dialect, Beta Code, the Greek shown in the docs, Linear B, Cypriot, the undeciphered-script
+honesty framing, benchmark methodology, provenance, and framing), each finding independently
+verified. The core philological surface came back clean; six localized defects are fixed.
+
+### Fixed
+- **Linear B lexicon — the reading `O-KA` = ἔχω "to hold" was a fabrication** and is removed.
+  ἔχω is written *e-ke* (which the lexicon already carries correctly); *o-ka* is the distinct
+  word of the Pylos "o-ka tablets", whose Greek reading is not securely established, so the
+  bridge now returns an honest miss rather than a confident wrong equation.
+- **Linear B lexicon — `A-PI-QO-TO`** kept its correct sense (a round, rimmed table) but was
+  lemmatized as ἀμφίβροτος, the Homeric shield-epithet ("man-covering"), a mis-etymology. The
+  lemma now records the honest analysis (ἀμφί- with the root of βαίνω, "go round"; no attested
+  Classical form).
+- **Lemmatizer — first-declension masculine `-ης` genitives** (προφήτου, Ἰωάνου, Ἡρῴδου) no
+  longer fabricate a confident `-ος` non-word. The `-ου` ending cannot be told from the
+  second-declension genitive, so for the common such nouns the strip is suppressed to an honest
+  miss (72 confident-wrong lemmas removed on the full New Testament; all 4,275 genuine `-ος`
+  genitives preserved; published accuracy unchanged).
+- **Lemmatizer — a neuter carrying the acute an enclitic throws onto its ultima** (δῶρόν, as in
+  δῶρόν ἐστιν) is now read as the neuter δῶρον, not the non-word `*δῶρός`; a grave-accented
+  neuter (ἱερὸν) normalizes to its citation form.
+- **Provenance — the UD Ancient Greek evaluation folds carry different licenses**:
+  UD-Perseus is CC BY-NC-SA 2.5, UD-PROIEL is CC BY-NC-SA 3.0 (each per its own README at the
+  pinned commit). The blanket "3.0" is corrected across the code and docs, and the version is
+  now recorded per treebank.
+
 ## 0.19.15 (2026-07-04)
 
 The Cypriot loader now decodes the rest of the IG XV 1 Leiden apparatus, completing the

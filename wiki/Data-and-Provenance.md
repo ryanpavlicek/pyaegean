@@ -63,7 +63,7 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `lineara/manifest.json` | 454 | corpus manifest |
 | `lineara/phonetic_map.json` | 648 | Linear A sound values |
 | `lineara/signs.json` | 63,272 | Linear A sign inventory |
-| `linearb/lexicon.json` | 12,058 | Unicode UCD + Wiktionary/kaikki excerpts |
+| `linearb/lexicon.json` | 12,071 | Unicode UCD + Wiktionary/kaikki excerpts |
 | `linearb/phonetic_map.json` | 986 | Unicode UCD |
 | `linearb/sample_inscriptions.json` | 7,198 | scholarly excerpts (Ventris & Chadwick) |
 | `linearb/signs.json` | 36,030 | Unicode UCD (Linear B Syllabary + Ideograms) |
@@ -283,8 +283,8 @@ models trained on: for a neutral, out-of-AGDT generalization number. PROIEL is
 locally, and never bundled or re-hosted (NonCommercial + ShareAlike). Cite Haug &
 Jøhndal (2008). See [Greek NLP → Neutral evaluation](Greek-NLP#neutral-evaluation-out-of-agdt).
 
-> The Universal Dependencies Ancient Greek treebanks (Perseus + PROIEL,
-> CC BY-NC-SA 3.0) and the CoNLL-2018 evaluator (MPL-2.0) are likewise fetched
+> The Universal Dependencies Ancient Greek treebanks (Perseus, CC BY-NC-SA 2.5;
+> PROIEL, CC BY-NC-SA 3.0) and the CoNLL-2018 evaluator (MPL-2.0) are likewise fetched
 > for `evaluate_on_ud()` only, never bundled, never trained on. See `NOTICE`.
 
 #### The SigLA corpus (`sigla-corpus`, `aegean.load("sigla")`)
@@ -536,7 +536,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.19.15'  (your installed version)
+v["package"]                                  # '0.19.16'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -588,7 +588,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.19.15'
+# '0.19.16'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -694,9 +694,10 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   3.0), Gorman (CC BY-SA 4.0), and Pedalion (CC BY-SA 4.0) treebanks, evaluation
   folds excluded from training. The model bundle is **CC BY-SA 4.0**, fetched to
   the user cache (~173 MB), never bundled; the wheel stays Apache-2.0.
-- **PROIEL / UD evaluation sets (opt-in)**: PROIEL treebank and the UD Ancient
-  Greek treebanks, CC BY-NC-SA 3.0; fetched to the user cache for evaluation only,
-  never bundled, never trained on (NonCommercial + ShareAlike).
+- **PROIEL / UD evaluation sets (opt-in)**: the PROIEL treebank and the UD Ancient
+  Greek treebanks (UD-Perseus CC BY-NC-SA 2.5; PROIEL and UD-PROIEL CC BY-NC-SA 3.0);
+  fetched to the user cache for evaluation only, never bundled, never trained on
+  (NonCommercial + ShareAlike).
 - **SigLA corpus (`sigla-corpus`)**: Salgarella & Castellan, CC BY-NC-SA 4.0;
   fetched, never bundled; NC + ShareAlike pass through to you.
 - **DAMOS corpus (`damos-corpus`)**: F. Aurora, CC BY-NC-SA 4.0; fetched, never
