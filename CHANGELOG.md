@@ -4,6 +4,45 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.11 (2026-07-04)
+
+A propagation audit: for each bug class already fixed at one site, every sibling site was
+checked and the ones the fix had not reached were corrected. Eight fixes covering fourteen
+sites, each pinned by a regression test.
+
+### Fixed
+- **Rebuilding a corpus database no longer risks the existing one.** `to_sqlite` (and
+  `aegean db build` / `aegean export --format sqlite`) deleted the current `.db` before
+  rebuilding, so a full disk or interruption mid-build left no recoverable file. It now builds
+  into a temporary database and atomically replaces the target, so a failed rebuild leaves the
+  prior database intact. The same temp-then-replace is applied to the JSON, CSV, Parquet, and
+  EpiDoc exports, which likewise overwrote a prior file in place.
+- **The Gemini provider wraps a network failure like the others.** A transport error (a
+  dropped connection or timeout) is not a Gemini API-error subclass, so it leaked out of a call
+  as a raw exception; it is now wrapped in `ProviderCallError`, matching the Anthropic and
+  OpenAI adapters.
+- **Every MCP corpus tool reports a fetch failure cleanly.** The shared corpus-loading helper
+  did not catch a download failure, so a cold-cache `damos`/`sigla` fetch could leak a raw
+  exception out of seven tools; it now returns the structured error the rest of the surface
+  uses.
+- **Cypriot transcription reads a damaged-but-legible sign correctly.** `word_to_phonetic`
+  (and `analysis.compare.to_phonemes(..., "cypriot")`) now strips the Leiden underdot before
+  the sign lookup, the fix Linear B already had.
+- **Linear A transcription folds case.** `word_to_phonetic` now upper-cases before the lookup,
+  so the standard lowercase transliteration reads the Q- and Z-series (`qa-de` → `kwade`)
+  instead of falling through to raw text, matching Linear B and Cypriot.
+- **The offline lemmatizer no longer fabricates a present from a sigmatic future.** The guard
+  that blocks the `-ει/-εις → -ω` strip on a sigmatic future (`δώσει`) now also covers the
+  other thematic endings (`δώσομεν`, `δώσετε`, `δώσουσιν`), which were stripped to a confident
+  wrong `-ω` lemma; genuine present verbs still resolve.
+- **A stored sign inventory can no longer be corrupted by a caller.** The `sign_inventory`
+  accessors returned a shared cached inventory whose per-sign `attrs` were live dicts, so an
+  edit leaked into every later reader and a subsequent load; each accessor now returns an
+  independent copy, matching `Corpus.copy`.
+- **Building a prebuilt lexicon index leaves no orphaned download.** `fetch_prebuilt` copied
+  the fetched file to the built-index name and left the original behind, uncounted and
+  unremovable; a single-file dataset is now moved into place, so no redundant copy lingers.
+
 ## 0.19.10 (2026-07-04)
 
 A regression audit of the recent fix churn: the areas most changed across 0.19.1 through
