@@ -258,7 +258,7 @@ c = aegean.load("lineara")
 dispersion(c, "KU-RO")
 # Dispersion(item='KU-RO', frequency=37, range=34, parts=559, dp=0.8501, dp_norm=0.8507)
 [(x.item, round(x.dp_norm, 2)) for x in dispersions(c, top=5)]
-# [('KU-RO', 0.85), ('KI-RO', 0.94), ('KU-PA₃-NU', 0.95), ('SA-RA₂', 0.95), ('A-DU', 0.96)]
+# [('KU-RO', 0.85), ('KI-RO', 0.94), ('SA-RA₂', 0.95), ('KU-PA₃-NU', 0.95), ('A-DU', 0.96)]
 ```
 
 ```bash
@@ -266,7 +266,7 @@ aegean dispersion lineara --top 5
 # item        freq  range/parts  DP     DPnorm
 # KU-RO        37    34/559       0.850  0.851
 # KI-RO        16    12/559       0.938  0.938
-# KU-PA₃-NU    8     7/559        0.948  0.949
+# SA-RA₂       20    20/559       0.948  0.949
 # ...
 ```
 

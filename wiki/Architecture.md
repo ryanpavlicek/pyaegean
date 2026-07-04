@@ -440,7 +440,7 @@ c = aegean.load("lineara")
 
 # in-memory string (indent defaults to 2; pass indent=None for compact)
 js = c.to_json()
-len(js)                                # 2661529
+len(js)                                # 2661624
 
 # round-trip and verify it's lossless
 c2 = aegean.Corpus.from_json(js)

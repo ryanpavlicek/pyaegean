@@ -811,9 +811,9 @@ returns every attested cell of a lemma as `(features, form)` pairs:
 
 ```python
 cells = greek.paradigm("λόγος")
-[(f, form) for f, form in cells][:3]
-# [({'pos': 'NOUN', 'case': 'nom', 'number': 'sg', 'gender': 'masc'}, 'λόγος'),
-#  ({'pos': 'NOUN', 'case': 'gen', 'number': 'sg', 'gender': 'masc'}, 'λόγου'), …]
+[(f, form) for f, form in cells][:3]   # cells are ordered most-attested first
+# [({'pos': 'NOUN', 'case': 'gen', 'number': 'sg', 'gender': 'masc'}, 'λόγου'),
+#  ({'pos': 'NOUN', 'case': 'nom', 'number': 'sg', 'gender': 'masc'}, 'λόγος'), …]
 ```
 
 The feature keys are the analyzer's short codes: `pos` (NOUN/VERB/ADJ/…), `case`

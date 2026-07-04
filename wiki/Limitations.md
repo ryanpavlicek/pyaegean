@@ -63,7 +63,7 @@ release.
   import aegean
   inv = aegean.get_script("lineara").sign_inventory
   read = [s for s in inv if s.phonetic]
-  print(len(list(inv)), len(read))     # 342 48
+  print(len(list(inv)), len(read))     # 342 50
   ```
 
   ```bash
@@ -122,7 +122,7 @@ The four undeciphered/partly-read scripts at a glance:
 
 | Script | `aegean.load(...)` id | Signs | Signs with a sound value | Lexicon | Status |
 | --- | --- | --- | --- | --- | --- |
-| Linear A | `lineara` | 342 | 48 (working convention) |— | Undeciphered |
+| Linear A | `lineara` | 342 | 50 (working convention) |— | Undeciphered |
 | Linear B | `linearb` | (Linear B grid) | full grid | 150 entries | Deciphered |
 | Cypriot syllabary | `cypriot` | (ICS grid) | full grid | 17 entries | Deciphered |
 | Cypro-Minoan | `cyprominoan` | 99 | 0 |— | Undeciphered |
