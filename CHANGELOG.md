@@ -4,6 +4,23 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.19.15 (2026-07-04)
+
+The Cypriot loader now decodes the rest of the IG XV 1 Leiden apparatus, completing the
+apparatus handling begun in 0.19.9.
+
+### Fixed
+- **Illegible-sign marks are no longer read as syllabograms.** A Leiden dot on the line
+  (`..`, one dot per illegible sign), a figure-dash filling a lost-sign slot in a lacuna, and
+  an unread `?` previously appeared as literal "signs" inside a word (`i-te-o-..-..-..-ja`
+  produced signs including `..`), and such a token could be marked `CERTAIN`. Each now marks a
+  sign whose reading is not preserved: it is kept in the token text (to show the position) but
+  dropped from the sign list, the token reads `UNCLEAR` (or `LOST` when the whole token is
+  illegible marks), and a marker attached to a legible sign (a trailing period, an `?`) is
+  stripped off the label. A retrograde arrow `↓` is recorded as a writing-direction marker,
+  not a sign. The raw marked form is kept in `annotations["leiden"]` and the inscription
+  `paritySha256` is unchanged (no text field changed — the fix is in the loader).
+
 ## 0.19.14 (2026-07-04)
 
 An Ancient Greek scholarly-correctness pass, verifying the Greek against the standard
