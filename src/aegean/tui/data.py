@@ -45,6 +45,13 @@ __all__ = [
     "DocDetail",
     "BalanceRow",
     "GreekResult",
+    "AnalysisOption",
+    "AnalysisResult",
+    "line_analyses",
+    "run_line_analysis",
+    "greek_neural_available",
+    "translation_available",
+    "translate_line",
     "DatasetRow",
     "CORPUS_IDS",
     "UNDECIPHERED",
@@ -481,6 +488,294 @@ def greek_ipa(text: str, period: str = "attic") -> GreekResult:
         for i, w in enumerate(words)
     ]
     return GreekResult(ok=True, rows=rows, summary=ipa)
+
+
+# ── in-reader line analysis ─────────────────────────────────────────────────────
+# One line of a document, analysed on demand: Greek lines get the offline parser/
+# tagger, the neural pipeline, IPA, and (BYOAI, optional) translation; syllabic
+# lines get sign values, the Greek bridge + gloss (Linear B / Cypriot), or an
+# honest exploratory transliteration (undeciphered Linear A / Cypro-Minoan).
+
+
+@dataclass(frozen=True)
+class AnalysisOption:
+    """One analysis a reader line can be run through, with whether it is available.
+
+    ``available`` is False when a prerequisite is missing (the ``[neural]`` extra,
+    or a configured BYOAI provider for translation); ``detail`` says why, or gives a
+    one-line hint (an honesty caveat for the undeciphered scripts)."""
+
+    key: str
+    label: str
+    available: bool
+    detail: str = ""
+
+
+@dataclass(frozen=True)
+class AnalysisResult:
+    """The rendered output of one analysis. Either a table (``columns`` + ``rows``)
+    or a prose ``text`` block (a translation), with an optional ``note`` (provenance
+    or an exploratory caveat). Never raised: a failure sets ``ok=False`` + ``error``."""
+
+    ok: bool
+    title: str = ""
+    columns: tuple[str, ...] = ()
+    rows: tuple[tuple[str, ...], ...] = ()
+    text: str = ""
+    note: str = ""
+    error: str = ""
+
+
+# The scripts that read as Greek (alphabetic Greek, NT, and fetched Greek works all
+# load with script_id "greek"). Syllabic scripts are handled by their own branches.
+_GREEK_SCRIPTS: frozenset[str] = frozenset({"greek"})
+
+
+def line_analyses(script_id: str) -> list[AnalysisOption]:
+    """The analyses offered for a line of ``script_id``, each flagged available or not.
+
+    Greek: offline parser/tagger, neural pipeline (needs ``[neural]`` + the model),
+    IPA, and translation (only when a BYOAI provider is configured). Linear B / Cypriot:
+    the Greek reading + gloss, and sign values. Linear A / Cypro-Minoan (undeciphered):
+    signs and, for Linear A, an exploratory transliteration, both plainly caveated."""
+    if script_id in _GREEK_SCRIPTS:
+        neural_ok, neural_why = greek_neural_available()
+        tr_ok, tr_why = translation_available()
+        return [
+            AnalysisOption("offline", "offline parser / tagger", True),
+            AnalysisOption("neural", "neural pipeline", neural_ok, neural_why),
+            AnalysisOption("ipa", "IPA (reconstructed)", True),
+            AnalysisOption("translate", "translate (BYOAI, optional)", tr_ok, tr_why),
+        ]
+    if script_id in {"linearb", "cypriot"}:
+        return [
+            AnalysisOption("bridge", "Greek reading + gloss", True),
+            AnalysisOption("signs", "signs (glyph + value)", True),
+        ]
+    if script_id in {"lineara", "sigla"}:
+        caveat = "Linear A is undeciphered — exploratory, not a reading"
+        return [
+            AnalysisOption("exploratory", "transliteration (exploratory)", True, caveat),
+            AnalysisOption("signs", "signs (glyph + value)", True, caveat),
+        ]
+    if script_id == "cyprominoan":
+        return [
+            AnalysisOption("signs", "signs (glyph only)", True, "Cypro-Minoan is undeciphered"),
+        ]
+    return [AnalysisOption("signs", "signs", True)]
+
+
+def run_line_analysis(
+    key: str, *, script_id: str, text: str, token_texts: tuple[str, ...]
+) -> AnalysisResult:
+    """Run analysis ``key`` on one line and return a renderable result. Never raises.
+
+    ``text`` is the line as one string (Greek analyses use it); ``token_texts`` are the
+    line's token surface forms (the syllabic analyses split each on ``-`` into signs)."""
+    try:
+        if key == "offline":
+            return _greek_offline(text)
+        if key == "neural":
+            return _greek_neural(text)
+        if key == "ipa":
+            return _greek_ipa_result(text)
+        if key == "translate":
+            return translate_line(text)
+        if key == "bridge":
+            return _aegean_bridge(script_id, token_texts)
+        if key == "exploratory":
+            return _lineara_exploratory(token_texts)
+        if key == "signs":
+            return _aegean_signs(script_id, token_texts)
+    except Exception as exc:  # pragma: no cover - each helper is already total
+        return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
+    return AnalysisResult(ok=False, error=f"unknown analysis {key!r}")
+
+
+# ── Greek line analyses ─────────────────────────────────────────────────────────
+def _greek_offline(text: str) -> AnalysisResult:
+    r = greek_pipeline(text)
+    if not r.ok:
+        return AnalysisResult(ok=False, error=r.error)
+    rows = tuple(
+        (str(row["index"]), row["text"], row["upos"], row["lemma"]) for row in r.rows
+    )
+    return AnalysisResult(
+        ok=True, title="offline parser / tagger",
+        columns=("#", "token", "POS", "lemma"), rows=rows,
+    )
+
+
+def greek_neural_available() -> tuple[bool, str]:
+    """Whether the neural pipeline can run: the ``[neural]`` extra must be installed.
+    The model is fetched on first run, so a missing model is not a blocker here (the
+    detail says so); a missing extra is."""
+    import importlib.util
+
+    missing = [m for m in ("onnxruntime", "tokenizers", "numpy") if importlib.util.find_spec(m) is None]
+    if missing:
+        return False, "needs the [neural] extra (pip install 'pyaegean[neural]')"
+    from ..data import _REMOTE, is_downloaded
+
+    root = _store_root()
+    fetched = (
+        root is not None and "grc-joint" in _REMOTE and is_downloaded(_REMOTE["grc-joint"], root)
+    )
+    return True, "" if fetched else "downloads the model (~170 MB) on first run"
+
+
+def _greek_neural(text: str) -> AnalysisResult:
+    text = text.strip()
+    if not text:
+        return AnalysisResult(ok=True, title="neural pipeline")
+    from ..greek import pipeline, use_neural_pipeline
+
+    try:
+        use_neural_pipeline()
+    except Exception as exc:
+        return AnalysisResult(ok=False, error=f"neural pipeline unavailable: {exc}")
+    try:
+        recs = pipeline(text, parse=True)
+    except Exception as exc:
+        return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
+    rows = tuple(
+        (
+            str(r.index), r.text, r.upos, r.lemma, r.feats or "",
+            f"{r.relation}→{r.head}" if r.relation and r.head is not None else "",
+        )
+        for r in recs
+    )
+    return AnalysisResult(
+        ok=True, title="neural pipeline",
+        columns=("#", "token", "POS", "lemma", "features", "dep"), rows=rows,
+        note="grc-joint neural model",
+    )
+
+
+def _greek_ipa_result(text: str) -> AnalysisResult:
+    r = greek_ipa(text)
+    if not r.ok:
+        return AnalysisResult(ok=False, error=r.error)
+    rows = tuple((row["word"], row["ipa"]) for row in r.rows)
+    return AnalysisResult(
+        ok=True, title="IPA (reconstructed, Attic)",
+        columns=("word", "IPA"), rows=rows, note=r.summary,
+    )
+
+
+def translation_available() -> tuple[bool, str]:
+    """Whether translation can run: a BYOAI provider must have its API key set. Returns
+    (available, hint). Translation is always optional — it requires an external LLM."""
+    providers = _usable_providers()
+    if providers:
+        return True, "via " + ", ".join(providers)
+    return False, "set a provider API key (BYOAI) to enable — e.g. OPENAI_API_KEY"
+
+
+def _usable_providers() -> list[str]:
+    """Provider names whose API key is present in the environment (the BYOAI signal)."""
+    import os
+
+    from ..ai.client import _PROVIDERS
+
+    out = [
+        name
+        for name, cls in _PROVIDERS.items()
+        if getattr(cls, "env_key", "") and os.environ.get(cls.env_key)
+    ]
+    return sorted(out)
+
+
+def translate_line(text: str, *, script: str = "greek") -> AnalysisResult:
+    """Translate one line via the configured BYOAI provider (exploratory, provenanced).
+
+    Returns a text result with the provider/model in ``note``; a missing key or any
+    provider error becomes a clean ``error`` (translation never crashes the reader)."""
+    text = text.strip()
+    if not text:
+        return AnalysisResult(ok=True, title="translation")
+    if not _usable_providers():
+        return AnalysisResult(
+            ok=False,
+            error="no BYOAI provider configured — set an API key (e.g. OPENAI_API_KEY) to translate",
+        )
+    from ..ai import AIError
+    from ..translate import translate as _translate
+
+    try:
+        result = _translate(text, script=script)  # type: ignore[arg-type]
+    except AIError as exc:
+        return AnalysisResult(ok=False, error=str(exc))
+    except Exception as exc:  # pragma: no cover - AIError covers the known cases
+        return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
+    note = f"exploratory · {result.provider}/{result.model}"
+    return AnalysisResult(ok=True, title="translation", text=result.text, note=note)
+
+
+# ── Aegean line analyses ────────────────────────────────────────────────────────
+def _aegean_signs(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResult:
+    """Per-sign glyph and sound value from the script's inventory. For an undeciphered
+    script the value column is honestly blank / conventional (noted)."""
+    from ..core.script import get_script
+
+    inv = get_script(script_id).sign_inventory
+    rows: list[tuple[str, ...]] = []
+    for word in token_texts:
+        for label in _sign_labels(word):
+            # Sign labels are upper-case (PO, KU) but tokens may be written either case
+            # (Linear B po-me vs Linear A KU-RO), so try the label as written then folded.
+            sign = inv.by_label(label) or inv.by_label(label.upper()) or inv.by_label(label.lower())
+            glyph = (sign.glyph if sign else "") or ""
+            value = (sign.phonetic if sign and sign.phonetic else "—")
+            rows.append((sign.label if sign else label, glyph, value))
+    note = (
+        "undeciphered — sign values are conventional, not a reading"
+        if script_id in UNDECIPHERED
+        else ""
+    )
+    return AnalysisResult(
+        ok=True, title="signs", columns=("sign", "glyph", "value"),
+        rows=tuple(rows), note=note,
+    )
+
+
+def _aegean_bridge(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResult:
+    """The Greek reading + gloss for each word (Linear B / Cypriot, deciphered)."""
+    import importlib
+
+    mod = importlib.import_module(f"..scripts.{script_id}", __package__)
+    rows: list[tuple[str, ...]] = []
+    for word in token_texts:
+        phon = mod.word_to_phonetic(word)
+        reading = mod.greek_reading(word)
+        if reading:
+            greek, gloss = reading
+        else:
+            greek, gloss = "", (mod.gloss(word) or "")
+        rows.append((word, phon, greek, gloss))
+    return AnalysisResult(
+        ok=True, title="Greek reading", columns=("word", "sound", "Greek", "gloss"),
+        rows=tuple(rows),
+    )
+
+
+def _lineara_exploratory(token_texts: tuple[str, ...]) -> AnalysisResult:
+    """A hypothetical (Linear-B-shared) transliteration for each Linear A word, plainly
+    labelled exploratory: Linear A is undeciphered, so this is not a reading."""
+    from ..scripts.lineara import word_to_phonetic
+
+    rows = tuple((word, word_to_phonetic(word)) for word in token_texts)
+    return AnalysisResult(
+        ok=True, title="transliteration (exploratory)",
+        columns=("word", "conventional value"), rows=rows,
+        note="Linear A is undeciphered — these are hypothetical, shared-with-Linear-B "
+        "values, not an established reading",
+    )
+
+
+def _sign_labels(word: str) -> list[str]:
+    """Split a syllabic word's surface form into its sign labels (``KU-RO`` → KU, RO)."""
+    return [s for s in word.split("-") if s]
 
 
 # ── data store ─────────────────────────────────────────────────────────────────

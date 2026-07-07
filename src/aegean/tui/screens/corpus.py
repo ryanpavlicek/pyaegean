@@ -66,11 +66,8 @@ class CorpusBrowserScreen(Screen[None]):
         width: 1fr;
         border: round $primary-darken-2;
     }
-    CorpusBrowserScreen #corpus-right:focus {
+    CorpusBrowserScreen #corpus-right:focus-within {
         border: round $accent;
-        background: $boost;
-    }
-    CorpusBrowserScreen #corpus-right:focus > DetailPane {
         background: $boost;
     }
     CorpusBrowserScreen #corpus-list:focus {
@@ -191,9 +188,9 @@ class CorpusBrowserScreen(Screen[None]):
         self.query_one("#corpus-search", Input).focus()
 
     def action_cycle_focus(self) -> None:
-        """``tab`` cycles list -> search -> table -> reader (so the reader is reachable
-        and, once focused, scrolls with the arrow keys / PageUp / PageDown)."""
-        order = ("#corpus-list", "#corpus-search", "#corpus-docs", "#corpus-right")
+        """``tab`` cycles list -> search -> table -> reader (so the reader is reachable;
+        once focused, ↑/↓ move the line cursor and Enter / ``a`` analyzes that line)."""
+        order = ("#corpus-list", "#corpus-search", "#corpus-docs", "#corpus-detail")
         focused = self.focused
         current = -1
         for i, sel in enumerate(order):
@@ -297,8 +294,24 @@ class CorpusBrowserScreen(Screen[None]):
             return
         balances = adapter.balance_rows(document)
         detail.show_document(info, balances)
-        # start a freshly-opened document at the top, and hint how to scroll it
+        # start a freshly-opened document at the top; hint the reader's line cursor + analysis
         self.query_one("#corpus-right", VerticalScroll).scroll_home(animate=False)
         self.query_one("#corpus-status", Static).update(
-            f"{doc_id} — Tab to the reader, then ↑/↓/PgUp/PgDn (or the mouse wheel) to scroll"
+            f"{doc_id} — Tab to the reader, then ↑/↓ to pick a line and Enter (or a) to analyze it"
+        )
+
+    def on_detail_pane_line_chosen(self, event: DetailPane.LineChosen) -> None:
+        """Open the analysis modal for the reader line the user chose (Enter / ``a``)."""
+        corpus = self._corpus
+        if corpus is None:
+            return
+        from .analysis import LineAnalysisScreen
+
+        self.app.push_screen(
+            LineAnalysisScreen(
+                script_id=corpus.script_id,
+                line_number=event.line_number,
+                line_text=event.line_text,
+                token_texts=event.token_texts,
+            )
         )

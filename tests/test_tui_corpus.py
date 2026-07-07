@@ -356,11 +356,10 @@ if __name__ == "__main__":  # a convenience runner outside pytest
             print(f"ok {name}")
 
 
-def test_reader_pane_is_a_scroll_container_reachable_by_tab() -> None:
-    """The document reader is a focusable scroll container in the Tab cycle, so a long
-    document scrolls with the arrow keys / PageUp/PageDown / mouse wheel (the pane is not a
-    plain clipped Static any more)."""
-    from textual.containers import VerticalScroll
+def test_reader_pane_is_focusable_and_reachable_by_tab() -> None:
+    """The document reader (DetailPane) is focusable and in the Tab cycle, so its line
+    cursor is reachable; a long document scrolls as the cursor moves and with the mouse
+    wheel (the pane is not a plain clipped Static any more)."""
 
     async def body() -> None:
         app = AegeanApp()
@@ -369,8 +368,8 @@ def test_reader_pane_is_a_scroll_container_reachable_by_tab() -> None:
             app.open_corpus("greek")
             await pilot.pause()
             screen = app.screen
-            reader = screen.query_one("#corpus-right", VerticalScroll)
-            assert reader.can_focus  # focusable, so keys scroll it
+            reader = screen.query_one("#corpus-detail", DetailPane)
+            assert reader.can_focus  # focusable, so ↑/↓ drive the line cursor
             for _ in range(5):  # Tab reaches the reader
                 screen.action_cycle_focus()
                 await pilot.pause()
@@ -415,9 +414,9 @@ def test_fetched_works_are_permanent_items_in_the_corpus_list(monkeypatch) -> No
 
 
 def test_reading_pane_shows_a_focus_highlight() -> None:
-    """Tabbing to the reading pane must be visible: it carries a 'reading' border title and its
-    border turns accent-coloured when focused, so the user knows the reader is active without
-    having to test-scroll it."""
+    """Tabbing to the reading pane must be visible: the reader box carries a 'reading' border
+    title and its border turns accent-coloured when the pane inside holds focus (focus-within),
+    so the user knows the reader is active without having to test-scroll it."""
     from textual.containers import VerticalScroll
 
     async def body() -> None:
@@ -428,14 +427,49 @@ def test_reading_pane_shows_a_focus_highlight() -> None:
             await pilot.pause()
             await pilot.pause()
             screen = app.screen
-            reader = screen.query_one("#corpus-right", VerticalScroll)
-            assert reader.border_title == "reading"
+            box = screen.query_one("#corpus-right", VerticalScroll)
+            detail = screen.query_one("#corpus-detail", DetailPane)
+            assert box.border_title == "reading"
             screen.query_one("#corpus-list", CorpusList).focus()
             await pilot.pause()
-            unfocused = reader.styles.border_top[1]
-            reader.focus()
+            unfocused = box.styles.border_top[1]
+            detail.focus()
             await pilot.pause()
-            assert reader.has_focus
-            assert reader.styles.border_top[1] != unfocused  # the border highlights on focus
+            assert detail.has_focus
+            assert box.styles.border_top[1] != unfocused  # the box border highlights (focus-within)
+
+    _run(body())
+
+
+def test_reader_line_cursor_moves_and_enter_opens_the_analysis_modal() -> None:
+    """↑/↓ move a highlighted line cursor in the reader, and Enter (or a) opens the analysis
+    modal for the current line — the in-reader analysis entry point."""
+    from aegean.tui.screens.analysis import LineAnalysisScreen
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            # the small bundled cypriot corpus (has multi-line docs), not the 1,721-doc lineara
+            app.open_corpus("cypriot")
+            await pilot.pause()
+            screen = app.screen
+            doc = next(d for d in screen._corpus.documents if len(d.lines) >= 4)
+            screen._show_document(doc.id)
+            await pilot.pause()
+            detail = screen.query_one("#corpus-detail", DetailPane)
+            assert detail._line_count() >= 4  # a multi-line document
+            detail.focus()
+            await pilot.pause()
+            detail.action_cursor_down()
+            detail.action_cursor_down()
+            await pilot.pause()
+            assert detail.cursor_line == 2  # the cursor advanced with ↓
+            detail.action_choose_line()  # Enter / a
+            await pilot.pause()
+            modal = app.screen
+            assert isinstance(modal, LineAnalysisScreen)
+            assert modal._line_number == 3  # 1-based line for cursor index 2
+            assert modal._script_id == "cypriot"
 
     _run(body())

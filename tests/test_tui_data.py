@@ -365,3 +365,75 @@ def test_cli_pipeline_json_equals_the_shared_view_rows() -> None:
     res = CliRunner().invoke(_build_app(), ["greek", "pipeline", text, "--json"])
     assert res.exit_code == 0, res.output
     assert _json.loads(res.stdout) == pipeline_rows(text)
+
+
+# ── in-reader line analysis ──────────────────────────────────────────────────
+def test_line_analyses_are_offered_per_script_with_honesty_flags() -> None:
+    greek = {o.key for o in adapter.line_analyses("greek")}
+    assert {"offline", "neural", "ipa", "translate"} <= greek
+    for sid in ("linearb", "cypriot"):
+        keys = {o.key for o in adapter.line_analyses(sid)}
+        assert "bridge" in keys and "signs" in keys
+    # undeciphered scripts: no bridge/gloss, and the options carry a caveat
+    la = adapter.line_analyses("lineara")
+    assert {o.key for o in la} == {"exploratory", "signs"}
+    assert all(o.detail for o in la)  # every Linear A option is caveated
+    cm = adapter.line_analyses("cyprominoan")
+    assert [o.key for o in cm] == ["signs"] and cm[0].detail
+
+
+def test_greek_offline_analysis_of_iliad_1_1_tags_the_first_tokens() -> None:
+    r = adapter.run_line_analysis(
+        "offline", script_id="greek", text="μῆνιν ἄειδε θεὰ",
+        token_texts=("μῆνιν", "ἄειδε", "θεὰ"),
+    )
+    assert r.ok and r.columns == ("#", "token", "POS", "lemma")
+    lemmas = {row[1]: row[3] for row in r.rows}
+    assert lemmas["μῆνιν"] == "μῆνις"  # known lemma
+    assert lemmas["θεὰ"] == "θεά"
+
+
+def test_translation_is_gated_off_without_a_provider_key(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from aegean.ai.client import _PROVIDERS
+
+    for cls in _PROVIDERS.values():
+        if getattr(cls, "env_key", ""):
+            monkeypatch.delenv(cls.env_key, raising=False)
+    available, why = adapter.translation_available()
+    assert available is False and "BYOAI" in why
+    # and it is marked unavailable in the option list, never crashing when run
+    opt = next(o for o in adapter.line_analyses("greek") if o.key == "translate")
+    assert opt.available is False
+    r = adapter.run_line_analysis("translate", script_id="greek", text="μῆνιν", token_texts=())
+    assert r.ok is False and "provider" in r.error.lower()
+
+
+def test_linearb_bridge_reads_po_me_as_greek_shepherd() -> None:
+    r = adapter.run_line_analysis(
+        "bridge", script_id="linearb", text="po-me", token_texts=("po-me",)
+    )
+    assert r.ok and r.columns == ("word", "sound", "Greek", "gloss")
+    word, sound, greek, gloss = r.rows[0]
+    assert word == "po-me" and greek == "ποιμήν" and "shepherd" in gloss
+
+
+def test_linearb_signs_resolve_glyph_and_value_despite_lowercase_tokens() -> None:
+    r = adapter.run_line_analysis(
+        "signs", script_id="linearb", text="po-me", token_texts=("po-me",)
+    )
+    assert r.ok
+    labels = {row[0]: (row[1], row[2]) for row in r.rows}
+    assert labels["PO"][0] == "𐀡" and labels["PO"][1] == "po"  # glyph + value found
+
+
+def test_lineara_analysis_is_labelled_exploratory_not_a_reading() -> None:
+    r = adapter.run_line_analysis(
+        "exploratory", script_id="lineara", text="KU-RO", token_texts=("KU-RO",)
+    )
+    assert r.ok and "undeciphered" in r.note.lower()
+    signs = adapter.run_line_analysis(
+        "signs", script_id="lineara", text="KU-RO", token_texts=("KU-RO",)
+    )
+    assert "undeciphered" in signs.note.lower()
+    # the glyphs are still resolved (the inventory is real), just not read
+    assert any(row[1] for row in signs.rows)

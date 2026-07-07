@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from textual.binding import Binding
+from textual.message import Message
 from textual.widgets import DataTable, ListItem, ListView, Static
 
 if TYPE_CHECKING:
@@ -105,9 +107,24 @@ class DetailPane(Static):
     with their editorial apparatus marked, and, for an undeciphered corpus, the
     exploratory caveat.
 
-    Renders as text (not a nested widget tree) so a screen reads it back via
-    ``.content`` in tests. Balance rows, when supplied, are appended as a small
-    accounting table."""
+    The reader is focusable and line-addressable: ↑/↓ (and PgUp/PgDn/Home/End) move
+    a highlighted line cursor, and Enter or ``a`` posts :class:`LineChosen` for that
+    line so the screen can open the analysis modal. It renders as one console-markup
+    string (not a nested widget tree), so ``str(.content)`` reads back the plain text
+    in tests. Balance rows, when supplied, are appended as a small table."""
+
+    can_focus = True
+
+    BINDINGS = [
+        Binding("up", "cursor_up", "Up", show=False),
+        Binding("down", "cursor_down", "Down", show=False),
+        Binding("pageup", "cursor_page_up", "Page up", show=False),
+        Binding("pagedown", "cursor_page_down", "Page down", show=False),
+        Binding("home", "cursor_first", "First line", show=False),
+        Binding("end", "cursor_last", "Last line", show=False),
+        Binding("enter", "choose_line", "Analyze line"),
+        Binding("a", "choose_line", "Analyze line"),
+    ]
 
     #: The caveat shown for undeciphered corpora, matching the CLI/docstring copy.
     UNDECIPHERED_CAVEAT = (
@@ -115,38 +132,133 @@ class DetailPane(Static):
         "exploratory, not a reading."
     )
 
+    class LineChosen(Message):
+        """Posted when the user picks the current reader line (Enter / ``a``)."""
+
+        def __init__(self, line_number: int, line_text: str, token_texts: tuple[str, ...]) -> None:
+            self.line_number = line_number
+            self.line_text = line_text
+            self.token_texts = token_texts
+            super().__init__()
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self._detail: DocDetail | None = None
+        self._balances: list[BalanceRow] = []
+        self._cursor = 0
+        self._header_rows = 0
+
     def show_document(
         self, detail: "DocDetail", balances: "list[BalanceRow] | None" = None
     ) -> None:
-        """Render one document's detail (and its balance table, if any)."""
-        self.update(self._detail_text(detail, balances or []))
+        """Render one document's detail (and its balance table, if any), with the line
+        cursor reset to the first line."""
+        self._detail = detail
+        self._balances = balances or []
+        self._cursor = 0
+        self._rebuild()
 
-    def _detail_text(self, detail: "DocDetail", balances: "list[BalanceRow]") -> str:
-        meta_bits = [
-            b for b in (detail.site, detail.period, detail.support, detail.scribe) if b
-        ]
-        lines = [detail.id]
+    def _rebuild(self) -> None:
+        # Built as a console-markup string (Static renders markup): the current line is
+        # wrapped in [reverse] so it reads as highlighted. Every piece of document text is
+        # rich-escaped first so a restored-reading mark ("[ ]") or a stray bracket in the
+        # data can never be mistaken for markup. str(.content) still yields the plain text.
+        from rich.markup import escape
+
+        detail = self._detail
+        if detail is None:
+            return
+        meta_bits = [b for b in (detail.site, detail.period, detail.support, detail.scribe) if b]
+        header = [detail.id]
         if meta_bits:
-            lines.append(" · ".join(meta_bits))
-        lines.append(
+            header.append(" · ".join(meta_bits))
+        header.append(
             f"{detail.n_words} words · {detail.n_tokens} tokens · structure: {detail.structure}"
         )
         if detail.undeciphered:
-            lines.append(self.UNDECIPHERED_CAVEAT)
-        lines.append("")
-        for line in detail.lines:
+            header.append(self.UNDECIPHERED_CAVEAT)
+        header.append("")
+        out = [escape(row) for row in header]
+        self._header_rows = len(header)
+        for i, line in enumerate(detail.lines):
             cells = []
             for tok in line.tokens:
                 mark = _STATUS_MARK.get(tok.status, "")
                 cells.append(f"{tok.text}{mark}" if mark else tok.text)
-            lines.append(f"{line.number:>3}  " + " ".join(cells))
-        if balances:
-            lines.append("")
-            lines.append("accounting balance")
-            for b in balances:
+            row_text = escape(f"{line.number:>3}  " + " ".join(cells))
+            out.append(f"[reverse]{row_text}[/reverse]" if i == self._cursor else row_text)
+        if self._balances:
+            out.append("")
+            out.append("accounting balance")
+            for b in self._balances:
                 verdict = "balances" if b.balances else "OFF"
-                lines.append(
-                    f"    {b.marker}: stated {b.stated:g} vs computed {b.computed:g} "
-                    f"(diff {b.difference:+g}) — {verdict}"
+                out.append(
+                    escape(
+                        f"    {b.marker}: stated {b.stated:g} vs computed {b.computed:g} "
+                        f"(diff {b.difference:+g}) — {verdict}"
+                    )
                 )
-        return "\n".join(lines)
+        self.update("\n".join(out))
+
+    # ── line cursor ───────────────────────────────────────────────────────────
+    def _line_count(self) -> int:
+        return len(self._detail.lines) if self._detail else 0
+
+    def _move_cursor(self, delta: int) -> None:
+        n = self._line_count()
+        if n == 0:
+            return
+        new = max(0, min(n - 1, self._cursor + delta))
+        if new == self._cursor:
+            return
+        self._cursor = new
+        self._rebuild()
+        self._scroll_to_cursor()
+
+    def _scroll_to_cursor(self) -> None:
+        """Keep the cursor line within the enclosing scroll container's viewport."""
+        parent = self.parent
+        scroll_to = getattr(parent, "scroll_to", None)
+        if scroll_to is None:
+            return
+        y = self._header_rows + self._cursor
+        top = getattr(parent, "scroll_offset", None)
+        top_y = top.y if top is not None else 0
+        height = getattr(parent, "size", None)
+        view = height.height if height is not None else 0
+        if view <= 0:
+            return
+        if y < top_y:
+            scroll_to(y=y, animate=False)
+        elif y >= top_y + view:
+            scroll_to(y=y - view + 1, animate=False)
+
+    def action_cursor_up(self) -> None:
+        self._move_cursor(-1)
+
+    def action_cursor_down(self) -> None:
+        self._move_cursor(1)
+
+    def action_cursor_page_up(self) -> None:
+        self._move_cursor(-10)
+
+    def action_cursor_page_down(self) -> None:
+        self._move_cursor(10)
+
+    def action_cursor_first(self) -> None:
+        self._move_cursor(-self._line_count())
+
+    def action_cursor_last(self) -> None:
+        self._move_cursor(self._line_count())
+
+    def action_choose_line(self) -> None:
+        if self._detail is None or not self._detail.lines:
+            return
+        line = self._detail.lines[self._cursor]
+        token_texts = tuple(tok.text for tok in line.tokens)
+        self.post_message(self.LineChosen(line.number, " ".join(token_texts), token_texts))
+
+    @property
+    def cursor_line(self) -> int:
+        """The current line's 0-based index (for tests / callers)."""
+        return self._cursor

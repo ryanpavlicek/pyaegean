@@ -26,6 +26,8 @@ _HELP = """[b]aegean — keys[/b]
 
 [b]In the corpus browser[/b]  /  focus search · Tab cycle panes · type a sign
   pattern (KU-*) to search · open: <spec> loads any work id or file
+  In the reader: ↑/↓ move the line cursor · Enter / a analyze the line
+  (parse/tag, neural, IPA, translate for Greek; signs + Greek reading for syllabic)
 
 [b]Works library (w)[/b]  search by author/title · f fetch · a fetch whole author
   · Enter open a fetched work in the corpus browser

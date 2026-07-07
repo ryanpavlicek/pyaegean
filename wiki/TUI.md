@@ -84,11 +84,28 @@ Three panes, left to right:
    in the status line. That corpus-wide search runs on a background worker, so a
    keystroke never blocks the UI and a fresh keystroke supersedes the previous
    still-running search.
-3. **The document detail**: the token lines with their editorial status marked
-   (unclear / restored / lost from the Leiden apparatus), the heuristic structure
+3. **The document detail (the reader)**: the token lines with their editorial status
+   marked (unclear / restored / lost from the Leiden apparatus), the heuristic structure
    classification, and an accounting-balance analysis (the `KU-RO` / `to-so`
-   reconciliation) whenever the document states a total. `Tab` cycles the three
-   panes; `Enter` on a document row opens its detail.
+   reconciliation) whenever the document states a total. `Tab` cycles the panes; `Enter`
+   on a document row opens its detail. The reader carries a "reading" border title that
+   lights up when it holds focus, so it is obvious which pane is active.
+
+**Analyze a line while you read.** With the reader focused, `↑`/`↓` (and PgUp/PgDn,
+Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **analysis
+popup** for that line. What it offers depends on the script:
+
+- **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
+  tagger** (lemma + POS, instant), the **neural pipeline** (best-in-class tags + a
+  dependency parse; needs the `[neural]` extra, and downloads the model on first use),
+  **IPA**, and **translation**. Translation is **optional** and requires a configured
+  BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says
+  so rather than pretending to translate. The neural and translation runs happen on a
+  background worker, so the UI never blocks.
+- **Linear B / Cypriot** (deciphered): the **Greek reading + gloss** of each word and
+  the **sign values** (glyph + phonetic value).
+- **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
+  **exploratory transliteration** — both plainly labelled as not a reading.
 
 The corpus browser is not limited to the eight registered corpora. It resolves any
 corpus spec the CLI accepts, so it also opens a **fetched Greek work** by its CTS
