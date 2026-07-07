@@ -4,6 +4,23 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.2 (2026-07-04)
+
+More follow-up fixes to the TUI, and a documentation ordering improvement.
+
+### Fixed
+- **Downloaded Greek works are now permanent, selectable items in the TUI corpus browser.**
+  Opening a fetched work (say the Iliad) previously loaded it transiently: it vanished the
+  moment the selection changed. Every downloaded work now appears in the left list as its own
+  entry (`author — title (Greek work)`), stays highlighted when open, and reloads when chosen —
+  clearly distinct from the bundled "greek" sample-texts corpus.
+
+### Changed
+- In the TUI works library, **Enter** on a highlighted work opens it, the same as the `o` key.
+- On the **Benchmarks** and **Methodology** wiki pages and in `docs/benchmarks.md`, the "what the
+  metrics mean" section now comes before the score tables, so the terms are defined before the
+  numbers that use them.
+
 ## 0.20.1 (2026-07-04)
 
 Follow-up fixes to the 0.20.0 CLI/REPL/TUI work.
