@@ -137,13 +137,23 @@ class CommandConsoleScreen(Screen[None]):
             return
         from textual.suggester import SuggestFromList
 
+        # The log must never take focus away from the prompt: if it did, a bare letter would
+        # fall through to a global binding (q quits the app) instead of being typed. It still
+        # auto-scrolls to the newest output and scrolls under the mouse wheel.
+        log.can_focus = False
         inp = self.query_one("#console-input", Input)
         inp.suggester = SuggestFromList(_command_candidates(self._group), case_sensitive=False)
         log.write(
             "aegean command console — any command (no 'aegean' prefix). Tab completes, ↑ recalls. "
             "Try:  quickstart"
         )
-        inp.focus()
+        self.call_after_refresh(inp.focus)
+
+    def on_screen_resume(self) -> None:
+        # Re-focus the prompt every time the console is shown (on_mount only fires on the first
+        # mount; a re-entry would otherwise leave the prompt unfocused and letters would navigate).
+        if getattr(self, "_group", None) is not None:
+            self.call_after_refresh(self.query_one("#console-input", Input).focus)
 
     def action_focus_input(self) -> None:
         self.query_one("#console-input", Input).focus()
@@ -163,11 +173,22 @@ class CommandConsoleScreen(Screen[None]):
         self._dispatch_worker(line)
 
     def on_key(self, event: Any) -> None:
-        """Up/Down recall previous commands while the prompt is focused (the REPL feel)."""
-        if not self._history:
-            return
+        """Keep every keystroke going to the prompt.
+
+        If focus ever drifts off the input (a click on the log, a terminal focus quirk), a
+        printable key re-focuses the prompt and is swallowed, so a bare letter can never trigger
+        a global binding (q would quit the whole app) instead of typing. When the prompt is
+        focused it consumes printable keys itself before this runs, so here Up/Down only recall
+        history and non-printable keys (Esc) still bubble to the app for navigation.
+        """
         inp = self.query_one("#console-input", Input)
-        if self.focused is not inp or event.key not in ("up", "down"):
+        if self.focused is not inp:
+            char = getattr(event, "character", None)
+            if char is not None and char.isprintable():
+                inp.focus()
+                event.stop()
+            return
+        if not self._history or event.key not in ("up", "down"):
             return
         if event.key == "up":
             self._hist_pos = max(0, self._hist_pos - 1)

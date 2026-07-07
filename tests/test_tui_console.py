@@ -127,3 +127,59 @@ def test_console_has_a_suggester_and_up_arrow_recalls_history() -> None:
             assert inp.value == "info lineara"
 
     _run(body())
+
+
+def test_a_stray_key_refocuses_the_prompt_instead_of_quitting_the_app() -> None:
+    """If focus drifts off the prompt (a click, a terminal quirk), a bare letter must NOT
+    fall through to a global binding — pressing 'q' would otherwise quit the whole app."""
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("console")
+            await pilot.pause()
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, CommandConsoleScreen)
+            inp = screen.query_one("#console-input", Input)
+            # the log can never steal focus and turn typing into navigation
+            assert screen.query_one("#console-log", RichLog).can_focus is False
+            # force focus away, as a click on the log or a terminal focus glitch would
+            app.set_focus(None)
+            await pilot.pause()
+            await pilot.press("q")  # the letter that quits the app
+            await pilot.pause()
+            assert isinstance(app.screen, CommandConsoleScreen)  # did NOT quit
+            assert app.focused is inp  # the prompt reclaimed focus
+            # and now ordinary letters type into the prompt rather than navigating away
+            await pilot.press("q", "u", "i", "t")
+            await pilot.pause()
+            assert inp.value == "quit"
+            assert isinstance(app.screen, CommandConsoleScreen)
+
+    _run(body())
+
+
+def test_escape_still_leaves_the_console() -> None:
+    """Esc is not printable, so the safety net lets it bubble to the app's back navigation.
+    Per the app-wide convention a focused input blurs on the first Esc, then a second Esc
+    (nothing focused) walks the history back — the console must not trap the user."""
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("corpus")
+            await pilot.pause()
+            app.goto("console")
+            await pilot.pause()
+            await pilot.pause()
+            assert isinstance(app.screen, CommandConsoleScreen)
+            await pilot.press("escape")  # blurs the prompt
+            await pilot.pause()
+            await pilot.press("escape")  # walks back
+            await pilot.pause()
+            assert not isinstance(app.screen, CommandConsoleScreen)  # navigated back
+
+    _run(body())
