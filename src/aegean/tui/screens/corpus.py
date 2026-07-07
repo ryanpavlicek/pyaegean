@@ -64,7 +64,17 @@ class CorpusBrowserScreen(Screen[None]):
     }
     CorpusBrowserScreen #corpus-right {
         width: 1fr;
-        border-left: solid $primary;
+        border: round $primary-darken-2;
+    }
+    CorpusBrowserScreen #corpus-right:focus {
+        border: round $accent;
+        background: $boost;
+    }
+    CorpusBrowserScreen #corpus-right:focus > DetailPane {
+        background: $boost;
+    }
+    CorpusBrowserScreen #corpus-list:focus {
+        border-right: solid $accent;
     }
     CorpusBrowserScreen #corpus-status {
         color: $text-muted;
@@ -109,6 +119,9 @@ class CorpusBrowserScreen(Screen[None]):
         self._refresh_corpus_list()
         docs = self.query_one("#corpus-docs", DocTable)
         docs.cursor_type = "row"
+        # A titled border on the reading pane, so it is obvious when Tab has landed there
+        # (the title + border turn accent-coloured on focus via the :focus rule above).
+        self.query_one("#corpus-right", VerticalScroll).border_title = "reading"
         self._sync_to_state()
 
     def on_screen_resume(self) -> None:

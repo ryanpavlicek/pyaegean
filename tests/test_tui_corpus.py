@@ -412,3 +412,30 @@ def test_fetched_works_are_permanent_items_in_the_corpus_list(monkeypatch) -> No
             assert clist.selected_id == "tlg0012.tlg001"  # and highlighted
 
     _run(body())
+
+
+def test_reading_pane_shows_a_focus_highlight() -> None:
+    """Tabbing to the reading pane must be visible: it carries a 'reading' border title and its
+    border turns accent-coloured when focused, so the user knows the reader is active without
+    having to test-scroll it."""
+    from textual.containers import VerticalScroll
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("corpus")
+            await pilot.pause()
+            await pilot.pause()
+            screen = app.screen
+            reader = screen.query_one("#corpus-right", VerticalScroll)
+            assert reader.border_title == "reading"
+            screen.query_one("#corpus-list", CorpusList).focus()
+            await pilot.pause()
+            unfocused = reader.styles.border_top[1]
+            reader.focus()
+            await pilot.pause()
+            assert reader.has_focus
+            assert reader.styles.border_top[1] != unfocused  # the border highlights on focus
+
+    _run(body())
