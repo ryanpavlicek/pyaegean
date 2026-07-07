@@ -122,3 +122,21 @@ def test_greek_ipa_period_selector_switches_to_koine() -> None:
             assert screen._period == "koine"
 
     _run(body())
+
+
+def test_home_corpus_menu_starts_focused_with_first_item_highlighted() -> None:
+    """The corpus list on Home is the active menu on open: framed, focused, first row
+    highlighted, so up/down/Enter work immediately (the user need not discover Tab)."""
+    from aegean.tui.screens.home import HomeScreen
+    from aegean.tui.widgets import CorpusList
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            assert isinstance(app.screen, HomeScreen)
+            corpora = app.screen.query_one("#home-corpora", CorpusList)
+            assert corpora.index == 0  # first item highlighted
+            assert app.focused is corpora  # the menu is the active element
+
+    _run(body())

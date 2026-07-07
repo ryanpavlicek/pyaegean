@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Input, Static
 
@@ -98,7 +98,10 @@ class CorpusBrowserScreen(Screen[None]):
             yield Input(placeholder=_SEARCH_PLACEHOLDER, id="corpus-search")
             yield Static("", id="corpus-status")
             yield DocTable(id="corpus-docs")
-        with Vertical(id="corpus-right"):
+        # A scroll container, not a plain Vertical, so a long document (a whole Iliad
+        # book) scrolls: Tab focuses it, then arrows / PageUp / PageDown / mouse wheel
+        # move through the text.
+        with VerticalScroll(id="corpus-right"):
             yield DetailPane(_NO_CORPUS, id="corpus-detail")
         yield Footer()
 
@@ -163,8 +166,9 @@ class CorpusBrowserScreen(Screen[None]):
         self.query_one("#corpus-search", Input).focus()
 
     def action_cycle_focus(self) -> None:
-        """``tab`` cycles list -> search -> table."""
-        order = ("#corpus-list", "#corpus-search", "#corpus-docs")
+        """``tab`` cycles list -> search -> table -> reader (so the reader is reachable
+        and, once focused, scrolls with the arrow keys / PageUp / PageDown)."""
+        order = ("#corpus-list", "#corpus-search", "#corpus-docs", "#corpus-right")
         focused = self.focused
         current = -1
         for i, sel in enumerate(order):
@@ -268,3 +272,8 @@ class CorpusBrowserScreen(Screen[None]):
             return
         balances = adapter.balance_rows(document)
         detail.show_document(info, balances)
+        # start a freshly-opened document at the top, and hint how to scroll it
+        self.query_one("#corpus-right", VerticalScroll).scroll_home(animate=False)
+        self.query_one("#corpus-status", Static).update(
+            f"{doc_id} — Tab to the reader, then ↑/↓/PgUp/PgDn (or the mouse wheel) to scroll"
+        )

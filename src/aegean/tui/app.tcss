@@ -19,9 +19,20 @@ Screen {
     padding: 1 2;
 }
 
+#home-corpora-title {
+    text-style: bold;
+    color: $accent;
+    margin-top: 1;
+}
+
+/* Frame the corpus list so it reads as a selectable menu, not static text. The
+   first row is highlighted and the list is focused on mount, so the highlight
+   (Textual's focused-ListView styling) shows immediately. */
 #home-corpora {
     height: auto;
-    margin: 1 0;
+    margin: 0 0 1 0;
+    border: round $primary;
+    background: $panel;
 }
 
 #home-keys {
@@ -42,8 +53,11 @@ Screen {
 
 DetailPane {
     padding: 1 1;
-    height: 1fr;
-    overflow-y: auto;
+    /* height auto (not 1fr) so the pane grows to its content and the enclosing
+       VerticalScroll (#corpus-right) scrolls a long document; a Static does not
+       scroll itself. */
+    height: auto;
+    width: 1fr;
 }
 
 /* Greek workbench: an input above the live tabs. */

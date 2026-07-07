@@ -92,7 +92,42 @@ def _rate_limit_message(reset: str | None) -> str:
         when = " (resets ~" + time.strftime("%H:%M", time.localtime(int(reset))) + ")"
     return (
         "GitHub API rate limit reached" + when + ". The unauthenticated limit is ~60 "
-        "requests/hour; set PYAEGEAN_GITHUB_TOKEN or GITHUB_TOKEN to raise it to 5,000/hour."
+        "requests/hour; authenticate to raise it to 5,000/hour: run `gh auth login`, or set "
+        "PYAEGEAN_GITHUB_TOKEN / GITHUB_TOKEN / GH_TOKEN."
+    )
+
+
+@lru_cache(maxsize=1)
+def _gh_cli_token() -> str | None:
+    """The token stored by the GitHub CLI (``gh auth login``), or ``None``.
+
+    Many machines are authenticated through ``gh`` (the token lives in the OS keyring, not an
+    environment variable), so this lets an already-``gh``-authenticated user hit the higher rate
+    limit without exporting anything. Cached, so the subprocess runs at most once per process."""
+    import shutil
+    import subprocess
+
+    if shutil.which("gh") is None:
+        return None
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "token"], capture_output=True, text=True, timeout=5, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    token = result.stdout.strip()
+    return token or None
+
+
+def _github_token() -> str | None:
+    """A GitHub token to raise the API rate limit, discovered in order: the
+    ``PYAEGEAN_GITHUB_TOKEN`` / ``GITHUB_TOKEN`` / ``GH_TOKEN`` environment variables, then the
+    GitHub CLI's stored auth (``gh auth token``) when ``gh`` is installed."""
+    return (
+        os.environ.get("PYAEGEAN_GITHUB_TOKEN")
+        or os.environ.get("GITHUB_TOKEN")
+        or os.environ.get("GH_TOKEN")
+        or _gh_cli_token()
     )
 
 
@@ -127,7 +162,7 @@ def _github_listing(repo: str, path: str, ref: str) -> list[str]:
         return [str(n) for n in names]
     url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
     headers = {"User-Agent": "pyaegean"}
-    token = os.environ.get("PYAEGEAN_GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    token = _github_token()
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)

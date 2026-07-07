@@ -32,15 +32,18 @@ _BANNER = (
 )
 
 _KEYS = (
-    "keys:  c corpus   g Greek   w works   d data   : console   t theme   "
-    "Esc back   ? help   ctrl+p commands   q quit"
+    "keys:  c corpus browser   g Greek workbench   w works library   d data store   "
+    ": console   t theme   Esc back   ? help   ctrl+p commands   q quit"
 )
 
 _INTRO = (
-    "pyaegean — Ancient Greek and the Aegean syllabic scripts. Browse the corpora "
-    "below, jump to the Greek workbench, fetch and read Greek works in the works "
-    "library (w), or run any command in the console (:)."
+    "pyaegean — Ancient Greek and the Aegean syllabic scripts. Pick a corpus below "
+    "(↑/↓ then Enter) to browse and read its documents. The keys open the tools: "
+    "g the Greek workbench (analyze a line of Greek), w the works library (fetch and "
+    "read real Greek works), : a console that runs any command."
 )
+
+_CORPORA_TITLE = "Corpora  —  ↑/↓ to choose, Enter to browse"
 
 
 class HomeScreen(Screen[None]):
@@ -51,13 +54,19 @@ class HomeScreen(Screen[None]):
         yield Static(_BANNER, id="home-banner")
         with VerticalScroll(id="home-body"):
             yield Static(_INTRO, id="home-intro")
-            yield Static("corpora", id="home-corpora-title")
+            yield Static(_CORPORA_TITLE, id="home-corpora-title")
             yield CorpusList(id="home-corpora")
             yield Static(_KEYS, id="home-keys")
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#home-corpora", CorpusList).set_corpora(adapter.list_corpora())
+        corpora = self.query_one("#home-corpora", CorpusList)
+        corpora.set_corpora(adapter.list_corpora())
+        # Make it obvious the list is the active menu: highlight the first row and focus
+        # it, so ↑/↓/Enter work immediately (not only after the user discovers Tab).
+        if corpora.children:
+            corpora.index = 0
+            corpora.focus()
 
     def on_list_view_selected(self, event: CorpusList.Selected) -> None:
         """Opening a corpus from the overview jumps to the corpus browser."""

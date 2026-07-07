@@ -354,3 +354,28 @@ if __name__ == "__main__":  # a convenience runner outside pytest
         if name.startswith("test_") and callable(fn):
             fn()
             print(f"ok {name}")
+
+
+def test_reader_pane_is_a_scroll_container_reachable_by_tab() -> None:
+    """The document reader is a focusable scroll container in the Tab cycle, so a long
+    document scrolls with the arrow keys / PageUp/PageDown / mouse wheel (the pane is not a
+    plain clipped Static any more)."""
+    from textual.containers import VerticalScroll
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 24)) as pilot:
+            await pilot.pause()
+            app.open_corpus("greek")
+            await pilot.pause()
+            screen = app.screen
+            reader = screen.query_one("#corpus-right", VerticalScroll)
+            assert reader.can_focus  # focusable, so keys scroll it
+            for _ in range(5):  # Tab reaches the reader
+                screen.action_cycle_focus()
+                await pilot.pause()
+                if app.focused is reader:
+                    break
+            assert app.focused is reader
+
+    _run(body())

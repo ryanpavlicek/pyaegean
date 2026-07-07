@@ -21,8 +21,9 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from textual import work
 from textual.app import ComposeResult
+from textual.containers import Horizontal
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, RichLog
+from textual.widgets import Footer, Header, Input, RichLog, Static
 
 if TYPE_CHECKING:
     from textual.worker import Worker
@@ -63,6 +64,21 @@ def _build_group() -> Any:
     return typer.main.get_command(_build_app())
 
 
+def _command_candidates(group: Any) -> list[str]:
+    """Command-path candidates for the console's predictive completion: every top-level
+    command and every ``group sub`` pair, plus the shell-only directives."""
+    import click
+
+    out: list[str] = []
+    for name, cmd in sorted(group.commands.items()):
+        out.append(name)
+        if isinstance(cmd, click.Group):
+            for sub in sorted(cmd.commands):
+                out.append(f"{name} {sub}")
+    out += ["use ", ":examples", ":help", ":exit"]
+    return out
+
+
 def run_console_command(group: Any, line: str, session: Any) -> str:
     """Dispatch one console line through the REPL's own runner, capturing the output."""
     from aegean.cli._repl import _run_line
@@ -81,24 +97,36 @@ class CommandConsoleScreen(Screen[None]):
         ("i", "focus_input", "Input"),
     ]
 
+    # A prompt LINE, not a boxed form: the input is borderless with an "aegean>" mark, so
+    # it reads like a shell. It gains predictive ghost-text completion (Tab/→ accepts) and
+    # up/down history, the way the REPL feels.
     DEFAULT_CSS = """
-    #console-log { height: 1fr; border: round $primary-darken-2; }
-    #console-input { dock: bottom; margin: 0 1; }
+    #console-log { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
+    #console-prompt { dock: bottom; height: 1; margin: 0 1; }
+    #console-prompt-mark { width: auto; padding: 0 1 0 0; color: $success; text-style: bold; }
+    #console-input { border: none; background: transparent; padding: 0; height: 1; }
     """
+
+    _history: list[str]
+    _hist_pos: int
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield RichLog(id="console-log", highlight=False, markup=False, wrap=True)
-        yield Input(
-            placeholder="a command without 'aegean', e.g. stats lineara --top 5   ·  :examples",
-            id="console-input",
-        )
+        with Horizontal(id="console-prompt"):
+            yield Static("aegean>", id="console-prompt-mark")
+            yield Input(
+                placeholder="any command without 'aegean' (Tab/→ completes · ↑/↓ history · :examples)",
+                id="console-input",
+            )
         yield Footer()
 
     def on_mount(self) -> None:
         from aegean.cli._repl import _Session
 
         self._session = _Session()
+        self._history = []
+        self._hist_pos = 0
         log = self.query_one("#console-log", RichLog)
         try:
             self._group = _build_group()
@@ -107,8 +135,15 @@ class CommandConsoleScreen(Screen[None]):
             log.write("the command console needs the [cli] extra — pip install 'pyaegean[cli]'")
             self.query_one("#console-input", Input).disabled = True
             return
-        log.write("aegean command console — type any command (without 'aegean'). Try:  quickstart")
-        self.query_one("#console-input", Input).focus()
+        from textual.suggester import SuggestFromList
+
+        inp = self.query_one("#console-input", Input)
+        inp.suggester = SuggestFromList(_command_candidates(self._group), case_sensitive=False)
+        log.write(
+            "aegean command console — any command (no 'aegean' prefix). Tab completes, ↑ recalls. "
+            "Try:  quickstart"
+        )
+        inp.focus()
 
     def action_focus_input(self) -> None:
         self.query_one("#console-input", Input).focus()
@@ -118,10 +153,30 @@ class CommandConsoleScreen(Screen[None]):
             return
         line = event.value.strip()
         event.input.value = ""
-        if not line or self._group is None:
+        if not line:
+            return
+        self._history.append(line)
+        self._hist_pos = len(self._history)
+        if self._group is None:
             return
         self.query_one("#console-log", RichLog).write(f"aegean> {line}")
         self._dispatch_worker(line)
+
+    def on_key(self, event: Any) -> None:
+        """Up/Down recall previous commands while the prompt is focused (the REPL feel)."""
+        if not self._history:
+            return
+        inp = self.query_one("#console-input", Input)
+        if self.focused is not inp or event.key not in ("up", "down"):
+            return
+        if event.key == "up":
+            self._hist_pos = max(0, self._hist_pos - 1)
+            inp.value = self._history[self._hist_pos]
+        else:
+            self._hist_pos = min(len(self._history), self._hist_pos + 1)
+            inp.value = "" if self._hist_pos >= len(self._history) else self._history[self._hist_pos]
+        inp.cursor_position = len(inp.value)
+        event.stop()
 
     @work(thread=True, exclusive=True, group="console")
     def _dispatch_worker(self, line: str) -> None:

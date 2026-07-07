@@ -119,3 +119,24 @@ def test_github_listing_raises_rate_limit_on_403(tmp_path, monkeypatch):
     monkeypatch.setattr(perseus.urllib.request, "urlopen", fake_urlopen)
     with pytest.raises(GitHubRateLimitError):
         perseus._github_listing("some/repo", "data/tlg0012/tlg001", "abc123def456")
+
+
+def test_github_token_precedence_and_gh_cli_fallback(monkeypatch):
+    """The token is discovered in order: PYAEGEAN_GITHUB_TOKEN, GITHUB_TOKEN, GH_TOKEN, then
+    the gh CLI (gh auth token) — so a gh-authenticated machine works without exporting anything."""
+    monkeypatch.setattr(perseus, "_gh_cli_token", lambda: "from-gh")
+    for var in ("PYAEGEAN_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"):
+        monkeypatch.delenv(var, raising=False)
+
+    monkeypatch.setenv("PYAEGEAN_GITHUB_TOKEN", "penv")
+    assert perseus._github_token() == "penv"
+    monkeypatch.delenv("PYAEGEAN_GITHUB_TOKEN")
+    monkeypatch.setenv("GITHUB_TOKEN", "genv")
+    assert perseus._github_token() == "genv"
+    monkeypatch.delenv("GITHUB_TOKEN")
+    monkeypatch.setenv("GH_TOKEN", "ghenv")
+    assert perseus._github_token() == "ghenv"
+    monkeypatch.delenv("GH_TOKEN")
+    assert perseus._github_token() == "from-gh"  # no env var -> gh CLI keyring
+    monkeypatch.setattr(perseus, "_gh_cli_token", lambda: None)
+    assert perseus._github_token() is None  # nothing anywhere

@@ -100,3 +100,30 @@ def test_a_bad_line_does_not_crash_the_console() -> None:
             assert isinstance(app.screen, CommandConsoleScreen)
 
     _run(body())
+
+
+def test_console_has_a_suggester_and_up_arrow_recalls_history() -> None:
+    import types
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("console")
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, CommandConsoleScreen)
+            inp = screen.query_one("#console-input", Input)
+            assert inp.suggester is not None  # predictive completion is wired
+            for line in ("info lineara", "stats lineara"):
+                screen.on_input_submitted(Input.Submitted(inp, line))
+                await pilot.pause()
+                await app.workers.wait_for_complete()
+            inp.focus()
+            await pilot.pause()
+            screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
+            assert inp.value == "stats lineara"  # most recent first
+            screen.on_key(types.SimpleNamespace(key="up", stop=lambda: None))
+            assert inp.value == "info lineara"
+
+    _run(body())
