@@ -4,6 +4,14 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.6 (2026-07-07)
+
+### Changed
+- **The TUI corpus reader now shows a focus highlight.** When you Tab to the reading pane it
+  carries a "reading" border title and its border turns accent-coloured, so it is obvious the
+  reader is active (and that the arrow keys will scroll it) without having to test-scroll. The
+  corpus list's border likewise highlights when it holds focus.
+
 ## 0.20.5 (2026-07-07)
 
 The TUI command console now shows the CLI hints the REPL shows.
