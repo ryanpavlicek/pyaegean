@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.1 (2026-07-04)
+
+Follow-up fixes to the 0.20.0 CLI/REPL/TUI work.
+
+### Fixed
+- **GitHub token discovery.** Fetching Greek works now finds a token in the `GH_TOKEN`
+  environment variable and, when no token variable is set, falls back to the GitHub CLI's
+  stored auth (`gh auth token`) — so a machine already authenticated with `gh auth login`
+  hits the 5,000/hour rate limit automatically, without exporting anything. The rate-limit
+  message names all the ways to authenticate.
+- **The TUI document reader could not scroll.** A long document (a whole Iliad book) was
+  clipped to the visible height with no way to see the rest. The reader is now a scroll
+  container in the Tab cycle: Tab focuses it, then the arrow keys, PageUp/PageDown, and the
+  mouse wheel move through the text.
+
+### Changed
+- **The TUI command console reads like a shell.** The boxed input is now a borderless
+  `aegean>` prompt line with predictive command completion (Tab or → accepts the ghosted
+  suggestion) and up/down history recall.
+- **The TUI home screen is clearer.** The corpus list is framed as a menu, opens focused with
+  the first entry highlighted (so ↑/↓/Enter work immediately), and the intro and key legend
+  distinguish the tools the keys open (the Greek workbench, `g`) from browsing a corpus.
+
 ## 0.20.0 (2026-07-04)
 
 A CLI/REPL/TUI usability and parity release: the terminal UI reaches feature parity with the CLI,
