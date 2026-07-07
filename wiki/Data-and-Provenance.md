@@ -22,7 +22,7 @@ third-party dependencies:
 - **Linear B**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
 - **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json`, `ig_inscriptions.json` (the bundled 178-inscription IG XV 1 corpus, CC BY 4.0)
 - **Cypro-Minoan**: `signs.json`, `sample_inscriptions.json` (undeciphered: no phonetic map or lexicon)
-- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (one NT book), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts)
+- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (two NT sample chapters: John 1 + Philemon 1), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts)
 - **Geo**: `site_coordinates.json` (approximate find-site lat/long)
 
 Large or license-restricted assets are **never bundled**: they are fetched on
@@ -56,7 +56,7 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `greek/dodson.json` | 712,301 | Dodson Greek Lexicon (CC0) |
 | `greek/idioms.json` | 6,675 | bundled idiom / MWE gloss lexicon |
 | `greek/lemmata.json` | 1,545 | bundled gold lemma seed |
-| `greek/nt_sample.json` | 38,846 | Nestle 1904: one book (CC0) |
+| `greek/nt_sample.json` | 132,814 | Nestle 1904: two sample chapters, John 1 + Philemon 1 (CC0) |
 | `greek/sample_texts.json` | 1,054 | public-domain Greek snippets |
 | `greek/works_catalogue.json` | 293,563 | Perseus + First1KGreek work index (metadata only; built by `scripts/build_greek_catalogue.py`) |
 | `lineara/inscriptions.json` | 720,766 | GORILA via mwenge/lineara.xyz |
@@ -150,7 +150,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 > under the **same ShareAlike terms** as their source, clearly labeled, and kept
 > out of the Apache-2.0 wheel. NonCommercial obligations (DAMOS, SigLA, PROIEL)
 > **pass through to you**. CC0 assets (the NT corpus, the Dodson lexicon) carry no
-> such obligation, which is exactly why one NT book can be bundled.
+> such obligation, which is exactly why two NT sample chapters can be bundled.
 
 ### Per-dataset notes
 
@@ -270,7 +270,7 @@ and an edit-script lemma head: on the **AGDT** (CC BY-SA 3.0), **Gorman**
 the UD-Perseus dev/test folds and all PROIEL evaluation texts **excluded from
 training** (the leakage manifest is built by `agdt_ud_overlap()`; the protocol is
 documented in
-[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
+[Benchmarks](Benchmarks)).
 The released bundle is **CC BY-SA 4.0**, fetched to the user cache and never
 bundled, so the wheel stays Apache-2.0.
 
@@ -334,8 +334,8 @@ d.provenance.source          # 'DAMOS — Database of Mycenaean at Oslo (F. Auro
 
 The **Nestle 1904** Greek NT base text is public domain; its per-token morphology,
 lemmas, and Strong's numbers (from biblicalhumanities/Nestle1904) are dedicated to
-the public domain under **CC0**. Because CC0 imposes no restriction, **one book is
-bundled** in the wheel (`greek/nt_sample.json`, ~38 KB) as an offline sample, and
+the public domain under **CC0**. Because CC0 imposes no restriction, **two sample chapters are
+bundled** in the wheel (`greek/nt_sample.json`, ~130 KB: John 1 + Philemon 1) as an offline sample, and
 the full **27-book corpus** (260 chapters / ~137,800 tokens) is hosted as the
 `nt-corpus` release asset, fetched on demand by `greek.load_nt` /
 `aegean.load("nt")`. Koine glossing uses the **Dodson Greek Lexicon** (J. J.
@@ -536,7 +536,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.19.16'  (your installed version)
+v["package"]                                  # '0.20.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -588,7 +588,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.19.16'
+# '0.20.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -704,7 +704,7 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   bundled; NC + ShareAlike pass through to you.
 - **Greek New Testament (`nt-corpus`) + Dodson lexicon (bundled)**: Nestle 1904
   base text public domain; morphology/lemmas/Strong's and the Dodson glosses are
-  **CC0**, so one NT book and the Dodson lexicon are bundled and the full NT
+  **CC0**, so two NT sample chapters and the Dodson lexicon are bundled and the full NT
   corpus may be redistributed.
 - **Linear A Workbench app (`workbench-app`)**: Apache-2.0 build; embedded data
   is GORILA-derived.

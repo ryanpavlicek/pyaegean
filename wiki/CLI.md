@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.19.16
+aegean --version          # pyaegean 0.20.0
 ```
 
 | Group | What's in it |
@@ -191,6 +191,8 @@ printf 'use lineara\nshow HT13\nstats --top 3\n' | aegean repl
 ---
 
 ## The terminal UI (`aegean tui`)
+
+> Full reference: the [TUI](TUI) page. This section is a quick tour.
 
 Where `repl` is the same commands typed one after another, **`aegean tui`** is a
 full-screen, app-like cockpit for the highest-value offline reads: a scrollable
@@ -810,7 +812,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.19.16                    │
+│ OK │ pyaegean │ 0.20.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1519,6 +1521,8 @@ label and grounding intact. The full design and the meaning of "grounded" are on
 ---
 
 ## MCP server — `aegean-mcp`
+
+> Full reference: the [MCP server](MCP) page. This section is a quick tour.
 
 A separate console script (the `[mcp]` extra) that exposes the toolkit to AI
 agents (Claude Code and other MCP clients) over stdio, so an agent can use

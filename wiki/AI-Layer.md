@@ -580,6 +580,8 @@ the provenance trace under the answer. Without it, you get a one-line footer:
 
 ## Hybrid translation
 
+> See the dedicated [Translation](Translation) page for the full translation reference.
+
 `aegean.translate` is the translator the CLI uses. It builds **deterministic,
 local** grounding first (Greek morphology: lemma, part of speech, case roles,
 clause skeleton; or Linear A sign→sound transliteration) and then delegates the translation to the AI layer, so the

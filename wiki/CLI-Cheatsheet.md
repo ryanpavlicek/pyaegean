@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.19.16
+aegean --version                # pyaegean 0.20.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -59,7 +59,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 |---|---|---|---|
 | `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
 | `repl` | Interactive shell: run commands without the `aegean` prefix (Tab-completion + a history that persists across sessions). Shell-only directives: `use CORPUS` sets a session corpus for corpus-first commands (`use off` clears) · `:examples` prints starter lines · `:help` · `:exit` |— | `aegean repl` |
-| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): a corpus browser, the live Greek workbench, and the local data store; keys `h`/`c`/`g`/`d` switch screens, `ctrl+p` opens the command palette. Offline, no API key | — | `aegean tui` |
+| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): a corpus browser, the Greek workbench, the data store, a **works library** (`w`, fetch + read Greek works), and a **command console** (`:`, any command); keys `h`/`c`/`g`/`d`/`w`, `:` console, `t` theme, `?` help, `Esc` back, `ctrl+p` palette. See the [TUI](TUI) page | — | `aegean tui` |
 | `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
@@ -324,9 +324,9 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
-| `work` | Fetch a real Greek work (Perseus / First1KGreek) | `--ref --source --edition -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` |
-| `nt` | Load the Greek NT (Nestle 1904, bundled): gold lemma/morph/Strong's + gloss | `--ref -o --json` | `aegean greek nt John --ref 1.1-1.18` |
-| `works` | List the curated catalog of 25 well-known works | `--json` | `aegean greek works` |
+| `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
+| `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
+| `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache | `--downloaded --json` | `aegean greek works --downloaded` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
 | `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |

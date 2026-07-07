@@ -34,7 +34,7 @@ Python, [Meters](Meters) for the metrical scansion in depth, and
 > (`use_neural_pipeline`, the `[neural]` extra) is **state of the art on the UD Ancient
 > Greek (Perseus) benchmark**: measured end-to-end through this package (the full protocol and
 > comparison tables live in
-> [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)).
+> [Benchmarks](Benchmarks)).
 
 ## The stages at a glance
 
@@ -166,7 +166,7 @@ precision; it needs **onnxruntime>=1.23** (the `[neural]` floor), and the full-p
 model stays available at the `grc-joint-v2` release for reproducibility. The
 model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
 leakage controls, and the comparison tables are documented in
-[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+[Benchmarks](Benchmarks).
 
 ## Normalization & Beta Code
 
@@ -1169,7 +1169,7 @@ Nestle-own-gold complement to the PROIEL out-of-AGDT check, and both are genuine
 out-of-domain (the models train on AGDT + Gorman + Pedalion). The measured numbers and
 the honesty notes (lemma-convention differences; why finer features aren't
 cross-comparable) are in
-[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+[Benchmarks](Benchmarks).
 
 ## Terminology rarity
 
@@ -1404,6 +1404,8 @@ default. See [Neural lemmatizer (opt-in)](#neural-lemmatizer-opt-in) above.
 
 ### Neutral evaluation (out-of-AGDT)
 
+> Full detail: the [Evaluation](Evaluation) and [Benchmarks](Benchmarks) pages.
+
 The held-out numbers above are leakage-free *within* the AGDT, but pyaegean's backends are
 all built from the AGDT, so they don't show how the system fares on text from a different
 source. `greek.evaluate_on_proiel()` (CLI `aegean greek eval proiel`) scores the active
@@ -1454,7 +1456,7 @@ evaluator**: the protocol the field's published numbers use. The folds are CC BY
 fetched to the cache for *evaluation only* (never trained on); `greek.agdt_ud_overlap()`
 builds the manifest of AGDT sentences that appear in the UD folds, which pyaegean's model
 training excludes. The full protocol, leakage controls, and measured numbers live in
-[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+[Benchmarks](Benchmarks).
 
 ```python
 greek.use_treebank(); greek.use_tagger(); greek.use_lemmatizer(); greek.use_parser()

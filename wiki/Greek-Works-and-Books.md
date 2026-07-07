@@ -511,6 +511,8 @@ books_1_3.to_sql("iliad_opening.db")
 
 ## 6. The Greek New Testament — `load_nt()`
 
+> See the dedicated [New Testament](New-Testament) page for the full NT tooling.
+
 `greek.load_nt(...)` is the Koine counterpart to `load_work`. It returns a `Corpus`
 of the Greek NT (Nestle 1904) where **every token already carries gold
 annotations**: a `lemma`, a Robinson-style `morph` parse, a `strongs` number, a

@@ -4,6 +4,33 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.0 (2026-07-04)
+
+A CLI/REPL/TUI usability and parity release: the terminal UI reaches feature parity with the CLI,
+the Greek work library becomes first-class in the TUI, and a set of reported paper-cuts are fixed.
+
+### Added
+- **`aegean greek work all AUTHOR`** bulk-fetches every work by an author (case-insensitive),
+  e.g. `aegean greek work all homer`, with `--dry-run`, `--limit`, a confirmation for large sets,
+  idempotent resume, and clear guidance when the unauthenticated GitHub rate limit is reached.
+- **`aegean greek works --downloaded`** lists the Greek works already in the local cache, and a
+  single `aegean greek work <id>` now states whether it was downloaded or already cached, and where.
+- **`aegean greek nt BOOK [PASSAGE]`** takes the chapter or range as a positional and renders the
+  passage text: `aegean greek nt John 1`, `aegean greek nt Matt 1-3`. `aegean show` reads chapter
+  ranges too (`show nt "Matt 1-3"`), and a dotted reference resolves (`show nt "Matt.1"`).
+- **`aegean repl`** shows the command menu on startup, the same map bare `aegean` prints.
+- **The terminal UI (`aegean tui`) reaches CLI parity and grows:** a **Works library** (`w`) to
+  search the ~1,800-work catalogue and fetch a work or a whole author and open it; a **command
+  console** (`:`) that runs any `aegean` command with full CLI/REPL parity; the corpus browser now
+  opens fetched Greek works and files; a live-preview, persistent **theme picker** (`t`); a **help**
+  overlay (`?`); **Esc** to exit an input or go back to the previous screen; and an Attic/Koine IPA
+  selector in the Greek workbench.
+- A richer offline Greek sample: the bundled New Testament sample is now two chapters, **John 1 and
+  Philemon 1** (Nestle 1904, CC0), fully annotated.
+- New wiki pages: **Benchmarks**, **Methodology**, **TUI**, **MCP server**, **New Testament**,
+  **Evaluation**, and **Translation**, with a restructured sidebar. The benchmark and methodology
+  material is now readable directly in the wiki rather than only in the repository.
+
 ## 0.19.16 (2026-07-04)
 
 A scholarly-correctness pass ahead of a review by university professors of Ancient Greek: a

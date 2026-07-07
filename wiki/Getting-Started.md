@@ -19,7 +19,7 @@ at a time; nothing here can break your computer.
 > for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
 > **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
 > Greek workbench, and manage the data store, all offline and mouse-or-keyboard
-> driven ([the CLI page](CLI#the-terminal-ui-aegean-tui)).
+> driven ([the TUI page](TUI)).
 
 ## What pyaegean is (in one breath)
 
@@ -113,7 +113,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.19.16 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.20.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

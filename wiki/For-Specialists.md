@@ -26,7 +26,7 @@ There are three registers:
 | Register | What it covers | How it's marked | If it's wrong, it's a… |
 |---|---|---|---|
 | **Established** | Facts carried from editions, lexica, and the Unicode standard: Linear B / Cypriot sign values, the Greek lexicon & morphology (Perseus AGDT, LSJ), bundled transliterations, the find-site gazetteer. | Each cites its source: see `info`/`cite`, [Data & Provenance](Data-and-Provenance), and `NOTICE`. | **correction** |
-| **Measured** | Model accuracies reported leakage-free on held-out data (the Greek lemmatizer/tagger/parser and the neural pipeline). | Numbers with a reproducible protocol in [Greek NLP](Greek-NLP) / `docs/benchmarks.md`. | **reproduce or challenge** the number |
+| **Measured** | Model accuracies reported leakage-free on held-out data (the Greek lemmatizer/tagger/parser and the neural pipeline). | Numbers with a reproducible protocol in [Benchmarks](Benchmarks) and [Methodology](Methodology). | **reproduce or challenge** the number |
 | **Exploratory** | Anything decipherment-adjacent over the **undeciphered** Linear A material (cross-linguistic distances, morphological clusters, structure heuristics, metrological guesses) and **all** AI-layer output. | An explicit `[EXPLORATORY …]` tag, an `exploratory=True` flag, a red badge in Jupyter, and an auditable `trace()`. | **validation** (confirm or refute) |
 
 The full, candid register of what the toolkit can and cannot claim: by

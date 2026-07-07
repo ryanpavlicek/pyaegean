@@ -18,13 +18,22 @@
 **Greek**
 - [Greek NLP](Greek-NLP)
 - [Greek Works & Books](Greek-Works-and-Books)
+- [New Testament](New-Testament)
 - [Meters](Meters)
 
 **Capabilities**
 - [CLI](CLI)
 - [CLI Cheatsheet](CLI-Cheatsheet)
+- [TUI](TUI)
+- [MCP server](MCP)
 - [AI Layer](AI-Layer)
+- [Translation](Translation)
 - [Geography](Geography)
+
+**Evaluation & methodology**
+- [Benchmarks](Benchmarks)
+- [Methodology](Methodology)
+- [Evaluation](Evaluation)
 
 **Reference**
 - [Architecture](Architecture)

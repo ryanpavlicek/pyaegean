@@ -116,7 +116,7 @@ release.
   (PROIEL annotates feature types the Perseus scheme lacks, and the 9-character
   AGDT positional tag doesn't exist there at all): a measurement boundary, not a
   model defect. Protocol notes:
-  [`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+  [Benchmarks](Benchmarks).
 
 The four undeciphered/partly-read scripts at a glance:
 
@@ -255,7 +255,7 @@ always reported together.
 The PROIEL UFeats/LAS figures are *measurement* boundaries, not model failures:
 PROIEL's UD conversion uses feature types and a relation scheme the Perseus
 training data doesn't share. Full tables and protocol:
-[`docs/benchmarks.md`](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md).
+[Benchmarks](Benchmarks).
 See [Greek NLP](Greek-NLP) for how to switch tiers.
 
 ---
