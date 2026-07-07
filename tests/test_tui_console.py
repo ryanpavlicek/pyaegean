@@ -59,6 +59,40 @@ def test_run_console_command_runs_a_real_offline_command() -> None:
     assert err.strip()  # some error text was captured, no exception
 
 
+def test_command_candidates_include_subcommands() -> None:
+    """Predictive completion must offer 'group sub' pairs, not only top-level commands. Typer's
+    TyperGroup is not a click.Group for isinstance, so the old check silently offered none of
+    them (greek scan, data fetch, ...)."""
+    from aegean.tui.screens.console import _build_group, _command_candidates
+
+    cands = _command_candidates(_build_group())
+    assert "quickstart" in cands  # top-level still present
+    assert "greek scan" in cands
+    assert "data fetch" in cands
+    assert "analyze clusters" in cands
+    # far more than the ~32 top-level commands, i.e. the subcommand pairs are included
+    assert len(cands) > 60
+
+
+def test_console_shows_the_command_menu_on_entry() -> None:
+    """Like `aegean repl`, the console prints the command map on entry so the hints are visible
+    up front, not only as ghost text once you start typing."""
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("console")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            svg = app.export_screenshot()
+            assert "quickstart" in svg
+            assert "greek" in svg
+
+    _run(body())
+
+
 def test_submitting_a_line_runs_a_worker_and_clears_the_input() -> None:
     async def body() -> None:
         app = AegeanApp()

@@ -66,14 +66,18 @@ def _build_group() -> Any:
 
 def _command_candidates(group: Any) -> list[str]:
     """Command-path candidates for the console's predictive completion: every top-level
-    command and every ``group sub`` pair, plus the shell-only directives."""
-    import click
+    command and every ``group sub`` pair, plus the shell-only directives.
+
+    Sub-groups are detected with the REPL's duck-typed ``_is_group`` (typer's ``TyperGroup``
+    is not a ``click.Group`` for ``isinstance``, so the old check silently offered no
+    subcommands — ``greek scan``, ``data fetch`` and the rest never completed)."""
+    from aegean.cli._repl import _is_group
 
     out: list[str] = []
     for name, cmd in sorted(group.commands.items()):
         out.append(name)
-        if isinstance(cmd, click.Group):
-            for sub in sorted(cmd.commands):
+        if _is_group(cmd):
+            for sub in sorted(getattr(cmd, "commands", {})):
                 out.append(f"{name} {sub}")
     out += ["use ", ":examples", ":help", ":exit"]
     return out
@@ -151,9 +155,12 @@ class CommandConsoleScreen(Screen[None]):
         inp = self.query_one("#console-input", Input)
         inp.suggester = SuggestFromList(_command_candidates(self._group), case_sensitive=False)
         log.write(
-            "aegean command console — any command (no 'aegean' prefix). Tab completes, ↑ recalls. "
-            "Try:  quickstart"
+            "aegean command console — type any command without the 'aegean' prefix. "
+            "Tab/→ completes · ↑/↓ history · :examples for starters · :help for this menu."
         )
+        # Show the command map on entry, exactly like `aegean repl` does, so the available
+        # commands are visible up front instead of only surfacing as you type.
+        self._dispatch_worker(":help")
         self.call_after_refresh(inp.focus)
 
     def on_screen_resume(self) -> None:
