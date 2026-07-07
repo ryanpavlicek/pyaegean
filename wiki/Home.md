@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.20.2 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.20.3 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -99,7 +99,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.20.2.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
+**Current release: v0.20.3.** pyaegean covers all four Aegean scripts and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
 `aegean-mcp` server, and a grounded multi-provider AI layer. The pages in the sidebar cover every

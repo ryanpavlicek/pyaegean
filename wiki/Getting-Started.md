@@ -113,7 +113,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.20.2 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.20.3 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code

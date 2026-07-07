@@ -4,6 +4,18 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.3 (2026-07-07)
+
+A TUI command-console input fix.
+
+### Fixed
+- **The TUI command console now captures every keystroke.** If focus ever drifted off the
+  prompt (a click on the output, or a terminal focus quirk), a bare letter fell through to a
+  global shortcut instead of being typed — pressing `q` quit the whole app. The prompt now
+  holds focus reliably (the output pane can no longer take it), and any stray key re-focuses
+  the prompt rather than triggering a shortcut, so typing a command always works. `Esc` still
+  leaves the console.
+
 ## 0.20.2 (2026-07-04)
 
 More follow-up fixes to the TUI, and a documentation ordering improvement.
