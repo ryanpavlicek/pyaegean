@@ -141,4 +141,4 @@ def test_aegean_load_nt_offline(monkeypatch: pytest.MonkeyPatch) -> None:
         raise DataNotAvailableError("simulated offline")
 
     monkeypatch.setattr(data, "fetch", _offline)
-    assert len(aegean.load("nt").documents) == 1  # bundled sample
+    assert len(aegean.load("nt").documents) == 2  # bundled sample: John 1 + Philemon 1

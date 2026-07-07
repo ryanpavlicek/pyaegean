@@ -817,7 +817,7 @@ def work(
     source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
     edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
     limit: int = typer.Option(
-        0, "--limit", help="With 'all': cap NEW downloads (0 = no cap)."
+        0, "--limit", "--top", help="With 'all': cap NEW downloads (0 = all)."
     ),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="With 'all': show what would be fetched; fetch nothing."
