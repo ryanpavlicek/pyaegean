@@ -17,7 +17,7 @@ import pytest
 
 pytest.importorskip("textual")
 
-from textual.widgets import DataTable, Input, Static  # noqa: E402
+from textual.widgets import Button, DataTable, Footer, Input, Static  # noqa: E402
 
 from aegean.tui import data as adapter  # noqa: E402
 from aegean.tui.app import AegeanApp, CorpusCommands  # noqa: E402
@@ -206,5 +206,30 @@ def test_enter_on_a_work_opens_it(monkeypatch: pytest.MonkeyPatch) -> None:
             screen.on_data_table_row_selected(types.SimpleNamespace())  # Enter delegates to open
             await pilot.pause()
             assert app.state.selected_corpus == "tlg0012.tlg001"
+
+    _run(body())
+
+
+def test_action_buttons_stay_on_screen_above_the_footer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The table must not over-expand and push the Fetch/Open buttons off the bottom of the
+    screen (under and below the Footer). The body fills the space and the buttons stay visible."""
+    monkeypatch.setattr(adapter, "catalog_rows",
+                        lambda *a, **k: [_row(f"tlg{i:04d}.tlg001") for i in range(200)])
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("works")
+            await pilot.pause()
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, WorksScreen)
+            fy = screen.query_one(Footer).region.y
+            for bid in ("works-fetch", "works-fetch-author", "works-open"):
+                r = screen.query_one(f"#{bid}", Button).region
+                assert r.height > 0
+                assert r.y + r.height - 1 < fy, f"{bid} is not above the footer (y={r.y}, footer={fy})"
+                assert r.y + r.height <= app.screen.size.height  # fully on screen
 
     _run(body())

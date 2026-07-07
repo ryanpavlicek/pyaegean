@@ -17,7 +17,7 @@ import pytest
 
 pytest.importorskip("textual")
 
-from textual.widgets import Input, RichLog  # noqa: E402
+from textual.widgets import Footer, Input, RichLog  # noqa: E402
 
 from aegean.tui.app import AegeanApp  # noqa: E402
 from aegean.tui.screens.console import (  # noqa: E402
@@ -157,6 +157,36 @@ def test_a_stray_key_refocuses_the_prompt_instead_of_quitting_the_app() -> None:
             await pilot.pause()
             assert inp.value == "quit"
             assert isinstance(app.screen, CommandConsoleScreen)
+
+    _run(body())
+
+
+def test_console_prompt_is_visible_above_the_footer() -> None:
+    """The prompt must occupy its own row strictly above the Footer and fit within the screen.
+
+    A bottom-docked prompt lands on the Footer's row, and the Footer paints over it, hiding the
+    cursor, the typed text, and the ghost completion — the input works but nothing is visible.
+    This pins the layout so that collision can't return, and confirms the prompt actually paints.
+    """
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.goto("console")
+            await pilot.pause()
+            await pilot.pause()
+            scr = app.screen
+            inp = scr.query_one("#console-input", Input)
+            foot = scr.query_one(Footer)
+            assert inp.region.y < foot.region.y  # prompt on its own row, above the footer
+            assert inp.region.x + inp.region.width <= scr.size.width  # no width overflow
+            assert app.focused is inp  # focused, so keystrokes land in it
+            await pilot.press("q", "u", "i", "c")
+            await pilot.pause()
+            svg = app.export_screenshot()
+            assert "aegean&gt;" in svg or "aegean>" in svg  # the prompt mark is painted
+            assert "quic" in svg  # the typed text is painted (not hidden under the footer)
 
     _run(body())
 

@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from textual import work
 from textual.app import ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Input, RichLog, Static
 
@@ -100,11 +100,17 @@ class CommandConsoleScreen(Screen[None]):
     # A prompt LINE, not a boxed form: the input is borderless with an "aegean>" mark, so
     # it reads like a shell. It gains predictive ghost-text completion (Tab/→ accepts) and
     # up/down history, the way the REPL feels.
+    # The log and the prompt live in one Vertical that fills the space between the Header and
+    # the Footer. The prompt must NOT be docked to the bottom: a bottom dock lands on the same
+    # row the Footer auto-docks to, and the Footer then paints over the input so the cursor,
+    # the typed text, and the ghost completion are all invisible. Inside the body the log takes
+    # the free space (1fr) and the prompt keeps its own one-row line just above the Footer.
     DEFAULT_CSS = """
+    #console-body { height: 1fr; }
     #console-log { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
-    #console-prompt { dock: bottom; height: 1; margin: 0 1; }
-    #console-prompt-mark { width: auto; padding: 0 1 0 0; color: $success; text-style: bold; }
-    #console-input { border: none; background: transparent; padding: 0; height: 1; }
+    #console-prompt { height: 1; width: 1fr; margin: 0 1; }
+    #console-prompt-mark { width: 8; padding: 0 1 0 0; color: $success; text-style: bold; }
+    #console-input { border: none; background: transparent; padding: 0; height: 1; width: 1fr; }
     """
 
     _history: list[str]
@@ -112,13 +118,14 @@ class CommandConsoleScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield RichLog(id="console-log", highlight=False, markup=False, wrap=True)
-        with Horizontal(id="console-prompt"):
-            yield Static("aegean>", id="console-prompt-mark")
-            yield Input(
-                placeholder="any command without 'aegean' (Tab/→ completes · ↑/↓ history · :examples)",
-                id="console-input",
-            )
+        with Vertical(id="console-body"):
+            yield RichLog(id="console-log", highlight=False, markup=False, wrap=True)
+            with Horizontal(id="console-prompt"):
+                yield Static("aegean>", id="console-prompt-mark")
+                yield Input(
+                    placeholder="any command without 'aegean' (Tab/→ completes · ↑/↓ history)",
+                    id="console-input",
+                )
         yield Footer()
 
     def on_mount(self) -> None:

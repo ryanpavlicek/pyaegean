@@ -289,3 +289,22 @@ def test_changing_meter_rescan_shows_error_for_hexameter_line() -> None:
             assert "trimeter" in content
 
     _run(body())
+
+
+def test_input_sits_below_the_header_not_on_top_of_it() -> None:
+    """The Greek input flows below the Header. Docking it to the top would land it on the
+    Header's row, and the Header would paint over the input's top border."""
+
+    async def body() -> None:
+        from textual.widgets import Header, Input
+
+        app = AegeanApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.press("g")
+            await pilot.pause()
+            header = app.screen.query_one(Header)
+            inp = app.screen.query_one("#greek-input", Input)
+            header_bottom = header.region.y + header.region.height - 1
+            assert inp.region.y > header_bottom  # strictly below the header, no overlap
+
+    _run(body())

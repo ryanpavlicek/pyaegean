@@ -60,15 +60,28 @@ DetailPane {
     width: 1fr;
 }
 
-/* Greek workbench: an input above the live tabs. */
+/* Greek workbench: an input above the live tabs. It flows in normal order below the
+   Header (not docked to the top, which would land on the Header's row and let the Header
+   paint over the input's top border). The tabs below fill the rest. */
 #greek-input {
-    dock: top;
     width: 100%;
     margin-bottom: 1;
 }
+#greek-tabs {
+    height: 1fr;
+}
 
-/* Data store: the doctor and dataset tables stacked. */
+/* Data store: the doctor and dataset tables stacked (auto height inside a scroll). */
 DataTable {
     height: auto;
+    max-height: 1fr;
+}
+
+/* Works library: the single table fills the body so the action buttons stay on screen
+   above the Footer. This id rule sits in the app tier so it wins over the DataTable rule
+   above (a screen DEFAULT_CSS rule would lose to it, leaving the table at auto height and
+   overflowing the buttons off the bottom). */
+#works-table {
+    height: 1fr;
     max-height: 1fr;
 }

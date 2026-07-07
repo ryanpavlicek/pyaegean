@@ -39,7 +39,11 @@ class WorksScreen(Screen[None]):
         ("r", "refresh", "Refresh"),
     ]
 
+    # The body fills the space between the Header and the Footer (height: 1fr). Without it the
+    # 1fr table over-expands past the bottom of the screen and pushes the action buttons off
+    # screen, under and below the Footer.
     DEFAULT_CSS = """
+    #works-body { height: 1fr; }
     #works-search { margin: 0 1; }
     #works-table { height: 1fr; }
     #works-actions { height: auto; }
