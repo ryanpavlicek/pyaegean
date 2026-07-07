@@ -4,6 +4,23 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.5 (2026-07-07)
+
+The TUI command console now shows the CLI hints the REPL shows.
+
+### Fixed
+- **Predictive completion now includes subcommands.** The ghost-text completion offered only
+  top-level commands: `greek scan`, `data fetch`, `analyze clusters` and the rest never
+  completed, because the sub-group check used `isinstance(cmd, click.Group)` and typer's
+  `TyperGroup` is not a `click.Group`. It now duck-types the same way the REPL completer does,
+  so typing `greek sc` suggests `greek scan`.
+
+### Changed
+- **The console prints the command map on entry**, exactly like `aegean repl`, so the available
+  commands are visible up front instead of only surfacing as you type. The intro line advertises
+  the directives: `Tab/→` completes, `↑/↓` recalls history, `:examples` prints starter lines,
+  `:help` reprints the menu.
+
 ## 0.20.4 (2026-07-07)
 
 Fixes for TUI layout collisions where widgets landed on the same row as the Header or Footer
