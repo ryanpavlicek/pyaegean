@@ -4,6 +4,23 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.20.4 (2026-07-07)
+
+Fixes for TUI layout collisions where widgets landed on the same row as the Header or Footer
+and were painted over.
+
+### Fixed
+- **The command console prompt is now visible.** It was docked to the bottom on the same row
+  the Footer occupies, so the Footer painted over it: the cursor, the typed text, and the ghost
+  completion were all hidden, even though the input was working. The prompt now sits on its own
+  row just above the Footer. (This completes the console fix begun in 0.20.3, which stopped a
+  stray key from quitting the app but left the prompt hidden.)
+- **The Works library action buttons are back on screen.** The table over-expanded and pushed
+  the "Fetch selected", "Fetch all by author", and "Open" buttons off the bottom of the screen,
+  below the Footer. The table now fills only the space above the buttons.
+- **The Greek workbench input no longer overlaps the header.** It was docked to the top on the
+  Header's row; it now flows just below the Header.
+
 ## 0.20.3 (2026-07-07)
 
 A TUI command-console input fix.
