@@ -114,7 +114,15 @@ from .lexicons import (
 from . import abbott_smith, scaife_lex  # noqa: F401  -- register the new lexica
 from .nt_eval import evaluate_on_nt
 from .pipeline import TokenRecord, pipeline
-from ..scripts.greek.perseus import catalog, load_work, popular_works
+from ..scripts.greek.perseus import (
+    GitHubRateLimitError,
+    WorkFetchResult,
+    catalog,
+    fetch_works,
+    list_fetched_works,
+    load_work,
+    popular_works,
+)
 from ..scripts.greek.nt import load_nt, nt_books
 from .prosody import scan, syllable_quantities
 from .meter import (
@@ -145,6 +153,10 @@ __all__ = [
     "load_work",
     "popular_works",
     "catalog",
+    "fetch_works",
+    "list_fetched_works",
+    "WorkFetchResult",
+    "GitHubRateLimitError",
     "load_nt",
     "nt_books",
     "use_dodson",

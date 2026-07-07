@@ -133,13 +133,13 @@ def _run_line(group: click.Group, line: str, session: _Session) -> bool:
             ":examples prints starter lines, :exit leaves.",
             file=sys.stderr,
         )
-        args = ["--help"]
-    else:
-        try:
-            args = shlex.split(line)
-        except ValueError as exc:  # unbalanced quotes etc.
-            print(f"aegean: {exc}", file=sys.stderr)
-            return True
+        _print_menu(group)
+        return True
+    try:
+        args = shlex.split(line)
+    except ValueError as exc:  # unbalanced quotes etc.
+        print(f"aegean: {exc}", file=sys.stderr)
+        return True
     if args and args[0] == "use":  # shell-only directive, never dispatched
         _handle_use(args[1:], session)
         return True
@@ -162,6 +162,16 @@ def _run_line(group: click.Group, line: str, session: _Session) -> bool:
         else:
             print(f"aegean: {exc}", file=sys.stderr)
     return True
+
+
+def _print_menu(group: click.Group) -> None:
+    """Render the root command map — the same output bare ``aegean`` (and ``aegean --help``)
+    show. Dispatched through the live group so it can never drift from the real command
+    surface; ``standalone_mode=False`` makes ``--help`` raise ``SystemExit``, which we swallow."""
+    try:
+        group.main(args=["--help"], prog_name="aegean", standalone_mode=False)
+    except SystemExit:
+        pass
 
 
 def _print_examples() -> None:
@@ -335,6 +345,7 @@ def _interactive_loop(group: click.Group, session: _Session) -> None:  # pragma:
         history=_history(), completer=_make_completer(cast(Any, group))
     )
     print(_BANNER, file=sys.stderr)
+    _print_menu(group)  # show the command map on entry, like bare `aegean`
     while True:
         try:
             line = prompt_session.prompt("aegean> ")

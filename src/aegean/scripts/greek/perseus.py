@@ -18,13 +18,17 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import urllib.error
 import urllib.request
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 from ...core.model import Document, DocumentMeta, Token
 from ...core.provenance import Provenance
-from ...data import cache_dir
+from ...data import DataNotAvailableError, FetchAborted, cache_dir
 
 if TYPE_CHECKING:
     from ...core.corpus import Corpus
@@ -50,6 +54,46 @@ _ENV_REF = {"perseus": "PYAEGEAN_GREEKLIT_REF", "first1k": "PYAEGEAN_FIRST1K_REF
 
 # subtrees that are editorial apparatus, not text, when flattening a line/block
 _SKIP_TAGS = {f"{_TEI}note", f"{_TEI}bibl", f"{_TEI}figDesc"}
+
+# The work id lives at the head of a cached edition filename
+# (``tlg0012.tlg001.perseus-grc2.xml`` -> ``tlg0012.tlg001``).
+_WORK_ID_FROM_FILE = re.compile(r"^(tlg\d+\.tlg\d+)", re.IGNORECASE)
+# Offline / bad-token fail-fast for the bulk loop: after this many works fail in a
+# row, stop rather than grind through hundreds of identical timeouts.
+_MAX_CONSECUTIVE_FAILURES = 3
+
+
+class GitHubRateLimitError(DataNotAvailableError):
+    """The unauthenticated GitHub contents API (~60 requests/hour) is exhausted.
+
+    Raised distinctly from a generic fetch failure so a bulk run can stop cleanly
+    instead of burning the next request. Set ``PYAEGEAN_GITHUB_TOKEN`` or
+    ``GITHUB_TOKEN`` to raise the limit to 5,000/hour."""
+
+
+@dataclass(frozen=True)
+class WorkFetchResult:
+    """One work's outcome in a bulk fetch: ``status`` is ``"fetched"`` (downloaded
+    now), ``"cached"`` (already on disk, no network), or ``"failed"`` (``error``
+    holds why). A dataclass so the CLI ``--json`` path serialises it directly."""
+
+    id: str
+    author: str
+    title: str
+    status: str
+    error: str | None = None
+
+
+def _rate_limit_message(reset: str | None) -> str:
+    when = ""
+    if reset and reset.isdigit():
+        import time
+
+        when = " (resets ~" + time.strftime("%H:%M", time.localtime(int(reset))) + ")"
+    return (
+        "GitHub API rate limit reached" + when + ". The unauthenticated limit is ~60 "
+        "requests/hour; set PYAEGEAN_GITHUB_TOKEN or GITHUB_TOKEN to raise it to 5,000/hour."
+    )
 
 
 def _ref(source: str) -> str:
@@ -87,8 +131,19 @@ def _github_listing(repo: str, path: str, ref: str) -> list[str]:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        entries = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            entries = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # GitHub signals an exhausted rate limit with 403 + X-RateLimit-Remaining: 0.
+        if exc.code == 403 and (
+            exc.headers.get("X-RateLimit-Remaining") == "0"
+            or "rate limit" in (exc.reason or "").lower()
+        ):
+            raise GitHubRateLimitError(
+                _rate_limit_message(exc.headers.get("X-RateLimit-Reset"))
+            ) from exc
+        raise
     names = [e["name"] for e in entries]
     cache_file.parent.mkdir(parents=True, exist_ok=True)
     cache_file.write_text(json.dumps(names), encoding="utf-8")
@@ -112,7 +167,7 @@ def pick_edition(names: list[str], edition: str | None = None) -> str | None:
 
 def _fetch_xml(work: str, source: str, edition: str | None, force: bool) -> tuple[bytes, str, str]:
     """Download (or reuse) the work's TEI file; returns (bytes, source, filename)."""
-    from ...data import DataNotAvailableError, download_file
+    from ...data import download_file
 
     tried: list[str] = []
     sources = [source] if source in _SOURCES else list(_SOURCES)
@@ -121,6 +176,10 @@ def _fetch_xml(work: str, source: str, edition: str | None, force: bool) -> tupl
         ref = _ref(src)
         try:
             names = _github_listing(repo, _work_dir(work), ref)
+        except GitHubRateLimitError:
+            # A rate limit is global — retrying the other source would waste another
+            # request and every remaining work would fail identically. Stop now.
+            raise
         except Exception as exc:
             tried.append(f"{src}: {exc}")
             continue
@@ -513,3 +572,96 @@ def catalog(
         return True
 
     return [dict(w) for w in works if keep(w)]
+
+
+def list_fetched_works() -> list[dict[str, Any]]:
+    """Which Greek works are already downloaded to the cache — a pure local scan, no network.
+
+    Walks ``cache_dir()/greek-works/<source>/<commit>/*.xml``, recovers each CTS id from the
+    edition filename (``tlg0012.tlg001.perseus-grc2.xml`` -> ``tlg0012.tlg001``), and joins the
+    bundled catalogue for author/title. Returns ``[{'id','author','title','source','path','bytes'}]``
+    sorted by id (one entry per work, even if present under several sources/commits); ``[]`` when
+    nothing is cached. Ignores the ``listings/`` cache and any ``.part``/``.lock`` files."""
+    root = cache_dir() / "greek-works"
+    if not root.exists():
+        return []
+    by_id = {w["id"]: w for w in _catalogue()}
+    seen: dict[str, dict[str, Any]] = {}
+    for source_dir in sorted(root.iterdir()):
+        if not source_dir.is_dir() or source_dir.name == "listings":
+            continue
+        for commit_dir in sorted(source_dir.iterdir()):
+            if not commit_dir.is_dir():
+                continue
+            for xml in sorted(commit_dir.glob("*.xml")):
+                match = _WORK_ID_FROM_FILE.match(xml.name)
+                if match is None:
+                    continue
+                work_id = match.group(1)
+                if work_id in seen:
+                    continue
+                meta = by_id.get(work_id, {})
+                seen[work_id] = {
+                    "id": work_id,
+                    "author": meta.get("author", ""),
+                    "title": meta.get("title", ""),
+                    "source": source_dir.name,
+                    "path": str(xml),
+                    "bytes": xml.stat().st_size,
+                }
+    return sorted(seen.values(), key=lambda w: w["id"])
+
+
+def fetch_works(
+    author: str | None = None,
+    *,
+    works: list[dict[str, str]] | None = None,
+    source: str | None = None,
+    force: bool = False,
+    limit: int | None = None,
+    on_progress: Callable[[int, int, dict[str, str]], None] | None = None,
+    abort: Callable[[], bool] | None = None,
+) -> Iterator[WorkFetchResult]:
+    """Fetch every catalogue work matching ``author`` into the cache, yielding a
+    :class:`WorkFetchResult` per work as it completes.
+
+    Shared by the CLI (``greek work all``) and the TUI works screen. ``works`` overrides the
+    catalogue query (pass a pre-filtered list). Already-cached works are yielded ``"cached"`` with
+    no network, so re-running resumes idempotently. ``on_progress(i, total, work)`` fires BEFORE
+    each work (a UI "downloading…" cue). ``limit`` caps NEW downloads (cached works do not count).
+    ``abort()`` is polled between works.
+
+    Terminal conditions raise, so the caller learns why the batch stopped:
+    :class:`GitHubRateLimitError` (API exhausted), :class:`aegean.data.FetchAborted` (aborted), or
+    :class:`aegean.data.DataNotAvailableError` (stopped after too many consecutive failures)."""
+    items = works if works is not None else catalog(author=author, source=source)
+    total = len(items)
+    fetched_ids = {w["id"] for w in list_fetched_works()}
+    attempted = 0
+    consecutive_failures = 0
+    for i, work in enumerate(items, start=1):
+        if abort is not None and abort():
+            raise FetchAborted("bulk fetch canceled")
+        if on_progress is not None:
+            on_progress(i, total, work)
+        wid, wauthor, wtitle = work["id"], work.get("author", ""), work.get("title", "")
+        if not force and wid in fetched_ids:
+            yield WorkFetchResult(wid, wauthor, wtitle, "cached")
+            continue
+        if limit is not None and attempted >= limit:
+            return  # the NEW-download cap is reached; stop cleanly
+        attempted += 1
+        try:
+            load_work(wid, source=source or "auto", force=force)
+            consecutive_failures = 0
+            yield WorkFetchResult(wid, wauthor, wtitle, "fetched")
+        except GitHubRateLimitError:
+            raise  # global — stop the whole batch
+        except Exception as exc:  # noqa: BLE001 — this work only; keep going
+            consecutive_failures += 1
+            yield WorkFetchResult(wid, wauthor, wtitle, "failed", str(exc))
+            if consecutive_failures >= _MAX_CONSECUTIVE_FAILURES:
+                raise DataNotAvailableError(
+                    f"stopped after {consecutive_failures} consecutive failures — check your "
+                    "connection, or set PYAEGEAN_GITHUB_TOKEN"
+                ) from exc

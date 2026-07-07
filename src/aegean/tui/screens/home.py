@@ -32,12 +32,14 @@ _BANNER = (
 )
 
 _KEYS = (
-    "keys:  c corpus   g Greek   d data   h home   ? help   ctrl+p commands   q quit"
+    "keys:  c corpus   g Greek   w works   d data   : console   t theme   "
+    "Esc back   ? help   ctrl+p commands   q quit"
 )
 
 _INTRO = (
     "pyaegean — Ancient Greek and the Aegean syllabic scripts. Browse the corpora "
-    "below, or press a key to jump to the Greek workbench or the data store."
+    "below, jump to the Greek workbench, fetch and read Greek works in the works "
+    "library (w), or run any command in the console (:)."
 )
 
 

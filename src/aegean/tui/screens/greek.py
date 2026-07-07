@@ -23,6 +23,8 @@ token of the input (syllabification is a per-word operation).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.screen import Screen
@@ -38,6 +40,9 @@ from textual.widgets import (
 
 from .. import data as adapter
 
+if TYPE_CHECKING:
+    from textual.timer import Timer
+
 __all__ = ["GreekWorkbenchScreen"]
 
 _PLACEHOLDER = "type Greek, e.g. μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
@@ -48,6 +53,12 @@ _METERS: tuple[tuple[str, str], ...] = (
     ("hexameter", "hexameter"),
     ("pentameter", "pentameter"),
     ("trimeter", "trimeter"),
+)
+
+# The reconstruction periods the IPA tab offers (Attic 5th c. vs Koine).
+_PERIODS: tuple[tuple[str, str], ...] = (
+    ("Attic", "attic"),
+    ("Koine", "koine"),
 )
 
 # Shown in each tab before anything is typed.
@@ -81,6 +92,14 @@ class GreekWorkbenchScreen(Screen[None]):
             with TabPane("syllables", id="tab-syllables"):
                 yield Static(_EMPTY_HINT, id="greek-syllables")
             with TabPane("IPA", id="tab-ipa"):
+                with Horizontal(id="greek-period-row"):
+                    yield Static("period:", id="greek-period-label")
+                    yield Select(
+                        _PERIODS,
+                        value="attic",
+                        allow_blank=False,
+                        id="greek-period",
+                    )
                 yield Static(_EMPTY_HINT, id="greek-ipa")
         yield Footer()
 
@@ -96,22 +115,37 @@ class GreekWorkbenchScreen(Screen[None]):
         return str(value) if value is not Select.BLANK else "hexameter"
 
     @property
+    def _period(self) -> str:
+        """The reconstruction period chosen in the IPA selector."""
+        value = self.query_one("#greek-period", Select).value
+        return str(value) if value is not Select.BLANK else "attic"
+
+    @property
     def _text(self) -> str:
         """The current input text."""
         return self.query_one("#greek-input", Input).value
 
     # ── live updates ────────────────────────────────────────────────────────
+    _debounce: "Timer | None" = None
+
     def action_focus_input(self) -> None:
         """Focus the text input (the ``/`` binding)."""
         self.query_one("#greek-input", Input).focus()
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """Re-render every tab as the line changes (each backend is instant)."""
-        self._refresh_all(event.value)
+        """Re-render every tab as the line changes, coalescing keystrokes with a short
+        debounce so a fast typist doesn't re-run all four backends per character."""
+        text = event.value
+        if self._debounce is not None:
+            self._debounce.stop()
+        self._debounce = self.set_timer(0.12, lambda: self._refresh_all(text))
 
     def on_select_changed(self, event: Select.Changed) -> None:
-        """Re-scan when the meter selector changes."""
-        self._render_scansion(self._text)
+        """Re-render the tab whose selector changed (meter -> scansion, period -> IPA)."""
+        if event.select.id == "greek-meter":
+            self._render_scansion(self._text)
+        elif event.select.id == "greek-period":
+            self._render_ipa(self._text)
 
     def _refresh_all(self, text: str) -> None:
         self._render_pipeline(text)
@@ -168,7 +202,7 @@ class GreekWorkbenchScreen(Screen[None]):
         if not text.strip():
             target.update(_EMPTY_HINT)
             return
-        result = adapter.greek_ipa(text, period="attic")
+        result = adapter.greek_ipa(text, period=self._period)
         if not result.ok:
             target.update(result.error)
             return

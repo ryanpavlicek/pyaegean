@@ -264,9 +264,14 @@ def test_cli_nt_unknown_book_did_you_mean(app):
     assert "nt-books" in msg
 
 
-def test_cli_nt_summary_ends_with_read_it_hint(app):
+def test_cli_nt_named_book_renders_the_passage_text(app):
+    # A named book now reads the text (verse-numbered), not just a summary.
     out = ok(app, "greek", "nt", "Philemon")
-    assert 'read it:  aegean show nt "Phlm 1"' in out
+    assert "Παῦλος" in out  # Philemon opens with Παῦλος
+    assert "1:" in out       # verse-numbered lines
+    # and a chapter range is accepted as a positional
+    ranged = ok(app, "greek", "nt", "Philemon", "1")
+    assert "Παῦλος" in ranged
 
 
 def test_cli_nt_output_dispatches_by_extension(app, tmp_path):
@@ -375,3 +380,39 @@ def test_help_renders_extra_names_literally(app):
     assert "[neural]" in res.output
     res = runner.invoke(app, ["greek", "usage", "--help"], env={"COLUMNS": "200"})
     assert "fetches the LSJ index on first use" in res.output
+
+
+# ── greek work all / works --downloaded (0.20.0) ─────────────────────────────
+def test_cli_work_all_dry_run_json(app):
+    d = json.loads(ok(app, "greek", "work", "all", "homer", "--dry-run", "--json"))
+    assert d["mode"] == "all" and d["matched"] > 0 and d["dry_run"] is True
+    assert all(w["status"] in ("cached", "pending") for w in d["works"])
+
+
+def test_cli_work_all_no_match_json(app):
+    d = json.loads(ok(app, "greek", "work", "all", "zzzznope", "--json"))
+    assert d["matched"] == 0 and d["works"] == []
+
+
+def test_cli_work_all_summary_shape(app, monkeypatch):
+    import aegean.greek as g
+    from aegean.greek import WorkFetchResult
+
+    def fake(author=None, *, works=None, source=None, force=False, limit=None,
+             on_progress=None, abort=None):
+        yield WorkFetchResult("tlg0012.tlg001", "Homer", "Iliad", "cached")
+        yield WorkFetchResult("tlg0012.tlg002", "Homer", "Odyssey", "fetched")
+
+    monkeypatch.setattr(g, "fetch_works", fake)
+    d = json.loads(ok(app, "greek", "work", "all", "homer", "--json", "--yes"))
+    assert {"mode", "matched", "fetched", "cached", "failed", "stopped", "works"} <= set(d)
+    assert d["fetched"] == 1 and d["cached"] == 1
+
+
+def test_cli_work_rejects_second_positional_in_single_mode(app):
+    assert "only used with 'all'" in err(app, "greek", "work", "tlg0012.tlg001", "homer")
+
+
+def test_cli_works_downloaded_json(app):
+    d = json.loads(ok(app, "greek", "works", "--downloaded", "--json"))
+    assert "downloaded" in d and isinstance(d["downloaded"], list)

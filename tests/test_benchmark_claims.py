@@ -146,3 +146,24 @@ def test_limitations_offline_lemma_claim_matches_the_registry() -> None:
     claims = _claims()["offline_nt_lemma"]
     text = _read("wiki/Limitations.md")
     assert f"~{round(claims['lemma'])}%" in text  # "~66% on the full NT"
+
+
+def test_wiki_benchmarks_page_matches_the_registry() -> None:
+    """The public wiki Benchmarks page (which, per the 2026-07 convention override, may now
+    carry the cross-tool comparison tables) must keep every measured figure pinned to the
+    registry — the "accurate and factual" condition the override is granted under. Number drift
+    on that page is a test failure, exactly as for docs/benchmarks.md."""
+    claims = _claims()
+    page = _read("wiki/Benchmarks.md")
+    for metric, v in claims["neural_ud_perseus_test"].items():
+        if isinstance(v, float):
+            assert f"{v:.2f}" in page, f"Perseus {metric} {v} missing from wiki/Benchmarks.md"
+    for metric in ("lemma", "uas", "las", "upos", "ufeats"):
+        v = claims["neural_ud_proiel_test"][metric]
+        assert f"{v:.2f}" in page, f"PROIEL {metric} {v} missing from wiki/Benchmarks.md"
+    for fold in ("perseus_test", "proiel_test"):
+        for metric, v in claims["offline_baseline_ud"][fold].items():
+            assert f"{v:.2f}" in page, f"baseline {fold} {metric} {v} missing from wiki/Benchmarks.md"
+    assert f"{claims['neural_nt']['lemma']:.2f}" in page
+    assert f"{claims['neural_nt']['upos_reconciled']:.2f}" in page
+    assert f"~{round(claims['offline_nt_lemma']['lemma'])}%" in page  # "~66% on the full NT"

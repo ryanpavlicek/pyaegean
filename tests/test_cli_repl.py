@@ -240,3 +240,19 @@ def test_repl_history_falls_back_when_unwritable(tmp_path, monkeypatch):  # type
     blocker.write_text("a file, not a directory", encoding="utf-8")
     monkeypatch.setenv("XDG_CONFIG_HOME", str(blocker / "config"))
     assert isinstance(repl_mod._history(), InMemoryHistory)  # the shell still starts
+
+
+def test_repl_menu_helper_renders_the_command_map(capsys) -> None:  # type: ignore[no-untyped-def]
+    """`_print_menu` renders the same root command map bare `aegean` shows, so `aegean repl`
+    can present it on startup and `:help` can reprint it."""
+    import typer
+
+    from aegean.cli import _build_app
+    from aegean.cli._repl import _print_menu
+
+    group = typer.main.get_command(_build_app())
+    _print_menu(group)
+    out = capsys.readouterr().out
+    assert "Commands" in out
+    for name in ("greek", "analyze", "data", "db", "ai"):
+        assert name in out

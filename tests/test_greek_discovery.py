@@ -61,3 +61,22 @@ def test_cli_works_json() -> None:
     assert r.exit_code == 0, r.output
     data = json.loads(r.stdout)
     assert any(w["title"] == "Iliad" for w in data)
+
+
+def test_resolve_documents_expands_a_chapter_range() -> None:
+    """The show/nt chapter-range logic: 'Matt 1-3' -> the Matt 1..3 documents in order,
+    a dotted id resolves, a plain id yields one, and no match yields an empty list."""
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
+    from aegean.core.resolve import resolve_documents
+
+    docs = [
+        Document(id=f"Matt {n}", script_id="greek",
+                 tokens=[Token("x", TokenKind.WORD, position=0)], lines=[[0]])
+        for n in (1, 2, 3, 4)
+    ]
+    corpus = Corpus(docs, script_id="greek")
+    assert [d.id for d in resolve_documents(corpus, "Matt 1-3")] == ["Matt 1", "Matt 2", "Matt 3"]
+    assert [d.id for d in resolve_documents(corpus, "Matt.2")] == ["Matt 2"]  # dot-fold
+    assert [d.id for d in resolve_documents(corpus, "Matt 4")] == ["Matt 4"]  # plain id
+    assert resolve_documents(corpus, "Mark 9") == []  # no such document

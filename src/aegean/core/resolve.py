@@ -76,8 +76,42 @@ def resolve_document(corpus: "Corpus", doc_id: str) -> "tuple[Document | None, l
     folded = [d for d in corpus if _fold(d.id) == _fold(doc_id)]
     if len(folded) == 1:
         return folded[0], []
+    # dot-insensitive fallback, so a dotted NT reference resolves to its space form
+    # (``Matt.1`` -> ``Matt 1``). Only accepted when it is unique, so it can't guess.
+    def _fold_dots(s: str) -> str:
+        return _fold(s).replace(".", "")
+
+    dotted = [d for d in corpus if _fold_dots(d.id) == _fold_dots(doc_id)]
+    if len(dotted) == 1:
+        return dotted[0], []
     near = sorted({d.id for d in corpus if _fold(doc_id) and _fold(doc_id) in _fold(d.id)})[:5]
     return None, near
+
+
+def resolve_documents(corpus: "Corpus", doc_id: str) -> "list[Document]":
+    """Resolve a document id, OR a ``prefix lo-hi`` chapter range, to the matching documents.
+
+    A plain id (or forgiving variant) returns the single matching document. A range like
+    ``"Matt 1-3"`` expands to the documents ``"Matt 1"``, ``"Matt 2"``, ``"Matt 3"`` (each
+    resolved forgivingly), in order, keeping only those that exist. Returns ``[]`` when nothing
+    matches — the caller then reports the friendly did-you-mean via :func:`resolve_document`."""
+    import re
+
+    doc, _near = resolve_document(corpus, doc_id)
+    if doc is not None:
+        return [doc]
+    match = re.match(r"^(.*?)\s*(\d+)\s*-\s*(\d+)$", doc_id.strip())
+    if match is not None:
+        prefix, lo, hi = match.group(1).strip(), int(match.group(2)), int(match.group(3))
+        if lo <= hi:
+            out: list[Document] = []
+            for n in range(lo, hi + 1):
+                part, _ = resolve_document(corpus, f"{prefix} {n}".strip())
+                if part is not None:
+                    out.append(part)
+            if out:
+                return out
+    return []
 
 
 def read_corpus(spec: str) -> "Corpus":

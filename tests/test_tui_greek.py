@@ -67,10 +67,13 @@ def test_pinned_strings_match_live_adapter() -> None:
 
 
 async def _type(pilot, widget_id: str, text: str) -> None:
-    """Focus an input and set its value, then let the change handlers run."""
+    """Focus an input and set its value, then let the change handlers run.
+
+    The greek workbench debounces input by 0.12 s (so a fast typist doesn't re-run
+    every backend per keystroke), so wait past the debounce for the render to land."""
     inp = pilot.app.screen.query_one(widget_id)
     inp.value = text
-    await pilot.pause()
+    await pilot.pause(0.2)
 
 
 def test_scansion_tab_shows_known_iliad_pattern() -> None:

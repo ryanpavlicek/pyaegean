@@ -129,11 +129,16 @@ class CorpusBrowserScreen(Screen[None]):
             self._open_corpus(corpus_id)
 
     def _open_corpus(self, corpus_id: str) -> None:
-        """Load ``corpus_id`` into the document table (or show a clean error)."""
+        """Load ``corpus_id`` into the document table (or show a clean error).
+
+        Resolves via :func:`~aegean.tui.data.read_corpus_spec`, so besides the eight
+        registered corpora this also opens a fetched Greek work id (``tlg0012.tlg001``)
+        or a ``.json``/``.db`` file, the same superset the CLI accepts."""
         status = self.query_one("#corpus-status", Static)
         detail = self.query_one("#corpus-detail", DetailPane)
+        status.update(f"loading {corpus_id}…")
         try:
-            self._corpus = adapter.load_corpus(corpus_id)
+            self._corpus = adapter.read_corpus_spec(corpus_id)
             self._all_rows = adapter.document_rows(self._corpus)
         except adapter.TuiError as exc:
             self._corpus = None

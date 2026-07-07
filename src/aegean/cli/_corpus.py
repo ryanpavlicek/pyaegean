@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -264,35 +265,44 @@ def show(
     ),
     json_out: bool = JSON_OPT,
 ) -> None:
-    """Display one document: metadata and line-by-line tokens."""
+    """Display one document, or a chapter range like "Matt 1-3": metadata and line-by-line tokens."""
+    from aegean.core.resolve import resolve_documents
+
     c = load_corpus(corpus)
-    doc = resolve_doc(c, corpus, doc_id)
-    lines = [[doc.tokens[i].text for i in line] for line in doc.lines]
-    if json_out:
-        emit_json(
-            {
-                "id": doc.id,
-                "script": doc.script_id,
-                "meta": {
-                    "site": doc.meta.site, "period": doc.meta.period,
-                    "scribe": doc.meta.scribe, "support": doc.meta.support,
-                    "findspot": doc.meta.findspot, "name": doc.meta.name,
-                },
-                "lines": lines,
-            }
-        )
+    docs = resolve_documents(c, doc_id)
+    if not docs:
+        resolve_doc(c, corpus, doc_id)  # no match: raise the friendly did-you-mean and exit
         return
-    meta_bits = [
-        f"{k}={v}"
-        for k, v in (
-            ("site", doc.meta.site), ("period", doc.meta.period),
-            ("scribe", doc.meta.scribe), ("support", doc.meta.support),
-        )
-        if v
-    ]
-    console().print(f"{doc.id}  {'  '.join(meta_bits)}", style="bold", markup=False)
-    for n, line in enumerate(lines, 1):
-        console().print(f"  {n}: {' '.join(line)}", markup=False)
+
+    def _doc_json(doc: Any) -> dict[str, Any]:
+        return {
+            "id": doc.id,
+            "script": doc.script_id,
+            "meta": {
+                "site": doc.meta.site, "period": doc.meta.period,
+                "scribe": doc.meta.scribe, "support": doc.meta.support,
+                "findspot": doc.meta.findspot, "name": doc.meta.name,
+            },
+            "lines": [[doc.tokens[i].text for i in line] for line in doc.lines],
+        }
+
+    if json_out:
+        payload = [_doc_json(d) for d in docs]
+        emit_json(payload[0] if len(payload) == 1 else {"documents": payload})
+        return
+    for doc in docs:
+        lines = [[doc.tokens[i].text for i in line] for line in doc.lines]
+        meta_bits = [
+            f"{k}={v}"
+            for k, v in (
+                ("site", doc.meta.site), ("period", doc.meta.period),
+                ("scribe", doc.meta.scribe), ("support", doc.meta.support),
+            )
+            if v
+        ]
+        console().print(f"{doc.id}  {'  '.join(meta_bits)}", style="bold", markup=False)
+        for n, line in enumerate(lines, 1):
+            console().print(f"  {n}: {' '.join(line)}", markup=False)
 
 
 def search(

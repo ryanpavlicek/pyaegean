@@ -61,6 +61,15 @@ __all__ = [
     "greek_ipa",
     "doctor_report",
     "fetch_dataset",
+    "read_corpus_spec",
+    "WorkRow",
+    "catalog_rows",
+    "fetched_work_ids",
+    "fetch_work",
+    "fetch_author_works",
+    "config_path",
+    "load_tui_config",
+    "save_tui_config",
 ]
 
 
@@ -547,3 +556,177 @@ def fetch_dataset(
     if on_progress is not None:
         on_progress(f"stored {name}")
     return path
+
+
+# ── Greek work library (fetch + read individual works, distinct from datasets) ──
+
+
+def read_corpus_spec(spec: str) -> "Corpus":
+    """Load any corpus spec — a registered id, a Greek work id (``tlg0012.tlg001``), or a
+    ``.json``/``.db`` file — re-raising failures as a clean :class:`TuiError`.
+
+    A superset of :func:`load_corpus` (registered ids only): this is how the corpus browser
+    opens a fetched Greek work or a saved file. The eight registered corpora resolve identically."""
+    from ..core.resolve import CorpusNotFound, read_corpus
+
+    try:
+        return read_corpus(spec)
+    except (CorpusNotFound, KeyError):
+        raise TuiError(f"no corpus {spec!r}") from None
+    except Exception as exc:  # network / parse failure on a fetch-on-demand work
+        raise TuiError(f"could not load {spec!r}: {exc}") from None
+
+
+@dataclass(frozen=True)
+class WorkRow:
+    """One Greek work in the library table: catalogue metadata plus whether it is already
+    fetched to the cache (and its on-disk size when so)."""
+
+    id: str
+    author: str
+    title: str
+    greek_title: str
+    source: str
+    fetched: bool
+    bytes: int | None
+
+
+def _fetched_works() -> list[dict[str, Any]]:
+    from ..greek import list_fetched_works
+
+    return list_fetched_works()
+
+
+def fetched_work_ids() -> list[str]:
+    """The CTS ids of every Greek work already downloaded to the cache (a local scan)."""
+    return [w["id"] for w in _fetched_works()]
+
+
+def catalog_rows(
+    query: str | None = None,
+    *,
+    author: str | None = None,
+    title: str | None = None,
+    source: str | None = None,
+) -> list[WorkRow]:
+    """The Greek-work catalogue as :class:`WorkRow`s, each flagged with its fetched state.
+
+    Case-insensitive substring filtering (the library ``catalog`` already ANDs the filters).
+    The screen renders a capped slice; the full match list is returned so it can show the count."""
+    from ..greek import catalog
+
+    fetched = {w["id"]: w for w in _fetched_works()}
+    out: list[WorkRow] = []
+    for w in catalog(query, author=author, title=title, source=source):
+        hit = fetched.get(w["id"])
+        out.append(
+            WorkRow(
+                id=w["id"], author=w.get("author", ""), title=w.get("title", ""),
+                greek_title=w.get("greek_title", ""), source=w.get("source", ""),
+                fetched=hit is not None, bytes=(hit["bytes"] if hit else None),
+            )
+        )
+    return out
+
+
+def fetch_work(
+    work_id: str,
+    on_progress: Callable[[str], None] | None = None,
+    abort: Callable[[], bool] | None = None,
+) -> "Path":
+    """Fetch one Greek work into the cache (via ``load_work``); returns its cache path.
+
+    A screen runs this on a worker. ``abort`` is polled before the transfer (a single work is a
+    small TEI file, so cancellation is best-effort, not mid-chunk). Errors become :class:`TuiError`."""
+    from pathlib import Path
+
+    from ..data import DataNotAvailableError, FetchAborted
+    from ..greek import list_fetched_works, load_work
+
+    if abort is not None and abort():
+        raise FetchCanceled(f"fetch of {work_id} canceled")
+    if on_progress is not None:
+        on_progress(f"fetching {work_id}…")
+    try:
+        load_work(work_id)
+    except FetchAborted:
+        raise FetchCanceled(f"fetch of {work_id} canceled (partial download kept)") from None
+    except DataNotAvailableError as exc:
+        raise TuiError(str(exc)) from None
+    except Exception as exc:  # network / parse failure
+        raise TuiError(f"could not fetch {work_id!r}: {exc}") from None
+    path = next((Path(w["path"]) for w in list_fetched_works() if w["id"] == work_id), None)
+    if path is None:
+        raise TuiError(f"fetched {work_id} but could not locate it in the cache")
+    if on_progress is not None:
+        on_progress(f"stored {work_id}")
+    return path
+
+
+def fetch_author_works(
+    author: str,
+    *,
+    source: str = "auto",
+    on_progress: Callable[[str], None] | None = None,
+    abort: Callable[[], bool] | None = None,
+) -> list[str]:
+    """Fetch every catalogue work by ``author`` into the cache; returns the ids present after.
+
+    Drives the shared ``fetch_works`` generator (idempotent — cached works are skipped), streaming
+    a per-work line through ``on_progress``. A rate limit or abort surfaces as :class:`TuiError` /
+    :class:`FetchCanceled` after the works already fetched are kept."""
+    from ..data import FetchAborted
+    from ..greek import GitHubRateLimitError, fetch_works
+
+    src = None if source == "auto" else source
+    done: list[str] = []
+
+    def progress(i: int, total: int, w: dict[str, str]) -> None:
+        if on_progress is not None:
+            on_progress(f"[{i}/{total}] {w['id']} ({w.get('title', '')})…")
+
+    try:
+        for res in fetch_works(author=author, source=src, on_progress=progress, abort=abort):
+            if res.status in ("fetched", "cached"):
+                done.append(res.id)
+    except FetchAborted:
+        raise FetchCanceled(f"fetch of {author!r} works canceled (fetched works kept)") from None
+    except GitHubRateLimitError as exc:
+        raise TuiError(str(exc)) from None
+    except Exception as exc:  # network / disk failure
+        raise TuiError(f"could not fetch works by {author!r}: {exc}") from None
+    return done
+
+
+# ── persisted TUI config (theme, …); a sibling of the REPL history file ──
+
+
+def config_path() -> "Path":
+    """The TUI config file: ``$XDG_CONFIG_HOME/pyaegean/tui.json`` (or ``~/.config/...``)."""
+    import os
+    from pathlib import Path
+
+    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
+    return Path(base) / "pyaegean" / "tui.json"
+
+
+def load_tui_config() -> dict[str, Any]:
+    """The persisted TUI config, or ``{}`` when missing/unreadable/invalid (never raises)."""
+    import json
+
+    try:
+        return dict(json.loads(config_path().read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_tui_config(data: dict[str, Any]) -> None:
+    """Persist the TUI config (best-effort — a write failure is swallowed, like the REPL history)."""
+    import json
+
+    path = config_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data), encoding="utf-8")
+    except OSError:
+        pass

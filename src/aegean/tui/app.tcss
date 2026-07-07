@@ -53,11 +53,6 @@ DetailPane {
     margin-bottom: 1;
 }
 
-#greek-summary {
-    color: $text-muted;
-    padding: 0 1;
-}
-
 /* Data store: the doctor and dataset tables stacked. */
 DataTable {
     height: auto;
