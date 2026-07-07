@@ -135,6 +135,11 @@ class WorksScreen(Screen[None]):
         elif event.button.id == "works-open":
             self.action_open_work()
 
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Enter on a highlighted work opens it — the same as the 'o' key (Enter is not
+        advertised as a separate binding, it just does the natural thing)."""
+        self.action_open_work()
+
     def action_focus_search(self) -> None:
         self.query_one("#works-search", Input).focus()
 

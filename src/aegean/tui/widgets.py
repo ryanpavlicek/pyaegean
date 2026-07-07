@@ -58,6 +58,14 @@ class CorpusList(ListView):
         child = self.highlighted_child
         return None if child is None else child.name
 
+    def highlight_id(self, corpus_id: str) -> None:
+        """Move the highlight to the list item for ``corpus_id`` (a no-op if it is not
+        listed), so the loaded corpus/work stays selected on the left."""
+        for i, child in enumerate(self.children):
+            if getattr(child, "name", None) == corpus_id:
+                self.index = i
+                return
+
 
 class DocTable(DataTable[str]):
     """A document table: id, site, period, words, and heuristic structure.

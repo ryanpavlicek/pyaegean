@@ -106,16 +106,27 @@ class CorpusBrowserScreen(Screen[None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.query_one("#corpus-list", CorpusList).set_corpora(adapter.list_corpora())
+        self._refresh_corpus_list()
         docs = self.query_one("#corpus-docs", DocTable)
         docs.cursor_type = "row"
         self._sync_to_state()
 
     def on_screen_resume(self) -> None:
         """Whenever the screen is shown again, reconcile with the shared
-        selection: a corpus opened from Home or the command palette while this
-        screen was hidden is loaded here on return."""
+        selection: a corpus opened from Home, the works library, or the command
+        palette while this screen was hidden is loaded here on return. The list is
+        rebuilt first so a work fetched since we mounted appears as its own item."""
+        self._refresh_corpus_list()
         self._sync_to_state()
+
+    def _refresh_corpus_list(self) -> None:
+        """List the registered corpora AND every downloaded Greek work, so an opened work
+        is a permanent, selectable menu item (not a transient load that vanishes when the
+        selection changes). Keep the highlight on the loaded corpus/work."""
+        corpus_list = self.query_one("#corpus-list", CorpusList)
+        corpus_list.set_corpora(list(adapter.list_corpora()) + adapter.fetched_work_entries())
+        if self._loaded_id is not None:
+            corpus_list.highlight_id(self._loaded_id)
 
     def _sync_to_state(self) -> None:
         """Load the shared-selected corpus if it differs from what is displayed."""
@@ -152,6 +163,7 @@ class CorpusBrowserScreen(Screen[None]):
             detail.update(_NO_CORPUS)
             return
         self._loaded_id = corpus_id
+        self.query_one("#corpus-list", CorpusList).highlight_id(corpus_id)
         self.query_one("#corpus-search", Input).value = ""
         self._render_rows(self._all_rows)
         status.update(f"{corpus_id}: {len(self._all_rows)} documents")

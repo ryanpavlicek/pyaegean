@@ -65,6 +65,7 @@ __all__ = [
     "WorkRow",
     "catalog_rows",
     "fetched_work_ids",
+    "fetched_work_entries",
     "fetch_work",
     "fetch_author_works",
     "config_path",
@@ -600,6 +601,23 @@ def _fetched_works() -> list[dict[str, Any]]:
 def fetched_work_ids() -> list[str]:
     """The CTS ids of every Greek work already downloaded to the cache (a local scan)."""
     return [w["id"] for w in _fetched_works()]
+
+
+def fetched_work_entries() -> list[CorpusEntry]:
+    """Every downloaded Greek work as a :class:`CorpusEntry`, so the corpus browser can list
+    them alongside the registered corpora — a fetched work is a permanent, selectable corpus,
+    not a transient one. Blurb is ``author — title (Greek work)``; always on disk, never
+    undeciphered."""
+    entries: list[CorpusEntry] = []
+    for w in _fetched_works():
+        label = f"{w['author']} — {w['title']}".strip(" —") or w["id"]
+        entries.append(
+            CorpusEntry(
+                id=w["id"], blurb=f"{label} (Greek work)",
+                downloaded=True, bundled=False, undeciphered=False,
+            )
+        )
+    return entries
 
 
 def catalog_rows(

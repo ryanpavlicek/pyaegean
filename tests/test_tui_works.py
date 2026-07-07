@@ -177,3 +177,34 @@ def test_palette_offers_the_works_library_and_open_work(monkeypatch: pytest.Monk
             assert any("Open work tlg0012.tlg001" in label for label in labels)
 
     _run(body())
+
+
+def test_enter_on_a_work_opens_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Enter (DataTable RowSelected) on a fetched work opens it, the same as the 'o' key."""
+    import types
+
+    monkeypatch.setattr(adapter, "catalog_rows",
+                        lambda *a, **k: [_row("tlg0012.tlg001", fetched=True)])
+
+    def fake_spec(spec):  # type: ignore[no-untyped-def]
+        import aegean
+
+        return aegean.load("lineara")
+
+    monkeypatch.setattr(adapter, "read_corpus_spec", fake_spec)
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 50)) as pilot:
+            await pilot.pause()
+            app.goto("works")
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, WorksScreen)
+            screen.query_one("#works-search", Input).value = "homer"
+            await pilot.pause()
+            screen.on_data_table_row_selected(types.SimpleNamespace())  # Enter delegates to open
+            await pilot.pause()
+            assert app.state.selected_corpus == "tlg0012.tlg001"
+
+    _run(body())

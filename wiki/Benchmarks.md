@@ -17,6 +17,24 @@ registry. See [Reproduce the numbers](#reproduce-the-numbers) below to run any o
 them yourself, and [Where this lives](#where-this-lives-canonical-source) for how a
 number is allowed to change.
 
+## What the metrics mean
+
+All are percentages against the human-annotated gold: higher is better.
+
+- **UPOS**: Universal Part Of Speech, the basic word class (noun, verb, adjective,
+  preposition, ...) from UD's 17-tag set.
+- **XPOS**: the language-specific part-of-speech tag, the treebank's own finer-grained
+  tagset. Not comparable across treebanks with different tagsets, so it is sometimes
+  marked n/a.
+- **UFeats**: Universal Features, the full morphology (case, number, gender, tense,
+  mood, voice, person). A word counts only if *every* feature is right, so this is the
+  strictest word-level tag.
+- **Lemma**: the dictionary/citation form (`λέγει` → `λέγω`, `ἀνθρώπους` → `ἄνθρωπος`).
+- **UAS**: Unlabeled Attachment Score, the fraction of words hooked to the correct
+  syntactic parent.
+- **LAS**: Labeled Attachment Score, UAS where the link must *also* carry the right
+  relation label. The usual headline number for parsing quality.
+
 ## The neural pipeline (shipped)
 
 The shipped joint model (`grc-joint-v3`) is one GreBerta-encoder checkpoint serving
@@ -183,24 +201,6 @@ keep the neural pipeline's numbers honest:
 One caveat applies only to the pure-Python baseline, not the neural pipeline: its
 lookup and models are built from the *full* AGDT, which contains the UD-Perseus test
 sentences, so its Perseus-fold scores are an in-training upper bound (marked ⚠ above).
-
-### What the metrics mean
-
-All are percentages against the human-annotated gold: higher is better.
-
-- **UPOS**: Universal Part Of Speech, the basic word class (noun, verb, adjective,
-  preposition, ...) from UD's 17-tag set.
-- **XPOS**: the language-specific part-of-speech tag, the treebank's own finer-grained
-  tagset. Not comparable across treebanks with different tagsets, so it is sometimes
-  marked n/a.
-- **UFeats**: Universal Features, the full morphology (case, number, gender, tense,
-  mood, voice, person). A word counts only if *every* feature is right, so this is the
-  strictest word-level tag.
-- **Lemma**: the dictionary/citation form (`λέγει` → `λέγω`, `ἀνθρώπους` → `ἄνθρωπος`).
-- **UAS**: Unlabeled Attachment Score, the fraction of words hooked to the correct
-  syntactic parent.
-- **LAS**: Labeled Attachment Score, UAS where the link must *also* carry the right
-  relation label. The usual headline number for parsing quality.
 
 ## Cross-tool comparison (with citations)
 

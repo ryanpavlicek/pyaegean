@@ -379,3 +379,36 @@ def test_reader_pane_is_a_scroll_container_reachable_by_tab() -> None:
             assert app.focused is reader
 
     _run(body())
+
+
+def test_fetched_works_are_permanent_items_in_the_corpus_list(monkeypatch) -> None:
+    """A downloaded work is its own selectable list item (not a transient load): it appears
+    in the left list, loads when opened, and stays highlighted."""
+    from aegean.tui import data as adapter
+    from aegean.tui.data import CorpusEntry
+
+    monkeypatch.setattr(adapter, "fetched_work_entries", lambda: [
+        CorpusEntry(id="tlg0012.tlg001", blurb="Homer — Iliad (Greek work)",
+                    downloaded=True, bundled=False, undeciphered=False)])
+
+    def fake_spec(spec):  # type: ignore[no-untyped-def]
+        import aegean
+
+        return aegean.load("lineara")
+
+    monkeypatch.setattr(adapter, "read_corpus_spec", fake_spec)
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.open_corpus("tlg0012.tlg001")  # as from the works library "open"
+            await pilot.pause()
+            screen = app.screen
+            clist = screen.query_one("#corpus-list", CorpusList)
+            names = [getattr(c, "name", None) for c in clist.children]
+            assert "tlg0012.tlg001" in names  # a permanent, selectable item
+            assert screen._loaded_id == "tlg0012.tlg001"  # loaded
+            assert clist.selected_id == "tlg0012.tlg001"  # and highlighted
+
+    _run(body())

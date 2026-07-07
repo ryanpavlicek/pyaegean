@@ -5,6 +5,35 @@ leakage controls that keep the comparison honest, the field's published numbers,
 pyaegean's own measured results. The README and wiki carry only pyaegean's own numbers;
 the cross-tool tables live here, with citations.
 
+## What the metrics mean
+
+The tables below score six things a pipeline does to each word (and to the sentence as a
+whole). All are percentages: higher is better, and each is the fraction the system got right
+against the human-annotated gold standard.
+
+- **UPOS** — *Universal Part Of Speech.* The basic word class (noun, verb, adjective,
+  preposition, ...) from Universal Dependencies' 17-tag set. "Did it identify what kind of
+  word this is?"
+- **XPOS** — the *language-specific* part-of-speech tag: the treebank's own finer-grained
+  tagset (more categories than UPOS). Not comparable across treebanks that use different
+  tagsets, so it is sometimes marked n/a.
+- **UFeats** — *Universal Features:* the full morphology of the word — case, number, gender,
+  tense, mood, voice, person. A word counts only if *every* feature is right, so this is the
+  strictest word-level tag. "Did it get the complete grammatical parse of the word?"
+- **Lemma** — the dictionary/citation form you would look up: `λέγει` → `λέγω`, `ἀνθρώπους`
+  → `ἄνθρωπος`. "Did it recover the headword?"
+- **UAS** — *Unlabeled Attachment Score:* the fraction of words hooked to the correct
+  syntactic parent (which other word each word grammatically depends on). It measures the
+  shape of the sentence's dependency tree, ignoring the name of each link.
+- **LAS** — *Labeled Attachment Score:* UAS, but the link must *also* carry the right relation
+  label (subject, object, modifier, ...). Stricter than UAS (right parent **and** right
+  relation), and the usual headline number for parsing quality.
+
+Two supporting terms: the scorer reports **F1** (the balance of precision and recall) per
+metric, and a **bootstrap confidence interval** (e.g. `[89.6, 90.9]`) is the range a score
+would plausibly fall in on similar data, estimated by re-sampling the fold's sentences — a
+narrow interval means the number is stable, not a lucky fold.
+
 ## Protocol
 
 - **Test sets:** the Universal Dependencies Ancient Greek test folds:
@@ -68,35 +97,6 @@ tagger, edit-tree lemmatizer, arc-eager parser, and treebank lookup are built fr
 *full* AGDT, which contains the UD-Perseus test sentences. Their Perseus-fold scores are
 therefore an in-training upper bound, reported for orientation; the PROIEL fold is their
 honest number.
-
-## What the metrics mean
-
-The tables below score six things a pipeline does to each word (and to the sentence as a
-whole). All are percentages: higher is better, and each is the fraction the system got right
-against the human-annotated gold standard.
-
-- **UPOS** — *Universal Part Of Speech.* The basic word class (noun, verb, adjective,
-  preposition, ...) from Universal Dependencies' 17-tag set. "Did it identify what kind of
-  word this is?"
-- **XPOS** — the *language-specific* part-of-speech tag: the treebank's own finer-grained
-  tagset (more categories than UPOS). Not comparable across treebanks that use different
-  tagsets, so it is sometimes marked n/a.
-- **UFeats** — *Universal Features:* the full morphology of the word — case, number, gender,
-  tense, mood, voice, person. A word counts only if *every* feature is right, so this is the
-  strictest word-level tag. "Did it get the complete grammatical parse of the word?"
-- **Lemma** — the dictionary/citation form you would look up: `λέγει` → `λέγω`, `ἀνθρώπους`
-  → `ἄνθρωπος`. "Did it recover the headword?"
-- **UAS** — *Unlabeled Attachment Score:* the fraction of words hooked to the correct
-  syntactic parent (which other word each word grammatically depends on). It measures the
-  shape of the sentence's dependency tree, ignoring the name of each link.
-- **LAS** — *Labeled Attachment Score:* UAS, but the link must *also* carry the right relation
-  label (subject, object, modifier, ...). Stricter than UAS (right parent **and** right
-  relation), and the usual headline number for parsing quality.
-
-Two supporting terms: the scorer reports **F1** (the balance of precision and recall) per
-metric, and a **bootstrap confidence interval** (e.g. `[89.6, 90.9]`) is the range a score
-would plausibly fall in on similar data, estimated by re-sampling the fold's sentences — a
-narrow interval means the number is stable, not a lucky fold.
 
 ## The field's published numbers
 
