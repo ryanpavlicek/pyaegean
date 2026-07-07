@@ -4,6 +4,26 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.21.0 (2026-07-07)
+
+Analyze a line while you read it, in the TUI.
+
+### Added
+- **In-reader line analysis.** With the corpus reader focused, `↑`/`↓` (and PgUp/PgDn,
+  Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **analysis
+  popup** for that line. The analyses offered fit the line's script:
+  - **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser/tagger**
+    (instant), the **neural pipeline** (best-in-class tags + a dependency parse; needs the
+    `[neural]` extra and downloads the model on first use), **IPA**, and **translation**.
+  - **Linear B / Cypriot** (deciphered): the **Greek reading + gloss** and the **sign values**.
+  - **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
+    **exploratory transliteration** — both plainly labelled as not a reading.
+
+  **Translation is optional and BYOAI-gated**: it appears only when a provider API key is
+  configured (e.g. `OPENAI_API_KEY`), and the popup says so otherwise rather than pretending
+  to translate. The neural and translation runs happen on a background worker, so the UI never
+  blocks. Esc closes the popup.
+
 ## 0.20.6 (2026-07-07)
 
 ### Changed
