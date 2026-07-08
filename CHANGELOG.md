@@ -4,6 +4,25 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.22.0 (2026-07-07)
+
+Manage downloaded Greek works, and a friendlier Linear B data path.
+
+### Added
+- **Delete downloaded Greek works.** `aegean greek works --remove <id>` removes one work,
+  `--remove-author <name>` removes every downloaded work by an author, and `--remove-all`
+  clears them all (the only way a fetched work leaves disk; re-fetch with `aegean greek work
+  <id>`). In the TUI Works library, `x` removes the highlighted downloaded work. Library:
+  `greek.remove_fetched_works(ids=…, author=…, remove_all=…)`.
+
+### Changed
+- **A friendly Linear B corpus path.** `aegean data fetch damos` now works directly (dataset
+  stems resolve, so you no longer need the `-corpus` suffix — `nt`, `sigla` too). `data fetch
+  linearb` no longer hits a bare "no pinned URL" wall: it points you at **DAMOS** (a ready,
+  directly-fetchable corpus, ~5,900 tablets, CC BY-NC-SA 4.0), is honest that **LiBER** is
+  browse-only (liber.cnr.it has no public download or API and is rights-restricted), and shows
+  how to import your own licensed export. `data remove` accepts the same stems.
+
 ## 0.21.0 (2026-07-07)
 
 Analyze a line while you read it, in the TUI.
