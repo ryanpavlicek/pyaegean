@@ -26,8 +26,8 @@ at a time; nothing here can break your computer.
 It's a free toolkit, written in the Python language, for working with Ancient
 Greek and the Aegean scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). You give it Greek text or a Linear A
 inscription; it gives you back syllables, accents, metre, morphology, statistics,
-and more. You drive it by writing very short snippets of Python: usually one or
-two lines: which this documentation gives you ready to copy.
+and more. You drive it by writing very short snippets of Python (usually one or
+two lines), which this documentation gives you ready to copy.
 
 ## Step 1 — Install Python
 
@@ -100,9 +100,9 @@ pip install pyaegean
 ```
 
 That's it: you now have the core library and the full Linear A corpus, working
-**offline** with zero third-party dependencies. The heavier Greek NLP backends:
-treebank lookup, dictionary glossing, and the **neural pipeline** (the most accurate
-tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away): are opt-in:
+**offline** with zero third-party dependencies. The heavier Greek NLP backends
+(treebank lookup, dictionary glossing, and the **neural pipeline**, the most accurate
+tagger/parser/lemmatizer, one `greek.use_neural_pipeline()` call away) are opt-in:
 each is fetched to a local cache the first time you turn it on, never bundled. See the
 [Greek NLP](Greek-NLP) page when you want them. If you'd rather not write Python at
 all, there's also a [command-line interface](CLI): `pip install "pyaegean[cli]"`,
@@ -113,7 +113,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.27.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.27.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code
@@ -215,13 +215,13 @@ aegean greek catalog --author plato --limit 5
 Pass any `id` you find straight to `greek.load_work("tlg0059.tlg002", ref="1")`, which
 fetches the text (network on first use only, then cached). The catalogue is honest about
 coverage: it lists exactly what the open repos hold, so a few authors that aren't online
-upstream: Sappho, for one: simply aren't in it. See
+upstream (Sappho, for one) simply aren't in it. See
 [Greek Works and Books](Greek-Works-and-Books) for the full guide to loading works.
 
 ## Step 8 — Bring your own text
 
-Have your own passage of Greek? Turn it into a real corpus — with the full
-filter / search / analyse / export toolkit: in one call. No `Corpus` boilerplate:
+Have your own passage of Greek? Turn it into a real corpus, with the full
+filter / search / analyse / export toolkit, in one call. No `Corpus` boilerplate:
 
 ```python
 from aegean import io

@@ -1,12 +1,12 @@
 """The Python the browser demo runs under Pyodide.
 
-Stable, pure-Python 0.8.x APIs only — everything here runs entirely client-side: the Greek
+Stable, pure-Python core APIs only. Everything here runs entirely client-side: the Greek
 pipeline + scansion + word analysis, the bundled Koine (Dodson) lexicon, the offline Greek
 work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corpus
 (sign search + accounting), the bundled Cypriot (IG XV 1) inscription corpus, the file importer,
 the stdlib EpiDoc reader, and cross-script phonetic comparison. The
 neural tier is excluded (it needs onnxruntime, which doesn't run in the browser), as are the
-network-only backends (load_work/load_nt, LSJ/treebank) and the generative AI layer. Each
+network-only backends (load_work, the full-NT fetch, LSJ/treebank) and the generative AI layer. Each
 function returns a JSON string for easy consumption from JavaScript. This module is exercised
 by tests/test_web_demo.py, so the demo's logic can't silently rot.
 """

@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.27.0
+aegean --version                # pyaegean 0.27.1
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -37,7 +37,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `nt` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -670,9 +670,18 @@ The fetchable datasets (`aegean data list`):
 | `grc-joint` | joint tagger-parser-lemmatizer, ~173 MB (the `[neural]` extra) | CC BY-SA 4.0 |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer, ~232 MB (the `[neural]` extra) | CC BY-SA 4.0 |
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
+| `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
+| `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
+| `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
 | `damos-corpus` | DAMOS Linear B corpus, ~5,900 tablets: `load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset, 781 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek NT (Nestle 1904), 260 chapters / ~137,800 tokens: `load('nt')` | CC0-1.0 |
+| `isicily-corpus` | I.Sicily Greek inscriptions of Sicily, 2,855 texts: `load('isicily')` | CC BY 4.0 |
+| `iip-corpus` | IIP Greek inscriptions of Israel/Palestine, 2,113 texts: `load('iip')` | CC BY-NC 4.0 |
+| `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea, 1,194 texts: `load('iospe')` | CC BY 4.0 |
+| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica, 997 texts: `load('igcyr')` | CC BY-NC-SA 4.0 |
+| `edh-corpus` | EDH Greek inscriptions (frozen 2021 dump), 1,286 texts: `load('edh')` | CC BY-SA 4.0 |
+| `ddbdp-corpus` | DDbDP documentary papyri, 57,329 texts as SQLite + FTS (~206 MB download): `aegean db search ddbdp` | CC BY 3.0 |
 | `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
 | `linearb-corpus` | bring-your-own Linear B export (no default source) | per your source |
 | `workbench-app` | prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |
@@ -718,7 +727,9 @@ aegean db search lineara.db KU-RO-ZZ
 
 `db search` never creates or modifies a file (the database opens read-only; a
 missing path is a one-line error naming `aegean db build`), `--limit 0` returns
-every match, and `-o` saves the hits (`.json`/`.csv`/`.txt`).
+every match, and `-o` saves the hits (`.json`/`.csv`/`.txt`). The PATH also
+resolves a DB-backed corpus id: `aegean db search ddbdp "βασιλέως"`
+full-text-searches the fetched DDbDP papyri database directly, no path needed.
 
 `build`'s corpus argument is any of the usual forms (id, work id, `.json`/`.db` file,
 `-`), so `aegean db build tlg0012.tlg001 -o iliad.db` builds straight from a Greek work.

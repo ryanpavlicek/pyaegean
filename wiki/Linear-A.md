@@ -167,14 +167,15 @@ The document-level frame's columns are: `id`, `script_id`, `site`, `support`,
 ## The sign inventory
 
 The inventory is the **full Unicode Linear A repertoire**: 342 signs. Of those,
-**50** carry an assigned sound value (`phonetic`); the rest are carried from the
+**97** appear in the corpus-aligned sign table, **50** of them with an assigned
+sound value (`phonetic`); the remaining 245 are carried from the
 Unicode Character Database with `attrs["source"] == "ucd"` and **no** reading,
 because Linear A is undeciphered and most of its repertoire has no agreed value.
 
 ```python
 inv = aegean.get_script("lineara").sign_inventory
 len(inv)                           # 342
-len([s for s in inv if s.phonetic])               # 50  — the read signs
+len([s for s in inv if s.phonetic])               # 50  — the signs with assigned sound values
 len([s for s in inv if s.attrs.get("sharedWithLinearB")])  # 81  — shared glyphs
 
 sign = inv.by_label("KU")

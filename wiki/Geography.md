@@ -168,7 +168,7 @@ aegean geo lineara --json
 
 | Flag | Default | What it does |
 |---|---|---|
-| `CORPUS` (argument) |— | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`) |
+| `CORPUS` (argument) |— | corpus id: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, or a fetched corpus (`nt`, `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`, …) |
 | `--word` |— | map the per-site attestations of one word (**case-insensitive**) instead of every site |
 | `--level` | `site` | `site` or `inscription` (only affects GeoJSON export) |
 | `--output`, `-o` |— | write GeoJSON to this path instead of printing the table (needs `[geo]`) |
@@ -176,8 +176,9 @@ aegean geo lineara --json
 | `--help`, `-h` |— | show usage and exit |
 
 Only provenanced inscription corpora yield rows: `lineara`, `linearb`, `cypriot`, `cyprominoan`,
-`sigla`, `damos`. Alphabetic Greek corpora (`greek`, `nt`, Greek work ids) carry no find-spot, so
-`geo` prints a one-line note rather than an empty table.
+`sigla`, `damos`. Literary corpora (`greek`, `nt`, Greek work ids) carry no find-spot, and the
+epigraphy/papyrus corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`) record find-places
+the Aegean gazetteer does not map, so `geo` prints a one-line note rather than an empty table.
 
 ---
 
@@ -426,7 +427,7 @@ anything else is dropped. Per corpus:
 | `cypriot` | 180 | 1 of 5 | bundled IG XV 1 corpus + samples (only the generic Cyprus label is in the gazetteer) |
 | `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | small bundled sample |
 
-The gazetteer holds 56 sites total — more than any single corpus uses — so it already covers
+The gazetteer holds 56 sites total (more than any single corpus uses), so it already covers
 find-sites across all four scripts. The few Linear A inscriptions with no row simply carry no usable
 `meta.site` value.
 

@@ -89,8 +89,9 @@ def _find_doc(c: Any, corpus: str, doc_id: str) -> tuple[Any, dict[str, Any] | N
 def list_corpora() -> list[str]:
     """List the corpora that can be loaded by name.
 
-    Most are bundled and load offline; 'damos', 'nt', and 'sigla' download into the
-    local data store on first use (``data_status`` shows what is already stored)."""
+    Five are bundled and load offline; the rest ('damos', 'nt', 'sigla', 'isicily', 'iip',
+    'iospe', 'igcyr', 'edh', 'ddbdp') download into the local data store on first use
+    (``data_status`` shows what is already stored)."""
     from .core.corpus import _LOADERS
 
     return sorted(_LOADERS)
@@ -99,9 +100,12 @@ def list_corpora() -> list[str]:
 def corpus_info(corpus: str) -> dict[str, Any]:
     """Overview of a corpus: script, document count, source, license, and a citation.
 
-    ``corpus`` is a name from ``list_corpora`` (e.g. 'lineara', 'damos', 'nt'). Loading
-    'damos', 'nt', or 'sigla' downloads the corpus on first use (a one-time fetch into
-    the local data store); check ``data_status`` first to see what is already stored."""
+    ``corpus`` is a name from ``list_corpora`` (e.g. 'lineara', 'damos', 'nt'). Loading a
+    fetch-on-demand corpus ('nt', 'damos', 'sigla', 'isicily', 'iip', 'iospe', 'igcyr',
+    'edh', 'ddbdp') downloads it on first use (a one-time fetch into the local data
+    store); check ``data_status`` first to see what is already stored. 'ddbdp' is heavy:
+    loading it materialises 57k papyri (prefer ``aegean db search ddbdp`` from the
+    shell)."""
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
@@ -309,10 +313,11 @@ def geo_sites(corpus: str, word: str | None = None) -> dict[str, Any]:
     contested-provenance flag; with ``word``, the per-site attestation counts of that
     word (case-insensitive) instead.
 
-    Bundled gazetteer, offline. Only provenanced inscription corpora yield sites
+    Bundled gazetteer, offline. Only the Aegean inscription corpora yield sites
     (lineara, linearb, cypriot, cyprominoan, sigla, damos); alphabetic Greek corpora
-    (greek, nt) carry no find-spot. A non-empty ``contested`` value is the reason a
-    find-spot is disputed; treat such sites as unverified provenance."""
+    (greek, nt) carry no find-spot, and the Greek epigraphy corpora record find-places
+    outside the Aegean gazetteer, so they yield no rows. A non-empty ``contested`` value
+    is the reason a find-spot is disputed; treat such sites as unverified provenance."""
     from .geo import site_coordinates
 
     c, err = _load_corpus(corpus)
@@ -351,8 +356,9 @@ def geo_sites(corpus: str, word: str | None = None) -> dict[str, Any]:
     payload = {"corpus": corpus, "sites": rows, "total_sites": len(sites), "located": len(rows)}
     if not rows:
         payload["note"] = (
-            "geo maps provenanced inscription corpora (lineara, linearb, cypriot, "
-            "cyprominoan, sigla, damos); alphabetic Greek corpora carry no find-spot"
+            "geo maps the Aegean inscription corpora (lineara, linearb, cypriot, "
+            "cyprominoan, sigla, damos); Greek corpora either carry no find-spot or "
+            "record find-places outside the bundled Aegean gazetteer"
         )
     return payload
 
@@ -362,9 +368,11 @@ def data_status() -> dict[str, Any]:
     size, size note, and license.
 
     Read-only (nothing is downloaded or deleted here). The corpora that load by name
-    over MCP appear as 'damos-corpus' / 'nt-corpus' / 'sigla-corpus'; a dataset that is
-    not downloaded is fetched automatically (sha256-verified) the first time something
-    needs it, or explicitly from the shell with `aegean data fetch NAME`."""
+    over MCP appear under their asset names ('nt-corpus', 'damos-corpus', 'sigla-corpus',
+    'isicily-corpus', 'iip-corpus', 'iospe-corpus', 'igcyr-corpus', 'edh-corpus',
+    'ddbdp-corpus'); a dataset that is not downloaded is fetched automatically
+    (sha256-verified) the first time something needs it, or explicitly from the shell
+    with `aegean data fetch NAME`."""
     from .data import _REMOTE, cache_dir, downloaded_bytes, is_downloaded
 
     root = cache_dir()

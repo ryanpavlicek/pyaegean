@@ -8,8 +8,8 @@ is *characteristic* of one hand by comparing that hand's tablets against all the
 with the same log-likelihood keyness used elsewhere. Per-hand dispersion is just
 ``dispersion(corpus.filter(scribe=hand), item)`` — the standard helper over the hand's slice.
 
-Script-agnostic: any corpus whose documents set ``meta.scribe`` works (DAMOS is the one
-that ships with hands today).
+Script-agnostic: any corpus whose documents set ``meta.scribe`` works (DAMOS and the
+bundled Linear A corpus both ship with hands today).
 """
 
 from __future__ import annotations

@@ -83,7 +83,7 @@ dictionaries.
 
 | Tool | Arguments | Purpose |
 | --- | --- | --- |
-| `list_corpora` | (none) | List the corpora loadable by name (bundled ones load offline; `damos`, `nt`, `sigla` download on first use). |
+| `list_corpora` | (none) | List the corpora loadable by name (five are bundled and load offline; the rest, `damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`, and `ddbdp`, download on first use). |
 | `corpus_info` | `corpus` | Overview of a corpus: script, document count, source, license, and a ready-to-use citation. |
 | `show_document` | `corpus`, `doc_id` | One document's metadata and text, line by line (`doc_id` is forgiving: `ht13`, `py ta 641` resolve). |
 | `search_signs` | `corpus`, `pattern`, `limit=50` | Words matching a wildcard sign pattern such as `KU-*-RO`, with frequencies. |
@@ -134,7 +134,7 @@ or query field) returns a JSON object with an `error` key and a recovery hint,
 rather than raising an exception the client would surface as a stack trace:
 
 ```json
-{ "error": "unknown corpus 'linar'; available: cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla" }
+{ "error": "unknown corpus 'linar' (did you mean 'linearb' or 'lineara'?); available: cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla" }
 ```
 
 Where it can, the hint is a did-you-mean suggestion, or a pointer to the tool
@@ -159,12 +159,13 @@ downloading or deleting anything.
 
 ## What downloads, and when
 
-Most corpora are bundled and everything runs offline. The exceptions are the
-larger datasets, which fetch into the local data store on first use and are
-offline afterward:
+Five corpora (`lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`) are
+bundled and run offline from install. The exceptions are the larger datasets,
+which fetch into the local data store on first use and are offline afterward:
 
-- **Corpora** `damos`, `nt`, and `sigla` download the first time a tool loads
-  them by name.
+- **Corpora** `damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`,
+  and `ddbdp` download the first time a tool loads them by name (`ddbdp` is a
+  57,000-document corpus: loading it whole is a heavy call).
 - **`greek_work`** downloads a work's TEI source the first time that work is
   requested (a one-time, commit-pinned fetch).
 - **`greek_gloss`** downloads and builds a dictionary index the first time that

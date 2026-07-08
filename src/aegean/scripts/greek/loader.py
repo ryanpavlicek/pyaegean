@@ -3,7 +3,7 @@ register it so ``Corpus.load("greek")`` works.
 
 The seed is a handful of short, public-domain Ancient Greek passages spanning
 Archaic→Koine, used to exercise the NLP pipeline. The full open-data corpus
-(First1KGreek / Perseus) is fetched/added in the deeper Greek track.
+(Perseus / First1KGreek) loads on demand via ``aegean.greek.load_work``.
 """
 
 from __future__ import annotations

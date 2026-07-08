@@ -88,7 +88,9 @@ def add(
 
 @db_app.command()
 def search(
-    path: Path = typer.Argument(..., help="A SQLite corpus DB (from `aegean db build`)."),
+    path: Path = typer.Argument(
+        ..., help="A SQLite corpus DB (from `aegean db build`) or a DB-backed corpus id (ddbdp)."
+    ),
     query: str = typer.Argument(..., help="Text to find — a whole token by default (e.g. KU-RO)."),
     limit: int = typer.Option(50, "--limit", "--top", help="Max hits; 0 = all."),
     substring: bool = typer.Option(

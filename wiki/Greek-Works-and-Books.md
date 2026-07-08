@@ -349,6 +349,23 @@ Save a whole work to disk to reuse without re-fetching:
 aegean greek work tlg0012.tlg001 -o iliad.json   # wrote 24 documents to iliad.json
 ```
 
+### Fetch a whole author, and manage the downloads
+
+`all` in place of a work id bulk-fetches every catalogued work by an author
+(case-insensitive), skipping anything already cached, so an interrupted run
+resumes where it stopped:
+
+```bash
+aegean greek work all homer --dry-run    # preview what would be fetched
+aegean greek work all homer --yes        # fetch it; --limit N caps new downloads
+```
+
+`aegean greek works --downloaded` lists the works already fetched to your local
+cache, and `--remove <id>`, `--remove-author <name>`, or `--remove-all` delete
+downloaded works you no longer need. The Python equivalents are
+`greek.fetch_works`, `greek.list_fetched_works()`, and
+`greek.remove_fetched_works(...)`.
+
 ### Notes carried along
 
 Editorial `<note>` and `<bibl>` material is **not dropped and not mixed into the
@@ -359,7 +376,7 @@ while the apparatus stays available.
 
 ## 5. Put works into a database
 
-Loading a work re-fetches and re-parses it every run. For anything you'll come back
+Loading a work re-parses its cached TEI every run. For anything you'll come back
 to (searching it, joining it with another work, sharing it) write it once into a
 **SQLite database** and read from that. The database carries the documents and their
 tokens, plus an FTS5 full-text index, so searches are instant and need no network.
@@ -519,8 +536,9 @@ annotations**: a `lemma`, a Robinson-style `morph` parse, a `strongs` number, a
 reconciled UD `upos`, the `normalized` form, and (where available) a short `gloss`.
 You don't have to run a tagger: it's all there.
 
-One book ships **inside the package** (Philemon), so `load_nt("Philemon")` works
-**fully offline**; the other 26 books fetch to cache on first use.
+The offline sample ships **inside the package** (John 1 and the one-chapter
+Philemon), so `load_nt("Philemon")` and `load_nt("John", ref="1")` work
+**fully offline**; everything else fetches to cache on first use.
 
 ### Loading a book, chapter, verse, or range
 
@@ -534,7 +552,7 @@ One book ships **inside the package** (Philemon), so `load_nt("Philemon")` works
 | `"3.16-18"` | the same range, shorthand |
 | `"3-5"` | chapters 3 through 5 |
 
-A complete, **verified, offline** example (Philemon is the bundled book):
+A complete, **verified, offline** example (Philemon is part of the bundled sample):
 
 ```python
 from aegean import greek
@@ -728,8 +746,8 @@ large-scale discovery:
 | `PYAEGEAN_NT_CORPUS_URL` | point `load_nt` at an alternate NT corpus asset |
 | `PYAEGEAN_GITHUB_TOKEN` / `GITHUB_TOKEN` | authenticate first-time work discovery (the GitHub contents API is rate-limited to 60 req/hour unauthenticated) |
 
-Files are fetched to your cache, **never bundled or re-hosted** (except the single
-offline NT sample book). Full details are on [Data & Provenance](Data-and-Provenance).
+Files are fetched to your cache, **never bundled or re-hosted** (except the offline
+NT sample: John 1 and Philemon). Full details are on [Data & Provenance](Data-and-Provenance).
 
 ---
 
@@ -737,7 +755,7 @@ offline NT sample book). Full details are on [Data & Provenance](Data-and-Proven
 
 - **First use of a non-cached work needs the network.** After that it's read from
   the local cache and works offline. The one exception that's offline from the
-  start is the bundled NT book, Philemon.
+  start is the bundled NT sample (John 1 and Philemon).
 - **TEI structures vary.** `ref` follows each work's own `<div>` nesting and `<l>`
   line numbering. A `ref` that doesn't match the work's structure raises a clear
   `ValueError` rather than guessing.

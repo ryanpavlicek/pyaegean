@@ -20,8 +20,9 @@ text, and gives a verifiable cross-check on scansion (a circumflex forces a long
 **undetermined** for the dichrona α/ι/υ (a problem the metrical scanner shares as ``common``).
 When a dichronon is the deciding factor the placement is returned with ``certain=False`` and a
 note; pass ``ultima_length`` / ``penult_length`` (e.g. from morphology) to resolve it. Out of
-scope, and flagged rather than guessed: enclitic/proclitic accent interaction, crasis, and the
-declension-specific specials (oxytone genitive/dative circumflex, contracted nouns).
+scope, and flagged rather than guessed: enclitic/proclitic accent interaction, crasis, and
+contracted nouns. (The oxytone genitive/dative circumflex, Smyth §163 a, and the πόλις-type
+-εως/-εων genitives, Smyth §275, are handled by ``persistent_accent``.)
 """
 
 from __future__ import annotations

@@ -37,7 +37,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.27.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.27.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -55,7 +55,7 @@ environment:
 | `build`, `twine` | wheel build + package metadata check |
 | `nbmake`, `ipykernel` | execute the example notebooks under pytest |
 | `pandas` | exercise the `[data]` DataFrame interop in tests |
-| `typer`, `rich` | the `aegean` CLI (the `[cli]` extra) |
+| `typer`, `rich`, `prompt_toolkit` | the `aegean` CLI + REPL (the `[cli]` extra) |
 | `lxml` | EpiDoc TEI export (the `[epidoc]` extra) |
 | `matplotlib` | one-line plots (the `[viz]` extra) |
 | `mcp` | the `aegean-mcp` Model Context Protocol server |
@@ -124,7 +124,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 144 source files
+# Success: no issues found in 155 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:
@@ -134,6 +134,11 @@ pytest                       # full suite, quiet (-q is the default via pyprojec
 pytest tests/test_numerals.py -q
 # ......                                                                   [100%]
 ```
+
+The suite also runs in parallel if you install `pytest-xdist`:
+`pytest -n 4 --dist loadgroup`. `tests/conftest.py` pins the TUI tests to a
+single worker group, so they stay reliable under parallel runs (use
+`--dist loadgroup`, not `loadfile`).
 
 In CI the test job runs with coverage (`pytest --cov=aegean
 --cov-report=term-missing`) across the full Python matrix.
@@ -156,7 +161,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.27.0-py3-none-any.whl: 3557 KB uncompressed, 187 files
+# wheel dist/pyaegean-0.27.1-py3-none-any.whl: 3561 KB uncompressed, 187 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -165,7 +170,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.27.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.27.1-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -190,11 +195,12 @@ that import **lazy** (see the next section).
 
 ### What CI runs
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) has four jobs:
+CI (GitHub Actions, `.github/workflows/ci.yml`) has five jobs:
 
 | Job | What it does |
 | --- | --- |
 | **test** | `ruff` → `mypy` (enforcing) → `pytest` with coverage, across **Python 3.10–3.14** |
+| **geo** | installs the `[dev,geo,parquet]` extras on one Python and runs the suite with `-rs`, so the geopandas/pyarrow tests execute instead of skipping |
 | **notebooks** | executes the example notebooks under `notebooks/` with `nbmake` |
 | **build** | `python -m build`, `twine check`, and the **wheel** footprint check |
 | **footprint** | installs the **core only** (no extras), then the import-clean + import-fast guard |
@@ -299,7 +305,7 @@ pyaegean is pre-1.0, but the public API is treated as a contract:
 3. **The CHANGELOG records both ends**: the release that deprecates and the
    release that removes.
 4. **Data and models version forward.** Fetched artifacts are sha256-pinned
-   release assets; a new model is a new asset name (`grc-joint-v2`), never a
+   release assets; a new model is a new asset name (`grc-joint-v3`), never a
    mutation of an existing one, so cached environments keep working.
 
 ---
@@ -433,9 +439,10 @@ their own licensed copy. The full list of currently registered assets:
 import aegean
 sorted(aegean.data.versions()["fetched"])
 # ['abbott-smith-index', 'agdt-derived', 'cunliffe-index', 'damos-corpus',
-#  'grc-joint', 'grc-lemma-neural', 'lineara-images', 'linearb-corpus',
-#  'lsj-index', 'middle-liddell-index', 'nt-corpus', 'sigla-corpus',
-#  'workbench-app']
+#  'ddbdp-corpus', 'edh-corpus', 'grc-joint', 'grc-lemma-neural',
+#  'igcyr-corpus', 'iip-corpus', 'iospe-corpus', 'isicily-corpus',
+#  'lineara-images', 'linearb-corpus', 'lsj-index', 'middle-liddell-index',
+#  'nt-corpus', 'sigla-corpus', 'workbench-app']
 ```
 
 See [Data and Provenance](Data-and-Provenance) for the licensing rules that
@@ -571,7 +578,8 @@ pytest                                # full suite
 ```
 src/aegean/
   core/      model corpus script provenance numerals
-  scripts/   lineara/{loader,inventory,phonetic,sigla,commodities}  greek/{loader,inventory,nt,perseus}
+  scripts/   lineara/{loader,inventory,phonetic,sigla,commodities}
+             greek/{loader,inventory,nt,perseus,isicily,iip,iospe,igcyr,edh,ddbdp}
              linearb/{loader,inventory,phonetic,lexicon,epidoc,damos}
              cypriot/{loader,inventory,phonetic,lexicon}
              cyprominoan/{loader,inventory}  (undeciphered — signs only)
@@ -584,6 +592,12 @@ src/aegean/
   io/        text (.txt/.csv/folder import) epidoc (TEI export)
              tabular (CSV/Parquet export) workbench (Workbench JSON I/O)
   cli/       the `aegean` command ([cli] extra; typer+rich, imported only by the console script)
+  tui/       the `aegean tui` terminal UI ([tui] extra; textual)
+  db.py      SQLite corpus persistence + FTS search
+  geo/       the Pleiades-aligned gazetteer (GeoDataFrames need the [geo] extra)
+  viz.py     one-line plots ([viz] extra)
+  cache.py   the analysis cache
+  mcp_server.py  the `aegean-mcp` server ([mcp] extra)
   ai/        client cache providers grounding capabilities
   translate/ (hybrid lexicon+LLM)
   data/      bundled/{lineara,linearb,cypriot,cyprominoan,greek,geo}/*.json  + fetch()/cache

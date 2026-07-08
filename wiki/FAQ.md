@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.27.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.27.1`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -105,7 +105,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 |---|---|
 | `data` | pandas, for DataFrame output (`to_dataframe`) |
 | `parquet` | Parquet export (`pyarrow`) |
-| `epidoc` | EpiDoc TEI import/export |
+| `epidoc` | the Linear B DAMOS EpiDoc reader (`lxml`); generic EpiDoc import and export run on the stdlib, no extra needed |
 | `geo` | GeoJSON / geographic output |
 | `viz` | plotting (`matplotlib`): figures and the scansion grid |
 | `neural` | the neural pipeline + neural lemmatizer (most accurate Greek NLP) |
@@ -143,7 +143,8 @@ since they share its SDK).
 import aegean
 from aegean.core.corpus import _LOADERS
 sorted(_LOADERS)
-# ['cypriot', 'cyprominoan', 'damos', 'greek', 'lineara', 'linearb', 'nt', 'sigla']
+# ['cypriot', 'cyprominoan', 'damos', 'ddbdp', 'edh', 'greek', 'igcyr', 'iip',
+#  'iospe', 'isicily', 'lineara', 'linearb', 'nt', 'sigla']
 ```
 
 | id | What it is | Offline? |
@@ -155,7 +156,13 @@ sorted(_LOADERS)
 | `cyprominoan` | the Cypro-Minoan corpus | yes, bundled |
 | `damos` | the full DAMOS Linear B corpus (~5,900 tablets, ~3 MB) | fetched on first use |
 | `sigla` | the SigLA Linear A dataset (~1.2 MB) | fetched on first use |
-| `nt` | the Greek New Testament (Nestle 1904); one book bundled offline, the rest fetched | mostly fetched |
+| `isicily` | I.Sicily Greek inscriptions of ancient Sicily (2,855 texts, ~7 MB) | fetched on first use |
+| `iip` | IIP Greek inscriptions of Israel/Palestine (2,113 texts, ~4 MB) | fetched on first use |
+| `iospe` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts, ~4 MB) | fetched on first use |
+| `igcyr` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts, ~3 MB) | fetched on first use |
+| `edh` | EDH Greek inscriptions, the pure-Greek subset (1,286 texts, ~6 MB) | fetched on first use |
+| `ddbdp` | the DDbDP documentary papyri (57,329 texts as a SQLite database with full-text search, ~206 MB; loading it whole is heavy, prefer `aegean db search ddbdp`) | fetched on first use |
+| `nt` | the Greek New Testament (Nestle 1904); two sample chapters bundled offline (John 1 + Philemon 1), the rest fetched | mostly fetched |
 
 ```python
 corpus = aegean.load("lineara")
@@ -189,7 +196,7 @@ ws[0]
 
 That's a curated short list. For the **whole** reachable canon, `greek.catalog()` is an
 offline, instant index of every work with a Greek edition in the open Perseus +
-First1KGreek repos: ~1,800 of them: searchable by author, title (English or Greek), or
+First1KGreek repos (~1,800 of them), searchable by author, title (English or Greek), or
 free text:
 
 ```python
@@ -349,7 +356,7 @@ aegean greek gloss-nt "λόγος"
 ### Can I load my own text file?
 
 Yes. `aegean.io` turns a string, a `.txt`, a folder of `.txt` files, or a `.csv` into a
-real `Corpus`: with the full filter / search / analyse / export API: so you don't have
+real `Corpus`, with the full filter / search / analyse / export API, so you don't have
 to write any `Corpus` boilerplate. It's all offline stdlib:
 
 ```python
@@ -428,8 +435,8 @@ That's a display/font issue, not a data problem: the text is correct underneath.
 
 ### I don't have a Greek keyboard
 
-You don't need one. Type **Beta Code**: the standard ASCII transliteration used by
-the TLG and Perseus — and convert:
+You don't need one. Type **Beta Code** (the standard ASCII transliteration used by
+the TLG and Perseus) and convert:
 
 ```python
 from aegean import greek
@@ -474,14 +481,16 @@ see [Metrical scansion](Greek-NLP#metrical-scansion).
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 the fetched corpora: `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
-~3 MB) and `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.2 MB):
+~3 MB), `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.2 MB), and the fetched
+Greek epigraphy corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, plus the ~206 MB
+`ddbdp` papyri database):
 `greek.load_work(...)` / `greek.load_nt(...)` (real Greek texts, pinned to a commit),
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,
 and the opt-in Greek backends. The treebank/LSJ/tagger/lemmatizer/parser backends now
 fetch small **prebuilt** artifacts: `greek.use_lsj()` a ~15 MB index (not 270 MB of
 Perseus TEI), and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
 `use_parser()` one shared ~15 MB AGDT-derived bundle (no 75 MB download or local
-training): falling back to building from source if an asset is unreachable. The
+training), falling back to building from source if an asset is unreachable. The
 `[neural]` models are larger: `greek.use_neural_lemmatizer()` (~232 MB) and
 `greek.use_neural_pipeline()` (~173 MB; quantized and lossless, needs
 `onnxruntime>=1.23`). Everything else, including the rule-based pipeline, works
@@ -490,7 +499,7 @@ fully offline.
 ### Do I need an API key?
 
 Only for the **[AI Layer](AI-Layer)** (translation, glossing, decipherment
-hypotheses). Everything else — analysis, scansion, morphology, statistics — needs
+hypotheses). Everything else (analysis, scansion, morphology, statistics) needs
 no key and no account. To use AI, install a provider extra and set its key, e.g.
 `pip install "pyaegean[anthropic]"` and `ANTHROPIC_API_KEY`.
 
@@ -546,7 +555,7 @@ irregular, third-declension, contract, and most open-class forms — and they te
 when a result is reconstructed (`lemma_certain=False`).
 
 Several opt-in backends raise accuracy well past that baseline. The strongest is the
-**neural pipeline**: `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
+**neural pipeline**, `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
 model for POS, morphology, UD dependency parsing, and lemmatization, state of the art
 on the UD Ancient Greek (Perseus) benchmark (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
 85.6 LAS on the Perseus test fold, measured end-to-end from raw text: see

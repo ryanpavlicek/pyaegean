@@ -65,7 +65,7 @@ backends layer in extra accuracy without changing the call you make.
 | Koine (NT) gloss | `gloss_nt` / `gloss_strongs` / `lookup_nt` | `aegean greek gloss-nt` | no (bundled) |
 | One-call pipeline | `pipeline` | `aegean greek pipeline` | opt-in backends |
 | Load a real work | `load_work` | `aegean greek work` | yes (first use) |
-| Load the Greek NT | `load_nt` |— | no for one book; yes for the rest |
+| Load the Greek NT | `load_nt` | `aegean greek nt` | no for the bundled sample; yes for the rest |
 | Discover works / books | `popular_works` / `catalog` / `nt_books` | `aegean greek works` / `catalog` / `nt-books` | no |
 | Import your own text | `io.from_text` / `from_text_file` / `from_csv` / … | `aegean import` | no |
 | Reproduce the numbers | `evaluate_on_ud` / `evaluate_on_proiel` / … | `aegean greek eval` | yes (gold data) |
@@ -451,7 +451,7 @@ of Homer), **elegiac pentameter** (the second line of an elegiac couplet),
 lyric** lines. The scanner resolves each syllable's quantity *in context*:
 applying *correptio* (a long vowel shortened before another vowel), treating
 muta-cum-liquida clusters as the ambiguity they are, and counting position across
-word boundaries. The deep dive (caesura conventions, resolution, synizesis, the
+word boundaries. The detailed treatment (caesura conventions, resolution, synizesis, the
 full template list) lives on the [Meters](Meters) page.
 
 The result is glyph notation you'll recognise from any commentary: **—** heavy
@@ -1127,8 +1127,8 @@ greek.load_nt()                                # the whole 27-book NT
 `load_nt(book, *, ref=None, force=False)`. `book` accepts names or abbreviations
 (`John`/`Jn`, `1Cor`, `Rev`); `ref` mirrors `load_work` (`"3"` chapter, `"3.16"`
 verse, `"3.16-18"` range). The base text is public domain and the
-morphology/lemmas/Strong's are CC0, so **one book is bundled** (works offline) and
-the full corpus fetches to cache on demand.
+morphology/lemmas/Strong's are CC0, so **a sample is bundled** (John 1 and
+Philemon, offline) and the full corpus fetches to cache on demand.
 
 A token-level dataframe puts every annotation in its own column:
 
@@ -1266,6 +1266,31 @@ index (768 Perseus + 1,010 First1KGreek). Either way `load_work` /
 `aegean greek work` take **any** Perseus canonical-greekLit / First1KGreek id
 (browse them at scaife.perseus.org). The full work catalogue and every NT book
 alias are tabulated on [Greek Works and Books](Greek-Works-and-Books).
+
+## Epigraphic and documentary Greek (inscriptions and papyri)
+
+Beyond the literary canon (`load_work`) and the New Testament, pyaegean hosts six
+openly-licensed corpora of Greek inscriptions and papyri, each fetched on demand
+and returned as an ordinary `Corpus`, so the pipeline, query engine, and
+statistics run on them unchanged: `isicily` (2,855 inscriptions of ancient
+Sicily), `iip` (2,113, Israel/Palestine), `iospe` (1,194, the Northern Black
+Sea), `igcyr` (997, Cyrenaica: archaic Doric and verse, with non-normalized
+epichoric spellings), `edh` (1,286, the Greek subset of the Epigraphic Database
+Heidelberg), and `ddbdp` (the Duke Databank of Documentary Papyri: 57,329 papyri,
+~4.4M tokens).
+
+```python
+import aegean
+igcyr = aegean.load("igcyr")   # fetched on first use, then offline
+```
+
+`ddbdp` is far larger than the rest, so it ships as a SQLite database with
+full-text search: prefer `aegean db search ddbdp "βασιλέως"` or
+`aegean.db.stream(ddbdp_db())` over `aegean.load("ddbdp")`, which materialises
+all 57k documents in memory. Note that inscriptions are not normalized literary
+Greek (majuscule text in IIP, epichoric letterforms in IGCyr, heavy onomastics in
+EDH), which the taggers were not trained on. Licenses and sources:
+[Data & Provenance](Data-and-Provenance).
 
 ## The sample corpus
 

@@ -5,7 +5,7 @@ Three things live here permanently:
 1. the undeciphered-script honesty banner (Linear A and Cypro-Minoan are
    undeciphered; analysis is exploratory, not a reading) — the honesty rule the
    CLI and docstrings carry, made visible the moment the app opens;
-2. the eight-corpus overview (each corpus, its blurb, and whether its data is on
+2. the corpus overview (each corpus, its blurb, and whether its data is on
    disk), read from :func:`aegean.tui.data.list_corpora` — offline, nothing is
    loaded;
 3. the global-key legend, so navigation is discoverable without the command

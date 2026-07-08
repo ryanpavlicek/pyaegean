@@ -12,10 +12,12 @@ Classifies each syllable of a word as **heavy**, **light**, or **common**
   isn't determinable from spelling alone.
 
 Baseline scope: quantities are computed within a single word. Two cross-word /
-contextual refinements are intentionally not applied — *correptio Attica* (a
-short vowel before a mute+liquid cluster may scan either way) always counts as
-heavy-by-position here, and word-final length before a following word isn't
-resolved. These are leads for a full metrical scansion, not a finished scanner.
+contextual refinements are intentionally not applied: a short vowel before a
+mute+liquid cluster is reported at its natural quantity here (the cluster
+syllabifies as the next syllable's onset, so the syllable stays open: πέ-τρος
+scans light), not the either-way *common* that `aegean.greek.meter` applies,
+and word-final length before a following word isn't resolved. These are leads
+for a full metrical scansion, not a finished scanner.
 """
 
 from __future__ import annotations

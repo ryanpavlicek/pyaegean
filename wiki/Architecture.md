@@ -26,6 +26,10 @@ pyaegean is built in **strict, downward-only layers**. Higher layers import
 lower ones; the core never imports a script.
 
 ```
+L7  interfaces            cli (the aegean CLI and REPL) · tui (aegean tui)
+                          · mcp_server (aegean-mcp); all three render the
+                          balance/pipeline views through the shared
+                          aegean._view, so those surfaces cannot drift
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
 L5  translate             hybrid: lexicon/morphology grounding → LLM
 L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/syllabify/…)
@@ -251,7 +255,7 @@ model build, which makes it the cache key for the opt-in
 
 ```python
 c = aegean.load("lineara")
-c.fingerprint()[:16]                   # '4daad66c2130beb1'
+c.fingerprint()[:16]                   # 'c36dcb48bb5addd6'
 c.cache_key() == c.fingerprint()       # True (cache_key is an alias)
 ```
 
@@ -1103,7 +1107,9 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   need to reconstruct, use `to_json`/`from_json` or the SQLite round-trip.
 - EpiDoc export is lossless only for **what EpiDoc preserves**: the id,
   find-place, token/line stream, and editorial certainty. The *reader* re-derives
-  token kinds from text and needs lxml (the `[epidoc]` extra).
+  token kinds from text; the generic reader (`io.from_epidoc`) is stdlib-only,
+  while the DAMOS-style Linear B reader (`scripts.linearb.parse_epidoc`) needs
+  lxml (the `[epidoc]` extra).
 - The query engine's word predicates operate on **multi-sign words** (tokens
   containing a `-`); single-sign tokens and logograms are matched by the
   inscription-scope predicates, not the word-scope ones.

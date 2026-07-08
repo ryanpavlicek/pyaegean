@@ -31,10 +31,11 @@ class ReadingStatus(str, Enum):
     """Editorial certainty of a token's reading (Leiden / EpiDoc conventions).
 
     ``CERTAIN`` is the default. The others mark the apparatus an epigraphic edition must
-    preserve — damaged, restored, or lost text. The bundled corpora are normalized
-    transcriptions (almost entirely ``CERTAIN``; see the Linear A provenance note); a
-    bring-your-own EpiDoc corpus populates these from ``<unclear>`` / ``<supplied>`` /
-    ``<gap>`` markup, and the EpiDoc writer emits them back.
+    preserve — damaged, restored, or lost text. The bundled loaders decode each edition's
+    apparatus into these statuses (the Leiden underdots, brackets, and erasure marks of
+    the Cypriot and Linear A corpora); a bring-your-own EpiDoc corpus populates them from
+    ``<unclear>`` / ``<supplied>`` / ``<gap>`` markup, and the EpiDoc writer emits them
+    back.
     """
 
     CERTAIN = "certain"      # securely read

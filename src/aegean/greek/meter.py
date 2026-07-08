@@ -2,8 +2,9 @@
 
 This is the step beyond per-syllable `aegean.greek.prosody`: it resolves
 syllable quantities **across word boundaries** and fits the whole line to a
-metrical pattern (dactylic hexameter, elegiac pentameter), recovering the feet,
-the resolved long/short sequence, and the main caesura.
+metrical pattern (dactylic hexameter, elegiac pentameter, iambic trimeter, or
+an aeolic lyric line), recovering the feet, the resolved long/short sequence,
+and the main caesura.
 
 Method
 ------

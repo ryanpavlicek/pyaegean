@@ -75,6 +75,11 @@ def test_unknown_word_returns_none(tmp_path: pathlib.Path, monkeypatch: pytest.M
 
 
 def test_gloss_requires_use_lsj() -> None:
+    # greek.gloss consults every active lexicon (the registry), so reset them all,
+    # not just LSJ: a registry lexicon activated by a neighbouring test (possible
+    # whenever its prebuilt index is already in the local cache) must not leak in.
+    for name in greek.active_lexica():
+        greek.disable_lexicon(name)
     lexicon.disable_lsj()
     with pytest.raises(LexiconNotLoadedError):
         greek.gloss("λόγος")

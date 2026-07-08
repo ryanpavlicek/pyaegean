@@ -3,8 +3,8 @@ one document with its editorial apparatus and accounting analysis.
 
 Three panes, left to right:
 
-1. the corpus list (the eight registered corpora, each marked when its data is
-   not yet on disk);
+1. the corpus list (the thirteen browsable corpora plus any downloaded Greek
+   works, each marked when its data is not yet on disk);
 2. the document table for the selected corpus, above a search box (``/`` focuses
    it) that filters the table by document id and, for a sign pattern, surfaces
    the matching words;
@@ -155,7 +155,7 @@ class CorpusBrowserScreen(Screen[None]):
     def _open_corpus(self, corpus_id: str) -> None:
         """Load ``corpus_id`` into the document table (or show a clean error).
 
-        Resolves via :func:`~aegean.tui.data.read_corpus_spec`, so besides the eight
+        Resolves via :func:`~aegean.tui.data.read_corpus_spec`, so besides the
         registered corpora this also opens a fetched Greek work id (``tlg0012.tlg001``)
         or a ``.json``/``.db`` file, the same superset the CLI accepts."""
         status = self.query_one("#corpus-status", Static)

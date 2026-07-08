@@ -1,7 +1,7 @@
 """The ``aegean tui`` terminal user interface (the ``[tui]`` extra).
 
 A focused research cockpit over the highest-value offline reads: browse the
-eight corpora and inspect one document (with its accounting balance and
+thirteen corpora and inspect one document (with its accounting balance and
 structure), the live Greek workbench (pipeline, scansion, syllables, IPA), and
 the local data store. Built on Textual; installed with ``pip install
 'pyaegean[tui]'`` and launched with ``aegean tui``.

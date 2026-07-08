@@ -57,7 +57,7 @@ def fetched(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture()
 def offline(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Make fetch('nt-corpus') fail, forcing the bundled one-book (Phlm) sample."""
+    """Make fetch('nt-corpus') fail, forcing the bundled sample (John 1 + Philemon)."""
     def _fail(name: str, **k: object) -> Path:
         raise DataNotAvailableError(f"{name} unavailable (test: simulated offline)")
 

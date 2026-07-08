@@ -91,7 +91,8 @@ class Corpus:
     # ── construction ────────────────────────────────────────────────────
     @classmethod
     def load(cls, script_id: str) -> "Corpus":
-        """Load a bundled corpus by script id, e.g. ``Corpus.load("lineara")``.
+        """Load a registered corpus by name, e.g. ``Corpus.load("lineara")`` (bundled)
+        or ``Corpus.load("damos")`` (fetched to the local data store on first use).
 
         Loaders may cache one built instance per process (the bundled corpora do),
         so the result is returned as a `copy`: mutate it freely, and documents
@@ -100,7 +101,7 @@ class Corpus:
             fn = _LOADERS[script_id]
         except KeyError:
             raise KeyError(
-                f"no bundled corpus for {script_id!r}; available: {sorted(_LOADERS)}"
+                f"no registered corpus {script_id!r}; available: {sorted(_LOADERS)}"
             ) from None
         return fn().copy()
 

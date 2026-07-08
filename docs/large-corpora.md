@@ -15,9 +15,12 @@ fetches:
 | DAMOS Linear B (`load("damos")`) | ~5,900 | ~hundreds of thousands of tokens |
 | SigLA Linear A (`load("sigla")`) | ~780 | sign-level |
 | A single Greek work (`greek.load_work`) | 1 work | the Iliad is ~127k tokens |
+| Greek inscriptions (`isicily`, `iip`, `iospe`, `igcyr`, `edh`) | ~1,000-2,900 each | tens of thousands of tokens each |
+| DDbDP papyri (`load("ddbdp")`) | 57,329 | ~4.4M tokens; SQLite-hosted, streamed via `aegean.db.stream` |
 
-All of these fit comfortably in memory, and the in-memory model keeps the API
-simple, random-access (`corpus.get(id)`), and analysable without a database.
+All but DDbDP fit comfortably in memory (DDbDP is the case the streaming section
+below handles), and the in-memory model keeps the API simple, random-access
+(`corpus.get(id)`), and analysable without a database.
 
 ## Building a bigger corpus
 
@@ -64,27 +67,30 @@ the per-document memory profile is unchanged.
 - **The opt-in analysis cache** (`aegean.cache`) keeps repeated heavy analyses
   off the hot path entirely.
 
-## Deferred: streaming load (and why)
+## Streaming: what ships, what is deferred (and why)
 
-True streaming: *not* holding all `Document`s in memory at once: is **not**
-implemented, on purpose. It would mean:
+The document-yielding half of streaming now ships: `aegean.db.stream(path)`
+yields a SQLite corpus's `Document`s one at a time without ever building the
+`Corpus`, with flat memory use (the recommended path for DDbDP, the one shipped
+corpus at that scale). What is **not** implemented, on purpose, is a fully
+streaming *analysis* pipeline. It would mean:
 
-- a loader that **yields** `Document`s instead of returning a `Corpus` (so a
-  multi-GB corpus is processed in a single pass without materialising);
 - analyses that accept a document **iterator** rather than a `Corpus` (most of
   the per-document statistics already could);
 - giving up O(1) random access (`get(id)`) and any analysis that needs two
   passes or the whole vocabulary at once (dispersion, keyness, clustering) unless
   it's restructured to spill to disk.
 
-That's a real cost in API complexity, and **no corpus pyaegean targets needs it
-yet**: the largest openly-licensed Greek corpus, the full First1KGreek, is read
-one work at a time via `greek.load_work`, and each work fits in memory. The test
-case for streaming would be loading *all* of First1KGreek (or a comparable
-multi-million-token corpus) at once, which the package does not currently do.
+That's a real cost in API complexity, and the corpus that crosses the line now
+exists: DDbDP (`aegean.load("ddbdp")`, 57,329 documentary papyri, ~4.4M tokens).
+It is answered at the storage layer rather than the API layer: the corpus is
+hosted as a SQLite database, `aegean.db.stream(ddbdp_db())` yields its
+`Document`s one at a time in flat memory, and `aegean.db.search()` (CLI:
+`aegean db search ddbdp "..."`) gives instant full-text search without loading
+anything. `aegean.load("ddbdp")` still returns the whole in-memory `Corpus` for
+those with the RAM.
 
-When that need arrives, the iterator-first views above are the seam to build on:
-add a `Corpus.stream(script_id)` classmethod yielding `Document`s, and an
-analysis path that consumes the iterator. Until then, adding the machinery would
-be speculative complexity against the project's zero-ceremony, dependency-free
-principles.
+When that need arrives, `aegean.db.stream()` and the iterator-first views above
+are the seam to build on: an analysis path that consumes the iterator. Until
+then, adding that machinery would be speculative complexity against the
+project's zero-ceremony, dependency-free principles.

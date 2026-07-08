@@ -25,7 +25,7 @@ _HELP = """[b]aegean — keys[/b]
   ctrl+p   Command palette (open a corpus, fetch, jump, theme…)
 
 [b]In the corpus browser[/b]  /  focus search · Tab cycle panes · type a sign
-  pattern (KU-*) to search · open: <spec> loads any work id or file
+  pattern (KU-*) to search · ctrl+p 'Open …' opens a corpus or a downloaded work
   In the reader: ↑/↓ move the line cursor · Enter / a analyze the line
   (parse/tag, neural, IPA, translate for Greek; signs + Greek reading for syllabic)
 

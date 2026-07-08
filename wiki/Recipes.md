@@ -40,6 +40,7 @@ you used lands in your paper's references. If you're brand new, start with
 | 24 | [Save a query as a reusable corpus, then reload it](#24--save-a-query-as-a-reusable-corpus-then-reload-it) | any | no |
 | 25 | [Find a work in the catalogue, or bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) | Greek | no |
 | 26 | [Get the best AI translation out of pyaegean](#26--get-the-best-ai-translation-out-of-pyaegean) | Greek | API key (generation only) |
+| 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~206 MB) |
 
 Throughout, the `--json` flag is your friend: every CLI command emits clean JSON
 on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/) or load it
@@ -48,7 +49,7 @@ straight into Python/pandas.
 One thing worth knowing before you start, because the last few recipes lean on
 it: **anywhere a command takes a corpus, it takes more than an id.** A registered
 id (`lineara`), a Greek work id (`tlg0012.tlg001`), a path to a saved `.json` or
-`.db` corpus, or `-` for JSON on stdin all work the same way — so you can build a
+`.db` corpus, or `-` for JSON on stdin all work the same way, so you can build a
 database straight from a work (`aegean db build tlg0012.tlg001 -o iliad.db`), run
 `aegean stats iliad.json`, or `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`
 without writing any Python. In Python the equivalent is
@@ -309,6 +310,7 @@ The registered providers and the extra that activates each:
 | `openai` | `pip install "pyaegean[openai]"` | GPT |
 | `gemini` | `pip install "pyaegean[gemini]"` | Gemini |
 | `grok` | `pip install "pyaegean[grok]"` | Grok |
+| `openrouter` | `pip install "pyaegean[openrouter]"` | many vendors via one key (`vendor/model` ids) |
 
 Every generative result is a labeled hypothesis, never a reading: see
 [AI Layer](AI-Layer) and, if you can judge the answer, the
@@ -732,9 +734,11 @@ The corpus sizes that ship in the wheel, for reference:
 | `linearb` | 18 documents | a small bundled Linear B sample; load `damos` for the full corpus |
 | `cypriot` | 180 documents | bundled Cypriot syllabic corpus |
 | `cyprominoan` | 2 documents | bundled Cypro-Minoan sample |
-| `greek` |— | the Greek NLP track, not a fixed corpus (`load_work` / `load_nt`) |
+| `greek` | 5 documents | bundled Greek sample passages; use `load_work` / `load_nt` for whole works |
 
-Fetched corpora (`damos`, `nt`, `sigla`) are larger and pulled on first use: see
+Fetched corpora (`damos`, `nt`, `sigla`, the Greek epigraphic corpora `isicily`,
+`iip`, `iospe`, `igcyr`, `edh`, and the `ddbdp` papyri database) are larger and
+pulled on first use: see
 the next recipe and [Data & Provenance](Data-and-Provenance).
 
 ## 21 · Lock down reproducibility (versions + sha256)
@@ -753,7 +757,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.27.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.27.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into
@@ -843,7 +847,7 @@ KI-RO,16
 A-TA-I-*301-WA-JA,11
 ```
 
-Keyness writes the full table — counts, totals, G², log-ratio, p — one row per
+Keyness writes the full table (counts, totals, G², log-ratio, p), one row per
 item, ready to sort in any spreadsheet:
 
 ```bash
@@ -870,7 +874,7 @@ label and grounding trace alongside the text: see [AI Layer](AI-Layer). See
 *Run the [compound query](#12--build-a-compound-query-and-pipe-the-json) once,
 keep the matched inscriptions as their own corpus, and feed it to any later
 command.* `query --output` writes the hits as a `.json` or `.db` corpus:
-inscriptions only — and stamps a `subset:` provenance note so the saved file
+inscriptions only, and stamps a `subset:` provenance note so the saved file
 still cites the exact query that built it:
 
 ```bash
@@ -1076,6 +1080,27 @@ published Homers agree), so every result is a **labeled, provenanced hypothesis*
 never a verdict. `ai.grounding_regime(text, corpus=...)` gives an exploratory
 help/neutral/hurt signal, but the simple rule holds: morphology always, glosses
 when the vocabulary is rare. See [AI Layer](AI-Layer).
+
+## 27 · Search 57,000 papyri without loading them (DDbDP)
+
+The Duke Databank of Documentary Papyri (`ddbdp`, 57,329 papyri, ~4.4M tokens) is
+delivered as a SQLite database with a full-text index, so the right way in is
+search and streaming, not `load`:
+
+```bash
+aegean db search ddbdp "βασιλέως" --limit 3   # fetches the database on first use (~206 MB), then instant
+```
+
+```python
+from aegean.scripts.greek import ddbdp_db
+from aegean import db
+for doc in db.stream(ddbdp_db()):   # one document at a time, flat memory
+    ...
+```
+
+`aegean.load("ddbdp")` still materialises the whole corpus for corpus-wide
+statistics, but it costs a couple of minutes and several GB of RAM; prefer the
+search and stream paths above.
 
 ---
 

@@ -153,7 +153,7 @@ from aegean import greek
 greek.scan_trimeter("ὦ κοινὸν αὐτάδελφον Ἰσμήνης κάρα").pattern
 # '×—⏑—|×—⏑—|×—⏑×'
 
-# Bacchae 1 — Διό- resolves to ⏑⏑, giving 13 syllables
+# Bacchae 2 — Διό- resolves to ⏑⏑, giving 13 syllables
 sc = greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη")
 sc.pattern              # '×⏑⏑⏑—|×—⏑—|×—⏑×'
 len(sc.syllables)       # 13
@@ -340,7 +340,7 @@ long elements only, never on the breves or the line-final element.
 ```python
 from aegean import greek
 
-sc = greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη")  # Bacchae 1
+sc = greek.scan_trimeter("Διόνυσον, ὃν τίκτει ποθ' ἡ Κάδμου κόρη")  # Bacchae 2
 len(sc.syllables)   # 13 — one element resolved (Διό- = ⏑⏑)
 sc.pattern          # '×⏑⏑⏑—|×—⏑—|×—⏑×'
 ```

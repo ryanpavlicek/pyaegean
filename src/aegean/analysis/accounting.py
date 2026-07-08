@@ -21,7 +21,8 @@ def account_lines(document: Document) -> list[list[str]]:
 def balance_check(document: Document) -> list[BalanceCheck]:
     """Verify every total line on a document against its summed item lines.
 
-    Uses the script's total markers (Linear A's KU-RO, Linear B's TO-SO/TO-SA)."""
+    Uses the script's total markers (Linear A's KU-RO/KU-RA and PO-TO-KU-RO, Linear B's
+    TO-SO/TO-SA/TO-SO-DE)."""
     markers = markers_for(document.script_id)
     return check_balances(parse_account_lines(account_lines(document), markers), markers)
 

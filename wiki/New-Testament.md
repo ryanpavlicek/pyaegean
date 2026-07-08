@@ -122,6 +122,7 @@ aegean greek nt
 │ field        │ value                                                  │
 ├──────────────┼──────────────────────────────────────────────────────┤
 │ scope        │ whole NT                                                │
+│ ref          │                                                        │
 │ documents    │ 260                                                    │
 │ tokens       │ 137779                                                 │
 │ first        │ Matt 1                                                 │
@@ -290,7 +291,7 @@ corpus = greek.load_nt("John", ref="1")
 corpus.provenance.source
 # 'Nestle 1904 Greek NT — morphology/lemmas (biblicalhumanities/Nestle1904)'
 corpus.provenance.license
-# "CC0-1.0 (morphology); base text public domain"
+# "CC0-1.0 (morphology, lemmas, Strong's); base Greek text public domain"
 corpus.provenance.data_version
 # 'nt-corpus-v1@713f28a3b7d4d66132f5aa809fa223fe79762e5d'
 ```

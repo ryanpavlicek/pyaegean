@@ -295,7 +295,7 @@ is on the [Analysis](Analysis) page.
 
 ## The bundled corpus
 
-pyaegean bundles the **Cypriot syllabic inscriptions of *Inscriptiones Graecae* XV 1** — the
+pyaegean bundles the **Cypriot syllabic inscriptions of *Inscriptiones Graecae* XV 1**, the
 Berlin-Brandenburg Academy of Sciences and Humanities digital edition
 ([telota.bbaw.de/ig](https://telota.bbaw.de/ig)), licensed **CC BY 4.0**. A point-in-time snapshot
 of **178 inscriptions** ships with the package, so the readable corpus is always available offline

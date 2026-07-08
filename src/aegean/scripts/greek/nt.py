@@ -8,8 +8,8 @@ form — all carried in ``Token.annotations`` (so ``to_dataframe`` surfaces them
 Source: the Nestle 1904 edition with morphology/lemmas/Strong's dedicated to the public
 domain under CC0 (biblicalhumanities/Nestle1904), built into a release asset by
 ``scripts/build_nt_corpus.py``. CC0 lets us both fetch the full 27-book corpus to cache
-and bundle one book as an offline sample — ``aegean.load("nt")`` works with no network for
-that book and fetches the rest on demand.
+and bundle a small offline sample (John 1 and Philemon): ``aegean.load("nt")`` works
+with no network for those passages and fetches the rest on demand.
 
 Reference addressing mirrors ``load_work``: ``ref="3"`` selects a chapter, ``ref="3.16"`` a
 verse, ``ref="3.16-3.18"`` (or the shorthand ``ref="3.16-18"``) a verse range, ``ref="3-5"``
@@ -253,7 +253,7 @@ def _provenance(meta: dict[str, Any], *, offline: bool) -> Any:
     ]
     if offline:
         notes.append(
-            "Loaded from the bundled one-book offline sample; call greek.load_nt(book) "
+            "Loaded from the bundled offline sample (John 1 + Philemon); call greek.load_nt(book) "
             "with network access (or set PYAEGEAN_NT_CORPUS_URL) for the full 27 books."
         )
     return Provenance(
@@ -286,8 +286,8 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     so gold strings compare byte-for-byte with the library's NFC output.
 
     The full 27-book corpus is fetched to cache on first use (sha256-pinned CC0 asset, or
-    ``PYAEGEAN_NT_CORPUS_URL``). When that asset is unavailable the bundled one-book sample
-    is used as an offline fallback (its provenance says so)."""
+    ``PYAEGEAN_NT_CORPUS_URL``). When that asset is unavailable the bundled sample
+    (John 1 + Philemon) is used as an offline fallback (its provenance says so)."""
     import json as _json
 
     from ...core.corpus import Corpus
@@ -306,7 +306,7 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     try:
         docs = _select(payload["documents"], book, ref)
     except ValueError:
-        # Offline we only have the bundled one-book sample: a *valid* book outside it
+        # Offline we only have the bundled sample (John 1 + Philemon): a *valid* book outside it
         # deserves a fetch-failure explanation, not the generic "no text matched".
         osis = _osis_or_none(book) if book is not None else None
         bundled = sorted({rec["book"] for rec in payload["documents"]})

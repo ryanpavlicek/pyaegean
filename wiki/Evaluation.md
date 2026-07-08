@@ -115,8 +115,8 @@ module, so the numbers are on the same instrument as the field's published
 results, and a swapped or tampered scorer fails the hash check before it can run.
 
 The gold folds are pinned too: each UD treebank is fetched from a fixed upstream
-commit, so a re-run reads byte-identical data. `greek.ud_path(treebank, split)`
-returns the cached fold path (fetching on first use), and `greek.load_conllu(path)`
+commit, so a re-run reads byte-identical data. `greek.ud.ud_path(treebank, split)`
+returns the cached fold path (fetching on first use), and `greek.ud.load_conllu(path)`
 parses a CoNLL-U file into `UDSentence` / `UDToken` objects (multiword-token
 ranges and empty nodes are skipped, so each sentence holds exactly the syntactic
 words the evaluator scores).
@@ -334,13 +334,14 @@ fetched gold data:
 ```bash
 aegean greek eval ud --fold perseus --split test --neural   # the standard benchmark, shipped model
 aegean greek eval ud --fold perseus --bootstrap --neural    # with percentile confidence intervals
-aegean greek eval proiel --treebank --neural-lemmatizer     # neutral out-of-AGDT check
+aegean greek eval proiel --neural-lemmatizer                # neutral out-of-AGDT check
 aegean greek eval proiel --drift                            # where the out-of-AGDT gap comes from
 aegean greek eval nt                                        # the neural model on the Greek NT
 ```
 
-The backend flags (`--neural`, `--tagger`, `--lemmatizer`, `--neural-lemmatizer`, and
-for `ud` the `--parser` implied by an active parser) choose which pipeline is scored;
+The backend flags (`--neural`, `--tagger`, `--lemmatizer`, `--neural-lemmatizer`)
+choose which pipeline is scored; for `ud`, `uas`/`las` are reported whenever a parser
+is active (the neural pipeline includes one);
 `--json` and `-o` write machine-readable output. These commands are **heavy**: they
 fetch gold data (and `tagger`/`lemmatizer`/`parser` may train a model), so run them
 only when you actually want to reproduce a number.

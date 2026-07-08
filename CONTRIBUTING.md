@@ -75,7 +75,9 @@ their own sources and methods in their module docstrings.
   `NOTICE` accurate as data sources are added.
 - **Measured claims only.** Accuracy numbers in docs must come from a
   reproducible evaluation (see `docs/benchmarks.md` for the protocol);
-  comparisons with other tools live there, not in the README/wiki.
+  comparisons with other tools live in `docs/benchmarks.md` and, with citations,
+  on the wiki's Benchmarks page (both pinned to the claims registry), never in
+  the README.
 
 ## Deprecation policy
 

@@ -66,11 +66,15 @@ The landing view holds three things permanently:
 1. **The undeciphered-script honesty banner.** Linear A and Cypro-Minoan are
    undeciphered, so any structural analysis of them is exploratory, not a reading.
    The banner states this the moment the app opens.
-2. **The eight-corpus overview.** Each of the eight registered corpora with a
+2. **The thirteen-corpus overview.** Each of the thirteen registered corpora with a
    one-line blurb and whether its data is already on disk, read without loading
    anything: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, `nt`,
-   `damos`, and `sigla`. Selecting a corpus here jumps straight into the corpus
-   browser with it open.
+   `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, and `edh`. Selecting a
+   corpus here jumps straight into the corpus browser with it open. The
+   fourteenth loadable corpus, `ddbdp` (57,000 documentary papyri), is
+   deliberately not listed: loading it whole is far too heavy for an interactive
+   browser. Search it with `aegean db search ddbdp` from the command line or the
+   command console instead.
 3. **The global-key legend**, so navigation is discoverable without the palette.
 
 ### Corpus browser (`c`)
@@ -96,7 +100,7 @@ Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **anal
 popup** for that line. What it offers depends on the script:
 
 - **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
-  tagger** (lemma + POS, instant), the **neural pipeline** (best-in-class tags + a
+  tagger** (lemma + POS, instant), the **neural pipeline** (the most accurate tags + a
   dependency parse; needs the `[neural]` extra, and downloads the model on first use),
   **IPA**, and **translation**. Translation is **optional** and requires a configured
   BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says
@@ -107,7 +111,7 @@ popup** for that line. What it offers depends on the script:
 - **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
   **exploratory transliteration** — both plainly labelled as not a reading.
 
-The corpus browser is not limited to the eight registered corpora. It resolves any
+The corpus browser is not limited to the thirteen registered corpora. It resolves any
 corpus spec the CLI accepts, so it also opens a **fetched Greek work** by its CTS
 id (for example `tlg0012.tlg001`) or a saved `.json` / `.db` corpus **file**. This
 is how a work fetched in the Works library (below) comes up for reading.

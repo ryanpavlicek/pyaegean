@@ -111,7 +111,8 @@ aegean info linearb
 #            excerpts — not a corpus.
 ```
 
-For full-corpus Mycenaean work, bring your own (DAMOS, LiBER): see
+For full-corpus Mycenaean work, fetch DAMOS on demand (`aegean.load("damos")`,
+~5,900 tablets, CC BY-NC-SA 4.0) or bring your own edition (LiBER): see
 [Data & Provenance](Data-and-Provenance) and [Limitations](Limitations).
 
 ---
@@ -499,7 +500,8 @@ step, without the `from_records` boilerplate. See [Tutorial](Tutorial) and
   offers *hypotheses* with traces, never translations. The accounting/structure
   analyses are pattern observations, not meanings.
 - **The bundled Linear B is a sample, not a corpus** (see §2). Full Mycenaean
-  work is bring-your-own (DAMOS, LiBER), which carry their own licences.
+  work uses the fetched DAMOS corpus (`aegean.load("damos")`) or your own
+  edition (LiBER); both carry their own licences.
 - **Measured ≠ established.** The neural Greek pipeline's accuracy is a number on
   held-out data, reproducible but not a guarantee on your text: check
   [Greek NLP](Greek-NLP).

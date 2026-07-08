@@ -123,7 +123,7 @@ The four undeciphered/partly-read scripts at a glance:
 | Script | `aegean.load(...)` id | Signs | Signs with a sound value | Lexicon | Status |
 | --- | --- | --- | --- | --- | --- |
 | Linear A | `lineara` | 342 | 50 (working convention) |— | Undeciphered |
-| Linear B | `linearb` | (Linear B grid) | full grid | 150 entries | Deciphered |
+| Linear B | `linearb` | (Linear B grid) | full grid | 149 entries | Deciphered |
 | Cypriot syllabary | `cypriot` | (ICS grid) | full grid | 17 entries | Deciphered |
 | Cypro-Minoan | `cyprominoan` | 99 | 0 |— | Undeciphered |
 
@@ -177,7 +177,10 @@ The fetched, never-bundled assets, and why:
 | --- | --- | --- | --- |
 | `damos` | Full Linear B, ~5,900 tablets | CC BY-NC-SA 4.0 | NonCommercial |
 | `sigla` | SigLA Linear A palaeography, 781 docs | CC BY-NC-SA 4.0 | NonCommercial |
-| `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size: redistributable, one book bundled offline |
+| `isicily` / `iospe` / `edh` | Greek inscriptions (2,855 / 1,194 / 1,286 docs) | CC BY 4.0 / CC BY / CC BY-SA 4.0 | Size: fetched on demand |
+| `iip` / `igcyr` | Greek inscriptions (2,113 / 997 docs) | CC BY-NC 4.0 / CC BY-NC-SA 4.0 | NonCommercial |
+| `ddbdp` | Documentary papyri, 57,329 docs (SQLite + FTS) | CC BY 3.0 | Size (~206 MB download) |
+| `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size: redistributable, John 1 + Philemon bundled offline |
 | UD / PROIEL folds | Evaluation treebanks | CC BY-NC-SA | NonCommercial; eval only, never trained on |
 | neural model | Joint tagger/parser/lemmatizer | CC BY-SA (from treebanks) | Size (~173 MB); the `[neural]` extra |
 | facsimile mirror | Linear A photos/drawings | © rightsholders | Not licensed for redistribution |
@@ -197,7 +200,7 @@ Each of these is something code *can* fix, and each is on the
 | Limitation today | Plan |
 | --- | --- |
 | The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 781 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
-| Linear B bundles an 18-tablet illustrative sample and a 150-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 150 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
+| Linear B bundles an 18-tablet illustrative sample and a 149-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 149 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
 | The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source that isn't currently available |
@@ -271,7 +274,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
 
   | Extra | Adds | Powers |
   | --- | --- | --- |
-  | `cli` | typer, rich | the `aegean` command |
+  | `cli` | typer, rich, prompt_toolkit | the `aegean` command + REPL |
   | `neural` | onnxruntime, tokenizers, numpy | the joint NLP pipeline (torch-free) |
   | `data` | pandas | tabular export / DataFrames |
   | `parquet` | pyarrow | Parquet export |
@@ -301,10 +304,14 @@ These are deliberate. They're listed here so you can judge them, not so they get
   you turn it on.
 
 - **Corpora are held in memory**: fine for everything pyaegean ships and fetches
-  (the largest, DAMOS, is ~5,900 documents). `Corpus.iter_documents` /
+  (the largest in-memory load, DAMOS, is ~5,900 documents; the one exception is
+  DDbDP, 57,329 papyri, hosted as SQLite: reach it with `aegean db search ddbdp`
+  or `aegean.db.stream(ddbdp_db())` rather than materialising
+  `aegean.load("ddbdp")`). `Corpus.iter_documents` /
   `iter_tokens` / `iter_words` stream token-by-token where you need it, and an
   opt-in [analysis cache](Analysis#caching-expensive-analyses-opt-in) reuses
-  heavy results; true streaming *load* is deferred until a corpus needs it (design
+  heavy results; a SQLite-hosted corpus streams document-by-document via
+  `aegean.db.stream` (design
   note:
   [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).
 

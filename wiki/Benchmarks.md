@@ -9,7 +9,7 @@ package with the official CoNLL 2018 evaluator.
 
 Every number here comes from the recorded protocol and matches the canonical
 source in the repository,
-`docs/benchmarks.md` (in the repository),
+`docs/benchmarks.md`,
 which is registry-pinned: each published figure lives in
 `training/results/published-claims.json`, a per-commit test asserts the docs carry
 exactly those values, and the offline-stack rows are re-measured against the
@@ -330,9 +330,8 @@ accuracy percentage.
 
 ## Where this lives (canonical source)
 
-`docs/benchmarks.md` (in the repository)
-in the repository is the canonical, registry-pinned source for every number on this
-page. Each published figure is stored in `training/results/published-claims.json`;
+`docs/benchmarks.md` in the repository is the canonical, registry-pinned source
+for every number on this page. Each published figure is stored in `training/results/published-claims.json`;
 `tests/test_benchmark_claims.py` asserts the docs (and their README and wiki echoes)
 carry exactly those values per commit and offline, so a documented number cannot drift
 without the registry, and `scripts/check_benchmarks.py --measure` re-runs the
@@ -340,7 +339,7 @@ offline-stack rows against it. A legitimate re-measure updates the registry, the
 and the evidence file in a single commit.
 
 For the surrounding detail, see the
-[Methodology](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/methodology.md)
+[Methodology](Methodology)
 notes, the evaluation tooling and reproduction targets on
 [Greek NLP](Greek-NLP#reproduce-the-numbers-from-the-shell), the reproducibility and
 "reproduce or challenge the number" stance on [For Specialists](For-Specialists), the

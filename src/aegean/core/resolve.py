@@ -145,7 +145,8 @@ def read_corpus(spec: str) -> "Corpus":
         return Corpus.from_json(spec)
 
     # 2. registered id — import aegean so every built-in loader is registered first
-    import aegean  # noqa: F401 — registers lineara/linearb/cypriot/cyprominoan/greek/nt/damos/sigla
+    # (lineara/linearb/cypriot/cyprominoan/greek/nt/damos/sigla/isicily/iip/iospe/igcyr/edh/ddbdp)
+    import aegean  # noqa: F401 — registers every built-in corpus loader
     from .corpus import _LOADERS
 
     if spec in _LOADERS:

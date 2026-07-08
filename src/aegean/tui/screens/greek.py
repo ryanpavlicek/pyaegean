@@ -1,8 +1,8 @@
 """The Greek workbench: a live, offline analysis surface for one line of Greek.
 
 A single text :class:`~textual.widgets.Input` at the top drives four tabs that
-update as the user types (each keystroke, no debounce, because every backend is
-zero-dep, offline, and instant):
+update as the user types (a short ~0.12 s debounce coalesces fast typing; every
+backend is zero-dep, offline, and instant):
 
 - **pipeline** — per-token analysis (sentence:index, text, UPOS, lemma) from
   :func:`aegean.tui.data.greek_pipeline`, the sentence number kept so a
@@ -11,7 +11,8 @@ zero-dep, offline, and instant):
   (hexameter / pentameter / trimeter), the foot glyphs and caesura, or the
   friendly "does not scan" message when the line does not fit the meter;
 - **syllables** — the syllabification of the first word, hyphenated;
-- **IPA** — the reconstructed Attic transcription, word by word.
+- **IPA** — the reconstructed transcription, word by word, in the period chosen
+  in a selector (Attic or Koine).
 
 Everything here goes through :mod:`aegean.tui.data`, which never raises to the
 UI: a bad meter or an unscannable line arrives as ``result.error`` text and is
@@ -67,7 +68,7 @@ _EMPTY_HINT = "type a line above"
 
 class GreekWorkbenchScreen(Screen[None]):
     """The Greek workbench screen: an input over live pipeline / scansion /
-    syllables / IPA tabs, each re-rendered on every keystroke."""
+    syllables / IPA tabs, each re-rendered live as the line changes."""
 
     BINDINGS = [
         ("slash", "focus_input", "Search"),

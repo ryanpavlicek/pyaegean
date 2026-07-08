@@ -45,7 +45,11 @@ except PackageNotFoundError:  # pragma: no cover - running from a source tree, u
 
 
 def load(script_id: str) -> Corpus:
-    """Load a bundled corpus, e.g. ``aegean.load("lineara")``.
+    """Load a registered corpus by id, e.g. ``aegean.load("lineara")``.
+
+    The Aegean corpora and the Greek sample texts are bundled and load offline;
+    the rest (``nt``, ``damos``, ``sigla``, the epigraphy corpora, ``ddbdp``)
+    fetch to the local data store on first use.
 
     Each call returns an independent copy (see `Corpus.copy`), so mutating the
     result never leaks into a later ``load()`` of the same corpus."""

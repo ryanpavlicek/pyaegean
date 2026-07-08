@@ -225,7 +225,8 @@ def _handle_use(rest: list[str], session: _Session) -> None:
 
 def _registered_ids() -> list[str]:
     """The registered corpus ids, importing ``aegean`` so every built-in loader
-    (lineara, linearb, cypriot, cyprominoan, greek, nt, damos, sigla) is present."""
+    (lineara, linearb, cypriot, cyprominoan, greek, nt, damos, sigla, isicily, iip,
+    iospe, igcyr, edh, ddbdp) is present."""
     import aegean  # noqa: F401  (importing registers the built-in loaders)
     from aegean.core.corpus import _LOADERS
 

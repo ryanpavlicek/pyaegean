@@ -280,8 +280,8 @@ def resolve_doc(c: Any, corpus: str, doc_id: str) -> Any:
 
 
 CORPUS_ARG = typer.Argument(
-    ..., help="A corpus id (lineara, linearb, cypriot, cyprominoan, greek, nt, damos, sigla), "
-              "a Greek work id (tlg0012.tlg001), a path to a .json/.db corpus, or '-' for JSON "
-              "on stdin."
+    ..., help="A corpus id (lineara, linearb, cypriot, cyprominoan, greek, nt, damos, sigla, "
+              "isicily, iip, iospe, igcyr, edh, ddbdp), a Greek work id (tlg0012.tlg001), a "
+              "path to a .json/.db corpus, or '-' for JSON on stdin."
 )
 JSON_OPT = typer.Option(False, "--json", help="Machine-readable JSON on stdout.")

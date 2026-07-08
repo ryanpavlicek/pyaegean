@@ -7,8 +7,8 @@ confirm it works.
 
 The good news for newcomers: **the core install is one command and has zero
 third-party dependencies.** The wheel ships code and JSON only, so `import aegean`
-is instant and works fully offline. Everything heavier: `pandas`, the Greek NLP
-backends, the AI provider SDKs, plotting, the command line: is an *optional
+is instant and works fully offline. Everything heavier (`pandas`, the Greek NLP
+backends, the AI provider SDKs, plotting, the command line) is an *optional
 extra* that you pull in only when you ask for it. Nothing is downloaded behind
 your back.
 
@@ -76,7 +76,7 @@ pip install "pyaegean[all]"       # everything except [neural] and [parquet]
 
 The complete matrix:
 
-| Extra | Pulls in | What it unlocks |
+| Extra | Pulls in | What it adds |
 | --- | --- | --- |
 | `pyaegean[data]` | `pandas>=2.2.2` | DataFrame interop (`corpus.to_dataframe()`) |
 | `pyaegean[neural]` | `onnxruntime>=1.23`, `tokenizers>=0.20`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
@@ -90,7 +90,7 @@ The complete matrix:
 | `pyaegean[geo]` | `geopandas>=0.14`, `shapely>=2.0.4` | geographic analysis / GeoJSON |
 | `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
 | `pyaegean[parquet]` | `pyarrow>=16.1` | Parquet export (`io.to_parquet`) |
-| `pyaegean[cli]` | `typer>=0.16`, `rich>=13` | the [`aegean` command line](CLI) |
+| `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
 | `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui` | everything **except** `neural` and `parquet` |
@@ -115,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.27.0
+# pyaegean 0.27.1
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.27.0
+print(aegean.__version__)                 # 0.27.1
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.27.0
+# pyaegean 0.27.1
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.27.0                    │
+│ OK │ pyaegean │ 0.27.1                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -208,8 +208,9 @@ metadata only, not the texts), and all the phonology / metre / analysis code.
 Nothing in that list ever needs the network.
 
 **What is fetched on demand into a user cache** (never bundled, and only when you
-explicitly ask for it): large or non-commercially-licensed corpora, the trained
-Greek backends, and the facsimile imagery. Each download is `sha256`-verified and,
+explicitly ask for it): the fetchable corpora (the Greek inscription and papyri
+collections, DAMOS, SigLA, the New Testament), the trained Greek backends, the
+prebuilt dictionary indexes, and the facsimile imagery. Each download is `sha256`-verified and,
 once on disk, stays offline forever after.
 
 You can see the full catalogue from the shell (the `note` and `license` columns
@@ -223,9 +224,18 @@ aegean data list
 | --- | --- | --- | --- |
 | `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~25 MB | CC BY-SA 3.0 (from Perseus AGDT) |
 | `lsj-index` | prebuilt LSJ lemma→entry index (`use_lsj()` prefers it over the 270 MB build) | ~15 MB | CC BY-SA 4.0 (Perseus) |
+| `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (`use_lexicon("middle-liddell")` prefers it) | ~2.3 MB | public domain (1889); Perseus/Scaife digitization |
+| `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT |
+| `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) |
 | `damos-corpus` | DAMOS-derived Linear B corpus v2: ~5,900 tablets: `load("damos")` | ~3 MB | CC BY-NC-SA 4.0 (DAMOS, F. Aurora) |
 | `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs / 1,376 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
 | `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens: `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
+| `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily: `load("isicily")` | ~7 MB | CC BY 4.0 (I.Sicily: Prag et al., Oxford) |
+| `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine: `load("iip")` | ~4 MB | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) |
+| `iospe-corpus` | IOSPE Greek inscriptions: 1,194 texts of the Northern Black Sea: `load("iospe")` | ~4 MB | CC BY (IOSPE III, King's College London) |
+| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse): `load("igcyr")` | ~3 MB | CC BY-NC-SA 4.0 (IGCyr²/GVCyr², Bologna) |
+| `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts of the frozen (2021) Heidelberg dump: `load("edh")` | ~6 MB | CC BY-SA 4.0 (EDH, Heidelberg Academy) |
+| `ddbdp-corpus` | DDbDP documentary papyri: 57,329 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp` (heavy: `load("ddbdp")`) | ~206 MB (~757 MB unpacked) | CC BY 3.0 (DDbDP / papyri.info) |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX): the `[neural]` extra | ~232 MB | CC BY-SA 4.0 (derived) |
 | `grc-joint` | joint tagger-parser-lemmatizer (quantized ONNX bundle): the `[neural]` extra | ~173 MB | CC BY-SA 4.0 (derived) |
 | `lineara-images` | 3,368 facsimile/photo files | ~116 MB | © École Française d'Athènes & others: academic reference only |
@@ -307,7 +317,7 @@ finds the glyphs by automatic font fallback, and if not you can select a font
 explicitly per profile under **Settings → your profile → Appearance → Font
 face**. (You may see the "Aegean" font by George Douros recommended elsewhere;
 it covers all four scripts in one file, but its license changed in 2024 to
-personal-use only — educational and commercial use now require a paid licence —
+personal-use only, with educational and commercial use now requiring a paid licence,
 so the Noto fonts above are the free choice.) Nothing breaks without the fonts:
 the transliterations (`KU-RO`, `po-me`) are plain text and always display; you
 only miss the glyph rendering.
@@ -318,9 +328,9 @@ Linear A and Linear B glyphs are on screen at once; the same Windows Terminal +
 Noto Aegean fonts advice applies, and running the TUI with `PYTHONUTF8=1` keeps
 Greek and Linear A displaying correctly.
 
-**Polytonic and epigraphic Greek.** Ordinary polytonic Greek needs no special font, but if you
-want the fullest coverage — every accent combination, and the editorial marks of epigraphic /
-papyrological texts (brackets, underdots) that the inscription corpora (e.g. `isicily`) use — the
+**Polytonic and epigraphic Greek.** Ordinary polytonic Greek needs no special font. For the
+fullest coverage (every accent combination, plus the brackets and underdots of the epigraphic /
+papyrological texts that the inscription corpora such as `isicily` use), the
 best **free** classicist fonts are **New Athena Unicode** (the de-facto scholarly standard, the most
 complete), and the SIL Open Font License families **Gentium Plus** and **Cardo**, plus the **Greek
 Font Society (GFS)** fonts. All are free for any use; New Athena Unicode and the GFS/OFL fonts are
@@ -346,7 +356,7 @@ setup at all: it's built into the shell.)
 
 Polytonic Greek displays perfectly in Jupyter and in editors like VS Code. The
 only place it can look wrong is the **classic Windows console**, where accents may
-render as boxes or `?`, and — more importantly — writing Greek to a file or piping
+render as boxes or `?`, and, more importantly, writing Greek to a file or piping
 output can raise a `UnicodeEncodeError` if the console is on a legacy code page.
 
 The clean fix is to tell Python to use UTF-8 everywhere. Set this once and it

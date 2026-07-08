@@ -1,9 +1,9 @@
 """Render a 9-character AGDT-convention postag as a UD FEATS string.
 
 The mapping is a pure function of the positional tag, validated at **100.00% agreement**
-with the UD-Perseus conversion over all 159,895 aligned train-fold tokens (see
-``docs/benchmarks.md``). Used by the neural pipeline (`aegean.greek.joint`) to render
-its predicted XPOS as UD morphology, and by the training-side converters.
+with the UD-Perseus conversion over all 159,895 aligned train-fold tokens (measured by
+``training/validate_agdt_ud.py``). Used by the neural pipeline (`aegean.greek.joint`) to
+render its predicted XPOS as UD morphology, and by the training-side converters.
 
 Positions: 0 pos, 1 person, 2 number, 3 tense, 4 mood, 5 voice, 6 gender, 7 case,
 8 degree; ``-`` means not-applicable.

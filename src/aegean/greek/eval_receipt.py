@@ -1,7 +1,7 @@
 """Content-addressed evaluation receipts: one tamper-evident record per result.
 
 A *receipt* ties a single evaluation result to the exact inputs that produced it,
-so a number in a paper or the methods write-up can be reproduced and checked. It
+so a number in a paper or a published table can be reproduced and checked. It
 composes pieces pyaegean already tracks, the package version
 (``aegean.__version__``), the data manifest (``aegean.data.versions()``), and the
 active neural model id (``aegean.greek.joint.active()``), with the caller-supplied

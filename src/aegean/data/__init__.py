@@ -117,7 +117,8 @@ class DataSpec:
 #   * project-hosted: datasets/artifacts this project derived or decoded under the
 #     source license and republishes as clearly-labeled pyaegean release assets —
 #     the DAMOS and SigLA corpora (CC BY-NC-SA 4.0; the NC+SA obligations pass to
-#     the user) and the prebuilt LSJ index / AGDT-derived models (CC BY-SA).
+#     the user), the NT and Greek epigraphy/papyri corpora (I.Sicily, IIP, IOSPE,
+#     IGCyr, EDH, DDbDP), and the prebuilt LSJ index / AGDT-derived models (CC BY-SA).
 # Every URL + sha256 is pinned below; each PYAEGEAN_<NAME>_URL env var overrides a
 # source with your own licensed copy.
 _REMOTE: dict[str, DataSpec] = {
@@ -380,8 +381,8 @@ _REMOTE: dict[str, DataSpec] = {
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public
     # domain, so — unlike DAMOS/SigLA — this asset MAY be redistributed; the full 27 books
-    # fetch on demand while one book is bundled as an offline sample (load_nt). sha256 is
-    # set PYAEGEAN_NT_CORPUS_URL to a local build to override the hosted asset, or use
+    # fetch on demand while a sample (John 1 + Philemon) is bundled offline (load_nt).
+    # Set PYAEGEAN_NT_CORPUS_URL to a local build to override the hosted asset, or use
     # the bundled sample offline.
     "nt-corpus": DataSpec(
         name="nt-corpus",

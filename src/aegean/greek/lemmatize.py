@@ -529,13 +529,14 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
     """Return ``(lemma, known)``. ``known`` is False when neither the seed table nor the
     generalizing rule layer found a lemma and the (normalized) input is returned unchanged.
 
-    When the AGDT treebank backend is active (see `aegean.greek.use_treebank`),
-    its attested, correctly-accented lemma is preferred; next, when the neural backend is
-    active (see `aegean.greek.use_neural_lemmatizer`), its GreTa seq2seq prediction is
-    used — it generalizes well to unseen forms (76.3%); next the trained edit-tree lemmatizer
-    (see `aegean.greek.use_lemmatizer`); otherwise the bundled seed table is consulted, then
-    the generalizing ending-stripping rule layer (`rule_lemma_verbose`) for regular forms not
-    in the table."""
+    When the neural joint pipeline is active (see `aegean.greek.use_neural_pipeline`), its
+    contextual prediction is used first; next, when the AGDT treebank backend is active
+    (see `aegean.greek.use_treebank`), its attested, correctly-accented lemma is preferred;
+    next, when the neural backend is active (see `aegean.greek.use_neural_lemmatizer`), its
+    GreTa seq2seq prediction is used — it generalizes well to unseen forms (76.3%); next the
+    trained edit-tree lemmatizer (see `aegean.greek.use_lemmatizer`); otherwise the bundled
+    seed table is consulted, then the generalizing ending-stripping rule layer
+    (`rule_lemma_verbose`) for regular forms not in the table."""
     from . import joint
 
     if joint.active() is not None:  # the neural pipeline: contextual scripts + big lookup
@@ -567,6 +568,7 @@ def lemmatize_verbose(word: str) -> tuple[str, bool]:
 
 
 def lemmatize(word: str) -> str:
-    """The lemma for a form via the seed table then the generalizing rule layer, or the
-    normalized form itself when neither applies."""
+    """The lemma for a form via the active backend cascade, then the seed table and the
+    generalizing rule layer, or the normalized form itself when nothing applies (see
+    `lemmatize_verbose` for the tier order)."""
     return lemmatize_verbose(word)[0]

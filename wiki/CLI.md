@@ -59,13 +59,13 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.27.0
+aegean --version          # pyaegean 0.27.1
 ```
 
 | Group | What's in it |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → tokenize → syllabify → accent → `accentuate` → `sandhi` → scan → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -158,7 +158,7 @@ dispatched as commands):
 
   ```text
   aegean> use linera
-  aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, or a path to a .json or .db corpus
+  aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, or a path to a .json or .db corpus
   ```
 
   One deliberate limit: with a session corpus set, options written *before* an
@@ -213,17 +213,20 @@ and cached data, never the (key-gated, exploratory) AI layer.
 
 ### What's on screen
 
-Four screens, switched with a single key from anywhere:
+Six screens, switched with a single key from anywhere:
 
 | Screen | Key | What it shows |
 |---|---|---|
-| **Home** | `h` | The landing view: the eight corpora at a glance, the global-key legend, and the permanent undeciphered-script honesty banner. |
+| **Home** | `h` | The landing view: the thirteen corpora at a glance, the global-key legend, and the permanent undeciphered-script honesty banner. |
 | **Corpus browser** | `c` | Three panes: the corpus list → a filterable document table (search by id, or by sign pattern like `KU-*-RO`) → an apparatus-aware document detail with its accounting reconciliation (`KU-RO` / `to-so` balance) and structure classification inline. |
 | **Greek workbench** | `g` | A text box over live tabs that re-render as you type: the full pipeline (lemma / POS / morphology), metrical scansion (with a hexameter / pentameter / trimeter selector), syllabification, and reconstructed IPA. All zero-dependency and instant. |
 | **Data store** | `d` | The `aegean doctor` environment report and the `aegean data list` table in one place: versions, extras, the data store, and the fetchable datasets, with a per-dataset Fetch action that downloads on a background worker with a progress bar. |
+| **Works library** | `w` | Search the ~1,800-work Greek catalogue, fetch a work (or a whole author) on a background worker, open or delete downloaded works. |
+| **Command console** | `:` | A shell-style `aegean>` prompt that runs any CLI command inside the TUI, with ghost-text completion and history. |
 
-The other global keys work on every screen: `q` quits, `?` returns to Home (where
-the legend lives), and **`ctrl+p`** opens the command palette, a fuzzy-searchable
+The other global keys work on every screen: `q` quits, `?` opens the help overlay,
+`t` opens the live-preview theme picker, `Esc` goes back a screen (blurring a
+focused input first), and **`ctrl+p`** opens the command palette, a fuzzy-searchable
 list of everything the keys do (open any corpus by name, jump to a screen, fetch a
 dataset). Inside the corpus browser, `/` focuses the search box, `enter` on a
 document row opens its detail, and `tab` cycles the three panes.
@@ -240,12 +243,14 @@ such caveat.
 
 ### A focused cockpit, not a second front end
 
-The TUI covers the three highest-value offline areas (browse and analyze a document,
-the Greek workbench, and the data store), which is a deliberate scope: it is a
+The TUI covers the highest-value offline areas (browse and analyze a document,
+the works library, the command console, the Greek workbench, and the data store),
+which is a deliberate scope: it is a
 research cockpit for the reads you do most, **not a mirror of every command**. The
 full query engine, keyness/dispersion, plots, export/import, geo maps, `db build`,
 the eval reproductions, and the exploratory AI layer stay on the regular command
-line (and in `aegean repl`), which remains the complete surface. On Windows the
+line (and in `aegean repl`); the command console (`:`) can run any of them from
+inside the TUI, but they have no dedicated screens. On Windows the
 Aegean glyph columns render best with the free Noto Sans Aegean fonts from
 [Installation → Set up your terminal](Installation#set-up-your-terminal); run the
 TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
@@ -262,7 +267,7 @@ and `greek`. Eight more download to your cache on first use: `damos` (the full
 `isicily` (~2,855 texts, ancient Sicily), `iip` (~2,113, Israel/Palestine),
 `iospe` (~1,194, the Northern Black Sea), `igcyr` (~997, Cyrenaica: Doric +
 verse), and `edh` (~1,286, the Greek subset of the Epigraphic Database
-Heidelberg). One more, `ddbdp` (the Duke Databank of Documentary Papyri —
+Heidelberg). One more, `ddbdp` (the Duke Databank of Documentary Papyri:
 **57,329 Greek papyri, ~4.4M tokens**), is far larger, so it is hosted as a
 SQLite database with full-text search: `aegean.load("ddbdp")` materialises the
 whole corpus (heavy, several GB of RAM), but the memory-friendly path is
@@ -274,7 +279,7 @@ close:
 
 ```bash
 aegean info bogus
-# aegean: unknown corpus 'bogus'; expected a registered id (cypriot, cyprominoan, damos, greek, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
+# aegean: unknown corpus 'bogus'; expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 aegean load linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (…), …
 ```
@@ -821,7 +826,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.27.0                    │
+│ OK │ pyaegean │ 0.27.1                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1169,12 +1174,15 @@ aegean greek works --remove-all                  # clear the whole downloaded li
 range). `--source` is `auto`/`perseus`/`first1k`; `--edition` picks a specific
 edition file.
 
-**The Greek New Testament** has its own loader, `nt` (Nestle 1904, bundled, offline),
+**The Greek New Testament** has its own loader, `nt` (Nestle 1904; fetched on
+first use, with a bundled John 1 + Philemon sample for offline use),
 because it carries gold per-token lemma / morph / Strong's plus a Koine gloss:
 
 ```bash
 aegean greek nt                          # all 27 books
 aegean greek nt John --ref 1.1-1.18      # one passage (a chapter.verse range)
+aegean greek nt John 1                   # a chapter, positional (same as --ref 1)
+aegean greek nt Matt 1-3                 # a chapter range (also: aegean show nt "Matt 1-3")
 aegean greek nt John -o john.json        # save as a corpus (then export --level token)
 ```
 
@@ -1398,9 +1406,18 @@ downloaded on demand, never bundled):
 | `grc-joint` | the joint tagger-parser-lemmatizer model (~173 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `grc-lemma-neural` | the GreTa seq2seq lemmatizer (~232 MB; the `[neural]` extra) | CC BY-SA 4.0 |
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
+| `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
+| `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
+| `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
 | `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset (781 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
+| `isicily-corpus` | I.Sicily Greek inscriptions (2,855 texts): `aegean.load('isicily')` | CC BY 4.0 |
+| `iip-corpus` | IIP Greek inscriptions of Israel/Palestine (2,113 texts): `aegean.load('iip')` | CC BY-NC 4.0 |
+| `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts): `aegean.load('iospe')` | CC BY 4.0 |
+| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts): `aegean.load('igcyr')` | CC BY-NC-SA 4.0 |
+| `edh-corpus` | EDH Greek inscriptions (1,286 texts, frozen 2021 dump): `aegean.load('edh')` | CC BY-SA 4.0 |
+| `ddbdp-corpus` | DDbDP documentary papyri as SQLite + FTS (57,329 texts, ~206 MB): `aegean db search ddbdp` | CC BY 3.0 |
 | `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
 | `linearb-corpus` | a bring-your-own Linear B export (no default source) | per your source |
 | `workbench-app` | the prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |
@@ -1438,6 +1455,10 @@ aegean db search lineara.db KU-RO --limit 3
 ```bash
 aegean db search lineara.db KU-RO --substring   # also matches PO-TO-KU-RO, etc.
 ```
+
+The database argument also accepts a DB-backed corpus id: `aegean db search
+ddbdp "βασιλέως"` searches the fetched DDbDP papyri database directly, no path
+needed.
 
 `db search` opens the database **read-only**, so a typoed path can never create
 or modify a file: a missing path is a one-line error naming `aegean db build`.

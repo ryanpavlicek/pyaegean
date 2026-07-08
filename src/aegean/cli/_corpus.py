@@ -742,7 +742,8 @@ def geo(
     word (GeoJSON needs the \\[geo] extra; the table does not).
 
     Only provenanced inscription corpora yield rows (lineara, linearb, cypriot, cyprominoan,
-    sigla, damos); alphabetic Greek corpora (greek, nt, work ids) carry no find-spot. --word
+    sigla, damos); literary corpora (greek, nt, work ids) carry no find-spot, and the Greek
+    epigraphy and papyrus corpora record find-places the Aegean gazetteer does not map. --word
     matching is case-insensitive."""
     if level not in ("site", "inscription"):
         raise fail(f"--level must be 'site' or 'inscription'; got {level!r}")
@@ -813,8 +814,8 @@ def geo(
     if not rows:
         print(
             f"{corpus}: no mapped find-sites. geo maps provenanced inscription corpora "
-            "(lineara, linearb, cypriot, cyprominoan, sigla, damos); alphabetic Greek corpora "
-            "carry no find-spot."
+            "(lineara, linearb, cypriot, cyprominoan, sigla, damos); other corpora carry no "
+            "find-spot or record find-places the Aegean gazetteer does not map."
         )
         return
     table(

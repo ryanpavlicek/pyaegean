@@ -156,7 +156,7 @@ dictionary. `ai.idiom_glosses(text)` returns one `GroundingItem` per match
 ```python
 from aegean import ai
 ai.idiom_glosses("διὰ τοῦτο ἐφ' ἡμῖν ἐστιν")
-# [GroundingItem('διὰ τοῦτο: for this reason', 'lexicon:idiom', 'διὰ τοῦτο'),
+# [GroundingItem('διὰ τοῦτο: for this reason, therefore', 'lexicon:idiom', 'διὰ τοῦτο'),
 #  GroundingItem("ἐφ' ἡμῖν: in our power, up to us", 'lexicon:idiom', "ἐφ' ἡμῖν")]
 ```
 

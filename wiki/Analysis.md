@@ -1000,7 +1000,7 @@ own to tell whether two corpora (or a corpus and a filtered subset) have the
 same analysable content):
 
 ```python
-aegean.load("lineara").fingerprint()[:16]          # '4daad66c2130beb1'
+aegean.load("lineara").fingerprint()[:16]          # 'c36dcb48bb5addd6'
 ```
 
 ## SQLite persistence & full-text search (`aegean.db`)

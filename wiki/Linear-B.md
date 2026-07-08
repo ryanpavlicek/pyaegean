@@ -187,7 +187,7 @@ aegean bridge linearb po-me --json
 # }
 ```
 
-The lexicon holds a **150-entry** core of well-established equations: a hand-curated set layered
+The lexicon holds a **149-entry** core of well-established equations: a hand-curated set layered
 with entries extracted from Wiktionary's Mycenaean Greek pages (via the kaikki.org dump, CC BY-SA);
 only entries whose etymology *states* the Ancient Greek equation are taken, so every bridge is
 source-attested rather than reconstructed. A few words resolve to a compound where the Greek is
@@ -329,8 +329,9 @@ map), `periods`, and `top_words`. `scribal_hands` takes `top_n=` (how many top w
 `min_docs=` (drop hands below a threshold). Per-hand **dispersion** is just the standard helper over
 the hand's slice: `dispersion(corpus.filter(scribe="117"), "ku-ta-to")`.
 
-The hand layer is script-agnostic: any corpus whose documents set `meta.scribe` works. DAMOS is the
-one that ships with hands today.
+The hand layer is script-agnostic: any corpus whose documents set `meta.scribe` works. DAMOS and
+the bundled Linear A corpus both ship with hands (Linear A carries GORILA hand identifications on
+592 of its 1,721 inscriptions).
 
 ### Licensing and citation (read this)
 
@@ -516,7 +517,7 @@ file itself). `corpus` accepts `linearb` (the sample) or
 
 ## Limitations and honest notes
 
-- **The bridge is a curated lexicon, not a parser.** 150 well-attested equations: it will not read
+- **The bridge is a curated lexicon, not a parser.** 149 well-attested equations: it will not read
   an arbitrary unattested word. Words outside the lexicon return `None`. That's by design: every
   reading is source-attested.
 - **Accounting is heuristic.** Section boundaries are inferred and Aegean metrology is contested; a

@@ -86,7 +86,8 @@ class TuiError(Exception):
     """A clean, user-facing error a screen can display in place of a traceback."""
 
 
-# The eight registered corpora, in a stable presentation order (bundled first,
+# The browsable corpora (every registered corpus except ddbdp, whose materialisation
+# is too heavy for the TUI browser), in a stable presentation order (bundled first,
 # then the fetch-on-demand ones). Kept as a constant so a screen can render the
 # overview without loading anything; validated against the live loader registry
 # by the adapter tests.
@@ -133,7 +134,9 @@ _CORPUS_BLURB: dict[str, str] = {
 # corpus id -> the release-asset name that must be in the store before the
 # corpus loads (the same signal `aegean data list` reports). Corpora not listed
 # here are bundled in the wheel and always available. The Greek-epigraphy corpora
-# (I.Sicily, IIP, IOSPE, IGCyr, EDH) are fetch-on-demand release assets, not bundled.
+# (I.Sicily, IIP, IOSPE, IGCyr, EDH) are fetch-on-demand release assets, not bundled. ddbdp is
+# deliberately absent from this map: it is not listed in the TUI corpus browser (see CORPUS_IDS),
+# so the browser never needs its download status.
 _CORPUS_ASSET: dict[str, str] = {
     "nt": "nt-corpus",
     "damos": "damos-corpus",
@@ -880,7 +883,7 @@ def read_corpus_spec(spec: str) -> "Corpus":
     ``.json``/``.db`` file — re-raising failures as a clean :class:`TuiError`.
 
     A superset of :func:`load_corpus` (registered ids only): this is how the corpus browser
-    opens a fetched Greek work or a saved file. The eight registered corpora resolve identically."""
+    opens a fetched Greek work or a saved file. The registered corpora resolve identically."""
     from ..core.resolve import CorpusNotFound, read_corpus
 
     try:

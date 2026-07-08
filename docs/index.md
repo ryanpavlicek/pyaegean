@@ -68,7 +68,7 @@ $ aegean greek catalog --author plato --source perseus -n 2
 
 ```bash
 pip install pyaegean            # core + Linear A + Greek (zero heavy dependencies)
-pip install "pyaegean[all]"     # the data, AI, EpiDoc, geo, viz, CLI, and MCP extras
+pip install "pyaegean[all]"     # the data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras
 ```
 
 See the [README](https://github.com/ryanpavlicek/pyaegean#install) for the full extras

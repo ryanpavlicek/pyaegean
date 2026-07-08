@@ -116,7 +116,7 @@ def test_unknown_book_raises(fetched: Path) -> None:
 
 
 def test_offline_bundled_sample(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With the asset unavailable, load_nt falls back to the bundled one-book sample."""
+    """With the asset unavailable, load_nt falls back to the bundled two-book sample."""
     def _offline(name: str, **k: object) -> Path:
         raise DataNotAvailableError(f"{name} unavailable (test: simulated offline)")
 

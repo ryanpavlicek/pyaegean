@@ -154,7 +154,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 > **Why two licenses keep appearing.** "Project-hosted" derivatives (DAMOS,
 > SigLA, the LSJ index, the AGDT-derived models, the neural models) are republished
 > under the **same ShareAlike terms** as their source, clearly labeled, and kept
-> out of the Apache-2.0 wheel. NonCommercial obligations (DAMOS, SigLA, PROIEL)
+> out of the Apache-2.0 wheel. NonCommercial obligations (DAMOS, SigLA, PROIEL, IIP, IGCyr/GVCyr)
 > **pass through to you**. CC0 assets (the NT corpus, the Dodson lexicon) carry no
 > such obligation, which is exactly why two NT sample chapters can be bundled.
 
@@ -346,7 +346,7 @@ gaps and editorial symbols dropped) with the ancient find-place (`meta.site`), t
 (`meta.period`), and the coordinates (`meta.findspot`), decoded into a compact JSON `Corpus` by
 `scripts/build_isicily_corpus.py` (from the pinned source commit) as the sha256-pinned
 `isicily-corpus` release asset: fetched on demand, **never bundled**. CC BY permits the
-redistribution, so — unlike DAMOS/SigLA — this is project-hosted; attribution to I.Sicily travels in
+redistribution, so (unlike DAMOS/SigLA) this is project-hosted; attribution to I.Sicily travels in
 the corpus provenance (and `NOTICE`). This adds **epigraphic** Greek (real inscriptions on stone)
 alongside pyaegean's literary (Perseus) and New Testament Greek. Cite I.Sicily (Prag et al.) in
 academic work.
@@ -357,6 +357,17 @@ s = aegean.load("isicily")
 len(s)                       # 2855 documents
 s.documents[0].meta.site     # e.g. 'Syracusae' — the ancient find-place
 ```
+
+#### The DDbDP documentary papyri (`ddbdp-corpus`, `aegean.load("ddbdp")`)
+
+**DDbDP**: the Duke Databank of Documentary Papyri (papyri.info, **CC BY 3.0**), hosted as a
+**SQLite database with full-text search**: 57,329 Greek documentary papyri / ~4.4M tokens with
+citation, date, place, and TM/HGV ids (~206 MB download, ~757 MB unpacked). `aegean.load("ddbdp")`
+materialises the whole corpus in memory (heavy: over a minute and more than a gigabyte of RAM); the
+memory-friendly paths are `aegean db search ddbdp "..."` (instant FTS) and
+`aegean.db.stream(ddbdp_db())`, which yields one document at a time
+(`from aegean.scripts.greek import ddbdp_db`). Attribution to the DDbDP travels in the database
+provenance and `NOTICE`.
 
 #### The Greek New Testament + Dodson lexicon (`nt-corpus`, `greek.load_nt`, `use_dodson`)
 
@@ -470,7 +481,7 @@ subcommands:
 | Command | What it does | Flags |
 |---|---|---|
 | `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `-h/--help` |
+| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
 | `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
 | `aegean data store` | Show the store location and its current contents (entries are permanent until removed). `aegean data cache` remains a deprecated alias this minor: it warns, naming the replacement | `--json` (machine-readable on stdout), `-h/--help` |
@@ -529,10 +540,19 @@ dataset (verified):
 | `lineara-images` | `PYAEGEAN_LINEARA_IMAGES_URL` |
 | `agdt-derived` | `PYAEGEAN_AGDT_DERIVED_URL` |
 | `lsj-index` | `PYAEGEAN_LSJ_INDEX_URL` |
+| `middle-liddell-index` | `PYAEGEAN_MIDDLE_LIDDELL_INDEX_URL` |
+| `cunliffe-index` | `PYAEGEAN_CUNLIFFE_INDEX_URL` |
+| `abbott-smith-index` | `PYAEGEAN_ABBOTT_SMITH_INDEX_URL` |
 | `grc-lemma-neural` | `PYAEGEAN_GRC_LEMMA_NEURAL_URL` |
 | `grc-joint` | `PYAEGEAN_GRC_JOINT_URL` |
 | `sigla-corpus` | `PYAEGEAN_SIGLA_CORPUS_URL` |
 | `damos-corpus` | `PYAEGEAN_DAMOS_CORPUS_URL` |
+| `isicily-corpus` | `PYAEGEAN_ISICILY_CORPUS_URL` |
+| `iip-corpus` | `PYAEGEAN_IIP_CORPUS_URL` |
+| `iospe-corpus` | `PYAEGEAN_IOSPE_CORPUS_URL` |
+| `igcyr-corpus` | `PYAEGEAN_IGCYR_CORPUS_URL` |
+| `edh-corpus` | `PYAEGEAN_EDH_CORPUS_URL` |
+| `ddbdp-corpus` | `PYAEGEAN_DDBDP_CORPUS_URL` |
 | `nt-corpus` | `PYAEGEAN_NT_CORPUS_URL` |
 | `workbench-app` | `PYAEGEAN_WORKBENCH_APP_URL` |
 | `linearb-corpus` | `PYAEGEAN_LINEARB_CORPUS_URL` |
@@ -564,7 +584,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.27.0'  (your installed version)
+v["package"]                                  # '0.27.1'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -616,7 +636,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.27.0'
+# '0.27.1'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -730,6 +750,12 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   fetched, never bundled; NC + ShareAlike pass through to you.
 - **DAMOS corpus (`damos-corpus`)**: F. Aurora, CC BY-NC-SA 4.0; fetched, never
   bundled; NC + ShareAlike pass through to you.
+- **Greek inscription corpora (`isicily-corpus`, `iip-corpus`, `iospe-corpus`,
+  `igcyr-corpus`, `edh-corpus`)**: I.Sicily CC BY 4.0; IIP CC BY-NC 4.0; IOSPE
+  CC BY; IGCyr/GVCyr CC BY-NC-SA 4.0; EDH CC BY-SA 4.0. All fetched, never
+  bundled; NonCommercial/ShareAlike obligations pass through where present.
+- **DDbDP papyri (`ddbdp-corpus`)**: DDbDP / papyri.info, CC BY 3.0; fetched,
+  never bundled; attribution required.
 - **Greek New Testament (`nt-corpus`) + Dodson lexicon (bundled)**: Nestle 1904
   base text public domain; morphology/lemmas/Strong's and the Dodson glosses are
   **CC0**, so two NT sample chapters and the Dodson lexicon are bundled and the full NT
@@ -749,9 +775,10 @@ See the repository `NOTICE` and `CITATION.cff` for full attribution.
 - **The full Linear A apparatus is not bundled.** Restorations and dotted
   readings were dropped upstream; only `LOST`/`UNCLEAR` survive. For edition-grade
   readings, go to GORILA and SigLA.
-- **NonCommercial data is NonCommercial for you too.** DAMOS, SigLA, PROIEL, and
-  the UD treebanks carry CC BY-NC-SA obligations that pass through: you may not
-  use them commercially, and you must ShareAlike.
+- **NonCommercial data is NonCommercial for you too.** DAMOS, SigLA, PROIEL, the
+  UD treebanks, and IGCyr/GVCyr carry CC BY-NC-SA obligations that pass through:
+  you may not use them commercially, and you must ShareAlike. IIP (CC BY-NC 4.0)
+  is NonCommercial too, though without the ShareAlike term.
 - **Override URLs skip checksum verification.** Setting `PYAEGEAN_<NAME>_URL`
   means *you* vouch for the bytes; the pinned sha256 only describes the pinned
   release asset.
