@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.24.0 (2026-07-07)
+
+More epigraphic Greek, and a preservation mirror.
+
+### Added
+- **Two more Greek-inscription corpora**, both fetched on demand and now **mirrored** in the
+  pyaegean repo (a preservation hedge against the upstream sources going offline):
+  - **`aegean.load("iip")`** — the **2,113 Greek inscriptions** of IIP (Inscriptions of
+    Israel/Palestine, Brown University, **CC BY-NC 4.0**), with find-place and coordinates. Adds
+    regional and late-antique Greek epigraphy (much of it in majuscule, as inscribed).
+  - **`aegean.load("iospe")`** — the **1,194 Greek inscriptions** of IOSPE (Ancient Inscriptions of
+    the Northern Black Sea, King's College London, data **CC BY**): Tyras, Olbia, Chersonesos, and
+    Byzantine texts, with find-place and date.
+
+  Both are sha256-pinned release assets, never bundled; attribution travels in the corpus
+  provenance and `NOTICE`. Also fetchable as friendly stems (`aegean data fetch iip` / `iospe`).
+
+### Changed
+- The terminal-setup docs now recommend the best **free** classicist Greek fonts for polytonic and
+  epigraphic Greek — **New Athena Unicode** (the scholarly standard) plus the OFL **Gentium Plus**,
+  **Cardo**, and **GFS** families.
+
 ## 0.23.0 (2026-07-07)
 
 Epigraphic Greek: the I.Sicily inscriptions.
