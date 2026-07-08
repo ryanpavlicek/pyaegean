@@ -4,6 +4,21 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.23.0 (2026-07-07)
+
+Epigraphic Greek: the I.Sicily inscriptions.
+
+### Added
+- **The I.Sicily Greek-inscriptions corpus** (`aegean.load("isicily")` / `aegean info isicily` /
+  `aegean data fetch isicily`). I.Sicily (ISicily/ISicily, **CC BY 4.0**) is an EpiDoc corpus of
+  the inscriptions of ancient Sicily; pyaegean now hosts the **2,855 primary-Greek texts** — their
+  Greek reading extracted from each inscription's primary edition (line breaks resolved,
+  abbreviations expanded, restored/uncertain letters kept, lost gaps and symbols dropped) with the
+  ancient find-place, date, and coordinates. This adds **epigraphic** Greek (real inscriptions on
+  stone) alongside pyaegean's literary (Perseus) and New Testament Greek. Fetched on demand,
+  sha256-pinned, never bundled; CC BY attribution to I.Sicily travels in the corpus provenance and
+  `NOTICE`. Also fetchable as the friendly stem: `aegean data fetch isicily`.
+
 ## 0.22.0 (2026-07-07)
 
 Manage downloaded Greek works, and a friendlier Linear B data path.
