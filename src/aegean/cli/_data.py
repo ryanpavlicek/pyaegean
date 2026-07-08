@@ -130,6 +130,7 @@ _FETCH_HINTS = {
     "iip-corpus": "load it:  aegean info iip",
     "iospe-corpus": "load it:  aegean info iospe",
     "igcyr-corpus": "load it:  aegean info igcyr",
+    "edh-corpus": "load it:  aegean info edh",
     "linearb-corpus": "load it:  aegean info linearb",
     "sigla-corpus": "load it:  aegean info sigla",
     "nt-corpus": "load it:  aegean info nt",

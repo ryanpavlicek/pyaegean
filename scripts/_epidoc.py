@@ -18,9 +18,10 @@ _TEI = "http://www.tei-c.org/ns/1.0"
 _XML = "http://www.w3.org/XML/1998/namespace"
 
 # Elements whose textual content is NOT part of the running reading text: editorial symbols
-# (<g> palm/christogram/etc.), lost gaps, spaces/milestones, apparatus/notes, and abbreviations
-# (the <ex> expansion inside <expan> is kept; the raw <abbr> is dropped).
-_SKIP = {"g", "gap", "space", "milestone", "note", "certainty", "lem", "rdg", "app", "abbr"}
+# (<g> palm/christogram/etc.), lost gaps, spaces/milestones, apparatus/notes, a section <head>
+# label (EDH editions open with <head>Text</head>), and abbreviations (the <ex> expansion inside
+# <expan> is kept; the raw <abbr> is dropped).
+_SKIP = {"g", "gap", "space", "milestone", "note", "certainty", "lem", "rdg", "app", "abbr", "head"}
 
 
 def local(tag: object) -> str:

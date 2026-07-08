@@ -103,6 +103,7 @@ CORPUS_IDS: tuple[str, ...] = (
     "iip",
     "iospe",
     "igcyr",
+    "edh",
 )
 
 # The undeciphered corpora: any structural analysis of these is exploratory,
@@ -126,15 +127,22 @@ _CORPUS_BLURB: dict[str, str] = {
     "iip": "IIP Greek inscriptions (Israel/Palestine)",
     "iospe": "IOSPE Greek inscriptions (Black Sea)",
     "igcyr": "IGCyr/GVCyr Greek inscriptions (Cyrenaica)",
+    "edh": "EDH Greek inscriptions (Heidelberg)",
 }
 
 # corpus id -> the release-asset name that must be in the store before the
 # corpus loads (the same signal `aegean data list` reports). Corpora not listed
-# here are bundled in the wheel and always available.
+# here are bundled in the wheel and always available. The Greek-epigraphy corpora
+# (I.Sicily, IIP, IOSPE, IGCyr, EDH) are fetch-on-demand release assets, not bundled.
 _CORPUS_ASSET: dict[str, str] = {
     "nt": "nt-corpus",
     "damos": "damos-corpus",
     "sigla": "sigla-corpus",
+    "isicily": "isicily-corpus",
+    "iip": "iip-corpus",
+    "iospe": "iospe-corpus",
+    "igcyr": "igcyr-corpus",
+    "edh": "edh-corpus",
 }
 
 
@@ -259,12 +267,13 @@ def _store_root() -> "Path | None":
 
 
 def list_corpora() -> list[CorpusEntry]:
-    """The eight corpora for the overview, each with its download state.
+    """The corpora for the overview, each with its download state.
 
     Bundled corpora (Linear A/B, Cypriot, Cypro-Minoan, Greek) are always
-    downloaded. The fetch-on-demand corpora (NT, DAMOS, SigLA) are reported
-    downloaded only when their release asset is in the local store, so a screen
-    can mark which need a fetch. Offline: nothing is loaded or downloaded."""
+    downloaded. The fetch-on-demand corpora (NT, DAMOS, SigLA, and the Greek-
+    epigraphy corpora I.Sicily/IIP/IOSPE/IGCyr/EDH) are reported downloaded only
+    when their release asset is in the local store, so a screen can mark which
+    need a fetch. Offline: nothing is loaded or downloaded."""
     root = _store_root()
     entries: list[CorpusEntry] = []
     for cid in CORPUS_IDS:

@@ -191,6 +191,19 @@ IGCyr/GVCyr — Greek inscriptions of Cyrenaica (project-hosted, fetched on dema
   ShareAlike obligations pass to the user; fetched on demand via aegean.load("igcyr"), never bundled.
   Cite IGCyr/GVCyr (Dobias-Lalou et al., Università di Bologna).
 
+EDH — Epigraphic Database Heidelberg (project-hosted, fetched on demand, NOT bundled)
+  EDH (Epigraphic Database Heidelberg; Heidelberg Academy of Sciences and Humanities;
+  https://edh.ub.uni-heidelberg.de, https://github.com/epigraphic-database-heidelberg/data), a
+  database of the Latin and bilingual inscriptions of the Roman Empire, licensed CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/). The data dump is frozen (the project closed in
+  2021). pyaegean's `edh-corpus` release asset is the pure Ancient-Greek subset (the 1,286 inscriptions
+  whose edition is xml:lang="grc"; the mostly-Latin bilingual records are excluded), their Greek
+  reading extracted with the ancient place, date, modern find-place, and Trismegistos id, decoded into
+  compact JSON (scripts/build_edh_corpus.py) from a pinned source commit. CC BY-SA permits
+  redistribution with attribution; the ShareAlike obligation passes to the user; fetched on demand via
+  aegean.load("edh"), never bundled. Cite EDH (Epigraphic Database Heidelberg, Heidelberg Academy of
+  Sciences and Humanities).
+
 LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
   LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
   bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your

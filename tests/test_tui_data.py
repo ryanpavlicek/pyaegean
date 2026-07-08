@@ -18,9 +18,9 @@ from aegean.tui import data as adapter
 def test_list_corpora_returns_the_registered_ids() -> None:
     entries = adapter.list_corpora()
     assert [e.id for e in entries] == list(adapter.CORPUS_IDS)
-    assert len(adapter.CORPUS_IDS) == 12
+    assert len(adapter.CORPUS_IDS) == 13
     # the Greek-inscription corpora (epigraphic Greek)
-    assert {"isicily", "iip", "iospe", "igcyr"} <= set(adapter.CORPUS_IDS)
+    assert {"isicily", "iip", "iospe", "igcyr", "edh"} <= set(adapter.CORPUS_IDS)
     # every listed id is a real registered loader (the adapter must not drift by
     # naming a corpus that does not exist); the registry may also hold loaders
     # that other tests registered, so this is a subset check, not equality.
@@ -34,8 +34,12 @@ def test_bundled_corpora_are_downloaded_and_lineara_is_flagged_undeciphered() ->
     # bundled corpora are always available
     assert by_id["lineara"].downloaded is True and by_id["lineara"].bundled is True
     assert by_id["greek"].bundled is True
-    # the fetch-on-demand corpora are not bundled
+    # the fetch-on-demand corpora are not bundled — DAMOS/SigLA and every Greek-
+    # epigraphy corpus (these must not read as bundled/always-available: they are
+    # release assets fetched on demand, so a screen can prompt the fetch)
     assert by_id["damos"].bundled is False and by_id["sigla"].bundled is False
+    for cid in ("isicily", "iip", "iospe", "igcyr", "edh"):
+        assert by_id[cid].bundled is False, f"{cid} is a fetch-on-demand asset, not bundled"
     # undeciphered scripts are flagged for the honesty caveat
     assert by_id["lineara"].undeciphered is True
     assert by_id["cyprominoan"].undeciphered is True

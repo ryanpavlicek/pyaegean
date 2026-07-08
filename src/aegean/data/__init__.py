@@ -350,6 +350,19 @@ _REMOTE: dict[str, DataSpec] = {
              "find-place, date, from the CC BY-NC-SA EpiDoc corpus. Loadable via aegean.load('igcyr').",
         extract=False,
     ),
+    "edh-corpus": DataSpec(
+        name="edh-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "edh-corpus-v1/edh-corpus.json"
+        ),
+        sha256="4828a9760fb64a397a510d3ac239a3df600ef23b7bd7d146c6ad911dc33f6541",
+        license="CC-BY-SA-4.0 (Epigraphic Database Heidelberg / Heidelberg Academy of Sciences and Humanities)",
+        note="EDH Ancient-Greek inscriptions: the 1,286 pure-Greek texts (Imperial Koine, largely "
+             "onomastic) of the frozen CC BY-SA EDH dump, with ancient place, date, find-place, and "
+             "Trismegistos id. Loadable via aegean.load('edh').",
+        extract=False,
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public
