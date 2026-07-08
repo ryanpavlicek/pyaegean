@@ -4,6 +4,25 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.27.0 (2026-07-08)
+
+The Duke Databank of Documentary Papyri — 57k Greek papyri, full-text searchable.
+
+### Added
+- **`aegean.load("ddbdp")`** — the **Duke Databank of Documentary Papyri** via papyri.info
+  (**CC BY 3.0**): **57,329 Greek documentary papyri, ~4.4M tokens**. By far the largest corpus
+  pyaegean ships, so it is hosted and read as a **SQLite database with full-text search**, not JSON.
+  The reading text is extracted resolving the papyrological apparatus (`<reg>` over `<orig>`,
+  `<lem>` over `<rdg>`, `<add>` over `<del>`, abbreviation expansions kept whole), with each
+  document's citation, date, place, and Trismegistos/HGV ids. Mirrored as a sha256-pinned release
+  asset (fetched + unpacked on demand, never bundled).
+- **`aegean.scripts.greek.ddbdp_db()`** and **`aegean db search ddbdp "…"`** — the memory-friendly
+  access path: instant full-text search and flat-memory streaming (`aegean.db.stream(ddbdp_db())`)
+  over all 57k papyri without materialising the whole corpus. `aegean.load("ddbdp")` still returns
+  the entire corpus in memory for those who want it (heavy — several GB of RAM).
+- `aegean db search` now accepts a DB-backed corpus id (`ddbdp`) directly, fetching the asset on
+  first use, in addition to a built `.db` file path.
+
 ## 0.26.0 (2026-07-08)
 
 The Greek subset of the Epigraphic Database Heidelberg.
