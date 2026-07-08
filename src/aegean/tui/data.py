@@ -102,6 +102,7 @@ CORPUS_IDS: tuple[str, ...] = (
     "isicily",
     "iip",
     "iospe",
+    "igcyr",
 )
 
 # The undeciphered corpora: any structural analysis of these is exploratory,
@@ -124,6 +125,7 @@ _CORPUS_BLURB: dict[str, str] = {
     "isicily": "I.Sicily Greek inscriptions (Sicily)",
     "iip": "IIP Greek inscriptions (Israel/Palestine)",
     "iospe": "IOSPE Greek inscriptions (Black Sea)",
+    "igcyr": "IGCyr/GVCyr Greek inscriptions (Cyrenaica)",
 }
 
 # corpus id -> the release-asset name that must be in the store before the

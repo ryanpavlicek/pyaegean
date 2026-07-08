@@ -16,14 +16,18 @@ from . import nt  # noqa: F401 — registers the New Testament corpus loader on 
 from . import isicily  # noqa: F401 — registers the I.Sicily corpus loader on import
 from . import iip  # noqa: F401 — registers the IIP corpus loader on import
 from . import iospe  # noqa: F401 — registers the IOSPE corpus loader on import
+from . import igcyr  # noqa: F401 — registers the IGCyr/GVCyr corpus loader on import
 from .inventory import greek_inventory
+from .igcyr import load_igcyr
 from .iip import load_iip
 from .iospe import load_iospe
 from .isicily import load_isicily
 from .nt import load_nt
 from .perseus import load_work
 
-__all__ = ["Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe"]
+__all__ = [
+    "Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe", "load_igcyr",
+]
 
 
 class Greek(Script):

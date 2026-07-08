@@ -333,6 +333,23 @@ _REMOTE: dict[str, DataSpec] = {
              "find-place and date, from the CC BY EpiDoc corpus. Loadable via aegean.load('iospe').",
         extract=False,
     ),
+    # The IGCyr/GVCyr Greek inscriptions of Cyrenaica (AMS Acta 7796, CC BY-NC-SA 4.0): the 997
+    # Greek inscriptions (incl. archaic Doric + the GVCyr verse subset), their Greek reading + title
+    # / find-place / date extracted to compact JSON (scripts/build_igcyr_corpus.py). CC BY-NC-SA
+    # permits redistribution as a self-licensed asset (NonCommercial + ShareAlike pass through);
+    # fetched on demand, never bundled; mirrored so pyaegean survives upstream loss.
+    "igcyr-corpus": DataSpec(
+        name="igcyr-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "igcyr-corpus-v1/igcyr-corpus.json"
+        ),
+        sha256="673481ce3041ad268d26fb1d5490987b187ad86fb29af50ef7390f919f77e28b",
+        license="CC-BY-NC-SA-4.0 (IGCyr2/GVCyr2, C. Dobias-Lalou et al., Univ. di Bologna, 2024)",
+        note="IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse) with title, "
+             "find-place, date, from the CC BY-NC-SA EpiDoc corpus. Loadable via aegean.load('igcyr').",
+        extract=False,
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public

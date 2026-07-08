@@ -180,6 +180,17 @@ IOSPE — Ancient Inscriptions of the Northern Black Sea (project-hosted, fetche
   bundled in the wheel. Cite IOSPE (Ancient Inscriptions of the Northern Black Sea, King's College
   London).
 
+IGCyr/GVCyr — Greek inscriptions of Cyrenaica (project-hosted, fetched on demand, NOT bundled)
+  IGCyr²/GVCyr² (eds. Catherine Dobias-Lalou, Alice Bencivenni, Hugues Berthelot, et al.,
+  Alma Mater Studiorum Università di Bologna, 2024; AMS Acta eprint 7796,
+  https://doi.org/10.6092/unibo/amsacta/7796), the EpiDoc corpus of the Greek inscriptions of
+  ancient Cyrenaica, licensed CC BY-NC-SA 4.0. pyaegean's `igcyr-corpus` release asset is the 997
+  inscriptions (incl. archaic Doric and the GVCyr verse subset), their Greek reading extracted with
+  title, find-place, and date, decoded into compact JSON (scripts/build_igcyr_corpus.py) from the
+  AMS Acta EpiDoc release. CC BY-NC-SA permits redistribution with attribution; the NonCommercial +
+  ShareAlike obligations pass to the user; fetched on demand via aegean.load("igcyr"), never bundled.
+  Cite IGCyr/GVCyr (Dobias-Lalou et al., Università di Bologna).
+
 LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
   LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
   bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your
