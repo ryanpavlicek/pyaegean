@@ -149,6 +149,7 @@ downloaded library, so you can see what you already have. From here you can:
 - **`f` — fetch the selected work** into the cache;
 - **`a` — fetch every work by the selected work's author** in one step;
 - **`o` (or `Enter`) — open a fetched work** in the corpus browser to read it;
+- **`x` — remove a downloaded work** from the cache (the highlighted one);
 - **`r` — refresh** the view.
 
 Downloads run on a background worker with a progress indicator, so the UI stays

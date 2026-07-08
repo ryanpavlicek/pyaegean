@@ -15,6 +15,7 @@ from aegean.scripts.greek.perseus import (
     GitHubRateLimitError,
     fetch_works,
     list_fetched_works,
+    remove_fetched_works,
 )
 
 
@@ -140,3 +141,53 @@ def test_github_token_precedence_and_gh_cli_fallback(monkeypatch):
     assert perseus._github_token() == "from-gh"  # no env var -> gh CLI keyring
     monkeypatch.setattr(perseus, "_gh_cli_token", lambda: None)
     assert perseus._github_token() is None  # nothing anywhere
+
+
+def _seed_three(tmp_path, monkeypatch):
+    """Cache three works: Homer Iliad + Odyssey (tlg0012) and Plato Republic (tlg0059.tlg030)."""
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    from aegean.data import cache_dir
+
+    commit = cache_dir() / "greek-works" / "perseus" / "d4fab69a2c26"
+    commit.mkdir(parents=True)
+    for name in (
+        "tlg0012.tlg001.perseus-grc2.xml",
+        "tlg0012.tlg002.perseus-grc2.xml",
+        "tlg0059.tlg030.perseus-grc2.xml",
+    ):
+        (commit / name).write_text("<TEI/>", encoding="utf-8")
+
+
+def test_remove_fetched_works_by_id(tmp_path, monkeypatch):
+    _seed_three(tmp_path, monkeypatch)
+    assert remove_fetched_works(["tlg0012.tlg002"]) == ["tlg0012.tlg002"]
+    assert {w["id"] for w in list_fetched_works()} == {"tlg0012.tlg001", "tlg0059.tlg030"}
+    # an id that is not downloaded removes nothing
+    assert remove_fetched_works(["tlg9999.tlg999"]) == []
+
+
+def test_remove_fetched_works_by_author(tmp_path, monkeypatch):
+    _seed_three(tmp_path, monkeypatch)
+    # both Homer works go; Plato stays (author match is the catalogue author)
+    assert remove_fetched_works(author="homer") == ["tlg0012.tlg001", "tlg0012.tlg002"]
+    assert {w["id"] for w in list_fetched_works()} == {"tlg0059.tlg030"}
+
+
+def test_remove_fetched_works_all_and_prunes_dirs(tmp_path, monkeypatch):
+    _seed_three(tmp_path, monkeypatch)
+    from aegean.data import cache_dir
+
+    removed = remove_fetched_works(remove_all=True)
+    assert set(removed) == {"tlg0012.tlg001", "tlg0012.tlg002", "tlg0059.tlg030"}
+    assert list_fetched_works() == []
+    # the emptied source/commit directories are pruned
+    src = cache_dir() / "greek-works" / "perseus"
+    assert not src.exists() or not any(src.iterdir())
+    # a second call is a clean no-op
+    assert remove_fetched_works(remove_all=True) == []
+
+
+def test_remove_fetched_works_no_selection_is_a_noop(tmp_path, monkeypatch):
+    _seed_three(tmp_path, monkeypatch)
+    assert remove_fetched_works() == []  # nothing selected removes nothing
+    assert len(list_fetched_works()) == 3

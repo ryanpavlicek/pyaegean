@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.21.0
+aegean --version          # pyaegean 0.22.0
 ```
 
 | Group | What's in it |
@@ -812,7 +812,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.21.0                    │
+│ OK │ pyaegean │ 0.22.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1148,6 +1148,12 @@ aegean greek works
 aegean greek work tlg0012.tlg001                 # the Iliad: 24 books, ~127k tokens
 aegean greek work tlg0012.tlg001 --ref 1.1-1.50  # just book 1, lines 1–50
 aegean greek work tlg0012.tlg001 -o iliad.json   # save as a corpus file
+
+# manage what you have downloaded:
+aegean greek works --downloaded                  # list the works in your cache
+aegean greek works --remove tlg0012.tlg001       # delete one downloaded work
+aegean greek works --remove-author homer         # delete every downloaded Homer work
+aegean greek works --remove-all                  # clear the whole downloaded library
 ```
 
 `--ref` selects a section: `1` (book), `1.2` (chapter), or `1.1-1.50` (line
@@ -1359,10 +1365,16 @@ deletes it (or `fetch --force` replaces it).
 ```bash
 aegean data list                                   # the fetchable datasets + downloaded status/size
 aegean data fetch grc-joint                         # one-time download (a no-op when already present)
+aegean data fetch damos                             # the DAMOS Linear B corpus (a stem: = damos-corpus)
 aegean data remove grc-joint                        # delete a downloaded dataset (--all clears everything)
 aegean data versions --json > data-versions.json    # pin every dataset's sha256 for reproducibility
 aegean data store                                   # store location + contents (override: PYAEGEAN_CACHE)
 ```
+
+For a **Linear B corpus**, fetch **DAMOS** directly (`aegean data fetch damos`, ~5,900 tablets,
+CC BY-NC-SA 4.0). **LiBER** (liber.cnr.it) is browse-only: it has no public download or API and is
+rights-restricted, so it cannot be fetched. To use your own licensed Linear B export, import it
+(`aegean import x.xml --epidoc --script linearb`) or set `PYAEGEAN_LINEARB_CORPUS_URL`.
 
 (`aegean data cache` remains a deprecated alias for `data store` this minor: it
 still works but warns, naming the replacement.)

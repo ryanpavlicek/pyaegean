@@ -647,6 +647,57 @@ def list_fetched_works() -> list[dict[str, Any]]:
     return sorted(seen.values(), key=lambda w: w["id"])
 
 
+def remove_fetched_works(
+    ids: list[str] | None = None, *, author: str | None = None, remove_all: bool = False
+) -> list[str]:
+    """Delete downloaded Greek works from the cache, returning the ids actually removed (sorted).
+
+    Select the targets one of three ways: explicit ``ids``; every fetched work by an ``author``
+    (case-insensitive substring of the catalogue author, the same match as ``greek catalog
+    --author``); or ``remove_all``. A no-op returning ``[]`` when nothing matches or nothing is
+    cached. Removes every cached edition file for each targeted work (across sources/commits) and
+    prunes the now-empty source/commit directories. Never touches the ``listings/`` cache."""
+    root = cache_dir() / "greek-works"
+    if not root.exists():
+        return []
+    fetched_ids = {w["id"] for w in list_fetched_works()}
+    if remove_all:
+        targets = set(fetched_ids)
+    elif author is not None:
+        needle = author.strip().lower()
+        by_author = {w["id"] for w in _catalogue() if needle and needle in w.get("author", "").lower()}
+        targets = fetched_ids & by_author
+    elif ids:
+        targets = {i for i in ids if i in fetched_ids}
+    else:
+        targets = set()
+    if not targets:
+        return []
+    removed: set[str] = set()
+    for source_dir in sorted(root.iterdir()):
+        if not source_dir.is_dir() or source_dir.name == "listings":
+            continue
+        for commit_dir in sorted(source_dir.iterdir()):
+            if not commit_dir.is_dir():
+                continue
+            for xml in sorted(commit_dir.glob("*.xml")):
+                match = _WORK_ID_FROM_FILE.match(xml.name)
+                if match is not None and match.group(1) in targets:
+                    xml.unlink()
+                    removed.add(match.group(1))
+            try:  # prune an emptied commit directory
+                if not any(commit_dir.iterdir()):
+                    commit_dir.rmdir()
+            except OSError:
+                pass
+        try:  # prune an emptied source directory
+            if source_dir.exists() and not any(source_dir.iterdir()):
+                source_dir.rmdir()
+        except OSError:
+            pass
+    return sorted(removed)
+
+
 def fetch_works(
     author: str | None = None,
     *,

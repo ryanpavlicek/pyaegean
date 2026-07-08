@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.21.0
+aegean --version                # pyaegean 0.22.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -326,7 +326,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
-| `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache | `--downloaded --json` | `aegean greek works --downloaded` |
+| `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
 | `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |

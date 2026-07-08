@@ -315,15 +315,17 @@ _REMOTE: dict[str, DataSpec] = {
         note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
         extract=True,
     ),
-    # A user-supplied Linear B corpus override (bring-your-own). DAMOS is now loadable
-    # directly via aegean.load("damos"); this remains for a local licensed export (e.g.
-    # a LiBER selection or a DAMOS EpiDoc download) via PYAEGEAN_LINEARB_CORPUS.
+    # A slot for your OWN licensed Linear B export (a LiBER selection, a DAMOS EpiDoc download),
+    # loaded via PYAEGEAN_LINEARB_CORPUS_URL or `aegean import --epidoc`. For a ready corpus use
+    # DAMOS directly — `aegean data fetch damos` / aegean.load("damos"). LiBER (liber.cnr.it) has
+    # no public download or API and is rights-restricted, so it is browse-only, never fetched.
     "linearb-corpus": DataSpec(
         name="linearb-corpus",
         url="",
         sha256="",
-        license="bring-your-own; DAMOS is CC BY-NC-SA 4.0 and LiBER all-rights-reserved — neither redistributed",
-        note="A user-supplied Linear B corpus export (e.g. a DAMOS EpiDoc download). No default source.",
+        license="bring-your-own; DAMOS is CC BY-NC-SA 4.0 (fetch it directly), LiBER all-rights-reserved (browse-only)",
+        note="Your own licensed Linear B export. For a ready corpus fetch DAMOS ('aegean data "
+             "fetch damos'); LiBER is browse-only at liber.cnr.it. No default source for this slot.",
         extract=False,
     ),
 }

@@ -122,6 +122,7 @@ from ..scripts.greek.perseus import (
     list_fetched_works,
     load_work,
     popular_works,
+    remove_fetched_works,
 )
 from ..scripts.greek.nt import load_nt, nt_books
 from .prosody import scan, syllable_quantities
@@ -155,6 +156,7 @@ __all__ = [
     "catalog",
     "fetch_works",
     "list_fetched_works",
+    "remove_fetched_works",
     "WorkFetchResult",
     "GitHubRateLimitError",
     "load_nt",

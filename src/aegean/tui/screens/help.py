@@ -30,7 +30,7 @@ _HELP = """[b]aegean — keys[/b]
   (parse/tag, neural, IPA, translate for Greek; signs + Greek reading for syllabic)
 
 [b]Works library (w)[/b]  search by author/title · f fetch · a fetch whole author
-  · Enter open a fetched work in the corpus browser
+  · Enter open a fetched work · x remove a downloaded work
 
 [b]Command console (:)[/b]  type any command without the 'aegean' prefix
   (e.g. stats lineara --top 5) · use CORPUS sets a session corpus

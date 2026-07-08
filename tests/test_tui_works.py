@@ -233,3 +233,61 @@ def test_action_buttons_stay_on_screen_above_the_footer(monkeypatch: pytest.Monk
                 assert r.y + r.height <= app.screen.size.height  # fully on screen
 
     _run(body())
+
+
+def test_x_removes_a_downloaded_work(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The 'x' key removes the highlighted downloaded work via the adapter, then refreshes."""
+    state = {"present": True}
+    monkeypatch.setattr(
+        adapter, "catalog_rows",
+        lambda *a, **k: [_row("tlg0012.tlg001", fetched=state["present"])],
+    )
+    removed: list[str] = []
+
+    def fake_remove(work_id: str) -> bool:
+        removed.append(work_id)
+        state["present"] = False
+        return True
+
+    monkeypatch.setattr(adapter, "remove_work", fake_remove)
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 50)) as pilot:
+            await pilot.pause()
+            app.goto("works")
+            await pilot.pause()
+            screen = app.screen
+            assert isinstance(screen, WorksScreen)
+            screen.query_one("#works-search", Input).value = "homer"
+            await pilot.pause()
+            screen.query_one("#works-table", DataTable).move_cursor(row=0)
+            screen.action_remove_work()
+            await pilot.pause()
+            assert removed == ["tlg0012.tlg001"]  # the adapter removal was called for the row
+
+    _run(body())
+
+
+def test_x_on_an_undownloaded_work_does_not_remove(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        adapter, "catalog_rows", lambda *a, **k: [_row("tlg0012.tlg001", fetched=False)]
+    )
+    called: list[str] = []
+    monkeypatch.setattr(adapter, "remove_work", lambda w: called.append(w) or True)
+
+    async def body() -> None:
+        app = AegeanApp()
+        async with app.run_test(size=(120, 50)) as pilot:
+            await pilot.pause()
+            app.goto("works")
+            await pilot.pause()
+            screen = app.screen
+            screen.query_one("#works-search", Input).value = "homer"
+            await pilot.pause()
+            screen.query_one("#works-table", DataTable).move_cursor(row=0)
+            screen.action_remove_work()
+            await pilot.pause()
+            assert called == []  # not downloaded -> no removal attempted
+
+    _run(body())

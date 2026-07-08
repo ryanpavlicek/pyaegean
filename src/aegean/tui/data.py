@@ -75,6 +75,7 @@ __all__ = [
     "fetched_work_entries",
     "fetch_work",
     "fetch_author_works",
+    "remove_work",
     "config_path",
     "load_tui_config",
     "save_tui_config",
@@ -896,6 +897,14 @@ def _fetched_works() -> list[dict[str, Any]]:
 def fetched_work_ids() -> list[str]:
     """The CTS ids of every Greek work already downloaded to the cache (a local scan)."""
     return [w["id"] for w in _fetched_works()]
+
+
+def remove_work(work_id: str) -> bool:
+    """Delete one downloaded Greek work from the cache. Returns True if it was removed
+    (False when it was not downloaded). Wraps ``greek.remove_fetched_works``."""
+    from ..greek import remove_fetched_works
+
+    return work_id in remove_fetched_works([work_id])
 
 
 def fetched_work_entries() -> list[CorpusEntry]:

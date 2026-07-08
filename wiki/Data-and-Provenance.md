@@ -115,7 +115,7 @@ try:
     data.fetch("linearb-corpus")             # has no default URL
 except data.DataNotAvailableError as e:
     print(str(e)[:70])
-# dataset 'linearb-corpus' has no pinned download URL yet (A user-suppli...
+# dataset 'linearb-corpus' has no pinned download URL yet (Your own licen...
 ```
 
 `fetch(name, force=True)` re-downloads even when a valid copy is cached.
@@ -143,7 +143,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
-| `linearb-corpus` | A user-supplied Linear B export (bring-your-own) |: (no default source) | bring-your-own; DAMOS is CC BY-NC-SA 4.0, LiBER all-rights-reserved | Set `PYAEGEAN_LINEARB_CORPUS_URL` to your own licensed copy |
+| `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | : | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
 > **Why two licenses keep appearing.** "Project-hosted" derivatives (DAMOS,
 > SigLA, the LSJ index, the AGDT-derived models, the neural models) are republished
@@ -536,7 +536,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.21.0'  (your installed version)
+v["package"]                                  # '0.22.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -588,7 +588,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.21.0'
+# '0.22.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

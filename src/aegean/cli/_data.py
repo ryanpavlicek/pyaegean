@@ -65,6 +65,37 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
     return out
 
 
+def _resolve_name(name: str) -> str:
+    """Map a friendly stem to its registered dataset name (``damos`` -> ``damos-corpus``,
+    ``nt`` -> ``nt-corpus``), passing an exact name through unchanged. So ``data fetch damos``
+    works, not only ``data fetch damos-corpus``."""
+    from aegean.data import _REMOTE
+
+    if name in _REMOTE:
+        return name
+    for full in _REMOTE:
+        for suffix in ("-corpus", "-index", "-app"):
+            if full.endswith(suffix) and full[: -len(suffix)] == name:
+                return full
+    return name
+
+
+# Friendly guidance for the Linear B corpus, replacing the raw "no pinned URL" wall: DAMOS is a
+# ready, directly-fetchable corpus; LiBER has no public download/API and is rights-restricted, so
+# it is browse-only — a licensed LiBER/EpiDoc export is imported, not fetched.
+_LINEARB_GUIDANCE = (
+    "No generic 'linearb-corpus' download exists. Your options for a Linear B corpus:\n"
+    "  • DAMOS (recommended, ready to fetch — ~5,900 tablets, CC BY-NC-SA 4.0):\n"
+    "        aegean data fetch damos\n"
+    "        aegean info damos\n"
+    "  • LiBER (liber.cnr.it): browse-only — no public download or API, and rights-restricted,\n"
+    "    so it cannot be fetched. Study it online at https://liber.cnr.it/\n"
+    "  • Your own licensed export (a LiBER selection, a DAMOS EpiDoc download): import it —\n"
+    "        aegean import your-export.xml --epidoc --script linearb\n"
+    "    or point the fetch at a copy you host:  set PYAEGEAN_LINEARB_CORPUS_URL"
+)
+
+
 def _unknown_dataset(name: str) -> str:
     """The one-line unknown-name message shared by fetch and remove, with a
     did-you-mean over the registered names and their stems (so a typo of the
@@ -163,11 +194,14 @@ def fetch(
     remove` deletes it."""
     from aegean.data import _REMOTE, DataNotAvailableError, fetch as _fetch
 
+    name = _resolve_name(name)
     if name not in _REMOTE:
         raise fail(_unknown_dataset(name))
     try:
         path = _fetch(name, force=force)
     except DataNotAvailableError as exc:  # a known name that cannot be fetched (network, …)
+        if name == "linearb-corpus":  # the BYO slot: guide to DAMOS instead of a raw wall
+            raise fail(_LINEARB_GUIDANCE) from None
         raise fail(str(exc)) from None
     if json_out:
         emit_json({"name": name, "path": str(path), "bytes": _on_disk_bytes(path)})
@@ -196,8 +230,10 @@ def remove(
 
     if name is None and not remove_all:
         raise fail("name a dataset to remove, or pass --all (see `aegean data list`)")
-    if name is not None and name not in _REMOTE:
-        raise fail(_unknown_dataset(name))
+    if name is not None:
+        name = _resolve_name(name)  # so `data remove damos` works, not only `damos-corpus`
+        if name not in _REMOTE:
+            raise fail(_unknown_dataset(name))
 
     root = cache_dir()
     names = sorted(_REMOTE) if remove_all else [name or ""]

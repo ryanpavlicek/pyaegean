@@ -252,3 +252,24 @@ def test_remove_reclaims_an_orphaned_partial_download(app, tmp_path, monkeypatch
     assert "removed nt-corpus" in res.output
     assert not (root / "nt-corpus.part").exists()
     assert not (root / "nt-corpus.part.info").exists()
+
+
+def test_fetch_resolves_a_friendly_stem_to_the_corpus_dataset(app) -> None:
+    """`data fetch damos` resolves to `damos-corpus`, so users need not know the -corpus suffix."""
+    from aegean.cli._data import _resolve_name
+
+    assert _resolve_name("damos") == "damos-corpus"
+    assert _resolve_name("nt") == "nt-corpus"
+    assert _resolve_name("sigla") == "sigla-corpus"
+    assert _resolve_name("damos-corpus") == "damos-corpus"  # exact name passes through
+    assert _resolve_name("nope") == "nope"  # unknown passes through to the did-you-mean
+
+
+def test_fetch_linearb_guides_to_damos_not_a_raw_wall(app) -> None:
+    """`data fetch linearb` (the BYO slot) points at DAMOS and is honest that LiBER is
+    browse-only, instead of the bare 'no pinned URL' error."""
+    for name in ("linearb", "linearb-corpus"):
+        out = runner.invoke(app, ["data", "fetch", name]).output
+        assert "DAMOS" in out and "aegean data fetch damos" in out
+        assert "LiBER" in out and "browse-only" in out
+        assert "import" in out  # the import-your-own path is offered

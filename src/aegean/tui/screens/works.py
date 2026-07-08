@@ -36,6 +36,7 @@ class WorksScreen(Screen[None]):
         ("f", "fetch", "Fetch"),
         ("a", "fetch_author", "Fetch author"),
         ("o", "open_work", "Open"),
+        ("x", "remove_work", "Remove"),
         ("r", "refresh", "Refresh"),
     ]
 
@@ -149,6 +150,21 @@ class WorksScreen(Screen[None]):
 
     def action_refresh(self) -> None:
         self._populate(self.query_one("#works-search", Input).value)
+
+    def action_remove_work(self) -> None:
+        """Delete the highlighted work from the cache if it is downloaded (the 'x' key)."""
+        row = self._selected()
+        if row is None:
+            self._set_status("select a work to remove")
+            return
+        if not row.fetched:
+            self._set_status(f"{row.id} is not downloaded")
+            return
+        if adapter.remove_work(row.id):
+            self._populate(self.query_one("#works-search", Input).value)
+            self._set_status(f"removed {row.id} from the cache")
+        else:
+            self._set_status(f"could not remove {row.id}")
 
     def action_open_work(self) -> None:
         row = self._selected()

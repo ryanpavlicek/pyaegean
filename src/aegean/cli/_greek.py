@@ -986,6 +986,16 @@ def works(
         False, "--downloaded", "--local",
         help="List Greek works already downloaded to the cache, instead of the curated set.",
     ),
+    remove: str | None = typer.Option(
+        None, "--remove", help="Delete one downloaded work by id (e.g. tlg0012.tlg001)."
+    ),
+    remove_author: str | None = typer.Option(
+        None, "--remove-author",
+        help="Delete every downloaded work by an author (case-insensitive substring).",
+    ),
+    remove_all: bool = typer.Option(
+        False, "--remove-all", help="Delete ALL downloaded Greek works from the cache."
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """List a curated catalog of well-known Greek works loadable with `aegean greek work`.
@@ -993,7 +1003,36 @@ def works(
     Every id here is verified. It is a starting point, not the whole canon — `work` takes
     any Perseus canonical-greekLit / First1KGreek id; browse them at scaife.perseus.org.
 
-    `--downloaded` lists instead the works already fetched to your local cache."""
+    `--downloaded` lists instead the works already fetched to your local cache. Delete
+    downloaded works with `--remove <id>`, `--remove-author <name>`, or `--remove-all`
+    (the only way a fetched work leaves disk; re-fetch with `aegean greek work <id>`)."""
+    if remove is not None or remove_author is not None or remove_all:
+        from aegean.greek import list_fetched_works, remove_fetched_works
+
+        before = {w["id"]: w for w in list_fetched_works()}
+        removed = remove_fetched_works(
+            [remove] if remove else None, author=remove_author, remove_all=remove_all
+        )
+        if json_out:
+            emit_json({"removed": removed})
+            return
+        if not removed:
+            if remove:
+                print(f"{remove!r} is not a downloaded work "
+                      "(`aegean greek works --downloaded` lists what is).")
+            elif remove_author:
+                print(f"no downloaded works by an author matching {remove_author!r} "
+                      "(`aegean greek works --downloaded` lists what is).")
+            else:
+                print("no Greek works are downloaded.")
+            return
+        for rid in removed:
+            meta = before.get(rid, {})
+            label = f"{meta.get('author', '')} — {meta.get('title', '')}".strip(" —") or rid
+            print(f"removed {rid}  ({label})")
+        print(f"\nremoved {len(removed)} work{'' if len(removed) == 1 else 's'} from the cache.")
+        return
+
     if downloaded:
         from aegean.greek import list_fetched_works
 
