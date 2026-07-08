@@ -115,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.22.0
+# pyaegean 0.23.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.22.0
+print(aegean.__version__)                 # 0.23.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.22.0
+# pyaegean 0.23.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.22.0                    │
+│ OK │ pyaegean │ 0.23.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -294,13 +294,23 @@ every modern terminal: nothing to install. The Aegean **glyphs** are different:
 signs like 𐘇 (Linear A) or 𐀀 (Linear B) live in Unicode's Supplementary
 Multilingual Plane, which most monospace fonts don't cover, so commands that
 print glyph columns (`aegean stats lineara --signs`, `aegean sign lineara KU`)
-can show boxes where the signs should be. Install **Noto Sans Linear A** and
-**Noto Sans Linear B** (free, from [Google's Noto fonts](https://fonts.google.com/noto)):
-Windows Terminal then usually finds the glyphs by automatic font fallback, and
-if not you can select the font explicitly per profile under **Settings → your
-profile → Appearance → Font face**. Nothing breaks without the fonts: the
-transliterations (`KU-RO`, `po-me`) are plain text and always display; you only
-miss the glyph rendering.
+can show boxes where the signs should be. Install the free **Noto Sans** fonts
+for the scripts you use, from [Google's Noto fonts](https://fonts.google.com/noto)
+(all are under the SIL Open Font License, so free for any use):
+
+- **Noto Sans Linear A** and **Noto Sans Linear B** — the Aegean syllabaries,
+- **Noto Sans Cypriot** — the Cypriot syllabary (the `cypriot` corpus),
+- **Noto Sans Cypro-Minoan** — the undeciphered Cypro-Minoan signs.
+
+Those four cover every script pyaegean renders. Windows Terminal then usually
+finds the glyphs by automatic font fallback, and if not you can select a font
+explicitly per profile under **Settings → your profile → Appearance → Font
+face**. (You may see the "Aegean" font by George Douros recommended elsewhere;
+it covers all four scripts in one file, but its license changed in 2024 to
+personal-use only — educational and commercial use now require a paid licence —
+so the Noto fonts above are the free choice.) Nothing breaks without the fonts:
+the transliterations (`KU-RO`, `po-me`) are plain text and always display; you
+only miss the glyph rendering.
 
 The fonts matter most in the **[`aegean tui`](TUI)**
 full-screen terminal UI (`pip install "pyaegean[tui]"`), where whole columns of

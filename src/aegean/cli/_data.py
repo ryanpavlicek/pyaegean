@@ -126,6 +126,7 @@ def _unknown_dataset(name: str) -> str:
 # for scripting; the hint goes to stderr, the 0.14.3 geo-hint pattern).
 _FETCH_HINTS = {
     "damos-corpus": "load it:  aegean info damos",
+    "isicily-corpus": "load it:  aegean info isicily",
     "linearb-corpus": "load it:  aegean info linearb",
     "sigla-corpus": "load it:  aegean info sigla",
     "nt-corpus": "load it:  aegean info nt",

@@ -280,6 +280,24 @@ _REMOTE: dict[str, DataSpec] = {
              "object class. Loadable via aegean.load('damos').",
         extract=False,
     ),
+    # The I.Sicily Greek inscriptions (ISicily/ISicily, CC BY 4.0): the ~2,855 primary-Greek
+    # texts of the ~5,120-inscription EpiDoc corpus, their Greek reading + find-place / date /
+    # coordinates extracted to compact JSON (scripts/build_isicily_corpus.py). CC BY permits
+    # redistribution with attribution, so — unlike DAMOS/SigLA — this is project-hosted; it is
+    # still fetched on demand, never bundled. Adds epigraphic Greek to the literary/NT holdings.
+    "isicily-corpus": DataSpec(
+        name="isicily-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "isicily-corpus-v1/isicily-corpus.json"
+        ),
+        sha256="c0242f4b52df05ae7295b17a0c786dd7b474c4ef47520be88795c8117aa8d4d1",
+        license="CC-BY-4.0 (I.Sicily — J. Prag et al., University of Oxford; attribution required)",
+        note="I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with "
+             "find-place, date, and coordinates, from the CC BY EpiDoc corpus. "
+             "Loadable via aegean.load('isicily').",
+        extract=False,
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public

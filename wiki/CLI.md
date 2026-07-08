@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.22.0
+aegean --version          # pyaegean 0.23.0
 ```
 
 | Group | What's in it |
@@ -246,7 +246,7 @@ research cockpit for the reads you do most, **not a mirror of every command**. T
 full query engine, keyness/dispersion, plots, export/import, geo maps, `db build`,
 the eval reproductions, and the exploratory AI layer stay on the regular command
 line (and in `aegean repl`), which remains the complete surface. On Windows the
-Aegean glyph columns render best with the Aegean fonts from
+Aegean glyph columns render best with the free Noto Sans Aegean fonts from
 [Installation → Set up your terminal](Installation#set-up-your-terminal); run the
 TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 
@@ -256,9 +256,10 @@ TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 
 Every corpus command takes a **corpus id** as its first argument. The bundled,
 offline-from-install corpora are `lineara`, `linearb`, `cypriot`, `cyprominoan`,
-and `greek`. Three more download to your cache on first use: `damos` (the full
-~5,900-tablet DAMOS Linear B corpus), `sigla` (the SigLA Linear A dataset), and
-`nt` (the Greek New Testament). Registered ids also match case-insensitively as a
+and `greek`. Four more download to your cache on first use: `damos` (the full
+~5,900-tablet DAMOS Linear B corpus), `sigla` (the SigLA Linear A dataset),
+`nt` (the Greek New Testament), and `isicily` (the ~2,855 Greek inscriptions of
+ancient Sicily, CC BY 4.0). Registered ids also match case-insensitively as a
 fallback (`aegean info LINEARA` loads `lineara`). Pass an unknown id and the error
 lists the valid ones, and suggests the nearest registered id when your spelling is
 close:
@@ -812,7 +813,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.22.0                    │
+│ OK │ pyaegean │ 0.23.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

@@ -142,6 +142,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, 1,376 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
+| `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
 | `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | : | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
@@ -328,6 +329,28 @@ import aegean
 d = aegean.load("damos")
 len(d)                       # 5932 documents
 d.provenance.source          # 'DAMOS — Database of Mycenaean at Oslo (F. Aurora), ...'
+```
+
+#### The I.Sicily Greek inscriptions (`isicily-corpus`, `aegean.load("isicily")`)
+
+**I.Sicily** (https://github.com/ISicily/ISicily, https://sicily.classics.ox.ac.uk) is an EpiDoc
+corpus of ~5,120 inscriptions of ancient Sicily, published under **CC BY 4.0**. pyaegean hosts the
+**2,855 primary-Greek texts**, their running Greek reading extracted from each inscription's primary
+edition (line breaks resolved, abbreviations expanded, restored and uncertain letters kept, lost
+gaps and editorial symbols dropped) with the ancient find-place (`meta.site`), the date
+(`meta.period`), and the coordinates (`meta.findspot`), decoded into a compact JSON `Corpus` by
+`scripts/build_isicily_corpus.py` (from the pinned source commit) as the sha256-pinned
+`isicily-corpus` release asset: fetched on demand, **never bundled**. CC BY permits the
+redistribution, so — unlike DAMOS/SigLA — this is project-hosted; attribution to I.Sicily travels in
+the corpus provenance (and `NOTICE`). This adds **epigraphic** Greek (real inscriptions on stone)
+alongside pyaegean's literary (Perseus) and New Testament Greek. Cite I.Sicily (Prag et al.) in
+academic work.
+
+```python
+import aegean
+s = aegean.load("isicily")
+len(s)                       # 2855 documents
+s.documents[0].meta.site     # e.g. 'Syracusae' — the ancient find-place
 ```
 
 #### The Greek New Testament + Dodson lexicon (`nt-corpus`, `greek.load_nt`, `use_dodson`)
@@ -536,7 +559,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.22.0'  (your installed version)
+v["package"]                                  # '0.23.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -588,7 +611,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.22.0'
+# '0.23.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

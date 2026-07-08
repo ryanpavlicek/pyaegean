@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.22.0
+aegean --version                # pyaegean 0.23.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -26,7 +26,7 @@ isn't installed until you add the `[cli]` extra.
 
 Every command and group answers `-h` / `--help`. The bundled, **offline-from-install**
 corpora are `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`; three more
-download to the cache on first use: `damos`, `sigla`, `nt`. The same `read_corpus(spec)`
+download to the cache on first use: `damos`, `sigla`, `nt`, `isicily`. The same `read_corpus(spec)`
 in Python resolves any of those forms: `aegean.read_corpus("iliad.json")`.
 
 ---

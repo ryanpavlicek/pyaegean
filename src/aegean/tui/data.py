@@ -99,6 +99,7 @@ CORPUS_IDS: tuple[str, ...] = (
     "nt",
     "damos",
     "sigla",
+    "isicily",
 )
 
 # The undeciphered corpora: any structural analysis of these is exploratory,
@@ -118,6 +119,7 @@ _CORPUS_BLURB: dict[str, str] = {
     "nt": "Greek New Testament (Nestle 1904)",
     "damos": "DAMOS full Linear B corpus",
     "sigla": "SigLA Linear A corpus",
+    "isicily": "I.Sicily Greek inscriptions (Sicily)",
 }
 
 # corpus id -> the release-asset name that must be in the store before the

@@ -148,6 +148,17 @@ DAMOS — Database of Mycenaean at Oslo (fetched on demand, NOT bundled)
   Aurora, F. (2015), "DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
   attested language", Procedia - Social and Behavioral Sciences 198: 21-31.
 
+I.Sicily — Inscriptions of ancient Sicily (project-hosted, fetched on demand, NOT bundled)
+  I.Sicily (J. Prag et al., University of Oxford; https://sicily.classics.ox.ac.uk,
+  https://github.com/ISicily/ISicily), an EpiDoc corpus of the inscriptions of ancient Sicily,
+  published under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). pyaegean's
+  `isicily-corpus` release asset is the 2,855 primary-Greek texts, their Greek reading extracted
+  from each inscription's primary edition with the find-place, date, and coordinates, decoded into
+  compact JSON (scripts/build_isicily_corpus.py) from a pinned source commit; attribution, source
+  URL, and licence travel in the corpus provenance. CC BY permits the redistribution with
+  attribution, so the asset is project-hosted; it is still fetched on demand via
+  aegean.load("isicily"), never bundled in the wheel. Cite I.Sicily (Prag et al.) in academic work.
+
 LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
   LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
   bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your

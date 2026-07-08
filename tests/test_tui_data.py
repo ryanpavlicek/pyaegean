@@ -15,10 +15,11 @@ from aegean.tui import data as adapter
 
 
 # ── corpora ──────────────────────────────────────────────────────────────────
-def test_list_corpora_returns_the_eight_registered_ids() -> None:
+def test_list_corpora_returns_the_registered_ids() -> None:
     entries = adapter.list_corpora()
     assert [e.id for e in entries] == list(adapter.CORPUS_IDS)
-    assert len(adapter.CORPUS_IDS) == 8
+    assert len(adapter.CORPUS_IDS) == 9
+    assert "isicily" in adapter.CORPUS_IDS  # the I.Sicily Greek inscriptions corpus
     # every listed id is a real registered loader (the adapter must not drift by
     # naming a corpus that does not exist); the registry may also hold loaders
     # that other tests registered, so this is a subset check, not equality.

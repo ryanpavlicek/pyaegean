@@ -1,7 +1,7 @@
 """Pilot smoke tests for the TUI app shell (`aegean.tui.app`).
 
 These assert real content, not "it mounts": the Home screen shows the
-undeciphered-honesty banner and the eight corpora, the global key bindings and
+undeciphered-honesty banner and the corpora, the global key bindings and
 navigation helpers switch screens, and the command-palette Provider returns
 'Open corpus' entries.
 
@@ -32,7 +32,7 @@ def _run(coro) -> None:  # type: ignore[no-untyped-def]
     asyncio.new_event_loop().run_until_complete(coro)
 
 
-def test_app_mounts_home_with_the_undeciphered_banner_and_eight_corpora() -> None:
+def test_app_mounts_home_with_the_undeciphered_banner_and_the_corpora() -> None:
     async def body() -> None:
         app = AegeanApp()
         async with app.run_test(size=(100, 40)) as pilot:
@@ -43,9 +43,11 @@ def test_app_mounts_home_with_the_undeciphered_banner_and_eight_corpora() -> Non
             text = str(banner.content)
             assert "Linear A" in text and "Cypro-Minoan" in text
             assert "exploratory" in text and "not a reading" in text
-            # the eight-corpus overview
+            # the corpus overview lists every registered corpus
             corpus_list = app.screen.query_one("#home-corpora", CorpusList)
-            assert len(corpus_list) == 8
+            from aegean.tui import data as adapter
+
+            assert len(corpus_list) == len(adapter.CORPUS_IDS)
 
     _run(body())
 
