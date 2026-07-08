@@ -127,6 +127,8 @@ def _unknown_dataset(name: str) -> str:
 _FETCH_HINTS = {
     "damos-corpus": "load it:  aegean info damos",
     "isicily-corpus": "load it:  aegean info isicily",
+    "iip-corpus": "load it:  aegean info iip",
+    "iospe-corpus": "load it:  aegean info iospe",
     "linearb-corpus": "load it:  aegean info linearb",
     "sigla-corpus": "load it:  aegean info sigla",
     "nt-corpus": "load it:  aegean info nt",

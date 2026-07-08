@@ -188,7 +188,6 @@ def main() -> int:
         if args.limit and len(docs) >= args.limit:
             break
 
-    commit_file = Path(args.source) / ".git" / "HEAD"
     prov = Provenance(
         source="I.Sicily (ISicily/ISicily, CC BY 4.0), primary-Greek inscriptions",
         license="CC-BY-4.0 (I.Sicily; Jonathan Prag et al., University of Oxford)",

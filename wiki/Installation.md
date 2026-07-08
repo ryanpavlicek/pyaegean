@@ -115,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.23.0
+# pyaegean 0.24.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.23.0
+print(aegean.__version__)                 # 0.24.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.23.0
+# pyaegean 0.24.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.23.0                    │
+│ OK │ pyaegean │ 0.24.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -317,6 +317,14 @@ full-screen terminal UI (`pip install "pyaegean[tui]"`), where whole columns of
 Linear A and Linear B glyphs are on screen at once; the same Windows Terminal +
 Noto Aegean fonts advice applies, and running the TUI with `PYTHONUTF8=1` keeps
 Greek and Linear A displaying correctly.
+
+**Polytonic and epigraphic Greek.** Ordinary polytonic Greek needs no special font, but if you
+want the fullest coverage — every accent combination, and the editorial marks of epigraphic /
+papyrological texts (brackets, underdots) that the inscription corpora (e.g. `isicily`) use — the
+best **free** classicist fonts are **New Athena Unicode** (the de-facto scholarly standard, the most
+complete), and the SIL Open Font License families **Gentium Plus** and **Cardo**, plus the **Greek
+Font Society (GFS)** fonts. All are free for any use; New Athena Unicode and the GFS/OFL fonts are
+downloadable from the [Digital Classicist Greek-fonts list](https://wiki.digitalclassicist.org/Greek_Fonts_(Unicode)).
 
 ### Shell completion
 

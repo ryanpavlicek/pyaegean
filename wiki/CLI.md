@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.23.0
+aegean --version          # pyaegean 0.24.0
 ```
 
 | Group | What's in it |
@@ -256,10 +256,11 @@ TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 
 Every corpus command takes a **corpus id** as its first argument. The bundled,
 offline-from-install corpora are `lineara`, `linearb`, `cypriot`, `cyprominoan`,
-and `greek`. Four more download to your cache on first use: `damos` (the full
+and `greek`. Six more download to your cache on first use: `damos` (the full
 ~5,900-tablet DAMOS Linear B corpus), `sigla` (the SigLA Linear A dataset),
-`nt` (the Greek New Testament), and `isicily` (the ~2,855 Greek inscriptions of
-ancient Sicily, CC BY 4.0). Registered ids also match case-insensitively as a
+`nt` (the Greek New Testament), and three Greek-inscription corpora —
+`isicily` (~2,855 texts, ancient Sicily), `iip` (~2,113, Israel/Palestine), and
+`iospe` (~1,194, the Northern Black Sea). Registered ids also match case-insensitively as a
 fallback (`aegean info LINEARA` loads `lineara`). Pass an unknown id and the error
 lists the valid ones, and suggests the nearest registered id when your spelling is
 close:
@@ -813,7 +814,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.23.0                    │
+│ OK │ pyaegean │ 0.24.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

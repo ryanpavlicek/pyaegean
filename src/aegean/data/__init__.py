@@ -298,6 +298,41 @@ _REMOTE: dict[str, DataSpec] = {
              "Loadable via aegean.load('isicily').",
         extract=False,
     ),
+    # The IIP Greek inscriptions (Brown-University-Library/iip-texts, CC BY-NC 4.0): the ~2,113
+    # primary-Greek texts of the multilingual Inscriptions of Israel/Palestine corpus, their Greek
+    # reading + find-place / coordinates extracted to compact JSON (scripts/build_iip_corpus.py).
+    # CC BY-NC permits redistribution as a separate self-licensed asset (NonCommercial passes to the
+    # user); fetched on demand, never bundled. Also mirrored here so pyaegean survives upstream loss.
+    "iip-corpus": DataSpec(
+        name="iip-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "iip-corpus-v1/iip-corpus.json"
+        ),
+        sha256="2fec633b5e6ea38621bc8e0b3c62f959317e4cdd84af5c348b650a479a02dc74",
+        license="CC-BY-NC-4.0 (IIP — M. L. Satlow, Brown University; NonCommercial, attribution)",
+        note="IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with "
+             "find-place and coordinates, from the CC BY-NC EpiDoc corpus. "
+             "Loadable via aegean.load('iip').",
+        extract=False,
+    ),
+    # The IOSPE Greek inscriptions (kingsdigitallab/iospe; repo code MIT, data CC BY): the ~1,194
+    # Greek inscriptions of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine), their
+    # Greek reading + find-place / date extracted to compact JSON (scripts/build_iospe_corpus.py).
+    # Attributed to IOSPE / King's College London; fetched on demand, never bundled; mirrored here
+    # so pyaegean survives upstream loss (the live site is behind anti-scraping).
+    "iospe-corpus": DataSpec(
+        name="iospe-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "iospe-corpus-v1/iospe-corpus.json"
+        ),
+        sha256="bd2143d408d13f96d2e087e54c1508da6bfdb6a096fec6d82feeeb4523e33d7e",
+        license="CC-BY-4.0 (IOSPE III, King's College London; attribution; repo code is MIT)",
+        note="IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea with "
+             "find-place and date, from the CC BY EpiDoc corpus. Loadable via aegean.load('iospe').",
+        extract=False,
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public

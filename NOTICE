@@ -159,6 +159,27 @@ I.Sicily — Inscriptions of ancient Sicily (project-hosted, fetched on demand, 
   attribution, so the asset is project-hosted; it is still fetched on demand via
   aegean.load("isicily"), never bundled in the wheel. Cite I.Sicily (Prag et al.) in academic work.
 
+IIP — Inscriptions of Israel/Palestine (project-hosted, fetched on demand, NOT bundled)
+  IIP (Michael L. Satlow, ed., Brown University; https://www.inscriptionsisraelpalestine.org,
+  https://github.com/Brown-University-Library/iip-texts), a multilingual EpiDoc corpus, licensed
+  CC BY-NC 4.0 (https://www.inscriptionsisraelpalestine.org/copyright/). pyaegean's `iip-corpus`
+  release asset is the 2,113 primary-Greek inscriptions, their Greek reading extracted with find-
+  place and coordinates, decoded into compact JSON (scripts/build_iip_corpus.py) from a pinned
+  source commit. CC BY-NC permits redistribution with attribution; the NonCommercial obligation
+  passes to the user; fetched on demand via aegean.load("iip"), never bundled in the wheel. Cite
+  IIP: Michael L. Satlow, ed., Inscriptions of Israel/Palestine (Brown University),
+  DOI 10.26300/pz1d-st89.
+
+IOSPE — Ancient Inscriptions of the Northern Black Sea (project-hosted, fetched on demand, NOT bundled)
+  IOSPE³ (King's College London, Dept. of Digital Humanities; https://iospe.kcl.ac.uk,
+  https://github.com/kingsdigitallab/iospe). The repository code is MIT-licensed; the inscription
+  data is published under CC BY. pyaegean's `iospe-corpus` release asset is the 1,194 Greek
+  inscriptions (Tyras, Olbia, Chersonesos, Byzantine), their Greek reading extracted with find-place
+  and date, decoded into compact JSON (scripts/build_iospe_corpus.py) from a pinned source commit;
+  attributed to IOSPE / King's College London. Fetched on demand via aegean.load("iospe"), never
+  bundled in the wheel. Cite IOSPE (Ancient Inscriptions of the Northern Black Sea, King's College
+  London).
+
 LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
   LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
   bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your
