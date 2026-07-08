@@ -4,6 +4,19 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.25.0 (2026-07-07)
+
+The Greek inscriptions of Cyrenaica — archaic Doric and verse.
+
+### Added
+- **`aegean.load("igcyr")`** — the **997 Greek inscriptions** of Cyrenaica, from IGCyr²/GVCyr²
+  (eds. C. Dobias-Lalou et al., Università di Bologna, **CC BY-NC-SA 4.0**), with a descriptive
+  title, find-place, and date. This is a high-value dialect corpus: it includes the archaic
+  epichoric **Doric** and the GVCyr metrical/**verse** subset, and its text preserves the epichoric
+  letterforms (e.g. `ō`/`ē` for long o/e) — non-normalized Greek, valuable for dialect study.
+  Mirrored as a sha256-pinned release asset (fetched on demand, never bundled); attribution travels
+  in the corpus provenance and `NOTICE`. Also fetchable as `aegean data fetch igcyr`.
+
 ## 0.24.0 (2026-07-07)
 
 More epigraphic Greek, and a preservation mirror.
