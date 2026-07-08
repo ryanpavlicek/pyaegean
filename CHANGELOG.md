@@ -4,6 +4,40 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.27.2 (2026-07-08)
+
+A data-store fix, and much more to read and try: a bigger browser demo, a full-coverage
+notebook, and workflow-level documentation.
+
+### Fixed
+- `aegean data fetch` of a prebuilt lexicon index (`lsj-index`, `middle-liddell-index`,
+  `cunliffe-index`, `abbott-smith-index`) now stores the artifact under its real on-disk
+  name, the same end state the lexicon backends produce, so `data list`, `doctor`, and
+  `data remove` all agree with the fetch (previously a plain fetch left a raw-named file
+  that `list` reported as not downloaded and `remove` could not see). A raw-named copy
+  left by an earlier fetch is adopted in place, without re-downloading, and `data remove`
+  now cleans one up.
+
+### Added
+- **Browser demo**: 15 new cards (29 total), one per offline feature — accentuation,
+  sandhi, prosody, honest lemmatization, a New Testament verse with its gold annotations,
+  idiom glosses, Linear A statistics and compound queries, Aegean numerals, sign lookup
+  across all five scripts, a Linear B tablet with its Greek bridge readings, a Cypro-Minoan
+  document, find-site geography, citation + fingerprint, and EpiDoc export.
+- **Notebook**: a "whole toolkit at a glance" appendix (38 new cells) covering the Python
+  surface end to end, plus real, optionally-runnable cells for the heavy features (the
+  DDbDP database, the joint neural pipeline, generative translation), gated on the
+  notebook's one `RUN_HEAVY` switch with the requirements spelled out; automated runs
+  print `[skipped]`.
+- **Recipes**: eight end-to-end workflows (epigraphist, papyrologist, literary classicist,
+  New Testament scholar, corpus linguist, Aegean-scripts researcher, AI-assisted
+  translator, toolsmith/agent-builder), each cross-linked to the task recipes.
+- **CLI guide**: a how-to-read-a-command primer, a common-tasks cookbook, worked
+  multi-flag examples for the confusing paths, a real REPL session, and a
+  what-went-wrong section with the actual error messages. **TUI guide**: key-by-key
+  walkthroughs (first five minutes, fetching corpora, the works library, the command
+  console) and a reader's guide to the apparatus colouring.
+
 ## 0.27.1 (2026-07-08)
 
 A documentation accuracy pass across the whole project.
