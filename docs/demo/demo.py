@@ -1,10 +1,14 @@
 """The Python the browser demo runs under Pyodide.
 
 Stable, pure-Python core APIs only. Everything here runs entirely client-side: the Greek
-pipeline + scansion + word analysis, the bundled Koine (Dodson) lexicon, the offline Greek
+pipeline + scansion + word analysis, accent placement, sandhi resolution, syllable
+quantities, the offline lemmatizer, the bundled Koine (Dodson) lexicon, the bundled New
+Testament sample (John 1 + Philemon), the curated idiom lexicon, the offline Greek
 work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corpus
-(sign search + accounting), the bundled Cypriot (IG XV 1) inscription corpus, the file importer,
-the stdlib EpiDoc reader, and cross-script phonetic comparison. The
+(sign search + accounting + statistics + compound queries + numerals), the sign
+inventories of all four Aegean scripts, the bundled Linear B / Cypriot (IG XV 1) /
+Cypro-Minoan corpora, the find-site gazetteer, citation + fingerprinting, the file importer,
+the stdlib EpiDoc reader/writer, and cross-script phonetic comparison. The
 neural tier is excluded (it needs onnxruntime, which doesn't run in the browser), as are the
 network-only backends (load_work, the full-NT fetch, LSJ/treebank) and the generative AI layer. Each
 function returns a JSON string for easy consumption from JavaScript. This module is exercised
@@ -232,3 +236,423 @@ def phonetic_compare(syllabic: str, greek_word: str) -> str:
         {"syllabic": syllabic, "greek": greek_word, "similarity": round(cmp.similarity, 3)},
         ensure_ascii=False,
     )
+
+
+# the corpora bundled inside the wheel: the only ones the browser can load with no network
+_BUNDLED_CORPORA = ("lineara", "linearb", "cypriot", "cyprominoan", "greek")
+
+
+def accent_word(word: str, lemma: str = "") -> str:
+    """Place the accent on an unaccented Greek word: recessive (finite verbs) by default,
+    persistent when a lemma is supplied."""
+    from aegean import greek
+
+    word = word.strip().split()[0] if word.strip() else word
+    lemma = lemma.strip()
+    p = greek.place_accent(word, recessive=not lemma, lemma=lemma or None)
+    return json.dumps(
+        {
+            "word": word,
+            "accented": p.form,
+            "accent": p.accent_type,
+            "classification": p.classification,
+            "certain": p.certain,
+            "note": p.note,
+        },
+        ensure_ascii=False,
+    )
+
+
+def sandhi(token: str) -> str:
+    """Resolve crasis, elision, and movable-nu in one token (never guesses an expansion)."""
+    from aegean import greek
+
+    token = token.strip().split()[0] if token.strip() else token
+    f = greek.resolve_sandhi(token)
+    out: dict[str, Any] = {
+        "surface": f.surface,
+        "words": list(f.words),
+        "kind": f.kind or "none",
+        "uncertain": f.uncertain,
+        "note": f.note,
+    }
+    if f.alternatives:
+        out["alternatives"] = list(f.alternatives)
+    return json.dumps(out, ensure_ascii=False)
+
+
+def prosody_word(word: str) -> str:
+    """Metrical quantity (heavy / light / common) of each syllable of a Greek word."""
+    from aegean import greek
+
+    word = word.strip().split()[0] if word.strip() else word
+    return json.dumps(
+        {
+            "word": word,
+            "syllables": [{"syllable": s, "quantity": q} for s, q in greek.scan(word)],
+        },
+        ensure_ascii=False,
+    )
+
+
+def lemmatize_word(word: str) -> str:
+    """Offline lemma + POS for one Greek word; ``known=False`` is an honest miss (the word
+    comes back unchanged rather than as a fabricated dictionary form)."""
+    from aegean import greek
+
+    word = word.strip().split()[0] if word.strip() else word
+    lemma, known = greek.lemmatize_verbose(word)
+    return json.dumps(
+        {"word": word, "lemma": lemma, "known": known, "pos": greek.pos_tag(word) or ""},
+        ensure_ascii=False,
+    )
+
+
+_NT_SAMPLE_BOOKS = {
+    "john": "John", "jn": "John", "jhn": "John",
+    "philemon": "Phlm", "phlm": "Phlm", "phm": "Phlm",
+}
+
+
+def nt_verse(ref: str) -> str:
+    """One verse of the bundled New Testament sample (John 1 + Philemon 1, Nestle 1904),
+    with the gold lemma, Robinson morph, Strong's number, and UPOS per token — no network.
+    Greek strings are NFC-folded, as in ``greek.load_nt`` (the source edition mixes oxia
+    and tonos precomposition)."""
+    import unicodedata
+
+    from aegean.data import load_bundled_json
+    from aegean.scripts.greek.nt import robinson_to_upos
+
+    def nfc(s: str) -> str:
+        return unicodedata.normalize("NFC", s)
+
+    usage = "use book chapter.verse, e.g. 'John 1.1' or 'Philemon 1.4'"
+    parts = ref.strip().split()
+    if len(parts) < 2:
+        return json.dumps({"error": usage})
+    book = _NT_SAMPLE_BOOKS.get("".join(parts[:-1]).lower().rstrip("."))
+    if book is None:
+        return json.dumps(
+            {"error": "the bundled offline sample has John 1 and Philemon 1 only; " + usage}
+        )
+    chap, _, verse = parts[-1].partition(".")
+    if not (chap.isdigit() and verse.isdigit()):
+        return json.dumps({"error": usage})
+    payload = dict(load_bundled_json("greek", "nt_sample.json"))
+    rec = next(
+        (r for r in payload["documents"]
+         if r["book"] == book and int(r["chapter"]) == int(chap)),
+        None,
+    )
+    if rec is None:
+        return json.dumps(
+            {"error": f"{book} {chap} is not in the bundled offline sample "
+                      "(John 1 and Philemon 1 only)"}
+        )
+    toks = [t for t in rec["tokens"] if int(t["v"]) == int(verse)]
+    if not toks:
+        return json.dumps({"error": f"no verse {verse} in {rec['id']}"})
+    return json.dumps(
+        {
+            "ref": f"{book} {int(chap)}.{int(verse)}",
+            "text": " ".join(nfc(t["t"]) for t in toks),
+            "tokens": [
+                {
+                    "text": nfc(t["t"]),
+                    "lemma": nfc(t.get("lemma", "")),
+                    "morph": t.get("morph", ""),
+                    "strongs": t.get("strongs", ""),
+                    "upos": robinson_to_upos(t.get("morph", "")),
+                }
+                for t in toks
+            ],
+            "source": "Nestle 1904 (morphology CC0); bundled offline sample: John 1 + Philemon 1",
+        },
+        ensure_ascii=False,
+    )
+
+
+def idioms(text: str) -> str:
+    """Detect curated Greek idioms in a text and gloss their non-literal meaning (offline)."""
+    from aegean.ai import idiom_glosses
+
+    return json.dumps(
+        {
+            "text": text,
+            "idioms": [{"gloss": i.content, "surface": i.ref} for i in idiom_glosses(text)],
+        },
+        ensure_ascii=False,
+    )
+
+
+def lineara_stats(site: str = "Haghia Triada") -> str:
+    """Corpus statistics on the bundled Linear A corpus: the most evenly dispersed words
+    (Gries' DP) plus the words key to one find-site against the rest (G² / log-ratio).
+    Deterministic counts over transliterated sign-groups, not meanings."""
+    import aegean
+    from aegean.analysis import dispersions, keyness
+    from aegean.core.corpus import Corpus
+
+    la = aegean.load("lineara")
+    site = site.strip()
+    target = la.filter(site=site)
+    if not target.documents:
+        sites = sorted({d.meta.site for d in la.documents if d.meta.site})
+        return json.dumps(
+            {"error": f"no documents from site {site!r}", "sites": sites}, ensure_ascii=False
+        )
+    rest = Corpus(
+        [d for d in la.documents if d.meta.site != site],
+        la.sign_inventory, la.provenance, la.script_id,
+    )
+    return json.dumps(
+        {
+            "dispersion": [
+                {"word": d.item, "count": d.frequency, "docs": d.range,
+                 "dp_norm": round(d.dp_norm, 3)}
+                for d in dispersions(la, top=5)
+            ],
+            "site": site,
+            "keyness": [
+                {"word": k.item, "site_count": k.target_count, "elsewhere": k.reference_count,
+                 "g2": round(k.log_likelihood, 1), "log_ratio": round(k.log_ratio, 2)}
+                for k in [r for r in keyness(target, rest) if r.log_ratio > 0][:5]
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def lineara_query(site: str, sign: str) -> str:
+    """Compound query over the bundled Linear A corpus: site AND word-contains-sign,
+    words output (count = document frequency)."""
+    import aegean
+    from aegean.analysis import FilterRow
+
+    rows = []
+    if site.strip():
+        rows.append(FilterRow("site-is", site.strip()))
+    if sign.strip():
+        rows.append(FilterRow("word-contains-sign", sign.strip(), "and" if rows else None))
+    if not rows:
+        return json.dumps({"error": "give a site and/or a sign to filter on"})
+    res = aegean.load("lineara").query(rows, output="words")
+    return json.dumps(
+        {
+            "filters": [{"field": r.field, "value": r.value} for r in rows],
+            "total": len(res.words),
+            "words": [{"word": w, "docs": n} for w, n in res.words[:20]],
+        },
+        ensure_ascii=False,
+    )
+
+
+def numerals(text: str) -> str:
+    """Parse Aegean numeral tokens (integers, fraction glyphs, ≈-approximations) and sum them."""
+    from aegean.core.numerals import format_value, parse_value
+
+    readings = []
+    for tok in text.split():
+        v = parse_value(tok)
+        readings.append(
+            {
+                "token": tok,
+                "value": round(v, 4) if v is not None else None,
+                "display": format_value(v) if v is not None else None,
+            }
+        )
+    total = sum(r["value"] for r in readings if r["value"] is not None)
+    return json.dumps(
+        {"readings": readings, "sum": round(total, 4), "sum_display": format_value(total)},
+        ensure_ascii=False,
+    )
+
+
+def sign_info(script: str, label: str) -> str:
+    """Look a sign up in a script's inventory: glyph, Unicode codepoint, sound value.
+    Undeciphered scripts carry their caveat in the output."""
+    from aegean.core.script import get_script
+
+    try:
+        inv = get_script(script.strip()).sign_inventory
+    except KeyError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    label = label.strip()
+    s = inv.by_label(label) or inv.by_label(label.upper()) or inv.by_label(label.lower())
+    if s is None:
+        s = inv.by_glyph(label)
+    if s is None:
+        return json.dumps(
+            {"error": f"no sign {label!r} in the {script} inventory"}, ensure_ascii=False
+        )
+    out = {
+        "script": script,
+        "label": s.label,
+        "glyph": s.glyph or "",
+        "codepoint": f"U+{s.codepoint:04X}" if s.codepoint is not None else "",
+        "sound_value": s.phonetic or "",
+    }
+    if script == "lineara":
+        out["note"] = (
+            "Linear A is undeciphered: a sound value here is exploratory, projected from "
+            "the Linear B comparison, not a reading."
+        )
+    elif script == "cyprominoan":
+        out["note"] = (
+            "Cypro-Minoan is undeciphered: signs have identities but no agreed sound values."
+        )
+    return json.dumps(out, ensure_ascii=False)
+
+
+def linearb_tablet(doc_id: str = "PY Ta 641") -> str:
+    """Read a tablet from the bundled Linear B corpus: its lines plus every word with an
+    attested Greek reading in the bundled lexicon."""
+    import aegean
+    from aegean.scripts.linearb.lexicon import gloss, greek_reading
+
+    corpus = aegean.load("linearb")
+    doc = corpus.get(doc_id.strip())
+    if doc is None:
+        return json.dumps(
+            {"error": f"no tablet {doc_id!r} in the bundled Linear B corpus",
+             "ids": [d.id for d in corpus.documents]},
+            ensure_ascii=False,
+        )
+    readings = []
+    seen: set[str] = set()
+    for t in doc.tokens:
+        if t.text in seen:
+            continue
+        seen.add(t.text)
+        r = greek_reading(t.text)
+        if r is not None:
+            readings.append({"word": t.text, "greek": r[0], "gloss": gloss(t.text) or r[1]})
+    return json.dumps(
+        {
+            "id": doc.id,
+            "site": doc.meta.site,
+            "name": doc.meta.name,
+            "period": doc.meta.period,
+            "lines": [" ".join(doc.tokens[i].text for i in idxs) for idxs in doc.lines],
+            "readings": readings,
+        },
+        ensure_ascii=False,
+    )
+
+
+def cyprominoan_doc(doc_id: str = "cm-enkomi-ball") -> str:
+    """Display a bundled Cypro-Minoan document: sign groups only — the script is
+    undeciphered, so no sound values or readings are offered."""
+    import aegean
+
+    corpus = aegean.load("cyprominoan")
+    doc = corpus.get(doc_id.strip())
+    if doc is None:
+        return json.dumps(
+            {"error": f"no document {doc_id!r} in the Cypro-Minoan corpus",
+             "ids": [d.id for d in corpus.documents]},
+            ensure_ascii=False,
+        )
+    return json.dumps(
+        {
+            "id": doc.id,
+            "site": doc.meta.site,
+            "name": doc.meta.name,
+            "support": doc.meta.support,
+            "sign_groups": [t.text for t in doc.tokens],
+            "note": ("Cypro-Minoan is undeciphered: the corpus carries sign identities only; "
+                     "no transliteration into sound values or Greek is offered."),
+        },
+        ensure_ascii=False,
+    )
+
+
+def geo_word(query: str) -> str:
+    """Find-site coordinates from the bundled Pleiades-aligned gazetteer: a site by name, or
+    every site where a Linear A word occurs."""
+    import aegean
+    from aegean.geo import site_coordinates
+
+    coords = site_coordinates()
+    q = query.strip()
+    for key, c in coords.items():
+        if key.lower() == q.lower():
+            return json.dumps(
+                {"site": key, "lat": c.lat, "lon": c.lon, "region": c.region,
+                 "pleiades": c.pleiades_uri or "", "contested": c.contested or ""},
+                ensure_ascii=False,
+            )
+    word = q.upper()
+    counts: dict[str, int] = {}
+    for d in aegean.load("lineara").documents:
+        if d.meta.site and any(t.text == word for t in d.tokens):
+            counts[d.meta.site] = counts.get(d.meta.site, 0) + 1
+    if not counts:
+        return json.dumps(
+            {"error": f"{q!r} matches no gazetteer site and no Linear A word"},
+            ensure_ascii=False,
+        )
+    sites = []
+    for site, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])):
+        c = coords.get(site)
+        sites.append(
+            {"site": site, "documents": n,
+             "lat": c.lat if c else None, "lon": c.lon if c else None,
+             "pleiades": (c.pleiades_uri or "") if c else "",
+             "contested": (c.contested or "") if c else ""}
+        )
+    return json.dumps({"word": word, "sites": sites}, ensure_ascii=False)
+
+
+def cite_bundled(corpus_id: str, site: str = "") -> str:
+    """Cite a bundled corpus (or a site-filtered subset): plain + BibTeX + content
+    fingerprint. The citation names the exact subset used."""
+    import aegean
+
+    corpus_id = corpus_id.strip().lower()
+    if corpus_id not in _BUNDLED_CORPORA:
+        return json.dumps(
+            {"error": f"bundled corpora only: {', '.join(_BUNDLED_CORPORA)}"}, ensure_ascii=False
+        )
+    corpus = aegean.load(corpus_id)
+    if site.strip():
+        corpus = corpus.filter(site=site.strip())
+        if not corpus.documents:
+            return json.dumps(
+                {"error": f"no documents in {corpus_id!r} with site {site.strip()!r}"},
+                ensure_ascii=False,
+            )
+    try:
+        plain, bibtex = corpus.cite(), corpus.cite("bibtex")
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return json.dumps(
+        {
+            "corpus": corpus_id,
+            "documents": len(corpus.documents),
+            "citation": plain,
+            "bibtex": bibtex,
+            "fingerprint": corpus.fingerprint(),
+        },
+        ensure_ascii=False,
+    )
+
+
+def export_epidoc(corpus_id: str, doc_id: str) -> str:
+    """Export one bundled-corpus document as an EpiDoc TEI XML string (in-memory, no files).
+    The output round-trips through the Read EpiDoc card."""
+    import aegean
+    from aegean.io import to_epidoc
+
+    corpus_id = corpus_id.strip().lower()
+    if corpus_id not in _BUNDLED_CORPORA:
+        return json.dumps(
+            {"error": f"bundled corpora only: {', '.join(_BUNDLED_CORPORA)}"}, ensure_ascii=False
+        )
+    doc = aegean.load(corpus_id).get(doc_id.strip())
+    if doc is None:
+        return json.dumps(
+            {"error": f"no document {doc_id!r} in the {corpus_id} corpus"}, ensure_ascii=False
+        )
+    return json.dumps({"id": doc.id, "xml": to_epidoc(doc)}, ensure_ascii=False)

@@ -42,6 +42,18 @@ you used lands in your paper's references. If you're brand new, start with
 | 26 | [Get the best AI translation out of pyaegean](#26--get-the-best-ai-translation-out-of-pyaegean) | Greek | API key (generation only) |
 | 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~206 MB) |
 
+Those are the single moves. For whole projects there is a second index:
+[Workflows: end to end](#workflows-end-to-end), just below, chains the recipes
+into eight walkthroughs, one per kind of reader:
+[the epigraphist](#a--the-epigraphist-from-a-site-filter-to-a-citable-subset),
+[the papyrologist](#b--the-papyrologist-ddbdp-without-loading-it),
+[the literary classicist](#c--the-literary-classicist-catalogue-metre-gloss-citation),
+[the New Testament scholar](#d--the-new-testament-scholar-gold-morphology-to-concordance),
+[the corpus linguist](#e--the-corpus-linguist-numbers-with-a-receipt),
+[the Aegean-scripts researcher](#f--the-aegean-scripts-researcher-exploratory-and-labeled-as-such),
+[the AI-assisted translator](#g--the-ai-assisted-translator-key-gated), and
+[the toolsmith](#h--the-toolsmith-one-database-and-tools-for-agents).
+
 Throughout, the `--json` flag is your friend: every CLI command emits clean JSON
 on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/) or load it
 straight into Python/pandas.
@@ -55,6 +67,520 @@ database straight from a work (`aegean db build tlg0012.tlg001 -o iliad.db`), ru
 without writing any Python. In Python the equivalent is
 `aegean.read_corpus(spec)`. That one rule is what lets recipes 22–24 chain
 commands together.
+
+---
+
+## Workflows: end to end
+
+The numbered recipes below are single moves; this section chains them into
+whole working sessions. Eight walkthroughs, one per kind of reader, each
+running from a research question to a citable result, in the CLI and in Python
+as each step is most natural. Every output shown is real, produced against the
+shipped corpora; the steps that touch the network (a first-time fetch) or need
+an API key are marked. Each walkthrough ends with links back to the task
+recipes it builds on.
+
+### A · The epigraphist: from a site filter to a citable subset
+
+*You work on Sicilian epigraphy and want the Greek of one city: Kamarina.*
+Filter the I.Sicily corpus by find-site, read an inscription, ask what
+vocabulary sets the site apart, and leave with a citable subset. (Add
+`--period` to any of these commands to narrow by date as well; the period
+strings are the editors' own.)
+
+```bash
+aegean load isicily --site Kamarina --limit 3
+# isicily: 174 matching document(s) (showing 3)
+#  id           site       period                               words
+#  ISic001075   Kamarina   Chrestos; age in years (?)           5
+#  ISic001479   Kamarina   Second half of the 6th century BCE   1
+#  ISic001480   Kamarina   4th or 2nd century BCE               6
+
+aegean show isicily ISic003022                # a verse epitaph for Hippo
+# ISic003022  site=Kamarina  period=350 BCE — early 3rd century BCE
+#   1: σωφροσύνην τιμῶσα
+#   2: δικαιοσύνην τε σέβουσα
+#   3: Ἱππὼ ἐν ἡλικίαι πνεῦμ’ ἔλιπεν βιότου
+
+aegean keyness isicily --site Kamarina --top 5
+#  item      target    reference   G2       log-ratio   p
+#  τετάρτα   16/1107   0/27812     104.63   +9.70       1.5e-24
+#  φράτρα    14/1107   0/27812     91.53    +9.51       1.1e-21
+#  τα        17/1107   10/27812    76.36    +5.42       2.4e-18
+#  ευτέρα    10/1107   0/27812     65.34    +9.04       6.3e-16
+#  δεκάτα    9/1107    0/27812     58.80    +8.90       1.7e-14
+
+aegean load isicily --site Kamarina -o kamarina.json
+# wrote 174 documents to kamarina.json
+aegean cite kamarina.json
+# I.Sicily (ISicily/ISicily, CC BY 4.0), primary-Greek inscriptions
+#   — https://github.com/ISicily/ISicily [subset: filter(site='Kamarina') → 174 of 2855 documents]
+```
+
+The keyness table is the city's lead phratry tablets speaking: φράτρα itself
+and the Doric feminine ordinals that number the phratries (τετάρτα, δεκάτα).
+Text is kept as inscribed, so fragmentary tokens (τα, ευτέρα) rank alongside
+whole words: inspect before you interpret.
+
+**Bring your own EpiDoc.** The same path works for editions pyaegean does not
+ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`
+elements imports directly; this is the edition div of `myinscription.xml`
+(its TEI header carries the `<idno>` and `<origPlace>`):
+
+```xml
+<div type="edition" xml:lang="grc">
+  <ab>
+    <lb n="1"/><w>Ἀρτεμιδώρα</w> <w>χρηστὰ</w>
+    <lb n="2"/><w>χαῖρε</w>
+  </ab>
+</div>
+```
+
+```bash
+aegean import myinscription.xml --epidoc -o mine.json
+# wrote 1 document(s) to mine.json
+aegean show mine.json "MyColl 1"
+# MyColl 1  site=Kamarina
+#   1: Ἀρτεμιδώρα χρηστὰ
+#   2: χαῖρε
+```
+
+The imported corpus takes every command above (`stats`, `keyness`, `export`,
+`cite`), and its provenance honestly records a local EpiDoc import.
+
+**Task recipes used:**
+[4 · keyness](#4--what-vocabulary-distinguishes-a-site-keyness) ·
+[24 · save a subset](#24--save-a-query-as-a-reusable-corpus-then-reload-it) ·
+[25 · bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) ·
+[21 · reproducibility](#21--lock-down-reproducibility-versions--sha256)
+
+### B · The papyrologist: DDbDP without loading it
+
+*You want every papyrus addressed στρατηγῷ, "to the strategos".* The Duke
+Databank (`ddbdp`, 57,329 papyri) ships as a SQLite database, so the working
+method is search and stream, never `aegean.load("ddbdp")` (which materialises
+~4.4M tokens in RAM). Search is instant (the first use fetches the database,
+~206 MB):
+
+```bash
+aegean db search ddbdp "στρατηγῷ" --limit 5
+#  doc              pos   text
+#  aegyptus.96.10   13    στρατηγῷ
+#  apf.67.374       218   στρατηγῷ
+#  arctos.13.15     2     στρατηγῷ
+#  bacps.27.18_2    1     στρατηγῷ
+#  bgu.1.125        1     στρατηγῷ
+```
+
+In Python, collect every hit, then stream the matched documents into a corpus
+of their own. The stream is one pass over all 57,329 papyri (a minute or two;
+memory stays flat), and the subset you save is small and instant ever after:
+
+```python
+import aegean
+from aegean import db
+from aegean.scripts.greek import ddbdp_db
+
+path = ddbdp_db()                              # the fetched SQLite file
+hits = db.search(path, "στρατηγῷ", limit=0)    # limit 0 = every hit
+print(len(hits), "attestations in", len({h[0] for h in hits}), "papyri")
+# 1398 attestations in 1092 papyri
+
+wanted = {doc_id for doc_id, pos, text in hits}
+picked = [d for d in db.stream(path) if d.id in wanted]   # flat-memory pass
+
+subset = aegean.Corpus(picked, script_id="greek", provenance=aegean.Provenance(
+    source="DDbDP, Duke Databank of Documentary Papyri (papyri.info): papyri attesting στρατηγῷ",
+    license="CC-BY-3.0 (DDbDP / Duke Collaboratory for Classics Computing, papyri.info)",
+    url="https://github.com/papyri/idp.data",
+))
+db.to_sqlite(subset, "strategos.db")
+print(subset.cite())
+# DDbDP, Duke Databank of Documentary Papyri (papyri.info): papyri attesting στρατηγῷ
+#   — https://github.com/papyri/idp.data
+```
+
+Now `strategos.db` is an ordinary corpus: read a house-share declaration to the
+strategos of the Arsinoite nome, or run any statistic, without touching the big
+database again:
+
+```bash
+aegean show strategos.db bgu.1.125
+# bgu.1.125  site=Arsinoite  period=II/III spc
+#   1: ι στρατηγῷ Ἀρσινοΐτου Ἡρακλείδου μερίδος
+#   2: παρὰ Αὐρηλίου
+#   3: ἀπογεγραμμένου διʼ ἑτέρου ὑπομνήτος. ὑπάρχει μοι ἐπʼ ἀμφόδου Θεσμοφορείου ἥμισυ μέρος
+#   4: μερους οἰκίας, ἐν ᾧ ἀπογράφομαι
+
+aegean stats strategos.db --top 5
+#  item    count
+#  καὶ     10082
+#  τοῦ     5214
+#  τῆς     2682
+#  τῶν     2544
+#  ἔτους   2196
+```
+
+**Task recipes used:**
+[27 · DDbDP search](#27--search-57000-papyri-without-loading-them-ddbdp) ·
+[19 · SQLite + FTS](#19--build-a-sqlite-database-and-full-text-search-it) ·
+[21 · reproducibility](#21--lock-down-reproducibility-versions--sha256)
+
+### C · The literary classicist: catalogue, metre, gloss, citation
+
+*You want a passage of Homer: read it, scan it, gloss it, cite the edition.*
+Finding the work is offline (the catalogue is bundled metadata); fetching its
+text is the one networked step, done once and then cached, commit-pinned:
+
+```python
+from aegean import greek
+greek.catalog("iliad")[0]
+# {'id': 'tlg0012.tlg001', 'author': 'Homer', 'title': 'Iliad', 'greek_title': 'Ἰλιάς', 'source': 'perseus'}
+```
+
+```bash
+aegean greek work tlg0012.tlg001         # network on first use; cached after
+#  documents      24
+#  tokens         127339
+#  first          tlg0012.tlg001:1
+#  name           Ἰλιάς — Book 1
+#  source         PerseusDL/canonical-greekLit (tlg0012.tlg001.perseus-grc2.xml)
+#  data_version   PerseusDL/canonical-greekLit@d4fab69a2c26
+```
+
+Read the opening, gloss the first words from Cunliffe's Homeric lexicon (a
+small one-time index fetch), and cite the edition:
+
+```python
+from aegean import greek
+
+iliad = greek.load_work("tlg0012.tlg001", ref="1.1-1.7")
+doc = iliad.documents[0]
+print(" ".join(doc.tokens[i].text for i in doc.lines[0]))
+# μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος
+
+greek.use_lexicon("cunliffe")
+for r in greek.pipeline("μῆνιν ἄειδε θεὰ"):
+    print(r.text, "→", r.lemma, "·", greek.gloss(r.lemma, dictionary="cunliffe")[:38])
+# μῆνιν → μῆνις · μῆνις: μῆνις ἡ. 1 Wrath, ire : μῆνιν ἄ
+# ἄειδε → ἀείδω · ἀείδω: ἀείδω Fut. pple. in mid. form ἀ
+# θεὰ → θεά · θεά: θεά -ᾶς, ἡ [fem. of θεός.] Dat. p
+
+print(iliad.cite())
+# Homer. Ἰλιάς. Digitized by the Perseus Digital Library / Open Greek and Latin.
+#   — https://github.com/PerseusDL/canonical-greekLit/blob/d4fab69a2c26…
+```
+
+```bash
+aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
+# —⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×
+# hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
+```
+
+The citation pins the exact source commit, so the text you quote is the text
+anyone else will get. The offline lemmatizer is the honest baseline tier;
+activate the treebank or neural tiers for higher measured accuracy
+([Greek NLP](Greek-NLP)).
+
+**Task recipes used:**
+[25 · find a work in the catalogue](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) ·
+[3 · lemmatize and cite](#3--lemmatize-and-cite-a-chapter) ·
+[8 · scan a line of verse](#8--scan-a-line-of-verse) ·
+[18 · gloss offline](#18--gloss-koine-vocabulary-offline)
+
+### D · The New Testament scholar: gold morphology to concordance
+
+*Trace ἀγάπη through 1 John with the gold annotations.* The NT (Nestle 1904,
+CC0) carries curated lemma, Robinson morphology, Strong's number, and a gloss
+on every token; it is a small fetch on first use (fully offline, the bundled
+sample covers John 1 and Philemon). Start from the verse every scholar checks
+first:
+
+```python
+import aegean
+
+jn = aegean.greek.load_nt("1 John")
+verse = [t for t in jn.documents[3].tokens if t.annotations.get("ref") == "1John.4.8"]
+for t in verse[-4:]:
+    a = t.annotations
+    print(f"{t.text:8} {a['lemma']:6} {a['morph']:9} Strong's {a['strongs']:>4}  {a['gloss']}")
+# ὁ        ὁ      T-NSM     Strong's 3588  the
+# Θεὸς     θεός   N-NSM     Strong's 2316  God, a god
+# ἀγάπη    ἀγάπη  N-NSF     Strong's   26  love
+# ἐστίν.   εἰμί   V-PAI-3S  Strong's 1510  I am, exist
+```
+
+A concordance is the query engine plus a context window (and the bundled Dodson
+lexicon glosses any Koine word offline: `greek.use_dodson()`, then
+`greek.gloss_nt("ἀγάπη")` returns `love`):
+
+```python
+from aegean.analysis import FilterRow
+
+sub = jn.query([FilterRow("ins-contains-word", "ἀγάπη")]).to_corpus(jn)
+print(len(sub.documents), "of", len(jn.documents), "chapters attest ἀγάπη")
+# 4 of 5 chapters attest ἀγάπη
+
+rows = []
+for doc in sub.documents:
+    toks = doc.tokens
+    for i, t in enumerate(toks):
+        if t.text == "ἀγάπη":
+            left = " ".join(x.text for x in toks[max(0, i - 3):i])
+            right = " ".join(x.text for x in toks[i + 1:i + 4])
+            rows.append(f"{t.annotations['ref']:12} {left:>28}  ἀγάπη  {right}")
+print(len(rows), "attestations; the first three:")
+for row in rows[:3]:
+    print(row)
+# 11 attestations; the first three:
+# 1John.2.5                      ἐν τούτῳ ἡ  ἀγάπη  τοῦ Θεοῦ τετελείωται.
+# 1John.2.15                    οὐκ ἔστιν ἡ  ἀγάπη  τοῦ Πατρὸς ἐν
+# 1John.3.17                   αὐτοῦ, πῶς ἡ  ἀγάπη  τοῦ Θεοῦ μένει
+```
+
+From the shell, the same subset saves and exports as a one-row-per-token table
+(lemma, morphology, Strong's, gloss, reference; recipe 17 shows the columns):
+
+```bash
+aegean query nt --where ins-contains-word=ἀγάπη -o agape.json
+# wrote 20 inscriptions to agape.json
+aegean export agape.json -f csv --level token -o agape.csv
+# wrote 20 documents to agape.csv (csv)
+aegean cite agape.json
+# Nestle, E. (1904). Novum Testamentum Graece (Nestle 1904). Morphology/lemmatization (CC0)
+#   via biblicalhumanities/Nestle1904. — https://github.com/biblicalhumanities/Nestle1904
+#   [subset: query(Contains exact word: ἀγάπη) → 20 documents]
+```
+
+**Task recipes used:**
+[17 · export the NT](#17--export-the-greek-nt-as-an-annotated-table) ·
+[18 · gloss offline](#18--gloss-koine-vocabulary-offline) ·
+[12 · compound query](#12--build-a-compound-query-and-pipe-the-json) ·
+[24 · save a subset](#24--save-a-query-as-a-reusable-corpus-then-reload-it) ·
+[23 · tables to CSV](#23--save-a-stats-or-keyness-table-to-csv)
+
+### E · The corpus linguist: numbers with a receipt
+
+*Frequency, dispersion, keyness, and collocation on the full Mycenaean corpus,
+with a reproducibility trail.* DAMOS (~5,900 tablets, CC BY-NC-SA) is a
+one-time ~3 MB fetch:
+
+```bash
+aegean stats damos --top 5
+#  item      count
+#  pa-ro     230
+#  ko-wo     188
+#  pe-mo     173
+#  o-na-to   154
+#  e-ke      143
+
+aegean dispersion damos o-na-to
+#  item      freq   range/parts   DP      DPnorm
+#  o-na-to   154    81/4135       0.873   0.873
+
+aegean analyze assoc damos o-na-to ko-to-na
+#  joint / w1 / w2 / docs   49 / 81 / 71 / 5932
+#  chi_squared              2391
+#  p_value                  0
+#  log_likelihood           371.3
+#  fisher_p                 3.856e-82
+#  pmi_interval             [5.258022054925833, 6.059875157574912]
+
+aegean keyness damos --site Thebes --top 5 -o thebes_key.csv
+# wrote thebes_key.csv
+```
+
+```csv
+item,target_count,target_total,reference_count,reference_total,log_likelihood,log_ratio,p_value
+*63-te-ra-de,9,811,0,13680,51.9889272376043,8.324150018999573,5.581449320930576e-13
+a-ko-da-mo,9,811,0,13680,51.9889272376043,8.324150018999573,5.581449320930576e-13
+```
+
+The numbers tell one story three ways: *o-na-to* ("lease plot") is frequent
+(154), clumped (DP 0.873, the Pylos land-tenure series), and locked to
+*ko-to-na* (joint count 49, Fisher's p ≈ 3.9e-82); the Thebes keys are the
+Fq-series vocabulary. The receipt that makes the table citable:
+
+```python
+import aegean
+
+damos = aegean.load("damos")
+print(aegean.__version__)          # 0.27.2
+print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
+print(damos.cite())
+# Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
+#   attested language. Procedia - Social and Behavioral Sciences, 198, 21-31. — https://damos.hf.uio.no
+```
+
+`aegean data versions` adds the dataset's own pin (the row
+`fetched/damos-corpus  eab9ccdfc4324b62…  cached`): paste those lines into your
+methods section and the analysis is reconstructible.
+
+**Task recipes used:**
+[4 · keyness](#4--what-vocabulary-distinguishes-a-site-keyness) ·
+[13 · dispersion](#13--where-does-a-word-concentrate-dispersion) ·
+[14 · collocation stats](#14--are-two-words-associated-collocation-stats) ·
+[23 · tables to CSV](#23--save-a-stats-or-keyness-table-to-csv) ·
+[21 · reproducibility](#21--lock-down-reproducibility-versions--sha256)
+
+### F · The Aegean-scripts researcher: exploratory, and labeled as such
+
+*Structure-hunting in Linear A without pretending it reads.* Linear A is
+undeciphered: everything here is a lead, and the tools label their own output
+exploratory. Start from what is secure (the accounting shape), mine structure,
+then test a hunch against a null model:
+
+```bash
+aegean balance lineara HT13
+#  doc    marker   stated   computed   diff   balances
+#  HT13   KU-RO    130.5    131.0      0.5    NO
+
+aegean stats lineara --signs --top 5
+#  item   count
+#  𐝫      552
+#  𐄁      468
+#  1      310
+#  KU     307
+#  KA     284
+
+aegean analyze clusters lineara --top 3       # exploratory word families
+#  JA-SA → JA-SA-SA-RA-ME, JA-SA, JA-SA-JA, JA-SA-MU, JA-SA-SA, JA-SA-SA-RA
+#  A-TA  → A-TA, A-TA-DE, A-TA-NA, A-TA-NA-JE, A-TA-NA-TE, A-TA-RE
+#  I-DA  → I-DA, I-DA-A, I-DA-DA, I-DA-MI
+```
+
+A null model keeps the pattern-hunting honest. Are doubled adjacent signs (the
+SA-SA of JA-SA-SA-RA-ME) more common in real Linear A words than chance would
+make them?
+
+```python
+import aegean
+from aegean.analysis import monte_carlo_p
+
+words = [t.text for d in aegean.load("lineara") for t in d.words if "-" in t.text]
+
+def repeat_rate(ws):
+    n = 0
+    for w in ws:
+        signs = w.split("-")
+        n += sum(1 for a, b in zip(signs, signs[1:]) if a == b)
+    return n / len(ws)
+
+res = monte_carlo_p(repeat_rate(words), repeat_rate, words, null="within_word", n=999)
+print(f"observed {res.observed:.4f}  null mean {res.null_mean:.4f}  p = {res.p_value}")
+# observed 0.0384  null mean 0.0424  p = 0.782
+```
+
+No: the observed rate sits inside the null band, and a negative is a result
+too. For the deciphered contrast, Linear B reads as Greek (Linear A has no such
+bridge), and any word maps geographically:
+
+```bash
+aegean bridge linearb ko-wo
+# ko-wo → κόρος   (boy, son)
+
+aegean geo lineara --word KU-RO
+# lineara: 'KU-RO' attested at 3 located site(s)
+#  site            lat     lon     count
+#  Haghia Triada   35.06   24.79   32
+#  Phaistos        35.05   24.81   1
+#  Zakros          35.1    26.26   1
+```
+
+**Task recipes used:**
+[1 · reconcile the accounting](#1--reconcile-the-accounting-of-a-whole-corpus-export-the-discrepancies) ·
+[6 · word families](#6--mine-word-families-from-an-undeciphered-corpus-and-cache-it) ·
+[10 · the Greek-reading bridge](#10--read-a-deciphered-syllabic-word-as-greek-the-bridge) ·
+[2 · map a word](#2--map-a-words-distribution) ·
+[5 · sound-matching](#5--sound-match-a-syllabic-word-against-greek)
+
+### G · The AI-assisted translator (key-gated)
+
+*(Generation needs a provider key; the grounding below is offline and
+deterministic.)* The discipline: derive the grammar locally, hand the model
+facts, keep the label. The grounding is fully inspectable before any key is
+involved:
+
+```python
+from aegean import greek, translate
+
+greek.use_neural_pipeline()     # [neural] extra: gold morphology feeds the grounding
+for item in translate.grounding_for("ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς.", "greek",
+                                    mode="morphology"):
+    print(item)
+# Clause skeleton: main predicate 'ἐγείρει' (ἐγείρω, active pres sg 3rd); subject θεὸς; object νεκρούς
+# ὁ = ὁ (det, nom sg m)
+# δὲ = δέ (adv)
+# θεὸς = θεός (noun, nom sg m)
+# ἐγείρει = ἐγείρω (verb, sg active pres ind 3rd)
+# τοὺς = ὁ (det, acc pl m)
+# νεκρούς = νεκρός (noun, acc pl m)
+```
+
+With a key configured (recipe 7 lists the providers), translate with that
+grounding, then again with the post-hoc check that drafts first and repairs
+against the analysis:
+
+```bash
+aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --mode morphology
+aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --verify
+# output is provider- and model-dependent, so none is shown here; every result
+# arrives labeled [EXPLORATORY · translate · <provider>], and -o keeps the
+# label and the grounding trace alongside the text
+```
+
+Every answer is a labeled hypothesis, never a reading; `result.trace()` shows
+exactly which locally derived facts the model was given. Mode choice, and what
+grounding can and cannot fix, is recipe 26.
+
+**Task recipes used:**
+[26 · the best AI translation](#26--get-the-best-ai-translation-out-of-pyaegean) ·
+[7 · ask a grounded question](#7--ask-a-grounded-question--and-audit-the-answer)
+
+### H · The toolsmith: one database, and tools for agents
+
+*Build one searchable database out of several corpora, then expose the toolkit
+to an AI agent.* `combine` resolves each source like any corpus argument and
+merges provenance honestly; full-text search comes free with the `.db`
+extension:
+
+```bash
+aegean combine isicily igcyr -o west.db     # Sicily + Cyrenaica, one database
+# wrote 3852 documents to west.db (merged 2 sources)
+
+aegean db search west.db "Δάματρι" --limit 4
+#  doc           pos   text
+#  ISic003009    0     Δάματρι
+#  ISic003109    0     Δάματρι
+#  ISic003427    0     Δάματρι
+#  igcyr003400   1     Δάματρι
+
+aegean cite west.db
+# Merged corpus of: I.Sicily (ISicily/ISicily, CC BY 4.0), primary-Greek inscriptions;
+#   IGCyr²/GVCyr² — Greek inscriptions of Cyrenaica (incl. Doric and verse)
+#   [merged: 2 corpora → 3852 documents]
+```
+
+One query, two Doric provinces: the dative Δάματρι (to Demeter) surfaces in
+Sicilian and Cyrenaican dedications alike. The same corpus surface is available
+to AI agents as an MCP server (`pip install "pyaegean[mcp]"`, then point your
+client at the `aegean-mcp` command):
+
+```python
+from aegean.mcp_server import TOOLS
+print(len(TOOLS), "tools:", ", ".join(t.__name__ for t in TOOLS[:6]), "…")
+# 15 tools: list_corpora, corpus_info, show_document, search_signs, balance_accounts, query_corpus …
+```
+
+The tools address corpora by registry name only (never by filesystem path) and
+return structured errors an agent can act on; setup and the full tool table are
+on [MCP](MCP).
+
+**Task recipes used:**
+[22 · all of Homer in one database](#22--put-all-of-homer-in-one-searchable-database) ·
+[19 · SQLite + FTS](#19--build-a-sqlite-database-and-full-text-search-it) ·
+[24 · save a subset](#24--save-a-query-as-a-reusable-corpus-then-reload-it) ·
+[21 · reproducibility](#21--lock-down-reproducibility-versions--sha256)
 
 ---
 
@@ -520,7 +1046,7 @@ aegean analyze assoc lineara KU-RO KI-RO
 #  p_value                  7.055e-19
 #  log_likelihood           23.94
 #  fisher_p                 1.595e-06
-#  pmi_interval             [3.17, 5.62]
+#  pmi_interval             [3.1720137984039996, 5.621837690118523]
 
 aegean analyze cooccur lineara KU-RO --top 5     # what shares a document with KU-RO
 #  KI-RO        5
@@ -757,7 +1283,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.27.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.27.2 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

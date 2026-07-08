@@ -41,9 +41,11 @@
   <h1>pyaegean <span class="status" id="status">loading…</span></h1>
   <p class="sub">The toolkit running entirely in your browser via
     <a href="https://pyodide.org/">Pyodide</a> — no install, no server. Every example below is the
-    pure-Python core running client-side: the Greek pipeline, scansion and word analysis, the
-    bundled Koine lexicon and the offline work catalogue, the deciphered-syllabary Greek bridge,
-    the bundled Linear A and Cypriot inscription corpora, the file importer, and cross-script
+    pure-Python core running client-side: the Greek pipeline, scansion, accent and sandhi rules,
+    word analysis, the bundled Koine lexicon, New Testament sample, and idiom lexicon, the offline
+    work catalogue, the deciphered-syllabary Greek bridge, the bundled corpora of all four Aegean
+    scripts (with statistics, queries, numerals, and sign inventories), the find-site gazetteer,
+    citation and fingerprinting, the file importer, EpiDoc in both directions, and cross-script
     comparison. The neural and
     AI layers, and the network-only backends (fetching real works, LSJ), don't run here. First
     load fetches the package, so give it a few seconds.</p>
@@ -74,6 +76,37 @@
   </div>
 
   <div class="card">
+    <h2>Accent placement</h2>
+    <label for="acc">An unaccented Greek word: recessive accent by default (finite verbs), or give
+      a lemma for the persistent rule (try word <code>θεου</code> with lemma <code>θεός</code>)</label>
+    <div class="row">
+      <input type="text" id="acc" value="ανθρωπος">
+      <input type="text" id="acclem" placeholder="lemma (optional)">
+      <button data-tool="acc" disabled>Accent</button>
+    </div>
+    <pre id="acc-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Sandhi resolution</h2>
+    <label for="snd">One token with crasis, elision, or movable-ν: it is expanded only from
+      curated forms, never guessed (try <code>κἀγώ</code>, <code>ἀπ'</code>, <code>ἐστίν</code>,
+      <code>τοὔνομα</code>)</label>
+    <input type="text" id="snd" value="κἀγώ">
+    <div class="row"><button data-tool="snd" disabled>Resolve</button></div>
+    <pre id="snd-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Syllable quantities</h2>
+    <label for="pro">A Greek word: the metrical weight of each syllable (heavy / light / common,
+      the raw material of scansion)</label>
+    <input type="text" id="pro" value="ἄνθρωπος">
+    <div class="row"><button data-tool="pro" disabled>Weigh syllables</button></div>
+    <pre id="pro-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Metrical scansion</h2>
     <label for="scan">A verse line — scan it into long/short syllables (— heavy, ⏑ light, × anceps)</label>
     <input type="text" id="scan" value="ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ">
@@ -96,6 +129,36 @@
     <input type="text" id="gloss" value="ἀγάπη">
     <div class="row"><button data-tool="gloss" disabled>Gloss</button></div>
     <pre id="gloss-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>New Testament verse (offline sample)</h2>
+    <label for="ntv">A verse from the bundled sample (John 1 and Philemon 1, Nestle 1904): each
+      token with its gold lemma, Robinson morph tag, Strong's number, and UPOS (try
+      <code>John 1.1</code> or <code>Philemon 1.4</code>)</label>
+    <input type="text" id="ntv" value="John 1.1">
+    <div class="row"><button data-tool="ntv" disabled>Look up verse</button></div>
+    <pre id="ntv-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Greek idioms</h2>
+    <label for="idi">A phrase or sentence: curated non-compositional idioms are detected and
+      glossed with their real meaning (try <code>ἐφ' ἡμῖν</code> or
+      <code>οὐκ ἔστιν ὅπως</code> in context)</label>
+    <textarea id="idi">τὸ δ' ἐφ' ἡμῖν ἐστι</textarea>
+    <div class="row"><button data-tool="idi" disabled>Find idioms</button></div>
+    <pre id="idi-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Offline lemmatizer, honest misses included</h2>
+    <label for="lem">One Greek word: the offline lemma and POS. When no rule or table applies the
+      word comes back unchanged and flagged, never as a fabricated dictionary form (compare
+      <code>ἀνθρώπων</code> with <code>προφήτου</code>)</label>
+    <input type="text" id="lem" value="ἀνθρώπων">
+    <div class="row"><button data-tool="lem" disabled>Lemmatize</button></div>
+    <pre id="lem-out"></pre>
   </div>
 
   <div class="card">
@@ -168,6 +231,93 @@
   </div>
 
   <div class="card">
+    <h2>Linear A — corpus statistics</h2>
+    <label for="last">Dispersion (which words are corpus-wide vs site-bound) and keyness (which
+      words are characteristic of one find-site against the rest); try
+      <code>Haghia Triada</code>, <code>Khania</code>, <code>Zakros</code></label>
+    <input type="text" id="last" value="Haghia Triada">
+    <div class="row"><button data-tool="last" disabled>Compute</button></div>
+    <pre id="last-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Deterministic counts over transliterated sign-groups,
+      not meanings: Linear A is undeciphered.</p>
+  </div>
+
+  <div class="card">
+    <h2>Linear A — compound query</h2>
+    <label>The compound-query engine: inscriptions from a site AND words containing a sign, words
+      output (the count is document frequency)</label>
+    <div class="row">
+      <input type="text" id="laqsite" value="Khania" placeholder="site (optional)">
+      <input type="text" id="laqsign" value="KU" placeholder="sign (optional)">
+      <button data-tool="laq" disabled>Query</button>
+    </div>
+    <pre id="laq-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Aegean numerals</h2>
+    <label for="num">Numeral tokens as transliterated (integers, fraction glyphs like
+      <code>½</code> and <code>³⁄₄</code>, the <code>≈</code> approximation prefix): each is parsed
+      and the line is summed, the way the accounting checker reads a tablet</label>
+    <input type="text" id="num" value="12 ½ ≈ ⅙ KU-RO">
+    <div class="row"><button data-tool="num" disabled>Parse numerals</button></div>
+    <pre id="num-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Sign inventory lookup</h2>
+    <label for="sig">A sign label in any of the four Aegean scripts (or Greek): its glyph, Unicode
+      codepoint, and sound value where one exists (try <code>PA</code>, <code>RA₂</code>,
+      <code>*301</code>, Cypro-Minoan <code>CM008</code>)</label>
+    <div class="row">
+      <select id="sigscript">
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cypriot">Cypriot</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+        <option value="greek">Greek</option>
+      </select>
+      <input type="text" id="sig" value="PA">
+      <button data-tool="sig" disabled>Look up</button>
+    </div>
+    <pre id="sig-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Linear B tablet with Greek readings</h2>
+    <label for="lbt">A tablet from the bundled Linear B corpus: its lines, plus every word with an
+      attested Greek reading in the bundled lexicon (try <code>PY Ta 641</code>,
+      <code>PY Er 312</code>, <code>MY Ge 602</code>)</label>
+    <input type="text" id="lbt" value="PY Ta 641">
+    <div class="row"><button data-tool="lbt" disabled>Read tablet</button></div>
+    <pre id="lbt-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Cypro-Minoan — signs only</h2>
+    <label for="cmn">A bundled Cypro-Minoan document: sign identities are all the field offers.
+      The script is undeciphered, so no sound values or readings are shown.</label>
+    <div class="row">
+      <select id="cmn">
+        <option value="cm-enkomi-ball">cm-enkomi-ball (Enkomi clay ball)</option>
+        <option value="cm-ugarit-tablet">cm-ugarit-tablet (Ugarit tablet)</option>
+      </select>
+      <button data-tool="cmn" disabled>Show document</button>
+    </div>
+    <pre id="cmn-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Find-site geography</h2>
+    <label for="geo">A find-site name (<code>Phaistos</code>) or a Linear A word
+      (<code>KU-RO</code>): coordinates from the bundled Pleiades-aligned gazetteer, or every
+      site the word occurs at</label>
+    <input type="text" id="geo" value="KU-RO">
+    <div class="row"><button data-tool="geo" disabled>Locate</button></div>
+    <pre id="geo-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Cross-script phonetic comparison</h2>
     <label>How close is a Linear B spelling to a Greek word? (Syllabic spelling is defective — it
       drops final consonants and clusters — so the score is a guide, not a verdict.)</label>
@@ -202,6 +352,41 @@
     <pre id="epi-out"></pre>
   </div>
 
+  <div class="card">
+    <h2>Write EpiDoc TEI</h2>
+    <label for="exp">Export one document from a bundled corpus as EpiDoc TEI XML, built entirely
+      in memory (paste the result into the Read EpiDoc card above to round-trip it)</label>
+    <div class="row">
+      <select id="expcorpus">
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cypriot">Cypriot</option>
+      </select>
+      <input type="text" id="exp" value="HT9b">
+      <button data-tool="exp" disabled>Export</button>
+    </div>
+    <pre id="exp-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Cite it — provenance and fingerprint</h2>
+    <label for="citsite">A citation for a bundled corpus, or an exact site-filtered subset: plain
+      and BibTeX forms name what was used, and the content fingerprint pins it (try
+      <code>lineara</code> with site <code>Zakros</code>, or leave the site empty)</label>
+    <div class="row">
+      <select id="citcorpus">
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cypriot">Cypriot</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+        <option value="greek">Greek samples</option>
+      </select>
+      <input type="text" id="citsite" value="Zakros" placeholder="site filter (optional)">
+      <button data-tool="cit" disabled>Cite</button>
+    </div>
+    <pre id="cit-out"></pre>
+  </div>
+
   <footer>
     Built on <a href="https://github.com/ryanpavlicek/pyaegean">pyaegean</a>
     (<a href="https://pypi.org/project/pyaegean/">PyPI</a>) — the released version runs here.
@@ -232,7 +417,10 @@ async function init() {
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
                         "catalog", "bridge", "cypriot_inscription", "lineara_search",
                         "lineara_balance", "import_text", "phonetic_compare", "lexicon_link",
-                        "epidoc_import"]) {
+                        "epidoc_import", "accent_word", "sandhi", "prosody_word", "nt_verse",
+                        "idioms", "lemmatize_word", "lineara_stats", "lineara_query", "numerals",
+                        "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
+                        "cite_bundled", "export_epidoc"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -319,6 +507,111 @@ const handlers = {
     show("epi-out", r.error ? r
       : `${r.id}${r.site ? "  ·  " + r.site : ""}\n${r.documents} document, ${r.tokens} tokens\n` +
         `tokens: ${r.preview.join(" ")}`);
+  },
+  acc: () => {
+    const r = call("accent_word", val("acc"), val("acclem"));
+    show("acc-out", r.error ? r
+      : `${r.word} → ${r.accented}\n${r.classification} (${r.accent}` +
+        `${r.certain ? "" : ", uncertain"})\nrule: ${r.note}`);
+  },
+  snd: () => {
+    const r = call("sandhi", val("snd"));
+    if (r.error) return show("snd-out", r);
+    show("snd-out", r.kind === "none"
+      ? `${r.surface}: no sandhi detected`
+      : `${r.surface} = ${r.words.join(" + ")}\n${r.kind}${r.uncertain ? " (uncertain)" : ""}` +
+        `\n${r.note}`);
+  },
+  pro: () => {
+    const r = call("prosody_word", val("pro"));
+    show("pro-out", r.error ? r
+      : r.syllables.map(s => `${s.syllable}\t${s.quantity}`).join("\n"));
+  },
+  ntv: () => {
+    const r = call("nt_verse", val("ntv"));
+    if (r.error) return show("ntv-out", r.error);
+    show("ntv-out", `${r.ref}  ${r.text}\n\n` +
+      r.tokens.map(t => `${t.text}\t${t.lemma}\t${t.morph}\t${t.strongs}\t${t.upos}`).join("\n") +
+      `\n\n${r.source}`);
+  },
+  idi: () => {
+    const r = call("idioms", val("idi"));
+    show("idi-out", r.idioms && r.idioms.length
+      ? r.idioms.map(i => i.gloss).join("\n") : "no curated idiom found in this text");
+  },
+  lem: () => {
+    const r = call("lemmatize_word", val("lem"));
+    show("lem-out", r.error ? r
+      : `${r.word} → ${r.lemma}${r.known ? "" : "   (honest miss: not derivable offline, " +
+        "returned unchanged)"}\nPOS: ${r.pos}`);
+  },
+  last: () => {
+    const r = call("lineara_stats", val("last"));
+    if (r.error) return show("last-out", r.error + (r.sites ? "\nsites: " + r.sites.join(", ") : ""));
+    show("last-out",
+      "most evenly dispersed corpus-wide (low DPnorm = everywhere):\n" +
+      r.dispersion.map(d => `  ${d.word}  ${d.count}× in ${d.docs} docs  DPnorm ${d.dp_norm}`).join("\n") +
+      `\n\nkey at ${r.site} vs the rest:\n` +
+      r.keyness.map(k => `  ${k.word}  ${k.site_count}× here / ${k.elsewhere}× elsewhere  ` +
+        `G² ${k.g2}  log-ratio ${k.log_ratio}`).join("\n"));
+  },
+  laq: () => {
+    const r = call("lineara_query", val("laqsite"), val("laqsign"));
+    if (r.error) return show("laq-out", r.error);
+    show("laq-out", r.words.length
+      ? `${r.total} word${r.total === 1 ? "" : "s"}:\n` +
+        r.words.map(w => `  ${w.word}  (in ${w.docs} doc${w.docs === 1 ? "" : "s"})`).join("\n")
+      : "no words match");
+  },
+  num: () => {
+    const r = call("numerals", val("num"));
+    if (r.error) return show("num-out", r);
+    show("num-out",
+      r.readings.map(x => `${x.token}\t${x.display === null ? "(not a numeral)"
+        : x.display + (String(x.value) !== x.display ? "  = " + x.value : "")}`).join("\n") +
+      `\nsum: ${r.sum_display}`);
+  },
+  sig: () => {
+    const r = call("sign_info", val("sigscript"), val("sig"));
+    if (r.error) return show("sig-out", r.error);
+    show("sig-out", `label: ${r.label}\nglyph: ${r.glyph}\ncodepoint: ${r.codepoint}\n` +
+      `sound value: ${r.sound_value || "(none)"}${r.note ? "\n" + r.note : ""}`);
+  },
+  lbt: () => {
+    const r = call("linearb_tablet", val("lbt"));
+    if (r.error) return show("lbt-out", r.error + (r.ids ? "\ntry: " + r.ids.join(", ") : ""));
+    show("lbt-out", `${r.id} · ${r.site} · ${r.period}\n${r.name}\n\n` +
+      r.lines.map(l => "  " + l).join("\n") +
+      (r.readings.length ? "\n\nGreek readings (attested in the bundled lexicon):\n" +
+        r.readings.map(g => `  ${g.word} → ${g.greek}   (${g.gloss})`).join("\n") : ""));
+  },
+  cmn: () => {
+    const r = call("cyprominoan_doc", val("cmn"));
+    if (r.error) return show("cmn-out", r.error);
+    show("cmn-out", `${r.id} · ${r.site} · ${r.support}\n${r.name}\n\n` +
+      `sign groups: ${r.sign_groups.join("   ")}\n\n${r.note}`);
+  },
+  geo: () => {
+    const r = call("geo_word", val("geo"));
+    if (r.error) return show("geo-out", r.error);
+    if (r.site) return show("geo-out",
+      `${r.site}: ${r.lat}, ${r.lon}  (${r.region})` +
+      (r.pleiades ? `\n${r.pleiades}` : "") +
+      (r.contested ? `\ndisputed find-spot: ${r.contested}` : ""));
+    show("geo-out", `${r.word} occurs at:\n` +
+      r.sites.map(s => `  ${s.site}  (${s.documents} doc${s.documents === 1 ? "" : "s"})` +
+        (s.lat !== null ? `  ${s.lat}, ${s.lon}` : "") +
+        (s.contested ? "  [disputed find-spot]" : "")).join("\n"));
+  },
+  cit: () => {
+    const r = call("cite_bundled", val("citcorpus"), val("citsite"));
+    if (r.error) return show("cit-out", r.error);
+    show("cit-out", `${r.documents} document${r.documents === 1 ? "" : "s"}\n\n${r.citation}\n\n` +
+      `${r.bibtex}\nfingerprint: ${r.fingerprint}`);
+  },
+  exp: () => {
+    const r = call("export_epidoc", val("expcorpus"), val("exp"));
+    show("exp-out", r.error ? r.error : r.xml);
   },
 };
 

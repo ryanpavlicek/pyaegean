@@ -56,10 +56,56 @@ aegean greek scan --help
 > The Linear A/B glyph columns (𐝫, 𐙂) additionally need a font that covers the
 > Aegean scripts: see [Installation → Set up your terminal](Installation#set-up-your-terminal).
 
+## How to read a command
+
+Every `--help` screen (and every example on this page) describes commands in the
+same compact notation. Here is one real usage line, exactly as
+`aegean stats --help` prints it, decoded piece by piece:
+
+```text
+Usage: aegean stats [OPTIONS] CORPUS
+```
+
+- **`aegean stats`** is the command itself: the program (`aegean`), then the
+  command (`stats`). Grouped commands add one more word: `aegean greek scan`.
+- **`CORPUS`** (capitals, no dashes) is an **argument**: a value you supply in
+  that position, with nothing in front of it. Here it is the corpus to analyse,
+  so the simplest complete command is `aegean stats lineara`. An argument in
+  square brackets is optional: `aegean balance [OPTIONS] CORPUS [DOC_ID]` means
+  the document id may be given (check one tablet) or left off (sweep the whole
+  corpus).
+- **`[OPTIONS]`** stands for the command's **options** (also called flags):
+  named switches that start with dashes and can go in any order. An option
+  either takes a value after it (`--top 5`) or is a plain on/off switch
+  (`--signs`). `aegean stats --help` lists them all with one-line descriptions.
+- **Short and long spellings.** Some options have a one-letter short form:
+  `-o` is the same option as `--output`, `-f` the same as `--format`. This page
+  usually writes the long form because it is self-describing; type whichever
+  you prefer.
+
+Put together, this command:
+
+```bash
+aegean stats lineara --signs --top 5
+```
+
+reads as: run `stats` on the corpus `lineara`, count individual signs rather
+than whole words, and show the top five rows.
+
+**Quoting.** Wrap anything containing a space, an asterisk, or punctuation in
+double quotes: `aegean search lineara "KU-*-RO"`,
+`aegean load lineara --site "Haghia Triada"`. Double quotes work in every shell
+pyaegean runs in (Windows PowerShell, cmd, macOS/Linux bash and zsh). A single
+Greek word needs no quotes (`aegean greek syllabify εἰσφέρω`),
+but quoting never hurts, and a multi-word line always needs it:
+`aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"`. On macOS/Linux single
+quotes work too; in PowerShell prefer double quotes so the text passes through
+unchanged.
+
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.27.1
+aegean --version          # pyaegean 0.27.2
 ```
 
 | Group | What's in it |
@@ -71,6 +117,160 @@ aegean --version          # pyaegean 0.27.1
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
+
+---
+
+## Common tasks
+
+One goal, one command, and what comes back. Every command here was run as
+shown; longer outputs are abridged with `…`. Commands marked *(downloads on
+first use)* fetch their data once and are offline after that.
+
+**See what is in a corpus** (size, source, license, the ready-to-paste citation):
+
+```bash
+aegean info edh
+# a small table: 1286 documents, 26937 words, the EDH source line,
+# the CC-BY-SA-4.0 license, and the citation
+```
+
+**Read one Linear A tablet**, line by line:
+
+```bash
+aegean show lineara HT13
+# HT13  site=Haghia Triada  period=LMIB  scribe=HT Scribe 8  support=Tablet
+#   1: KA-U-DE-TA VIN 𐄁 TE 𐄁
+#   2: RE-ZA 5 ¹⁄₂
+#   …
+```
+
+**Read a chapter of the Greek New Testament** (John 1 is bundled, so this works
+offline from install):
+
+```bash
+aegean greek nt John 1
+# John 1  (1 chapter, 828 tokens)
+# John 1
+#   1: Ἐν ἀρχῇ ἦν ὁ Λόγος, καὶ ὁ Λόγος ἦν πρὸς τὸν Θεόν, καὶ Θεὸς ἦν ὁ Λόγος.
+#   …
+```
+
+**Read the Iliad, one book at a time** *(downloads on first use)*:
+
+```bash
+aegean show tlg0012.tlg001 1
+# tlg0012.tlg001:1
+#   1: μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος
+#   2: οὐλομένην , ἣ μυρίʼ Ἀχαιοῖς ἄλγεʼ ἔθηκε ,
+#   …
+```
+
+**Count the commonest words in a corpus** *(nt downloads on first use)*:
+
+```bash
+aegean stats nt --top 3
+# a two-column table: καὶ 8541 · ὁ 2768 · ἐν 2683
+```
+
+**Find a word anywhere in 57,000 documentary papyri** *(the DDbDP database
+downloads once, ~206 MB)*:
+
+```bash
+aegean db search ddbdp "βασιλέως" --limit 3
+# a doc/pos/text table: apf.59.84_2 · bgu.10.1910 · bgu.10.1957, each
+# holding βασιλέως at the given token position
+```
+
+**List the documents that contain a given word**:
+
+```bash
+aegean query nt --where "ins-contains-word=ἀγάπη" --limit 3
+# Contains exact word: ἀγάπη → 20 inscription(s)
+# a table starting Matt 24 · John 17 · Rom 5, then the exact-subset citation
+```
+
+**Map where a word was found** (case does not matter):
+
+```bash
+aegean geo lineara --word a-du
+# lineara: 'a-du' attested at 3 located site(s)
+# a site/lat/lon/count table: Haghia Triada ×7, Khania ×2, Tylissos ×1
+```
+
+**Check whether a tablet's arithmetic adds up**:
+
+```bash
+aegean balance lineara HT9a
+# one row: HT9a  KU-RO  stated 31.75  computed 31.0  diff -0.75  balances NO
+```
+
+**Read a Linear B word as Greek**:
+
+```bash
+aegean bridge linearb qa-si-re-u
+# qa-si-re-u → βασιλεύς   (chief, local leader (later: king))
+```
+
+**Split a Greek word into syllables**:
+
+```bash
+aegean greek syllabify ἄνθρωπος
+# ἄνθρωπος → ἄν-θρω-πος
+```
+
+**Scan a line of Homer**:
+
+```bash
+aegean greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
+# —⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×
+# hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
+```
+
+**Reconstruct a pronunciation** (Attic or Koine):
+
+```bash
+aegean greek ipa "Χριστός" --period koine
+# xristos
+```
+
+**Type Greek without a Greek keyboard** (Beta Code in, polytonic Greek out):
+
+```bash
+aegean greek betacode "lo/gos"
+# λόγος
+```
+
+**Look up an NT word's meaning** (bundled lexicon, no download):
+
+```bash
+aegean greek gloss-nt ἀγάπη
+# love
+```
+
+**Lemmatize a clause**:
+
+```bash
+echo "ἐν ἀρχῇ ἦν ὁ λόγος" | aegean greek lemmatize -
+# ἐν      ἐν
+# ἀρχῇ    ἀρχή
+# ἦν      εἰμί
+# …
+```
+
+**Cite exactly what you used**:
+
+```bash
+aegean cite nt
+# Nestle, E. (1904). Novum Testamentum Graece (Nestle 1904). Morphology/lemmatization (CC0) via biblicalhumanities/Nestle1904. — https://github.com/biblicalhumanities/Nestle1904
+```
+
+**Check the install when something seems off**:
+
+```bash
+aegean doctor
+# five tables (versions, extras, data store, models, analysis cache), then:
+# doctor: all checks passed
+```
 
 ---
 
@@ -187,6 +387,58 @@ of prompting, so you can script it (the `use` directive works there too):
 ```bash
 printf 'use lineara\nshow HT13\nstats --top 3\n' | aegean repl
 ```
+
+### A worked session
+
+A short, realistic sitting: set a session corpus, read a tablet, run two
+analyses on it, ask a Greek question, and leave. The outputs below are from a
+real scripted run (the shell reads one command per line when its input is
+piped); the `aegean>` prompt lines are added for readability, since a piped
+session does not echo them. In an interactive terminal the shell first greets
+you with a banner and the full command map (the same map bare `aegean`
+prints), not shown here.
+
+```text
+$ aegean repl
+aegean> use lineara
+aegean: session corpus: lineara — corpus-first commands (show, stats, search, …) now default to it; 'use off' clears.
+aegean> show HT13
+HT13  site=Haghia Triada  period=LMIB  scribe=HT Scribe 8  support=Tablet
+  1: KA-U-DE-TA VIN 𐄁 TE 𐄁
+  2: RE-ZA 5 ¹⁄₂
+  …
+  8: KU-RO 130 ¹⁄₂
+aegean> stats --top 3
+  lineara: top 3
+      words
+┌────────┬───────┐
+│ item   │ count │
+├────────┼───────┤
+│ KU-RO  │ 37    │
+│ SA-RA₂ │ 20    │
+│ KI-RO  │ 16    │
+└────────┴───────┘
+aegean> search "KU-*-RO"
+'KU-*-RO': 1 word(s)
+┌──────────┬───────┐
+│ word     │ count │
+├──────────┼───────┤
+│ KU-MA-RO │ 1     │
+└──────────┴───────┘
+aegean> greek syllabify Ποσειδῶνι
+Ποσειδῶνι → Πο-σει-δῶ-νι
+aegean> use off
+aegean: session corpus cleared.
+aegean> :examples
+  info lineara                      corpus overview: size, provenance, license
+  show lineara HT13                 one document, metadata and line-by-line tokens
+  …  (thirteen starter lines in all)
+aegean> :exit
+```
+
+Note what the session corpus did: after `use lineara`, `show HT13`,
+`stats --top 3`, and `search "KU-*-RO"` all ran against Linear A with no corpus
+argument, while `greek syllabify` (not a corpus command) was untouched by it.
 
 ---
 
@@ -453,6 +705,70 @@ use `--output-kind words --json` if you want the word list instead.)
 > carries the untruncated totals in `matched` (`{"inscriptions": …, "words": …}`),
 > so a pipeline never silently loses count of the full result set.
 
+#### Worked examples: combining `--where` rows
+
+The grammar in practice, on the bundled Linear A corpus. Two plain rows **AND**
+together (both must hold):
+
+```bash
+aegean query lineara --where "site-is=Haghia Triada" --where "ins-contains-word=KU-RO" --limit 3
+```
+```
+Site is: Haghia Triada · Contains exact word: KU-RO → 32 inscription(s)
+┌───────┬───────────────┬───────┐
+│ id    │ site          │ words │
+├───────┼───────────────┼───────┤
+│ HT9a  │ Haghia Triada │ 9     │
+│ HT9b  │ Haghia Triada │ 10    │
+│ HT11a │ Haghia Triada │ 6     │
+└───────┴───────────────┴───────┘
+```
+
+An `or:` prefix ORs its row in (either site qualifies):
+
+```bash
+aegean query lineara --where "site-is=Zakros" --where "or:site-is=Phaistos" --limit 3
+# Site is: Zakros · Site is: Phaistos → 119 inscription(s)
+# (the table starts PH1a, PH1b, PH2 …)
+```
+
+A `!` prefix negates its row (Haghia Triada tablets that do NOT mention KU-RO):
+
+```bash
+aegean query lineara --where "site-is=Haghia Triada" --where "!ins-contains-word=KU-RO" --limit 3
+# Site is: Haghia Triada · NOT Contains exact word: KU-RO → 1078 inscription(s)
+```
+
+`--output-kind words` switches the result from matching inscriptions to the
+matching **words** (each count is the word's document frequency within the
+matched subset). Word-scope fields such as `word-prefix` only bite in this
+mode:
+
+```bash
+aegean query lineara --where "site-is=Haghia Triada" --where "word-prefix=KU" --output-kind words --limit 5
+```
+```
+Site is: Haghia Triada · Word starts with: KU → 25 word(s)
+┌──────────────┬───────┐
+│ word         │ count │
+├──────────────┼───────┤
+│ KU-RO        │ 32    │
+│ KU-PA₃-NU    │ 6     │
+│ KU-NI-SU     │ 5     │
+│ KU-MI-NA-QE  │ 2     │
+│ KU-PA₃-NA-TU │ 2     │
+└──────────────┴───────┘
+```
+
+Every result ends with the exact-subset citation (elided above): the filter
+you ran travels with the numbers. A mistyped field is a one-line error with a
+suggestion, never a silent empty match:
+
+```bash
+aegean query lineara --where "site=Zakros"
+# aegean: unknown field 'site' — did you mean 'site-is'? (`aegean query lineara --fields` lists all)
+```
+
 ### `stats` — frequency tables
 
 Word frequencies by default; `--signs` counts individual signs.
@@ -581,6 +897,40 @@ aegean export lineara -f workbench -o wb.json             # Linear A Workbench J
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
 Filters (`--site` etc.) apply before export.
+
+#### The whole matrix, run once
+
+Each format, on the compact bundled Cypriot corpus (180 documents), with the
+confirmation each one prints. Files land exactly where `-o` says: a bare
+filename goes to the directory you ran the command from.
+
+```bash
+aegean export cypriot -f json -o cypriot.json         # wrote 180 documents to cypriot.json (json)
+aegean export cypriot -f csv -o cypriot.csv           # wrote 180 documents to cypriot.csv (csv)
+aegean export cypriot -f parquet -o cypriot.parquet   # wrote 180 documents to cypriot.parquet (parquet)
+aegean export cypriot -f epidoc -o cypriot-epidoc/    # wrote 180 documents to cypriot-epidoc (epidoc)
+aegean export cypriot -f sqlite -o cypriot.db         # wrote 180 documents to cypriot.db (sqlite)
+aegean export lineara -f workbench -o wb.json         # wrote 1721 documents to wb.json (workbench)
+```
+
+Two shapes to know about. `epidoc` writes a **folder**, one TEI XML file per
+document (here `cypriot-epidoc/IG_XV_1__1.xml` and 179 siblings), because an
+EpiDoc edition is per-inscription. Everything else writes the single file you
+named. `parquet` is the one format needing an extra (`pip install
+"pyaegean[parquet]"`); without it the command exits with a one-line install
+hint.
+
+At `--level document` (the default) the CSV has one row per document with its
+metadata. `--level token` explodes to one row per token; on an annotated corpus
+the annotations become columns, so the NT export is analysis-ready as a
+spreadsheet:
+
+```bash
+aegean export nt -f csv --level token -o nt-tokens.csv   # wrote 260 documents to nt-tokens.csv (csv)
+head -2 nt-tokens.csv
+# lemma,morph,strongs,normalized,upos,ref,gloss,doc_id,line_no,position,text,kind,site,period
+# βίβλος,N-NSF,976,Βίβλος,NOUN,Matt.1.1,"a written book, roll, or volume",Matt 1,1,0,Βίβλος,word,,Koine
+```
 
 ### `combine` — merge several corpora into one file
 
@@ -762,6 +1112,26 @@ aegean geo lineara --word KU-RO          # sites where KU-RO occurs, most-attest
 └───────────────┴───────┴───────┴───────┘
 ```
 
+The word is matched case-insensitively (`--word a-du` finds A-DU), and the
+same works on any corpus that records find-sites. On the fetched DAMOS Linear B
+corpus, for instance, the distribution of *po-ti-ni-ja* (Potnia, "the
+Mistress") across the Mycenaean archives:
+
+```bash
+aegean geo damos --word po-ti-ni-ja
+```
+```
+ damos: 'po-ti-ni-ja' attested at 3
+          located site(s)
+┌─────────┬────────┬───────┬───────┐
+│ site    │ lat    │ lon   │ count │
+├─────────┼────────┼───────┼───────┤
+│ Pylos   │ 36.952 │ 21.66 │ 8     │
+│ Knossos │ 35.3   │ 25.16 │ 1     │
+│ Mycenae │ 37.73  │ 22.75 │ 1     │
+└─────────┴────────┴───────┴───────┘
+```
+
 ### `sign` — look up one sign
 
 Glyph, Unicode codepoint, sound value, and the raw attributes for a single sign
@@ -826,7 +1196,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.27.1                    │
+│ OK │ pyaegean │ 0.27.2                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1170,6 +1540,63 @@ aegean greek works --remove-author homer         # delete every downloaded Homer
 aegean greek works --remove-all                  # clear the whole downloaded library
 ```
 
+#### The whole lifecycle, worked
+
+Find a work, fetch it, confirm it is on disk, delete it. Every step below ran
+as shown (the fetch touches the network once; everything after is local).
+
+Find the id (`catalog` is offline metadata, instant):
+
+```bash
+aegean greek catalog --title crito
+```
+```
+                Greek works (1 match)
+┌────────────────┬────────┬───────┬────────┬─────────┐
+│ id             │ author │ title │ greek  │ src     │
+├────────────────┼────────┼───────┼────────┼─────────┤
+│ tlg0059.tlg003 │ Plato  │ Crito │ Κρίτων │ perseus │
+└────────────────┴────────┴───────┴────────┴─────────┘
+Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10
+```
+
+Fetch it (downloads once, then it is cached):
+
+```bash
+aegean greek work tlg0059.tlg003
+```
+```
+                                tlg0059.tlg003
+┌──────────────┬──────────────────────────────────────────────────────────────┐
+│ field        │ value                                                        │
+├──────────────┼──────────────────────────────────────────────────────────────┤
+│ documents    │ 12                                                           │
+│ tokens       │ 4635                                                         │
+│ first        │ tlg0059.tlg003:43                                            │
+│ name         │ Κρίτων — section 43                                          │
+│ source       │ PerseusDL/canonical-greekLit                                 │
+│              │ (tlg0059.tlg003.perseus-grc2.xml)                            │
+│ data_version │ PerseusDL/canonical-greekLit@d4fab69a2c26                    │
+└──────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+Confirm it is in the downloaded library (its row of the table):
+
+```bash
+aegean greek works --downloaded
+# │ tlg0059.tlg003 │ Plato              │ Crito             │ perseus │ 64 KB   │
+```
+
+Read it like any corpus (`aegean show tlg0059.tlg003 43`, `aegean stats
+tlg0059.tlg003`), and when you are done with it:
+
+```bash
+aegean greek works --remove tlg0059.tlg003
+# removed tlg0059.tlg003  (Plato — Crito)
+#
+# removed 1 work from the cache.
+```
+
 `--ref` selects a section: `1` (book), `1.2` (chapter), or `1.1-1.50` (line
 range). `--source` is `auto`/`perseus`/`first1k`; `--edition` picks a specific
 edition file.
@@ -1292,6 +1719,45 @@ divergence from scattered real error (`evaluate_on_proiel` itself is unchanged).
 exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 [Limitations](Limitations#measured-accuracy-boundaries).
 
+#### A worked run
+
+The lightest useful combination: the pure-Python tagger (prebuilt models fetch
+once with `agdt-derived`; here already cached, so the whole run took about two
+seconds) on the Perseus **dev** split. Real output:
+
+```bash
+aegean greek eval ud --fold perseus --split dev --tagger
+# aegean: activating the POS tagger (first use may download/build)…   [stderr]
+```
+```
+              eval: ud
+┌─────────────┬────────────────────┐
+│ metric      │ value              │
+├─────────────┼────────────────────┤
+│ treebank    │ perseus            │
+│ split       │ dev                │
+│ parsed      │ False              │
+│ upos        │ 0.8262480234922069 │
+│ xpos        │ 0.0                │
+│ ufeats      │ 0.36638807318726   │
+│ lemma       │ 0.6045629094194714 │
+│ uas         │ None               │
+│ las         │ None               │
+│ clas        │ None               │
+│ n_words     │ 22135              │
+│ n_sentences │ 1137               │
+└─────────────┴────────────────────┘
+```
+
+How to read it: the backend flag decides which stack is scored, and only the
+stages that ran are meaningful. With just `--tagger` no parser was activated,
+so `parsed` is `False` and `uas`/`las`/`clas` read `None`; swap in `--neural`
+and the same table fills in the dependency metrics (and takes much longer, as
+the model fetches and then runs on every sentence). These dev-split numbers
+are a working check, not the published figures: the published (test-split)
+results and their protocol live in `docs/benchmarks.md` and on
+[Greek NLP](Greek-NLP).
+
 ---
 
 ## Analysis — `aegean analyze …`
@@ -1396,6 +1862,32 @@ rights-restricted, so it cannot be fetched. To use your own licensed Linear B ex
 (`aegean data cache` remains a deprecated alias for `data store` this minor: it
 still works but warns, naming the replacement.)
 
+### A worked round trip
+
+Delete and re-download a dataset, watching the store at each step (run here on
+the NT corpus; the fetch is the one networked step). `remove` frees the space
+and says how much; `list` flips its **downloaded** column; `fetch` prints the
+destination path (plus a "load it" hint on stderr), and re-running a fetch of
+something already present is a no-op:
+
+```bash
+aegean data remove nt-corpus
+# removed nt-corpus: C:\Users\you\.cache\pyaegean\nt-corpus (15.8 MB reclaimed)
+
+aegean data list        # its row now reads:
+# │ nt-corpus         │ no             │ Greek New          │ CC0-1.0           │
+
+aegean data fetch nt    # stems resolve: nt = nt-corpus (so do damos, sigla)
+# C:\Users\you\.cache\pyaegean\nt-corpus
+# load it:  aegean info nt        [stderr]
+
+aegean data list        # downloaded again, with its real on-disk size:
+# │ nt-corpus         │ yes (15.8 MB)  │ Greek New          │ CC0-1.0           │
+```
+
+`aegean data store` shows the same thing from the disk's point of view: the
+store's location and a name/MB table of everything in it.
+
 `aegean data list` shows the full registry, with a **downloaded** column giving
 each present dataset's actual on-disk size. The fetchable datasets (all
 downloaded on demand, never bundled):
@@ -1495,6 +1987,37 @@ Mixing scripts is allowed and noted on stderr (the database's script id becomes
 corpus.to_sql("aegean.db", append=True)      # or aegean.db.to_sqlite(corpus, "aegean.db", append=True)
 ```
 
+### The chain, worked end to end
+
+Build, grow, search, in one sitting (all offline, on the bundled corpora).
+Note the stderr line when the second script goes in:
+
+```bash
+aegean db build lineara -o aegean.db
+# wrote 1721 documents to aegean.db
+# search it:  aegean db search aegean.db KU-RO
+
+aegean db add cypriot -o aegean.db
+# aegean: appended a 'cypriot' corpus into a 'lineara' database; the database's script id is now 'mixed'   [stderr]
+# added/updated 180 documents in aegean.db
+
+aegean db search aegean.db KU-RO --limit 3
+```
+```
+ 'KU-RO' in aegean.db
+┌───────┬─────┬───────┐
+│ doc   │ pos │ text  │
+├───────┼─────┼───────┤
+│ HT9a  │ 25  │ KU-RO │
+│ HT9b  │ 20  │ KU-RO │
+│ HT11a │ 7   │ KU-RO │
+└───────┴─────┴───────┘
+```
+
+The grown database now answers for both scripts: the same search with a
+Cypriot token finds the Cypriot documents, and `aegean stats aegean.db` treats
+the whole file as one corpus.
+
 ---
 
 ## AI — `aegean ai …` (exploratory, key-gated)
@@ -1543,6 +2066,59 @@ text ungrounded. `--verify` translates raw first, then checks and repairs the dr
 the analysis (a second model call: the analysis cannot bias the draft, though a wrong
 analysis can still mislead the repair).
 
+#### Worked runs (provider-dependent)
+
+Three real runs, `--provider openrouter` with its default model. **Generative
+output varies** run to run and model to model, so read the wording as
+illustrative of the shape, never as expected output. The default `--provider`
+is `anthropic`; each provider reads its own key from the environment, and
+without one the command stops on one line rather than silently calling out:
+
+```bash
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"
+# aegean: no API key for 'anthropic'; set $ANTHROPIC_API_KEY or pass api_key=   [stderr, exit 1]
+```
+
+The default grounding (`--mode morphology`) attaches the local analysis and
+flags ambiguities; the answer arrives labeled at both ends:
+
+```text
+$ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --provider openrouter
+[EXPLORATORY · translate · openrouter/openai/gpt-4o-mini]
+Translation: "In the beginning was the Word."
+
+Note: The phrase "ἐν ἀρχῇ" is commonly translated as "In the beginning," …
+…a short discussion of the ambiguity of λόγος follows…
+exploratory · openrouter:openai/gpt-4o-mini · grounded on 5 item(s) (--trace to audit them)
+```
+
+`--mode full` adds rarity-gated dictionary glosses to that grounding (most
+useful on rare or documentary vocabulary):
+
+```text
+$ aegean ai translate "μῆνιν ἄειδε θεά" --provider openrouter --mode full
+[EXPLORATORY · translate · openrouter/openai/gpt-4o-mini]
+Translation: "Sing of the wrath, O goddess."
+
+Notes on Ambiguities:
+1. **μῆνιν**: Typically translated as "wrath," …
+```
+
+`--verify` drafts first, then checks and repairs the draft against the
+analysis in a second call; the surviving text is what prints:
+
+```text
+$ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --provider openrouter --verify
+[EXPLORATORY · translate · openrouter/openai/gpt-4o-mini]
+"In the beginning was the Word."
+exploratory · openrouter:openai/gpt-4o-mini · grounded on 5 item(s) (--trace to audit them)
+```
+
+Each of these runs also printed a stderr note that the grounding came from the
+baseline lemmatizer, recommending `aegean.greek.use_treebank()` or
+`use_neural_pipeline()` first for fuller grounding; that note is about the
+*grounding* quality, not an error.
+
 **Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,
 `ask`, and `extract` take `--output/-o`. A `.json` file carries the text plus its provenance
 and grounding evidence; a `.txt` file is the labeled text. The exploratory label
@@ -1587,6 +2163,60 @@ cached and offline after), `greek_gloss` (the registry dictionaries), and
 `koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
 by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
+
+---
+
+## When something goes wrong
+
+Three error shapes cover most first-week trouble. All of them are one line on
+stderr with exit code `1`, and each names its own fix. (The messages below are
+real runs.)
+
+**1. A name pyaegean does not recognise.** Corpus ids, dataset names, and
+query fields all answer a typo with the nearest real name:
+
+```bash
+aegean info linera
+# aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
+
+aegean data fetch grc-jiont
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 19)
+```
+
+The fix is in the message: take the suggestion, or list the valid names
+(`aegean data list`, `aegean query CORPUS --fields`).
+
+**2. A missing optional extra.** The zero-dependency core is a supported
+install, so features with heavier needs live behind extras, and reaching one
+you have not installed stops with the exact `pip install` line:
+
+```bash
+aegean tui
+# aegean: the TUI needs the [tui] extra — install it with: pip install 'pyaegean[tui]'
+```
+
+`plot` (`[viz]`), `export -f parquet` (`[parquet]`), the neural flags
+(`[neural]`), and the AI providers (`[anthropic]` and friends) all guard the
+same way. Run the printed install line and re-run your command;
+`aegean doctor` lists every extra's state with its install line.
+
+**3. Data (or a key) that is not on this machine.** Most fetched corpora
+download themselves on first use, so the messages you actually see are about
+the store's state, or a missing credential, each naming the next step:
+
+```bash
+aegean data remove linearb-corpus
+# aegean: dataset 'linearb-corpus' is not downloaded; `aegean data list` shows what is
+
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"
+# aegean: no API key for 'anthropic'; set $ANTHROPIC_API_KEY or pass api_key=
+```
+
+One dataset is special: `linearb-corpus` has no generic download, so
+`aegean data fetch linearb` prints a short option list instead of fetching
+(fetch DAMOS, browse LiBER online, or import your own licensed export). If a
+download was interrupted, `aegean doctor` spots the leftover partial file and
+names the `aegean data remove` that reclaims it.
 
 ---
 

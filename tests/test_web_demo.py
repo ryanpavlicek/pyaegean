@@ -121,6 +121,166 @@ def test_demo_epidoc_import() -> None:
     assert "error" in json.loads(demo.epidoc_import("not xml"))
 
 
+def test_demo_accent_word() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.accent_word("ανθρωπος"))
+    assert r["accented"] == "άνθρωπος" and r["classification"] == "proparoxytone"
+    assert r["certain"] is True
+    p = json.loads(demo.accent_word("θεου", "θεός"))
+    assert p["accented"] == "θεοῦ" and p["accent"] == "circumflex"
+    assert p["classification"] == "perispomenon"
+
+
+def test_demo_sandhi() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.sandhi("κἀγώ"))
+    assert r["words"] == ["καί", "ἐγώ"] and r["kind"] == "crasis" and r["uncertain"] is False
+    e = json.loads(demo.sandhi("ἀπ'"))
+    assert e["words"] == ["ἀπό"] and e["kind"] == "elision"
+    n = json.loads(demo.sandhi("γνῶσιν"))          # ambiguous i-stem: never claimed
+    assert n["kind"] == "none" and n["words"] == ["γνῶσιν"]
+
+
+def test_demo_prosody_word() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.prosody_word("ἄνθρωπος"))
+    assert [s["syllable"] for s in r["syllables"]] == ["ἄν", "θρω", "πος"]
+    assert [s["quantity"] for s in r["syllables"]] == ["heavy", "heavy", "heavy"]
+
+
+def test_demo_lemmatize_word() -> None:
+    demo = _load_demo()
+    hit = json.loads(demo.lemmatize_word("ἀνθρώπων"))
+    assert hit["lemma"] == "ἄνθρωπος" and hit["known"] is True and hit["pos"] == "NOUN"
+    # the honest miss: an ambiguous -ου genitive comes back unchanged, not fabricated
+    miss = json.loads(demo.lemmatize_word("προφήτου"))
+    assert miss["lemma"] == "προφήτου" and miss["known"] is False
+
+
+def test_demo_nt_verse() -> None:
+    import unicodedata
+
+    nfc = lambda s: unicodedata.normalize("NFC", s)  # noqa: E731
+    demo = _load_demo()
+    r = json.loads(demo.nt_verse("John 1.1"))
+    assert r["ref"] == "John 1.1" and r["text"].startswith(nfc("Ἐν ἀρχῇ ἦν ὁ Λόγος"))
+    first = r["tokens"][0]
+    assert first == {"text": "Ἐν", "lemma": "ἐν", "morph": "PREP",
+                     "strongs": "1722", "upos": "ADP"}
+    p = json.loads(demo.nt_verse("Philemon 1.4"))
+    assert p["ref"] == "Phlm 1.4" and p["tokens"][0]["lemma"] == nfc("εὐχαριστέω")
+    assert "error" in json.loads(demo.nt_verse("Rev 1.1"))       # not in the offline sample
+    assert "error" in json.loads(demo.nt_verse("John"))          # malformed ref
+
+
+def test_demo_idioms() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.idioms("τὸ δ' ἐφ' ἡμῖν ἐστι"))
+    assert any("in our power" in i["gloss"] for i in r["idioms"])
+    assert json.loads(demo.idioms("λόγος"))["idioms"] == []
+
+
+def test_demo_lineara_stats() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.lineara_stats("Haghia Triada"))
+    top = r["dispersion"][0]
+    assert top["word"] == "KU-RO" and top["count"] == 37 and top["dp_norm"] == 0.851
+    assert r["keyness"][0]["word"] == "KU-RO" and r["keyness"][0]["site_count"] == 35
+    assert all(k["log_ratio"] > 0 for k in r["keyness"])
+    bad = json.loads(demo.lineara_stats("Atlantis"))
+    assert "error" in bad and "Khania" in bad["sites"]
+
+
+def test_demo_lineara_query() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.lineara_query("Khania", "KU"))
+    assert r["total"] == 5 and any(w["word"] == "I-KU-PI" for w in r["words"])
+    site_only = json.loads(demo.lineara_query("Zakros", ""))
+    assert site_only["total"] > 0
+    assert "error" in json.loads(demo.lineara_query("", ""))
+
+
+def test_demo_numerals() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.numerals("12 ½ ≈ ⅙ KU-RO"))
+    by_tok = {x["token"]: x for x in r["readings"]}
+    assert by_tok["12"]["value"] == 12 and by_tok["½"]["value"] == 0.5
+    assert by_tok["⅙"]["display"] == "⅙" and by_tok["KU-RO"]["value"] is None
+    assert r["sum"] == 12.6667
+
+
+def test_demo_sign_info() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.sign_info("lineara", "PA"))
+    assert r["glyph"] == "𐘂" and r["codepoint"] == "U+10602" and r["sound_value"] == "pa"
+    assert "exploratory" in r["note"]                      # Linear A honesty caveat
+    b = json.loads(demo.sign_info("linearb", "da"))        # case-folded label
+    assert b["label"] == "DA" and b["sound_value"]
+    cm = json.loads(demo.sign_info("cyprominoan", "CM008"))
+    assert cm["codepoint"] == "U+12F96" and cm["sound_value"] == ""
+    assert "undeciphered" in cm["note"]
+    assert "error" in json.loads(demo.sign_info("lineara", "NOPE"))
+    assert "error" in json.loads(demo.sign_info("klingon", "PA"))
+
+
+def test_demo_linearb_tablet() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.linearb_tablet("PY Ta 641"))
+    assert r["site"] == "Pylos" and "tripod" in r["name"]
+    assert r["lines"] and r["lines"][0].startswith("TI-RI-PO-DE")
+    assert any(g["word"] == "TI-RI-PO-DE" and g["greek"] == "τρίπους" for g in r["readings"])
+    bad = json.loads(demo.linearb_tablet("XX 0"))
+    assert "error" in bad and "PY Ta 641" in bad["ids"]
+
+
+def test_demo_cyprominoan_doc() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.cyprominoan_doc("cm-enkomi-ball"))
+    assert r["site"] == "Enkomi" and "CM005-CM023-CM002" in r["sign_groups"]
+    assert "undeciphered" in r["note"]
+    bad = json.loads(demo.cyprominoan_doc("nope"))
+    assert "error" in bad and "cm-ugarit-tablet" in bad["ids"]
+
+
+def test_demo_geo_word() -> None:
+    demo = _load_demo()
+    site = json.loads(demo.geo_word("Phaistos"))
+    assert site["lat"] == 35.05 and site["lon"] == 24.81 and site["region"] == "crete"
+    assert site["pleiades"].endswith("/589987")
+    word = json.loads(demo.geo_word("KU-RO"))
+    ht = word["sites"][0]
+    assert ht["site"] == "Haghia Triada" and ht["documents"] == 32
+    assert ht["lat"] == 35.06 and ht["lon"] == 24.79
+    assert "error" in json.loads(demo.geo_word("zzz-zzz"))
+
+
+def test_demo_cite_bundled() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.cite_bundled("lineara", "Zakros"))
+    assert r["documents"] == 53
+    assert "Recueil des inscriptions" in r["citation"]
+    assert "subset: filter(site='Zakros') → 53 of 1721 documents" in r["citation"]
+    assert r["bibtex"].startswith("@misc{lineara-corpus")
+    assert len(r["fingerprint"]) == 64 and int(r["fingerprint"], 16) >= 0
+    # the whole-corpus and subset fingerprints differ (the hash covers content)
+    whole = json.loads(demo.cite_bundled("lineara"))
+    assert whole["documents"] == 1721 and whole["fingerprint"] != r["fingerprint"]
+    assert "error" in json.loads(demo.cite_bundled("nt"))        # fetched corpora refused
+    assert "error" in json.loads(demo.cite_bundled("lineara", "Atlantis"))
+
+
+def test_demo_export_epidoc() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.export_epidoc("lineara", "HT9b"))
+    assert r["id"] == "HT9b"
+    assert '<div type="edition"' in r["xml"] and "<idno>HT9b</idno>" in r["xml"]
+    # the exported XML reads back through the import path (round-trip)
+    back = json.loads(demo.epidoc_import(r["xml"]))
+    assert back["id"] == "HT9b" and back["site"] == "Haghia Triada"
+    assert "error" in json.loads(demo.export_epidoc("ddbdp", "x"))   # bundled corpora only
+    assert "error" in json.loads(demo.export_epidoc("lineara", "NOPE"))
+
+
 def test_demo_works_without_sqlite3() -> None:
     """Pyodide unvendors sqlite3 from its stdlib, so `import aegean` and the demo's calls
     must not require it (regression: a top-level `import sqlite3` in the opt-in cache made
@@ -147,6 +307,28 @@ def test_demo_works_without_sqlite3() -> None:
         "assert io.from_text('ἦν ὁ λόγος').word_frequencies()\n"
         "from aegean.analysis import balance_check\n"
         "assert balance_check(c.get('HT9b'))\n"
+        "assert greek.place_accent('ανθρωπος', recessive=True).form == 'άνθρωπος'\n"
+        "assert greek.resolve_sandhi('κἀγώ').words == ('καί', 'ἐγώ')\n"
+        "assert greek.scan('μῆνιν')\n"
+        "assert greek.lemmatize_verbose('ἀνθρώπων') == ('ἄνθρωπος', True)\n"
+        "from aegean.ai import idiom_glosses\n"
+        "assert idiom_glosses(\"ἐφ' ἡμῖν\")\n"
+        "from aegean.geo import site_coordinates\n"
+        "assert 'Haghia Triada' in site_coordinates()\n"
+        "from aegean.analysis import FilterRow, dispersions\n"
+        "assert dispersions(c, top=1)[0].item == 'KU-RO'\n"
+        "assert c.query([FilterRow('site-is', 'Khania')], output='words').words\n"
+        "from aegean.core.script import get_script\n"
+        "assert get_script('lineara').sign_inventory.by_label('PA')\n"
+        "from aegean.core.numerals import parse_value\n"
+        "assert parse_value('½') == 0.5\n"
+        "from aegean.io import to_epidoc\n"
+        "assert '<TEI' in to_epidoc(c.get('HT9b'))\n"
+        "assert c.cite() and len(c.fingerprint()) == 64\n"
+        "from aegean.data import load_bundled_json\n"
+        "assert load_bundled_json('greek', 'nt_sample.json')['documents']\n"
+        "assert aegean.load('linearb').get('PY Ta 641')\n"
+        "assert aegean.load('cyprominoan').documents\n"
         "print('OK')\n"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
@@ -163,5 +345,8 @@ def test_demo_html_wiring() -> None:
     demo = _load_demo()
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
                  "bridge", "cypriot_inscription", "lineara_search", "lineara_balance", "import_text",
-                 "phonetic_compare", "lexicon_link", "epidoc_import"):
+                 "phonetic_compare", "lexicon_link", "epidoc_import", "accent_word", "sandhi",
+                 "prosody_word", "nt_verse", "idioms", "lemmatize_word", "lineara_stats",
+                 "lineara_query", "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc",
+                 "geo_word", "cite_bundled", "export_epidoc"):
         assert hasattr(demo, name) and f'"{name}"' in html

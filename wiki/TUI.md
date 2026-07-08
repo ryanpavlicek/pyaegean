@@ -28,6 +28,208 @@ TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 
 ---
 
+## Your first five minutes
+
+A key-by-key tour from a cold start to reading and analyzing a real document. Every
+step names the key you press and what the screen does in response.
+
+1. Run `aegean tui`. The app opens on **Home**: the undeciphered-script banner
+   across the top, the corpus list below it with the first entry (`lineara`)
+   already highlighted and focused, and the key legend at the bottom.
+2. Press `c`. The **corpus browser** opens: the corpus list on the left (focused),
+   an empty document table in the middle, and the reader on the right saying
+   "Select a corpus on the left to browse its documents."
+3. Press `↓`. The highlight lands on `lineara`, the first entry; `↑`/`↓` move it
+   through the list (an entry whose data is not yet on disk carries a `· fetch` tag).
+4. Press `Enter`. The corpus loads: the status line reads `lineara: 1721 documents`
+   and the middle table fills with one row per document (id, site, period, words,
+   structure). The reader now says "Select a document to read it."
+5. Press `Tab`. Focus moves to the search box above the table (typing there filters
+   by id). Press `Tab` again: focus moves into the document table, with the first
+   row under the cursor; `↑`/`↓` move the row highlight.
+6. Press `Enter`. The reader shows the highlighted document. For the first Linear A
+   tablet that is: the id (`HT1`), a metadata line (`Haghia Triada · LMIB · Tablet ·
+   HT Scribe 21`), the counts and structure line, the undeciphered caveat, then the
+   numbered token lines with line 1 highlighted. The status line spells out the next
+   move: `HT1 — Tab to the reader, then ↑/↓ to pick a line and Enter (or a) to analyze it`.
+7. Press `Tab`. The reader gains focus: its border and its "reading" title turn
+   accent-colored. `↑`/`↓` now move the highlighted **line cursor** through the
+   text (PgUp/PgDn jump ten lines at a time, Home/End go to the first and last line).
+8. Press `Enter` (or `a`). The **line-analysis popup** opens over the reader: the
+   chosen line at the top, a short list of the analyses that fit its script, and the
+   first one already run below (for a Linear A line, the exploratory transliteration
+   table with its caveat). `↑`/`↓` and `Enter` in that list run a different analysis.
+9. Press `Esc`. The popup closes and you are back in the reader, with the line
+   cursor where you left it.
+10. Press `?`. The help overlay lists every global key and what the command palette
+    can do; `Esc` (or `q`, or `Enter`) closes it. Press `Esc` once more to walk back
+    to Home, and `q` to quit.
+
+One habit worth forming: `Esc` always exits a focused text box first and only then
+navigates back, so when in doubt press `Esc` and look at where the focus went.
+
+---
+
+## Three everyday tasks
+
+The same key-by-key style, for the three things a new user most often wants.
+
+### Fetch DAMOS and browse it
+
+DAMOS is the full Linear B corpus (~5,900 tablets), fetch-on-demand rather than
+bundled. The data store is where it enters the local store.
+
+1. Press `d`. The **data store** opens: the environment report tables first (versions,
+   extras, store location, models, cache), then the dataset table listing all 19
+   fetchable datasets with their state, on-disk size, and license.
+2. Press `Tab` until the dataset table holds the focus (the report tables come first
+   in the Tab order), then `↓` to the `damos-corpus` row.
+3. Press `f`. The download runs on a background worker: the status line below the
+   table reports `fetching damos-corpus…` and then `stored damos-corpus`, and the
+   row flips to `downloaded` with its real size. A second `f` while a fetch is in
+   flight is refused rather than starting a duplicate download.
+4. Press `c`, move the highlight to `damos` in the corpus list, and press `Enter`.
+   The whole corpus loads (allow a moment); the status line reads
+   `damos: 5932 documents`.
+5. Press `/` and type `KN`. The table narrows to the Knossos tablets and the status
+   line reads `4228 of 5932 documents match id 'KN'`. Press `Tab` to move into the
+   filtered table and `Enter` on a row to read that tablet.
+
+### Find a Greek work, fetch it, read it, remove it
+
+The works library is where a Greek work enters the cache; the corpus browser is
+where you read it.
+
+1. Press `w`. The **works library** opens with the search box already focused; before
+   you type anything it lists the works you have downloaded, and the status line
+   invites a search of the ~1,800-work catalogue.
+2. Type `epigrams`. The status line reads `3 matches` and the table shows the
+   matching catalogue rows (id, author, title, source, state).
+3. Press `Tab`. Focus moves into the results table; `↑`/`↓` pick a row, for example
+   `tlg0012.tlg003` (Homer, Epigrams). Leave the search box before pressing an
+   action key: while the box is focused, a letter is just text you are typing.
+4. Press `f`. The fetch runs on a worker with a progress bar; on completion the
+   status line reads `stored tlg0012.tlg003 — open it (o)` and the row's state
+   flips to `downloaded`.
+5. Press `o` (or `Enter`). The corpus browser opens with the work loaded, one row
+   per book or section: `tlg0012.tlg003: 17 documents`. The work is now also a
+   permanent entry in the corpus list (`tlg0012.tlg003 — Homer — Epigrams (Greek
+   work)`), and reading works exactly as in the first-five-minutes tour: `Tab` to
+   the table, `Enter` on a row, `Tab` to the reader, `Enter` on a line to analyze.
+6. Press `w` to return to the library, highlight the work in the table, and press
+   `x`. The status line reads `removed tlg0012.tlg003 from the cache`. The other
+   action keys: `a` fetches every work by the highlighted row's author, `r`
+   refreshes the view.
+
+### Run any CLI command from the console
+
+1. Press `:`. The **command console** opens: a scrolling output log on top and an
+   `aegean>` prompt below it, already focused. The full command map prints on entry
+   (the same menu `aegean repl` shows), so the available commands are visible before
+   you type anything.
+2. Type `stats lineara --top 5` and press `Enter`. The prompt line echoes into the
+   log (`aegean> stats lineara --top 5`) and the command's output renders beneath
+   it, styled the same as in the terminal CLI:
+
+   ```text
+       lineara: top 5 words
+   ┌───────────────────┬───────┐
+   │ item              │ count │
+   ├───────────────────┼───────┤
+   │ KU-RO             │ 37    │
+   │ SA-RA₂            │ 20    │
+   │ KI-RO             │ 16    │
+   │ *411-VS           │ 15    │
+   │ A-TA-I-*301-WA-JA │ 11    │
+   └───────────────────┴───────┘
+   ```
+
+3. Type `greek scan "μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"` and press `Enter`:
+
+   ```text
+   —⏑⏑|—⏑⏑|——|—⏑⏑|—⏑⏑|—×
+   hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
+   ```
+
+4. As you type, ghost-text completion suggests command names (`Tab` or `→` accepts
+   the suggestion) and `↑`/`↓` recall history. A long or networked command runs on a
+   background worker, so the log keeps scrolling and the app stays responsive.
+5. Press `Esc` once to leave the prompt (it blurs), and `Esc` again to go back to
+   the screen you came from.
+
+---
+
+## What the reader shows you
+
+### The editorial markers
+
+Every token line in the reader carries the editorial status of its tokens, taken
+from the Leiden apparatus of the source edition. The markers are plain text
+appended to the token (not a color), so they read the same under every theme:
+
+| Editorial status | Marker in the reader |
+|---|---|
+| certain | none (the token as read) |
+| unclear | `?` after the token |
+| restored | `[ ]` after the token |
+| lost | `---` after the token |
+
+### The undeciphered-corpus caveat
+
+For the undeciphered corpora (`lineara`, `sigla`, `cyprominoan`) the reader header
+carries, on every document:
+
+> Linear A and Cypro-Minoan are undeciphered; structural analysis is exploratory,
+> not a reading.
+
+The Home banner states the same thing the moment the app opens. The deciphered
+corpora (Greek, Linear B, Cypriot) carry no caveat.
+
+### The line-analysis popup, script by script
+
+The popup (`Enter` or `a` on a reader line) offers only the analyses that fit the
+line's script, and runs the first available one immediately:
+
+- **Greek** (the `greek` sample corpus, the NT, the inscription corpora, and
+  fetched Greek works all read as script `greek`):
+  - `offline parser / tagger`: an instant table of token, POS, and lemma from the
+    zero-dependency pipeline;
+  - `neural pipeline`: the most accurate tags plus morphological features and a
+    dependency parse; needs the `[neural]` extra, and downloads the model
+    (~170 MB) on first run;
+  - `IPA (reconstructed)`: the Attic transcription, word by word;
+  - `translate (BYOAI, optional)`: only when a provider API key is configured.
+    Without one the option is listed as
+    `translate (BYOAI, optional)  ·  unavailable: set a provider API key (BYOAI) to enable — e.g. OPENAI_API_KEY`,
+    and choosing it explains that instead of failing.
+- **Linear B / Cypriot** (deciphered): `Greek reading + gloss` (each word, its
+  sound value, the Greek word it writes, and a gloss) and `signs (glyph + value)`
+  (each sign's glyph and phonetic value).
+- **Linear A** (the bundled corpus and SigLA): `transliteration (exploratory)` and
+  `signs (glyph + value)`, both carrying the caveat that Linear A is undeciphered.
+  The values shown are the conventional, Linear-B-shared ones, and the output says
+  so. The transliteration of a line of HT2, exactly as the popup renders it:
+
+  ```text
+  transliteration (exploratory)
+
+  word   conventional value
+  -----  ------------------
+  OLE+A  ole+a
+  17     17
+
+  Linear A is undeciphered — these are hypothetical, shared-with-Linear-B values, not an established reading
+  ```
+
+- **Cypro-Minoan**: `signs (glyph only)`, with the note that Cypro-Minoan is
+  undeciphered (no sound values are pretended).
+
+The slow analyses (neural, translate) run on a background worker behind an
+"analyzing…" line; everything else renders instantly. `Esc` (or `q`) closes the
+popup.
+
+---
+
 ## Keys
 
 The same global keys work from every screen:
@@ -216,6 +418,36 @@ theme.
 corpus by name, jump to any screen, open a work you have already fetched, fetch a
 not-yet-downloaded dataset, switch theme, or open the help reference. It is the
 discoverability layer over the same navigation the key bindings drive.
+
+---
+
+## Troubleshooting
+
+**`aegean tui` prints an error instead of starting.** Without the `[tui]` extra the
+command exits (status 1) with exactly one line:
+
+```text
+aegean: the TUI needs the [tui] extra — install it with: pip install 'pyaegean[tui]'
+```
+
+`pip install "pyaegean[tui]"` fixes it, and includes the CLI dependencies the
+command console uses. If the console screen ever reports `the command console needs
+the [cli] extra — pip install 'pyaegean[cli]'` (possible when the TUI was launched
+from Python in an environment without the CLI dependencies), that install line
+fixes it the same way.
+
+**Boxes or blanks where the Aegean glyphs should be.** The terminal font does not
+cover the Linear A / Linear B / Cypriot / Cypro-Minoan Unicode blocks. Install and
+select one of the fonts in
+[Installation → Set up your terminal](Installation#set-up-your-terminal), and on
+Windows run the TUI with `PYTHONUTF8=1` so the glyphs reach the terminal intact.
+
+**Where the theme choice is stored.** `Enter` in the theme picker writes `tui.json`
+under your config directory: `$XDG_CONFIG_HOME/pyaegean/tui.json` when
+`XDG_CONFIG_HOME` is set, otherwise `~/.config/pyaegean/tui.json` (the same path
+convention on Windows, for example `C:\Users\you\.config\pyaegean\tui.json`).
+Deleting the file resets the theme; a persisted theme that no longer exists is
+ignored on the next launch, so the app always starts on a valid one.
 
 ---
 

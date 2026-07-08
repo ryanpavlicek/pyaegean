@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.27.1
+aegean --version                # pyaegean 0.27.2
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -23,6 +23,15 @@ isn't installed until you add the `[cli]` extra.
 | **A corpus arg is flexible** | Every corpus argument resolves the same way: a registered id, a **Greek work id** (`tlg0012.tlg001` → fetched & parsed), a path to a saved **`.json` or `.db`** corpus, or `-` for a `Corpus.to_json()` document on stdin. So `aegean stats iliad.json` and `aegean export tlg0012.tlg002 -f csv -o odyssey.csv` work with no Python. | `aegean stats lineara.json` |
 | **`--top` / `--limit`** | Interchangeable spellings of the same cap on every command that caps a ranked table or result list, `plot` included. `0` lifts the cap wherever the help says `0 = all` (the one exception is `greek rarity`, whose cap is a plain slice). | `aegean stats lineara --limit 3` |
 | **Exit codes** | `0` success · `1` a domain error (one line on stderr, prefixed `aegean:`) · `2` a usage error. | `aegean greek scan "λόγος"` → exit `1` |
+
+Reading the usage lines here and in `--help` (full primer:
+[CLI → How to read a command](CLI#how-to-read-a-command)):
+
+| notation | meaning |
+|---|---|
+| `CORPUS` (capitals, no dashes) | a required value you supply in that position: `aegean stats lineara` |
+| `--top 5` / `--signs` / `-o` | options: named, any order; some take a value, some are switches; `-o` = `--output`, `-f` = `--format` |
+| `"KU-*-RO"` (double quotes) | quote anything with spaces, `*`, or punctuation; double quotes work in every shell |
 
 Every command and group answers `-h` / `--help`. The bundled, **offline-from-install**
 corpora are `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`; eight more
