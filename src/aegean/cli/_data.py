@@ -52,6 +52,10 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
     spec = _REMOTE.get(name)
     paths = list(on_disk_paths(spec, root)) if spec is not None else [root / name]
     paths += [
+        # the raw dataset-named copy an older fetch may have left (before fetch()
+        # normalized single-file datasets to their on_disk name) plus the
+        # partial-download / extraction leftovers, all in the dataset's namespace
+        root / name,
         root / (name + ".part"),
         root / (name + ".part.info"),
         root / (name + ".extract"),

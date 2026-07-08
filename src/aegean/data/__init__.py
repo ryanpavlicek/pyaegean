@@ -928,14 +928,28 @@ def fetch(
             return _fetch_and_extract(url, name, force, sha256, abort)
 
         dest = cache_dir() / name
-        if dest.exists() and not force:
-            if not sha256 or sha256_file(dest) == sha256:
-                return dest  # present and valid → idempotent no-op
-        tmp = dest.with_name(dest.name + ".part")
+        final = dest
+        if len(spec.on_disk) == 1 and spec.on_disk[0] != name:
+            # A single-file dataset whose real artifact name differs from the dataset
+            # name (the prebuilt lexicon indexes: ``on_disk`` names the built-index
+            # file). Store it under that name — the same end state the backends'
+            # ``fetch_prebuilt`` produces — so fetch/list/doctor/remove all agree.
+            # A raw-named copy left by an older fetch is adopted in place (or dropped
+            # when it is stale or redundant) instead of being re-downloaded.
+            final = cache_dir() / spec.on_disk[0]
+            if dest.exists():
+                if not final.exists() and (not sha256 or sha256_file(dest) == sha256):
+                    os.replace(dest, final)
+                else:
+                    dest.unlink()
+        if final.exists() and not force:
+            if not sha256 or sha256_file(final) == sha256:
+                return final  # present and valid → idempotent no-op
+        tmp = dest.with_name(dest.name + ".part")  # raw-named .part: resume + orphan probes key on it
         _download(url, tmp, name, abort)
         _verify(tmp, sha256, name)
-        tmp.replace(dest)  # atomic within the cache dir
-        return dest
+        tmp.replace(final)  # atomic within the cache dir
+        return final
 
 
 def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) -> bool:
@@ -960,11 +974,12 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
     if src.resolve() != dest.resolve():
         dest.parent.mkdir(parents=True, exist_ok=True)
         if member is None:
-            # A single-file dataset: fetch() wrote it to cache_dir()/name, but the real
-            # artifact lives under dest (the built-index filename). MOVE it there rather
-            # than copy, or the raw cache_dir()/name lingers uncounted and unremovable
-            # (its on_disk override lists only dest). For a member (an extract dataset),
-            # cache_dir()/name is the tracked unpacked directory, so copy and keep it.
+            # A single-file dataset: fetch() already stores it under its on_disk name,
+            # so src == dest for the standard cache and this branch is a no-op guard.
+            # It still MOVES (never copies) when a backend passes a different dest, or
+            # the raw copy would linger uncounted and unremovable (the spec's on_disk
+            # override lists only the built-index name). For a member (an extract
+            # dataset), cache_dir()/name is the tracked unpacked directory: copy, keep.
             os.replace(src, dest)
         else:
             shutil.copyfile(src, dest)
