@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.27.1 (2026-07-08)
+
+A documentation accuracy pass across the whole project.
+
+### Fixed
+- `NOTICE` corrections: the UD Ancient Greek treebank licenses are now stated per treebank
+  (Perseus CC BY-NC-SA 2.5, PROIEL CC BY-NC-SA 3.0), and the Middle Liddell, Cunliffe, and
+  Abbott-Smith derived lexicon indexes now carry their own attribution entry (Perseus Digital
+  Library, Scaife Viewer, and translatable-exegetical-tools digitizations).
+- README, wiki, and CLI/MCP help text caught up with the corpus catalogue: the six epigraphic
+  and papyrological corpora (I.Sicily, IIP, IOSPE, IGCyr/GVCyr, EDH, DDbDP) now appear in the
+  feature summary, the fetchable-dataset tables (all 19 assets), the corpus-id lists, the shown
+  error outputs, and the TUI/MCP surface descriptions.
+- Scholarly and technical docstring corrections: the prosody module no longer claims
+  muta-cum-liquida is always heavy-by-position; the lemmatizer cascade documents the neural
+  joint pipeline as its first tier; the accounting docstring lists all total markers (KU-RA,
+  PO-TO-KU-RO, TO-SO-DE); scribal hands are documented for the bundled Linear A corpus as well
+  as DAMOS; stale one-book NT sample references now say John 1 + Philemon.
+- `wiki/Evaluation.md` documented a `greek eval` invocation that consumed its own flag as a
+  fold name, and pointed at `greek.ud_path`/`greek.load_conllu` at the wrong import level; both
+  corrected. Fingerprint examples re-measured; the Bacchae line mis-citation in Meters fixed.
+- `docs/large-corpora.md` now documents the shipped streaming path (`aegean.db.stream`) and
+  DDbDP as the corpus it serves, instead of describing both as deferred.
+
 ## 0.27.0 (2026-07-08)
 
 The Duke Databank of Documentary Papyri — 57k Greek papyri, full-text searchable.
