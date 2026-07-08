@@ -4,6 +4,26 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.26.0 (2026-07-08)
+
+The Greek subset of the Epigraphic Database Heidelberg.
+
+### Added
+- **`aegean.load("edh")`** — the **1,286 pure-Greek inscriptions** of the Epigraphic Database
+  Heidelberg (Heidelberg Academy of Sciences and Humanities, **CC BY-SA 4.0**), extracted from the
+  frozen (2021) EDH data dump. EDH is overwhelmingly Latin; this is its Ancient-Greek subset — the
+  editions marked `xml:lang="grc"` — Imperial-period Koine (dedications, boundary and funerary
+  texts, verse epitaphs), largely onomastic. Each document keeps its ancient place, date, modern
+  find-place, and Trismegistos id (for cross-referencing). Because the EDH project has closed, this
+  also preserves a corpus that will not be republished. Mirrored as a sha256-pinned release asset
+  (fetched on demand, never bundled); attribution travels in the corpus provenance and `NOTICE`.
+  Also fetchable as `aegean data fetch edh`.
+
+### Fixed
+- The TUI corpus overview now correctly reports the Greek-epigraphy corpora (I.Sicily, IIP, IOSPE,
+  IGCyr, EDH) as **fetch-on-demand**, not bundled — previously they read as always-downloaded, so a
+  screen could not prompt their fetch.
+
 ## 0.25.0 (2026-07-07)
 
 The Greek inscriptions of Cyrenaica — archaic Doric and verse.
