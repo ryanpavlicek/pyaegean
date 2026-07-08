@@ -30,6 +30,22 @@ db_app = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
+# Registered corpora that are themselves hosted as a SQLite database, so `aegean db search <id>`
+# searches them directly (fetching the asset on first use) instead of requiring a built .db file.
+_DB_CORPORA = {"ddbdp"}
+
+
+def _resolve_db(path: Path) -> Path:
+    """Resolve a DB-backed corpus id (e.g. ``ddbdp``) to its fetched SQLite path; a real file path
+    passes through unchanged. Lets ``aegean db search ddbdp "..."`` work like a built ``.db``."""
+    if path.exists() or str(path) not in _DB_CORPORA:
+        return path
+    if str(path) == "ddbdp":
+        from aegean.scripts.greek import ddbdp_db
+
+        return ddbdp_db()
+    return path
+
 
 @db_app.command()
 def build(
@@ -92,6 +108,7 @@ def search(
 
     from aegean.db import search as db_search
 
+    path = _resolve_db(path)
     if not path.exists():
         raise fail(f"no database at {path} (build one with `aegean db build`)")
     try:

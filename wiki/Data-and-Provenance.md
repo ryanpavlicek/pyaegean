@@ -147,6 +147,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From kingsdigitallab/iospe; **may be redistributed** (CC BY), attribution required |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (archaic Doric + verse) with title, find-place, date | ~3 MB JSON | CC BY-NC-SA 4.0 (IGCyr2/GVCyr2, Dobias-Lalou et al., Bologna) | From AMS Acta 7796; **may be redistributed** (CC BY-NC-SA), attribution + NonCommercial + ShareAlike; epichoric (non-normalized) Greek |
 | `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of the frozen (2021) EDH dump; **may be redistributed** (CC BY-SA), attribution + ShareAlike |
+| `ddbdp-corpus` | DDbDP documentary papyri: 57,329 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~206 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
 | `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | : | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
@@ -563,7 +564,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.26.0'  (your installed version)
+v["package"]                                  # '0.27.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -615,7 +616,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.26.0'
+# '0.27.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

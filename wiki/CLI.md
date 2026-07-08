@@ -59,7 +59,7 @@ aegean greek scan --help
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.26.0
+aegean --version          # pyaegean 0.27.0
 ```
 
 | Group | What's in it |
@@ -262,7 +262,12 @@ and `greek`. Eight more download to your cache on first use: `damos` (the full
 `isicily` (~2,855 texts, ancient Sicily), `iip` (~2,113, Israel/Palestine),
 `iospe` (~1,194, the Northern Black Sea), `igcyr` (~997, Cyrenaica: Doric +
 verse), and `edh` (~1,286, the Greek subset of the Epigraphic Database
-Heidelberg). Registered ids also match case-insensitively as a
+Heidelberg). One more, `ddbdp` (the Duke Databank of Documentary Papyri —
+**57,329 Greek papyri, ~4.4M tokens**), is far larger, so it is hosted as a
+SQLite database with full-text search: `aegean.load("ddbdp")` materialises the
+whole corpus (heavy, several GB of RAM), but the memory-friendly path is
+`aegean db search ddbdp "βασιλέως"` (instant FTS) and, in Python,
+`aegean.db.stream(ddbdp_db())`. Registered ids also match case-insensitively as a
 fallback (`aegean info LINEARA` loads `lineara`). Pass an unknown id and the error
 lists the valid ones, and suggests the nearest registered id when your spelling is
 close:
@@ -816,7 +821,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.26.0                    │
+│ OK │ pyaegean │ 0.27.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

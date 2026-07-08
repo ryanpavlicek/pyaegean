@@ -204,6 +204,18 @@ EDH — Epigraphic Database Heidelberg (project-hosted, fetched on demand, NOT b
   aegean.load("edh"), never bundled. Cite EDH (Epigraphic Database Heidelberg, Heidelberg Academy of
   Sciences and Humanities).
 
+DDbDP — Duke Databank of Documentary Papyri (project-hosted, fetched on demand, NOT bundled)
+  The DDbDP (Duke Databank of Documentary Papyri), via papyri.info (Duke Collaboratory for Classics
+  Computing; https://papyri.info, https://github.com/papyri/idp.data), the corpus of Greek (and some
+  Latin) documentary papyri, licensed CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/; stated
+  repo-wide in the README and per-file in each edition's <availability>). pyaegean's `ddbdp-corpus`
+  release asset is the 57,329 Greek documentary papyri (~4.4M tokens), their Greek reading extracted
+  from each edition (resolving the papyrological apparatus) with the citation, date, place, and
+  Trismegistos/HGV ids, decoded into a SQLite database with full-text search
+  (scripts/build_ddbdp_corpus.py) from a pinned source commit. CC BY permits redistribution with
+  attribution; fetched on demand via aegean.load("ddbdp") / aegean.db.search(ddbdp_db(), ...), never
+  bundled. Cite the DDbDP (Duke Databank of Documentary Papyri) / papyri.info in academic work.
+
 LiBER — Linear B Electronic Resources (NOT bundled, NOT fetched)
   LiBER (CNR, https://liber.cnr.it) is © CNR Edizioni, all rights reserved. pyaegean neither
   bundles nor fetches it; to work with a LiBER selection, set PYAEGEAN_LINEARB_CORPUS to your

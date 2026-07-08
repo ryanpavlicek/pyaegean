@@ -363,6 +363,19 @@ _REMOTE: dict[str, DataSpec] = {
              "Trismegistos id. Loadable via aegean.load('edh').",
         extract=False,
     ),
+    "ddbdp-corpus": DataSpec(
+        name="ddbdp-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "ddbdp-corpus-v1/ddbdp-corpus.tar.gz"
+        ),
+        sha256="7ae265384543cabc7554e543c3f3a1cccbfa1e3ca531b4cbd8755124f58845e2",
+        license="CC-BY-3.0 (DDbDP / Duke Collaboratory for Classics Computing, papyri.info)",
+        note="DDbDP Greek documentary papyri: 57,329 texts / ~4.4M tokens (~206 MB tar.gz, ~757 MB "
+             "unpacked) as a SQLite database with full-text search, from the CC BY papyri.info corpus. "
+             "aegean.load('ddbdp') materialises it (heavy); aegean.db.search/stream the memory-friendly path.",
+        extract=True,
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public

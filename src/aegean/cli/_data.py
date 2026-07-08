@@ -131,6 +131,7 @@ _FETCH_HINTS = {
     "iospe-corpus": "load it:  aegean info iospe",
     "igcyr-corpus": "load it:  aegean info igcyr",
     "edh-corpus": "load it:  aegean info edh",
+    "ddbdp-corpus": "search it (memory-friendly):  aegean db search ddbdp \"βασιλέως\"",
     "linearb-corpus": "load it:  aegean info linearb",
     "sigla-corpus": "load it:  aegean info sigla",
     "nt-corpus": "load it:  aegean info nt",

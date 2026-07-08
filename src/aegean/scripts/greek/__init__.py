@@ -18,7 +18,9 @@ from . import iip  # noqa: F401 — registers the IIP corpus loader on import
 from . import iospe  # noqa: F401 — registers the IOSPE corpus loader on import
 from . import igcyr  # noqa: F401 — registers the IGCyr/GVCyr corpus loader on import
 from . import edh  # noqa: F401 — registers the EDH corpus loader on import
+from . import ddbdp  # noqa: F401 — registers the DDbDP corpus loader on import
 from .inventory import greek_inventory
+from .ddbdp import ddbdp_db, load_ddbdp
 from .edh import load_edh
 from .igcyr import load_igcyr
 from .iip import load_iip
@@ -29,7 +31,7 @@ from .perseus import load_work
 
 __all__ = [
     "Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe", "load_igcyr",
-    "load_edh",
+    "load_edh", "load_ddbdp", "ddbdp_db",
 ]
 
 
