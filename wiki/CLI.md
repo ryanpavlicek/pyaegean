@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.27.2
+aegean --version          # pyaegean 0.28.0
 ```
 
 | Group | What's in it |
@@ -115,6 +115,7 @@ aegean --version          # pyaegean 0.27.2
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
+| **`aegean review …`** | `export` `apply` (the human-in-the-loop annotation round-trip) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
 
@@ -1196,7 +1197,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.27.2                    │
+│ OK │ pyaegean │ 0.28.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1703,7 +1704,9 @@ heavy, but it reproduces pyaegean's measured accuracy. Targets: `ud`, `proiel`,
 # heavy: fetches gold data and the model
 aegean greek eval ud --fold perseus --split test --neural
 aegean greek eval ud --neural --bootstrap          # percentile CIs over the fold's sentences
-aegean greek eval proiel --drift                   # where the out-of-AGDT PROIEL gap comes from
+aegean greek eval ud --drift                       # error analysis: POS confusions, per-POS accuracy
+aegean greek eval proiel --drift                   # the same, for the out-of-AGDT PROIEL gold
+aegean greek eval nt --drift                       # the same, for the Nestle 1904 New Testament
 ```
 
 `--fold` picks the UD Ancient Greek fold (`perseus` or `proiel`) and `--split` the
@@ -1712,12 +1715,13 @@ split (`dev` or `test`); both are validated before anything is fetched. (The old
 but warns, naming `--fold`.) The measured numbers save with `--output/-o` like any
 other result table.
 `--bootstrap` (ud only) reports each metric as `estimate [low, high]` instead of a
-single point. `--drift` (proiel only) replaces the bare accuracy numbers with a
-breakdown of *where* the out-of-AGDT gap comes from: a gold→predicted POS-confusion
-table plus sampled lemma mismatches, which separates systematic annotation-convention
-divergence from scattered real error (`evaluate_on_proiel` itself is unchanged). The
-exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
-[Limitations](Limitations#measured-accuracy-boundaries).
+single point. `--drift` (ud, proiel, or nt) replaces the bare accuracy numbers with an
+error analysis: a gold→predicted POS-confusion table, per-part-of-speech accuracy, the
+common lemma confusions, and a seen-vs-unseen split, which separates systematic
+annotation-convention divergence from scattered real error (the aggregate `evaluate_*`
+numbers are unchanged). See [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for how to
+read the breakdown. The exact figures and how they were measured are on
+[Greek NLP](Greek-NLP) and [Limitations](Limitations#measured-accuracy-boundaries).
 
 #### A worked run
 
@@ -2017,6 +2021,38 @@ aegean db search aegean.db KU-RO --limit 3
 The grown database now answers for both scripts: the same search with a
 Cypriot token finds the Cypriot documents, and `aegean stats aegean.db` treats
 the whole file as one corpus.
+
+---
+
+## Review — `aegean review …`
+
+The review commands close the loop between machine analysis and human judgement: export
+the toolkit's annotations to a spreadsheet, correct them, and read the corrections back.
+Automation does not end the workflow; this is how a scholar keeps the final say and a
+record of it.
+
+| Command | What it does | Key flags | One-line example |
+|---|---|---|---|
+| `review export` | Write one reviewable CSV row per word: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--only-needs-review` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv` |
+| `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
+
+```bash
+# 1. export a reviewable table (the NT already carries gold annotations; for your own
+#    imported text add --annotate to fill lemma/POS from the pipeline first)
+aegean review export nt -o review.csv
+#    wrote 137779 review rows to review.csv     (illustrative count)
+
+# 2. open review.csv in a spreadsheet, fill correct_lemma / correct_pos / correct_morph /
+#    reviewer_note on the rows you want to change (the needs_review column flags the shaky ones;
+#    --only-needs-review exports just those), then:
+
+aegean review apply nt review.csv -o nt-reviewed.json --reviewer "A. Scholar"
+#    wrote nt-reviewed.json  (review: 12 tokens corrected by A. Scholar (2026-…))
+```
+
+The join is by document id and token position, so the corpus you apply against must be the
+one you exported. See [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow
+in context and [Data & Provenance](Data-and-Provenance) for the table columns.
 
 ---
 

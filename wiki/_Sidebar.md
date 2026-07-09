@@ -17,6 +17,7 @@
 
 **Greek**
 - [Greek NLP](Greek-NLP)
+- [Reading a Parse](Reading-a-Parse)
 - [Greek Works & Books](Greek-Works-and-Books)
 - [New Testament](New-Testament)
 - [Meters](Meters)
@@ -34,10 +35,12 @@
 - [Benchmarks](Benchmarks)
 - [Methodology](Methodology)
 - [Evaluation](Evaluation)
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong)
 
 **Reference**
 - [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
+- [Citing Computational Assistance](Citing-Computational-Assistance)
 - [Glossary](Glossary)
 - [Limitations](Limitations)
 - [For Specialists](For-Specialists)

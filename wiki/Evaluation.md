@@ -39,7 +39,7 @@ what you want measured first (`use_treebank`, `use_tagger`, `use_lemmatizer`,
 | Standard benchmark | `evaluate_on_ud` | UD Ancient Greek (Perseus / PROIEL), official CoNLL 2018 scorer | the field-standard UPOS / UFeats / Lemma / UAS / LAS |
 | Sampling variability | `bootstrap_ud` | same folds | percentile confidence intervals over the fold's sentences |
 | Neutral out-of-AGDT | `evaluate_on_proiel` | PROIEL treebank (NT + Herodotus) | how pyaegean reads Greek it never trained on |
-| Convention vs error | `proiel_drift` | PROIEL treebank | where the out-of-AGDT gap comes from |
+| Error analysis | `proiel_error_analysis` / `ud_error_analysis` / `nt_error_analysis` / `heldout_error_analysis` (and `proiel_drift`) | any gold fold | the kinds of error: POS confusion matrix, per-POS accuracy, lemma confusions, seen/unseen (see [When the Tool Is Wrong](When-the-Tool-Is-Wrong)) |
 | Out-of-domain Koine | `evaluate_on_nt` | Nestle 1904 own gold | the shipped neural model on the Greek NT |
 | Held-out (in-AGDT) | `evaluate_tagger` / `evaluate_lemmatizer` / `evaluate_parser` | 90/10 AGDT sentence split | leakage-free generalization of each trainable backend |
 | Leakage manifest | `agdt_ud_overlap` | AGDT ↔ UD-Perseus | which sentences training must exclude |

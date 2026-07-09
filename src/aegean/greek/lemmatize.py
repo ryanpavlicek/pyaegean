@@ -42,9 +42,45 @@ it preserves the surface stem accent, so those need the opt-in backends.
 from __future__ import annotations
 
 import unicodedata
+from enum import Enum
 from functools import lru_cache
 
 from ..data import load_bundled_json
+
+
+class LemmaSource(str, Enum):
+    """Where a lemma came from — the evidence class for one token's lemma.
+
+    A ``str`` Enum (not ``StrEnum``: the floor is Python 3.10), so members are plain
+    strings under ``json.dumps`` and comparisons; emit ``.value`` where a bare string
+    is wanted. Ordered from most to least trustworthy:
+
+    - ``ATTESTED``   — a treebank-lexicon hit (an attested, correctly accented lemma).
+    - ``NEURAL``     — a real prediction from the joint pipeline / seq2seq / edit-tree model.
+    - ``RULE``       — the ending-stripping rule layer recovered a regular citation form.
+    - ``SEED``       — the bundled seed table / a closed-class function word.
+    - ``IDENTITY``   — a backend/model was consulted but returned the surface form unchanged
+      (no real analysis), so the "lemma" is just the input.
+    - ``UNRESOLVED`` — the baseline cascade was exhausted; the normalized form is returned.
+    - ``PUNCT``      — a non-word token (punctuation / numeral): trivially its own lemma.
+
+    ``IDENTITY`` and ``UNRESOLVED`` are the classes a human should verify (see
+    `needs_review`); the rest are grounded analyses."""
+
+    ATTESTED = "attested"
+    NEURAL = "neural"
+    RULE = "rule"
+    SEED = "seed"
+    IDENTITY = "identity"
+    UNRESOLVED = "unresolved"
+    PUNCT = "punct"
+
+
+def needs_review(source: LemmaSource) -> bool:
+    """Whether a lemma with this source should be verified by a human: an ``IDENTITY``
+    fall-through or an ``UNRESOLVED`` baseline miss. ``ATTESTED``/``NEURAL``/``RULE``/
+    ``SEED``/``PUNCT`` are grounded and do not need review."""
+    return source in (LemmaSource.IDENTITY, LemmaSource.UNRESOLVED)
 
 _ACUTE = "́"
 _GRAVE = "̀"
@@ -525,50 +561,67 @@ def rule_lemma_verbose(word: str) -> tuple[str, bool]:
     return norm, False
 
 
-def lemmatize_verbose(word: str) -> tuple[str, bool]:
-    """Return ``(lemma, known)``. ``known`` is False when neither the seed table nor the
-    generalizing rule layer found a lemma and the (normalized) input is returned unchanged.
+def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
+    """Return ``(lemma, source)``: the lemma plus the evidence class it came from (see
+    `LemmaSource`). This is the authoritative cascade; `lemmatize` and `lemmatize_verbose`
+    are expressed on top of it, so the lemma and its known/verbose flag can never drift
+    from the source.
 
-    When the neural joint pipeline is active (see `aegean.greek.use_neural_pipeline`), its
-    contextual prediction is used first; next, when the AGDT treebank backend is active
-    (see `aegean.greek.use_treebank`), its attested, correctly-accented lemma is preferred;
-    next, when the neural backend is active (see `aegean.greek.use_neural_lemmatizer`), its
-    GreTa seq2seq prediction is used — it generalizes well to unseen forms (76.3%); next the
-    trained edit-tree lemmatizer (see `aegean.greek.use_lemmatizer`); otherwise the bundled
-    seed table is consulted, then the generalizing ending-stripping rule layer
-    (`rule_lemma_verbose`) for regular forms not in the table."""
+    Tier order (identical to the historical cascade): the neural joint pipeline
+    (`use_neural_pipeline`) → the AGDT treebank (`use_treebank`, an attested lemma) → the
+    GreTa seq2seq backend (`use_neural_lemmatizer`) → the trained edit-tree lemmatizer
+    (`use_lemmatizer`) → the bundled seed table → the generalizing ending-stripping rule
+    layer. A backend that returns the surface form unchanged is reported ``IDENTITY`` (not
+    a real analysis); an exhausted baseline is ``UNRESOLVED``.
+
+    The joint pipeline's ``IDENTITY`` is decided by *which branch composed the lemma*
+    (`joint._compose_lemma`), not by a surface-string compare, so a nominative singular
+    whose lemma equals the form is correctly ``NEURAL``. The auxiliary seq2seq/edit-tree
+    backends have no such signal, so there a lemma equal to the surface reads ``IDENTITY``
+    (preserving their historical ``known`` semantics)."""
     from . import joint
 
     if joint.active() is not None:  # the neural pipeline: contextual scripts + big lookup
-        pred = joint.analyze_sentence([word]).lemma[0]
-        return pred, pred != unicodedata.normalize("NFC", word)
+        ana = joint.analyze_sentence([word])
+        resolved = ana.lemma_resolved[0] if ana.lemma_resolved else ana.lemma[0] != word
+        return ana.lemma[0], LemmaSource.NEURAL if resolved else LemmaSource.IDENTITY
     from . import treebank
 
     lex = treebank.active()
     if lex is not None:
         hit = lex.lemmatize(word)
         if hit is not None:
-            return hit, True
+            return hit, LemmaSource.ATTESTED
     from . import neural_lemmatizer
 
     if neural_lemmatizer.active() is not None:  # GreTa seq2seq — strong on unseen forms
         pred = neural_lemmatizer.predict(word)
-        return pred, pred != unicodedata.normalize("NFC", word)
+        changed = pred != unicodedata.normalize("NFC", word)
+        return pred, LemmaSource.NEURAL if changed else LemmaSource.IDENTITY
     from . import lemmatizer
 
     if lemmatizer.active() is not None:  # trained generalizer for unseen forms
         pred = lemmatizer.predict(word)
-        # A prediction identical to the (normalized) form is an identity fall-through, so
-        # mirror the seed-table contract: known=False when the form is returned unchanged.
-        return pred, pred != unicodedata.normalize("NFC", word)
+        changed = pred != unicodedata.normalize("NFC", word)
+        return pred, LemmaSource.NEURAL if changed else LemmaSource.IDENTITY
     lemma, known = seed_lemma_verbose(word)
     if known:
-        return lemma, True
-    return rule_lemma_verbose(word)  # generalize over the regular paradigms before giving up
+        return lemma, LemmaSource.SEED
+    lemma, recovered = rule_lemma_verbose(word)  # generalize over the regular paradigms
+    return lemma, LemmaSource.RULE if recovered else LemmaSource.UNRESOLVED
+
+
+def lemmatize_verbose(word: str) -> tuple[str, bool]:
+    """Return ``(lemma, known)``. ``known`` is False when the lemma is not a real analysis:
+    an identity fall-through from a backend, or an exhausted baseline that returns the
+    (normalized) input unchanged. Delegates to `lemmatize_sourced` (the tier order is
+    documented there) so the flag tracks the evidence class exactly."""
+    lemma, source = lemmatize_sourced(word)
+    return lemma, not needs_review(source)
 
 
 def lemmatize(word: str) -> str:
     """The lemma for a form via the active backend cascade, then the seed table and the
     generalizing rule layer, or the normalized form itself when nothing applies (see
-    `lemmatize_verbose` for the tier order)."""
-    return lemmatize_verbose(word)[0]
+    `lemmatize_sourced` for the tier order and the evidence class)."""
+    return lemmatize_sourced(word)[0]

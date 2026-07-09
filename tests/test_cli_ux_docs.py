@@ -114,6 +114,8 @@ _NON_DATA_PRODUCING = {
     ("workbench",),
     ("db", "build"),
     ("db", "add"),
+    ("review", "export"),  # writes a CSV review table via -o, not JSON to stdout
+    ("review", "apply"),   # writes a corrected corpus via -o
     ("greek", "normalize"),
     ("greek", "betacode"),
     ("greek", "strip"),

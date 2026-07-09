@@ -418,9 +418,9 @@ returns one record per token:
 ```python
 for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")[:3]:
     print(r)
-# TokenRecord(sentence=0, index=1, text='ἐν', upos='ADP', lemma='ἐν', lemma_known=True, ...)
-# TokenRecord(sentence=0, index=2, text='ἀρχῇ', upos='NOUN', lemma='ἀρχή', lemma_known=True, ...)
-# TokenRecord(sentence=0, index=3, text='ἦν', upos='VERB', lemma='εἰμί', lemma_known=True, ...)
+# TokenRecord(sentence=0, index=1, text='ἐν', upos='ADP', lemma='ἐν', lemma_source=<LemmaSource.SEED: 'seed'>, ...)
+# TokenRecord(sentence=0, index=2, text='ἀρχῇ', upos='NOUN', lemma='ἀρχή', lemma_source=<LemmaSource.SEED: 'seed'>, ...)
+# TokenRecord(sentence=0, index=3, text='ἦν', upos='VERB', lemma='εἰμί', lemma_source=<LemmaSource.SEED: 'seed'>, ...)
 ```
 
 `pipeline` honours whichever backends you've turned on; turn on the treebank or

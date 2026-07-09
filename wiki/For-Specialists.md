@@ -420,6 +420,11 @@ on [AI Layer](AI-Layer).
 
 ## 6. How to help — corrections, validations, contributions
 
+For correcting automated output in your own copy first (export, fix, re-import), see
+[When the Tool Is Wrong](When-the-Tool-Is-Wrong); for citing computationally-assisted
+results, see [Citing Computational Assistance](Citing-Computational-Assistance). To push a
+fix back into the project, use one of the three paths below.
+
 Three lightweight paths, each a GitHub issue form (New issue → pick a template).
 Attribution is **first-class**: contributed facts keep their source.
 

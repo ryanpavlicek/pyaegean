@@ -164,3 +164,27 @@ def test_rule_layer_does_not_overfire_on_irregular_or_indeclinable():
     # ἑαυτοῦ is now a genuine closed-class table hit (reflexive pronoun, lemma = itself),
     # returned known=True, not a fabricated recovery.
     assert lemmatize_verbose("ἑαυτοῦ") == ("ἑαυτοῦ", True)
+
+
+def test_lemmatize_sourced_reports_the_evidence_class():
+    from aegean.greek import LemmaSource, lemmatize_sourced
+
+    assert lemmatize_sourced("ἦν") == ("εἰμί", LemmaSource.SEED)       # closed-class / seed
+    assert lemmatize_sourced("νόμου") == ("νόμος", LemmaSource.RULE)   # ending-rule recovery
+    assert lemmatize_sourced("πατρός") == ("πατρός", LemmaSource.UNRESOLVED)  # baseline miss
+
+
+def test_needs_review_matches_the_lemma_known_flag():
+    """`needs_review` is the exact complement of `lemmatize_verbose`'s `known`, and flags
+    only the two ungrounded classes."""
+    from aegean.greek import LemmaSource, needs_review
+
+    assert needs_review(LemmaSource.IDENTITY) and needs_review(LemmaSource.UNRESOLVED)
+    for grounded in (LemmaSource.ATTESTED, LemmaSource.NEURAL, LemmaSource.RULE,
+                     LemmaSource.SEED, LemmaSource.PUNCT):
+        assert not needs_review(grounded)
+    # derivation consistency: known == not needs_review(source), for real forms
+    from aegean.greek import lemmatize_sourced
+    for w in ("ἦν", "νόμου", "πατρός", "ὁ", "θεόν", "ἀγαθῷ"):
+        _lemma, src = lemmatize_sourced(w)
+        assert lemmatize_verbose(w)[1] is (not needs_review(src))

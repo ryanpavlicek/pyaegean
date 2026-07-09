@@ -684,11 +684,15 @@ def pipeline(
     rows = pipeline_rows_from_records(records)  # the row shape shared with the TUI
     if emit_result(rows, json_output=json_out, output=output):
         return
+    # 'src' shows the lemma's evidence class only when it is worth a second look
+    # (an identity fall-through or an unresolved miss); grounded lemmas leave it blank
+    # so the table stays scannable. The full class is always in --json (lemma_source).
     table(
         f"{len(rows)} token(s)",
-        ["s", "i", "token", "upos", "lemma", "head", "rel", "feats"],
+        ["s", "i", "token", "upos", "lemma", "src", "head", "rel", "feats"],
         [
             [str(r["sentence"]), str(r["index"]), r["text"], r["upos"], r["lemma"],
+             "" if r["lemma_known"] else r["lemma_source"],
              "" if r["head"] is None else str(r["head"]), r["relation"] or "", r["feats"] or ""]
             for r in rows
         ],
@@ -1140,7 +1144,9 @@ def evaluate(
         False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
     ),
     drift: bool = typer.Option(
-        False, "--drift", help="For proiel: a POS-confusion / lemma convention-drift breakdown."
+        False, "--drift",
+        help="For ud/proiel/nt: an error analysis (POS confusion matrix, per-POS accuracy, "
+             "lemma confusions) instead of the aggregate score.",
     ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
@@ -1169,8 +1175,16 @@ def evaluate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
     )
+    def emit_drift(report: object) -> None:  # ErrorAnalysis -> --json dict / text summary
+        if emit_result(report.as_dict(), json_output=json_out, output=output):  # type: ignore[attr-defined]
+            return
+        print(report.summary())  # type: ignore[attr-defined]
+
     result: object
     if target == "ud":
+        if drift:
+            emit_drift(greek.ud_error_analysis(treebank=fold, split=split))
+            return
         if bootstrap:
             cis = greek.bootstrap_ud(treebank=fold, split=split)
             result = {
@@ -1180,21 +1194,14 @@ def evaluate(
             result = greek.evaluate_on_ud(treebank=fold, split=split)
     elif target == "proiel":
         if drift:
-            report = greek.proiel_drift()
-            payload = {
-                "pos_scored": report.pos_scored, "pos_errors": report.pos_errors,
-                "lemma_errors": report.lemma_errors, "top_share": round(report.top_share, 3),
-                "pos_confusions": [
-                    {"gold": g, "predicted": p, "count": c} for g, p, c in report.pos_confusions
-                ],
-            }
-            if emit_result(payload, json_output=json_out, output=output):
-                return
-            print(report.summary())
+            emit_drift(greek.proiel_error_analysis())
             return
         result = greek.evaluate_on_proiel()
     elif target == "nt":
         _activate(neural=True)  # the NT fold reports the shipped neural model's number
+        if drift:
+            emit_drift(greek.nt_error_analysis())
+            return
         result = greek.evaluate_on_nt()
     elif target == "tagger":
         result = greek.evaluate_tagger()

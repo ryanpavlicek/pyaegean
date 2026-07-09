@@ -64,21 +64,35 @@ class SentenceAnalysis:
     head: tuple[int, ...]       # 0 = root, else 1-based index into tokens
     deprel: tuple[str, ...]     # UD relations
     lemma: tuple[str, ...]
+    # Per-token: True when the lemma came from a real analysis (lookup or edit-script),
+    # False when it is the identity fall-through (the surface form returned unchanged).
+    # Defaulted so the empty-sentence and any positional construction stay valid.
+    lemma_resolved: tuple[bool, ...] = ()
 
 
-def _compose_lemma(form: str, upos: str, script_id: int, model: "_JointModel") -> str:
-    """The dev-preferred ``lookup-first`` composition: (form|UPOS) lookup → form lookup
-    → predicted edit script → lowercase lookup → the form itself."""
+def _compose_lemma(
+    form: str, upos: str, script_id: int, model: "_JointModel"
+) -> tuple[str, bool]:
+    """The dev-preferred ``lookup-first`` composition, with an honesty flag: returns
+    ``(lemma, resolved)``. ``resolved`` is True when a real analysis was found — a
+    (form|UPOS) or form lookup, a predicted edit script, or a lowercase lookup — and
+    False for the terminal identity fall-through (the form itself). A lemma that equals
+    the surface form is still ``resolved=True`` when it came from a lookup (a nominative
+    singular is a genuine analysis), so callers must not infer the source from a string
+    compare."""
     looked = model.lookup_form_upos.get(f"{form}|{upos}") or model.lookup_form.get(form)
     if looked:
-        return looked
+        return looked, True
     if 0 <= script_id < len(model.trees):
         from .lemmatizer import apply_tree
 
         applied = apply_tree(model.trees[script_id], form)
         if applied:
-            return applied
-    return model.lookup_lower.get(form.lower()) or form
+            return applied, True
+    low = model.lookup_lower.get(form.lower())
+    if low:
+        return low, True
+    return form, False
 
 
 class _JointModel:
@@ -155,7 +169,7 @@ class _JointModel:
         forms = [unicodedata.normalize("NFC", w) for w in words]
         n = len(forms)
         if n == 0:
-            return SentenceAnalysis((), (), (), (), (), (), ())
+            return SentenceAnalysis((), (), (), (), (), (), (), ())
         out = self._run(forms)
         word_pos: list[int] = out["_word_pos"]
         kept: list[int] = out["_kept"]
@@ -166,6 +180,9 @@ class _JointModel:
         head = [0 if i == 0 else 1 for i in range(n)]
         rel = ["root" if i == 0 else "dep" for i in range(n)]
         lemma = list(forms)
+        # default False = the identity fall-through (truncated / undecoded tokens keep
+        # the surface form, which is not a real analysis)
+        resolved = [False] * n
 
         if nw:
             heads_w = decode_mst(out["arc"][0, :nw, : nw + 1])
@@ -181,7 +198,7 @@ class _JointModel:
                 rel[w] = self.inv["deprel"][int(rel_scores[:, wi, heads_w[wi]].argmax())]
                 if head[w] == 0:
                     rel[w] = "root"
-                lemma[w] = _compose_lemma(forms[w], upos[w], int(lem_ids[wi]), self)
+                lemma[w], resolved[w] = _compose_lemma(forms[w], upos[w], int(lem_ids[wi]), self)
         # exactly one root, even with truncation fallbacks in play
         roots = [i for i in range(n) if head[i] == 0]
         first = roots[0] if roots else 0
@@ -194,6 +211,7 @@ class _JointModel:
             tokens=tuple(forms), upos=tuple(upos), xpos=tuple(xpos),
             feats=tuple(feats_from_xpos(x) for x in xpos),
             head=tuple(head), deprel=tuple(rel), lemma=tuple(lemma),
+            lemma_resolved=tuple(resolved),
         )
 
 

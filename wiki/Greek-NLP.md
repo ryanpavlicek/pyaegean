@@ -105,11 +105,15 @@ Each `TokenRecord` is a dataclass with these fields:
 | `text` | the surface token (punctuation included) |
 | `upos` | UD coarse part of speech |
 | `lemma` | the lemma |
-| `lemma_known` | whether the lemma was a real lookup vs an identity fallback |
+| `lemma_source` | the lemma's evidence class: `attested` (treebank), `neural`, `rule`, `seed`, `identity` (model returned the surface unchanged), `unresolved` (baseline miss), or `punct` |
+| `lemma_known` | derived: `False` for an `identity` fall-through or an `unresolved` miss (a lemma to verify), `True` otherwise |
 | `head` | head token index (only when parsed) |
 | `relation` | dependency relation (only when parsed) |
 | `xpos` | language-specific tag (neural pipeline only) |
 | `feats` | UD FEATS string (neural pipeline only) |
+
+For a field-by-field guide to interpreting a record, including what each `lemma_source`
+class means for how far to trust a lemma, see [Reading a Parse](Reading-a-Parse).
 
 `pipeline` uses whatever backends are **active**: with none, the zero-dependency
 baseline; after `use_treebank()`/`use_tagger()` etc., their better answers; after

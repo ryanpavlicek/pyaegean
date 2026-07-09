@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .lemmatize import lemmatize_verbose
+from .lemmatize import LemmaSource, lemmatize_sourced, needs_review
 from .tokenize import _SENTENCE_SPLIT_RE
 from .tokenize import tokenize as _tokenize
 
@@ -32,19 +32,29 @@ class TokenRecord:
 
     ``head`` refers to the ``index`` of another record **in the same sentence**
     (``0`` = sentence root, ``None`` = no parse). ``xpos``/``feats`` are filled
-    only by the neural pipeline; ``lemma_known`` is ``False`` when the lemma is a
-    fallback (the normalized form itself, from an unknown word)."""
+    only by the neural pipeline. ``lemma_source`` is the lemma's evidence class
+    (see `LemmaSource`): whether it was attested in a treebank, predicted by a
+    model, recovered by a rule, from the seed table, an identity fall-through, or
+    unresolved. ``lemma_known`` is the derived boolean (``False`` for an identity
+    fall-through or an unresolved baseline miss, i.e. a lemma to verify)."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
     text: str
     upos: str
     lemma: str
-    lemma_known: bool
+    lemma_source: LemmaSource  # evidence class of the lemma
     head: int | None = None  # index of the head record; 0 = root
     relation: str | None = None  # UD (neural pipeline) or AGDT/Prague (use_parser)
     xpos: str | None = None  # 9-char positional tag (neural pipeline only)
     feats: str | None = None  # UD FEATS string (neural pipeline only)
+
+    @property
+    def lemma_known(self) -> bool:
+        """True when the lemma is a real analysis, not an identity fall-through or an
+        unresolved baseline miss. Derived from ``lemma_source``; kept as a stable
+        read-API (the record stores the richer ``lemma_source``)."""
+        return not needs_review(self.lemma_source)
 
 
 def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
@@ -86,15 +96,22 @@ def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
     for s_idx, (words, is_word) in enumerate(zip(sents, word_flags)):
         if joint.active() is not None:
             ana = joint.analyze_sentence(words)
-            records.extend(
-                TokenRecord(
-                    sentence=s_idx, index=i + 1, text=ana.tokens[i],
-                    upos=ana.upos[i], lemma=ana.lemma[i], lemma_known=True,
-                    head=ana.head[i], relation=ana.deprel[i],
-                    xpos=ana.xpos[i], feats=ana.feats[i],
+            resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
+            for i in range(len(ana.tokens)):
+                if not is_word[i]:
+                    source = LemmaSource.PUNCT  # a punctuation/number token is its own lemma
+                elif resolved[i]:
+                    source = LemmaSource.NEURAL
+                else:
+                    source = LemmaSource.IDENTITY  # the model returned the surface unchanged
+                records.append(
+                    TokenRecord(
+                        sentence=s_idx, index=i + 1, text=ana.tokens[i],
+                        upos=ana.upos[i], lemma=ana.lemma[i], lemma_source=source,
+                        head=ana.head[i], relation=ana.deprel[i],
+                        xpos=ana.xpos[i], feats=ana.feats[i],
+                    )
                 )
-                for i in range(len(ana.tokens))
-            )
             continue
 
         from .pos import pos_tag, pos_tags
@@ -118,14 +135,14 @@ def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
                 heads[word_positions[k]] = (rec_head, dep.relation)
         for i, (tok_text, tag) in enumerate(tags):
             if is_word[i]:
-                lemma, known = lemmatize_verbose(tok_text)
+                lemma, source = lemmatize_sourced(tok_text)
             else:
-                lemma, known = tok_text, True  # a punct/number token is its own lemma
+                lemma, source = tok_text, LemmaSource.PUNCT  # a punct/number token is its own lemma
             head, rel = heads.get(i, (None, None))
             records.append(
                 TokenRecord(
                     sentence=s_idx, index=i + 1, text=tok_text,
-                    upos=tag, lemma=lemma, lemma_known=known, head=head, relation=rel,
+                    upos=tag, lemma=lemma, lemma_source=source, head=head, relation=rel,
                 )
             )
     return records

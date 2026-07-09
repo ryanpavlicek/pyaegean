@@ -19,6 +19,8 @@ The command tree mirrors the public API:
 - ``aegean data …``: the fetch-to-store data layer (``fetch``, ``list``,
   ``store``, ``versions``, ``remove``);
 - ``aegean db …``: SQLite persistence (``build``, ``add``, ``search``);
+- ``aegean review …``: the human-in-the-loop round-trip (``export`` a
+  reviewable table, ``apply`` the corrections back);
 - ``aegean ai …``: the generative layer (exploratory-labeled, key-gated).
 
 Conventions: ``--json`` on every data-producing command for machine-readable
@@ -85,6 +87,7 @@ def _build_app() -> Any:
     from ._data import data_app
     from ._db import db_app
     from ._greek import greek_app
+    from ._review import review_app
 
     app = typer.Typer(
         pretty_exceptions_show_locals=False,
@@ -125,4 +128,5 @@ def _build_app() -> Any:
     app.add_typer(data_app, name="data")
     app.add_typer(db_app, name="db")
     app.add_typer(ai_app, name="ai")
+    app.add_typer(review_app, name="review")
     return app

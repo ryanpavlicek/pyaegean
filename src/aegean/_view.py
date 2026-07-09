@@ -57,10 +57,12 @@ def pipeline_rows(text: str, *, parse: bool = False) -> list[dict[str, Any]]:
 
     Wraps :func:`aegean.greek.pipeline`, mapping each `TokenRecord` to a row with
     ``sentence`` / ``index`` position, ``text``, ``upos``, ``lemma``,
-    ``lemma_known`` (``False`` marks a fallback lemma from an unknown form), and
-    the optional ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by
-    the parser or the neural pipeline, ``None`` otherwise). Backends follow
-    whatever is active, exactly as `pipeline` does."""
+    ``lemma_source`` (the lemma's evidence class, e.g. ``"attested"`` / ``"neural"``
+    / ``"rule"`` / ``"identity"``), ``lemma_known`` (``False`` marks a lemma to
+    verify — an identity fall-through or unresolved miss), and the optional
+    ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
+    the neural pipeline, ``None`` otherwise). Backends follow whatever is active,
+    exactly as `pipeline` does."""
     from .greek import pipeline
 
     return pipeline_rows_from_records(pipeline(text, parse=parse))
@@ -79,6 +81,7 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
             "text": r.text,
             "upos": r.upos,
             "lemma": r.lemma,
+            "lemma_source": r.lemma_source.value,
             "lemma_known": r.lemma_known,
             "head": r.head,
             "relation": r.relation,

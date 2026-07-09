@@ -126,6 +126,7 @@ def test_morphology_grounding_includes_clause_skeleton_when_parsed():
 # These exercise the skeleton builder directly on known UD dependency parses, so the
 # copular-vs-verbal logic is checked without needing the neural parser at test time.
 
+from aegean.greek.lemmatize import LemmaSource  # noqa: E402
 from aegean.greek.pipeline import TokenRecord  # noqa: E402
 from aegean.translate import _clause_skeleton  # noqa: E402
 
@@ -133,7 +134,7 @@ from aegean.translate import _clause_skeleton  # noqa: E402
 def _tok(index, text, upos, lemma, head, relation, feats=None):
     return TokenRecord(
         sentence=0, index=index, text=text, upos=upos, lemma=lemma,
-        lemma_known=True, head=head, relation=relation, feats=feats,
+        lemma_source=LemmaSource.ATTESTED, head=head, relation=relation, feats=feats,
     )
 
 

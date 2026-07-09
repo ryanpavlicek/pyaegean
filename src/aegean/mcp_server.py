@@ -409,9 +409,11 @@ def _human_size(n: int) -> str:
 def greek_pipeline(text: str) -> list[dict[str, Any]]:
     """Run the (baseline, offline) Greek NLP pipeline: one row per token.
 
-    Each row carries ``text``, ``upos``, ``lemma``, ``lemma_known``, sentence/index
-    position, and the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``;
-    ``None`` under the baseline). The rows are the shared
+    Each row carries ``text``, ``upos``, ``lemma``, ``lemma_source`` (the lemma's
+    evidence class: attested / neural / rule / seed / identity / unresolved / punct),
+    ``lemma_known`` (``False`` marks a lemma to verify), sentence/index position, and
+    the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``; ``None`` under
+    the baseline). The rows are the shared
     :func:`aegean._view.pipeline_rows` mapping, so this tool, the ``aegean greek pipeline``
     command, and the terminal UI emit identical rows."""
     from ._view import pipeline_rows

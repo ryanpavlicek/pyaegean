@@ -134,7 +134,49 @@ def test_joint_analyze_end_to_end_logic() -> None:
 
 
 def test_joint_analyze_empty_sentence() -> None:
-    assert _stub_model().analyze([]) == joint.SentenceAnalysis((), (), (), (), (), (), ())
+    assert _stub_model().analyze([]) == joint.SentenceAnalysis((), (), (), (), (), (), (), ())
+
+
+def test_joint_analyze_populates_lemma_resolved() -> None:
+    # every stub lemma comes from a lookup or the edit-script (never the bare fall-through)
+    ana = _stub_model().analyze(["ὁ", "λόγος", "ἐστί"])
+    assert ana.lemma_resolved == (True, True, True)
+
+
+def test_compose_lemma_reports_whether_it_resolved() -> None:
+    """The D1 fix: `_compose_lemma` must report resolution by *which branch fired*, not by a
+    surface-string compare. A lookup hit whose lemma equals the form (a nominative) is a real
+    analysis (resolved=True); only the terminal fall-through is resolved=False."""
+    from types import SimpleNamespace
+
+    hit = SimpleNamespace(
+        lookup_form_upos={}, lookup_form={"λόγος": "λόγος"}, lookup_lower={}, trees=[]
+    )
+    # lemma == form, yet it came from a lookup → resolved True (NOT an identity fall-through)
+    assert joint._compose_lemma("λόγος", "NOUN", 0, hit) == ("λόγος", True)
+
+    miss = SimpleNamespace(lookup_form_upos={}, lookup_form={}, lookup_lower={}, trees=[])
+    # nothing matched: the surface form is returned, flagged as not resolved
+    assert joint._compose_lemma("ζζζ", "NOUN", 0, miss) == ("ζζζ", False)
+
+
+def test_pipeline_neural_identity_fallthrough_is_not_known(monkeypatch) -> None:
+    """The end-to-end D1 regression: under an active joint model, a token the model cannot
+    lemmatize (identity fall-through) must report `lemma_source == IDENTITY` and
+    `lemma_known is False` — even though its lemma equals the surface form."""
+    from aegean import greek
+    from aegean.greek import LemmaSource
+
+    model = _stub_model()
+    model.lookup_form = {}          # clear every lemma source so all three fall through
+    model.lookup_form_upos = {}
+    model.lookup_lower = {}
+    model.trees = []                # no edit-script applies → bare identity fall-through
+    monkeypatch.setattr(joint, "_ACTIVE", model)
+    recs = greek.pipeline("ὁ λόγος ἐστί")
+    assert [r.lemma for r in recs] == ["ὁ", "λόγος", "ἐστί"]  # all identity (surface form)
+    for r in recs:  # lemma == surface, but honestly flagged as an unresolved fall-through
+        assert r.lemma_source is LemmaSource.IDENTITY and r.lemma_known is False
 
 
 # --- the dispatch hooks -------------------------------------------------------------

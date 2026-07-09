@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.27.2
+aegean --version                # pyaegean 0.28.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -50,6 +50,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
+| **`review`** | `export` `apply` (annotation review round-trip) |
 | **`geo`** | (top-level command: coordinates / GeoJSON) |
 | **`ai`** | `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` `providers` |
 | **`workbench`** | (top-level command: serve the web UI) |
@@ -415,7 +416,7 @@ aegean greek morph λόγον
 # λόγος [NOUN acc sg masc]   λόγος [NOUN acc sg fem]   λόγος [NOUN nom sg neut]   …
 
 aegean greek pipeline "ἐν ἀρχῇ" --json
-# [{"sentence":0,"index":1,"text":"ἐν","upos":"ADP","lemma":"ἐν","lemma_known":true,…}, …]
+# [{"sentence":0,"index":1,"text":"ἐν","upos":"ADP","lemma":"ἐν","lemma_source":"seed","lemma_known":true,…}, …]
 ```
 
 A lemma the lexicon doesn't know is still returned, marked `(fallback)` (and

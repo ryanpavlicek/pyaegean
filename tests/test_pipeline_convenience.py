@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from aegean import greek
-from aegean.greek import TokenRecord
+from aegean.greek import LemmaSource, TokenRecord
 
 
 def test_pipeline_baseline_records():
@@ -17,12 +17,24 @@ def test_pipeline_baseline_records():
     assert (first.text, first.upos, first.lemma) == ("ἐν", "ADP", "ἐν")
     assert first.index == 1 and first.head is None and first.relation is None
     assert first.xpos is None and first.feats is None  # neural-only fields
+    assert first.lemma_source is LemmaSource.SEED and first.lemma_known  # ἐν is closed-class
+
+
+def test_pipeline_records_carry_the_lemma_source_class():
+    # νόμου is recovered by the rule layer; πατρός is outside the baseline's scope.
+    by_text = {r.text: r for r in greek.pipeline("νόμου πατρός.")}
+    assert by_text["νόμου"].lemma_source is LemmaSource.RULE
+    assert by_text["νόμου"].lemma == "νόμος" and by_text["νόμου"].lemma_known
+    assert by_text["πατρός"].lemma_source is LemmaSource.UNRESOLVED
+    assert by_text["πατρός"].lemma_known is False  # an unresolved miss is flagged for review
+    assert by_text["."].lemma_source is LemmaSource.PUNCT
 
 
 def test_pipeline_keeps_punctuation_as_records():
     recs = greek.pipeline("ἦν ὁ λόγος.")
     assert recs[-1].text == "." and recs[-1].upos == "PUNCT"
     assert recs[-1].lemma == "." and recs[-1].lemma_known  # punct is its own lemma
+    assert recs[-1].lemma_source is LemmaSource.PUNCT
 
 
 def test_pipeline_indexes_restart_per_sentence():
@@ -54,3 +66,6 @@ def test_pipeline_uses_the_joint_model_when_active(monkeypatch):
     assert [r.relation for r in recs] == ["det", "nsubj", "root"]  # UD labels
     assert all(r.xpos is not None and r.feats is not None for r in recs)
     assert all(r.lemma_known for r in recs)
+    # every stub lemma is a real analysis (lookup or edit-script), so the source is NEURAL,
+    # never the IDENTITY fall-through
+    assert [r.lemma_source for r in recs] == [LemmaSource.NEURAL] * 3

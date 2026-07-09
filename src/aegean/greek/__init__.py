@@ -48,7 +48,13 @@ from .inflect import (
     paradigm,
     use_inflector,
 )
-from .lemmatize import lemmatize, lemmatize_verbose
+from .lemmatize import (
+    LemmaSource,
+    lemmatize,
+    lemmatize_sourced,
+    lemmatize_verbose,
+    needs_review,
+)
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .rarity import RarityResult, WordRarity, terminology_rarity
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
@@ -81,6 +87,16 @@ from .joint import (
     analyze_sentence,
     disable_neural_pipeline,
     use_neural_pipeline,
+)
+from .annotate import annotate_corpus
+from .erroranalysis import (
+    ErrorAnalysis,
+    PosStat,
+    analyze_errors,
+    heldout_error_analysis,
+    nt_error_analysis,
+    proiel_error_analysis,
+    ud_error_analysis,
 )
 from .proiel import DriftReport, evaluate_on_proiel, load_proiel_gold, proiel_dir, proiel_drift
 from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_on_ud
@@ -198,6 +214,9 @@ __all__ = [
     "pos_tags",
     "lemmatize",
     "lemmatize_verbose",
+    "lemmatize_sourced",
+    "LemmaSource",
+    "needs_review",
     "analyze",
     "lemmas",
     "best_pos",
@@ -249,6 +268,14 @@ __all__ = [
     "evaluate_on_proiel",
     "proiel_drift",
     "DriftReport",
+    "ErrorAnalysis",
+    "PosStat",
+    "analyze_errors",
+    "annotate_corpus",
+    "proiel_error_analysis",
+    "nt_error_analysis",
+    "ud_error_analysis",
+    "heldout_error_analysis",
     "evaluate_on_ud",
     "eval_receipt",
     "EvalReceipt",

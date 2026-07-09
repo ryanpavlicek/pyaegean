@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import unicodedata
 import xml.etree.ElementTree as ET
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -240,27 +239,22 @@ def proiel_drift(
     returns a `DriftReport`: the gold→predicted POS confusion matrix (most-frequent first), a
     sample of lemma mismatches, and the scored counts. A few confusion pairs carrying most of
     the POS errors (high ``top_share``) suggests a convention difference rather than real
-    error. ``tag_sentence`` and ``source_dir`` are as for `evaluate_on_proiel`."""
-    tagger = _reconciled(tag_sentence)
-    confus: Counter[tuple[str, str]] = Counter()
-    lemma_mis: list[tuple[str, str, str]] = []
-    n = pos_ok = lemma_err = 0
-    for sent in load_proiel_gold(source_dir=source_dir, files=files):
-        preds = tagger([t.form for t in sent])
-        for tok, (plemma, ppos) in zip(sent, preds):
-            if not tok.scored:
-                continue
-            n += 1
-            if ppos == tok.upos:
-                pos_ok += 1
-            else:
-                confus[(tok.upos, ppos)] += 1
-            if plemma != tok.lemma:
-                lemma_err += 1
-                if len(lemma_mis) < samples:
-                    lemma_mis.append((tok.form, tok.lemma, plemma))
+    error. ``tag_sentence`` and ``source_dir`` are as for `evaluate_on_proiel`.
+
+    This is now a thin PROIEL view of the shared `aegean.greek.erroranalysis` engine (which
+    also serves UD-Perseus, the NT, and the AGDT held-out split, and carries richer per-POS /
+    seen-unseen breakdowns): see `erroranalysis.proiel_error_analysis` for the full report."""
+    from .erroranalysis import analyze_errors
+
+    ea = analyze_errors(
+        _reconciled(tag_sentence),
+        load_proiel_gold(source_dir=source_dir, files=files),
+        samples=samples,
+    )
     return DriftReport(
-        pos_confusions=tuple((g, p, c) for (g, p), c in confus.most_common()),
-        lemma_mismatches=tuple(lemma_mis),
-        pos_scored=n, pos_errors=n - pos_ok, lemma_errors=lemma_err,
+        pos_confusions=ea.pos_confusions,
+        lemma_mismatches=ea.lemma_mismatches,
+        pos_scored=ea.pos_scored,
+        pos_errors=ea.pos_errors,
+        lemma_errors=ea.lemma_errors,
     )
