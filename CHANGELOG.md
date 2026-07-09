@@ -4,6 +4,35 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.28.0 (2026-07-09)
+
+Trust signals in the output: see where each analysis came from, what kinds of errors to
+expect, and correct them with a human in the loop.
+
+### Added
+- **Evidence class on every lemma.** `greek.pipeline()` records now carry `lemma_source`
+  (`aegean.greek.LemmaSource`): `attested` (treebank), `neural`, `rule`, `seed`, `identity`
+  (a model returned the surface form unchanged), `unresolved` (baseline miss), or `punct`. A
+  new `greek.lemmatize_sourced()` exposes it directly and `greek.needs_review()` flags the two
+  classes worth checking. The class flows through `greek pipeline --json` and the CLI table.
+- **Error analysis for scholars.** A new `aegean.greek.erroranalysis` module (POS confusion
+  matrix, per-POS accuracy, lemma confusions, seen-vs-unseen) generalizes the former
+  PROIEL-only drift report to UD-Perseus, the NT, and the AGDT held-out split:
+  `aegean greek eval {ud,proiel,nt} --drift`, and `greek.{proiel,ud,nt,heldout}_error_analysis`.
+- **Human review loop.** `aegean review export` writes a corpus's annotations to a reviewable
+  CSV (machine lemma / POS / morphology, the evidence class, a `needs_review` flag, blank
+  correction columns); `aegean review apply` reads corrections back onto the corpus, keeping
+  each machine value under `<field>__pred` and stamping the reviewer and a provenance note.
+  New `aegean.io.to_review_table` / `from_review_table` and `greek.annotate_corpus`.
+- **Teaching pages:** "How to read a pyaegean parse", "When the tool is wrong", and "Citing
+  computational assistance" (wiki).
+
+### Fixed
+- Under the neural joint pipeline, `lemma_known` was hard-coded `True`, so an identity
+  fall-through (the model returning the surface form) wrongly read as a known lemma. It is now
+  decided by which branch of the lemma composition fired, so a real analysis whose lemma equals
+  the surface form (a nominative singular) is still `known`, while a true fall-through is not.
+
 ## 0.27.2 (2026-07-08)
 
 A data-store fix, and much more to read and try: a bigger browser demo, a full-coverage
