@@ -115,7 +115,7 @@ def test_in_memory_cache_unchanged_by_the_hardening(tmp_path):
     assert cache.get("p", "m", "s", "prompt", max_tokens=1024) is None  # key still separates
 
 
-# ── (2) client docstring names all five providers, OpenRouter included ───────
+# ── (2) client docstring names all six providers, OpenRouter and local included ──
 
 
 def test_client_module_docstring_lists_openrouter():
@@ -126,7 +126,8 @@ def test_client_module_docstring_lists_openrouter():
     # OpenRouter. Cross-check against the live registry so the doc can't drift again silently.
     for name in ("Anthropic", "OpenAI", "Grok", "Gemini", "OpenRouter"):
         assert name in doc
-    assert "openrouter" in client_mod.providers()
+    assert "local" in doc  # the keyless local (Ollama/LM Studio/llama.cpp) provider
+    assert "openrouter" in client_mod.providers() and "local" in client_mod.providers()
 
 
 # ── (3) clean_gloss keeps an ablative "from" sense, drops etymology "from" ────

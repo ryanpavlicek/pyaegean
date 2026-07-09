@@ -38,7 +38,9 @@ class KeyRequiringClient(LLMClient):
 
 # ── registry / factory ───────────────────────────────────────────────────────
 def test_builtin_providers_registered():
-    assert set(ai.list_providers()) == {"anthropic", "openai", "grok", "gemini", "openrouter"}
+    assert set(ai.list_providers()) == {
+        "anthropic", "openai", "grok", "gemini", "openrouter", "local",
+    }
 
 
 def test_unknown_provider_raises():

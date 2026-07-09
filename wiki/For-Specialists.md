@@ -294,13 +294,15 @@ you can audit three ways.
 | Summarize | `ai.summarize(text, …)` | `aegean ai summarize` | faithful summary of an excerpt |
 | Extract | `ai.extract(text, schema=…)` | `aegean ai extract` | structured JSON into `result.data` |
 
-Providers are optional extras, key-gated; the registered set is fixed:
+Providers are optional extras (key-gated for the hosted ones; `local` needs no key);
+the registered set is fixed:
 
 ```bash
 aegean ai providers
 # anthropic
 # gemini
 # grok
+# local
 # openai
 # openrouter
 ```

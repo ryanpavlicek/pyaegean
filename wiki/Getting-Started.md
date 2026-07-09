@@ -12,6 +12,12 @@ at a time; nothing here can break your computer.
 > **Just want to try it first?** The core pipeline runs **in your browser**, nothing to
 > install: [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/) (Pyodide).
 
+> **Prefer to jump straight into code?** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+> is a self-contained, runnable guided tour: work through it cell by cell on your own
+> machine or free in the cloud ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
+> It is a standalone way in; it does **not** follow this page's steps or the
+> [Tutorial](Tutorial), so treat it as an alternative, not a companion.
+
 > **Prefer the terminal to Python?** Once you're installed (Steps 1–4), add the
 > command line with `pip install "pyaegean[cli]"` and run **`aegean quickstart`**:
 > a guided first five minutes (eight short steps, seven of them running a real
@@ -113,7 +119,7 @@ Check it:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.30.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.31.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ## Step 5 — Run your first code
@@ -158,6 +164,12 @@ jupyter lab
 Your browser opens; click **Python 3** to make a new notebook, type a snippet into
 a cell, and press **Shift+Enter** to run it. Results (including Greek text and
 tables) appear right below the cell.
+
+Rather than start from a blank notebook, you can open the ready-made
+[getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb),
+a runnable guided tour of the toolkit ([open it in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+to run it in the cloud with nothing installed). It stands on its own and does not
+follow this page.
 
 ## Step 6 — Your first real result
 

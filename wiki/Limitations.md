@@ -300,8 +300,9 @@ These are deliberate. They're listed here so you can judge them, not so they get
 - **The AI layer is exploratory by construction.** Every generative result is a
   labeled, provenanced hypothesis built on local deterministic grounding: by
   policy it is never presented as a reading, whatever the model's confidence. It
-  needs your own API key and the matching extra; nothing is sent anywhere unless
-  you turn it on.
+  needs either a hosted provider's API key or a no-key local server (the `local`
+  provider: Ollama, LM Studio, llama.cpp), plus the matching extra; nothing is sent
+  anywhere unless you turn it on (and with `local`, nothing leaves your machine).
 
 - **Corpora are held in memory**: fine for everything pyaegean ships and fetches
   (the largest in-memory load, DAMOS, is ~5,900 documents; the one exception is

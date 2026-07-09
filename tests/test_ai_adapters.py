@@ -138,6 +138,43 @@ def test_grok_uses_xai_base_url(monkeypatch):
     assert rec["kwargs"]["messages"] == [{"role": "user", "content": "q"}]
 
 
+# ── local (Ollama / LM Studio / llama.cpp / vLLM, OpenAI-compatible) ──────────
+def test_local_defaults_to_ollama_and_placeholder_key(monkeypatch):
+    mod, rec = _fake_openai()
+    _install(monkeypatch, "openai", mod)
+    for var in ("PYAEGEAN_LOCAL_URL", "PYAEGEAN_LOCAL_API_KEY", "PYAEGEAN_LOCAL_MODEL"):
+        monkeypatch.delenv(var, raising=False)
+
+    resp = ai.get_client("local", model="llama3.1").complete("q")
+    assert resp.provider == "local" and resp.text == "oai answer"
+    assert rec["base_url"] == "http://localhost:11434/v1"  # Ollama default
+    assert rec["api_key"] == "local"                       # placeholder when none is set
+    assert rec["kwargs"]["model"] == "llama3.1"
+
+
+def test_local_honors_url_and_key_env(monkeypatch):
+    mod, rec = _fake_openai()
+    _install(monkeypatch, "openai", mod)
+    monkeypatch.setenv("PYAEGEAN_LOCAL_URL", "http://localhost:1234/v1")  # LM Studio
+    monkeypatch.setenv("PYAEGEAN_LOCAL_API_KEY", "vllm-secret")
+    monkeypatch.setenv("PYAEGEAN_LOCAL_MODEL", "mistral")
+
+    ai.get_client("local").complete("q")
+    assert rec["base_url"] == "http://localhost:1234/v1"
+    assert rec["api_key"] == "vllm-secret"
+    assert rec["kwargs"]["model"] == "mistral"
+
+
+def test_local_requires_a_model(monkeypatch):
+    mod, _rec = _fake_openai()
+    _install(monkeypatch, "openai", mod)
+    for var in ("PYAEGEAN_LOCAL_MODEL", "PYAEGEAN_LOCAL_API_KEY", "PYAEGEAN_LOCAL_URL"):
+        monkeypatch.delenv(var, raising=False)
+
+    with pytest.raises(ai.ProviderCallError, match="no model set for the 'local' provider"):
+        ai.get_client("local").complete("q")
+
+
 # ── Gemini ───────────────────────────────────────────────────────────────────
 def _fake_google() -> tuple[dict[str, types.ModuleType], dict]:
     rec: dict = {}

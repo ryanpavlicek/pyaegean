@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.30.0
+aegean --version                # pyaegean 0.31.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -323,6 +323,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `quantities` | Per-syllable metrical quantity | `--json` | `aegean greek quantities πατρός` |
 | `scan` | Metrical scansion against a fixed template | `--meter --json` | `aegean greek scan "…" --meter hexameter` |
 | `ipa` | Reconstructed IPA pronunciation | `--period` | `aegean greek ipa "λόγος" --period koine` |
+| `profile` | Observable features of a text (script, polytonic, Beta Code, editorial marks) | `--json` | `aegean greek profile "μῆνιν ἄειδε θεά"` |
 | `tag` | POS-tag (UD coarse tags) | `--treebank --tagger --neural --json` | `aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
 | `morph` | Candidate morphological parses | `--treebank --json` | `aegean greek morph λόγον` |
@@ -764,15 +765,16 @@ append=True)` (or `aegean.db.to_sqlite(corpus, path, append=True)`); load a DB b
 
 The generative layer. **Every result is exploratory**: a labeled model hypothesis
 carrying its grounding, never a citable fact and never a "decipherment." It needs a
-provider SDK (an extra such as `pip install "pyaegean[anthropic]"`) and that
-provider's API key in your environment. Without a key the command exits `1` with a
-clear message: it never silently calls out. Design notes: [AI Layer](AI-Layer);
-hard limits: [Limitations](Limitations).
+provider SDK (an extra such as `pip install "pyaegean[anthropic]"`) and, for a hosted
+provider, that provider's API key in your environment; the `local` provider instead
+uses a running local server (Ollama/LM Studio/llama.cpp) with no key. Without a key a
+hosted-provider command exits `1` with a clear message: it never silently calls out.
+Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --glosses/--no-glosses --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -782,7 +784,7 @@ hard limits: [Limitations](Limitations).
 
 ```bash
 aegean ai providers
-# anthropic / gemini / grok / openai / openrouter
+# anthropic / gemini / grok / local / openai / openrouter
 
 # heavy (needs the provider extra + API key in your environment):
 aegean ai translate "KU-RO 130" --script lineara          # exploratory (undeciphered!)
@@ -790,7 +792,8 @@ aegean ai ask "What is KU-RO?" --corpus lineara --trace   # answer + grounding p
 aegean ai extract "OLE S 1" --fields commodity,amount     # → {"commodity":"OLE","amount":…}
 ```
 
-`--provider` is `anthropic` (default) / `openai` / `grok` / `gemini` / `openrouter`; `--model`
+`--provider` is `anthropic` (default) / `openai` / `grok` / `gemini` / `openrouter` / `local`
+(a local Ollama/LM Studio/llama.cpp server); `--model`
 overrides the model. `--corpus NAME` grounds the answer on that corpus's frequent
 words. `--trace` prints the grounding provenance under the answer, so you can audit
 exactly what the model was (and wasn't) told. `extract` always prints JSON. For Greek,

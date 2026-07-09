@@ -121,6 +121,8 @@ baseline; after `use_treebank()`/`use_tagger()` etc., their better answers; afte
 `parse=True` (CLI `--parse`) without the neural pipeline requires `use_parser()`
 (CLI `--parser`). The CLI flags `--treebank`, `--tagger`, `--lemmatizer`,
 `--neural-lemmatizer`, and `--neural` turn the matching backend on for that run.
+To choose the backend that fits your material (clean text, a damaged inscription,
+OCR, teaching, benchmarking), see [Choosing a Pipeline](Choosing-a-Pipeline).
 
 ## The neural pipeline (opt-in)
 

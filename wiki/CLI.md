@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.30.0
+aegean --version          # pyaegean 0.31.0
 ```
 
 | Group | What's in it |
@@ -1197,7 +1197,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.30.0                    │
+│ OK │ pyaegean │ 0.31.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -2066,8 +2066,10 @@ in context and [Data & Provenance](Data-and-Provenance) for the table columns.
 The generative layer. **Every result here is exploratory**: a labeled model
 hypothesis carrying its grounding evidence, never a citable fact, and never a
 "decipherment." It needs a provider SDK (an extra such as
-`pip install "pyaegean[anthropic]"`) and that provider's API key in your
-environment. Without a key, the command exits `1` with a clear message: it never
+`pip install "pyaegean[anthropic]"`) and, for a hosted provider, that provider's
+API key in your environment; the `local` provider instead points at a running local
+server (Ollama, LM Studio, llama.cpp) and needs no key. Without a key, a
+hosted-provider command exits `1` with a clear message: it never
 silently calls out.
 
 ```bash
@@ -2075,6 +2077,7 @@ aegean ai providers
 # anthropic
 # gemini
 # grok
+# local
 # openai
 # openrouter
 ```

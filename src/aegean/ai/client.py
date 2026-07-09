@@ -1,7 +1,8 @@
 """Provider-agnostic LLM client contract + result/labeling types.
 
 The AI layer is **multi-provider** (Anthropic default, plus OpenAI, xAI Grok,
-Google Gemini, and OpenRouter) and **optional**: provider SDKs are extras, imported lazily inside
+Google Gemini, OpenRouter, and `local` for a locally hosted OpenAI-compatible endpoint) and
+**optional**: provider SDKs are extras, imported lazily inside
 each adapter, so ``import aegean`` never requires them. Every generative output
 is wrapped in an `ExploratoryResult` carrying provenance (provider, model,
 prompt version) and an ``exploratory`` flag — generative readings of this
@@ -267,7 +268,7 @@ def get_client(
 
 
 def providers() -> list[str]:
-    """Sorted names of registered providers, e.g. ``['anthropic', 'gemini', 'grok', 'openai', 'openrouter']``."""
+    """Sorted names of registered providers, e.g. ``['anthropic', 'gemini', 'grok', 'local', 'openai', 'openrouter']``."""
     return sorted(_PROVIDERS)
 
 

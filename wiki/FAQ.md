@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.30.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.31.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -124,8 +124,8 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 
 See [Installation](Installation) for the full breakdown. `aegean doctor` reports
 which of the runtime extras are importable in your environment, with the install
-line for each one that isn't (`grok` and `openrouter` ride the `openai` row,
-since they share its SDK).
+line for each one that isn't (`grok`, `openrouter`, and `local` ride the `openai`
+row, since they share its SDK).
 
 ### Which Python versions are supported?
 
@@ -501,7 +501,11 @@ fully offline.
 Only for the **[AI Layer](AI-Layer)** (translation, glossing, decipherment
 hypotheses). Everything else (analysis, scansion, morphology, statistics) needs
 no key and no account. To use AI, install a provider extra and set its key, e.g.
-`pip install "pyaegean[anthropic]"` and `ANTHROPIC_API_KEY`.
+`pip install "pyaegean[anthropic]"` and `ANTHROPIC_API_KEY`. Or skip the key
+entirely and run a model on your own machine with the `local` provider (Ollama,
+LM Studio, llama.cpp): `pip install "pyaegean[openai]"`, then point
+`PYAEGEAN_LOCAL_MODEL` at a model your server has. See
+[AI Layer → Using a local model](AI-Layer#using-a-local-model-ollama-lm-studio-llamacpp-vllm).
 
 ### Where are downloaded/fetched files stored?
 

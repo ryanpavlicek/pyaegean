@@ -14,6 +14,12 @@ shown; pick whichever fits how you work. The shell side assumes you installed th
 CLI (`pip install "pyaegean[cli]"`); see the [CLI](CLI) page for the full command
 list.
 
+> **Want a ready-made notebook instead?** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+> is a self-contained runnable tour you can open and run cell by cell, locally or free
+> in the cloud ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
+> It covers its own material and does **not** follow this tutorial, so it is a separate
+> jump-in rather than a companion to these walkthroughs.
+
 **The three walkthroughs:**
 
 | # | Question | Track | Network needed? |

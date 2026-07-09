@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.31.0 (2026-07-09)
+
+Run the AI layer on a model on your own machine, with no API key or network.
+
+### Added
+- **Local model provider.** A new `local` AI provider talks to any OpenAI-compatible server, so
+  the model runs on your own machine: **Ollama** (the default, `http://localhost:11434/v1`), **LM
+  Studio**, **llama.cpp**'s server, **vLLM**, and **LocalAI**. Configure it with `PYAEGEAN_LOCAL_URL`,
+  `PYAEGEAN_LOCAL_MODEL`, and an optional `PYAEGEAN_LOCAL_API_KEY`. It uses the `openai` extra (no new
+  dependency), needs no key or network, and grounding, exploratory labeling, provenance, caching, and
+  `translate(verify=True)` all work as they do for a hosted provider. Reachable from Python
+  (`ai.get_client("local", model=…)`, `translate(..., client=…)`) and the CLI (`--provider local`).
+  New wiki section: "Using a local model".
+
+### Changed
+- The getting-started notebook is now linked from the **Getting Started** and **Tutorial** wiki pages
+  (as a standalone runnable tour, noted as an alternative that does not follow those pages), not only
+  from the README.
+- Documentation consistency pass across the recent releases: the `local` provider, the `aegean greek
+  profile` command, and the six-provider list are reflected everywhere the AI layer, providers, and
+  command maps are described.
+
 ## 0.30.0 (2026-07-09)
 
 Guidance and process: help a user pick the right pipeline and workflow, describe what a text

@@ -1,7 +1,7 @@
 # AI Layer
 
-`aegean.ai` is an **optional, key-gated** generative layer: you bring an API key
-for one of five providers, feed the model **real local evidence** from the corpus
+`aegean.ai` is an **optional** generative layer: you bring an API key for one of
+five hosted providers (or run a model locally with no key), feed the model **real local evidence** from the corpus
 and lexicon, and ask it to translate, gloss, summarize, propose decipherment
 hypotheses, answer questions, or pull structured data out of a tablet. You'd reach for it when
 the rule-based tools have done all they can and you want a *labeled, traceable
@@ -18,8 +18,9 @@ A few things hold across the whole layer:
 
 - **Optional and lazy.** Each provider's SDK is an extra, imported only when you
   actually call it. `import aegean` never requires any of them, and nothing here
-  runs (or costs anything) until you build a client with a key.
-- **Keys come from the environment** and are never logged.
+  runs (or costs anything) until you build a client (with a hosted provider's key,
+  or a no-key local server via the `local` provider).
+- **Keys come from the environment** and are never logged; the `local` provider needs none.
 - **Grounded by design.** You pass deterministic, local evidence (corpus
   frequencies, co-occurrences, dictionary glosses) and the model is told to reason
   over it. Untrusted source text is wrapped so instructions hidden inside a
@@ -63,7 +64,8 @@ See [Installation](Installation) for the full extras matrix.
 
 ## Providers & clients
 
-Five providers ship built in. Each is registered automatically when you
+Six providers ship built in, including a **local** one that runs a model on your own
+machine with no API key or network. Each is registered automatically when you
 `import aegean.ai`.
 
 | Provider | id | SDK extra | Key env var | Model env var | Default model |
@@ -73,10 +75,11 @@ Five providers ship built in. Each is registered automatically when you
 | xAI Grok | `grok` | `pyaegean[grok]` | `XAI_API_KEY` | `XAI_MODEL` | `grok-2-latest` |
 | Google Gemini | `gemini` | `pyaegean[gemini]` | `GEMINI_API_KEY` | `GEMINI_MODEL` | `gemini-1.5-pro` |
 | OpenRouter | `openrouter` | `pyaegean[openrouter]` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `openai/gpt-4o-mini` |
+| Local (Ollama, …) | `local` | `pyaegean[openai]` | `PYAEGEAN_LOCAL_API_KEY` (optional) | `PYAEGEAN_LOCAL_MODEL` | none (set the model) |
 
 > The default models are starting points. Model ids drift; the layer is built so
 > you can point each provider at the current model without touching code (see
-> [Model selection](#model-selection) below). Grok and OpenRouter talk through
+> [Model selection](#model-selection) below). Grok, OpenRouter, and Local talk through
 > OpenAI-compatible endpoints under the hood, so they use the `openai` SDK; OpenRouter
 > reaches many vendors from one key, with `vendor/model` ids (e.g.
 > `anthropic/claude-3.5-sonnet`) set via `OPENROUTER_MODEL`.
@@ -86,11 +89,12 @@ List what's registered, and build a client:
 ```python
 from aegean import ai
 
-ai.list_providers()                      # ['anthropic', 'gemini', 'grok', 'openai', 'openrouter']
+ai.list_providers()                      # ['anthropic', 'gemini', 'grok', 'local', 'openai', 'openrouter']
 
 client = ai.get_client("anthropic")      # needs pyaegean[anthropic] + a key
 client = ai.get_client("openai", model="gpt-4o")
 client = ai.get_client("gemini", api_key="…")   # or pass the key explicitly
+client = ai.get_client("local", model="llama3.1")  # a model you've pulled in Ollama
 ```
 
 From the shell:
@@ -100,9 +104,46 @@ aegean ai providers
 # anthropic
 # gemini
 # grok
+# local
 # openai
 # openrouter
 ```
+
+### Using a local model (Ollama, LM Studio, llama.cpp, vLLM)
+
+The `local` provider talks to any server that speaks the OpenAI `/v1/chat/completions`
+API, so the model runs on your own machine: no key, no network, no per-token cost. It
+uses the `openai` SDK (`pip install "pyaegean[openai]"`), and you point it at your server
+and name a model:
+
+| Server | Start it | `PYAEGEAN_LOCAL_URL` |
+| --- | --- | --- |
+| **Ollama** | `ollama serve` then `ollama pull llama3.1` | `http://localhost:11434/v1` (the default) |
+| **LM Studio** | start its local server | `http://localhost:1234/v1` |
+| **llama.cpp** | `llama-server -m model.gguf` | `http://localhost:8080/v1` |
+| **vLLM / LocalAI** | per their docs | that server's base URL |
+
+```bash
+pip install "pyaegean[openai]"          # the local provider uses the OpenAI SDK
+export PYAEGEAN_LOCAL_MODEL=llama3.1     # a model your server has (here: pulled in Ollama)
+# PYAEGEAN_LOCAL_URL defaults to Ollama's http://localhost:11434/v1
+aegean ai translate --provider local "μῆνιν ἄειδε θεά"
+```
+
+```python
+from aegean import ai, translate
+
+client = ai.get_client("local", model="llama3.1")   # Ollama on localhost by default
+translate.translate("μῆνιν ἄειδε θεά", client=client)  # runs entirely on your machine
+```
+
+Notes: the model name is required (there is no universal default, set
+`PYAEGEAN_LOCAL_MODEL` or pass `model=`); most local servers ignore the API key, so a
+placeholder is sent unless you set `PYAEGEAN_LOCAL_API_KEY` (for a server like vLLM started
+with `--api-key`); everything else (grounding, exploratory labeling, provenance, the
+response cache, `translate(verify=True)`) works exactly as it does for a hosted provider.
+A small local model is weaker than a frontier model: its output is exploratory like any
+other, and grounding it on the corpus (the default) matters more, not less.
 
 ### `get_client` arguments
 
@@ -871,7 +912,7 @@ time), so a bad key won't blow up until you actually make a call.
 | --- | --- | --- |
 | `ProviderNotInstalled` | The provider's SDK isn't installed | `pip install "pyaegean[<provider>]"` |
 | `MissingAPIKey` | No key in the env or `api_key=` | Set `$<PROVIDER>_API_KEY` or pass `api_key=` |
-| `UnknownProvider` | An unregistered provider id | Use one of `anthropic`, `openai`, `grok`, `gemini`, `openrouter` |
+| `UnknownProvider` | An unregistered provider id | Use one of `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, `local` |
 
 All three subclass `AIError`. On the CLI they print one clean line to stderr and
 exit 1:
@@ -882,7 +923,7 @@ aegean ai gloss "ἦν"          # with no SDK installed
 
 python -c "from aegean import ai; ai.get_client('llama')"
 # aegean.ai.client.UnknownProvider: unknown provider 'llama';
-#   available: ['anthropic', 'gemini', 'grok', 'openai', 'openrouter']
+#   available: ['anthropic', 'gemini', 'grok', 'local', 'openai', 'openrouter']
 ```
 
 ---

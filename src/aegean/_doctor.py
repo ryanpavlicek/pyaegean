@@ -25,7 +25,7 @@ _EXTRAS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     ("data", ("pandas",), "DataFrame interop (to_dataframe)"),
     ("neural", ("onnxruntime", "tokenizers", "numpy"), "the neural Greek pipeline"),
     ("anthropic", ("anthropic",), "the Anthropic provider (aegean.ai)"),
-    ("openai", ("openai",), "the OpenAI, Grok, and OpenRouter providers (aegean.ai)"),
+    ("openai", ("openai",), "the OpenAI, Grok, OpenRouter, and local providers (aegean.ai)"),
     ("gemini", ("google.genai",), "the Gemini provider (aegean.ai)"),
     ("epidoc", ("lxml",), "schema-valid EpiDoc export"),
     ("geo", ("geopandas", "shapely"), "the geospatial layer (aegean.geo)"),

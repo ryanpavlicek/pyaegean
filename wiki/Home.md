@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.30.0 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.31.0 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -80,7 +80,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [CLI](CLI) | The **`aegean` command line** (`[cli]` extra): the whole toolkit without writing Python: a guided `quickstart` tour, an interactive `repl` (persistent history, session corpus), a full-screen `tui` terminal UI (the `[tui]` extra), corpus commands, the full Greek NLP pipeline, analysis, data fetching, an offline `doctor` environment check, and the (exploratory) AI layer; `--json` everywhere, stdin-pipeable |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
-| [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter), grounding, caching, exploratory-labeled capabilities, hybrid translation |
+| [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter, plus a local Ollama/LM Studio/llama.cpp option), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
 The **[API reference](https://ryanpavlicek.github.io/pyaegean/)** documents every public module, class,
@@ -91,7 +91,7 @@ and function, generated from the docstrings and type hints, complementing the gu
 ```bash
 pip install pyaegean            # core + Linear A + Greek
 pip install "pyaegean[cli]"     # + the `aegean` command line
-pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients
+pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local Ollama option)
 pip install "pyaegean[all]"     # everything
 ```
 
@@ -100,7 +100,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.30.0.** pyaegean covers all four Aegean scripts, fourteen loadable corpora
+**Current release: v0.31.0.** pyaegean covers all four Aegean scripts, fourteen loadable corpora
 (through the 57,000-papyrus DDbDP documentary corpus), and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the

@@ -1,8 +1,9 @@
 """Built-in provider adapters: Anthropic (default), OpenAI, xAI Grok, Google
-Gemini, and OpenRouter (an OpenAI-compatible gateway to many models from one key).
-Each SDK is an optional extra, imported lazily inside ``_complete`` and surfaced as
-`ProviderNotInstalled` if absent. API keys are read from the environment and never
-logged.
+Gemini, OpenRouter (an OpenAI-compatible gateway to many models from one key), and
+`local` (a locally hosted OpenAI-compatible endpoint: Ollama, LM Studio, llama.cpp,
+vLLM, LocalAI). Each SDK is an optional extra, imported lazily inside ``_complete``
+and surfaced as `ProviderNotInstalled` if absent. API keys are read from the
+environment and never logged; the `local` provider needs none.
 
 Default models are configurable (model ids drift): set ``ANTHROPIC_MODEL`` /
 ``OPENAI_MODEL`` / ``XAI_MODEL`` / ``GEMINI_MODEL`` / ``OPENROUTER_MODEL`` to pin the
@@ -13,6 +14,8 @@ model ids are ``vendor/model`` (e.g. ``anthropic/claude-3.5-sonnet``); set
 """
 
 from __future__ import annotations
+
+import os
 
 from .client import (
     LLMClient,
@@ -127,6 +130,51 @@ class OpenRouterClient(_OpenAICompatibleClient):
     env_model = "OPENROUTER_MODEL"
     default_model = "openai/gpt-4o-mini"  # OpenRouter ids are vendor/model; override via OPENROUTER_MODEL
     base_url = "https://openrouter.ai/api/v1"  # OpenAI-API-compatible gateway
+
+
+@register_provider
+class LocalClient(_OpenAICompatibleClient):
+    """A locally hosted, OpenAI-API-compatible endpoint: Ollama, LM Studio, llama.cpp's
+    server, vLLM, LocalAI, or any server that speaks the OpenAI ``/v1/chat/completions``
+    API. Runs the model on your own machine, no API key or network required.
+
+    Configure it with environment variables (or the usual ``model=`` / ``api_key=`` args):
+
+    - ``PYAEGEAN_LOCAL_URL`` — the server's OpenAI-compatible base URL. Defaults to
+      Ollama's ``http://localhost:11434/v1``. LM Studio is ``http://localhost:1234/v1``,
+      llama.cpp's server ``http://localhost:8080/v1``.
+    - ``PYAEGEAN_LOCAL_MODEL`` — the model name to request (e.g. an Ollama model you have
+      pulled). Required: there is no universal default.
+    - ``PYAEGEAN_LOCAL_API_KEY`` — only if your server enforces one (vLLM's ``--api-key``);
+      most local servers ignore it, so a placeholder is sent when it is unset.
+
+    Uses the ``openai`` SDK, so ``pip install 'pyaegean[openai]'`` is all it needs. A local
+    model's output is exploratory like any other provider's: labeled, provenanced, grounded.
+    """
+
+    provider = "local"
+    env_key = "PYAEGEAN_LOCAL_API_KEY"
+    env_model = "PYAEGEAN_LOCAL_MODEL"
+    default_model = ""  # no universal local default; require model= or PYAEGEAN_LOCAL_MODEL
+
+    _DEFAULT_URL = "http://localhost:11434/v1"  # Ollama
+
+    def __init__(self, model: str | None = None, *, api_key: str | None = None, cache=None) -> None:  # type: ignore[no-untyped-def]
+        super().__init__(model, api_key=api_key, cache=cache)
+        # base_url is per-instance here (it varies by server), unlike the fixed-gateway clients.
+        self.base_url = os.environ.get("PYAEGEAN_LOCAL_URL", self._DEFAULT_URL)
+
+    def _require_key(self) -> str:
+        # Local servers usually accept any key; send the configured one or a harmless placeholder.
+        return self._api_key or "local"
+
+    def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
+        if not self.model:
+            raise ProviderCallError(
+                "no model set for the 'local' provider; set $PYAEGEAN_LOCAL_MODEL or pass "
+                "model= (the name of a model your local server has, e.g. one you pulled in Ollama)"
+            )
+        return super()._complete(prompt=prompt, system=system, max_tokens=max_tokens)
 
 
 @register_provider

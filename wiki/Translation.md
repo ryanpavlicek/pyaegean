@@ -211,11 +211,15 @@ verify, see [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean)
 
 ## Providers: the key-gated `[ai]` layer
 
-Translation runs through the same five providers as the rest of the AI layer.
+Translation runs through the same providers as the rest of the AI layer: five hosted
+(Anthropic, OpenAI, Grok, Gemini, OpenRouter) plus `local`, which runs a model on your own
+machine through an OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM) with no key
+or network. See [AI Layer → Using a local model](AI-Layer#using-a-local-model-ollama-lm-studio-llamacpp-vllm).
 The core library has **zero third-party dependencies**; a provider's SDK is an
 optional extra, imported only when you actually call it, and nothing runs (or
-costs anything) until you build a client with an API key. Keys come from the
-environment and are never logged.
+costs anything) until you build a client (with a hosted provider's API key, or a
+no-key local server via the `local` provider). Keys come from the environment and
+are never logged.
 
 | Provider | id | Key env var | Default model |
 | --- | --- | --- | --- |
@@ -299,7 +303,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--mode` | `morphology` | Grounding style: `morphology`, `full`, `lemma` (legacy), `none`. |
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
-| `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, or `openrouter`. |
+| `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |
 | `--model` | provider default | Model override. |
 | `--output` / `-o` | — | Save the result (`.json` full result, `.txt` labeled text). |
 | `--trace` | off | Print the grounding provenance under the answer. |

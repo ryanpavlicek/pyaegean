@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.30.0 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.31.0 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -52,7 +52,7 @@ prior programming.
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **schema-valid EpiDoc / CSV / Parquet** export via `aegean.io` (the EpiDoc validates against the official EpiDoc RelaxNG and round-trips editorial status, and any EpiDoc edition **reads back in** with `from_epidoc`). Every corpus carries provenance and a one-line citation. |
 | **A browser UI for any corpus** | `aegean.io.to_workbench(corpus, "my.json")` emits a file the [Linear A Research Workbench](https://linearaworkbench.xyz/) opens via `?corpus=`: your own inscriptions get its 50 analysis modules, maps, and imagery browser with zero setup. `from_workbench_export()` loads the workbench's corpus exports (and its static data API) back into Python. |
 | **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer, so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
-| **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter. Every generative reading is built on a **local, deterministic grounding** step from the tools above, and is labeled **exploratory** with its provenance: a hypothesis, never an assertion. |
+| **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Every generative reading is built on a **local, deterministic grounding** step from the tools above, and is labeled **exploratory** with its provenance: a hypothesis, never an assertion. |
 | **Measured accuracy** | Deciphered Greek uses real scholarship (attested lemmas, gold POS, measured accuracy). The *undeciphered* material (Linear A, Cypro-Minoan) is labeled **EXPLORATORY** everywhere: the tools surface *leads*, never answers. |
 
 ## Install
@@ -62,7 +62,7 @@ pip install pyaegean              # core + Linear A + Greek (zero heavy dependen
 pip install "pyaegean[cli]"       # + the `aegean` command line
 pip install "pyaegean[tui]"       # + the `aegean tui` full-screen terminal UI (Textual)
 pip install "pyaegean[neural]"    # + the neural Greek pipeline & lemmatizer (onnxruntime; no torch)
-pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients
+pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local option)
 pip install "pyaegean[mcp]"       # + the `aegean-mcp` Model Context Protocol server (for agents)
 pip install "pyaegean[all]"       # the data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras
 ```
@@ -154,7 +154,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.30.0**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.31.0**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, inflection synthesis, terminology-rarity scoring, dialect/register tags, a benchmark
 harness, and a neutral out-of-AGDT evaluation with a convention-drift breakdown); a **pluggable lexicon
@@ -166,7 +166,8 @@ corpora (I.Sicily, IIP, IOSPE, IGCyr/GVCyr, the EDH Greek subset, and the 57,331
 plots, and cross-script phonetic comparison; a complete data layer (lossless JSON round-trip, a
 compound `query()`, schema-valid EpiDoc / CSV / Parquet export, **SQLite persistence** with
 full-text search, an opt-in analysis cache, and Pleiades-aligned find-sites); a **multi-provider
-AI layer** (Anthropic, OpenAI, Grok, Gemini, OpenRouter) with grounded, exploratory-labeled
+AI layer** (Anthropic, OpenAI, Grok, Gemini, OpenRouter, plus a local Ollama/llama.cpp option)
+with grounded, exploratory-labeled
 translation and optional gated LSJ gloss grounding; the **`aegean`** command line mirroring the
 Python API, the **`aegean tui`** terminal UI, and the **`aegean-mcp`** server; and an in-browser
 demo.
@@ -213,7 +214,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.30.0},
+  version = {0.31.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

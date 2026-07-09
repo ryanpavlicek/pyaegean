@@ -434,7 +434,7 @@ def test_analyze_structure(app):
 # ── ai group ─────────────────────────────────────────────────────────────────
 def test_ai_providers(app):
     assert set(json.loads(ok(app, "ai", "providers", "--json"))) == {
-        "anthropic", "openai", "grok", "gemini", "openrouter",
+        "anthropic", "openai", "grok", "gemini", "openrouter", "local",
     }
 
 

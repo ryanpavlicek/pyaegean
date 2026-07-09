@@ -8,7 +8,7 @@ authors:
     orcid: "https://orcid.org/0009-0009-8303-3644"
 repository-code: "https://github.com/ryanpavlicek/pyaegean"
 license: Apache-2.0
-version: 0.30.0
+version: 0.31.0
 date-released: 2026-07-09
 keywords:
   - ancient greek

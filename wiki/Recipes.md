@@ -78,7 +78,8 @@ running from a research question to a citable result, in the CLI and in Python
 as each step is most natural. Every output shown is real, produced against the
 shipped corpora; the steps that touch the network (a first-time fetch) or need
 an API key are marked. Each walkthrough ends with links back to the task
-recipes it builds on.
+recipes it builds on. To match your audience or goal (teaching, research,
+exploratory, benchmarking) to a workflow, see [Choosing a Workflow](Choosing-a-Workflow).
 
 ### A · The epigraphist: from a site filter to a citable subset
 
@@ -405,7 +406,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.30.0
+print(aegean.__version__)          # 0.31.0
 print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -824,7 +825,7 @@ print(r.trace())       # every corpus/analysis fact the answer rested on, by sou
 
 ```bash
 aegean ai ask "What is KU-RO?" --corpus lineara --trace
-aegean ai providers             # anthropic · gemini · grok · openai · openrouter
+aegean ai providers             # anthropic · gemini · grok · local · openai · openrouter
 aegean ai eval                  # grounding-fidelity scores for your provider
 ```
 
@@ -837,6 +838,7 @@ The registered providers and the extra that activates each:
 | `gemini` | `pip install "pyaegean[gemini]"` | Gemini |
 | `grok` | `pip install "pyaegean[grok]"` | Grok |
 | `openrouter` | `pip install "pyaegean[openrouter]"` | many vendors via one key (`vendor/model` ids) |
+| `local` | `pip install "pyaegean[openai]"` | a local server (Ollama/LM Studio/llama.cpp), no key |
 
 Every generative result is a labeled hypothesis, never a reading: see
 [AI Layer](AI-Layer) and, if you can judge the answer, the
@@ -1283,7 +1285,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.30.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.31.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

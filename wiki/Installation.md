@@ -103,7 +103,9 @@ A few things worth knowing:
 - **`[grok]` and `[openai]` install the same SDK**: Grok speaks the OpenAI API,
   so it reuses the `openai` package with a different endpoint and key.
 - **The AI layer is exploratory and key-gated.** Installing `[ai]` only adds the
-  SDKs; you still supply your own API key at runtime. See [AI Layer](AI-Layer).
+  SDKs; you still supply your own API key at runtime, unless you run a model locally
+  with the `local` provider (Ollama, LM Studio, llama.cpp), which needs no key.
+  See [AI Layer](AI-Layer).
 
 ### Two extras that add command-line tools
 
@@ -115,7 +117,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.30.0
+# pyaegean 0.31.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +132,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.30.0
+print(aegean.__version__)                 # 0.31.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +149,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.30.0
+# pyaegean 0.31.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +187,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.30.0                    │
+│ OK │ pyaegean │ 0.31.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -414,8 +416,9 @@ pip install -e ".[dev]"
   (Linear A) are not redistributed inside the package precisely because of their
   licenses: you fetch them yourself, under their terms. The facsimile imagery is
   for academic reference only. Mind the license column before reusing data.
-- **The AI layer needs your own API key** and is explicitly exploratory; it does
-  not ship a model. See [AI Layer](AI-Layer).
+- **The AI layer needs your own API key** (or a no-key local server via the `local`
+  provider) and is explicitly exploratory; it does not ship a model. See
+  [AI Layer](AI-Layer).
 - **`aegean.__version__` reads installed package metadata.** If it ever prints
   `0.0.0+unknown`, the package metadata wasn't found (an unusual editable/zip
   setup): reinstall normally and it resolves.
