@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.28.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.29.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -161,7 +161,7 @@ sorted(_LOADERS)
 | `iospe` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts, ~4 MB) | fetched on first use |
 | `igcyr` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts, ~3 MB) | fetched on first use |
 | `edh` | EDH Greek inscriptions, the pure-Greek subset (1,286 texts, ~6 MB) | fetched on first use |
-| `ddbdp` | the DDbDP documentary papyri (57,329 texts as a SQLite database with full-text search, ~206 MB; loading it whole is heavy, prefer `aegean db search ddbdp`) | fetched on first use |
+| `ddbdp` | the DDbDP documentary papyri (57,331 texts as a SQLite database with full-text search, ~219 MB; loading it whole is heavy, prefer `aegean db search ddbdp`) | fetched on first use |
 | `nt` | the Greek New Testament (Nestle 1904); two sample chapters bundled offline (John 1 + Philemon 1), the rest fetched | mostly fetched |
 
 ```python
@@ -482,7 +482,7 @@ No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 the fetched corpora: `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
 ~3 MB), `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.2 MB), and the fetched
-Greek epigraphy corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, plus the ~206 MB
+Greek epigraphy corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, plus the ~219 MB
 `ddbdp` papyri database):
 `greek.load_work(...)` / `greek.load_nt(...)` (real Greek texts, pinned to a commit),
 `data.fetch(...)` for large extra assets (the facsimile images), the optional AI layer,

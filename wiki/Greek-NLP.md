@@ -1280,7 +1280,7 @@ statistics run on them unchanged: `isicily` (2,855 inscriptions of ancient
 Sicily), `iip` (2,113, Israel/Palestine), `iospe` (1,194, the Northern Black
 Sea), `igcyr` (997, Cyrenaica: archaic Doric and verse, with non-normalized
 epichoric spellings), `edh` (1,286, the Greek subset of the Epigraphic Database
-Heidelberg), and `ddbdp` (the Duke Databank of Documentary Papyri: 57,329 papyri,
+Heidelberg), and `ddbdp` (the Duke Databank of Documentary Papyri: 57,331 papyri,
 ~4.4M tokens).
 
 ```python

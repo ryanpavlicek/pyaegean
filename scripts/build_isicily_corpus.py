@@ -24,60 +24,13 @@ from pathlib import Path
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML = "http://www.w3.org/XML/1998/namespace"
 
-# Elements whose textual content is NOT part of the running reading text: editorial symbols
-# (<g> palm/christogram/etc.), lost gaps, spaces/milestones, and apparatus/notes.
-_SKIP = {"g", "gap", "space", "milestone", "note", "certainty", "lem", "rdg", "app", "abbr"}
-# Within <choice>/<expan> keep the resolved/expanded form (<ex>, <reg>, <corr>), drop the raw
-# (<abbr>, <orig>, <sic>) — <abbr> is already in _SKIP; <expan> keeps <ex> and drops <abbr>.
+# The reading-text extractor (with per-token editorial ReadingStatus) is shared across the
+# epigraphy corpora; I.Sicily reuses it so a restored/damaged reading is preserved, not flattened.
+from _epidoc import edition_tokens  # noqa: E402
 
 
 def _local(tag: object) -> str:
     return str(tag).rsplit("}", 1)[-1]
-
-
-def _edition_lines(edition: ET.Element) -> list[str]:
-    """The primary edition's reading text as a list of physical lines (Greek running text).
-
-    ``<lb break="no"/>`` marks a word split across a line with no word boundary, so the text that
-    follows must attach with no space (Ἀ|λεξάνδρου -> Ἀλεξάνδρου); a plain ``<lb/>`` starts a new
-    physical line. Inter-word spaces come from the literal text nodes between tokens."""
-    lines: list[str] = [""]
-    join_next = [False]  # the next text fragment continues a word (strip its leading space)
-
-    def add(text: str | None) -> None:
-        if not text:
-            return
-        if join_next[0]:
-            text = text.lstrip()
-            join_next[0] = False
-        lines[-1] += text
-
-    def walk(el: ET.Element) -> None:
-        tag = _local(el.tag)
-        if tag == "lb":
-            if el.get("break") == "no":
-                lines[-1] = lines[-1].rstrip()  # continuation attaches with no space
-                join_next[0] = True
-            else:
-                lines.append("")
-            return
-        if tag in _SKIP:
-            return  # element content dropped; the caller still adds the element's tail
-        add(el.text)
-        for child in el:
-            walk(child)
-            add(child.tail)
-
-    for child in edition:  # walk the <ab>(s) under the edition div
-        walk(child)
-        add(child.tail)
-
-    out: list[str] = []
-    for raw in lines:
-        text = re.sub(r"\s+", " ", raw).strip()
-        if text:
-            out.append(text)
-    return out
 
 
 def _first(root: ET.Element, *locals_: str) -> str:
@@ -155,19 +108,21 @@ def main() -> int:
         edition = _primary_edition(root)
         if edition is None:
             continue
-        lines_text = _edition_lines(edition)
-        if not lines_text:
+        token_lines = edition_tokens(edition)
+        if not token_lines:
             continue  # no readable Greek text (fragment/uninscribed)
         greek += 1
         tokens: list[Token] = []
         lines: list[list[int]] = []
         pos = 0
-        for lt in lines_text:
+        for tl in token_lines:
             idxs: list[int] = []
-            for word in lt.split(" "):
+            for word, status in tl:
                 if not word:
                     continue
-                tokens.append(Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos))
+                tokens.append(
+                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
+                )
                 idxs.append(pos)
                 pos += 1
             if idxs:
@@ -192,6 +147,7 @@ def main() -> int:
         source="I.Sicily (ISicily/ISicily, CC BY 4.0), primary-Greek inscriptions",
         license="CC-BY-4.0 (I.Sicily; Jonathan Prag et al., University of Oxford)",
         url="https://github.com/ISicily/ISicily",
+        edition_fidelity="apparatus-preserved,normalized",
     )
     corpus = Corpus(docs, provenance=prov, script_id="greek")
     Path(args.output).write_text(corpus.to_json(), encoding="utf-8")

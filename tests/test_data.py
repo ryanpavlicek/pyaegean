@@ -114,6 +114,53 @@ def test_extract_dataset_unpacks_and_is_idempotent(tmp_path, monkeypatch):
     assert not (data.cache_dir() / "imgs.part").exists()  # archive cleaned up
 
 
+def test_extract_repin_redownloads_on_sha_change(tmp_path, monkeypatch):
+    """A re-pinned archive (a corpus rebuilt as -v2, new sha256) must be re-fetched, not
+    served stale from the existing unpacked directory. The single-file path re-hashes the
+    file; the extract path relies on a sha256 stamp beside the unpacked dir."""
+    v1, sha1 = _make_targz(tmp_path, {"corpus.txt": b"v1-content"})
+    monkeypatch.setitem(
+        data._REMOTE, "cx", DataSpec(name="cx", url=v1.as_uri(), license="x", sha256=sha1, extract=True)
+    )
+    out = fetch("cx")
+    assert (out / "images" / "corpus.txt").read_bytes() == b"v1-content"
+    assert (data.cache_dir() / "cx.sha256").read_text().strip() == sha1  # stamped
+
+    # re-pin the same dataset to a different archive (v2) — must re-extract
+    v2 = tmp_path / "v2.tar.gz"
+    import tarfile
+    src2 = tmp_path / "p2"
+    (src2 / "images").mkdir(parents=True)
+    (src2 / "images" / "corpus.txt").write_bytes(b"v2-content")
+    with tarfile.open(v2, "w:gz") as tf:
+        tf.add(src2 / "images", arcname="images")
+    sha2 = sha256_file(v2)
+    monkeypatch.setitem(
+        data._REMOTE, "cx", DataSpec(name="cx", url=v2.as_uri(), license="x", sha256=sha2, extract=True)
+    )
+    out2 = fetch("cx")
+    assert (out2 / "images" / "corpus.txt").read_bytes() == b"v2-content"  # picked up v2
+    assert (data.cache_dir() / "cx.sha256").read_text().strip() == sha2
+
+
+def test_extract_legacy_unstamped_is_trusted(tmp_path, monkeypatch):
+    """A pre-stamp (legacy) extraction has no .sha256 sidecar. To avoid needlessly
+    re-downloading every unchanged heavy archive on upgrade, a missing stamp is trusted:
+    the existing directory is served as-is (no re-extract)."""
+    archive, sha = _make_targz(tmp_path, {"a.txt": b"cached"})
+    monkeypatch.setitem(
+        data._REMOTE, "cx", DataSpec(name="cx", url=archive.as_uri(), license="x", sha256=sha, extract=True)
+    )
+    out = fetch("cx")
+    (data.cache_dir() / "cx.sha256").unlink()  # simulate a pre-0.29 extraction
+    mtime = out.stat().st_mtime_ns
+    # a DIFFERENT pinned sha, but no stamp present → trust the legacy extraction, no re-fetch
+    monkeypatch.setitem(
+        data._REMOTE, "cx", DataSpec(name="cx", url=archive.as_uri(), license="x", sha256="0" * 64, extract=True)
+    )
+    assert fetch("cx") == out and out.stat().st_mtime_ns == mtime  # untouched
+
+
 def test_extract_rejects_checksum_mismatch(tmp_path, monkeypatch):
     archive, _ = _make_targz(tmp_path, {"a.jpg": b"x"})
     monkeypatch.setitem(

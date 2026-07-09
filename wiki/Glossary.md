@@ -11,7 +11,7 @@ what it meant here, this is the page to keep open.
 > the full command reference see the [CLI](CLI) page; for every Greek function see
 > [Greek NLP](Greek-NLP).
 
-The examples below were run against pyaegean 0.28.0 (the `aegean` command-line tool
+The examples below were run against pyaegean 0.29.0 (the `aegean` command-line tool
 and the `aegean` Python package). Where a feature has both a Python call and a
 shell command, both are shown.
 
@@ -376,7 +376,7 @@ See [Greek Works and Books](Greek-Works-and-Books#3-finding-any-other-work).
 | **GORILA** | *Recueil des inscriptions en linéaire A* (Godart & Olivier 1976–1985): the standard Linear A edition; pyaegean's bundled Linear A corpus is derived from it. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
 | **DAMOS** | *Database of Mycenaean at Oslo*: a Linear B corpus (~5,900 tablets) with scribal hands, find context, and object class; fetched on demand. | [Linear B](Linear-B), [Data & Provenance](Data-and-Provenance) |
 | **SigLA** | The *Signs of Linear A* database (Salgarella & Castellan): a Linear A dataset (781 documents) with its own word division and commodity ideograms; fetched on demand. | [Linear A](Linear-A), [Data & Provenance](Data-and-Provenance) |
-| **DDbDP** | The *Duke Databank of Documentary Papyri* (papyri.info): 57,329 Greek documentary papyri, hosted as a SQLite database with full-text search; fetched on demand. | [Data & Provenance](Data-and-Provenance) |
+| **DDbDP** | The *Duke Databank of Documentary Papyri* (papyri.info): 57,331 Greek documentary papyri, hosted as a SQLite database with full-text search; fetched on demand. | [Data & Provenance](Data-and-Provenance) |
 | **AGDT** | *Ancient Greek Dependency Treebank* (Perseus): gold grammatical annotation behind the Greek backends. | [Greek NLP](Greek-NLP) |
 | **EpiDoc** | A community standard (a flavour of TEI XML) for encoding ancient inscriptions; pyaegean can **export** a corpus to EpiDoc TEI. | [CLI](CLI), [Data & Provenance](Data-and-Provenance) |
 | **Pleiades** | The open gazetteer of ancient places; pyaegean tags located sites with their Pleiades id where one exists. | [Geography](Geography) |

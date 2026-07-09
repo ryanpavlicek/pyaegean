@@ -99,7 +99,7 @@ from .erroranalysis import (
     ud_error_analysis,
 )
 from .proiel import DriftReport, evaluate_on_proiel, load_proiel_gold, proiel_dir, proiel_drift
-from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_on_ud
+from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_by_genre, evaluate_on_ud
 from .eval_receipt import EvalReceipt, eval_receipt
 from .normalize import (
     NormalizationWarning,
@@ -277,6 +277,7 @@ __all__ = [
     "ud_error_analysis",
     "heldout_error_analysis",
     "evaluate_on_ud",
+    "evaluate_by_genre",
     "eval_receipt",
     "EvalReceipt",
     "use_neural_pipeline",

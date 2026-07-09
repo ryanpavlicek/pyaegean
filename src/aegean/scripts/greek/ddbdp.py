@@ -2,7 +2,7 @@
 
 DDbDP — the Duke Databank of Documentary Papyri, via papyri.info (github.com/papyri/idp.data). The
 data is CC BY 3.0, so pyaegean mirrors it as the ``ddbdp-corpus`` release asset. This is by far the
-largest corpus pyaegean ships — **57,329 Greek documentary papyri, ~4.4M tokens** — so it is hosted
+largest corpus pyaegean ships — **57,331 Greek documentary papyri, ~4.4M tokens** — so it is hosted
 and read as a **SQLite** database (with full-text search), not JSON, built by
 ``scripts/build_ddbdp_corpus.py``.
 
@@ -39,7 +39,7 @@ def ddbdp_db() -> Path:
 def load_ddbdp() -> Any:
     """Load ALL of DDbDP as an in-memory ``Corpus`` (opt-in, fetched, CC BY 3.0).
 
-    WARNING: 57,329 papyri / ~4.4M tokens — this materialises the entire corpus and costs several GB
+    WARNING: 57,331 papyri / ~4.4M tokens — this materialises the entire corpus and costs several GB
     of RAM. For most work prefer the memory-friendly DB layer: ``aegean.db.search(ddbdp_db(), ...)``
     for instant full-text search, or ``aegean.db.stream(ddbdp_db())`` for flat-memory iteration.
     The attribution travels with the corpus provenance; cite the DDbDP (papyri.info)."""

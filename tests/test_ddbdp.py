@@ -106,3 +106,28 @@ def test_papyrological_apparatus_picks_the_preferred_reading():
     assert "δραχμάς" in text and "δραχμαι" not in text        # lem over rdg
     assert "πεπρακέναι" in text and "επρακεν" not in text     # add over del
     assert "δραχμάς" in text                                  # expansion kept whole (δρ + αχμάς)
+
+
+def test_papyrological_apparatus_carries_reading_status():
+    """The DDbDP extractor threads a per-token ReadingStatus alongside the preferred reading:
+    a supplied (restored) reading is RESTORED, an unclear one UNCLEAR, while the chosen apparatus
+    reading itself stays CERTAIN. This is the D2 fidelity fix on DDbDP's own walker."""
+    from build_ddbdp_corpus import edition_tokens
+
+    from aegean.core.model import ReadingStatus
+
+    ns = 'xmlns="http://www.tei-c.org/ns/1.0"'
+    xml = (
+        f'<div {ns} type="edition"><ab>'
+        '<choice><reg>πυρράν</reg><orig>φυρα</orig></choice> '
+        '<supplied reason="lost">δραχμάς</supplied> '
+        '<unclear>ἀργυρίου</unclear> '
+        '<app><lem><supplied reason="undefined">τάλαντον</supplied></lem><rdg>ταλαντα</rdg></app>'
+        '</ab></div>'
+    )
+    status = {w: s for line in edition_tokens(ET.fromstring(xml)) for (w, s) in line}
+    assert status["πυρράν"] is ReadingStatus.CERTAIN          # chosen reading, not damaged
+    assert "φυρα" not in status                               # apparatus picking still holds
+    assert status["δραχμάς"] is ReadingStatus.RESTORED        # <supplied reason="lost">
+    assert status["ἀργυρίου"] is ReadingStatus.UNCLEAR        # <unclear>
+    assert status["τάλαντον"] is ReadingStatus.LOST           # <supplied reason="undefined"> inside <lem>

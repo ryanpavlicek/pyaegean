@@ -40,7 +40,7 @@ you used lands in your paper's references. If you're brand new, start with
 | 24 | [Save a query as a reusable corpus, then reload it](#24--save-a-query-as-a-reusable-corpus-then-reload-it) | any | no |
 | 25 | [Find a work in the catalogue, or bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) | Greek | no |
 | 26 | [Get the best AI translation out of pyaegean](#26--get-the-best-ai-translation-out-of-pyaegean) | Greek | API key (generation only) |
-| 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~206 MB) |
+| 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~219 MB) |
 
 Those are the single moves. For whole projects there is a second index:
 [Workflows: end to end](#workflows-end-to-end), just below, chains the recipes
@@ -157,10 +157,10 @@ The imported corpus takes every command above (`stats`, `keyness`, `export`,
 ### B · The papyrologist: DDbDP without loading it
 
 *You want every papyrus addressed στρατηγῷ, "to the strategos".* The Duke
-Databank (`ddbdp`, 57,329 papyri) ships as a SQLite database, so the working
+Databank (`ddbdp`, 57,331 papyri) ships as a SQLite database, so the working
 method is search and stream, never `aegean.load("ddbdp")` (which materialises
 ~4.4M tokens in RAM). Search is instant (the first use fetches the database,
-~206 MB):
+~219 MB):
 
 ```bash
 aegean db search ddbdp "στρατηγῷ" --limit 5
@@ -173,7 +173,7 @@ aegean db search ddbdp "στρατηγῷ" --limit 5
 ```
 
 In Python, collect every hit, then stream the matched documents into a corpus
-of their own. The stream is one pass over all 57,329 papyri (a minute or two;
+of their own. The stream is one pass over all 57,331 papyri (a minute or two;
 memory stays flat), and the subset you save is small and instant ever after:
 
 ```python
@@ -405,7 +405,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.28.0
+print(aegean.__version__)          # 0.29.0
 print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -1283,7 +1283,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.28.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.29.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into
@@ -1609,12 +1609,12 @@ when the vocabulary is rare. See [AI Layer](AI-Layer).
 
 ## 27 · Search 57,000 papyri without loading them (DDbDP)
 
-The Duke Databank of Documentary Papyri (`ddbdp`, 57,329 papyri, ~4.4M tokens) is
+The Duke Databank of Documentary Papyri (`ddbdp`, 57,331 papyri, ~4.4M tokens) is
 delivered as a SQLite database with a full-text index, so the right way in is
 search and streaming, not `load`:
 
 ```bash
-aegean db search ddbdp "βασιλέως" --limit 3   # fetches the database on first use (~206 MB), then instant
+aegean db search ddbdp "βασιλέως" --limit 3   # fetches the database on first use (~219 MB), then instant
 ```
 
 ```python

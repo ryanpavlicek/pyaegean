@@ -147,7 +147,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From kingsdigitallab/iospe; **may be redistributed** (CC BY), attribution required |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (archaic Doric + verse) with title, find-place, date | ~3 MB JSON | CC BY-NC-SA 4.0 (IGCyr2/GVCyr2, Dobias-Lalou et al., Bologna) | From AMS Acta 7796; **may be redistributed** (CC BY-NC-SA), attribution + NonCommercial + ShareAlike; epichoric (non-normalized) Greek |
 | `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of the frozen (2021) EDH dump; **may be redistributed** (CC BY-SA), attribution + ShareAlike |
-| `ddbdp-corpus` | DDbDP documentary papyri: 57,329 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~206 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
+| `ddbdp-corpus` | DDbDP documentary papyri: 57,331 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~219 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
 | `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | : | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
@@ -336,6 +336,15 @@ len(d)                       # 5932 documents
 d.provenance.source          # 'DAMOS — Database of Mycenaean at Oslo (F. Aurora), ...'
 ```
 
+#### Reading status on the epigraphy and papyri corpora
+
+The six inscription and papyrus corpora below (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`)
+carry each editor's apparatus through to every token: a `Token.status` of `CERTAIN`, `UNCLEAR`,
+`RESTORED`, or `LOST`, and an `edition_fidelity` flag in the corpus provenance
+(`apparatus-preserved,normalized`, or `apparatus-preserved,epichoric` for IGCyr's archaic Cyrenaean
+spelling). Restored or damaged readings are never presented as if securely on the object. See
+[Using Critical Editions](Using-Critical-Editions) for the full model and worked examples.
+
 #### The I.Sicily Greek inscriptions (`isicily-corpus`, `aegean.load("isicily")`)
 
 **I.Sicily** (https://github.com/ISicily/ISicily, https://sicily.classics.ox.ac.uk) is an EpiDoc
@@ -361,8 +370,8 @@ s.documents[0].meta.site     # e.g. 'Syracusae' — the ancient find-place
 #### The DDbDP documentary papyri (`ddbdp-corpus`, `aegean.load("ddbdp")`)
 
 **DDbDP**: the Duke Databank of Documentary Papyri (papyri.info, **CC BY 3.0**), hosted as a
-**SQLite database with full-text search**: 57,329 Greek documentary papyri / ~4.4M tokens with
-citation, date, place, and TM/HGV ids (~206 MB download, ~757 MB unpacked). `aegean.load("ddbdp")`
+**SQLite database with full-text search**: 57,331 Greek documentary papyri / ~4.4M tokens with
+citation, date, place, and TM/HGV ids (~219 MB download, ~757 MB unpacked). `aegean.load("ddbdp")`
 materialises the whole corpus in memory (heavy: over a minute and more than a gigabyte of RAM); the
 memory-friendly paths are `aegean db search ddbdp "..."` (instant FTS) and
 `aegean.db.stream(ddbdp_db())`, which yields one document at a time
@@ -584,7 +593,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.28.0'  (your installed version)
+v["package"]                                  # '0.29.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -636,7 +645,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.28.0'
+# '0.29.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

@@ -1148,6 +1148,11 @@ def evaluate(
         help="For ud/proiel/nt: an error analysis (POS confusion matrix, per-POS accuracy, "
              "lemma confusions) instead of the aggregate score.",
     ),
+    by_genre: bool = typer.Option(
+        False, "--by-genre",
+        help="For ud: score the fold sliced by literary genre (epic/tragedy/prose, from the "
+             "sent_id author). Note: the leakage-clean Perseus test fold is prose-only.",
+    ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -1184,6 +1189,20 @@ def evaluate(
     if target == "ud":
         if drift:
             emit_drift(greek.ud_error_analysis(treebank=fold, split=split))
+            return
+        if by_genre:
+            by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap)
+            unmapped = by.pop("_unmapped", {}).get("authors", [])  # type: ignore[union-attr]
+            if emit_result({**by, "_unmapped": unmapped}, json_output=json_out, output=output):
+                return
+            rows = []
+            for genre, d in by.items():
+                flag = " (thin)" if d.get("thin") else ""
+                cells = [f"{k}={d[k]}" for k in ("upos", "lemma", "uas", "las") if k in d]
+                rows.append([f"{genre}{flag}", str(d["n_sentences"]), str(d["n_words"]), ", ".join(cells)])
+            table(f"eval ud {fold}/{split} by genre", ["genre", "sents", "words", "metrics"], rows)
+            if unmapped:
+                print(f"unmapped authors (counted as 'other'): {', '.join(unmapped)}", file=sys.stderr)
             return
         if bootstrap:
             cis = greek.bootstrap_ud(treebank=fold, split=split)

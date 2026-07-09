@@ -43,6 +43,13 @@ class Provenance:
     schema_version: int = SCHEMA_VERSION
     notes: tuple[str, ...] = field(default_factory=tuple)
     data_version: str = ""           # version of the dataset itself (see aegean.data.versions)
+    # How faithfully the corpus text reflects its source edition, as comma-joined tags from a
+    # small controlled vocabulary: "apparatus-preserved" / "apparatus-stripped" (is the editorial
+    # apparatus kept as per-token ReadingStatus?), "normalized" (accents/case regularized),
+    # "epichoric" (non-normalized local letterforms kept). Empty when unknown. Additive and
+    # optional, so it does NOT bump SCHEMA_VERSION: an older pyaegean still loads a corpus that
+    # carries it (the reader defaults it), which is required for the re-hosted -v2 corpora.
+    edition_fidelity: str = ""
 
     def cite(self) -> str:
         """A one-line citation string for papers / logs."""

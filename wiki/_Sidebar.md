@@ -40,6 +40,7 @@
 **Reference**
 - [Architecture](Architecture)
 - [Data & Provenance](Data-and-Provenance)
+- [Using Critical Editions](Using-Critical-Editions)
 - [Citing Computational Assistance](Citing-Computational-Assistance)
 - [Glossary](Glossary)
 - [Limitations](Limitations)

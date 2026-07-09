@@ -115,7 +115,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.28.0
+# pyaegean 0.29.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -130,7 +130,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.28.0
+print(aegean.__version__)                 # 0.29.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -147,7 +147,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.28.0
+# pyaegean 0.29.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -185,7 +185,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.28.0                    │
+│ OK │ pyaegean │ 0.29.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -235,7 +235,7 @@ aegean data list
 | `iospe-corpus` | IOSPE Greek inscriptions: 1,194 texts of the Northern Black Sea: `load("iospe")` | ~4 MB | CC BY (IOSPE III, King's College London) |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse): `load("igcyr")` | ~3 MB | CC BY-NC-SA 4.0 (IGCyr²/GVCyr², Bologna) |
 | `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts of the frozen (2021) Heidelberg dump: `load("edh")` | ~6 MB | CC BY-SA 4.0 (EDH, Heidelberg Academy) |
-| `ddbdp-corpus` | DDbDP documentary papyri: 57,329 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp` (heavy: `load("ddbdp")`) | ~206 MB (~757 MB unpacked) | CC BY 3.0 (DDbDP / papyri.info) |
+| `ddbdp-corpus` | DDbDP documentary papyri: 57,331 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp` (heavy: `load("ddbdp")`) | ~219 MB (~757 MB unpacked) | CC BY 3.0 (DDbDP / papyri.info) |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX): the `[neural]` extra | ~232 MB | CC BY-SA 4.0 (derived) |
 | `grc-joint` | joint tagger-parser-lemmatizer (quantized ONNX bundle): the `[neural]` extra | ~173 MB | CC BY-SA 4.0 (derived) |
 | `lineara-images` | 3,368 facsimile/photo files | ~116 MB | © École Française d'Athènes & others: academic reference only |

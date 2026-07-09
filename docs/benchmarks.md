@@ -281,6 +281,39 @@ What is and isn't reported, and why:
   dependency trees: a UFeats or LAS number here would be a convention artefact, not an
   accuracy (the same reasoning as the PROIEL UFeats note above).
 
+### Genre and register: what the folds support (and what they don't)
+
+A fair question for any Greek parser is "how much can I trust this on Homer, on tragedy, on
+Koine prose?" `greek.evaluate_by_genre("perseus", "test")` (CLI: `aegean greek eval ud
+--by-genre`) buckets a UD fold by its `sent_id` author, maps each author to a literary genre
+(epic, tragedy, comedy, prose), and scores each bucket separately with the official evaluator,
+reporting the per-bucket sentence and word counts and, optionally, bootstrap CIs.
+
+Running the discovery step on the leakage-clean folds gives an important, and limiting, result:
+
+| Fold | Genre composition | Authors |
+|---|---|---|
+| UD Perseus **test** | 100% prose | Athenaeus (`tlg0008`) |
+| UD Perseus **dev** | 100% prose | Thucydides, Plutarch, Athenaeus |
+| UD Perseus **train** | epic, tragedy, prose | Homer, Sophocles, Hesiod, Aeschylus, Herodotus, and others |
+
+The epic and tragic material lives in the *training* fold; the held-out test and dev folds are
+entirely prose (the test fold is a single imperial-prose author, Athenaeus). So the shipped
+Perseus test numbers, and every published Perseus number in this document, describe accuracy on
+literary prose. A genre-conditioned test accuracy for epic or tragedy is **not** something the
+current leakage-clean data can report: measuring it honestly would require a held-out
+epic/tragedy slice that the model has not trained on, which is future annotation work, not a
+number we can pin today. `evaluate_by_genre` is shipped so that this can be checked and, once
+such a slice exists, reported; run against the Perseus test fold today it returns a single
+`prose` bucket equal to the overall Perseus score.
+
+On register (Classical literary vs Koine), the closest available signal is the contrast between
+the Perseus rows (literary, and as shown here prose) and the Nestle 1904 NT row (Koine): lemma
+94.29 on Perseus against 87.03 on the NT. That gap is real but is **not** a clean register
+effect, because register co-varies with the annotation project: the NT row is a different
+treebank's conventions and a genuinely out-of-domain fold, so the difference mixes register,
+convention, and domain. It is reported as orientation, not as a measured "Koine penalty."
+
 ## pyaegean — the pure-Python baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

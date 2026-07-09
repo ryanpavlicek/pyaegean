@@ -4,6 +4,44 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.29.0 (2026-07-09)
+
+Critical-edition fidelity for the epigraphy and papyri corpora, and genre-aware evaluation.
+
+### Added
+- **Reading status on every epigraphic and papyrological token.** The six inscription and
+  papyrus corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`) now carry each editor's
+  apparatus through to every token: `Token.status` is `CERTAIN`, `UNCLEAR`, `RESTORED`, or
+  `LOST` (a word takes the most severe status touching its letters), and the corpus provenance
+  records an `edition_fidelity` flag (`apparatus-preserved,normalized`, or
+  `apparatus-preserved,epichoric` for IGCyr's archaic Cyrenaean spelling). Restored or damaged
+  readings are no longer presented as if securely on the object. Status round-trips through JSON,
+  SQLite, and EpiDoc export. New wiki page: "Using critical editions".
+- **Genre-sliced UD evaluation.** `greek.evaluate_by_genre()` (CLI: `aegean greek eval ud
+  --by-genre`) buckets a fold by its `sent_id` author into literary genres and scores each
+  bucket with the official evaluator. The new "Genre and register" section of the benchmarks
+  document records what the folds do and do not support: the leakage-clean Perseus test fold is
+  prose-only, so a held-out epic/tragedy accuracy is future annotation work, not a current claim.
+
+### Fixed
+- **The epigraphy corpora flattened the editorial apparatus.** Restored (`<supplied>`), unclear
+  (`<unclear>`), and lost readings were marked as certain text. They now carry their true reading
+  status. The apparatus assets were rebuilt and re-hosted as `-v2` (same documents and reading
+  text as `-v1`, now with the apparatus preserved); older pyaegean releases keep loading the
+  `-v1` assets they pinned.
+- **A re-pinned `extract` dataset was served stale from the cache.** `fetch()` re-validated a
+  single-file dataset against its pinned sha256 but returned an unpacked archive directory
+  without checking it, so a rebuilt archive was never picked up. Unpacked datasets now record the
+  archive's sha256 and re-download when the pin changes. Existing DDbDP caches predate the stamp,
+  so to pick up the reading-status `ddbdp` v2 run `aegean data remove ddbdp` (or
+  `fetch("ddbdp-corpus", force=True)`); the five inscription corpora refresh automatically.
+- I.Sicily and the other EpiDoc corpora no longer emit a stray `Text` section-heading token
+  (three IGCyr documents were affected); the shared extractor now skips edition `<head>` labels.
+
+### Changed
+- **DDbDP refreshed from upstream:** 57,329 -> 57,331 documentary papyri (two papyri added and
+  two re-edited at papyri.info since the previous build), rebuilt with reading status.
+
 ## 0.28.0 (2026-07-09)
 
 Trust signals in the output: see where each analysis came from, what kinds of errors to

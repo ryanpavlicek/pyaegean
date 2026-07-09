@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.28.0
+aegean --version          # pyaegean 0.29.0
 ```
 
 | Group | What's in it |
@@ -174,7 +174,7 @@ aegean stats nt --top 3
 ```
 
 **Find a word anywhere in 57,000 documentary papyri** *(the DDbDP database
-downloads once, ~206 MB)*:
+downloads once, ~219 MB)*:
 
 ```bash
 aegean db search ddbdp "βασιλέως" --limit 3
@@ -521,7 +521,7 @@ and `greek`. Eight more download to your cache on first use: `damos` (the full
 `iospe` (~1,194, the Northern Black Sea), `igcyr` (~997, Cyrenaica: Doric +
 verse), and `edh` (~1,286, the Greek subset of the Epigraphic Database
 Heidelberg). One more, `ddbdp` (the Duke Databank of Documentary Papyri:
-**57,329 Greek papyri, ~4.4M tokens**), is far larger, so it is hosted as a
+**57,331 Greek papyri, ~4.4M tokens**), is far larger, so it is hosted as a
 SQLite database with full-text search: `aegean.load("ddbdp")` materialises the
 whole corpus (heavy, several GB of RAM), but the memory-friendly path is
 `aegean db search ddbdp "βασιλέως"` (instant FTS) and, in Python,
@@ -1197,7 +1197,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.28.0                    │
+│ OK │ pyaegean │ 0.29.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1707,6 +1707,7 @@ aegean greek eval ud --neural --bootstrap          # percentile CIs over the fol
 aegean greek eval ud --drift                       # error analysis: POS confusions, per-POS accuracy
 aegean greek eval proiel --drift                   # the same, for the out-of-AGDT PROIEL gold
 aegean greek eval nt --drift                       # the same, for the Nestle 1904 New Testament
+aegean greek eval ud --by-genre --neural           # score the fold sliced by literary genre
 ```
 
 `--fold` picks the UD Ancient Greek fold (`perseus` or `proiel`) and `--split` the
@@ -1720,7 +1721,11 @@ error analysis: a gold→predicted POS-confusion table, per-part-of-speech accur
 common lemma confusions, and a seen-vs-unseen split, which separates systematic
 annotation-convention divergence from scattered real error (the aggregate `evaluate_*`
 numbers are unchanged). See [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for how to
-read the breakdown. The exact figures and how they were measured are on
+read the breakdown. `--by-genre` (ud only) buckets the fold by its `sent_id` author into
+literary genres (epic, tragedy, prose) and scores each bucket separately. Note that the
+leakage-clean Perseus test fold is prose-only, so today this returns a single `prose`
+bucket; the machinery is in place for a future held-out epic/tragedy slice (see
+[Benchmarks](Benchmarks)). The exact figures and how they were measured are on
 [Greek NLP](Greek-NLP) and [Limitations](Limitations#measured-accuracy-boundaries).
 
 #### A worked run
@@ -1913,7 +1918,7 @@ downloaded on demand, never bundled):
 | `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts): `aegean.load('iospe')` | CC BY 4.0 |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts): `aegean.load('igcyr')` | CC BY-NC-SA 4.0 |
 | `edh-corpus` | EDH Greek inscriptions (1,286 texts, frozen 2021 dump): `aegean.load('edh')` | CC BY-SA 4.0 |
-| `ddbdp-corpus` | DDbDP documentary papyri as SQLite + FTS (57,329 texts, ~206 MB): `aegean db search ddbdp` | CC BY 3.0 |
+| `ddbdp-corpus` | DDbDP documentary papyri as SQLite + FTS (57,331 texts, ~219 MB): `aegean db search ddbdp` | CC BY 3.0 |
 | `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
 | `linearb-corpus` | a bring-your-own Linear B export (no default source) | per your source |
 | `workbench-app` | the prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |

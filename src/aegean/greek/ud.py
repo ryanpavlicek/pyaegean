@@ -53,6 +53,7 @@ __all__ = [
     "agdt_ud_overlap",
     "bootstrap_ud",
     "evaluate_on_ud",
+    "evaluate_by_genre",
     "load_conllu",
     "ud_path",
 ]
@@ -74,6 +75,35 @@ _UD_LICENSE: dict[str, str] = {
     "proiel": "CC BY-NC-SA 3.0",
 }
 _SPLITS = ("train", "dev", "test")
+
+# AGDT (Perseus) TLG author-group id -> literary genre, for genre-sliced evaluation. The
+# UD-Perseus sentence ids begin with the AGDT source filename, which begins with the TLG author
+# id (e.g. "tlg0012.tlg001…@197" -> Homer). Genre boundaries are editorial (Hesiod is grouped
+# with epic as didactic hexameter). Only ids that actually occur in a fold matter; the rest fall
+# to "other". `evaluate_by_genre` reports the unmapped ids so this table can be audited/extended.
+_AUTHOR_GENRE: dict[str, str] = {
+    "tlg0012": "epic",     # Homer
+    "tlg0013": "epic",     # Homeric Hymns (hexameter)
+    "tlg0020": "epic",     # Hesiod (didactic hexameter)
+    "tlg0085": "tragedy",  # Aeschylus
+    "tlg0011": "tragedy",  # Sophocles
+    "tlg0006": "tragedy",  # Euripides
+    "tlg0019": "comedy",   # Aristophanes
+    "tlg0016": "prose",    # Herodotus
+    "tlg0003": "prose",    # Thucydides
+    "tlg0059": "prose",    # Plato
+    "tlg0032": "prose",    # Xenophon
+    "tlg0007": "prose",    # Plutarch
+    "tlg0008": "prose",    # Athenaeus (Deipnosophistae)
+    "tlg0060": "prose",    # Diodorus Siculus
+}
+
+
+def _sent_genre(sent_id: str) -> tuple[str, str]:
+    """(author id, genre) for a UD sentence id like ``tlg0012.tlg001.perseus-grc1.tb.xml@197``."""
+    head = sent_id.rpartition("@")[0] or sent_id  # drop the "@197" sentence index
+    author = head.split(".", 1)[0]
+    return author, _AUTHOR_GENRE.get(author, "other")
 
 # The official CoNLL 2018 shared-task evaluator (MPL 2.0), pinned by content hash.
 _EVAL_URL = "https://universaldependencies.org/conll18/conll18_ud_eval.py"
@@ -426,6 +456,85 @@ def bootstrap_ud(
         level=level,
         seed=seed,
     )
+
+
+def evaluate_by_genre(
+    treebank: str = "perseus",
+    split: str = "test",
+    *,
+    metrics: Sequence[str] = ("upos", "lemma", "uas", "las"),
+    bootstrap: bool = True,
+    n_resamples: int = 999,
+    level: float = 0.95,
+    seed: int = 0,
+    source: Path | str | None = None,
+    parse: bool | None = None,
+    min_sentences: int = 20,
+) -> dict[str, dict[str, Any]]:
+    """Score the active pipeline on a UD fold, sliced by literary genre.
+
+    Each sentence is bucketed by its ``sent_id`` author (a TLG id, mapped through
+    ``_AUTHOR_GENRE`` to epic / tragedy / comedy / prose / other). The pipeline runs **once**
+    over the whole fold; each genre is then scored with the official evaluator (and, when
+    ``bootstrap``, given a percentile CI). Returns ``{genre: {"n_sentences", "n_words",
+    "authors", "thin" (True under ``min_sentences``), <metric>: value or BootstrapCI}}`` plus an
+    ``"_unmapped"`` list of author ids not in the table (the built-in discovery step: run this
+    before pinning any numbers, and extend ``_AUTHOR_GENRE`` from it).
+
+    This is meaningful only for the leakage-clean neural model on Perseus: the offline baseline
+    has seen the Perseus test sentences (see the module leakage caveat), so do not publish genre
+    slices for it. ``uas``/``las`` are dropped when no parser is active."""
+    gold_path = Path(source) if source is not None else ud_path(treebank, split)
+    sentences = load_conllu(gold_path)
+    if parse is None:
+        from . import joint, syntax
+
+        parse = joint.active() is not None or syntax.active() is not None
+    wanted = [m for m in metrics if parse or m not in ("uas", "las")]
+    system_text = pipeline_conllu(sentences, parse=parse)
+    gold_blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8"))
+    sys_blocks = _split_conllu_sentences(system_text)
+    if not (len(gold_blocks) == len(sys_blocks) == len(sentences)):
+        raise ValueError(
+            f"gold/system/sentence count mismatch: {len(gold_blocks)}/{len(sys_blocks)}/"
+            f"{len(sentences)}"
+        )
+
+    buckets: dict[str, list[tuple[str, str]]] = {}
+    authors: dict[str, set[str]] = {}
+    unmapped: set[str] = set()
+    for sent, g, s in zip(sentences, gold_blocks, sys_blocks):
+        author, genre = _sent_genre(sent.sent_id)
+        buckets.setdefault(genre, []).append((g, s))
+        authors.setdefault(genre, set()).add(author)
+        if genre == "other":
+            unmapped.add(author)
+
+    ev = _eval_module()
+    out: dict[str, dict[str, Any]] = {}
+    for genre, pairs in buckets.items():
+        gold_text = "".join(g for g, _ in pairs)
+        sys_text = "".join(s for _, s in pairs)
+        n_words = sum(1 for line in gold_text.splitlines() if line[:1].isdigit() and "-" not in line.split("\t", 1)[0])
+        entry: dict[str, Any] = {
+            "n_sentences": len(pairs),
+            "n_words": n_words,
+            "authors": sorted(authors[genre]),
+            "thin": len(pairs) < min_sentences,
+        }
+        if bootstrap:
+            entry.update(
+                _bootstrap_conllu(
+                    gold_text, sys_text,
+                    lambda gg, ss: _score_conllu_text(ev, gg, ss, wanted),
+                    n_resamples=n_resamples, level=level, seed=seed,
+                )
+            )
+        else:
+            entry.update(_score_conllu_text(ev, gold_text, sys_text, wanted))
+        out[genre] = entry
+    out["_unmapped"] = {"authors": sorted(unmapped)}  # type: ignore[dict-item]
+    return out
 
 
 # --- the leakage-exclusion manifest ----------------------------------------------

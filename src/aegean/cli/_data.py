@@ -59,6 +59,8 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
         root / (name + ".part"),
         root / (name + ".part.info"),
         root / (name + ".extract"),
+        root / (name + ".old"),     # a superseded extraction awaiting cleanup (re-pin swap)
+        root / (name + ".sha256"),  # the extract-dataset stamp (sha of the unpacked archive)
     ]
     seen: set[Path] = set()
     out: list[Path] = []

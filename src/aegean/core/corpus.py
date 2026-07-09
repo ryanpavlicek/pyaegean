@@ -644,7 +644,7 @@ def _provenance_to_dict(p: Provenance | None) -> dict[str, Any] | None:
     return {
         "source": p.source, "license": p.license, "citation": p.citation,
         "url": p.url, "schema_version": p.schema_version, "notes": list(p.notes),
-        "data_version": p.data_version,
+        "data_version": p.data_version, "edition_fidelity": p.edition_fidelity,
     }
 
 
@@ -657,6 +657,7 @@ def _provenance_from_dict(d: dict[str, Any] | None) -> Provenance | None:
         schema_version=d.get("schema_version", SCHEMA_VERSION),
         notes=tuple(d.get("notes") or ()),
         data_version=d.get("data_version", ""),
+        edition_fidelity=d.get("edition_fidelity", ""),
     )
 
 

@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from _epidoc import edition_lines, first_text, local, primary_edition  # noqa: E402
+from _epidoc import edition_tokens, first_text, local, primary_edition  # noqa: E402
 
 _XML = "http://www.w3.org/XML/1998/namespace"
 _GREEK_EDITION = 'type="edition" xml:lang="grc"'
@@ -143,20 +143,22 @@ def main() -> int:
         edition = primary_edition(root)
         if edition is None:
             continue
-        lines_text = edition_lines(edition)
-        if not lines_text:
+        token_lines = edition_tokens(edition)
+        if not token_lines:
             continue
         greek += 1
         stem = Path(path).stem
         tokens: list[Token] = []
         lines: list[list[int]] = []
         pos = 0
-        for lt in lines_text:
+        for tl in token_lines:
             idxs: list[int] = []
-            for word in lt.split(" "):
+            for word, status in tl:
                 if not word:
                     continue
-                tokens.append(Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos))
+                tokens.append(
+                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
+                )
                 idxs.append(pos)
                 pos += 1
             if idxs:
@@ -173,6 +175,7 @@ def main() -> int:
             source="EDH — Epigraphic Database Heidelberg, Ancient Greek inscriptions",
             license="CC-BY-SA-4.0 (Epigraphic Database Heidelberg / Heidelberg Academy of Sciences and Humanities)",
             url="https://github.com/epigraphic-database-heidelberg/data",
+            edition_fidelity="apparatus-preserved,normalized",
         ),
         script_id="greek",
     )

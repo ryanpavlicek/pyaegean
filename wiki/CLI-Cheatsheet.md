@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.28.0
+aegean --version                # pyaegean 0.29.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -340,7 +340,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |
+| `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --by-genre --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |
 
 ### Stages that work immediately
 
@@ -691,7 +691,7 @@ The fetchable datasets (`aegean data list`):
 | `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea, 1,194 texts: `load('iospe')` | CC BY 4.0 |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica, 997 texts: `load('igcyr')` | CC BY-NC-SA 4.0 |
 | `edh-corpus` | EDH Greek inscriptions (frozen 2021 dump), 1,286 texts: `load('edh')` | CC BY-SA 4.0 |
-| `ddbdp-corpus` | DDbDP documentary papyri, 57,329 texts as SQLite + FTS (~206 MB download): `aegean db search ddbdp` | CC BY 3.0 |
+| `ddbdp-corpus` | DDbDP documentary papyri, 57,331 texts as SQLite + FTS (~219 MB download): `aegean db search ddbdp` | CC BY 3.0 |
 | `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
 | `linearb-corpus` | bring-your-own Linear B export (no default source) | per your source |
 | `workbench-app` | prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |

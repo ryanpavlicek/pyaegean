@@ -179,7 +179,7 @@ The fetched, never-bundled assets, and why:
 | `sigla` | SigLA Linear A palaeography, 781 docs | CC BY-NC-SA 4.0 | NonCommercial |
 | `isicily` / `iospe` / `edh` | Greek inscriptions (2,855 / 1,194 / 1,286 docs) | CC BY 4.0 / CC BY / CC BY-SA 4.0 | Size: fetched on demand |
 | `iip` / `igcyr` | Greek inscriptions (2,113 / 997 docs) | CC BY-NC 4.0 / CC BY-NC-SA 4.0 | NonCommercial |
-| `ddbdp` | Documentary papyri, 57,329 docs (SQLite + FTS) | CC BY 3.0 | Size (~206 MB download) |
+| `ddbdp` | Documentary papyri, 57,331 docs (SQLite + FTS) | CC BY 3.0 | Size (~219 MB download) |
 | `nt` | Greek NT (Nestle 1904), ~137,800 tokens | CC0 / public domain | Size: redistributable, John 1 + Philemon bundled offline |
 | UD / PROIEL folds | Evaluation treebanks | CC BY-NC-SA | NonCommercial; eval only, never trained on |
 | neural model | Joint tagger/parser/lemmatizer | CC BY-SA (from treebanks) | Size (~173 MB); the `[neural]` extra |
@@ -305,7 +305,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
 
 - **Corpora are held in memory**: fine for everything pyaegean ships and fetches
   (the largest in-memory load, DAMOS, is ~5,900 documents; the one exception is
-  DDbDP, 57,329 papyri, hosted as SQLite: reach it with `aegean db search ddbdp`
+  DDbDP, 57,331 papyri, hosted as SQLite: reach it with `aegean db search ddbdp`
   or `aegean.db.stream(ddbdp_db())` rather than materialising
   `aegean.load("ddbdp")`). `Corpus.iter_documents` /
   `iter_tokens` / `iter_words` stream token-by-token where you need it, and an

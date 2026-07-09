@@ -33,7 +33,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from _epidoc import local, primary_edition  # noqa: E402
+from _epidoc import _SEVERITY, _elem_status, local, primary_edition  # noqa: E402
+
+from aegean.core.model import ReadingStatus  # noqa: E402
 
 _XML = "http://www.w3.org/XML/1998/namespace"
 _TEI = "http://www.tei-c.org/ns/1.0"
@@ -54,34 +56,66 @@ def _is_greek(root: ET.Element) -> bool:
     return edition is not None and edition.get(f"{{{_XML}}}lang") == "grc"
 
 
-def edition_lines(edition: ET.Element) -> list[str]:
-    """The DDbDP edition's reading text as physical lines, resolving the papyrological apparatus."""
-    lines: list[str] = [""]
+def edition_tokens(edition: ET.Element) -> list[list[tuple[str, ReadingStatus]]]:
+    """The DDbDP edition as physical lines of ``(word, ReadingStatus)``, resolving the
+    papyrological apparatus (prefer ``<reg>``/``<lem>``/``<add>``) and carrying editorial status
+    (``<supplied>``/``<unclear>``) per token, the most severe touching each word."""
+    lines: list[list[tuple[str, ReadingStatus]]] = []
+    buf: list[str] = []
+    cstat: list[ReadingStatus] = []
     join_next = [False]
 
-    def add(text: str | None) -> None:
+    def add(text: str | None, status: ReadingStatus) -> None:
         if not text:
             return
         if join_next[0]:
             text = text.lstrip()
             join_next[0] = False
-        lines[-1] += text
+        for ch in text:
+            buf.append(ch)
+            cstat.append(status)
 
-    def recurse_into(el: ET.Element) -> None:
-        add(el.text)
+    def flush() -> None:
+        word: list[str] = []
+        wstat: list[ReadingStatus] = []
+        out_line: list[tuple[str, ReadingStatus]] = []
+
+        def emit() -> None:
+            if word:
+                out_line.append(("".join(word), max(wstat, key=lambda s: _SEVERITY[s])))
+                word.clear()
+                wstat.clear()
+
+        for ch, st in zip(buf, cstat):
+            if ch.isspace():
+                emit()
+            else:
+                word.append(ch)
+                wstat.append(st)
+        emit()
+        if out_line:
+            lines.append(out_line)
+        buf.clear()
+        cstat.clear()
+
+    def recurse_into(el: ET.Element, status: ReadingStatus) -> None:
+        add(el.text, status)
         for child in el:
-            walk(child)
-            add(child.tail)
+            walk(child, status)
+            add(child.tail, status)
 
-    def walk(el: ET.Element) -> None:
+    def walk(el: ET.Element, inherited: ReadingStatus) -> None:
         tag = local(el.tag)
         if tag == "lb":
             if el.get("break") == "no":
-                lines[-1] = lines[-1].rstrip()
+                while buf and buf[-1].isspace():
+                    buf.pop()
+                    cstat.pop()
                 join_next[0] = True
             else:
-                lines.append("")
+                flush()
             return
+        st = _elem_status(el, inherited)
         if tag == "choice":
             picked = None
             for pref in _CHOICE_ORDER:
@@ -91,28 +125,28 @@ def edition_lines(edition: ET.Element) -> list[str]:
             if picked is None and len(el):
                 picked = el[0]
             if picked is not None:
-                recurse_into(picked)
+                walk(picked, st)
             return
         if tag in ("app", "subst"):
             want = "lem" if tag == "app" else "add"
             for c in el:
                 if local(c.tag) == want:
-                    recurse_into(c)
+                    walk(c, st)
             return
         if tag in _DROP:
             return
-        recurse_into(el)
+        recurse_into(el, st)
 
     for child in edition:
-        walk(child)
-        add(child.tail)
+        walk(child, ReadingStatus.CERTAIN)
+        add(child.tail, ReadingStatus.CERTAIN)
+    flush()
+    return lines
 
-    out: list[str] = []
-    for raw in lines:
-        text = re.sub(r"\s+", " ", raw).strip()
-        if text:
-            out.append(text)
-    return out
+
+def edition_lines(edition: ET.Element) -> list[str]:
+    """The reading text as plain physical lines (a status-dropping view of `edition_tokens`)."""
+    return [" ".join(w for w, _ in line) for line in edition_tokens(edition)]
 
 
 def _idno(root: ET.Element, typ: str) -> str:
@@ -210,19 +244,21 @@ def _document(path: str, content: bytes):  # type: ignore[no-untyped-def]
     edition = primary_edition(root)
     if edition is None:
         return None
-    lines_text = edition_lines(edition)
-    if not lines_text:
+    token_lines = edition_tokens(edition)
+    if not token_lines:
         return None
     stem = Path(path).stem
     tokens: list[Token] = []
     lines: list[list[int]] = []
     pos = 0
-    for lt in lines_text:
+    for tl in token_lines:
         idxs: list[int] = []
-        for word in lt.split(" "):
+        for word, status in tl:
             if not word:
                 continue
-            tokens.append(Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos))
+            tokens.append(
+                Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
+            )
             idxs.append(pos)
             pos += 1
         if idxs:
@@ -256,6 +292,7 @@ def main() -> int:
         source="DDbDP — Duke Databank of Documentary Papyri (papyri.info), Greek documentary papyri",
         license="CC-BY-3.0 (DDbDP / Duke Collaboratory for Classics Computing, papyri.info)",
         url="https://github.com/papyri/idp.data",
+        edition_fidelity="apparatus-preserved,normalized",
     )
 
     batch: list = []

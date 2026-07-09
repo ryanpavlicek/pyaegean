@@ -59,6 +59,8 @@ def main() -> int:
         license="CC-BY-NC-SA-4.0 (IGCyr2/GVCyr2, C. Dobias-Lalou et al., Univ. di Bologna, 2024)",
         url="https://doi.org/10.6092/unibo/amsacta/7796",
         limit=args.limit,
+        # IGCyr keeps the epichoric letterforms (ō/ē for long o/e), so the text is NOT normalized
+        edition_fidelity="apparatus-preserved,epichoric",
     )
     print(f"Greek inscriptions with text: {greek}; documents written: {written}")
     print(f"wrote {args.output} ({Path(args.output).stat().st_size} bytes)")

@@ -290,9 +290,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="isicily-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "isicily-corpus-v1/isicily-corpus.json"
+            "isicily-corpus-v2/isicily-corpus.json"
         ),
-        sha256="c0242f4b52df05ae7295b17a0c786dd7b474c4ef47520be88795c8117aa8d4d1",
+        sha256="38655e36fe44058780cae30b4b4594e382a20e9a4a73d26229e4ed8c9b6570c2",
         license="CC-BY-4.0 (I.Sicily — J. Prag et al., University of Oxford; attribution required)",
         note="I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with "
              "find-place, date, and coordinates, from the CC BY EpiDoc corpus. "
@@ -308,9 +308,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iip-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iip-corpus-v1/iip-corpus.json"
+            "iip-corpus-v2/iip-corpus.json"
         ),
-        sha256="2fec633b5e6ea38621bc8e0b3c62f959317e4cdd84af5c348b650a479a02dc74",
+        sha256="1e3bb6c3da0a98c5dc8812c1cd191807e7ab8384a808606abd8c2ef4fa6eab88",
         license="CC-BY-NC-4.0 (IIP — M. L. Satlow, Brown University; NonCommercial, attribution)",
         note="IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with "
              "find-place and coordinates, from the CC BY-NC EpiDoc corpus. "
@@ -326,9 +326,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iospe-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iospe-corpus-v1/iospe-corpus.json"
+            "iospe-corpus-v2/iospe-corpus.json"
         ),
-        sha256="bd2143d408d13f96d2e087e54c1508da6bfdb6a096fec6d82feeeb4523e33d7e",
+        sha256="70e729ac5afe0bf1df339bc10f4ffe161ba6aa253a8bdd175f2a6e8c8a3df375",
         license="CC-BY-4.0 (IOSPE III, King's College London; attribution; repo code is MIT)",
         note="IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea with "
              "find-place and date, from the CC BY EpiDoc corpus. Loadable via aegean.load('iospe').",
@@ -343,9 +343,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="igcyr-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "igcyr-corpus-v1/igcyr-corpus.json"
+            "igcyr-corpus-v2/igcyr-corpus.json"
         ),
-        sha256="673481ce3041ad268d26fb1d5490987b187ad86fb29af50ef7390f919f77e28b",
+        sha256="c5b9f48f5ccb8abf5b77b678bce1f5ae01de1b2befd481bd6155a8d1b3e5af8f",
         license="CC-BY-NC-SA-4.0 (IGCyr2/GVCyr2, C. Dobias-Lalou et al., Univ. di Bologna, 2024)",
         note="IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse) with title, "
              "find-place, date, from the CC BY-NC-SA EpiDoc corpus. Loadable via aegean.load('igcyr').",
@@ -355,9 +355,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="edh-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "edh-corpus-v1/edh-corpus.json"
+            "edh-corpus-v2/edh-corpus.json"
         ),
-        sha256="4828a9760fb64a397a510d3ac239a3df600ef23b7bd7d146c6ad911dc33f6541",
+        sha256="1bb4f6170833555143ad816eb86a9affacbe888a5276657804182c7702ca24e2",
         license="CC-BY-SA-4.0 (Epigraphic Database Heidelberg / Heidelberg Academy of Sciences and Humanities)",
         note="EDH Ancient-Greek inscriptions: the 1,286 pure-Greek texts (Imperial Koine, largely "
              "onomastic) of the frozen CC BY-SA EDH dump, with ancient place, date, find-place, and "
@@ -368,13 +368,14 @@ _REMOTE: dict[str, DataSpec] = {
         name="ddbdp-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "ddbdp-corpus-v1/ddbdp-corpus.tar.gz"
+            "ddbdp-corpus-v2/ddbdp-corpus.tar.gz"
         ),
-        sha256="7ae265384543cabc7554e543c3f3a1cccbfa1e3ca531b4cbd8755124f58845e2",
+        sha256="a9c57bcefcf978cf9f832bfef25a1a4296b933f36215619b369887d98020b54a",
         license="CC-BY-3.0 (DDbDP / Duke Collaboratory for Classics Computing, papyri.info)",
-        note="DDbDP Greek documentary papyri: 57,329 texts / ~4.4M tokens (~206 MB tar.gz, ~757 MB "
+        note="DDbDP Greek documentary papyri: 57,331 texts / ~4.4M tokens (~219 MB tar.gz, ~757 MB "
              "unpacked) as a SQLite database with full-text search, from the CC BY papyri.info corpus. "
-             "aegean.load('ddbdp') materialises it (heavy); aegean.db.search/stream the memory-friendly path.",
+             "Every token carries editorial reading status. aegean.load('ddbdp') materialises it "
+             "(heavy); aegean.db.search/stream the memory-friendly path.",
         extract=True,
     ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
@@ -986,14 +987,36 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
     return True
 
 
+def _extract_stamp(name: str) -> pathlib.Path:
+    """The sidecar recording the sha256 of the archive that produced an ``extract``
+    dataset's unpacked directory, so a later ``fetch`` can tell whether the cached
+    extraction still matches the pinned archive (the single-file path re-hashes the
+    file itself; an extraction cannot, its archive is gone, hence this stamp)."""
+    return cache_dir() / (name + ".sha256")
+
+
 def _fetch_and_extract(
     url: str, name: str, force: bool, sha256: str, abort: Callable[[], bool] | None = None
 ) -> pathlib.Path:
     import shutil
 
     target = cache_dir() / name  # a directory of unpacked files
+    stamp = _extract_stamp(name)
     if target.exists() and not force:
-        return target  # already unpacked → idempotent no-op
+        # Idempotent no-op ONLY when the extraction still matches the pinned archive.
+        # An env-overridden URL disables sha enforcement (sha256==""), so trust the
+        # existing extraction. A stamp that mismatches the pin means the archive was
+        # re-pinned (e.g. a corpus rebuilt as -v2): fall through and re-fetch. A
+        # missing stamp is a pre-stamp (legacy) extraction: trust it, so upgrading
+        # does not needlessly re-download every unchanged heavy archive.
+        if not sha256:
+            return target
+        try:
+            stamped = stamp.read_text(encoding="utf-8").strip() if stamp.exists() else ""
+        except OSError:
+            stamped = ""
+        if stamped == "" or stamped == sha256:
+            return target
 
     archive = cache_dir() / (name + ".part")
     _download(url, archive, name, abort)
@@ -1008,6 +1031,20 @@ def _fetch_and_extract(
     finally:
         archive.unlink(missing_ok=True)
     if target.exists():
-        shutil.rmtree(target)
-    staging.replace(target)  # atomic within the cache dir
+        # Swap in the new extraction without an rmtree-then-replace race: on Windows a
+        # just-rmtree'd directory can linger in a pending-delete state, so os.replace onto
+        # it fails (WinError 5). Rename the old extraction aside first (a fast atomic move),
+        # put the new one in place, then delete the old copy.
+        trash = cache_dir() / (name + ".old")
+        if trash.exists():
+            shutil.rmtree(trash, ignore_errors=True)
+        os.replace(target, trash)
+        staging.replace(target)  # atomic within the cache dir; target is now free
+        shutil.rmtree(trash, ignore_errors=True)
+    else:
+        staging.replace(target)  # atomic within the cache dir
+    if sha256:
+        stamp.write_text(sha256, encoding="utf-8")  # record what produced this extraction
+    else:
+        stamp.unlink(missing_ok=True)  # unpinned (env mirror): no meaningful stamp
     return target

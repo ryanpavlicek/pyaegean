@@ -16,7 +16,7 @@ fetches:
 | SigLA Linear A (`load("sigla")`) | ~780 | sign-level |
 | A single Greek work (`greek.load_work`) | 1 work | the Iliad is ~127k tokens |
 | Greek inscriptions (`isicily`, `iip`, `iospe`, `igcyr`, `edh`) | ~1,000-2,900 each | tens of thousands of tokens each |
-| DDbDP papyri (`load("ddbdp")`) | 57,329 | ~4.4M tokens; SQLite-hosted, streamed via `aegean.db.stream` |
+| DDbDP papyri (`load("ddbdp")`) | 57,331 | ~4.4M tokens; SQLite-hosted, streamed via `aegean.db.stream` |
 
 All but DDbDP fit comfortably in memory (DDbDP is the case the streaming section
 below handles), and the in-memory model keeps the API simple, random-access
@@ -82,7 +82,7 @@ streaming *analysis* pipeline. It would mean:
   it's restructured to spill to disk.
 
 That's a real cost in API complexity, and the corpus that crosses the line now
-exists: DDbDP (`aegean.load("ddbdp")`, 57,329 documentary papyri, ~4.4M tokens).
+exists: DDbDP (`aegean.load("ddbdp")`, 57,331 documentary papyri, ~4.4M tokens).
 It is answered at the storage layer rather than the API layer: the corpus is
 hosted as a SQLite database, `aegean.db.stream(ddbdp_db())` yields its
 `Document`s one at a time in flat memory, and `aegean.db.search()` (CLI:
