@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.30.0 (2026-07-09)
+
+Guidance and process: help a user pick the right pipeline and workflow, describe what a text
+actually is, surface coverage gaps for sourced contributions, and document how quality is checked.
+
+### Added
+- **Descriptive text profiler.** `greek.profile_text(text)` returns a `TextProfile` of observable
+  features (writing system, polytonic vs bare vowels, a Beta Code look, majuscule share, editorial
+  brackets, numeral density, counts). It describes what the characters are; it deliberately does not
+  predict a genre or an "out of domain" label. CLI: `aegean greek profile TEXT` (`--json`).
+- **Coverage helper.** `greek.missing_forms(corpus)` lists the word forms the offline lemmatizer does
+  not resolve, grouped by form with a representative location and a count: the bridge from the
+  evidence class (0.28.0) to a sourced contribution.
+- **Guidance pages** (wiki): "Choosing a Pipeline" (material to backend), "Choosing a Workflow"
+  (audience/goal to an end-to-end workflow), and "Validation and Review" (an honest record of how
+  quality is checked, what has and has not had external review, and how to submit a finding).
+- **Sourced-data contribution path.** The data-contribution issue form and CONTRIBUTING now ask for
+  the source, form, lemma, morphology, a scope note, and a test, across missing/wrong lemma, missing
+  morphology, and poetic/dialectal/Koine/epigraphic forms.
+
+### Changed
+- The `xdist_group` pytest marker is registered in `pyproject.toml`, so a plain `pytest` run without
+  `pytest-xdist` no longer emits `PytestUnknownMarkWarning`.
+
 ## 0.29.0 (2026-07-09)
 
 Critical-edition fidelity for the epigraphy and papyri corpora, and genre-aware evaluation.

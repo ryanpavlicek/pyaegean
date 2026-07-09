@@ -308,6 +308,17 @@ def lemmatize_word(word: str) -> str:
     )
 
 
+def text_profile(text: str) -> str:
+    """Observable features of a raw text: writing system, polytonic vs bare vowels, a Beta Code
+    look, majuscule share, editorial marks, numeral density. Describes what the characters ARE,
+    never a genre or an "out of domain" guess."""
+    import dataclasses
+
+    from aegean import greek
+
+    return json.dumps(dataclasses.asdict(greek.profile_text(text)), ensure_ascii=False)
+
+
 _NT_SAMPLE_BOOKS = {
     "john": "John", "jn": "John", "jhn": "John",
     "philemon": "Phlm", "phlm": "Phlm", "phm": "Phlm",

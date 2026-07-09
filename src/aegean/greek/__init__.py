@@ -89,6 +89,8 @@ from .joint import (
     use_neural_pipeline,
 )
 from .annotate import annotate_corpus
+from .coverage import MissingForm, missing_forms
+from .profile import TextProfile, profile_text
 from .erroranalysis import (
     ErrorAnalysis,
     PosStat,
@@ -272,6 +274,10 @@ __all__ = [
     "PosStat",
     "analyze_errors",
     "annotate_corpus",
+    "missing_forms",
+    "MissingForm",
+    "profile_text",
+    "TextProfile",
     "proiel_error_analysis",
     "nt_error_analysis",
     "ud_error_analysis",

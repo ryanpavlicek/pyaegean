@@ -6,6 +6,7 @@
 - [Getting Started](Getting-Started)
 - [Tutorial](Tutorial)
 - [Recipes](Recipes)
+- [Choosing a Workflow](Choosing-a-Workflow)
 - [Installation](Installation)
 
 **Aegean scripts**
@@ -17,6 +18,7 @@
 
 **Greek**
 - [Greek NLP](Greek-NLP)
+- [Choosing a Pipeline](Choosing-a-Pipeline)
 - [Reading a Parse](Reading-a-Parse)
 - [Greek Works & Books](Greek-Works-and-Books)
 - [New Testament](New-Testament)
@@ -36,6 +38,7 @@
 - [Methodology](Methodology)
 - [Evaluation](Evaluation)
 - [When the Tool Is Wrong](When-the-Tool-Is-Wrong)
+- [Validation & Review](Validation-and-Review)
 
 **Reference**
 - [Architecture](Architecture)

@@ -157,6 +157,14 @@ def test_demo_lemmatize_word() -> None:
     assert miss["lemma"] == "προφήτου" and miss["known"] is False
 
 
+def test_demo_text_profile() -> None:
+    demo = _load_demo()
+    greek = json.loads(demo.text_profile("μῆνιν ἄειδε θεά"))
+    assert greek["script"] == "greek" and greek["is_polytonic"] is True
+    beta = json.loads(demo.text_profile("mh=nin a)/eide qea/"))
+    assert beta["looks_like_betacode"] is True and beta["is_polytonic"] is False
+
+
 def test_demo_nt_verse() -> None:
     import unicodedata
 
@@ -346,7 +354,7 @@ def test_demo_html_wiring() -> None:
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
                  "bridge", "cypriot_inscription", "lineara_search", "lineara_balance", "import_text",
                  "phonetic_compare", "lexicon_link", "epidoc_import", "accent_word", "sandhi",
-                 "prosody_word", "nt_verse", "idioms", "lemmatize_word", "lineara_stats",
-                 "lineara_query", "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc",
-                 "geo_word", "cite_bundled", "export_epidoc"):
+                 "prosody_word", "nt_verse", "idioms", "lemmatize_word", "text_profile",
+                 "lineara_stats", "lineara_query", "numerals", "sign_info", "linearb_tablet",
+                 "cyprominoan_doc", "geo_word", "cite_bundled", "export_epidoc"):
         assert hasattr(demo, name) and f'"{name}"' in html

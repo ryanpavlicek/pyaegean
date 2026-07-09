@@ -107,6 +107,16 @@
   </div>
 
   <div class="card">
+    <h2>Text profile</h2>
+    <label for="prof">Any text: the observable features (writing system, polytonic vs bare vowels, a
+      Beta Code look, majuscule share, editorial marks, numeral density). It describes what the
+      characters are, never a genre. Try <code>mh=nin a)/eide qea/</code> or <code>ΜΗΝΙΝ</code></label>
+    <input type="text" id="prof" value="μῆνιν ἄειδε θεά">
+    <div class="row"><button data-tool="prof" disabled>Profile</button></div>
+    <pre id="prof-out"></pre>
+  </div>
+
+  <div class="card">
     <h2>Metrical scansion</h2>
     <label for="scan">A verse line — scan it into long/short syllables (— heavy, ⏑ light, × anceps)</label>
     <input type="text" id="scan" value="ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ">
@@ -418,8 +428,8 @@ async function init() {
                         "catalog", "bridge", "cypriot_inscription", "lineara_search",
                         "lineara_balance", "import_text", "phonetic_compare", "lexicon_link",
                         "epidoc_import", "accent_word", "sandhi", "prosody_word", "nt_verse",
-                        "idioms", "lemmatize_word", "lineara_stats", "lineara_query", "numerals",
-                        "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
+                        "idioms", "lemmatize_word", "text_profile", "lineara_stats", "lineara_query",
+                        "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
                         "cite_bundled", "export_epidoc"]) {
       tools[name] = pyodide.globals.get(name);
     }
@@ -526,6 +536,11 @@ const handlers = {
     const r = call("prosody_word", val("pro"));
     show("pro-out", r.error ? r
       : r.syllables.map(s => `${s.syllable}\t${s.quantity}`).join("\n"));
+  },
+  prof: () => {
+    const r = call("text_profile", val("prof"));
+    show("prof-out", r.error ? r.error
+      : Object.entries(r).map(([k, v]) => `${k}\t${v}`).join("\n"));
   },
   ntv: () => {
     const r = call("nt_verse", val("ntv"));

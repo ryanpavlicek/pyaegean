@@ -255,6 +255,25 @@ def ipa(
 
 
 @greek_app.command()
+def profile(text: str = TEXT_ARG, json_out: bool = JSON_OPT) -> None:
+    """Describe the observable features of a text (script, polytonic, Beta Code, editorial marks).
+
+    Reports what the characters ARE (writing system, accents/breathings, majuscule share,
+    apparatus markers, numeral density), never a genre or an out-of-domain guess.
+    """
+    import dataclasses
+
+    from aegean import greek
+
+    p = greek.profile_text(read_text(text))  # type: ignore[arg-type]
+    d = dataclasses.asdict(p)
+    if emit_result(d, json_output=json_out, output=None):
+        return
+    rows = [[k, str(v)] for k, v in d.items()]
+    table("text profile", ["feature", "value"], rows)
+
+
+@greek_app.command()
 def accentuate(
     word: str = typer.Argument(..., help="The Greek word (any existing accent is re-placed)."),
     recessive: bool = typer.Option(

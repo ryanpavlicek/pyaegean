@@ -1,49 +1,85 @@
-name: "Data contribution (a lexicon entry, sign value, gazetteer ID, …)"
-description: "Contribute a small, sourced fact — a Greek-bridge equation, a sign reading, a Pleiades ID, a benchmark item."
+name: "Data contribution (a lemma, morphology, sign value, gazetteer ID, …)"
+description: "Contribute a small, sourced fact: a Greek lemma or morphology reading, a poetic/dialectal/Koine/epigraphic form, a sign value, a Pleiades ID, or a benchmark item."
 title: "[data] "
 labels: ["data", "contribution"]
 body:
   - type: markdown
     attributes:
       value: |
-        Small, well-scoped, **sourced** facts are the best contributions — see the
-        [contribution menu](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#good-first-contributions-a-menu).
-        Each lands in a bundled JSON / lexicon with a citation and a test. (You are
-        welcome to open a pull request directly instead of this issue.)
+        Small, well-scoped, **sourced** facts are welcome. See the
+        [Contributing sourced data](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#contributing-sourced-data)
+        section for what each entry needs. Each one lands in a bundled JSON or
+        lexicon with a citation and a correctness test. (You are welcome to open a
+        pull request directly instead of this issue.)
+
+        To find Greek forms the lemmatizer does not resolve,
+        `greek.missing_forms(corpus)` lists the candidates; confirm each against a
+        source before adding it.
   - type: dropdown
     id: kind
     attributes:
       label: What kind of data?
       options:
+        - "Missing lemma (a form the lemmatizer does not resolve)"
+        - "Wrong lemma (a form the lemmatizer resolves incorrectly)"
+        - "Missing morphology (part of speech or features for a form)"
+        - "Poetic / dialectal / Koine / epigraphic form"
+        - "Closed-class Greek form (article / particle / pronoun)"
         - "Linear B → Greek bridge equation (lexicon)"
         - "Sign value / variant / attribute (Linear A/B, Cypriot, Cypro-Minoan)"
         - "Gazetteer Pleiades ID for a find-site"
-        - "Closed-class Greek form (article/particle/pronoun)"
-        - "Benchmark gold item (lemma/POS)"
+        - "Benchmark gold item (lemma / POS)"
         - "Other (describe below)"
     validations:
       required: true
-  - type: textarea
-    id: payload
+  - type: input
+    id: form
     attributes:
-      label: The fact
-      description: The entry exactly as it should be recorded (form, value, lemma, id, …).
-      placeholder: "e.g. po-me = ποιμήν 'shepherd' (Linear B → Greek)"
+      label: The form
+      description: The form or item exactly as written, with its accents and any editorial marks. For a sign, give the sign label; for a find-site, the site name.
+      placeholder: "e.g. μήνιδος   (or: po-me   /   Cyrene)"
     validations:
       required: true
+  - type: input
+    id: lemma
+    attributes:
+      label: The lemma
+      description: The dictionary headword the form belongs under. For a Linear B bridge, the Greek reading; for a sign, its sound value; for a find-site, the Pleiades URI.
+      placeholder: "e.g. μῆνις   (or: ποιμήν   /   https://pleiades.stoa.org/places/…)"
+    validations:
+      required: true
+  - type: input
+    id: morphology
+    attributes:
+      label: Morphology (if known)
+      description: Part of speech and features, if you have them.
+      placeholder: "e.g. noun, genitive singular   (or UD feats: Case=Gen|Number=Sing)"
+    validations:
+      required: false
   - type: textarea
     id: source
     attributes:
       label: Source / authority
-      description: The edition, lexicon, or database the fact comes from, with a reference.
+      description: The edition, dictionary, or database the fact comes from, with a reference (an entry, page, or passage).
+      placeholder: "e.g. LSJ s.v. μῆνις; or Ventris & Chadwick, Documents in Mycenaean Greek (2nd ed.), p. …"
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope note
+      description: The register, dialect, or genre the form belongs to (Homeric, Doric, Koine, an inscription, …), and how widely it is attested. Keep it to what the source supports.
+      placeholder: "e.g. Epic / Homeric; genitive singular of μῆνις; opens Iliad 1.1."
     validations:
       required: true
   - type: checkboxes
-    id: scope
+    id: checks
     attributes:
-      label: Scope
+      label: Before you submit
       options:
         - label: "This is a single, verifiable fact (not a bulk import or a design change)."
           required: true
         - label: "It is openly licensed or a scholarly fact (not copied from an all-rights-reserved dataset)."
+          required: true
+        - label: "A correctness test will accompany the entry (checking the recorded reading is the one the code returns)."
           required: true

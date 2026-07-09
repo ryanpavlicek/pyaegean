@@ -40,6 +40,47 @@ architecture: each has an obvious home and an obvious test:
 For anything larger, open an issue first so the design can be agreed before
 you write code.
 
+## Contributing sourced data
+
+Additions to the bundled lexica, sign tables, gazetteer, and benchmark gold are
+welcome when each is a single fact backed by a citation. This is the path for the
+Greek coverage additions in particular: a missing lemma (a form the lemmatizer
+does not resolve), a wrong lemma (a form it resolves incorrectly), missing
+morphology (part of speech or features for a form), and poetic, dialectal, Koine,
+or epigraphic forms that the ordinary Attic-prose rules do not reach. The
+[Data contribution](.github/ISSUE_TEMPLATE/data_contribution.yml) issue form
+collects the same fields.
+
+State, for each entry:
+
+- **The source**: the edition, dictionary, or citation the fact comes from (an
+  LSJ or Middle Liddell entry, a treebank, or a named edition with a passage or
+  document reference). Nothing enters a bundled table without one; this applies
+  the "Provenance & attribution" and "Measured claims only" principles below to
+  data.
+- **The form**, exactly as written, with its accents and any editorial marks.
+- **The lemma**, the dictionary headword the form belongs under.
+- **The morphology**, if known: part of speech and features (for example "noun,
+  genitive singular").
+- **A scope note**: the register, dialect, or genre the form belongs to (for
+  example Homeric, Doric, Koine, or an inscription), and how widely it is
+  attested. Keep the entry to what the source supports; do not generalize one
+  attestation into a full paradigm.
+- **A test**, per the Tests section below: a correctness test that checks the
+  recorded reading is the one the code returns, so a later change cannot silently
+  drop it.
+
+To find candidates, `greek.missing_forms(corpus)` reports the word forms in a
+corpus that the lemmatizer does not resolve, grouped by form with where each one
+occurs. The results reflect whichever lemmatizer is active when you run it (the
+offline baseline by default; a loaded treebank or neural backend resolves more),
+so run it against the coverage you ship. It points to forms worth reviewing, not
+to corrections: confirm each against a source before adding it.
+
+To fix an existing reading, use the Correction issue form. To confirm or refute
+an exploratory (decipherment, cross-linguistic, or AI) result, use the Validation
+form; those outputs are labeled hypotheses, not facts.
+
 ## Regenerating bundled data
 
 Some bundled JSON is generated, not hand-edited, by the scripts in `scripts/`:
