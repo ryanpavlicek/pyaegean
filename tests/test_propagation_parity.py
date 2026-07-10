@@ -180,7 +180,9 @@ def test_every_registered_provider_has_a_pyproject_extra():
     ``pip install 'pyaegean[<provider>]'``, so every registered provider MUST have an
     extra of exactly that name or the error sends users to a nonexistent install line
     (the class the 0.31.0 'local' provider shipped with: registered, no extra)."""
-    import tomllib
+    tomllib = pytest.importorskip(
+        "tomllib", reason="stdlib from 3.11; this repo-hygiene guard runs on the 3.11+ jobs"
+    )
     from pathlib import Path
 
     from aegean.ai.client import _PROVIDERS
