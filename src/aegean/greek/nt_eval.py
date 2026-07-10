@@ -25,6 +25,8 @@ from .proiel import _SKIP_POS, _canon_pos
 from .treebank import _clean_lemma
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ..core.corpus import Corpus
 
 __all__ = ["evaluate_on_nt"]
@@ -83,13 +85,16 @@ def evaluate_on_nt(
     *,
     corpus: Corpus | None = None,
     book: str | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, float]:
     """Score a tagger on the Nestle1904 Greek NT gold — lemma + reconciled UPOS accuracy.
 
     ``tag_sentence`` maps a sentence's forms to ``(lemma, upos)`` per token; it defaults to
     the **neural joint pipeline** (enable ``greek.use_neural_pipeline()`` first), so the
     number reflects the shipped model. ``corpus`` supplies the gold (defaults to
-    ``greek.load_nt(book)`` — the whole NT, or one ``book``). Returns
+    ``greek.load_nt(book)`` — the whole NT, or one ``book``). ``progress`` (optional) is
+    called as ``progress(done, total)`` per scored verse — the whole-NT run is ~1 h on
+    plain CPU, so this is how the CLI shows it moving. Returns
     ``{"lemma", "upos", "n"}``: accuracy over the scored tokens. Lemma is the clean metric;
     UPOS is compared under a reconciled tagset, mirroring ``evaluate_on_proiel``."""
     if corpus is None:
@@ -107,5 +112,5 @@ def evaluate_on_nt(
     def reconciled(forms: list[str]) -> list[tuple[str, str]]:
         return [(lemma, _canon_pos(pos)) for lemma, pos in base(forms)]
 
-    result = score(reconciled, split=split)
+    result = score(reconciled, split=split, progress=progress)
     return {"lemma": result["lemma_all"], "upos": result["pos_all"], "n": result["n_all"]}

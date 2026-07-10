@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.31.0"
+version = "0.32.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -45,6 +45,7 @@ openai = ["openai>=1.55.3"]        # >=1.55.3: first compatible with httpx>=0.28
 gemini = ["google-genai>=0.3"]
 grok = ["openai>=1.55.3"]          # xAI Grok is OpenAI-API-compatible
 openrouter = ["openai>=1.55.3"]    # OpenRouter is an OpenAI-API-compatible gateway
+local = ["openai>=1.55.3"]         # a local OpenAI-compatible server (Ollama / LM Studio / llama.cpp / vLLM)
 ai = ["anthropic>=0.40", "openai>=1.55.3", "google-genai>=0.3"]
 epidoc = ["lxml>=5.0"]
 parquet = ["pyarrow>=16.1"]        # >=16.1: first numpy-2-compatible

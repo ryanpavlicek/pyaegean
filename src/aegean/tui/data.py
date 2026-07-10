@@ -618,12 +618,16 @@ def _greek_offline(text: str) -> AnalysisResult:
     r = greek_pipeline(text)
     if not r.ok:
         return AnalysisResult(ok=False, error=r.error)
+    # The evidence column shows the lemma's source class only when it is NOT a grounded
+    # analysis (the CLI's src-column convention): blank = trustworthy, a name = verify it.
     rows = tuple(
-        (str(row["index"]), row["text"], row["upos"], row["lemma"]) for row in r.rows
+        (str(row["index"]), row["text"], row["upos"], row["lemma"],
+         "" if row.get("lemma_known", True) else str(row.get("lemma_source", "")))
+        for row in r.rows
     )
     return AnalysisResult(
         ok=True, title="offline parser / tagger",
-        columns=("#", "token", "POS", "lemma"), rows=rows,
+        columns=("#", "token", "POS", "lemma", "check"), rows=rows,
     )
 
 
@@ -661,7 +665,11 @@ def _greek_neural(text: str) -> AnalysisResult:
         return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
     rows = tuple(
         (
-            str(r.index), r.text, r.upos, r.lemma, r.feats or "",
+            str(r.index), r.text, r.upos,
+            # an unresolved/identity lemma is flagged with its evidence class so a model
+            # guess never displays like a grounded analysis
+            r.lemma if r.lemma_known else f"{r.lemma} [{r.lemma_source.value}]",
+            r.feats or "",
             f"{r.relation}→{r.head}" if r.relation and r.head is not None else "",
         )
         for r in recs
@@ -690,20 +698,28 @@ def translation_available() -> tuple[bool, str]:
     providers = _usable_providers()
     if providers:
         return True, "via " + ", ".join(providers)
-    return False, "set a provider API key (BYOAI) to enable — e.g. OPENAI_API_KEY"
+    return False, (
+        "set a provider API key (BYOAI, e.g. OPENAI_API_KEY) or configure the keyless "
+        "local provider (PYAEGEAN_LOCAL_MODEL + a running Ollama) to enable"
+    )
 
 
 def _usable_providers() -> list[str]:
-    """Provider names whose API key is present in the environment (the BYOAI signal)."""
+    """Provider names configured for use: an API key in the environment (the BYOAI
+    signal), or, for the keyless ``local`` provider, its model named
+    (``PYAEGEAN_LOCAL_MODEL`` — the endpoint URL has an Ollama default and the key is
+    optional, so the model is the one signal that a local server is intended)."""
     import os
 
     from ..ai.client import _PROVIDERS
 
-    out = [
-        name
-        for name, cls in _PROVIDERS.items()
-        if getattr(cls, "env_key", "") and os.environ.get(cls.env_key)
-    ]
+    out = []
+    for name, cls in _PROVIDERS.items():
+        if name == "local":
+            if os.environ.get(cls.env_model):
+                out.append(name)
+        elif getattr(cls, "env_key", "") and os.environ.get(cls.env_key):
+            out.append(name)
     return sorted(out)
 
 
@@ -715,16 +731,22 @@ def translate_line(text: str, *, script: str = "greek") -> AnalysisResult:
     text = text.strip()
     if not text:
         return AnalysisResult(ok=True, title="translation")
-    if not _usable_providers():
+    providers = _usable_providers()
+    if not providers:
         return AnalysisResult(
             ok=False,
-            error="no BYOAI provider configured — set an API key (e.g. OPENAI_API_KEY) to translate",
+            error="no BYOAI provider configured — set an API key (e.g. OPENAI_API_KEY) "
+                  "or PYAEGEAN_LOCAL_MODEL (the keyless local provider) to translate",
         )
-    from ..ai import AIError
+    from ..ai import AIError, get_client
     from ..translate import translate as _translate
 
     try:
-        result = _translate(text, script=script)  # type: ignore[arg-type]
+        # Route to the first CONFIGURED provider (sorted, so anthropic keeps priority when
+        # keyed) rather than translate()'s anthropic default, which would fail for a user
+        # whose only configured provider is another hosted one or the keyless local server.
+        client = get_client(providers[0])
+        result = _translate(text, script=script, client=client)  # type: ignore[arg-type]
     except AIError as exc:
         return AnalysisResult(ok=False, error=str(exc))
     except Exception as exc:  # pragma: no cover - AIError covers the known cases

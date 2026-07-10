@@ -70,9 +70,9 @@ State, for each entry:
   recorded reading is the one the code returns, so a later change cannot silently
   drop it.
 
-To find candidates, `greek.missing_forms(corpus)` reports the word forms in a
-corpus that the lemmatizer does not resolve, grouped by form with where each one
-occurs. The results reflect whichever lemmatizer is active when you run it (the
+To find candidates, `greek.missing_forms(corpus)` (CLI:
+`aegean greek missing-forms CORPUS`) reports the word forms in a corpus that the
+lemmatizer does not resolve, grouped by form with where each one occurs. The results reflect whichever lemmatizer is active when you run it (the
 offline baseline by default; a loaded treebank or neural backend resolves more),
 so run it against the coverage you ship. It points to forms worth reviewing, not
 to corrections: confirm each against a source before adding it.
@@ -146,3 +146,20 @@ against `tests/fixtures/golden/`; statistical functions get cross-checks against
 hand-computed or reference (`scipy`) value; invariants get property tests
 (`hypothesis`). A new public function is not done until it has one. Keep `pytest`
 green and the wheel small.
+
+Two more dimensions ship WITH the correctness tests, in the same change:
+
+- **Adversarial input, when the feature accepts external input** (a user file, pasted
+  text, a CSV from a spreadsheet, network data, an environment variable): malformed,
+  truncated, hostile, and mismatched inputs must produce a clean, named error or a
+  documented degradation, never a raw traceback, a silent wrong result, or a hang.
+  Probe at least: the malformed file, the wrong-but-plausible input (a CSV from a
+  different corpus, a stale artifact), and the pathological size/shape (an unclosed
+  quote, a combining-mark flood, a huge field). The review-table importer shipped
+  correctness-tested but not adversarially tested, and three of its input defects
+  survived two releases.
+- **The full journey, when the feature is a step in one** (import → analyze → export,
+  fetch → load → save): at least one test walks the whole path and re-reads the final
+  artifact, asserting the content — segments that each pass can still lose data at the
+  seams (an export that silently drops a column its consumers rely on). The
+  `tests/test_journey_*.py` files are the pattern.

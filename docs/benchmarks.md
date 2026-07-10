@@ -147,7 +147,7 @@ reference rather than rows in the single-protocol table above:
   give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma 87.86 / UAS 79.46 / LAS 73.97, and
   **grc_proiel** (in-domain for that model) UPOS 97.42 / lemma 97.18 / LAS 79.02. Its
   self-reported Perseus lemma (87.86) edges the 87.58 measured in the table above; pyaegean's
-  94.29 still leads it by +6.4.
+  94.27 still leads it by +6.4.
 - **DILEMMA** (<https://github.com/ciscoriordan/dilemma>) is the closest *architectural* peer: a
   Greek tagger/lemmatizer on the same torch-free ONNX inference path pyaegean uses. But it is
   lemmatizer-first and publishes accuracy only on its own multi-period benchmarks (93.7%
@@ -170,8 +170,8 @@ onnxruntime CPU):
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 |---|---|---|---|---|---|---|
-| UD Perseus | **94.29** | **90.23** | **85.64** | 97.04 | 96.04 | 93.48 |
-| UD PROIEL | 90.50 | 82.47 | 63.47 | 86.71 | 59.43 | n/a |
+| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.04 | 93.48 |
+| UD PROIEL | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
 
 The shipped checkpoint is one of five seed replicates of this recipe; across those seeds the
 UD Perseus test mean ± standard deviation is **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12,
@@ -182,26 +182,26 @@ clears both that seed spread and a within-fold bootstrap confidence interval:
 
 | Metric | pyaegean | 95% CI | best published | margin |
 |---|---|---|---|---|
-| UPOS | 97.04 | [96.77, 97.32] | 95.83 (2024) | +1.21 |
-| XPOS | 93.48 | [93.09, 93.90] | 91.09 (2024) | +2.39 |
-| UFeats | 96.04 | [95.74, 96.34] | 92.56 (odyCy 2023) | +3.48 |
-| Lemma | 94.29 | [93.91, 94.63] | 87.86 (Stanza model card) | +6.43 |
-| UAS | 90.23 | [89.56, 90.80] | 88.20 (2024) | +2.03 |
-| LAS | 85.64 | [84.91, 86.29] | 83.98 (2024) | +1.66 |
+| UPOS | 97.02 | [96.76, 97.29] | 95.83 (2024) | +1.19 |
+| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2024) | +2.39 |
+| UFeats | 96.04 | [95.75, 96.34] | 92.56 (odyCy 2023) | +3.48 |
+| Lemma | 94.27 | [93.89, 94.62] | 87.86 (Stanza model card) | +6.41 |
+| UAS | 90.24 | [89.62, 90.80] | 88.20 (2024) | +2.04 |
+| LAS | 85.65 | [84.93, 86.29] | 83.98 (2024) | +1.67 |
 
 (CIs are percentile bootstrap over the fold's sentences, 999 resamples: `greek.bootstrap_ud`'s
 default, so the reproduction command matches; the 2-decimal bounds are stable across resample counts.)
 
 Three things keep these honest:
 
-- **The leads are robust, LAS and UAS included.** The +1.66 LAS and +2.03 UAS margins are
+- **The leads are robust, LAS and UAS included.** The +1.67 LAS and +2.04 UAS margins are
   large next to both the seed spread (±0.10 / ±0.12) and the within-fold CIs above, whose lower
-  bounds (84.91 / 89.56) sit well above the published 83.98 / 88.20. An earlier single-run build
+  bounds (84.93 / 89.62) sit well above the published 83.98 / 88.20. An earlier single-run build
   had a thin, within-noise LAS lead; the converter comma fix and the predicted-arc relation
   training above turned it into a robust one (and tightened the seed spread fourfold).
 - **PROIEL is out of domain.** The in-domain published systems train on the PROIEL fold
   itself; pyaegean never does. Against a *Perseus-trained* published system, the like-for-like
-  out-of-domain comparison, pyaegean leads by ~23 UAS (82.47 vs the Perseus-trained Stanza
+  out-of-domain comparison, pyaegean leads by ~23 UAS (82.48 vs the Perseus-trained Stanza
   baseline's 59.00 on this fold). The remaining PROIEL
   LAS and UFeats gaps are largely deprel- and feature-convention divergence between the two
   treebanks' UD conversions (PROIEL annotates five feature types the Perseus scheme lacks,
@@ -251,7 +251,7 @@ model trains on AGDT + Gorman + Pedalion, never on the NT.
 
 | Test set | Lemma | UPOS (reconciled) | scored tokens |
 |---|---|---|---|
-| Nestle 1904 NT (whole) | 87.03 | 86.75 | 137,303 |
+| Nestle 1904 NT (whole) | 87.96 | 86.75 | 137,303 |
 
 Reproduce: `aegean greek eval nt` (or `greek.use_neural_pipeline(); greek.evaluate_on_nt()`).
 Gold-tokenized, all 27 books, ≈1 h on plain CPU. Measured with the shipped quantized
@@ -264,12 +264,16 @@ not re-measured when v2 replaced v1 (0.8.7). Decomposed per effect on a fixed bo
 the v1 → v2 model change costs about 1.8 UPOS out of domain here (the trade that bought v2's
 across-the-board UD Perseus/PROIEL gains); int8 quantization (v3, 0.10.0) costs a further
 ~0.1, consistent with its Perseus-lossless gate; the gold correction adds ~+0.35; Unicode
-normalization of the gold has zero effect. Lemma is stable across all three generations
-(87.04 → 87.03).
+normalization of the gold has zero effect. Lemma was stable across those three generations
+(87.04 → 87.03); the 0.32.0 lemma-composition fix then raised it to 87.96 (+0.93, about
+1,280 tokens): a sentence-initial capitalized form absent from the training lookups
+previously surfaced its own capitalized surface as the lemma, and now resolves through the
+lowercase lookup (verified prediction-level on Mark: 205 changes, 191 corrected, none newly
+wrong; UPOS untouched). See `training/results/lemma-remeasure-2026-07-09.json`.
 
 What is and isn't reported, and why:
 
-- **Lemma** is the clean metric. It sits a few points under the PROIEL-NT lemma (90.50)
+- **Lemma** is the clean metric. It sits a few points under the PROIEL-NT lemma (90.51)
   largely because Nestle 1904's lemma conventions differ from the AGDT the model learned
   (principal-part choice, proper-noun citation form, movable-nu): a real convention gap as
   much as model error; scoring only normalizes NFC + homograph digits, not lemma style.
@@ -309,7 +313,7 @@ such a slice exists, reported; run against the Perseus test fold today it return
 
 On register (Classical literary vs Koine), the closest available signal is the contrast between
 the Perseus rows (literary, and as shown here prose) and the Nestle 1904 NT row (Koine): lemma
-94.29 on Perseus against 87.03 on the NT. That gap is real but is **not** a clean register
+94.27 on Perseus against 87.96 on the NT. That gap is real but is **not** a clean register
 effect, because register co-varies with the annotation project: the NT row is a different
 treebank's conventions and a genuinely out-of-domain fold, so the difference mixes register,
 convention, and domain. It is reported as orientation, not as a measured "Koine penalty."

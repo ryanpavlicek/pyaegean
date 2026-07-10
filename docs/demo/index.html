@@ -24,7 +24,12 @@
           border: 1px solid var(--line); border-radius: 6px; background: #fff; }
   textarea { min-height: 52px; resize: vertical; }
   .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-  .row input[type=text] { flex: 1; }
+  .row input[type=text] { flex: 1 1 0; min-width: 0; }
+  /* A select shares its row with a text input on several cards (bridge, sign lookup,
+     EpiDoc export, cite). The global width:100% would make its flex-basis the whole
+     row and collapse the input to a sliver, so inside a row a select sizes to its
+     content and the input takes the remaining space. */
+  .row select { width: auto; flex: 0 0 auto; }
   button { font: inherit; padding: 7px 14px; border: 0; border-radius: 6px; cursor: pointer;
            background: var(--accent); color: #fff; white-space: nowrap; }
   button:disabled { background: #bbb; cursor: not-allowed; }

@@ -25,14 +25,44 @@ def _read(rel: str) -> str:
     return (ROOT / rel).read_text(encoding="utf-8")
 
 
-def test_registry_agrees_with_the_quantize_evidence() -> None:
-    """The registry's neural Perseus row and sizes must equal the v3 evidence file."""
+def test_registry_agrees_with_the_remeasure_evidence() -> None:
+    """Every neural accuracy row must equal the newest full-protocol evidence file
+    (the 2026-07-09 re-measure, taken with the 0.32.0 lemma-composition fix). The v3
+    quantize report stays as the historical record backing the size claims; its
+    accuracy cells reflect the 2026-06 evaluation path and are superseded."""
     claims = _claims()
-    v3 = json.loads(_read("training/results/v3-quantize-report.json"))
-    ev = v3["ud_perseus_test_shipped_v3"]
+    rem = json.loads(_read("training/results/lemma-remeasure-2026-07-09.json"))
+    res = rem["results_full_precision"]
     row = claims["neural_ud_perseus_test"]
     for metric in ("lemma", "uas", "las", "upos", "ufeats", "xpos"):
-        assert row[metric] == ev[metric], metric
+        assert row[metric] == round(res["perseus_test"][metric] * 100, 2), metric
+    prow = claims["neural_ud_proiel_test"]
+    for metric in ("lemma", "uas", "las", "upos", "ufeats"):
+        assert prow[metric] == round(res["proiel_ud_test"][metric] * 100, 2), metric
+    nt = claims["neural_nt"]
+    assert nt["lemma"] == round(res["nt_whole"]["lemma"] * 100, 2)
+    assert nt["upos_reconciled"] == round(res["nt_whole"]["upos_reconciled"] * 100, 2)
+    assert nt["n_tokens"] == res["nt_whole"]["n_tokens"]
+
+
+def test_doc_confidence_intervals_match_the_bootstrap_evidence() -> None:
+    """The stated 95% CI cells must come from the recorded bootstrap evidence file,
+    and the evidence's point estimates must agree with the registry pins."""
+    claims = _claims()["neural_ud_perseus_test"]
+    doc = _read("docs/benchmarks.md")
+    page = _read("wiki/Benchmarks.md")
+    ev = _read("training/results/v3-bootstrap-ci-2026-07-10.txt")
+    for line in ev.strip().splitlines():
+        metric, point, _, _, low, high = line.split()
+        assert float(point) == claims[metric], metric
+        cell = f"[{low.strip('[,')}, {high.strip(']')}]"
+        assert cell in doc, f"{metric} CI {cell} missing from docs/benchmarks.md"
+        assert cell in page, f"{metric} CI {cell} missing from wiki/Benchmarks.md"
+
+
+def test_registry_agrees_with_the_quantize_size_evidence() -> None:
+    claims = _claims()
+    v3 = json.loads(_read("training/results/v3-quantize-report.json"))
     q = claims["quantization"]
     assert q["tar_gz_bytes"] == v3["shipped_bytes"]["tar_gz"]
     assert q["onnx_bytes"] == v3["shipped_bytes"]["model.onnx"]
@@ -126,9 +156,17 @@ def test_readme_and_wiki_echoes_match_the_registry() -> None:
     """The 1-decimal headline echoes outside docs/benchmarks.md must round from the
     registry values (the drift class where an echo outlives a re-measurement).
     README and Home state them as prose ("97.0 UPOS / ..."); Greek-NLP as a table row,
-    so each page is checked for the rounded values it actually carries."""
+    so each page is checked for the rounded values it actually carries. The 1-decimal
+    figures round from the FULL-PRECISION evidence, not from the registry's 2-decimal
+    cells: re-rounding an already-rounded pin double-rounds (85.648 -> 85.65 -> 85.7,
+    overstating a measured 85.6)."""
+    rem = json.loads(_read("training/results/lemma-remeasure-2026-07-09.json"))
+    per = rem["results_full_precision"]["perseus_test"]
     row = _claims()["neural_ud_perseus_test"]
-    rounded = {m: f"{row[m]:.1f}" for m in ("upos", "ufeats", "lemma", "uas", "las")}
+    rounded = {m: f"{per[m] * 100:.1f}" for m in ("upos", "ufeats", "lemma", "uas", "las")}
+    # each 1-decimal echo must also be consistent with the registry's 2-decimal pin
+    for m, v in rounded.items():
+        assert abs(float(v) - row[m]) < 0.06, m
     prose = f"{rounded['upos']} UPOS / {rounded['ufeats']} UFeats / {rounded['lemma']} lemma"
     for rel in ("README.md", "wiki/Home.md"):
         text = _read(rel)

@@ -254,6 +254,46 @@ def ipa(
         raise fail(str(exc)) from None
 
 
+@greek_app.command("missing-forms")
+def missing_forms_cmd(
+    corpus: str = typer.Argument(..., help="A corpus id, .json/.db file, work id, or -."),
+    limit: int = typer.Option(0, "--limit", "--top", help="Cap the list (0 = all)."),
+    tagger: bool = TAGGER_OPT,
+    lemmatizer: bool = LEMMATIZER_OPT,
+    neural_lemmatizer: bool = NEURAL_LEMM_OPT,
+    neural: bool = NEURAL_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """The Greek word forms the active lemmatizer cannot resolve, ranked by frequency.
+
+    Each row is a candidate for a sourced contribution (see CONTRIBUTING's "Contributing
+    sourced data"): confirm the form against a dictionary or edition before adding it. The
+    result reflects whichever lemmatizer backends are active (the offline baseline by
+    default; --treebank/--neural etc. resolve more).
+    """
+    from aegean import greek
+
+    _activate(tagger=tagger, lemmatizer=lemmatizer,
+              neural_lemmatizer=neural_lemmatizer, neural=neural)
+    c = load_corpus(corpus)
+    forms = greek.missing_forms(c, limit=limit)
+    if json_out:
+        emit_json([
+            {"form": m.form, "count": m.count,
+             "example_doc_id": m.example_doc_id, "example_position": m.example_position}
+            for m in forms
+        ])
+        return
+    if not forms:
+        print("no unresolved forms: the active lemmatizer covers this corpus")
+        return
+    table(
+        f"unresolved forms: {corpus}",
+        ["form", "count", "example"],
+        [[m.form, str(m.count), f"{m.example_doc_id}:{m.example_position}"] for m in forms],
+    )
+
+
 @greek_app.command()
 def profile(text: str = TEXT_ARG, json_out: bool = JSON_OPT) -> None:
     """Describe the observable features of a text (script, polytonic, Beta Code, editorial marks).
@@ -1204,13 +1244,25 @@ def evaluate(
             return
         print(report.summary())  # type: ignore[attr-defined]
 
+    def live_progress(done: int, total: int) -> None:
+        # A single repainted stderr line, TTY-only: piped/captured runs (CI, --json > f)
+        # stay clean, but a scholar watching the ~1 h NT eval sees it moving.
+        if not sys.stderr.isatty():
+            return
+        step = max(1, total // 200)
+        if done % step and done != total:
+            return
+        end = "\n" if done == total else ""
+        print(f"\r  scoring {done:,}/{total:,} sentences ({100 * done // total}%)",
+              file=sys.stderr, end=end, flush=True)
+
     result: object
     if target == "ud":
         if drift:
             emit_drift(greek.ud_error_analysis(treebank=fold, split=split))
             return
         if by_genre:
-            by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap)
+            by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap, progress=live_progress)
             unmapped = by.pop("_unmapped", {}).get("authors", [])  # type: ignore[union-attr]
             if emit_result({**by, "_unmapped": unmapped}, json_output=json_out, output=output):
                 return
@@ -1229,18 +1281,18 @@ def evaluate(
                 k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]" for k, ci in cis.items()
             }
         else:
-            result = greek.evaluate_on_ud(treebank=fold, split=split)
+            result = greek.evaluate_on_ud(treebank=fold, split=split, progress=live_progress)
     elif target == "proiel":
         if drift:
             emit_drift(greek.proiel_error_analysis())
             return
-        result = greek.evaluate_on_proiel()
+        result = greek.evaluate_on_proiel(progress=live_progress)
     elif target == "nt":
         _activate(neural=True)  # the NT fold reports the shipped neural model's number
         if drift:
             emit_drift(greek.nt_error_analysis())
             return
-        result = greek.evaluate_on_nt()
+        result = greek.evaluate_on_nt(progress=live_progress)
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":

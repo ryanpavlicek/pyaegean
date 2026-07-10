@@ -174,10 +174,55 @@ def _fake_sdk_that_raises(exc: Exception) -> dict[str, types.ModuleType]:
     }
 
 
-@pytest.mark.parametrize("provider,env", [
+# ── CLASS: every registered provider has an installable extra of its own name ──
+def test_every_registered_provider_has_a_pyproject_extra():
+    """The ProviderNotInstalled message interpolates the provider name into
+    ``pip install 'pyaegean[<provider>]'``, so every registered provider MUST have an
+    extra of exactly that name or the error sends users to a nonexistent install line
+    (the class the 0.31.0 'local' provider shipped with: registered, no extra)."""
+    import tomllib
+    from pathlib import Path
+
+    from aegean.ai.client import _PROVIDERS
+
+    pyproject = tomllib.loads(
+        (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    extras = set(pyproject["project"]["optional-dependencies"])
+    missing = set(_PROVIDERS) - extras
+    assert not missing, f"registered providers without a pyproject extra: {sorted(missing)}"
+
+
+# ── CLASS: the needs-review class set has ONE source of truth ──
+def test_needs_review_set_is_single_sourced():
+    """io.review's low-confidence set must be DERIVED from greek.needs_review (the one
+    canonical predicate), never re-hardcoded: the two were once defined independently and
+    could drift, silently changing which rows a review table flags."""
+    from aegean.greek.lemmatize import LemmaSource, needs_review
+    from aegean.io.review import _low_confidence
+
+    assert _low_confidence() == frozenset(s.value for s in LemmaSource if needs_review(s))
+    # and the derived set is exactly the two honest-miss classes today
+    assert _low_confidence() == {"identity", "unresolved"}
+
+
+_WRAP_COVERED = [
     ("anthropic", "ANTHROPIC_API_KEY"), ("openai", "OPENAI_API_KEY"),
-    ("grok", "XAI_API_KEY"), ("openrouter", "OPENROUTER_API_KEY"), ("gemini", "GEMINI_API_KEY"),
-])
+    ("grok", "XAI_API_KEY"), ("openrouter", "OPENROUTER_API_KEY"),
+    ("gemini", "GEMINI_API_KEY"), ("local", "PYAEGEAN_LOCAL_API_KEY"),
+]
+
+
+def test_every_registered_provider_has_wrap_coverage():
+    """The parametrize list below must enumerate EVERY registered provider — a new adapter
+    that ships without transport-failure wrap coverage fails here, loudly (the 0.31.0
+    'local' adapter initially shipped outside this list)."""
+    from aegean.ai.client import _PROVIDERS
+
+    assert {p for p, _ in _WRAP_COVERED} == set(_PROVIDERS)
+
+
+@pytest.mark.parametrize("provider,env", _WRAP_COVERED)
 def test_provider_adapters_wrap_a_transport_failure(provider, env, monkeypatch):
     """A provider call that raises a non-SDK-error (a transport failure) must surface as
     ProviderCallError from every adapter, not leak raw (the class fixed for the OpenAI-

@@ -40,10 +40,11 @@ _EXTRAS: tuple[tuple[str, tuple[str, ...], str], ...] = (
 # regular datasets; this answers "are the models here?" directly).
 _MODEL_BUNDLES = ("grc-joint", "grc-lemma-neural")
 
-# Store files that only exist mid-download or mid-extraction; found at rest
-# they are leftovers from an interrupted fetch. Longest suffix first so
+# Store files that only exist mid-download, mid-extraction, or mid-swap; found at rest
+# they are leftovers from an interrupted fetch (``.old`` is a superseded extraction the
+# re-pin swap renames aside — normally deleted a moment later). Longest suffix first so
 # ``name.part.info`` strips to ``name``, not ``name.info``.
-_ORPHAN_SUFFIXES = (".part.info", ".part", ".extract")
+_ORPHAN_SUFFIXES = (".part.info", ".part", ".extract", ".old")
 
 
 def build_report() -> dict[str, Any]:
@@ -183,15 +184,17 @@ def _store_section(issues: list[dict[str, Any]]) -> dict[str, Any]:
         if suffix is None:
             continue
         dataset = name[: -len(suffix)]
-        fix = f"aegean data remove {dataset}" if dataset in _REMOTE else f"delete {child}"
+        if suffix == ".old":
+            # A superseded extraction the re-pin swap renamed aside: the healthy current
+            # copy sits next to it, so the fix is deleting the leftover, NOT `data remove`
+            # (which would purge the good copy too and force a re-download).
+            fix = f"delete {child}"
+            message = f"superseded extraction left behind: {name}"
+        else:
+            fix = f"aegean data remove {dataset}" if dataset in _REMOTE else f"delete {child}"
+            message = f"leftover partial download: {name}"
         orphans.append({"file": name, "dataset": dataset, "fix": fix})
-        issues.append(
-            {
-                "section": "data store",
-                "message": f"leftover partial download: {name}",
-                "fix": fix,
-            }
-        )
+        issues.append({"section": "data store", "message": message, "fix": fix})
 
     datasets = []
     for name in sorted(_REMOTE):  # the same per-dataset state `aegean data list` reports

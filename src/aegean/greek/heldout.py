@@ -111,15 +111,21 @@ def score(
     source_dir: str | None = None,
     holdout: float = 0.1,
     split: HeldoutSplit | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, float]:
     """Score a whole-sentence tagger on the held-out split, overall and on the **unseen**
     subset. ``tag_sentence`` receives every form in a sentence (so context-aware systems
     get full context) and returns ``(lemma, pos)`` per token; only non-PUNCT/NUM tokens
-    count. Lemmas are compared after ``_clean_lemma`` on both sides."""
+    count. Lemmas are compared after ``_clean_lemma`` on both sides.
+
+    ``progress`` (optional) is called as ``progress(done, total)`` after each scored
+    sentence — the hook the long evaluations (the ~1 h whole-NT run) report through.
+    It never changes the result; an exception it raises aborts the run."""
     sp = split if split is not None else split_tokens(source_dir=source_dir, holdout=holdout)
+    total = len(sp.sentences)
     n_all = n_seen = n_unseen = 0
     lemma_ok = lemma_ok_unseen = pos_ok = pos_ok_unseen = 0
-    for sent in sp.sentences:
+    for done, sent in enumerate(sp.sentences, start=1):
         preds = tag_sentence([t.form for t in sent])
         for tok, pred in zip(sent, preds):
             if not tok.scored:
@@ -135,6 +141,8 @@ def score(
             if (pred[1] or "") == tok.upos:
                 pos_ok += 1
                 pos_ok_unseen += int(unseen)
+        if progress is not None:
+            progress(done, total)
     return {
         "lemma_all": _ratio(lemma_ok, n_all),
         "pos_all": _ratio(pos_ok, n_all),

@@ -172,8 +172,8 @@ lemmas. Measured through the package's own inference code:
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 | --- | --- | --- | --- | --- | --- | --- |
-| UD Perseus (in family) | 94.29 | 90.23 | 85.64 | 97.04 | 96.04 | 93.48 |
-| UD PROIEL (out of domain) | 90.50 | 82.47 | 63.47 | 86.71 | 59.43 | n/a |
+| UD Perseus (in family) | 94.27 | 90.24 | 85.65 | 97.02 | 96.04 | 93.48 |
+| UD PROIEL (out of domain) | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
 
 The shipped checkpoint is one of **five seed replicates** of the recipe; across
 those seeds the UD Perseus test mean ± standard deviation is LAS 85.58 ± 0.10,
@@ -191,7 +191,7 @@ types the Perseus scheme lacks, and its XPOS is a different tagset entirely), a
 measurement boundary rather than a model defect.
 
 A second out-of-domain check scores the pipeline against the **Nestle 1904** Greek
-New Testament's own gold (`greek.evaluate_on_nt()`): lemma 87.03, UPOS
+New Testament's own gold (`greek.evaluate_on_nt()`): lemma 87.96, UPOS
 (reconciled) 86.75 over 137,303 tokens. The model never trains on the NT.
 
 ### The pure-Python baseline is a floor, not the accuracy story

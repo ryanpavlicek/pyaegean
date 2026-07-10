@@ -313,11 +313,15 @@ def _combined_provenance(provs: list[Provenance], n_docs: int) -> Provenance:
     reloaded corpus stays truthful (the same pattern as ``Corpus.merge``)."""
     sources = [p.citation or p.source for p in provs]
     licenses = sorted({p.license for p in provs if p.license})
+    # edition_fidelity carries through only when every appended source agrees on one
+    # non-empty value (the same rule as Corpus.merge); otherwise honestly unknown.
+    fidelities = {p.edition_fidelity for p in provs}
     return Provenance(
         source="Combined corpus (aegean.db)",
         license="; ".join(licenses) or "mixed",
         citation="Combined corpus of: " + "; ".join(sources),
         notes=(f"appended: {len(provs)} corpora → {n_docs} documents",),
+        edition_fidelity=fidelities.pop() if len(fidelities) == 1 else "",
     )
 
 

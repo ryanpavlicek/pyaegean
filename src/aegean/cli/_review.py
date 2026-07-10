@@ -59,7 +59,13 @@ def export(
     with writing(output):
         n = to_review_table(c, output, only_needs_review=only_needs_review)
     print(f"wrote {n} review rows to {output}", file=sys.stderr)
-    print(f"correct the columns, then:  aegean review apply {corpus} {output} -o corrected.json")
+    # When the corpus was annotated for this export, apply must annotate too, or the
+    # accepted machine values would be missing from the corrected corpus.
+    extra = " --annotate" if annotate else ""
+    print(
+        f"correct the columns, then:  aegean review apply {corpus} {output} "
+        f"-o corrected.json{extra}"
+    )
 
 
 @review_app.command()
@@ -70,17 +76,34 @@ def apply(
         ..., "--output", "-o", help="Destination .json / .db for the corrected corpus."
     ),
     reviewer: str = typer.Option("", "--reviewer", help="Name stamped on each correction."),
+    annotate: bool = typer.Option(
+        False, "--annotate",
+        help="Fill machine annotations from the pipeline before applying — pass it whenever "
+             "the export used it, so accepted (uncorrected) predictions land in the corrected "
+             "corpus too, not only the reviewer's changes.",
+    ),
+    tagger: bool = TAGGER_OPT,
+    lemmatizer: bool = LEMMATIZER_OPT,
+    neural_lemmatizer: bool = NEURAL_LEMM_OPT,
+    neural: bool = NEURAL_OPT,
 ) -> None:
     """Apply a reviewed table's corrections back onto ``corpus`` and save the result.
 
-    Matches rows to tokens by document id + position; each corrected field keeps the machine
-    value under ``<field>__pred`` and records the reviewer. Pass the SAME corpus the table was
-    exported from."""
+    Matches rows to tokens by document id + position, verifying each row's exported token
+    text against the corpus (a mismatch is an error, never a silent wrong-word edit); each
+    corrected field keeps the machine value under ``<field>__pred`` and records the reviewer.
+    Pass the SAME corpus the table was exported from, and repeat ``--annotate`` (plus any
+    backend flags) if the export used it."""
+    from aegean import greek
     from aegean.io import from_review_table
 
     if not table.exists():
         raise fail(f"no review table at {table} (create one with `aegean review export`)")
     c = load_corpus(corpus)
+    if annotate:
+        _activate(tagger=tagger, lemmatizer=lemmatizer,
+                  neural_lemmatizer=neural_lemmatizer, neural=neural)
+        c = greek.annotate_corpus(c)
     try:
         corrected = from_review_table(table, c, reviewer=reviewer)
     except (OSError, ValueError, KeyError) as exc:

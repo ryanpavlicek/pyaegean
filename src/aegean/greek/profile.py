@@ -12,7 +12,9 @@ unreliability invites false confidence. Callers get the raw features and draw
 their own conclusions. Every field is a measured count or ratio over the input.
 
 Pure, stdlib-only (``unicodedata``), and fast: one NFC pass, one NFD pass, and a
-few linear scans, with no data files or heavy imports loaded.
+few linear scans, with no data files or heavy imports loaded. Runs of combining
+marks are capped before normalizing, so a hostile mark flood (Zalgo text) cannot
+push the normalize passes quadratic.
 """
 
 from __future__ import annotations
@@ -48,16 +50,19 @@ _EDITORIAL_AMBIGUOUS = frozenset("()<>")
 _EDITORIAL_ALL = _EDITORIAL_CORE | _EDITORIAL_AMBIGUOUS
 
 # ── Beta Code signal ────────────────────────────────────────────────────────
-# Strong, low-false-positive markers of TLG/Perseus Beta Code: an accent /
-# circumflex / diaeresis / iota-subscript symbol touching a Latin letter, the
-# capital marker "*" before a letter, or a sigma variant s1/s2/s3. The weak
-# breathing symbols ") (" are excluded here because ordinary parentheses would
-# match them; they are handled by the editorial-bracket path instead.
+# Markers of TLG/Perseus Beta Code, anchored the way Beta Code actually places
+# them so ordinary English ("and/or", "I/O"), file paths, and source code do
+# not trip it: an accent symbol directly after a VOWEL letter (Beta Code accents
+# follow the vowel they modify), a diaeresis after i/u, an iota subscript after
+# a/h/w, the capital marker "*" at a word start, or a sigma variant s1/s2/s3
+# after a letter. The weak breathing symbols ") (" are excluded because ordinary
+# parentheses would match them; they are handled by the editorial-bracket path.
 _BETA_SIGNAL_RE = re.compile(
-    r"[A-Za-z][/\\=+|]"  # mark after a letter (lo/gos, w=|)
-    r"|[/\\=+|][A-Za-z]"  # or before a letter
-    r"|\*[A-Za-z]"  # capital marker (*a)qh/nh)
-    r"|[sS][123]"  # sigma variants s1/s2/s3
+    r"[aehiouwAEHIOUW][/\\=]"  # accent after a vowel (lo/gos, mh=nin, qea/)
+    r"|[iuIU]\+"  # diaeresis (i+, u+)
+    r"|[ahwAHW]\|"  # iota subscript (tw=| -> w|)
+    r"|(?<![A-Za-z0-9])\*[A-Za-z]"  # capital marker at a word start (*a)qh/nh)
+    r"|[A-Za-z][sS][123](?![0-9])"  # sigma variants (s1/s2/s3) inside a word
 )
 
 # ── Greek alphabetic-numeral signs (the letters themselves are counted as
@@ -137,14 +142,48 @@ def _looks_like_betacode(
 ) -> bool:
     """Heuristic: does the ASCII look like transliterated Beta Code Greek?
 
-    Requires no real Unicode Greek, a Latin-letter-dominated body (so algebra,
-    paths, and code do not match), and at least one strong Beta Code marker.
+    Requires no real Unicode Greek, a Latin-letter-dominated body, and DENSE Beta
+    Code markers: real Beta Code carries an accent on most words, so at least one
+    word in three must show a signal. A stray "I/O" or "a/b" in ordinary English
+    prose, a file path, or source code stays below the density bar.
     """
     if greek_count or not latin_count or not nonspace:
         return False
     if latin_count / nonspace < 0.5:
         return False
-    return bool(_BETA_SIGNAL_RE.search(text))
+    signals = len(_BETA_SIGNAL_RE.findall(text))
+    if not signals:
+        return False
+    words = len(_TOKEN_RE.findall(text))
+    return signals >= max(1, words // 3)
+
+
+# Real polytonic Greek stacks at most a few combining marks on one base letter (breathing +
+# accent + diaeresis + iota subscript); anything past this cap is a decorative/hostile flood.
+_MAX_COMBINING_RUN = 8
+
+
+def _cap_combining_runs(text: str, cap: int = _MAX_COMBINING_RUN) -> str:
+    """Truncate runs of combining marks longer than ``cap``.
+
+    Unicode canonical (re)ordering inside ``normalize`` is quadratic within a single run of
+    combining marks with mixed combining classes, so an adversarial mark flood (Zalgo text)
+    would otherwise blow up the two normalize passes. Real text is untouched: no natural
+    Greek stacks more than a handful of marks. One linear pass."""
+    run = 0
+    out: list[str] | None = None  # built lazily: the common case copies nothing
+    for i, ch in enumerate(text):
+        if unicodedata.combining(ch):
+            run += 1
+            if run > cap:
+                if out is None:
+                    out = list(text[:i])
+                continue
+        else:
+            run = 0
+        if out is not None:
+            out.append(ch)
+    return text if out is None else "".join(out)
 
 
 def _is_numeric(ch: str) -> bool:
@@ -171,6 +210,7 @@ def profile_text(text: str) -> TextProfile:
     a genre or an out-of-domain label. An empty string yields an all-zero profile
     with ``script="other"``.
     """
+    text = _cap_combining_runs(text)  # bound the normalize passes on a hostile mark flood
     nfc = unicodedata.normalize("NFC", text)
     nfd = unicodedata.normalize("NFD", text)
 

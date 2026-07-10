@@ -40,11 +40,19 @@ def _merged_provenance(corpora: "list[Corpus]", n_docs: int) -> Provenance:
     licenses = sorted(
         {c.provenance.license for c in corpora if c.provenance and c.provenance.license}
     )
+    # edition_fidelity survives a merge only when every input agrees on one non-empty
+    # value; a mixed or partly-unknown merge honestly reports "" (unknown), never a
+    # single corpus's flag stretched over the others' text.
+    fidelities = {
+        c.provenance.edition_fidelity if c.provenance is not None else "" for c in corpora
+    }
+    fidelity = fidelities.pop() if len(fidelities) == 1 else ""
     return Provenance(
         source="Merged corpus (aegean.combine)",
         license="; ".join(licenses) or "mixed",
         citation="Merged corpus of: " + "; ".join(sources),
         notes=(f"merged: {len(corpora)} corpora → {n_docs} documents",),
+        edition_fidelity=fidelity,
     )
 
 
@@ -402,6 +410,10 @@ class Corpus:
                     "position": tok.position,
                     "text": tok.text,
                     "kind": tok.kind.value,
+                    # the editorial reading status (CERTAIN/UNCLEAR/RESTORED/LOST): without
+                    # it, a spreadsheet of an epigraphic corpus could not tell a restored
+                    # reading from a securely-read one
+                    "status": tok.status.value,
                     "site": d.meta.site,
                     "period": d.meta.period,
                 }

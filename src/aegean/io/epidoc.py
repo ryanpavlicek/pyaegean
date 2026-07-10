@@ -82,7 +82,11 @@ def to_epidoc(document: Document) -> str:
     return becomes a line feed, leading/trailing whitespace on a token is trimmed, and a
     token (or alternate reading) whose text is only whitespace does not survive the parse.
     Real transliteration tokens are never whitespace-only, so this affects only synthetic
-    input; the transliteration content itself is preserved."""
+    input; the transliteration content itself is preserved.
+
+    ``Token.annotations`` (lemma, morphology, evidence class, review stamps) are NOT
+    serialized to EpiDoc — the format carries the edition text and its apparatus, not an
+    analysis layer. Use `Corpus.to_json` or `aegean.db.to_sqlite` for the full record."""
     import xml.etree.ElementTree as ET  # lazy: keep `import aegean` free of the XML parser
 
     def q(tag: str) -> str:
@@ -155,7 +159,8 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     the filesystem (anything outside ``[A-Za-z0-9-_.]`` becomes ``_``), which
     can conflate distinct ids: when two ids sanitize to the same filename, the
     later ones (in id order) get a ``-2``, ``-3``, ... suffix and a warning
-    names the colliding ids, so no document silently overwrites another."""
+    names the colliding ids, so no document silently overwrites another.
+    ``Token.annotations`` are not serialized (see `to_epidoc`)."""
     if isinstance(obj, Document):
         with atomic_path(path) as tmp:  # temp+replace: a failed write keeps the prior file
             tmp.write_text(to_epidoc(obj), encoding="utf-8")

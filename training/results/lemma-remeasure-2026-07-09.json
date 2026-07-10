@@ -1,0 +1,36 @@
+{
+  "what": "Full-protocol re-measure of the neural rows after the 0.32.0 lemma-composition fix (joint._compose_lemma no longer emits the '_' placeholder script output or counts an identity edit-script on an out-of-vocabulary form as a resolved analysis; a genuine identity lemma from the training lookups is unaffected).",
+  "date": "2026-07-09",
+  "model": "grc-joint-v3 (int8+fp16 quantized, sha256-pinned release asset), CPU (CPUExecutionProvider)",
+  "protocols": {
+    "perseus": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator",
+    "proiel_ud": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain",
+    "nt": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
+  },
+  "results_full_precision": {
+    "perseus_test": {
+      "upos": 0.9702275871940456, "xpos": 0.9347774225869555, "ufeats": 0.9603511617920703,
+      "lemma": 0.9426976477885395, "uas": 0.9024285509804857, "las": 0.8564817023712964,
+      "n_words": 20959, "n_sentences": 1306
+    },
+    "proiel_ud_test": {
+      "upos": 0.8669070151719994, "ufeats": 0.594261679435181, "lemma": 0.9050623403935707,
+      "uas": 0.8247709178308548, "las": 0.6349707075259126,
+      "n_words": 13314, "n_sentences": 1047
+    },
+    "nt_whole": {
+      "lemma": 0.8796238975113435, "upos_reconciled": 0.8675265653336053, "n_tokens": 137303
+    }
+  },
+  "effect_of_the_fix": {
+    "mechanism": "A capitalized form absent from the training lookups whose predicted edit script was the identity previously surfaced its own capitalized surface as the lemma; it now falls through to the lowercase lookup (or an honest unresolved flag). Gold lemmas are lowercase citation forms for common words, so the sentence-initial-capital class flips from wrong to right; treebanks that capitalize proper-noun lemmas (AGDT, PROIEL) give back a small offsetting loss on names.",
+    "mark_ab_check": "Gospel of Mark, prediction-level A/B against the prior release's composition: 11,277 gold tokens compared; 205 lemma predictions changed, 0 UPOS predictions changed; against gold: +191 corrected, 0 newly wrong, 10 changed-but-still-wrong.",
+    "deltas_vs_prior_pins": {
+      "perseus_lemma": "pin 94.29 -> 94.27 (a same-day pre-fix control run measured 94.28; the fix's net effect is -2 tokens of 20,959: AGDT capitalizes proper-noun lemmas)",
+      "nt_lemma": "87.03 -> 87.96 (+0.93; ~1,280 tokens corrected; Nestle gold lemmas are lowercase)",
+      "proiel_lemma": "90.50 -> 90.51",
+      "upos_uas_las": "Perseus UPOS/UAS/LAS byte-identical to the same-day pre-fix control run; NT UPOS unchanged at 86.75. Versus the 2026-06 quantize-era pins the Perseus cells differ by a few hundredths (97.04 -> 97.02, 90.23 -> 90.24, 85.64 -> 85.65) -- see non_lemma_drift_note."
+    },
+    "non_lemma_drift_note": "Both folds' non-lemma metrics sit a few hundredths off their prior pins (Perseus UPOS 97.04 -> 97.02, UAS 90.23 -> 90.24, LAS 85.64 -> 85.65; PROIEL UPOS 86.71 -> 86.69, UAS 82.47 -> 82.48, LAS 63.47 -> 63.50; UFeats/XPOS unchanged). The lemma composition cannot affect those metrics, and a same-day pre-fix control run reproduces today's values byte-for-byte, so the differences predate the fix: they reflect evaluation-path corrections made after the prior records were taken (the PROIEL row previously carried no evidence file at all). The values here are the current recorded-protocol measurements and are now the pinned ones."
+  }
+}

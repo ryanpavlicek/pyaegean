@@ -81,7 +81,7 @@ def test_eval_treebank_alias_warns_and_is_validated(app):
 def test_eval_fold_and_alias_select_the_fold(app, monkeypatch):
     seen: list[dict[str, str]] = []
 
-    def fake_eval(*, treebank: str, split: str) -> dict[str, float]:
+    def fake_eval(*, treebank: str, split: str, progress: object = None) -> dict[str, float]:
         seen.append({"treebank": treebank, "split": split})
         return {"upos": 0.97}
 

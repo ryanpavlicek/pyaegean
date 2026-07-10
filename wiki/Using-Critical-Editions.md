@@ -64,8 +64,12 @@ Roughly a fifth of the I.Sicily tokens are not securely read. That is normal for
 corpus, and it is exactly the information a study should account for rather than discover too late.
 
 Status round-trips through every persistence format: `Corpus.to_json` / `from_json`, the SQLite store
-(`aegean.db`), and EpiDoc export all preserve it. A corpus you load, filter, and re-save keeps the
-apparatus.
+(`aegean.db`), and EpiDoc export all preserve it, and the token-level tabular exports (`to_csv`,
+`to_parquet`, `to_dataframe`) carry it as a `status` column, so a spreadsheet can filter restored
+readings out. A corpus you load, filter, and re-save keeps the apparatus. Two caveats: the
+workbench export format carries token text only (a workbench round-trip returns every token as
+`CERTAIN`), and merging corpora keeps `edition_fidelity` only when every input agrees on one value
+(a mixed merge reports it unknown).
 
 ## The `edition_fidelity` flag
 

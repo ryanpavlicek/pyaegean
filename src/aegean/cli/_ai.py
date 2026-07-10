@@ -2,7 +2,8 @@
 
 Every result here is **exploratory** — a labeled model hypothesis with its
 grounding evidence, never a citable fact. Requires a provider SDK (an extra
-such as ``pyaegean[anthropic]``) and its API key in the environment.
+such as ``pyaegean[anthropic]``) and, for a hosted provider, its API key in
+the environment (the ``local`` provider needs a running local server, no key).
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
 
 ai_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Generative (exploratory, key-gated): translate, gloss, summarize, hypotheses, ask, extract, eval, providers.",
+    help="Generative (exploratory; API key per hosted provider, none for local): translate, gloss, summarize, hypotheses, ask, extract, eval, providers.",
     no_args_is_help=True,
 )
 

@@ -46,8 +46,8 @@ Measured through the package's own inference code, gold-tokenized, official CoNL
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 | --- | --- | --- | --- | --- | --- | --- |
-| UD Perseus | **94.29** | **90.23** | **85.64** | 97.04 | 96.04 | 93.48 |
-| UD PROIEL | 90.50 | 82.47 | 63.47 | 86.71 | 59.43 | n/a |
+| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.04 | 93.48 |
+| UD PROIEL | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
 
 UD PROIEL is a genuine **out-of-domain** fold: no pyaegean model ever trains on it
 (see [Leakage controls](#leakage-controls)). Its lower LAS and UFeats are largely
@@ -67,16 +67,16 @@ interval:
 
 | Metric | pyaegean | 95% CI | best published | margin |
 | --- | --- | --- | --- | --- |
-| UPOS | 97.04 | [96.77, 97.32] | 95.83 (2024) | +1.21 |
-| XPOS | 93.48 | [93.09, 93.90] | 91.09 (2024) | +2.39 |
-| UFeats | 96.04 | [95.74, 96.34] | 92.56 (odyCy 2023) | +3.48 |
-| Lemma | 94.29 | [93.91, 94.63] | 87.86 (Stanza model card) | +6.43 |
-| UAS | 90.23 | [89.56, 90.80] | 88.20 (2024) | +2.03 |
-| LAS | 85.64 | [84.91, 86.29] | 83.98 (2024) | +1.66 |
+| UPOS | 97.02 | [96.76, 97.29] | 95.83 (2024) | +1.19 |
+| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2024) | +2.39 |
+| UFeats | 96.04 | [95.75, 96.34] | 92.56 (odyCy 2023) | +3.48 |
+| Lemma | 94.27 | [93.89, 94.62] | 87.86 (Stanza model card) | +6.41 |
+| UAS | 90.24 | [89.62, 90.80] | 88.20 (2024) | +2.04 |
+| LAS | 85.65 | [84.93, 86.29] | 83.98 (2024) | +1.67 |
 
 CIs are percentile bootstrap over the fold's sentences, 999 resamples
 (`greek.bootstrap_ud`'s default, so the reproduction command matches). The lower
-bounds (LAS 84.91, UAS 89.56) sit well above the published 83.98 / 88.20, so the
+bounds (LAS 84.93, UAS 89.62) sit well above the published 83.98 / 88.20, so the
 parsing leads are robust, not within noise. The cross-tool sources for the "best
 published" column are cited in [Cross-tool comparison](#cross-tool-comparison-with-citations).
 
@@ -89,9 +89,9 @@ PROIEL row (a different project's NT annotation).
 
 | Test set | Lemma | UPOS (reconciled) | scored tokens |
 | --- | --- | --- | --- |
-| Nestle 1904 NT (whole) | 87.03 | 86.75 | 137,303 |
+| Nestle 1904 NT (whole) | 87.96 | 86.75 | 137,303 |
 
-Lemma is the clean metric; it sits a few points under the PROIEL-NT lemma (90.50)
+Lemma is the clean metric; it sits a few points under the PROIEL-NT lemma (90.51)
 largely because Nestle 1904's lemma conventions differ from the AGDT the model
 learned (principal-part choice, proper-noun citation form, movable-nu). UPOS is
 compared under a reconciled tagset (PROPN→NOUN, SCONJ→CCONJ, AUX→VERB), so it
@@ -253,7 +253,7 @@ reference rather than rows in the single-protocol table above:
   Stanza's own tokenization, give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma
   87.86 / UAS 79.46 / LAS 73.97, and **grc_proiel** (in-domain for that model) UPOS
   97.42 / lemma 97.18 / LAS 79.02. Its self-reported Perseus lemma (87.86) edges the
-  87.58 measured in the OdyCy table; pyaegean's 94.29 still leads it by +6.4, and it is
+  87.58 measured in the OdyCy table; pyaegean's 94.27 still leads it by +6.4, and it is
   the "Stanza model card" entry in the CI/margin table above.
 - **DILEMMA** ([repository](https://github.com/ciscoriordan/dilemma)) is the closest
   *architectural* peer: a Greek tagger/lemmatizer on the same torch-free ONNX inference
@@ -265,7 +265,7 @@ reference rather than rows in the single-protocol table above:
 **The out-of-domain lead is like-for-like.** The in-domain published systems train on
 the PROIEL fold itself; pyaegean never does. Against a *Perseus-trained* published
 system, the fair out-of-domain comparison, pyaegean leads by roughly 23 UAS on PROIEL
-(82.47 vs the Perseus-trained Stanza baseline's 59.00 on that fold).
+(82.48 vs the Perseus-trained Stanza baseline's 59.00 on that fold).
 
 ## Model size and throughput
 

@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.31.0
+aegean --version                # pyaegean 0.32.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -46,7 +46,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `pipeline` `work` `nt` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `work` `nt` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -335,6 +335,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
+| `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
 | `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |

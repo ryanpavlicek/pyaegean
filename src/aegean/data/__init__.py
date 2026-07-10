@@ -1021,6 +1021,12 @@ def _fetch_and_extract(
     archive = cache_dir() / (name + ".part")
     _download(url, archive, name, abort)
     _verify(archive, sha256, name)  # removes the archive on mismatch + raises
+    # Stamp what was ACTUALLY extracted, even on an unpinned (env-mirror) fetch: an
+    # unstamped extraction is indistinguishable from a trusted pre-stamp legacy cache, so
+    # a later PINNED fetch would serve the mirror's content unverified. With the real
+    # archive sha stamped, a later pin mismatch re-downloads (and a mirror serving
+    # byte-identical content stamps the matching sha and is a clean no-op).
+    stamp_value = sha256 or sha256_file(archive)
 
     staging = cache_dir() / (name + ".extract")
     if staging.exists():
@@ -1043,8 +1049,5 @@ def _fetch_and_extract(
         shutil.rmtree(trash, ignore_errors=True)
     else:
         staging.replace(target)  # atomic within the cache dir
-    if sha256:
-        stamp.write_text(sha256, encoding="utf-8")  # record what produced this extraction
-    else:
-        stamp.unlink(missing_ok=True)  # unpinned (env mirror): no meaningful stamp
+    stamp.write_text(stamp_value, encoding="utf-8")  # record what produced this extraction
     return target

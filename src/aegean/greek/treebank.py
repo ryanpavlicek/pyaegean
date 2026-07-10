@@ -182,6 +182,8 @@ def build_lexicon(*, source_dir: Path | str | None = None, force: bool = False) 
     lexicon is reused unless ``force`` (or a ``source_dir``) is given.
     """
     out = cache_dir() / _LEXICON_NAME
+    # A present artifact is trusted as-is (a deliberate local build must never be
+    # trampled); rebuilt hosted content ships under a new asset name, never in place.
     if out.exists() and not force and source_dir is None:
         return out
 

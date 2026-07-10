@@ -161,8 +161,8 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 | --- | --- | --- | --- | --- | --- |
 | neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.6** |
 
-Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.50,
-UAS 82.47, UPOS 86.71. Inference is torch-free, at roughly 20–70 words/second on a plain
+Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.51,
+UAS 82.48, UPOS 86.69. Inference is torch-free, at roughly 20–70 words/second on a plain
 CPU for the shipped quantized bundle (sentence-length dependent; the full-precision
 `grc-joint-v2` asset is several times faster where throughput matters more than download
 size). The bundle ships **quantized** at about 173 MB (down from 518 MB) with **no loss of

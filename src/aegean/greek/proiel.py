@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import unicodedata
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -211,17 +212,23 @@ def evaluate_on_proiel(
     *,
     source_dir: Path | str | None = None,
     files: tuple[str, ...] = _GREEK_FILES,
+    progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, float]:
     """Score a tagger on PROIEL gold — the neutral, out-of-AGDT generalization number.
 
     ``tag_sentence`` maps a sentence's forms to ``(lemma, pos)`` per token; it defaults to
     pyaegean's current pipeline (``lemmatize`` + ``pos_tag``, honouring whichever backends
     are active — enable ``use_treebank``/``use_neural_lemmatizer`` first to measure them).
+    ``progress`` (optional) is called as ``progress(done, total)`` per scored sentence.
     Returns ``{"lemma", "pos", "n"}``: lemma and POS accuracy over the scored tokens. Lemma
     is the clean metric; POS is compared under a reconciled tagset (PROPN→NOUN, SCONJ→CCONJ).
     See `proiel_drift` for *where* the gap comes from. The PROIEL files are fetched on first
     use unless ``source_dir`` points at local XML."""
-    result = score(_reconciled(tag_sentence), split=_gold_split(source_dir=source_dir, files=files))
+    result = score(
+        _reconciled(tag_sentence),
+        split=_gold_split(source_dir=source_dir, files=files),
+        progress=progress,
+    )
     return {"lemma": result["lemma_all"], "pos": result["pos_all"], "n": result["n_all"]}
 
 

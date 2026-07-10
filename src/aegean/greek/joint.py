@@ -75,11 +75,11 @@ def _compose_lemma(
 ) -> tuple[str, bool]:
     """The dev-preferred ``lookup-first`` composition, with an honesty flag: returns
     ``(lemma, resolved)``. ``resolved`` is True when a real analysis was found — a
-    (form|UPOS) or form lookup, a predicted edit script, or a lowercase lookup — and
-    False for the terminal identity fall-through (the form itself). A lemma that equals
-    the surface form is still ``resolved=True`` when it came from a lookup (a nominative
-    singular is a genuine analysis), so callers must not infer the source from a string
-    compare."""
+    (form|UPOS) or form lookup, a predicted non-identity edit script, or a lowercase
+    lookup — and False for the identity fall-through (the form itself). A lemma that
+    equals the surface form is still ``resolved=True`` when it came from a lookup (a
+    nominative singular is a genuine analysis), so callers must not infer the source
+    from a string compare."""
     looked = model.lookup_form_upos.get(f"{form}|{upos}") or model.lookup_form.get(form)
     if looked:
         return looked, True
@@ -87,7 +87,12 @@ def _compose_lemma(
         from .lemmatizer import apply_tree
 
         applied = apply_tree(model.trees[script_id], form)
-        if applied:
+        # Two edit-script outputs are never a grounded lemma: the literal "_" (a CoNLL-U
+        # empty-LEMMA placeholder that leaked into the training scripts) and the surface
+        # form unchanged (the identity script — an out-of-vocabulary form the model just
+        # kept; a GENUINE identity lemma, a nominative, comes from the lookups above and
+        # stays resolved). Both fall through to the remaining lookups / honest identity.
+        if applied and applied != "_" and applied != form:
             return applied, True
     low = model.lookup_lower.get(form.lower())
     if low:

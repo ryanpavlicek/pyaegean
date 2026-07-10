@@ -138,9 +138,11 @@ def test_joint_analyze_empty_sentence() -> None:
 
 
 def test_joint_analyze_populates_lemma_resolved() -> None:
-    # every stub lemma comes from a lookup or the edit-script (never the bare fall-through)
+    # ὁ resolves via the form lookup and ἐστί via the (form|UPOS) lookup; λόγος goes
+    # through the edit script, whose output equals the surface form — no lookup confirms
+    # it, so it is honestly flagged unresolved (needs review), not counted as grounded
     ana = _stub_model().analyze(["ὁ", "λόγος", "ἐστί"])
-    assert ana.lemma_resolved == (True, True, True)
+    assert ana.lemma_resolved == (True, False, True)
 
 
 def test_compose_lemma_reports_whether_it_resolved() -> None:

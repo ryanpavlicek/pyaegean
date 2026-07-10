@@ -215,22 +215,32 @@ def _tag_forms(forms: list[str]) -> list[str]:
     return out
 
 
-def pipeline_conllu(sentences: list[UDSentence], *, parse: bool = False) -> str:
+def pipeline_conllu(
+    sentences: list[UDSentence],
+    *,
+    parse: bool = False,
+    progress: Callable[[int, int], None] | None = None,
+) -> str:
     """Run the active pyaegean pipeline over gold-tokenized sentences, emitting CoNLL-U.
 
     FORM is the gold token (gold tokenization — see the module docstring); LEMMA and UPOS
     come from the active cascade (whatever backends are switched on); HEAD/DEPREL come
     from `aegean.greek.parse` when ``parse=True`` (requires `use_parser`), else a flat
     placeholder that makes UAS/LAS meaningless (the caller omits them). XPOS/FEATS are
-    not emitted by the current stack (``_``)."""
+    not emitted by the current stack (``_``). ``progress`` (optional) is called as
+    ``progress(done, total)`` after each analyzed sentence — the hook the long fold
+    evaluations report through; the output is unaffected."""
     from . import joint
     from .lemmatize import lemmatize
 
     if parse:
         from .syntax import parse as parse_tree
 
+    total = len(sentences)
     lines: list[str] = []
-    for sent in sentences:
+    for done, sent in enumerate(sentences, start=1):
+        if progress is not None and done > 1:
+            progress(done - 1, total)  # the previous sentence just finished
         forms = [t.form for t in sent.tokens]
         model = joint.active()
         if model is not None:  # the neural pipeline: one encoder pass fills every column
@@ -278,6 +288,8 @@ def pipeline_conllu(sentences: list[UDSentence], *, parse: bool = False) -> str:
                 )
             )
         lines.append("")
+    if progress is not None and total:
+        progress(total, total)  # the last sentence (the in-loop call reports done-1)
     return "\n".join(lines) + "\n"
 
 
@@ -302,6 +314,7 @@ def evaluate_on_ud(
     *,
     source: Path | str | None = None,
     parse: bool | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, Any]:
     """Score the active pipeline on a UD Ancient Greek fold with the official evaluator.
 
@@ -309,7 +322,8 @@ def evaluate_on_ud(
     scores it against the gold file with ``conll18_ud_eval``. Activate the backends you
     want measured first (`use_treebank`, `use_tagger`, `use_lemmatizer`,
     `use_neural_lemmatizer`, `use_parser`). ``parse`` defaults to whether the parser
-    is active; with ``parse=False`` UAS/LAS are returned as ``None``.
+    is active; with ``parse=False`` UAS/LAS are returned as ``None``. ``progress``
+    (optional) is called as ``progress(done, total)`` per analyzed sentence.
 
     Returns ``{"upos", "lemma", "uas", "las", "n_words", "n_sentences", "treebank",
     "split", "parsed"}`` — accuracies in [0, 1]. **Read the module docstring's leakage
@@ -320,7 +334,7 @@ def evaluate_on_ud(
         from . import joint, syntax
 
         parse = joint.active() is not None or syntax.active() is not None
-    system = pipeline_conllu(sentences, parse=parse)
+    system = pipeline_conllu(sentences, parse=parse, progress=progress)
 
     ev = _eval_module()
     with tempfile.TemporaryDirectory() as td:
@@ -470,6 +484,7 @@ def evaluate_by_genre(
     source: Path | str | None = None,
     parse: bool | None = None,
     min_sentences: int = 20,
+    progress: Callable[[int, int], None] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Score the active pipeline on a UD fold, sliced by literary genre.
 
@@ -491,7 +506,7 @@ def evaluate_by_genre(
 
         parse = joint.active() is not None or syntax.active() is not None
     wanted = [m for m in metrics if parse or m not in ("uas", "las")]
-    system_text = pipeline_conllu(sentences, parse=parse)
+    system_text = pipeline_conllu(sentences, parse=parse, progress=progress)
     gold_blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8"))
     sys_blocks = _split_conllu_sentences(system_text)
     if not (len(gold_blocks) == len(sys_blocks) == len(sentences)):
@@ -522,7 +537,7 @@ def evaluate_by_genre(
             "authors": sorted(authors[genre]),
             "thin": len(pairs) < min_sentences,
         }
-        if bootstrap:
+        if bootstrap and len(pairs) >= 2:
             entry.update(
                 _bootstrap_conllu(
                     gold_text, sys_text,
@@ -531,6 +546,9 @@ def evaluate_by_genre(
                 )
             )
         else:
+            # A 1-sentence bucket cannot be resampled (bootstrap needs >= 2 items); fall back
+            # to the point scores rather than aborting every healthy bucket with it — the
+            # bucket is already flagged thin above.
             entry.update(_score_conllu_text(ev, gold_text, sys_text, wanted))
         out[genre] = entry
     out["_unmapped"] = {"authors": sorted(unmapped)}  # type: ignore[dict-item]

@@ -4,6 +4,72 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.32.0 (2026-07-10)
+
+A correctness and end-to-end reliability release: the full user journeys (import your own
+text, annotate, review, export, re-read; fetch, analyze, export) are now tested as whole
+lifecycles, and the defects that audit surfaced are fixed.
+
+### Fixed
+- **The review loop kept every machine value through the documented CLI journey.**
+  `review apply` gained `--annotate` (and the backend flags), matching `review export`; the
+  export's printed next-step command includes it. `from_review_table` now takes each
+  `<field>__pred` from the table's own `pred_*` column (the value the reviewer actually saw),
+  so the audit trail survives even against a freshly-loaded corpus.
+- **Corrections can no longer land on the wrong word.** `from_review_table` verifies each
+  row's exported token text against the token it matched and raises a clear error on a
+  mismatch (a changed or wrong corpus), on duplicate rows with conflicting corrections, and
+  on corrected rows that match no token. A malformed CSV surfaces as a clean error. A
+  morphology correction lands on the same key that supplied the prediction (`morph` or UD
+  `feats`), tokens without a position are no longer exported (their corrections could never
+  round-trip), and cells that would execute as spreadsheet formulas are neutralized on export.
+- **The neural lemmatizer no longer emits the `_` placeholder as a lemma**, and an
+  edit-script identity result on an out-of-vocabulary form is now honestly
+  `identity`/needs-review rather than a grounded `neural` lemma, restoring the pre-0.28
+  calibration (a genuine identity lemma from a lookup, e.g. a nominative, stays resolved).
+  `missing_forms` now sees unresolved forms under the neural pipeline. Measured on the full
+  recorded protocol (evidence: `training/results/lemma-remeasure-2026-07-09.json`): NT lemma
+  87.03 → 87.96 (+0.93, about 1,280 of 137,303 tokens), UD Perseus lemma 94.29 → 94.27
+  (AGDT capitalizes proper-noun lemmas), UD PROIEL lemma 90.50 → 90.51; UPOS/UAS/LAS are
+  untouched by the fix. The neural benchmark rows are re-pinned to the same run, which also
+  trues up a few hundredths of pre-existing evaluation-path drift on the non-lemma cells.
+- `evaluate_by_genre(bootstrap=True)` no longer aborts on a genre bucket with a single
+  sentence; the bucket falls back to point scores and stays flagged thin.
+- **Token-level CSV/Parquet/DataFrame exports carry the editorial reading status** (a
+  `status` column), so a spreadsheet can tell a restored reading from a securely-read one.
+- Merging corpora (`aegean.combine`, multi-corpus databases) keeps `edition_fidelity` when
+  every input agrees on one value.
+- The `local` AI provider: the missing `pyaegean[local]` extra now exists, the response
+  cache keys on the endpoint URL (two local servers can host different models under one
+  name), and the TUI reader's translate option recognizes a configured keyless local server
+  and routes to the first configured provider rather than assuming Anthropic.
+- An extract dataset fetched from an env-override mirror now records what was extracted, so
+  a later pinned fetch re-validates it; `aegean doctor` reports a leftover superseded
+  extraction (`<name>.old`) with the right fix.
+- The text profiler bounds hostile combining-mark floods and no longer mistakes ordinary
+  English, file paths, or source code for Beta Code (accent markers must follow vowels, and
+  real Beta Code density is required).
+- The TUI now marks unresolved/identity lemmas with their evidence class in the workbench
+  pipeline tab and the reader's offline/neural analyses, matching the CLI.
+- The browser demo's text inputs no longer collapse to a sliver on the cards that pair a
+  dropdown with an input (the Greek bridge, sign inventory lookup, EpiDoc export, and cite
+  cards): a dropdown now sizes to its content and the input takes the remaining row.
+
+### Added
+- **Progress reporting on the long evaluations.** `evaluate_on_ud`, `evaluate_by_genre`,
+  `evaluate_on_proiel`, `evaluate_on_nt`, `heldout.score`, and `pipeline_conllu` accept a
+  `progress(done, total)` callback, and `aegean greek eval` paints a live per-sentence
+  progress line on the terminal (TTY only, so piped and scripted runs stay clean). The
+  whole-NT evaluation runs about an hour on plain CPU; it no longer runs silently.
+- **`aegean greek missing-forms CORPUS`**: the unresolved word forms of a corpus, ranked by
+  frequency, as candidates for a sourced contribution (the CLI face of
+  `greek.missing_forms`).
+- `from_workbench_export(..., script_id=)` so a non-Linear-A corpus re-imports under its own
+  script; the workbench and EpiDoc docs now state exactly what those formats do and do not
+  preserve (annotations and, for workbench, reading status are not carried).
+- **End-to-end journey tests** covering import → annotate → review → export → re-read across
+  formats, and a real fetch → registered loader → analyze → export → re-read chain.
+
 ## 0.31.0 (2026-07-09)
 
 Run the AI layer on a model on your own machine, with no API key or network.
@@ -99,6 +165,10 @@ expect, and correct them with a human in the loop.
   (a model returned the surface form unchanged), `unresolved` (baseline miss), or `punct`. A
   new `greek.lemmatize_sourced()` exposes it directly and `greek.needs_review()` flags the two
   classes worth checking. The class flows through `greek pipeline --json` and the CLI table.
+  Note for code that *constructs* `TokenRecord` (an output type; construction is rare):
+  the `lemma_known` init field was replaced by `lemma_source` in this release, so
+  `TokenRecord(..., lemma_known=...)` must become `TokenRecord(..., lemma_source=...)`;
+  *reading* `record.lemma_known` is unchanged (it is a derived property).
 - **Error analysis for scholars.** A new `aegean.greek.erroranalysis` module (POS confusion
   matrix, per-POS accuracy, lemma confusions, seen-vs-unseen) generalizes the former
   PROIEL-only drift report to UD-Perseus, the NT, and the AGDT held-out split:

@@ -168,8 +168,11 @@ class GreekWorkbenchScreen(Screen[None]):
             return
         # Prefix each token with sentence:index so multi-sentence input is
         # unambiguous (the pipeline restarts the index at each new sentence).
+        # An unresolved/identity lemma is marked with its evidence class (the CLI
+        # src-column convention), so a guess never displays like a grounded lemma.
         lines = [
             f"{r['sentence']}:{r['index']:<3}  {r['text']}  {r['upos']}  {r['lemma']}"
+            + ("" if r.get("lemma_known", True) else f"  [{r.get('lemma_source', '?')}]")
             for r in result.rows
         ]
         target.update("\n".join(lines) if lines else "no tokens")

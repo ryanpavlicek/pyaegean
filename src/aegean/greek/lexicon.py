@@ -234,6 +234,8 @@ def build_index(*, source_dir: Path | str | None = None, force: bool = False) ->
     network, no prebuilt fetch).
     """
     out = cache_dir() / _INDEX_NAME
+    # A present artifact is trusted as-is (a deliberate local build must never be
+    # trampled); rebuilt hosted content ships under a new asset name, never in place.
     if out.exists() and not force and source_dir is None:
         return out
     if source_dir is None:

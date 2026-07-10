@@ -65,7 +65,10 @@ def test_pipeline_uses_the_joint_model_when_active(monkeypatch):
     assert [r.head for r in recs] == [2, 3, 0]  # filled without parse=True
     assert [r.relation for r in recs] == ["det", "nsubj", "root"]  # UD labels
     assert all(r.xpos is not None and r.feats is not None for r in recs)
-    assert all(r.lemma_known for r in recs)
-    # every stub lemma is a real analysis (lookup or edit-script), so the source is NEURAL,
-    # never the IDENTITY fall-through
-    assert [r.lemma_source for r in recs] == [LemmaSource.NEURAL] * 3
+    # ὁ and ἐστί resolve via the model's lookups (NEURAL, known); λόγος comes out of the
+    # edit script equal to its surface form with no lookup confirming it, so it is the
+    # honest IDENTITY fall-through (needs review), not a grounded neural lemma
+    assert [r.lemma_known for r in recs] == [True, False, True]
+    assert [r.lemma_source for r in recs] == [
+        LemmaSource.NEURAL, LemmaSource.IDENTITY, LemmaSource.NEURAL,
+    ]

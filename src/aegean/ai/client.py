@@ -220,6 +220,13 @@ class LLMClient(ABC):
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         """Provider-specific single-turn completion."""
 
+    def _cache_id(self) -> str:
+        """The provider identity the response cache keys on. A provider whose responses
+        depend on per-instance routing state (the ``local`` provider's endpoint URL: two
+        servers can host different models under one name) must fold that state in here,
+        or one endpoint's cached completion would be served for the other's."""
+        return self.provider
+
     def complete(
         self,
         prompt: str,
@@ -227,15 +234,15 @@ class LLMClient(ABC):
         system: str | None = None,
         max_tokens: int = 1024,
     ) -> LLMResponse:
-        """A cached single-turn completion (cache is keyed on provider/model/
+        """A cached single-turn completion (cache is keyed on provider identity/model/
         system/prompt/max_tokens so re-asking is free and deterministic)."""
         if self.cache is not None:
-            hit = self.cache.get(self.provider, self.model, system, prompt, max_tokens=max_tokens)
+            hit = self.cache.get(self._cache_id(), self.model, system, prompt, max_tokens=max_tokens)
             if hit is not None:
                 return LLMResponse(hit, self.provider, self.model)
         resp = self._complete(prompt=prompt, system=system, max_tokens=max_tokens)
         if self.cache is not None:
-            self.cache.set(self.provider, self.model, system, prompt, resp.text, max_tokens=max_tokens)
+            self.cache.set(self._cache_id(), self.model, system, prompt, resp.text, max_tokens=max_tokens)
         return resp
 
 

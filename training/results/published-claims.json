@@ -1,21 +1,22 @@
 {
   "_comment": "The canonical registry of every measured number docs/benchmarks.md publishes. tests/test_benchmark_claims.py asserts the docs (and their README/wiki echoes) carry exactly these values, so a doc edit and a re-measurement can only land together; scripts/check_benchmarks.py --measure re-runs the offline-stack rows against this registry (the neural rows are pinned by the immutable sha256 release asset plus the evidence files named in source_evidence). To change a number: re-measure, update this file, the docs, and the evidence file in the same commit.",
   "neural_ud_perseus_test": {
-    "lemma": 94.29,
-    "uas": 90.23,
-    "las": 85.64,
-    "upos": 97.04,
+    "lemma": 94.27,
+    "uas": 90.24,
+    "las": 85.65,
+    "upos": 97.02,
     "ufeats": 96.04,
     "xpos": 93.48,
-    "source_evidence": "training/results/v3-quantize-report.json (ud_perseus_test_shipped_v3)",
+    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json (full-protocol re-measure, 2026-07-09; the lemma cell reflects the 0.32.0 lemma-composition fix, the other cells are the same run). The 2026-06 quantize-era record (training/results/v3-quantize-report.json) differs by a few hundredths on UPOS/UAS/LAS because of evaluation-path corrections since; it remains the historical record for the quantization size claims.",
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator"
   },
   "neural_ud_proiel_test": {
-    "lemma": 90.50,
-    "uas": 82.47,
-    "las": 63.47,
-    "upos": 86.71,
+    "lemma": 90.51,
+    "uas": 82.48,
+    "las": 63.50,
+    "upos": 86.69,
     "ufeats": 59.43,
+    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain (never trained on PROIEL)"
   },
   "neural_seed_replicates": {
@@ -26,9 +27,10 @@
     "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
   },
   "neural_nt": {
-    "lemma": 87.03,
+    "lemma": 87.96,
     "upos_reconciled": 86.75,
     "n_tokens": 137303,
+    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
   },
   "offline_baseline_ud": {
@@ -64,9 +66,9 @@
     "note": "greek.bootstrap_ud's default; docs/benchmarks.md states the same so the reproduction command matches"
   },
   "out_of_domain_lead": {
-    "pyaegean_proiel_uas": 82.47,
+    "pyaegean_proiel_uas": 82.48,
     "stanza_perseus_proiel_uas": 59.00,
     "stated_lead": 23,
-    "note": "~23 = round(82.47 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
+    "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
   }
 }

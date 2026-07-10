@@ -127,6 +127,8 @@ def build_index(source_id: str, *, source_dir: Path | str | None = None, force: 
     """
     src = _SOURCES[source_id]
     out = cache_dir() / src.index_name
+    # A present artifact is trusted as-is (a deliberate local build must never be
+    # trampled); rebuilt hosted content ships under a new asset name, never in place.
     if out.exists() and not force and source_dir is None:
         return out
     if source_dir is None:

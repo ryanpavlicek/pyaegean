@@ -105,13 +105,13 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.31.0
+aegean --version          # pyaegean 0.32.0
 ```
 
 | Group | What's in it |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -1197,7 +1197,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.31.0                    │
+│ OK │ pyaegean │ 0.32.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -2039,7 +2039,7 @@ record of it.
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `review export` | Write one reviewable CSV row per word: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--only-needs-review` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv` |
-| `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
+| `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ backend flags — repeat whatever the export used, so accepted predictions persist too) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
 
 ```bash
 # 1. export a reviewable table (the NT already carries gold annotations; for your own
@@ -2055,9 +2055,14 @@ aegean review apply nt review.csv -o nt-reviewed.json --reviewer "A. Scholar"
 #    wrote nt-reviewed.json  (review: 12 tokens corrected by A. Scholar (2026-…))
 ```
 
-The join is by document id and token position, so the corpus you apply against must be the
-one you exported. See [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow
-in context and [Data & Provenance](Data-and-Provenance) for the table columns.
+The join is by document id and token position, and each row's exported token text is
+verified against the corpus on apply: a mismatch (a different corpus, or one that changed
+since the export) is an error, never a silent wrong-word correction. When the export used
+`--annotate`, pass `--annotate` (and the same backend flags) to `apply` too, so the accepted
+machine predictions land in the corrected corpus alongside the reviewer's changes — the
+export's printed next-step command includes it. See
+[When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context and
+[Data & Provenance](Data-and-Provenance) for the table columns.
 
 ---
 

@@ -134,6 +134,8 @@ def train_tagger(*, source_dir: str | None = None, epochs: int = 8, force: bool 
     falls back to training from the AGDT (downloaded on first use). ``source_dir``
     trains from local fixture XML (tests; no network, no prebuilt fetch)."""
     out = cache_dir() / _MODEL_NAME
+    # A present artifact is trusted as-is (a deliberate local build must never be
+    # trampled); rebuilt hosted content ships under a new asset name, never in place.
     if out.exists() and not force and source_dir is None:
         return out
     if source_dir is None:

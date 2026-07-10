@@ -149,7 +149,9 @@ def test_remove_of_an_extracted_dataset_deletes_the_directory(
     _register_archive(monkeypatch, tmp_path, "arch")
     ok(app, "data", "fetch", "arch")
     payload = json.loads(ok(app, "data", "remove", "arch", "--json"))
-    assert payload["reclaimed_bytes"] == sum(len(b) for b in MEMBERS.values())
+    # members + the <name>.sha256 extraction stamp (a 64-char hexdigest; written for
+    # mirror fetches too, so a later pinned fetch can re-validate the extraction)
+    assert payload["reclaimed_bytes"] == sum(len(b) for b in MEMBERS.values()) + 64
     assert not (store / "arch").exists()
 
 

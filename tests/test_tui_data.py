@@ -393,10 +393,12 @@ def test_greek_offline_analysis_of_iliad_1_1_tags_the_first_tokens() -> None:
         "offline", script_id="greek", text="μῆνιν ἄειδε θεὰ",
         token_texts=("μῆνιν", "ἄειδε", "θεὰ"),
     )
-    assert r.ok and r.columns == ("#", "token", "POS", "lemma")
+    assert r.ok and r.columns == ("#", "token", "POS", "lemma", "check")
     lemmas = {row[1]: row[3] for row in r.rows}
     assert lemmas["μῆνιν"] == "μῆνις"  # known lemma
     assert lemmas["θεὰ"] == "θεά"
+    checks = {row[1]: row[4] for row in r.rows}
+    assert checks["μῆνιν"] == ""  # a grounded lemma shows no evidence flag
 
 
 def test_translation_is_gated_off_without_a_provider_key(monkeypatch) -> None:  # type: ignore[no-untyped-def]

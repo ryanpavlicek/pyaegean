@@ -168,6 +168,11 @@ class LocalClient(_OpenAICompatibleClient):
         # Local servers usually accept any key; send the configured one or a harmless placeholder.
         return self._api_key or "local"
 
+    def _cache_id(self) -> str:
+        # Two local servers can host DIFFERENT models under one name (llama3.1 on Ollama vs a
+        # custom build on llama.cpp), so the response cache must key on the endpoint too.
+        return f"{self.provider}@{self.base_url}"
+
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         if not self.model:
             raise ProviderCallError(

@@ -39,6 +39,13 @@ def to_workbench(corpus: Corpus, path: str | Path | None = None) -> list[dict[st
     references as paths under its own mirror, so corpora without one simply
     show no imagery.
 
+    Content the format does NOT preserve: the workbench schema carries token
+    *text* only, so per-token editorial `ReadingStatus` (UNCLEAR/RESTORED/LOST)
+    and `Token.annotations` (lemma, morphology, evidence class, review stamps)
+    are not written, and a re-import reads every token as CERTAIN and
+    unannotated. For a lossless round-trip use `Corpus.to_json` or
+    `aegean.db.to_sqlite`.
+
     With ``path``, the records are also written as UTF-8 JSON — the file the
     app loads via ``?corpus=<url>`` or its corpus file picker.
     """
@@ -77,14 +84,23 @@ def to_workbench(corpus: Corpus, path: str | Path | None = None) -> list[dict[st
     return records
 
 
-def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Corpus:
+def from_workbench_export(
+    source: str | Path | dict[str, Any] | list[Any], *, script_id: str = "lineara"
+) -> Corpus:
     """Load a workbench corpus export into a `Corpus`.
 
     ``source`` is a path to a JSON file, a JSON string, or already-parsed
     JSON. Both forms the workbench produces are accepted: the schema-v1
     export object (records under ``"inscriptions"``, provenance under
     ``"_meta"``, per-record ``"derived"`` analyses — ignored here) and a
-    plain array of inscription records.
+    plain array of inscription records. ``script_id`` defaults to ``lineara``
+    (the workbench's own corpus); pass the real script when re-importing an
+    export of some other corpus, so the documents are not rebranded.
+
+    The workbench schema carries token text only: any editorial
+    `ReadingStatus` or `Token.annotations` the original corpus had were not
+    in the export, so every re-imported token is CERTAIN and unannotated
+    (see `to_workbench`).
 
     Token kinds are inferred the `Corpus.from_records` way (numerals by
     parseability, everything else a word); glyphs, transcription, and image
@@ -168,7 +184,7 @@ def from_workbench_export(source: str | Path | dict[str, Any] | list[Any]) -> Co
         source_bits.append(f"scope: {meta['scopeSummary']}")
     corpus = Corpus.from_records(
         records,
-        script_id="lineara",
+        script_id=script_id,
         provenance=Provenance(
             source=" · ".join(source_bits),
             license="see the workbench's data sources",
