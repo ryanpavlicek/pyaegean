@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..data import fetch, load_gzip_json
+from . import _ort
 
 if TYPE_CHECKING:  # heavy types, never imported at runtime-base
     from collections.abc import Mapping
@@ -70,7 +71,9 @@ class _NeuralModel:
         self._np = np
         opts = ort.SessionOptions()
         opts.log_severity_level = 3  # quiet
-        prov = ["CPUExecutionProvider"]
+        # Provider policy lives in one place (_ort.resolve_providers): the published
+        # numbers are measured on CPU; a GPU provider is a throughput convenience.
+        prov = _ort.resolve_providers()
         self._enc = ort.InferenceSession(str(model_dir / "encoder_model.onnx"), opts, providers=prov)
         self._dec = ort.InferenceSession(str(model_dir / "decoder_model.onnx"), opts, providers=prov)
         self._dec_in = {i.name for i in self._dec.get_inputs()}

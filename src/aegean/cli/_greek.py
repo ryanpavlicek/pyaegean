@@ -1212,6 +1212,12 @@ def evaluate(
         help="For ud: score the fold sliced by literary genre (epic/tragedy/prose, from the "
              "sent_id author). Note: the leakage-clean Perseus test fold is prose-only.",
     ),
+    batch_size: int | None = typer.Option(
+        None, "--batch-size",
+        help="For ud/nt with the neural pipeline: run the encoder over N sentences at a "
+             "time (faster on long folds; the published numbers use the sequential "
+             "default).",
+    ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -1235,6 +1241,14 @@ def evaluate(
         raise fail("--fold must be perseus or proiel")
     if split not in ("dev", "test"):
         raise fail("--split must be dev or test")
+    if batch_size is not None:
+        if batch_size < 1:
+            raise fail("--batch-size must be at least 1")
+        # bootstrap_ud and the error analyses run their own inference loops without a
+        # batching hook; --by-genre threads batch_size through pipeline_conllu like ud.
+        if target not in ("ud", "nt") or drift or (bootstrap and not by_genre):
+            raise fail("--batch-size applies to `eval ud` and `eval nt` score runs "
+                       "(not --drift/--bootstrap)")
     _activate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
@@ -1262,7 +1276,15 @@ def evaluate(
             emit_drift(greek.ud_error_analysis(treebank=fold, split=split))
             return
         if by_genre:
-            by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap, progress=live_progress)
+            # batch_size is forwarded only when given, so the default invocation stays
+            # identical to the recorded protocol's call (same pattern below).
+            if batch_size is not None:
+                by = greek.evaluate_by_genre(
+                    fold, split, bootstrap=bootstrap, progress=live_progress,
+                    batch_size=batch_size,
+                )
+            else:
+                by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap, progress=live_progress)
             unmapped = by.pop("_unmapped", {}).get("authors", [])  # type: ignore[union-attr]
             if emit_result({**by, "_unmapped": unmapped}, json_output=json_out, output=output):
                 return
@@ -1280,6 +1302,10 @@ def evaluate(
             result = {
                 k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]" for k, ci in cis.items()
             }
+        elif batch_size is not None:
+            result = greek.evaluate_on_ud(
+                treebank=fold, split=split, progress=live_progress, batch_size=batch_size
+            )
         else:
             result = greek.evaluate_on_ud(treebank=fold, split=split, progress=live_progress)
     elif target == "proiel":
@@ -1292,7 +1318,10 @@ def evaluate(
         if drift:
             emit_drift(greek.nt_error_analysis())
             return
-        result = greek.evaluate_on_nt(progress=live_progress)
+        if batch_size is not None:
+            result = greek.evaluate_on_nt(progress=live_progress, batch_size=batch_size)
+        else:
+            result = greek.evaluate_on_nt(progress=live_progress)
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":

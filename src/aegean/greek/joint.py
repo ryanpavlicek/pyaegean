@@ -26,11 +26,13 @@ from __future__ import annotations
 
 import json
 import unicodedata
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ..data import fetch
+from . import _ort
 from .mst import decode_mst
 from .udfeats import feats_from_xpos
 
@@ -39,7 +41,9 @@ __all__ = [
     "SentenceAnalysis",
     "active",
     "analyze_sentence",
+    "analyze_sentences",
     "disable_neural_pipeline",
+    "neural_backend_info",
     "use_neural_pipeline",
 ]
 
@@ -121,8 +125,10 @@ class _JointModel:
                 model_dir = nested[0]
         opts = ort.SessionOptions()
         opts.log_severity_level = 3
+        # Provider policy lives in one place (_ort.resolve_providers): the published
+        # numbers are measured on CPU; a GPU provider is a throughput convenience.
         self._sess = ort.InferenceSession(
-            str(model_dir / "model.onnx"), opts, providers=["CPUExecutionProvider"]
+            str(model_dir / "model.onnx"), opts, providers=_ort.resolve_providers()
         )
         try:
             self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
@@ -145,9 +151,10 @@ class _JointModel:
         self.lookup_form_upos: dict[str, str] = lookup["form_upos"]
         self.lookup_lower: dict[str, str] = lookup["form_lower"]
 
-    def _run(self, words: list[str]) -> dict[str, Any]:
-        """One encoder pass over a pre-tokenized sentence → raw arrays + word bookkeeping."""
-        np = self._np
+    def _encode(self, words: list[str]) -> tuple[list[int], list[int], list[int]]:
+        """Tokenize one pre-tokenized sentence → ``(subword ids, first-subword position
+        per kept word, kept word indices)``. Truncation to ``_MAX_LEN`` happens here, so
+        the single and batched passes share the same kept/fallback bookkeeping."""
         enc = self._tok.encode(words, is_pretokenized=True)
         ids = enc.ids[:_MAX_LEN]
         word_ids = enc.word_ids[: len(ids)]
@@ -159,6 +166,12 @@ class _JointModel:
                 word_pos.append(si)
                 kept.append(wid)
             prev = wid
+        return ids, word_pos, kept
+
+    def _run(self, words: list[str]) -> dict[str, Any]:
+        """One encoder pass over a pre-tokenized sentence → raw arrays + word bookkeeping."""
+        np = self._np
+        ids, word_pos, kept = self._encode(words)
         feed = {
             "input_ids": np.array([ids], dtype=np.int64),
             "attention_mask": np.ones((1, len(ids)), dtype=np.int64),
@@ -170,12 +183,71 @@ class _JointModel:
         outs["_kept"] = kept
         return outs
 
+    def _run_batch(self, batch: list[list[str]]) -> list[dict[str, Any]]:
+        """One padded encoder pass over several non-empty sentences → per-sentence
+        output dicts shaped exactly like `_run`'s.
+
+        Rows are padded to the batch's max subword/word lengths with attention-mask
+        zeros; the biaffine and per-token heads score each position independently, so
+        pad rows never influence a real token, and `_decode` reads only the real
+        ``:nw`` slice of every array. Padding changes float reduction order in the
+        batched matmuls, so batched logits can differ from the single pass at machine
+        precision — batching is a throughput convenience, never the recorded protocol."""
+        np = self._np
+        encoded = [self._encode(words) for words in batch]
+        max_len = max(len(ids) for ids, _, _ in encoded)
+        max_words = max(max((len(wp) for _, wp, _ in encoded), default=0), 1)
+        n = len(batch)
+        input_ids = np.zeros((n, max_len), dtype=np.int64)
+        attention_mask = np.zeros((n, max_len), dtype=np.int64)
+        word_pos = np.zeros((n, max_words), dtype=np.int64)
+        for b, (ids, wp, _kept) in enumerate(encoded):
+            input_ids[b, : len(ids)] = ids
+            attention_mask[b, : len(ids)] = 1
+            row = wp or [0]  # mirror _run's empty-word_pos feed fallback
+            word_pos[b, : len(row)] = row
+        feed = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "word_pos": word_pos,
+        }
+        names = [o.name for o in self._sess.get_outputs()]
+        outs = dict(zip(names, self._sess.run(None, feed)))
+        results: list[dict[str, Any]] = []
+        for b, (_ids, wp, kept) in enumerate(encoded):
+            one: dict[str, Any] = {name: arr[b : b + 1] for name, arr in outs.items()}
+            one["_word_pos"] = wp
+            one["_kept"] = kept
+            results.append(one)
+        return results
+
     def analyze(self, words: list[str]) -> SentenceAnalysis:
         forms = [unicodedata.normalize("NFC", w) for w in words]
-        n = len(forms)
-        if n == 0:
+        if not forms:
             return SentenceAnalysis((), (), (), (), (), (), (), ())
-        out = self._run(forms)
+        return self._decode(forms, self._run(forms))
+
+    def analyze_batch(self, sentences: list[list[str]]) -> list[SentenceAnalysis]:
+        """Analyses of several sentences, one padded encoder pass per call.
+
+        Produces the same fields as ``[self.analyze(s) for s in sentences]`` — empty
+        sentences and the truncation fallbacks included; only the number of ONNX calls
+        differs. Sequential per-sentence analysis is the recorded benchmark protocol
+        (see `_run_batch` on float reduction order); batching is a throughput
+        convenience."""
+        norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
+        out: list[SentenceAnalysis] = [
+            SentenceAnalysis((), (), (), (), (), (), (), ()) for _ in norm
+        ]
+        live = [i for i, forms in enumerate(norm) if forms]
+        if live:
+            for i, res in zip(live, self._run_batch([norm[i] for i in live])):
+                out[i] = self._decode(norm[i], res)
+        return out
+
+    def _decode(self, forms: list[str], out: dict[str, Any]) -> SentenceAnalysis:
+        """Decode one sentence's raw arrays (from `_run`, or one `_run_batch` slice)."""
+        n = len(forms)
         word_pos: list[int] = out["_word_pos"]
         kept: list[int] = out["_kept"]
         nw = len(kept)
@@ -258,3 +330,60 @@ def analyze_sentence(words: list[str]) -> SentenceAnalysis:
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
     return _ACTIVE.analyze(words)
+
+
+def analyze_sentences(
+    sentences: Iterable[list[str]], *, batch_size: int | None = None
+) -> list[SentenceAnalysis]:
+    """Full joint analyses of several pre-tokenized sentences (raises if not active).
+
+    ``batch_size=None`` (the default) analyzes each sentence with its own encoder pass —
+    identical to calling `analyze_sentence` in a loop, and the code path the published
+    benchmark numbers are measured on (plain CPU, ``CPUExecutionProvider``). A positive
+    int runs padded chunks of that many sentences through the encoder (one ONNX call per
+    chunk), a throughput convenience producing the same analyses; batched matmuls can
+    reorder float reductions, so it is never used for the recorded protocol."""
+    if _ACTIVE is None:
+        raise NeuralPipelineNotLoadedError(
+            "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
+        )
+    sents = [list(s) for s in sentences]
+    if batch_size is None:
+        return [_ACTIVE.analyze(s) for s in sents]
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
+    out: list[SentenceAnalysis] = []
+    for start in range(0, len(sents), batch_size):
+        out.extend(_ACTIVE.analyze_batch(sents[start : start + batch_size]))
+    return out
+
+
+def neural_backend_info() -> dict[str, Any]:
+    """Which ONNX Runtime execution providers the neural pipeline can and does use.
+
+    Returns ``{"model", "available_providers", "active_providers"}``: ``model`` is the
+    joint model's dataset name (the pinned ``grc-joint`` release asset);
+    ``available_providers`` is what the installed onnxruntime offers (``None`` when the
+    ``[neural]`` extra is not installed); ``active_providers`` is what the live joint
+    session actually runs on (``session.get_providers()``), or ``None`` when the
+    pipeline is not active. Never fetches, never raises for a missing extra.
+
+    The published benchmark numbers are measured on ``CPUExecutionProvider``; GPU
+    execution (``PYAEGEAN_ORT_PROVIDERS``, or auto-detected CUDA/DirectML) is a
+    throughput convenience, and the int8-quantized models may partition only partially
+    onto a GPU provider."""
+    available: list[str] | None = None
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        pass
+    else:
+        available = list(ort.get_available_providers())
+    active_providers: list[str] | None = None
+    if _ACTIVE is not None:
+        active_providers = list(_ACTIVE._sess.get_providers())
+    return {
+        "model": _DATASET,
+        "available_providers": available,
+        "active_providers": active_providers,
+    }

@@ -85,7 +85,9 @@ from .joint import (
     NeuralPipelineNotLoadedError,
     SentenceAnalysis,
     analyze_sentence,
+    analyze_sentences,
     disable_neural_pipeline,
+    neural_backend_info,
     use_neural_pipeline,
 )
 from .annotate import annotate_corpus
@@ -289,6 +291,8 @@ __all__ = [
     "use_neural_pipeline",
     "disable_neural_pipeline",
     "analyze_sentence",
+    "analyze_sentences",
+    "neural_backend_info",
     "SentenceAnalysis",
     "NeuralPipelineNotLoadedError",
     "agdt_ud_overlap",

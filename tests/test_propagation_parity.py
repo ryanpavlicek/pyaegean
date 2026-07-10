@@ -88,6 +88,31 @@ def test_sign_inventory_accessors_return_independent_copies(script):
     assert aegean.get_script(script).sign_inventory.signs[0].attrs.get("_probe") is None
 
 
+# ── CLASS: every neural ONNX session takes its providers from the one shared resolver ──
+def test_neural_sessions_share_the_provider_resolver():
+    """Every neural InferenceSession (the joint pipeline's one, the GreTa lemmatizer's
+    encoder AND decoder) must take ``providers=`` from `aegean.greek._ort.resolve_providers`
+    — never a hard-coded list — so provider policy (the PYAEGEAN_ORT_PROVIDERS override,
+    GPU auto-detect, the CPU fallback, the TensorRT exclusion) cannot drift between the
+    two backends."""
+    import inspect
+
+    from aegean.greek import _ort, joint, neural_lemmatizer
+
+    for mod, n_sessions in ((joint, 1), (neural_lemmatizer, 2)):
+        src = inspect.getsource(mod)
+        assert mod._ort is _ort, mod.__name__            # the same shared module
+        assert src.count("InferenceSession(") == n_sessions, mod.__name__
+        assert "_ort.resolve_providers()" in src, mod.__name__
+        # a literal provider list at a constructor is exactly the drift being guarded
+        assert '["CPUExecutionProvider"]' not in src, mod.__name__
+    # the joint session resolves inline; the lemmatizer resolves once for both sessions
+    assert "providers=_ort.resolve_providers()" in inspect.getsource(joint)
+    lem_src = inspect.getsource(neural_lemmatizer)
+    assert "prov = _ort.resolve_providers()" in lem_src
+    assert lem_src.count("providers=prov") == 2
+
+
 # ── CLASS: every hash / cache key is injective (length-prefixed, no separator collision) ──
 def test_hash_keys_are_injective_no_separator_collision():
     """Both keyed hashers must length-prefix their fields: a control char in the data

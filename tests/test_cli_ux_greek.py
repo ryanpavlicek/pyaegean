@@ -98,6 +98,49 @@ def test_eval_fold_and_alias_select_the_fold(app, monkeypatch):
     ]
 
 
+def test_eval_batch_size_is_accepted_and_forwarded_to_ud(app, monkeypatch):
+    seen: list[int | None] = []
+
+    def fake_eval(*, treebank: str, split: str, progress: object = None,
+                  batch_size: int | None = None) -> dict[str, float]:
+        seen.append(batch_size)
+        return {"upos": 0.97}
+
+    monkeypatch.setattr("aegean.greek.evaluate_on_ud", fake_eval)
+    ok(app, "greek", "eval", "ud", "--batch-size", "8", "--json")
+    ok(app, "greek", "eval", "ud", "--json")
+    # forwarded when given; the default invocation carries no batch_size at all
+    assert seen == [8, None]
+
+
+def test_eval_batch_size_is_forwarded_to_nt(app, monkeypatch):
+    seen: list[int | None] = []
+
+    def fake_nt(*, progress: object = None, batch_size: int | None = None) -> dict[str, float]:
+        seen.append(batch_size)
+        return {"lemma": 0.88, "upos": 0.87, "n": 1}
+
+    monkeypatch.setattr("aegean.greek.evaluate_on_nt", fake_nt)
+    monkeypatch.setattr("aegean.greek.use_neural_pipeline", lambda **kw: None)
+    ok(app, "greek", "eval", "nt", "--batch-size", "4", "--json")
+    assert seen == [4]
+
+
+def test_eval_batch_size_zero_is_a_clean_error(app):
+    msg = err(app, "greek", "eval", "ud", "--batch-size", "0")
+    assert "--batch-size must be at least 1" in msg
+    assert "Traceback" not in msg
+
+
+def test_eval_batch_size_rejected_where_no_batched_loop_exists(app):
+    msg = err(app, "greek", "eval", "proiel", "--batch-size", "8")
+    assert "--batch-size applies to" in msg
+    msg = err(app, "greek", "eval", "ud", "--bootstrap", "--batch-size", "8")
+    assert "--batch-size applies to" in msg
+    msg = err(app, "greek", "eval", "ud", "--drift", "--batch-size", "8")
+    assert "--batch-size applies to" in msg
+
+
 def test_eval_saves_result_with_output(app, monkeypatch, tmp_path):
     monkeypatch.setattr("aegean.greek.evaluate_tagger", lambda: {"accuracy": 0.5})
     out_file = tmp_path / "metrics.json"

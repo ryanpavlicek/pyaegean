@@ -26,7 +26,7 @@ pipeline — drops into the identical split.
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 
 from . import syntax
@@ -38,6 +38,10 @@ _SKIP_POS = frozenset({"PUNCT", "NUM"})
 
 # A whole-sentence tagger: given the sentence's forms, return (lemma, pos) per token.
 TagSentence = Callable[[list[str]], list[tuple[str, str]]]
+
+# The batched counterpart: given several sentences' forms, return one prediction list
+# per sentence, in order — the hook batched neural inference plugs into `score`.
+TagBatch = Callable[[list[list[str]]], list[list[tuple[str, str]]]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +116,8 @@ def score(
     holdout: float = 0.1,
     split: HeldoutSplit | None = None,
     progress: Callable[[int, int], None] | None = None,
+    batch_size: int | None = None,
+    tag_batch: TagBatch | None = None,
 ) -> dict[str, float]:
     """Score a whole-sentence tagger on the held-out split, overall and on the **unseen**
     subset. ``tag_sentence`` receives every form in a sentence (so context-aware systems
@@ -120,13 +126,31 @@ def score(
 
     ``progress`` (optional) is called as ``progress(done, total)`` after each scored
     sentence — the hook the long evaluations (the ~1 h whole-NT run) report through.
-    It never changes the result; an exception it raises aborts the run."""
+    It never changes the result; an exception it raises aborts the run.
+
+    ``batch_size`` + ``tag_batch`` (optional, together): predictions come from
+    ``tag_batch`` over chunks of ``batch_size`` sentences instead of per-sentence
+    ``tag_sentence`` calls — the hook batched neural inference plugs into. The scoring
+    loop and the ``progress`` sequence are unchanged, and the recorded protocol stays
+    the sequential default; a ``tag_batch`` that returns the wrong number of
+    predictions aborts loudly. ``batch_size`` without ``tag_batch`` has no effect."""
+    if batch_size is not None and batch_size < 1:
+        raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
     sp = split if split is not None else split_tokens(source_dir=source_dir, holdout=holdout)
     total = len(sp.sentences)
+
+    def predictions() -> Iterator[list[tuple[str, str]]]:
+        if batch_size is not None and tag_batch is not None:
+            for start in range(0, total, batch_size):
+                chunk = sp.sentences[start : start + batch_size]
+                yield from tag_batch([[t.form for t in sent] for sent in chunk])
+        else:
+            for sent in sp.sentences:
+                yield tag_sentence([t.form for t in sent])
+
     n_all = n_seen = n_unseen = 0
     lemma_ok = lemma_ok_unseen = pos_ok = pos_ok_unseen = 0
-    for done, sent in enumerate(sp.sentences, start=1):
-        preds = tag_sentence([t.form for t in sent])
+    for done, (sent, preds) in enumerate(zip(sp.sentences, predictions(), strict=True), start=1):
         for tok, pred in zip(sent, preds):
             if not tok.scored:
                 continue

@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING, Any
 from ..data import cache_dir, download_file
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     from ..analysis.stats import BootstrapCI
 
@@ -220,6 +220,7 @@ def pipeline_conllu(
     *,
     parse: bool = False,
     progress: Callable[[int, int], None] | None = None,
+    batch_size: int | None = None,
 ) -> str:
     """Run the active pyaegean pipeline over gold-tokenized sentences, emitting CoNLL-U.
 
@@ -229,14 +230,31 @@ def pipeline_conllu(
     placeholder that makes UAS/LAS meaningless (the caller omits them). XPOS/FEATS are
     not emitted by the current stack (``_``). ``progress`` (optional) is called as
     ``progress(done, total)`` after each analyzed sentence — the hook the long fold
-    evaluations report through; the output is unaffected."""
+    evaluations report through; the output is unaffected. ``batch_size`` (optional) runs
+    the **neural** pipeline's encoder over that many sentences at a time (one ONNX call
+    per chunk) — a throughput convenience; the recorded benchmark protocol is the
+    sequential default (``None``), and without an active joint model the value has no
+    effect."""
     from . import joint
     from .lemmatize import lemmatize
 
     if parse:
         from .syntax import parse as parse_tree
 
+    if batch_size is not None and batch_size < 1:
+        raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
     total = len(sentences)
+    analyses: Iterator[joint.SentenceAnalysis] | None = None
+    batch_model = joint.active() if batch_size is not None else None
+    if batch_model is not None and batch_size is not None:
+        m, bs = batch_model, batch_size
+
+        def _batched() -> Iterator[joint.SentenceAnalysis]:
+            for start in range(0, total, bs):
+                chunk = sentences[start : start + bs]
+                yield from m.analyze_batch([[t.form for t in s.tokens] for s in chunk])
+
+        analyses = _batched()
     lines: list[str] = []
     for done, sent in enumerate(sentences, start=1):
         if progress is not None and done > 1:
@@ -244,7 +262,7 @@ def pipeline_conllu(
         forms = [t.form for t in sent.tokens]
         model = joint.active()
         if model is not None:  # the neural pipeline: one encoder pass fills every column
-            ana = model.analyze(forms)
+            ana = next(analyses) if analyses is not None else model.analyze(forms)
             if sent.sent_id:
                 lines.append(f"# sent_id = {sent.sent_id}")
             if sent.text:
@@ -315,6 +333,7 @@ def evaluate_on_ud(
     source: Path | str | None = None,
     parse: bool | None = None,
     progress: Callable[[int, int], None] | None = None,
+    batch_size: int | None = None,
 ) -> dict[str, Any]:
     """Score the active pipeline on a UD Ancient Greek fold with the official evaluator.
 
@@ -324,6 +343,9 @@ def evaluate_on_ud(
     `use_neural_lemmatizer`, `use_parser`). ``parse`` defaults to whether the parser
     is active; with ``parse=False`` UAS/LAS are returned as ``None``. ``progress``
     (optional) is called as ``progress(done, total)`` per analyzed sentence.
+    ``batch_size`` (optional) batches the neural pipeline's encoder passes (see
+    `pipeline_conllu`) — a throughput convenience; the recorded protocol behind every
+    published number is the sequential default.
 
     Returns ``{"upos", "lemma", "uas", "las", "n_words", "n_sentences", "treebank",
     "split", "parsed"}`` — accuracies in [0, 1]. **Read the module docstring's leakage
@@ -334,7 +356,7 @@ def evaluate_on_ud(
         from . import joint, syntax
 
         parse = joint.active() is not None or syntax.active() is not None
-    system = pipeline_conllu(sentences, parse=parse, progress=progress)
+    system = pipeline_conllu(sentences, parse=parse, progress=progress, batch_size=batch_size)
 
     ev = _eval_module()
     with tempfile.TemporaryDirectory() as td:
@@ -485,6 +507,7 @@ def evaluate_by_genre(
     parse: bool | None = None,
     min_sentences: int = 20,
     progress: Callable[[int, int], None] | None = None,
+    batch_size: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Score the active pipeline on a UD fold, sliced by literary genre.
 
@@ -498,7 +521,9 @@ def evaluate_by_genre(
 
     This is meaningful only for the leakage-clean neural model on Perseus: the offline baseline
     has seen the Perseus test sentences (see the module leakage caveat), so do not publish genre
-    slices for it. ``uas``/``las`` are dropped when no parser is active."""
+    slices for it. ``uas``/``las`` are dropped when no parser is active. ``progress`` and
+    ``batch_size`` thread through to `pipeline_conllu`; the recorded protocol stays the
+    sequential default."""
     gold_path = Path(source) if source is not None else ud_path(treebank, split)
     sentences = load_conllu(gold_path)
     if parse is None:
@@ -506,7 +531,7 @@ def evaluate_by_genre(
 
         parse = joint.active() is not None or syntax.active() is not None
     wanted = [m for m in metrics if parse or m not in ("uas", "las")]
-    system_text = pipeline_conllu(sentences, parse=parse, progress=progress)
+    system_text = pipeline_conllu(sentences, parse=parse, progress=progress, batch_size=batch_size)
     gold_blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8"))
     sys_blocks = _split_conllu_sentences(system_text)
     if not (len(gold_blocks) == len(sys_blocks) == len(sentences)):

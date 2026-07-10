@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .heldout import HeldoutSplit, HeldoutToken, TagSentence, score
+from .heldout import HeldoutSplit, HeldoutToken, TagBatch, TagSentence, score
 from .proiel import _SKIP_POS, _canon_pos
 from .treebank import _clean_lemma
 
@@ -80,12 +80,27 @@ def _neural_tagger() -> TagSentence:
     return tag
 
 
+def _neural_batch_tagger() -> TagBatch:
+    """The batched counterpart of `_neural_tagger`: one padded encoder pass per chunk.
+
+    Must produce exactly the per-sentence tagger's predictions — batching is a
+    throughput convenience; the published NT numbers use the sequential default."""
+    from .joint import analyze_sentences
+
+    def tag(batch: list[list[str]]) -> list[list[tuple[str, str]]]:
+        analyses = analyze_sentences(batch, batch_size=max(len(batch), 1))
+        return [list(zip(a.lemma, a.upos)) for a in analyses]
+
+    return tag
+
+
 def evaluate_on_nt(
     tag_sentence: TagSentence | None = None,
     *,
     corpus: Corpus | None = None,
     book: str | None = None,
     progress: Callable[[int, int], None] | None = None,
+    batch_size: int | None = None,
 ) -> dict[str, float]:
     """Score a tagger on the Nestle1904 Greek NT gold — lemma + reconciled UPOS accuracy.
 
@@ -94,9 +109,13 @@ def evaluate_on_nt(
     number reflects the shipped model. ``corpus`` supplies the gold (defaults to
     ``greek.load_nt(book)`` — the whole NT, or one ``book``). ``progress`` (optional) is
     called as ``progress(done, total)`` per scored verse — the whole-NT run is ~1 h on
-    plain CPU, so this is how the CLI shows it moving. Returns
-    ``{"lemma", "upos", "n"}``: accuracy over the scored tokens. Lemma is the clean metric;
-    UPOS is compared under a reconciled tagset, mirroring ``evaluate_on_proiel``."""
+    plain CPU, so this is how the CLI shows it moving. ``batch_size`` (optional) runs the
+    default neural tagger's encoder over that many verses at a time (one ONNX call per
+    chunk) — a throughput convenience; the recorded protocol (the published numbers) is
+    the sequential default, and with a caller-supplied ``tag_sentence`` the value has no
+    effect. Returns ``{"lemma", "upos", "n"}``: accuracy over the scored tokens. Lemma is
+    the clean metric; UPOS is compared under a reconciled tagset, mirroring
+    ``evaluate_on_proiel``."""
     if corpus is None:
         from ..scripts.greek.nt import load_nt
 
@@ -112,5 +131,18 @@ def evaluate_on_nt(
     def reconciled(forms: list[str]) -> list[tuple[str, str]]:
         return [(lemma, _canon_pos(pos)) for lemma, pos in base(forms)]
 
-    result = score(reconciled, split=split, progress=progress)
+    tag_batch: TagBatch | None = None
+    if batch_size is not None and tag_sentence is None:
+        raw_batch = _neural_batch_tagger()
+
+        def _reconciled_batch(batch: list[list[str]]) -> list[list[tuple[str, str]]]:
+            return [
+                [(lemma, _canon_pos(pos)) for lemma, pos in sent] for sent in raw_batch(batch)
+            ]
+
+        tag_batch = _reconciled_batch
+
+    result = score(
+        reconciled, split=split, progress=progress, batch_size=batch_size, tag_batch=tag_batch
+    )
     return {"lemma": result["lemma_all"], "upos": result["pos_all"], "n": result["n_all"]}
