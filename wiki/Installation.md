@@ -100,6 +100,13 @@ A few things worth knowing:
 - **`[all]` deliberately omits `[neural]` and `[parquet]`.** The neural models pull
   in `onnxruntime` and download large model bundles; `parquet` adds `pyarrow`.
   Both are heavy and not everyone needs them, so you opt in to those by name.
+- **The neural pipeline uses a GPU automatically when one is available.** Replace
+  the CPU wheel with a GPU build (`pip uninstall onnxruntime`, then
+  `pip install onnxruntime-gpu` for NVIDIA or `onnxruntime-directml` on Windows)
+  and provider selection picks it up, with the CPU kept as fallback. Match the
+  wheel to your CUDA version: PyPI's current `onnxruntime-gpu` targets CUDA 13; on
+  a CUDA 12 system install `onnxruntime-gpu==1.25.*`. `PYAEGEAN_ORT_PROVIDERS`
+  overrides the selection; see [Greek NLP](Greek-NLP#gpu-execution-and-batching).
 - **`[grok]` and `[openai]` install the same SDK**: Grok speaks the OpenAI API,
   so it reuses the `openai` package with a different endpoint and key.
 - **The AI layer is exploratory and key-gated.** Installing `[ai]` only adds the

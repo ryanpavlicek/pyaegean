@@ -174,6 +174,31 @@ model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data
 leakage controls, and the comparison tables are documented in
 [Benchmarks](Benchmarks).
 
+### GPU execution and batching
+
+With a GPU build of ONNX Runtime installed, the neural backends use the GPU
+automatically: provider selection prefers CUDA, then DirectML, and always keeps the
+CPU as the fallback. `PYAEGEAN_ORT_PROVIDERS` (comma-separated provider names, e.g.
+`CUDAExecutionProvider,CPUExecutionProvider`) overrides the selection exactly as
+given; an unavailable name is a clean error listing what the install offers.
+`greek.neural_backend_info()` reports the available and active providers.
+
+```bash
+pip uninstall onnxruntime && pip install onnxruntime-gpu   # NVIDIA CUDA
+# note: match the wheel to your CUDA version; on CUDA 12 use onnxruntime-gpu==1.25.*
+# (PyPI's current onnxruntime-gpu targets CUDA 13). DirectML: onnxruntime-directml.
+```
+
+Batched inference runs many sentences per model call:
+`greek.analyze_sentences(sentences, batch_size=32)`, and the evaluators accept the
+same `batch_size` (CLI: `aegean greek eval ud --batch-size 32`). Both are verified
+prediction-identical to sequential CPU inference on a fixed verification set
+(`training/results/gpu-verify-2026-07-10.json`): identical predictions from CPU vs
+GPU and batched vs sequential on every token. Throughput on that set: CPU batching
+alone was about 4× over sequential CPU, and a data-center GPU with `batch_size=32`
+about 90×. **Every published benchmark number is measured on the CPU provider,
+sequentially** — the recorded protocol; GPU and batching are throughput conveniences.
+
 ## Normalization & Beta Code
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and

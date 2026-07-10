@@ -1725,7 +1725,10 @@ read the breakdown. `--by-genre` (ud only) buckets the fold by its `sent_id` aut
 literary genres (epic, tragedy, prose) and scores each bucket separately. Note that the
 leakage-clean Perseus test fold is prose-only, so today this returns a single `prose`
 bucket; the machinery is in place for a future held-out epic/tragedy slice (see
-[Benchmarks](Benchmarks)). The exact figures and how they were measured are on
+[Benchmarks](Benchmarks)). `--batch-size N` (ud, nt, and `--by-genre`) runs the neural
+model over N sentences per call: identical results, several times faster; it is
+rejected where no batched loop exists (`proiel`, `--bootstrap`, `--drift`). The exact
+figures and how they were measured are on
 [Greek NLP](Greek-NLP) and [Limitations](Limitations#measured-accuracy-boundaries).
 
 #### A worked run

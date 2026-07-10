@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.33.0 (2026-07-10)
+
+GPU execution and batched inference for the neural backends.
+
+### Added
+- **The neural pipeline uses a GPU automatically when one is available.** Both neural
+  backends (the joint pipeline and the GreTa lemmatizer) select their ONNX Runtime
+  execution providers through one shared resolver: CUDA preferred, then DirectML,
+  always with the CPU as fallback; a plain CPU install behaves exactly as before.
+  `PYAEGEAN_ORT_PROVIDERS` (comma-separated provider names) overrides the selection
+  as given, and an unavailable name is a clean error listing what the install offers.
+  New `greek.neural_backend_info()` reports the available and active providers.
+- **Batched neural inference.** `greek.analyze_sentences(sentences, batch_size=N)`
+  runs N sentences per model call; the evaluators accept the same `batch_size`
+  (`evaluate_on_ud`, `evaluate_by_genre`, `evaluate_on_nt`, `heldout.score`; CLI:
+  `aegean greek eval ud --batch-size 32`). Verified prediction-identical to
+  sequential inference, CPU and GPU, on a fixed verification set (evidence:
+  `training/results/gpu-verify-2026-07-10.json`): zero token-level differences,
+  with CPU batching about 4x faster and a data-center GPU at `batch_size=32` about
+  90x. Every published benchmark number remains measured on the CPU provider,
+  sequentially; the recorded protocol is unchanged.
+
 ## 0.32.0 (2026-07-10)
 
 A correctness and end-to-end reliability release: the full user journeys (import your own

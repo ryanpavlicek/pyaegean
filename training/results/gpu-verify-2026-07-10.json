@@ -1,0 +1,120 @@
+{
+  "started_utc": "2026-07-10 21:07:15",
+  "python": "3.12.13 (main, Mar  4 2026, 09:23:07) [GCC 11.4.0]",
+  "platform": "Linux-6.6.122+-x86_64-with-glibc2.35",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition, 97887 MiB, 580.82.07",
+  "pyaegean_version": "0.32.0",
+  "onnxruntime_version": "1.25.1",
+  "onnxruntime_gpu_requirement": "onnxruntime-gpu==1.25.*",
+  "cuda_userland": "12.8",
+  "ort_available_providers": [
+    "TensorrtExecutionProvider",
+    "CUDAExecutionProvider",
+    "CPUExecutionProvider"
+  ],
+  "backend_info_auto": {
+    "model": "grc-joint",
+    "available_providers": [
+      "TensorrtExecutionProvider",
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "active_providers": [
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ]
+  },
+  "backend_info_cpu_override": {
+    "model": "grc-joint",
+    "available_providers": [
+      "TensorrtExecutionProvider",
+      "CUDAExecutionProvider",
+      "CPUExecutionProvider"
+    ],
+    "active_providers": [
+      "CPUExecutionProvider"
+    ]
+  },
+  "sentence_set": {
+    "units": 165,
+    "words": 1163,
+    "per_document": {
+      "John 1": 114,
+      "Phlm 1": 51
+    },
+    "source": "Nestle 1904 (John 1 + Philemon), verse text split at sentence punctuation"
+  },
+  "agreement_cpu_vs_gpu_sequential": {
+    "tokens_compared": 1163,
+    "per_field": {
+      "upos": 0,
+      "lemma": 0,
+      "head": 0,
+      "deprel": 0
+    },
+    "tokens_differing_any_field": 0,
+    "examples": []
+  },
+  "parity_gpu_batch32_vs_sequential": {
+    "tokens_compared": 1163,
+    "per_field": {
+      "upos": 0,
+      "lemma": 0,
+      "head": 0,
+      "deprel": 0
+    },
+    "tokens_differing_any_field": 0,
+    "examples": []
+  },
+  "parity_cpu_batch32_vs_sequential": {
+    "tokens_compared": 1163,
+    "per_field": {
+      "upos": 0,
+      "lemma": 0,
+      "head": 0,
+      "deprel": 0
+    },
+    "tokens_differing_any_field": 0,
+    "examples": []
+  },
+  "timings": [
+    {
+      "provider": "CPU",
+      "batch_size": null,
+      "seconds": 4.45,
+      "words_per_second": 261.2
+    },
+    {
+      "provider": "CPU",
+      "batch_size": 32,
+      "seconds": 1.13,
+      "words_per_second": 1028.4
+    },
+    {
+      "provider": "GPU",
+      "batch_size": null,
+      "seconds": 0.4,
+      "words_per_second": 2929.2
+    },
+    {
+      "provider": "GPU",
+      "batch_size": 8,
+      "seconds": 0.08,
+      "words_per_second": 14120.5
+    },
+    {
+      "provider": "GPU",
+      "batch_size": 32,
+      "seconds": 0.05,
+      "words_per_second": 23559.8
+    },
+    {
+      "provider": "GPU",
+      "batch_size": 128,
+      "seconds": 0.08,
+      "words_per_second": 14209.3
+    }
+  ],
+  "finished_utc": "2026-07-10 21:08:39",
+  "notes": "pyaegean 0.33.0 GPU verification. Published benchmark numbers are measured on CPU under the recorded protocol; GPU is a throughput convenience. Agreement and parity counts are exact field-level disagreement counts over the fixed John 1 + Philemon sentence set."
+}

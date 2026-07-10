@@ -342,7 +342,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --by-genre --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |
+| `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |
 
 ### Stages that work immediately
 

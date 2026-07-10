@@ -44,6 +44,12 @@ narrow interval means the number is stable, not a lucky fold.
   MPL 2.0), fetched sha256-pinned
   (`1072e02af00b1a56205b5e8216d51dee9b8944a104d80744afaccc78859fcb16`) and imported from
   the cache. Reported figures are the evaluator's F1 per metric.
+- **Execution:** every published number is measured on the CPU provider
+  (`CPUExecutionProvider`), one sentence per model call. GPU execution and batched
+  inference (both added in 0.33.0) are throughput conveniences, verified
+  prediction-identical to the protocol path on a fixed verification set
+  (`training/results/gpu-verify-2026-07-10.json`); a registry re-measure may use them
+  only after a full-fold identity check against the sequential CPU run.
 - **Gold tokenization:** pyaegean runs over each fold's gold FORM column, so its scores
   measure tagging/lemma/parsing quality, not tokenizer agreement. (The published numbers
   below let each pipeline tokenize raw text; their token accuracy on these folds is ≈100%,
