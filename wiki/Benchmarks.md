@@ -67,12 +67,12 @@ interval:
 
 | Metric | pyaegean | 95% CI | best published | margin |
 | --- | --- | --- | --- | --- |
-| UPOS | 97.02 | [96.76, 97.29] | 95.83 (2024) | +1.19 |
-| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2024) | +2.39 |
+| UPOS | 97.02 | [96.76, 97.29] | 95.83 (2023) | +1.19 |
+| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2023) | +2.39 |
 | UFeats | 96.04 | [95.75, 96.34] | 92.56 (odyCy 2023) | +3.48 |
-| Lemma | 94.27 | [93.89, 94.62] | 87.86 (Stanza model card) | +6.41 |
-| UAS | 90.24 | [89.62, 90.80] | 88.20 (2024) | +2.04 |
-| LAS | 85.65 | [84.93, 86.29] | 83.98 (2024) | +1.67 |
+| Lemma | 94.27 | [93.89, 94.62] | 91.14 (GreTa+Chars 2023) | +3.13 |
+| UAS | 90.24 | [89.62, 90.80] | 88.20 (2023) | +2.04 |
+| LAS | 85.65 | [84.93, 86.29] | 83.98 (2023) | +1.67 |
 
 CIs are percentile bootstrap over the fold's sentences, 999 resamples
 (`greek.bootstrap_ud`'s default, so the reproduction command matches). The lower
@@ -236,14 +236,21 @@ The same paper shows every single-treebank model collapsing on the *other* treeb
 out-of-domain and unseen-form measurement first-class.
 
 A newer baseline raises the parsing bar above that table: Riemenschneider & Frank
-2024, *"A State-of-the-Art Morphosyntactic Parser and Lemmatizer for Ancient Greek"*
-([arXiv:2410.12055](https://arxiv.org/abs/2410.12055), the GreBERTa/GreTa authors),
-reports on the UD Perseus test fold (models trained on the UD train fold, gold
-tokenization): GreBERTa-based parsing **UAS 88.20 / LAS 83.98**, POS 95.83, XPOS
-91.09, and a GreTa lemmatizer at 91.17 lemma accuracy on their own (AGDT + Gorman +
-Pedalion, normalized) folds. Their main models use the same license-clean data lever
-(Gorman and Pedalion, both CC BY-SA 4.0) the pyaegean joint model uses. These are the
-"2024" entries in the CI/margin table above.
+2023, *"Exploring Large Language Models for Classical Philology"*
+([ACL 2023](https://aclanthology.org/2023.acl-long.846/)), reports on the UD Perseus
+test fold (models trained on the UD train fold, UD 2.10; gold tokenization; the
+official CoNLL evaluator; mean of three seeds): GreBERTa **UAS 88.20 / LAS 83.98**,
+UPOS 95.83, XPOS 91.09, and a GreTa seq2seq lemmatizer at **91.14** (the best
+published UD-Perseus lemma). Separately, Celano 2025, *"A State-of-the-Art
+Morphosyntactic Parser and Lemmatizer for Ancient Greek"* (LM4DH 2025,
+[arXiv:2410.12055](https://arxiv.org/abs/2410.12055)), fine-tunes Trankit and GreTa
+on AGDT + Gorman + Pedalion (~1.26 M tokens, normalized to the AGDT scheme) and
+reports on his own folds (Trankit UAS 82.28 / LAS 76.67; GreTa lemma 91.17),
+reprinting the Riemenschneider & Frank UD rows for loose comparison only (the
+schemes differ). That AGDT + Gorman + Pedalion combination is the same license-clean
+data lever (Gorman and Pedalion, both CC BY-SA 4.0) the pyaegean joint model uses.
+The Riemenschneider & Frank results are the "2023" entries in the CI/margin table
+above.
 
 Two more reference points, each reported under its *own* evaluation, so points of
 reference rather than rows in the single-protocol table above:
@@ -253,8 +260,8 @@ reference rather than rows in the single-protocol table above:
   Stanza's own tokenization, give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma
   87.86 / UAS 79.46 / LAS 73.97, and **grc_proiel** (in-domain for that model) UPOS
   97.42 / lemma 97.18 / LAS 79.02. Its self-reported Perseus lemma (87.86) edges the
-  87.58 measured in the OdyCy table; pyaegean's 94.27 still leads it by +6.4, and it is
-  the "Stanza model card" entry in the CI/margin table above.
+  87.58 measured in the OdyCy table; pyaegean's 94.27 leads it by +6.4 (and leads the
+  best published UD-Perseus lemma, GreTa at 91.14, by +3.1).
 - **DILEMMA** ([repository](https://github.com/ciscoriordan/dilemma)) is the closest
   *architectural* peer: a Greek tagger/lemmatizer on the same torch-free ONNX inference
   path pyaegean uses. It is lemmatizer-first and publishes accuracy only on its own
