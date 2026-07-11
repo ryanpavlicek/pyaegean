@@ -4,6 +4,27 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.42.0 (2026-07-11)
+
+The first leakage-clean tragedy evaluation.
+
+### Added
+- **The verse fold** (`greek.evaluate_on_verse`, CLI `aegean greek eval verse
+  [--track tragedy|hexameter|all]`): gold manual dependency annotation of
+  Euripides, *Bacchae* 1-169 from the UNESP Trees project (Perseids/Arethusa,
+  CC BY-SA 4.0), found by a deep multi-avenue search after every known treebank
+  avenue had been verified blocked, converted through the same machinery as every
+  other fold, and leakage-checked sentence-by-sentence in its build (0 overlaps
+  with training; the only Euripides the model trains on is *Medea*). The gold
+  survived a close scholarly spot-check before any number was pinned. Measured
+  (CPU sequential): tragedy UPOS 90.88 / UFeats 92.79 / lemma 87.35 / UAS 79.73 /
+  LAS 73.06 over 735 tokens, with wide bootstrap confidence intervals disclosed —
+  a small-sample genre-conditioned datapoint, never a headline number, and the
+  first honest tragedy accuracy anywhere. The substantive finding: tragedy parses
+  ~7 LAS points below documentary papyri — poetic word order and hyperbaton are
+  materially harder than either prose register. A directional sliver of didactic
+  hexameter (Maximus, 25 tokens) rides along as a footnote, deliberately unpinned.
+
 ## 0.41.0 (2026-07-11)
 
 The documentary levers land with their measured rows, SigLA grows to 802

@@ -1,0 +1,40 @@
+# sent_id = verse:tragedy:euripides-ba-1-22@1
+# text = ἥκω Διὸς παῖς τήνδε Θηβαίων χθόνα Διόνυσος , ὃν τίκτει ποθʼ ἡ Κάδμου κόρη Σεμέλη λοχευθεῖσʼ ἀστραπηφόρῳ πυρί ·
+1	ἥκω	ἥκω	VERB	v1spia---	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+2	Διὸς	Ζεύς	NOUN	n-s---mg-	Case=Gen|Gender=Masc|Number=Sing	3	nmod	_	_
+3	παῖς	παῖς	NOUN	n-s---mn-	Case=Nom|Gender=Masc|Number=Sing	1	nsubj	_	_
+4	τήνδε	ὅδε	PRON	p-s---fa-	Case=Acc|Gender=Fem|Number=Sing	6	nmod	_	_
+5	Θηβαίων	Θηβαῖος	ADJ	a-p---fg-	Case=Gen|Gender=Fem|Number=Plur	6	nmod	_	_
+6	χθόνα	χθών	NOUN	n-s---fa-	Case=Acc|Gender=Fem|Number=Sing	1	obj	_	_
+7	Διόνυσος	Διόνυσος	NOUN	n-s---mn-	Case=Nom|Gender=Masc|Number=Sing	3	cc	_	_
+8	,	,	PUNCT	u--------	_	9	punct	_	_
+9	ὃν	ὅς	PRON	p-s---ma-	Case=Acc|Gender=Masc|Number=Sing	10	obj	_	_
+10	τίκτει	τίκτω	VERB	v3spia---	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	7	acl	_	_
+11	ποθʼ	ποτέ	ADV	d-------_	_	10	advmod	_	_
+12	ἡ	ὁ	DET	l-s---fn-	Case=Nom|Gender=Fem|Number=Sing	14	det	_	_
+13	Κάδμου	Κάδμος	NOUN	n-s---mg-	Case=Gen|Gender=Masc|Number=Sing	14	nmod	_	_
+14	κόρη	κόρη	NOUN	n-s---fn-	Case=Nom|Gender=Fem|Number=Sing	15	cc	_	_
+15	Σεμέλη	Σεμέλη	NOUN	n-s---fn-	Case=Nom|Gender=Fem|Number=Sing	10	nsubj	_	_
+16	λοχευθεῖσʼ	λοχεύω	VERB	v-sappfn_	Case=Nom|Gender=Fem|Number=Sing|Tense=Past|VerbForm=Part|Voice=Pass	10	advcl	_	_
+17	ἀστραπηφόρῳ	ἀστραπηφόρος	ADJ	a-s---nd-	Case=Dat|Gender=Neut|Number=Sing	18	nmod	_	_
+18	πυρί	πῦρ	NOUN	n-s---nd-	Case=Dat|Gender=Neut|Number=Sing	16	obj	_	_
+19	·	·	PUNCT	u--------	_	1	punct	_	_
+
+# sent_id = verse:tragedy:euripides-ba-1-22@5
+# text = ἀμπέλου δέ νιν πέριξ ἐγὼ ʼκάλυψα βοτρυώδει χλόῃ .
+1	ἀμπέλου	ἄμπελος	NOUN	n-s---fg-	Case=Gen|Gender=Fem|Number=Sing	8	nmod	_	_
+2	δέ	δέ	CCONJ	c--------	_	6	cc	_	_
+3	νιν	νιν	PRON	p3s---ma-	Case=Acc|Gender=Masc|Number=Sing|Person=3	6	obj	_	_
+4	πέριξ	πέριξ	ADP	r--------	_	8	case	_	_
+5	ἐγὼ	ἐγώ	PRON	p1s---mn-	Case=Nom|Gender=Masc|Number=Sing|Person=1	6	nsubj	_	_
+6	ʼκάλυψα	καλύπτω	VERB	v1saia---	Mood=Ind|Number=Sing|Person=1|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+7	βοτρυώδει	βοτρυώδης	ADJ	a-s---fd-	Case=Dat|Gender=Fem|Number=Sing	8	nmod	_	_
+8	χλόῃ	χλόη	NOUN	n-s---fd-	Case=Dat|Gender=Fem|Number=Sing	6	obl	_	_
+9	.	.	PUNCT	u--------	_	6	punct	_	_
+
+# sent_id = verse:hexameter:maximus-astrol-1-4@21
+# text = ἔμπρακτον γὰρ γίνεται .
+1	ἔμπρακτον	ἔμπρακτος	ADJ	a-s---nn-	Case=Nom|Gender=Neut|Number=Sing	3	xcomp	_	_
+2	γὰρ	γάρ	ADV	d--------	_	3	cc	_	_
+3	γίνεται	γίγνομαι	VERB	v3spie---	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Mid	0	root	_	_
+4	.	.	PUNCT	u--------	_	3	punct	_	_

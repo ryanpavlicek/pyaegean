@@ -173,5 +173,34 @@
     "source_evidence": "training/results/procrustes-null-2026-07-11.json",
     "protocol": "aegean.analysis.rank_known_pairs(la, lb, shared_label_anchors(la, lb), leave_one_out=True); source = bundled Linear A sign_embeddings; target = DAMOS Linear B sign_embeddings restricted to the 74 canonical syllabograms; dim=50, window=1; pure-Python deterministic; identity floor = recover_identity(la, anchor_fraction=1.0)",
     "note": "EXPLORATORY negative result: distributional embedding alignment recovers NO Linear A -> Linear B correspondence at this corpus scale (top-1 0.000, top-5 at chance, median far short of recovery), while self-alignment recovers 90.1% (the 16 misses are distributional twins). The module ships as the instrument that measured this null; every output is exploratory-labelled."
+  },
+  "neural_verse_test": {
+    "tragedy": {
+      "upos": 90.88,
+      "xpos": 82.31,
+      "ufeats": 92.79,
+      "lemma": 87.35,
+      "uas": 79.73,
+      "las": 73.06,
+      "n_words": 735,
+      "n_sentences": 36,
+      "las_ci_95": [
+        69.53,
+        77.8
+      ]
+    },
+    "all": {
+      "upos": 91.05,
+      "xpos": 82.76,
+      "ufeats": 93.03,
+      "lemma": 87.37,
+      "uas": 79.87,
+      "las": 73.16,
+      "n_words": 760,
+      "n_sentences": 39
+    },
+    "note": "small-sample genre-conditioned datapoint (wide bootstrap CIs), never a headline number; the first leakage-clean tragedy evaluation; the hexameter track (3 sentences / 25 tokens) is directional only and not pinned",
+    "source_evidence": "training/results/verse-eval-2026-07-11.json",
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track=...); verse fold verse-fold-v1 (Euripides Bacchae 1-169 tragedy + Maximus hexameter), out of domain, scheme-matched (AGDT->UD); CPU sequential"
   }
 }

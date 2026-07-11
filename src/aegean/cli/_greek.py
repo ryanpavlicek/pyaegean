@@ -1264,7 +1264,8 @@ def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
 def evaluate(
     target: str = typer.Argument(
         ...,
-        help="ud, proiel, nt, papygreek, tagger, lemmatizer, or parser (heavy: fetches/trains).",
+        help="ud, proiel, nt, papygreek, verse, tagger, lemmatizer, or parser "
+        "(heavy: fetches/trains).",
     ),
     fold: str = typer.Option(
         "perseus", "--fold", help="For ud: which UD Ancient Greek fold, perseus or proiel."
@@ -1273,6 +1274,10 @@ def evaluate(
         None, "--treebank", hidden=True, help="Deprecated alias for --fold."
     ),
     split: str = typer.Option("test", "--split", help="For ud: dev or test."),
+    track: str = typer.Option(
+        "all", "--track",
+        help="For verse: tragedy, hexameter, or all (both tracks). Small-sample, wide CIs.",
+    ),
     bootstrap: bool = typer.Option(
         False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
     ),
@@ -1324,20 +1329,24 @@ def evaluate(
         raise fail("--fold must be perseus or proiel")
     if split not in ("dev", "test"):
         raise fail("--split must be dev or test")
+    if track != "all" and target != "verse":
+        raise fail("--track applies to `eval verse` (tragedy/hexameter/all)")
+    if track not in ("all", "tragedy", "hexameter"):
+        raise fail("--track must be tragedy, hexameter, or all")
     if batch_size is not None:
         if batch_size < 1:
             raise fail("--batch-size must be at least 1")
         # bootstrap_ud and the error analyses run their own inference loops without a
         # batching hook; --by-genre threads batch_size through pipeline_conllu like ud.
-        if target not in ("ud", "nt", "papygreek") or drift or (bootstrap and not by_genre):
-            raise fail("--batch-size applies to `eval ud`, `eval nt`, and `eval papygreek` "
-                       "score runs (not --drift/--bootstrap)")
+        if target not in ("ud", "nt", "papygreek", "verse") or drift or (bootstrap and not by_genre):
+            raise fail("--batch-size applies to `eval ud`, `eval nt`, `eval papygreek`, and "
+                       "`eval verse` score runs (not --drift/--bootstrap)")
     if documentary and (
-        target not in ("ud", "nt", "papygreek") or drift or bootstrap or by_genre
+        target not in ("ud", "nt", "papygreek", "verse") or drift or bootstrap or by_genre
     ):
-        raise fail("--documentary applies to `eval ud`, `eval nt`, and `eval papygreek` score "
-                   "runs (not --drift/--bootstrap/--by-genre); it post-processes the neural "
-                   "pipeline's output.")
+        raise fail("--documentary applies to `eval ud`, `eval nt`, `eval papygreek`, and "
+                   "`eval verse` score runs (not --drift/--bootstrap/--by-genre); it "
+                   "post-processes the neural pipeline's output.")
     _activate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
@@ -1447,6 +1456,19 @@ def evaluate(
             result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
         else:
             result = greek.evaluate_on_papygreek(progress=live_progress)
+    elif target == "verse":
+        _activate(neural=True)  # the verse fold reports the shipped neural model's number
+        if drift:
+            # a small-sample genre fold: no convention decomposition, just the score
+            raise fail("`eval verse` has no --drift decomposition; run the score "
+                       "(optionally --track tragedy|hexameter)")
+        tr = None if track == "all" else track
+        if documentary:
+            _apply_documentary()
+        if batch_size is not None:
+            result = greek.evaluate_on_verse(track=tr, progress=live_progress, batch_size=batch_size)
+        else:
+            result = greek.evaluate_on_verse(track=tr, progress=live_progress)
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":
@@ -1455,7 +1477,8 @@ def evaluate(
         _activate(parser=True)
         result = greek.evaluate_parser()
     else:
-        raise fail("target must be ud, proiel, nt, papygreek, tagger, lemmatizer, or parser")
+        raise fail("target must be ud, proiel, nt, papygreek, verse, tagger, lemmatizer, "
+                   "or parser")
     if documentary:  # opt-in post-processing is per-run; leave the session clean afterwards
         greek.disable_documentary_reconciliation()
         greek.disable_documentary_lemma_rescue()

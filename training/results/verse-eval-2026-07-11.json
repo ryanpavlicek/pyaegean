@@ -1,0 +1,73 @@
+{
+ "what": "Neural pipeline scored on the verse fold: the first leakage-clean tragedy dependency evaluation (gold from the UNESP Trees project, CC BY-SA 4.0).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track=...); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; fold verse-fold-v1 (sha 6e91adbe...), built from perseids-publications/unesp-trees @ a6367b97, leakage-checked in-build (0/39 sentences overlap training; work-level disjointness asserted)",
+ "results_full_precision": {
+  "tragedy": {
+   "treebank": "verse",
+   "track": "tragedy",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.908843537414966,
+   "xpos": 0.8231292517006803,
+   "ufeats": 0.927891156462585,
+   "lemma": 0.8734693877551021,
+   "uas": 0.7972789115646258,
+   "las": 0.7306122448979592,
+   "clas": 0.6992337164750958,
+   "n_words": 735,
+   "n_sentences": 36
+  },
+  "hexameter": {
+   "treebank": "verse",
+   "track": "hexameter",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.96,
+   "xpos": 0.96,
+   "ufeats": 1.0,
+   "lemma": 0.88,
+   "uas": 0.84,
+   "las": 0.76,
+   "clas": 0.7142857142857143,
+   "n_words": 25,
+   "n_sentences": 3
+  },
+  "all": {
+   "treebank": "verse",
+   "track": "all",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.9105263157894737,
+   "xpos": 0.8276315789473684,
+   "ufeats": 0.9302631578947368,
+   "lemma": 0.8736842105263158,
+   "uas": 0.7986842105263158,
+   "las": 0.7315789473684211,
+   "clas": 0.6996268656716418,
+   "n_words": 760,
+   "n_sentences": 39
+  }
+ },
+ "tragedy_bootstrap_ci_95": {
+  "note": "percentile bootstrap over the track's sentences, 999 resamples",
+  "upos": [
+   88.4,
+   92.96
+  ],
+  "lemma": [
+   84.79,
+   89.72
+  ],
+  "uas": [
+   75.84,
+   84.68
+  ],
+  "las": [
+   69.53,
+   77.8
+  ]
+ },
+ "gold_diligence": "single-pass teaching-project provenance; an 8-sentence scholarly spot-check (~180 tokens, incl. lyric parodos passages) against Smyth/AGDT found one immaterial lemma-accent slip and only defensible judgment calls otherwise: trustworthy for a small-sample row",
+ "framing": "SMALL-SAMPLE genre-conditioned datapoint with wide CIs, never a headline number; the hexameter track (3 sentences / 25 tokens) is directional only and is not pinned as a track number; tragedy LAS (~73) runs well below the documentary fold (~80): poetic word order and hyperbaton are materially harder to parse"
+}

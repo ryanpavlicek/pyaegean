@@ -143,6 +143,24 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     assert full["lemma"] > row["lemma"]
 
 
+def test_verse_fold_row_matches_registry_and_evidence() -> None:
+    """The small-sample verse rows (the first leakage-clean tragedy evaluation) stay
+    pinned to the canonical sequential evidence; the hexameter track is directional
+    only and must never appear as a pinned registry track."""
+    reg = _claims()["neural_verse_test"]
+    ev = json.loads(_read("training/results/verse-eval-2026-07-11.json"))
+    res = ev["results_full_precision"]
+    for track in ("tragedy", "all"):
+        for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+            assert reg[track][metric] == round(res[track][metric] * 100, 2), f"{track}.{metric}"
+        assert reg[track]["n_words"] == res[track]["n_words"]
+    assert "hexameter" not in reg, "the 25-token hexameter track is directional only"
+    assert "small-sample" in reg["note"]
+    doc = _read("docs/benchmarks.md")
+    for token in (f"{reg['tragedy']['las']:.2f}", f"{reg['tragedy']['uas']:.2f}"):
+        assert token in doc, f"verse tragedy {token} missing from docs/benchmarks.md"
+
+
 def test_procrustes_null_matches_registry_and_evidence() -> None:
     """The measured Procrustes null (an exploratory negative result) stays pinned:
     registry block == evidence file, so a change that suddenly finds cross-script

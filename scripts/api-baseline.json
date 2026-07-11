@@ -15579,6 +15579,38 @@
       ],
       "returns": true
     },
+    "aegean.greek.evaluate_on_verse": {
+      "canonical": "aegean.greek.verse_eval.evaluate_on_verse",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "track"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.evaluate_parser": {
       "canonical": "aegean.greek.syntax.evaluate",
       "kind": "function",
@@ -21430,6 +21462,63 @@
           "default": true,
           "kind": "keyword-only",
           "name": "force"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.verse_eval": {
+      "kind": "module"
+    },
+    "aegean.greek.verse_eval.evaluate_on_verse": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "track"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.verse_eval.verse_path": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "download"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.verse_path": {
+      "canonical": "aegean.greek.verse_eval.verse_path",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "download"
         }
       ],
       "returns": true

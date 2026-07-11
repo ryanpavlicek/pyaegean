@@ -178,6 +178,16 @@ pinned fold:
 | + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
 | + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
 
+## Verse, out of domain: tragedy
+
+The verse fold (gold manual annotation from the UNESP Trees project, CC BY-SA
+4.0; Euripides *Bacchae* 1-169, leakage-checked against training) provides the
+first leakage-clean tragedy evaluation anywhere. A small-sample datapoint with
+wide CIs, never a headline: tragedy UPOS 90.88 / lemma 87.35 / UAS 79.73 /
+LAS 73.06 over 735 tokens (LAS 95% CI [69.53, 77.80]). Tragedy parses ~7 LAS
+points below the documentary fold: poetic word order is materially harder.
+Reproduce: `aegean greek eval verse --track tragedy`.
+
 ## Pure-Python offline baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

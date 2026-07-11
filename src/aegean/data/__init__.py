@@ -238,6 +238,20 @@ _REMOTE: dict[str, DataSpec] = {
              "Evaluation only.",
         extract=False,
     ),
+    "verse-fold": DataSpec(
+        name="verse-fold",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "verse-fold-v1/verse-fold.conllu.gz"
+        ),
+        sha256="6e91adbe5096556f7fe6686b35f30b363b115325d7ee2843e39d16c75fbdf8bc",
+        license="CC BY-SA 4.0 (unesp-trees, Perseids/Arethusa, UNESP); derived UD fold, fetched, never bundled",
+        note="Ancient Greek verse dependency eval fold (39 sentences / 760 tokens: tragedy = "
+             "Euripides Bacchae 1-169, 36/735; hexameter = Maximus Peri katarchon 1.4, 3/25, "
+             "directional only); AGDT->UD, leakage-clean. Small-sample genre-conditioned "
+             "datapoint, never a headline number. Evaluation only.",
+        extract=False,
+    ),
     "papygreek-dev-tagging": DataSpec(
         name="papygreek-dev-tagging",
         url=(

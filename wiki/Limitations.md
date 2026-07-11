@@ -118,20 +118,22 @@ release.
   model defect. Protocol notes:
   [Benchmarks](Benchmarks).
 
-- **There is no leakage-clean epic or tragedy gold to score against.** The
-  genre-conditioned evaluation (`greek.evaluate_by_genre`) can only report a register
-  pyaegean holds held-out gold for, and the leakage-clean UD-Perseus test/dev folds are
-  **100% prose** (a single author); epic and tragedy appear only in the *training* split,
-  so scoring the model on them would leak training data. This is a work-queue item, and
-  every existing treebank avenue has been checked and is blocked: the **AGDT** upstream is
-  unchanged (the same Perseus split), **Daphne** is a re-conversion of works pyaegean
-  already trains on, **PROIEL**'s Ancient Greek is prose (the NT, Herodotus), and
-  **GLAUx** is silver (model-tagged, not gold). The one route that would actually work is
-  **new expert annotation of a work absent from training** — Euripides beyond the Medea,
-  Sophocles' *Oedipus at Colonus* or *Philoctetes*, or Apollonius — on the order of
-  ~45–100 expert-hours per genre. That is a scoping / funding decision, not a code change;
-  it stays on the register to re-investigate as new treebanks are released. See
-  [Benchmarks](Benchmarks).
+- **Tragedy gold exists only as a small slice; epic gold not at all.** The
+  leakage-clean UD-Perseus test/dev folds are **100% prose**; epic and tragedy appear
+  only in the *training* split, so scoring the model on them would leak training data.
+  A deep multi-avenue search (the register-as-work-queue rule in action) found exactly
+  one leakage-clean gold source: the UNESP Trees project's Euripides *Bacchae* 1-169,
+  now the shipped **verse fold** (36 tragedy sentences / 735 tokens: the first honest
+  tragedy evaluation anywhere, reported with wide CIs as a small-sample datapoint on
+  [Benchmarks](Benchmarks)). Everything else checked is blocked: the **AGDT** upstream
+  is unchanged, **Daphne** re-converts works pyaegean already trains on, **PROIEL**'s
+  Greek is prose, **GLAUx** is silver, and Ezekiel's *Exagoge* (a real tragedy treebank)
+  is in the Pedalion training data. A *larger* verse fold needs **new expert annotation
+  of a work absent from training** (Euripides beyond *Medea* and *Bacchae* 1-169,
+  Sophocles' *Oedipus at Colonus*, Apollonius), ~45–100 expert-hours per genre: a
+  scoping / funding decision. Re-investigate triggers on the register: **AthDGC** (the
+  Athens/Oslo diachronic treebank) releases its full data partitions ~August 2026, and
+  the UNESP project may annotate further passages.
 
 The four undeciphered/partly-read scripts at a glance:
 

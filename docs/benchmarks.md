@@ -403,6 +403,36 @@ below. One measurement note: on this fold, batched inference is *not*
 prediction-identical to sequential (a handful of float-order flips), so the
 published numbers are CPU-sequential and batching stays off this row's protocol.
 
+### Verse, out of domain: the first leakage-clean tragedy evaluation
+
+No manually-annotated Greek verse treebank outside the model's own training data
+was previously known: the canonical epic and tragedy treebanks are all in the
+AGDT+Gorman+Pedalion training set, so no honest verse accuracy existed anywhere
+(the leakage-clean UD-Perseus test fold is 100% prose). The verse fold changes
+that with gold from the UNESP Trees project (Perseids/Arethusa manual annotation,
+CC BY-SA 4.0): Euripides, *Bacchae* 1-169 (tragedy: 36 sentences / 735 tokens
+after the standard selection policy) plus a directional sliver of Maximus'
+didactic hexameter (3 sentences / 25 tokens, reported only as a footnote). The
+fold is leakage-checked sentence-by-sentence in its build (0 overlaps; the only
+Euripides in training is *Medea*), and the gold survived an eight-sentence
+scholarly spot-check against the grammar before any number was pinned.
+
+**This is a small-sample datapoint with wide confidence intervals, never a
+headline number.**
+
+| Track | UPOS | UFeats | Lemma | UAS | LAS | tokens |
+|---|---|---|---|---|---|---|
+| Tragedy (Bacchae) | 90.88 | 92.79 | 87.35 | 79.73 | 73.06 | 735 |
+| All verse | 91.05 | 93.03 | 87.37 | 79.87 | 73.16 | 760 |
+
+Tragedy 95% CIs (percentile bootstrap, 999): UPOS [88.40, 92.96], lemma
+[84.79, 89.72], UAS [75.84, 84.68], LAS [69.53, 77.80]. The substantive finding:
+tragedy LAS (~73) runs well below the documentary fold (~80) — poetic word order
+and hyperbaton are materially harder to parse than either prose register, which
+is precisely what this fold exists to measure. Reproduce:
+`aegean greek eval verse --track tragedy` (evidence:
+`training/results/verse-eval-2026-07-11.json`).
+
 ### PapyGreek convention decomposition
 
 The PapyGreek row's two weakest cells are largely convention, not model quality,

@@ -144,6 +144,7 @@ from .papygreek import (
     papygreek_dev_path,
     papygreek_path,
 )
+from .verse_eval import evaluate_on_verse, verse_path
 from .eval_receipt import EvalReceipt, eval_receipt
 from .normalize import (
     NormalizationWarning,
@@ -360,6 +361,8 @@ __all__ = [
     "papygreek_dev_path",
     "papygreek_convention_report",
     "PapyGreekConventionReport",
+    "evaluate_on_verse",
+    "verse_path",
     "eval_receipt",
     "EvalReceipt",
     "use_neural_pipeline",
