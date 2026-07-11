@@ -66,5 +66,14 @@ def test_disable_resets() -> None:
 
 def test_import_stays_clean() -> None:
     # Activating the backend is what pulls onnxruntime/tokenizers; merely importing must not.
-    assert "onnxruntime" not in sys.modules
-    assert "tokenizers" not in sys.modules
+    # Probed in a subprocess so the check is order-independent under parallel test workers
+    # (an in-process sys.modules assertion depends on what ran earlier in the same worker).
+    import subprocess
+
+    probe = (
+        "import sys; import aegean; import aegean.greek; "
+        "assert 'onnxruntime' not in sys.modules, 'onnxruntime leaked'; "
+        "assert 'tokenizers' not in sys.modules, 'tokenizers leaked'"
+    )
+    result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
