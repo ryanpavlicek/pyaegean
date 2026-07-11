@@ -67,6 +67,9 @@ class LemmaSource(str, Enum):
     - ``NEURAL``     — a real prediction from the joint pipeline / seq2seq / edit-tree model.
     - ``RULE``       — the ending-stripping rule layer recovered a regular citation form.
     - ``SEED``       — the bundled seed table / a closed-class function word.
+    - ``PARADIGM``   — a hit in the opt-in UniMorph paradigm table (`use_paradigms`): a
+      curated inflection lookup that recovers an irregular / third-declension form the
+      ending rules cannot (γυναικός → γυνή), correctly accented and grounded.
     - ``IDENTITY``   — a backend/model was consulted but returned the surface form unchanged
       (no real analysis), so the "lemma" is just the input.
     - ``UNRESOLVED`` — the baseline cascade was exhausted; the normalized form is returned.
@@ -79,6 +82,7 @@ class LemmaSource(str, Enum):
     NEURAL = "neural"
     RULE = "rule"
     SEED = "seed"
+    PARADIGM = "paradigm"
     IDENTITY = "identity"
     UNRESOLVED = "unresolved"
     PUNCT = "punct"
@@ -87,7 +91,7 @@ class LemmaSource(str, Enum):
 def needs_review(source: LemmaSource) -> bool:
     """Whether a lemma with this source should be verified by a human: an ``IDENTITY``
     fall-through or an ``UNRESOLVED`` baseline miss. ``ATTESTED``/``NEURAL``/``RULE``/
-    ``SEED``/``PUNCT`` are grounded and do not need review."""
+    ``SEED``/``PARADIGM``/``PUNCT`` are grounded and do not need review."""
     return source in (LemmaSource.IDENTITY, LemmaSource.UNRESOLVED)
 
 _ACUTE = "́"
@@ -105,6 +109,18 @@ def _fold_key(word: str) -> str:
     `.morphology`."""
     nfd = unicodedata.normalize("NFD", word.lower())
     return unicodedata.normalize("NFC", nfd.replace(_GRAVE, _ACUTE))
+
+
+def _is_capitalized(word: str) -> bool:
+    """Whether the surface's first cased letter is upper/title case, a proper-name signal.
+    The paradigm table is lowercase common vocabulary, so a capitalized surface is left to
+    the seed and rule layers, which preserve the surface capitalization (Πέτρου → Πέτρος),
+    rather than served the downcased common-noun entry the table would key up
+    (Πέτρος → πέτρος 'stone')."""
+    for ch in word:
+        if ch.isalpha():
+            return ch != ch.lower()
+    return False
 
 
 # Closed-class function words: the article, the personal/demonstrative/relative/
@@ -231,11 +247,11 @@ _THIRD_DECL: dict[str, str] = {
     "νήστεις": "νῆστις", "πελάγει": "πέλαγος",
 }
 
-# Contracted second-declension nouns in -οῦς (Smyth §237): νοῦς (< νόος), πλοῦς, χοῦς, and the
+# Contracted second-declension nouns in -οῦς (Smyth §235): νοῦς (< νόος), πλοῦς, χοῦς, and the
 # NT proper name Ἰησοῦς, which declines the same way. Their oblique cases carry a circumflex on
 # the ending (gen. -οῦ, acc. -οῦν), but the nominative is -οῦς, NOT the oxytone -ός: an ending
 # rule that strips -οῦ → -ος fabricates a non-word (Ἰησοῦ → *Ἰησός). The circumflex alone cannot
-# flag them — a genuine oxytone -ός genitive (Χριστός → Χριστοῦ, Smyth §163a) carries the SAME
+# flag them — a genuine oxytone -ός genitive (Χριστός → Χριστοῦ, Smyth §176 c) carries the SAME
 # perispomenon on -οῦ and DOES strip correctly to -ός — so the citation form is purely lexical and
 # is seeded here. πλόος/πλοῦς is deliberately absent: the Nestle1904 gold lemmatises πλοῦν to the
 # uncontracted πλόος, so a πλοῦς seed would introduce a new mismatch.
@@ -459,7 +475,7 @@ _NEUTER_2ND_BY_BARE = {_bare(w): w for w in _NEUTER_2ND}
 
 # Common first-declension MASCULINE nouns in -ης. Their genitive singular is -ου (προφήτου,
 # Ἰωάνου), homographic with the 2nd-declension -ος genitive (λόγου → λόγος) but yielding the -ης
-# nominative as the lemma (προφήτου → προφήτης, NOT a fabricated *προφήτος; Smyth §227, §230). The
+# nominative as the lemma (προφήτου → προφήτης, NOT a fabricated *προφήτος; Smyth §222, §225). The
 # -ου ending alone cannot tell the two declensions apart, so for these curated stems the -ου→-ος
 # strip is suppressed and the layer returns an honest miss rather than a confident non-word. Stems
 # are accent/breathing-blind (the -ης dropped); NT-text spelling variants are listed explicitly
@@ -557,12 +573,12 @@ def _rule_lemma(word: str) -> str | None:
             and not (ending in ("ου", "οισ") and _bare(word)[: -len(ending)] in _NEUTER_2ND_STEMS)
             # A first-declension MASCULINE -ης genitive (προφήτου, Ἰωάνου) is homographic with the
             # 2nd-decl -ος genitive but its lemma is the -ης nominative: block the strip (honest
-            # miss) rather than fabricate *προφήτος (Smyth §227). Curated stems only, so a genuine
+            # miss) rather than fabricate *προφήτος (Smyth §222). Curated stems only, so a genuine
             # 2nd-decl -ος genitive on the same shape (πλούτου → πλοῦτος) is untouched.
             and not (ending == "ου" and _bare(word)[:-2] in _MASC_1ST_ES_STEMS)
             # A contracted -οῦς noun's genitive (Ἰησοῦ) carries a circumflex on the ending like the
             # oxytone -ός genitive (Χριστοῦ) but yields the -οῦς nominative, not -ός: block the strip
-            # (honest miss) rather than fabricate *Ἰησός (Smyth §237). Curated stems only; the
+            # (honest miss) rather than fabricate *Ἰησός (Smyth §235). Curated stems only; the
             # frequent forms are resolved correctly by the seed table, which is consulted first.
             and not (ending == "ου" and _bare(word)[:-2] in _CONTRACT_2ND_STEMS)
             and (best is None or len(ending) > best[0])
@@ -618,14 +634,24 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
     are expressed on top of it, so the lemma and its known/verbose flag can never drift
     from the source.
 
-    Tier order (identical to the historical cascade): the neural joint pipeline
-    (`use_neural_pipeline`) → the AGDT treebank (`use_treebank`, an attested lemma) → the
-    GreTa seq2seq backend (`use_neural_lemmatizer`) → the trained edit-tree lemmatizer
-    (`use_lemmatizer`) → the bundled seed table → the opt-in UniMorph paradigm table
-    (`use_paradigms`, a curated ``SEED``-class lookup for irregular/3rd-declension forms) →
-    the generalizing ending-stripping rule layer. A backend that returns the surface form
-    unchanged is reported ``IDENTITY`` (not a real analysis); an exhausted baseline is
-    ``UNRESOLVED``.
+    Tier order: the neural joint pipeline (`use_neural_pipeline`) → the AGDT treebank
+    (`use_treebank`, an attested lemma) → the GreTa seq2seq backend
+    (`use_neural_lemmatizer`) → the trained edit-tree lemmatizer (`use_lemmatizer`) → the
+    bundled seed table → the generalizing ending-stripping rule layer → the opt-in UniMorph
+    paradigm table (`use_paradigms`, a curated ``PARADIGM``-class lookup). A backend that
+    returns the surface form unchanged is reported ``IDENTITY`` (not a real analysis); an
+    exhausted baseline is ``UNRESOLVED``.
+
+    The paradigm table is consulted **after** the ending rules, only when the guarded rules
+    do not recover a citation form: the rules' recover-set (regular second-declension
+    obliques and thematic verb endings) is exactly where the purely-nominal table shadows
+    the dominant verb reading (the noun dative ``ἔχει`` = ``ἔχις`` would otherwise displace
+    the verb ``ἔχει`` → ``ἔχω`` the rules resolve correctly), so the rules win there and the
+    table supplies only the irregular / third-declension forms they cannot touch (``γυναικός
+    → γυνή``). A paradigm hit is further gated: the closed-class and indeclinable guard, a
+    capitalized surface (a proper name; the table is lowercase common vocabulary), and any
+    form the table itself maps to more than one distinct lemma (``φωτός`` = genitive of both
+    ``φώς`` and ``φῶς``) are all left as an honest miss rather than an arbitrary pick.
 
     The joint pipeline's ``IDENTITY`` is decided by *which branch composed the lemma*
     (`joint._compose_lemma`), not by a surface-string compare, so a nominative singular
@@ -660,21 +686,36 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
     lemma, known = seed_lemma_verbose(word)
     if known:
         return lemma, LemmaSource.SEED
+    # The guarded ending rules run BEFORE the paradigm table: their recover-set is where the
+    # purely-nominal table shadows the dominant verb reading, and their guards are the
+    # battle-tested ones. A recovery here wins.
+    lemma, recovered = rule_lemma_verbose(word)  # generalize over the regular paradigms
+    if recovered:
+        return lemma, LemmaSource.RULE
     from . import paradigms
 
     plex = paradigms.active()  # opt-in UniMorph inflection tables (irregular / 3rd-decl nominals)
-    if plex is not None and (key := _fold_key(word)) not in _FUNCTION_KEYS and key not in _INDECLINABLE:
+    if plex is not None:
+        key = _fold_key(word)
         # A nominal paradigm table must not shadow a word pyaegean already knows to be a
         # closed-class function word or indeclinable (the preposition ἐνώπιον is also an
-        # adjective's accusative ἐνώπιος → ἐνώπιον): the same guard the rule layer applies.
-        hit = plex.lemmatize(word)
-        if hit is not None:
-            # a curated inflection-table lookup: grounded + correctly accented, so the same
-            # SEED evidence class as the bundled seed table (a lexical lookup, not a review-bait
-            # identity fall-through); ranked below the seed and above the ending rules.
-            return hit, LemmaSource.SEED
-    lemma, recovered = rule_lemma_verbose(word)  # generalize over the regular paradigms
-    return lemma, LemmaSource.RULE if recovered else LemmaSource.UNRESOLVED
+        # adjective's accusative ἐνώπιος → ἐνώπιον), nor a capitalized proper name (the table
+        # is lowercase common vocabulary), nor a form the table itself maps to MORE THAN ONE
+        # distinct lemma (φωτός = genitive of both φώς 'man' and φῶς 'light'): an arbitrary
+        # first-entry pick is not a grounded analysis, so those fall through as an honest miss.
+        if (
+            key not in _FUNCTION_KEYS
+            and key not in _INDECLINABLE
+            and not _is_capitalized(word)
+            and len(plex.lemma_options(word)) == 1
+        ):
+            hit = plex.lemmatize(word)
+            if hit is not None:
+                # a curated inflection-table lookup: grounded + correctly accented, so its own
+                # PARADIGM evidence class (not a review-bait identity fall-through); consulted
+                # only when the guarded ending rules did not recover a citation form.
+                return hit, LemmaSource.PARADIGM
+    return lemma, LemmaSource.UNRESOLVED
 
 
 def lemmatize_verbose(word: str) -> tuple[str, bool]:

@@ -218,9 +218,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-fold",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-fold-v1/papygreek-fold.conllu.gz"
+            "papygreek-fold-v2/papygreek-fold.conllu.gz"
         ),
-        sha256="29bc27b6717bcf3cc9abe37fde2fd927bfc567310aea2693f3a36de4fe79b0de",
+        sha256="75304be2d12df23419e6486ddefb40ed7c70a1f9af49da9846cf08dbbf224dc1",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
         note="documentary-Koine dependency eval fold (1,696 sentences / 24,105 tokens) converted "
              "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, leakage-clean vs grc-joint training. "
@@ -231,9 +231,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="autenrieth-index",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "autenrieth-index-v1/autenrieth-index.json.gz"
+            "autenrieth-index-v2/autenrieth-index.json.gz"
         ),
-        sha256="9196574a8d9e5b9ad3731c1c9f7cda7061e6b33e03b7d6d12ecf12ad6c5275dc",
+        sha256="2982e716eea8c69317437c9f0887aabf661e24c0ed96c2025d7433e9084a42c6",
         license="public domain (1891); Perseus digitization CC BY-SA; derived index, fetched, never bundled",
         note="prebuilt Autenrieth (Homeric) lemma->entry index (~0.6 MB); use_lexicon('autenrieth') prefers it.",
         extract=False,
@@ -257,18 +257,16 @@ _REMOTE: dict[str, DataSpec] = {
     # nominal paradigms the offline seed+rule lemmatizer cannot reach (γυναικός -> γυνή,
     # πατράσι -> πατήρ, ὕδατος -> ὕδωρ); opt-in via greek.use_paradigms(), fetched on demand,
     # never bundled (ShareAlike + wheel size). CC BY-SA 3.0 (UniMorph / Wikipedia).
-    # PLACEHOLDER — integrator: after hosting the built grc-paradigms.json.gz (~233 KB gzip;
-    # reproducible build sha256 c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a,
-    # from unimorph/grc commit 7f4a58df733726c75c1355dd3a038e950d5e308f) as a release asset,
-    # confirm the URL/tag below match the upload. Until then use_paradigms(path=...) loads a
-    # local build, or set PYAEGEAN_GRC_PARADIGMS_URL to a mirror.
+    # Reproducible build from unimorph/grc commit 7f4a58df733726c75c1355dd3a038e950d5e308f
+    # plus the AGDT treebank lexicon (Perseus commit pinned in greek/treebank.py) for the
+    # attested-gender cross-check; a rebuild from the same pins yields an identical sha.
     "grc-paradigms": DataSpec(
         name="grc-paradigms",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "grc-paradigms-v1/grc-paradigms.json.gz"
+            "grc-paradigms-v2/grc-paradigms.json.gz"
         ),
-        sha256="c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a",
+        sha256="be68b4ec83509864c2533da2aedb8faf8a1b22b985c46c49d7379ef943a7fd27",
         license="CC-BY-SA-3.0 (UniMorph / Wikipedia); derived paradigm index, fetched, never bundled",
         note="prebuilt UniMorph Ancient Greek paradigm index (~234 KB gzip); use_paradigms() "
              "fetches it for offline irregular/third-declension lemma+feature coverage.",
@@ -311,13 +309,13 @@ _REMOTE: dict[str, DataSpec] = {
         name="sigla-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "sigla-corpus-v2/sigla-corpus.json"
+            "sigla-corpus-v3/sigla-corpus.json"
         ),
-        sha256="c334a9431aa985afa9655268e018efc7513c2d3aea0541ca96afffe61e29b133",
+        sha256="683fa0147f2b923a78f7c2c1da95cf42d8c05563f9ed53c5dfa8e520f4e38569",
         license="CC BY-NC-SA 4.0 (SigLA — Salgarella & Castellan; NonCommercial, never bundled)",
-        note="SigLA-derived Linear A dataset v2: 781 documents with SigLA's own word "
-             "division (1,376 words) and commodity ideograms (~1.2 MB JSON). Drawings "
-             "stay at sigla.phis.me.",
+        note="SigLA-derived Linear A dataset v3: 781 documents with SigLA's own word "
+             "division (1,376 words), homophone subscripts (RA₂/PU₂/TA₂), and "
+             "commodity ideograms (~1.3 MB JSON). Drawings stay at sigla.phis.me.",
         extract=False,
     ),
     # The DAMOS Linear B corpus (Aurora, damos.hf.uio.no): transliterations + core
@@ -347,9 +345,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="isicily-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "isicily-corpus-v2/isicily-corpus.json"
+            "isicily-corpus-v3/isicily-corpus.json"
         ),
-        sha256="38655e36fe44058780cae30b4b4594e382a20e9a4a73d26229e4ed8c9b6570c2",
+        sha256="1aa0abb3a7f06c415599932f6b1de844aaab6f0b78ff12f79ab4842f3636063c",
         license="CC-BY-4.0 (I.Sicily — J. Prag et al., University of Oxford; attribution required)",
         note="I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with "
              "find-place, date, and coordinates, from the CC BY EpiDoc corpus. "
@@ -365,9 +363,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iip-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iip-corpus-v2/iip-corpus.json"
+            "iip-corpus-v3/iip-corpus.json"
         ),
-        sha256="1e3bb6c3da0a98c5dc8812c1cd191807e7ab8384a808606abd8c2ef4fa6eab88",
+        sha256="d9b83daa0fb675c6cb45d9fe4ca66c10af96eef40976bb0b8816628bdc9692c7",
         license="CC-BY-NC-4.0 (IIP — M. L. Satlow, Brown University; NonCommercial, attribution)",
         note="IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with "
              "find-place and coordinates, from the CC BY-NC EpiDoc corpus. "
@@ -383,9 +381,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iospe-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iospe-corpus-v2/iospe-corpus.json"
+            "iospe-corpus-v3/iospe-corpus.json"
         ),
-        sha256="70e729ac5afe0bf1df339bc10f4ffe161ba6aa253a8bdd175f2a6e8c8a3df375",
+        sha256="e89ef85a946eb5b3eceae3ad805c2d1a7ab621f5be53463fd1398fb8037d6971",
         license="CC-BY-4.0 (IOSPE III, King's College London; attribution; repo code is MIT)",
         note="IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea with "
              "find-place and date, from the CC BY EpiDoc corpus. Loadable via aegean.load('iospe').",
@@ -400,9 +398,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="igcyr-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "igcyr-corpus-v2/igcyr-corpus.json"
+            "igcyr-corpus-v3/igcyr-corpus.json"
         ),
-        sha256="c5b9f48f5ccb8abf5b77b678bce1f5ae01de1b2befd481bd6155a8d1b3e5af8f",
+        sha256="de1950e2543102bfe8bfacd09cdd3c1803328dc7981795066107392fc4165f75",
         license="CC-BY-NC-SA-4.0 (IGCyr2/GVCyr2, C. Dobias-Lalou et al., Univ. di Bologna, 2024)",
         note="IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse) with title, "
              "find-place, date, from the CC BY-NC-SA EpiDoc corpus. Loadable via aegean.load('igcyr').",
@@ -412,9 +410,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="edh-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "edh-corpus-v2/edh-corpus.json"
+            "edh-corpus-v3/edh-corpus.json"
         ),
-        sha256="1bb4f6170833555143ad816eb86a9affacbe888a5276657804182c7702ca24e2",
+        sha256="bcb5e4b5123cec47c725a116c291556c220252fe9cbee42a1b3f2d3715000965",
         license="CC-BY-SA-4.0 (Epigraphic Database Heidelberg / Heidelberg Academy of Sciences and Humanities)",
         note="EDH Ancient-Greek inscriptions: the 1,286 pure-Greek texts (Imperial Koine, largely "
              "onomastic) of the frozen CC BY-SA EDH dump, with ancient place, date, find-place, and "
@@ -437,7 +435,7 @@ _REMOTE: dict[str, DataSpec] = {
     ),
     # The DDbDP document-URI map: file-stem -> ddb-hybrid, harvested from papyri.info's own
     # idp.data by scripts/build_ddbdp_uri_map.py. Lets aegean.io.to_rdf mint papyri.info
-    # document URIs (https://papyri.info/ddbdp/<hybrid>) for the ddbdp corpus without shipping
+    # document URIs (http://papyri.info/ddbdp/<hybrid>) for the ddbdp corpus without shipping
     # the ~70k-entry map in the wheel; fetched on demand, never bundled. CC BY 3.0 (papyri.info).
     # The RDF export falls back to Trismegistos URIs (with one warning) when this is absent, so
     # it stays offline-capable. PLACEHOLDER — integrator: after hosting the built
@@ -534,6 +532,15 @@ class HistoricalPin:
 _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     "isicily-corpus": [
         HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "isicily-corpus-v2/isicily-corpus.json"
+            ),
+            sha256="38655e36fe44058780cae30b4b4594e382a20e9a4a73d26229e4ed8c9b6570c2",
+            superseded="v3",
+        ),
+        HistoricalPin(
             version="v1",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -544,6 +551,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "iip-corpus": [
+        HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iip-corpus-v2/iip-corpus.json"
+            ),
+            sha256="1e3bb6c3da0a98c5dc8812c1cd191807e7ab8384a808606abd8c2ef4fa6eab88",
+            superseded="v3",
+        ),
         HistoricalPin(
             version="v1",
             url=(
@@ -556,6 +572,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "iospe-corpus": [
         HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iospe-corpus-v2/iospe-corpus.json"
+            ),
+            sha256="70e729ac5afe0bf1df339bc10f4ffe161ba6aa253a8bdd175f2a6e8c8a3df375",
+            superseded="v3",
+        ),
+        HistoricalPin(
             version="v1",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -566,6 +591,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "igcyr-corpus": [
+        HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "igcyr-corpus-v2/igcyr-corpus.json"
+            ),
+            sha256="c5b9f48f5ccb8abf5b77b678bce1f5ae01de1b2befd481bd6155a8d1b3e5af8f",
+            superseded="v3",
+        ),
         HistoricalPin(
             version="v1",
             url=(
@@ -578,12 +612,65 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "edh-corpus": [
         HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "edh-corpus-v2/edh-corpus.json"
+            ),
+            sha256="1bb4f6170833555143ad816eb86a9affacbe888a5276657804182c7702ca24e2",
+            superseded="v3",
+        ),
+        HistoricalPin(
             version="v1",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
                 "edh-corpus-v1/edh-corpus.json"
             ),
             sha256="4828a9760fb64a397a510d3ac239a3df600ef23b7bd7d146c6ad911dc33f6541",
+            superseded="v2",
+        ),
+    ],
+    "sigla-corpus": [
+        HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "sigla-corpus-v2/sigla-corpus.json"
+            ),
+            sha256="c334a9431aa985afa9655268e018efc7513c2d3aea0541ca96afffe61e29b133",
+            superseded="v3",
+        ),
+    ],
+    "papygreek-fold": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-fold-v1/papygreek-fold.conllu.gz"
+            ),
+            sha256="29bc27b6717bcf3cc9abe37fde2fd927bfc567310aea2693f3a36de4fe79b0de",
+            superseded="v2",
+        ),
+    ],
+    "autenrieth-index": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "autenrieth-index-v1/autenrieth-index.json.gz"
+            ),
+            sha256="9196574a8d9e5b9ad3731c1c9f7cda7061e6b33e03b7d6d12ecf12ad6c5275dc",
+            superseded="v2",
+        ),
+    ],
+    "grc-paradigms": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "grc-paradigms-v1/grc-paradigms.json.gz"
+            ),
+            sha256="c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a",
             superseded="v2",
         ),
     ],
@@ -754,19 +841,79 @@ def present_paths(spec: DataSpec, root: pathlib.Path) -> list[pathlib.Path]:
     return [p for p in on_disk_paths(spec, root) if p.exists()]
 
 
+# The download/extraction sidecar suffixes a store entry can carry: the resumable
+# ``.part`` and its ``.part.info`` validator, the ``.extract`` staging dir and ``.old``
+# swap-aside of an extract dataset, the ``.sha256`` extraction stamp, and the per-entry
+# ``.lock``. Used to bound a single-version match, since a version tag itself may contain
+# dots (``v1.2``) and so cannot be told from a sibling by a dot alone.
+_VERSION_SIBLINGS = frozenset({".part", ".part.info", ".extract", ".old", ".sha256", ".lock"})
+
+
+def versioned_entry_paths(
+    name: str, root: pathlib.Path, *, version: str | None = None
+) -> list[pathlib.Path]:
+    """Cache paths of dataset ``name``'s versioned fetches, for byte accounting and removal.
+
+    A ``fetch(name, version=...)`` (the kept-release path) lands in a
+    ``<name>@<version>`` cache entry beside the current pin: a file, or a directory for
+    an ``extract`` dataset, plus, transiently, its download/extraction siblings
+    (``.part``, ``.part.info``, ``.extract``, ``.old``, ``.sha256``, ``.lock``), all of
+    which share the ``<name>@<version>`` prefix. The current-pin probes (`on_disk_paths`,
+    `present_paths`) live at a separate location, so these versioned entries were
+    invisible to ``data list`` byte accounting and unreachable by ``data remove``; this
+    enumerates them.
+
+    ``version`` restricts the result to that one kept release (``<name>@<version>`` and
+    its own siblings); ``None`` returns every version's entries. The match is anchored on
+    the exact ``<name>@`` prefix, and for a single ``version`` on the exact entry name or
+    that entry plus one of the known download/extraction suffixes, so a sibling dataset is
+    never swept in and, e.g., ``v1`` never matches ``v11`` or the distinct version ``v1.2``
+    (a version tag can itself contain dots, so a plain entry-plus-dot prefix is unsafe;
+    dataset names contain no ``@``). Only entries that actually exist are returned."""
+    try:
+        children = list(root.iterdir())
+    except OSError:
+        return []
+    if version is None:
+        prefix = name + "@"
+        return sorted(p for p in children if p.name.startswith(prefix))
+    entry = f"{name}@{version}"
+    return sorted(
+        p for p in children
+        if p.name == entry or (p.name.startswith(entry) and p.name[len(entry):] in _VERSION_SIBLINGS)
+    )
+
+
+def versioned_bytes(name: str, root: pathlib.Path, *, version: str | None = None) -> int:
+    """Total on-disk size of dataset ``name``'s versioned cache entries (0 if none).
+
+    See `versioned_entry_paths`; ``version`` narrows it to a single kept release."""
+    return sum(_dir_bytes(p) for p in versioned_entry_paths(name, root, version=version))
+
+
 def is_downloaded(spec: DataSpec, root: pathlib.Path) -> bool:
-    """Whether any real on-disk artifact of ``spec`` is present under ``root``.
+    """Whether any real on-disk artifact of ``spec``'s CURRENT pin is present under ``root``.
 
     This is the corrected downloaded-probe: a dataset a backend fetched under a
     different filename (``lsj-index`` -> ``lsj-perseus-index.json.gz``, an
     ``agdt-derived`` member) counts as downloaded, where a bare
-    ``(root/name).exists()`` check missed it."""
+    ``(root/name).exists()`` check missed it. It reports the CURRENT pin only: a
+    store holding only a kept historical version (``<name>@<version>``) reads not
+    downloaded, since the current asset is what a plain ``fetch``/``load`` uses.
+    Use `versioned_entry_paths` / `versioned_bytes` for the kept-version footprint."""
     return bool(present_paths(spec, root))
 
 
 def downloaded_bytes(spec: DataSpec, root: pathlib.Path) -> int:
-    """Total real on-disk size of ``spec``'s present artifacts (0 if none)."""
-    return sum(_dir_bytes(p) for p in present_paths(spec, root))
+    """Total real on-disk size of ``spec``'s artifacts (0 if none).
+
+    Counts the current pin's present artifacts plus any kept versioned entries
+    (``<name>@<version>`` from ``fetch(name, version=...)``) that also occupy the store,
+    so a dataset's reported footprint reflects every reclaimable byte it holds. The
+    current-pin subset alone is ``sum(_dir_bytes(p) for p in present_paths(spec, root))``;
+    the versioned subset alone is `versioned_bytes`."""
+    current = sum(_dir_bytes(p) for p in present_paths(spec, root))
+    return current + versioned_bytes(spec.name, root)
 
 
 def bundled_data_version() -> str:

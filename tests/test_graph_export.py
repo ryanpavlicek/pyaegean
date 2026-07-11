@@ -1,4 +1,4 @@
-"""Sign/word co-occurrence graph export (GEXF 1.3 / GraphML). Pure stdlib — no extras."""
+"""Sign/word co-occurrence graph export (GEXF 1.2draft / GraphML). Pure stdlib — no extras."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from aegean.analysis.graph import (
 )
 from aegean.core.model import Document, DocumentMeta, Token, TokenKind
 
-GEXF_NS = "http://gexf.net/1.3"
+GEXF_NS = "http://www.gexf.net/1.2draft"
 GRAPHML_NS = "http://graphml.graphdrawing.org/xmlns"
 XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
@@ -114,7 +114,7 @@ def test_gexf_reparses_namespace_correct(tmp_path):
     path = to_gexf(g, tmp_path / "g.gexf")
     root = ET.parse(path).getroot()
     assert root.tag == f"{{{GEXF_NS}}}gexf"
-    assert root.get("version") == "1.3"
+    assert root.get("version") == "1.2"
     assert root.get(f"{{{XSI}}}schemaLocation", "").startswith(GEXF_NS)
     # node label + frequency attvalue round-trip
     nodes = root.findall(f".//{{{GEXF_NS}}}node")

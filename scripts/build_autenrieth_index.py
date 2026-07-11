@@ -10,26 +10,43 @@ Greek, ``<gloss>`` English senses, and ``<bibl>`` Homer citations.
 This produces the same gzipped ``{lemma: {"hw", "def"}}`` index shape as the sibling
 Scaife / Abbott-Smith backends (see ``aegean.greek.lexindex``), so
 ``use_lexicon("autenrieth")`` can fetch and serve it. The lemma key is
-``norm(betacode→Unicode(key))`` — identical to the ``norm`` that `IndexLexicon` looks up
-with, so a fetched index resolves.
+``norm(betacode→Unicode(headword))`` — identical to the ``norm`` that `IndexLexicon`
+looks up with (NFC + lowercase), so a fetched index resolves.
 
 Headword-convention normalization (the real work — Autenrieth's Homeric headwords vs the
 project's lemma conventions):
 
+* **Lemma + headword come from ``<orth>``, not the ``key`` attribute.** The Perseus
+  ``key`` is unreliable: 26 entries in the δη- run carry a ``D.H.``-prefixed
+  data-entry artifact (``key="D.H.=mos1"`` for δῆμος), and a handful carry a stray
+  period or a misplaced mark (``e)u/.cestos``, ``nuc/s``, ``kartu=)nw``). Where the
+  ``key`` is malformed the entry's own ``<orth>`` is well-formed (``<orth>dh=mos</orth>``),
+  so the build derives both the lemma key and the display headword from the first
+  ``<orth>`` form, using the ``key`` only when ``<orth>`` is absent or unusable. A
+  well-formed-Greek gate rejects any lemma that is not Greek letters + combining marks;
+  an entry that fails through both paths is skipped and reported.
 * **Beta Code → Unicode.** The whole document is Beta Code; ``key``/``orth``/``foreign``
   spans are converted with `aegean.greek.normalize.betacode_to_unicode`. English text
-  (``gloss``, ``bibl``, prose) is kept verbatim.
+  (``gloss``, prose) is kept verbatim; ``<bibl>`` is English except for the Homeric
+  book-letter citations (``*a 278`` = Iliad Α 278), whose Greek letters are converted.
 * **Digamma.** Perseus Beta Code writes the Homeric digamma ϝ as ``v`` (``*v`` capital),
-  which the project's 24-letter converter does not map; this build substitutes ``v→ϝ`` /
-  ``*v→Ϝ`` first. Autenrieth's *headwords* are already in the project's bare-vowel
-  convention (ἄναξ under ``a)/nac``, not ϝάναξ), so no headword digamma remapping is
-  needed; the digamma survives only where Autenrieth prints it — the etymological notes in
-  the body (ἄναξ → "(ϝάναξ)", ἀείδω → "(ἀϝείδω)").
-* **Vowel-length marks.** Beta Code macron ``_`` and breve ``^`` (Autenrieth's
-  quantity notation) have no Unicode Beta Code reading and are dropped from the text.
+  which the project's 24-letter converter does not map. The digamma is applied only to
+  the etymological **body** spans, where Autenrieth prints it (ἄναξ → "(ϝάναξ)", ἀείδω →
+  "(ἀϝείδω)"). It is NOT applied to lemma/headword derivation: Autenrieth's headwords are
+  in the bare-vowel convention, and the one ``v`` that reaches a headword form is the
+  spurious ``de/vw`` byform of δέω 'lack' (the 1891 print reads plain "1. δέω (δεύω)",
+  no digamma; LSJ/Cunliffe lemmatize δέω), so the ``v`` is dropped there and the two δέω
+  homographs merge under one δέω lemma carrying both senses.
+* **Quantity / placeholder marks.** Beta Code macron ``_`` and breve ``^`` (Autenrieth's
+  vowel-length notation) have no Unicode Beta Code reading and are dropped. The source
+  also uses ``<*>`` (99×) as a quantity/placeholder mark that sits between a letter and
+  its breathing or accent; left in place it detaches the diacritic (ἀάω → "α<>ἀ<>ώ"), so
+  it is stripped before conversion, along with a stray ``*`` before a non-letter.
 * **Homograph digits.** Perseus disambiguates homographs with a trailing digit on the
   ``key`` (``ai)no/s2``, ``a)i/w1``); the digit is stripped so the lemma is the bare
-  headword, and the (few) entries that then share a lemma are merged, so no sense is lost.
+  headword, and entries that share a lemma after digit-stripping and case-folding —
+  proper-noun/common-noun pairs, true homographs — are merged in document order so no
+  sense is lost.
 
 Usage:
     python scripts/build_autenrieth_index.py                 # fetch Perseus, write to cache
@@ -45,6 +62,7 @@ import hashlib
 import json
 import re
 import sys
+import unicodedata
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -66,18 +84,50 @@ ATTRIBUTION = (
 )
 
 _HOMOGRAPH_DIGIT = re.compile(r"[0-9]+$")
+# A ``*`` (Beta Code capital marker) is stray unless it precedes a letter or a Beta Code
+# mark (breathings/accents/subscript may sit between ``*`` and the capital letter).
+_STRAY_STAR = re.compile(r"\*(?![A-Za-z)(/\\=+|])")
+
+# Greek and Coptic (U+0370–U+03FF, includes digamma ϝ) plus Greek Extended
+# (U+1F00–U+1FFF, the precomposed polytonic letters).
+_GREEK_LO, _GREEK_HI = 0x0370, 0x03FF
+_GREEKEXT_LO, _GREEKEXT_HI = 0x1F00, 0x1FFF
+
+
+def _strip_markers(text: str) -> str:
+    """Drop the quantity/placeholder marks common to every span: the ``<*>`` marker, a
+    stray capital marker, and the macron ``_`` / breve ``^`` vowel-length notation."""
+    text = text.replace("<*>", "")
+    text = _STRAY_STAR.sub("", text)
+    return text.replace("_", "").replace("^", "")
 
 
 def beta_to_unicode(text: str) -> str:
-    """Convert an Autenrieth Beta Code span to precomposed Greek.
+    """Convert an Autenrieth **body** Beta Code span to precomposed Greek.
 
-    Handles the two conventions the project's 24-letter converter does not: the Perseus
-    digamma ``v`` (``*v`` capital) → ϝ/Ϝ, and the macron ``_`` / breve ``^`` vowel-length
-    marks (dropped — they have no Unicode Beta Code reading)."""
+    Body spans keep the etymological digamma: Perseus writes it ``v`` (``*v`` capital),
+    which the project's 24-letter converter does not map, so it is substituted ϝ / Ϝ
+    here (ἄναξ → "(ϝάναξ)"). The ``<*>`` placeholder and the macron ``_`` / breve ``^``
+    vowel-length marks (no Unicode Beta Code reading) are stripped first."""
     if not text:
         return ""
+    text = _strip_markers(text)
     text = text.replace("*v", "Ϝ").replace("v", "ϝ")
-    text = text.replace("_", "").replace("^", "")
+    return betacode_to_unicode(text)
+
+
+def _beta_headword(text: str) -> str:
+    """Convert a Beta Code lemma/headword form to precomposed Greek.
+
+    Unlike `beta_to_unicode`, this does NOT remap ``v`` to digamma: Autenrieth's
+    headwords use the bare-vowel convention, and the only ``v`` that reaches a headword
+    form is the spurious ``de/vw`` byform of δέω (dropped so it merges with δέω). A stray
+    period from a malformed key (``e)u/.cestos`` → ἐύξεστος) is also dropped."""
+    if not text:
+        return ""
+    text = _strip_markers(text)
+    text = text.replace("*v", "").replace("*V", "").replace("v", "")
+    text = text.replace(".", "")
     return betacode_to_unicode(text)
 
 
@@ -86,14 +136,46 @@ def _strip_homograph(beta_key: str) -> str:
     return _HOMOGRAPH_DIGIT.sub("", beta_key)
 
 
-def lemma_key(beta_key: str) -> str:
-    """The normalized lemma index key for a Beta Code ``key`` (matches `lexindex.norm`)."""
-    return norm(beta_to_unicode(_strip_homograph(beta_key)))
+def headword(beta: str) -> str:
+    """The Unicode display headword for a Beta Code form (case preserved: proper nouns
+    stay capitalized). Digamma is not applied (see `_beta_headword`)."""
+    return _beta_headword(_strip_homograph(beta))
 
 
-def headword(beta_key: str) -> str:
-    """The Unicode display headword (case preserved: proper nouns stay capitalized)."""
-    return beta_to_unicode(_strip_homograph(beta_key))
+def lemma_key(beta: str) -> str:
+    """The normalized lemma index key for a Beta Code form (matches `lexindex.norm`:
+    NFC + lowercase)."""
+    return norm(headword(beta))
+
+
+def first_orth_form(orth_text: str) -> str:
+    """The first Beta Code form from an ``<orth>`` element, ready for `headword`.
+
+    An ``<orth>`` may list several comma-separated forms (``dhqa/, dh/q)``) — the first is
+    the headword. Autenrieth marks morpheme/compound boundaries with a hyphen
+    (``a)-a_/a_tos``, ``dhmo - bo/ros``); those hyphens and any surrounding whitespace
+    (including line-wrap newlines) are removed so the form is the joined headword."""
+    first = orth_text.split(",")[0].replace("-", "")
+    return "".join(first.split())
+
+
+def is_greek_lemma(text: str) -> bool:
+    """True when every character is a Greek/Greek-Extended letter or a combining mark.
+
+    The build's well-formed gate: a lemma key must contain only Greek letters and their
+    diacritics, so a malformed key (a ``D.H.`` prefix, a stray period, a leaked ``<``/``>``
+    or Latin letter) never enters the index."""
+    if not text:
+        return False
+    for ch in text:
+        cat = unicodedata.category(ch)
+        o = ord(ch)
+        if cat[0] == "L" and (_GREEK_LO <= o <= _GREEK_HI or _GREEKEXT_LO <= o <= _GREEKEXT_HI):
+            continue
+        if cat[0] == "M":  # combining diacritics (NFC leaves macron/breve stacks decomposed)
+            continue
+        return False
+    return True
 
 
 def _local(tag: str) -> str:
@@ -102,6 +184,17 @@ def _local(tag: str) -> str:
 
 def _is_greek(elem: ET.Element) -> bool:
     return elem.get("lang") == "greek" or _local(elem.tag) in ("orth", "foreign")
+
+
+def _render_bibl(text: str) -> str:
+    """Render a ``<bibl>`` citation: English kept verbatim, but a Homeric book-letter
+    reference in Beta Code (``*a 278`` = Iliad Α 278, ``*h 80``, ``*i 122``) is converted.
+
+    The book letter is the only Greek in these citations and always carries the ``*``
+    capital marker, so a whitespace token containing ``*`` is converted and everything
+    else (``Il.``, ``Od.``, line numbers) is left as printed."""
+    tokens = text.split()
+    return " ".join(beta_to_unicode(tok) if "*" in tok else tok for tok in tokens)
 
 
 def _render(elem: ET.Element, greek: bool) -> str:
@@ -116,9 +209,12 @@ def _render(elem: ET.Element, greek: bool) -> str:
     parts = [conv(elem.text)]
     for child in elem:
         tag = _local(child.tag)
-        if tag in ("gloss", "bibl"):
-            # English content: keep as printed (citations are ASCII, glosses English).
+        if tag == "gloss":
+            # English content: keep as printed.
             parts.append(" ".join("".join(child.itertext()).split()))
+        elif tag == "bibl":
+            # English citations, except Homeric book-letter references in Beta Code.
+            parts.append(_render_bibl("".join(child.itertext())))
         else:
             parts.append(_render(child, greek))
         # A tail belongs to THIS element's language context, not the child's.
@@ -131,29 +227,62 @@ def entry_body(elem: ET.Element) -> str:
     return " ".join(_render(elem, greek=False).split())
 
 
-def index_from_tei(path: Path | str) -> dict[str, dict[str, str]]:
+def _derive_lemma(ef: ET.Element, beta_key: str) -> tuple[str, str] | None:
+    """The ``(lemma_key, headword)`` for an entry, from ``<orth>`` first then ``key``.
+
+    Returns ``None`` when neither the first ``<orth>`` form nor the ``key`` produces a
+    well-formed Greek lemma (the entry is then skipped and reported)."""
+    orth = ef.find("orth")
+    orth_text = "".join(orth.itertext()) if orth is not None else ""
+    candidates = (first_orth_form(orth_text), _strip_homograph(beta_key))
+    for beta in candidates:
+        if not beta:
+            continue
+        hw = _beta_headword(beta)
+        lk = norm(hw)
+        if is_greek_lemma(lk):
+            return lk, hw
+    return None
+
+
+def index_from_tei(
+    path: Path | str, *, report: list[str] | None = None
+) -> dict[str, dict[str, str]]:
     """Parse the Autenrieth Perseus TEI into a normalized lemma→entry index.
 
-    Every ``<entryFree>`` with a ``key`` becomes a ``{lemma: {"hw", "def"}}`` record.
-    The (few) entries whose keys collapse to the same lemma after digit-stripping and
-    case-folding — proper-noun/common-noun pairs, true homographs — are merged in
-    document order so no sense is dropped (unlike the siblings' first-sense-wins, but
-    the same index shape)."""
+    Every ``<entryFree>`` with a ``key`` becomes a ``{lemma: {"hw", "def"}}`` record whose
+    lemma + headword are derived from ``<orth>`` (the ``key`` only as a fallback). Entries
+    whose keys collapse to the same lemma after digit-stripping and case-folding —
+    proper-noun/common-noun pairs, true homographs — are merged in document order so no
+    sense is dropped (unlike the siblings' first-sense-wins, but the same index shape).
+    An entry that yields no well-formed Greek lemma is skipped; if ``report`` is given,
+    its ``key`` is appended for the caller to surface."""
     root = ET.parse(str(path)).getroot()
     index: dict[str, dict[str, str]] = {}
     for ef in root.iter("entryFree"):
         beta_key = (ef.get("key") or "").strip()
         if not beta_key:
             continue
-        key = lemma_key(beta_key)
+        derived = _derive_lemma(ef, beta_key)
+        if derived is None:
+            if report is not None:
+                report.append(beta_key)
+            continue
+        key, hw = derived
         body = entry_body(ef)
-        if not key or not body:
+        if not body:
             continue
         existing = index.get(key)
         if existing is None:
-            index[key] = {"hw": headword(beta_key), "def": body}
+            index[key] = {"hw": hw, "def": body}
         elif body not in existing["def"]:
             existing["def"] = f"{existing['def']} | {body}"
+    violators = [k for k in index if not is_greek_lemma(k)]
+    if violators:
+        raise SystemExit(
+            f"well-formed-Greek gate: {len(violators)} lemma(s) are not Greek "
+            f"letters + marks (e.g. {violators[:5]}) — build aborted"
+        )
     return index
 
 
@@ -196,7 +325,8 @@ def main() -> None:
         print(f"fetching {SOURCE_URL}")
         _fetch_source(src)
 
-    index = index_from_tei(src)
+    skipped: list[str] = []
+    index = index_from_tei(src, report=skipped)
     if len(index) < 4000:
         raise SystemExit(
             f"{src}: only {len(index)} lemmas — the source looks truncated "
@@ -208,6 +338,8 @@ def main() -> None:
     sha = hashlib.sha256(raw).hexdigest()
     print(f"source:  Perseus text {PERSEUS_TEXT_ID} ({LICENSE})")
     print(f"wrote {args.out}  ({len(index)} lemmas, {len(raw) / 1_000_000:.2f} MB gzipped)")
+    if skipped:
+        print(f"skipped {len(skipped)} entr(y/ies) with no well-formed Greek lemma: {skipped}")
     print(f"sha256: {sha}")
 
 

@@ -12401,6 +12401,48 @@
       ],
       "returns": true
     },
+    "aegean.data.versioned_bytes": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "name"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "root"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "version"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.data.versioned_entry_paths": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "name"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "root"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "version"
+        }
+      ],
+      "returns": true
+    },
     "aegean.data.versions": {
       "kind": "function",
       "params": [],
@@ -15731,6 +15773,9 @@
     "aegean.greek.lemmatize.LemmaSource.NEURAL": {
       "kind": "attribute"
     },
+    "aegean.greek.lemmatize.LemmaSource.PARADIGM": {
+      "kind": "attribute"
+    },
     "aegean.greek.lemmatize.LemmaSource.PUNCT": {
       "kind": "attribute"
     },
@@ -17360,6 +17405,22 @@
       "returns": true
     },
     "aegean.greek.paradigms.ParadigmLexicon.analyze": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "form"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.paradigms.ParadigmLexicon.lemma_options": {
       "kind": "function",
       "params": [
         {

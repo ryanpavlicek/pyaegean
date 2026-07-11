@@ -1,0 +1,20 @@
+{
+  "what": "Neural pipeline re-scored on the PapyGreek documentary-Koine dependency fold after the v2 fold rebuild (five malformed gold LEMMA cells cleaned).",
+  "date": "2026-07-11",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; fold = papygreek-fold-v2 (sha 75304be2d12df23419e6486ddefb40ed7c70a1f9af49da9846cf08dbbf224dc1), leakage-checked vs the grc-joint training set (354 overlapping sentences excluded via Pedalion's papyri subset)",
+  "supersedes": "papygreek-eval-2026-07-11.json (fold v1: five gold LEMMA cells carried PapyGreek's internal numeral-value annotation, e.g. 'b|num:2|', each an unmatchable guaranteed miss)",
+  "results_full_precision": {
+    "upos": 0.9104750051856462,
+    "xpos": 0.7676000829703381,
+    "ufeats": 0.8857498444306161,
+    "lemma": 0.8613150798589504,
+    "uas": 0.8570835926156399,
+    "las": 0.7989213856046463,
+    "clas": 0.7594068460935458,
+    "n_words": 24105,
+    "n_sentences": 1696
+  },
+  "delta_vs_v1": "lemma only: 0.8611076540136902 -> 0.8613150798589504 (+5/24105, the five cleaned cells now score correct); every other metric byte-identical to the v1 run, as expected for a lemma-column-only gold change",
+  "batching_note": "batch-32 is NOT prediction-identical on this fold (~0.02% of decisions flip: float non-associativity under padded batching; 0 UPOS diffs, single-digit head/lemma/feats flips) — sequential is canonical; the full-fold identity check FAILED here, unlike UD-Perseus, so batching stays off this pin per the standing rule",
+  "verification": "measured through the hosted papygreek-fold-v2 asset via the pinned fetch path; the decompress cache now carries a sha stamp of its source archive, after the v1 re-measure attempt was caught silently serving the stale v1 decompress (byte-identical lemma value was the tell)"
+}

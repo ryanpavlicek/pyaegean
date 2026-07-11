@@ -76,7 +76,7 @@ A few notes that decide most cases:
   than the lookups. When accuracy matters most and you can install the extra,
   this is the choice.
 - **Every record tells you how far to trust it.** Each pipeline record carries a
-  `lemma_source` (`attested`, `neural`, `rule`, `seed`, `identity`,
+  `lemma_source` (`attested`, `neural`, `rule`, `seed`, `paradigm`, `identity`,
   `unresolved`, or `punct`) and a derived `needs_review`, so you can route the
   uncertain tokens to a human rather than trusting the whole output uniformly.
   See [Reading a Parse](Reading-a-Parse).

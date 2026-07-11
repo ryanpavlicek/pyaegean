@@ -186,13 +186,13 @@ def test_cli_hand_json() -> None:
     assert data["series"] == {"Ta": 1}                   # PY Ta 641
 
 
-def test_cli_dossiers_empty_result_errors() -> None:
-    # lineara ids are single-token (HT1, HT6a) so no series parses -> no dossiers ->
-    # a clean error, never a raw traceback
+def test_cli_dossiers_non_linear_b_errors() -> None:
+    # dossiers is defined for Linear B designations only; a non-Linear-B corpus must
+    # error cleanly (never invent a dossier out of an unrelated id, never a traceback)
     from typer.testing import CliRunner
 
     from aegean.cli import _build_app
 
     r = CliRunner().invoke(_build_app(), ["analyze", "dossiers", "lineara"])
     assert r.exit_code != 0
-    assert "no archival dossiers" in r.output
+    assert "Linear B" in r.output

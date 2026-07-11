@@ -48,8 +48,9 @@ NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pip
 LSJ_OPT = typer.Option(False, "--lsj", help="Activate LSJ glossing (~270 MB fetch on first use).")
 CONFIDENCE_OPT = typer.Option(
     False, "--confidence",
-    help="Attach calibrated confidence (loads the shipped calibration). Needs --neural — "
-    "it is model-only, so lookup/identity/punctuation lemmas carry none.",
+    help="Attach calibrated confidence (loads the shipped calibration). Needs --neural: "
+    "it is model-only, so identity/punctuation lemmas carry none (a lookup-composed lemma "
+    "does — the calibration covers the model's internal training-form lookup).",
 )
 
 
@@ -804,7 +805,7 @@ def explain(
     """Explain what the pipeline did to each token and why (lemma evidence classes).
 
     Each row shows the analysis plus the lemma's evidence class (attested / neural /
-    rule / seed / identity / unresolved / punct) and a plain-language note; identity
+    rule / seed / paradigm / identity / unresolved / punct) and a plain-language note; identity
     and unresolved rows are flagged for review. Source classes are the honesty
     surface: by default there are no confidence numbers. Pass --confidence (with
     --neural) to additionally append each token's calibrated confidence to its note

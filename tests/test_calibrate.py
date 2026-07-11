@@ -10,7 +10,7 @@ Covers the whole `aegean.greek.calibrate` surface:
 - adversarial inputs: temperature<=0, NaN/inf logits, empty fold, shape mismatch,
   bad bracket, n_bins<1 — a clean error, never a raw traceback or silent wrong number;
 - ``use_calibration`` / ``disable_calibration`` / ``active`` from a Calibration, a
-  dict, and a path, plus the not-yet-shipped bundled-default error.
+  dict, and a path, plus the bundled-default load-failure error (missing install).
 """
 
 from __future__ import annotations
@@ -209,16 +209,16 @@ def test_use_calibration_from_object_dict_and_path(tmp_path):
     assert from_path == cal and calibrate.active() == cal
 
 
-def test_bundled_default_not_shipped_yet_raises_clearly(monkeypatch):
-    # The bundled calibration.json is intentionally not created yet (the integrator
-    # lands it with the measured numbers); the no-arg form must fail loudly, not
-    # fall back to an uncalibrated number.
+def test_bundled_default_missing_raises_clearly(monkeypatch):
+    # The bundled calibration.json ships and loads; if the install is broken so the file
+    # is missing, the no-arg form must fail loudly with actionable guidance, not fall
+    # back to an uncalibrated number.
     import aegean.data as data
 
     def _missing(*parts):
         raise FileNotFoundError("no such bundled file")
 
     monkeypatch.setattr(data, "load_bundled_json", _missing)
-    with pytest.raises(UncalibratedConfidenceError, match="no bundled calibration"):
+    with pytest.raises(UncalibratedConfidenceError, match="bundled calibration could not be loaded"):
         calibrate.use_calibration()
     assert calibrate.active() is None  # nothing was loaded

@@ -1,8 +1,11 @@
 # Cypriot syllabary
 
-The Cypriot syllabary wrote Greek (the Arcado-Cypriot dialect) from roughly the 11th to the
-4th century BC. Like [Linear B](Linear-B) it is **deciphered**, so reading it is verifiable
-rather than guesswork. Use this page when you want to look up a Cypriot sign, turn a transliterated
+The Cypriot syllabary wrote mainly Greek (the Arcado-Cypriot dialect) from roughly the 11th to
+the 4th century BC. The same script also recorded **Eteocypriot**, the island's non-Greek
+language, and the bundled *Inscriptiones Graecae* XV 1 corpus includes such non-Greek material
+alongside the Greek. Like [Linear B](Linear-B) its sign values are **deciphered**, so a phonetic
+reading is verifiable rather than guesswork (the Greek texts read as Greek; Eteocypriot
+transliterates cleanly but is not understood as a language). Use this page when you want to look up a Cypriot sign, turn a transliterated
 word into its sound, or read a syllabic word as Greek (the famous **pa-si-le-u-se → basileus**
 bridge, "king"). pyaegean handles all of that through the same plugin model as the other Aegean
 scripts: a sign inventory, a transliteration step, and a bridge into the [Greek track](Greek-NLP).

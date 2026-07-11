@@ -49,6 +49,7 @@ you build on it:
 | `neural` | a real prediction from the joint neural model | high on in-domain text, less so far from it |
 | `rule` | recovered by the ending-stripping rule layer (e.g. `νόμου` → `νόμος`) | good for the regular paradigms it covers |
 | `seed` | the bundled seed table or a closed-class word (the article, particles, …) | high: curated |
+| `paradigm` | a curated UniMorph inflection-table lookup, opt-in via `use_paradigms()` | high: a curated inflectional form |
 | `identity` | a model was asked but returned the surface form unchanged | **verify**: not a real analysis |
 | `unresolved` | the baseline was exhausted; the form is returned as-is | **verify**: the tool could not lemmatize it |
 | `punct` | a punctuation or numeral token, its own "lemma" | n/a |

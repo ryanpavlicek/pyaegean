@@ -65,7 +65,7 @@ def pipeline_rows(
     Wraps :func:`aegean.greek.pipeline`, mapping each `TokenRecord` to a row with
     ``sentence`` / ``index`` position, ``text``, ``upos``, ``lemma``,
     ``lemma_source`` (the lemma's evidence class, e.g. ``"attested"`` / ``"neural"``
-    / ``"rule"`` / ``"identity"``), ``lemma_known`` (``False`` marks a lemma to
+    / ``"rule"`` / ``"seed"`` / ``"paradigm"`` / ``"identity"``), ``lemma_known`` (``False`` marks a lemma to
     verify — an identity fall-through or unresolved miss), and the optional
     ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
     the neural pipeline, ``None`` otherwise). Backends follow whatever is active,
@@ -94,10 +94,12 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
     Calibrated confidence is an optional COLUMN, not a per-row field: only when at
     least one record carries a non-``None`` ``upos_confidence`` / ``lemma_confidence``
     (the neural pipeline active, a calibration loaded, and the call asked for it) do
-    all rows gain the two keys — the per-row value may still be ``None`` (a head with
-    no calibrated number: a lookup-resolved / identity / punctuation lemma, or an
-    undecoded token). Absent otherwise, so a call without confidence produces
-    byte-identical rows to a build without the feature."""
+    all rows gain the two keys — the per-row value may still be ``None`` for a head
+    the model does not itself produce (within the neural pipeline: an identity
+    fall-through, punctuation, or an undecoded token; a lookup-composed lemma still
+    carries one, since the calibration covers the model's internal training-form
+    lookup). Absent otherwise, so a call without confidence produces byte-identical
+    rows to a build without the feature."""
     rows: list[dict[str, Any]] = [
         {
             "sentence": r.sentence,
@@ -129,10 +131,12 @@ def format_confidence(
     """Render a token's two calibrated confidences as one compact cell.
 
     ``"<upos>/<lemma>"`` to two decimals, with ``"—"`` for a head that carries no
-    calibrated number (a lookup-resolved / identity / punctuation lemma, or an
-    undecoded token), and ``"—"`` alone when neither head has one. Shared so the CLI
-    pipeline table, the TUI workbench line, and the reader's analysis table format the
-    confidence column identically."""
+    calibrated number (within the neural pipeline, a lemma the model does not itself
+    produce: an identity fall-through, punctuation, or an undecoded token; a
+    lookup-composed lemma still carries one, since the calibration covers the model's
+    internal training-form lookup), and ``"—"`` alone when neither head has one.
+    Shared so the CLI pipeline table, the TUI workbench line, and the reader's
+    analysis table format the confidence column identically."""
     if upos_confidence is None and lemma_confidence is None:
         return "—"
 

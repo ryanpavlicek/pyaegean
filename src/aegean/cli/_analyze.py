@@ -409,13 +409,18 @@ def dossiers(
 ) -> None:
     """Archival dossiers: tablets sharing a find-site and an archival series (Linear B).
 
-    A dossier is a (site, series) grouping — e.g. the Knossos Da sheep-tablets —
-    the standard Mycenological working unit. The series is parsed from each
-    tablet's designation; documents without a parseable series are omitted."""
+    A dossier is a (site, series) grouping, e.g. the Knossos Da sheep-tablets, a
+    common Mycenological working unit. The series is parsed from each tablet's
+    designation (a Linear B convention), so this needs a Linear B corpus; documents
+    without a parseable series are omitted. A residual or unconventional prefix is
+    grouped as parsed, not asserted to be an attested archival set."""
     from aegean.analysis.hands import dossiers as _dossiers
 
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
-    found = _dossiers(c, min_docs=min_docs)
+    try:
+        found = _dossiers(c, min_docs=min_docs)
+    except ValueError as exc:
+        raise fail(str(exc)) from None
     shown = found[: top if top > 0 else None]
     if not shown:
         raise fail(f"no archival dossiers found in {corpus!r} (needs series in the document ids)")

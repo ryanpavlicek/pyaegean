@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.38.0
+aegean --version                # pyaegean 0.39.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -669,9 +669,9 @@ re-fetched, evicted, or expired, and stays until `remove` deletes it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `list` | The fetchable datasets + downloaded status and on-disk size | `--json` | `aegean data list` |
+| `list` | The fetchable datasets + downloaded status and on-disk size (folding in any kept `--version` entries) | `--json` | `aegean data list` |
 | `fetch` | One-time download into the store (idempotent; resumes); `--version v1` fetches a superseded historical pin | `--force --version` | `aegean data fetch grc-joint` |
-| `remove` | Delete downloaded dataset(s), reclaiming the space | `--all` `--json` | `aegean data remove nt-corpus` |
+| `remove` | Delete downloaded dataset(s), reclaiming the space; `--version v1` removes only that one kept release | `--all` `--version` `--json` | `aegean data remove nt-corpus` |
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |
 

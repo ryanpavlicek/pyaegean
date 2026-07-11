@@ -275,8 +275,8 @@ Dev n = 22,135 tokens; test n = 20,959 (report-only, one shot). Three honesty no
 travel with the number: the lemma figure calibrates the edit-script head's probability
 against whether the *composed lemma* matched gold (a documented proxy — the lemma a user
 sees also passes through the training lookup, which is why the fitted temperature is
-below 1: the lookup rescues predictions the script head doubted); lemmas resolved by a
-lexicon lookup (evidence class `attested`/`seed`) carry **no** model confidence — the
+below 1: the lookup rescues predictions the script head doubted); lemmas resolved by an
+offline lexicon backend (evidence class `attested`/`seed`) carry **no** model confidence — the
 evidence class speaks for them; and the calibration is fitted on literary prose, so the
 genre boundary described below applies to the confidence exactly as it applies to the
 accuracy. Reproduce with `training/calibrate_temperature.py`; evidence in
@@ -364,18 +364,41 @@ Documentary Greek (letters, petitions, receipts on papyrus) had no parsing
 evaluation here until this fold: **1,696 sentences / 24,105 tokens** converted from
 the PapyGreek Treebanks (CC BY-SA 4.0) to UD CoNLL-U through the same AGDT
 conversion the model trains under, so the numbers measure domain transfer rather
-than annotation-convention divergence. The fold is leakage-checked against the
-training set — 354 overlapping sentences were found and excluded (Pedalion ships a
-documentary-papyri subset the model trained on; source-level disjointness reasoning
-was not enough, the sentence-level check caught it).
+than annotation-convention divergence.
+
+**Scoring is on PapyGreek's regularized layer.** Each token has two readings, the
+diplomatic `orig` and the editorially regularized `reg`; this fold uses `reg`, the
+reading whose spelling the editors normalized toward standard Koine (and whose
+Leiden/EpiDoc apparatus is stripped to the reading text). The scores are therefore a
+regularized-text figure. They do not measure the model on the raw documentary
+orthography (phonetic spellings, itacism, non-standard case and agreement) that the
+`orig` layer preserves and that is meaningfully harder; a raw-orthography documentary
+number is separate future work.
+
+**Exclusion accounting.** The fold keeps 1,696 of the 4,557 annotated sentences in
+the source; the full accounting is in `training/results/papygreek-fold-manifest.json`.
+The exclusions, largest first: 1,793 sentences carry an artificial node (an elliptic
+or inserted token with no surface form), which gold-tokenization scoring cannot
+include without empty-node handling that would inject conversion artifacts; 678 are
+not fully annotated (a real token missing its `reg` form, head, relation, postag, or
+lemma, including trees whose syntax was never completed); 354 are leakage overlaps
+with the training set (below); and 36 do not reduce to a clean reading after
+apparatus stripping (an illegibility marker or a fully-erased word). Dropping the
+elliptic sentences biases the fold toward syntactically complete material, so the
+measured accuracy sits above what a corpus that retained ellipsis would give.
+
+The 354 leakage exclusions are the reason source-level reasoning is not enough:
+Pedalion ships a documentary-papyri subset (`papyri.xml`) the model trained on, so
+the sentence-level NFC form-tuple check, not corpus provenance, caught the real
+overlaps.
 
 | Test set | UPOS | UFeats | Lemma | UAS | LAS | scored tokens |
 |---|---|---|---|---|---|---|
-| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.11 | 85.71 | 79.89 | 24,105 |
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.89 | 24,105 |
 
 Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
 Scheme-matched out-of-domain parsing runs ~16 LAS points above the
-convention-capped PROIEL row — the quantitative confirmation of the decomposition
+convention-capped PROIEL row, the quantitative confirmation of the decomposition
 below. One measurement note: on this fold, batched inference is *not*
 prediction-identical to sequential (a handful of float-order flips), so the
 published numbers are CPU-sequential and batching stays off this row's protocol.
@@ -404,8 +427,9 @@ scheme does not), `Degree` (6.5%: PROIEL marks `Degree=Pos` on the plain positiv
 and `Person` (77.9%). The 16.4 shared points are therefore an upper bound on genuine
 morphological error.
 
-**LAS.** Of the 36.5-point UAS-to-LAS gap, 17.5 points are attachment errors and
-19.0 points (2,526 tokens) are attachment-correct but label-wrong. That relabelling
+**LAS.** Of the 36.5-point LAS gap (100 − LAS), 17.5 points are attachment errors
+(100 − UAS) and 19.0 points (2,526 tokens, the UAS-to-LAS gap) are attachment-correct
+but label-wrong. That relabelling
 mass is systematic, not scattered — the top five gold-to-predicted confusions carry
 68.9% of it, and each is a known convention pair between the two UD conversions:
 `discourse → advmod` (24.1%: PROIEL tags the sentential particles μέν, δέ, γάρ, οὖν

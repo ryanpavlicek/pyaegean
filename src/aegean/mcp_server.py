@@ -410,7 +410,7 @@ def greek_pipeline(text: str) -> list[dict[str, Any]]:
     """Run the (baseline, offline) Greek NLP pipeline: one row per token.
 
     Each row carries ``text``, ``upos``, ``lemma``, ``lemma_source`` (the lemma's
-    evidence class: attested / neural / rule / seed / identity / unresolved / punct),
+    evidence class: attested / neural / rule / seed / paradigm / identity / unresolved / punct),
     ``lemma_known`` (``False`` marks a lemma to verify), sentence/index position, and
     the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``; ``None`` under
     the baseline). The rows are the shared
@@ -514,7 +514,8 @@ def greek_work(work_id: str, ref: str | None = None, preview_lines: int = 10) ->
 
 def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[str, Any]:
     """Gloss a Greek word from a registry dictionary: lsj (classical, the default),
-    middle-liddell, cunliffe (Homeric), abbott-smith, or dodson (Koine NT).
+    middle-liddell, cunliffe (Homeric), autenrieth (Homeric), abbott-smith, or
+    dodson (Koine NT).
 
     The word is looked up as given and lemmatized on a miss, so inflected forms resolve.
     The first use of a dictionary other than dodson downloads and builds its index (a

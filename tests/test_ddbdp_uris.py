@@ -4,7 +4,7 @@ Three dimensions (the CONTRIBUTING rule for a feature that reads external input 
 in a user journey):
 
 * **correctness** — the harvest parser turns real ``git grep`` lines into ``{stem: hybrid}``
-  (round-tripping through gzip), and ``to_rdf`` mints ``https://papyri.info/ddbdp/<hybrid>``
+  (round-tripping through gzip), and ``to_rdf`` mints ``http://papyri.info/ddbdp/<hybrid>``
   subjects with the Trismegistos URI moved to ``rdfs:seeAlso``, for the plain, division-suffix,
   dotted-series, and empty-volume hybrid forms (real examples harvested from idp.data);
 * **adversarial / degradation** — when the map asset is unavailable the export stays offline-capable:
@@ -156,7 +156,7 @@ def test_direct_key_mints_papyri_uri_with_tm_seealso(map_asset: Path, tmp_path: 
     out = tmp_path / "d.ttl"
     to_rdf(corpus, out, fmt="turtle")
     text = out.read_text(encoding="utf-8")
-    assert "<https://papyri.info/ddbdp/bgu;1;100> rdf:type dctype:Text ;" in text
+    assert "<http://papyri.info/ddbdp/bgu;1;100> rdf:type dctype:Text ;" in text
     # the hybrid + the file-stem + the TM are all identifiers; the TM URI is a see-also
     assert 'dcterms:identifier "bgu.1.100"' in text
     assert 'dcterms:identifier "bgu;1;100"' in text
@@ -173,7 +173,7 @@ def test_underscore_division_key_resolves_directly(map_asset: Path, tmp_path: Pa
     out = tmp_path / "u.jsonld"
     to_rdf(corpus, out, fmt="jsonld")
     node = json.loads(out.read_text(encoding="utf-8"))["@graph"][0]
-    assert node["@id"] == "https://papyri.info/ddbdp/aegyptus;103;69_1"
+    assert node["@id"] == "http://papyri.info/ddbdp/aegyptus;103;69_1"
     assert node["rdfs:seeAlso"] == {"@id": "https://www.trismegistos.org/text/9325"}
 
 
@@ -184,7 +184,7 @@ def test_base_strip_is_a_fallback_for_a_suffix_not_in_the_map(map_asset: Path, t
     out = tmp_path / "b.ttl"
     to_rdf(corpus, out, fmt="turtle")
     text = out.read_text(encoding="utf-8")
-    assert "<https://papyri.info/ddbdp/bgu;1;100> rdf:type dctype:Text ;" in text
+    assert "<http://papyri.info/ddbdp/bgu;1;100> rdf:type dctype:Text ;" in text
     assert "rdfs:seeAlso <https://www.trismegistos.org/text/8875>" in text
 
 
@@ -203,7 +203,7 @@ def test_dotted_and_empty_volume_hybrids(
     out = tmp_path / "e.jsonld"
     to_rdf(corpus, out, fmt="jsonld")
     node = json.loads(out.read_text(encoding="utf-8"))["@graph"][0]
-    assert node["@id"] == f"https://papyri.info/ddbdp/{hybrid}"
+    assert node["@id"] == f"http://papyri.info/ddbdp/{hybrid}"
 
 
 def test_turtle_semicolon_iri_is_unescaped_and_legal(map_asset: Path, tmp_path: Path) -> None:
@@ -213,7 +213,7 @@ def test_turtle_semicolon_iri_is_unescaped_and_legal(map_asset: Path, tmp_path: 
     out = tmp_path / "s.ttl"
     to_rdf(corpus, out, fmt="turtle")
     text = out.read_text(encoding="utf-8")
-    assert "<https://papyri.info/ddbdp/p.alex.giss;;47>" in text
+    assert "<http://papyri.info/ddbdp/p.alex.giss;;47>" in text
     assert "%3B" not in text and "\\u003B" not in text and "\\u003b" not in text
 
 
@@ -225,7 +225,7 @@ def test_ddb_note_preferred_over_map(map_asset: Path, tmp_path: Path) -> None:
     out = tmp_path / "n.ttl"
     to_rdf(_ddbdp_corpus([doc]), out, fmt="turtle")
     text = out.read_text(encoding="utf-8")
-    assert "<https://papyri.info/ddbdp/sb;9;9999> rdf:type dctype:Text ;" in text
+    assert "<http://papyri.info/ddbdp/sb;9;9999> rdf:type dctype:Text ;" in text
     assert "papyri.info/ddbdp/bgu;1;100" not in text  # the map hybrid was overridden
 
 
@@ -234,7 +234,7 @@ def test_ddb_note_works_without_the_map() -> None:
     papyri.info URI from its own note)."""
     doc = _ddbdp_doc("whatever", notes_extra=("DDb p.oxy;1;1",))
     assert _document_uri(doc, "urn:aegean:", _ddbdp_hybrid(doc, None)) == (
-        "https://papyri.info/ddbdp/p.oxy;1;1"
+        "http://papyri.info/ddbdp/p.oxy;1;1"
     )
 
 

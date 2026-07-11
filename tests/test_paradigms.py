@@ -188,22 +188,22 @@ def test_running_text_grave_folds_to_the_citation_acute(index_path: Path) -> Non
     assert _nfc(greek.lemmatize("γυναικὸς")) == "γυνή"
 
 
-# ── cascade priority: paradigm beats the ending rules, loses to treebank and seed ──────────
-def test_paradigm_beats_the_ending_rule(index_path: Path) -> None:
+# ── cascade priority: paradigm fills the 3rd-declension gap the rules cannot, below them ────
+def test_paradigm_recovers_a_third_declension_form_the_rules_cannot(index_path: Path) -> None:
     # Without the backend, γυναικός is an honest third-declension miss for the rule layer.
     assert lemmatize_sourced("γυναικός") == ("γυναικός", LemmaSource.UNRESOLVED)
     greek.use_paradigms(path=index_path)
     lemma, source = lemmatize_sourced("γυναικός")
     assert _nfc(lemma) == "γυνή"
-    assert source is LemmaSource.SEED           # a grounded, curated lexical lookup
+    assert source is LemmaSource.PARADIGM       # its own grounded, curated evidence class
     assert needs_review(source) is False
 
 
-def test_regular_forms_still_reach_the_rule_layer(index_path: Path) -> None:
-    """A regular form absent from the paradigm table still falls through to the ending rule
-    (paradigm ranks ABOVE the rule but only when it has a hit)."""
+def test_regular_forms_are_recovered_by_the_rule_before_the_paradigm(index_path: Path) -> None:
+    """The ending rule is consulted BEFORE the paradigm table; a regular form the rule
+    recovers is reported RULE, and the paradigm is never reached for it."""
     greek.use_paradigms(path=index_path)
-    lemma, source = lemmatize_sourced("καρπόν")   # a regular -ον noun, not in the fixture
+    lemma, source = lemmatize_sourced("καρπόν")   # a regular -ον noun the rule handles
     assert _nfc(lemma) == "καρπός"
     assert source is LemmaSource.RULE
 

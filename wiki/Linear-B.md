@@ -305,12 +305,15 @@ corpus.filter(site="Pylos")            # 1,004 Pylos tablets
 
 The `aegean.analysis.scribal` layer profiles every hand and finds what is characteristic of each
 one. `scribal_hands` returns one `HandProfile` per hand (busiest first); `hand_keyness` runs the
-standard log-likelihood keyness of one hand against all the others.
+standard log-likelihood keyness of one hand against all the others. A "hand" here is one distinct
+attribution string the edition records (a hand number, possibly qualified with a certainty mark
+such as `117?`, or a compound/sub-hand tag), not necessarily one distinct scribe; DAMOS carries
+291 such strings, which `aegean.analysis.hands` groups into 212 site-and-series dossiers.
 
 ```python
 from aegean.analysis import scribal_hands, hand_keyness
 
-profiles = scribal_hands(corpus)             # 291 hands in DAMOS
+profiles = scribal_hands(corpus)             # 291 distinct hand-attribution strings in DAMOS
 for h in profiles[:5]:
     print(h.hand, h.doc_count, list(h.sites)[:1], [w for w, _ in h.top_words[:3]])
 # 117 684 ['Knossos'] ['ku-ta-to', 'ru-ki-to', 'pa-i-to']

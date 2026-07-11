@@ -28,7 +28,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from _epidoc import edition_tokens, first_text, local, primary_edition  # noqa: E402
+from _epidoc import (  # noqa: E402
+    edition_tokens,
+    first_text,
+    local,
+    primary_edition,
+    resolve_inline_variants,
+)
 
 _XML = "http://www.w3.org/XML/1998/namespace"
 _GREEK_EDITION = 'type="edition" xml:lang="grc"'
@@ -143,7 +149,9 @@ def main() -> int:
         edition = primary_edition(root)
         if edition is None:
             continue
-        token_lines = edition_tokens(edition)
+        # EDH resolves <choice> to its edited member and joins parallel word-forms with a literal
+        # '#'; keep one reading per token and route the other forms to Token.alt.
+        token_lines = edition_tokens(edition, choice_prefer=True)
         if not token_lines:
             continue
         greek += 1
@@ -156,8 +164,14 @@ def main() -> int:
             for word, status in tl:
                 if not word:
                     continue
+                text, alt = resolve_inline_variants(word)
+                if not text:
+                    continue
                 tokens.append(
-                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
+                    Token(
+                        text=text, kind=TokenKind.WORD, line_no=len(lines),
+                        position=pos, status=status, alt=alt,
+                    )
                 )
                 idxs.append(pos)
                 pos += 1

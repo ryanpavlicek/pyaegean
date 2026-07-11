@@ -58,12 +58,39 @@ def _elem_status(el: ET.Element, inherited: ReadingStatus) -> ReadingStatus:
     return st if _SEVERITY[st] >= _SEVERITY[inherited] else inherited
 
 
-def edition_tokens(edition: ET.Element) -> list[list[tuple[str, ReadingStatus]]]:
+# A TEI <choice> presents mutually exclusive readings; only its edited member belongs in the
+# running text. Prefer the expansion/regularization/correction over the raw abbr/orig/sic.
+_CHOICE_PREFER = ("expan", "reg", "corr")
+
+
+def _preferred_choice(choice: ET.Element) -> ET.Element | None:
+    """The edited member of a ``<choice>`` (``<expan>``/``<reg>``/``<corr>``), else the first
+    non-skipped child. Walking every member concatenates the alternatives into one garbled word
+    (e.g. ``<corr>μ</corr><sic>Ν</sic>`` -> ``μΝ``), so a caller that resolves choices walks only
+    this member."""
+    kids = list(choice)
+    for want in _CHOICE_PREFER:
+        for k in kids:
+            if local(k.tag) == want:
+                return k
+    for k in kids:
+        if local(k.tag) not in _SKIP:
+            return k
+    return kids[0] if kids else None
+
+
+def edition_tokens(
+    edition: ET.Element, choice_prefer: bool = False
+) -> list[list[tuple[str, ReadingStatus]]]:
     """The edition's reading text as physical lines of ``(word, ReadingStatus)`` pairs.
 
     ``<lb break="no"/>`` joins a word split across a line (Ἀ|λεξάνδρου → Ἀλεξάνδρου); a plain
     ``<lb/>`` starts a new line. Inter-word spaces come from the literal text nodes. Each word's
-    status is the most severe apparatus status touching its characters (see `_elem_status`)."""
+    status is the most severe apparatus status touching its characters (see `_elem_status`).
+
+    With ``choice_prefer=True``, a ``<choice>`` contributes only its edited member (see
+    `_preferred_choice`) instead of every alternative; the default keeps the historical behaviour
+    (both members walked) so corpora built without it are byte-identical."""
     lines: list[list[tuple[str, ReadingStatus]]] = []
     buf: list[str] = []                 # characters of the current line
     cstat: list[ReadingStatus] = []     # per-character status, parallel to buf
@@ -117,6 +144,14 @@ def edition_tokens(edition: ET.Element) -> list[list[tuple[str, ReadingStatus]]]
             else:
                 flush()
             return
+        if choice_prefer and tag == "choice":
+            st = _elem_status(el, inherited)  # <choice> itself carries no apparatus status
+            add(el.text, st)
+            pick = _preferred_choice(el)
+            if pick is not None:
+                walk(pick, st)
+                add(pick.tail, st)  # text inside <choice> after the chosen member (rare)
+            return
         if tag in _SKIP:
             return
         st = _elem_status(el, inherited)
@@ -138,6 +173,52 @@ def edition_lines(edition: ET.Element) -> list[str]:
     A thin view over `edition_tokens` that drops the per-token status: the reading text is
     unchanged from before status tracking, so callers that only want the text are unaffected."""
     return [" ".join(w for w, _ in line) for line in edition_tokens(edition)]
+
+
+def _strip_diplomatic_eq(seg: str) -> str:
+    """Drop each EDH ``=`` correspondence marker and the run of capitals it introduces.
+
+    EDH marks a diplomatic-to-edited letter correspondence inline as ``edited=DIPLOMATIC`` with the
+    as-inscribed letters in capitals (e.g. ``Th=ΗΤ`` -> ``Th``, ``γυναι=Ι`` -> ``γυναι``). Keeping
+    the edited side yields the reading; the capitalised diplomatic run is recorded, if at all, only
+    by the separate diplomatic form of the ``#`` group."""
+    out: list[str] = []
+    i = 0
+    n = len(seg)
+    while i < n:
+        c = seg[i]
+        if c == "=":
+            i += 1
+            while i < n and seg[i].isalpha() and seg[i].isupper():
+                i += 1
+        else:
+            out.append(c)
+            i += 1
+    return "".join(out)
+
+
+def resolve_inline_variants(word: str) -> tuple[str, tuple[str, ...]]:
+    """Split an EDH ``#``-joined multi-form token into one reading plus its alternates.
+
+    EDH bakes several parallel forms of a word into the edition text joined by a literal ``#`` (the
+    edited form first, further editorial variants, then the diplomatic all-capitals form) and marks
+    inline letter correspondences as ``edited=DIPLOMATIC`` (see `_strip_diplomatic_eq`). The first
+    form is kept as the token reading; each remaining distinct form becomes an alternate, so no
+    ``#`` or ``=`` survives in the running text and the variant readings are preserved. A word
+    without ``#`` is returned unchanged with no alternates."""
+    if "#" not in word:
+        return word, ()
+    segs = [s for s in (_strip_diplomatic_eq(p) for p in word.split("#")) if s]
+    if not segs:
+        return word, ()
+    primary = segs[0]
+    alts: list[str] = []
+    seen = {primary}
+    for s in segs[1:]:
+        if s not in seen:
+            seen.add(s)
+            alts.append(s)
+    return primary, tuple(alts)
 
 
 def primary_edition(root: ET.Element) -> ET.Element | None:

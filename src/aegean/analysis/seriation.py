@@ -8,8 +8,9 @@ Two classic archaeological tools, ported to the corpus model:
   could not parse. What is unparseable is counted and surfaced, never guessed.
 - :func:`seriate` builds the Brainerd-Robinson similarity matrix over an abundance
   table (rows = assemblages / documents, columns = types) and orders the rows by a
-  deterministic, spectral-free iterative mean-position refinement, the seriation
-  ordering that puts similar assemblages next to each other.
+  deterministic spectral ordering (the Fiedler vector of the similarity's Laplacian),
+  the seriation ordering that puts similar assemblages next to each other. The result
+  is independent of the order the rows were supplied in (up to the inherent reversal).
 
 **Exploratory.** Seriation orders assemblages by *compositional similarity*; it is a
 hypothesis about relative sequence, not a date. It has no inherent direction (an
@@ -221,46 +222,127 @@ def _argsort(values: Sequence[float]) -> tuple[int, ...]:
     return tuple(sorted(range(len(values)), key=lambda i: (values[i], i)))
 
 
-def _seriation_order(sim: list[list[float]], max_iter: int) -> tuple[tuple[int, ...], int]:
-    """Order rows by centred power iteration on the similarity matrix.
+# Above this row count the dense Jacobi eigensolver (O(n^3) per sweep) is too slow; a
+# constant-deflated, positive-shifted power iteration is used instead. Real assemblage tables
+# are far smaller than this, so the exact solver covers every ordinary seriation.
+_DENSE_SOLVER_MAX_N = 160
 
-    This is reciprocal averaging without a full eigensolver: iterate
-    ``score_i <- Σ_j S_ij score_j / Σ_j S_ij`` (a similarity-weighted mean of the other
-    rows' positions), re-centre to remove the trivial constant component, and re-scale.
-    Power iteration on the row-normalized similarity, deflated against the constant
-    eigenvector by the re-centring, converges to the seriation axis (the second
-    eigenvector); ``argsort`` of it is the ordering. Deterministic: the start vector is
-    fixed and slightly asymmetric, mirroring the embeddings SVD routine."""
+
+def _jacobi_eigh(
+    matrix: list[list[float]], *, max_sweeps: int = 100
+) -> tuple[list[float], list[list[float]], int]:
+    """Eigenvalues and eigenvectors of a small symmetric matrix (cyclic Jacobi rotation).
+
+    Returns ``(eigenvalues, eigenvectors, sweeps)`` where ``eigenvectors[k]`` is the unit
+    eigenvector for ``eigenvalues[k]``. Deterministic and basis-independent: the result does
+    not depend on the order the rows and columns were supplied in, which is what makes the
+    seriation ordering permutation-invariant."""
+    n = len(matrix)
+    a = [row[:] for row in matrix]
+    v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+    sweeps = 0
+    for sweep in range(1, max_sweeps + 1):
+        sweeps = sweep
+        off = math.sqrt(sum(a[i][j] * a[i][j] for i in range(n) for j in range(i + 1, n)))
+        if off <= 1e-13:
+            break
+        for p in range(n - 1):
+            for q in range(p + 1, n):
+                apq = a[p][q]
+                if apq == 0.0:
+                    continue
+                theta = (a[q][q] - a[p][p]) / (2.0 * apq)
+                t = (1.0 if theta >= 0 else -1.0) / (abs(theta) + math.sqrt(theta * theta + 1.0))
+                cos = 1.0 / math.sqrt(t * t + 1.0)
+                sin = t * cos
+                for k in range(n):
+                    akp, akq = a[k][p], a[k][q]
+                    a[k][p] = cos * akp - sin * akq
+                    a[k][q] = sin * akp + cos * akq
+                for k in range(n):
+                    apk, aqk = a[p][k], a[q][k]
+                    a[p][k] = cos * apk - sin * aqk
+                    a[q][k] = sin * apk + cos * aqk
+                for k in range(n):
+                    vkp, vkq = v[k][p], v[k][q]
+                    v[k][p] = cos * vkp - sin * vkq
+                    v[k][q] = sin * vkp + cos * vkq
+    eigvals = [a[i][i] for i in range(n)]
+    eigvecs = [[v[i][j] for i in range(n)] for j in range(n)]
+    return eigvals, eigvecs, sweeps
+
+
+def _fiedler_power(
+    sim: list[list[float]], row_sum: list[float], max_iter: int
+) -> tuple[list[float], int]:
+    """The Fiedler vector by constant-deflated, positive-shifted power iteration (large-n path).
+
+    Powers ``M = cI - L`` (``L = D - S`` the Laplacian, ``c`` above ``L``'s spectral radius so
+    ``M`` is positive definite and cannot sign-flip between steps); each step removes the
+    constant component (the trivial eigenvector) and renormalizes, converging on the vector
+    itself rather than on its ``argsort``. So the limit is the seriation axis regardless of the
+    input row order, avoiding the order-dependence and sign-flip oscillation of the naive
+    reciprocal-averaging iteration."""
+    n = len(sim)
+    shift = 2.0 * max(row_sum) + 1.0
+    x = [math.sin(1.0 + i) for i in range(n)]
+    mean = sum(x) / n
+    x = [xi - mean for xi in x]
+    norm = math.sqrt(sum(xi * xi for xi in x)) or 1.0
+    x = [xi / norm for xi in x]
+    used = 0
+    for used in range(1, max_iter + 1):
+        y = [
+            (shift - row_sum[i]) * x[i] + sum(sim[i][j] * x[j] for j in range(n))
+            for i in range(n)
+        ]
+        mean = sum(y) / n
+        y = [yi - mean for yi in y]
+        norm = math.sqrt(sum(yi * yi for yi in y))
+        if norm < 1e-14:
+            break
+        y = [yi / norm for yi in y]
+        # Converge on the vector direction (sign-agnostic), not on the argsort.
+        conv = min(
+            sum((a - b) ** 2 for a, b in zip(x, y, strict=True)),
+            sum((a + b) ** 2 for a, b in zip(x, y, strict=True)),
+        )
+        x = y
+        if conv < 1e-14:
+            break
+    return x, used
+
+
+def _seriation_order(sim: list[list[float]], max_iter: int) -> tuple[tuple[int, ...], int]:
+    """Order rows by the Fiedler vector of the Brainerd-Robinson similarity's Laplacian.
+
+    The seriation axis is the eigenvector of the second-smallest eigenvalue of the graph
+    Laplacian ``L = D - S`` (spectral seriation): sorting the rows by that vector's components
+    puts compositionally similar rows next to each other. The eigenvector is found by a direct
+    symmetric eigensolver for ordinary (small) matrices, so the ordering is deterministic and
+    does not depend on the order the rows were given in; a constant-deflated power iteration is
+    the fallback when the matrix is too large for the dense solver. The direction is
+    canonicalized (the smaller row index at the low end) so repeated calls agree; the reverse
+    ordering is an equally valid seriation. ``max_iter`` bounds the fallback iteration."""
     n = len(sim)
     if n <= 2:
         return tuple(range(n)), 0
     row_sum = [sum(sim[i]) for i in range(n)]
-    # Fixed, slightly asymmetric, mean-centred start (deterministic).
-    scores = [1.0 + (i + 1) / n for i in range(n)]
-    mean = sum(scores) / n
-    scores = [s - mean for s in scores]
-    prev_order: tuple[int, ...] | None = None
-    used = 0
-    for used in range(1, max_iter + 1):
-        nxt: list[float] = []
-        for i in range(n):
-            rs = row_sum[i]
-            if rs <= 0:
-                nxt.append(0.0)
-            else:
-                nxt.append(sum(sim[i][j] * scores[j] for j in range(n)) / rs)
-        mean = sum(nxt) / n
-        nxt = [x - mean for x in nxt]
-        norm = math.sqrt(sum(x * x for x in nxt))
-        if norm < 1e-12:
-            break
-        nxt = [x / norm for x in nxt]
-        order = _argsort(nxt)
-        if order == prev_order:
-            break
-        prev_order = order
-        scores = nxt
-    return _argsort(scores), used
+    if n <= _DENSE_SOLVER_MAX_N:
+        laplacian = [
+            [(row_sum[i] if i == j else 0.0) - sim[i][j] for j in range(n)] for i in range(n)
+        ]
+        eigvals, eigvecs, used = _jacobi_eigh(laplacian)
+        # L is a PSD graph Laplacian: the smallest eigenvalue is 0 (constant vector); the
+        # second-smallest is the Fiedler / seriation axis.
+        by_value = sorted(range(n), key=lambda k: eigvals[k])
+        axis = eigvecs[by_value[1]]
+    else:
+        axis, used = _fiedler_power(sim, row_sum, max_iter)
+    order = _argsort(axis)
+    if order[0] > order[-1]:  # canonicalize direction; the exact reverse is equally valid
+        order = tuple(reversed(order))
+    return order, used
 
 
 def _abundance_from_corpus(
@@ -304,10 +386,12 @@ class SeriationResult:
     ``order`` is the row indices of the input in seriated sequence (apply it to the
     original rows to read them in order). ``similarity`` is the Brainerd-Robinson matrix
     in the *original* row order. ``labels`` names the rows when the input was a corpus
-    (document ids), else ``None``. ``iterations`` is how many refinement passes ran.
+    (document ids), else ``None``. ``iterations`` is how many solver passes ran (Jacobi
+    sweeps for the dense eigensolver, power-iteration steps for the large-matrix fallback).
 
-    The ordering has no inherent direction: ``order`` and its reverse are equally valid
-    seriation solutions. It is a compositional-sequence hypothesis, not a date."""
+    The ordering is deterministic and independent of the input row order, but it has no
+    inherent direction: ``order`` and its exact reverse are equally valid seriation
+    solutions. It is a compositional-sequence hypothesis, not a date."""
 
     order: tuple[int, ...]
     similarity: tuple[tuple[float, ...], ...]
@@ -331,7 +415,8 @@ def seriate(
 
     Builds the Brainerd-Robinson similarity matrix (see :func:`brainerd_robinson`) and
     orders the rows so that compositionally similar assemblages sit next to each other,
-    using a deterministic, spectral-free iterative mean-position refinement.
+    using a deterministic spectral ordering (the Fiedler vector of the similarity's
+    Laplacian). The ordering does not depend on the order the rows were supplied in.
 
     Parameters
     ----------
@@ -344,7 +429,8 @@ def seriate(
         Optional row labels for a matrix input (must match the row count). Ignored for a
         corpus input, where document ids are used.
     max_iter:
-        Cap on refinement passes (the routine stops early once the ordering is stable).
+        Cap on iterations for the large-matrix power-iteration fallback (the dense
+        eigensolver used for ordinary tables ignores it). Must be positive.
 
     Returns a :class:`SeriationResult`. Raises ``ValueError`` on an empty/ragged matrix,
     a labels-length mismatch, or a corpus with no sign-bearing documents.

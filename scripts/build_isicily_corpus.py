@@ -3,8 +3,9 @@
 I.Sicily (https://github.com/ISicily/ISicily, CC BY 4.0) is ~5,120 EpiDoc TEI inscriptions
 from ancient Sicily in many languages. This script filters to the ~3,194 primary-Greek texts
 (``<textLang mainLang="grc">``), extracts the running Greek reading text of each primary edition
-(respecting line breaks, expanding abbreviations, keeping restored/uncertain letters, skipping
-symbols and lost gaps), and writes a compact pyaegean ``Corpus`` JSON. That JSON is published as a
+(respecting line breaks, expanding abbreviations, resolving editorial ``<choice>`` to its
+corrected/regularized member, keeping restored/uncertain letters, skipping symbols and lost gaps),
+and writes a compact pyaegean ``Corpus`` JSON. That JSON is published as a
 sha256-pinned release asset and fetched on demand via ``aegean.load("isicily")`` — the same
 build-once / host-derived / fetch-to-cache pattern as DAMOS. CC BY permits the redistribution;
 attribution + the pinned source commit are recorded in the corpus provenance and NOTICE.
@@ -108,7 +109,9 @@ def main() -> int:
         edition = _primary_edition(root)
         if edition is None:
             continue
-        token_lines = edition_tokens(edition)
+        # Resolve each editorial <choice> to its corrected/regularized member (expan>reg>corr)
+        # rather than concatenating both alternatives into one garbled token.
+        token_lines = edition_tokens(edition, choice_prefer=True)
         if not token_lines:
             continue  # no readable Greek text (fragment/uninscribed)
         greek += 1

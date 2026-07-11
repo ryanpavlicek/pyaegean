@@ -11,7 +11,7 @@ is minted from the authoritative identifiers **already present in the corpus dat
 DDbDP document, from a verified stem-to-hybrid map fetched on demand), in priority order (see
 `_document_uri` / `_ddbdp_hybrid`):
 
-1. a **papyri.info DDbDP document URI**, ``https://papyri.info/ddbdp/<hybrid>``, where ``<hybrid>``
+1. a **papyri.info DDbDP document URI**, ``http://papyri.info/ddbdp/<hybrid>``, where ``<hybrid>``
    is the ``ddb-hybrid`` key (``bgu;1;100``, semicolons literal). The corpus stores the file-stem
    id (``bgu.1.100``) and a ``TM`` note but not the hybrid, and reversing a stem is ambiguous
    (dotted series names, empty volume components), so the hybrid is taken from a ``DDb <hybrid>``
@@ -29,8 +29,10 @@ DDbDP document, from a verified stem-to-hybrid map fetched on demand), in priori
 No URI scheme is invented that is not observed in the data. Both the ``ddb-hybrid`` key and the
 ``papyri.info/ddbdp/<hybrid>`` namespace come from papyri.info's own idp.data (the ``<idno
 type="ddb-hybrid">`` in each DDB file, and the ``http://papyri.info/ddbdp/<series>`` collection
-URIs in ``RDF/collection.rdf``); the ``ddbdp-uris`` map is harvested from that source by
-``scripts/build_ddbdp_uri_map.py``, served over the ``https`` scheme papyri.info uses.
+URIs in ``RDF/collection.rdf``); the minted document URIs use that same ``http`` scheme, the one
+papyri.info's own RDF uses to identify DDbDP resources, so a subject is character-identical to the
+node papyri.info publishes (RDF IRIs compare byte-exact, so ``https`` would be a disjoint node).
+The ``ddbdp-uris`` map is harvested from that source by ``scripts/build_ddbdp_uri_map.py``.
 
 Vocabularies
 ------------
@@ -105,17 +107,24 @@ _COORD_RE = re.compile(r"^[+-]?\d+(?:\.\d+)?$")
 # DDbDP papyri.info document URIs. The base namespace is papyri.info's own:
 # RDF/collection.rdf in github.com/papyri/idp.data declares
 # ``http://papyri.info/ddbdp/<series>``; a document extends it with its
-# ``ddb-hybrid`` key (``bgu;1;100``, semicolons literal), served over https.
-_DDBDP_BASE = "https://papyri.info/ddbdp/"
+# ``ddb-hybrid`` key (``bgu;1;100``, semicolons literal). papyri.info identifies
+# these resources over http (not https) in its own RDF, and RDF IRIs compare
+# character-exact, so the minted subject uses http to match that node.
+_DDBDP_BASE = "http://papyri.info/ddbdp/"
 _DDB_NOTE_RE = re.compile(r"^DDb\s+(\S+)$")  # an explicit "DDb <hybrid>" note on a document
 _N_SUFFIX_RE = re.compile(r"_\d+$")          # forward-compat division-suffix strip (fallback only)
 
 
 # ── identifier / metadata extraction (from the real corpus fields) ─────────────
 def _tm_id(notes: tuple[str, ...]) -> str | None:
-    """The Trismegistos number from a ``TM <number>`` note (EDH / DDbDP), if present."""
+    """The Trismegistos number from a standalone ``TM <number>`` note (EDH / DDbDP), if present.
+
+    The whole note must be the id (``fullmatch``): the shipped EDH and DDbDP corpora carry the
+    Trismegistos id as its own note, so a note that merely mentions ``TM`` in prose (``cf. TM
+    12345 for a parallel``) or ends in those letters (``ATM 500``) must not be misread as an
+    authoritative Trismegistos id and mint a bogus subject URI from a stray substring."""
     for note in notes:
-        m = _TM_RE.search(note)
+        m = _TM_RE.fullmatch(note.strip())
         if m:
             return m.group(1)
     return None
@@ -177,10 +186,14 @@ def _load_ddbdp_map(corpus: Corpus) -> dict[str, str] | None:
     try:
         path = fetch("ddbdp-uris")
         data = load_gzip_json(path)
-    except DataNotAvailableError as exc:
+    except (DataNotAvailableError, OSError, ValueError) as exc:
+        # DataNotAvailableError: the map is not hosted / offline. OSError (which covers
+        # gzip.BadGzipFile) and ValueError (which covers json.JSONDecodeError): a corrupt or
+        # truncated cached/mirrored map. Either way the contract holds: one warning, fall back to
+        # Trismegistos subjects, never raise over a missing or unreadable map.
         _LOG.warning(
-            "DDbDP URI map ('ddbdp-uris') unavailable (%s); falling back to Trismegistos "
-            "subject URIs (no papyri.info document URIs minted)",
+            "DDbDP URI map ('ddbdp-uris') unavailable or unreadable (%s); falling back to "
+            "Trismegistos subject URIs (no papyri.info document URIs minted)",
             exc,
         )
         return None
@@ -318,6 +331,26 @@ def _ttl_iri(iri: str) -> str:
         else:
             out.append(ch)
     return "<" + "".join(out) + ">"
+
+
+def _validate_base_uri(base: str) -> None:
+    """Reject a ``base_uri`` that cannot appear literally in an IRI, naming the offending character.
+
+    A subject IRI is emitted verbatim by both serializers: Turtle wraps it in ``<...>`` (and would
+    UCHAR-escape an illegal character), while JSON-LD uses it as an ``@id`` string (where the same
+    character makes the IRI invalid and a conforming reader silently drops the whole node). So a
+    space or control character in ``base_uri`` yields a Turtle graph and a JSON-LD graph that
+    disagree. Fail fast here rather than emit a subject that means different things to the two
+    formats. Document ids appended under ``base_uri`` are percent-escaped when they are minted, so
+    only the caller-supplied base is checked."""
+    for ch in base:
+        o = ord(ch)
+        if o <= 0x20 or o == 0x7F or ch in _IRI_BAD:
+            raise ValueError(
+                f"base_uri {base!r} contains {ch!r} (U+{o:04X}), which cannot appear literally in "
+                "an IRI; use only IRI-legal characters (no spaces, control characters, or any of "
+                '<>"{}|^`\\)'
+            )
 
 
 def _lit(text: str, lang: str | None = None) -> str:
@@ -501,12 +534,15 @@ def to_rdf(
     non-resolvable ``urn:aegean:`` namespace.
 
     The write is atomic (temp file + ``os.replace``), so a failed or interrupted write never
-    truncates a prior export. Raises ``ValueError`` for an unknown ``fmt``.
+    truncates a prior export. Raises ``ValueError`` for an unknown ``fmt``, or for a ``base_uri``
+    that cannot appear literally in an IRI (a space, a control character, or an IRIREF-forbidden
+    character) since that would make the Turtle and JSON-LD subjects disagree.
 
     RDF is an export only: there is no reader and no round-trip guarantee (use
     `aegean.core.corpus.Corpus.to_json` / `aegean.db.to_sqlite` for lossless persistence)."""
     fmt_norm = fmt.strip().lower()
     base = base_uri if base_uri is not None else _DEFAULT_BASE
+    _validate_base_uri(base)
     if fmt_norm in ("turtle", "ttl"):
         text = _serialize_turtle(corpus, base)
     elif fmt_norm in ("jsonld", "json-ld"):

@@ -86,6 +86,15 @@ def _site_index(coords: dict[str, SiteCoord]) -> dict[str, SiteCoord]:
     return {_normalize_site(key): sc for key, sc in coords.items()}
 
 
+def _key_index(coords: dict[str, SiteCoord]) -> dict[str, str]:
+    """Map a find-site label's normalized form to its canonical gazetteer key.
+
+    Keying aggregations on this canonical key (rather than the raw ``meta.site`` string)
+    collapses whitespace/line-split variants of one place into a single row: a corpus that
+    carries both ``"Beth Shearim"`` and ``"Beth\\n Shearim"`` counts them as one site."""
+    return {_normalize_site(key): key for key in coords}
+
+
 def _import_geo() -> tuple[Any, Any]:
     try:
         import geopandas as gpd
@@ -112,13 +121,15 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
     """A geopandas ``GeoDataFrame`` of the corpus's find-sites (EPSG:4326 point geometry).
 
     ``level="inscription"`` gives one row per inscription whose site is in the gazetteer (id, site,
-    label, region, period, geometry); ``level="site"`` gives one row per site with its inscription
-    count. Inscriptions whose site isn't mapped are dropped; a corpus with no mapped sites yields
-    an empty GeoDataFrame with the same columns and crs. Needs the ``[geo]`` extra."""
+    label, region, period, geometry); ``level="site"`` gives one row per gazetteer site with its
+    inscription count, keyed on the canonical gazetteer label so whitespace/line-split variants of a
+    find-place collapse to one row (its counts summed). Inscriptions whose site isn't mapped are
+    dropped; a corpus with no mapped sites yields an empty GeoDataFrame with the same columns and
+    crs. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
     coords = site_coordinates()
-    index = _site_index(coords)
     if level == "inscription":
+        index = _site_index(coords)
         cols = ["id", "site", "label", "region", "period", "pleiades", "contested", "geometry"]
         rows = []
         for d in corpus:
@@ -132,14 +143,18 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
                 "geometry": point(sc.lon, sc.lat),
             })
     elif level == "site":
+        keys = _key_index(coords)
         cols = ["site", "label", "region", "pleiades", "inscriptions", "contested", "geometry"]
-        counts = Counter(d.meta.site for d in corpus if _resolve_site(index, d.meta.site))
+        counts: Counter[str] = Counter()
+        for d in corpus:
+            key = keys.get(_normalize_site(d.meta.site))
+            if key is not None:
+                counts[key] += 1
         rows = []
-        for site, n in counts.most_common():
-            sc = _resolve_site(index, site)
-            assert sc is not None  # counts only holds resolvable sites
+        for key, n in counts.most_common():
+            sc = coords[key]
             rows.append({
-                "site": site, "label": sc.name, "region": sc.region,
+                "site": key, "label": sc.name, "region": sc.region,
                 "pleiades": sc.pleiades, "inscriptions": n, "contested": sc.contested,
                 "geometry": point(sc.lon, sc.lat),
             })
@@ -151,23 +166,24 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
 def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def]
     """A ``GeoDataFrame`` of the find-sites where ``word`` is attested, with per-site counts — i.e.
     *where* a given word shows up across the corpus, ready to map. Matching is case-insensitive
-    (``ku-ro`` finds ``KU-RO``). A word attested at no mapped site yields an empty GeoDataFrame
-    with the same columns and crs. Needs the ``[geo]`` extra."""
+    (``ku-ro`` finds ``KU-RO``). Counts are keyed on the canonical gazetteer label, so a find-place
+    written two ways (line-split or extra spaces) contributes to one row, not several. A word
+    attested at no mapped site yields an empty GeoDataFrame with the same columns and crs. Needs the
+    ``[geo]`` extra."""
     gpd, point = _import_geo()
     coords = site_coordinates()
-    index = _site_index(coords)
+    keys = _key_index(coords)
     target = word.casefold()
     counts: Counter[str] = Counter()
     for d in corpus:
-        site = d.meta.site
-        if _resolve_site(index, site) and any(t.text.casefold() == target for t in d.words):
-            counts[site] += 1
+        key = keys.get(_normalize_site(d.meta.site))
+        if key is not None and any(t.text.casefold() == target for t in d.words):
+            counts[key] += 1
     rows = []
-    for site, n in counts.most_common():
-        sc = _resolve_site(index, site)
-        assert sc is not None  # counts only holds resolvable sites
+    for key, n in counts.most_common():
+        sc = coords[key]
         rows.append({
-            "site": site, "label": sc.name, "region": sc.region,
+            "site": key, "label": sc.name, "region": sc.region,
             "pleiades": sc.pleiades, "count": n, "contested": sc.contested,
             "geometry": point(sc.lon, sc.lat),
         })

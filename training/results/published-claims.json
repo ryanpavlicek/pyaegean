@@ -55,8 +55,8 @@
     "measured": "2026-07-11",
     "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
     "doc_claim": "wiki/Limitations.md states ~67% on the full NT",
-    "with_paradigms": 71.96,
-    "with_paradigms_note": "the opt-in use_paradigms() backend (UniMorph-derived, fetched); evidence: training/results/paradigms-lift-2026-07-11.json; the base row stays the no-backends protocol"
+    "with_paradigms": 71.21,
+    "with_paradigms_note": "the opt-in use_paradigms() backend (UniMorph-derived, fetched, grc-paradigms-v2) under the honesty guards (capitalized-surface skip, intra-table-ambiguity skip, rule-first ordering); evidence: training/results/paradigms-guards-2026-07-11.json; the base row stays the no-backends protocol"
   },
   "quantization": {
     "tar_gz_bytes": 173068548,
@@ -115,12 +115,12 @@
     "upos": 91.05,
     "xpos": 76.76,
     "ufeats": 88.57,
-    "lemma": 86.11,
+    "lemma": 86.13,
     "uas": 85.71,
     "las": 79.89,
     "n_words": 24105,
     "n_sentences": 1696,
-    "source_evidence": "training/results/papygreek-eval-2026-07-11.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential"
+    "source_evidence": "training/results/papygreek-eval-v2-2026-07-11.json",
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v2"
   }
 }

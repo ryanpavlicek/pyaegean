@@ -12,10 +12,10 @@ same caution applies to any small or fragmentary corpus, where a heavy edge can
 be an artefact of a handful of documents.
 
 Pure stdlib: ``import aegean`` stays instant and this module pulls in nothing
-heavy. The writers serialise with :mod:`xml.etree.ElementTree` to the canonical
-GEXF 1.3 (``http://gexf.net/1.3``) and GraphML
-(``http://graphml.graphdrawing.org/xmlns``) namespaces, verified against the
-format specifications, so the output re-parses and loads in Gephi/networkx.
+heavy. The writers serialise with :mod:`xml.etree.ElementTree` to the GEXF
+1.2draft (``http://www.gexf.net/1.2draft``) and GraphML
+(``http://graphml.graphdrawing.org/xmlns``) namespaces, so the output re-parses
+and loads in both Gephi and networkx (``read_gexf`` / ``read_graphml``).
 
 Access (not re-exported from ``aegean.analysis`` to keep the writers off the hot
 import path)::
@@ -189,9 +189,11 @@ def cooccurrence_graph(
 
 _XSI = "http://www.w3.org/2001/XMLSchema-instance"
 
-# GEXF 1.3 (targetNamespace of the official gexf.xsd; matches the NetworkX writer).
-_GEXF_NS = "http://gexf.net/1.3"
-_GEXF_SCHEMA = "http://gexf.net/1.3 http://gexf.net/1.3/gexf.xsd"
+# GEXF 1.2draft: the namespace/version that networkx's ``read_gexf`` AND Gephi accept (and what
+# networkx's own writer emits). The later 1.3 namespace (``http://gexf.net/1.3``) is rejected by
+# networkx's reader ("No <graph> element"), so this is the interoperable choice.
+_GEXF_NS = "http://www.gexf.net/1.2draft"
+_GEXF_SCHEMA = "http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd"
 
 # GraphML (the canonical graphdrawing.org namespace, per the GraphML primer).
 _GRAPHML_NS = "http://graphml.graphdrawing.org/xmlns"
@@ -211,7 +213,7 @@ def _description(graph: Graph) -> str:
 def _gexf_tree(graph: Graph) -> ET.ElementTree:
     root = ET.Element("gexf")
     root.set("xmlns", _GEXF_NS)
-    root.set("version", "1.3")
+    root.set("version", "1.2")
     root.set("xmlns:xsi", _XSI)
     root.set("xsi:schemaLocation", _GEXF_SCHEMA)
 
@@ -285,7 +287,8 @@ def _graphml_tree(graph: Graph) -> ET.ElementTree:
 
 
 def to_gexf(graph: Graph, path: str | Path) -> Path:
-    """Write ``graph`` to a GEXF 1.3 file (Gephi's native format). Returns the path.
+    """Write ``graph`` to a GEXF 1.2draft file (Gephi's native format; also read by networkx's
+    ``read_gexf``). Returns the path.
 
     The write is atomic (temp file + replace), so a failed write never truncates an
     existing export. Node labels are XML-escaped and control-stripped, so any label

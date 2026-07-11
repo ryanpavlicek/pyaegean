@@ -1,28 +1,38 @@
 """Scribal-hand and archival-series tooling over a Linear B corpus.
 
 Where :mod:`aegean.analysis.scribal` profiles the person who wrote a tablet, this
-module adds the **archival series** — the Mycenological classification prefix a
+module adds the **archival series**, the Mycenological classification prefix a
 tablet's designation carries (``Fp`` in ``KN Fp(1) 1 (138)``, ``Da`` in
-``KN Da 1156 (117)``) — and joins it to the scribal hand and the find-site. The
-result is the standard Mycenological working unit: the *set* / *series* of
-tablets, who wrote it, and where.
+``KN Da 1156 (117)``), and joins it to the scribal hand and the find-site.
+
+**The series is a Linear B convention.** The classification prefix belongs to the
+Bennett/Olivier tablet-designation system used for the Linear B corpus, so the
+series parse and the dossier grouping are defined for Linear B only.
+:func:`dossiers` raises on a non-Linear-B corpus rather than read a spurious
+prefix out of an unrelated id scheme (an ``IG XV 1, 217`` inscription number, say),
+and the ``series`` breakdown in the hand groupings is filled only for a Linear B
+corpus.
 
 **Where the series comes from.** DAMOS records the site, chronology, scribal
 hand, find context, and physical support of each tablet in
-:class:`~aegean.core.model.DocumentMeta`, but the *series* is **not a stored
-metadata field** — it lives in the tablet's conventional designation (the
-document id / heading), e.g. ``KN Db 1196 + 8233 (117)``. :func:`series_of`
-parses it out: the alphabetic run of the token after the site code (``Db``).
-DAMOS parenthetical sub-set markers (``Fp(1)`` vs ``Fp(2)``, both scribally
-distinct sets within the Fp series) are folded to the parent series, matching
-how a Mycenologist speaks of "the Fp series". A designation without a
-parseable series (e.g. ``SID 1``) yields ``None`` and is left out of the
-series-based groupings.
+:class:`~aegean.core.model.DocumentMeta`, but the *series* is not a stored
+metadata field. It lives in the tablet's conventional designation (the document
+id / heading), e.g. ``KN Db 1196 + 8233 (117)``. :func:`series_of` parses it out:
+the alphabetic run of the token after the site code (``Db``). Parenthetical
+sub-set markers (``Fp(1)`` vs ``Fp(2)``, scribally distinct sets within the Fp
+series) are folded to the parent prefix. A designation with no parseable prefix
+(e.g. ``SID 1``) yields ``None`` and is left out of the series-based groupings.
+The parse follows the designation convention: a well-established prefix names a
+recognised set, while a residual or unconventional prefix (a single-capital ``X``
+fragment class, say) is grouped as parsed, not asserted to be an attested archival
+set.
 
-**Attribution is the editors'.** A scribal hand grouping is DAMOS's attribution
-(from the standard hand studies) passed through unaltered — this module only
-counts and joins the recorded fields; it makes no attribution of its own. All
-three functions are descriptive: they report what the edition records.
+**Attribution is the editors'.** A hand grouping is DAMOS's attribution (from the
+standard hand studies) passed through unaltered; this module only counts and joins
+the recorded fields, it makes no attribution of its own. A grouping key is one
+distinct attribution *string* (a hand number, possibly qualified with a certainty
+mark such as ``117?`` or a sub-hand tag), not necessarily one distinct scribe. All
+functions are descriptive: they report what the edition records.
 """
 
 from __future__ import annotations
@@ -52,17 +62,36 @@ def _documents(corpus: Any) -> list[Any]:
     return list(getattr(corpus, "documents", corpus))
 
 
-def series_of(doc: Any) -> str | None:
-    """The archival series of a tablet, parsed from its designation, or ``None``.
+def _is_linear_b(corpus: Any) -> bool:
+    return getattr(corpus, "script_id", "") == "linearb"
 
-    Accepts a `Document` (uses ``doc.id``) or a plain id string. The series is the
-    alphabetic run of the second whitespace-delimited field — the classification
-    prefix after the site code: ``series_of("KN Fp(1) 1 (138)") == "Fp"``,
+
+def _require_linear_b(corpus: Any, func: str) -> None:
+    """Guard a series-grouping path: it is defined for Linear B designations only."""
+    if not _is_linear_b(corpus):
+        script = getattr(corpus, "script_id", "") or "unknown"
+        raise ValueError(
+            f"{func}() is defined for Linear B only (the archival-series parse follows "
+            f"the Bennett/Olivier tablet-designation convention), but this corpus is "
+            f"{script!r}. Load a Linear B corpus, e.g. aegean.load('damos')."
+        )
+
+
+def series_of(doc: Any) -> str | None:
+    """The archival series of a Linear B tablet, parsed from its designation, or ``None``.
+
+    Defined for Linear B tablet designations (the Bennett/Olivier sigla). Accepts a
+    `Document` (uses ``doc.id``) or a plain id string. The series is the alphabetic
+    run of the second whitespace-delimited field, the classification prefix after
+    the site code: ``series_of("KN Fp(1) 1 (138)") == "Fp"``,
     ``series_of("PY Ta 641") == "Ta"``. A designation with no such field (only a
     site code and a number, e.g. ``"SID 1 (-)"``) returns ``None``.
 
-    The parse is the standard Mycenological convention and is descriptive only —
-    it reads the editors' tablet designation, it does not classify anything anew."""
+    This is a pure parser: it reads whatever second field an id carries and does not
+    check the script, so a caller that passes an unrelated id scheme gets that
+    scheme's second field back. It classifies nothing anew, and a residual or
+    unconventional prefix is returned as parsed, not asserted to be an attested
+    series. For the script-guarded grouping use :func:`dossiers`."""
     doc_id = getattr(doc, "id", doc)
     parts = str(doc_id).split()
     if len(parts) < 2:
@@ -73,12 +102,14 @@ def series_of(doc: Any) -> str | None:
 
 @dataclass(frozen=True, slots=True)
 class HandGroup:
-    """One scribal hand's tablets, broken down by find-site and archival series.
+    """One hand attribution's tablets, broken down by find-site and archival series.
 
-    ``sites`` / ``series`` / ``periods`` are ``value -> tablet count`` maps
-    (most-common first); ``doc_ids`` lists the hand's tablets in corpus order. A
-    tablet whose series does not parse is counted in ``doc_count`` but not in
-    ``series``."""
+    ``hand`` is one distinct editorial attribution string (a hand number, possibly
+    qualified). ``sites`` / ``series`` / ``periods`` are ``value -> tablet count``
+    maps (most-common first); ``doc_ids`` lists the tablets in corpus order. The
+    ``series`` breakdown is populated only for a Linear B corpus (the designation
+    convention it parses); a tablet whose series does not parse is counted in
+    ``doc_count`` but not in ``series``."""
 
     hand: str
     doc_count: int
@@ -89,15 +120,21 @@ class HandGroup:
 
 
 def by_hand(corpus: Any, *, min_docs: int = 1) -> list[HandGroup]:
-    """Group a corpus's documents by scribal hand, with a site / series breakdown.
+    """Group a corpus's documents by hand attribution, with a site / series breakdown.
 
-    Returns one `HandGroup` per hand (``meta.scribe``) attested on at least
-    ``min_docs`` documents, sorted by tablet count desc, then hand id. Documents
-    with no recorded hand are skipped. The series breakdown is parsed from each
-    document's designation (see :func:`series_of`).
+    Returns one `HandGroup` per distinct attribution string (``meta.scribe``)
+    attested on at least ``min_docs`` documents, sorted by tablet count desc, then
+    attribution string. A group key is one attribution string (a hand number,
+    possibly qualified with a certainty mark or sub-hand tag), so the number of
+    groups counts distinct attribution strings, not necessarily distinct scribes.
+    Documents with no recorded hand are skipped.
 
-    The hand attribution is the edition's (DAMOS), passed through unchanged; this
-    just counts the tablets, sites, and series each recorded hand carries."""
+    The series breakdown is parsed from each document's designation (see
+    :func:`series_of`) and is filled only for a Linear B corpus, where that
+    convention applies; on other scripts it is left empty. The attribution is the
+    edition's, passed through unchanged; this just counts the tablets, sites, and
+    series each recorded attribution carries."""
+    linear_b = _is_linear_b(corpus)
     groups: dict[str, list[Any]] = {}
     for doc in _documents(corpus):
         hand = (doc.meta.scribe or "").strip()
@@ -114,9 +151,10 @@ def by_hand(corpus: Any, *, min_docs: int = 1) -> list[HandGroup]:
         for d in docs:
             if d.meta.site:
                 sites[d.meta.site] += 1
-            s = series_of(d)
-            if s is not None:
-                series[s] += 1
+            if linear_b:
+                s = series_of(d)
+                if s is not None:
+                    series[s] += 1
             if d.meta.period:
                 periods[d.meta.period] += 1
         out.append(
@@ -135,13 +173,15 @@ def by_hand(corpus: Any, *, min_docs: int = 1) -> list[HandGroup]:
 
 @dataclass(frozen=True, slots=True)
 class HandReport:
-    """A single scribal hand's full descriptive profile.
+    """One hand attribution's full descriptive profile.
 
-    Tablet / token / lexical-word totals, the hand's tablets (``doc_ids``), its
-    ``sites`` / ``series`` / ``periods`` breakdowns (``value -> count``,
-    most-common first), and its ``top_words`` (the hand's most frequent lexical
-    words, ``(word, count)``) computed with the standard corpus frequency
-    machinery over the hand's slice."""
+    ``hand`` is one editorial attribution string (a hand number, possibly
+    qualified). Tablet / token / lexical-word totals, its tablets (``doc_ids``),
+    its ``sites`` / ``series`` / ``periods`` breakdowns (``value -> count``,
+    most-common first), and its ``top_words`` (the attribution's most frequent
+    lexical words, ``(word, count)``) computed with the standard corpus frequency
+    machinery over the attribution's slice. The ``series`` breakdown is populated
+    only for a Linear B corpus."""
 
     hand: str
     doc_count: int
@@ -155,22 +195,25 @@ class HandReport:
 
 
 def hand_profile(corpus: Any, hand: str, *, top_n: int = 15) -> HandReport:
-    """Profile one scribal ``hand``: its tablets, sites, series, and vocabulary.
+    """Profile one hand attribution ``hand``: its tablets, sites, series, and vocabulary.
 
-    Builds the sub-corpus of the tablets attributed to ``hand`` and reports its
+    ``hand`` is an editorial attribution string (a hand number, possibly qualified).
+    Builds the sub-corpus of the tablets carrying that attribution and reports its
     counts, its site / series / chronology breakdowns, and its ``top_n`` most
     frequent lexical words (via `Corpus.word_frequencies`, the standard machinery).
-    Raises ``ValueError`` if no document is attributed to ``hand``.
+    The series breakdown is filled only for a Linear B corpus. Raises ``ValueError``
+    if no document carries the attribution.
 
-    The vocabulary is descriptive — the words this hand happened to write most —
-    not a claim about the hand's remit; for what is *distinctive* of a hand versus
-    the others use :func:`aegean.analysis.hand_keyness`."""
+    The vocabulary is descriptive (the words this attribution happened to write
+    most), not a claim about a scribe's remit; for what is *distinctive* of one
+    attribution versus the others use :func:`aegean.analysis.hand_keyness`."""
     from ..core.corpus import Corpus
 
     docs = [d for d in _documents(corpus) if (d.meta.scribe or "").strip() == hand]
     if not docs:
         raise ValueError(f"no documents attributed to scribal hand {hand!r}")
 
+    linear_b = _is_linear_b(corpus)
     sub = Corpus(docs, script_id=getattr(corpus, "script_id", ""))
     freqs = sub.word_frequencies()
     sites: Counter[str] = Counter()
@@ -181,9 +224,10 @@ def hand_profile(corpus: Any, hand: str, *, top_n: int = 15) -> HandReport:
         token_count += len(d.tokens)
         if d.meta.site:
             sites[d.meta.site] += 1
-        s = series_of(d)
-        if s is not None:
-            series[s] += 1
+        if linear_b:
+            s = series_of(d)
+            if s is not None:
+                series[s] += 1
         if d.meta.period:
             periods[d.meta.period] += 1
     return HandReport(
@@ -201,13 +245,16 @@ def hand_profile(corpus: Any, hand: str, *, top_n: int = 15) -> HandReport:
 
 @dataclass(frozen=True, slots=True)
 class SeriesDossier:
-    """One archival dossier: the tablets sharing a find-site and an archival series.
+    """One archival grouping: the tablets sharing a find-site and a parsed series prefix.
 
-    The Mycenological working unit — e.g. the Knossos ``Da`` sheep-tablets, or the
-    Pylos ``Aa`` personnel tablets. ``hands`` / ``periods`` are ``value -> tablet
-    count`` maps (most-common first) over the dossier's tablets; ``doc_ids`` lists
-    them in corpus order; ``token_count`` / ``word_count`` sum the writing they
-    carry."""
+    A common Mycenological working unit, e.g. the Knossos ``Da`` sheep-tablets or the
+    Pylos ``Aa`` personnel tablets. The grouping follows the tablet-designation
+    convention: a well-established prefix names a recognised set, while a residual or
+    unconventional prefix (a single-capital ``X`` fragment class, say) is grouped as
+    parsed and is not asserted to be an attested archival set. ``hands`` / ``periods``
+    are ``value -> tablet count`` maps (most-common first) over the grouping's
+    tablets; ``doc_ids`` lists them in corpus order; ``token_count`` / ``word_count``
+    sum the writing they carry."""
 
     site: str
     series: str
@@ -220,18 +267,24 @@ class SeriesDossier:
 
 
 def dossiers(corpus: Any, *, min_docs: int = 1) -> list[SeriesDossier]:
-    """Group documents into archival dossiers by shared find-site **and** series.
+    """Group Linear B documents into archival dossiers by shared find-site **and** series.
 
-    A *dossier* here is a ``(site, series)`` grouping — the set of tablets found at
-    one site and classified under one archival series (see :func:`series_of`). This
-    is the conservative reading of the metadata that exists: the find-site
-    (``meta.site``) and the series parsed from the designation. It does **not**
-    attempt joins, hand-based sets, or physical-fit reconstructions the recorded
-    fields cannot support.
+    A *dossier* here is a ``(site, series)`` grouping: the tablets found at one site
+    and sharing one series prefix (see :func:`series_of`). This is the conservative
+    reading of the metadata that exists, the find-site (``meta.site``) and the series
+    parsed from the designation. It does **not** attempt joins, hand-based sets, or
+    physical-fit reconstructions the recorded fields cannot support.
+
+    The series parse is a Linear B designation convention, so this raises
+    ``ValueError`` on a non-Linear-B corpus (``corpus.script_id != "linearb"``)
+    rather than read a spurious prefix out of an unrelated id scheme. The grouping
+    follows the designation convention: a residual or unconventional prefix is
+    grouped as parsed, not asserted to be an attested archival set.
 
     Returns one `SeriesDossier` per grouping with at least ``min_docs`` documents,
     sorted by tablet count desc, then site, then series. Documents whose series
     does not parse are left out (they belong to no series)."""
+    _require_linear_b(corpus, "dossiers")
     groups: dict[tuple[str, str], list[Any]] = {}
     for doc in _documents(corpus):
         s = series_of(doc)

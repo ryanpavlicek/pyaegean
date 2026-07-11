@@ -143,7 +143,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `ddbdp-uris` | DDbDP document-identifier map (file stem→ddb-hybrid) for papyri.info URIs in RDF export | ~337 KB | CC BY 3.0 (derived from papyri.info idp.data) | Project-hosted derivative; rebuild: `scripts/build_ddbdp_uri_map.py` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
-| `sigla-corpus` | SigLA-derived Linear A dataset v2: 781 docs, 1,376 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.2 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
+| `sigla-corpus` | SigLA-derived Linear A dataset v3: 781 docs, 1,376 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
@@ -239,7 +239,7 @@ unreachable it builds the index from the upstream source instead. Never bundled:
   in `translatable-exegetical-tools/Abbott-Smith` (pinned to a commit); text and markup are
   public domain.
 
-Dictionaries that are not openly redistributable (Autenrieth, Slater, Montanari, DGE, Bailly)
+Dictionaries that are not openly redistributable (Slater, Montanari, DGE, Bailly)
 are not hosted; `greek.lexicon_link(word)` builds a Logeion deep-link to them instead. None of
 these is bundled in the Apache-2.0 wheel. See [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
 
@@ -493,9 +493,9 @@ subcommands:
 
 | Command | What it does | Flags |
 |---|---|---|
-| `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size (which folds in any kept `--version` entries) | `--json` (machine-readable on stdout; additive keys `versioned_bytes` / `versioned` break out the kept-version footprint), `-h/--help` |
 | `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
-| `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--json`, `-h/--help` |
+| `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--version v1` (delete only that one kept release, leaving the current copy in place), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
 | `aegean data store` | Show the store location and its current contents (entries are permanent until removed). `aegean data cache` remains a deprecated alias this minor: it warns, naming the replacement | `--json` (machine-readable on stdout), `-h/--help` |
 
@@ -597,7 +597,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.38.0'  (your installed version)
+v["package"]                                  # '0.39.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -638,7 +638,10 @@ status.
 
 `aegean export <corpus> -f ttl` (Turtle) or `-f jsonld` (JSON-LD) publishes a corpus
 as linked data (`io.to_rdf` in Python). Subject URIs come from the authoritative
-identifiers already in the data, never invented: EDH and DDbDP documents use their
+identifiers already in the data, never invented: DDbDP documents use their
+**papyri.info** document URIs (`http://papyri.info/ddbdp/<hybrid>`, with the
+Trismegistos id attached as an `rdfs:seeAlso`; offline, where the URI map is not
+fetched, the Trismegistos id is the fallback subject), EDH documents use their
 **Trismegistos** ids (`https://www.trismegistos.org/text/<id>`), I.Sicily documents
 use the project's own inscription URIs, and documents with no external identifier
 fall back to a documented non-resolvable `urn:aegean:` form (or your `--base-uri`).
@@ -665,7 +668,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.38.0'
+# '0.39.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

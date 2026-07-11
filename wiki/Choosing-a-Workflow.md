@@ -65,7 +65,7 @@ as far as your goal needs and no further:
 | A table you can correct | `aegean review export` → fix → `aegean review apply` | machine annotations with a `needs_review` column, corrected columns, and a stamped reviewer |
 
 The evidence class (`LemmaSource`: `attested`, `neural`, `rule`, `seed`,
-`identity`, `unresolved`, `punct`) is the key to reading a parse: an `identity`
+`paradigm`, `identity`, `unresolved`, `punct`) is the key to reading a parse: an `identity`
 or `unresolved` lemma is the pipeline flagging a token you should check.
 [Reading a Parse](Reading-a-Parse) explains every field, and
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) covers the export / fix /

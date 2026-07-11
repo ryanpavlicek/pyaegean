@@ -113,7 +113,7 @@ def test_kuriou_defect_is_not_a_capitalization_artifact() -> None:
 def test_oxytone_os_genitive_still_strips_correctly(form: str, want: str) -> None:
     from aegean.greek.lemmatize import lemmatize, rule_lemma_verbose
 
-    # an oxytone -ός noun takes the circumflex in the genitive (Smyth §163a); its -οῦ IS the
+    # an oxytone -ός noun takes the circumflex in the genitive (Smyth §176); its -οῦ IS the
     # regular thematic genitive and DOES strip to -ός — the guard must not block it.
     assert _nfc(lemmatize(form)) == want, form
     lemma, recovered = rule_lemma_verbose(form)

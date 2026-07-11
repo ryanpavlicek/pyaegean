@@ -7,7 +7,7 @@ West, Ventris-Chadwick), so a professor's spot-check now passes.
 from __future__ import annotations
 
 
-# ── #1 accent: an oxytone takes the circumflex in the genitive/dative (Smyth §163a) ──
+# ── #1 accent: an oxytone takes the circumflex in the genitive/dative (Smyth §176) ──
 def test_oxytone_genitive_dative_take_circumflex():
     from aegean.greek.accent_law import place_accent
 

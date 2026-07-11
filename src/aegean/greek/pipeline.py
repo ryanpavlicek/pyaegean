@@ -34,8 +34,9 @@ class TokenRecord:
     (``0`` = sentence root, ``None`` = no parse). ``xpos``/``feats`` are filled
     only by the neural pipeline. ``lemma_source`` is the lemma's evidence class
     (see `LemmaSource`): whether it was attested in a treebank, predicted by a
-    model, recovered by a rule, from the seed table, an identity fall-through, or
-    unresolved. ``lemma_known`` is the derived boolean (``False`` for an identity
+    model, recovered by a rule, from the seed table, from a paradigm-table lookup
+    (the opt-in UniMorph inflection tables, ``use_paradigms()``), an identity
+    fall-through, or unresolved. ``lemma_known`` is the derived boolean (``False`` for an identity
     fall-through or an unresolved baseline miss, i.e. a lemma to verify).
 
     ``upos_confidence`` / ``lemma_confidence`` are **calibrated** confidences
@@ -44,11 +45,14 @@ class TokenRecord:
     correct. They are ``None`` unless the neural pipeline is active, a calibration
     is loaded, AND the call set ``with_confidence=True`` — the project never
     surfaces a raw (uncalibrated) softmax. A calibrated number is model-only:
-    ``lemma_confidence`` is ``None`` for any lemma that is not a neural prediction
-    (a lookup-resolved attested/seed lemma, an identity fall-through, an unresolved
-    miss, or punctuation — the evidence class speaks for those), and both are
-    ``None`` throughout the offline cascade. The number is fitted on literary prose,
-    so it carries that genre caveat."""
+    lemmas resolved by an offline lexicon backend carry no model confidence (both
+    fields stay ``None`` throughout the offline cascade, where the evidence class
+    speaks). Within the neural pipeline the calibrated ``lemma_confidence`` covers
+    the model's full lemma composition, including its internal training-form
+    lookup, by design (the calibration target is composed-lemma correctness); it is
+    ``None`` only for a token the model does not itself lemmatize (an identity
+    fall-through or punctuation). The number is fitted on literary prose, so it
+    carries that genre caveat."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
@@ -127,9 +131,10 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
                 else:
                     source = LemmaSource.IDENTITY  # the model returned the surface unchanged
                 # A calibrated confidence is model-only: UPOS is always a neural prediction
-                # here, but the lemma confidence is surfaced only when the lemma itself is a
-                # neural prediction (NEURAL) — an identity fall-through / punctuation carry
-                # no calibrated number (the evidence class speaks for them).
+                # here. The lemma confidence is surfaced whenever the model itself produced
+                # the lemma (LemmaSource.NEURAL is the model's full composition, INCLUDING
+                # its internal training-form lookup); an identity fall-through / punctuation
+                # carry no calibrated number (the evidence class speaks for them).
                 upos_conf = ana.upos_prob[i] if ana.upos_prob else None
                 lemma_conf = (
                     ana.lemma_script_prob[i]

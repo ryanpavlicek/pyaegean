@@ -105,7 +105,7 @@ number of distinct **located** sites in the Linear A corpus.
 | Column | Levels | Type | Meaning |
 |---|---|---|---|
 | `id` | inscription | str | the inscription id (e.g. `HT1`) |
-| `site` | both | str | the corpus's `meta.site` label (the gazetteer key) |
+| `site` | both | str | at inscription level, the raw `meta.site` label; at site and word_distribution level, the canonical gazetteer label (whitespace-variant find-place spellings collapse into one row) |
 | `label` | both | str | the gazetteer's display name (may be fuller, e.g. `Iouktas (Mt Juktas)`) |
 | `region` | both | str | one of the six [region codes](#regions) |
 | `period` | inscription | str | the inscription's `meta.period` (e.g. `LMIB`) |

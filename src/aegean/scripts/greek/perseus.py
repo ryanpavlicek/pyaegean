@@ -438,6 +438,23 @@ def _select_ref(edition_div: Any, work: str, title: str, ref: str) -> Document:
     return doc
 
 
+def _dedup_refs(ref: str) -> list[str]:
+    """The distinct entries of a comma-list ``ref``, stripped and in source order
+    (exact duplicates dropped, blank entries skipped).
+
+    Shared by `_select_refs` and `canonical_citation` so the citation lists exactly
+    the distinct sections that were loaded: ``"1.1,1.1"`` loads one document and
+    cites one section, ``"1.5,1.1"`` keeps that order in both."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in ref.split(","):
+        seg = raw.strip()
+        if seg and seg not in seen:
+            seen.add(seg)
+            out.append(seg)
+    return out
+
+
 def _select_refs(edition_div: Any, work: str, title: str, ref: str) -> list[Document]:
     """Resolve ``ref`` — one citation ref, or several comma-separated (``"1.1,1.5"``,
     ``"1,3"``) — to one `Document` per selection (source order preserved, exact
@@ -445,19 +462,12 @@ def _select_refs(edition_div: Any, work: str, title: str, ref: str) -> list[Docu
     span textparts (``"1.1,2.1"``) even though a single hyphen-range may not."""
     if "," not in ref:
         return [_select_ref(edition_div, work, title, ref)]
-    segments: list[str] = []
-    seen: set[str] = set()
-    for raw in ref.split(","):
-        seg = raw.strip()
-        if seg == "":
-            raise ValueError(
-                f"malformed work ref {ref!r}: an empty entry in the comma list "
-                "(use e.g. '1.1,1.5' or '1,3')"
-            )
-        if seg not in seen:
-            seen.add(seg)
-            segments.append(seg)
-    return [_select_ref(edition_div, work, title, seg) for seg in segments]
+    if any(raw.strip() == "" for raw in ref.split(",")):
+        raise ValueError(
+            f"malformed work ref {ref!r}: an empty entry in the comma list "
+            "(use e.g. '1.1,1.5' or '1,3')"
+        )
+    return [_select_ref(edition_div, work, title, seg) for seg in _dedup_refs(ref)]
 
 
 def parse_tei_work(
@@ -573,15 +583,17 @@ def canonical_citation(
     """The canonical scholarly citation for a loaded work or the exact section selected.
 
     ``"Homer, Iliad 1.1-1.50"`` — author and title, then the canonical reference. A
-    comma list of refs is joined with ``"; "`` (``"Homer, Iliad 1.1; 1.5"``); a
-    whole-work load (``ref=None``) is just ``"Homer, Iliad"``. ``work`` (the CTS id) is
-    the fallback lead when author/title are unknown. This is the string ``corpus.cite()``
-    reports for a loaded work, and what a ``--cite`` echo prints — the exact citation for
-    what was selected, ready to paste into an apparatus or bibliography."""
+    comma list of refs is joined with ``"; "`` (``"Homer, Iliad 1.1; 1.5"``), with the
+    same order-preserving deduplication `load_work` applies, so the citation lists exactly
+    the distinct sections loaded (``"1.1,1.1"`` cites ``"1.1"`` once). A whole-work load
+    (``ref=None``) is just ``"Homer, Iliad"``. ``work`` (the CTS id) is the fallback lead
+    when author/title are unknown. This is the string ``corpus.cite()`` reports for a
+    loaded work, and what a ``--cite`` echo prints — the exact citation for what was
+    selected, ready to paste into an apparatus or bibliography."""
     lead = ", ".join(p for p in (author.strip(), title.strip()) if p) or work
     if not ref or not ref.strip():
         return lead
-    refs = "; ".join(r.strip() for r in ref.split(",") if r.strip())
+    refs = "; ".join(_dedup_refs(ref))
     return f"{lead} {refs}" if refs else lead
 
 

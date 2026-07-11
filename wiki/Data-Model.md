@@ -144,7 +144,7 @@ its normal key (`lemma`, `upos`, `morph` or `feats`) and the machine value the
 reviewer saw is preserved under `lemma__pred` / `upos__pred` / `morph__pred`.
 Nothing is overwritten silently; treat any key ending in `__pred` as reserved
 for that convention. `lemma_source` holds a `LemmaSource` evidence-class value
-(`attested` / `neural` / `rule` / `seed` / `identity` / `unresolved` /
+(`attested` / `neural` / `rule` / `seed` / `paradigm` / `identity` / `unresolved` /
 `punct`), and `lemma_known` is its derived boolean; the review export's
 "needs review" triage reads them.
 
@@ -285,7 +285,8 @@ import aegean
 a = aegean.load("lineara")
 b = a.copy()
 print("same fingerprint after copy:", a.fingerprint() == b.fingerprint())
-print(a.fingerprint()[:16], "...")
+# the hash folds provenance.data_version, so it is stable within a release but
+# changes across releases — compare fingerprints, never hard-code the hex value
 
 # annotations is the one mutable slot on a (frozen) Token — and the copy owns its own dicts
 b.get("HT13").tokens[0].annotations["my_note"] = "checked against GORILA"
@@ -299,7 +300,6 @@ print("fresh load clean:", c.get("HT13").tokens[0].annotations == {})
 
 ```
 same fingerprint after copy: True
-c6e3d680a3a85842 ...
 original untouched: {}
 fingerprints now differ: True
 fresh load clean: True

@@ -91,6 +91,25 @@ _REG_KEYS = (
     "artificial", "insertion_id", "lang",
 )
 
+# PapyGreek stores letter-numeral lemmas with an inline value annotation,
+# "<lemma>|num:<value>|" (e.g. "β|num:2|" for beta read as the numeral 2), and some
+# lemmas carry a bare trailing "|" left by an empty apparatus marker. Neither is part of
+# the lemma; reduce a reg lemma to the bare form before the shared homonym cleanup.
+_LEMMA_NUM_SUFFIX = re.compile(r"\|num:[^|]*\|$")
+
+
+def clean_lemma(lemma_reg: str | None) -> str:
+    """Clean a reg-layer lemma to the training-convention lemma.
+
+    Strips a trailing ``|num:<value>|`` numeral annotation and a bare trailing ``|``
+    (PapyGreek apparatus residue, not part of the lemma), then delegates to the shared
+    `_clean_lemma` for NFC and Perseus homonym numbering (``μένω1`` -> ``μένω``)."""
+    lemma = unicodedata.normalize("NFC", lemma_reg or "").strip()
+    lemma = _LEMMA_NUM_SUFFIX.sub("", lemma)
+    if lemma.endswith("|"):
+        lemma = lemma[:-1]
+    return _clean_lemma(lemma)
+
 
 def strip_apparatus(form: str) -> str:
     """Reduce a reg surface form to its reading text (see the module docstring)."""
@@ -154,9 +173,9 @@ def sentence_to_conllu(sent_id: str, words: list[dict[str, Any]]) -> tuple[str, 
 
     Returns ``(block, forms)`` where ``forms`` is the NFC stripped-reading form tuple (for
     the leakage check). HEAD/DEPREL/UPOS/XPOS/FEATS come from the shared AGDT->UD converter;
-    the LEMMA is ``_clean_lemma(lemma_reg)`` (punctuation reconciled to the surface form, the
-    convention the model was trained on — training punct lemma is the punct char, not
-    PapyGreek's ``punc1``)."""
+    the LEMMA is ``clean_lemma(lemma_reg)`` (numeral value annotations stripped; punctuation
+    reconciled to the surface form, the convention the model was trained on — training punct
+    lemma is the punct char, not PapyGreek's ``punc1``)."""
     attrs: list[dict[str, Any]] = []
     forms: list[str] = []
     for w in words:
@@ -167,7 +186,7 @@ def sentence_to_conllu(sent_id: str, words: list[dict[str, Any]]) -> tuple[str, 
             "head": w["head_reg"],
             "relation": w["relation_reg"],
             "form": s,
-            "lemma": _clean_lemma(w["lemma_reg"] or ""),
+            "lemma": clean_lemma(w["lemma_reg"]),
             "xpos": (w["postag_reg"] or "").ljust(9, "-")[:9],
         })
     flags = copular_flags(attrs)

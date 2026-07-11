@@ -93,10 +93,11 @@ temperature per head, fitted on the UD Perseus **dev** fold only; quality measur
 | Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
 
 The lemma figure calibrates the edit-script head's probability against
-composed-lemma-vs-gold correctness (a documented proxy); lookup-resolved lemmas carry
-no model confidence (the evidence class speaks for them); the calibration is fitted on
-literary prose, so the genre boundary applies to the confidence exactly as to the
-accuracy. Full protocol in the canonical `docs/benchmarks.md`; evidence in
+composed-lemma-vs-gold correctness (a documented proxy) over the model's full lemma
+composition, including its internal training-form lookup; lemmas resolved by an
+offline lexicon backend carry no model confidence (the evidence class speaks for
+them). The calibration is fitted on literary prose, so the genre boundary applies
+to the confidence exactly as to the accuracy. Full protocol in the canonical `docs/benchmarks.md`; evidence in
 `training/results/calibration-2026-07-11.json`.
 
 ## Out of domain: Koine / New Testament
@@ -126,12 +127,23 @@ is the closest measured Koine parsing figure this document has.
 
 The first documentary-Greek parsing evaluation here: 1,696 sentences / 24,105
 tokens of papyrus letters and petitions from the PapyGreek Treebanks (CC BY-SA),
-converted through the same AGDT scheme the model trains under and leakage-checked
-against the training set (354 overlapping sentences excluded).
+converted through the same AGDT scheme the model trains under.
+
+Scoring is on PapyGreek's **regularized** (`reg`) layer, the reading whose spelling
+the editors normalized toward standard Koine. The number is a regularized-text
+figure; the raw diplomatic (`orig`) orthography, with its phonetic spellings and
+itacism, is meaningfully harder and is separate future work.
+
+The fold keeps 1,696 of the 4,557 annotated source sentences. Excluded: 1,793 that
+carry an artificial (elliptic or inserted) node gold tokenization cannot score, 678
+not fully annotated, 354 leakage overlaps with the training set (Pedalion ships a
+documentary `papyri.xml` subset the model trained on), and 36 that do not reduce to a
+clean reading. Dropping the elliptic sentences biases the fold toward complete
+syntax. Full accounting: `training/results/papygreek-fold-manifest.json`.
 
 | Test set | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
-| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.11 | 85.71 | 79.89 |
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.89 |
 
 Scheme-matched out-of-domain parsing runs ~16 LAS points above the
 convention-capped PROIEL row. Reproduce: `aegean greek eval papygreek`.
@@ -156,10 +168,12 @@ baseline exists for the zero-install path; the neural pipeline carries the accur
 claims. (Perseus: 1,306 sentences / 20,959 words; PROIEL: 1,047 / 13,314.)
 
 On the **full New Testament**, the fully offline lemmatizer (no backends active,
-`greek.lemmatize` per token) scores **66.98%** over 137,303 tokens (**71.96%**
-with the opt-in fetched paradigm backend, `greek.use_paradigms()`). This is the
-"~67% on the full NT" figure quoted on [Limitations](Limitations); it is re-measured
-by the offline-stack guard because it moves with the code.
+`greek.lemmatize` per token) scores **66.98%** over 137,303 tokens (**71.21%**
+with the opt-in fetched paradigm backend, `greek.use_paradigms()`, under its
+honesty guards: a form matching more than one paradigm lemma, or a capitalized
+surface, falls through as an honest miss rather than an arbitrary grounded pick).
+This is the "~67% on the full NT" figure quoted on [Limitations](Limitations); it
+is re-measured by the offline-stack guard because it moves with the code.
 
 ## Held-out generalization (pure-Python backends)
 

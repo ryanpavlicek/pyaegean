@@ -113,7 +113,7 @@ same engine and fields are documented on [Analysis](Analysis).
 | `greek_scan` | `text`, `meter="hexameter"` | Scan a Greek verse line, reporting the glyph pattern, feet, and caesura, or `scans: false` with the reason. |
 | `greek_catalog` | `query`, `author`, `title`, `source`, `limit=40` | Search the bundled catalogue of roughly 1,800 loadable Greek works (Perseus + First1KGreek). |
 | `greek_work` | `work_id`, `ref=None`, `preview_lines=10` | Load a real Greek work by its catalogue id (e.g. `tlg0012.tlg001`, the Iliad), whole or one section, with a short preview. |
-| `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `abbott-smith`, `dodson`). |
+| `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `autenrieth`, `abbott-smith`, `dodson`). |
 | `koine_gloss` | `word` | Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0). |
 
 `greek_pipeline` and `balance_accounts` return the shared row mappings from

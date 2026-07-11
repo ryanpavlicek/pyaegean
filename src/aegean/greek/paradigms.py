@@ -12,12 +12,18 @@ The index is a ``{form: [analysis, ...]}`` table whose analysis records have the
 as the AGDT treebank lexicon (`aegean.greek.treebank`) — ``{lemma, pos, case, number,
 gender?}`` — so both backends serve identical `Analysis` records and the consumer layer is
 uniform. It is a curated inflection table (Wiktionary paradigms), so a hit is a **grounded,
-correctly-accented** lemma reported under the ``SEED`` evidence class (a curated lexical
-lookup, like the bundled seed table): it does not need human review.
+correctly-accented** lemma reported under its own ``PARADIGM`` evidence class (see
+`aegean.greek.LemmaSource`): it does not need human review.
 
-Cascade rank: **below** the neural pipeline / treebank / bundled seed table, **above** the
-generalizing ending rules — the same slot `use_treebank` occupies, one tier lower. The data
-is the purely-nominal UniMorph Ancient Greek set (``github.com/unimorph/grc``, **CC BY-SA
+Cascade rank: **below** the neural pipeline / treebank / bundled seed table AND below the
+generalizing ending rules. It is consulted only when the guarded rules do not recover a
+citation form, and then only for surfaces that pass the cascade guards (not a closed-class
+or indeclinable word, not a capitalized proper name, and not a form the table maps to more
+than one distinct lemma). This ordering keeps the purely-nominal table from shadowing the
+dominant verb reading the rules resolve (the noun dative ``ἔχει`` over the verb
+``ἔχει → ἔχω``); the table then supplies the irregular / third-declension forms the rules
+cannot touch (``γυναικός → γυνή``). The data is the purely-nominal UniMorph Ancient Greek
+set (``github.com/unimorph/grc``, **CC BY-SA
 3.0**, from Wiktionary), fetched as a prebuilt gzip index and **never bundled** (ShareAlike;
 keeps the wheel small). Build recipe: ``scripts/build_paradigm_table.py``.
 """
@@ -133,6 +139,19 @@ class ParadigmLexicon:
         entries = self._entries(form)
         return entries[0]["lemma"] if entries else None
 
+    def lemma_options(self, form: str) -> frozenset[str]:
+        """The DISTINCT lemmas (NFC-compared) a form maps to; ``frozenset()`` if unknown.
+
+        More than one element means the table is internally ambiguous for the form: φωτός is
+        the genitive of both φώς 'man' and φῶς 'light', βασιλεία collides with βασίλεια. A
+        caller can treat that as no confident pick rather than the arbitrary first entry.
+        Several cells of a SINGLE lemma (γυναικός) collapse to one element and stay grounded.
+        """
+        entries = self._entries(form)
+        if not entries:
+            return frozenset()
+        return frozenset(unicodedata.normalize("NFC", e["lemma"]) for e in entries)
+
     def pos(self, form: str) -> str | None:
         """The first part-of-speech tag for a form, or ``None`` if unknown."""
         entries = self._entries(form)
@@ -172,10 +191,11 @@ def use_paradigms(
 
     Fetches the prebuilt index on first use (``build=True``); pass ``path`` to load a local
     build/fixture offline, or ``force=True`` to re-fetch. Once active,
-    `aegean.greek.lemmatize` / `analyze` consult it for irregular/third-declension forms —
-    ranked below the treebank/seed tiers and above the generalizing ending rules — and fall
-    back to those rules on a miss. A paradigm hit is reported under the ``SEED`` evidence
-    class (a grounded, curated lookup)."""
+    `aegean.greek.lemmatize` / `analyze` consult it for irregular/third-declension forms,
+    after the generalizing ending rules and only when those rules do not recover, subject to
+    the cascade guards (closed-class/indeclinable, capitalized surface, intra-table
+    ambiguity). A paradigm hit is reported under its own ``PARADIGM`` evidence class (a
+    grounded, curated lookup)."""
     global _ACTIVE
     _ACTIVE = load_paradigms(build=build, force=force, path=path)
     return _ACTIVE

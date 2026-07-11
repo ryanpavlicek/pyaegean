@@ -18,7 +18,74 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _epidoc import build_greek_corpus, geo_coords, local, main_lang  # noqa: E402
+from _epidoc import edition_tokens, geo_coords, local, main_lang, primary_edition  # noqa: E402
+
+
+def _build_choice_corpus(  # type: ignore[no-untyped-def]
+    insc_dir,
+    *,
+    is_greek,
+    metadata,
+    out,
+    source,
+    license,
+    url,
+    script_id="greek",
+    limit=0,
+    edition_fidelity="apparatus-preserved,normalized",
+):
+    """Mirror of ``_epidoc.build_greek_corpus`` that resolves each editorial ``<choice>`` to its
+    corrected/regularized member (``edition_tokens(choice_prefer=True)``) instead of concatenating
+    both alternatives into one garbled token. Inlined because ``build_greek_corpus`` does not expose
+    the flag; EDH/DDbDP already resolve choices this way (expan>reg>corr, lem>rdg)."""
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
+    from aegean.core.provenance import Provenance
+
+    files = sorted(Path(insc_dir).glob("*.xml"))
+    docs: list = []
+    greek = 0
+    for f in files:
+        try:
+            root = ET.parse(str(f)).getroot()
+        except ET.ParseError:
+            continue
+        if not is_greek(root):
+            continue
+        edition = primary_edition(root)
+        if edition is None:
+            continue
+        token_lines = edition_tokens(edition, choice_prefer=True)
+        if not token_lines:
+            continue
+        greek += 1
+        tokens: list = []
+        lines: list = []
+        pos = 0
+        for tl in token_lines:
+            idxs: list = []
+            for word, status in tl:
+                if not word:
+                    continue
+                tokens.append(
+                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
+                )
+                idxs.append(pos)
+                pos += 1
+            if idxs:
+                lines.append(idxs)
+        if not tokens:
+            continue
+        docs.append(
+            Document(id=f.stem, script_id=script_id, tokens=tokens, lines=lines, meta=metadata(root, f.stem))
+        )
+        if limit and len(docs) >= limit:
+            break
+
+    prov = Provenance(source=source, license=license, url=url, edition_fidelity=edition_fidelity)
+    corpus = Corpus(docs, provenance=prov, script_id=script_id)
+    Path(out).write_text(corpus.to_json(), encoding="utf-8")
+    return greek, len(docs)
 
 
 def _is_greek(root: ET.Element) -> bool:
@@ -54,7 +121,7 @@ def main() -> int:
     args = ap.parse_args()
 
     insc = Path(args.source) / "epidoc-files"
-    greek, written = build_greek_corpus(
+    greek, written = _build_choice_corpus(
         insc,
         is_greek=_is_greek,
         metadata=_metadata,

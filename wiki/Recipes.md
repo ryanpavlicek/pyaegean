@@ -406,7 +406,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.38.0
+print(aegean.__version__)          # 0.39.0
 print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -1186,7 +1186,7 @@ aegean greek gloss-nt λόγος       # a word, speech, divine utterance, analo
 
 **More dictionaries.** Dodson and LSJ are two backends in a **lexicon registry**.
 `greek.use_lexicon(id)` activates **Middle Liddell** (concise classical), **Cunliffe**
-(Homeric), **Abbott-Smith** (New Testament), or **LSJ**, and `greek.gloss(word,
+(Homeric), **Autenrieth** (Homeric), **Abbott-Smith** (New Testament), or **LSJ**, and `greek.gloss(word,
 dictionary=id)` glosses from the one you choose (each fetches a small index on first use,
 0.1–15 MB):
 
@@ -1198,7 +1198,7 @@ greek.use_lexicon("abbott-smith")                        # Abbott-Smith's NT lex
 print(greek.gloss("πίστις", dictionary="abbott-smith"))  # πίστις: faith; belief; trust; …
 ```
 
-For dictionaries pyaegean cannot host (Autenrieth, Slater, Montanari, …), build a
+For dictionaries pyaegean cannot host (Slater, Montanari, …), build a
 **Logeion deep-link** instead, which runs offline:
 
 ```python
@@ -1285,7 +1285,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.38.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.39.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

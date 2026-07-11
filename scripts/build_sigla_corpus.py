@@ -82,13 +82,67 @@ def _first_string(v: Any, depth: int = 0) -> str:
     return ""
 
 
+_SUBSCRIPT = {str(d): chr(0x2080 + d) for d in range(10)}  # '2' → '₂' (U+2082)
+
+
+def _subscript(digits: str) -> str:
+    """Homophone index as Unicode subscript digits (``2`` → ``₂``), matching the
+    bundled GORILA lineara corpus's sign-label convention (RA₂, PU₂, TA₂)."""
+    return "".join(_SUBSCRIPT.get(c, c) for c in digits)
+
+
+def _find_pair(v: Any, depth: int = 0) -> Block | None:
+    """The (base, option) transliteration pair: an OCaml tuple block whose first
+    field is the base string. field[2] wraps it as ``Some (base, option)``
+    (``B0[B0['ra', option]]``), so this descends past the option wrapper."""
+    if isinstance(v, Block):
+        if len(v.fields) >= 2 and isinstance(v.fields[0], str):
+            return v
+        if depth < 6:
+            for f in v.fields:
+                hit = _find_pair(f, depth + 1)
+                if hit is not None:
+                    return hit
+    return None
+
+
+def _option_string(opt: Any) -> str:
+    """The homophone option component (OCaml ``string option``): ``0`` = None (no
+    homophone index), ``B0[x]`` = Some x. SigLA encodes RA₂/PU₂/TA₂ as the base
+    ``'ra'``/``'pu'``/``'ta'`` with option ``Some '2'``; plain RA/PU/TA carry
+    ``None``."""
+    if isinstance(opt, Block) and opt.tag == 0 and len(opt.fields) == 1:
+        inner = opt.fields[0]
+        return inner if isinstance(inner, str) else _first_string(inner)
+    return ""
+
+
+def _transliteration(f2: Any) -> str:
+    """The sign's transliteration from field[2] = ``Some (base, option)``: the
+    base syllabogram value with its homophone index appended as a Unicode
+    subscript. SigLA stores homophones as a (base, option) pair, e.g.
+    AB76 = ``('ra', Some '2')`` → ``ra₂``; the option is absent (``None``) on the
+    plain signs AB60 ``ra`` / AB50 ``pu`` / AB59 ``ta``. Dropping the option
+    collapses distinct signs (RA₂ ≠ RA), so it is preserved here."""
+    pair = _find_pair(f2)
+    if pair is None:
+        return _first_string(f2)
+    base = pair.fields[0]
+    if not isinstance(base, str):
+        return _first_string(f2)
+    option = _option_string(pair.fields[1])
+    return base + _subscript(option) if option else base
+
+
 def _triple(rec: Block) -> tuple[str, str, str]:
     """(series, transliteration, representative drawing ref) — the content key.
 
     The ``data`` and ``signs`` payloads are separate Marshal values, so their
     sign records are copies, not shared objects; this triple joins them (the
-    representative ref, e.g. ``KH 5/5``, is unique per sign)."""
-    return str(rec.fields[0]), _first_string(rec.fields[2]), _first_string(rec.fields[3])
+    representative ref, e.g. ``KH 5/5``, is unique per sign). The transliteration
+    keeps its homophone subscript (RA₂, PU₂, TA₂; `_transliteration`); the ref is
+    a plain string."""
+    return str(rec.fields[0]), _transliteration(rec.fields[2]), _first_string(rec.fields[3])
 
 
 def _display(series: str, number: int | None, value: str) -> str:

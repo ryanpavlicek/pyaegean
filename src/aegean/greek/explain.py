@@ -15,8 +15,8 @@ zero-dependency offline cascade by default, or the joint neural pipeline when
 filled from its FEATS output).
 
 The source classes are the honesty surface: ``attested`` / ``neural`` /
-``rule`` / ``seed`` are grounded analyses, ``identity`` / ``unresolved`` are
-fall-throughs a human should verify. By default there are NO confidence numbers
+``rule`` / ``seed`` / ``paradigm`` are grounded analyses, ``identity`` /
+``unresolved`` are fall-throughs a human should verify. By default there are NO confidence numbers
 in this output: the evidence CLASS is the whole claim (source-class only). The
 one exception is opt-in: ``explain_pipeline(text, with_confidence=True)`` with
 the neural pipeline active and a calibration loaded appends the token's
@@ -41,6 +41,10 @@ _NOTES: dict[LemmaSource, str] = {
     LemmaSource.ATTESTED: "lemma attested in the treebank lexicon",
     LemmaSource.RULE: "derived by a conservative inflection rule (ending substitution)",
     LemmaSource.SEED: "from the bundled seed table (closed-class or high-frequency form)",
+    LemmaSource.PARADIGM: (
+        "from the UniMorph paradigm table (a curated inflection lookup for an "
+        "irregular or third-declension form)"
+    ),
     LemmaSource.UNRESOLVED: (
         "no analysis found; the normalized surface form is shown and flagged for review"
     ),

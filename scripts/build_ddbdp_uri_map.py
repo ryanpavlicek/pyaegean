@@ -4,7 +4,7 @@ The pyaegean ``ddbdp`` corpus stores each document's id as the idp.data file ste
 (``bgu.1.100``, and division-suffixed stems such as ``aegyptus.103.69_1``) and a
 ``TM <id>`` note, but NOT the ``<idno type="ddb-hybrid">`` value (``bgu;1;100``)
 that papyri.info document URLs are built from
-(``https://papyri.info/ddbdp/bgu;1;100`` -- the semicolons are literal). Reversing
+(``http://papyri.info/ddbdp/bgu;1;100`` -- the semicolons are literal). Reversing
 a stem to a hybrid is genuinely ambiguous: series names contain dots
 (``c.epist.lat.10`` -> ``c.epist.lat;;10``) and many hybrids have an empty volume
 component (the ``;;``), so a naive ``.`` -> ``;`` swap is wrong for tens of

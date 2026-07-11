@@ -38,7 +38,7 @@ def _human_size(n: int) -> str:
     return f"{n} B"
 
 
-def _entry_paths(root: Path, name: str) -> list[Path]:
+def _entry_paths(root: Path, name: str, *, version: str | None = None) -> list[Path]:
     """Everything in the store belonging to one dataset: the real artifact(s) plus
     any leftover partial-download or extraction files.
 
@@ -46,8 +46,21 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
     ``on_disk_paths``), so a dataset a backend writes under a different filename
     (a prebuilt lexicon index -> ``lsj-perseus-index.json.gz``, an ``agdt-derived``
     member) is actually found and removed, not just the empty ``root/name`` probe
-    (which left ``list`` reporting it downloaded while ``remove`` refused it)."""
-    from aegean.data import _REMOTE, on_disk_paths
+    (which left ``list`` reporting it downloaded while ``remove`` refused it). Kept
+    versioned entries (``<name>@<version>`` from ``fetch(name, version=...)``) are
+    folded in too, so ``data remove NAME`` reclaims them instead of orphaning
+    unreclaimable disk. ``.lock`` files are excluded from removal targets (a held
+    lock signals an in-progress fetch; the caller guards on it).
+
+    ``version`` restricts the result to one kept release's entries
+    (``<name>@<version>`` and its siblings), for surgical removal that leaves the
+    current copy and the other versions in place."""
+    from aegean.data import _REMOTE, on_disk_paths, versioned_entry_paths
+
+    if version is not None:
+        # Surgical, single-version removal: only that kept release's entries.
+        return [p for p in versioned_entry_paths(name, root, version=version)
+                if not p.name.endswith(".lock")]
 
     spec = _REMOTE.get(name)
     paths = list(on_disk_paths(spec, root)) if spec is not None else [root / name]
@@ -62,6 +75,10 @@ def _entry_paths(root: Path, name: str) -> list[Path]:
         root / (name + ".old"),     # a superseded extraction awaiting cleanup (re-pin swap)
         root / (name + ".sha256"),  # the extract-dataset stamp (sha of the unpacked archive)
     ]
+    # Every kept-version entry (``<name>@<version>`` plus its download/extraction
+    # siblings), so a full remove reclaims the versioned footprint; the ``.lock`` of
+    # an in-progress versioned fetch is left for the caller's in-progress guard.
+    paths += [p for p in versioned_entry_paths(name, root) if not p.name.endswith(".lock")]
     seen: set[Path] = set()
     out: list[Path] = []
     for p in paths:  # de-dup: on_disk defaults to [root/name], which may repeat
@@ -150,8 +167,16 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
     """List the fetchable datasets and whether each is downloaded.
 
     Columns: name, downloaded (with the actual on-disk size, directory-recursive
-    for extracted datasets), size note, and license."""
-    from aegean.data import _REMOTE, cache_dir, downloaded_bytes, is_downloaded
+    for extracted datasets, and including any kept ``--version`` entries), size
+    note, and license."""
+    from aegean.data import (
+        _REMOTE,
+        available_versions,
+        cache_dir,
+        downloaded_bytes,
+        is_downloaded,
+        versioned_bytes,
+    )
 
     root = cache_dir()
     rows: list[dict[str, Any]] = []
@@ -161,7 +186,16 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
         # land under their built-index filename and agdt-derived members are
         # copied out, so those would read "not downloaded" otherwise.
         downloaded = is_downloaded(spec, root)
-        size = downloaded_bytes(spec, root) if downloaded else None
+        ver_bytes = versioned_bytes(name, root)
+        # downloaded_bytes already folds in the versioned footprint; when the
+        # current pin is absent but a kept version is present, surface that alone.
+        size = downloaded_bytes(spec, root) if downloaded else (ver_bytes or None)
+        # Per-version breakdown (only versions actually on disk), for surgical removal.
+        per_version = [
+            {"version": v["version"], "bytes": vb}
+            for v in available_versions(name)
+            if (vb := versioned_bytes(name, root, version=v["version"])) > 0
+        ]
         rows.append(
             {
                 "name": name,
@@ -170,12 +204,15 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
                 "extract": spec.extract,
                 "downloaded": downloaded,
                 "bytes": size,
+                # additive keys: the kept-version footprint, split out from ``bytes``
+                "versioned_bytes": ver_bytes,
+                "versioned": per_version,
             }
         )
         display.append(
             [
                 name,
-                f"yes ({_human_size(size)})" if size is not None else "no",
+                _downloaded_cell(downloaded, size, ver_bytes),
                 spec.note,
                 spec.license,
             ]
@@ -188,6 +225,18 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
         ["name", "downloaded", "note", "license"],
         display,
     )
+
+
+def _downloaded_cell(downloaded: bool, size: int | None, ver_bytes: int) -> str:
+    """The `data list` downloaded-column text, surfacing any versioned footprint so a
+    kept ``--version`` entry's reclaimable disk is visible where it was invisible before."""
+    if downloaded:
+        if ver_bytes:
+            return f"yes ({_human_size(size or 0)}, incl. {_human_size(ver_bytes)} versioned)"
+        return f"yes ({_human_size(size or 0)})"
+    if ver_bytes:
+        return f"versioned only ({_human_size(ver_bytes)})"
+    return "no"
 
 
 class _FetchProgress:
@@ -306,16 +355,27 @@ def remove(
         None, help="Downloaded dataset to delete (see `aegean data list`)."
     ),
     remove_all: bool = typer.Option(False, "--all", help="Delete every downloaded dataset."),
+    version: str | None = typer.Option(
+        None, "--version",
+        help="Delete only this kept ``--version`` entry (e.g. v1), leaving the current "
+        "copy and other versions in place (see `aegean data versions`).",
+    ),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Delete downloaded dataset(s) from the local store, reclaiming the space.
 
     This is the only way stored data leaves disk (nothing is evicted or expires
-    on its own); `aegean data fetch NAME` downloads a removed dataset again."""
+    on its own); `aegean data fetch NAME` downloads a removed dataset again.
+    Removing a dataset also reclaims any kept ``--version`` entries it holds;
+    `--version v1` removes only that one pinned release."""
     import shutil
 
-    from aegean.data import _REMOTE, cache_dir
+    from aegean.data import _REMOTE, cache_dir, versioned_entry_paths
 
+    if version is not None and remove_all:
+        raise fail("--version deletes one dataset's kept release; it cannot combine with --all")
+    if version is not None and name is None:
+        raise fail("name a dataset to remove a --version of (see `aegean data versions`)")
     if name is None and not remove_all:
         raise fail("name a dataset to remove, or pass --all (see `aegean data list`)")
     if name is not None:
@@ -327,17 +387,26 @@ def remove(
     names = sorted(_REMOTE) if remove_all else [name or ""]
     removed: list[dict[str, Any]] = []
     for n in names:
-        if (root / (n + ".lock")).exists():
-            # a fetch of this dataset is running (its per-dataset lock is held);
-            # removing under it would corrupt the transfer or be silently undone
+        # A held lock means a fetch is in progress; removing under it would corrupt the
+        # transfer or be silently undone. The current-pin fetch holds ``<n>.lock``; a
+        # versioned fetch holds ``<n>@<version>.lock``. Check the locks in scope.
+        locked = []
+        if version is None and (root / (n + ".lock")).exists():
+            locked.append(n)
+        locked += [
+            p.name for p in versioned_entry_paths(n, root, version=version)
+            if p.name.endswith(".lock")
+        ]
+        if locked:
+            scope = f"{n}@{version}" if version is not None else n
             raise fail(
-                f"a fetch of {n!r} appears to be in progress — let it finish "
-                f"(or delete {n}.lock in the store if it is stale) and retry"
+                f"a fetch of {scope!r} appears to be in progress — let it finish "
+                f"(or delete {locked[0]} in the store if it is stale) and retry"
             )
         # Gate on the full target set, not the main entry: an interrupted
         # first fetch leaves only .part/.part.info orphans, and those must be
         # removable too.
-        targets = [p for p in _entry_paths(root, n) if p.exists()]
+        targets = [p for p in _entry_paths(root, n, version=version) if p.exists()]
         if not targets:
             continue
         entry = targets[0]  # the real artifact removed (root/name for most; the index file otherwise)
@@ -355,9 +424,15 @@ def remove(
                 f"could not remove {n!r}: a file is in use ({exc}); "
                 "if a fetch is running, retry after it finishes"
             ) from None
-        removed.append({"name": n, "path": str(entry), "bytes": size})
+        label = f"{n}@{version}" if version is not None else n
+        removed.append({"name": label, "path": str(entry), "bytes": size})
 
     if not remove_all and not removed:
+        if version is not None:
+            raise fail(
+                f"version {version!r} of {name!r} is not downloaded; "
+                "`aegean data versions` shows the kept releases"
+            )
         raise fail(
             f"dataset {name!r} is not downloaded; `aegean data list` shows what is"
         )

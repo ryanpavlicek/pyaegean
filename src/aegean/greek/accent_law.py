@@ -21,7 +21,7 @@ text, and gives a verifiable cross-check on scansion (a circumflex forces a long
 When a dichronon is the deciding factor the placement is returned with ``certain=False`` and a
 note; pass ``ultima_length`` / ``penult_length`` (e.g. from morphology) to resolve it. Out of
 scope, and flagged rather than guessed: enclitic/proclitic accent interaction, crasis, and
-contracted nouns. (The oxytone genitive/dative circumflex, Smyth §163 a, and the πόλις-type
+contracted nouns. (The oxytone genitive/dative circumflex, Smyth §176, and the πόλις-type
 -εως/-εων genitives, Smyth §275, are handled by ``persistent_accent``.)
 """
 
@@ -216,7 +216,7 @@ def persistent_accent(form: str, lemma: str, *, ultima_length: str | None = None
             note += "; penult acute/circumflex undetermined (dichronon)"
     elif pos == 1:
         # An oxytone nominal takes the CIRCUMFLEX in the genitive and dative of all numbers
-        # when the ultima is long (Smyth §163 a): θεός -> gen θεοῦ, dat θεῷ; τιμή -> τιμῆς,
+        # when the ultima is long (Smyth §176): θεός -> gen θεοῦ, dat θεῷ; τιμή -> τιμῆς,
         # τιμῇ. Gen sg/pl and dat pl are read off the unambiguous endings; the dative
         # singular by its iota subscript (θεῷ, τιμῇ, ἀγορᾷ). The bare -ας ending is left
         # acute: it is gen sg -ᾶς (circumflex) or acc pl -άς (acute), indistinguishable here.

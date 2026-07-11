@@ -13,12 +13,24 @@ Two data caveats the avenues audit flagged, both cleaned here:
 * **The form field carries the definite article** (``ὁ βοηθός``, ``αἱ γυναῖκες``, and the
   common-gender ``ὁ, ἡ ἔλαφος`` / ``ὁ/ἡ σῦς``). The leading run of article tokens is
   stripped (the exact set is `_ARTICLE`, documented below); vocatives, which never take the
-  article, have none. The article is also the ONLY signal of a noun's lexical gender —
-  UniMorph tags a noun's gender nowhere else — so a gender-unambiguous article
-  (``ὁ``/``ἡ``/``τό`` and their unambiguous case forms) is harvested to gender the noun
-  (`_ARTICLE_GENDER`); an ambiguous article (``τοῦ`` = masc-or-neut, the duals) contributes
-  no vote, and a common-gender cell (both ``ὁ`` and ``ἡ``) resolves the whole lemma to *no*
-  gender rather than guess.
+  article, have none. The article is UniMorph's only lexical-gender signal (it tags a noun's
+  gender nowhere else), so a gender-unambiguous article (``ὁ``/``ἡ``/``τό`` and their
+  unambiguous case forms) is harvested (`_ARTICLE_GENDER`); an ambiguous article (``τοῦ`` =
+  masc-or-neut, the duals) contributes no vote, and a common-gender cell (both ``ὁ`` and
+  ``ἡ``) resolves the whole lemma to *no* article gender.
+
+  The Wiktionary article is not always right: it ships several textbook **feminine
+  second-declension -ος nouns** (``ἡ δοκός``, ``ἡ κιβωτός``, ``ἡ ψῆφος``; Smyth §230 N.) with
+  a wrong masculine ``ὁ``. Two guards correct it (see `build_index`): (a) each noun lemma's
+  gender is cross-checked against the **attested** gender in the AGDT treebank lexicon
+  (`aegean.greek.treebank`); an attestation with two or more supporting tokens overrides a
+  conflicting article, and a single attestation fills an absent article gender (one isolated
+  treebank token is too weak to overturn the article, e.g. the ``-εύς`` masculine
+  ``Παλληνεύς``). (b) A curated feminine ``-ος`` backstop (`_FEM_OS_NOUNS`, each verified
+  against LSJ) genders the canonical feminine ``-ος`` nouns the treebank does not attest.
+  Separately, a ``-μα`` noun whose paradigm shows the third-declension dental (``-ματ-``)
+  stem, a genitive in ``-ματος``/``-ματων``, is filled ``neut`` (the ``-ματ-`` neuter class,
+  Smyth §215).
 
 * **Forms carry metrical breve/macron length marks** (``ᾰ``/``ᾱ``, prosodic notation absent
   from real polytonic text). They are stripped with the project's established normalization
@@ -79,6 +91,28 @@ _CASE_MAP = {"NOM": "nom", "GEN": "gen", "DAT": "dat", "ACC": "acc", "VOC": "voc
 _NUMBER_MAP = {"SG": "sg", "PL": "pl", "DU": "du"}
 _GENDER_MAP = {"MASC": "masc", "FEM": "fem", "NEUT": "neut"}
 
+# Canonical feminine second-declension (-ος) nouns (Smyth §230 N.): they take the article
+# ``ἡ`` though the ending looks masculine, and UniMorph's Wiktionary annotation ships several
+# with a wrong masculine ``ὁ``. Pinned feminine as the backstop for the lemma the attested
+# treebank cross-check cannot vote on (see `resolve_noun_gender`). Each verified against LSJ:
+# ἡ ὁδός (road), ἡ νῆσος (island), ἡ νόσος (disease), ἡ ψῆφος (pebble/vote), ἡ δοκός (beam),
+# ἡ κιβωτός (chest/ark), ἡ γνάθος (jaw), ἡ ῥάβδος (rod), ἡ ἄμπελος (vine), ἡ βάσανος
+# (touchstone), ἡ βίβλος (book), ἡ παρθένος (maiden), ἡ ἔρημος (desert, as substantive),
+# ἡ τροφός (nurse). Applied only to NOUN lemmas (an ``-ος`` two-termination adjective keeps
+# its explicit UniMorph gender tag).
+_FEM_OS_NOUNS = frozenset(
+    unicodedata.normalize("NFC", w)
+    for w in (
+        "ὁδός", "νῆσος", "νόσος", "ψῆφος", "δοκός", "κιβωτός", "γνάθος", "ῥάβδος",
+        "ἄμπελος", "βάσανος", "βίβλος", "παρθένος", "ἔρημος", "τροφός",
+    )
+)
+
+# The genitive of a third-declension dental (-ματ-) neuter (πνεῦμα → πνεύματος). The diagnostic
+# of the -ματ- neuter class (Smyth §215), matched accent-blind (the accent shifts, the stem does
+# not).
+_MA_GEN_ENDINGS = ("ματος", "ματων")
+
 # --- length-mark stripping (the two metrical combining marks only) ------------
 _MACRON = "̄"
 _BREVE = "̆"
@@ -97,6 +131,13 @@ def _fold(tok: str) -> str:
     """Article-match key: length-stripped, grave→acute (running-text notation), lower NFC."""
     nfd = unicodedata.normalize("NFD", strip_length(tok)).replace(_GRAVE, _ACUTE)
     return unicodedata.normalize("NFC", nfd).lower()
+
+
+def strip_accents(s: str) -> str:
+    """Accent/breathing-stripped, length-stripped, NFC. For structural ending tests where the
+    accent shifts across a paradigm (``ἀπόφθεγμα`` → ``ἀποφθέγματος``) but the stem does not."""
+    nfd = unicodedata.normalize("NFD", strip_length(s))
+    return unicodedata.normalize("NFC", "".join(c for c in nfd if not unicodedata.combining(c)))
 
 
 # --- the definite article (Attic + the Doric/epic forms present in UniMorph grc) ----
@@ -213,14 +254,85 @@ def read_rows(grc_file: Path) -> list[tuple[str, str, str]]:
     return rows
 
 
-def build_index(rows: list[tuple[str, str, str]]) -> dict[str, list[dict[str, str]]]:
+def agdt_gender_map(
+    lexicon: dict[str, list[dict[str, str]]],
+) -> dict[str, tuple[str, int]]:
+    """The attested NOUN gender per lemma from an AGDT-shaped form→analyses lexicon.
+
+    Returns ``{lemma (NFC): (majority_gender, winning_vote_count)}``, counting every gendered
+    NOUN analysis as one vote for its lemma. Only a lemma with a **strict plurality** gender is
+    included; a tie carries no attested majority and is omitted. Order-independent, so the map
+    is reproducible from the (commit-pinned) treebank lexicon."""
+    votes: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    for entries in lexicon.values():
+        for e in entries:
+            if e.get("pos") == "NOUN" and "gender" in e and "lemma" in e:
+                votes[unicodedata.normalize("NFC", e["lemma"])][e["gender"]] += 1
+    out: dict[str, tuple[str, int]] = {}
+    for lemma, counter in votes.items():
+        ranked = counter.most_common()
+        if len(ranked) == 1 or ranked[0][1] > ranked[1][1]:
+            out[lemma] = (ranked[0][0], ranked[0][1])
+    return out
+
+
+def is_ma_neuter(lemma: str, forms: dict[tuple[str, str], set[str]]) -> bool:
+    """Whether a ``-μα`` lemma is a third-declension dental (-ματ-) neuter.
+
+    True when the lemma ends ``-μα`` and its paradigm shows the dental stem, a genitive in
+    ``-ματος``/``-ματων`` (Smyth §215). ``forms`` maps ``(case, number)`` to the lemma's form
+    keys. The dental genitive is the class diagnostic, so this never fires on a non-neuter
+    ``-μα`` word (there is none in the class)."""
+    if not lemma.endswith("μα"):
+        return False
+    gens = forms.get(("gen", "sg"), set()) | forms.get(("gen", "pl"), set())
+    return any(strip_accents(g).endswith(_MA_GEN_ENDINGS) for g in gens)
+
+
+def resolve_noun_gender(
+    lemma: str,
+    article_gender: str | None,
+    attested: dict[str, tuple[str, int]],
+    ma_neuter: bool,
+) -> str | None:
+    """The lexical gender for a noun lemma, reconciling the UniMorph article with attested and
+    structural evidence.
+
+    Precedence: (1) a dental ``-μα`` neuter is ``neut`` (structural, always correct for the
+    class); (2) the attested treebank gender overrides a conflicting article only with two or
+    more supporting tokens, or fills an absent article gender with a single token (an isolated
+    treebank token is too weak to overturn UniMorph's own article signal); (3) the curated
+    feminine ``-ος`` backstop; (4) the article gender (possibly ``None``)."""
+    if ma_neuter:
+        return "neut"
+    att = attested.get(lemma)
+    if att is not None:
+        gender, count = att
+        if article_gender is None or gender == article_gender or count >= 2:
+            return gender
+    if lemma in _FEM_OS_NOUNS:
+        return "fem"
+    return article_gender
+
+
+def build_index(
+    rows: list[tuple[str, str, str]],
+    *,
+    attested: dict[str, tuple[str, int]] | None = None,
+) -> dict[str, list[dict[str, str]]]:
     """Assemble the ``{form: [analysis, ...]}`` index (AGDT record shape) from the TSV rows.
 
-    Two passes: first harvest each noun-lemma's gender from its articles (a noun's gender is
-    constant across its paradigm, so the votes are unioned per lemma and resolved to the sole
-    unambiguous gender, else left unset); then emit every cleaned form key → analysis."""
+    Two passes: first harvest each noun-lemma's article gender and form paradigm; then resolve
+    each noun's lexical gender through `resolve_noun_gender` (article, cross-checked against the
+    ``attested`` treebank gender map from `agdt_gender_map`, plus the structural ``-μα`` and
+    curated feminine ``-ος`` guards) and emit every cleaned form key → analysis. ``attested``
+    defaults to empty, which reproduces the article-only behaviour."""
+    attested = attested or {}
     parsed: list[tuple[str, str, str, str, str | None, list[str]]] = []
     lemma_gender_votes: dict[str, set[str]] = collections.defaultdict(set)
+    lemma_forms: dict[str, dict[tuple[str, str], set[str]]] = collections.defaultdict(
+        lambda: collections.defaultdict(set)
+    )
     for lemma_raw, form_raw, feat_raw in rows:
         pos, case, number, tag_gender = parse_features(feat_raw)
         lemma = clean_lemma(lemma_raw)
@@ -229,11 +341,17 @@ def build_index(rows: list[tuple[str, str, str]]) -> dict[str, list[dict[str, st
             continue
         if pos == "NOUN":
             lemma_gender_votes[lemma] |= art_genders
+            for key in keys:
+                lemma_forms[lemma][(case, number)].add(key)
         parsed.append((lemma, pos, case, number, tag_gender, keys))
 
     noun_gender: dict[str, str | None] = {}
-    for lemma, votes in lemma_gender_votes.items():
-        noun_gender[lemma] = next(iter(votes)) if len(votes) == 1 else None
+    for lemma in set(lemma_gender_votes) | set(lemma_forms):
+        votes = lemma_gender_votes.get(lemma, set())
+        article_gender = next(iter(votes)) if len(votes) == 1 else None
+        noun_gender[lemma] = resolve_noun_gender(
+            lemma, article_gender, attested, is_ma_neuter(lemma, lemma_forms[lemma])
+        )
 
     index: dict[str, list[dict[str, str]]] = {}
     for lemma, pos, case, number, tag_gender, keys in parsed:
@@ -246,6 +364,24 @@ def build_index(rows: list[tuple[str, str, str]]) -> dict[str, list[dict[str, st
             if analysis not in bucket:
                 bucket.append(analysis)
     return {k: index[k] for k in sorted(index)}
+
+
+def load_attested_genders(lexicon_path: str | None) -> dict[str, tuple[str, int]]:
+    """The attested NOUN gender map (`agdt_gender_map`) from the AGDT treebank lexicon.
+
+    With ``lexicon_path`` given, reads that JSON (a specific build or a test fixture, no
+    network). Otherwise builds/loads the commit-pinned AGDT lexicon via
+    `aegean.greek.treebank.build_lexicon` (cached after first use) and parses it. Both paths
+    are deterministic, so the resulting map is reproducible."""
+    if lexicon_path:
+        lexicon = json.loads(Path(lexicon_path).read_text(encoding="utf-8"))
+    else:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+        from aegean.greek import treebank
+
+        lex_path = treebank.build_lexicon()
+        lexicon = json.loads(Path(lex_path).read_text(encoding="utf-8"))
+    return agdt_gender_map(lexicon)
 
 
 def clone_or_reuse(source: str | None, clone_dir: Path) -> Path:
@@ -267,6 +403,12 @@ def main() -> int:
     ap.add_argument("source", nargs="?", help="path to an existing unimorph/grc clone")
     ap.add_argument("-o", "--output", default="grc-paradigms.json.gz")
     ap.add_argument("--clone-dir", default="", help="where to clone when no source is given")
+    ap.add_argument(
+        "--agdt-lexicon",
+        default="",
+        help="path to an AGDT treebank lexicon JSON for the attested-gender cross-check "
+        "(default: build/load the commit-pinned one via aegean.greek.treebank)",
+    )
     args = ap.parse_args()
 
     clone_dir = Path(args.clone_dir) if args.clone_dir else Path(tempfile.gettempdir()) / "unimorph-grc"
@@ -275,9 +417,11 @@ def main() -> int:
         ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True
     ).stdout.strip()
 
+    attested = load_attested_genders(args.agdt_lexicon or None)
+    print(f"attested noun genders (AGDT cross-check): {len(attested)} lemmas")
     rows = read_rows(repo / "grc")
     print(f"read {len(rows)} TSV rows from {repo / 'grc'} (commit {commit or 'unknown'})")
-    index = build_index(rows)
+    index = build_index(rows, attested=attested)
 
     out = Path(args.output)
     payload = json.dumps(index, ensure_ascii=False, separators=(",", ":"), sort_keys=True)

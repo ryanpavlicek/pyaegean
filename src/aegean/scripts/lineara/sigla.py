@@ -250,24 +250,31 @@ def parse_database_js(text: str) -> dict[str, Any]:
 # ── the SigLA editorial apparatus (loader-side decoding) ─────────────────────
 # SigLA's transcription carries editorial-certainty markers that map onto the
 # package's `ReadingStatus`. Interpretation verified against SigLA's own help
-# (https://sigla.phis.me/help) and Salgarella 2020, and aligned with the bundled
-# GORILA Linear A loader (``lineara/loader.py``), which decodes the same marks:
-#   ?      a sign of doubtful reading — SigLA help: "traces of a sign are visible,
-#          but the sign cannot be recognised" → UNCLEAR
+# (https://sigla.phis.me/help) and Salgarella 2020:
+#   ?      an unreadable sign. SigLA help glosses "unreadable" as "no reading
+#          because of breakage (sign incomplete)" → UNCLEAR
 #   [ ]    standard epigraphic break/lacuna brackets (``]x`` a left break, ``x[`` a
-#          right break, ``[?]`` a sign lost in a lacuna) → UNCLEAR, matching the
-#          bundled GORILA loader, which reads ``[`` / ``]`` / ``?`` as UNCLEAR too
+#          right break) → UNCLEAR. A ``[?]`` never stands alone in the corpus
+#          (0 tokens): it is always a lost COMPONENT inside an otherwise-read
+#          complex sign (e.g. ``*16+[?]+*50``), so the surviving components are
+#          kept and only the lost slot is dropped from ``signs``
 #   *?     an in-word sign SigLA recorded but left unresolved (a ``blank``
 #          attestation): present but unread → UNCLEAR; it is kept in the word TEXT
 #          to mark the position, but is not a real syllabogram so it is dropped
-#          from ``signs``
+#          from ``signs``. This blank (``*?``), not ``[?]``, is the standalone
+#          no-reading case
 # The other symbols SigLA uses (``+`` ``|`` ``||`` ``(`` ``)`` ``{`` ``}``) are its
 # complex-sign DECOMPOSITION notation (Salgarella 2020, 54-59), not editorial
-# certainty — left untouched in both the token text and its sign labels. SigLA
-# does not editorially supply lost text, so its apparatus yields only CERTAIN and
-# UNCLEAR (never RESTORED/LOST): a lost, unread sign surfaces as ``[?]`` or a
-# blank, both UNCLEAR. Anything not securely interpretable stays the conservative
-# UNCLEAR, never a silent CERTAIN.
+# certainty: left untouched in both the token text and its sign labels.
+# SigLA has no lacuna/gap category of its own; it collapses lost and merely
+# uncertain signs into a single unreadable/blank bucket, which this loader
+# conservatively maps to UNCLEAR rather than guessing LOST. Its apparatus
+# therefore yields only CERTAIN and UNCLEAR (never RESTORED/LOST). This
+# deliberately diverges from the bundled GORILA loader (``lineara/loader.py``),
+# which maps the upstream wholly-illegible placeholder (U+1076B) to LOST: the two
+# editions use incompatible apparatus, so their status decodings are not aligned.
+# Anything not securely interpretable stays the conservative UNCLEAR, never a
+# silent CERTAIN.
 _APPARATUS = "?[]"        # editorial-uncertainty markers → ReadingStatus.UNCLEAR
 _BLANK_SIGN = "*?"        # an unresolved in-word sign position (from a ``blank``)
 

@@ -11,10 +11,14 @@ analysis surface already offers have Cypriot counterparts here:
   broken down by the editorial reading status of each word.
 
 Both are observational: they count what the bundled Inscriptiones Graecae XV 1
-edition and the shipped sign table / lexicon contain. The Greek-reading lexicon
-is deliberately small (only securely-established equations); low bridge coverage
-is a fact about the lexicon's conservative scope, not the legibility of the
-corpus. Neither function adds sign values or lexicon entries.
+edition and the shipped sign table / lexicon contain. IG XV 1 records Cypriot-
+syllabary inscriptions whose language is mostly, but not exclusively, Greek: it
+includes Eteocypriot and language-undetermined material (the Amathus texts, for
+example), and much of the Greek content is onomastic (personal names). The Greek-
+reading lexicon is deliberately small (only securely-established equations), so
+low bridge coverage is a joint fact about the lexicon's conservative scope and the
+corpus's language composition, not a measure of the corpus's legibility. Neither
+function adds sign values or lexicon entries.
 """
 
 from __future__ import annotations
@@ -184,10 +188,12 @@ def bridge_coverage(corpus: Any = None) -> BridgeCoverage:
     resolve, split by the token's editorial reading status. ``corpus`` defaults to
     the bundled Cypriot corpus.
 
-    Coverage is bounded by the deliberately small, securely-attested lexicon (this
-    reports its reach; it does not extend it). Read the number as "share of the
-    corpus the shipped lexicon already equates to Greek", not as a legibility or
-    decipherment rate."""
+    Coverage is bounded by two things: the deliberately small, securely-attested
+    lexicon (this reports its reach; it does not extend it), and the corpus's own
+    language composition, since IG XV 1 mixes Greek with Eteocypriot and language-
+    undetermined material and is heavily onomastic. Read the number as "share of the
+    corpus the shipped lexicon already equates to Greek", a joint fact about lexicon
+    scope and corpus language content, not as a legibility or decipherment rate."""
     corpus = _cypriot_corpus(corpus)
     words = _word_tokens(corpus)
 

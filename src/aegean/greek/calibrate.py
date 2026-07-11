@@ -59,9 +59,10 @@ __all__ = [
 # The two model heads pyaegean calibrates and surfaces a confidence for.
 HEADS = ("upos", "lemma")
 
-# The bundled default calibration, dropped into the wheel alongside the other small
-# JSON data (code + JSON wheel rule). Not shipped yet: `use_calibration()` with no
-# argument raises a clear "not shipped" error until the integrator lands the measured file.
+# The bundled default calibration, shipped in the wheel alongside the other small JSON
+# data (code + JSON wheel rule): src/aegean/data/bundled/greek/calibration.json.
+# `use_calibration()` with no argument loads it; `UncalibratedConfidenceError` fires only
+# when confidence is requested and this file cannot be loaded (a missing/corrupt install).
 _BUNDLED_PARTS = ("greek", "calibration.json")
 
 
@@ -335,16 +336,21 @@ _ACTIVE: Calibration | None = None
 def _load_bundled() -> Calibration:
     from ..data import load_bundled_json
 
+    # The bundled calibration ships (see _BUNDLED_PARTS). A missing file (a broken
+    # install) OR a present-but-corrupt/partial one (truncated JSON, a temperature head
+    # dropped) must fail loudly with actionable guidance, never leak a raw
+    # JSONDecodeError/ValueError, and never fall back to an uncalibrated softmax.
     try:
         d = load_bundled_json(*_BUNDLED_PARTS)
-    except FileNotFoundError as e:
+        return Calibration.from_dict(d)
+    except (FileNotFoundError, json.JSONDecodeError, ValueError, KeyError) as e:
         raise UncalibratedConfidenceError(
-            "no bundled calibration is shipped yet — fit one with "
+            "the bundled calibration could not be loaded "
+            f"({type(e).__name__}: {e}); reinstall pyaegean, or fit one with "
             "training/calibrate_temperature.py and pass its JSON to "
-            "use_calibration(path), or pass a Calibration object. The project will not "
+            "use_calibration(path) (or pass a Calibration object). The project will not "
             "surface an uncalibrated softmax."
         ) from e
-    return Calibration.from_dict(d)
 
 
 def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" = None) -> Calibration:
@@ -352,8 +358,9 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
     calibrated confidence.
 
     ``source`` is a `Calibration`, a path to a JSON file (`save`'s format), a `to_dict`
-    mapping, or ``None`` for the bundled default (which raises `UncalibratedConfidenceError`
-    until a measured calibration is shipped). Returns the loaded `Calibration`."""
+    mapping, or ``None`` for the bundled default calibration (shipped in the wheel). The
+    no-arg form raises `UncalibratedConfidenceError` only when that file cannot be loaded
+    (a missing or corrupt install), never a raw softmax. Returns the loaded `Calibration`."""
     global _ACTIVE
     if source is None:
         cal = _load_bundled()

@@ -175,11 +175,6 @@ def _has_corrections(row: Mapping[str, str | None]) -> bool:
     return any(_cell(row, col) for col, _pred, _key in _CORRECTIONS)
 
 
-def _split_reviewers(value: str) -> list[str]:
-    """The individual reviewer names in a (possibly comma-joined) ``reviewer`` cell."""
-    return [name.strip() for name in value.split(",") if name.strip()]
-
-
 def _morph_key(annotations: dict[str, str]) -> str:
     """The annotation key a morphology correction belongs under: the key that supplied the
     displayed prediction (``morph`` for NT Robinson, ``feats`` for UD), defaulting to ``morph``."""
@@ -227,6 +222,7 @@ def _apply_corrections(
     label: str,
     default_reviewer: str = "",
     note_extra: str = "",
+    reviewers: tuple[str, ...] | None = None,
 ) -> "Corpus":
     """Land ``corrections`` onto ``corpus``, returning a NEW corpus (the input is not mutated).
 
@@ -236,7 +232,13 @@ def _apply_corrections(
     and a correction whose row matches no token likewise raises. Each corrected field keeps the
     machine value under ``<field>__pred`` and the token is stamped ``review_status="corrected"``
     plus ``reviewed_by`` (from the row's ``reviewer`` cell, or ``default_reviewer``). The shared
-    apply core behind both the single-reviewer and the merged paths."""
+    apply core behind both the single-reviewer and the merged paths.
+
+    ``reviewers`` carries the structured set of contributing reviewers for the provenance
+    attribution (the merged path passes `MergedReview.reviewers`). It is used verbatim rather
+    than re-derived from a joined ``reviewer`` cell, so a reviewer name that itself contains a
+    comma (``"Smith, John"``) is credited as one person, not split. When ``None`` (the
+    single-reviewer path), each row's ``reviewer`` cell is one identity and is credited whole."""
     corrected = 0
     mismatched: list[str] = []
     applied_keys: set[tuple[str, int]] = set()
@@ -277,8 +279,13 @@ def _apply_corrections(
             edits["review_status"] = "corrected"
             who = _cell(crow, "reviewer") or default_reviewer
             if who:
+                # `who` is the display attribution kept verbatim (a merged cell may join
+                # several reviewers, and one name may itself contain a comma). When the
+                # structured `reviewers` set is not supplied, this is the single-reviewer
+                # path where the whole cell is one identity — credit it whole, never split.
                 edits["reviewed_by"] = who
-                applied_reviewers.update(_split_reviewers(who))
+                if reviewers is None:
+                    applied_reviewers.add(who)
             note = _cell(crow, "reviewer_note")
             if note:
                 edits["review_note"] = note
@@ -308,6 +315,10 @@ def _apply_corrections(
     if prov is not None and corrected:  # a no-op apply leaves provenance untouched
         if default_reviewer:
             who_text = f" by {default_reviewer}"
+        elif reviewers:
+            # the structured set (merged path): joined for display, but each element is a
+            # whole reviewer identity, so a comma-bearing name stays intact
+            who_text = f" by {', '.join(reviewers)}"
         elif applied_reviewers:
             who_text = f" by {', '.join(sorted(applied_reviewers))}"
         else:
@@ -605,5 +616,6 @@ def apply_merged(merged: MergedReview, corpus: "Corpus") -> "Corpus":
             corrections[(row.get("doc_id") or "", int(pos))] = row
     note_extra = f" (merged from {len(merged.source_paths)} review tables)"
     return _apply_corrections(
-        corrections, corpus, label="the merged review table", note_extra=note_extra
+        corrections, corpus, label="the merged review table", note_extra=note_extra,
+        reviewers=merged.reviewers,
     )

@@ -25,10 +25,12 @@ documentary-Koine generalization number.
 from __future__ import annotations
 
 import gzip
+import hashlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..data import cache_dir, fetch
+from .._atomic import atomic_path
+from ..data import DataNotAvailableError, cache_dir, fetch
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -38,22 +40,65 @@ __all__ = ["evaluate_on_papygreek", "papygreek_path"]
 _ASSET = "papygreek-fold"
 _CACHE_SUBDIR = "papygreek-grc"
 _FOLD_NAME = "papygreek-test.conllu"
+# The fold decompresses to ~1.3 MB. This cap is comfortably above that (documentary
+# folds could grow) and far below what would OOM: it guards a decompression bomb served
+# through a ``PYAEGEAN_PAPYGREEK_FOLD_URL`` override that disables the sha256 pin.
+_MAX_FOLD_BYTES = 256 * 1024 * 1024
+
+
+def _decompress_fold(gz: Path, *, max_bytes: int = _MAX_FOLD_BYTES) -> str:
+    """Decompress the gzipped fold to text, capping the decompressed size.
+
+    The asset is sha256-pinned when fetched from the project release, but a
+    ``PYAEGEAN_PAPYGREEK_FOLD_URL`` override disables that check, so a swapped mirror could
+    serve a tiny gzip that inflates to gigabytes. Decompress in chunks and stop with a clear
+    error past ``max_bytes`` instead of reading the whole stream blindly (mirrors
+    `aegean.data.load_gzip_json`)."""
+    buf = bytearray()
+    with gzip.open(gz, "rb") as fin:
+        while True:
+            chunk = fin.read(1 << 20)
+            if not chunk:
+                break
+            buf += chunk
+            if len(buf) > max_bytes:
+                raise DataNotAvailableError(
+                    f"{gz} decompresses to more than {max_bytes} bytes; refusing to load it "
+                    "(a possible decompression bomb from an unverified mirror)"
+                )
+    return buf.decode("utf-8")
 
 
 def papygreek_path(*, download: bool = True) -> Path:
     """The cached CoNLL-U path of the PapyGreek fold, fetched + decompressed on first use.
 
     The release asset is a gzipped CoNLL-U file (``papygreek-fold``); this fetches it (sha256
-    pinned) and decompresses it once to a stable cache path. CC BY-SA 4.0 — cached for
-    evaluation only, never bundled."""
+    pinned), decompresses it with a size cap, and writes it to a stable cache path. The write
+    is atomic (temp file + ``os.replace``), so an interrupted decompress never leaves a
+    truncated ``.conllu`` behind. A ``.sha256`` stamp sidecar records which archive the
+    decompressed copy came from, so a re-pinned fold (a ``-v2`` asset) re-decompresses instead
+    of serving the stale copy forever; a missing stamp re-decompresses too (the fold is ~1.3 MB,
+    so unlike the heavy extract archives there is no legacy-trust carve-out). CC BY-SA 4.0 —
+    cached for evaluation only, never bundled."""
     dest = cache_dir() / _CACHE_SUBDIR / _FOLD_NAME
-    if dest.exists() or not download:
+    stamp = dest.with_name(dest.name + ".sha256")
+    if not download:
         return dest
     gz = fetch(_ASSET)
-    with gzip.open(gz, "rt", encoding="utf-8") as fin:
-        text = fin.read()
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(text, encoding="utf-8")
+    gz_sha = hashlib.sha256(gz.read_bytes()).hexdigest()
+    if dest.exists() and stamp.exists():
+        try:
+            if stamp.read_text(encoding="ascii").strip() == gz_sha:
+                return dest
+        except (OSError, UnicodeDecodeError):
+            pass  # unreadable stamp: fall through to a fresh decompress
+    text = _decompress_fold(gz)
+    with atomic_path(dest) as tmp:
+        tmp.write_text(text, encoding="utf-8")
+    # written after dest: an interruption between the two leaves a missing stamp, which
+    # re-decompresses on the next call rather than trusting an unverified copy
+    with atomic_path(stamp) as tmp:
+        tmp.write_text(gz_sha, encoding="ascii")
     return dest
 
 

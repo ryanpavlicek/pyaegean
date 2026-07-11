@@ -4,6 +4,116 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.39.0 (2026-07-11)
+
+The correctness-and-fidelity release: nine data assets rebuilt against their
+sources, the paradigm backend made honest on ambiguous forms, and a wide set of
+fixes across the export, visualization, and data-management surfaces.
+
+### Fixed
+- **The paradigm backend no longer serves arbitrary picks as grounded lemmas.**
+  With `use_paradigms()` active, a form matching more than one distinct paradigm
+  lemma (φωτός is the genitive of both φώς and φῶς), or a capitalized surface
+  (Πέτρος is not the common noun πέτρος), now falls through as an honest miss
+  instead of a confident wrong answer, and the nominal table is consulted only
+  where the guarded ending rules do not already resolve the form (so ἔχει stays
+  the verb ἔχω, never the noun ἔχις). Paradigm hits report their own evidence
+  class, `LemmaSource.PARADIGM` (previously folded into `seed`), and
+  `greek explain` names the UniMorph table. Re-measured on the full NT: the
+  backend's lift is now 66.98% → 71.21% (was 71.96%), trading 0.75 accuracy
+  points to cut confidently-wrong grounded lemmas from 742 to 218 and
+  wrong-where-the-baseline-was-right from 420 to 10.
+- **`grc-paradigms` rebuilt (v2)** with a gender cross-check: noun genders are
+  now validated against attested treebank data plus a curated feminine
+  second-declension list (Smyth §230 N.), fixing the textbook feminines the
+  UniMorph source mislabels (ἡ δοκός, ἡ κιβωτός, ἡ ψῆφος, ἡ γνάθος) and filling
+  unambiguous -μα neuters: 4,338 gender cells corrected or filled across 284
+  lemmas.
+- **The Autenrieth index rebuilt (v2)**: lemma keys and headwords now derive from
+  each entry's own `<orth>` Beta Code behind a well-formed-Greek gate, recovering
+  22 core Homeric headwords the malformed Perseus key attributes had made
+  unreachable (δῆμος, δηλέομαι, δημοβόρος, δήν, δηρός, ἐύξεστος, …) and giving
+  δῆλος "clear" back its own entry beside the island Δῆλος; the vowel-quantity
+  placeholder no longer corrupts 82 definition bodies; both Autenrieth homographs
+  of δέω merge under one reachable entry; Greek inside citations converts. 9,660
+  lemmas.
+- **The SigLA corpus rebuilt (v3)**: the homophone signs AB76 RA₂, AB29 PU₂, and
+  AB66 TA₂ are now decoded from SigLA's own transliteration pairs instead of
+  collapsing onto plain RA/PU/TA (64 attestations; HT 1 reads QE-RA₂-U, agreeing
+  with GORILA and the bundled corpus). Apparatus statuses unchanged; the loader's
+  apparatus note now states SigLA's actual reading categories.
+- **Five epigraphy corpora rebuilt** to fix apparatus-handling defects in the
+  extraction: EDH (v3) no longer bakes `#`-joined parallel word-forms into token
+  text (132 tokens across 81 inscriptions now carry one reading with the variants
+  as alternates), and isicily / iip / iospe / igcyr (v3) no longer fuse both
+  members of a TEI `<choice>` into one garbled token — the preferred member is
+  kept (expansion over regularization over correction, the same policy the DDbDP
+  extractor has always used), correcting 725 documents across the four corpora
+  and tightening reading statuses the discarded member had wrongly inflated.
+- **The PapyGreek fold rebuilt (v2)**: five gold lemma cells carrying PapyGreek's
+  internal numeral-value annotation (`β|num:2|`) reduce to the plain letter-numeral
+  reading; the registry lemma cell moves 86.11 → 86.13 (+5 tokens, every other
+  metric byte-identical). The fold's decompressed cache now records which archive
+  it came from, so a re-pinned fold re-extracts instead of silently serving the
+  old gold, and the extraction is atomic.
+- **`viz.parse_period` reads cross-era and abbreviated dates correctly**: each
+  side of a range now parses its own era, so "27 BC - 14 AD" spans the epoch
+  instead of collapsing to a BCE range, "5th cent. BCE" is a century rather than
+  the year 5, and Roman-numeral century ranges ("II-III century C.E.") span both
+  centuries — 904 shipped documents' chronologies corrected, with no previously
+  parsed string lost.
+- **`analysis.seriate` is now deterministic and input-order-invariant**: the
+  ordering comes from the Fiedler eigenvector of the similarity Laplacian
+  (a pure-Python Jacobi eigensolver) with a canonical direction, so any
+  permutation of the same assemblages recovers the same sequence up to the
+  documented reversal; the old power iteration could return a different, wrong
+  ordering depending on input order.
+- **GEXF export is readable by networkx again**: `analysis.graph.to_gexf` writes
+  the 1.2draft namespace both networkx and Gephi accept (the 1.3 namespace made
+  `networkx.read_gexf` reject every export).
+- **Geo aggregation collapses whitespace variants of one site**:
+  `geo.to_geodataframe(level="site")` and `geo.word_distribution` aggregate by
+  the normalized gazetteer key and emit the canonical site label (line-split
+  spellings previously produced duplicate rows at identical coordinates), and
+  `viz.plot_findspots` resolves through the same index so its counts agree.
+- **`analysis.hands.dossiers` requires a Linear B corpus**: running it against
+  another script's corpus invented archival series from unrelated designations
+  ("IG XV 1" is not a series); it now raises a clear error, and the hands/dossier
+  docstrings state that hand counts are editorial attribution strings, not a
+  census of scribes.
+- **Versioned cache entries are now managed disk**: `aegean data list` counts
+  `name@version` entries fetched via `--version`, `data remove NAME` reclaims
+  them, and `data remove NAME --version v1` removes one pinned version
+  surgically (previously they were invisible and unremovable).
+- **RDF export hardening**: an unusable `base_uri` (a space or control character)
+  raises a clear error instead of producing a JSON-LD document that silently
+  drops every node; a Trismegistos subject is minted only from a note that is
+  exactly a TM identifier (never from prose that mentions one); DDbDP subjects
+  use the `http://papyri.info/ddbdp/…` scheme papyri.info's own linked data uses
+  (the https form was a distinct RDF node co-referring with nothing); a corrupt
+  cached DDbDP URI map degrades to Trismegistos subjects with a warning instead
+  of raising.
+- **Citations deduplicate comma-list references**: loading a work with a
+  duplicated passage reference no longer repeats it in `cite()`.
+- **Reviewer names containing commas survive the review merge**: merged
+  provenance credits "Smith, John" as one reviewer, not two.
+- **A corrupt or partial bundled calibration file** raises the calibrated-
+  confidence error with reinstall guidance instead of leaking a JSON traceback,
+  and the docs now state precisely which lemmas carry a calibrated confidence:
+  the neural pipeline's calibrated lemma confidence covers its full composition
+  including the internal training-form lookup (that inclusion is the calibration
+  target); lemmas resolved by an offline lexicon backend carry none.
+- **Benchmark prose corrections**: the PapyGreek section now discloses that
+  scoring is on the regularized spelling layer and gives the full exclusion
+  accounting (1,696 of 4,557 sentences kept, with the manifest published), and
+  the PROIEL decomposition names its quantities correctly (36.5 is the total LAS
+  gap; 19.0, the label-only component, is the UAS-to-LAS gap).
+
+### Added
+- `greek.LemmaSource.PARADIGM`, `ParadigmLexicon.lemma_options` (the distinct
+  lemma set for a form), `aegean.data.versioned_bytes` /
+  `aegean.data.versioned_entry_paths`, and `aegean data remove --version`.
+
 ## 0.38.0 (2026-07-11)
 
 The research-workflow release: collaborate on corrections, pin exact data versions,
@@ -128,8 +238,11 @@ Calibrated confidence for the neural pipeline: a number you can trust, or no num
   calibration is an error, not a fallback. The calibration is fitted on the UD Perseus
   dev fold only and its quality is measured: expected calibration error 1.11% (UPOS)
   and 6.29% (lemma) on the test fold, protocol and caveats in the Benchmarks pages.
-  Lemmas resolved by a lexicon lookup carry no model confidence; their evidence class
-  (`attested`/`seed`) speaks for them. New public API: `use_calibration`,
+  Lemmas resolved by an offline lexicon backend carry no model confidence; their
+  evidence class (`attested`/`seed`) speaks for them. Within the neural pipeline the
+  calibrated lemma confidence covers the model's full composition, including its
+  internal training-form lookup: that inclusion is what the calibration is fitted
+  on. New public API: `use_calibration`,
   `disable_calibration`, `Calibration`, `fit_temperature`, `ece`,
   `temperature_softmax`, `top1_confidence`, `UncalibratedConfidenceError`; the fitting
   and measurement protocol ships as `training/calibrate_temperature.py` with its

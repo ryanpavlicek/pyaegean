@@ -48,17 +48,30 @@ _RECOVERED_V1 = {
 @pytest.mark.parametrize(("name", "sha"), sorted(_RECOVERED_V1.items()))
 def test_shipped_history_carries_the_real_recovered_v1_sha(name: str, sha: str) -> None:
     pins = data.historical_versions(name)
-    assert [p.version for p in pins] == ["v1"]
-    pin = pins[0]
-    assert pin.sha256 == sha  # the actual published v1 checksum, not invented
-    assert len(pin.sha256) == 64 and pin.superseded == "v2"
-    assert pin.url.endswith(f"{name}-v1/{name}.json") or pin.url.endswith(f"{name}-v1/{name}.tar.gz")
-    # a superseded pin must differ from the current pin it replaced
-    assert pin.sha256 != data._REMOTE[name].sha256
+    v1 = next(p for p in pins if p.version == "v1")
+    assert v1.sha256 == sha  # the actual published v1 checksum, not invented
+    assert len(v1.sha256) == 64 and v1.superseded == "v2"
+    assert v1.url.endswith(f"{name}-v1/{name}.json") or v1.url.endswith(f"{name}-v1/{name}.tar.gz")
+    # every kept pin must differ from the current pin, and versions are newest-first
+    for pin in pins:
+        assert pin.sha256 != data._REMOTE[name].sha256
+    assert [p.version for p in pins] == sorted(
+        (p.version for p in pins), key=lambda v: int(v[1:]), reverse=True
+    )
 
 
-def test_only_the_six_epigraphy_corpora_have_kept_history() -> None:
-    assert set(data._REMOTE_HISTORY) == set(_RECOVERED_V1)
+# Datasets whose superseded releases stay hosted: the six 0.29.0-era epigraphy corpora
+# (v1 recovered) plus the assets rebuilt in the 0.39.0 fidelity pass.
+_KEPT_HISTORY = set(_RECOVERED_V1) | {
+    "sigla-corpus",
+    "papygreek-fold",
+    "autenrieth-index",
+    "grc-paradigms",
+}
+
+
+def test_exactly_the_superseded_assets_have_kept_history() -> None:
+    assert set(data._REMOTE_HISTORY) == _KEPT_HISTORY
     # a dataset without history reports an empty list, and available_versions is current-only
     assert data.historical_versions("nt-corpus") == []
     avail = data.available_versions("nt-corpus")
@@ -67,14 +80,15 @@ def test_only_the_six_epigraphy_corpora_have_kept_history() -> None:
 
 def test_ddbdp_history_is_an_extract_archive_the_others_json() -> None:
     assert data.historical_versions("ddbdp-corpus")[0].extract is True
-    assert data.historical_versions("isicily-corpus")[0].extract is False
+    assert all(p.extract is False for p in data.historical_versions("isicily-corpus"))
 
 
-def test_available_versions_lists_current_first_then_history() -> None:
+def test_available_versions_lists_current_first_then_history_newest_first() -> None:
     versions = data.available_versions("isicily-corpus")
-    assert [v["version"] for v in versions] == ["v2", "v1"]
-    assert versions[0]["current"] is True and versions[1]["current"] is False
-    assert versions[1]["superseded"] == "v2"
+    assert [v["version"] for v in versions] == ["v3", "v2", "v1"]
+    assert versions[0]["current"] is True
+    assert all(v["current"] is False for v in versions[1:])
+    assert versions[1]["superseded"] == "v3" and versions[2]["superseded"] == "v2"
 
 
 # ── (B) version resolution + fetch mechanics (file:// mocks) ─────────────────────
@@ -332,8 +346,8 @@ def test_cli_data_versions_lists_the_historical_pin_json() -> None:
     assert res.exit_code == 0, res.output
     manifest = json.loads(res.output)
     hist = manifest["fetched"]["isicily-corpus"]["history"]
-    assert hist and hist[0]["version"] == "v1"
-    assert hist[0]["sha256"] == _RECOVERED_V1["isicily-corpus"]
+    assert [h["version"] for h in hist] == ["v2", "v1"]
+    assert hist[-1]["sha256"] == _RECOVERED_V1["isicily-corpus"]
 
 
 def test_cli_data_versions_table_shows_a_versioned_row() -> None:

@@ -105,7 +105,7 @@ Each `TokenRecord` is a dataclass with these fields:
 | `text` | the surface token (punctuation included) |
 | `upos` | UD coarse part of speech |
 | `lemma` | the lemma |
-| `lemma_source` | the lemma's evidence class: `attested` (treebank), `neural`, `rule`, `seed`, `identity` (model returned the surface unchanged), `unresolved` (baseline miss), or `punct` |
+| `lemma_source` | the lemma's evidence class: `attested` (treebank), `neural`, `rule`, `seed`, `paradigm` (opt-in UniMorph inflection tables, `use_paradigms()`), `identity` (model returned the surface unchanged), `unresolved` (baseline miss), or `punct` |
 | `lemma_known` | derived: `False` for an `identity` fall-through or an `unresolved` miss (a lemma to verify), `True` otherwise |
 | `head` | head token index (only when parsed) |
 | `relation` | dependency relation (only when parsed) |
@@ -183,9 +183,12 @@ predictions: `greek.use_calibration()` loads the shipped calibration, then
 probabilities are deliberately not exposed), with the calibration quality measured as
 expected calibration error: UPOS 1.11% and lemma 6.29% on the UD Perseus test fold
 (protocol, table, and caveats in [Benchmarks](Benchmarks#calibrated-confidence)).
-Lemmas resolved by a lexicon lookup carry no model confidence — their evidence class
-(`attested`/`seed`) speaks for them — and the calibration is fitted on literary
-prose, so the genre boundary on the accuracy numbers applies to the confidence too.
+Lemmas resolved by an offline lexicon backend carry no model confidence: their
+evidence class (`attested`/`seed`) speaks for them. Within the neural pipeline the
+calibrated lemma confidence deliberately covers the model's full lemma composition,
+including its internal training-form lookup: composed-lemma correctness is exactly
+what the calibration was fitted on. The calibration is fitted on literary prose, so
+the genre boundary on the accuracy numbers applies to the confidence too.
 
 ### GPU execution and batching
 
@@ -1098,6 +1101,7 @@ The hosted dictionaries:
 | `lsj` | Liddell-Scott-Jones | classical (full) |
 | `middle-liddell` | An Intermediate Greek-English Lexicon | classical (concise) |
 | `cunliffe` | A Lexicon of the Homeric Dialect | Homeric |
+| `autenrieth` | A Homeric Dictionary (Autenrieth) | Homeric |
 | `abbott-smith` | A Manual Greek Lexicon of the New Testament | Koine / NT |
 | `dodson` | Dodson Greek Lexicon | Koine / NT (bundled) |
 
@@ -1105,7 +1109,7 @@ Each (except the bundled Dodson) is fetched to your cache on first use and built
 lemma→entry index, never bundled: sources and licenses are in
 [Data & Provenance](Data-and-Provenance).
 
-**Dictionaries pyaegean cannot host** (Autenrieth, Slater, Montanari, DGE, Bailly, …) are
+**Dictionaries pyaegean cannot host** (Slater, Montanari, DGE, Bailly, …) are
 reachable as deep-links. `greek.lexicon_link(word)` builds a
 [Logeion](https://logeion.uchicago.edu/) URL (or Perseus, with `service="perseus"`),
 lemmatizing the word first; Logeion aggregates all of those dictionaries.

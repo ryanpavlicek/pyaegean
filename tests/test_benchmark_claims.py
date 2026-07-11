@@ -86,7 +86,7 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
 
 def test_papygreek_row_matches_registry_and_evidence() -> None:
     claims = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/papygreek-eval-2026-07-11.json"))
+    ev = json.loads(_read("training/results/papygreek-eval-v2-2026-07-11.json"))
     res = ev["results_full_precision"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
         assert claims[metric] == round(res[metric] * 100, 2), metric
@@ -225,7 +225,7 @@ def test_limitations_offline_lemma_claim_matches_the_registry() -> None:
     lift = f"{claims['with_paradigms']:.2f}%"
     assert lift in text
     assert lift in _read("wiki/Benchmarks.md")
-    ev = json.loads(_read("training/results/paradigms-lift-2026-07-11.json"))
+    ev = json.loads(_read("training/results/paradigms-guards-2026-07-11.json"))
     assert round(ev["results"]["with_paradigms_lemma"] * 100, 2) == claims["with_paradigms"]
     assert round(ev["results"]["baseline_lemma"] * 100, 2) == claims["lemma"]
 

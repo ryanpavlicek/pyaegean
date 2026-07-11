@@ -393,17 +393,25 @@ def plot_findspots(corpus: Any, *, backend: str = "matplotlib", ax: Any = None) 
     labelled with its site name and count.
 
     Coordinates come from the bundled site gazetteer (:func:`aegean.geo.site_coordinates`,
-    stdlib — no ``[geo]`` extra needed to plot). Sites absent from the gazetteer are
-    dropped; if *no* site maps, the corpus has nothing to place and a clear
-    ``ValueError`` is raised (the CLI turns it into a one-line message)."""
+    stdlib — no ``[geo]`` extra needed to plot). Find-site labels are resolved through the
+    same whitespace-normalized index :mod:`aegean.geo` uses, so the plot's site and
+    inscription counts agree with :func:`aegean.geo.to_geodataframe` (a label split across
+    lines still maps, and raw-label variants of one gazetteer site aggregate into one
+    point). Sites absent from the gazetteer are dropped; if *no* site maps, the corpus has
+    nothing to place and a clear ``ValueError`` is raised (the CLI turns it into a one-line
+    message)."""
     _check_backend(backend)
-    from .geo import site_coordinates
+    from .geo import _resolve_site, _site_index, site_coordinates
 
-    coords = site_coordinates()
-    counts = Counter(d.meta.site for d in _documents(corpus) if d.meta.site in coords)
+    index = _site_index(site_coordinates())
+    counts: Counter[Any] = Counter()
+    for d in _documents(corpus):
+        sc = _resolve_site(index, d.meta.site)
+        if sc is not None:
+            counts[sc] += 1
     if not counts:
         raise ValueError("no find-sites in this corpus map to the bundled gazetteer")
-    rows = [(coords[s].name, coords[s].lon, coords[s].lat, n) for s, n in counts.most_common()]
+    rows = [(sc.name, sc.lon, sc.lat, n) for sc, n in counts.most_common()]
     n_max = max(r[3] for r in rows)
     total = sum(r[3] for r in rows)
     title = f"find-sites ({len(rows)} sites, {total} inscriptions)"
@@ -443,11 +451,15 @@ def _findspots_plotly(rows: list[tuple[str, float, float, int]], n_max: int, tit
 # ── timeline over parsed dates ────────────────────────────────────────────────
 #
 # origDate-style metadata (``meta.period``) is free text — "Third century BC", "480—450
-# BCE", "II century C.E", "201 AD – 300 AD", "Hellenistic". parse_period() is a best-effort
-# reader: explicit year ranges and centuries (English words, digit ordinals, Roman numerals,
-# the isicily "C3" abbreviation), with BC/BCE/до-н.э → negative years and AD/CE → positive.
-# What it can't read is never silently dropped — it is counted and surfaced as the unparsed
-# fraction on the plot and in the returned Timeline.
+# BCE", "II century C.E", "201 AD – 300 AD", "27 BC – 14 AD", "5th cent. BCE", "Hellenistic".
+# parse_period() is a best-effort reader: explicit year ranges and centuries (English words,
+# digit ordinals, Roman numerals, the "cent."/"c." abbreviations, the isicily "C3" form),
+# with BC/BCE/до-н.э → negative years and AD/CE → positive. A range is split into sides and
+# each side is read on its own era and century intent, so a cross-era span ("27 BC - 14 AD")
+# keeps both signs; a side missing an era or the "century" word inherits it from the other
+# side (the epigraphic shorthand in "100-90 BC" and "II-III century CE"). What it can't read
+# is never silently dropped — it is counted and surfaced as the unparsed fraction on the plot
+# and in the returned Timeline.
 
 _WORD_ORDINALS = {
     "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6, "seventh": 7,
@@ -488,45 +500,70 @@ _FRACTION_RE = re.compile(
     r"\b(?:first|second|third|fourth|fifth|last|\d+(?:st|nd|rd|th))\s+(?:half|quarter|third)\b"
 )
 
+# The most negative century a value may name (a guard so a stray Roman-letter word or a plain
+# year read in century mode cannot inject an implausible value).
+_MAX_CENTURY = 21
 
-def _centuries(t: str) -> set[int]:
-    # Drop "<ordinal> half/quarter/third" phrases so "second half of fourth century" reads as
-    # the 4th century, not the 2nd–4th. The century is kept whole (best-effort binning).
-    t = _FRACTION_RE.sub(" ", t)
+# A range delimiter between two date expressions. En/em dash, the words "to"/"or", a slash
+# that is not between two digits (so "bc/ad" splits but the within-side "15/14" does not), and
+# a hyphen not followed by a Cyrillic letter (so the range "bc-ad" splits but the Russian
+# ordinal suffix in "1-я" does not).
+_RANGE_RE = re.compile(r"—|–|\bto\b|\bor\b|(?<!\d)/(?!\d)|-(?![а-яё])")
+
+
+def _split_sides(t: str) -> list[str]:
+    """Split a lowercased date string into at most two sides at the first range delimiter."""
+    parts = [p.strip() for p in _RANGE_RE.split(t, maxsplit=1)]
+    sides = [p for p in parts if p]
+    return sides or [t]
+
+
+def _has_century(s: str) -> bool:
+    """Whether a side names a century: the word/abbreviation "century"/"cent."/"cent", or the
+    isicily "C3" form (a bare "c." is left to circa, never read as a century)."""
+    return bool(re.search(r"\bcent", s)) or bool(re.search(r"\bc\d", s))
+
+
+def _century_numbers(s: str, *, bare: bool) -> set[int]:
+    """The century numbers a side names (best-effort, capped to a plausible range).
+
+    Reads word ordinals ("third"), digit ordinals ("3rd"), the isicily "C3" form, and a
+    Roman numeral or plain integer standing before a "century"/"cent." word. ``bare=True`` (a
+    range side that inherits century intent from the other side but carries no "century" word
+    of its own, e.g. "II" in "II-III century CE") additionally reads a lone Roman numeral as
+    the century; a lone plain integer is left alone, since it is more often a stray year or an
+    ordinal fragment (the "2" of a Russian "2-я пол."). "<ordinal> half/quarter/third" phrases
+    are dropped so "second half of fourth century" reads as the 4th century, kept whole."""
+    s = _FRACTION_RE.sub(" ", s)
     nums: set[int] = set()
     for word, n in _WORD_ORDINALS.items():
-        if re.search(rf"\b{word}\b", t):
+        if re.search(rf"\b{word}\b", s):
             nums.add(n)
-    for m in re.finditer(r"\b(\d+)(?:st|nd|rd|th)\b", t):
+    for m in re.finditer(r"\b(\d+)(?:st|nd|rd|th)\b", s):
         nums.add(int(m.group(1)))
-    for m in re.finditer(r"\bc(\d+)\b", t):  # isicily "C3 AD" century abbreviation
+    for m in re.finditer(r"\bc(\d+)\b", s):  # isicily "C3 AD" century abbreviation
         nums.add(int(m.group(1)))
-    # Roman numeral immediately before "century" ("III century", "IVth century"). Capped to a
-    # plausible century so an all-Roman-letter English word ("mid", "c" from a following "C.E")
-    # can't inject a spurious value; era markers follow the century word, never precede it.
-    for m in re.finditer(r"\b([ivxlcdm]+)(?:th)?\s+centur", t):
+    # Roman numeral or plain integer immediately before a "century"/"cent." word.
+    for m in re.finditer(r"\b([ivxlcdm]+)(?:th)?\s+cent", s):
         r = _roman_to_int(m.group(1))
-        if r is not None and 1 <= r <= 21:
+        if r is not None and 1 <= r <= _MAX_CENTURY:
             nums.add(r)
+    for m in re.finditer(r"\b(\d+)(?:st|nd|rd|th)?\s+cent", s):
+        v = int(m.group(1))
+        if 1 <= v <= _MAX_CENTURY:
+            nums.add(v)
+    if bare:
+        for m in re.finditer(r"\b([ivxlcdm]+)\b", s):
+            r = _roman_to_int(m.group(1))
+            if r is not None and 1 <= r <= _MAX_CENTURY:
+                nums.add(r)
     return nums
 
 
-def parse_period(text: str) -> tuple[int, int] | None:
-    """Best-effort parse of an origDate-style date string to a ``(start, end)`` year range,
-    BCE years negative and CE positive (e.g. ``"480—450 BCE"`` → ``(-480, -450)``,
-    ``"Third century BC"`` → ``(-300, -201)``, ``"II century C.E"`` → ``(101, 200)``).
-
-    Returns ``None`` when the string carries no readable century or era-qualified year
-    (a bare "Hellenistic" or "" is honestly unparseable, not guessed). Half/quarter and
-    hedge qualifiers ("Second half of", "Perhaps", "Ca.") are ignored — the whole century
-    is returned. This is a heuristic for aggregate binning, not a dating authority."""
-    if not text:
-        return None
-    t = text.lower()
-    era = _era(t)
-    is_century = ("centur" in t) or bool(re.search(r"\bc\d", t))
+def _side_range(s: str, era: int | None, is_century: bool, *, bare: bool) -> tuple[int, int] | None:
+    """One side of a date string as a ``(start, end)`` year range (or ``None`` if unreadable)."""
     if is_century:
-        cents = _centuries(t)
+        cents = _century_numbers(s, bare=bare)
         if not cents or era is None:
             return None
         n_lo, n_hi = min(cents), max(cents)
@@ -535,13 +572,46 @@ def parse_period(text: str) -> tuple[int, int] | None:
         return ((n_lo - 1) * 100 + 1, n_hi * 100)
     if era is None:
         return None
-    years = [int(m) for m in re.findall(r"\d+", t)]
+    years = [int(m) for m in re.findall(r"\d+", s)]
     if not years:
         return None
     lo_y, hi_y = min(years), max(years)
     if era < 0:
         return (-hi_y, -lo_y)
     return (lo_y, hi_y)
+
+
+def parse_period(text: str) -> tuple[int, int] | None:
+    """Best-effort parse of an origDate-style date string to a ``(start, end)`` year range,
+    BCE years negative and CE positive (e.g. ``"480—450 BCE"`` → ``(-480, -450)``,
+    ``"Third century BC"`` → ``(-300, -201)``, ``"II century C.E"`` → ``(101, 200)``,
+    ``"27 BC - 14 AD"`` → ``(-27, 14)``, ``"II-III century CE"`` → ``(101, 300)``).
+
+    A range is split into sides and each side is read on its own era and century intent, so a
+    cross-era span keeps both signs; a side missing an era or the "century" word inherits it
+    from the other side ("100-90 BC", "II-III century CE"). Returns ``None`` when the string
+    carries no readable century or era-qualified year (a bare "Hellenistic" or "" is honestly
+    unparseable, not guessed). Half/quarter and hedge qualifiers ("Second half of", "Perhaps",
+    "Ca.") are ignored, and the whole century is returned. This is a heuristic for aggregate
+    binning, not a dating authority."""
+    if not text:
+        return None
+    t = text.lower()
+    sides = _split_sides(t)
+    if len(sides) == 1:
+        s = sides[0]
+        return _side_range(s, _era(s), _has_century(s), bare=False)
+    s0, s1 = sides[0], sides[1]
+    era0, era1 = _era(s0), _era(s1)
+    cent0_own, cent1_own = _has_century(s0), _has_century(s1)
+    # A side's own era/century intent wins; a side missing one inherits from the other side.
+    cent0, cent1 = cent0_own or cent1_own, cent1_own or cent0_own
+    r0 = _side_range(s0, era0 if era0 is not None else era1, cent0, bare=cent0 and not cent0_own)
+    r1 = _side_range(s1, era1 if era1 is not None else era0, cent1, bare=cent1 and not cent1_own)
+    ranges = [r for r in (r0, r1) if r is not None]
+    if not ranges:
+        return None
+    return (min(r[0] for r in ranges), max(r[1] for r in ranges))
 
 
 @dataclass(frozen=True)

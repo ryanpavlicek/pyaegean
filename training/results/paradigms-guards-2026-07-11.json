@@ -1,0 +1,26 @@
+{
+  "what": "Re-measured lift of the opt-in UniMorph paradigm backend (use_paradigms) on the offline NT lemma protocol, after the honesty guards and the gender-corrected v2 asset.",
+  "date": "2026-07-11",
+  "protocol": "no other backends active; greek.lemmatize per token via evaluate_on_nt scoring (the registry offline_nt_lemma protocol) with use_paradigms() toggled; asset grc-paradigms-v2 fetched sha-verified",
+  "supersedes": "paradigms-lift-2026-07-11.json (the pre-guard measurement: with_paradigms 0.7196 with 742 paradigm-sourced wrong lemmas served as grounded)",
+  "guards": {
+    "capitalized_surface": "the paradigm tier is skipped for capitalized surfaces (the table is lowercase common vocabulary; the rule layer preserves surface capitalization)",
+    "intra_table_ambiguity": "a form mapping to more than one distinct lemma in the table returns no pick (honest miss over an arbitrary first-entry choice)",
+    "rule_first_ordering": "the paradigm tier is consulted only where the guarded ending rules do not recover, so the nominal table cannot shadow the thematic-verb readings",
+    "evidence_class": "paradigm hits report LemmaSource.PARADIGM (previously folded into SEED)"
+  },
+  "results": {
+    "baseline_lemma": 0.6698,
+    "with_paradigms_lemma": 0.7121,
+    "n_tokens": 137303,
+    "newly_right_vs_baseline": 5812,
+    "newly_wrong_vs_baseline": 10,
+    "paradigm_sourced_wrong_served_grounded": 218,
+    "pre_guard_comparison": "the shipped 0.37.0 behavior measured 0.7196 but served 742 paradigm-sourced wrong lemmas as grounded no-review answers (420 newly wrong vs baseline); the guards trade 0.75 accuracy points for removing 524 of those confidently-wrong lemmas and cutting newly-wrong from 420 to 10"
+  },
+  "asset": {
+    "name": "grc-paradigms",
+    "sha256": "be68b4ec83509864c2533da2aedb8faf8a1b22b985c46c49d7379ef943a7fd27",
+    "source": "UniMorph grc, CC BY-SA 3.0, commit 7f4a58df733726c75c1355dd3a038e950d5e308f; gender cells cross-checked against the AGDT treebank lexicon (Perseus commit pinned in greek/treebank.py) plus a curated feminine second-declension list (Smyth 230 N.)"
+  }
+}
