@@ -106,8 +106,11 @@ def test_neural_sessions_share_the_provider_resolver():
         assert "_ort.resolve_providers()" in src, mod.__name__
         # a literal provider list at a constructor is exactly the drift being guarded
         assert '["CPUExecutionProvider"]' not in src, mod.__name__
-    # the joint session resolves inline; the lemmatizer resolves once for both sessions
-    assert "providers=_ort.resolve_providers()" in inspect.getsource(joint)
+    # each module resolves once, ahead of the wrapped session construction (so a bad
+    # PYAEGEAN_ORT_PROVIDERS surfaces its own ValueError, not the corrupt-model message)
+    joint_src = inspect.getsource(joint)
+    assert "providers = _ort.resolve_providers()" in joint_src
+    assert "providers=providers" in joint_src
     lem_src = inspect.getsource(neural_lemmatizer)
     assert "prov = _ort.resolve_providers()" in lem_src
     assert lem_src.count("providers=prov") == 2

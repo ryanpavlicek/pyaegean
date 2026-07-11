@@ -92,6 +92,7 @@ from .joint import (
 )
 from .annotate import annotate_corpus
 from .coverage import MissingForm, missing_forms
+from .explain import TokenExplanation, explain_pipeline, render_explanations
 from .profile import TextProfile, profile_text
 from .erroranalysis import (
     ErrorAnalysis,
@@ -278,8 +279,11 @@ __all__ = [
     "annotate_corpus",
     "missing_forms",
     "MissingForm",
+    "explain_pipeline",
     "profile_text",
+    "render_explanations",
     "TextProfile",
+    "TokenExplanation",
     "proiel_error_analysis",
     "nt_error_analysis",
     "ud_error_analysis",

@@ -362,7 +362,23 @@ def run_query(
     Convenience over `eval_query` for the common whole-corpus case. The result
     carries the corpus's provenance and a filter summary, so it is citable
     via `QueryResults.cite`.
+
+    Raises `TypeError` if ``filters`` is not a sequence of `FilterRow` (e.g. a
+    bare ``"field=value"`` string), and `ValueError` naming `FIELDS` if a row's
+    ``field`` is not a known query field. This is the one shared guard behind
+    `Corpus.query`; the CLI `aegean query` and MCP ``query_corpus`` wrappers
+    validate the same way before reaching here.
     """
+    for f in filters:
+        if not isinstance(f, FilterRow):
+            raise TypeError(
+                "query filters must be a sequence of aegean.analysis.FilterRow, got "
+                f"{type(f).__name__}; e.g. [FilterRow(field='word-prefix', value='KU')]"
+            )
+        if f.field not in FIELDS:
+            raise ValueError(
+                f"unknown query field {f.field!r}; fields: {', '.join(FIELDS)}"
+            )
     documents = list(corpus)
     # The co-occurrence map is quadratic-ish in per-document vocabulary and is only read
     # by the word-cooccurs-with predicate, so build it only when a filter needs it

@@ -127,9 +127,24 @@ class _JointModel:
         opts.log_severity_level = 3
         # Provider policy lives in one place (_ort.resolve_providers): the published
         # numbers are measured on CPU; a GPU provider is a throughput convenience.
-        self._sess = ort.InferenceSession(
-            str(model_dir / "model.onnx"), opts, providers=_ort.resolve_providers()
-        )
+        # (Resolve providers before the session so a bad PYAEGEAN_ORT_PROVIDERS value
+        # surfaces its own ValueError, not the "model corrupt" message below.)
+        providers = _ort.resolve_providers()
+        model_path = model_dir / "model.onnx"
+        try:
+            self._sess = ort.InferenceSession(str(model_path), opts, providers=providers)
+        except Exception as e:
+            # A corrupt/truncated model.onnx (an interrupted extract, disk corruption, or a
+            # legacy pre-0.29 extract cache that fetch() trusts without re-hashing) makes
+            # onnxruntime raise a bare protobuf/parse error naming nothing actionable — and
+            # it is the largest file in the bundle, so the likeliest to be truncated. Say
+            # what it is and how to re-fetch, mirroring the tokenizer.json wrapper below.
+            raise NeuralPipelineNotLoadedError(
+                f"could not load the joint model at {model_path} (onnxruntime: {e}) — "
+                f"the cached model looks corrupt or incompletely downloaded. Re-fetch it: "
+                f"run `aegean data remove {_DATASET}` and retry, or call "
+                f"use_neural_pipeline(force=True)."
+            ) from e
         try:
             self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
         except Exception as e:
@@ -295,6 +310,25 @@ class _JointModel:
 _ACTIVE: _JointModel | None = None
 
 
+def _require_neural_extra() -> None:
+    """Probe the ``[neural]`` extra BEFORE fetching, so a user who never installed it is
+    told to ``pip install 'pyaegean[neural]'`` rather than to retry a ~173 MB download.
+
+    The same import guard lives in `_JointModel.__init__`, but that runs only after
+    `fetch` succeeds — on a fresh machine with no cached model the missing-extra message
+    would otherwise be unreachable (a missing model would surface as a network/fetch error
+    first). Extra presence is a cheap, purely-local fact, so this check is free."""
+    try:
+        import numpy  # noqa: F401
+        import onnxruntime  # noqa: F401
+        from tokenizers import Tokenizer  # noqa: F401
+    except ModuleNotFoundError as e:
+        raise NeuralPipelineNotLoadedError(
+            "the neural pipeline needs the optional dependencies: "
+            "pip install 'pyaegean[neural]'"
+        ) from e
+
+
 def use_neural_pipeline(*, force: bool = False) -> None:
     """Activate the neural pipeline (tags + morphology + trees + lemmas, one model).
 
@@ -304,10 +338,11 @@ def use_neural_pipeline(*, force: bool = False) -> None:
     `pos_tag`, `aegean.greek.parse` (UD relations), and `aegean.greek.lemmatize`
     all use it; `analyze_sentence` returns the full joint analysis in one call.
 
-    Raises `aegean.data.DataNotAvailableError` if the download fails (set
-    ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror), and
-    `NeuralPipelineNotLoadedError` if the optional dependencies are missing."""
+    Raises `NeuralPipelineNotLoadedError` if the optional dependencies are missing
+    (checked before any download), and `aegean.data.DataNotAvailableError` if the
+    download fails (set ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror)."""
     global _ACTIVE
+    _require_neural_extra()
     model_dir = fetch(_DATASET, force=force)
     _ACTIVE = _JointModel(model_dir)
 

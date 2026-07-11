@@ -22,6 +22,7 @@ from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
 from . import viz  # noqa: F401 — one-line plots (matplotlib lazy/optional, the [viz] extra)
+from ._log import set_verbosity  # opt-in library logging (off by default; stdlib logging)
 from .core import (
     Corpus,
     Document,
@@ -57,6 +58,7 @@ def load(script_id: str) -> Corpus:
 
 
 from .core.resolve import read_corpus  # noqa: E402 — flexible loader (id/work/file/stdin)
+from .core.diagnose import DiagnoseReport, diagnose  # noqa: E402 — corpus health report
 
 
 def combine(corpora: "Iterable[Corpus]", *, dedupe: str = "error") -> Corpus:
@@ -84,9 +86,12 @@ __all__ = [
     "load",
     "read_corpus",
     "combine",
+    "diagnose",
+    "DiagnoseReport",
     "get_script",
     "register",
     "registered_scripts",
+    "set_verbosity",
     "analysis",
     "cache",
     "geo",

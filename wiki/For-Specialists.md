@@ -50,6 +50,7 @@ The bundled corpora are normalized transcriptions (mostly `certain`, with a
 real fraction `lost`/`unclear` where the originals are damaged).
 If you bring your own EpiDoc, these are populated from the markup and round-trip
 back out: see [Linear A](Linear-A) and the I/O notes on [Data & Provenance](Data-and-Provenance).
+The field-by-field tour of these objects, the annotation conventions, and the invariants an extension must hold are on [Data Model](Data-Model).
 
 ```python
 import aegean

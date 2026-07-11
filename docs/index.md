@@ -1,75 +1,113 @@
-# pyaegean API reference
+# pyaegean
 
-`pyaegean` is a specialist Python toolkit for Ancient Greek and the Aegean syllabic
-scripts: alphabetic Greek and Linear A, Linear B, the Cypriot syllabary, and
-Cypro-Minoan. This site is the **API reference**, generated from the source. For guides,
-tutorials, and the per-script handbooks, see the
-**[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**.
+**A specialist Python toolkit for Ancient Greek and the Aegean syllabic scripts**: alphabetic
+Greek (Archaic through Koine) and Linear A, Linear B, the Cypriot syllabary, and Cypro-Minoan,
+in one small, dependency-light library.
 
-## Where to start
+The core installs with zero heavy dependencies and runs offline. Claims are measured, not
+asserted: the opt-in neural pipeline is state of the art on the UD Ancient Greek (Perseus)
+benchmark, measured end-to-end through the shipped package at
+**97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS** on the test fold
+([protocol and tables](benchmarks.md)). Analytical output on the *undeciphered* material
+(Linear A, Cypro-Minoan) is always labeled **exploratory**: leads for a human expert, never
+ground truth.
 
-- [`aegean`](api/aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
-- [`aegean.core`](api/core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
-- [`aegean.greek`](api/greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
-- [`aegean.analysis`](api/analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
-- [`aegean.io`](api/io.md): import your own text (`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) and export to EpiDoc / CSV / Parquet, plus the Linear A Research Workbench round-trip.
-- [`aegean.db`](api/db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
-- [`aegean.mcp_server`](api/mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
+## Quick start (60 seconds)
 
-## Build a corpus from your own text
+```bash
+pip install pyaegean
+```
 
-`aegean.io` also reads: turn a string, a `.txt` file, a folder of texts, or a CSV into a
-real `Corpus` with the full filter/query/analyse/export API. Greek text is run through the
-Greek tokenizer; other scripts split on whitespace. Everything here is offline and
-stdlib-only.
+Load a bundled corpus: 1,721 Linear A inscriptions, offline, no downloads:
 
 ```python
-from aegean import io
+import aegean
 
-corpus = io.from_text("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος", doc_id="iliad")
-print(len(corpus), "document(s),", sum(len(d.words) for d in corpus), "words")
-# 1 document(s), 5 words
+corpus = aegean.load("lineara")
+ht13 = corpus.get("HT13")
+[t.text for t in ht13.tokens][:6]
+# ['KA-U-DE-TA', 'VIN', '𐄁', 'TE', '𐄁', 'RE-ZA']
 ```
 
-From the CLI, `aegean import` writes a corpus you can then analyse like any other:
-
-```console
-$ aegean import myplato.txt -o myplato.json   # --split whole|paragraph|line
-wrote 1 document(s) to myplato.json
-$ aegean stats myplato.json --top 5           # …then any corpus command works
-```
-
-## Find a work to load
-
-`greek.catalog()` is a bundled, offline index of **every** work with a Greek (`-grc`)
-edition in Perseus canonical-greekLit + First1KGreek: 1,778 works, far beyond the 25
-curated `popular_works()`. Each entry's `id` loads directly with `greek.load_work`
-(metadata only: the texts stay fetched-on-demand, never bundled).
+Analyze a Greek sentence, one call, per-token records:
 
 ```python
 from aegean import greek
 
-for w in greek.catalog(author="plato", source="perseus")[:2]:
-    print(w["id"], "—", w["title"])
-# tlg0059.tlg001 — Euthyphro
-# tlg0059.tlg002 — Apology
+[(r.text, r.upos, r.lemma) for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")]
+# [('ἐν', 'ADP', 'ἐν'), ('ἀρχῇ', 'NOUN', 'ἀρχή'), ('ἦν', 'VERB', 'εἰμί'),
+#  ('ὁ', 'DET', 'ὁ'), ('λόγος', 'NOUN', 'λόγος'), ('.', 'PUNCT', '.')]
 ```
 
-```console
-$ aegean greek catalog --author plato --source perseus -n 2
-                       Greek works (36 matches)
-┌────────────────┬────────┬───────────┬────────────────────┬─────────┐
-│ id             │ author │ title     │ greek              │ src     │
-├────────────────┼────────┼───────────┼────────────────────┼─────────┤
-│ tlg0059.tlg001 │ Plato  │ Euthyphro │ Εὐθύφρων           │ perseus │
-│ tlg0059.tlg002 │ Plato  │ Apology   │ Ἀπολογία Σωκράτους │ perseus │
-└────────────────┴────────┴───────────┴────────────────────┴─────────┘
+Read an inscription's editorial apparatus: the bundled Cypriot-syllabary corpus
+(*Inscriptiones Graecae* XV 1) carries a reading status on every word:
+
+```python
+doc = aegean.load("cypriot").get("IG XV 1, 120")
+[(t.text, t.status.name) for t in doc.tokens]
+# [('a-ke-se-to-ro', 'CERTAIN'), ('to', 'CERTAIN'), ('pa-po', 'CERTAIN'),
+#  ('pa-si-le-wo-se', 'RESTORED'), ('ti-mo-ke-re-to-se', 'RESTORED'), ('e-mi', 'RESTORED')]
 ```
 
-```bash
-pip install pyaegean            # core + Linear A + Greek (zero heavy dependencies)
-pip install "pyaegean[all]"     # the data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras
-```
+Everything above runs offline with zero heavy dependencies. Prefer not to install anything?
+The [getting-started notebook](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+runs in Colab, and the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) runs
+the core pipeline client-side.
 
-See the [README](https://github.com/ryanpavlicek/pyaegean#install) for the full extras
-matrix and [Benchmarks](benchmarks.md) for the Greek NLP accuracy numbers and protocol.
+## Find your path
+
+**I'm a classicist analyzing texts.**
+Start with [Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)
+(it assumes no prior programming), then
+[Choosing a Workflow](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Workflow) to
+match your task to a working pattern, and
+[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes) for end-to-end scholarly
+workflows, each ending in a citation.
+[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP) is the full reference
+for the pipeline (scansion, accentuation, IPA, tagging, lemmatization, parsing).
+
+**I work with inscriptions or papyri.**
+[Using Critical Editions](https://github.com/ryanpavlicek/pyaegean/wiki/Using-Critical-Editions)
+covers the six fetchable epigraphic and papyrological corpora (I.Sicily, IIP, IOSPE,
+IGCyr/GVCyr, the EDH Greek subset, and the DDbDP documentary papyri), per-token reading
+statuses, and each corpus's edition-fidelity flag.
+
+**I study the Aegean scripts.**
+[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A) is the per-script
+handbook (Linear B, Cypriot, and Cypro-Minoan have siblings), and
+[Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations) states plainly what
+the undeciphered material can and cannot support.
+
+**I'm an NLP researcher and want the benchmark protocol.**
+[Benchmarks](benchmarks.md) on this site is the canonical evaluation protocol and every
+published number; the wiki
+[Benchmarks](https://github.com/ryanpavlicek/pyaegean/wiki/Benchmarks) page adds the cited
+cross-tool comparison tables, and
+[Choosing a Pipeline](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Pipeline)
+maps material to the right backend.
+
+## Install
+
+The core is zero-dependency; everything heavier is an opt-in extra:
+
+| Install | What it adds |
+|---|---|
+| `pip install pyaegean` | Core + Linear A + Greek (zero heavy dependencies) |
+| `pip install "pyaegean[cli]"` | The `aegean` command line |
+| `pip install "pyaegean[tui]"` | The `aegean tui` full-screen terminal UI |
+| `pip install "pyaegean[neural]"` | The neural Greek pipeline and lemmatizer (onnxruntime; no torch) |
+| `pip install "pyaegean[ai]"` | Anthropic / OpenAI / Grok / Gemini / OpenRouter clients, plus a local no-key option |
+| `pip install "pyaegean[mcp]"` | The `aegean-mcp` Model Context Protocol server (for agents) |
+| `pip install "pyaegean[all]"` | The data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras |
+
+Large assets (corpora, models, lexica) are never bundled: they fetch to a local cache,
+sha256-pinned, only when you opt in.
+
+## On this site
+
+- **[API reference](api/index.md)**: every public module, class, and function, generated
+  from the source.
+- **[Benchmarks](benchmarks.md)**: the measured accuracy numbers and the evaluation
+  protocol behind them.
+- The **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)** holds the guides,
+  tutorials, and per-script handbooks linked above.

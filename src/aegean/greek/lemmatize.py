@@ -28,15 +28,23 @@ Two zero-dependency tiers, tried in order:
    ``-εί`` adverb whose accent sits on the diphthong (``ἀποκριθείς``). The frequent third-declension
    i-stem/s-stem datives and plurals whose ending collides with that verb rule (``πόλει``, ``πίστει``,
    ``δυνάμει``) are seeded to their attested noun lemma, so they resolve correctly rather than
-   fabricating ``*πόλω``.
+   fabricating ``*πόλω``. The contracted second-declension nouns in ``-οῦς`` (``Ἰησοῦς``, ``νοῦς``,
+   ``χοῦς``) are the mirror case on the noun side: their genitive ``-οῦ`` carries the same
+   circumflex as a genuine oxytone ``-ός`` genitive (``Χριστοῦ → Χριστός``, which strips correctly),
+   so the ending alone cannot flag them; their curated stems block the ``-ου → -ος`` strip (an
+   honest miss rather than a fabricated ``*Ἰησός``) and the frequent forms are seeded to the
+   ``-οῦς`` nominative.
 
 This is the seed/rule tier of the cascade: the treebank, neural, and edit-tree backends
 (opt-in) handle the heavier, ambiguous, and irregular work and take precedence when active.
 Forms outside this scope (the ambiguous first-declension ``-η`` series, most third-declension
 stems, augmented past tenses, indeclinables, suppletives) are returned normalized (NFC)
 unchanged, flagged via `lemmatize_verbose`. The rule layer also cannot restore an accent that
-*recedes* between the inflected form and the lemma (``κυρίῳ`` → ``κύριος``, ``δούλοις`` → ``δοῦλος``):
-it preserves the surface stem accent, so those need the opt-in backends.
+*recedes* between the inflected form and the lemma (a proparoxytone whose oblique accent moves to
+the penult, ``δούλοις`` → ``δοῦλος``): it preserves the surface stem accent, so the general class
+needs the opt-in backends. The most frequent such noun, ``κύριος`` (whose genitive ``κυρίου`` the
+rule would render as the mis-accented ``*κυρίος``), has its whole paradigm seeded to the correct
+citation form.
 """
 
 from __future__ import annotations
@@ -223,6 +231,34 @@ _THIRD_DECL: dict[str, str] = {
     "νήστεις": "νῆστις", "πελάγει": "πέλαγος",
 }
 
+# Contracted second-declension nouns in -οῦς (Smyth §237): νοῦς (< νόος), πλοῦς, χοῦς, and the
+# NT proper name Ἰησοῦς, which declines the same way. Their oblique cases carry a circumflex on
+# the ending (gen. -οῦ, acc. -οῦν), but the nominative is -οῦς, NOT the oxytone -ός: an ending
+# rule that strips -οῦ → -ος fabricates a non-word (Ἰησοῦ → *Ἰησός). The circumflex alone cannot
+# flag them — a genuine oxytone -ός genitive (Χριστός → Χριστοῦ, Smyth §163a) carries the SAME
+# perispomenon on -οῦ and DOES strip correctly to -ός — so the citation form is purely lexical and
+# is seeded here. πλόος/πλοῦς is deliberately absent: the Nestle1904 gold lemmatises πλοῦν to the
+# uncontracted πλόος, so a πλοῦς seed would introduce a new mismatch.
+_CONTRACT_2ND: dict[str, str] = {
+    "Ἰησοῦ": "Ἰησοῦς", "Ἰησοῦν": "Ἰησοῦς",
+    "νοῦ": "νοῦς", "νοῦν": "νοῦς",
+    "χοῦν": "χοῦς",
+}
+
+# The accent-receding second-declension noun κύριος (Smyth §163: a proparoxytone whose accent
+# moves to the penult when the ultima is long, κύριος → κυρίου). The rule layer preserves the
+# surface stem accent, so it recovers the mis-accented *κυρίος from the genitive/dative and cannot
+# restore the antepenult of the nominative — the general accent-recession limitation. κύριος is the
+# most frequent noun in the NT and its lemma is lexically certain, so its whole paradigm is seeded
+# to the correct citation form; the broader proparoxytone -ος class (θάνατος, ἄγγελος, …) remains a
+# documented limitation resolved by the opt-in backends. The feminine κυρία and the derivatives
+# κυριότης / κυριακός / κυριεύω have distinct stems and are untouched.
+_RECESSIVE_2ND: dict[str, str] = {
+    "κύριος": "κύριος", "κυρίου": "κύριος", "κυρίῳ": "κύριος", "κύριον": "κύριος",
+    "κύριε": "κύριος", "κύριοι": "κύριος", "κυρίων": "κύριος", "κυρίοις": "κύριος",
+    "κυρίους": "κύριος",
+}
+
 
 @lru_cache(maxsize=1)
 def _lemma_table() -> dict[str, str]:
@@ -231,6 +267,8 @@ def _lemma_table() -> dict[str, str]:
     # robust to input form; the bundled seed extends the closed-class function words.
     table = {_fold_key(k): unicodedata.normalize("NFC", v) for k, v in _FUNCTION_WORDS.items()}
     table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in _THIRD_DECL.items())
+    table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in _CONTRACT_2ND.items())
+    table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in _RECESSIVE_2ND.items())
     table.update((_fold_key(k), unicodedata.normalize("NFC", v)) for k, v in raw.items())
     return table
 
@@ -435,6 +473,14 @@ _MASC_1ST_ES = frozenset({
 })
 _MASC_1ST_ES_STEMS = frozenset(_bare(w)[:-2] for w in _MASC_1ST_ES)
 
+# The bare, accent-blind stems of the contracted -οῦς nouns (nominative minus -ους), so the ending
+# rule blocks the -ου → -ος strip on their genitive (Ἰησοῦ → honest miss, never *Ἰησός) instead of
+# fabricating a non-word. Curated stems only — a genuine oxytone -ός genitive on the same shape
+# (Χριστοῦ → Χριστός) carries the identical circumflex and must still strip, so it is untouched.
+# (Most such stems are single-consonant and already caught by the vowel-less-stem guard; Ἰησοῦς,
+# with a vowelful stem, is the load-bearing case.)
+_CONTRACT_2ND_STEMS = frozenset(_bare(w)[:-3] for w in ("Ἰησοῦς", "νοῦς", "πλοῦς", "χοῦς"))
+
 
 def _ei_strip_unsafe(word: str, bare: str) -> bool:
     """Whether the thematic ``-ει/-εις → -ω`` strip must NOT fire on this form.
@@ -514,6 +560,11 @@ def _rule_lemma(word: str) -> str | None:
             # miss) rather than fabricate *προφήτος (Smyth §227). Curated stems only, so a genuine
             # 2nd-decl -ος genitive on the same shape (πλούτου → πλοῦτος) is untouched.
             and not (ending == "ου" and _bare(word)[:-2] in _MASC_1ST_ES_STEMS)
+            # A contracted -οῦς noun's genitive (Ἰησοῦ) carries a circumflex on the ending like the
+            # oxytone -ός genitive (Χριστοῦ) but yields the -οῦς nominative, not -ός: block the strip
+            # (honest miss) rather than fabricate *Ἰησός (Smyth §237). Curated stems only; the
+            # frequent forms are resolved correctly by the seed table, which is consulted first.
+            and not (ending == "ου" and _bare(word)[:-2] in _CONTRACT_2ND_STEMS)
             and (best is None or len(ending) > best[0])
         ):
             best = (len(ending), citation)

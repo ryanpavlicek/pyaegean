@@ -42,6 +42,7 @@
 
 **Reference**
 - [Architecture](Architecture)
+- [Data Model](Data-Model)
 - [Data & Provenance](Data-and-Provenance)
 - [Using Critical Editions](Using-Critical-Editions)
 - [Citing Computational Assistance](Citing-Computational-Assistance)

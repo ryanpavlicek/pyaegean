@@ -73,9 +73,25 @@ class _NeuralModel:
         opts.log_severity_level = 3  # quiet
         # Provider policy lives in one place (_ort.resolve_providers): the published
         # numbers are measured on CPU; a GPU provider is a throughput convenience.
+        # (Resolve providers before the sessions so a bad PYAEGEAN_ORT_PROVIDERS value
+        # surfaces its own ValueError, not the "model corrupt" message below.)
         prov = _ort.resolve_providers()
-        self._enc = ort.InferenceSession(str(model_dir / "encoder_model.onnx"), opts, providers=prov)
-        self._dec = ort.InferenceSession(str(model_dir / "decoder_model.onnx"), opts, providers=prov)
+        model_path = model_dir / "encoder_model.onnx"
+        try:
+            self._enc = ort.InferenceSession(str(model_path), opts, providers=prov)
+            model_path = model_dir / "decoder_model.onnx"
+            self._dec = ort.InferenceSession(str(model_path), opts, providers=prov)
+        except Exception as e:
+            # A corrupt/truncated encoder or decoder .onnx (an interrupted extract, disk
+            # corruption, or a legacy pre-0.29 extract cache that fetch() trusts without
+            # re-hashing) makes onnxruntime raise a bare parse error naming nothing
+            # actionable; say what it is and how to re-fetch, mirroring the tokenizer wrapper.
+            raise NeuralLemmatizerNotLoadedError(
+                f"could not load the neural lemmatizer model at {model_path} "
+                f"(onnxruntime: {e}) — the cached model looks corrupt or incompletely "
+                f"downloaded. Re-fetch it: run `aegean data remove {_DATASET}` and retry, "
+                f"or call use_neural_lemmatizer(force=True)."
+            ) from e
         self._dec_in = {i.name for i in self._dec.get_inputs()}
         try:
             self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
@@ -117,6 +133,25 @@ class _NeuralModel:
 _ACTIVE: _NeuralModel | None = None
 
 
+def _require_neural_extra() -> None:
+    """Probe the ``[neural]`` extra BEFORE fetching, so a user who never installed it is
+    told to ``pip install 'pyaegean[neural]'`` rather than to retry a download.
+
+    The same import guard lives in `_NeuralModel.__init__`, but that runs only after
+    `fetch` succeeds — on a fresh machine with no cached model the missing-extra message
+    would otherwise be unreachable (a missing model would surface as a network/fetch error
+    first). Extra presence is a cheap, purely-local fact, so this check is free."""
+    try:
+        import numpy  # noqa: F401
+        import onnxruntime  # noqa: F401
+        from tokenizers import Tokenizer  # noqa: F401
+    except ModuleNotFoundError as e:
+        raise NeuralLemmatizerNotLoadedError(
+            "the neural backend needs the optional dependencies: "
+            "pip install 'pyaegean[neural]'"
+        ) from e
+
+
 def use_neural_lemmatizer(*, force: bool = False) -> None:
     """Activate the neural (GreTa seq2seq) lemmatizer.
 
@@ -125,11 +160,13 @@ def use_neural_lemmatizer(*, force: bool = False) -> None:
     ``[neural]`` extra (``pip install 'pyaegean[neural]'``). Best paired with
     `aegean.greek.use_treebank`, whose attested lemmas take precedence for seen forms.
 
-    Raises `aegean.data.DataNotAvailableError` if the model URL is not yet pinned (set
-    ``PYAEGEAN_GRC_LEMMA_NEURAL_URL`` to fetch from your own mirror) or the download fails, and
-    `NeuralLemmatizerNotLoadedError` if the optional dependencies are missing.
+    Raises `NeuralLemmatizerNotLoadedError` if the optional dependencies are missing
+    (checked before any download), and `aegean.data.DataNotAvailableError` if the model URL
+    is not yet pinned (set ``PYAEGEAN_GRC_LEMMA_NEURAL_URL`` to fetch from your own mirror)
+    or the download fails.
     """
     global _ACTIVE
+    _require_neural_extra()
     model_dir = fetch(_DATASET, force=force)
     _ACTIVE = _NeuralModel(model_dir)
 

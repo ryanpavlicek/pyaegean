@@ -22,6 +22,7 @@ it and have the RAM. Cite the DDbDP / papyri.info in academic work.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -36,16 +37,20 @@ def ddbdp_db() -> Path:
     return Path(fetch("ddbdp-corpus")) / "ddbdp.sqlite"
 
 
-def load_ddbdp() -> Any:
+def load_ddbdp(*, progress: Callable[[int, int], None] | None = None) -> Any:
     """Load ALL of DDbDP as an in-memory ``Corpus`` (opt-in, fetched, CC BY 3.0).
 
-    WARNING: 57,331 papyri / ~4.4M tokens — this materialises the entire corpus and costs several GB
-    of RAM. For most work prefer the memory-friendly DB layer: ``aegean.db.search(ddbdp_db(), ...)``
-    for instant full-text search, or ``aegean.db.stream(ddbdp_db())`` for flat-memory iteration.
-    The attribution travels with the corpus provenance; cite the DDbDP (papyri.info)."""
+    WARNING: 57,331 papyri / ~4.4M tokens — this materialises the entire corpus (minutes of
+    work) and costs several GB of RAM. For most work prefer the memory-friendly DB layer:
+    ``aegean.db.search(ddbdp_db(), ...)`` for instant full-text search, or
+    ``aegean.db.stream(ddbdp_db())`` for flat-memory iteration. ``progress`` (optional) is
+    called as ``progress(done, total)`` per materialised document (see
+    ``aegean.db.from_sqlite``), so a long load can show it is moving; the corpus is
+    identical with or without it. The attribution travels with the corpus provenance;
+    cite the DDbDP (papyri.info)."""
     from ...db import from_sqlite
 
-    return from_sqlite(ddbdp_db())
+    return from_sqlite(ddbdp_db(), progress=progress)
 
 
 from ...core.corpus import register_loader  # noqa: E402

@@ -1,4 +1,4 @@
-name: API docs
+name: Docs site
 
 # Builds the API reference site from the package's docstrings + type hints with
 # MkDocs (Material theme + mkdocstrings) and publishes it to GitHub Pages:

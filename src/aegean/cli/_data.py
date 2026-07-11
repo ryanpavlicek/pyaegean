@@ -190,6 +190,58 @@ def list_datasets(json_out: bool = JSON_OPT) -> None:
     )
 
 
+class _FetchProgress:
+    """A TTY-only live line for `aegean data fetch`'s ``progress=`` hook, in the
+    repainted-stderr-line style of ``_db.live_progress``. One repainted line: the
+    download phase reports bytes (rendered as MB, with a percent when the size is
+    known), then an ``extract`` dataset's unpacking reports tar members (rendered as
+    files). The two phases are told apart by ``total`` switching value (a byte size,
+    or -1 when unknown, to a member count). Piped / captured / ``--json`` runs stay
+    clean via the isatty gate; ``close()`` ends a still-open line so a following
+    message starts fresh."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._phase = -1  # -1 = nothing yet; 0 = download (bytes); >=1 = extraction (members)
+        self._last_total: int | None = None
+        self._open = False  # the current line lacks its closing newline
+
+    def __call__(self, done: int, total: int) -> None:
+        if not sys.stderr.isatty():  # piped / captured / --json: stay silent
+            return
+        if self._last_total is None:
+            self._phase = 0
+        elif total != self._last_total:
+            # a phase boundary (bytes -> members): close any dangling line first
+            if self._open:
+                print(file=sys.stderr)
+                self._open = False
+            self._phase += 1
+        self._last_total = total
+        if self._phase == 0:
+            self._paint(f"fetching {self._name}", done, total, unit="MB", scale=1e6)
+        else:
+            self._paint(f"extracting {self._name}", done, total, unit="files", scale=1)
+
+    def _paint(self, label: str, done: int, total: int, *, unit: str, scale: float) -> None:
+        if total > 0:
+            end = "\n" if done >= total else ""
+            if scale == 1:  # counts (tar members): plain integers
+                body = f"{done:,}/{total:,} {unit} ({100 * done // total}%)"
+            else:  # bytes -> MB
+                body = f"{done / scale:.1f}/{total / scale:.1f} {unit} ({100 * done // total}%)"
+            print(f"\r  {label}: {body}", file=sys.stderr, end=end, flush=True)
+            self._open = end == ""
+        elif scale != 1:  # unknown byte total (-1): bytes only, no percent
+            print(f"\r  {label}: {done / scale:.1f} {unit}", file=sys.stderr, end="", flush=True)
+            self._open = True
+
+    def close(self) -> None:
+        if self._open and sys.stderr.isatty():
+            print(file=sys.stderr)  # close the dangling line before the next message
+            self._open = False
+
+
 @data_app.command()
 def fetch(
     name: str = typer.Argument(..., help="Dataset name (see `aegean data list`)."),
@@ -209,12 +261,17 @@ def fetch(
     name = _resolve_name(name)
     if name not in _REMOTE:
         raise fail(_unknown_dataset(name))
+    # A live byte/member line on a real terminal; --json (and piped) runs stay silent.
+    painter = None if json_out else _FetchProgress(name)
     try:
-        path = _fetch(name, force=force)
+        path = _fetch(name, force=force, progress=painter)
     except DataNotAvailableError as exc:  # a known name that cannot be fetched (network, …)
         if name == "linearb-corpus":  # the BYO slot: guide to DAMOS instead of a raw wall
             raise fail(_LINEARB_GUIDANCE) from None
         raise fail(str(exc)) from None
+    finally:
+        if painter is not None:
+            painter.close()  # end any open line before the path / hint prints
     if json_out:
         emit_json({"name": name, "path": str(path), "bytes": _on_disk_bytes(path)})
         return

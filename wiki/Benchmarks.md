@@ -121,8 +121,8 @@ baseline exists for the zero-install path; the neural pipeline carries the accur
 claims. (Perseus: 1,306 sentences / 20,959 words; PROIEL: 1,047 / 13,314.)
 
 On the **full New Testament**, the fully offline lemmatizer (no backends active,
-`greek.lemmatize` per token) scores **66.16%** over 137,303 tokens. This is the
-"~66% on the full NT" figure quoted on [Limitations](Limitations); it is re-measured
+`greek.lemmatize` per token) scores **66.98%** over 137,303 tokens. This is the
+"~67% on the full NT" figure quoted on [Limitations](Limitations); it is re-measured
 by the offline-stack guard because it moves with the code.
 
 ## Held-out generalization (pure-Python backends)

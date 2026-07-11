@@ -15,12 +15,15 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .._log import get_logger
 from .model import Document, DocumentMeta, ReadingStatus, Sign, SignInventory, Token, TokenKind
 from .provenance import SCHEMA_VERSION, Provenance
 
 if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependency on L3 analysis
     from ..analysis.query import FilterRow, Output, QueryResults
+    from .diagnose import DiagnoseReport
 
+_LOG = get_logger("core")
 _LOADERS: dict[str, Callable[[], "Corpus"]] = {}
 
 
@@ -105,13 +108,31 @@ class Corpus:
         Loaders may cache one built instance per process (the bundled corpora do),
         so the result is returned as a `copy`: mutate it freely, and documents
         added, dropped, or edited never leak into later ``load`` calls."""
-        try:
-            fn = _LOADERS[script_id]
-        except KeyError:
-            raise KeyError(
-                f"no registered corpus {script_id!r}; available: {sorted(_LOADERS)}"
-            ) from None
-        return fn().copy()
+        fn = _LOADERS.get(script_id)
+        if fn is None:
+            # Forgive case as a last resort, so ``load("LINEARA")`` finds ``lineara`` —
+            # mirroring read_corpus, so the primary Python entry point behaves like its
+            # flexible sibling rather than raising a bare KeyError.
+            by_fold = {k.casefold(): k for k in _LOADERS}
+            hit = by_fold.get(script_id.casefold())
+            if hit is not None:
+                fn = _LOADERS[hit]
+                script_id = hit
+            else:
+                from .resolve import suggest
+
+                close = suggest(script_id, sorted(_LOADERS), n=2)
+                lead = f"no registered corpus {script_id!r}"
+                if close:
+                    lead += f" — did you mean {' or '.join(repr(m) for m in close)}?"
+                    lead += " available"
+                else:
+                    lead += "; available"
+                raise KeyError(f"{lead}: {sorted(_LOADERS)}") from None
+        _LOG.info("loading corpus %r", script_id)
+        corpus = fn().copy()
+        _LOG.info("loaded corpus %r (%d documents)", script_id, len(corpus))
+        return corpus
 
     # ── access ──────────────────────────────────────────────────────────
     def __len__(self) -> int:
@@ -367,6 +388,19 @@ class Corpus:
         """(word, count) for every lexical word, sorted by descending count."""
         counter: Counter[str] = Counter(self.iter_words())
         return sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
+
+    # ── health report ────────────────────────────────────────────────────
+    def diagnose(self, level: str = "quick") -> "DiagnoseReport":
+        """A descriptive corpus-health report: reading-status profile, provenance /
+        citation completeness, Aegean accounting reconciliation, numeral anomalies,
+        annotation review state, and (``level="full"``) sign-frequency outliers.
+
+        Composes existing public machinery into one `aegean.core.diagnose.DiagnoseReport`
+        (``.print()`` / ``.to_markdown()`` / ``.to_dataframe()``); every check degrades
+        gracefully on a corpus it does not apply to. Descriptive, not a verdict."""
+        from .diagnose import diagnose
+
+        return diagnose(self, level)
 
     # ── interop ─────────────────────────────────────────────────────────
     def to_dataframe(self, level: str = "document"):  # type: ignore[no-untyped-def]

@@ -16,7 +16,7 @@ line is analyzed in one pass; otherwise the zero-dependency lemmatize + POS base
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from .heldout import TagSentence
 
@@ -27,7 +27,11 @@ __all__ = ["annotate_corpus"]
 
 
 def annotate_corpus(
-    corpus: "Corpus", *, tag_sentence: TagSentence | None = None, with_evidence: bool = True
+    corpus: "Corpus",
+    *,
+    tag_sentence: TagSentence | None = None,
+    with_evidence: bool = True,
+    progress: Callable[[int, int], None] | None = None,
 ) -> "Corpus":
     """Return a copy of ``corpus`` with each word token's ``lemma`` / ``upos`` annotations
     filled by the pipeline (and, when ``with_evidence``, ``lemma_source`` / ``lemma_known``).
@@ -35,7 +39,9 @@ def annotate_corpus(
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
-    baseline. Existing annotations on a token are preserved except for the keys written here."""
+    baseline. Existing annotations on a token are preserved except for the keys written here.
+    ``progress`` is called as ``progress(done, total)`` once per document (a large corpus under
+    the neural pipeline is a long run)."""
     from ..core.corpus import Corpus
     from ..core.model import TokenKind
     from . import joint
@@ -49,8 +55,9 @@ def annotate_corpus(
             ann["lemma_source"] = source.value
             ann["lemma_known"] = "false" if needs_review(source) else "true"
 
+    total = len(corpus.documents)
     new_docs = []
-    for doc in corpus.documents:
+    for done, doc in enumerate(corpus.documents, start=1):
         new_tokens = list(doc.tokens)
         groups: dict[int, list[int]] = {}
         for i, tok in enumerate(doc.tokens):
@@ -78,4 +85,6 @@ def annotate_corpus(
                     _evidence(ann, src)
                     new_tokens[i] = replace(doc.tokens[i], annotations=ann)
         new_docs.append(replace(doc, tokens=new_tokens))
+        if progress is not None:
+            progress(done, total)
     return Corpus(new_docs, corpus.sign_inventory, corpus.provenance, corpus.script_id)

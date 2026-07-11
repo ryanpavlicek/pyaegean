@@ -9,7 +9,9 @@ index; load it back in Python with ``Corpus.from_sql(path)`` or stream it with
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -47,6 +49,51 @@ def _resolve_db(path: Path) -> Path:
     return path
 
 
+def live_progress(verb: str) -> Callable[[int, int], None]:
+    """A document-count progress painter for the db read/write hooks (`aegean.db`'s
+    ``progress=``), e.g. ``live_progress("writing")``. Same behavior as the eval live
+    line in ``_greek.py``: one repainted stderr line, TTY-only."""
+
+    def paint(done: int, total: int) -> None:
+        # A single repainted stderr line, TTY-only: piped/captured runs (CI, --json > f)
+        # stay clean, but a scholar building or loading a 57k-document DDbDP-sized
+        # database sees the minutes-long run moving.
+        if not sys.stderr.isatty():
+            return
+        step = max(1, total // 200)
+        if done % step and done != total:
+            return
+        end = "\n" if done == total else ""
+        print(f"\r  {verb} {done:,}/{total:,} documents ({100 * done // total}%)",
+              file=sys.stderr, end=end, flush=True)
+
+    return paint
+
+
+def _load_source(spec: str) -> Any:
+    """Load the corpus behind ``spec`` with a live progress line where one is possible:
+    a DB-backed corpus id (``ddbdp``) or an existing ``.db``/``.sqlite`` file materializes
+    through ``from_sqlite(progress=...)`` (the ~100 s DDbDP load is no longer silent);
+    every other spec resolves through the shared `load_corpus` unchanged."""
+    p = Path(spec)
+    if spec not in _DB_CORPORA and not (
+        p.suffix.lower() in {".db", ".sqlite", ".sqlite3"} and p.exists()
+    ):
+        return load_corpus(spec)
+    try:
+        if spec in _DB_CORPORA:  # a registered id wins over a same-named file (read_corpus rule)
+            from aegean.scripts.greek import ddbdp_db
+
+            target = ddbdp_db()  # fetches + unpacks on first use, like load_corpus would
+        else:
+            target = p
+        from aegean.db import from_sqlite
+
+        return from_sqlite(target, progress=live_progress("loading"))
+    except Exception as exc:  # fetch/parse failure — one clean line, same as load_corpus
+        raise fail(f"could not load corpus {spec!r}: {exc}") from None
+
+
 @db_app.command()
 def build(
     corpus: str = CORPUS_ARG,
@@ -56,9 +103,9 @@ def build(
     """Write a corpus to a SQLite database (documents + tokens, queryable, with FTS5)."""
     from aegean.db import to_sqlite
 
-    c = load_corpus(corpus)
+    c = _load_source(corpus)
     with writing(output):
-        to_sqlite(c, output, fts=not no_fts)
+        to_sqlite(c, output, fts=not no_fts, progress=live_progress("writing"))
     print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
     freqs = c.word_frequencies()
     word = freqs[0][0] if freqs else "<word>"
@@ -80,9 +127,9 @@ def add(
 
     if not output.exists():
         raise fail(f"no database to append to: {output} (create it with `aegean db build`)")
-    c = load_corpus(source)
+    c = _load_source(source)
     with writing(output):
-        to_sqlite(c, output, append=True)
+        to_sqlite(c, output, append=True, progress=live_progress("writing"))
     print(f"added/updated {len(c)} documents in {output}")
 
 

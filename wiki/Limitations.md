@@ -235,7 +235,7 @@ are where the accuracy lives.
 | Baseline (pure-Python, zero deps) | Roughly | Use it for |
 | --- | --- | --- |
 | Rule POS tagger | High precision on **closed classes** only | Quick, offline first pass |
-| Rule-based lemmatizer | ~66% on the full NT (closed-class table with grave-accent folding + regular 2nd-decl/verb rules; the opt-in backends do far better) | Always-offline default |
+| Rule-based lemmatizer | ~67% on the full NT (closed-class table with grave-accent folding + regular 2nd-decl/verb rules; the opt-in backends do far better) | Always-offline default |
 | Edit-tree lemmatizer | ~40% on unseen forms | Offline fallback |
 | Arc-eager parser | ~0.67 UAS (projective) | Offline structural sketch |
 

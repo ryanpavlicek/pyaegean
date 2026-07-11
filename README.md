@@ -9,13 +9,60 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Status: v0.33.0 (beta).** Usable and tested, but the API may still shift before 1.0.
+> **Status: v0.34.0 (beta).** Usable and tested, but the API may still shift before 1.0.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
 > epigraphic apparatus); for edition-grade readings consult GORILA / SigLA.
 
 ---
+
+## Quick start for researchers
+
+Sixty seconds, offline, no accounts:
+
+```bash
+pip install pyaegean
+```
+
+```python
+import aegean
+from aegean import greek
+
+ht13 = aegean.load("lineara").get("HT13")      # a tablet from the bundled 1,721-inscription corpus
+[t.text for t in ht13.tokens][:3]
+# ['KA-U-DE-TA', 'VIN', '𐄁']
+
+[(r.text, r.upos, r.lemma) for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")]
+# [('ἐν','ADP','ἐν'), ('ἀρχῇ','NOUN','ἀρχή'), ('ἦν','VERB','εἰμί'), …]   full analysis, one call
+
+[(t.text, t.status.name) for t in aegean.load("cypriot").get("IG XV 1, 120").tokens]
+# [('a-ke-se-to-ro','CERTAIN'), …, ('e-mi','RESTORED')]   editorial apparatus on every word
+```
+
+More runnable examples are in [Try it](#try-it) below. Then pick your path:
+
+- **Classicist analyzing texts**: [Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)
+  assumes no prior programming; [Choosing a Workflow](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Workflow)
+  matches your task to a working pattern; [Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)
+  are end-to-end scholarly workflows, each ending in a citation;
+  [Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP) is the full pipeline reference.
+- **Epigrapher or papyrologist**: [Using Critical Editions](https://github.com/ryanpavlicek/pyaegean/wiki/Using-Critical-Editions)
+  covers the six fetchable inscription and papyrus corpora, per-token reading statuses, and
+  edition fidelity.
+- **Aegean-script researcher**: [Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)
+  is the per-script handbook (Linear B, Cypriot, and Cypro-Minoan have siblings);
+  [Limitations](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations) states what the
+  undeciphered material can and cannot support.
+- **NLP researcher**: [Benchmarks](https://github.com/ryanpavlicek/pyaegean/wiki/Benchmarks)
+  has the measured numbers, the evaluation protocol, and cited cross-tool comparisons;
+  [docs/benchmarks.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)
+  is the canonical source;
+  [Choosing a Pipeline](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Pipeline)
+  maps material to the right backend.
+
+The **[documentation site](https://ryanpavlicek.github.io/pyaegean/)** pairs this quick start
+with the full API reference.
 
 ## What this is
 
@@ -154,7 +201,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 
 ## Roadmap
 
-Shipped through **v0.33.0**: the script-agnostic core and all four Aegean scripts; the full Greek
+Shipped through **v0.34.0**: the script-agnostic core and all four Aegean scripts; the full Greek
 NLP track (treebank, dependency parser, generalizing tagger and lemmatizer, the neural joint
 pipeline, inflection synthesis, terminology-rarity scoring, dialect/register tags, a benchmark
 harness, and a neutral out-of-AGDT evaluation with a convention-drift breakdown); a **pluggable lexicon
@@ -214,7 +261,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.33.0},
+  version = {0.34.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

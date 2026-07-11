@@ -4,6 +4,68 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.34.0 (2026-07-11)
+
+Finding your way in, and seeing what the tools did: a documentation, diagnostics, and
+explainability release.
+
+### Added
+- **A researcher-facing documentation site.** The project site
+  (<https://ryanpavlicek.github.io/pyaegean/>) now opens with a landing page: a
+  60-second quick start, a find-your-path router by kind of researcher, and the install
+  matrix, with the API reference as a section beside it. The README gained the same
+  quick start for researchers near the top.
+- **Three persona walkthrough notebooks** under `notebooks/`: the epigraphist
+  (inscriptions, apparatus, export, citation), the New Testament reader (gold
+  annotations, glossing, the review loop end to end), and the Aegean researcher (all
+  four scripts, accounting, the honesty framing). Every offline cell executes in CI;
+  heavy cells sit behind the notebooks' one `RUN_HEAVY` switch.
+- **`greek.explain_pipeline(text)`** (CLI: `aegean greek explain`) renders a
+  plain-language account of what the pipeline did to each token — the lemma's evidence
+  class, whether it needs review, and what that class means — derived from the same
+  records `pipeline()` returns, never a re-run. Deliberately class-based: there are no
+  confidence numbers.
+- **`corpus.diagnose()`** (CLI: `aegean doctor corpus <id> [--deep]`) builds a corpus
+  health report: reading-status profile, accounting reconciliation (a discrepancy is
+  reported as a lead, never a verdict), numeral-pattern anomalies, provenance and
+  citation completeness, review state, and (deep) sign-frequency outliers; renders to
+  terminal, Markdown, or a DataFrame for sharing.
+- **Library logging.** `aegean.set_verbosity("info")` (callable or context manager,
+  env `PYAEGEAN_LOG`) turns on stdlib logging of the fetch/load/build journey. Off by
+  default, never logs corpus text, and adds nothing to import time.
+- **Progress everywhere long.** `progress=` callbacks (and TTY live lines on the CLI)
+  now cover the whole-corpus SQLite materialise (`aegean.load("ddbdp")` end to end),
+  `to_sqlite`/append, token-level CSV/Parquet export, corpus annotation, and dataset
+  downloads (byte-level, resume-aware) with archive extraction. Defaults change
+  nothing: every output is byte-identical with the callback off.
+- **A public-API stability gate.** `scripts/check_api.py` diffs the package's public
+  surface (2,200+ names, statically analyzed) against a committed baseline in CI;
+  removing or changing a public signature without its deprecation cycle now fails the
+  build. A new wiki **Data Model** page documents the object hierarchy, annotation
+  conventions, persistence contracts, and extension invariants for advanced users.
+
+### Fixed
+- **The rule lemmatizer no longer fabricates lemmas for contracted `-οῦς` nouns.**
+  Ἰησοῦ was confidently lemmatized to the non-word Ἰησός (and the κύριος paradigm to
+  the mis-accented κυρίος); curated seeds now resolve Ἰησοῦς, νοῦς, χοῦς, and the
+  κύριος family correctly, and the contract-noun genitive can no longer strip to a
+  fabricated form (regular genitives like Χριστοῦ → Χριστός are untouched). Measured
+  on the full Nestle 1904 NT: +1,135 tokens corrected, zero regressions; the offline
+  NT lemma figure moves 66.16 → 66.98 (evidence re-measured through
+  `scripts/check_benchmarks.py`).
+- **Error messages tell you what, where, and what to do next.** An EpiDoc directory
+  import now names the file (not just the directory) a parse error lives in, a missing
+  path says `no such EpiDoc file:` like its siblings, and a source that yields zero
+  documents is an error instead of a cheerful empty corpus. A failed download no
+  longer claims a partial file was kept when nothing was downloaded, and says what is
+  and is not in your local store. `aegean.load` gained the same case-folding and
+  did-you-mean the other entry points had. Activating the neural pipeline without the
+  `[neural]` extra says to install it before any download starts, and a corrupt cached
+  model bundle explains how to re-fetch instead of leaking an onnxruntime traceback.
+  Opening a file that is not a pyaegean corpus database, and querying with an unknown
+  field, both name the problem and the fix at the library level, matching what the CLI
+  already did.
+
 ## 0.33.0 (2026-07-10)
 
 GPU execution and batched inference for the neural backends.

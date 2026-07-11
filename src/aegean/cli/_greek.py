@@ -758,6 +758,37 @@ def pipeline(
     )
 
 
+@greek_app.command()
+def explain(
+    text: str = TEXT_ARG,
+    treebank: bool = TREEBANK_OPT,
+    tagger: bool = TAGGER_OPT,
+    lemmatizer: bool = LEMMATIZER_OPT,
+    neural_lemmatizer: bool = NEURAL_LEMM_OPT,
+    neural: bool = NEURAL_OPT,
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Explain what the pipeline did to each token and why (lemma evidence classes).
+
+    Each row shows the analysis plus the lemma's evidence class (attested / neural /
+    rule / seed / identity / unresolved / punct) and a plain-language note; identity
+    and unresolved rows are flagged for review. Source classes are the honesty
+    surface: there are no confidence numbers (deliberate).
+    """
+    from aegean.greek.explain import explain_pipeline, render_explanations
+
+    _activate(
+        treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
+        neural_lemmatizer=neural_lemmatizer, neural=neural,
+    )
+    explanations = explain_pipeline(read_text(text))
+    rows = [to_plain(e) for e in explanations]  # dataclass → dict, enum → value
+    if emit_result(rows, json_output=json_out, output=output):
+        return
+    print(render_explanations(explanations))
+
+
 def _work_all(
     author: str | None,
     *,

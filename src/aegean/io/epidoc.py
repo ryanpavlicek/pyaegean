@@ -350,16 +350,54 @@ def read_epidoc(source: str | Path, *, script_id: str = "greek") -> list[Documen
     """Parse an EpiDoc TEI file — or a directory of ``*.xml`` files — into Documents.
 
     ``script_id`` labels the result: EpiDoc's ``xml:lang`` can't disambiguate (say) Linear A
-    from Cypro-Minoan, so the caller names the script. Uses the stdlib XML parser only."""
+    from Cypro-Minoan, so the caller names the script. Uses the stdlib XML parser only.
+
+    Raises `FileNotFoundError` if ``source`` does not exist (or a directory holds no
+    ``*.xml`` files), and `ValueError` if nothing in it is EpiDoc (no ``<div type="edition">``
+    or ``<body>`` in the TEI namespace) — rather than silently returning an empty list. A
+    malformed file inside a directory raises an `xml.etree.ElementTree.ParseError` whose
+    message names the offending file, so a single bad inscription in a large corpus folder
+    is identifiable (a directory has no line/column of its own)."""
     import xml.etree.ElementTree as ET
 
     path = Path(source)
-    files = sorted(path.glob("*.xml")) if path.is_dir() else [path]
+    if not path.exists():
+        # Match the friendly not-found message the sibling importers give (from_text_file
+        # "no such text file", from_csv "no such CSV file") instead of leaking a raw
+        # OSError "[Errno 2] No such file or directory" out of ET.parse.
+        raise FileNotFoundError(f"no such EpiDoc file: {path}")
+    is_dir = path.is_dir()
+    files = sorted(path.glob("*.xml")) if is_dir else [path]
+    if is_dir and not files:
+        # Mirror from_text_dir's empty-match error rather than reporting "wrote 0" success.
+        raise FileNotFoundError(f"no *.xml files in {path}")
     out: list[Document] = []
     for f in files:
-        doc = _read_document(ET.parse(str(f)).getroot(), script_id, f.stem)
+        try:
+            root = ET.parse(str(f)).getroot()
+        except ET.ParseError as exc:
+            # Name the offending FILE, not just a line/column. In a directory import the
+            # caller (and the CLI) only knows the folder, and a folder has no "line 4"; a
+            # single bad inscription in a large corpus would otherwise be unfindable. Keep
+            # the parser's position and re-raise as a ParseError so the CLI adds its own
+            # "not well-formed EpiDoc/TEI XML" frame exactly once (don't repeat it here).
+            if is_dir:
+                named = ET.ParseError(f"{f.name}: {exc}")
+                named.code = exc.code
+                named.position = exc.position
+                raise named from None
+            raise
+        doc = _read_document(root, script_id, f.stem)
         if doc is not None:
             out.append(doc)
+    if not out:
+        # The source existed and parsed, but held no recognizable EpiDoc edition — say WHY
+        # and where to look, rather than returning an empty corpus that reads as success.
+        raise ValueError(
+            f"no EpiDoc editions found in {path.name} — expected a "
+            '<div type="edition"> or <body> in the TEI namespace '
+            "(see the Using-Critical-Editions wiki page)"
+        )
     return out
 
 

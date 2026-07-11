@@ -30,6 +30,10 @@ from dataclasses import dataclass
 from importlib.resources import files
 from typing import IO, Any
 
+from .._log import get_logger
+
+_LOG = get_logger("data")
+
 
 class DataNotAvailableError(RuntimeError):
     """Raised when a non-bundled dataset has not been fetched (or can't be)."""
@@ -642,13 +646,55 @@ class FetchAborted(DataNotAvailableError):
     resumes instead of restarting."""
 
 
-def _stream_body(resp: Any, out: IO[bytes], abort: Callable[[], bool] | None = None) -> None:
+class _ProgressCallbackError(Exception):
+    """Internal marker: a user ``progress`` callback raised mid-transfer. It carries
+    the original exception so the download loop can surface it *unwrapped* while
+    keeping the resumable ``.part`` (a broken observer must not look like a network
+    failure that discards the transfer, nor a content error)."""
+
+    def __init__(self, original: BaseException) -> None:
+        super().__init__(str(original))
+        self.original = original
+
+
+def _guard_progress(
+    progress: Callable[[int, int], None] | None,
+) -> Callable[[int, int], None] | None:
+    """Wrap a user progress callback so any exception it raises becomes a
+    `_ProgressCallbackError` (the download loop keeps the ``.part`` and re-raises
+    the original); ``None`` passes through as ``None`` (no reporting, no overhead)."""
+    if progress is None:
+        return None
+
+    def wrapped(done: int, total: int) -> None:
+        try:
+            progress(done, total)
+        except Exception as exc:  # a broken observer must not corrupt the transfer
+            raise _ProgressCallbackError(exc) from exc
+
+    return wrapped
+
+
+def _stream_body(
+    resp: Any,
+    out: IO[bytes],
+    abort: Callable[[], bool] | None = None,
+    *,
+    on_progress: Callable[[int, int], None] | None = None,
+    start: int = 0,
+    total: int | None = None,
+) -> None:
     """Chunked copy (a 500 MB asset never sits in memory) that raises when the
     body ends short of its declared Content-Length. ``read(amt)`` returns short
     silently when the connection drops, so without this check a truncated
     transfer would look complete and be thrown away at sha256 verification
     instead of kept for resume. ``abort`` is polled between chunks; when it goes
-    true the transfer stops with `FetchAborted` (the ``.part`` stays resumable)."""
+    true the transfer stops with `FetchAborted` (the ``.part`` stays resumable).
+
+    ``on_progress`` (when given) is called after each chunk with the absolute file
+    position ``start + written`` (``start`` is the resumed ``.part`` offset, 0 for a
+    fresh download) and ``total`` — the full file size, or ``-1`` when the remote did
+    not declare one."""
     import http.client
 
     expected = _expected_length(getattr(resp, "headers", None))
@@ -661,33 +707,48 @@ def _stream_body(resp: Any, out: IO[bytes], abort: Callable[[], bool] | None = N
             break
         out.write(chunk)
         written += len(chunk)
+        if on_progress is not None:
+            on_progress(start + written, total if total is not None else -1)
     if expected is not None and written < expected:
         raise http.client.IncompleteRead(b"", expected - written)
 
 
 def _write_from_zero(
-    resp: Any, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+    resp: Any,
+    dest_part: pathlib.Path,
+    abort: Callable[[], bool] | None = None,
+    *,
+    progress: Callable[[int, int], None] | None = None,
 ) -> None:
     """Stream a full-body response into a fresh ``.part``, recording resume
     metadata first so a mid-stream failure leaves a continuable file behind."""
     headers = getattr(resp, "headers", None)
-    _record_part_info(dest_part, headers, total=_expected_length(headers))
+    total = _expected_length(headers)  # the full file size (a 200 body is the whole file)
+    _record_part_info(dest_part, headers, total=total)
     with open(dest_part, "wb") as out:
-        _stream_body(resp, out, abort)
+        _stream_body(resp, out, abort, on_progress=progress, start=0, total=total)
 
 
 def _download_full(
-    url: str, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+    url: str,
+    dest_part: pathlib.Path,
+    abort: Callable[[], bool] | None = None,
+    *,
+    progress: Callable[[int, int], None] | None = None,
 ) -> None:
     import urllib.request
 
     resp = urllib.request.urlopen(url, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310 (registered/overridable url)
     with resp:
-        _write_from_zero(resp, dest_part, abort)
+        _write_from_zero(resp, dest_part, abort, progress=progress)
 
 
 def _download_once(
-    url: str, dest_part: pathlib.Path, abort: Callable[[], bool] | None = None
+    url: str,
+    dest_part: pathlib.Path,
+    abort: Callable[[], bool] | None = None,
+    *,
+    progress: Callable[[int, int], None] | None = None,
 ) -> None:
     """One transfer attempt: resume an existing ``.part`` with an HTTP Range
     request when the scheme supports it (GitHub's release CDN does), falling
@@ -704,7 +765,7 @@ def _download_once(
     if offset <= 0:
         # Nothing to resume, or a file:// URL (the env-override / test path),
         # where Range is not meaningful and a restart is cheap.
-        _download_full(url, dest_part, abort)
+        _download_full(url, dest_part, abort, progress=progress)
         return
 
     info = _read_part_info(dest_part)
@@ -726,9 +787,13 @@ def _download_once(
         hdrs = getattr(e, "headers", None)
         _, total = _parse_content_range(hdrs.get("Content-Range") if hdrs is not None else None)
         if total is not None and total == offset:
-            return  # fully downloaded; sha256 verification has the final word
+            # Fully downloaded; sha256 verification has the final word. Report a
+            # completed line (offset == total here) so a live consumer closes out.
+            if progress is not None:
+                progress(offset, offset)
+            return
         _discard_part(dest_part)
-        _download_full(url, dest_part, abort)
+        _download_full(url, dest_part, abort, progress=progress)
         return
 
     with resp:
@@ -743,7 +808,9 @@ def _download_once(
             if consistent:
                 _record_part_info(dest_part, resp.headers, total=total)
                 with open(dest_part, "ab") as out:
-                    _stream_body(resp, out, abort)
+                    # resume: absolute position starts at the kept .part's offset;
+                    # ``total`` from Content-Range is the full file size.
+                    _stream_body(resp, out, abort, on_progress=progress, start=offset, total=total)
                 return
             # The remote changed under the .part (its total drifted from what
             # was recorded, or the server answered a different offset): fall
@@ -751,10 +818,10 @@ def _download_once(
         else:
             # 200: the server ignored Range, or If-Range flagged a changed
             # remote, and it is sending the whole file. Write from byte zero.
-            _write_from_zero(resp, dest_part, abort)
+            _write_from_zero(resp, dest_part, abort, progress=progress)
             return
     _discard_part(dest_part)
-    _download_full(url, dest_part, abort)
+    _download_full(url, dest_part, abort, progress=progress)
 
 
 def _download(
@@ -762,6 +829,8 @@ def _download(
     dest_part: pathlib.Path,
     name: str,
     abort: Callable[[], bool] | None = None,
+    *,
+    progress: Callable[[int, int], None] | None = None,
 ) -> None:
     """Download ``url`` to ``dest_part``, resuming interrupted transfers.
 
@@ -774,6 +843,10 @@ def _download(
     ``.part`` instead. The caller verifies the assembled file's sha256 and
     performs the atomic rename, so nothing partial is ever visible at the
     final path.
+
+    ``progress`` (already `_guard_progress`-wrapped by the caller) reports absolute
+    byte counts during the transfer; if it raises, the ``.part`` is kept and the
+    original error is surfaced (a broken observer never discards the transfer).
     """
     import http.client
     import urllib.error
@@ -781,9 +854,13 @@ def _download(
     last_exc: Exception | None = None
     for _ in range(_DOWNLOAD_ATTEMPTS):
         try:
-            _download_once(url, dest_part, abort)
+            _download_once(url, dest_part, abort, progress=progress)
         except FetchAborted:
             raise  # deliberate cancel: keep the .part so a later fetch resumes it
+        except _ProgressCallbackError as e:
+            # a user progress callback raised: keep the resumable .part (do NOT
+            # discard) and surface the original error, not a wrapped network one
+            raise e.original from None
         except urllib.error.HTTPError as e:
             # A status error (403, 404, ...) means the resource is wrong or
             # gone; no kept .part could assemble into the right file.
@@ -797,9 +874,20 @@ def _download(
         else:
             _part_info_path(dest_part).unlink(missing_ok=True)
             return
+    if dest_part.exists():
+        # A transfer got underway and was cut off mid-stream: the .part on disk
+        # holds the bytes received so far and a later fetch resumes from there.
+        raise DataNotAvailableError(
+            f"could not fetch {name!r} from {url} after {_DOWNLOAD_ATTEMPTS} attempts "
+            f"(partial download kept; retrying will resume it): {last_exc}"
+        ) from last_exc
+    # Connection refused, DNS failure, or otherwise offline: no bytes were
+    # transferred, so there is nothing partial to resume. Say so, and point at
+    # the store and an offline-appropriate next step.
     raise DataNotAvailableError(
-        f"could not fetch {name!r} from {url} after {_DOWNLOAD_ATTEMPTS} attempts "
-        f"(partial download kept; retrying will resume it): {last_exc}"
+        f"could not fetch {name!r} from {url}: {last_exc}. Nothing was downloaded, so "
+        f"{name!r} is not in your local store ({dest_part.parent}). Check your network "
+        f"connection and retry; run 'aegean data list' to see what is already downloaded."
     ) from last_exc
 
 
@@ -811,6 +899,7 @@ def _verify(path: pathlib.Path, sha256: str, name: str) -> None:
             raise DataNotAvailableError(
                 f"checksum mismatch for {name!r}: expected {sha256}, got {got}"
             )
+        _LOG.debug("checksum verified for %r", name)
 
 
 def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.Path:
@@ -828,13 +917,26 @@ def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.
     return dest
 
 
-def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
-    """Extract a tar archive, refusing any member (or link target) that escapes ``dest``."""
+def _safe_extract_tar(
+    archive: pathlib.Path,
+    dest: pathlib.Path,
+    *,
+    progress: Callable[[int, int], None] | None = None,
+) -> None:
+    """Extract a tar archive, refusing any member (or link target) that escapes ``dest``.
+
+    Every member is validated up front, so an unsafe archive is rejected before any
+    file is written (unchanged). ``progress`` (when given) reports
+    ``progress(members_done, total_members)`` as members are extracted one at a time;
+    without it the whole archive is extracted in a single ``extractall`` call (the
+    unchanged default). The member count is already computed for the safety pass, so
+    per-member progress adds no extra work over the default path."""
     import tarfile
 
     root = dest.resolve()
     with tarfile.open(archive) as tf:
-        for member in tf.getmembers():
+        members = tf.getmembers()
+        for member in members:
             target = (root / member.name).resolve()
             if target != root and root not in target.parents:
                 raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
@@ -847,10 +949,22 @@ def _safe_extract_tar(archive: pathlib.Path, dest: pathlib.Path) -> None:
                     raise DataNotAvailableError(
                         f"unsafe link target in archive: {member.name!r} -> {member.linkname!r}"
                     )
-        try:
-            tf.extractall(root, filter="data")  # py3.12+ hardening
-        except TypeError:  # pragma: no cover - older Python
-            tf.extractall(root)
+        if progress is None:
+            try:
+                tf.extractall(root, filter="data")  # py3.12+ hardening
+            except TypeError:  # pragma: no cover - older Python
+                tf.extractall(root)
+            return
+        # Per-member extraction (same files as extractall) so a member-count progress
+        # line can move; members are in archive order, so each seek is forward (no
+        # gzip re-read penalty vs extractall).
+        total = len(members)
+        for i, member in enumerate(members, 1):
+            try:
+                tf.extract(member, root, filter="data")  # py3.12+ hardening
+            except TypeError:  # pragma: no cover - older Python
+                tf.extract(member, root)
+            progress(i, total)
 
 
 # Concurrent fetches of the SAME dataset (two threads, two processes, a doctor/TUI
@@ -893,7 +1007,11 @@ class _DatasetLock:
 
 
 def fetch(
-    name: str, *, force: bool = False, abort: Callable[[], bool] | None = None
+    name: str,
+    *,
+    force: bool = False,
+    abort: Callable[[], bool] | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> pathlib.Path:
     """Download a registered remote dataset into the cache and return its path.
 
@@ -907,9 +1025,20 @@ def fetch(
     caller waits, then returns the completed artifact. ``abort`` is an optional
     zero-argument callable polled during the transfer; when it returns true the
     fetch stops with `FetchAborted`, keeping the partial file resumable (how the
-    TUI cancels a download worker). Raises `DataNotAvailableError` for
-    unknown datasets, un-pinned URLs, checksum mismatches, unsafe archives, or
-    network failures — never silently, and never blocking ``import``.
+    TUI cancels a download worker).
+
+    ``progress`` (optional) reports the run's movement as ``progress(done, total)``:
+    during the download it is **bytes** — the absolute byte position and the full
+    file size, or ``total == -1`` when the remote declares no Content-Length (the
+    ``[int, int]`` signature is preserved by using ``-1`` rather than ``None``, and
+    ``-1`` is unambiguous where an empty file's ``0`` would not be); resume continues
+    from the kept ``.part`` offset. For an ``extract`` dataset it is then called with
+    **tar members** — ``progress(members_done, total_members)`` — while unpacking. A
+    fresh, already-cached fetch makes no download calls (nothing to report). If
+    ``progress`` raises, the transfer's resumable ``.part`` is kept and the error is
+    surfaced unwrapped. Raises `DataNotAvailableError` for unknown datasets, un-pinned
+    URLs, checksum mismatches, unsafe archives, or network failures — never silently,
+    and never blocking ``import``.
     """
     spec = _REMOTE.get(name)
     if spec is None:
@@ -923,10 +1052,11 @@ def fetch(
     # The pinned sha256 describes the pinned URL only. When the URL is overridden
     # via the env var (a user's own licensed copy), don't enforce it.
     sha256 = "" if os.environ.get(_env_url_var(name)) else spec.sha256
+    guarded = _guard_progress(progress)  # a raising observer never corrupts the transfer
 
     with _DatasetLock(name):
         if spec.extract:
-            return _fetch_and_extract(url, name, force, sha256, abort)
+            return _fetch_and_extract(url, name, force, sha256, abort, progress=guarded)
 
         dest = cache_dir() / name
         final = dest
@@ -945,9 +1075,11 @@ def fetch(
                     dest.unlink()
         if final.exists() and not force:
             if not sha256 or sha256_file(final) == sha256:
+                _LOG.debug("dataset %r already cached at %s", name, final)
                 return final  # present and valid → idempotent no-op
+        _LOG.info("fetching dataset %r", name)
         tmp = dest.with_name(dest.name + ".part")  # raw-named .part: resume + orphan probes key on it
-        _download(url, tmp, name, abort)
+        _download(url, tmp, name, abort, progress=guarded)
         _verify(tmp, sha256, name)
         tmp.replace(final)  # atomic within the cache dir
         return final
@@ -996,7 +1128,13 @@ def _extract_stamp(name: str) -> pathlib.Path:
 
 
 def _fetch_and_extract(
-    url: str, name: str, force: bool, sha256: str, abort: Callable[[], bool] | None = None
+    url: str,
+    name: str,
+    force: bool,
+    sha256: str,
+    abort: Callable[[], bool] | None = None,
+    *,
+    progress: Callable[[int, int], None] | None = None,
 ) -> pathlib.Path:
     import shutil
 
@@ -1010,16 +1148,19 @@ def _fetch_and_extract(
         # missing stamp is a pre-stamp (legacy) extraction: trust it, so upgrading
         # does not needlessly re-download every unchanged heavy archive.
         if not sha256:
+            _LOG.debug("dataset %r already extracted at %s", name, target)
             return target
         try:
             stamped = stamp.read_text(encoding="utf-8").strip() if stamp.exists() else ""
         except OSError:
             stamped = ""
         if stamped == "" or stamped == sha256:
+            _LOG.debug("dataset %r already extracted at %s", name, target)
             return target
 
+    _LOG.info("fetching dataset %r (archive to extract)", name)
     archive = cache_dir() / (name + ".part")
-    _download(url, archive, name, abort)
+    _download(url, archive, name, abort, progress=progress)
     _verify(archive, sha256, name)  # removes the archive on mismatch + raises
     # Stamp what was ACTUALLY extracted, even on an unpinned (env-mirror) fetch: an
     # unstamped extraction is indistinguishable from a trusted pre-stamp legacy cache, so
@@ -1032,8 +1173,14 @@ def _fetch_and_extract(
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
+    _LOG.info("extracting dataset %r", name)
     try:
-        _safe_extract_tar(archive, staging)
+        _safe_extract_tar(archive, staging, progress=progress)
+    except _ProgressCallbackError as e:
+        # a user progress callback raised mid-extraction: surface it unwrapped.
+        # The staging dir is orphaned (target not yet swapped, so the prior
+        # extraction is intact) and the next fetch clears + re-extracts it.
+        raise e.original from None
     finally:
         archive.unlink(missing_ok=True)
     if target.exists():

@@ -29,6 +29,8 @@ jobs:
         run: ruff check src tests
       - name: Type-check
         run: mypy
+      - name: Public-API stability (baseline diff)
+        run: python scripts/check_api.py
       - name: Tests
         run: pytest --cov=aegean --cov-report=term-missing
 

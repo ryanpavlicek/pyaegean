@@ -13,7 +13,7 @@
   "neural_ud_proiel_test": {
     "lemma": 90.51,
     "uas": 82.48,
-    "las": 63.50,
+    "las": 63.5,
     "upos": 86.69,
     "ufeats": 59.43,
     "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
@@ -21,7 +21,7 @@
   },
   "neural_seed_replicates": {
     "las_mean": 85.58,
-    "las_std": 0.10,
+    "las_std": 0.1,
     "uas_mean": 90.15,
     "uas_std": 0.12,
     "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
@@ -34,19 +34,27 @@
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
   },
   "offline_baseline_ud": {
-    "perseus_test": { "upos": 86.73, "lemma": 97.65, "uas": 37.43 },
-    "proiel_test": { "upos": 78.83, "lemma": 85.63, "uas": 35.41 },
+    "perseus_test": {
+      "upos": 86.73,
+      "lemma": 97.65,
+      "uas": 37.43
+    },
+    "proiel_test": {
+      "upos": 78.83,
+      "lemma": 85.63,
+      "uas": 35.41
+    },
     "proiel_lemma_with_neural_lemmatizer": 90.38,
     "measured": "2026-07-03",
     "protocol": "use_treebank()+use_tagger()+use_lemmatizer()+use_parser(); greek.evaluate_on_ud(fold,'test'); deterministic",
     "note": "the offline stack changes with the code, so these are re-measured by scripts/check_benchmarks.py --measure (weekly CI + the pre-cut gate); the Perseus cells are an in-training upper bound by design"
   },
   "offline_nt_lemma": {
-    "lemma": 66.16,
+    "lemma": 66.98,
     "n_tokens": 137303,
-    "measured": "2026-07-03",
+    "measured": "2026-07-11",
     "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
-    "doc_claim": "wiki/Limitations.md states ~66% on the full NT"
+    "doc_claim": "wiki/Limitations.md states ~67% on the full NT"
   },
   "quantization": {
     "tar_gz_bytes": 173068548,
@@ -67,7 +75,7 @@
   },
   "out_of_domain_lead": {
     "pyaegean_proiel_uas": 82.48,
-    "stanza_perseus_proiel_uas": 59.00,
+    "stanza_perseus_proiel_uas": 59.0,
     "stated_lead": 23,
     "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
   }

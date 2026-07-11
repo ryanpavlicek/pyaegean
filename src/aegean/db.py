@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
 from ._atomic import atomic_path
+from ._log import get_logger
 from .core.corpus import (
     Corpus,
     _document_from_dict,
@@ -38,6 +39,8 @@ from .core.model import Document
 from .core.provenance import SCHEMA_VERSION, Provenance
 
 __all__ = ["to_sqlite", "from_sqlite", "search", "stream"]
+
+_LOG = get_logger("db")
 
 _SCHEMA = """
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -105,7 +108,14 @@ def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -
     )
 
 
-def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: bool = False) -> None:
+def to_sqlite(
+    corpus: Corpus,
+    path: str | Path,
+    *,
+    fts: bool = True,
+    append: bool = False,
+    progress: Callable[[int, int], None] | None = None,
+) -> None:
     """Write ``corpus`` to a SQLite database at ``path``.
 
     By default this **overwrites** any existing file. With ``append=True`` it instead
@@ -114,13 +124,21 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
     index is refreshed, and the appended corpus's provenance is recorded alongside the
     original's, so the reloaded corpus cites every source that went in (see `from_sqlite`).
     Documents and tokens become queryable rows; provenance and the sign inventory live in
-    a ``meta`` table. Round-trips losslessly via `from_sqlite`."""
+    a ``meta`` table. Round-trips losslessly via `from_sqlite`.
+
+    ``progress`` (optional) is called as ``progress(done, total)`` after each document is
+    written, counting documents — the hook a minutes-long write (a DDbDP-sized corpus is
+    ~57k documents) reports through; the CLI paints a live line from it. The written
+    database is identical with or without it; the final call is ``(total, total)``,
+    made before the FTS index build (one bulk statement, not per-document)."""
     p = str(path)
     if append:
         if p != ":memory:" and not Path(p).exists():
             raise FileNotFoundError(f"no database to append to: {p} (build it first)")
-        _append_sqlite(corpus, p)
+        _append_sqlite(corpus, p, progress=progress)
         return
+
+    _LOG.info("writing %d documents to SQLite database %s", len(corpus.documents), p)
 
     def _build(target: str) -> None:
         conn = sqlite3.connect(target)
@@ -133,8 +151,11 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
                 "sign_inventory": json.dumps(_inventory_to_dict(corpus.sign_inventory)),
             }
             conn.executemany("INSERT INTO meta(key, value) VALUES (?, ?)", list(meta.items()))
+            total = len(corpus.documents)
             for i, doc in enumerate(corpus.documents):
                 _insert_document(conn, _document_to_dict(doc), i)
+                if progress is not None:
+                    progress(i + 1, total)
             if fts:
                 _build_fts(conn)
             conn.commit()
@@ -152,13 +173,19 @@ def to_sqlite(corpus: Corpus, path: str | Path, *, fts: bool = True, append: boo
         _build(str(tmp))
 
 
-def _append_sqlite(corpus: Corpus, p: str) -> None:
+def _append_sqlite(
+    corpus: Corpus, p: str, *, progress: Callable[[int, int], None] | None = None
+) -> None:
     """Upsert ``corpus``'s documents into the existing DB at ``p`` (by document id).
 
     The appended corpus's provenance joins the stored one(s) in ``meta`` (deduplicated),
     so `from_sqlite` can cite every corpus that went in. The sign inventory follows the
     `Corpus.merge` rule: a same-script inventory fills an empty slot, and a cross-script
-    append clears it (a mixed corpus has no single-script inventory)."""
+    append clears it (a mixed corpus has no single-script inventory). ``progress`` is
+    called as ``progress(done, total)`` after each upserted document (total = the
+    appended corpus's document count); the final ``(total, total)`` call comes before
+    the FTS rebuild and the provenance/inventory bookkeeping."""
+    _LOG.info("appending %d documents into SQLite database %s", len(corpus.documents), p)
     conn = sqlite3.connect(p)
     try:
         # Take the write lock BEFORE the pre-insert reads (MAX(doc_order), the per-doc
@@ -176,7 +203,8 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
         next_order = conn.execute("SELECT COALESCE(MAX(doc_order), -1) FROM documents").fetchone()[0] + 1
         row = conn.execute("SELECT value FROM meta WHERE key = 'script_id'").fetchone()
         existing_script = row[0] if row else ""
-        for doc in corpus.documents:
+        total = len(corpus.documents)
+        for done, doc in enumerate(corpus.documents, start=1):
             dd = _document_to_dict(doc)
             prev = conn.execute(
                 "SELECT doc_order FROM documents WHERE id = ?", (dd["id"],)
@@ -188,6 +216,8 @@ def _append_sqlite(corpus: Corpus, p: str) -> None:
             else:
                 order, next_order = next_order, next_order + 1
             _insert_document(conn, dd, order)
+            if progress is not None:
+                progress(done, total)
         if has_fts:  # rebuild from current tokens so replaced docs leave no stale hits
             conn.execute("DROP TABLE tokens_fts")
             _build_fts(conn)
@@ -245,6 +275,26 @@ def _check_schema_version(meta: dict[str, Any]) -> None:
             f"this database uses schema version {stored}, but this pyaegean understands "
             f"up to {SCHEMA_VERSION} — upgrade pyaegean to read it"
         )
+
+
+def _corpus_db_error(path: str | Path, exc: sqlite3.Error) -> ValueError:
+    """Turn a raw ``sqlite3`` error from opening a supposed corpus database into a clean
+    domain error with a next step, so a corpus-load path never leaks a third-party
+    traceback (the guard the sibling ``aegean db search`` already applied, now at the
+    shared primitive so every load path inherits it).
+
+    A locked database is a distinct, transient condition (a read is blocked only while a
+    writer holds the lock), not a malformed file — it names that and says to retry, rather
+    than mislabelling the file as not a corpus. Everything else (no pyaegean schema table,
+    an unreadable or non-SQLite file) means this is simply not a pyaegean corpus database."""
+    if "locked" in str(exc).lower():
+        return ValueError(
+            f"corpus database {path} is locked (another process is writing it); retry"
+        )
+    return ValueError(
+        f"{path} is not a pyaegean corpus database "
+        "(build one with `aegean db build`, or aegean.db.to_sqlite)"
+    )
 
 
 def _has_token_order(conn: sqlite3.Connection) -> bool:
@@ -325,11 +375,18 @@ def _combined_provenance(provs: list[Provenance], n_docs: int) -> Provenance:
     )
 
 
-def from_sqlite(path: str | Path) -> Corpus:
+def from_sqlite(
+    path: str | Path, *, progress: Callable[[int, int], None] | None = None
+) -> Corpus:
     """Reconstruct the `Corpus` written by `to_sqlite` — documents, sign inventory, and
     provenance, byte-for-byte equivalent to the original. A database grown with
     ``to_sqlite(append=True)`` stores one provenance per appended source; those come back
-    as a single combined provenance naming every source, so `Corpus.cite` stays truthful."""
+    as a single combined provenance naming every source, so `Corpus.cite` stays truthful.
+
+    ``progress`` (optional) is called as ``progress(done, total)`` after each document is
+    materialized, counting documents — the hook the ~100 s DDbDP whole-corpus load
+    (``aegean.load("ddbdp")``) reports through. The returned corpus is identical with or
+    without it; an empty database makes no calls, and the final call is ``(total, total)``."""
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     try:
@@ -347,16 +404,30 @@ def from_sqlite(path: str | Path) -> Corpus:
         ]
         inventory = _inventory_from_dict(json.loads(meta.get("sign_inventory") or "null"))
         order_col = "token_order" if _has_token_order(conn) else "position"
-        docs = [
-            _document_from_row(conn, r, order_col=order_col)
-            for r in conn.execute("SELECT * FROM documents ORDER BY doc_order")
-        ]
+        total = (
+            int(conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0])
+            if progress is not None
+            else 0
+        )
+        docs: list[Document] = []
+        for done, r in enumerate(
+            conn.execute("SELECT * FROM documents ORDER BY doc_order"), start=1
+        ):
+            docs.append(_document_from_row(conn, r, order_col=order_col))
+            if progress is not None:
+                progress(done, total)
+    except sqlite3.Error as exc:
+        # A wrong-schema, non-SQLite, or locked file leaked a raw sqlite3 traceback with
+        # no path or next step; give a clean domain error instead. (_check_schema_version
+        # raises ValueError, not sqlite3.Error, so its "upgrade pyaegean" message survives.)
+        raise _corpus_db_error(path, exc) from None
     finally:
         try:
             conn.rollback()  # end the read transaction (read-only: nothing to write)
         except sqlite3.Error:
             pass
         conn.close()
+    _LOG.info("loaded %d documents from SQLite database %s", len(docs), path)
     provenance: Provenance | None
     if len(provs) > 1:
         provenance = _combined_provenance(provs, len(docs))
@@ -467,6 +538,7 @@ def stream(path: str | Path) -> Iterator[Document]:
         )
         order_col = "token_order" if _has_token_order(conn) else "position"
         ids = [r["id"] for r in conn.execute("SELECT id FROM documents ORDER BY doc_order")]
+        _LOG.debug("streaming %d documents from SQLite database %s", len(ids), path)
         for doc_id in ids:
             # Each document's row + tokens are read inside one short transaction, so a
             # concurrent append committing between the two statements cannot yield a
