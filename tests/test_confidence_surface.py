@@ -100,7 +100,7 @@ def _controllable_stub(upos_logits, lemma_logits, *, kept=None):
 
 # reuse the canonical stub (ὁ / λόγος / ἐστί → NEURAL / IDENTITY / NEURAL) for the surface
 def _stub_model():
-    from tests.test_joint import _stub_model as base
+    from test_joint import _stub_model as base
 
     return base()
 
@@ -179,7 +179,7 @@ def test_undecoded_token_carries_none_confidence():
 def test_batch_populates_probs_like_sequential():
     # the batch-capable stub backs `_run` and `_run_batch` with the SAME logits, so a
     # sequential/batched divergence in the prob fields would be a real padding/slicing bug
-    from tests.test_joint_batch import _batch_stub_model
+    from test_joint_batch import _batch_stub_model
 
     m = _batch_stub_model()
     calibrate.use_calibration(_synthetic_calibration(1.3, 1.9))
