@@ -395,7 +395,7 @@ def test_greek_gloss_dict_dodson(app):
 
 
 def test_greek_gloss_deeplink_only_errors(app):
-    msg = err(app, "greek", "gloss", "λόγος", "--dict", "autenrieth")
+    msg = err(app, "greek", "gloss", "λόγος", "--dict", "slater")
     assert "deep-link" in msg or "lexicon-link" in msg
 
 

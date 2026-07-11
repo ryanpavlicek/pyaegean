@@ -114,8 +114,19 @@ from .erroranalysis import (
     proiel_error_analysis,
     ud_error_analysis,
 )
-from .proiel import DriftReport, evaluate_on_proiel, load_proiel_gold, proiel_dir, proiel_drift
+from .proiel import (
+    ConventionReport,
+    DeprelConfusion,
+    DriftReport,
+    FeatureConventionStat,
+    evaluate_on_proiel,
+    load_proiel_gold,
+    proiel_convention_report,
+    proiel_dir,
+    proiel_drift,
+)
 from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_by_genre, evaluate_on_ud
+from .papygreek import evaluate_on_papygreek, papygreek_path
 from .eval_receipt import EvalReceipt, eval_receipt
 from .normalize import (
     NormalizationWarning,
@@ -287,6 +298,10 @@ __all__ = [
     "evaluate_on_proiel",
     "proiel_drift",
     "DriftReport",
+    "proiel_convention_report",
+    "ConventionReport",
+    "FeatureConventionStat",
+    "DeprelConfusion",
     "ErrorAnalysis",
     "PosStat",
     "analyze_errors",
@@ -312,6 +327,8 @@ __all__ = [
     "heldout_error_analysis",
     "evaluate_on_ud",
     "evaluate_by_genre",
+    "evaluate_on_papygreek",
+    "papygreek_path",
     "eval_receipt",
     "EvalReceipt",
     "use_neural_pipeline",

@@ -122,6 +122,20 @@ accuracy. For an NT *dependency* measurement, the UD PROIEL row above is exactly
 that: PROIEL's test fold is mostly New Testament, so its out-of-domain UAS 82.48
 is the closest measured Koine parsing figure this document has.
 
+## Documentary Koine: the PapyGreek fold
+
+The first documentary-Greek parsing evaluation here: 1,696 sentences / 24,105
+tokens of papyrus letters and petitions from the PapyGreek Treebanks (CC BY-SA),
+converted through the same AGDT scheme the model trains under and leakage-checked
+against the training set (354 overlapping sentences excluded).
+
+| Test set | UPOS | UFeats | Lemma | UAS | LAS |
+| --- | --- | --- | --- | --- | --- |
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.11 | 85.71 | 79.89 |
+
+Scheme-matched out-of-domain parsing runs ~16 LAS points above the
+convention-capped PROIEL row. Reproduce: `aegean greek eval papygreek`.
+
 ## Pure-Python offline baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

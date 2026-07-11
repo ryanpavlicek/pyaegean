@@ -10142,6 +10142,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "script_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "version"
         }
       ],
       "returns": true
@@ -12109,6 +12114,71 @@
     "aegean.data.FetchAborted": {
       "kind": "class"
     },
+    "aegean.data.HistoricalPin": {
+      "kind": "class"
+    },
+    "aegean.data.HistoricalPin.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "version"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "url"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sha256"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "superseded"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "extract"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.data.HistoricalPin.extract": {
+      "kind": "attribute"
+    },
+    "aegean.data.HistoricalPin.sha256": {
+      "kind": "attribute"
+    },
+    "aegean.data.HistoricalPin.superseded": {
+      "kind": "attribute"
+    },
+    "aegean.data.HistoricalPin.url": {
+      "kind": "attribute"
+    },
+    "aegean.data.HistoricalPin.version": {
+      "kind": "attribute"
+    },
+    "aegean.data.available_versions": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "name"
+        }
+      ],
+      "returns": true
+    },
     "aegean.data.bundled_data_version": {
       "kind": "function",
       "params": [],
@@ -12167,6 +12237,11 @@
         {
           "default": true,
           "kind": "keyword-only",
+          "name": "version"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
           "name": "force"
         },
         {
@@ -12203,6 +12278,17 @@
       ],
       "returns": true
     },
+    "aegean.data.historical_versions": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "name"
+        }
+      ],
+      "returns": true
+    },
     "aegean.data.is_downloaded": {
       "kind": "function",
       "params": [
@@ -12226,6 +12312,27 @@
           "default": true,
           "kind": "variadic positional",
           "name": "parts"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.data.load_corpus_version": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "script_id"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "version"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
         }
       ],
       "returns": true
@@ -12546,12 +12653,20 @@
       "canonical": "aegean.greek.calibrate.Calibration",
       "kind": "class"
     },
+    "aegean.greek.ConventionReport": {
+      "canonical": "aegean.greek.proiel.ConventionReport",
+      "kind": "class"
+    },
     "aegean.greek.DepToken": {
       "canonical": "aegean.greek.syntax.DepToken",
       "kind": "class"
     },
     "aegean.greek.DepTree": {
       "canonical": "aegean.greek.syntax.DepTree",
+      "kind": "class"
+    },
+    "aegean.greek.DeprelConfusion": {
+      "canonical": "aegean.greek.proiel.DeprelConfusion",
       "kind": "class"
     },
     "aegean.greek.DodsonEntry": {
@@ -12572,6 +12687,10 @@
     },
     "aegean.greek.EvalReceipt": {
       "canonical": "aegean.greek.eval_receipt.EvalReceipt",
+      "kind": "class"
+    },
+    "aegean.greek.FeatureConventionStat": {
+      "canonical": "aegean.greek.proiel.FeatureConventionStat",
       "kind": "class"
     },
     "aegean.greek.Foot": {
@@ -14497,6 +14616,33 @@
           "default": true,
           "kind": "keyword-only",
           "name": "book"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.evaluate_on_papygreek": {
+      "canonical": "aegean.greek.papygreek.evaluate_on_papygreek",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
         },
         {
           "default": true,
@@ -17127,6 +17273,58 @@
       ],
       "returns": true
     },
+    "aegean.greek.papygreek": {
+      "kind": "module"
+    },
+    "aegean.greek.papygreek.evaluate_on_papygreek": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.papygreek.papygreek_path": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "download"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.papygreek_path": {
+      "canonical": "aegean.greek.papygreek.papygreek_path",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "download"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.paradigm": {
       "canonical": "aegean.greek.inflect.paradigm",
       "kind": "function",
@@ -17725,6 +17923,211 @@
     "aegean.greek.proiel": {
       "kind": "module"
     },
+    "aegean.greek.proiel.ConventionReport": {
+      "kind": "class"
+    },
+    "aegean.greek.proiel.ConventionReport.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "n_words"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "ufeats_correct"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "n_scheme_blocked_words"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "n_shared_only_words"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "shared_only_correct"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "feature_stats"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "uas_correct"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "las_correct"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "label_only_errors"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "deprel_confusions"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.ConventionReport.as_dict": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.ConventionReport.deprel_concentration": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "top"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.ConventionReport.deprel_confusions": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.deprel_top_share": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.feature_stats": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.gap_scheme_absent": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.gap_shared_disagreement": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.label_only_errors": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.label_only_share": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.las": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.las_correct": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.n_scheme_blocked_words": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.n_shared_only_words": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.n_words": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.scheme_absent_features": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.shared_only_correct": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.shared_subset_ufeats": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.summary": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "top"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.ConventionReport.uas": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.uas_correct": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.ufeats": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.ufeats_correct": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.ConventionReport.ufeats_gap": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.DeprelConfusion": {
+      "kind": "class"
+    },
+    "aegean.greek.proiel.DeprelConfusion.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "gold"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "predicted"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "count"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.DeprelConfusion.count": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.DeprelConfusion.gold": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.DeprelConfusion.predicted": {
+      "kind": "attribute"
+    },
     "aegean.greek.proiel.DriftReport": {
       "kind": "class"
     },
@@ -17804,6 +18207,58 @@
     "aegean.greek.proiel.DriftReport.top_share": {
       "kind": "attribute"
     },
+    "aegean.greek.proiel.FeatureConventionStat": {
+      "kind": "class"
+    },
+    "aegean.greek.proiel.FeatureConventionStat.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "feature"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "gold_count"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "emitted_by_model_scheme"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "shared_agree"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel.FeatureConventionStat.agreement_on_shared": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.FeatureConventionStat.emitted_by_model_scheme": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.FeatureConventionStat.feature": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.FeatureConventionStat.gold_count": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.FeatureConventionStat.shared_agree": {
+      "kind": "attribute"
+    },
+    "aegean.greek.proiel.NeuralPipelineRequiredError": {
+      "kind": "class"
+    },
     "aegean.greek.proiel.evaluate_on_proiel": {
       "kind": "function",
       "params": [
@@ -17846,6 +18301,37 @@
       ],
       "returns": true
     },
+    "aegean.greek.proiel.proiel_convention_report": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "split"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "predictions"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.proiel.proiel_dir": {
       "kind": "function",
       "params": [
@@ -17884,6 +18370,38 @@
           "default": true,
           "kind": "keyword-only",
           "name": "samples"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.proiel_convention_report": {
+      "canonical": "aegean.greek.proiel.proiel_convention_report",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "split"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "progress"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "predictions"
         }
       ],
       "returns": true
@@ -19713,9 +20231,38 @@
     "aegean.io": {
       "kind": "module"
     },
+    "aegean.io.MergedReview": {
+      "canonical": "aegean.io.review.MergedReview",
+      "kind": "class"
+    },
     "aegean.io.REVIEW_COLUMNS": {
       "canonical": "aegean.io.review.REVIEW_COLUMNS",
       "kind": "attribute"
+    },
+    "aegean.io.ReviewConflict": {
+      "canonical": "aegean.io.review.ReviewConflict",
+      "kind": "class"
+    },
+    "aegean.io.ReviewerValue": {
+      "canonical": "aegean.io.review.ReviewerValue",
+      "kind": "class"
+    },
+    "aegean.io.apply_merged": {
+      "canonical": "aegean.io.review.apply_merged",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "merged"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        }
+      ],
+      "returns": true
     },
     "aegean.io.epidoc": {
       "kind": "module"
@@ -19973,6 +20520,28 @@
       ],
       "returns": true
     },
+    "aegean.io.merge_review_tables": {
+      "canonical": "aegean.io.review.merge_review_tables",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "paths"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "on_conflict"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.needs_review_flag": {
       "canonical": "aegean.io.review.needs_review_flag",
       "kind": "function",
@@ -20039,8 +20608,178 @@
     "aegean.io.review": {
       "kind": "module"
     },
+    "aegean.io.review.MergedReview": {
+      "kind": "class"
+    },
+    "aegean.io.review.MergedReview.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "rows"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "conflicts"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "reviewers"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "source_paths"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.review.MergedReview.conflicts": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.MergedReview.reviewers": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.MergedReview.rows": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.MergedReview.source_paths": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.MergedReview.to_csv": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.review.REVIEW_COLUMNS": {
       "kind": "attribute"
+    },
+    "aegean.io.review.ReviewConflict": {
+      "kind": "class"
+    },
+    "aegean.io.review.ReviewConflict.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "doc_id"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "position"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "token"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "field"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "options"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.review.ReviewConflict.doc_id": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewConflict.field": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewConflict.options": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewConflict.position": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewConflict.token": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewerValue": {
+      "kind": "class"
+    },
+    "aegean.io.review.ReviewerValue.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "reviewer"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "value"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "note"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.review.ReviewerValue.note": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewerValue.reviewer": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.ReviewerValue.value": {
+      "kind": "attribute"
+    },
+    "aegean.io.review.apply_merged": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "merged"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        }
+      ],
+      "returns": true
     },
     "aegean.io.review.from_review_table": {
       "kind": "function",
@@ -20059,6 +20798,27 @@
           "default": true,
           "kind": "keyword-only",
           "name": "reviewer"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.review.merge_review_tables": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "paths"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "on_conflict"
         }
       ],
       "returns": true
@@ -20101,6 +20861,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "only_needs_review"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "reviewer"
         }
       ],
       "returns": true
@@ -20413,6 +21178,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "only_needs_review"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "reviewer"
         }
       ],
       "returns": true
@@ -20493,6 +21263,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "script_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "version"
         }
       ],
       "returns": true
@@ -21352,6 +22127,32 @@
     },
     "aegean.scripts.greek.perseus.WorkFetchResult.title": {
       "kind": "attribute"
+    },
+    "aegean.scripts.greek.perseus.canonical_citation": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "work"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "ref"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "author"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "title"
+        }
+      ],
+      "returns": true
     },
     "aegean.scripts.greek.perseus.catalog": {
       "kind": "function",

@@ -358,6 +358,62 @@ effect, because register co-varies with the annotation project: the NT row is a 
 treebank's conventions and a genuinely out-of-domain fold, so the difference mixes register,
 convention, and domain. It is reported as orientation, not as a measured "Koine penalty."
 
+### Documentary Koine: the PapyGreek fold
+
+Documentary Greek (letters, petitions, receipts on papyrus) had no parsing
+evaluation here until this fold: **1,696 sentences / 24,105 tokens** converted from
+the PapyGreek Treebanks (CC BY-SA 4.0) to UD CoNLL-U through the same AGDT
+conversion the model trains under, so the numbers measure domain transfer rather
+than annotation-convention divergence. The fold is leakage-checked against the
+training set — 354 overlapping sentences were found and excluded (Pedalion ships a
+documentary-papyri subset the model trained on; source-level disjointness reasoning
+was not enough, the sentence-level check caught it).
+
+| Test set | UPOS | UFeats | Lemma | UAS | LAS | scored tokens |
+|---|---|---|---|---|---|---|
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.11 | 85.71 | 79.89 | 24,105 |
+
+Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
+Scheme-matched out-of-domain parsing runs ~16 LAS points above the
+convention-capped PROIEL row — the quantitative confirmation of the decomposition
+below. One measurement note: on this fold, batched inference is *not*
+prediction-identical to sequential (a handful of float-order flips), so the
+published numbers are CPU-sequential and batching stays off this row's protocol.
+
+### PROIEL convention decomposition
+
+The out-of-domain UD-PROIEL row above (UFeats 59.43, UAS 82.48, LAS 63.50) is held
+down less by model error than by annotation-convention divergence.
+`greek.proiel_convention_report()` (CLI: `aegean greek eval ud --fold proiel --drift`)
+measures that divergence directly, reproducing UFeats/UAS/LAS from the model's own
+outputs (equal to the official evaluator to four decimals) and partitioning each gap.
+This is a measurement decomposition only: it changes none of the published numbers,
+it accounts for them. (13,314 words, neural pipeline; evidence:
+`training/results/proiel-convention-decomp-2026-07-11.json`.)
+
+**UFeats.** Of the 40.6-point gap, 24.2 points are *scheme-absent* features — UD
+feature types the AGDT scheme cannot emit at all (PROIEL uses exactly five the
+Perseus scheme lacks: `PronType`, `Definite`, `Polarity`, `Reflex`, `Poss`; 3,224
+words carry at least one) — and 16.4 points are disagreement inside the shared
+scheme. On the 10,090 words whose gold features are all scheme-shared, the model
+scores UFeats **78.4**. Within the shared types, the well-shared morphology agrees
+closely (Number 99.6%, VerbForm 99.7%, Case 99.0%, Mood 99.0%, Tense 98.3%, Voice
+94.2%, Gender 91.9%), while three shared types diverge by convention rather than
+competence: `Aspect` (29.2%: PROIEL marks aspect on the aorist where the Perseus
+scheme does not), `Degree` (6.5%: PROIEL marks `Degree=Pos` on the plain positive),
+and `Person` (77.9%). The 16.4 shared points are therefore an upper bound on genuine
+morphological error.
+
+**LAS.** Of the 36.5-point UAS-to-LAS gap, 17.5 points are attachment errors and
+19.0 points (2,526 tokens) are attachment-correct but label-wrong. That relabelling
+mass is systematic, not scattered — the top five gold-to-predicted confusions carry
+68.9% of it, and each is a known convention pair between the two UD conversions:
+`discourse → advmod` (24.1%: PROIEL tags the sentential particles μέν, δέ, γάρ, οὖν
+`discourse`, a relation the AGDT scheme lacks), `det → nmod` (17.6%), `obl → obj`
+(11.0%) with `obl → iobj` (3.2%), `amod → nmod` (8.2%), and `cc → advmod` (8.1%).
+None of these is a wrong tree; each is a correctly-attached relation named by the
+model's own convention.
+
 ## pyaegean — the pure-Python baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

@@ -166,7 +166,7 @@ def test_shipped_baseline_is_loadable_and_nontrivial() -> None:
     assert len(names) > 1000, f"baseline suspiciously small: {len(names)} names"
     entry = names["aegean.load"]
     assert entry["kind"] == "function"
-    assert [p["name"] for p in entry["params"]] == ["script_id"]
+    assert [p["name"] for p in entry["params"]] == ["script_id", "version"]
     assert names["aegean.greek"]["kind"] == "module"
 
 

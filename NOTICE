@@ -59,14 +59,15 @@ Liddell-Scott-Jones lexicon — Perseus LSJ (fetched on demand, NOT redistribute
   downloading the ~270 MB TEI and building locally, falling back to build-from-source if
   it is unreachable. Fetched to the cache, never bundled.
 
-Middle Liddell, Cunliffe, and Abbott-Smith lexica — derived indexes (fetched on demand, NOT bundled)
+Middle Liddell, Cunliffe, Abbott-Smith, and Autenrieth lexica — derived indexes (fetched on demand, NOT bundled)
   An Intermediate Greek-English Lexicon (Liddell & Scott, 1889; public domain), digitized by the
   Perseus Digital Library (CC BY-SA) with structured data from the Scaife Viewer's
   scaife-viewer/atlas-data-prep (MIT); A Lexicon of the Homeric Dialect (Cunliffe, 1924; public
   domain; Scaife structured data, MIT); and A Manual Greek Lexicon of the New Testament
   (Abbott-Smith, 1922; public domain), TEI markup from translatable-exegetical-tools/Abbott-Smith.
   pyaegean hosts derived lemma->entry indexes as the release assets "middle-liddell-index",
-  "cunliffe-index", and "abbott-smith-index"; downloaded by the user on demand via
+  "cunliffe-index", "abbott-smith-index", and "autenrieth-index" (A Homeric Dictionary,
+  Autenrieth, 1891; public domain; Perseus digitization CC BY-SA); downloaded by the user on demand via
   aegean.greek.use_lexicon(), which falls back to fetching the source data and building the index
   locally if an asset is unreachable; fetched to the local cache, never bundled. Attribute the
   digitizers (Perseus Digital Library / Scaife Viewer / translatable-exegetical-tools) in academic
@@ -151,6 +152,12 @@ Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.jso
   the Greek-epigraphy find-place rows carry representative points and place identifiers from
   Pleiades: A Gazetteer of Past Places (https://pleiades.stoa.org), used under CC BY 3.0 —
   attribution: Pleiades contributors. Rounded to ~1 km — for mapping, not survey work.
+
+PapyGreek Treebanks — documentary-Koine evaluation fold (fetched on demand, NOT bundled)
+  The papygreek-fold asset is a UD conversion of the PapyGreek Treebanks
+  (Vierros et al., https://github.com/ezhenrik/papygreek-treebanks), CC BY-SA 4.0,
+  used for evaluation only; the derived fold is redistributed under the same
+  CC BY-SA terms. Cite PapyGreek in academic work that relies on the fold.
 
 Greek nominal paradigm table (fetched on demand, NOT bundled: grc-paradigms)
   Derived from UniMorph Ancient Greek (https://github.com/unimorph/grc), CC BY-SA 3.0,

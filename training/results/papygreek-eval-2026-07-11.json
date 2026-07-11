@@ -1,0 +1,18 @@
+{
+  "what": "Neural pipeline scored on the PapyGreek documentary-Koine dependency fold (first documentary-Greek parsing evaluation).",
+  "date": "2026-07-11",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; fold = papygreek-fold-v1 (sha 29bc27b6...), leakage-checked vs the grc-joint training set (354 overlapping sentences excluded via Pedalion's papyri subset)",
+  "results_full_precision": {
+    "upos": 0.9104750051856462,
+    "xpos": 0.7676000829703381,
+    "ufeats": 0.8857498444306161,
+    "lemma": 0.8611076540136902,
+    "uas": 0.8570835926156399,
+    "las": 0.7989213856046463,
+    "clas": 0.7594068460935458,
+    "n_words": 24105,
+    "n_sentences": 1696
+  },
+  "batching_note": "batch-32 is NOT prediction-identical on this fold (~0.02% of decisions flip: float non-associativity under padded batching; 0 UPOS diffs, single-digit head/lemma/feats flips) — sequential is canonical; the full-fold identity check FAILED here, unlike UD-Perseus, so batching stays off this pin per the standing rule",
+  "verification": "the pinned numbers reproduce to full precision through the hosted asset (run twice: builder's local fold and the fetched papygreek-fold-v1)"
+}

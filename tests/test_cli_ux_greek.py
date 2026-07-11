@@ -398,7 +398,7 @@ def test_lexicon_link_bad_service_has_no_doubled_quotes(app):
 
 
 def test_gloss_deep_link_error_names_the_cli_command(app):
-    msg = err(app, "greek", "gloss", "λόγος", "--dict", "autenrieth")
+    msg = err(app, "greek", "gloss", "λόγος", "--dict", "slater")
     assert "aegean greek lexicon-link" in msg
     assert "greek.lexicon_link(" not in msg
 

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TEI.2>
+  <text>
+    <body>
+      <div1 type="alphabetic letter" n="alpha">
+        <head lang="greek">*a</head>
+        <entryFree id="n1" type="main" key="a)ei/dw">
+          <orth lang="greek">a)ei/dw</orth> (<foreign lang="greek">a)vei/dw</foreign>): <gloss>sing</gloss>, <bibl n="Hom. Il. 1.1">Il. 1.1</bibl>.</entryFree>
+        <entryFree id="n2" type="main" key="a)/nac">
+          <orth lang="greek">a)/nac</orth> (<foreign lang="greek">va/nac</foreign>), <foreign lang="greek">aktos</foreign>: <gloss>lord</gloss> (<gloss>king</gloss>), <gloss>master</gloss>.</entryFree>
+        <entryFree id="n3" type="main" key="*)axaioi/">
+          <orth lang="greek">*)axaioi/</orth>: <gloss>the Achaeans</gloss>, the chief tribe of Greeks.</entryFree>
+        <entryFree id="n4" type="main" key="a)i/w1">
+          <orth lang="greek">a)i/w</orth>: <gloss>hear</gloss>, <gloss>perceive</gloss>, <bibl n="Hom. Il. 15.252">Il. 15.252</bibl>.</entryFree>
+        <entryFree id="n5" type="main" key="a)i/w2">
+          <orth lang="greek">a)i/w</orth>: <gloss>breathe out</gloss>, of the life-breath.</entryFree>
+        <entryFree id="n6" type="main" key="">
+          <orth lang="greek">a)/keys</orth>: skipped, no key.</entryFree>
+      </div1>
+      <div1 type="alphabetic letter" n="theta">
+        <head lang="greek">*q</head>
+        <entryFree id="n7" type="main" key="qea/">
+          <orth lang="greek">qea/</orth>, <foreign lang="greek">qea=s</foreign>: <gloss>goddess</gloss>.</entryFree>
+      </div1>
+      <div1 type="alphabetic letter" n="eta">
+        <head lang="greek">*h</head>
+        <entryFree id="n8" type="main" key="h)e/lios">
+          <orth lang="greek">h)e/lios</orth>: <gloss>the sun</gloss>; afternoon, <foreign lang="greek">boulu_to/nde</foreign>, <bibl n="Hom. Il. 16.779">Il. 16.779</bibl>.</entryFree>
+      </div1>
+      <div1 type="alphabetic letter" n="kappa">
+        <head lang="greek">*k</head>
+        <entryFree id="n9" type="main" key="krh/demnon">
+          <orth lang="greek">krh/demnon</orth> (<foreign lang="greek">ka/rh, de/w</foreign>): <gloss>head-band</gloss>, a short veil.</entryFree>
+      </div1>
+      <div1 type="alphabetic letter" n="mu">
+        <head lang="greek">*m</head>
+        <entryFree id="n10" type="main" key="mh=nis">
+          <orth lang="greek">mh=nis</orth>, <foreign lang="greek">ios</foreign>: <gloss>wrath</gloss>, i. e. enduring anger, usually of gods, <bibl n="Hom. Il. 1.75">Il. 1.75</bibl>.</entryFree>
+      </div1>
+      <div1 type="alphabetic letter" n="epsilon">
+        <head lang="greek">*e</head>
+        <entryFree id="n11" type="main" key="e)/rgon">
+          <orth lang="greek">e)/rgon</orth> (<foreign lang="greek">ve/rgon</foreign>): <gloss>work</gloss>, <gloss>deed</gloss>, act, thing.</entryFree>
+      </div1>
+    </body>
+  </text>
+</TEI.2>

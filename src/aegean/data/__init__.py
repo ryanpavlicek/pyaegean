@@ -25,12 +25,16 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from importlib.resources import files
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
 
 from .._log import get_logger
+
+if TYPE_CHECKING:  # type-only: no runtime data -> core import edge
+    from ..core.corpus import Corpus
 
 _LOG = get_logger("data")
 
@@ -209,6 +213,31 @@ _REMOTE: dict[str, DataSpec] = {
         note="prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB); use_lexicon('cunliffe') prefers it.",
         extract=False,
         on_disk=("cunliffe-index.json.gz",),
+    ),
+    "papygreek-fold": DataSpec(
+        name="papygreek-fold",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "papygreek-fold-v1/papygreek-fold.conllu.gz"
+        ),
+        sha256="29bc27b6717bcf3cc9abe37fde2fd927bfc567310aea2693f3a36de4fe79b0de",
+        license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
+        note="documentary-Koine dependency eval fold (1,696 sentences / 24,105 tokens) converted "
+             "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, leakage-clean vs grc-joint training. "
+             "Evaluation only.",
+        extract=False,
+    ),
+    "autenrieth-index": DataSpec(
+        name="autenrieth-index",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "autenrieth-index-v1/autenrieth-index.json.gz"
+        ),
+        sha256="9196574a8d9e5b9ad3731c1c9f7cda7061e6b33e03b7d6d12ecf12ad6c5275dc",
+        license="public domain (1891); Perseus digitization CC BY-SA; derived index, fetched, never bundled",
+        note="prebuilt Autenrieth (Homeric) lemma->entry index (~0.6 MB); use_lexicon('autenrieth') prefers it.",
+        extract=False,
+        on_disk=("autenrieth-index.json.gz",),
     ),
     "abbott-smith-index": DataSpec(
         name="abbott-smith-index",
@@ -475,6 +504,213 @@ _REMOTE: dict[str, DataSpec] = {
 }
 
 
+@dataclass(frozen=True, slots=True)
+class HistoricalPin:
+    """A superseded release pin for a dataset that the project still hosts.
+
+    When an asset is rebuilt and re-hosted under a new tag (the 0.29.0 epigraphy
+    re-host: ``isicily-corpus-v2`` etc.), the previous release is kept on GitHub so
+    an earlier analysis can be reproduced byte-for-byte. Each `HistoricalPin` records
+    that kept release: its ``version`` (the release tag suffix, ``"v1"``), the exact
+    ``url`` and ``sha256`` the pin was published with, and ``superseded`` (the version
+    that replaced it). ``extract`` mirrors the dataset's archive kind (a tar to unpack)
+    for that historical asset. `fetch(name, version=...)` resolves these."""
+
+    version: str
+    url: str
+    sha256: str
+    superseded: str = ""
+    extract: bool = False
+
+
+# Kept prior release pins, keyed by dataset name. Populated ONLY from releases that are
+# still hosted, with the REAL url + sha256 the pin carried at publish time (recovered from
+# the git history of _REMOTE — never reconstructed). The six 0.29.0-superseded epigraphy
+# assets were re-hosted as ``-v2`` (adding the P5 per-token ReadingStatus / edition_fidelity);
+# their ``-v1`` releases remain on GitHub, so a paper pinned to the pre-0.29.0 data still
+# resolves. `fetch(name, version="v1")` fetches one to a version-suffixed cache entry, leaving
+# the default (current) path untouched. Set PYAEGEAN_<NAME>_<VERSION>_URL to fetch a historical
+# pin from your own mirror (e.g. PYAEGEAN_ISICILY_CORPUS_V1_URL).
+_REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
+    "isicily-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "isicily-corpus-v1/isicily-corpus.json"
+            ),
+            sha256="c0242f4b52df05ae7295b17a0c786dd7b474c4ef47520be88795c8117aa8d4d1",
+            superseded="v2",
+        ),
+    ],
+    "iip-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iip-corpus-v1/iip-corpus.json"
+            ),
+            sha256="2fec633b5e6ea38621bc8e0b3c62f959317e4cdd84af5c348b650a479a02dc74",
+            superseded="v2",
+        ),
+    ],
+    "iospe-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iospe-corpus-v1/iospe-corpus.json"
+            ),
+            sha256="bd2143d408d13f96d2e087e54c1508da6bfdb6a096fec6d82feeeb4523e33d7e",
+            superseded="v2",
+        ),
+    ],
+    "igcyr-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "igcyr-corpus-v1/igcyr-corpus.json"
+            ),
+            sha256="673481ce3041ad268d26fb1d5490987b187ad86fb29af50ef7390f919f77e28b",
+            superseded="v2",
+        ),
+    ],
+    "edh-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "edh-corpus-v1/edh-corpus.json"
+            ),
+            sha256="4828a9760fb64a397a510d3ac239a3df600ef23b7bd7d146c6ad911dc33f6541",
+            superseded="v2",
+        ),
+    ],
+    "ddbdp-corpus": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "ddbdp-corpus-v1/ddbdp-corpus.tar.gz"
+            ),
+            sha256="7ae265384543cabc7554e543c3f3a1cccbfa1e3ca531b4cbd8755124f58845e2",
+            superseded="v2",
+            extract=True,
+        ),
+    ],
+}
+
+
+# corpus id -> (dataset name, how to build a Corpus from the fetched path) for the corpora
+# whose loaders go through fetch AND have kept historical pins, so aegean.load(id, version=)
+# can reach an earlier release. The five epigraphy JSON corpora reload via Corpus.from_json;
+# ddbdp is the SQLite-in-tar corpus (materialised via db.from_sqlite).
+_VERSIONED_CORPORA: dict[str, tuple[str, str]] = {
+    "isicily": ("isicily-corpus", "json"),
+    "iip": ("iip-corpus", "json"),
+    "iospe": ("iospe-corpus", "json"),
+    "igcyr": ("igcyr-corpus", "json"),
+    "edh": ("edh-corpus", "json"),
+    "ddbdp": ("ddbdp-corpus", "sqlite"),
+}
+
+# The version tag suffix of a pinned release URL: '.../isicily-corpus-v2/...' -> 'v2',
+# '.../workbench-app-v1.6.1/...' -> 'v1.6.1'.
+_TAG_VERSION = re.compile(r"-(v\d+(?:\.\d+)*)$")
+
+
+def _spec_version(spec: DataSpec) -> str:
+    """The current release version of a pinned dataset, read from its release tag
+    (``.../releases/download/<tag>/<file>``); ``""`` when the URL is not a pinned
+    project release (an env-only / bring-your-own slot)."""
+    marker = "/releases/download/"
+    if marker not in spec.url:
+        return ""
+    tag = spec.url.split(marker, 1)[1].split("/", 1)[0]
+    m = _TAG_VERSION.search(tag)
+    return m.group(1) if m else ""
+
+
+def _version_env_url_var(name: str, version: str) -> str:
+    """The per-version URL override env var, e.g. ``PYAEGEAN_ISICILY_CORPUS_V1_URL``,
+    so a historical pin can be fetched from a user's own mirror."""
+    v = version.upper().replace(".", "_").replace("-", "_")
+    return "PYAEGEAN_" + name.upper().replace("-", "_") + "_" + v + "_URL"
+
+
+def historical_versions(name: str) -> list[HistoricalPin]:
+    """The kept superseded release pins for dataset ``name`` (newest-recorded first),
+    or ``[]`` when the dataset has none. Each pin is a `HistoricalPin` carrying the
+    version tag, its published url + sha256, and the version that superseded it —
+    the reproducibility record `fetch(name, version=...)` resolves against."""
+    return list(_REMOTE_HISTORY.get(name, ()))
+
+
+def available_versions(name: str) -> list[dict[str, Any]]:
+    """Every fetchable version of dataset ``name``: the current pin first (``current``:
+    True), then each kept historical pin. Each entry is
+    ``{"version", "current", "sha256", "url", "superseded"}``. Empty when ``name`` is
+    not a registered dataset."""
+    spec = _REMOTE.get(name)
+    if spec is None:
+        return []
+    out: list[dict[str, Any]] = []
+    cur = _spec_version(spec)
+    out.append(
+        {
+            "version": cur or "current",
+            "current": True,
+            "sha256": spec.sha256,
+            "url": spec.url,
+            "superseded": "",
+        }
+    )
+    for pin in _REMOTE_HISTORY.get(name, ()):
+        out.append(
+            {
+                "version": pin.version,
+                "current": False,
+                "sha256": pin.sha256,
+                "url": pin.url,
+                "superseded": pin.superseded,
+            }
+        )
+    return out
+
+
+def _resolve_version(name: str, version: str) -> tuple[str, str, bool, str]:
+    """Resolve ``(name, version)`` to ``(url, sha256_to_enforce, extract, resolved_version)``.
+
+    ``version`` may name the current pin (from `_REMOTE`) or a kept historical pin (from
+    `_REMOTE_HISTORY`). A ``PYAEGEAN_<NAME>_<VERSION>_URL`` mirror override wins (and disables
+    sha enforcement, like the standard current-URL override); otherwise the pinned historical
+    url + sha are used and the sha is enforced. Raises `DataNotAvailableError` for an unknown
+    dataset or an unknown version (listing the versions that exist)."""
+    spec = _REMOTE.get(name)
+    if spec is None:
+        raise DataNotAvailableError(f"unknown dataset {name!r}; known: {sorted(_REMOTE)}")
+    env = os.environ.get(_version_env_url_var(name, version))
+    cur = _spec_version(spec)
+    if cur and version == cur:
+        if env:
+            return env, "", spec.extract, cur
+        cur_env = os.environ.get(_env_url_var(name))
+        if cur_env:  # the current asset's own PYAEGEAN_<NAME>_URL override
+            return cur_env, "", spec.extract, cur
+        return spec.url, spec.sha256, spec.extract, cur
+    for pin in _REMOTE_HISTORY.get(name, ()):
+        if pin.version == version:
+            if env:
+                return env, "", pin.extract, pin.version
+            return pin.url, pin.sha256, pin.extract, pin.version
+    avail = ([cur] if cur else []) + [p.version for p in _REMOTE_HISTORY.get(name, ())]
+    raise DataNotAvailableError(
+        f"dataset {name!r} has no version {version!r}; available: {avail or ['(none)']}. "
+        "`aegean data versions` lists the kept historical pins."
+    )
+
+
 def _dir_bytes(path: pathlib.Path) -> int:
     """Recursive size of a store path (a file's own size, or a directory's files).
 
@@ -594,6 +830,18 @@ def versions() -> dict[str, Any]:
             "url_overridden": overridden,
             "license": spec.license,
             "cached": is_downloaded(spec, root),
+            # Kept superseded release pins the project still hosts, so an earlier analysis
+            # stays reproducible: fetch(name, version=...) / aegean.load(id, version=...).
+            "history": [
+                {
+                    "version": p.version,
+                    "sha256": p.sha256,
+                    "url": p.url,
+                    "superseded": p.superseded,
+                    "cached": (root / f"{name}@{p.version}").exists(),
+                }
+                for p in _REMOTE_HISTORY.get(name, ())
+            ],
         }
     return {"package": bundled_data_version(), "bundled": bundled, "fetched": fetched}
 
@@ -1051,6 +1299,7 @@ class _DatasetLock:
 def fetch(
     name: str,
     *,
+    version: str | None = None,
     force: bool = False,
     abort: Callable[[], bool] | None = None,
     progress: Callable[[int, int], None] | None = None,
@@ -1069,6 +1318,14 @@ def fetch(
     fetch stops with `FetchAborted`, keeping the partial file resumable (how the
     TUI cancels a download worker).
 
+    ``version`` (optional) fetches a specific kept release of the dataset instead
+    of the current pin — the current version tag (``"v2"``) or a superseded one the
+    project still hosts (``"v1"``; see `historical_versions`). A versioned fetch
+    lands in a **separate** version-suffixed cache entry (``<name>@<version>``), so
+    the default (``version=None``) path is completely unaffected — byte-for-byte the
+    same download to the same location as before. Use it to reproduce an analysis
+    pinned to an earlier release; `available_versions` lists what exists.
+
     ``progress`` (optional) reports the run's movement as ``progress(done, total)``:
     during the download it is **bytes** — the absolute byte position and the full
     file size, or ``total == -1`` when the remote declares no Content-Length (the
@@ -1079,12 +1336,16 @@ def fetch(
     fresh, already-cached fetch makes no download calls (nothing to report). If
     ``progress`` raises, the transfer's resumable ``.part`` is kept and the error is
     surfaced unwrapped. Raises `DataNotAvailableError` for unknown datasets, un-pinned
-    URLs, checksum mismatches, unsafe archives, or network failures — never silently,
-    and never blocking ``import``.
+    URLs, an unknown version, checksum mismatches, unsafe archives, or network
+    failures — never silently, and never blocking ``import``.
     """
     spec = _REMOTE.get(name)
     if spec is None:
         raise DataNotAvailableError(f"unknown dataset {name!r}; known: {sorted(_REMOTE)}")
+    if version is not None:
+        # A specific kept release: separate version-suffixed cache entry; the default
+        # (version=None) path below is untouched.
+        return _fetch_versioned(name, version, force, abort, progress)
     url = _resolve_url(spec)
     if not url:
         raise DataNotAvailableError(
@@ -1177,11 +1438,16 @@ def _fetch_and_extract(
     abort: Callable[[], bool] | None = None,
     *,
     progress: Callable[[int, int], None] | None = None,
+    store_name: str | None = None,
 ) -> pathlib.Path:
     import shutil
 
-    target = cache_dir() / name  # a directory of unpacked files
-    stamp = _extract_stamp(name)
+    # ``store_name`` is the on-disk cache entry name; it equals ``name`` for a normal
+    # fetch and ``<name>@<version>`` for a versioned one, so a historical release unpacks
+    # beside (never over) the current extraction. ``name`` stays the log/error label.
+    store = store_name or name
+    target = cache_dir() / store  # a directory of unpacked files
+    stamp = _extract_stamp(store)
     if target.exists() and not force:
         # Idempotent no-op ONLY when the extraction still matches the pinned archive.
         # An env-overridden URL disables sha enforcement (sha256==""), so trust the
@@ -1201,7 +1467,7 @@ def _fetch_and_extract(
             return target
 
     _LOG.info("fetching dataset %r (archive to extract)", name)
-    archive = cache_dir() / (name + ".part")
+    archive = cache_dir() / (store + ".part")
     _download(url, archive, name, abort, progress=progress)
     _verify(archive, sha256, name)  # removes the archive on mismatch + raises
     # Stamp what was ACTUALLY extracted, even on an unpinned (env-mirror) fetch: an
@@ -1211,7 +1477,7 @@ def _fetch_and_extract(
     # byte-identical content stamps the matching sha and is a clean no-op).
     stamp_value = sha256 or sha256_file(archive)
 
-    staging = cache_dir() / (name + ".extract")
+    staging = cache_dir() / (store + ".extract")
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
@@ -1230,7 +1496,7 @@ def _fetch_and_extract(
         # just-rmtree'd directory can linger in a pending-delete state, so os.replace onto
         # it fails (WinError 5). Rename the old extraction aside first (a fast atomic move),
         # put the new one in place, then delete the old copy.
-        trash = cache_dir() / (name + ".old")
+        trash = cache_dir() / (store + ".old")
         if trash.exists():
             shutil.rmtree(trash, ignore_errors=True)
         os.replace(target, trash)
@@ -1240,3 +1506,70 @@ def _fetch_and_extract(
         staging.replace(target)  # atomic within the cache dir
     stamp.write_text(stamp_value, encoding="utf-8")  # record what produced this extraction
     return target
+
+
+def _fetch_versioned(
+    name: str,
+    version: str,
+    force: bool,
+    abort: Callable[[], bool] | None,
+    progress: Callable[[int, int], None] | None,
+) -> pathlib.Path:
+    """Fetch a specific kept release of ``name`` into a version-suffixed cache entry
+    (``<name>@<version>``). Mirrors the default `fetch` path (sha-verify, atomic,
+    resumable, per-entry lock) but never touches the current dataset's cache location,
+    so `fetch(name)` behaviour is unchanged."""
+    url, sha256, extract, resolved = _resolve_version(name, version)
+    store_name = f"{name}@{resolved}"
+    guarded = _guard_progress(progress)  # a raising observer never corrupts the transfer
+    with _DatasetLock(store_name):
+        if extract:
+            return _fetch_and_extract(
+                url, name, force, sha256, abort, progress=guarded, store_name=store_name
+            )
+        dest = cache_dir() / store_name
+        if dest.exists() and not force:
+            if not sha256 or sha256_file(dest) == sha256:
+                _LOG.debug("dataset %r version %s already cached at %s", name, resolved, dest)
+                return dest  # present and valid → idempotent no-op
+        _LOG.info("fetching dataset %r version %s", name, resolved)
+        tmp = dest.with_name(dest.name + ".part")
+        _download(url, tmp, store_name, abort, progress=guarded)
+        _verify(tmp, sha256, store_name)
+        tmp.replace(dest)  # atomic within the cache dir
+        return dest
+
+
+def load_corpus_version(
+    script_id: str,
+    version: str,
+    *,
+    progress: Callable[[int, int], None] | None = None,
+) -> "Corpus":
+    """Load a kept historical release of a fetched corpus as a `Corpus`.
+
+    Backs ``aegean.load(script_id, version=...)`` for the corpora whose loaders go
+    through `fetch` and have kept historical pins (`_VERSIONED_CORPORA`): the five
+    epigraphy JSON corpora reload via `Corpus.from_json`; ``ddbdp`` materialises from
+    its SQLite database (heavy). The versioned asset lands in its own cache entry, so
+    the current corpus is untouched. Raises `DataNotAvailableError` for a corpus with
+    no kept historical pins."""
+    from ..core.corpus import Corpus
+
+    entry = _VERSIONED_CORPORA.get(script_id)
+    if entry is None:
+        raise DataNotAvailableError(
+            f"aegean.load(..., version=...) is available only for corpora with kept "
+            f"historical pins ({sorted(_VERSIONED_CORPORA)}); {script_id!r} has none. "
+            "Its current data loads with the plain aegean.load(script_id)."
+        )
+    dataset, kind = entry
+    path = fetch(dataset, version=version, progress=progress)
+    if kind == "json":
+        return Corpus.from_json(path)
+    # sqlite (ddbdp): the fetched path is the unpacked directory; load the .sqlite in it
+    from ..db import from_sqlite
+
+    db_files = sorted(pathlib.Path(path).glob("*.sqlite"))
+    db_path = db_files[0] if db_files else pathlib.Path(path) / "ddbdp.sqlite"
+    return from_sqlite(db_path, progress=progress)

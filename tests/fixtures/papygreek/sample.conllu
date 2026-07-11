@@ -1,0 +1,39 @@
+# sent_id = papygreek:aegyptus.90.43@2
+# text = παράσχου τῷ ἀδελφῷ Ἀμμωνίῳ τῷ καμηλάτῃ κριθῆς μάτια ἑκατὸν τεσσεράκοντα .
+1	παράσχου	παρέχω	VERB	v2saim---	Mood=Ind|Number=Sing|Person=2|Tense=Past|VerbForm=Fin|Voice=Mid	0	root	_	_
+2	τῷ	ὁ	DET	l-s---md-	Case=Dat|Gender=Masc|Number=Sing	4	det	_	_
+3	ἀδελφῷ	ἀδελφός	NOUN	n-s---md-	Case=Dat|Gender=Masc|Number=Sing	4	nmod	_	_
+4	Ἀμμωνίῳ	Ἀμμώνιος	NOUN	n-s---md-	Case=Dat|Gender=Masc|Number=Sing	1	iobj	_	_
+5	τῷ	ὁ	DET	l-s---md-	Case=Dat|Gender=Masc|Number=Sing	6	det	_	_
+6	καμηλάτῃ	καμηλάτης	NOUN	n-s---md-	Case=Dat|Gender=Masc|Number=Sing	4	nmod	_	_
+7	κριθῆς	κριθή	NOUN	n-s---fg-	Case=Gen|Gender=Fem|Number=Sing	8	nmod	_	_
+8	μάτια	μάτιον	NOUN	n-p---na-	Case=Acc|Gender=Neut|Number=Plur	1	obj	_	_
+9	ἑκατὸν	ἑκατόν	NUM	m--------	_	8	nummod	_	_
+10	τεσσεράκοντα	τεσσαράκοντα	NUM	m--------	_	9	nummod	_	_
+11	.	.	PUNCT	u--------	_	1	punct	_	_
+
+# sent_id = papygreek:bgu.1.261@2
+# text = γιγνώσκειν σε θέλω ἐγὼ καὶ Οὐαλερία , ἐὰν Ἡροὶς τέκῃ , εὐχόμεθα ἐλθεῖν πρὸς σέ .
+1	γιγνώσκειν	γιγνώσκω	VERB	v--pna---	Tense=Pres|VerbForm=Inf|Voice=Act	3	ccomp	_	_
+2	σε	σύ	PRON	p2s----a-	Case=Acc|Number=Sing|Person=2	1	nsubj	_	_
+3	θέλω	ἐθέλω	VERB	v1spia---	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
+4	ἐγὼ	ἐγώ	PRON	p1s---fn-	Case=Nom|Gender=Fem|Number=Sing|Person=1	12	nsubj	_	_
+5	καὶ	καί	CCONJ	c--------	_	4	cc	_	_
+6	Οὐαλερία	Οὐαλερία	NOUN	n-s---fn-	Case=Nom|Gender=Fem|Number=Sing	4	conj	_	_
+7	,	,	PUNCT	u--------	_	8	punct	_	_
+8	ἐὰν	ἐάν	SCONJ	c--------	_	10	mark	_	_
+9	Ἡροὶς	Ἡροίς	NOUN	n-s---fn-	Case=Nom|Gender=Fem|Number=Sing	10	nsubj	_	_
+10	τέκῃ	τίκτω	VERB	v3sasa---	Mood=Sub|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	12	advcl	_	_
+11	,	,	PUNCT	u--------	_	12	punct	_	_
+12	εὐχόμεθα	εὔχομαι	VERB	v1ppie---	Mood=Ind|Number=Plur|Person=1|Tense=Pres|VerbForm=Fin|Voice=Mid	1	ccomp	_	_
+13	ἐλθεῖν	ἔρχομαι	VERB	v--ana---	Tense=Past|VerbForm=Inf|Voice=Act	12	xcomp	_	_
+14	πρὸς	πρός	ADP	r--------	_	15	case	_	_
+15	σέ	σύ	PRON	p2s----a-	Case=Acc|Number=Sing|Person=2	13	obl	_	_
+16	.	.	PUNCT	u--------	_	3	punct	_	_
+
+# sent_id = papygreek:bgu.1.261@3
+# text = δεῖ γάρ .
+1	δεῖ	δεῖ	VERB	v3siia---	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin|Voice=Act	0	root	_	_
+2	γάρ	γάρ	ADV	d--------	_	1	advmod	_	_
+3	.	.	PUNCT	u--------	_	1	punct	_	_
+

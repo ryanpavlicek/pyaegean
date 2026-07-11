@@ -1,0 +1,281 @@
+{
+  "n_words": 13314,
+  "recomputed": {
+    "ufeats": 59.4337,
+    "uas": 82.4771,
+    "las": 63.5046
+  },
+  "official_batched": {
+    "ufeats": 59.4337,
+    "uas": 82.4771,
+    "las": 63.5046
+  },
+  "published_sequential": {
+    "ufeats": 59.43,
+    "uas": 82.48,
+    "las": 63.5
+  },
+  "ufeats_decomposition": {
+    "ufeats": 59.43,
+    "gap_total_pts": 40.57,
+    "gap_scheme_absent_pts": 24.22,
+    "gap_shared_disagreement_pts": 16.35,
+    "n_scheme_blocked_words": 3224,
+    "n_shared_only_words": 10090,
+    "shared_subset_ufeats": 78.42
+  },
+  "las_decomposition": {
+    "uas": 82.48,
+    "las": 63.5,
+    "label_only_share_pts": 18.97,
+    "label_only_errors": 2526,
+    "attachment_errors": 2333,
+    "deprel_top_share": 0.2411,
+    "deprel_top5_concentration": 0.6892,
+    "deprel_top10_concentration": 0.7838
+  },
+  "feature_stats": [
+    {
+      "feature": "Number",
+      "gold_count": 9320,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 99.58
+    },
+    {
+      "feature": "Case",
+      "gold_count": 7603,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 99.03
+    },
+    {
+      "feature": "Gender",
+      "gold_count": 7541,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 91.91
+    },
+    {
+      "feature": "PronType",
+      "gold_count": 2990,
+      "emitted_by_model_scheme": false,
+      "agreement_on_shared": 0.0
+    },
+    {
+      "feature": "VerbForm",
+      "gold_count": 2741,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 99.67
+    },
+    {
+      "feature": "Tense",
+      "gold_count": 2740,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 98.25
+    },
+    {
+      "feature": "Voice",
+      "gold_count": 2740,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 94.16
+    },
+    {
+      "feature": "Person",
+      "gold_count": 2631,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 77.88
+    },
+    {
+      "feature": "Definite",
+      "gold_count": 1794,
+      "emitted_by_model_scheme": false,
+      "agreement_on_shared": 0.0
+    },
+    {
+      "feature": "Mood",
+      "gold_count": 1717,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 99.01
+    },
+    {
+      "feature": "Aspect",
+      "gold_count": 1427,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 29.15
+    },
+    {
+      "feature": "Degree",
+      "gold_count": 764,
+      "emitted_by_model_scheme": true,
+      "agreement_on_shared": 6.54
+    },
+    {
+      "feature": "Polarity",
+      "gold_count": 221,
+      "emitted_by_model_scheme": false,
+      "agreement_on_shared": 0.0
+    },
+    {
+      "feature": "Reflex",
+      "gold_count": 46,
+      "emitted_by_model_scheme": false,
+      "agreement_on_shared": 0.0
+    },
+    {
+      "feature": "Poss",
+      "gold_count": 13,
+      "emitted_by_model_scheme": false,
+      "agreement_on_shared": 0.0
+    }
+  ],
+  "deprel_confusions_top25": [
+    {
+      "gold": "discourse",
+      "predicted": "advmod",
+      "count": 609,
+      "share_of_label_only": 24.11
+    },
+    {
+      "gold": "det",
+      "predicted": "nmod",
+      "count": 444,
+      "share_of_label_only": 17.58
+    },
+    {
+      "gold": "obl",
+      "predicted": "obj",
+      "count": 277,
+      "share_of_label_only": 10.97
+    },
+    {
+      "gold": "amod",
+      "predicted": "nmod",
+      "count": 206,
+      "share_of_label_only": 8.16
+    },
+    {
+      "gold": "cc",
+      "predicted": "advmod",
+      "count": 205,
+      "share_of_label_only": 8.12
+    },
+    {
+      "gold": "obl",
+      "predicted": "iobj",
+      "count": 80,
+      "share_of_label_only": 3.17
+    },
+    {
+      "gold": "appos",
+      "predicted": "nmod",
+      "count": 57,
+      "share_of_label_only": 2.26
+    },
+    {
+      "gold": "nummod",
+      "predicted": "nmod",
+      "count": 38,
+      "share_of_label_only": 1.5
+    },
+    {
+      "gold": "advcl",
+      "predicted": "mark",
+      "count": 34,
+      "share_of_label_only": 1.35
+    },
+    {
+      "gold": "acl",
+      "predicted": "nmod",
+      "count": 30,
+      "share_of_label_only": 1.19
+    },
+    {
+      "gold": "nmod",
+      "predicted": "acl",
+      "count": 27,
+      "share_of_label_only": 1.07
+    },
+    {
+      "gold": "advmod",
+      "predicted": "obl",
+      "count": 23,
+      "share_of_label_only": 0.91
+    },
+    {
+      "gold": "ccomp",
+      "predicted": "xcomp",
+      "count": 21,
+      "share_of_label_only": 0.83
+    },
+    {
+      "gold": "obj",
+      "predicted": "xcomp",
+      "count": 21,
+      "share_of_label_only": 0.83
+    },
+    {
+      "gold": "advmod",
+      "predicted": "mark",
+      "count": 19,
+      "share_of_label_only": 0.75
+    },
+    {
+      "gold": "ccomp",
+      "predicted": "obj",
+      "count": 19,
+      "share_of_label_only": 0.75
+    },
+    {
+      "gold": "advcl",
+      "predicted": "obl",
+      "count": 17,
+      "share_of_label_only": 0.67
+    },
+    {
+      "gold": "advcl",
+      "predicted": "advmod",
+      "count": 16,
+      "share_of_label_only": 0.63
+    },
+    {
+      "gold": "obl",
+      "predicted": "xcomp",
+      "count": 15,
+      "share_of_label_only": 0.59
+    },
+    {
+      "gold": "obj",
+      "predicted": "ccomp",
+      "count": 14,
+      "share_of_label_only": 0.55
+    },
+    {
+      "gold": "xcomp",
+      "predicted": "nsubj",
+      "count": 14,
+      "share_of_label_only": 0.55
+    },
+    {
+      "gold": "appos",
+      "predicted": "acl",
+      "count": 12,
+      "share_of_label_only": 0.48
+    },
+    {
+      "gold": "nsubj",
+      "predicted": "obj",
+      "count": 11,
+      "share_of_label_only": 0.44
+    },
+    {
+      "gold": "obj",
+      "predicted": "nsubj",
+      "count": 11,
+      "share_of_label_only": 0.44
+    },
+    {
+      "gold": "nmod",
+      "predicted": "obl",
+      "count": 10,
+      "share_of_label_only": 0.4
+    }
+  ]
+}

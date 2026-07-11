@@ -101,13 +101,26 @@ class Corpus:
 
     # ── construction ────────────────────────────────────────────────────
     @classmethod
-    def load(cls, script_id: str) -> "Corpus":
+    def load(cls, script_id: str, *, version: str | None = None) -> "Corpus":
         """Load a registered corpus by name, e.g. ``Corpus.load("lineara")`` (bundled)
         or ``Corpus.load("damos")`` (fetched to the local data store on first use).
 
         Loaders may cache one built instance per process (the bundled corpora do),
         so the result is returned as a `copy`: mutate it freely, and documents
-        added, dropped, or edited never leak into later ``load`` calls."""
+        added, dropped, or edited never leak into later ``load`` calls.
+
+        ``version`` (optional) loads a kept **historical** release of a fetched corpus
+        that the project still hosts, for reproducing an earlier analysis byte-for-byte
+        (e.g. ``version="v1"`` for a pre-0.29.0 epigraphy corpus). It applies only to
+        the corpora with kept historical pins (``isicily``, ``iip``, ``iospe``,
+        ``igcyr``, ``edh``, ``ddbdp``; see `aegean.data.historical_versions`) and
+        fetches into a separate version-suffixed cache entry, leaving the current data
+        untouched. The default (``version=None``) is unchanged."""
+        if version is not None:
+            from ..data import load_corpus_version
+
+            _LOG.info("loading corpus %r version %s", script_id, version)
+            return load_corpus_version(script_id, version)
         fn = _LOADERS.get(script_id)
         if fn is None:
             # Forgive case as a last resort, so ``load("LINEARA")`` finds ``lineara`` —

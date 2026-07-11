@@ -141,9 +141,13 @@ def test_versions_fetched_entries_carry_pinned_metadata() -> None:
     flag; with our isolated empty cache it must be uncached."""
     v = versions()
     li = v["fetched"]["lineara-images"]
-    assert set(li.keys()) == {
+    assert set(li.keys()) >= {
         "url", "sha256", "license", "cached", "sha256_enforced", "url_overridden"
     }
+    # 0.38.0: entries may additionally carry a `history` list of superseded pins
+    assert set(li.keys()) - {
+        "url", "sha256", "license", "cached", "sha256_enforced", "url_overridden", "history"
+    } == set()
     assert len(li["sha256"]) == 64
     # a pinned (non-overridden) URL enforces its sha256, so the manifest is honest
     assert li["url_overridden"] is False and li["sha256_enforced"] is True

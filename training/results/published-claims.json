@@ -96,5 +96,31 @@
     "source_evidence": "training/results/calibration-2026-07-11.json",
     "protocol": "temperature fitted on the UD Perseus DEV fold only (the checkpoint-selection fold); test ECE is report-only, one shot; 15-bin equal-width ECE; CPU, batch_size=32; the lemma head calibrates the argmax-script probability against composed-lemma-vs-gold correctness (a documented proxy)",
     "note": "the shipped bundled calibration (src/aegean/data/bundled/greek/calibration.json) carries exactly these temperatures; confidence is exposed ONLY through this calibration, never raw softmax; fitted on literary prose (the genre caveat travels with the number)"
+  },
+  "proiel_convention_decomposition": {
+    "ufeats_gap_points": 40.6,
+    "ufeats_scheme_absent_points": 24.2,
+    "ufeats_shared_disagreement_points": 16.4,
+    "ufeats_shared_subset_score": 78.4,
+    "scheme_absent_word_share": 24.2,
+    "las_gap_points": 36.5,
+    "las_attachment_points": 17.5,
+    "las_label_only_points": 19.0,
+    "label_only_tokens": 2526,
+    "top5_label_confusion_share": 68.9,
+    "source_evidence": "training/results/proiel-convention-decomp-2026-07-11.json",
+    "protocol": "greek.proiel_convention_report(); UD-PROIEL test, neural pipeline, decomposition of the published UFeats/UAS/LAS rows (reproduces the official evaluator to 4 decimals); measurement only — the published rows are unchanged"
+  },
+  "neural_papygreek_test": {
+    "upos": 91.05,
+    "xpos": 76.76,
+    "ufeats": 88.57,
+    "lemma": 86.11,
+    "uas": 85.71,
+    "las": 79.89,
+    "n_words": 24105,
+    "n_sentences": 1696,
+    "source_evidence": "training/results/papygreek-eval-2026-07-11.json",
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential"
   }
 }

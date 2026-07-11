@@ -371,18 +371,114 @@ def _tokens_for(blocks: list[str]) -> tuple[list[Token], list[list[int]]]:
     return tokens, lines
 
 
+def _make_doc(
+    work: str, title: str, part: Any, id_suffix: str, name_suffix: str,
+    lo: int | None, hi: int | None,
+) -> Document | None:
+    """One `Document` from a textpart (optionally a verse line-range ``lo``–``hi``);
+    ``None`` when the selection contains no text."""
+    tokens, lines = _tokens_for(_blocks(part, lo, hi))
+    if not tokens:
+        return None
+    return Document(
+        id=f"{work}:{id_suffix}", script_id="greek", tokens=tokens, lines=lines,
+        meta=DocumentMeta(name=f"{title} — {name_suffix}".strip(), notes=_collect_notes(part)),
+    )
+
+
+def _select_ref(edition_div: Any, work: str, title: str, ref: str) -> Document:
+    """Resolve ONE citation ref — a textpart (``"1"``), a nested div (``"1.2"``), or a
+    verse line-range within one book (``"1.1-1.50"``); no comma — to a `Document`.
+
+    Raises `ValueError` for a range that crosses textparts, an endpoint that resolves
+    nowhere, or a ref that selects no text (the message names the sections or line
+    numbers that ARE present, so a wrong address is actionable)."""
+    start, end = _parse_ref(ref)
+    part, rest = _navigate(edition_div, start)
+    end_part, end_rest = _navigate(edition_div, end)
+    if end_part is not part:
+        # The two endpoints landed in different <div>s. Collecting across textparts isn't
+        # supported (a Document is one textpart), and returning the start part labeled with
+        # the full range would be a silent truncation — refuse instead.
+        def where(components: list[str], unmatched: list[str]) -> str:
+            matched = components[: len(components) - len(unmatched)]
+            return f"textpart {'.'.join(matched)}" if matched else "no matching textpart"
+
+        raise ValueError(
+            f"{work}: ref {ref!r} crosses textparts: the range start resolves to "
+            f"{where(start, rest)} but the end to {where(end, end_rest)}. A range "
+            "must stay within one textpart; load each part separately (one "
+            "load_work call per book/chapter) and merge the corpora, or pass the parts "
+            "as a comma list (e.g. '1,2') to get one document each."
+        )
+
+    def selected_no_text(lo: "int | None") -> ValueError:
+        avail = [d.get("n") for d in part.iterfind(f"{_TEI}div") if d.get("n")]
+        if avail:
+            hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
+        elif lo is not None:
+            nums = [n for n in (_line_num(el) for el in part.iter(f"{_TEI}l")) if n is not None]
+            hint = f"; lines present: {min(nums)}–{max(nums)}" if nums else ""
+        else:
+            hint = ""
+        return ValueError(f"{work}: ref {ref!r} selected no text{hint}")
+
+    # After navigation, the only legitimate leftover is a single numeric verse-line
+    # selector. Anything else (a non-numeric component like "abc", or several unmatched
+    # components) means the ref did not resolve: refuse, instead of silently falling back
+    # to the whole part mislabeled with the ref.
+    for leftover in (rest, end_rest):
+        if leftover and (not leftover[-1].isdigit() or len(leftover) > 1):
+            raise selected_no_text(None)
+    lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
+    hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
+    doc = _make_doc(work, title, part, ref, ref, lo, hi)
+    if doc is None:
+        raise selected_no_text(lo)
+    return doc
+
+
+def _select_refs(edition_div: Any, work: str, title: str, ref: str) -> list[Document]:
+    """Resolve ``ref`` — one citation ref, or several comma-separated (``"1.1,1.5"``,
+    ``"1,3"``) — to one `Document` per selection (source order preserved, exact
+    duplicates dropped). Each comma entry is resolved independently, so a multi-ref may
+    span textparts (``"1.1,2.1"``) even though a single hyphen-range may not."""
+    if "," not in ref:
+        return [_select_ref(edition_div, work, title, ref)]
+    segments: list[str] = []
+    seen: set[str] = set()
+    for raw in ref.split(","):
+        seg = raw.strip()
+        if seg == "":
+            raise ValueError(
+                f"malformed work ref {ref!r}: an empty entry in the comma list "
+                "(use e.g. '1.1,1.5' or '1,3')"
+            )
+        if seg not in seen:
+            seen.add(seg)
+            segments.append(seg)
+    return [_select_ref(edition_div, work, title, seg) for seg in segments]
+
+
 def parse_tei_work(
     blob: bytes, work: str, ref: str | None = None
 ) -> tuple[str, str, list[Document]]:
     """Parse one TEI work file into ``(title, author, documents)``.
 
     Without ``ref``: one `Document` per top-level textpart of the edition div (an
-    Iliad book, a prose chapter run). With ``ref`` (e.g. ``"1"``, ``"1.2"``,
-    ``"1.1-1.50"``): the matching textpart or verse line-range is selected —
-    nested ``<div>``s are addressed by their ``n``, and a trailing numeric range
-    filters verse ``<l>`` lines. A range must stay within one textpart: a ref
-    whose endpoints resolve to different textparts (``"1.1-2.50"``) raises
-    `ValueError` naming both parts. ``<note>``/``<bibl>`` are kept in
+    Iliad book, a prose chapter run). With ``ref``: the addressed section(s) —
+
+    * a textpart or nested div by its ``n`` (``"1"`` = book 1, ``"1.2"`` = book 1
+      chapter 2);
+    * a verse line-range within one book (``"1.1-1.50"`` = book 1, lines 1–50; the
+      hi may drop the repeated prefix, ``"1.1-50"``);
+    * several of the above as a **comma list** (``"1.1,1.5"``, ``"1,3"``), giving one
+      `Document` per entry, in source order (exact duplicates dropped).
+
+    A hyphen **range** must stay within one textpart: ``"1.1-2.50"`` (or the
+    whole-part ``"1-2"``) raises `ValueError` naming both parts. A **comma list** has
+    no such limit — each entry is resolved independently — so ``"1,2"`` returns both
+    parts as separate documents. ``<note>``/``<bibl>`` are kept in
     ``DocumentMeta.notes`` (excluded from the running text, not dropped)."""
     import xml.etree.ElementTree as ET
 
@@ -406,67 +502,15 @@ def parse_tei_work(
     if edition_div is None:
         raise ValueError(f"{work}: no edition <div>")
 
-    def make_doc(
-        part: Any, id_suffix: str, name_suffix: str, lo: int | None, hi: int | None
-    ) -> Document | None:
-        tokens, lines = _tokens_for(_blocks(part, lo, hi))
-        if not tokens:
-            return None
-        return Document(
-            id=f"{work}:{id_suffix}", script_id="greek", tokens=tokens, lines=lines,
-            meta=DocumentMeta(name=f"{title} — {name_suffix}".strip(), notes=_collect_notes(part)),
-        )
-
     if ref is not None:
-        start, end = _parse_ref(ref)
-        part, rest = _navigate(edition_div, start)
-        end_part, end_rest = _navigate(edition_div, end)
-        if end_part is not part:
-            # The two endpoints landed in different <div>s. Collecting across
-            # textparts isn't supported (a Document is one textpart), and
-            # returning the start part labeled with the full range would be a
-            # silent truncation — refuse instead.
-            def where(components: list[str], unmatched: list[str]) -> str:
-                matched = components[: len(components) - len(unmatched)]
-                return f"textpart {'.'.join(matched)}" if matched else "no matching textpart"
-
-            raise ValueError(
-                f"{work}: ref {ref!r} crosses textparts: the range start resolves to "
-                f"{where(start, rest)} but the end to {where(end, end_rest)}. A range "
-                "must stay within one textpart; load each part separately (one "
-                "load_work call per book/chapter) and merge the corpora."
-            )
-        def selected_no_text(lo: "int | None") -> ValueError:
-            avail = [d.get("n") for d in part.iterfind(f"{_TEI}div") if d.get("n")]
-            if avail:
-                hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
-            elif lo is not None:
-                nums = [n for n in (_line_num(el) for el in part.iter(f"{_TEI}l")) if n is not None]
-                hint = f"; lines present: {min(nums)}–{max(nums)}" if nums else ""
-            else:
-                hint = ""
-            return ValueError(f"{work}: ref {ref!r} selected no text{hint}")
-
-        # After navigation, the only legitimate leftover is a single numeric verse-line
-        # selector. Anything else (a non-numeric component like "abc", or several
-        # unmatched components) means the ref did not resolve: refuse, instead of
-        # silently falling back to the whole part mislabeled with the ref.
-        for leftover in (rest, end_rest):
-            if leftover and (not leftover[-1].isdigit() or len(leftover) > 1):
-                raise selected_no_text(None)
-        lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
-        hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
-        doc = make_doc(part, ref, ref, lo, hi)
-        if doc is None:
-            raise selected_no_text(lo)
-        return title, author, [doc]
+        return title, author, _select_refs(edition_div, work, title, ref)
 
     parts = [d for d in edition_div.iterfind(f"{_TEI}div")] or [edition_div]
     docs: list[Document] = []
     for i, part in enumerate(parts, start=1):
         n = part.get("n") or str(i)
         subtype = part.get("subtype") or "part"
-        doc = make_doc(part, n, f"{subtype} {n}".strip(), None, None)
+        doc = _make_doc(work, title, part, n, f"{subtype} {n}".strip(), None, None)
         if doc is not None:
             docs.append(doc)
     return title, author, docs
@@ -489,11 +533,15 @@ def load_work(
 
     ``ref`` selects a sub-section instead of the whole work — a citation address
     matching the work's structure: a textpart number (``"1"`` = Iliad book 1),
-    a nested div path (``"1.2"`` = book 1, chapter 2 of a prose work), or a verse
-    line-range (``"1.1-1.50"`` = book 1, lines 1–50). A range must stay within a
-    single textpart: ``"1.1-2.50"`` (crossing from book 1 into book 2) raises
-    `ValueError`; load each book separately and `Corpus.merge` the results.
-    Without ``ref``, the corpus is one `Document` per top-level textpart.
+    a nested div path (``"1.2"`` = book 1, chapter 2 of a prose work), a verse
+    line-range (``"1.1-1.50"`` = book 1, lines 1–50), or a comma list of any of
+    these (``"1.1,1.5"``, ``"1,3"``) giving one `Document` per entry. A hyphen range
+    must stay within a single textpart: ``"1.1-2.50"`` (crossing from book 1 into
+    book 2) raises `ValueError`; use a comma list, or load each book separately and
+    `Corpus.merge` the results. Without ``ref``, the corpus is one `Document` per
+    top-level textpart. The corpus provenance's ``citation`` is the **canonical**
+    scholarly citation of exactly what was selected (``"Homer, Iliad 1.1-1.50"``; see
+    `canonical_citation`), so ``corpus.cite()`` echoes the selection.
     ``<note>``/``<bibl>`` ride along in ``Document.meta.notes``. Raises
     `aegean.data.DataNotAvailableError` when the work can't be found/fetched, or
     `ValueError` when ``ref`` matches nothing."""
@@ -505,15 +553,36 @@ def load_work(
     repo, _, license_ = _SOURCES[src]
     commit = _ref(src)
     scope = f"ref {ref} of {work}" if ref else f"every textpart of {work}"
+    canon = canonical_citation(work, ref, author, title)
     provenance = Provenance(
         source=f"{repo} ({filename})",
         license=license_,
-        citation=f"{author}. {title}. Digitized by the Perseus Digital Library / Open Greek and Latin.".lstrip(". "),
+        # The exact canonical citation of what was selected, then the digitization
+        # attribution: "Homer, Iliad 1.1-1.50. Digitized by …".
+        citation=f"{canon}. Digitized by the Perseus Digital Library / Open Greek and Latin.".lstrip(". "),
         url=f"https://github.com/{repo}/blob/{commit}/{_work_dir(work)}/{filename}",
         data_version=f"{repo}@{commit[:12]}",
         notes=(f"fetched to cache; {scope}",),
     )
     return Corpus(docs, None, provenance, "greek")
+
+
+def canonical_citation(
+    work: str, ref: str | None = None, author: str = "", title: str = ""
+) -> str:
+    """The canonical scholarly citation for a loaded work or the exact section selected.
+
+    ``"Homer, Iliad 1.1-1.50"`` — author and title, then the canonical reference. A
+    comma list of refs is joined with ``"; "`` (``"Homer, Iliad 1.1; 1.5"``); a
+    whole-work load (``ref=None``) is just ``"Homer, Iliad"``. ``work`` (the CTS id) is
+    the fallback lead when author/title are unknown. This is the string ``corpus.cite()``
+    reports for a loaded work, and what a ``--cite`` echo prints — the exact citation for
+    what was selected, ready to paste into an apparatus or bibliography."""
+    lead = ", ".join(p for p in (author.strip(), title.strip()) if p) or work
+    if not ref or not ref.strip():
+        return lead
+    refs = "; ".join(r.strip() for r in ref.split(",") if r.strip())
+    return f"{lead} {refs}" if refs else lead
 
 
 # A small, curated catalog of well-known works for discovery. Every id below was verified to

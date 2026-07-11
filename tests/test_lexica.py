@@ -25,8 +25,8 @@ def test_lexica_lists_hosted_and_deeplink():
     ids = {i.id: i.hosted for i in greek.lexica()}
     assert ids["lsj"] is True
     assert ids["dodson"] is True
-    assert ids["autenrieth"] is False  # deep-link only
-    assert ids["slater"] is False
+    assert ids["autenrieth"] is True  # hosted (prebuilt Homeric index)
+    assert ids["slater"] is False  # deep-link only
     assert ids["montanari"] is False
 
 
@@ -44,7 +44,7 @@ def test_lexicon_link_logeion_and_perseus():
 
 def test_deeplink_only_lexicon_guard():
     with pytest.raises(ValueError, match="deep-link only"):
-        greek.use_lexicon("autenrieth")
+        greek.use_lexicon("slater")
 
 
 def test_unknown_lexicon_raises():

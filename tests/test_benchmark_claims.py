@@ -84,6 +84,19 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
     assert bundled["temperature"] == cal["temperature"]
 
 
+def test_papygreek_row_matches_registry_and_evidence() -> None:
+    claims = _claims()["neural_papygreek_test"]
+    ev = json.loads(_read("training/results/papygreek-eval-2026-07-11.json"))
+    res = ev["results_full_precision"]
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+        assert claims[metric] == round(res[metric] * 100, 2), metric
+    assert claims["n_words"] == res["n_words"]
+    doc = _read("docs/benchmarks.md")
+    for metric in ("upos", "ufeats", "lemma", "uas", "las"):
+        assert f"{claims[metric]:.2f}" in doc, metric
+    assert f"{claims['n_words']:,}" in doc
+
+
 def test_registry_agrees_with_the_quantize_size_evidence() -> None:
     claims = _claims()
     v3 = json.loads(_read("training/results/v3-quantize-report.json"))

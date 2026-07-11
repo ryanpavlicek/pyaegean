@@ -45,16 +45,22 @@ except PackageNotFoundError:  # pragma: no cover - running from a source tree, u
     __version__ = "0.0.0+unknown"
 
 
-def load(script_id: str) -> Corpus:
+def load(script_id: str, *, version: str | None = None) -> Corpus:
     """Load a registered corpus by id, e.g. ``aegean.load("lineara")``.
 
     The Aegean corpora and the Greek sample texts are bundled and load offline;
     the rest (``nt``, ``damos``, ``sigla``, the epigraphy corpora, ``ddbdp``)
     fetch to the local data store on first use.
 
+    ``version`` (optional) loads a kept **historical** release of a fetched corpus
+    the project still hosts, for reproducing an earlier analysis (e.g.
+    ``aegean.load("isicily", version="v1")`` for the pre-0.29.0 I.Sicily data). It
+    is accepted only for corpora with kept historical pins (``isicily``, ``iip``,
+    ``iospe``, ``igcyr``, ``edh``, ``ddbdp``); the default loads the current data.
+
     Each call returns an independent copy (see `Corpus.copy`), so mutating the
     result never leaks into a later ``load()`` of the same corpus."""
-    return Corpus.load(script_id)
+    return Corpus.load(script_id, version=version)
 
 
 from .core.resolve import read_corpus  # noqa: E402 — flexible loader (id/work/file/stdin)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import typer
 
-from ._common import CORPUS_ARG, fail, load_corpus, write_corpus, writing
+from ._common import CORPUS_ARG, console, fail, load_corpus, table, write_corpus, writing
 from ._greek import LEMMATIZER_OPT, NEURAL_LEMM_OPT, NEURAL_OPT, TAGGER_OPT, _activate
 
 review_app = typer.Typer(
@@ -111,3 +111,110 @@ def apply(
     write_corpus(corrected, output)
     note = corrected.provenance.notes[-1] if corrected.provenance and corrected.provenance.notes else ""
     print(f"wrote {output}" + (f"  ({note})" if note.startswith("review:") else ""), file=sys.stderr)
+
+
+@review_app.command()
+def merge(
+    tables: list[Path] = typer.Argument(
+        ..., help="Two or more reviewed .csv tables — corrected copies of the SAME export."
+    ),
+    corpus: str = typer.Option(
+        ..., "--corpus", "-c", help="The corpus the tables were exported from (id / path / '-')."
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Write the merged (agreed) review table here (.csv)."
+    ),
+    on_conflict: str = typer.Option(
+        "error", "--on-conflict",
+        help="'error' (fail when reviewers disagree) or 'report' (list conflicts, keep the "
+             "agreed subset).",
+    ),
+    json_out: bool = typer.Option(False, "--json", help="Emit the merge result as JSON."),
+) -> None:
+    """Combine several reviewers' corrected copies of one export into one review table.
+
+    Corrections the reviewers agree on (or that only one made) are merged; a genuine
+    disagreement on the same token is listed, never silently resolved. Reviewer identity comes
+    from each table's ``reviewer`` column (or the file name when blank). Write the agreed subset
+    with ``-o merged.csv`` and apply it with ``aegean review apply``. Example:
+    aegean review merge alice.csv bob.csv --corpus nt -o merged.csv --on-conflict report"""
+    from aegean.io import merge_review_tables
+
+    if on_conflict not in ("error", "report"):
+        raise fail("--on-conflict must be 'error' or 'report'")
+    if len(tables) < 2:
+        raise fail("review merge needs at least two review tables to combine")
+    for t in tables:
+        if not t.exists():
+            raise fail(f"no review table at {t}")
+    c = load_corpus(corpus)
+    # Always merge in report mode so the conflicts are structured and can be shown; the
+    # --on-conflict flag then decides whether an unresolved conflict is a failure.
+    try:
+        merged = merge_review_tables(tables, c, on_conflict="report")
+    except (OSError, ValueError, KeyError) as exc:
+        raise fail(f"could not merge review tables: {exc}") from None
+
+    if json_out:
+        from ._common import emit_json
+
+        emit_json({
+            "tables": [str(t) for t in tables],
+            "reviewers": list(merged.reviewers),
+            "agreed_corrections": len(merged.rows),
+            "conflicts": [
+                {
+                    "doc_id": k.doc_id, "position": k.position, "token": k.token,
+                    "field": k.field,
+                    "options": [
+                        {"reviewer": o.reviewer, "value": o.value, "note": o.note}
+                        for o in k.options
+                    ],
+                }
+                for k in merged.conflicts
+            ],
+        })
+        if output is not None:
+            with writing(output):
+                merged.to_csv(output)
+        if merged.conflicts and on_conflict == "error":
+            raise typer.Exit(1)
+        return
+
+    if merged.conflicts:
+        rows: list[list[str]] = []
+        for k in merged.conflicts:
+            for i, opt in enumerate(k.options):
+                rows.append([
+                    k.doc_id if i == 0 else "",
+                    str(k.position) if i == 0 else "",
+                    k.token if i == 0 else "",
+                    k.field if i == 0 else "",
+                    opt.reviewer, opt.value, opt.note,
+                ])
+        table(
+            "review conflicts (reviewers disagree — not applied)",
+            ["doc", "pos", "token", "field", "reviewer", "value", "note"],
+            rows,
+        )
+
+    if output is not None:
+        if output.suffix.lower() != ".csv":
+            raise fail("review merge writes a .csv table (pass -o merged.csv)")
+        with writing(output):
+            merged.to_csv(output)
+        print(f"wrote {len(merged.rows)} merged review rows to {output}", file=sys.stderr)
+        print(f"then:  aegean review apply {corpus} {output} -o corrected.json")
+
+    who = ", ".join(merged.reviewers) or "—"
+    n_conf = len(merged.conflicts)
+    console().print(
+        f"merged {len(tables)} tables by {who}: {len(merged.rows)} agreed correction(s), "
+        f"{n_conf} conflict(s)",
+        style="dim", markup=False,
+    )
+    if n_conf and on_conflict == "error":
+        raise fail(
+            f"{n_conf} unresolved conflict(s) across reviewers; resolve them, or re-run with "
+            f"--on-conflict report to keep the agreed subset"
+        )

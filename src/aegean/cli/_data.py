@@ -245,6 +245,11 @@ class _FetchProgress:
 @data_app.command()
 def fetch(
     name: str = typer.Argument(..., help="Dataset name (see `aegean data list`)."),
+    version: str | None = typer.Option(
+        None, "--version",
+        help="Fetch a kept historical release (e.g. v1) into a version-suffixed store "
+        "entry, for reproducing an earlier analysis (see `aegean data versions`).",
+    ),
     force: bool = typer.Option(
         False, "--force", help="Replace the stored copy with a fresh download."
     ),
@@ -255,7 +260,9 @@ def fetch(
     A one-time download: when a valid copy is already stored the call is a
     no-op, and an interrupted transfer resumes from its partial file on the
     next attempt instead of restarting. The result stays until `aegean data
-    remove` deletes it."""
+    remove` deletes it. `--version v1` fetches a kept prior release (the project
+    still hosts the superseded epigraphy corpora) into a separate
+    ``<name>@<version>`` store entry, leaving the current copy untouched."""
     from aegean.data import _REMOTE, DataNotAvailableError, fetch as _fetch
 
     name = _resolve_name(name)
@@ -264,18 +271,30 @@ def fetch(
     # A live byte/member line on a real terminal; --json (and piped) runs stay silent.
     painter = None if json_out else _FetchProgress(name)
     try:
-        path = _fetch(name, force=force, progress=painter)
+        path = _fetch(name, version=version, force=force, progress=painter)
     except DataNotAvailableError as exc:  # a known name that cannot be fetched (network, …)
-        if name == "linearb-corpus":  # the BYO slot: guide to DAMOS instead of a raw wall
+        if name == "linearb-corpus" and version is None:  # BYO slot: guide to DAMOS, not a raw wall
             raise fail(_LINEARB_GUIDANCE) from None
         raise fail(str(exc)) from None
     finally:
         if painter is not None:
             painter.close()  # end any open line before the path / hint prints
     if json_out:
-        emit_json({"name": name, "path": str(path), "bytes": _on_disk_bytes(path)})
+        emit_json(
+            {"name": name, "version": version, "path": str(path), "bytes": _on_disk_bytes(path)}
+        )
         return
     print(path)
+    if version is not None:
+        # The current-copy load hint would load the CURRENT data, not this release; point
+        # at the versioned loader instead (only the *-corpus datasets have a load path).
+        stem = name[: -len("-corpus")] if name.endswith("-corpus") else name
+        print(
+            f"historical pin — load it:  python -c \"import aegean; "
+            f"aegean.load('{stem}', version='{version}')\"",
+            file=sys.stderr,
+        )
+        return
     hint = _FETCH_HINTS.get(name)
     if hint is not None:
         print(hint, file=sys.stderr)
@@ -359,7 +378,10 @@ def remove(
 def versions(json_out: bool = JSON_OPT) -> None:
     """The reproducibility manifest: every dataset's version + sha256.
 
-    Pin it for a paper: `aegean data versions --json > data-versions.json`."""
+    Kept prior release pins (the project still hosts the superseded epigraphy
+    corpora) are listed as ``fetched/<name>@<version>`` rows — fetch one with
+    `aegean data fetch <name> --version <v>`. Pin the whole manifest for a paper:
+    `aegean data versions --json > data-versions.json`."""
     from aegean.data import versions as _versions
 
     manifest = _versions()
@@ -382,6 +404,13 @@ def versions(json_out: bool = JSON_OPT) -> None:
         rows.append(
             [f"fetched/{name}", sha, "cached" if info["cached"] else "not cached"]
         )
+        # Kept historical pins, one indented row each (reproducibility of an earlier release).
+        for pin in info.get("history", []):
+            status = "cached" if pin.get("cached") else "not cached"
+            note = f"{status} (superseded by {pin['superseded']})" if pin.get("superseded") else status
+            rows.append(
+                [f"fetched/{name}@{pin['version']}", str(pin["sha256"])[:16] + "…", note]
+            )
     table("data versions (pin with --json for papers)", ["dataset", "sha256", "status"], rows)
 
 

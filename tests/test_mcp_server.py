@@ -389,7 +389,7 @@ def test_greek_gloss_miss_and_bad_dictionary() -> None:
     assert "unknown dictionary 'cunlife'" in typo["error"]
     assert "'cunliffe'" in typo["error"]  # did-you-mean
 
-    linked = m.greek_gloss("μῆνις", dictionary="autenrieth")
+    linked = m.greek_gloss("μῆνις", dictionary="slater")
     assert "deep-link only" in linked["error"]
     assert "lsj" in linked["error"]  # names the hosted dictionaries
 

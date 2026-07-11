@@ -4,6 +4,46 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.38.0 (2026-07-11)
+
+The research-workflow release: collaborate on corrections, pin exact data versions,
+and the first documentary-Greek parsing evaluation.
+
+### Added
+- **The first documentary-Greek dependency evaluation**: `greek.evaluate_on_papygreek()`
+  (CLI: `aegean greek eval papygreek`) scores the neural pipeline on a new fold of
+  1,696 sentences / 24,105 tokens of papyrus letters and petitions, converted from
+  the PapyGreek Treebanks (CC BY-SA 4.0) through the same AGDT scheme the model
+  trains under. Measured: UPOS 91.05 / UFeats 88.57 / lemma 86.11 / UAS 85.71 /
+  LAS 79.89 — scheme-matched out-of-domain parsing runs ~16 LAS points above the
+  convention-capped PROIEL row. The fold is leakage-checked sentence-by-sentence
+  against the training set: 354 overlapping sentences were found (Pedalion ships a
+  documentary-papyri subset) and excluded.
+- **The PROIEL convention decomposition**: `greek.proiel_convention_report()` (CLI:
+  `greek eval ud --fold proiel --drift`) turns the qualitative "convention-capped"
+  caveat into measured numbers — 24.2 of the 40.6 UFeats gap points are feature
+  types the model's scheme cannot emit, and 19.0 of the 36.5 LAS gap points are
+  correctly-attached words labeled by a different convention, 68.9% of them in five
+  systematic relation pairs. A measurement decomposition only: the published rows
+  are unchanged.
+- **Multi-reviewer corrections**: `io.merge_review_tables` and
+  `aegean review merge A.csv B.csv --corpus X` combine several reviewers' copies of
+  a review export, applying agreements and surfacing per-field conflicts (never
+  silently resolving them); the applied corpus stamps every contributing reviewer.
+- **Versioned data pinning for reproducibility**: `aegean.load(id, version="v1")`
+  and `aegean data fetch <name> --version v1` fetch the superseded historical pin
+  of a dataset (the six 0.29-era epigraphy corpora keep their v1 assets hosted,
+  with the original checksums recovered and enforced), so a paper can name and
+  re-fetch the exact data snapshot it used.
+- **Autenrieth's Homeric Dictionary** joins the lexicon registry
+  (`use_lexicon("autenrieth")`): 9,663 lemma entries from the Perseus digitization
+  of the 1891 public-domain text, homograph senses merged rather than dropped.
+  Slater's Lexicon to Pindar stays deep-link-only: the 1969 De Gruyter edition
+  remains in copyright (verified against the publisher's live catalogue).
+- **Richer work citations**: `load_work` refs accept comma lists ("1.1,1.5"), and
+  the exact canonical citation of what was selected ("Homer, Iliad 1.1-1.50") now
+  travels in provenance, `corpus.cite()`, and a `cite it:` line on `greek work`.
+
 ## 0.37.0 (2026-07-11)
 
 Deeper Aegean scholarship: apparatus everywhere, scribal hands, and an offline

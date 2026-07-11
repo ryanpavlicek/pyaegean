@@ -83,7 +83,7 @@ _SPECS: dict[str, _Spec] = {}
 _ACTIVE: dict[str, Lexicon] = {}
 
 # Priority for an unspecified ``dictionary=`` (classical first, then Homeric, then NT).
-_DEFAULT_ORDER = ("lsj", "middle-liddell", "cunliffe", "abbott-smith", "dodson")
+_DEFAULT_ORDER = ("lsj", "middle-liddell", "cunliffe", "autenrieth", "abbott-smith", "dodson")
 
 
 def register_lexicon(info: LexiconInfo, loader: Callable[..., Lexicon]) -> None:
@@ -260,6 +260,46 @@ class _DodsonAdapter:
         return None if e is None else f"{e.headword}: {e.gloss}"
 
 
+# --- Autenrieth's Homeric Dictionary (hosted, index-backed) ------------------
+# Georg Autenrieth, *A Homeric Dictionary* (1891, public domain), from the Perseus
+# digitization (CC BY-SA). Like the Scaife / Abbott-Smith backends, it serves a
+# prebuilt lemma→entry index (built offline by scripts/build_autenrieth_index.py);
+# until that index is hosted, `use_lexicon("autenrieth")` raises a clean not-available
+# error rather than a traceback.
+
+_AUTENRIETH_INFO = LexiconInfo(
+    id="autenrieth",
+    name="Autenrieth, A Homeric Dictionary",
+    scope="Homeric",
+    license="public domain (1891); Perseus digitization CC BY-SA; derived index, fetched, never bundled",
+    source="Perseus Digital Library (text 1999.04.0073)",
+    hosted=True,
+)
+_AUTENRIETH_INDEX_NAME = "autenrieth-index.json.gz"
+_AUTENRIETH_PREBUILT = "autenrieth-index"
+
+
+def _load_autenrieth(*, build: bool = True, force: bool = False) -> Lexicon:
+    """Load Autenrieth (fetching its prebuilt index on first use).
+
+    Homeric Greek: Georg Autenrieth's *A Homeric Dictionary* (1891, public domain),
+    from the Perseus digitization (CC BY-SA). The lemma→entry index is a pinned release
+    asset; until it is hosted, a clean `DataNotAvailableError` (never bundled; the data
+    is open and the wheel stays Apache-2.0)."""
+    from ..data import DataNotAvailableError, cache_dir, fetch_prebuilt
+    from .lexindex import IndexLexicon, load_index
+
+    out = cache_dir() / _AUTENRIETH_INDEX_NAME
+    if build and (force or not out.exists()):
+        if not fetch_prebuilt(_AUTENRIETH_PREBUILT, out):
+            raise DataNotAvailableError(
+                "the Autenrieth Homeric Dictionary index is not hosted yet — build it "
+                "locally with scripts/build_autenrieth_index.py, or reach the dictionary "
+                "online with greek.lexicon_link(word)"
+            )
+    return IndexLexicon(_AUTENRIETH_INFO, load_index(out))
+
+
 def _deeplink_only(**_kwargs: object) -> Lexicon:  # pragma: no cover - never called
     raise ValueError("deep-link-only lexicon; use greek.lexicon_link(word)")
 
@@ -267,9 +307,9 @@ def _deeplink_only(**_kwargs: object) -> Lexicon:  # pragma: no cover - never ca
 def _register_builtins() -> None:
     register_lexicon(_LSJ_INFO, lambda **kw: _LSJAdapter(lexicon.use_lsj(**kw)))
     register_lexicon(_DODSON_INFO, lambda **kw: _DodsonAdapter(koine.use_dodson(**kw)))
+    register_lexicon(_AUTENRIETH_INFO, lambda **kw: _load_autenrieth(**kw))
     # Dictionaries pyaegean does not host: reachable via lexicon_link (Logeion aggregates them).
     for _id, _name, _scope in (
-        ("autenrieth", "Autenrieth, A Homeric Dictionary", "Homeric"),
         ("slater", "Slater, A Lexicon to Pindar", "lyric"),
         ("montanari", "Montanari, The Brill Dictionary of Ancient Greek", "classical"),
     ):

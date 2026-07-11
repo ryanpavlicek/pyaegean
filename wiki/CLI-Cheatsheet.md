@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.37.0
+aegean --version                # pyaegean 0.38.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -50,7 +50,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
-| **`review`** | `export` `apply` (annotation review round-trip) |
+| **`review`** | `export` `apply` `merge` (annotation review round-trip, multi-reviewer merge) |
 | **`geo`** | (top-level command: coordinates / GeoJSON) |
 | **`ai`** | `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` `providers` |
 | **`workbench`** | (top-level command: serve the web UI) |
@@ -343,7 +343,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy) | `--fold --split --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval ud --neural` |
+| `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `tagger` `lemmatizer` `parser` | `--fold --split --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
 
 ### Stages that work immediately
 
@@ -670,7 +670,7 @@ re-fetched, evicted, or expired, and stays until `remove` deletes it.
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `list` | The fetchable datasets + downloaded status and on-disk size | `--json` | `aegean data list` |
-| `fetch` | One-time download into the store (idempotent; resumes) | `--force` | `aegean data fetch grc-joint` |
+| `fetch` | One-time download into the store (idempotent; resumes); `--version v1` fetches a superseded historical pin | `--force --version` | `aegean data fetch grc-joint` |
 | `remove` | Delete downloaded dataset(s), reclaiming the space | `--all` `--json` | `aegean data remove nt-corpus` |
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |

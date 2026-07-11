@@ -12,13 +12,27 @@ from __future__ import annotations
 
 from .epidoc import from_epidoc, read_epidoc, to_epidoc, write_epidoc
 from .rdf import to_rdf
-from .review import REVIEW_COLUMNS, from_review_table, needs_review_flag, to_review_table
+from .review import (
+    REVIEW_COLUMNS,
+    MergedReview,
+    ReviewConflict,
+    ReviewerValue,
+    apply_merged,
+    from_review_table,
+    merge_review_tables,
+    needs_review_flag,
+    to_review_table,
+)
 from .tabular import to_csv, to_parquet
 from .text import from_csv, from_text, from_text_dir, from_text_file
 from .workbench import from_workbench_export, to_workbench
 
 __all__ = [
     "REVIEW_COLUMNS",
+    "MergedReview",
+    "ReviewConflict",
+    "ReviewerValue",
+    "apply_merged",
     "from_csv",
     "from_epidoc",
     "from_review_table",
@@ -26,6 +40,7 @@ __all__ = [
     "from_text_dir",
     "from_text_file",
     "from_workbench_export",
+    "merge_review_tables",
     "needs_review_flag",
     "read_epidoc",
     "to_csv",

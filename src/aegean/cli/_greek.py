@@ -1030,6 +1030,8 @@ def work(
     if len(c):
         section = str(summary["first"]).split(":", 1)[-1]
         print(f"read it:  aegean show {work_id} {section}")
+    if c.provenance is not None and c.provenance.citation:
+        print(f"cite it:  {c.provenance.citation}")
 
 
 @greek_app.command()
@@ -1257,7 +1259,8 @@ def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
 @greek_app.command("eval")
 def evaluate(
     target: str = typer.Argument(
-        ..., help="ud, proiel, nt, tagger, lemmatizer, or parser (heavy: fetches/trains)."
+        ...,
+        help="ud, proiel, nt, papygreek, tagger, lemmatizer, or parser (heavy: fetches/trains).",
     ),
     fold: str = typer.Option(
         "perseus", "--fold", help="For ud: which UD Ancient Greek fold, perseus or proiel."
@@ -1281,8 +1284,8 @@ def evaluate(
     ),
     batch_size: int | None = typer.Option(
         None, "--batch-size",
-        help="For ud/nt with the neural pipeline: run the encoder over N sentences at a "
-             "time (faster on long folds; the published numbers use the sequential "
+        help="For ud/nt/papygreek with the neural pipeline: run the encoder over N sentences "
+             "at a time (faster on long folds; the published numbers use the sequential "
              "default).",
     ),
     neural: bool = NEURAL_OPT,
@@ -1313,9 +1316,9 @@ def evaluate(
             raise fail("--batch-size must be at least 1")
         # bootstrap_ud and the error analyses run their own inference loops without a
         # batching hook; --by-genre threads batch_size through pipeline_conllu like ud.
-        if target not in ("ud", "nt") or drift or (bootstrap and not by_genre):
-            raise fail("--batch-size applies to `eval ud` and `eval nt` score runs "
-                       "(not --drift/--bootstrap)")
+        if target not in ("ud", "nt", "papygreek") or drift or (bootstrap and not by_genre):
+            raise fail("--batch-size applies to `eval ud`, `eval nt`, and `eval papygreek` "
+                       "score runs (not --drift/--bootstrap)")
     _activate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
@@ -1340,6 +1343,12 @@ def evaluate(
     result: object
     if target == "ud":
         if drift:
+            if fold == "proiel":
+                # the PROIEL drift view includes the convention decomposition: the
+                # measured split of the UFeats/LAS gaps into scheme-absent vs shared
+                _activate(neural=True)
+                emit_drift(greek.proiel_convention_report(split=split, progress=live_progress))
+                return
             emit_drift(greek.ud_error_analysis(treebank=fold, split=split))
             return
         if by_genre:
@@ -1389,6 +1398,15 @@ def evaluate(
             result = greek.evaluate_on_nt(progress=live_progress, batch_size=batch_size)
         else:
             result = greek.evaluate_on_nt(progress=live_progress)
+    elif target == "papygreek":
+        if drift:
+            raise fail("--drift is not available for papygreek (dependency eval; "
+                       "use ud/proiel/nt for an error analysis)")
+        _activate(neural=True)  # the documentary-Koine fold reports the shipped neural model
+        if batch_size is not None:
+            result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
+        else:
+            result = greek.evaluate_on_papygreek(progress=live_progress)
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":
@@ -1397,7 +1415,7 @@ def evaluate(
         _activate(parser=True)
         result = greek.evaluate_parser()
     else:
-        raise fail("target must be ud, proiel, nt, tagger, lemmatizer, or parser")
+        raise fail("target must be ud, proiel, nt, papygreek, tagger, lemmatizer, or parser")
     if emit_result(result, json_output=json_out, output=output):
         return
     if isinstance(result, dict):
