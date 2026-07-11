@@ -174,6 +174,19 @@ model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data
 leakage controls, and the comparison tables are documented in
 [Benchmarks](Benchmarks).
 
+### Calibrated confidence (opt-in)
+
+The neural pipeline can attach a per-token confidence to its UPOS and lemma
+predictions: `greek.use_calibration()` loads the shipped calibration, then
+`greek.pipeline(text, with_confidence=True)` (CLI: `--confidence` on `pipeline` and
+`explain`). The number is temperature-scaled, never the raw softmax (uncalibrated
+probabilities are deliberately not exposed), with the calibration quality measured as
+expected calibration error: UPOS 1.11% and lemma 6.29% on the UD Perseus test fold
+(protocol, table, and caveats in [Benchmarks](Benchmarks#calibrated-confidence)).
+Lemmas resolved by a lexicon lookup carry no model confidence — their evidence class
+(`attested`/`seed`) speaks for them — and the calibration is fitted on literary
+prose, so the genre boundary on the accuracy numbers applies to the confidence too.
+
 ### GPU execution and batching
 
 With a GPU build of ONNX Runtime installed, the neural backends use the GPU

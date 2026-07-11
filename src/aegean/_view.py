@@ -20,7 +20,12 @@ if TYPE_CHECKING:  # type-only: keep this module import-clean
     from .core.model import Document
     from .greek.pipeline import TokenRecord
 
-__all__ = ["balance_rows", "pipeline_rows", "pipeline_rows_from_records"]
+__all__ = [
+    "balance_rows",
+    "format_confidence",
+    "pipeline_rows",
+    "pipeline_rows_from_records",
+]
 
 
 def balance_rows(document: "Document") -> list[dict[str, Any]]:
@@ -52,7 +57,9 @@ def balance_rows(document: "Document") -> list[dict[str, Any]]:
     ]
 
 
-def pipeline_rows(text: str, *, parse: bool = False) -> list[dict[str, Any]]:
+def pipeline_rows(
+    text: str, *, parse: bool = False, with_confidence: bool = False
+) -> list[dict[str, Any]]:
     """One row per token from the Greek analysis pipeline.
 
     Wraps :func:`aegean.greek.pipeline`, mapping each `TokenRecord` to a row with
@@ -62,10 +69,19 @@ def pipeline_rows(text: str, *, parse: bool = False) -> list[dict[str, Any]]:
     verify — an identity fall-through or unresolved miss), and the optional
     ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
     the neural pipeline, ``None`` otherwise). Backends follow whatever is active,
-    exactly as `pipeline` does."""
+    exactly as `pipeline` does.
+
+    ``with_confidence=True`` threads through to `pipeline`; when it yields tokens
+    that carry a calibrated confidence (the neural pipeline active AND a calibration
+    loaded), every row additionally gains ``upos_confidence`` / ``lemma_confidence``
+    (floats or ``None``). With the feature off — the default, or the offline cascade
+    where there is no model prediction to calibrate — those keys are absent, so the
+    rows are byte-identical to before (see `pipeline_rows_from_records`)."""
     from .greek import pipeline
 
-    return pipeline_rows_from_records(pipeline(text, parse=parse))
+    return pipeline_rows_from_records(
+        pipeline(text, parse=parse, with_confidence=with_confidence)
+    )
 
 
 def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, Any]]:
@@ -73,8 +89,16 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
 
     The CLI calls `pipeline` itself (to handle a not-loaded parser cleanly) and
     then maps here, so the CLI ``--json`` and the TUI workbench emit the exact
-    same rows from the exact same code."""
-    return [
+    same rows from the exact same code.
+
+    Calibrated confidence is an optional COLUMN, not a per-row field: only when at
+    least one record carries a non-``None`` ``upos_confidence`` / ``lemma_confidence``
+    (the neural pipeline active, a calibration loaded, and the call asked for it) do
+    all rows gain the two keys — the per-row value may still be ``None`` (a head with
+    no calibrated number: a lookup-resolved / identity / punctuation lemma, or an
+    undecoded token). Absent otherwise, so a call without confidence produces
+    byte-identical rows to a build without the feature."""
+    rows: list[dict[str, Any]] = [
         {
             "sentence": r.sentence,
             "index": r.index,
@@ -90,3 +114,29 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
         }
         for r in records
     ]
+    if any(
+        r.upos_confidence is not None or r.lemma_confidence is not None for r in records
+    ):
+        for row, r in zip(rows, records):
+            row["upos_confidence"] = r.upos_confidence
+            row["lemma_confidence"] = r.lemma_confidence
+    return rows
+
+
+def format_confidence(
+    upos_confidence: float | None, lemma_confidence: float | None
+) -> str:
+    """Render a token's two calibrated confidences as one compact cell.
+
+    ``"<upos>/<lemma>"`` to two decimals, with ``"—"`` for a head that carries no
+    calibrated number (a lookup-resolved / identity / punctuation lemma, or an
+    undecoded token), and ``"—"`` alone when neither head has one. Shared so the CLI
+    pipeline table, the TUI workbench line, and the reader's analysis table format the
+    confidence column identically."""
+    if upos_confidence is None and lemma_confidence is None:
+        return "—"
+
+    def _one(v: float | None) -> str:
+        return f"{v:.2f}" if v is not None else "—"
+
+    return f"{_one(upos_confidence)}/{_one(lemma_confidence)}"

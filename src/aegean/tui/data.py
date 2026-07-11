@@ -62,6 +62,7 @@ __all__ = [
     "document_detail",
     "search_corpus",
     "balance_rows",
+    "confidence_available",
     "greek_pipeline",
     "greek_scan",
     "greek_syllables",
@@ -427,19 +428,36 @@ def balance_rows(document: "Document") -> list[BalanceRow]:
 
 
 # ── Greek workbench ───────────────────────────────────────────────────────────
-def greek_pipeline(text: str) -> GreekResult:
+def confidence_available() -> bool:
+    """Whether the pipeline can surface calibrated confidence right now.
+
+    True only when the neural pipeline is active AND a calibration is loaded: confidence
+    is model-only, and the project never surfaces a raw (uncalibrated) softmax. A TUI
+    surface requests confidence only when this holds, so a pipeline call never raises for
+    a missing calibration — the confidence column appears when the numbers are free."""
+    from ..greek import joint
+    from ..greek.calibrate import active as _calibration_active
+
+    return joint.active() is not None and _calibration_active() is not None
+
+
+def greek_pipeline(text: str, *, with_confidence: bool = False) -> GreekResult:
     """Analyze Greek ``text`` and return per-token rows (never raises to the UI).
 
     Rows come from the shared :func:`aegean._view.pipeline_rows`, the same
     mapping the ``aegean greek pipeline`` command uses, so a token row is
-    identical across the two surfaces. Empty input yields ``ok`` with no rows."""
+    identical across the two surfaces. Empty input yields ``ok`` with no rows.
+
+    ``with_confidence=True`` threads through; when the active backends produce
+    calibrated numbers (see `confidence_available`) each row also carries
+    ``upos_confidence`` / ``lemma_confidence``, otherwise those keys are absent."""
     from .._view import pipeline_rows
 
     text = text.strip()
     if not text:
         return GreekResult(ok=True, rows=[])
     try:
-        rows = pipeline_rows(text)
+        rows = pipeline_rows(text, with_confidence=with_confidence)
     except Exception as exc:  # pragma: no cover - the baseline pipeline is total
         return GreekResult(ok=False, error=f"{type(exc).__name__}: {exc}")
     return GreekResult(ok=True, rows=rows, summary=f"{len(rows)} token(s)")
@@ -615,19 +633,35 @@ def run_line_analysis(
 
 # ── Greek line analyses ─────────────────────────────────────────────────────────
 def _greek_offline(text: str) -> AnalysisResult:
-    r = greek_pipeline(text)
+    r = greek_pipeline(text, with_confidence=confidence_available())
     if not r.ok:
         return AnalysisResult(ok=False, error=r.error)
+    from .._view import format_confidence
+
     # The evidence column shows the lemma's source class only when it is NOT a grounded
     # analysis (the CLI's src-column convention): blank = trustworthy, a name = verify it.
-    rows = tuple(
-        (str(row["index"]), row["text"], row["upos"], row["lemma"],
-         "" if row.get("lemma_known", True) else str(row.get("lemma_source", "")))
-        for row in r.rows
-    )
+    def _base(row: dict[str, Any]) -> tuple[str, ...]:
+        return (
+            str(row["index"]), row["text"], row["upos"], row["lemma"],
+            "" if row.get("lemma_known", True) else str(row.get("lemma_source", "")),
+        )
+
+    # A calibrated 'conf' column appears only when the rows carry a confidence (the same
+    # condition as the workbench + the CLI), so the offline table is unchanged otherwise.
+    has_conf = bool(r.rows) and "upos_confidence" in r.rows[0]
+    columns: tuple[str, ...]
+    rows: tuple[tuple[str, ...], ...]
+    if has_conf:
+        columns = ("#", "token", "POS", "lemma", "check", "conf")
+        rows = tuple(
+            _base(row) + (format_confidence(row["upos_confidence"], row["lemma_confidence"]),)
+            for row in r.rows
+        )
+    else:
+        columns = ("#", "token", "POS", "lemma", "check")
+        rows = tuple(_base(row) for row in r.rows)
     return AnalysisResult(
-        ok=True, title="offline parser / tagger",
-        columns=("#", "token", "POS", "lemma", "check"), rows=rows,
+        ok=True, title="offline parser / tagger", columns=columns, rows=rows,
     )
 
 

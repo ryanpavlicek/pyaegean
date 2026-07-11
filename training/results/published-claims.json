@@ -78,5 +78,21 @@
     "stanza_perseus_proiel_uas": 59.0,
     "stated_lead": 23,
     "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
+  },
+  "calibration_ece": {
+    "upos_temperature": 1.341,
+    "lemma_temperature": 0.6645,
+    "dev_ece_upos_before": 0.0094,
+    "dev_ece_upos_after": 0.0019,
+    "dev_ece_lemma_before": 0.0877,
+    "dev_ece_lemma_after": 0.0539,
+    "test_ece_upos_uncalibrated": 0.0195,
+    "test_ece_upos": 0.0111,
+    "test_ece_lemma": 0.0629,
+    "n_dev_tokens": 22135,
+    "n_test_tokens": 20959,
+    "source_evidence": "training/results/calibration-2026-07-11.json",
+    "protocol": "temperature fitted on the UD Perseus DEV fold only (the checkpoint-selection fold); test ECE is report-only, one shot; 15-bin equal-width ECE; CPU, batch_size=32; the lemma head calibrates the argmax-script probability against composed-lemma-vs-gold correctness (a documented proxy)",
+    "note": "the shipped bundled calibration (src/aegean/data/bundled/greek/calibration.json) carries exactly these temperatures; confidence is exposed ONLY through this calibration, never raw softmax; fitted on literary prose (the genre caveat travels with the number)"
   }
 }

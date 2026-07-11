@@ -16,9 +16,13 @@ filled from its FEATS output).
 
 The source classes are the honesty surface: ``attested`` / ``neural`` /
 ``rule`` / ``seed`` are grounded analyses, ``identity`` / ``unresolved`` are
-fall-throughs a human should verify. There are deliberately NO confidence
-numbers anywhere in this output: an uncalibrated score invites false
-confidence, so the evidence CLASS is the whole claim (source-class only).
+fall-throughs a human should verify. By default there are NO confidence numbers
+in this output: the evidence CLASS is the whole claim (source-class only). The
+one exception is opt-in: ``explain_pipeline(text, with_confidence=True)`` with
+the neural pipeline active and a calibration loaded appends the token's
+**calibrated** confidence (temperature-scaled on the UD Perseus dev fold; see
+`aegean.greek.calibrate`) to the note. A raw softmax is never shown — without a
+loaded calibration that call raises, and offline tokens carry no number.
 """
 
 from __future__ import annotations
@@ -73,7 +77,29 @@ class TokenExplanation:
     note: str
 
 
-def explain_pipeline(text: str) -> list[TokenExplanation]:
+_CALIBRATED_PHRASE = (
+    "calibrated confidence (temperature-scaled on the UD Perseus dev fold; see Benchmarks)"
+)
+
+
+def _confidence_note(rec: object) -> str:
+    """The calibrated-confidence clause for a record that carries one, else ``""``.
+
+    Reads only the record's already-computed ``upos_confidence`` / ``lemma_confidence``
+    (never re-runs a model), so it cannot diverge from what `pipeline` produced."""
+    upos_c = getattr(rec, "upos_confidence", None)
+    lemma_c = getattr(rec, "lemma_confidence", None)
+    parts: list[str] = []
+    if upos_c is not None:
+        parts.append(f"UPOS {upos_c:.2f}")
+    if lemma_c is not None:
+        parts.append(f"lemma {lemma_c:.2f}")
+    if not parts:
+        return ""
+    return f"; {_CALIBRATED_PHRASE}: {', '.join(parts)}"
+
+
+def explain_pipeline(text: str, *, with_confidence: bool = False) -> list[TokenExplanation]:
     """Analyze ``text`` with `pipeline` and explain each token's record.
 
     Returns one `TokenExplanation` per token, in pipeline order: the surface
@@ -84,15 +110,19 @@ def explain_pipeline(text: str) -> list[TokenExplanation]:
     for that call (activate them first with the ``use_*`` functions). Empty
     or whitespace-only input yields an empty list.
 
-    The evidence class is the honesty surface; there are deliberately no
-    confidence numbers (source-class only)."""
+    The evidence class is the honesty surface. ``with_confidence=True`` (opt-in)
+    additionally appends each token's **calibrated** confidence to its note — it
+    requires the neural pipeline active and a loaded calibration
+    (`aegean.greek.use_calibration`), and raises `UncalibratedConfidenceError`
+    otherwise; a raw softmax is never shown. Only model predictions carry a
+    number (lookup-resolved / identity / punctuation lemmas do not)."""
     from . import joint
     from .pipeline import pipeline
 
     # The same backend check pipeline() itself makes; used only to word the notes.
     neural_active = joint.active() is not None
     explanations: list[TokenExplanation] = []
-    for rec in pipeline(text):
+    for rec in pipeline(text, with_confidence=with_confidence):
         source = rec.lemma_source
         if source is LemmaSource.NEURAL:
             note = _NEURAL_JOINT if neural_active else _NEURAL_BACKEND
@@ -100,6 +130,8 @@ def explain_pipeline(text: str) -> list[TokenExplanation]:
             note = _IDENTITY_JOINT if neural_active else _IDENTITY_BACKEND
         else:
             note = _NOTES[source]
+        if with_confidence:
+            note += _confidence_note(rec)
         explanations.append(
             TokenExplanation(
                 token=rec.text,

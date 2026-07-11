@@ -91,6 +91,16 @@ from .joint import (
     use_neural_pipeline,
 )
 from .annotate import annotate_corpus
+from .calibrate import (
+    Calibration,
+    UncalibratedConfidenceError,
+    disable_calibration,
+    ece,
+    fit_temperature,
+    temperature_softmax,
+    top1_confidence,
+    use_calibration,
+)
 from .coverage import MissingForm, missing_forms
 from .explain import TokenExplanation, explain_pipeline, render_explanations
 from .profile import TextProfile, profile_text
@@ -280,6 +290,14 @@ __all__ = [
     "missing_forms",
     "MissingForm",
     "explain_pipeline",
+    "use_calibration",
+    "disable_calibration",
+    "Calibration",
+    "UncalibratedConfidenceError",
+    "fit_temperature",
+    "ece",
+    "temperature_softmax",
+    "top1_confidence",
     "profile_text",
     "render_explanations",
     "TextProfile",

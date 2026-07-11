@@ -72,6 +72,16 @@ class SentenceAnalysis:
     # False when it is the identity fall-through (the surface form returned unchanged).
     # Defaulted so the empty-sentence and any positional construction stay valid.
     lemma_resolved: tuple[bool, ...] = ()
+    # Per-token CALIBRATED confidence, populated ONLY when a call sets ``with_probs=True``
+    # AND a calibration is loaded (`aegean.greek.use_calibration`); otherwise empty ``()``,
+    # so the default path is byte-identical to a build without this feature. Each value is
+    # the temperature-scaled top-1 softmax probability of that head — an estimate of the
+    # probability the prediction is correct (see `aegean.greek.calibrate`). ``None`` for a
+    # token the model did not decode (a subword-budget truncation fallback). The project
+    # never exposes a *raw* softmax: with ``with_probs=True`` and no calibration loaded,
+    # `analyze` raises `UncalibratedConfidenceError` rather than filling these.
+    upos_prob: tuple[float | None, ...] = ()
+    lemma_script_prob: tuple[float | None, ...] = ()
 
 
 def _compose_lemma(
@@ -102,6 +112,25 @@ def _compose_lemma(
     if low:
         return low, True
     return form, False
+
+
+def _probs_calibration(with_probs: bool) -> Any:
+    """Resolve the calibration to use when ``with_probs`` is requested, enforcing the
+    honesty rule: return ``None`` when probs are not asked for, the active `Calibration`
+    when one is loaded, and RAISE otherwise — a raw (uncalibrated) softmax is never
+    exposed. Returns a `aegean.greek.calibrate.Calibration` or ``None``."""
+    if not with_probs:
+        return None
+    from . import calibrate
+
+    cal = calibrate.active()
+    if cal is None:
+        raise calibrate.UncalibratedConfidenceError(
+            "uncalibrated confidence is not exposed; load or fit a calibration first "
+            "(aegean.greek.use_calibration()). The project never surfaces a raw softmax "
+            "probability (measured-claims-only)."
+        )
+    return cal
 
 
 class _JointModel:
@@ -236,20 +265,31 @@ class _JointModel:
             results.append(one)
         return results
 
-    def analyze(self, words: list[str]) -> SentenceAnalysis:
+    def analyze(self, words: list[str], *, with_probs: bool = False) -> SentenceAnalysis:
+        """Analyze one pre-tokenized sentence.
+
+        ``with_probs=False`` (the default) is the historical path, byte-identical to
+        before this feature — ``upos_prob`` / ``lemma_script_prob`` stay empty ``()``.
+        ``with_probs=True`` fills them with calibrated top-1 confidences, and REQUIRES a
+        loaded calibration (`aegean.greek.use_calibration`): with none loaded it raises
+        `UncalibratedConfidenceError` rather than exposing a raw softmax."""
+        calibration = _probs_calibration(with_probs)
         forms = [unicodedata.normalize("NFC", w) for w in words]
         if not forms:
             return SentenceAnalysis((), (), (), (), (), (), (), ())
-        return self._decode(forms, self._run(forms))
+        return self._decode(forms, self._run(forms), calibration=calibration)
 
-    def analyze_batch(self, sentences: list[list[str]]) -> list[SentenceAnalysis]:
+    def analyze_batch(
+        self, sentences: list[list[str]], *, with_probs: bool = False
+    ) -> list[SentenceAnalysis]:
         """Analyses of several sentences, one padded encoder pass per call.
 
         Produces the same fields as ``[self.analyze(s) for s in sentences]`` — empty
         sentences and the truncation fallbacks included; only the number of ONNX calls
         differs. Sequential per-sentence analysis is the recorded benchmark protocol
         (see `_run_batch` on float reduction order); batching is a throughput
-        convenience."""
+        convenience. ``with_probs`` behaves as in `analyze` (calibration required)."""
+        calibration = _probs_calibration(with_probs)
         norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
         out: list[SentenceAnalysis] = [
             SentenceAnalysis((), (), (), (), (), (), (), ()) for _ in norm
@@ -257,11 +297,18 @@ class _JointModel:
         live = [i for i, forms in enumerate(norm) if forms]
         if live:
             for i, res in zip(live, self._run_batch([norm[i] for i in live])):
-                out[i] = self._decode(norm[i], res)
+                out[i] = self._decode(norm[i], res, calibration=calibration)
         return out
 
-    def _decode(self, forms: list[str], out: dict[str, Any]) -> SentenceAnalysis:
-        """Decode one sentence's raw arrays (from `_run`, or one `_run_batch` slice)."""
+    def _decode(
+        self, forms: list[str], out: dict[str, Any], *, calibration: Any = None
+    ) -> SentenceAnalysis:
+        """Decode one sentence's raw arrays (from `_run`, or one `_run_batch` slice).
+
+        When ``calibration`` is a `Calibration`, per-token calibrated top-1 confidences
+        are computed from the SAME logits the argmax reads (no second pass) and returned
+        in ``upos_prob`` / ``lemma_script_prob``; with ``calibration=None`` those fields
+        stay empty ``()`` and the result is byte-identical to the pre-feature decode."""
         n = len(forms)
         word_pos: list[int] = out["_word_pos"]
         kept: list[int] = out["_kept"]
@@ -275,11 +322,21 @@ class _JointModel:
         # default False = the identity fall-through (truncated / undecoded tokens keep
         # the surface form, which is not a real analysis)
         resolved = [False] * n
+        # None = a token with no model logits to read (an undecoded truncation fallback);
+        # a float only for decoded words, and only when a calibration is active.
+        upos_prob: list[float | None] = [None] * n
+        lemma_prob: list[float | None] = [None] * n
 
         if nw:
             heads_w = decode_mst(out["arc"][0, :nw, : nw + 1])
             rel_scores = out["rel"][0]                      # [R, W, W+1]
             lem_ids = out["lemma"][0].argmax(-1)            # [W]
+            t_upos = t_lemma = 1.0
+            if calibration is not None:
+                from . import calibrate  # local: numpy-lazy, keeps the no-probs path clean
+
+                t_upos = calibration.temperature["upos"]
+                t_lemma = calibration.temperature["lemma"]
             for wi, w in enumerate(kept):
                 sp = word_pos[wi]
                 upos[w] = self.inv["upos"][int(out["upos"][0, sp].argmax())]
@@ -291,6 +348,14 @@ class _JointModel:
                 if head[w] == 0:
                     rel[w] = "root"
                 lemma[w], resolved[w] = _compose_lemma(forms[w], upos[w], int(lem_ids[wi]), self)
+                if calibration is not None:
+                    # Same logit vectors the argmaxes above read — temperature-scaled.
+                    upos_prob[w] = float(
+                        calibrate.top1_confidence(out["upos"][0, sp], t_upos, np=self._np)
+                    )
+                    lemma_prob[w] = float(
+                        calibrate.top1_confidence(out["lemma"][0, wi], t_lemma, np=self._np)
+                    )
         # exactly one root, even with truncation fallbacks in play
         roots = [i for i in range(n) if head[i] == 0]
         first = roots[0] if roots else 0
@@ -304,6 +369,8 @@ class _JointModel:
             feats=tuple(feats_from_xpos(x) for x in xpos),
             head=tuple(head), deprel=tuple(rel), lemma=tuple(lemma),
             lemma_resolved=tuple(resolved),
+            upos_prob=tuple(upos_prob) if calibration is not None else (),
+            lemma_script_prob=tuple(lemma_prob) if calibration is not None else (),
         )
 
 
@@ -358,17 +425,25 @@ def active() -> _JointModel | None:
     return _ACTIVE
 
 
-def analyze_sentence(words: list[str]) -> SentenceAnalysis:
-    """The full joint analysis of one pre-tokenized sentence (raises if not active)."""
+def analyze_sentence(words: list[str], *, with_probs: bool = False) -> SentenceAnalysis:
+    """The full joint analysis of one pre-tokenized sentence (raises if not active).
+
+    ``with_probs=True`` additionally fills the calibrated confidence fields and requires
+    a loaded calibration (see `_JointModel.analyze`)."""
     if _ACTIVE is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
+    # Keep the default call byte-identical to the historical signature (positional
+    # ``words`` only), so existing callers and test stubs are unaffected; only a
+    # confidence request threads the keyword through.
+    if with_probs:
+        return _ACTIVE.analyze(words, with_probs=True)
     return _ACTIVE.analyze(words)
 
 
 def analyze_sentences(
-    sentences: Iterable[list[str]], *, batch_size: int | None = None
+    sentences: Iterable[list[str]], *, batch_size: int | None = None, with_probs: bool = False
 ) -> list[SentenceAnalysis]:
     """Full joint analyses of several pre-tokenized sentences (raises if not active).
 
@@ -377,19 +452,30 @@ def analyze_sentences(
     benchmark numbers are measured on (plain CPU, ``CPUExecutionProvider``). A positive
     int runs padded chunks of that many sentences through the encoder (one ONNX call per
     chunk), a throughput convenience producing the same analyses; batched matmuls can
-    reorder float reductions, so it is never used for the recorded protocol."""
+    reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
+    behaves as in `analyze_sentence` (calibration required)."""
     if _ACTIVE is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
     sents = [list(s) for s in sentences]
     if batch_size is None:
+        if with_probs:
+            return [_ACTIVE.analyze(s, with_probs=True) for s in sents]
         return [_ACTIVE.analyze(s) for s in sents]
     if batch_size < 1:
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
     out: list[SentenceAnalysis] = []
     for start in range(0, len(sents), batch_size):
-        out.extend(_ACTIVE.analyze_batch(sents[start : start + batch_size]))
+        chunk = sents[start : start + batch_size]
+        # Keep the default call byte-identical to the historical signature (positional
+        # ``batch`` only), so existing callers and test spies are unaffected; only a
+        # confidence request threads the keyword through.
+        out.extend(
+            _ACTIVE.analyze_batch(chunk, with_probs=True)
+            if with_probs
+            else _ACTIVE.analyze_batch(chunk)
+        )
     return out
 
 

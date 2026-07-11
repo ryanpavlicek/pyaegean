@@ -1,0 +1,21 @@
+{
+  "temperature": {
+    "upos": 1.3409716818268338,
+    "lemma": 0.6644609912371262
+  },
+  "fitted_on": "UD Ancient Greek-Perseus dev fold (grc-joint v3, CPU, batch_size=32)",
+  "date": "2026-07-11",
+  "ece_before": {
+    "upos": 0.009355745112904506,
+    "lemma": 0.08770604874595654
+  },
+  "ece_after": {
+    "upos": 0.0018907988820069973,
+    "lemma": 0.053889998212149265
+  },
+  "n": {
+    "upos": 22135,
+    "lemma": 22135
+  },
+  "notes": "Temperature scaling (top-1 confidence, binary-NLL objective). UPOS target: argmax==gold. lemma target: composed lemma (script+lookup) == gold — a calibrated proxy on the script head's top-1 prob. Literary prose (Perseus); genre caveat applies."
+}

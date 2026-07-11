@@ -36,7 +36,19 @@ class TokenRecord:
     (see `LemmaSource`): whether it was attested in a treebank, predicted by a
     model, recovered by a rule, from the seed table, an identity fall-through, or
     unresolved. ``lemma_known`` is the derived boolean (``False`` for an identity
-    fall-through or an unresolved baseline miss, i.e. a lemma to verify)."""
+    fall-through or an unresolved baseline miss, i.e. a lemma to verify).
+
+    ``upos_confidence`` / ``lemma_confidence`` are **calibrated** confidences
+    (temperature-scaled on the UD Perseus dev fold; see
+    `aegean.greek.calibrate`): the estimated probability the prediction is
+    correct. They are ``None`` unless the neural pipeline is active, a calibration
+    is loaded, AND the call set ``with_confidence=True`` — the project never
+    surfaces a raw (uncalibrated) softmax. A calibrated number is model-only:
+    ``lemma_confidence`` is ``None`` for any lemma that is not a neural prediction
+    (a lookup-resolved attested/seed lemma, an identity fall-through, an unresolved
+    miss, or punctuation — the evidence class speaks for those), and both are
+    ``None`` throughout the offline cascade. The number is fitted on literary prose,
+    so it carries that genre caveat."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
@@ -48,6 +60,8 @@ class TokenRecord:
     relation: str | None = None  # UD (neural pipeline) or AGDT/Prague (use_parser)
     xpos: str | None = None  # 9-char positional tag (neural pipeline only)
     feats: str | None = None  # UD FEATS string (neural pipeline only)
+    upos_confidence: float | None = None  # calibrated; None unless with_confidence + calibration
+    lemma_confidence: float | None = None  # calibrated; model-only (see the class docstring)
 
     @property
     def lemma_known(self) -> bool:
@@ -57,7 +71,7 @@ class TokenRecord:
         return not needs_review(self.lemma_source)
 
 
-def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
+def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -> list[TokenRecord]:
     """Analyze ``text`` end-to-end and return one `TokenRecord` per token.
 
     Tokenizes (words **and** punctuation — nothing is dropped), splits into
@@ -73,6 +87,14 @@ def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
     ``parse=True`` without the neural pipeline requires `use_parser` (raises
     `ParserNotLoadedError` otherwise) and parses **word** tokens only —
     punctuation records keep ``head=None``.
+
+    ``with_confidence=True`` fills ``upos_confidence`` / ``lemma_confidence`` with
+    **calibrated** confidences. This works only with the neural pipeline active
+    (``use_neural_pipeline``) and requires a loaded calibration
+    (``use_calibration``): with the pipeline active but no calibration it raises
+    `UncalibratedConfidenceError` (a raw softmax is never exposed); on the offline
+    cascade, where there is no model prediction to calibrate, the confidence fields
+    simply stay ``None``. ``with_confidence=False`` (the default) leaves both ``None``.
     """
     from ..core.model import TokenKind
     from . import joint, syntax
@@ -95,7 +117,7 @@ def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
     records: list[TokenRecord] = []
     for s_idx, (words, is_word) in enumerate(zip(sents, word_flags)):
         if joint.active() is not None:
-            ana = joint.analyze_sentence(words)
+            ana = joint.analyze_sentence(words, with_probs=with_confidence)
             resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
             for i in range(len(ana.tokens)):
                 if not is_word[i]:
@@ -104,12 +126,23 @@ def pipeline(text: str, *, parse: bool = False) -> list[TokenRecord]:
                     source = LemmaSource.NEURAL
                 else:
                     source = LemmaSource.IDENTITY  # the model returned the surface unchanged
+                # A calibrated confidence is model-only: UPOS is always a neural prediction
+                # here, but the lemma confidence is surfaced only when the lemma itself is a
+                # neural prediction (NEURAL) — an identity fall-through / punctuation carry
+                # no calibrated number (the evidence class speaks for them).
+                upos_conf = ana.upos_prob[i] if ana.upos_prob else None
+                lemma_conf = (
+                    ana.lemma_script_prob[i]
+                    if ana.lemma_script_prob and source is LemmaSource.NEURAL
+                    else None
+                )
                 records.append(
                     TokenRecord(
                         sentence=s_idx, index=i + 1, text=ana.tokens[i],
                         upos=ana.upos[i], lemma=ana.lemma[i], lemma_source=source,
                         head=ana.head[i], relation=ana.deprel[i],
                         xpos=ana.xpos[i], feats=ana.feats[i],
+                        upos_confidence=upos_conf, lemma_confidence=lemma_conf,
                     )
                 )
             continue

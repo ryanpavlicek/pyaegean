@@ -80,6 +80,25 @@ bounds (LAS 84.93, UAS 89.62) sit well above the published 83.98 / 88.20, so the
 parsing leads are robust, not within noise. The cross-tool sources for the "best
 published" column are cited in [Cross-tool comparison](#cross-tool-comparison-with-citations).
 
+## Calibrated confidence
+
+The pipeline's opt-in per-token confidence (`use_calibration()` +
+`pipeline(text, with_confidence=True)`) is temperature-scaled, never raw softmax. One
+temperature per head, fitted on the UD Perseus **dev** fold only; quality measured as
+15-bin expected calibration error:
+
+| Head | Temperature | Dev ECE (raw → calibrated) | Test ECE (calibrated) |
+| --- | --- | --- | --- |
+| UPOS | 1.34 | 0.94% → 0.19% | 1.11% (raw was 1.95%) |
+| Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
+
+The lemma figure calibrates the edit-script head's probability against
+composed-lemma-vs-gold correctness (a documented proxy); lookup-resolved lemmas carry
+no model confidence (the evidence class speaks for them); the calibration is fitted on
+literary prose, so the genre boundary applies to the confidence exactly as to the
+accuracy. Full protocol in the canonical `docs/benchmarks.md`; evidence in
+`training/results/calibration-2026-07-11.json`.
+
 ## Out of domain: Koine / New Testament
 
 `greek.evaluate_on_nt()` scores the same shipped pipeline against the **Nestle 1904**

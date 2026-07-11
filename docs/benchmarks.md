@@ -254,6 +254,34 @@ The quantized model requires **onnxruntime ≥ 1.23** (the 8-bit MatMulNBits CPU
 `[neural]` extra floor was raised from 1.17 to 1.23 accordingly. The fp32 model stays
 available at the `grc-joint-v2` release for reproducibility.
 
+### Calibrated confidence (temperature scaling + ECE)
+
+The pipeline can attach a per-token **calibrated confidence** to its UPOS and lemma
+predictions (`greek.use_calibration()` then `pipeline(text, with_confidence=True)`; CLI
+`--confidence`). The number is an estimate of the probability the prediction is correct,
+produced by temperature-scaling the model's own probability — never the raw softmax,
+which is uncalibrated and is deliberately not exposed. The protocol: one temperature per
+head, fitted on the UD Perseus **dev** fold only (the same fold already used for
+checkpoint selection; the test fold is never fitted on), quality measured as 15-bin
+expected calibration error (ECE — the average gap between stated confidence and actual
+accuracy; lower is better, 0 is perfect):
+
+| Head | Temperature | Dev ECE (raw → calibrated) | Test ECE (calibrated) |
+|---|---|---|---|
+| UPOS | 1.34 | 0.94% → 0.19% | 1.11% (raw was 1.95%) |
+| Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
+
+Dev n = 22,135 tokens; test n = 20,959 (report-only, one shot). Three honesty notes
+travel with the number: the lemma figure calibrates the edit-script head's probability
+against whether the *composed lemma* matched gold (a documented proxy — the lemma a user
+sees also passes through the training lookup, which is why the fitted temperature is
+below 1: the lookup rescues predictions the script head doubted); lemmas resolved by a
+lexicon lookup (evidence class `attested`/`seed`) carry **no** model confidence — the
+evidence class speaks for them; and the calibration is fitted on literary prose, so the
+genre boundary described below applies to the confidence exactly as it applies to the
+accuracy. Reproduce with `training/calibrate_temperature.py`; evidence in
+`training/results/calibration-2026-07-11.json`.
+
 ### Koine / New Testament (Nestle 1904 own gold)
 
 `greek.evaluate_on_nt()` scores the shipped pipeline against the **Nestle 1904** NT's own

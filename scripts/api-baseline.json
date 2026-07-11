@@ -11358,6 +11358,10 @@
       "canonical": "aegean.greek.morphology.Analysis",
       "kind": "class"
     },
+    "aegean.greek.Calibration": {
+      "canonical": "aegean.greek.calibrate.Calibration",
+      "kind": "class"
+    },
     "aegean.greek.DepToken": {
       "canonical": "aegean.greek.syntax.DepToken",
       "kind": "class"
@@ -11492,6 +11496,10 @@
     },
     "aegean.greek.TreebankLexicon": {
       "canonical": "aegean.greek.treebank.TreebankLexicon",
+      "kind": "class"
+    },
+    "aegean.greek.UncalibratedConfidenceError": {
+      "canonical": "aegean.greek.calibrate.UncalibratedConfidenceError",
       "kind": "class"
     },
     "aegean.greek.UsageInfo": {
@@ -11861,6 +11869,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "words"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_probs"
         }
       ],
       "returns": true
@@ -11878,6 +11891,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "batch_size"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_probs"
         }
       ],
       "returns": true
@@ -12149,6 +12167,259 @@
       ],
       "returns": true
     },
+    "aegean.greek.calibrate": {
+      "kind": "module"
+    },
+    "aegean.greek.calibrate.Calibration": {
+      "kind": "class"
+    },
+    "aegean.greek.calibrate.Calibration.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "temperature"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "fitted_on"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "date"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "ece_before"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "ece_after"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "n"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "notes"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.Calibration.date": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.ece_after": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.ece_before": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.fitted_on": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.from_dict": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "cls"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "d"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.Calibration.load": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "cls"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.Calibration.n": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.notes": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.save": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.Calibration.temperature": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.Calibration.to_dict": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.HEADS": {
+      "kind": "attribute"
+    },
+    "aegean.greek.calibrate.UncalibratedConfidenceError": {
+      "kind": "class"
+    },
+    "aegean.greek.calibrate.active": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.calibrate.disable_calibration": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.calibrate.ece": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "probs"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "n_bins"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.fit_temperature": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "bracket"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.temperature_softmax": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "temperature"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.top1_confidence": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "temperature"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.calibrate.use_calibration": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "source"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.catalog": {
       "canonical": "aegean.scripts.greek.perseus.catalog",
       "kind": "function",
@@ -12241,6 +12512,12 @@
       ],
       "returns": true
     },
+    "aegean.greek.disable_calibration": {
+      "canonical": "aegean.greek.calibrate.disable_calibration",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
     "aegean.greek.disable_inflector": {
       "canonical": "aegean.greek.inflect.disable_inflector",
       "kind": "function",
@@ -12299,6 +12576,33 @@
       "canonical": "aegean.greek.treebank.disable_treebank",
       "kind": "function",
       "params": [],
+      "returns": true
+    },
+    "aegean.greek.ece": {
+      "canonical": "aegean.greek.calibrate.ece",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "probs"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "n_bins"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
       "returns": true
     },
     "aegean.greek.entry": {
@@ -13201,6 +13505,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
         }
       ],
       "returns": true
@@ -13224,6 +13533,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
         }
       ],
       "returns": true
@@ -13266,6 +13580,33 @@
           "default": true,
           "kind": "keyword-only",
           "name": "abort"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.fit_temperature": {
+      "canonical": "aegean.greek.calibrate.fit_temperature",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "bracket"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
         }
       ],
       "returns": true
@@ -13732,6 +14073,16 @@
           "default": true,
           "kind": "positional or keyword",
           "name": "lemma_resolved"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "upos_prob"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "lemma_script_prob"
         }
       ],
       "returns": true
@@ -13751,10 +14102,16 @@
     "aegean.greek.joint.SentenceAnalysis.lemma_resolved": {
       "kind": "attribute"
     },
+    "aegean.greek.joint.SentenceAnalysis.lemma_script_prob": {
+      "kind": "attribute"
+    },
     "aegean.greek.joint.SentenceAnalysis.tokens": {
       "kind": "attribute"
     },
     "aegean.greek.joint.SentenceAnalysis.upos": {
+      "kind": "attribute"
+    },
+    "aegean.greek.joint.SentenceAnalysis.upos_prob": {
       "kind": "attribute"
     },
     "aegean.greek.joint.SentenceAnalysis.xpos": {
@@ -13772,6 +14129,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "words"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_probs"
         }
       ],
       "returns": true
@@ -13788,6 +14150,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "batch_size"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_probs"
         }
       ],
       "returns": true
@@ -15702,6 +16069,16 @@
           "default": true,
           "kind": "positional or keyword",
           "name": "feats"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "upos_confidence"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "lemma_confidence"
         }
       ],
       "returns": true
@@ -15716,6 +16093,9 @@
       "kind": "attribute"
     },
     "aegean.greek.pipeline.TokenRecord.lemma": {
+      "kind": "attribute"
+    },
+    "aegean.greek.pipeline.TokenRecord.lemma_confidence": {
       "kind": "attribute"
     },
     "aegean.greek.pipeline.TokenRecord.lemma_known": {
@@ -15736,6 +16116,9 @@
     "aegean.greek.pipeline.TokenRecord.upos": {
       "kind": "attribute"
     },
+    "aegean.greek.pipeline.TokenRecord.upos_confidence": {
+      "kind": "attribute"
+    },
     "aegean.greek.pipeline.TokenRecord.xpos": {
       "kind": "attribute"
     },
@@ -15751,6 +16134,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
         }
       ],
       "returns": true
@@ -17098,6 +17486,28 @@
       ],
       "returns": true
     },
+    "aegean.greek.temperature_softmax": {
+      "canonical": "aegean.greek.calibrate.temperature_softmax",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "temperature"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.terminology_rarity": {
       "canonical": "aegean.greek.rarity.terminology_rarity",
       "kind": "function",
@@ -17176,6 +17586,28 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.top1_confidence": {
+      "canonical": "aegean.greek.calibrate.top1_confidence",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "logits"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "temperature"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
         }
       ],
       "returns": true
@@ -17753,6 +18185,18 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "word"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.use_calibration": {
+      "canonical": "aegean.greek.calibrate.use_calibration",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "source"
         }
       ],
       "returns": true
@@ -20923,6 +21367,11 @@
       ],
       "returns": true
     },
+    "aegean.tui.data.confidence_available": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
     "aegean.tui.data.config_path": {
       "kind": "function",
       "params": [],
@@ -21066,6 +21515,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
         }
       ],
       "returns": true

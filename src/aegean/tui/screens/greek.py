@@ -162,17 +162,26 @@ class GreekWorkbenchScreen(Screen[None]):
         if not text.strip():
             target.update(_EMPTY_HINT)
             return
-        result = adapter.greek_pipeline(text)
+        result = adapter.greek_pipeline(text, with_confidence=adapter.confidence_available())
         if not result.ok:
             target.update(result.error)
             return
+        from aegean._view import format_confidence
+
         # Prefix each token with sentence:index so multi-sentence input is
         # unambiguous (the pipeline restarts the index at each new sentence).
         # An unresolved/identity lemma is marked with its evidence class (the CLI
         # src-column convention), so a guess never displays like a grounded lemma.
+        # A calibrated confidence is appended only when the rows carry one (neural +
+        # calibration active), the same condition as the CLI's 'conf' column.
         lines = [
             f"{r['sentence']}:{r['index']:<3}  {r['text']}  {r['upos']}  {r['lemma']}"
             + ("" if r.get("lemma_known", True) else f"  [{r.get('lemma_source', '?')}]")
+            + (
+                f"  {format_confidence(r['upos_confidence'], r['lemma_confidence'])}"
+                if "upos_confidence" in r
+                else ""
+            )
             for r in result.rows
         ]
         target.update("\n".join(lines) if lines else "no tokens")

@@ -4,6 +4,27 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.35.0 (2026-07-11)
+
+Calibrated confidence for the neural pipeline: a number you can trust, or no number at all.
+
+### Added
+- **Per-token calibrated confidence** on the neural pipeline's UPOS and lemma
+  predictions: `greek.use_calibration()` loads the shipped calibration, then
+  `greek.pipeline(text, with_confidence=True)` (CLI: `--confidence` on `greek pipeline`
+  and `greek explain`; the TUI shows the column when active). The number is an estimate
+  of the probability the prediction is correct, produced by temperature scaling — the
+  raw softmax is deliberately never exposed, and asking for confidence without a
+  calibration is an error, not a fallback. The calibration is fitted on the UD Perseus
+  dev fold only and its quality is measured: expected calibration error 1.11% (UPOS)
+  and 6.29% (lemma) on the test fold, protocol and caveats in the Benchmarks pages.
+  Lemmas resolved by a lexicon lookup carry no model confidence; their evidence class
+  (`attested`/`seed`) speaks for them. New public API: `use_calibration`,
+  `disable_calibration`, `Calibration`, `fit_temperature`, `ece`,
+  `temperature_softmax`, `top1_confidence`, `UncalibratedConfidenceError`; the fitting
+  and measurement protocol ships as `training/calibrate_temperature.py` with its
+  evidence file.
+
 ## 0.34.0 (2026-07-11)
 
 Finding your way in, and seeing what the tools did: a documentation, diagnostics, and

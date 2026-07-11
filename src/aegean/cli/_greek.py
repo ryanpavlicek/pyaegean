@@ -46,6 +46,27 @@ LEMMATIZER_OPT = typer.Option(False, "--lemmatizer", help="Activate the edit-tre
 NEURAL_LEMM_OPT = typer.Option(False, "--neural-lemmatizer", help="Activate the seq2seq lemmatizer (~232 MB model, \\[neural] extra).")
 NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~173 MB model, \\[neural] extra).")
 LSJ_OPT = typer.Option(False, "--lsj", help="Activate LSJ glossing (~270 MB fetch on first use).")
+CONFIDENCE_OPT = typer.Option(
+    False, "--confidence",
+    help="Attach calibrated confidence (loads the shipped calibration). Needs --neural — "
+    "it is model-only, so lookup/identity/punctuation lemmas carry none.",
+)
+
+
+def _ensure_calibration() -> None:
+    """Activate the bundled calibration for a ``--confidence`` request (a no-op when one
+    is already loaded), or exit with the established one clean line if none is shipped."""
+    from aegean.greek import calibrate
+
+    if calibrate.active() is not None:
+        return
+    try:
+        calibrate.use_calibration()
+    except calibrate.UncalibratedConfidenceError:
+        raise fail(
+            "the shipped calibration file is missing; reinstall pyaegean or run "
+            "use_calibration(path)"
+        ) from None
 
 
 def _activate(
@@ -724,6 +745,7 @@ def pipeline(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    confidence: bool = CONFIDENCE_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -734,25 +756,34 @@ def pipeline(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural, parser=parser,
     )
+    if confidence:
+        _ensure_calibration()
     try:
-        records = greek.pipeline(read_text(text), parse=parse)
+        records = greek.pipeline(read_text(text), parse=parse, with_confidence=confidence)
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
-    from aegean._view import pipeline_rows_from_records
+    from aegean._view import format_confidence, pipeline_rows_from_records
 
     rows = pipeline_rows_from_records(records)  # the row shape shared with the TUI
     if emit_result(rows, json_output=json_out, output=output):
         return
+    # A calibrated 'conf' column appears only when the rows actually carry a confidence
+    # (--confidence with the neural pipeline active); --json keeps the raw floats/None.
+    has_conf = bool(rows) and "upos_confidence" in rows[0]
+    columns = ["s", "i", "token", "upos", "lemma", "src", "head", "rel", "feats"]
+    if has_conf:
+        columns.append("conf")
     # 'src' shows the lemma's evidence class only when it is worth a second look
     # (an identity fall-through or an unresolved miss); grounded lemmas leave it blank
     # so the table stays scannable. The full class is always in --json (lemma_source).
     table(
         f"{len(rows)} token(s)",
-        ["s", "i", "token", "upos", "lemma", "src", "head", "rel", "feats"],
+        columns,
         [
             [str(r["sentence"]), str(r["index"]), r["text"], r["upos"], r["lemma"],
              "" if r["lemma_known"] else r["lemma_source"],
              "" if r["head"] is None else str(r["head"]), r["relation"] or "", r["feats"] or ""]
+            + ([format_confidence(r["upos_confidence"], r["lemma_confidence"])] if has_conf else [])
             for r in rows
         ],
     )
@@ -766,6 +797,7 @@ def explain(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    confidence: bool = CONFIDENCE_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -774,7 +806,9 @@ def explain(
     Each row shows the analysis plus the lemma's evidence class (attested / neural /
     rule / seed / identity / unresolved / punct) and a plain-language note; identity
     and unresolved rows are flagged for review. Source classes are the honesty
-    surface: there are no confidence numbers (deliberate).
+    surface: by default there are no confidence numbers. Pass --confidence (with
+    --neural) to additionally append each token's calibrated confidence to its note
+    (temperature-scaled, model-only; loads the shipped calibration).
     """
     from aegean.greek.explain import explain_pipeline, render_explanations
 
@@ -782,7 +816,9 @@ def explain(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
     )
-    explanations = explain_pipeline(read_text(text))
+    if confidence:
+        _ensure_calibration()
+    explanations = explain_pipeline(read_text(text), with_confidence=confidence)
     rows = [to_plain(e) for e in explanations]  # dataclass → dict, enum → value
     if emit_result(rows, json_output=json_out, output=output):
         return

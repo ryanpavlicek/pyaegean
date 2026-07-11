@@ -60,6 +60,30 @@ def test_doc_confidence_intervals_match_the_bootstrap_evidence() -> None:
         assert cell in page, f"{metric} CI {cell} missing from wiki/Benchmarks.md"
 
 
+def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
+    """The calibration section's temperatures and ECE percentages must derive from the
+    registry block, which must itself match the evidence file (full precision)."""
+    reg = _claims()["calibration_ece"]
+    ev = json.loads(_read("training/results/calibration-2026-07-11.json"))
+    cal = ev["calibration"]
+    assert round(cal["temperature"]["upos"], 4) == reg["upos_temperature"]
+    assert round(cal["temperature"]["lemma"], 4) == reg["lemma_temperature"]
+    doc = _read("docs/benchmarks.md")
+    assert f"| UPOS | {reg['upos_temperature']:.2f} | " in doc
+    assert f"| Lemma | {reg['lemma_temperature']:.2f} | " in doc
+    for key, pct in (
+        ("dev_ece_upos_before", "0.94%"), ("dev_ece_upos_after", "0.19%"),
+        ("dev_ece_lemma_before", "8.77%"), ("dev_ece_lemma_after", "5.39%"),
+        ("test_ece_upos_uncalibrated", "1.95%"), ("test_ece_upos", "1.11%"),
+        ("test_ece_lemma", "6.29%"),
+    ):
+        assert f"{reg[key] * 100:.2f}%" == pct, key
+        assert pct in doc, key
+    # the shipped bundled calibration carries exactly the fitted temperatures
+    bundled = json.loads(_read("src/aegean/data/bundled/greek/calibration.json"))
+    assert bundled["temperature"] == cal["temperature"]
+
+
 def test_registry_agrees_with_the_quantize_size_evidence() -> None:
     claims = _claims()
     v3 = json.loads(_read("training/results/v3-quantize-report.json"))
