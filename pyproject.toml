@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.35.0"
+version = "0.36.0"
 description = "A specialist Python toolkit for Ancient Greek — alphabetic Greek NLP (incl. a state-of-the-art neural pipeline) and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,6 +51,7 @@ epidoc = ["lxml>=5.0"]
 parquet = ["pyarrow>=16.1"]        # >=16.1: first numpy-2-compatible
 geo = ["geopandas>=0.14", "shapely>=2.0.4"]  # shapely >=2.0.4: first with numpy-2-safe wheels/metadata
 viz = ["matplotlib>=3.8"]          # one-line plots (aegean.viz / `aegean plot`); the core is matplotlib-free
+viz-interactive = ["plotly>=5"]    # optional interactive backend for aegean.viz (backend="plotly"); matplotlib stays the default
 neural = ["onnxruntime>=1.23", "tokenizers>=0.20", "numpy>=1.24"]  # neural pipeline + GreTa lemmatizer (torch-free); models fetched to cache (onnxruntime>=1.23: the quantized joint model's int8 weight-only kernel; tokenizers>=0.20: loads the shipped tokenizer.json format)
 cli = ["typer>=0.16", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean` command-line interface (+ `aegean repl`); typer>=0.16: first compatible with click>=8.2
 mcp = ["mcp>=1.2"]                 # the `aegean-mcp` Model Context Protocol server; >=1.2: mcp.server.fastmcp
@@ -101,7 +102,7 @@ files = ["src/aegean"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "mcp.*", "textual.*"]
+module = ["pandas.*", "anthropic.*", "openai.*", "google.*", "onnxruntime.*", "tokenizers.*", "lxml.*", "geopandas.*", "shapely.*", "matplotlib.*", "plotly.*", "mcp.*", "textual.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

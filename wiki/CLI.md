@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.35.0
+aegean --version          # pyaegean 0.36.0
 ```
 
 | Group | What's in it |
@@ -877,13 +877,14 @@ aegean cite lineara --site "Haghia Triada"
 `--style` is `plain` (default), `bibtex`, or `apa`. Append a BibTeX entry to your
 bibliography with `aegean cite lineara --site Zakros --style bibtex >> paper.bib`.
 
-### `export` — JSON, CSV, Parquet, EpiDoc, SQLite
+### `export` — JSON, CSV, Parquet, EpiDoc, SQLite, RDF
 
 ```bash
 aegean export lineara -f csv -o lineara.csv               # → "wrote 1721 documents to lineara.csv (csv)"
 aegean export greek -f epidoc -o greek.xml                # EpiDoc TEI
 aegean export lineara -f sqlite -o lineara.db             # same DB as `aegean db build`
 aegean export lineara -f workbench -o wb.json             # Linear A Workbench JSON
+aegean export edh -f ttl -o edh.ttl                       # Linked Open Data (Turtle)
 ```
 
 | `--format` | output | needs |
@@ -894,6 +895,7 @@ aegean export lineara -f workbench -o wb.json             # Linear A Workbench J
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
 | `workbench` | Linear A Research Workbench JSON (round-trips via `import --workbench`) | core |
+| `ttl` / `jsonld` | Linked Open Data (Turtle / JSON-LD): stable subject URIs from the authoritative identifiers in the data (Trismegistos for EDH and DDbDP, the I.Sicily URI, else a documented `urn:` fallback or `--base-uri`), Dublin Core terms, WGS84 coordinates, and the corpus license attached to every document | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
@@ -1197,7 +1199,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.35.0                    │
+│ OK │ pyaegean │ 0.36.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.35.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.36.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -108,6 +108,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `epidoc` | the Linear B DAMOS EpiDoc reader (`lxml`); generic EpiDoc import and export run on the stdlib, no extra needed |
 | `geo` | GeoJSON / geographic output |
 | `viz` | plotting (`matplotlib`): figures and the scansion grid |
+| `viz-interactive` | interactive plots (`plotly`): findspots, timelines, sign networks |
 | `neural` | the neural pipeline + neural lemmatizer (most accurate Greek NLP) |
 | `cli` | the `aegean` command-line interface |
 | `tui` | the `aegean tui` full-screen terminal UI (`textual`) |

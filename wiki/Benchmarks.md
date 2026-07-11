@@ -118,7 +118,9 @@ measures real disagreement rather than a Robinson-vs-UD convention gap. Finer UD
 features and UAS/LAS are not reported here: the Robinson morph tagset does not align
 feature-for-feature with UD FEATS, and the Nestle 1904 word list carries no
 dependency trees, so those numbers would be convention artefacts rather than
-accuracy.
+accuracy. For an NT *dependency* measurement, the UD PROIEL row above is exactly
+that: PROIEL's test fold is mostly New Testament, so its out-of-domain UAS 82.48
+is the closest measured Koine parsing figure this document has.
 
 ## Pure-Python offline baseline
 

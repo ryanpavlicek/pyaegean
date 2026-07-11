@@ -593,7 +593,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.35.0'  (your installed version)
+v["package"]                                  # '0.36.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -630,6 +630,22 @@ status.
 
 ---
 
+## Linked Open Data export
+
+`aegean export <corpus> -f ttl` (Turtle) or `-f jsonld` (JSON-LD) publishes a corpus
+as linked data (`io.to_rdf` in Python). Subject URIs come from the authoritative
+identifiers already in the data, never invented: EDH and DDbDP documents use their
+**Trismegistos** ids (`https://www.trismegistos.org/text/<id>`), I.Sicily documents
+use the project's own inscription URIs, and documents with no external identifier
+fall back to a documented non-resolvable `urn:aegean:` form (or your `--base-uri`).
+Each document carries Dublin Core terms (title, identifier, source, language),
+WGS84 coordinates where a findspot is known, a Pleiades place reference where one
+exists, and **the corpus license as a machine-readable triple**: a NonCommercial
+corpus exports with its NC license attached to every document, so the obligations
+travel with the data. The editorial apparatus (reading statuses) is deliberately not
+flattened into RDF; the JSON and SQLite formats remain the lossless persistence
+story, and RDF export does not claim round-trip.
+
 ## Provenance & citation
 
 Every `Corpus` carries a `Provenance` that stamps exports and gives a citation:
@@ -645,7 +661,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.35.0'
+# '0.36.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

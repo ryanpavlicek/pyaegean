@@ -42,11 +42,13 @@ def test_pleiades_alignment() -> None:
 
 def test_gazetteer_well_formed() -> None:
     coords = site_coordinates()
-    regions = {"crete", "aegean", "anatolia", "levant", "mainland", "remote"}
+    # the Aegean regions plus the Greek-epigraphy regions (Sicily, Cyrenaica, the Pontic/Black Sea)
+    regions = {"crete", "aegean", "anatolia", "levant", "mainland", "remote",
+               "sicily", "cyrenaica", "pontic"}
     for name, sc in coords.items():
         assert sc.region in regions, name
-        assert 30 < sc.lat < 43, name       # Aegean / East-Mediterranean latitudes
-        assert 20 < sc.lon < 63, name       # west Greece out to the Margiana outlier
+        assert 30 < sc.lat < 47, name       # Cyrenaica (~32) up to the N Black Sea coast (~46)
+        assert 12 < sc.lon < 63, name       # west Sicily (~12.4) out to the Margiana outlier (~62)
         assert sc.pleiades is None or isinstance(sc.pleiades, int), name
     # exactly the disputed find-spot carries the contested flag
     assert coords["Margiana"].is_contested

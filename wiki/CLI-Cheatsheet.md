@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.35.0
+aegean --version                # pyaegean 0.36.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -82,14 +82,14 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | `keyness` | Characteristic items vs a reference (G² + log-ratio) | `--reference --site/... --signs --top --min-target -o/--output` | `aegean keyness lineara --site Zakros` |
 | `balance` | Accounting reconciliation (KU-RO / TO-SO vs items) | `--strict -o/--output --json` | `aegean balance lineara HT13` |
 | `cite` | Cite the corpus, or the exact filtered subset | `--style --site/... --json` | `aegean cite lineara --site Zakros --style bibtex` |
-| `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | `-f/--format -o/--output --level --site/...` | `aegean export lineara -f csv -o lineara.csv` |
+| `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF (Turtle, JSON-LD) | `-f/--format -o/--output --level --base-uri --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict --json` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
 | `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc --json` | `aegean import john.txt -o john.json --script nt` |
 | `geo` | Find-site coordinates, or `--word`'s per-site map (case-insensitive); GeoJSON with `-o` (`.json`/`.geojson` only) | `--word --level --site --period --scribe --support -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
 | `cache` | Inspect (or `--clear`) the opt-in **analysis** cache | `--clear --json` | `aegean cache` |
-| `plot` | Draw one figure to a file (`[viz]` extra) | `-o/--output --signs --top --word --meter --dpi …` | `aegean plot keyness lineara --site Zakros -o k.png` |
+| `plot` | Draw one figure to a file (`[viz]` extra); kinds include `findspots`, `timeline`, and the `signnet` co-occurrence network | `-o/--output --signs --top --word --meter --scope --bin-width --min-count --dpi …` | `aegean plot findspots lineara -o sites.png` |
 | `workbench` | Serve the Linear A Research Workbench locally | `-p/--port --no-browser --force --fetch-images` | `aegean workbench` |
 
 ### Verified examples

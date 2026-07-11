@@ -4564,6 +4564,181 @@
       ],
       "returns": true
     },
+    "aegean.analysis.graph": {
+      "kind": "module"
+    },
+    "aegean.analysis.graph.Graph": {
+      "kind": "class"
+    },
+    "aegean.analysis.graph.Graph.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "nodes"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "edges"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "level"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "scope"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.analysis.graph.Graph.edges": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.Graph.level": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.Graph.nodes": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.Graph.scope": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.GraphEdge": {
+      "kind": "class"
+    },
+    "aegean.analysis.graph.GraphEdge.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "target"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "weight"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.analysis.graph.GraphEdge.source": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.GraphEdge.target": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.GraphEdge.weight": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.GraphNode": {
+      "kind": "class"
+    },
+    "aegean.analysis.graph.GraphNode.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "id"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "frequency"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.analysis.graph.GraphNode.frequency": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.GraphNode.id": {
+      "kind": "attribute"
+    },
+    "aegean.analysis.graph.cooccurrence_graph": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "level"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "scope"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "min_count"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.analysis.graph.to_gexf": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "graph"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.analysis.graph.to_graphml": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "graph"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
     "aegean.analysis.hand_keyness": {
       "canonical": "aegean.analysis.scribal.hand_keyness",
       "kind": "function",
@@ -18636,6 +18811,35 @@
       ],
       "returns": true
     },
+    "aegean.io.rdf": {
+      "kind": "module"
+    },
+    "aegean.io.rdf.to_rdf": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "fmt"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "base_uri"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.read_epidoc": {
       "canonical": "aegean.io.epidoc.read_epidoc",
       "kind": "function",
@@ -18976,6 +19180,33 @@
           "default": true,
           "kind": "keyword-only",
           "name": "progress"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.to_rdf": {
+      "canonical": "aegean.io.rdf.to_rdf",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "fmt"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "base_uri"
         }
       ],
       "returns": true
@@ -22852,6 +23083,93 @@
     "aegean.viz": {
       "kind": "module"
     },
+    "aegean.viz.Timeline": {
+      "kind": "class"
+    },
+    "aegean.viz.Timeline.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "bins"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "parsed"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "unparsed"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "total"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "bin_width"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.Timeline.bin_width": {
+      "kind": "attribute"
+    },
+    "aegean.viz.Timeline.bins": {
+      "kind": "attribute"
+    },
+    "aegean.viz.Timeline.parsed": {
+      "kind": "attribute"
+    },
+    "aegean.viz.Timeline.total": {
+      "kind": "attribute"
+    },
+    "aegean.viz.Timeline.unparsed": {
+      "kind": "attribute"
+    },
+    "aegean.viz.Timeline.unparsed_fraction": {
+      "kind": "attribute"
+    },
+    "aegean.viz.TimelineBin": {
+      "kind": "class"
+    },
+    "aegean.viz.TimelineBin.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "start"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "count"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.TimelineBin.count": {
+      "kind": "attribute"
+    },
+    "aegean.viz.TimelineBin.start": {
+      "kind": "attribute"
+    },
     "aegean.viz.correspondence_layout": {
       "kind": "function",
       "params": [
@@ -22874,6 +23192,17 @@
           "default": true,
           "kind": "keyword-only",
           "name": "floor"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.parse_period": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
         }
       ],
       "returns": true
@@ -22977,6 +23306,27 @@
       ],
       "returns": true
     },
+    "aegean.viz.plot_findspots": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "backend"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "ax"
+        }
+      ],
+      "returns": true
+    },
     "aegean.viz.plot_keyness": {
       "kind": "function",
       "params": [
@@ -23056,6 +23406,89 @@
           "default": true,
           "kind": "keyword-only",
           "name": "ax"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.plot_sign_network": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "level"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "scope"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "min_count"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "max_nodes"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "backend"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "ax"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.plot_timeline": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "bin_width"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "backend"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "ax"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.viz.timeline_bins": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "bin_width"
         }
       ],
       "returns": true

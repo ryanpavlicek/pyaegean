@@ -203,7 +203,7 @@ Each of these is something code *can* fix, and each is on the
 | Linear B bundles an 18-tablet illustrative sample and a 149-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 149 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
-| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; a redistributable offline paradigm table would need a license-clean source that isn't currently available |
+| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; a redistributable offline paradigm table is planned from the license-clean sources that exist for it (UniMorph and Morpheus, both CC BY-SA), following the same fetched-asset pattern as the treebank lexicon |
 | 40 of 56 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots / peak sanctuaries not yet in Pleiades | The alignment was extended (each coordinate-verified, and re-checked weekly by `scripts/check_gazetteer.py`); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
 | The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution: adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
 
@@ -281,6 +281,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `epidoc` | lxml | EpiDoc TEI in/out |
   | `geo` | geopandas, shapely | GeoJSON / GeoDataFrames |
   | `viz` | matplotlib | the `plot` figures |
+  | `viz-interactive` | plotly | interactive findspot/timeline/sign-network plots |
   | `mcp` | mcp | the Model Context Protocol server (e.g. for Claude Code) |
   | `tui` | textual | the `aegean tui` terminal UI |
   | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` | one provider SDK | the AI layer |

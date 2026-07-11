@@ -145,10 +145,12 @@ Aegean syllabic sign data — Unicode Character Database (bundled)
   build_linearb_samples.py document the method), layered under the hand-curated readings.
 
 Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.json)
-  Approximate site-level latitude/longitude for the find-sites attested in the corpora, compiled from
-  standard archaeological references (GORILA, Younger, and public gazetteers) via the Linear A Research
-  Workbench (https://github.com/ryanpavlicek/linearaworkbench, Apache-2.0). Rounded to ~1 km — for
-  mapping, not survey work.
+  Approximate site-level latitude/longitude for the find-sites attested in the corpora. The Aegean
+  rows are compiled from standard archaeological references (GORILA, Younger, and public gazetteers)
+  via the Linear A Research Workbench (https://github.com/ryanpavlicek/linearaworkbench, Apache-2.0);
+  the Greek-epigraphy find-place rows carry representative points and place identifiers from
+  Pleiades: A Gazetteer of Past Places (https://pleiades.stoa.org), used under CC BY 3.0 —
+  attribution: Pleiades contributors. Rounded to ~1 km — for mapping, not survey work.
 
 DAMOS — Database of Mycenaean at Oslo (fetched on demand, NOT bundled)
   DAMOS (F. Aurora, University of Oslo; https://damos.hf.uio.no), the most complete edition

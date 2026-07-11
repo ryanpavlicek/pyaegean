@@ -382,6 +382,24 @@ _REMOTE: dict[str, DataSpec] = {
              "(heavy); aegean.db.search/stream the memory-friendly path.",
         extract=True,
     ),
+    # The DDbDP document-URI map: file-stem -> ddb-hybrid, harvested from papyri.info's own
+    # idp.data by scripts/build_ddbdp_uri_map.py. Lets aegean.io.to_rdf mint papyri.info
+    # document URIs (https://papyri.info/ddbdp/<hybrid>) for the ddbdp corpus without shipping
+    # the ~70k-entry map in the wheel; fetched on demand, never bundled. CC BY 3.0 (papyri.info).
+    # The RDF export falls back to Trismegistos URIs (with one warning) when this is absent, so
+    # it stays offline-capable. PLACEHOLDER — integrator: after hosting the built
+    # ddbdp-uris.json.gz (~337 KB gzip; built sha256
+    # c767f351168c44f287edc22e0bb7cd22b190b0a019c73a78b3fe2b90e97d356c) as a release asset,
+    "ddbdp-uris": DataSpec(
+        name="ddbdp-uris",
+        url="https://github.com/ryanpavlicek/pyaegean/releases/download/ddbdp-uris-v1/ddbdp-uris.json.gz",
+        sha256="c767f351168c44f287edc22e0bb7cd22b190b0a019c73a78b3fe2b90e97d356c",
+        license="CC-BY-3.0 (DDbDP / papyri.info); derived stem->hybrid map, fetched, never bundled",
+        note="DDbDP document-URI map: file-stem -> ddb-hybrid entries (~337 KB gzip) harvested "
+             "from papyri.info idp.data; lets to_rdf mint papyri.info document URIs.",
+        extract=False,
+        on_disk=("ddbdp-uris.json.gz",),
+    ),
     # The Greek New Testament (Nestle 1904) with per-token lemma / Robinson morph /
     # Strong's, built from biblicalhumanities/Nestle1904 (scripts/build_nt_corpus.py).
     # The morphology, lemmas, and Strong's numbers are CC0 and the base text is public

@@ -89,6 +89,7 @@ The complete matrix:
 | `pyaegean[epidoc]` | `lxml>=5.0` | the Linear B DAMOS EpiDoc reader + schema validation (writing, and the generic `io.from_epidoc` reader, use the stdlib) |
 | `pyaegean[geo]` | `geopandas>=0.14`, `shapely>=2.0.4` | geographic analysis / GeoJSON |
 | `pyaegean[viz]` | `matplotlib>=3.8` | one-line plots (`aegean.viz`, `aegean plot`) |
+| `pyaegean[viz-interactive]` | `plotly>=5` | interactive versions of the findspot/timeline/sign-network plots (`backend="plotly"`) |
 | `pyaegean[parquet]` | `pyarrow>=16.1` | Parquet export (`io.to_parquet`) |
 | `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
@@ -124,7 +125,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.35.0
+# pyaegean 0.36.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -139,7 +140,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.35.0
+print(aegean.__version__)                 # 0.36.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -156,7 +157,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.35.0
+# pyaegean 0.36.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -194,7 +195,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.35.0                    │
+│ OK │ pyaegean │ 0.36.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

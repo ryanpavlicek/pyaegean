@@ -4,6 +4,36 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.36.0 (2026-07-11)
+
+Linked Open Data, a wider gazetteer, and new ways to see the corpora.
+
+### Added
+- **Linked Open Data export**: `aegean export <corpus> -f ttl` (Turtle) or `-f jsonld`
+  (JSON-LD), `io.to_rdf` in Python. Subject URIs come from the authoritative
+  identifiers in the data, never invented: DDbDP documents get their real papyri.info
+  URIs (via a new fetched identifier map harvested from papyri.info's own source data;
+  57,331 of 57,331 documents resolve), EDH documents their Trismegistos URIs, I.Sicily
+  its project URIs; documents without an external identifier use a documented `urn:`
+  fallback or your `--base-uri`. Every document carries Dublin Core terms, WGS84
+  coordinates where a findspot is known, and the corpus license as a machine-readable
+  triple, so NonCommercial obligations travel with the data.
+- **The find-site gazetteer now covers the Greek epigraphy corpora**: 38 new
+  find-places (94 sites total, 78 Pleiades-linked), each verified against its live
+  Pleiades representative point before linking; `aegean geo` yields rows for
+  isicily/igcyr/iospe/iip/edh, and find-place labels split across lines in the source
+  now resolve to their gazetteer row. Coverage and the deliberately-unlinked cases
+  (modern names, medieval places, region-level labels) are recorded with the data.
+  Pleiades (CC BY) is now credited in NOTICE.
+- **Sign co-occurrence graph export** (`analysis.graph`): GEXF and GraphML writers for
+  pattern-hunting in Gephi or networkx, using the same counting conventions as the
+  existing co-occurrence analysis; exploratory framing carried in the module.
+- **Three new plot kinds**: `aegean plot findspots` (find-site map), `plot timeline`
+  (documents over parsed date ranges, with the unparsed fraction stated on the
+  figure), and `plot signnet` (the co-occurrence network). Each accepts
+  `backend="plotly"` for an interactive version via the new `[viz-interactive]` extra;
+  matplotlib remains the default.
+
 ## 0.35.0 (2026-07-11)
 
 Calibrated confidence for the neural pipeline: a number you can trust, or no number at all.

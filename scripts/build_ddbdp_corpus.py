@@ -181,7 +181,16 @@ def _metadata(root: ET.Element, stem: str):  # type: ignore[no-untyped-def]
     hybrid = _idno(root, "ddb-hybrid")
     tm = _idno(root, "TM")
     hgv = _idno(root, "HGV")
-    notes = tuple(n for n in (f"TM {tm}" if tm else "", f"HGV {hgv}" if hgv else "") if n)
+    # The ddb-hybrid is what papyri.info document URIs are built from; carry it as a
+    # "DDb <hybrid>" note so a rebuilt corpus mints papyri.info URIs natively (io.rdf),
+    # without needing the fetched ddbdp-uris map. Additive; existing assets lack it.
+    notes = tuple(
+        n for n in (
+            f"DDb {hybrid}" if hybrid else "",
+            f"TM {tm}" if tm else "",
+            f"HGV {hgv}" if hgv else "",
+        ) if n
+    )
     return DocumentMeta(
         name=_citation(hybrid, stem),
         site=_head_child(root, "placeName"),

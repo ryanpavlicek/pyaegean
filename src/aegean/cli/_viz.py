@@ -10,7 +10,10 @@ import typer
 from ._common import apply_meta_filters, fail, load_corpus, read_text, writing
 from ._corpus import PERIOD_OPT, SCRIBE_OPT, SITE_OPT, SUPPORT_OPT
 
-_KINDS = ("freq", "dispersion", "keyness", "network", "balance", "scansion")
+_KINDS = (
+    "freq", "dispersion", "keyness", "network", "balance", "scansion",
+    "findspots", "timeline", "signnet",
+)
 
 # Kept word-for-word in step with `aegean greek scan --meter`: plot's scansion meter is
 # passed straight to greek.scan_line, so the two helps must name the same meters.
@@ -41,12 +44,17 @@ def plot(
         None, "--reference", help="Keyness: reference corpus (else filters split subset vs rest)."
     ),
     word: str | None = typer.Option(None, "--word", help="Network: this word's ego network."),
-    min_count: int = typer.Option(2, "--min-count", help="Network: minimum shared documents."),
+    min_count: int = typer.Option(2, "--min-count", help="Network/signnet: minimum shared units."),
+    scope: str = typer.Option(
+        "document", "--scope", help="signnet: co-occurrence scope (document | line)."
+    ),
+    bin_width: int = typer.Option(100, "--bin-width", help="timeline: bin size in years."),
     meter: str = typer.Option("hexameter", "--meter", help=_METER_HELP),
     dpi: int = typer.Option(150, "--dpi", help="Raster resolution for .png output."),
 ) -> None:
     """Draw one figure (frequencies, dispersion, keyness, co-occurrence network,
-    accounting balance, or a scansion grid) and write it to --output.
+    accounting balance, a scansion grid, a find-site map, a date timeline, or a
+    sign/word co-occurrence network) and write it to --output.
 
     Needs the viz extra: pip install 'pyaegean\\[viz]'.
     """
@@ -88,6 +96,15 @@ def plot(
                 ax = viz.plot_keyness(target, ref, kind=item_kind, top=top)
             elif kind == "network":
                 ax = viz.plot_collocation_network(filtered, word, min_count=min_count)
+            elif kind == "findspots":
+                ax = viz.plot_findspots(filtered)
+            elif kind == "timeline":
+                ax = viz.plot_timeline(filtered, bin_width=bin_width)
+            elif kind == "signnet":
+                ax = viz.plot_sign_network(
+                    filtered, level="sign" if signs else "word",
+                    scope=scope, min_count=min_count,
+                )
             else:  # balance
                 ax = viz.plot_balance(filtered)
         with writing(output):  # parent dirs + one-line OSError failures

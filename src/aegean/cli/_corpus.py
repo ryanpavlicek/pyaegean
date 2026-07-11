@@ -670,24 +670,34 @@ def cite(
 def export(
     corpus: str = CORPUS_ARG,
     fmt: str = typer.Option(
-        ..., "--format", "-f", help="json, csv, parquet, epidoc, sqlite, or workbench."
+        ..., "--format", "-f",
+        help="json, csv, parquet, epidoc, sqlite, workbench, ttl (RDF Turtle), or jsonld.",
     ),
     output: Path = typer.Option(..., "--output", "-o", help="Destination file."),
     level: str = typer.Option(
         "document", "--level",
         help="For csv/parquet: document, token, or word (token carries NT lemma/morph/Strong's/gloss).",
     ),
+    base_uri: str | None = typer.Option(
+        None, "--base-uri",
+        help="For ttl/jsonld: base namespace for documents without a Trismegistos/I.Sicily id "
+        "(default urn:aegean:, non-resolvable).",
+    ),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
     support: str | None = SUPPORT_OPT,
 ) -> None:
-    """Export a (filtered) corpus: lossless JSON, tabular CSV/Parquet, EpiDoc TEI, or a SQLite DB.
+    """Export a (filtered) corpus: lossless JSON, tabular CSV/Parquet, EpiDoc TEI, a SQLite DB, or
+    Linked Open Data (RDF Turtle / JSON-LD).
 
     ``--level token`` (csv/parquet) emits one row per token, spreading any per-token
-    annotations — the Greek NT's lemma/morph/Strong's/gloss — into columns."""
-    if fmt not in ("json", "csv", "parquet", "epidoc", "sqlite", "workbench"):
-        raise fail(f"unknown format {fmt!r}; use json, csv, parquet, epidoc, sqlite, or workbench")
+    annotations — the Greek NT's lemma/morph/Strong's/gloss — into columns. ``-f ttl`` / ``-f
+    jsonld`` mint a stable per-document URI (from a Trismegistos or I.Sicily id where the corpus
+    carries one, else a ``--base-uri`` fragment) and carry the corpus license through."""
+    formats = ("json", "csv", "parquet", "epidoc", "sqlite", "workbench", "ttl", "jsonld")
+    if fmt not in formats:
+        raise fail(f"unknown format {fmt!r}; use {', '.join(formats)}")
     if level not in ("document", "token", "word"):
         raise fail(f"--level must be 'document', 'token', or 'word'; got {level!r}")
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
@@ -711,6 +721,10 @@ def export(
                 from aegean.db import to_sqlite
 
                 to_sqlite(c, output)
+            elif fmt in ("ttl", "jsonld"):
+                from aegean.io import to_rdf
+
+                to_rdf(c, output, fmt="turtle" if fmt == "ttl" else "jsonld", base_uri=base_uri)
             else:
                 from aegean.io import to_workbench
 
@@ -767,11 +781,17 @@ def geo(
             return
         from collections import Counter
 
+        from aegean.geo import _normalize_site
+
+        # resolve labels through the same whitespace-normalized view the geo module uses,
+        # so a line-split find-place label counts toward its gazetteer row
+        name_by_norm = {_normalize_site(k): k for k in coords}
         counts: Counter[str] = Counter()
         target = word.casefold()
         for d in c:
-            if d.meta.site in coords and any(t.text.casefold() == target for t in d.words):
-                counts[d.meta.site] += 1
+            resolved = name_by_norm.get(_normalize_site(d.meta.site)) if d.meta.site else None
+            if resolved is not None and any(t.text.casefold() == target for t in d.words):
+                counts[resolved] += 1
         wrows = [
             {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}
             for s, n in counts.most_common()
@@ -799,14 +819,19 @@ def geo(
             output.write_text(gdf.to_json(), encoding="utf-8")
         print(f"wrote {len(gdf)} features to {output}", file=sys.stderr)
         return
+    from aegean.geo import _normalize_site
+
+    name_by_norm = {_normalize_site(k): k for k in coords}
     sites = {d.meta.site for d in c if d.meta.site}
+    resolved_sites = {
+        r for s in sites for r in (name_by_norm.get(_normalize_site(s)),) if r is not None
+    }
     rows = [
         {
             "site": s, "lat": coords[s].lat, "lon": coords[s].lon,
             "pleiades": coords[s].pleiades or "", "contested": coords[s].contested or "",
         }
-        for s in sorted(sites)
-        if s in coords
+        for s in sorted(resolved_sites)
     ]
     if json_out:
         emit_json(rows)
@@ -814,8 +839,9 @@ def geo(
     if not rows:
         print(
             f"{corpus}: no mapped find-sites. geo maps provenanced inscription corpora "
-            "(lineara, linearb, cypriot, cyprominoan, sigla, damos); other corpora carry no "
-            "find-spot or record find-places the Aegean gazetteer does not map."
+            "(lineara, linearb, cypriot, cyprominoan, sigla, damos, and the Greek epigraphy "
+            "corpora isicily/igcyr/iospe/iip/edh); other corpora carry no find-spot or record "
+            "find-places the gazetteer does not yet map."
         )
         return
     table(
