@@ -394,7 +394,7 @@ from skipping that step says so, and prints the exact `aegean import` line to ru
 
 The pure-Python core (the Greek pipeline plus the bundled Linear A corpus) runs
 **in your browser**: nothing to install, no server:
-[the web demo](https://ryanpavlicek.github.io/pyaegean/demo/). It's
+[the web demo](https://pyaegean.xyz/demo/). It's
 [Pyodide](https://pyodide.org/) (CPython compiled to WebAssembly) running locally
 in the page.
 

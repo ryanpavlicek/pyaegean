@@ -348,7 +348,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
   [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).
 
 - **Try it without installing anything**: the core pipeline runs client-side via
-  Pyodide at [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/); the
+  Pyodide at [the web demo](https://pyaegean.xyz/demo/); the
   [CLI](CLI) is the full no-Python path; and the
   [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) web app
   covers the visual Linear A use case.

@@ -61,7 +61,7 @@ More runnable examples are in [Try it](#try-it) below. Then pick your path:
   [Choosing a Pipeline](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Pipeline)
   maps material to the right backend.
 
-The **[documentation site](https://ryanpavlicek.github.io/pyaegean/)** pairs this quick start
+The **[documentation site](https://pyaegean.xyz/)** pairs this quick start
 with the full API reference.
 
 ## What this is
@@ -121,7 +121,7 @@ pip install "pyaegean[all]"       # the data, AI, EpiDoc, geo, viz, CLI, TUI, an
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
 
 Or try the toolkit **live in your browser**: the core pipeline running client-side via Pyodide,
-nothing to install: **[ryanpavlicek.github.io/pyaegean/demo](https://ryanpavlicek.github.io/pyaegean/demo/)**.
+nothing to install: **[pyaegean.xyz/demo](https://pyaegean.xyz/demo/)**.
 
 ```python
 import aegean
@@ -198,7 +198,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)**: per-script guides
 - **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)**: end-to-end scholarly workflows, each ending in a citation
 - **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
-- **[API reference](https://ryanpavlicek.github.io/pyaegean/)**: every public module, class, and function, generated from the source
+- **[API reference](https://pyaegean.xyz/)**: every public module, class, and function, generated from the source
 
 ## Roadmap
 

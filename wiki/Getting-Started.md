@@ -10,7 +10,7 @@ at a time; nothing here can break your computer.
 > [Installation](Installation) and the [Tutorial](Tutorial).
 
 > **Just want to try it first?** The core pipeline runs **in your browser**, nothing to
-> install: [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/) (Pyodide).
+> install: [the web demo](https://pyaegean.xyz/demo/) (Pyodide).
 
 > **Prefer to jump straight into code?** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
 > is a self-contained, runnable guided tour: work through it cell by cell on your own

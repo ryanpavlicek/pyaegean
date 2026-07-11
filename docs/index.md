@@ -4,6 +4,13 @@
 Greek (Archaic through Koine) and Linear A, Linear B, the Cypriot syllabary, and Cypro-Minoan,
 in one small, dependency-light library.
 
+[Source on GitHub](https://github.com/ryanpavlicek/pyaegean){ .md-button .md-button--primary }
+[API reference](api/index.md){ .md-button }
+[User guide (wiki)](https://github.com/ryanpavlicek/pyaegean/wiki){ .md-button }
+[Try it in your browser](https://pyaegean.xyz/demo/){ .md-button }
+[Benchmarks](benchmarks.md){ .md-button }
+[PyPI](https://pypi.org/project/pyaegean/){ .md-button }
+
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is state of the art on the UD Ancient Greek (Perseus)
 benchmark, measured end-to-end through the shipped package at
@@ -51,7 +58,7 @@ doc = aegean.load("cypriot").get("IG XV 1, 120")
 
 Everything above runs offline with zero heavy dependencies. Prefer not to install anything?
 The [getting-started notebook](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
-runs in Colab, and the [in-browser demo](https://ryanpavlicek.github.io/pyaegean/demo/) runs
+runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
 ## Find your path

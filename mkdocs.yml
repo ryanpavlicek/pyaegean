@@ -1,6 +1,6 @@
 site_name: pyaegean
 site_description: A specialist Python toolkit for Ancient Greek and the Aegean syllabic scripts
-site_url: https://ryanpavlicek.github.io/pyaegean/
+site_url: https://pyaegean.xyz/
 repo_url: https://github.com/ryanpavlicek/pyaegean
 repo_name: ryanpavlicek/pyaegean
 copyright: Apache-2.0
@@ -60,6 +60,7 @@ plugins:
             filters: ["!^_"]
 
 markdown_extensions:
+  - attr_list
   - admonition
   - toc:
       permalink: true
@@ -70,7 +71,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Try it in your browser: https://ryanpavlicek.github.io/pyaegean/demo/
+  - Try it in your browser: https://pyaegean.xyz/demo/
   - API reference:
       - Overview: api/index.md
       - aegean: api/aegean.md

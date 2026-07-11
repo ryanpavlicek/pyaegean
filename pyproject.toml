@@ -68,7 +68,7 @@ aegean-mcp = "aegean.mcp_server:main"
 Homepage = "https://github.com/ryanpavlicek/pyaegean"
 Source = "https://github.com/ryanpavlicek/pyaegean"
 Documentation = "https://github.com/ryanpavlicek/pyaegean/wiki"
-"API Reference" = "https://ryanpavlicek.github.io/pyaegean/"
+"API Reference" = "https://pyaegean.xyz/"
 Issues = "https://github.com/ryanpavlicek/pyaegean/issues"
 Changelog = "https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md"
 

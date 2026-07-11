@@ -16,7 +16,7 @@ your back.
 > which walks you through installing Python, opening a terminal, and making a
 > virtual environment before you run anything here. Want to try it with nothing
 > installed at all? The core pipeline runs in your browser:
-> [the web demo](https://ryanpavlicek.github.io/pyaegean/demo/).
+> [the web demo](https://pyaegean.xyz/demo/).
 
 ## Requirements
 
