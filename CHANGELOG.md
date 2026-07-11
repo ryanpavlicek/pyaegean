@@ -4,6 +4,43 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.43.0 (2026-07-11)
+
+Two more firsts for the evaluation record: the cost of scribal orthography,
+measured, and Byzantine verse.
+
+### Added
+- **The diplomatic-orthography row**: `greek.evaluate_on_papygreek(layer="orig")`
+  (CLI: `aegean greek eval papygreek --layer orig`) scores the same 1,696
+  sentences and gold as the published PapyGreek row, with the FORM column
+  carrying the scribes' actual spellings (1,637 tokens differ: itacism,
+  vowel-quantity confusion, nasal assimilation). Measured once, sequentially:
+  UPOS 90.00 / UFeats 85.90 / lemma 81.80 / UAS 84.33 / LAS 77.64 against the
+  regularized row's 91.05 / 88.57 / 86.13 / 85.71 / 79.89 — the pair isolates
+  what documentary orthography costs, and lemma composition takes the largest
+  hit. The fold is a pure form-swap of the regularized one (gold columns
+  byte-identical, leakage re-checked on the diplomatic forms).
+- **Byzantine verse tagging**: `greek.evaluate_on_dbbe()` (CLI: `aegean greek
+  eval dbbe`) scores the pipeline against the DBBE gold standard (Swaelens,
+  De Vos & Lefever, Language Resources and Evaluation 2025; CC BY 4.0): 822
+  sentences / 9,203 tokens of unedited medieval book epigrams in scribal
+  orthography, gold POS and lemma, leakage-checked. Measured once: UPOS 86.61 /
+  XPOS 76.34 / UFeats 85.87 / lemma 76.74, with the mapped-tagset and
+  Attic-lemma caveats stated. Tagging only: the gold carries no trees.
+- **Margin-milestone addressing**: `--ref 17a` opens a Stephanus sub-page and
+  `--ref 1447a10` a Bekker line, read generically from each edition's declared
+  milestone markup; every existing ref form is unchanged.
+- **Parity machinery hardening**: notebook coverage claims are now
+  machine-checked (each carries a marker asserted to appear in a code cell of
+  the named notebook), and the documentation site's navigation joined the
+  tracked surfaces.
+
+### Fixed
+- The catalogue build script's GitHub-token gate now requires an exact
+  `api.github.com` hostname rather than a substring match, and a legacy test's
+  deprecated `tempfile.mktemp` calls are replaced; seven code-scanning false
+  positives were dismissed with written justifications.
+
 ## 0.42.0 (2026-07-11)
 
 The first leakage-clean tragedy evaluation.

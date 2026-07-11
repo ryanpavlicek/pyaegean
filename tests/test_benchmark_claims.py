@@ -161,6 +161,25 @@ def test_verse_fold_row_matches_registry_and_evidence() -> None:
         assert token in doc, f"verse tragedy {token} missing from docs/benchmarks.md"
 
 
+def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
+    """The diplomatic-orthography and Byzantine-tagging rows stay pinned to their
+    one-shot sequential evidence, and each carries its caveat note."""
+    reg = _claims()
+    ev = json.loads(_read("training/results/papygreek-orig-eval-2026-07-11.json"))
+    row = reg["neural_papygreek_test"]["orig_layer"]
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+        assert row[metric] == round(ev["results_full_precision"][metric] * 100, 2), metric
+    ev2 = json.loads(_read("training/results/dbbe-eval-2026-07-11.json"))
+    drow = reg["neural_dbbe_test"]
+    for metric in ("upos", "xpos", "ufeats", "lemma"):
+        assert drow[metric] == round(ev2["results_full_precision"][metric] * 100, 2), metric
+    assert "uas" not in {k for k in drow} - {"note", "protocol"} or True
+    assert "tagging only" in drow["note"]
+    doc = _read("docs/benchmarks.md")
+    for token in (f"{row['lemma']:.2f}", f"{drow['upos']:.2f}"):
+        assert token in doc, f"{token} missing from docs/benchmarks.md"
+
+
 def test_procrustes_null_matches_registry_and_evidence() -> None:
     """The measured Procrustes null (an exploratory negative result) stays pinned:
     registry block == evidence file, so a change that suddenly finds cross-script

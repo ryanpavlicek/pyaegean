@@ -142,8 +142,10 @@ from .papygreek import (
     evaluate_on_papygreek_dev,
     papygreek_convention_report,
     papygreek_dev_path,
+    papygreek_orig_path,
     papygreek_path,
 )
+from .dbbe import dbbe_path, evaluate_on_dbbe
 from .verse_eval import evaluate_on_verse, verse_path
 from .eval_receipt import EvalReceipt, eval_receipt
 from .normalize import (
@@ -358,9 +360,12 @@ __all__ = [
     "evaluate_on_papygreek",
     "evaluate_on_papygreek_dev",
     "papygreek_path",
+    "papygreek_orig_path",
     "papygreek_dev_path",
     "papygreek_convention_report",
     "PapyGreekConventionReport",
+    "evaluate_on_dbbe",
+    "dbbe_path",
     "evaluate_on_verse",
     "verse_path",
     "eval_receipt",

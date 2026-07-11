@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.42.0
+aegean --version          # pyaegean 0.43.0
 ```
 
 | Group | What's in it |
@@ -1199,7 +1199,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.42.0                    │
+│ OK │ pyaegean │ 0.43.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1608,7 +1608,12 @@ Stephanus-paged Plato dialogue is a single `section`, Aristotle is `chapter.subc
 multi-book prose is `book.chapter.section` — so a **wrong `--ref` names the work's own
 scheme** (e.g. `cited by book.line`) instead of only reporting a miss. A hyphen range must
 stay within one textpart; for sibling sections, or a range that would cross textparts, use
-a **comma list** (`--ref 1.1,1.5` or `--ref 1,3`), one document per entry. To discover the
+a **comma list** (`--ref 1.1,1.5` or `--ref 1,3`), one document per entry. `--ref` also
+addresses **margin milestones outside the `<div>` scheme** — a Stephanus sub-page (`17a`)
+or a Bekker line (`1447a10`) an edition prints in the margin — by extracting the span
+between that marker and the next of its kind (a whole Bekker page `1447a` works too, and
+`17a,17b` in a comma list); a hyphen **range** of milestones is not yet supported (use a
+comma list of the markers). To discover the
 scheme before loading, call `greek.citation_scheme("tlg0012.tlg001")` (it returns the
 ordered levels, e.g. `["book", "line"]`); the per-genre table is on
 [Greek Works and Books](Greek-Works-and-Books#citation-schemes-how-a-work-is-addressed).

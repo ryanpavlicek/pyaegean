@@ -40,12 +40,20 @@ __all__ = [
     "evaluate_on_papygreek_dev",
     "papygreek_convention_report",
     "papygreek_dev_path",
+    "papygreek_orig_path",
     "papygreek_path",
 ]
 
 _ASSET = "papygreek-fold"
 _CACHE_SUBDIR = "papygreek-grc"
 _FOLD_NAME = "papygreek-test.conllu"
+
+# The ORIG (diplomatic) surface variant of the test fold: the SAME 1,696 sentences and the
+# SAME gold columns as the reg fold, with the emitted FORM swapped to the raw documentary
+# orthography. Built by ``scripts/build_papygreek_fold.py --layer orig``; a distinct pinned
+# asset, measured once by the integrator, never fitted against. See `papygreek_orig_path`.
+_ORIG_ASSET = "papygreek-fold-orig"
+_ORIG_FOLD_NAME = "papygreek-test-orig.conllu"
 
 # The document-disjoint DEV fold (experiment/lever-ranking only, never a published number and
 # never touching the pinned test fold): two tracks, one per fetchable asset. See
@@ -80,6 +88,21 @@ def papygreek_path(*, download: bool = True) -> Path:
     the fetch/decompress/stamp mechanics. CC BY-SA 4.0 — cached for evaluation only, never
     bundled."""
     return _fetch_conllu(_ASSET, cache_dir() / _CACHE_SUBDIR / _FOLD_NAME, download=download)
+
+
+def papygreek_orig_path(*, download: bool = True) -> Path:
+    """The cached CoNLL-U path of the PapyGreek ORIG (diplomatic) test fold, fetched +
+    decompressed on first use.
+
+    The diplomatic-surface variant of `papygreek_path`: the **same** 1,696 sentences and the
+    **same** gold columns (UPOS/XPOS/UFeats/lemma/head/deprel), with the emitted FORM swapped
+    to the raw documentary orthography (itacism, phonetic spelling, non-standard breathing) that
+    the ``orig`` layer preserves. The two folds are token-aligned line-for-line and differ only
+    in the surface form, so the orig row isolates the effect of the harder orthography. Built by
+    ``scripts/build_papygreek_fold.py --layer orig``. See `_fetch_conllu` for the
+    fetch/decompress/stamp mechanics. CC BY-SA 4.0 — cached for evaluation only, never
+    bundled."""
+    return _fetch_conllu(_ORIG_ASSET, cache_dir() / _CACHE_SUBDIR / _ORIG_FOLD_NAME, download=download)
 
 
 def papygreek_dev_path(track: str = "tagging", *, download: bool = True) -> Path:
@@ -146,6 +169,7 @@ def _score_fold(
 
 def evaluate_on_papygreek(
     *,
+    layer: str = "reg",
     source: Path | str | None = None,
     parse: bool | None = None,
     progress: Callable[[int, int], None] | None = None,
@@ -164,14 +188,29 @@ def evaluate_on_papygreek(
     encoder's passes (a throughput convenience — the recorded protocol is the sequential
     default). ``source`` overrides the fold path (tests pass a local CoNLL-U).
 
-    Returns ``{"treebank", "split", "parsed", "upos", "xpos", "ufeats", "lemma", "uas", "las",
-    "clas", "n_words", "n_sentences"}`` — accuracies in [0, 1]. The fold is leakage-clean for
-    the shipped model (see the module docstring)."""
-    gold_path = Path(source) if source is not None else papygreek_path()
-    return _score_fold(
+    ``layer`` selects which fold is fetched when ``source`` is not given: ``"reg"`` (the
+    default, the editorially regularized reading behind the published PapyGreek numbers) or
+    ``"orig"`` (the diplomatic-surface variant — the same sentences and gold, the raw
+    documentary orthography as the FORM; see `papygreek_orig_path`). The orig fold measures the
+    same model against a harder input and is directly comparable to the reg row.
+
+    Returns ``{"treebank", "split", "layer", "parsed", "upos", "xpos", "ufeats", "lemma",
+    "uas", "las", "clas", "n_words", "n_sentences"}`` — accuracies in [0, 1]. The fold is
+    leakage-clean for the shipped model (see the module docstring)."""
+    if layer not in ("reg", "orig"):
+        raise ValueError(f"layer must be 'reg' or 'orig'; got {layer!r}")
+    if source is not None:
+        gold_path = Path(source)
+    elif layer == "orig":
+        gold_path = papygreek_orig_path()
+    else:
+        gold_path = papygreek_path()
+    result = _score_fold(
         gold_path, treebank="papygreek", split="test",
         parse=parse, progress=progress, batch_size=batch_size,
     )
+    result["layer"] = layer
+    return result
 
 
 def evaluate_on_papygreek_dev(

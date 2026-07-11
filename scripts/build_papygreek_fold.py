@@ -12,8 +12,24 @@ with the same official CoNLL 2018 evaluator every other UD fold uses. Evaluation
 never bundled, never trained on.
 
 PapyGreek's ``<word>`` carries two annotation layers, ``orig_*`` (diplomatic) and ``reg_*``
-(editorially regularized); this uses the **reg** layer — the normalized reading that matches
-the AGDT/UD convention the model expects.
+(editorially regularized); the default build uses the **reg** layer — the normalized reading
+that matches the AGDT/UD convention the model expects.
+
+``--layer orig`` builds the diplomatic-surface variant of this same fold. The orig and reg
+layers share tokenization exactly (every ``<word>`` carries both an ``orig_form`` and a
+``form_reg`` on the same element — no token is added, dropped, or merged between layers), so
+the orig fold keeps the **same sentences and the same gold columns** (LEMMA/UPOS/XPOS/FEATS/
+HEAD/DEPREL, all computed from the reg reading) and swaps **only** the emitted FORM column
+(and the ``# text`` header) to the raw diplomatic reading. The two folds are therefore
+token-aligned line-for-line and differ only in column 2, so the orig row measures purely the
+effect of the harder documentary orthography (itacism, phonetic spelling, non-standard
+breathing) on the model, holding the gold analysis fixed. A diplomatic form that cannot be
+recovered as a clean reading with the reg apparatus stripper (a fully-lost ``$`` marker, a
+private-use papyrological glyph, an uncommon editorial sign) falls back to the reg reading so
+the alignment is preserved; every such fallback is counted in the manifest. The orig FORM
+tuples are re-run through the same leakage exclusion (a diplomatic spelling could in principle
+collide differently), and any sentence that leaks only in its orig form is dropped and
+recorded. The default (reg) build is byte-identical whether or not this mode exists.
 
 Selection criteria (each counted in the manifest), applied per ``<sentence>``:
   1. **no artificial nodes** — an elliptic/``insertion_id`` node has no surface token, so a
@@ -35,11 +51,15 @@ Selection criteria (each counted in the manifest), applied per ``<sentence>``:
 
 Output (``--out``): ``papygreek-test.conllu`` + ``papygreek-fold.conllu.gz`` (the release
 asset) + ``papygreek-fold-manifest.json`` (source commit, counts, per-reason exclusions,
-doc ids). Prints the sha256 of the gz asset for the ``_REMOTE`` DataSpec pin.
+doc ids). Prints the sha256 of the gz asset for the ``_REMOTE`` DataSpec pin. ``--layer orig``
+writes the diplomatic-surface variant instead: ``papygreek-test-orig.conllu`` +
+``papygreek-fold-orig.conllu.gz`` + ``papygreek-fold-orig-manifest.json`` (with the surface
+disposition, the reg-vs-orig diff count, and the orig leakage recheck).
 
 Usage:
     python scripts/build_papygreek_fold.py [--repo DIR] [--out DIR]
                                            [--training-data training/data]
+                                           [--layer {reg,orig}]
 """
 
 from __future__ import annotations
@@ -143,6 +163,39 @@ def reg_words(sentence: ET.Element) -> list[dict[str, Any]]:
     return out
 
 
+def orig_form_reads(sentence: ET.Element) -> list[str | None]:
+    """The raw ``orig_form`` (diplomatic-layer surface) of each ``<word>``, aligned 1:1 with
+    `reg_words` (both iterate the ``<word>`` children in document order; every element carries
+    both a ``form_reg`` and an ``orig_form``)."""
+    return [w.get("orig_form") for w in sentence if w.tag == "word"]
+
+
+def orig_token_reading(orig_form: str | None, reg_reading: str, *, is_punct: bool) -> tuple[str, str]:
+    """The emitted FORM for one token's orig (diplomatic) layer, and its disposition.
+
+    The diplomatic reading is recovered with the SAME `strip_apparatus` + `is_clean_reading`
+    the reg build uses — no orig-specific editorial modeling — so the two layers are stripped
+    identically. Where the diplomatic form cannot be recovered as a clean Greek reading (a
+    fully-lost ``$`` marker, a private-use papyrological glyph, an uncommon editorial sign) the
+    token FALLS BACK to ``reg_reading`` so the orig fold stays token-aligned with the reg fold.
+
+    ``reg_reading`` is the already-stripped, NFC reg surface form (``strip_apparatus(form_reg)``,
+    the exact string the reg fold emits). Returns ``(form, disposition)`` where disposition is
+    one of ``diplomatic_diff`` (a genuine diplomatic spelling unlike reg), ``diplomatic_same``
+    (the diplomatic reading equals the reg reading), ``punct`` / ``punct_diff`` (a punctuation
+    token), or ``fallback_unclean`` / ``fallback_empty`` (the reg reading is substituted)."""
+    stripped = strip_apparatus(orig_form or "")
+    if is_punct:
+        if not stripped:
+            return reg_reading, "fallback_empty"
+        return (stripped, "punct_diff") if stripped != reg_reading else (stripped, "punct")
+    if is_clean_reading(stripped):
+        if stripped == reg_reading:  # both NFC already
+            return stripped, "diplomatic_same"
+        return stripped, "diplomatic_diff"
+    return (reg_reading, "fallback_empty") if not stripped else (reg_reading, "fallback_unclean")
+
+
 def sentence_status(words: list[dict[str, Any]]) -> str:
     """Selection verdict for one sentence: ``ok`` or the exclusion reason.
 
@@ -168,19 +221,31 @@ def sentence_status(words: list[dict[str, Any]]) -> str:
     return "ok"
 
 
-def sentence_to_conllu(sent_id: str, words: list[dict[str, Any]]) -> tuple[str, tuple[str, ...]]:
+def sentence_to_conllu(
+    sent_id: str,
+    words: list[dict[str, Any]],
+    *,
+    surface_forms: list[str] | None = None,
+) -> tuple[str, tuple[str, ...]]:
     """Convert one selected sentence's reg-layer words to a CoNLL-U block.
 
-    Returns ``(block, forms)`` where ``forms`` is the NFC stripped-reading form tuple (for
-    the leakage check). HEAD/DEPREL/UPOS/XPOS/FEATS come from the shared AGDT->UD converter;
-    the LEMMA is ``clean_lemma(lemma_reg)`` (numeral value annotations stripped; punctuation
-    reconciled to the surface form, the convention the model was trained on — training punct
-    lemma is the punct char, not PapyGreek's ``punc1``)."""
+    Returns ``(block, forms)`` where ``forms`` is the emitted NFC form tuple (for the leakage
+    check). HEAD/DEPREL/UPOS/XPOS/FEATS come from the shared AGDT->UD converter; the LEMMA is
+    ``clean_lemma(lemma_reg)`` (numeral value annotations stripped; punctuation reconciled to
+    the reg surface form, the convention the model was trained on — training punct lemma is the
+    punct char, not PapyGreek's ``punc1``).
+
+    ``surface_forms`` (one string per word, same order/length) overlays the emitted FORM column
+    (and the ``# text`` header and the returned form tuple) with an alternate reading — the orig
+    (diplomatic) layer — while EVERY gold column (LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL) is
+    still computed from the reg reading. An orig fold is therefore byte-identical to the reg
+    fold except column 2. When ``None`` (the default) the reg reading is emitted and the output
+    is the reg fold, byte-for-byte."""
     attrs: list[dict[str, Any]] = []
-    forms: list[str] = []
+    reg_forms: list[str] = []
     for w in words:
         s = strip_apparatus(w["form_reg"])
-        forms.append(s)
+        reg_forms.append(s)
         attrs.append({
             "id": w["id"],
             "head": w["head_reg"],
@@ -189,9 +254,10 @@ def sentence_to_conllu(sent_id: str, words: list[dict[str, Any]]) -> tuple[str, 
             "lemma": clean_lemma(w["lemma_reg"]),
             "xpos": (w["postag_reg"] or "").ljust(9, "-")[:9],
         })
+    emit = list(surface_forms) if surface_forms is not None else reg_forms
     flags = copular_flags(attrs)
     tree = convert_tree(attrs)
-    lines = [f"# sent_id = {sent_id}", f"# text = {' '.join(forms)}"]
+    lines = [f"# sent_id = {sent_id}", f"# text = {' '.join(emit)}"]
     for i, (a, (head, deprel), flag) in enumerate(zip(attrs, tree, flags), start=1):
         xpos = a["xpos"]
         upos = upos_from_xpos(
@@ -200,9 +266,9 @@ def sentence_to_conllu(sent_id: str, words: list[dict[str, Any]]) -> tuple[str, 
         feats = feats_from_xpos(xpos)
         lemma = a["form"] if xpos[:1] == "u" else (a["lemma"] or a["form"])
         lines.append(
-            "\t".join([str(i), a["form"], lemma, upos, xpos, feats, str(head), deprel, "_", "_"])
+            "\t".join([str(i), emit[i - 1], lemma, upos, xpos, feats, str(head), deprel, "_", "_"])
         )
-    return "\n".join(lines) + "\n", tuple(forms)
+    return "\n".join(lines) + "\n", tuple(emit)
 
 
 # --- leakage key set (form tuples of the shipped model's training data) ----------
@@ -253,8 +319,14 @@ def _clone(dest: Path) -> Path:
     return dest
 
 
-def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
-    """Convert the treebank; return ``(conllu_text, manifest)``."""
+def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, dict[str, Any]]:
+    """Convert the treebank; return ``(conllu_text, manifest)``.
+
+    ``layer`` is ``"reg"`` (the default, editorially regularized forms — byte-identical output
+    whether or not the orig mode exists) or ``"orig"`` (the same sentences and gold columns, the
+    emitted FORM swapped to the diplomatic reading; see the module docstring)."""
+    if layer not in ("reg", "orig"):
+        raise ValueError(f"layer must be 'reg' or 'orig'; got {layer!r}")
     docdir = repo / "documentary"
     if not docdir.is_dir():
         raise SystemExit(f"no documentary/ dir under {repo}")
@@ -265,6 +337,11 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
     doc_ids: list[str] = []
     n_sent_total = 0
     n_tokens = 0
+    # orig-mode accounting (unused in reg mode)
+    disp: Counter[str] = Counter()
+    n_diff = 0
+    orig_leaked = 0
+    orig_leaked_ids: list[str] = []
     for fp in sorted(docdir.rglob("*.xml")):
         stem = fp.name[:-4] if fp.name.endswith(".xml") else fp.name
         root = ET.parse(str(fp)).getroot()
@@ -277,10 +354,35 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
                 reasons[status] += 1
                 continue
             sent_id = f"papygreek:{stem}@{sent.get('id')}"
-            block, forms = sentence_to_conllu(sent_id, words)
-            if is_leaked(forms, keys):
+            # The reg forms drive selection identically in both modes: the same reg leakage
+            # exclusion keeps the same base set of sentences the reg fold keeps.
+            reg_block, reg_forms = sentence_to_conllu(sent_id, words)
+            if is_leaked(reg_forms, keys):
                 reasons["leaked"] += 1
                 continue
+            if layer == "orig":
+                surface: list[str] = []
+                local_disp: Counter[str] = Counter()
+                local_diff = 0
+                origs = orig_form_reads(sent)
+                for w, oform, reg_read in zip(words, origs, reg_forms):
+                    is_punct = (w["postag_reg"] or "")[:1] == "u"
+                    read, d = orig_token_reading(oform, reg_read, is_punct=is_punct)
+                    surface.append(read)
+                    local_disp[d] += 1
+                    if read != reg_read:
+                        local_diff += 1
+                block, forms = sentence_to_conllu(sent_id, words, surface_forms=surface)
+                # Mandatory: a diplomatic spelling could collide with the training keys
+                # differently from its reg form — re-run the exclusion on the orig FORM tuple.
+                if is_leaked(forms, keys):
+                    orig_leaked += 1
+                    orig_leaked_ids.append(sent_id)
+                    continue
+                disp.update(local_disp)
+                n_diff += local_diff
+            else:
+                block, forms = reg_block, reg_forms
             blocks.append(block)
             n_tokens += len(forms)
             kept_here += 1
@@ -290,23 +392,63 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
     # each block ends in "\n"; joining with "\n" gives a blank line between sentences and
     # the trailing "+\n" makes the file end with an empty line (the CoNLL-U evaluator requires it)
     conllu = ("\n".join(blocks) + "\n") if blocks else ""
-    manifest: dict[str, Any] = {
-        "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold; eval only",
-        "source_repo": "github.com/ezhenrik/papygreek-treebanks",
-        "source_commit": REPO_COMMIT,
-        "license": LICENSE,
-        "annotation_scheme": "AGDT Guidelines 2.0 (reg layer)",
-        "converter": "training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,"
-                     "upos_from_xpos,feats_from_xpos}",
-        "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
-                             "NFC form-tuple exclusion (full + punct-stripped)",
-        "sentences_in_source": n_sent_total,
-        "sentences_kept": len(blocks),
-        "tokens_kept": n_tokens,
-        "documents_kept": len(doc_ids),
-        "excluded": dict(sorted(reasons.items())),
-        "doc_ids": doc_ids,
-    }
+    if layer == "reg":
+        manifest: dict[str, Any] = {
+            "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold; eval only",
+            "source_repo": "github.com/ezhenrik/papygreek-treebanks",
+            "source_commit": REPO_COMMIT,
+            "license": LICENSE,
+            "annotation_scheme": "AGDT Guidelines 2.0 (reg layer)",
+            "converter": "training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,"
+                         "upos_from_xpos,feats_from_xpos}",
+            "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
+                                 "NFC form-tuple exclusion (full + punct-stripped)",
+            "sentences_in_source": n_sent_total,
+            "sentences_kept": len(blocks),
+            "tokens_kept": n_tokens,
+            "documents_kept": len(doc_ids),
+            "excluded": dict(sorted(reasons.items())),
+            "doc_ids": doc_ids,
+        }
+    else:
+        manifest = {
+            "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold — ORIG "
+                       "(diplomatic) surface layer; eval only",
+            "layer": "orig (diplomatic surface forms; reg gold labels)",
+            "comparability": "the SAME sentences and the SAME gold columns "
+                             "(LEMMA/UPOS/XPOS/FEATS/HEAD/DEPREL) as the reg papygreek-fold; "
+                             "only the emitted FORM (column 2) and the '# text' header carry the "
+                             "diplomatic orig reading, so the two folds are token-aligned "
+                             "line-for-line and diff only in the surface form",
+            "reg_fold_reference": "papygreek-fold (reg layer); same sentence selection",
+            "source_repo": "github.com/ezhenrik/papygreek-treebanks",
+            "source_commit": REPO_COMMIT,
+            "license": LICENSE,
+            "annotation_scheme": "AGDT Guidelines 2.0 (reg gold labels; orig/diplomatic "
+                                 "surface forms)",
+            "converter": "training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,"
+                         "upos_from_xpos,feats_from_xpos}",
+            "surface_layer_policy": "diplomatic reading recovered with the reg apparatus "
+                                    "stripper + clean-reading test (no orig-specific editorial "
+                                    "modeling); a token whose diplomatic form is a lost '$' "
+                                    "marker, a private-use glyph, or an uncommon editorial sign "
+                                    "falls back to the reg reading (counted in surface_disposition)",
+            "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
+                                 "NFC form-tuple exclusion (full + punct-stripped)",
+            "leakage_recheck": "the reg selection already excluded reg-leaked sentences; the "
+                               "orig FORM tuples were re-run through the same exclusion (a "
+                               "diplomatic spelling could collide differently)",
+            "sentences_in_source": n_sent_total,
+            "sentences_kept": len(blocks),
+            "tokens_kept": n_tokens,
+            "documents_kept": len(doc_ids),
+            "excluded": dict(sorted(reasons.items())),
+            "orig_leakage_rechecked_and_dropped": orig_leaked,
+            "orig_leaked_sent_ids": orig_leaked_ids,
+            "surface_disposition": dict(sorted(disp.items())),
+            "tokens_diplomatic_differ_from_reg": n_diff,
+            "doc_ids": doc_ids,
+        }
     return conllu, manifest
 
 
@@ -319,6 +461,9 @@ def main() -> None:
     ap.add_argument("--training-data",
                     default=str(Path(__file__).resolve().parent.parent / "training" / "data"),
                     help="dir holding full-train.jsonl / full-dev.jsonl for the leakage check")
+    ap.add_argument("--layer", default="reg", choices=("reg", "orig"),
+                    help="reg (default, regularized forms — byte-identical to the shipped fold) "
+                         "or orig (the diplomatic-surface variant; same sentences/gold, FORM only)")
     args = ap.parse_args()
 
     tmp: tempfile.TemporaryDirectory[str] | None = None
@@ -328,16 +473,21 @@ def main() -> None:
         tmp = tempfile.TemporaryDirectory()
         repo = _clone(Path(tmp.name) / "papygreek-treebanks")
     try:
-        conllu, manifest = build(repo, Path(args.training_data))
+        conllu, manifest = build(repo, Path(args.training_data), layer=args.layer)
     finally:
         if tmp is not None:
             tmp.cleanup()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    conllu_path = out / "papygreek-test.conllu"
-    gz_path = out / "papygreek-fold.conllu.gz"
-    manifest_path = out / "papygreek-fold-manifest.json"
+    if args.layer == "orig":
+        conllu_path = out / "papygreek-test-orig.conllu"
+        gz_path = out / "papygreek-fold-orig.conllu.gz"
+        manifest_path = out / "papygreek-fold-orig-manifest.json"
+    else:
+        conllu_path = out / "papygreek-test.conllu"
+        gz_path = out / "papygreek-fold.conllu.gz"
+        manifest_path = out / "papygreek-fold-manifest.json"
     conllu_path.write_text(conllu, encoding="utf-8")
     raw = conllu.encode("utf-8")
     # mtime=0 + no embedded filename → the gz bytes (and sha256) are reproducible across runs.

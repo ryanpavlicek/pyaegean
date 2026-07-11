@@ -29,6 +29,7 @@ import re
 import subprocess
 import sys
 import urllib.request
+from urllib.parse import urlsplit
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -64,7 +65,9 @@ def _token() -> str:
 
 def _get(url: str, token: str = "", *, retries: int = 2) -> bytes:
     headers = {"User-Agent": "pyaegean-catalogue"}
-    if token and "api.github.com" in url:
+    # exact-hostname check: a substring test would leak the token to any URL that
+    # merely CONTAINS "api.github.com" (in a path or query)
+    if token and urlsplit(url).hostname == "api.github.com":
         headers["Authorization"] = f"Bearer {token}"
     last: Exception | None = None
     for _ in range(retries + 1):

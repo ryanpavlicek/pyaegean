@@ -434,6 +434,113 @@ def _make_doc(
     )
 
 
+def _milestone_events(el: Any) -> list[tuple[str, Any]]:
+    """Document-order stream of ``("ms", <milestone>)`` / ``("text", str)`` events over
+    ``el``, skipping the editorial subtrees `_line_text` skips.
+
+    A ``<milestone>`` is an empty marker: its content is the text that follows it (its
+    tail, then following siblings) up to the next marker. Flattening to one stream makes
+    that span recoverable across element nesting and even across ``<div>`` boundaries — a
+    Bekker page runs through several subchapter divs, so a per-``<p>`` sibling walk would
+    truncate it."""
+    events: list[tuple[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if node.tag in _SKIP_TAGS:
+            return
+        if node.tag == f"{_TEI}milestone":
+            events.append(("ms", node))
+        if node.text:
+            events.append(("text", node.text))
+        for child in node:
+            walk(child)
+            if child.tail:
+                events.append(("text", child.tail))
+
+    walk(el)
+    return events
+
+
+def _select_milestone(
+    part: Any, work: str, title: str, ref: str, marker: str
+) -> Document | None:
+    """Resolve a ref that names a ``<milestone>`` marker rather than a ``<div>`` — a
+    Stephanus sub-page (Plato ``"17a"``) or a Bekker line (Aristotle ``"1447a10"``) the
+    edition prints in the margin, outside the CTS ``<div>`` citation scheme.
+
+    The span is the text between the matching marker and the next marker of the same
+    ``unit`` — exactly what the markup delimits. Two shapes are read, both generic (no
+    author or unit-name hardcoding — only the declared ``unit``/``n`` attributes):
+
+    * a marker whose ``n`` equals ``marker`` (a Stephanus ``n="17a"``, a Bekker page
+      ``n="1447a"``): the span runs to the next same-``unit`` marker;
+    * a ``page+line`` composite (``"1447a10"``, where the line milestone carries the
+      page-relative ``n="10"``): the longest marker ``n`` that is a proper prefix (the
+      Bekker page ``"1447a"``) anchors a coarse span, and within it the marker whose
+      ``n`` is the remainder (the line ``"10"``) delimits the span.
+
+    Returns ``None`` when no marker matches (the caller then raises the scheme-naming
+    error), so a work with no such markers behaves exactly as before."""
+    events = _milestone_events(part)
+    markers = [(i, ev[1]) for i, ev in enumerate(events) if ev[0] == "ms"]
+    if not markers:
+        return None
+
+    def span_to(start_i: int, boundary_unit: str | None, hi: int) -> str:
+        """Text from just after ``start_i`` to the next same-``boundary_unit`` marker
+        before ``hi`` (else ``hi``)."""
+        end = hi
+        for j in range(start_i + 1, hi):
+            if events[j][0] == "ms" and events[j][1].get("unit") == boundary_unit:
+                end = j
+                break
+        text = "".join(e[1] for e in events[start_i + 1 : end] if e[0] == "text")
+        return " ".join(text.split())
+
+    text: str | None = None
+    exact = [(i, m) for i, m in markers if (m.get("n") or "") == marker]
+    if len(exact) == 1:
+        i0, m0 = exact[0]
+        text = span_to(i0, m0.get("unit"), len(events))
+    elif not exact:
+        # page+line composite: the longest marker n that is a *proper* prefix of the ref
+        prefixes = [
+            (i, m)
+            for i, m in markers
+            if (m.get("n") or "") and m.get("n") != marker and marker.startswith(m.get("n") or "")
+        ]
+        if prefixes:
+            i0, coarse = max(prefixes, key=lambda im: len(im[1].get("n") or ""))
+            remainder = marker[len(coarse.get("n") or "") :]
+            # the coarse (page) span bounds the finer (line) search, so a page-relative
+            # line n like "10" resolves to the "10" of *this* page, not any other
+            coarse_end = len(events)
+            for j in range(i0 + 1, len(events)):
+                if events[j][0] == "ms" and events[j][1].get("unit") == coarse.get("unit"):
+                    coarse_end = j
+                    break
+            fine = [
+                (j, m)
+                for j, m in markers
+                if i0 < j < coarse_end and (m.get("n") or "") == remainder
+            ]
+            if len(fine) == 1:
+                j0, f0 = fine[0]
+                text = span_to(j0, f0.get("unit"), coarse_end)
+    if not text:
+        return None
+    tokens, lines = _tokens_for([text])
+    if not tokens:
+        return None
+    return Document(
+        id=f"{work}:{ref}",
+        script_id="greek",
+        tokens=tokens,
+        lines=lines,
+        meta=DocumentMeta(name=f"{title} — {ref}".strip()),
+    )
+
+
 def _select_ref(
     edition_div: Any, work: str, title: str, ref: str, scheme: list[str]
 ) -> Document:
@@ -492,6 +599,16 @@ def _select_ref(
         else:
             hint = ""
         return ValueError(f"{work}: ref {ref!r} selected no text{scheme_note}{hint}")
+
+    # A single non-numeric leftover may name a <milestone> the edition prints in the
+    # margin (a Stephanus sub-page "17a", a Bekker line "1447a10") rather than a <div>.
+    # These live outside the CTS <div> scheme but are addressable by extracting the span
+    # between the marker and the next. Only a single ref (no hyphen range) is milestone-
+    # addressable; a range or multi-part path falls through to the scheme-naming error.
+    if start == end and len(rest) == 1 and not rest[-1].isdigit():
+        milestone_doc = _select_milestone(part, work, title, ref, rest[-1])
+        if milestone_doc is not None:
+            return milestone_doc
 
     # After navigation, the only legitimate leftover is a single numeric verse-line
     # selector. Anything else (a non-numeric component like "abc", or several unmatched
@@ -555,8 +672,13 @@ def parse_tei_work(
       chapter 2);
     * a verse line-range within one book (``"1.1-1.50"`` = book 1, lines 1–50; the
       hi may drop the repeated prefix, ``"1.1-50"``);
-    * several of the above as a **comma list** (``"1.1,1.5"``, ``"1,3"``), giving one
-      `Document` per entry, in source order (exact duplicates dropped).
+    * a ``<milestone>`` marker the edition prints in the margin, outside the CTS ``<div>``
+      scheme — a Stephanus sub-page (Plato ``"17a"``) or a Bekker line (Aristotle
+      ``"1447a10"``, the page ``1447a`` line ``10``): the addressed text is the span
+      between the marker and the next of its kind. A whole Bekker/Stephanus page also
+      resolves (``"1447a"``, ``"17"``);
+    * several of the above as a **comma list** (``"1.1,1.5"``, ``"1,3"``, ``"17a,17b"``),
+      giving one `Document` per entry, in source order (exact duplicates dropped).
 
     A hyphen **range** must stay within one textpart: ``"1.1-2.50"`` (or the
     whole-part ``"1-2"``) raises `ValueError` naming both parts. A **comma list** has
@@ -623,10 +745,12 @@ def load_work(
     ``ref`` selects a sub-section instead of the whole work — a citation address
     matching the work's structure: a textpart number (``"1"`` = Iliad book 1),
     a nested div path (``"1.2"`` = book 1, chapter 2 of a prose work), a verse
-    line-range (``"1.1-1.50"`` = book 1, lines 1–50), or a comma list of any of
-    these (``"1.1,1.5"``, ``"1,3"``) giving one `Document` per entry. A hyphen range
-    must stay within a single textpart: ``"1.1-2.50"`` (crossing from book 1 into
-    book 2) raises `ValueError`; use a comma list, or load each book separately and
+    line-range (``"1.1-1.50"`` = book 1, lines 1–50), a marginal ``<milestone>``
+    marker outside the CTS ``<div>`` scheme (a Stephanus sub-page ``"17a"``, a Bekker
+    line ``"1447a10"`` or a whole Bekker page ``"1447a"``), or a comma list of any of
+    these (``"1.1,1.5"``, ``"1,3"``, ``"17a,17b"``) giving one `Document` per entry. A
+    hyphen range must stay within a single textpart: ``"1.1-2.50"`` (crossing from book 1
+    into book 2) raises `ValueError`; use a comma list, or load each book separately and
     `Corpus.merge` the results. Without ``ref``, the corpus is one `Document` per
     top-level textpart. The corpus provenance's ``citation`` is the **canonical**
     scholarly citation of exactly what was selected (``"Homer, Iliad 1.1-1.50"``; see
@@ -692,10 +816,12 @@ def citation_scheme(
 
     Returns ``[]`` when the work declares no CTS ``refsDecl``. Like `load_work`, the
     TEI file is fetched once to the cache (``source``/``edition``/``force`` as there);
-    this is metadata about the edition, not its text. It reports the addressable
-    levels the edition declares: finer references some editions print in the margin
-    (a Stephanus sub-page ``17a``, a Bekker line ``1447a10``) live in ``<milestone>``
-    markers the CTS scheme does not make addressable, and are not returned."""
+    this is metadata about the edition, not its text. It reports the CTS ``<div>``
+    levels the edition declares. Finer references some editions print in the margin (a
+    Stephanus sub-page ``17a``, a Bekker line ``1447a10``) live in ``<milestone>``
+    markers *outside* the CTS scheme, so they are not part of the returned levels — but
+    `load_work`'s ``ref`` does resolve them directly (it extracts the span between the
+    marker and the next)."""
     import xml.etree.ElementTree as ET
 
     blob, _src, _filename = _fetch_xml(work, source, edition, force)

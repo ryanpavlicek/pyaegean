@@ -337,10 +337,17 @@ error tells you how to address the work. Two rules follow from the scheme: a hyp
 **range** must stay inside one top-level part (`1.1-1.50` is fine; `1.1-2.50`, which crosses
 from book 1 into book 2, is rejected — load each book and `Corpus.merge`, or use a comma
 list), and a **comma list** (`1.1,1.5` or `1,3`) selects siblings, or ranges that would
-cross a textpart, as one `Document` each, in source order. Finer references some editions
-print in the margin (a Stephanus sub-page `17a`, a Bekker line `1447a10`) live in TEI
-`<milestone>` markers the CTS scheme does not make addressable, so they are not selectable
-levels.
+cross a textpart, as one `Document` each, in source order.
+
+Some editions print finer references in the margin, in TEI `<milestone>` markers that live
+**outside** the CTS `<div>` scheme — a Stephanus sub-page (`17a`) or a Bekker line
+(`1447a10`, the page `1447a` line `10`). `--ref` now addresses these too: it extracts the
+span between the named marker and the next of its kind, so `aegean greek work tlg0086.tlg035
+--ref 1447a10` loads that Bekker line. A whole Bekker page resolves the same way (`1447a`),
+and milestone refs may appear in a **comma list** (`17a,17b`), one `Document` each. A hyphen
+**range** of milestones is **not yet** supported — only a single milestone ref is
+addressable; a range falls through to the scheme-naming error, so use a comma list of the
+individual markers instead.
 
 ### The same thing on the command line
 

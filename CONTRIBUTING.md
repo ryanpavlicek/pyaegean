@@ -183,6 +183,21 @@ functions and `aegean.mcp_server.TOOLS` against the manifest in both directions,
 new demo card or MCP tool without a manifest entry fails, and it fails any capability
 that leaves a surface undecided or uses a reason outside the vocabulary.
 
+Two of those checks are stricter than a bare presence test, because a bare filename
+survives the very drift it is meant to catch:
+
+- A `notebooks`-covered `where` is an object `{notebook, marker}`, not a filename. The
+  `marker` is a distinctive substring (usually the call the cell demonstrates), and the
+  guard opens the named notebook and asserts the marker really appears in one of its
+  code cells. Deleting or renaming the covering cell then fails the guard in the same
+  commit; a bare filename would have stayed green.
+- The `site_nav` block is a tracked part of the manifest, reconciled against
+  `mkdocs.yml`'s top-level navigation in both directions: every tracked entry is either
+  `covered` (pointing at a tracked surface or a capability id) or `excluded` (with a
+  reason), scaffolding pages are listed as `structural`, and no live nav entry may be
+  left undecided. Adding or removing a top-level Pages-site nav entry without recording
+  it here fails.
+
 ## The propagation step
 
 When a fix or a feature creates a recurring pattern — a guard, a normalization, an

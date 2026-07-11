@@ -154,10 +154,21 @@ Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.jso
   attribution: Pleiades contributors. Rounded to ~1 km — for mapping, not survey work.
 
 PapyGreek Treebanks — documentary-Koine evaluation fold (fetched on demand, NOT bundled)
-  The papygreek-fold asset is a UD conversion of the PapyGreek Treebanks
+  The papygreek-fold and papygreek-fold-orig assets are UD conversions of the PapyGreek Treebanks
   (Vierros et al., https://github.com/ezhenrik/papygreek-treebanks), CC BY-SA 4.0,
-  used for evaluation only; the derived fold is redistributed under the same
-  CC BY-SA terms. Cite PapyGreek in academic work that relies on the fold.
+  used for evaluation only; the derived folds (the regularized reg fold and the raw-diplomatic
+  orig surface layer) are redistributed under the same CC BY-SA terms. Cite PapyGreek in academic
+  work that relies on the fold.
+
+DBBE gold standard — Byzantine book-epigram tagging fold (fetched on demand, NOT bundled)
+  The dbbe-lingann-fold asset is a UD conversion of the DBBE linguistic-annotation gold standard
+  (lingAnn_GS_medievalGreek.tsv, https://github.com/coswaele/ByzantineGreekDatasets), by
+  W. Swaelens, I. De Vos & E. Lefever / Database of Byzantine Book Epigrams (DBBE), Ghent
+  University, CC BY 4.0. Gold POS + morphology + lemma over unedited (scribal-orthography)
+  Byzantine verse; used for evaluation only (tagging-only, no dependency trees), the derived
+  fold redistributed under the same CC BY terms. Cite Swaelens, De Vos & Lefever (2025),
+  "Linguistic annotation of Byzantine book epigrams", Language Resources and Evaluation
+  59(1):109-134, doi:10.1007/s10579-023-09703-x, in academic work that relies on the fold.
 
 Greek nominal paradigm table (fetched on demand, NOT bundled: grc-paradigms)
   Derived from UniMorph Ancient Greek (https://github.com/unimorph/grc), CC BY-SA 3.0,

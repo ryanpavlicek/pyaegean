@@ -1,7 +1,7 @@
 {
   "manifest": "pyaegean surface-parity ledger",
-  "schema_version": "1",
-  "description": "A machine-readable record of every user-facing capability and how it is surfaced across the four secondary surfaces (the browser demo, the MCP server, the walkthrough notebooks, and the terminal UI). The primary surfaces (the Python API and the aegean CLI) carry every capability and are not tracked here. tests/test_surface_parity.py enforces this file against docs/demo (index.html + demo.py) and aegean.mcp_server.TOOLS in both directions, so a new demo card or MCP tool cannot land without a manifest entry, and no capability can exist without a decision recorded for all four surfaces.",
+  "schema_version": "2",
+  "description": "A machine-readable record of every user-facing capability and how it is surfaced across the four secondary per-capability surfaces (the browser demo, the MCP server, the walkthrough notebooks, and the terminal UI). The primary surfaces (the Python API and the aegean CLI) carry every capability and are not tracked here. tests/test_surface_parity.py enforces this file against docs/demo (index.html + demo.py) and aegean.mcp_server.TOOLS in both directions, opens each notebook a capability claims and asserts its marker really appears in a code cell (so a deleted cell fails the guard), and reconciles the 'site_nav' block below against the published mkdocs.yml navigation. A notebooks:covered 'where' is an object {notebook, marker}: the marker is a distinctive substring, tied to the capability, that a covering code cell contains. The 'site_nav' section tracks the Pages-site navigation at the nav-entry level (a navigation menu has no per-capability grain), separate from the four per-capability surfaces.",
   "surfaces": [
     "demo",
     "mcp",
@@ -17,6 +17,33 @@
     "heavy-dep": "requires a heavy optional dependency (matplotlib/plotly, geopandas) that the surface does not carry.",
     "file-path-ux": "reads or writes filesystem paths, which the surface cannot offer (the MCP server accepts no paths by design; the browser has no filesystem).",
     "not-applicable": "deliberately not surfaced here; the note says why (folded into another covered capability on the surface, or reachable only through the TUI command console with no dedicated screen)."
+  },
+  "site_nav": {
+    "description": "The published documentation-site navigation: the 'nav:' block of mkdocs.yml (READ-ONLY from this file's owner). Tracked so a top-level nav entry cannot appear or disappear without a recorded decision. It is modelled at the nav-entry level rather than as a fifth per-capability column because a navigation menu maps to surfaces and pages, not to individual capabilities. 'structural' lists the site's own scaffolding (Home and the API reference), which carry no capability and are skipped. Every other top-level nav entry is either 'covered' (it points at a tracked surface or a capability id, named in 'maps_to') or 'excluded' (documentation with no capability behind it, reason from the shared exclusion vocabulary). The browser-demo link is the one covered entry today; the Benchmarks and Design-notes entries are documentation pages, recorded as honest not-applicable.",
+    "structural": [
+      "Home",
+      "API reference"
+    ],
+    "entries": [
+      {
+        "label": "Try it in your browser",
+        "status": "covered",
+        "maps_to": "demo",
+        "note": "the browser demo surface (mkdocs links out to /demo/); its per-capability coverage is the 'demo' column of the capabilities above."
+      },
+      {
+        "label": "Benchmarks",
+        "status": "excluded",
+        "reason": "not-applicable",
+        "note": "the measured-claims and evaluation-protocol page (docs/benchmarks.md); a documentation page, not a capability surface."
+      },
+      {
+        "label": "Design notes",
+        "status": "excluded",
+        "reason": "not-applicable",
+        "note": "a documentation section (Large corpora, Methodology, Pleiades candidates); design and methodology notes, not a capability surface."
+      }
+    ]
   },
   "capabilities": [
     {
@@ -35,7 +62,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.pipeline("
+          }
         },
         "tui": {
           "status": "covered",
@@ -59,7 +89,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "scan_hexameter("
+          }
         },
         "tui": {
           "status": "covered",
@@ -83,7 +116,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "explain_pipeline("
+          }
         },
         "tui": {
           "status": "covered",
@@ -107,7 +143,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.catalog("
+          }
         },
         "tui": {
           "status": "covered",
@@ -131,7 +170,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "word_matches_sign_pattern("
+          }
         },
         "tui": {
           "status": "covered",
@@ -155,7 +197,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "balance_check("
+          }
         },
         "tui": {
           "status": "covered",
@@ -179,7 +224,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-epigraphist.ipynb"
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": ".query("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -204,7 +252,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": ".cite("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -229,7 +280,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "site_coordinates("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -254,7 +308,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-epigraphist.ipynb"
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": ".diagnose("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -279,7 +336,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb"
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "gloss_nt("
+          }
         },
         "tui": {
           "status": "covered",
@@ -304,7 +364,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "betacode_to_unicode("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -330,7 +393,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.analyze("
+          }
         },
         "tui": {
           "status": "covered",
@@ -355,7 +421,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "place_accent("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -381,7 +450,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "resolve_sandhi("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -407,7 +479,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "syllable_quantities("
+          },
           "note": "shown as the syllable weights underlying metrical scansion."
         },
         "tui": {
@@ -434,7 +509,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.lemmatize("
+          }
         },
         "tui": {
           "status": "covered",
@@ -459,7 +537,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "profile_text("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -485,7 +566,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "lexicon_link("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -539,7 +623,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "idiom_glosses("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -566,7 +653,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb"
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "load_nt("
+          }
         },
         "tui": {
           "status": "covered",
@@ -591,7 +681,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "from_records("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -617,7 +710,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "from_epidoc("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -644,7 +740,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "to_epidoc("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -670,7 +769,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb",
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "phonetic_compare("
+          },
           "note": "Step 4: the per-segment alignment behind the nearest() ranking (po-me vs ποιμήν)."
         },
         "tui": {
@@ -697,7 +799,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "greek_reading("
+          }
         },
         "tui": {
           "status": "covered",
@@ -722,7 +827,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "load(\"cypriot\")"
+          }
         },
         "tui": {
           "status": "covered",
@@ -747,7 +855,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "load(\"linearb\")"
+          }
         },
         "tui": {
           "status": "covered",
@@ -772,7 +883,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "\"cyprominoan\""
+          }
         },
         "tui": {
           "status": "covered",
@@ -797,7 +911,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "parse_value("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -823,7 +940,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "by_label("
+          }
         },
         "tui": {
           "status": "covered",
@@ -848,7 +968,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "dispersions("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -874,7 +997,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "apparatus_summary("
+          }
         },
         "tui": {
           "status": "covered",
@@ -899,7 +1025,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "dossiers("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -925,7 +1054,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "seriate("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -951,7 +1083,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-aegean.ipynb"
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "variant_groups("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -977,7 +1112,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "registered_scripts("
+          }
         },
         "tui": {
           "status": "covered",
@@ -1002,7 +1140,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": ".provenance"
+          }
         },
         "tui": {
           "status": "covered",
@@ -1027,7 +1168,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": ".get(\"HT13\")"
+          }
         },
         "tui": {
           "status": "covered",
@@ -1052,7 +1196,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "data.versions("
+          }
         },
         "tui": {
           "status": "covered",
@@ -1077,7 +1224,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "load_work("
+          }
         },
         "tui": {
           "status": "covered",
@@ -1102,7 +1252,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "use_lexicon("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -1129,7 +1282,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "use_neural_pipeline("
+          },
           "note": "behind the notebooks' RUN_HEAVY switch."
         },
         "tui": {
@@ -1156,7 +1312,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "use_calibration("
+          },
           "note": "behind the notebooks' RUN_HEAVY switch."
         },
         "tui": {
@@ -1183,7 +1342,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "use_paradigms("
+          },
           "note": "behind the notebooks' RUN_HEAVY switch (a ~234 KB fetch); shows γυναικός resolving and φωτός staying an honest miss."
         },
         "tui": {
@@ -1267,7 +1429,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb"
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.inflect("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -1294,7 +1459,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-epigraphist.ipynb"
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": "to_rdf("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -1321,7 +1489,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-epigraphist.ipynb",
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": "plot_findspots("
+          },
           "note": "an offline plot_findspots figure renders in CI; the RUN_HEAVY branch runs plot_timeline on the fetched I.Sicily corpus."
         },
         "tui": {
@@ -1349,7 +1520,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "translate.translate("
+          },
           "note": "behind the notebooks' RUN_HEAVY switch."
         },
         "tui": {
@@ -1376,7 +1550,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "walkthrough-nt-koine.ipynb"
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "to_review_table("
+          }
         },
         "tui": {
           "status": "excluded",
@@ -1442,6 +1619,62 @@
       }
     },
     {
+      "id": "papygreek-orig-eval",
+      "since": "0.43.0",
+      "python_api": "aegean.greek.papygreek_orig_path",
+      "summary": "The raw-diplomatic (orig) surface layer of the PapyGreek fold: the same sentences and gold, the harder documentary orthography as the input, scored via evaluate_on_papygreek(layer='orig').",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "runs the neural pipeline over a fetched fold."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "an evaluation over the neural model; no MCP tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model and the fetched orig fold."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval papygreek --layer orig)."
+        }
+      }
+    },
+    {
+      "id": "dbbe-eval",
+      "since": "0.43.0",
+      "python_api": "aegean.greek.evaluate_on_dbbe",
+      "summary": "A Byzantine-verse POS/lemma tagging-evaluation fold (leakage-checked DBBE gold standard); a small single-register datapoint, tagging-only (no dependency trees).",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "runs the neural pipeline over a fetched fold."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "an evaluation over the neural model; no MCP tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model and the fetched fold."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval dbbe)."
+        }
+      }
+    },
+    {
       "id": "proiel-convention-report",
       "since": "0.38.0",
       "python_api": "aegean.greek.proiel_convention_report",
@@ -1487,7 +1720,10 @@
         },
         "notebooks": {
           "status": "covered",
-          "where": "getting-started.ipynb",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "to_sqlite("
+          },
           "note": "the DDbDP database sits behind the notebooks' RUN_HEAVY switch."
         },
         "tui": {

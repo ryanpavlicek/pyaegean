@@ -945,8 +945,9 @@ def work(
     ref: str | None = typer.Option(
         None, "--ref",
         help="Select a section by the work's citation scheme: '1' (book/section), '1.2' "
-        "(chapter), '1.1-1.50' (lines); comma list for siblings. A wrong ref names the "
-        "work's declared scheme; greek.citation_scheme(id) reports it.",
+        "(chapter), '1.1-1.50' (lines), a margin milestone ('17a' Stephanus, '1447a10' "
+        "Bekker); comma list for siblings. A wrong ref names the work's declared scheme; "
+        "greek.citation_scheme(id) reports it.",
     ),
     source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
     edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
@@ -1264,7 +1265,7 @@ def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
 def evaluate(
     target: str = typer.Argument(
         ...,
-        help="ud, proiel, nt, papygreek, verse, tagger, lemmatizer, or parser "
+        help="ud, proiel, nt, papygreek, dbbe, verse, tagger, lemmatizer, or parser "
         "(heavy: fetches/trains).",
     ),
     fold: str = typer.Option(
@@ -1277,6 +1278,11 @@ def evaluate(
     track: str = typer.Option(
         "all", "--track",
         help="For verse: tragedy, hexameter, or all (both tracks). Small-sample, wide CIs.",
+    ),
+    layer: str = typer.Option(
+        "reg", "--layer",
+        help="For papygreek: reg (the regularized reading behind the published numbers) or "
+             "orig (the raw diplomatic orthography — same sentences and gold, harder input).",
     ),
     bootstrap: bool = typer.Option(
         False, "--bootstrap", help="For ud: percentile CIs over the fold's sentences (slower)."
@@ -1333,14 +1339,31 @@ def evaluate(
         raise fail("--track applies to `eval verse` (tragedy/hexameter/all)")
     if track not in ("all", "tragedy", "hexameter"):
         raise fail("--track must be tragedy, hexameter, or all")
+    if layer not in ("reg", "orig"):
+        raise fail("--layer must be reg or orig")
+    if layer != "reg" and target != "papygreek":
+        raise fail("--layer applies to `eval papygreek` (reg/orig)")
+    if layer == "orig" and drift:
+        # --drift is the convention decomposition, which reproduces the published (reg)
+        # numbers and runs sequentially on the reg fold; it has no orig variant.
+        raise fail("--layer orig does not combine with --drift (the convention decomposition "
+                   "is the reg-fold reproduction)")
+    if target == "dbbe" and (drift or by_genre or bootstrap):
+        # the DBBE fold carries no dependency trees and is a single small register row: it is
+        # tagging-only, so the drift decomposition / genre slices / bootstrap CIs do not apply.
+        raise fail("`eval dbbe` is tagging-only (the DBBE fold has no dependency trees): it has "
+                   "no --drift/--by-genre/--bootstrap; run the plain score (optionally --batch-size)")
     if batch_size is not None:
         if batch_size < 1:
             raise fail("--batch-size must be at least 1")
         # bootstrap_ud and the error analyses run their own inference loops without a
         # batching hook; --by-genre threads batch_size through pipeline_conllu like ud.
-        if target not in ("ud", "nt", "papygreek", "verse") or drift or (bootstrap and not by_genre):
-            raise fail("--batch-size applies to `eval ud`, `eval nt`, `eval papygreek`, and "
-                       "`eval verse` score runs (not --drift/--bootstrap)")
+        if (
+            target not in ("ud", "nt", "papygreek", "dbbe", "verse")
+            or drift or (bootstrap and not by_genre)
+        ):
+            raise fail("--batch-size applies to `eval ud`, `eval nt`, `eval papygreek`, "
+                       "`eval dbbe`, and `eval verse` score runs (not --drift/--bootstrap)")
     if documentary and (
         target not in ("ud", "nt", "papygreek", "verse") or drift or bootstrap or by_genre
     ):
@@ -1452,10 +1475,27 @@ def evaluate(
             return
         if documentary:
             _apply_documentary()
-        if batch_size is not None:
+        # layer is forwarded only when non-default, so the reg (published-protocol) call stays
+        # byte-identical to evaluate_on_papygreek(progress=...); batch_size the same way.
+        if layer != "reg":
+            if batch_size is not None:
+                result = greek.evaluate_on_papygreek(
+                    layer=layer, progress=live_progress, batch_size=batch_size
+                )
+            else:
+                result = greek.evaluate_on_papygreek(layer=layer, progress=live_progress)
+        elif batch_size is not None:
             result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
         else:
             result = greek.evaluate_on_papygreek(progress=live_progress)
+    elif target == "dbbe":
+        # tagging-only Byzantine-verse fold, reported by the shipped neural model; --documentary
+        # (a documentary-Koine lever) is rejected above, so no post-processing branch here.
+        _activate(neural=True)
+        if batch_size is not None:
+            result = greek.evaluate_on_dbbe(progress=live_progress, batch_size=batch_size)
+        else:
+            result = greek.evaluate_on_dbbe(progress=live_progress)
     elif target == "verse":
         _activate(neural=True)  # the verse fold reports the shipped neural model's number
         if drift:
@@ -1477,7 +1517,7 @@ def evaluate(
         _activate(parser=True)
         result = greek.evaluate_parser()
     else:
-        raise fail("target must be ud, proiel, nt, papygreek, verse, tagger, lemmatizer, "
+        raise fail("target must be ud, proiel, nt, papygreek, dbbe, verse, tagger, lemmatizer, "
                    "or parser")
     if documentary:  # opt-in post-processing is per-run; leave the session clean afterwards
         greek.disable_documentary_reconciliation()

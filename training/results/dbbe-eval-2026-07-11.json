@@ -1,0 +1,19 @@
+{
+ "what": "Neural pipeline (tagging only) on the DBBE Byzantine book-epigram gold standard: unedited medieval scribal Greek verse, 7th-15th c.",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; parse=False (the gold carries no trees); fold dbbe-lingann-fold-v1 (sha d9953f73...); leakage 0; caveats: DBBE tagset mapped to UPOS, gold lemmas are normalized Attic headwords over non-normalized surfaces, copular forms capped by the no-tree mapping",
+ "results_full_precision": {
+  "treebank": "dbbe",
+  "split": "test",
+  "parsed": false,
+  "upos": 0.8661306095838314,
+  "xpos": 0.7634467021623383,
+  "ufeats": 0.8587417146582637,
+  "lemma": 0.7673584700641095,
+  "uas": null,
+  "las": null,
+  "clas": null,
+  "n_words": 9203,
+  "n_sentences": 822
+ }
+}

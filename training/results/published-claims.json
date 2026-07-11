@@ -140,7 +140,17 @@
       "las": 79.89,
       "note": "opt-in Levers A+B (reconciliation + lemma OOV rescue with use_paradigms; the rescue is seed+paradigm only, ending rules excluded by measurement)"
     },
-    "variant_evidence": "training/results/documentary-levers-2026-07-11.json"
+    "variant_evidence": "training/results/documentary-levers-2026-07-11.json",
+    "orig_layer": {
+      "upos": 90.0,
+      "xpos": 74.1,
+      "ufeats": 85.9,
+      "lemma": 81.8,
+      "uas": 84.33,
+      "las": 77.64,
+      "note": "the diplomatic-orthography surface of the SAME sentences and gold (papygreek-fold-orig); the delta vs the reg row isolates the cost of scribal spelling",
+      "source_evidence": "training/results/papygreek-orig-eval-2026-07-11.json"
+    }
   },
   "papygreek_convention_decomposition": {
     "upos_gap_points": 8.95,
@@ -202,5 +212,16 @@
     "note": "small-sample genre-conditioned datapoint (wide bootstrap CIs), never a headline number; the first leakage-clean tragedy evaluation; the hexameter track (3 sentences / 25 tokens) is directional only and not pinned",
     "source_evidence": "training/results/verse-eval-2026-07-11.json",
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track=...); verse fold verse-fold-v1 (Euripides Bacchae 1-169 tragedy + Maximus hexameter), out of domain, scheme-matched (AGDT->UD); CPU sequential"
+  },
+  "neural_dbbe_test": {
+    "upos": 86.61,
+    "xpos": 76.34,
+    "ufeats": 85.87,
+    "lemma": 76.74,
+    "n_words": 9203,
+    "n_sentences": 822,
+    "note": "tagging only (the gold has no trees); Byzantine book epigrams, unedited scribal orthography; DBBE tagset mapped to UPOS; lemma scored against normalized Attic headwords",
+    "source_evidence": "training/results/dbbe-eval-2026-07-11.json",
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; fold dbbe-lingann-fold-v1"
   }
 }

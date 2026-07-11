@@ -1,0 +1,26 @@
+{
+ "purpose": "Byzantine book-epigram (DBBE) POS/morph/lemma tagging evaluation fold; eval only, tagging-only (no dependency trees → no UAS/LAS)",
+ "source_repo": "github.com/coswaele/ByzantineGreekDatasets",
+ "source_commit": "0b0133a97f8dd39190ffcc5ceeb3a6597ba5958d",
+ "source_file": "lingAnn_GS_medievalGreek.tsv",
+ "license": "CC BY 4.0 (ByzantineGreekDatasets README; repo LICENSE file is CC0 1.0) — Swaelens, De Vos & Lefever / DBBE, Ghent University",
+ "citation": "Swaelens, De Vos & Lefever (2025), Linguistic annotation of Byzantine book epigrams, Language Resources and Evaluation 59(1):109-134, doi:10.1007/s10579-023-09703-x",
+ "register": "unedited (non-normalised, scribal-orthography) medieval Greek verse, 9th-15th c.; lemmas standardised to Attic dictionary headwords",
+ "annotation_scheme": "AGDT 9-position positional postag (POS/morph) + lemma",
+ "converter": "training/agdt_ud.upos_from_xpos + aegean.greek.udfeats.feats_from_xpos (no tree context: has_pnom_child=False, so copular εἰμί scores VERB)",
+ "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); NFC form-tuple exclusion (full + punct-stripped)",
+ "leakage_reference_present": true,
+ "segmentation": "split after terminal punctuation (. ; · · +) and blank rows",
+ "sentences_in_source": 903,
+ "sentences_kept": 822,
+ "tokens_kept": 9203,
+ "kept_tokens_with_padded_tag": 30,
+ "dropped_noise_punct_tokens": 62,
+ "excluded_sentences": {
+  "illegible": 20,
+  "malformed_tag": 3,
+  "no_word": 58
+ },
+ "asset_sha256": "d9953f739af27e2beaf37c7cce4b616aaaa6816f1cd02efe6054d8474a0e3253",
+ "asset_bytes": 119804
+}

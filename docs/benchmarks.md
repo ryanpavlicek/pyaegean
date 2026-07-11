@@ -372,8 +372,11 @@ reading whose spelling the editors normalized toward standard Koine (and whose
 Leiden/EpiDoc apparatus is stripped to the reading text). The scores are therefore a
 regularized-text figure. They do not measure the model on the raw documentary
 orthography (phonetic spellings, itacism, non-standard case and agreement) that the
-`orig` layer preserves and that is meaningfully harder; a raw-orthography documentary
-number is separate future work.
+`orig` layer preserves and that is meaningfully harder. That harder input now has its
+own fold: the diplomatic `orig` surface layer (`papygreek-fold-orig` — the same 1,696
+sentences and the same gold, with the raw diplomatic form as the token), scored by
+`greek.evaluate_on_papygreek(layer="orig")` (CLI `aegean greek eval papygreek --layer
+orig`). Its row appears below once measured.
 
 **Exclusion accounting.** The fold keeps 1,696 of the 4,557 annotated sentences in
 the source; the full accounting is in `training/results/papygreek-fold-manifest.json`.
@@ -432,6 +435,34 @@ and hyperbaton are materially harder to parse than either prose register, which
 is precisely what this fold exists to measure. Reproduce:
 `aegean greek eval verse --track tragedy` (evidence:
 `training/results/verse-eval-2026-07-11.json`).
+
+### The diplomatic-orthography row, and Byzantine verse
+
+The orig-layer fold (`evaluate_on_papygreek(layer="orig")`) scores the same
+1,696 sentences and gold as the row above, with the FORM column carrying the
+scribes' actual spellings (1,637 tokens differ: itacism, vowel-quantity
+confusion, nasal assimilation). Measured once, CPU sequential:
+
+| Fold | UPOS | XPOS | UFeats | Lemma | UAS | LAS |
+|---|---|---|---|---|---|---|
+| PapyGreek, regularized (above) | 91.05 | 76.76 | 88.57 | 86.13 | 85.71 | 79.89 |
+| PapyGreek, diplomatic (orig) | 90.00 | 74.10 | 85.90 | 81.80 | 84.33 | 77.64 |
+
+The pair isolates the cost of scribal orthography: lemma takes the largest hit
+(−4.33 points — phonetic spellings break lemma composition), morphology loses
+~2.7, attachment the least. Only 6.8% of tokens differ in surface form, so the
+per-changed-token degradation is steep. (Evidence:
+`training/results/papygreek-orig-eval-2026-07-11.json`.)
+
+**Byzantine verse (tagging only).** `greek.evaluate_on_dbbe()` scores the
+pipeline against the DBBE gold standard (Swaelens, De Vos & Lefever, LRE 2025;
+CC BY 4.0): 822 sentences / 9,203 tokens of unedited medieval book epigrams,
+7th–15th c., non-normalized scribal orthography. The gold carries POS and lemma
+but no trees, so this is a tagging row; the DBBE tagset is mapped to UPOS and
+gold lemmas are normalized Attic headwords, both stated caveats. Measured once,
+CPU sequential: **UPOS 86.61 / XPOS 76.34 / UFeats 85.87 / lemma 76.74** —
+leakage-checked (0 overlaps). (Evidence:
+`training/results/dbbe-eval-2026-07-11.json`.)
 
 ### PapyGreek convention decomposition
 

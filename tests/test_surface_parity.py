@@ -10,13 +10,23 @@ behind" drift class fails a test in the same commit:
   capability names a real demo function, checked in both directions;
 * every MCP tool in ``aegean.mcp_server.TOOLS`` is named by exactly one
   capability's ``mcp`` coverage, and back;
-* every capability records a decision for all four surfaces, each either
-  ``covered`` with a location or ``excluded`` with a reason from the controlled
-  vocabulary (no silent absence);
+* every capability records a decision for all four secondary surfaces, each
+  either ``covered`` with a location or ``excluded`` with a reason from the
+  controlled vocabulary (no silent absence);
+* every notebooks-covered capability names ``where`` as a ``{notebook, marker}``
+  pair, and the marker is machine-checked to appear in a real code cell of that
+  notebook, so deleting the covering cell fails the guard (a bare filename is not
+  enough: a claim survives a cell deletion, a marker does not);
+* the ``site_nav`` block is reconciled against the published mkdocs.yml
+  navigation in both directions: every tracked nav entry exists in the site and
+  every top-level nav entry (bar the structural Home / API reference) has a
+  recorded decision (covered → a surface or capability id, or excluded → reason);
 * the manifest is valid against its own schema (stdlib json only).
 
-So adding a demo card or an MCP tool without a manifest entry fails, and adding a
-capability without deciding its four surface fates fails.
+So adding a demo card or an MCP tool without a manifest entry fails, adding a
+capability without deciding its four surface fates fails, deleting a notebook cell
+that a capability leans on fails, and adding or removing a Pages-site nav entry
+without recording it fails.
 
 Plain-module test: imports only the stdlib and the installed ``aegean`` package,
 and reaches the repo files through ``__file__`` (no repo root on sys.path).
@@ -33,6 +43,8 @@ from typing import Any
 _REPO = Path(__file__).resolve().parents[1]
 _MANIFEST_PATH = _REPO / "scripts" / "surface-manifest.json"
 _DEMO_DIR = _REPO / "docs" / "demo"
+_NOTEBOOKS_DIR = _REPO / "notebooks"
+_MKDOCS_PATH = _REPO / "mkdocs.yml"
 
 # The four secondary surfaces the ledger tracks (the Python API and the CLI carry
 # every capability and are not tracked). Pinned here so a surface can't be dropped
@@ -69,6 +81,63 @@ def _capabilities() -> list[dict[str, Any]]:
     caps = _load_manifest()["capabilities"]
     assert isinstance(caps, list) and caps, "manifest has no capabilities"
     return caps
+
+
+def _site_nav() -> dict[str, Any]:
+    nav = _load_manifest().get("site_nav")
+    assert isinstance(nav, dict) and nav, "manifest has no site_nav block"
+    return nav
+
+
+def _notebook_code_sources(nb_name: str) -> list[str]:
+    """Every code cell's source in a notebook (stdlib json; source is a list of
+    line strings or a single string)."""
+    data = json.loads((_NOTEBOOKS_DIR / nb_name).read_text(encoding="utf-8"))
+    out: list[str] = []
+    for cell in data.get("cells", []):
+        if cell.get("cell_type") == "code":
+            src = cell.get("source", [])
+            out.append("".join(src) if isinstance(src, list) else str(src))
+    return out
+
+
+def _mkdocs_top_level_nav() -> list[str]:
+    """The labels of the top-level entries under mkdocs.yml's ``nav:`` block, in
+    order (stdlib parse of the tiny YAML subset the nav block uses; no PyYAML).
+
+    A top-level entry is a line indented exactly two spaces beginning ``- ``;
+    deeper-indented children (API-reference pages, Design-notes pages) are skipped.
+    The label is the text before the first ``": "`` for a ``Label: value`` line, or
+    the text before a trailing ``:`` for a ``Label:`` section header."""
+    lines = _MKDOCS_PATH.read_text(encoding="utf-8").splitlines()
+    start = None
+    for i, line in enumerate(lines):
+        if re.match(r"^nav:\s*$", line):
+            start = i + 1
+            break
+    assert start is not None, "no 'nav:' block found in mkdocs.yml"
+
+    labels: list[str] = []
+    for line in lines[start:]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        # a non-indented, non-empty line ends the nav block (a new top-level key)
+        if not line.startswith((" ", "\t")):
+            break
+        m = re.match(r"^ {2}- (.+?)\s*$", line)
+        if not m:
+            continue  # a deeper-indented child entry
+        content = m.group(1)
+        if ": " in content:
+            label = content.split(": ", 1)[0].strip()
+        elif content.endswith(":"):
+            label = content[:-1].strip()
+        else:
+            label = content.strip()
+        assert label, f"could not read a nav label from {line!r}"
+        labels.append(label)
+    assert labels, "parsed no top-level nav entries from mkdocs.yml"
+    return labels
 
 
 def _demo_registered_functions() -> set[str]:
@@ -122,6 +191,10 @@ def test_manifest_is_valid_against_its_schema() -> None:
         "the manifest's exclusion_reasons keys must equal the enforced vocabulary "
         f"(missing {set(_VOCAB) - set(reasons)}, extra {set(reasons) - set(_VOCAB)})"
     )
+    assert isinstance(data.get("site_nav"), dict), (
+        "manifest needs a 'site_nav' block (validated in full by "
+        "test_site_nav_reconciles_with_mkdocs)"
+    )
 
     seen_ids: set[str] = set()
     for cap in _capabilities():
@@ -164,9 +237,12 @@ def _check_surface_entry(cid: str, name: str, entry: Any) -> None:
         assert set(entry) <= {"status", "where", "note"}, (
             f"{cid}.{name} (covered) has unexpected keys {set(entry) - {'status', 'where', 'note'}}"
         )
-        assert isinstance(entry.get("where"), str) and entry["where"].strip(), (
-            f"{cid}.{name} is covered but has no 'where'"
-        )
+        if name == "notebooks":
+            _check_notebook_where(cid, entry.get("where"))
+        else:
+            assert isinstance(entry.get("where"), str) and entry["where"].strip(), (
+                f"{cid}.{name} is covered but has no 'where'"
+            )
     else:
         assert set(entry) <= {"status", "reason", "note"}, (
             f"{cid}.{name} (excluded) has unexpected keys {set(entry) - {'status', 'reason', 'note'}}"
@@ -177,6 +253,29 @@ def _check_surface_entry(cid: str, name: str, entry: Any) -> None:
         )
     if "note" in entry:
         assert isinstance(entry["note"], str) and entry["note"].strip()
+
+
+def _check_notebook_where(cid: str, where: Any) -> None:
+    """A notebooks-covered ``where`` is an object ``{notebook, marker}``: a bare
+    filename cannot survive a cell deletion, a marker can be machine-checked."""
+    assert isinstance(where, dict), (
+        f"{cid}.notebooks (covered) 'where' must be an object {{notebook, marker}}, "
+        f"got {type(where).__name__}"
+    )
+    assert set(where) == {"notebook", "marker"}, (
+        f"{cid}.notebooks 'where' keys must be exactly notebook+marker, got {set(where)}"
+    )
+    nb = where["notebook"]
+    marker = where["marker"]
+    assert isinstance(nb, str) and nb.endswith(".ipynb") and nb.strip(), (
+        f"{cid}.notebooks 'notebook' must be a .ipynb filename, got {nb!r}"
+    )
+    assert "/" not in nb and "\\" not in nb, (
+        f"{cid}.notebooks 'notebook' must be a bare filename (resolved under notebooks/), got {nb!r}"
+    )
+    assert isinstance(marker, str) and marker.strip(), (
+        f"{cid}.notebooks needs a non-empty 'marker'"
+    )
 
 
 def test_every_capability_decides_all_four_surfaces() -> None:
@@ -244,4 +343,119 @@ def test_mcp_tools_and_manifest_agree() -> None:
     assert covered <= tools, (
         "manifest claims MCP coverage for tools that are not in TOOLS: "
         f"{sorted(covered - tools)}"
+    )
+
+
+# ── notebook parity (the marker must appear in a real code cell) ──────────────
+def test_notebook_markers_appear_in_code_cells() -> None:
+    """Every notebooks-covered capability's marker really occurs in a code cell of
+    the notebook it names. A bare filename would still pass if the covering cell
+    were deleted; a marker will not — deleting or renaming that cell fails here."""
+    checked = 0
+    for cap in _capabilities():
+        entry = cap["surfaces"]["notebooks"]
+        if entry["status"] != "covered":
+            continue
+        where = entry["where"]
+        nb_name, marker = where["notebook"], where["marker"]
+        path = _NOTEBOOKS_DIR / nb_name
+        assert path.is_file(), (
+            f"{cap['id']}: notebooks 'where' names {nb_name}, which is not in notebooks/"
+        )
+        sources = _notebook_code_sources(nb_name)
+        assert any(marker in src for src in sources), (
+            f"{cap['id']}: marker {marker!r} appears in no code cell of {nb_name} "
+            "(the covering cell was deleted or renamed, or the marker is stale)"
+        )
+        checked += 1
+    assert checked, "no notebooks:covered capabilities to check"
+
+
+# ── Pages-site nav parity (reconciled with mkdocs.yml, both directions) ───────
+def test_site_nav_reconciles_with_mkdocs() -> None:
+    """The manifest's site_nav block and mkdocs.yml's top-level navigation agree:
+    every tracked (covered/excluded) or structural entry exists in the live nav,
+    and every top-level nav entry has a recorded decision. A covered entry maps to
+    a tracked surface or a real capability id; an excluded one carries a reason."""
+    nav = _mkdocs_top_level_nav()
+    nav_labels = set(nav)
+    assert len(nav) == len(nav_labels), (
+        f"duplicate top-level labels in mkdocs.yml nav: "
+        f"{sorted(x for x in nav if nav.count(x) > 1)}"
+    )
+
+    site = _site_nav()
+    assert set(site) <= {"description", "structural", "entries"}, (
+        f"site_nav has unexpected keys {set(site) - {'description', 'structural', 'entries'}}"
+    )
+    if "description" in site:
+        assert isinstance(site["description"], str) and site["description"].strip()
+
+    structural = site.get("structural", [])
+    assert isinstance(structural, list) and all(
+        isinstance(s, str) and s.strip() for s in structural
+    ), "site_nav.structural must be a list of non-empty strings"
+    structural_set = set(structural)
+    assert len(structural) == len(structural_set), "duplicate site_nav.structural labels"
+
+    entries = site.get("entries", [])
+    assert isinstance(entries, list) and entries, "site_nav.entries must be a non-empty list"
+    cap_ids = {cap["id"] for cap in _capabilities()}
+    entry_labels: list[str] = []
+    for e in entries:
+        assert isinstance(e, dict), "each site_nav entry must be an object"
+        label = e.get("label")
+        assert isinstance(label, str) and label.strip(), "a site_nav entry has no 'label'"
+        entry_labels.append(label)
+        status = e.get("status")
+        assert status in ("covered", "excluded"), (
+            f"site_nav entry {label!r} status must be 'covered' or 'excluded', got {status!r}"
+        )
+        if status == "covered":
+            assert set(e) <= {"label", "status", "maps_to", "note"}, (
+                f"site_nav entry {label!r} (covered) has unexpected keys "
+                f"{set(e) - {'label', 'status', 'maps_to', 'note'}}"
+            )
+            maps_to = e.get("maps_to")
+            assert isinstance(maps_to, str) and maps_to.strip(), (
+                f"site_nav entry {label!r} is covered but names no 'maps_to'"
+            )
+            assert maps_to in set(_SURFACES) or maps_to in cap_ids, (
+                f"site_nav entry {label!r} maps_to {maps_to!r}, which is neither a tracked "
+                f"surface {sorted(_SURFACES)} nor a capability id"
+            )
+        else:
+            assert set(e) <= {"label", "status", "reason", "note"}, (
+                f"site_nav entry {label!r} (excluded) has unexpected keys "
+                f"{set(e) - {'label', 'status', 'reason', 'note'}}"
+            )
+            assert e.get("reason") in _VOCAB, (
+                f"site_nav entry {label!r} excluded with reason {e.get('reason')!r}, "
+                f"not in the vocabulary {sorted(_VOCAB)}"
+            )
+        if "note" in e:
+            assert isinstance(e["note"], str) and e["note"].strip()
+
+    entry_label_set = set(entry_labels)
+    assert len(entry_labels) == len(entry_label_set), (
+        f"duplicate site_nav entry labels: "
+        f"{sorted(x for x in entry_labels if entry_labels.count(x) > 1)}"
+    )
+
+    # structural and tracked labels must be real, current nav entries
+    assert structural_set <= nav_labels, (
+        f"site_nav.structural names entries not in mkdocs.yml nav: {sorted(structural_set - nav_labels)}"
+    )
+    assert entry_label_set <= nav_labels, (
+        f"site_nav.entries names nav entries not in mkdocs.yml: {sorted(entry_label_set - nav_labels)}"
+    )
+    # a label is either scaffolding or a tracked entry, never both
+    assert structural_set.isdisjoint(entry_label_set), (
+        f"labels declared both structural and tracked: {sorted(structural_set & entry_label_set)}"
+    )
+    # and nothing in the live nav is left undecided
+    assert nav_labels == structural_set | entry_label_set, (
+        "top-level mkdocs.yml nav entries with no site_nav decision (add a site_nav entry "
+        "or mark them structural): "
+        f"{sorted(nav_labels - structural_set - entry_label_set)}"
     )

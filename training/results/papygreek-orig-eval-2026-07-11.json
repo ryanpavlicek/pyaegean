@@ -1,0 +1,21 @@
+{
+ "what": "Neural pipeline on the ORIG (diplomatic) surface layer of the PapyGreek fold: same 1,696 sentences and gold as papygreek-fold-v2, FORM = raw scribal orthography (1,637 forms differ).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(layer='orig'); CPU sequential; fold papygreek-fold-orig-v1 (sha 5af59219...); orig-form leakage recheck 0",
+ "results_full_precision": {
+  "treebank": "papygreek",
+  "split": "test",
+  "parsed": true,
+  "upos": 0.900020742584526,
+  "xpos": 0.7410080896079652,
+  "ufeats": 0.8589504252229828,
+  "lemma": 0.8179630781995436,
+  "uas": 0.8432690313213026,
+  "las": 0.7764364239784277,
+  "clas": 0.7320631818922,
+  "n_words": 24105,
+  "n_sentences": 1696,
+  "layer": "orig"
+ },
+ "finding": "the cost of diplomatic orthography, isolated (same sentences, same gold as the reg row): lemma -4.33 points, UFeats -2.67, XPOS -2.66, UPOS -1.05, UAS -1.38, LAS -2.25; only 6.8% of tokens differ in surface form, so the per-changed-token degradation is steep and concentrates on lemma composition"
+}

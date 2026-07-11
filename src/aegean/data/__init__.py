@@ -238,6 +238,18 @@ _REMOTE: dict[str, DataSpec] = {
              "Evaluation only.",
         extract=False,
     ),
+    "papygreek-fold-orig": DataSpec(
+        name="papygreek-fold-orig",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "papygreek-fold-orig-v1/papygreek-fold-orig.conllu.gz"
+        ),
+        sha256="5af592199bb14c211865cd9d9494cf015f9b667e30ae2d8ad59fb68dff758b85",
+        license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
+        note="the ORIG diplomatic surface layer of papygreek-fold (same 1,696 sentences and gold; "
+             "FORM = raw diplomatic orthography; 1,637 forms differ). Evaluation only.",
+        extract=False,
+    ),
     "verse-fold": DataSpec(
         name="verse-fold",
         url=(
@@ -276,6 +288,19 @@ _REMOTE: dict[str, DataSpec] = {
         note="documentary-Koine DEV parse track (126 sentences / 1,285 tokens, directional "
              "only); document-disjoint from the papygreek-fold test set; UAS/LAS. "
              "Experiment data only, never a published number.",
+        extract=False,
+    ),
+    "dbbe-lingann-fold": DataSpec(
+        name="dbbe-lingann-fold",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "dbbe-lingann-fold-v1/dbbe-lingann-fold.conllu.gz"
+        ),
+        sha256="d9953f739af27e2beaf37c7cce4b616aaaa6816f1cd02efe6054d8474a0e3253",
+        license="CC BY 4.0 (DBBE gold standard, Swaelens/De Vos/Lefever, Ghent); derived fold, "
+                "fetched, never bundled",
+        note="Byzantine book-epigram tagging fold (822 sentences / 9,203 tokens, gold POS+lemma, "
+             "no trees; scribal orthography). Evaluation only.",
         extract=False,
     ),
     "autenrieth-index": DataSpec(

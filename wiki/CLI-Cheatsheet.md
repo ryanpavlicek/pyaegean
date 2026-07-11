@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.42.0
+aegean --version                # pyaegean 0.43.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -345,7 +345,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
-| `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `tagger` `lemmatizer` `parser` | `--fold --split --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
+| `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `verse` `dbbe` `tagger` `lemmatizer` `parser` | `--fold --split --track --layer --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
 
 ### Stages that work immediately
 
@@ -469,7 +469,10 @@ the work's **declared citation scheme**: `1` (book/section), `1.2` (chapter),
 `1.1-1.50` (line range) — verse is `book.line`, a Stephanus-paged Plato dialogue is one
 `section`, Aristotle is `chapter.subchapter`, prose is `book.chapter.section` — so a wrong
 `--ref` names the work's own scheme. For siblings or cross-textpart ranges use a comma
-list (`--ref 1.1,1.5`); `greek.citation_scheme(id)` returns the ordered levels.
+list (`--ref 1.1,1.5`); `greek.citation_scheme(id)` returns the ordered levels. `--ref`
+also reaches **margin milestones outside the `<div>` scheme** (a Stephanus sub-page `17a`,
+a Bekker line `1447a10`, or a whole Bekker page `1447a`), addressable singly or in a comma
+list (`17a,17b`) but not yet as a hyphen range.
 `--source` is `auto` / `perseus` / `first1k`; `--edition` picks a specific edition file.
 Browse ids at scaife.perseus.org. Full reference:
 [Greek Works and Books](Greek-Works-and-Books).

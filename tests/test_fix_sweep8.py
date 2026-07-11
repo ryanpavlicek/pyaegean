@@ -9,6 +9,7 @@ output. The `data remove` on_disk regression is pinned in tests/test_cli_data_st
 from __future__ import annotations
 
 import asyncio
+import os
 import tempfile
 import threading
 
@@ -43,8 +44,9 @@ def test_analysis_cache_survives_enable_disable_under_worker_threads():
     def _sum(payload):
         return sum(payload["nums"])
 
-    path_a = tempfile.mktemp(suffix=".sqlite")
-    path_b = tempfile.mktemp(suffix=".sqlite")
+    tmpdir = tempfile.mkdtemp()
+    path_a = os.path.join(tmpdir, "a.sqlite")
+    path_b = os.path.join(tmpdir, "b.sqlite")
     cache.enable(path_a)
     try:
         _sum({"nums": [1, 2, 3]})  # warm

@@ -132,7 +132,9 @@ converted through the same AGDT scheme the model trains under.
 Scoring is on PapyGreek's **regularized** (`reg`) layer, the reading whose spelling
 the editors normalized toward standard Koine. The number is a regularized-text
 figure; the raw diplomatic (`orig`) orthography, with its phonetic spellings and
-itacism, is meaningfully harder and is separate future work.
+itacism, is meaningfully harder. That harder input now has its own fold, the
+diplomatic `orig` surface layer (`evaluate_on_papygreek(layer="orig")`, the same
+sentences and gold with the raw diplomatic form); its row appears below once measured.
 
 The fold keeps 1,696 of the 4,557 annotated source sentences. Excluded: 1,793 that
 carry an artificial (elliptic or inserted) node gold tokenization cannot score, 678
@@ -177,6 +179,16 @@ pinned fold:
 | --- | --- |
 | + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
 | + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
+
+## Diplomatic orthography and Byzantine verse
+
+The orig-layer PapyGreek fold (same sentences and gold, the scribes' actual
+spellings) measures the cost of documentary orthography directly: UPOS 90.00 /
+UFeats 85.90 / lemma 81.80 / UAS 84.33 / LAS 77.64 vs the regularized row's
+91.05 / 88.57 / 86.13 / 85.71 / 79.89 — lemma composition takes the biggest
+hit. And the DBBE Byzantine book-epigram gold (tagging only, unedited medieval
+verse) scores UPOS 86.61 / lemma 76.74 over 9,203 tokens. Reproduce:
+`aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 
 ## Verse, out of domain: tragedy
 
