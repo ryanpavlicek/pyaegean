@@ -23,12 +23,18 @@ from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, RichLog, Static
+from textual.widgets import Footer, Header, Input, OptionList, RichLog, Static
+from textual.widgets.option_list import Option
 
 if TYPE_CHECKING:
     from textual.worker import Worker
 
-__all__ = ["CommandConsoleScreen", "capture_dispatch", "run_console_command"]
+__all__ = [
+    "CommandConsoleScreen",
+    "CompletionDropdown",
+    "capture_dispatch",
+    "run_console_command",
+]
 
 
 def capture_dispatch(dispatch: Callable[[], None]) -> str:
@@ -64,23 +70,62 @@ def _build_group() -> Any:
     return typer.main.get_command(_build_app())
 
 
-def _command_candidates(group: Any) -> list[str]:
-    """Command-path candidates for the console's predictive completion: every top-level
-    command and every ``group sub`` pair, plus the shell-only directives.
+# The shell-only directives, with a one-line description each (mirroring the REPL's
+# dropdown, which shows a command's short help beside it). ``use`` keeps its trailing
+# space so accepting it leaves the cursor ready for the corpus id.
+_DIRECTIVES: tuple[tuple[str, str], ...] = (
+    ("use ", "set a session corpus (corpus-first commands default to it)"),
+    (":examples", "copyable starter command lines"),
+    (":help", "show the command map"),
+    (":exit", "leave the console"),
+)
+
+
+def _short_help(cmd: Any) -> str:
+    """A command's one-line description for the dropdown, collapsed to a single line.
+
+    Prefers Click's own ``get_short_help_str`` (what ``--help`` shows in the command
+    list), falling back to the first line of ``help`` / ``short_help``."""
+    getter = getattr(cmd, "get_short_help_str", None)
+    if callable(getter):
+        try:
+            text = getter(limit=60)
+        except TypeError:
+            text = getter()
+        except Exception:
+            text = ""
+        if text:
+            return " ".join(str(text).split())
+    doc = (getattr(cmd, "help", "") or getattr(cmd, "short_help", "") or "").strip()
+    first = doc.splitlines()[0] if doc else ""
+    return " ".join(first.split())
+
+
+def _command_completions(group: Any) -> list[tuple[str, str]]:
+    """``(command-path, description)`` pairs for the console's completion dropdown: every
+    top-level command and every ``group sub`` pair, each with its short help, plus the
+    shell-only directives.
 
     Sub-groups are detected with the REPL's duck-typed ``_is_group`` (typer's ``TyperGroup``
     is not a ``click.Group`` for ``isinstance``, so the old check silently offered no
     subcommands — ``greek scan``, ``data fetch`` and the rest never completed)."""
     from aegean.cli._repl import _is_group
 
-    out: list[str] = []
+    out: list[tuple[str, str]] = []
     for name, cmd in sorted(group.commands.items()):
-        out.append(name)
+        out.append((name, _short_help(cmd)))
         if _is_group(cmd):
-            for sub in sorted(getattr(cmd, "commands", {})):
-                out.append(f"{name} {sub}")
-    out += ["use ", ":examples", ":help", ":exit"]
+            subs = getattr(cmd, "commands", {})
+            for sub in sorted(subs):
+                out.append((f"{name} {sub}", _short_help(subs[sub])))
+    out += list(_DIRECTIVES)
     return out
+
+
+def _command_candidates(group: Any) -> list[str]:
+    """The command-path strings alone (for the inline ghost-text suggester); the dropdown
+    uses :func:`_command_completions`, which pairs each with a description."""
+    return [cand for cand, _ in _command_completions(group)]
 
 
 def run_console_command(group: Any, line: str, session: Any) -> str:
@@ -93,6 +138,33 @@ def run_console_command(group: Any, line: str, session: Any) -> str:
     return capture_dispatch(_dispatch)
 
 
+class CompletionDropdown(OptionList):
+    """A floating completion list under the console prompt: command paths with a dim
+    description column, filtered as you type.
+
+    It overlays ABOVE the log via the console body's layer system (a dedicated
+    ``dropdown`` layer, docked to the bottom of the body just above the one-row prompt),
+    so it never reflows the layout and can never land on the Footer's row (the 0.20.4
+    geometry hazard). It never takes focus — the prompt keeps focus so every printable
+    key types (the 0.20.3 safety contract); the screen drives the highlight and accepts a
+    completion on the user's behalf."""
+
+    can_focus = False
+
+    @staticmethod
+    def option_for(candidate: str, description: str) -> Option:
+        """One option: the command path, then its description dimmed. Built as a Rich
+        ``Text`` (OptionList renders renderables directly), with the candidate as the
+        option id so the screen can read back the highlighted completion."""
+        from rich.text import Text
+
+        label = Text(candidate.strip(), style="bold")
+        if description:
+            label.append("  ")
+            label.append(description, style="dim")
+        return Option(label, id=candidate)
+
+
 class CommandConsoleScreen(Screen[None]):
     """A REPL-style console with full CLI parity (any command, captured output)."""
 
@@ -102,23 +174,34 @@ class CommandConsoleScreen(Screen[None]):
     ]
 
     # A prompt LINE, not a boxed form: the input is borderless with an "aegean>" mark, so
-    # it reads like a shell. It gains predictive ghost-text completion (Tab/→ accepts) and
+    # it reads like a shell. As you type, a floating completion dropdown appears above the
+    # prompt (command paths + descriptions), plus an inline ghost-text suggestion and
     # up/down history, the way the REPL feels.
     # The log and the prompt live in one Vertical that fills the space between the Header and
     # the Footer. The prompt must NOT be docked to the bottom: a bottom dock lands on the same
     # row the Footer auto-docks to, and the Footer then paints over the input so the cursor,
     # the typed text, and the ghost completion are all invisible. Inside the body the log takes
     # the free space (1fr) and the prompt keeps its own one-row line just above the Footer.
+    # The dropdown lives on a dedicated "dropdown" layer of the body and is docked to the
+    # body's bottom (lifted one row to clear the prompt): a layer overlays the log WITHOUT
+    # reflowing it, and being bounded by the body it can never reach the Footer's row.
     DEFAULT_CSS = """
-    #console-body { height: 1fr; }
-    #console-log { height: 1fr; border: round $primary-darken-2; padding: 0 1; }
-    #console-prompt { height: 1; width: 1fr; margin: 0 1; }
+    #console-body { height: 1fr; layers: base dropdown; }
+    #console-log { height: 1fr; layer: base; border: round $primary-darken-2; padding: 0 1; }
+    #console-prompt { height: 1; layer: base; width: 1fr; margin: 0 1; }
     #console-prompt-mark { width: 8; padding: 0 1 0 0; color: $success; text-style: bold; }
     #console-input { border: none; background: transparent; padding: 0; height: 1; width: 1fr; }
+    #console-completions {
+        layer: dropdown; dock: bottom; margin: 0 1 1 1;
+        width: auto; min-width: 40; max-width: 100%;
+        height: auto; max-height: 12;
+        border: round $primary; background: $panel; display: none;
+    }
     """
 
     _history: list[str]
     _hist_pos: int
+    _completions: list[tuple[str, str]]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -127,9 +210,11 @@ class CommandConsoleScreen(Screen[None]):
             with Horizontal(id="console-prompt"):
                 yield Static("aegean>", id="console-prompt-mark")
                 yield Input(
-                    placeholder="any command without 'aegean' (Tab/→ completes · ↑/↓ history)",
+                    placeholder="any command without 'aegean' "
+                    "(↑/↓ pick · Tab/Enter complete · Esc close · ↑/↓ history when closed)",
                     id="console-input",
                 )
+            yield CompletionDropdown(id="console-completions")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -138,6 +223,11 @@ class CommandConsoleScreen(Screen[None]):
         self._session = _Session()
         self._history = []
         self._hist_pos = 0
+        self._completions = []
+        # Setting the input value in code (history recall) posts an Input.Changed; this flag
+        # tells that handler to close the dropdown once rather than reopening it on the recalled
+        # line, so recalling history never hijacks the next Up/Down for the dropdown.
+        self._suppress_filter = False
         log = self.query_one("#console-log", RichLog)
         try:
             self._group = _build_group()
@@ -153,10 +243,16 @@ class CommandConsoleScreen(Screen[None]):
         # auto-scrolls to the newest output and scrolls under the mouse wheel.
         log.can_focus = False
         inp = self.query_one("#console-input", Input)
-        inp.suggester = SuggestFromList(_command_candidates(self._group), case_sensitive=False)
+        self._completions = _command_completions(self._group)
+        # The inline ghost-text complements the dropdown: it previews the single best match
+        # (accepted with →); the dropdown offers the full filtered list with descriptions.
+        inp.suggester = SuggestFromList(
+            [c for c, _ in self._completions], case_sensitive=False
+        )
         log.write(
             "aegean command console — type any command without the 'aegean' prefix. "
-            "Tab/→ completes · ↑/↓ history · :examples for starters · :help for this menu."
+            "A completion list opens as you type: ↑/↓ pick · Tab/Enter complete · Esc close. "
+            "↑/↓ recall history when the list is closed. :examples for starters · :help for this menu."
         )
         # Show the command map on entry, exactly like `aegean repl` does, so the available
         # commands are visible up front instead of only surfacing as you type.
@@ -172,9 +268,85 @@ class CommandConsoleScreen(Screen[None]):
     def action_focus_input(self) -> None:
         self.query_one("#console-input", Input).focus()
 
+    # ── the completion dropdown ────────────────────────────────────────────────
+    def _dropdown(self) -> CompletionDropdown:
+        return self.query_one("#console-completions", CompletionDropdown)
+
+    def _dropdown_open(self) -> bool:
+        return bool(self._dropdown().display)
+
+    def _refilter(self, value: str) -> None:
+        """Rebuild the dropdown from the completions whose command path starts with the
+        typed text (case-insensitively), and show it — or hide it when the input is empty
+        or nothing matches. Prefix matching mirrors the inline ghost-text and the REPL."""
+        if self._group is None:
+            return
+        dd = self._dropdown()
+        if not value.strip():
+            self._close_dropdown()
+            return
+        low = value.casefold()
+        matches = [(c, d) for c, d in self._completions if c.casefold().startswith(low)]
+        if not matches:
+            self._close_dropdown()
+            return
+        dd.clear_options()
+        dd.add_options([CompletionDropdown.option_for(c, d) for c, d in matches])
+        dd.highlighted = 0
+        dd.display = True
+
+    def _close_dropdown(self) -> None:
+        self._dropdown().display = False
+
+    def _highlighted_candidate(self) -> str | None:
+        dd = self._dropdown()
+        idx = dd.highlighted
+        if idx is None or idx < 0 or idx >= dd.option_count:
+            return None
+        return dd.get_option_at_index(idx).id
+
+    def _move_highlight(self, delta: int) -> None:
+        dd = self._dropdown()
+        n = dd.option_count
+        if n == 0:
+            return
+        cur = dd.highlighted if dd.highlighted is not None else 0
+        dd.highlighted = max(0, min(n - 1, cur + delta))
+        scroll = getattr(dd, "scroll_to_highlight", None)
+        if callable(scroll):
+            scroll()
+
+    def _accept_candidate(self, candidate: str) -> None:
+        """Fill the prompt with the highlighted completion (a trailing space so the cursor
+        is ready for the next word), then re-filter — a group keeps showing its
+        subcommands, a leaf command closes the list ready for arguments."""
+        inp = self.query_one("#console-input", Input)
+        inp.value = candidate if candidate.endswith(" ") else candidate.rstrip() + " "
+        inp.cursor_position = len(inp.value)
+        self._refilter(inp.value)
+        inp.focus()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id != "console-input":
+            return
+        if self._suppress_filter:
+            self._suppress_filter = False
+            self._close_dropdown()
+            return
+        self._refilter(event.value)
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id != "console-input":
             return
+        # Enter with the dropdown open ACCEPTS the highlighted completion (unless it already
+        # equals the typed line, in which case there is nothing to complete and the line
+        # runs). With the dropdown closed, Enter submits — the ordinary case.
+        if self._dropdown_open():
+            cand = self._highlighted_candidate()
+            if cand is not None and cand.rstrip() != event.value.strip():
+                self._accept_candidate(cand)
+                return
+            self._close_dropdown()
         line = event.value.strip()
         event.input.value = ""
         if not line:
@@ -187,13 +359,19 @@ class CommandConsoleScreen(Screen[None]):
         self._dispatch_worker(line)
 
     def on_key(self, event: Any) -> None:
-        """Keep every keystroke going to the prompt.
+        """Keep every keystroke going to the prompt and drive the completion dropdown.
 
         If focus ever drifts off the input (a click on the log, a terminal focus quirk), a
         printable key re-focuses the prompt and is swallowed, so a bare letter can never trigger
         a global binding (q would quit the whole app) instead of typing. When the prompt is
-        focused it consumes printable keys itself before this runs, so here Up/Down only recall
-        history and non-printable keys (Esc) still bubble to the app for navigation.
+        focused it consumes printable keys itself before this runs, so here only the navigation
+        keys are handled:
+
+        - Tab accepts the highlighted completion (and never moves focus off the prompt);
+        - Esc closes the dropdown first, and only bubbles to the app's back-navigation when
+          the dropdown is already closed;
+        - Up/Down move the dropdown highlight while it is open, and recall history when it is
+          closed (the original behaviour).
         """
         inp = self.query_one("#console-input", Input)
         if self.focused is not inp:
@@ -202,9 +380,30 @@ class CommandConsoleScreen(Screen[None]):
                 inp.focus()
                 event.stop()
             return
-        if not self._history or event.key not in ("up", "down"):
+        key = event.key
+        open_ = self._dropdown_open()
+        if key == "escape":
+            if open_:
+                self._close_dropdown()
+                event.stop()  # consumed here, so the app's Esc back-navigation does not fire
+            return  # closed: let Esc bubble to the app (blur the input, then walk back)
+        if key == "tab":
+            if open_:
+                cand = self._highlighted_candidate()
+                if cand is not None:
+                    self._accept_candidate(cand)
+            event.stop()  # never let Tab move focus off the prompt
             return
-        if event.key == "up":
+        if key not in ("up", "down"):
+            return
+        if open_:
+            self._move_highlight(1 if key == "down" else -1)
+            event.stop()
+            return
+        if not self._history:
+            return
+        self._suppress_filter = True  # the recalled line must not reopen the dropdown
+        if key == "up":
             self._hist_pos = max(0, self._hist_pos - 1)
             inp.value = self._history[self._hist_pos]
         else:

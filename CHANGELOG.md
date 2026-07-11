@@ -4,6 +4,67 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.40.0 (2026-07-11)
+
+Documentary-Greek research infrastructure, a measured cross-script null result,
+surface parity across the demo/MCP/notebooks, and the anti-drift machinery that
+keeps every surface current from now on.
+
+### Added
+- **The PapyGreek convention decomposition**: `greek.papygreek_convention_report()`
+  (CLI: `aegean greek eval papygreek --drift`) reproduces the published
+  documentary-Koine row exactly, then partitions its two weakest cells. Of the
+  8.95-point UPOS gap, 5.13 points (57.3% of all UPOS errors) sit on the
+  coordinator class alone (καί, δέ, τε: tagged under three incompatible
+  conventions in the merged training treebanks); of the 23.24-point XPOS gap,
+  13.62 points are convention or encoding, and forgiving them XPOS would read
+  90.38%. A measurement decomposition only, mirroring the PROIEL one; the
+  published row is unchanged.
+- **PapyGreek dev folds** (`papygreek-dev-tagging`, `papygreek-dev-parse`;
+  `greek.evaluate_on_papygreek_dev(track=...)`): document-disjoint experiment
+  data built only from the source documents that contributed nothing to the
+  pinned test fold, leakage-refiltered against the training set. Improvement
+  experiments validate here; the test fold is measured once per shipped change
+  and never fitted to. These folds never produce a published number.
+- **Cross-script Procrustes alignment, shipped with the null it measured**
+  (`analysis.align_scripts`, `rank_known_pairs`, `recover_identity`; exploratory):
+  aligning Linear A to Linear B distributional sign embeddings recovers **no**
+  correspondence signal at this corpus scale — leave-one-out over the 53
+  chart-shared sign pairs scores top-1 0.000 with top-5 at chance, while
+  self-alignment recovers 90.1% (the misses are distributional twins), so the
+  failure is absence of signal, not broken machinery. The module ships as the
+  instrument that measured that negative result; a test pins the null so any
+  change that suddenly "finds signal" fails loudly and demands scrutiny. Every
+  output is exploratory-labelled and nothing here reads a sign.
+- **A completion dropdown in the TUI command console**: typing opens a floating
+  list of matching commands with a one-line description each (`↑`/`↓` pick,
+  `Tab`/`Enter` complete, `Esc` closes); the inline ghost-text still previews the
+  best match, history recall and the console's key-safety rules are unchanged,
+  and no new dependency was added.
+- **Two MCP tools** (fifteen → seventeen): `greek_explain` (each token's lemma
+  evidence class in plain language) and `corpus_diagnose` (the corpus health
+  report as structured data). **Six browser-demo cards** (explain, diagnose,
+  apparatus summary, Linear B dossiers, seriation, allograph groups) and the
+  0.34–0.39 features woven into all four notebooks.
+- **Anti-drift machinery**, so surfaces stop lagging features: a surface-parity
+  manifest (`scripts/surface-manifest.json`) where every capability declares
+  covered-or-excluded per surface, enforced by a guard test in both directions;
+  an EpiDoc extraction conformance battery run against every epigraphy builder
+  (the reading-fusion class can never ship silently again); registry
+  exhaustiveness tests (evidence classes, lexica, providers, corpus ids, export
+  formats enumerated live against every consumer surface); a corpus-facts
+  registry pinning document/token counts to their doc echoes, re-measured weekly;
+  and `aegean.data.fetch_text`, the shared fetch-and-materialize helper carrying
+  the capped decompress, atomic write, and re-pin freshness stamp (with
+  `expect_gzip` so a declared-gzip asset refuses a corrupt body instead of
+  materializing it). Contribution rules for both are in CONTRIBUTING.
+
+### Fixed
+- The machinery caught its first drift while being built: the CLI cheatsheet's
+  export-format table had omitted the RDF formats since 0.36.0 (now listed and
+  pinned), a stale SigLA version label, and two evidence-class enumerations that
+  had fallen behind the registry.
+
 ## 0.39.0 (2026-07-11)
 
 The correctness-and-fidelity release: nine data assets rebuilt against their

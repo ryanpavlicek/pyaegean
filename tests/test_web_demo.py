@@ -289,6 +289,103 @@ def test_demo_export_epidoc() -> None:
     assert "error" in json.loads(demo.export_epidoc("lineara", "NOPE"))
 
 
+def test_demo_explain() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.explain("ἐν ἀρχῇ ἦν ὁ λόγος"))
+    assert r["text"] == "ἐν ἀρχῇ ἦν ὁ λόγος"
+    first = r["tokens"][0]
+    assert first["token"] == "ἐν" and first["upos"] == "ADP" and first["lemma"] == "ἐν"
+    # every token carries its evidence class and a plain-language note, no confidence number
+    assert {"token", "upos", "lemma", "source", "review", "morphology", "note"} <= set(first)
+    assert first["source"] == "seed" and first["review"] is False
+    assert "seed table" in first["note"]
+    assert all(isinstance(t["review"], bool) for t in r["tokens"])
+
+
+def test_demo_diagnose_corpus() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.diagnose_corpus("lineara"))
+    assert r["documents"] == 1721 and r["tokens"] == 6406
+    assert r["reading_status"] == {
+        "certain": 5734, "unclear": 120, "restored": 0, "lost": 552,
+        "documents_with_apparatus": 366,
+    }
+    assert r["provenance"]["can_cite"] is True
+    assert r["accounting"]["applicable"] is True
+    assert r["accounting"]["documents_with_total"] == 37
+    assert r["accounting"]["balanced"] == 14 and r["accounting"]["discrepant"] == 23
+    assert r["accounting"]["intact_and_balancing"] == 7
+    assert "lead, not a verdict" in r["accounting"]["caveat"]
+    assert r["numerals"] == {"applicable": True, "anomalies": 0}
+    assert r["review"]["applicable"] is False  # no sourced-lemmatization evidence classes
+    assert "signs" not in r  # quick level omits the sign scan
+    # deep adds the sign-frequency scan
+    deep = json.loads(demo.diagnose_corpus("lineara", True))
+    assert deep["signs"] == {
+        "distinct": 162, "hapax": 56,
+        "out_of_inventory_occurrences": 157, "out_of_inventory_distinct": 66,
+    }
+    # a Greek prose corpus marks accounting / numerals not-applicable, never an error
+    greek = json.loads(demo.diagnose_corpus("greek"))
+    assert greek["accounting"]["applicable"] is False
+    assert "error" in json.loads(demo.diagnose_corpus("nt"))  # fetched corpora refused
+
+
+def test_demo_apparatus() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.apparatus("cypriot"))
+    assert r["status_counts"] == {"certain": 370, "unclear": 188, "restored": 51, "lost": 19}
+    assert r["non_certain"] == 258
+    assert r["documents_with_apparatus"] == 130
+    assert r["alt_reading_tokens"] == 0  # bundled cypriot carries no <app>/<rdg> variants
+    # only the apparatus that actually occurs is legended
+    assert any("unclear" in n for n in r["marker_notes"])
+    assert any("restored" in n for n in r["marker_notes"])
+    assert "error" in json.loads(demo.apparatus("ddbdp"))
+
+
+def test_demo_linearb_dossiers() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.linearb_dossiers("2"))
+    assert r["min_docs"] == 2
+    by_key = {(d["site"], d["series"]): d for d in r["dossiers"]}
+    np_dossier = by_key[("Knossos", "Np")]
+    assert np_dossier["documents"] == 3
+    assert set(np_dossier["doc_ids"]) == {"KN Np 267", "KN Np 272", "KN Np 85"}
+    assert np_dossier["hands"] == {}  # the bundled sample records no hands for these
+    # a higher threshold returns fewer, and min_docs=1 returns at least as many
+    assert json.loads(demo.linearb_dossiers("1"))["total"] >= r["total"]
+    assert json.loads(demo.linearb_dossiers("junk"))["min_docs"] == 1  # bad input floors to 1
+
+
+def test_demo_seriate_site() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.seriate_site("Zakros"))
+    assert r["site"] == "Zakros" and r["documents"] == 53
+    assert r["seriated"] == 47  # only the sign-bearing documents seriate
+    assert len(r["order"]) == 47 and len(set(r["order"])) == 47
+    assert r["order"][0] == "ZAWa38"  # deterministic, input-order-invariant ordering
+    assert "ZA10a" in r["order"]
+    assert "EXPLORATORY" in r["note"]
+    bad = json.loads(demo.seriate_site("Atlantis"))
+    assert "error" in bad and "Khania" in bad["sites"]
+
+
+def test_demo_allographs() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.allographs("linearb"))
+    assert r["script"] == "linearb" and r["signs"] == 211
+    ra = next(g for g in r["groups"] if g["base"] == "RA")
+    assert ra["members"] == ["RA", "RA2", "RA3"] and ra["kind"] == "homophone-number"
+    assert r["composites"] == []
+    assert "not claimed" in r["note"]  # the palaeographic-allography caveat
+    la = json.loads(demo.allographs("lineara"))
+    assert len(la["groups"]) == 4 and la["composites"]  # Linear A has ligature signs
+    cm = json.loads(demo.allographs("cyprominoan"))
+    assert any(g["kind"] == "catalog-suffix" for g in cm["groups"])
+    assert "error" in json.loads(demo.allographs("klingon"))
+
+
 def test_demo_works_without_sqlite3() -> None:
     """Pyodide unvendors sqlite3 from its stdlib, so `import aegean` and the demo's calls
     must not require it (regression: a top-level `import sqlite3` in the opt-in cache made
@@ -337,6 +434,16 @@ def test_demo_works_without_sqlite3() -> None:
         "assert load_bundled_json('greek', 'nt_sample.json')['documents']\n"
         "assert aegean.load('linearb').get('PY Ta 641')\n"
         "assert aegean.load('cyprominoan').documents\n"
+        "assert greek.explain_pipeline('ἐν ἀρχῇ ἦν ὁ λόγος')\n"
+        "assert c.diagnose('full').signs.computed\n"
+        "from aegean.core.apparatus import apparatus_summary\n"
+        "assert apparatus_summary(aegean.load('cypriot')).non_certain > 0\n"
+        "from aegean.analysis.hands import dossiers\n"
+        "assert dossiers(aegean.load('linearb'))\n"
+        "from aegean.analysis.seriation import seriate\n"
+        "assert seriate(c.filter(site='Zakros')).order\n"
+        "from aegean.analysis.allographs import variant_groups\n"
+        "assert variant_groups('lineara').groups\n"
         "print('OK')\n"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
@@ -356,5 +463,6 @@ def test_demo_html_wiring() -> None:
                  "phonetic_compare", "lexicon_link", "epidoc_import", "accent_word", "sandhi",
                  "prosody_word", "nt_verse", "idioms", "lemmatize_word", "text_profile",
                  "lineara_stats", "lineara_query", "numerals", "sign_info", "linearb_tablet",
-                 "cyprominoan_doc", "geo_word", "cite_bundled", "export_epidoc"):
+                 "cyprominoan_doc", "geo_word", "cite_bundled", "export_epidoc", "explain",
+                 "diagnose_corpus", "apparatus", "linearb_dossiers", "seriate_site", "allographs"):
         assert hasattr(demo, name) and f'"{name}"' in html

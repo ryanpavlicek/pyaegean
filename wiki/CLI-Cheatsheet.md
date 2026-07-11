@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.39.0
+aegean --version                # pyaegean 0.40.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -219,6 +219,8 @@ aegean export lineara -f workbench -o wb.json     # Linear A Workbench JSON
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
 | `workbench` | Linear A Workbench JSON (round-trips via `import --workbench`) | core |
+| `ttl` | RDF Turtle (export only; `--base-uri` for the minted subjects) | core |
+| `jsonld` | RDF JSON-LD (export only; same graph as `ttl`) | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
@@ -835,8 +837,9 @@ coordinates and per-site word attestations), and `data_status` (the local data
 store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
 `greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
 work's text by catalogue id; the first use fetches it into the local data store,
-cached and offline after), `greek_gloss` (the registry dictionaries), and
-`koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
+evidence class in plain language), `corpus_diagnose` (the corpus health report),
+and `koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
 by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 

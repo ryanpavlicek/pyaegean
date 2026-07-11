@@ -1,0 +1,68 @@
+{
+  "what": "Cross-script Procrustes alignment calibration: the measured leave-one-out null on the known Linear A <-> Linear B chart-shared signs, plus the self-alignment identity sanity floor. This is the evidence the aegean.analysis.procrustes module ships to document that distributional embedding alignment recovers NO Linear A -> Linear B correspondence signal at this corpus scale.",
+  "date": "2026-07-11",
+  "exploratory": true,
+  "module": "aegean.analysis.procrustes",
+  "protocol": {
+    "source": "Linear A sign embeddings from the bundled lineara corpus (aegean.load('lineara'))",
+    "target": "Linear B sign embeddings from DAMOS (aegean.load('damos')) RESTRICTED TO SYLLABOGRAMS",
+    "syllabogram_restriction": "full-vocab DAMOS embeddings are intractable for the pure-Python SVD, so each DAMOS sign is cleaned with the Linear B Leiden normalizer (aegean.scripts.linearb.lexicon._norm: strip the combining underdot and the [ ] ? markers, fold subscripts, upper-case) and kept only if it is one of the 74 canonical Linear B syllabograms (signClass == 'syllabogram' in the linearb sign inventory); WORD tokens left with fewer than two syllabograms drop out of the co-occurrence model",
+    "embedding_params": {"dim": 50, "window": 1, "method": "PPMI + deterministic pure-Python truncated SVD (aegean.analysis.sign_embeddings)"},
+    "anchors": "shared_label_anchors(la, lb): the signs the two scripts share by transliteration value (folded label), the AB 'chart-shared' signs, used as the seed dictionary and as the partial ground truth",
+    "leave_one_out": "rank_known_pairs(la, lb, pairs, leave_one_out=True): for each known pair the alignment is relearned with that pair held out of the anchors, then the rank of the true target among all target signs is recorded",
+    "execution": "CPU, pure Python, deterministic (verified: two runs give identical ranks and identical identity recovery)",
+    "elapsed_s": 763.8
+  },
+  "corpus": {
+    "la_vocab": 162,
+    "la_dim": 50,
+    "lb_syllabogram_vocab": 73,
+    "lb_dim": 50,
+    "n_canonical_syllabograms": 74,
+    "note": "73 of the 74 canonical Linear B syllabograms are attested inside multi-sign words in DAMOS and enter the embedding vocabulary"
+  },
+  "leave_one_out_null": {
+    "n_pairs": 53,
+    "n_targets": 73,
+    "top1": 0.0,
+    "top5": 0.09433962264150944,
+    "median_rank": 26.0,
+    "mean_rank": 29.07547169811321,
+    "chance_median": 37.0,
+    "chance_top5": 0.0684931506849315,
+    "ranks": [5, 63, 60, 61, 21, 43, 24, 33, 3, 6, 10, 60, 16, 55, 59, 14, 64, 27, 44, 16, 29, 8, 15, 16, 26, 6, 43, 63, 45, 9, 28, 32, 63, 21, 12, 10, 44, 12, 26, 21, 16, 2, 33, 2, 17, 28, 26, 13, 65, 34, 4, 41, 47],
+    "interpretation": "top-1 recovery is exactly 0.000 (no known pair's true target is its nearest neighbour) and top-5 (0.094) is at chance (0.068); the median rank 26 of 73 is modestly better than the chance median 37 but nowhere near recovery. Distributional embedding alignment recovers no usable Linear A -> Linear B correspondence signal at this corpus scale."
+  },
+  "identity_sanity_floor": {
+    "check": "recover_identity(la, anchor_fraction=1.0, seed=1): align the Linear A embedding to ITSELF with every sign anchored; a well-behaved method recovers each sign as its own nearest neighbour",
+    "n": 162,
+    "top1_recovery": 0.9012345679012346,
+    "top5_recovery": 0.9567901234567902,
+    "n_misses_top1": 16,
+    "misses_are_distributional_twins": true,
+    "misses": [
+      {"sign": "*410", "mapped_to": "*403"},
+      {"sign": "*415", "mapped_to": "*403"},
+      {"sign": "*416", "mapped_to": "*403"},
+      {"sign": "GRA+QE", "mapped_to": "VIN+TE"},
+      {"sign": "*554", "mapped_to": "*539"},
+      {"sign": "*406", "mapped_to": "*403"},
+      {"sign": "VIR+*307", "mapped_to": "CYP+E"},
+      {"sign": "*417", "mapped_to": "*403"},
+      {"sign": "*411", "mapped_to": "*403"},
+      {"sign": "*409", "mapped_to": "*403"},
+      {"sign": "*408", "mapped_to": "*403"},
+      {"sign": "HIDE+B", "mapped_to": "*350"},
+      {"sign": "*404", "mapped_to": "*403"},
+      {"sign": "*405", "mapped_to": "*403"},
+      {"sign": "*412", "mapped_to": "*403"},
+      {"sign": "*82", "mapped_to": "*354"}
+    ],
+    "interpretation": "self-alignment recovers 90.1% of signs at rank 1 (95.7% within top-5); all 16 misses are distributionally identical signs whose context vectors are collinear (raw cosine > 0.98, tied alignment score 1.0), chiefly hapax *NNN signs that appear in exactly one shared context and so resolve to a tied sibling rather than to themselves. The machinery works; the cross-script top-1 of 0.000 is a genuine null, not a broken alignment."
+  },
+  "conclusion": "The instrument functions (self-alignment recovers 90.1% of signs) yet recovers 0.0% of the known Linear A -> Linear B pairs at rank 1: distributional embedding alignment carries no recoverable cross-script correspondence signal at the Aegean corpus scale. The module ships as the honest instrument that measured this null, not as a decipherment aid; every output remains exploratory-labelled.",
+  "notes": {
+    "in_sample_overfitting": "without leave-one-out (rank_known_pairs(..., leave_one_out=False)) the known pairs rank near-perfectly, because the alignment is fitted on the very pairs it is scored on; only the held-out numbers above are honest.",
+    "reproduction_vs_0_37_0": "this re-run reproduces the 0.37.0 parked calibration's decisive invariants exactly: 53 shared pairs, 73 target signs, chance median 37, and top-1 = 0.000. Two figures differ from the 0.37.0 working note: the leave-one-out median is 26.0 here (the note recorded 34), and the self-alignment identity recovery is 0.901 here (the note recorded 1.000). The identity gap is explained above (distributional twins; the theoretical 1.0 holds only on a clean, twin-free space); the median difference does not change the qualitative null (top-1 0.000, top-5 at chance, median far short of recovery). The numbers in this file are the ones the module, docs, and tests are pinned to."
+  }
+}

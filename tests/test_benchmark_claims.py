@@ -97,6 +97,51 @@ def test_papygreek_row_matches_registry_and_evidence() -> None:
     assert f"{claims['n_words']:,}" in doc
 
 
+def test_papygreek_decomposition_matches_registry_and_evidence() -> None:
+    """The PapyGreek convention decomposition (measurement only) stays pinned:
+    registry block == evidence file == the doc echoes, mirroring the PROIEL one."""
+    reg = _claims()["papygreek_convention_decomposition"]
+    ev = json.loads(_read("training/results/papygreek-convention-decomp-2026-07-11.json"))
+    x = ev["xpos_decomposition"]
+    assert reg["xpos_gap_points"] == x["gap_pct"]
+    assert reg["xpos_coordinator_points"] == x["buckets_pts"]["coordinator_poscode"]
+    assert reg["xpos_common_gender_points"] == x["buckets_pts"]["common_gender"]
+    assert reg["xpos_underscore_encoding_points"] == x["buckets_pts"]["underscore_encoding"]
+    assert reg["xpos_residual_real_points"] == x["buckets_pts"]["residual_real"]
+    assert reg["xpos_convention_encoding_subtotal_points"] == x["convention_encoding_subtotal_pts"]
+    assert reg["xpos_forgiving_convention_pct"] == x["xpos_forgiving_convention_pct"]
+    u = ev["upos_decomposition"]
+    assert reg["upos_gap_points"] == round(u["gap_pct"], 2)
+    assert reg["upos_coordinator_points"] == u["coordinator_gap_pts"]
+    assert reg["coordinator_share_of_upos_errors"] == u["coordinator_share_of_upos_errors_pct"]
+    # the decomposition reproduced the pinned row before partitioning it
+    row = _claims()["neural_papygreek_test"]
+    rc = ev["reproduce_check"]["official_evaluator"]
+    assert round(rc["upos"], 2) == row["upos"] and round(rc["xpos"], 2) == row["xpos"]
+    for doc in ("docs/benchmarks.md", "wiki/Benchmarks.md"):
+        text = _read(doc)
+        for token in ("57.3", "13.62", "90.38"):
+            assert token in text, f"{token} missing from {doc}"
+
+
+def test_procrustes_null_matches_registry_and_evidence() -> None:
+    """The measured Procrustes null (an exploratory negative result) stays pinned:
+    registry block == evidence file, so a change that suddenly finds cross-script
+    signal must arrive as a deliberate re-measure, never silent drift."""
+    reg = _claims()["procrustes_null"]
+    ev = json.loads(_read("training/results/procrustes-null-2026-07-11.json"))
+    loo = ev["leave_one_out_null"]
+    assert reg["loo_top1"] == loo["top1"]
+    assert reg["loo_top5"] == round(loo["top5"], 4)
+    assert reg["loo_median_rank"] == loo["median_rank"]
+    assert reg["chance_median"] == loo["chance_median"]
+    assert reg["n_pairs"] == loo["n_pairs"]
+    assert reg["n_targets"] == loo["n_targets"]
+    ident = ev["identity_sanity_floor"]
+    assert reg["identity_top1"] == round(ident["top1_recovery"], 4)
+    assert reg["identity_top5"] == round(ident["top5_recovery"], 4)
+
+
 def test_registry_agrees_with_the_quantize_size_evidence() -> None:
     claims = _claims()
     v3 = json.loads(_read("training/results/v3-quantize-report.json"))

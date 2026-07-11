@@ -7,7 +7,7 @@ or any other MCP client) can browse the corpora, run the compound query engine,
 reconcile Linear A accounts, scan Greek verse, gloss words, and load real Greek
 works, all **without writing a line of Python**.
 
-The server is deliberately narrow. It offers fifteen read-only tools over the
+The server is deliberately narrow. It offers seventeen read-only tools over the
 same code paths the [CLI](CLI) and the terminal UI use, so the three surfaces
 cannot disagree. It never accepts a filesystem path and never mutates a corpus,
 and every miss comes back as a structured error rather than a raw traceback.
@@ -69,7 +69,7 @@ from the command line instead:
 claude mcp add pyaegean -- aegean-mcp
 ```
 
-Once connected, the client lists the fifteen tools below and can call them by
+Once connected, the client lists the seventeen tools below and can call them by
 name.
 
 ## The tools
@@ -92,6 +92,7 @@ dictionaries.
 | `cite_corpus` | `corpus`, `style="plain"`, `site`, `period`, `scribe`, `support` | Cite a corpus, or with metadata filters the exact subset, as plain text, BibTeX, or APA. |
 | `geo_sites` | `corpus`, `word=None` | Find-site coordinates (WGS84), Pleiades ids, and the contested-provenance flag; with `word`, per-site attestation counts. |
 | `data_status` | (none) | The local data store: every fetchable dataset with its downloaded state, on-disk size, and license (read-only). |
+| `corpus_diagnose` | `corpus`, `deep=False` | A descriptive corpus-health report: reading-status profile (including alternate-reading tokens), provenance and citability, accounting reconciliation, numeral anomalies, review state, and with `deep` a sign scan. |
 
 `query_corpus` takes a list of `where` rows. Each row is
 `{"field": ..., "value": ...}` plus an optional `"connector"` (`and`/`or`,
@@ -115,6 +116,7 @@ same engine and fields are documented on [Analysis](Analysis).
 | `greek_work` | `work_id`, `ref=None`, `preview_lines=10` | Load a real Greek work by its catalogue id (e.g. `tlg0012.tlg001`, the Iliad), whole or one section, with a short preview. |
 | `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `autenrieth`, `abbott-smith`, `dodson`). |
 | `koine_gloss` | `word` | Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0). |
+| `greek_explain` | `text` | Each token's lemma evidence class rendered in plain language (a reading of `greek_pipeline`'s records; deliberately class-based, no confidence numbers). |
 
 `greek_pipeline` and `balance_accounts` return the shared row mappings from
 `aegean._view`, the same rows the `aegean greek pipeline` and `aegean balance`

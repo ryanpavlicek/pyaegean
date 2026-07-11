@@ -64,8 +64,9 @@ def pipeline_rows(
 
     Wraps :func:`aegean.greek.pipeline`, mapping each `TokenRecord` to a row with
     ``sentence`` / ``index`` position, ``text``, ``upos``, ``lemma``,
-    ``lemma_source`` (the lemma's evidence class, e.g. ``"attested"`` / ``"neural"``
-    / ``"rule"`` / ``"seed"`` / ``"paradigm"`` / ``"identity"``), ``lemma_known`` (``False`` marks a lemma to
+    ``lemma_source`` (the lemma's evidence class: ``"attested"`` / ``"neural"``
+    / ``"rule"`` / ``"seed"`` / ``"paradigm"`` / ``"identity"`` / ``"unresolved"`` /
+    ``"punct"``), ``lemma_known`` (``False`` marks a lemma to
     verify — an identity fall-through or unresolved miss), and the optional
     ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
     the neural pipeline, ``None`` otherwise). Backends follow whatever is active,

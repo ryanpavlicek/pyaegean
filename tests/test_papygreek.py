@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from aegean import data
 from aegean.data import DataNotAvailableError
 from aegean.greek import joint, papygreek
 
@@ -235,17 +236,43 @@ def test_cli_papygreek_target_accepted_and_batch_forwarded(monkeypatch) -> None:
     assert seen == [4, None]
 
 
-def test_cli_papygreek_rejects_drift_and_bad_batch(monkeypatch) -> None:
+def test_cli_papygreek_drift_runs_convention_report(monkeypatch) -> None:
+    # --drift is now the UPOS/XPOS convention decomposition (mirrors proiel --drift); it must
+    # run the convention report through the neural pipeline and emit it, not error out.
+    from typer.testing import CliRunner
+
+    from aegean.greek.papygreek import _decompose_papygreek
+
+    report = _decompose_papygreek(
+        [[("CCONJ", "c--------"), ("NOUN", "n-s---mn-")]],
+        [[("X", "b--------"), ("NOUN", "n-s---mn-")]],
+    )
+    seen: list[bool] = []
+
+    def fake_report(*, progress: object = None, **kw: object):
+        seen.append(True)
+        return report
+
+    monkeypatch.setattr("aegean.greek.papygreek_convention_report", fake_report)
+    monkeypatch.setattr("aegean.greek.use_neural_pipeline", lambda **kw: None)
+    runner = CliRunner()
+    r = runner.invoke(_cli_app(), ["greek", "eval", "papygreek", "--drift", "--json"])
+    assert r.exit_code == 0, r.output
+    assert seen == [True]
+    assert "xpos_coordinator_poscode" in r.output  # the decomposition's JSON view
+
+
+def test_cli_papygreek_rejects_bad_batch_and_drift_batch(monkeypatch) -> None:
     from typer.testing import CliRunner
 
     monkeypatch.setattr("aegean.greek.use_neural_pipeline", lambda **kw: None)
     runner = CliRunner()
-    r = runner.invoke(_cli_app(), ["greek", "eval", "papygreek", "--drift"])
-    assert r.exit_code != 0
-    assert "drift" in r.output.lower()
     r = runner.invoke(_cli_app(), ["greek", "eval", "papygreek", "--batch-size", "0"])
     assert r.exit_code != 0
     assert "--batch-size must be at least 1" in r.output
+    # --batch-size does not combine with the (sequential) --drift decomposition
+    r = runner.invoke(_cli_app(), ["greek", "eval", "papygreek", "--drift", "--batch-size", "4"])
+    assert r.exit_code != 0
 
 
 # --- adversarial ------------------------------------------------------------------
@@ -257,7 +284,7 @@ def test_missing_asset_raises_clean_datanotavailable(monkeypatch, tmp_path: Path
     def boom(name: str, **kw: object) -> Path:
         raise DataNotAvailableError(f"unknown dataset {name!r}")
 
-    monkeypatch.setattr(papygreek, "fetch", boom)
+    monkeypatch.setattr(data, "fetch", boom)
     monkeypatch.setattr(papygreek, "cache_dir", lambda: tmp_path)  # force the cache miss
     with pytest.raises(DataNotAvailableError):
         papygreek.evaluate_on_papygreek()
@@ -267,19 +294,21 @@ def test_papygreek_path_propagates_fetch_error(monkeypatch, tmp_path: Path) -> N
     def boom(name: str, **kw: object) -> Path:
         raise DataNotAvailableError("no pinned URL")
 
-    monkeypatch.setattr(papygreek, "fetch", boom)
+    monkeypatch.setattr(data, "fetch", boom)
     monkeypatch.setattr(papygreek, "cache_dir", lambda: tmp_path)  # ensure the cache miss
     with pytest.raises(DataNotAvailableError):
         papygreek.papygreek_path()
 
 
-def test_corrupt_gz_asset_raises_clean_oserror(monkeypatch, tmp_path: Path) -> None:
+def test_corrupt_gz_asset_refused_cleanly(monkeypatch, tmp_path: Path) -> None:
     bad = tmp_path / "papygreek-fold"
     bad.write_bytes(b"this is not gzip data")  # a corrupt/malformed asset
 
-    monkeypatch.setattr(papygreek, "fetch", lambda name, **kw: bad)
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: bad)
     monkeypatch.setattr(papygreek, "cache_dir", lambda: tmp_path / "cache")
-    with pytest.raises(OSError):  # gzip.BadGzipFile is an OSError — clean, not a raw traceback
+    # the fold asset is declared gzip (expect_gzip=True), so a non-gzip body is refused
+    # with the clean data error, never materialized as the fold
+    with pytest.raises(DataNotAvailableError):
         papygreek.papygreek_path()
 
 

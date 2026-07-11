@@ -122,5 +122,37 @@
     "n_sentences": 1696,
     "source_evidence": "training/results/papygreek-eval-v2-2026-07-11.json",
     "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v2"
+  },
+  "papygreek_convention_decomposition": {
+    "upos_gap_points": 8.95,
+    "upos_coordinator_points": 5.13,
+    "coordinator_share_of_upos_errors": 57.3,
+    "xpos_gap_points": 23.24,
+    "xpos_coordinator_points": 5.12,
+    "xpos_common_gender_points": 5.91,
+    "xpos_underscore_encoding_points": 2.6,
+    "xpos_residual_real_points": 9.62,
+    "xpos_convention_encoding_subtotal_points": 13.62,
+    "xpos_forgiving_convention_pct": 90.38,
+    "source_evidence": "training/results/papygreek-convention-decomp-2026-07-11.json",
+    "protocol": "greek.papygreek_convention_report(); papygreek-fold-v2, neural pipeline, CPU sequential (batching is not prediction-identical on this fold); reproduces the official evaluator exactly; measurement only, the published row is unchanged"
+  },
+  "procrustes_null": {
+    "n_pairs": 53,
+    "n_targets": 73,
+    "loo_top1": 0.0,
+    "loo_top5": 0.0943,
+    "loo_median_rank": 26.0,
+    "loo_mean_rank": 29.08,
+    "chance_median": 37.0,
+    "chance_top5": 0.0685,
+    "identity_top1": 0.9012,
+    "identity_top5": 0.9568,
+    "n_identity": 162,
+    "la_vocab": 162,
+    "lb_syllabogram_vocab": 73,
+    "source_evidence": "training/results/procrustes-null-2026-07-11.json",
+    "protocol": "aegean.analysis.rank_known_pairs(la, lb, shared_label_anchors(la, lb), leave_one_out=True); source = bundled Linear A sign_embeddings; target = DAMOS Linear B sign_embeddings restricted to the 74 canonical syllabograms; dim=50, window=1; pure-Python deterministic; identity floor = recover_identity(la, anchor_fraction=1.0)",
+    "note": "EXPLORATORY negative result: distributional embedding alignment recovers NO Linear A -> Linear B correspondence at this corpus scale (top-1 0.000, top-5 at chance, median far short of recovery), while self-alignment recovers 90.1% (the 16 misses are distributional twins). The module ships as the instrument that measured this null; every output is exploratory-labelled."
   }
 }

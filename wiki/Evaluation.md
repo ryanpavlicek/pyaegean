@@ -326,6 +326,7 @@ fetched gold data:
 | --- | --- |
 | `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--fold perseus\|proiel`, `--split dev\|test`, `--bootstrap` for CIs |
 | `proiel` | the neutral out-of-AGDT check (lemma + POS); `--drift` for the convention-vs-error breakdown |
+| `papygreek` | the documentary-Koine fold (full UD metric set); `--drift` for the UPOS/XPOS convention decomposition |
 | `nt` | the neural pipeline against the Nestle 1904 gold |
 | `tagger` | the held-out AGDT POS evaluation |
 | `lemmatizer` | the held-out AGDT lemma evaluation |
@@ -336,6 +337,7 @@ aegean greek eval ud --fold perseus --split test --neural   # the standard bench
 aegean greek eval ud --fold perseus --bootstrap --neural    # with percentile confidence intervals
 aegean greek eval proiel --neural-lemmatizer                # neutral out-of-AGDT check
 aegean greek eval proiel --drift                            # where the out-of-AGDT gap comes from
+aegean greek eval papygreek --drift                         # where the documentary XPOS/UPOS gap comes from
 aegean greek eval nt                                        # the neural model on the Greek NT
 ```
 

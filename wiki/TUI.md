@@ -151,11 +151,14 @@ where you read it.
    hexameter: dactyl, dactyl, spondee, dactyl, dactyl, final; caesura: penthemimeral
    ```
 
-4. As you type, ghost-text completion suggests command names (`Tab` or `→` accepts
-   the suggestion) and `↑`/`↓` recall history. A long or networked command runs on a
-   background worker, so the log keeps scrolling and the app stays responsive.
-5. Press `Esc` once to leave the prompt (it blurs), and `Esc` again to go back to
-   the screen you came from.
+4. As you type, a completion list opens above the prompt showing the matching
+   commands with a short description each: `↑`/`↓` pick one, `Tab` or `Enter`
+   complete it, `Esc` closes the list. An inline ghost-text suggestion also
+   previews the top match (`→` accepts it). With the list closed, `↑`/`↓` recall
+   history. A long or networked command runs on a background worker, so the log
+   keeps scrolling and the app stays responsive.
+5. Press `Esc` to close the completion list if one is open, then once more to
+   leave the prompt (it blurs), and again to go back to the screen you came from.
 
 ---
 
@@ -388,8 +391,11 @@ A REPL inside the TUI with **full CLI parity**. Type any command **without** the
 `aegean` prefix (for example `stats lineara --top 5`) and its output renders in a
 scrolling log. It runs through the same dispatcher `aegean repl` uses, so `use
 CORPUS` sets a session corpus, `:examples` works, and every command behaves
-identically to the command line. Long or networked commands run on a worker so the
-console stays responsive.
+identically to the command line. As you type, a floating completion list offers
+the matching command paths with a one-line description each (`↑`/`↓` to pick,
+`Tab`/`Enter` to complete, `Esc` to close); the inline ghost-text still previews
+the best match. Long or networked commands run on a worker so the console stays
+responsive.
 
 The console needs the `[cli]` extra (typer + rich). If it is missing, the input is
 disabled with a one-line message pointing you at `pip install 'pyaegean[cli]'`.

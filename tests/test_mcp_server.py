@@ -42,6 +42,7 @@ def test_unknown_corpus_error_convention() -> None:
         m.query_corpus("linera", []),
         m.cite_corpus("linera"),
         m.geo_sites("linera"),
+        m.corpus_diagnose("linera"),
     ):
         assert isinstance(result, dict)
         assert "unknown corpus 'linera'" in result["error"]
@@ -260,6 +261,59 @@ def test_greek_pipeline() -> None:
     assert recs[0]["text"] == "ἐν"
 
 
+def test_greek_explain() -> None:
+    rows = m.greek_explain("ἐν ἀρχῇ ἦν ὁ λόγος.")
+    assert rows and isinstance(rows, list)
+    first = rows[0]
+    assert {"token", "upos", "lemma", "lemma_source", "needs_review", "morphology", "note"} == set(
+        first
+    )
+    assert first["token"] == "ἐν" and first["upos"] == "ADP" and first["lemma"] == "ἐν"
+    assert first["lemma_source"] == "seed" and first["needs_review"] is False
+    assert "seed table" in first["note"]
+    # the token stream lines up with greek_pipeline (explain is a rendering, not a re-run)
+    piped = m.greek_pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
+    assert [r["token"] for r in rows] == [r["text"] for r in piped]
+    assert all(isinstance(r["needs_review"], bool) for r in rows)
+
+
+def test_corpus_diagnose() -> None:
+    rep = m.corpus_diagnose("lineara")
+    assert rep["documents"] == 1721 and rep["script_id"] == "lineara"
+    assert rep["level"] == "quick"
+    assert rep["reading_status"]["certain"] == 5734
+    assert rep["reading_status"]["lost"] == 552
+    assert rep["reading_status"]["documents_with_apparatus"] == 366
+    assert rep["provenance"]["can_cite"] is True
+    a = rep["accounting"]
+    assert a["applicable"] is True and a["documents_with_total"] == 37
+    assert a["balanced"] == 14 and a["discrepant"] == 23 and a["intact_and_balancing"] == 7
+    assert "lead, not a verdict" in a["caveat"]
+    assert rep["numerals"] == {"applicable": True, "anomalies": 0}
+    assert rep["review"]["applicable"] is False
+    assert "signs" not in rep  # quick omits the sign scan
+    # deep adds the sign-frequency scan
+    deep = m.corpus_diagnose("lineara", deep=True)
+    assert deep["level"] == "full"
+    assert deep["signs"] == {
+        "distinct": 162, "hapax": 56,
+        "out_of_inventory_occurrences": 157, "out_of_inventory_distinct": 66,
+    }
+
+
+def test_corpus_diagnose_not_applicable_sections() -> None:
+    """A Greek prose corpus marks accounting/numerals/signs not-applicable, never an error."""
+    rep = m.corpus_diagnose("greek")
+    assert rep["accounting"]["applicable"] is False
+    assert rep["numerals"]["applicable"] is False
+
+
+def test_corpus_diagnose_forgives_case_and_reports_unknown() -> None:
+    assert m.corpus_diagnose("LINEARA")["documents"] == 1721
+    miss = m.corpus_diagnose("linera")
+    assert "unknown corpus 'linera'" in miss["error"] and "'lineara'" in miss["error"]
+
+
 def test_greek_scan() -> None:
     ok = m.greek_scan("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ", "hexameter")
     assert ok["scans"] is True and "—" in ok["pattern"]
@@ -411,7 +465,7 @@ def test_build_server_registers_tools() -> None:
 
     server = m.build_server()
     assert server is not None
-    assert len(m.TOOLS) == 15  # the registered tool surface
+    assert len(m.TOOLS) == 17  # the registered tool surface
     registered = {t.name for t in asyncio.run(server.list_tools())}
     assert registered == {fn.__name__ for fn in m.TOOLS}
 

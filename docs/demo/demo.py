@@ -8,9 +8,12 @@ work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corp
 (sign search + accounting + statistics + compound queries + numerals), the sign
 inventories of all four Aegean scripts, the bundled Linear B / Cypriot (IG XV 1) /
 Cypro-Minoan corpora, the find-site gazetteer, citation + fingerprinting, the file importer,
-the stdlib EpiDoc reader/writer, and cross-script phonetic comparison. The
-neural tier is excluded (it needs onnxruntime, which doesn't run in the browser), as are the
-network-only backends (load_work, the full-NT fetch, LSJ/treebank) and the generative AI layer. Each
+the stdlib EpiDoc reader/writer, cross-script phonetic comparison, the pipeline evidence-class
+explanation, corpus-health diagnostics, the editorial-apparatus profile, Linear B scribal
+dossiers, Linear A seriation, and catalogued sign-variant (allograph) groups. The
+neural tier is excluded (it needs onnxruntime, which doesn't run in the browser) — so is the
+neural pipeline's calibrated confidence — as are the network-only backends (load_work, the
+full-NT fetch, LSJ/treebank, the fetched paradigm table) and the generative AI layer. Each
 function returns a JSON string for easy consumption from JavaScript. This module is exercised
 by tests/test_web_demo.py, so the demo's logic can't silently rot.
 """
@@ -667,3 +670,221 @@ def export_epidoc(corpus_id: str, doc_id: str) -> str:
             {"error": f"no document {doc_id!r} in the {corpus_id} corpus"}, ensure_ascii=False
         )
     return json.dumps({"id": doc.id, "xml": to_epidoc(doc)}, ensure_ascii=False)
+
+
+def explain(text: str) -> str:
+    """Explain what the offline pipeline did to each token: the lemma's evidence class
+    (attested / rule / seed / paradigm / identity / unresolved / punct), whether the token
+    needs review, and a one-line note saying what that class means. Rendered from the same
+    records the pipeline returns, never a re-run; there are no confidence numbers by design
+    (the neural pipeline's calibrated confidence needs the model, which is out of the browser)."""
+    from aegean import greek
+
+    tokens = [
+        {
+            "token": e.token,
+            "upos": e.upos,
+            "lemma": e.lemma,
+            "source": e.lemma_source.value,
+            "review": e.needs_review,
+            "morphology": e.morphology or "",
+            "note": e.note,
+        }
+        for e in greek.explain_pipeline(text)
+    ]
+    return json.dumps({"text": text, "tokens": tokens}, ensure_ascii=False)
+
+
+def diagnose_corpus(corpus_id: str, deep: bool = False) -> str:
+    """A descriptive corpus-health report for a bundled corpus: reading-status profile,
+    accounting reconciliation (a discrepancy is a lead, not a verdict), numeral anomalies,
+    provenance and citation, annotation-review state, and (deep) sign-frequency outliers.
+    Every check that does not apply to a corpus is marked so, never an error."""
+    import aegean
+    from aegean.core.diagnose import ACCOUNTING_CAVEAT
+
+    corpus_id = corpus_id.strip().lower()
+    if corpus_id not in _BUNDLED_CORPORA:
+        return json.dumps(
+            {"error": f"bundled corpora only: {', '.join(_BUNDLED_CORPORA)}"}, ensure_ascii=False
+        )
+    rep = aegean.load(corpus_id).diagnose("full" if deep else "quick")
+    s, a, nm, rv, sg, p = (
+        rep.reading_status, rep.accounting, rep.numerals, rep.review, rep.signs, rep.provenance,
+    )
+    out: dict[str, Any] = {
+        "corpus": corpus_id,
+        "documents": rep.n_documents,
+        "tokens": rep.n_tokens,
+        "reading_status": {
+            "certain": s.certain, "unclear": s.unclear, "restored": s.restored,
+            "lost": s.lost, "documents_with_apparatus": s.documents_with_apparatus,
+        },
+        "provenance": {
+            "can_cite": p.can_cite,
+            "edition_fidelity": p.edition_fidelity,
+            "citation": p.citation,
+        },
+        "accounting": (
+            {
+                "applicable": True,
+                "documents_with_total": a.documents_with_total,
+                "balanced": a.balanced,
+                "discrepant": a.discrepant,
+                "intact_and_balancing": a.intact_and_balancing,
+                "caveat": ACCOUNTING_CAVEAT,
+            }
+            if a.applicable
+            else {"applicable": False, "note": a.note}
+        ),
+        "numerals": (
+            {"applicable": True, "anomalies": nm.anomaly_count}
+            if nm.applicable
+            else {"applicable": False, "note": nm.note}
+        ),
+        "review": (
+            {
+                "applicable": True,
+                "word_tokens": rv.word_tokens,
+                "needs_review": rv.needs_review,
+                "density": round(rv.density, 4),
+            }
+            if rv.applicable
+            else {"applicable": False, "note": rv.note}
+        ),
+    }
+    if deep and sg.applicable and sg.computed:
+        out["signs"] = {
+            "distinct": sg.distinct_signs,
+            "hapax": sg.hapax_count,
+            "out_of_inventory_occurrences": sg.out_of_inventory_occurrences,
+            "out_of_inventory_distinct": sg.out_of_inventory_distinct,
+        }
+    return json.dumps(out, ensure_ascii=False)
+
+
+def apparatus(corpus_id: str) -> str:
+    """The editorial-apparatus profile of a bundled corpus, in one uniform shape: the
+    four reading-status counts, how many documents carry any non-certain text, the
+    alternate-reading tally, and a legend of only the apparatus that actually occurs
+    (Leiden underdots/brackets, EpiDoc <unclear>/<supplied>/<gap>)."""
+    import aegean
+    from aegean.core.apparatus import apparatus_summary
+
+    corpus_id = corpus_id.strip().lower()
+    if corpus_id not in _BUNDLED_CORPORA:
+        return json.dumps(
+            {"error": f"bundled corpora only: {', '.join(_BUNDLED_CORPORA)}"}, ensure_ascii=False
+        )
+    summ = apparatus_summary(aegean.load(corpus_id))
+    return json.dumps(
+        {
+            "corpus": corpus_id,
+            "documents": summ.n_documents,
+            "tokens": summ.n_tokens,
+            "status_counts": summ.status_counts,
+            "non_certain": summ.non_certain,
+            "documents_with_apparatus": summ.documents_with_apparatus,
+            "alt_reading_tokens": summ.alt_reading_tokens,
+            "marker_notes": list(summ.marker_notes),
+        },
+        ensure_ascii=False,
+    )
+
+
+def linearb_dossiers(min_docs: str = "2") -> str:
+    """Group the bundled Linear B tablets into archival dossiers by shared find-site AND
+    series prefix (the standard Mycenological working unit, e.g. the Knossos Np tablets).
+    ``min_docs`` keeps only groupings that large. The bundled sample records scribal-hand
+    attributions for just a couple of tablets, so hand breakdowns are usually empty here;
+    the full corpus (aegean.load('damos')) fills them in."""
+    import aegean
+    from aegean.analysis.hands import dossiers
+
+    try:
+        md = max(1, int(str(min_docs)))
+    except (TypeError, ValueError):
+        md = 1
+    ds = dossiers(aegean.load("linearb"), min_docs=md)
+    return json.dumps(
+        {
+            "min_docs": md,
+            "total": len(ds),
+            "dossiers": [
+                {
+                    "site": d.site,
+                    "series": d.series,
+                    "documents": d.doc_count,
+                    "doc_ids": d.doc_ids,
+                    "hands": d.hands,
+                    "periods": d.periods,
+                }
+                for d in ds
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def seriate_site(site: str = "Zakros") -> str:
+    """Seriate one Linear A find-site's tablets by Brainerd-Robinson sign similarity: a
+    deterministic ordering that places compositionally similar tablets next to each other.
+    EXPLORATORY: a relative-sequence hypothesis, not a date, with no inherent direction; on
+    an undeciphered script the axis may track scribal drift as readily as time."""
+    import aegean
+    from aegean.analysis.seriation import seriate
+
+    la = aegean.load("lineara")
+    site = site.strip()
+    sub = la.filter(site=site)
+    if not sub.documents:
+        sites = sorted({d.meta.site for d in la.documents if d.meta.site})
+        return json.dumps(
+            {"error": f"no Linear A documents from site {site!r}", "sites": sites},
+            ensure_ascii=False,
+        )
+    try:
+        res = seriate(sub)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return json.dumps(
+        {
+            "site": site,
+            "documents": len(sub.documents),
+            "seriated": len(res.order),
+            "order": list(res.ordered_labels() or ()),
+            "note": (
+                "EXPLORATORY: a compositional-sequence hypothesis with no direction and no "
+                "calendar anchor; on undeciphered Linear A the axis may track scribal or "
+                "graphotactic drift, not time."
+            ),
+        },
+        ensure_ascii=False,
+    )
+
+
+def allographs(script: str = "linearb") -> str:
+    """The catalogued sign-variant groups a script's inventory records: numbered homophone
+    series (RA / RA₂ / RA₃) and Cypro-Minoan catalogue-suffix variants (CM012 / CM012B).
+    EXPLORATORY and deliberately narrow — this is the catalogue's NAMING, not palaeographic
+    allography (the same sign drawn differently by different hands), which the data does not
+    carry. Ligature/compound signs are listed separately, never folded into a group."""
+    from aegean.analysis.allographs import variant_groups
+
+    try:
+        rep = variant_groups(script.strip())
+    except KeyError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return json.dumps(
+        {
+            "script": rep.script_id,
+            "signs": rep.n_signs,
+            "groups": [
+                {"base": g.base, "members": list(g.members), "kind": g.kind}
+                for g in rep.groups
+            ],
+            "composites": list(rep.composite_signs),
+            "note": rep.notes,
+        },
+        ensure_ascii=False,
+    )

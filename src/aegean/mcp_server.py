@@ -7,11 +7,13 @@ use pyaegean without writing Python:
 * corpora: ``list_corpora``, ``corpus_info``, ``show_document``, ``search_signs``,
   ``balance_accounts``, ``query_corpus`` (the compound query engine), ``cite_corpus``
   (plain / BibTeX / APA, exact subsets included), ``geo_sites`` (find-site coordinates,
-  Pleiades ids, per-site word attestations), and ``data_status`` (the local data store);
-* Greek: ``greek_pipeline``, ``greek_scan``, ``greek_catalog`` (the ~1,800-work
-  discovery catalogue), ``greek_work`` (a work's text by catalogue id, summarized with
-  a capped preview), ``greek_gloss`` (the registry dictionaries), and ``koine_gloss``
-  (the bundled Dodson NT lexicon).
+  Pleiades ids, per-site word attestations), ``corpus_diagnose`` (a descriptive
+  corpus-health report), and ``data_status`` (the local data store);
+* Greek: ``greek_pipeline``, ``greek_explain`` (each token's lemma evidence class in
+  plain language), ``greek_scan``, ``greek_catalog`` (the ~1,800-work discovery
+  catalogue), ``greek_work`` (a work's text by catalogue id, summarized with a capped
+  preview), ``greek_gloss`` (the registry dictionaries), and ``koine_gloss`` (the
+  bundled Dodson NT lexicon).
 
 Two conventions hold across every tool. Corpora and works are addressed by **registry
 name or catalogue work id only**: no tool accepts a filesystem path, so the server
@@ -421,6 +423,118 @@ def greek_pipeline(text: str) -> list[dict[str, Any]]:
     return pipeline_rows(text)
 
 
+def greek_explain(text: str) -> list[dict[str, Any]]:
+    """Explain what the (baseline, offline) Greek pipeline did to each token.
+
+    One row per token, in pipeline order, carrying ``token``, ``upos``, ``lemma``,
+    ``lemma_source`` (the lemma's evidence class: attested / neural / rule / seed /
+    paradigm / identity / unresolved / punct), ``needs_review`` (``True`` marks a lemma
+    a human should verify: an ``identity`` fall-through or an ``unresolved`` miss),
+    ``morphology`` (the UD FEATS string when a neural backend filled one, else ``None``),
+    and ``note`` (a one-line, plain-language account of what that evidence class means).
+    The evidence CLASS is the whole trust claim: there are deliberately no confidence
+    numbers (the neural pipeline's calibrated confidence needs the trained model, which
+    this server does not load). Rendered from the same records ``greek_pipeline`` returns,
+    never a re-run, so the two tools cannot disagree."""
+    from .greek import explain_pipeline
+
+    return [
+        {
+            "token": e.token,
+            "upos": e.upos,
+            "lemma": e.lemma,
+            "lemma_source": e.lemma_source.value,
+            "needs_review": e.needs_review,
+            "morphology": e.morphology,
+            "note": e.note,
+        }
+        for e in explain_pipeline(text)
+    ]
+
+
+def corpus_diagnose(corpus: str, deep: bool = False) -> dict[str, Any]:
+    """A descriptive corpus-health report for a corpus, as structured JSON.
+
+    ``corpus`` is a name from ``list_corpora``. Reports, as OBSERVABLE facts: the
+    reading-status profile (certain / unclear / restored / lost, and how many documents
+    carry apparatus), provenance and citation, the accounting reconciliation for the
+    Aegean accounting scripts (a discrepancy is a *lead, not a verdict on the scribe* —
+    Aegean metrology is imperfectly understood), numeral-parse anomalies, and the
+    annotation-review state. ``deep`` adds a sign-frequency scan (hapax signs and labels
+    absent from the inventory) for the Aegean syllabic scripts. Every section that does
+    not apply to a corpus is marked ``applicable: false`` rather than raising.
+
+    Loading a fetch-on-demand corpus ('nt', 'damos', 'sigla', 'isicily', 'iip', 'iospe',
+    'igcyr', 'edh', 'ddbdp') downloads it on first use; a cold-cache offline failure
+    returns the structured error. 'ddbdp' is heavy (57k papyri materialise), and ``deep``
+    over a large corpus is expensive; check ``data_status`` first."""
+    from .core.diagnose import ACCOUNTING_CAVEAT
+
+    c, err = _load_corpus(corpus)
+    if err is not None:
+        return err
+    rep = c.diagnose("full" if deep else "quick")
+    s, a, nm, rv, sg, p = (
+        rep.reading_status, rep.accounting, rep.numerals, rep.review, rep.signs, rep.provenance,
+    )
+    out: dict[str, Any] = {
+        "corpus": corpus,
+        "script_id": rep.script_id,
+        "documents": rep.n_documents,
+        "tokens": rep.n_tokens,
+        "level": rep.level,
+        "reading_status": {
+            "certain": s.certain,
+            "unclear": s.unclear,
+            "restored": s.restored,
+            "lost": s.lost,
+            "documents_with_apparatus": s.documents_with_apparatus,
+            "alt_reading_tokens": s.alt_reading_tokens,
+        },
+        "provenance": {
+            "can_cite": p.can_cite,
+            "edition_fidelity": p.edition_fidelity,
+            "citation": p.citation,
+        },
+        "accounting": (
+            {
+                "applicable": True,
+                "documents_with_total": a.documents_with_total,
+                "balanced": a.balanced,
+                "discrepant": a.discrepant,
+                "intact_and_balancing": a.intact_and_balancing,
+                "discrepant_ids": list(a.discrepant_ids),
+                "caveat": ACCOUNTING_CAVEAT,
+            }
+            if a.applicable
+            else {"applicable": False, "note": a.note}
+        ),
+        "numerals": (
+            {"applicable": True, "anomalies": nm.anomaly_count}
+            if nm.applicable
+            else {"applicable": False, "note": nm.note}
+        ),
+        "review": (
+            {
+                "applicable": True,
+                "word_tokens": rv.word_tokens,
+                "needs_review": rv.needs_review,
+                "density": rv.density,
+            }
+            if rv.applicable
+            else {"applicable": False, "note": rv.note}
+        ),
+    }
+    if sg.applicable and sg.computed:
+        out["signs"] = {
+            "distinct": sg.distinct_signs,
+            "hapax": sg.hapax_count,
+            "out_of_inventory_occurrences": sg.out_of_inventory_occurrences,
+            "out_of_inventory_distinct": sg.out_of_inventory_distinct,
+        }
+    return out
+
+
 def greek_scan(text: str, meter: str = "hexameter") -> dict[str, Any]:
     """Scan a Greek verse line. ``meter`` is 'hexameter' / 'pentameter' / 'trimeter' or an
     aeolic line type ('sapphic_hendecasyllable', 'glyconic', …). Reports the glyph pattern,
@@ -591,11 +705,13 @@ TOOLS = (
     geo_sites,
     data_status,
     greek_pipeline,
+    greek_explain,
     greek_scan,
     greek_catalog,
     greek_work,
     greek_gloss,
     koine_gloss,
+    corpus_diagnose,
 )
 
 

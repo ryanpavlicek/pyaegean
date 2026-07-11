@@ -1276,7 +1276,9 @@ def evaluate(
     drift: bool = typer.Option(
         False, "--drift",
         help="For ud/proiel/nt: an error analysis (POS confusion matrix, per-POS accuracy, "
-             "lemma confusions) instead of the aggregate score.",
+             "lemma confusions) instead of the aggregate score. For papygreek: the "
+             "UPOS/XPOS convention decomposition (coordinator / common-gender / '_'-encoding "
+             "vs real error).",
     ),
     by_genre: bool = typer.Option(
         False, "--by-genre",
@@ -1400,10 +1402,13 @@ def evaluate(
         else:
             result = greek.evaluate_on_nt(progress=live_progress)
     elif target == "papygreek":
-        if drift:
-            raise fail("--drift is not available for papygreek (dependency eval; "
-                       "use ud/proiel/nt for an error analysis)")
         _activate(neural=True)  # the documentary-Koine fold reports the shipped neural model
+        if drift:
+            # the convention decomposition: the measured split of the UPOS/XPOS gaps into
+            # coordinator / common-gender / '_'-encoding convention vs residual real error.
+            # One canonical SEQUENTIAL run (batch-32 is not prediction-identical on this fold).
+            emit_drift(greek.papygreek_convention_report(progress=live_progress))
+            return
         if batch_size is not None:
             result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
         else:

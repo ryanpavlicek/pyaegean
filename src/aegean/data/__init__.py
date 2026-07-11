@@ -58,13 +58,14 @@ def load_bundled_json(*parts: str) -> Any:
 _MAX_GZIP_JSON_BYTES = 512 * 1024 * 1024
 
 
-def load_gzip_json(path: str | pathlib.Path, *, max_bytes: int = _MAX_GZIP_JSON_BYTES) -> Any:
-    """gzip-decompress and parse a fetched ``.json.gz`` index, capping the decompressed size.
+def _read_gzip_capped(path: str | pathlib.Path, max_bytes: int) -> bytes:
+    """gzip-decompress ``path`` to bytes, refusing a stream that inflates past ``max_bytes``.
 
-    A prebuilt index is sha256-pinned when fetched from the project release, but a
-    ``PYAEGEAN_<NAME>_URL`` override disables that check, so a swapped mirror could serve a
-    tiny gzip that inflates to gigabytes and exhausts memory. Decompress in chunks and stop
-    with a clear error past ``max_bytes`` instead of loading the whole stream blindly."""
+    The capped-chunk read shared by `load_gzip_json` and `fetch_text`. A fetched asset is
+    sha256-pinned, but a ``PYAEGEAN_<NAME>_URL`` mirror override disables that check, so a
+    swapped mirror could serve a tiny gzip that inflates to gigabytes and exhausts memory.
+    Read in chunks and stop with a clear error past ``max_bytes`` instead of loading the
+    whole stream blindly."""
     import gzip
 
     buf = bytearray()
@@ -79,7 +80,17 @@ def load_gzip_json(path: str | pathlib.Path, *, max_bytes: int = _MAX_GZIP_JSON_
                     f"{path} decompresses to more than {max_bytes} bytes; refusing to load it "
                     "(a possible decompression bomb from an unverified mirror)"
                 )
-    return json.loads(bytes(buf))
+    return bytes(buf)
+
+
+def load_gzip_json(path: str | pathlib.Path, *, max_bytes: int = _MAX_GZIP_JSON_BYTES) -> Any:
+    """gzip-decompress and parse a fetched ``.json.gz`` index, capping the decompressed size.
+
+    A prebuilt index is sha256-pinned when fetched from the project release, but a
+    ``PYAEGEAN_<NAME>_URL`` override disables that check, so a swapped mirror could serve a
+    tiny gzip that inflates to gigabytes and exhausts memory. Decompress in chunks and stop
+    with a clear error past ``max_bytes`` instead of loading the whole stream blindly."""
+    return json.loads(_read_gzip_capped(path, max_bytes))
 
 
 def cache_dir() -> pathlib.Path:
@@ -225,6 +236,32 @@ _REMOTE: dict[str, DataSpec] = {
         note="documentary-Koine dependency eval fold (1,696 sentences / 24,105 tokens) converted "
              "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, leakage-clean vs grc-joint training. "
              "Evaluation only.",
+        extract=False,
+    ),
+    "papygreek-dev-tagging": DataSpec(
+        name="papygreek-dev-tagging",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "papygreek-dev-v1/papygreek-dev-tagging.conllu.gz"
+        ),
+        sha256="f562021d4e57351b7f669a24148bf3c628fe024902a7614f331242ff4e05d7f7",
+        license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
+        note="documentary-Koine DEV tagging track (327 sentences / 6,389 tokens); "
+             "document-disjoint from the papygreek-fold test set; UPOS/XPOS/UFeats/lemma. "
+             "Experiment data only, never a published number.",
+        extract=False,
+    ),
+    "papygreek-dev-parse": DataSpec(
+        name="papygreek-dev-parse",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "papygreek-dev-v1/papygreek-dev-parse.conllu.gz"
+        ),
+        sha256="8044f3bc414d157fad556b4ea42876f2f62613d6adefaa5c15a22630569b025b",
+        license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
+        note="documentary-Koine DEV parse track (126 sentences / 1,285 tokens, directional "
+             "only); document-disjoint from the papygreek-fold test set; UAS/LAS. "
+             "Experiment data only, never a published number.",
         extract=False,
     ),
     "autenrieth-index": DataSpec(
@@ -1567,6 +1604,98 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
         else:
             shutil.copyfile(src, dest)
     return True
+
+
+def _looks_gzip(path: pathlib.Path) -> bool:
+    """Whether ``path`` begins with the gzip magic number (``1f 8b``).
+
+    Content-sniffed rather than name-sniffed, so a gzipped source is decompressed and a
+    plain one is copied through regardless of how the asset is named."""
+    try:
+        with open(path, "rb") as f:
+            return f.read(2) == b"\x1f\x8b"
+    except OSError:
+        return False
+
+
+def fetch_text(
+    name: str,
+    dest: str | pathlib.Path,
+    *,
+    max_bytes: int = _MAX_GZIP_JSON_BYTES,
+    download: bool = True,
+    expect_gzip: bool | None = None,
+) -> pathlib.Path:
+    """Fetch dataset ``name`` and materialize it at ``dest``, gunzipping and stamping it.
+
+    The shared fetch-then-materialize helper. It fetches the registered dataset ``name``
+    (sha256-pinned, via `fetch`), gunzip-decompresses it under a ``max_bytes`` cap, and
+    writes the result to ``dest``. ``expect_gzip`` declares the caller's knowledge of the
+    asset: ``True`` means the asset is always a gzip archive, so a source failing the
+    ``1f 8b`` magic-byte check is a corrupt or swapped archive and raises rather than
+    materializing garbage; ``False`` copies through without decompressing; the default
+    ``None`` sniffs the content, decompressing gzip and copying plain sources through,
+    but still refuses a non-gzip source whose own name says ``.gz`` (the same
+    corrupt-archive reasoning). The ``max_bytes`` cap guards a decompression-bomb (or
+    otherwise oversized) payload served through a ``PYAEGEAN_<NAME>_URL`` mirror override
+    that disables the pinned-sha check, exactly as `load_gzip_json` documents.
+
+    Contract:
+
+    * **Atomic write.** ``dest`` is written to a temp sibling then swapped into place, so an
+      interrupted write never leaves a partial file to be served, and a failed write leaves
+      any prior ``dest`` intact.
+    * **Re-pin means re-extract.** A ``<dest>.sha256`` sidecar records the sha256 of the
+      fetched source. On a later call ``dest`` is reused only when that sidecar matches the
+      current source, so a re-pinned asset (new content at the same name) re-materializes. A
+      missing or unreadable stamp also re-materializes: unlike `fetch`'s heavy-archive
+      extract path, there is no legacy-trust carve-out here, because these are small files,
+      so a fresh decompress is cheap and correctness wins.
+
+    ``download=False`` returns ``dest`` without fetching, for referencing the cached path
+    offline. Returns ``dest``. Raises `DataNotAvailableError` for an unknown or un-pinned
+    dataset, a network or checksum failure (from `fetch`), or a source that exceeds
+    ``max_bytes``."""
+    from .._atomic import atomic_path
+
+    dest = pathlib.Path(dest)
+    stamp = dest.with_name(dest.name + ".sha256")
+    if not download:
+        return dest
+    src = fetch(name)
+    src_sha = sha256_file(src)
+    if dest.exists() and stamp.exists():
+        try:
+            if stamp.read_text(encoding="ascii").strip() == src_sha:
+                return dest  # unchanged source: the cached materialization is current
+        except (OSError, UnicodeDecodeError):
+            pass  # unreadable stamp: fall through and re-materialize
+    is_gzip = _looks_gzip(src)
+    if is_gzip and expect_gzip is not False:
+        payload = _read_gzip_capped(src, max_bytes)
+    elif expect_gzip is True or (expect_gzip is None and src.name.endswith(".gz") and not is_gzip):
+        # The caller (or the name) promises gzip but the content is not: a corrupt
+        # download or a swapped mirror body. Refuse rather than materialize garbage.
+        raise DataNotAvailableError(
+            f"{src} is not gzip data but the {name!r} asset must be; refusing to "
+            "materialize it (a corrupt or swapped archive)"
+        )
+    else:
+        # A plain source is copied through; check the on-disk size first (cheap) so an
+        # oversized mirror payload is refused before it is read into memory.
+        if src.stat().st_size > max_bytes:
+            raise DataNotAvailableError(
+                f"{src} is larger than {max_bytes} bytes; refusing to materialize it "
+                "(a possible oversized payload from an unverified mirror)"
+            )
+        payload = src.read_bytes()
+    with atomic_path(dest) as tmp:
+        tmp.write_bytes(payload)
+    # The stamp is written AFTER dest: an interruption between the two leaves a missing
+    # stamp, which re-materializes on the next call rather than serving an unverified copy.
+    with atomic_path(stamp) as tmp:
+        tmp.write_text(src_sha, encoding="ascii")
+    return dest
 
 
 def _extract_stamp(name: str) -> pathlib.Path:

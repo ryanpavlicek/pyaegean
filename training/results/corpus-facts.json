@@ -1,0 +1,438 @@
+{
+  "_comment": "Canonical registry of measured corpus FACTS (document, token, word counts and the Aegean sign-inventory headline facts). tests/test_corpus_facts.py pins the doc surface to these values: the five bundled corpora are re-measured live and every echo in 'echoes' is checked against its fact, so a rebuild that changes a count and a doc that states it can only move together. scripts/check_corpus_facts.py (network) re-measures every corpus (including the nine fetched ones) against this file. To change a count: rebuild, re-measure, update this file AND the echo sites in the same commit. Each echo is [fact, file, pattern] where pattern has exactly one capture group whose digits (commas stripped) must equal the fact; add an echo site by appending one entry.",
+  "corpora": {
+    "lineara": {
+      "documents": 1721,
+      "tokens": 6406,
+      "words": 1381,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "linearb": {
+      "documents": 18,
+      "tokens": 92,
+      "words": 61,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "cypriot": {
+      "documents": 180,
+      "tokens": 628,
+      "words": 448,
+      "ig_xv1_inscriptions": 178,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "cyprominoan": {
+      "documents": 2,
+      "tokens": 4,
+      "words": 4,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "greek": {
+      "documents": 5,
+      "tokens": 27,
+      "words": 27,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "nt": {
+      "documents": 260,
+      "tokens": 137779,
+      "words": 137779,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "damos": {
+      "documents": 5932,
+      "tokens": 54476,
+      "words": 14491,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "sigla": {
+      "documents": 781,
+      "tokens": 2578,
+      "words": 1868,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "isicily": {
+      "documents": 2855,
+      "tokens": 28913,
+      "words": 28913,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "iip": {
+      "documents": 2113,
+      "tokens": 14007,
+      "words": 14007,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "iospe": {
+      "documents": 1194,
+      "tokens": 15220,
+      "words": 15220,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "igcyr": {
+      "documents": 997,
+      "tokens": 12963,
+      "words": 12963,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "edh": {
+      "documents": 1286,
+      "tokens": 26937,
+      "words": 26937,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    },
+    "ddbdp": {
+      "documents": 57331,
+      "tokens": 4373912,
+      "words": 4373912,
+      "measured_from": "cached-asset",
+      "measured": "2026-07-11"
+    }
+  },
+  "sign_inventories": {
+    "lineara": {
+      "signs": 342,
+      "with_sound_values": 50,
+      "read": 97,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "linearb": {
+      "signs": 211,
+      "with_sound_values": 74,
+      "read": 211,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "cypriot": {
+      "signs": 55,
+      "with_sound_values": 55,
+      "read": 55,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "cyprominoan": {
+      "signs": 99,
+      "with_sound_values": 0,
+      "read": 99,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    },
+    "greek": {
+      "signs": 25,
+      "with_sound_values": 25,
+      "read": 25,
+      "measured_from": "bundled",
+      "measured": "2026-07-11"
+    }
+  },
+  "echoes": [
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "README.md",
+      "pattern": "bundled (\\d[\\d,]*)-inscription corpus"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "README.md",
+      "pattern": "(\\d[\\d,]*)-inscription\\*\\* Linear A corpus"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "wiki/Home.md",
+      "pattern": "Bundled (\\d[\\d,]*)-inscription corpus, the full Unicode Linear A"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "wiki/Linear-A.md",
+      "pattern": "Inscriptions \\(documents\\) \\| \\*\\*(\\d[\\d,]*)\\*\\*"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "wiki/FAQ.md",
+      "pattern": "full Linear A corpus \\((\\d[\\d,]*) documents\\)"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "wiki/Glossary.md",
+      "pattern": "# documents: (\\d[\\d,]*) ·"
+    },
+    {
+      "fact": "corpora.lineara.documents",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "lineara\\s+(\\d[\\d,]*) bundled documents"
+    },
+    {
+      "fact": "corpora.lineara.tokens",
+      "file": "wiki/Linear-A.md",
+      "pattern": "Tokens \\(words, numerals, logograms, separators\\) \\| \\*\\*(\\d[\\d,]*)\\*\\*"
+    },
+    {
+      "fact": "corpora.lineara.words",
+      "file": "wiki/Glossary.md",
+      "pattern": "· words: (\\d[\\d,]*) ·"
+    },
+    {
+      "fact": "corpora.linearb.documents",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "linearb\\s+(\\d[\\d,]*) bundled documents"
+    },
+    {
+      "fact": "corpora.cypriot.documents",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "cypriot\\s+(\\d[\\d,]*) bundled documents"
+    },
+    {
+      "fact": "corpora.cypriot.documents",
+      "file": "wiki/Cypriot.md",
+      "pattern": "len\\(c\\)\\s*# (\\d[\\d,]*) \\("
+    },
+    {
+      "fact": "corpora.cypriot.documents",
+      "file": "wiki/Recipes.md",
+      "pattern": "`cypriot` \\| (\\d[\\d,]*) documents"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "README.md",
+      "pattern": "bundles a \\*\\*(\\d[\\d,]*)-inscription corpus\\*\\*"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Home.md",
+      "pattern": "bundled \\*\\*(\\d[\\d,]*)-inscription corpus\\*\\*"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Cypriot.md",
+      "pattern": "\\*\\*(\\d[\\d,]*) inscriptions\\*\\* ships"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Cypriot.md",
+      "pattern": "\\((\\d[\\d,]*) IG XV 1"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Cypriot.md",
+      "pattern": "The (\\d[\\d,]*)-inscription \\*Inscriptiones"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Glossary.md",
+      "pattern": "(\\d[\\d,]*)-inscription IG XV 1 corpus"
+    },
+    {
+      "fact": "corpora.cypriot.ig_xv1_inscriptions",
+      "file": "wiki/Data-and-Provenance.md",
+      "pattern": "(\\d[\\d,]*)-inscription IG XV 1 corpus"
+    },
+    {
+      "fact": "corpora.cyprominoan.documents",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "cyprominoan\\s+(\\d[\\d,]*) bundled documents"
+    },
+    {
+      "fact": "corpora.nt.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) chapters"
+    },
+    {
+      "fact": "corpora.damos.documents",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "(\\d[\\d,]*) tablets ·"
+    },
+    {
+      "fact": "corpora.damos.documents",
+      "file": "wiki/Linear-B.md",
+      "pattern": "of (\\d[\\d,]*) documents"
+    },
+    {
+      "fact": "corpora.damos.documents",
+      "file": "wiki/Linear-B.md",
+      "pattern": "len\\(corpus\\.documents\\)\\s*# (\\d[\\d,]*) —"
+    },
+    {
+      "fact": "corpora.sigla.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) documents with SigLA"
+    },
+    {
+      "fact": "corpora.sigla.documents",
+      "file": "wiki/Data-and-Provenance.md",
+      "pattern": "\\*\\*(\\d[\\d,]*) documents\\*\\* with SigLA"
+    },
+    {
+      "fact": "corpora.isicily.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) primary-Greek texts from ancient Sicily"
+    },
+    {
+      "fact": "corpora.isicily.documents",
+      "file": "README.md",
+      "pattern": "I\\.Sicily\\*\\* \\((\\d[\\d,]*) Greek inscriptions"
+    },
+    {
+      "fact": "corpora.isicily.documents",
+      "file": "notebooks/walkthrough-epigraphist.ipynb",
+      "pattern": "(\\d[\\d,]*) Greek inscriptions of Sicily"
+    },
+    {
+      "fact": "corpora.iip.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) primary-Greek texts from Israel"
+    },
+    {
+      "fact": "corpora.iip.documents",
+      "file": "README.md",
+      "pattern": "IIP\\*\\* \\((\\d[\\d,]*),"
+    },
+    {
+      "fact": "corpora.iospe.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) Greek texts of the Northern Black Sea"
+    },
+    {
+      "fact": "corpora.iospe.documents",
+      "file": "README.md",
+      "pattern": "IOSPE\\*\\* \\((\\d[\\d,]*),"
+    },
+    {
+      "fact": "corpora.igcyr.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) texts \\(Doric"
+    },
+    {
+      "fact": "corpora.igcyr.documents",
+      "file": "README.md",
+      "pattern": "IGCyr/GVCyr\\*\\* \\((\\d[\\d,]*),"
+    },
+    {
+      "fact": "corpora.edh.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) pure-Greek texts"
+    },
+    {
+      "fact": "corpora.edh.documents",
+      "file": "README.md",
+      "pattern": "EDH\\*\\* Greek subset \\((\\d[\\d,]*),"
+    },
+    {
+      "fact": "corpora.ddbdp.documents",
+      "file": "src/aegean/data/__init__.py",
+      "pattern": "(\\d[\\d,]*) texts / ~4\\.4M tokens"
+    },
+    {
+      "fact": "corpora.ddbdp.documents",
+      "file": "README.md",
+      "pattern": "(\\d[\\d,]*) texts / ~4\\.4M tokens"
+    },
+    {
+      "fact": "corpora.ddbdp.documents",
+      "file": "wiki/Data-and-Provenance.md",
+      "pattern": "(\\d[\\d,]*) Greek documentary papyri / ~4\\.4M tokens"
+    },
+    {
+      "fact": "corpora.ddbdp.documents",
+      "file": "wiki/FAQ.md",
+      "pattern": "\\((\\d[\\d,]*) texts as a SQLite"
+    },
+    {
+      "fact": "sign_inventories.lineara.signs",
+      "file": "wiki/Home.md",
+      "pattern": "\\((\\d[\\d,]*) signs;"
+    },
+    {
+      "fact": "sign_inventories.lineara.signs",
+      "file": "wiki/Linear-A.md",
+      "pattern": "Signs in the inventory \\| \\*\\*(\\d[\\d,]*)\\*\\*"
+    },
+    {
+      "fact": "sign_inventories.lineara.signs",
+      "file": "wiki/Limitations.md",
+      "pattern": "Linear A \\| `lineara` \\| (\\d[\\d,]*) \\|"
+    },
+    {
+      "fact": "sign_inventories.lineara.signs",
+      "file": "wiki/Glossary.md",
+      "pattern": "· signs_in_inventory: (\\d[\\d,]*)"
+    },
+    {
+      "fact": "sign_inventories.lineara.signs",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "lineara\\s+(\\d[\\d,]*) signs ·"
+    },
+    {
+      "fact": "sign_inventories.lineara.with_sound_values",
+      "file": "wiki/Home.md",
+      "pattern": "signs; (\\d[\\d,]*) carry conventional"
+    },
+    {
+      "fact": "sign_inventories.lineara.with_sound_values",
+      "file": "wiki/Linear-A.md",
+      "pattern": "Signs with an assigned sound value \\| \\*\\*(\\d[\\d,]*)\\*\\*"
+    },
+    {
+      "fact": "sign_inventories.lineara.with_sound_values",
+      "file": "wiki/Limitations.md",
+      "pattern": "\\| (\\d[\\d,]*) \\(working convention\\)"
+    },
+    {
+      "fact": "sign_inventories.lineara.with_sound_values",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "lineara\\s+\\d[\\d,]* signs ·\\s+(\\d[\\d,]*) with a sound value"
+    },
+    {
+      "fact": "sign_inventories.lineara.read",
+      "file": "wiki/Linear-A.md",
+      "pattern": "Of those,\\s*\\*\\*(\\d[\\d,]*)\\*\\* appear in the corpus-aligned"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.signs",
+      "file": "wiki/Cypro-Minoan.md",
+      "pattern": "\\*\\*(\\d[\\d,]*) signs\\*\\*"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.signs",
+      "file": "wiki/Cypro-Minoan.md",
+      "pattern": "✅ (\\d[\\d,]*) signs"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.signs",
+      "file": "wiki/Limitations.md",
+      "pattern": "Cypro-Minoan \\| `cyprominoan` \\| (\\d[\\d,]*) \\|"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.signs",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "cyprominoan\\s+(\\d[\\d,]*) signs ·"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.with_sound_values",
+      "file": "wiki/Limitations.md",
+      "pattern": "`cyprominoan` \\| \\d[\\d,]* \\| (\\d[\\d,]*) \\|"
+    },
+    {
+      "fact": "sign_inventories.cyprominoan.with_sound_values",
+      "file": "notebooks/walkthrough-aegean.ipynb",
+      "pattern": "cyprominoan\\s+\\d[\\d,]* signs ·\\s+(\\d[\\d,]*) with a sound value"
+    },
+    {
+      "fact": "sign_inventories.cypriot.signs",
+      "file": "wiki/Cypriot.md",
+      "pattern": "All (\\d[\\d,]*) signs"
+    }
+  ]
+}

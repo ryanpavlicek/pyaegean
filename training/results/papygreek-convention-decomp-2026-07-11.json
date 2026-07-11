@@ -1,0 +1,130 @@
+{
+ "purpose": "PapyGreek UPOS/XPOS convention decomposition (measurement only; mirrors the PROIEL convention decomposition). Reproduces the pinned neural_papygreek_test UPOS/XPOS from the model's own outputs, then partitions each gap into annotation/encoding convention vs residual real error. Changes NO published number; nothing fitted to the fold.",
+ "fold": "papygreek-fold-v2 (sha 75304be2…); 1696 sentences / 24105 tokens",
+ "model": "grc-joint neural pipeline (the model behind the published PapyGreek row)",
+ "protocol": "ONE canonical SEQUENTIAL run (batch_size=None), gold tokenization, official conll18_ud_eval; the same standing as the PROIEL decomposition. Batch-32 is not prediction-identical on this fold, so sequential is required to reproduce the pinned row.",
+ "reproduce_check": {
+  "official_evaluator": {
+   "upos": 91.0475,
+   "xpos": 76.76,
+   "ufeats": 88.575,
+   "lemma": 86.1315,
+   "uas": 85.7084,
+   "las": 79.8921,
+   "clas": 75.9407
+  },
+  "decomposition_reproduces": {
+   "upos": 91.0475,
+   "xpos": 76.76
+  },
+  "matches_pinned_v2_evidence_exactly": true,
+  "note": "all 7 metrics identical to training/results/papygreek-eval-v2-2026-07-11.json"
+ },
+ "upos_decomposition": {
+  "upos_pct": 91.0475,
+  "gap_pct": 8.9525,
+  "total_upos_errors": 2158,
+  "coordinator_class_errors_gold_CCONJ": 1236,
+  "coordinator_share_of_upos_errors_pct": 57.3,
+  "coordinator_gap_pts": 5.13,
+  "other_gap_pts": 3.82,
+  "top_confusions": [
+   [
+    "CCONJ",
+    "X",
+    784
+   ],
+   [
+    "CCONJ",
+    "ADV",
+    441
+   ],
+   [
+    "NOUN",
+    "ADJ",
+    115
+   ],
+   [
+    "PRON",
+    "DET",
+    99
+   ],
+   [
+    "ADV",
+    "X",
+    86
+   ],
+   [
+    "ADV",
+    "ADJ",
+    74
+   ],
+   [
+    "ADJ",
+    "NOUN",
+    63
+   ],
+   [
+    "PRON",
+    "ADJ",
+    50
+   ],
+   [
+    "ADV",
+    "SCONJ",
+    36
+   ],
+   [
+    "NOUN",
+    "X",
+    32
+   ],
+   [
+    "ADV",
+    "CCONJ",
+    28
+   ],
+   [
+    "ADJ",
+    "PRON",
+    26
+   ]
+  ],
+  "finding": "the coordinator class (gold CCONJ — καί/δέ/τε…) carries 57% of all UPOS errors; the merged training labels tag these words under three conventions (c/CCONJ vs the non-AGDT b/X pos-code vs d/ADV) and the model drifts to the b/X and d readings."
+ },
+ "xpos_decomposition": {
+  "xpos_pct": 76.76,
+  "gap_pct": 23.24,
+  "total_xpos_errors": 5602,
+  "buckets_tokens": {
+   "coordinator_poscode": 1233,
+   "common_gender": 1424,
+   "underscore_encoding": 626,
+   "residual_real": 2319
+  },
+  "buckets_pts": {
+   "coordinator_poscode": 5.12,
+   "common_gender": 5.91,
+   "underscore_encoding": 2.6,
+   "residual_real": 9.62
+  },
+  "convention_encoding_subtotal_pts": 13.62,
+  "real_error_pts": 9.62,
+  "xpos_forgiving_convention_pct": 90.38,
+  "gold_tokens_with_underscore_slot": 1092,
+  "additive_check": "coordinator + common_gender + underscore + residual == total_xpos_errors; the four pts sum to the XPOS gap (verified in code + tests)",
+  "finding": "of the 23.24-pt XPOS gap, 13.6 pts is convention/encoding (5.1 coordinator pos-code + 5.9 common-gender 'c' over-prediction + 2.6 the fold's un-normalized '_' slots) and only ~9.6 pts is real morphology error; forgiving the three, XPOS is 90.4%. 1092 gold tokens carry a literal '_' slot (fold-v2 did NOT normalize '_'→'-')."
+ },
+ "suggested_registry_block": {
+  "key": "papygreek_convention_decomposition (measurement-only, like proiel_convention_decomposition)",
+  "reproduces": {
+   "upos": 91.05,
+   "xpos": 76.76
+  },
+  "upos_coordinator_share": 0.573,
+  "xpos_convention_pts": 13.63,
+  "xpos_real_pts": 9.61,
+  "xpos_forgiving_convention": 90.4
+ },
+ "summary": "PapyGreek convention decomposition over 24105 words\n  UPOS 91.0% (gap 9.0%): coordinator class (gold CCONJ) 5.1% = 57% of all UPOS errors (1236 tokens) + 3.8% other\n    top UPOS confusions (gold → predicted):\n      CCONJ → X: 784 (36% of UPOS errors)\n      CCONJ → ADV: 441 (20% of UPOS errors)\n      NOUN → ADJ: 115 (5% of UPOS errors)\n      PRON → DET: 99 (5% of UPOS errors)\n      ADV → X: 86 (4% of UPOS errors)\n      ADV → ADJ: 74 (3% of UPOS errors)\n      ADJ → NOUN: 63 (3% of UPOS errors)\n      PRON → ADJ: 50 (2% of UPOS errors)\n      ADV → SCONJ: 36 (2% of UPOS errors)\n      NOUN → X: 32 (1% of UPOS errors)\n  XPOS 76.8% (gap 23.2%): 5.1% coordinator pos-code + 5.9% common-gender + 2.6% '_'-encoding = 13.6% convention/encoding, + 9.6% real morphology error\n    forgiving those three, XPOS would be 90.4% (1092 gold words carry a literal '_' slot)"
+}

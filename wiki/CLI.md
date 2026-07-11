@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.39.0
+aegean --version          # pyaegean 0.40.0
 ```
 
 | Group | What's in it |
@@ -1199,7 +1199,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.39.0                    │
+│ OK │ pyaegean │ 0.40.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -2214,8 +2214,9 @@ coordinates and per-site word attestations), and `data_status` (the local data
 store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
 `greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
 work's text by catalogue id; the first use fetches it into the local data store,
-cached and offline after), `greek_gloss` (the registry dictionaries), and
-`koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
+evidence class in plain language), `corpus_diagnose` (the corpus health report),
+and `koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
 by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 

@@ -403,6 +403,30 @@ below. One measurement note: on this fold, batched inference is *not*
 prediction-identical to sequential (a handful of float-order flips), so the
 published numbers are CPU-sequential and batching stays off this row's protocol.
 
+### PapyGreek convention decomposition
+
+The PapyGreek row's two weakest cells are largely convention, not model quality,
+and `greek.papygreek_convention_report()` (CLI: `aegean greek eval papygreek
+--drift`) measures it the same way the PROIEL decomposition does: it reproduces
+UPOS/XPOS from the model's own outputs (equal to the official evaluator exactly)
+and partitions each gap. Measurement only; the published row is unchanged.
+(24,105 words, neural pipeline, CPU sequential; evidence:
+`training/results/papygreek-convention-decomp-2026-07-11.json`.)
+
+**UPOS.** Of the 8.95-point gap, 5.13 points (57.3% of all UPOS errors) sit on one
+closed class: the coordinators (gold `CCONJ` — καί, δέ, τε …). The merged training
+treebanks tag these words under three incompatible conventions (the AGDT
+conjunction code, an adverb reading, and a non-AGDT code that maps to `X`), so the
+model's label for them is unstable and drifts in the documentary register.
+
+**XPOS.** Of the 23.24-point gap, 13.62 points are convention or encoding: the
+same coordinator pos-code (5.12), the model's common-gender `c` where the fold's
+gold commits to a specific gender (5.91), and gold tags carrying a literal `_`
+slot where the model writes `-` (2.60). Forgiving those three, XPOS would read
+90.38%; the residual 9.62 points are genuine morphology error, dominated by real
+gender confusion. The 9-position tag is convention-capped on this fold, not
+broken.
+
 ### PROIEL convention decomposition
 
 The out-of-domain UD-PROIEL row above (UFeats 59.43, UAS 82.48, LAS 63.50) is held

@@ -148,6 +148,15 @@ syntax. Full accounting: `training/results/papygreek-fold-manifest.json`.
 Scheme-matched out-of-domain parsing runs ~16 LAS points above the
 convention-capped PROIEL row. Reproduce: `aegean greek eval papygreek`.
 
+The row's two weakest cells are largely convention, not model quality, and
+`aegean greek eval papygreek --drift` measures it: 5.13 of the 8.95 UPOS gap
+points (57.3% of all UPOS errors) sit on the coordinator class alone (καί, δέ,
+τε — tagged under three incompatible conventions in the merged training
+treebanks), and 13.62 of the 23.24 XPOS gap points are convention or encoding
+(the coordinator pos-code, the model's common-gender `c`, and a gold `_`-slot
+artifact); forgiving those three, XPOS would read 90.38%. A measurement
+decomposition only, mirroring the PROIEL one; the published row is unchanged.
+
 ## Pure-Python offline baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

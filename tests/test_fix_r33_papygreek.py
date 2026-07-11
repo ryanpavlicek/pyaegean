@@ -18,6 +18,7 @@ from pathlib import Path
 import pytest
 
 from aegean.data import DataNotAvailableError
+from aegean import data
 from aegean.greek import papygreek
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
@@ -100,17 +101,17 @@ def _write_gz(path: Path, text: str) -> None:
         f.write(text.encode("utf-8"))
 
 
-def test_decompress_fold_returns_full_text(tmp_path: Path) -> None:
-    gz = tmp_path / "fold.gz"
-    _write_gz(gz, _SAMPLE)
-    assert papygreek._decompress_fold(gz) == _SAMPLE
-
-
-def test_decompress_fold_caps_oversized_stream(tmp_path: Path) -> None:
+def test_papygreek_path_caps_oversized_stream(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # the decompression cap survives the move onto the shared data.fetch_text helper
     gz = tmp_path / "big.gz"
     _write_gz(gz, "x" * 5000)
+    monkeypatch.setattr(papygreek, "cache_dir", lambda: tmp_path / "cache")
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: gz)
+    monkeypatch.setattr(papygreek, "_MAX_FOLD_BYTES", 100)
     with pytest.raises(DataNotAvailableError):
-        papygreek._decompress_fold(gz, max_bytes=100)
+        papygreek.papygreek_path()
 
 
 def test_papygreek_path_writes_full_fold_and_leaves_no_temp(
@@ -120,7 +121,7 @@ def test_papygreek_path_writes_full_fold_and_leaves_no_temp(
     _write_gz(gz, _SAMPLE)
     cache = tmp_path / "cache"
     monkeypatch.setattr(papygreek, "cache_dir", lambda: cache)
-    monkeypatch.setattr(papygreek, "fetch", lambda name, **kw: gz)
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: gz)
 
     dest = papygreek.papygreek_path()
     assert dest.read_text(encoding="utf-8") == _SAMPLE
@@ -140,7 +141,7 @@ def test_papygreek_path_repinned_asset_refreshes_stale_decompress(
     _write_gz(gz, _SAMPLE)
     cache = tmp_path / "cache"
     monkeypatch.setattr(papygreek, "cache_dir", lambda: cache)
-    monkeypatch.setattr(papygreek, "fetch", lambda name, **kw: gz)
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: gz)
 
     dest = papygreek.papygreek_path()
     assert dest.read_text(encoding="utf-8") == _SAMPLE
@@ -165,7 +166,7 @@ def test_papygreek_path_interrupted_write_leaves_no_partial_then_recovers(
     _write_gz(gz, _SAMPLE)
     cache = tmp_path / "cache"
     monkeypatch.setattr(papygreek, "cache_dir", lambda: cache)
-    monkeypatch.setattr(papygreek, "fetch", lambda name, **kw: gz)
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: gz)
 
     import aegean._atomic as atomic
 
@@ -195,14 +196,16 @@ def test_papygreek_path_interrupted_write_leaves_no_partial_then_recovers(
     assert result.read_text(encoding="utf-8") == _SAMPLE
 
 
-def test_papygreek_path_corrupt_gz_raises_oserror(
+def test_papygreek_path_corrupt_gz_refused(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # a .gz-named source that is not gzip is a corrupt or swapped archive: refused
+    # cleanly (never materialized as the fold), and no partial file remains
     bad = tmp_path / "asset.gz"
     bad.write_bytes(b"not gzip data at all")
     monkeypatch.setattr(papygreek, "cache_dir", lambda: tmp_path / "cache")
-    monkeypatch.setattr(papygreek, "fetch", lambda name, **kw: bad)
-    with pytest.raises(OSError):  # gzip.BadGzipFile is an OSError, and no partial file remains
+    monkeypatch.setattr(data, "fetch", lambda name, **kw: bad)
+    with pytest.raises(DataNotAvailableError):
         papygreek.papygreek_path()
     dest = (tmp_path / "cache") / papygreek._CACHE_SUBDIR / papygreek._FOLD_NAME
     assert not dest.exists()

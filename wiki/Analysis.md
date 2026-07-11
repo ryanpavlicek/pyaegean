@@ -48,6 +48,7 @@ A few of the newer/lower-level ones are Python-only. This table is the map.
 | Morpheme segmentation | `segment`, `candidate_morphs` |— |
 | Sign embeddings | `sign_embeddings` |— |
 | Brown sign-class induction | `induce_classes` |— |
+| Cross-script alignment (measured null) | `align_scripts`, `rank_known_pairs`, `recover_identity` |— |
 | Affix productivity / edge bias | `baayen_productivity`, `affix_edge_bias`, `successor_variety` |— |
 | Positional bias | `positional_bias` |— |
 | Sign-bigram PMI | `sign_bigram_pmi`, `sign_bigram_pmis` |— |
@@ -546,6 +547,50 @@ candidate shared grammatical or phonotactic role, **never** a phonetic reading. 
 the small Aegean corpora most sign bigrams are seen once or never, so the classing
 overfits; the attached `report` carries the corpus size so the classes are read as
 leads, not facts.
+
+## Cross-script alignment, and the null it measured
+
+The most useful result in this part of the toolkit is a negative one. `align_scripts`
+learns the orthogonal rotation (the classic Procrustes problem) that best maps one
+script's [sign embeddings](#sign-embeddings) onto another's, seeded by the signs the two
+scripts share by transliteration value, and can then rank, for each source sign, its
+nearest target signs. Run as a Linear A to Linear B correspondence generator and
+**calibrated by leave-one-out on the 53 signs the two scripts already share**, it recovers
+**nothing**: top-1 recovery 0.000, top-5 0.094 (chance is 5/73 = 0.068), median rank 26 of
+73 (chance median 37). The same machinery aligned to a space to *itself* recovers 90.1% of
+signs at rank 1, so the failure is not broken code: distributional embedding alignment
+carries **no recoverable Linear A to Linear B signal at this corpus scale**. (Measured
+2026-07-11 on the bundled Linear A vs the syllabogram-restricted DAMOS Linear B; full
+protocol and rank distribution in `training/results/procrustes-null-2026-07-11.json`.)
+
+So the module ships as the instrument that measured that null. The two calibration checks
+are the point; the ranked-hypothesis API is there only for re-running the measurement with
+different embeddings, a larger corpus, or a different seed dictionary.
+
+```python
+import aegean
+from aegean.analysis import (
+    recover_identity, rank_known_pairs, shared_label_anchors, sign_embeddings,
+)
+
+la = sign_embeddings(aegean.load("lineara"))
+
+# Calibration 1 - the sanity floor. Does the machinery recover a space aligned to itself?
+# High, though not a clean 1.0: 16 distributionally identical signs (hapax *NNN signs that
+# share one context) tie and resolve to a sibling.
+recover_identity(la, anchor_fraction=1.0).top1_recovery      # 0.90 on Linear A
+
+# Calibration 2 - the headline null. lb is the Linear B syllabogram embedding (see the
+# evidence file for the DAMOS restriction). Where does each known pair's true target land?
+rep = rank_known_pairs(la, lb, shared_label_anchors(la, lb))
+rep.top1, rep.median_rank, rep.chance_median                 # 0.0, 26.0, 37.0  -> no signal
+```
+
+**Exploratory, and read the calibration first.** An alignment score is a geometry
+statistic (a similar distributional position in two tiny corpora), never a reading of a
+sign. The ranked hypotheses (`align_scripts(...).hypotheses()`) exist only so the same
+calibration can be re-run on new data; on the bundled corpora the answer is the null above,
+and no hypothesis it emits is a decipherment lead.
 
 ## Affix productivity, edge bias & successor variety
 

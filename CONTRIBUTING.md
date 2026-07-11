@@ -163,3 +163,34 @@ Two more dimensions ship WITH the correctness tests, in the same change:
   artifact, asserting the content — segments that each pass can still lose data at the
   seams (an export that silently drops a column its consumers rely on). The
   `tests/test_journey_*.py` files are the pattern.
+
+## Surface parity
+
+Every user-facing capability is carried by the two primary surfaces (the Python API
+and the `aegean` CLI), and then deliberately either surfaced or not on each of the
+four secondary surfaces: the browser demo (`docs/demo/`), the MCP server
+(`aegean.mcp_server`), the walkthrough notebooks (`notebooks/`), and the terminal UI
+(`aegean tui`). `scripts/surface-manifest.json` is the ledger of those decisions: one
+entry per capability with, for all four secondary surfaces, either `covered` (naming
+where) or `excluded` (naming a reason from the manifest's controlled vocabulary).
+
+A new capability updates the manifest in the same change: add its entry and choose a
+covered-or-excluded verdict per surface. Excluding a surface is a first-class choice,
+not an omission — record the reason (needs a fetch, needs the neural model, needs an
+API key, a heavy dependency, a filesystem path the surface cannot offer, or simply
+not applicable there). `tests/test_surface_parity.py` diffs the demo's registered
+functions and `aegean.mcp_server.TOOLS` against the manifest in both directions, so a
+new demo card or MCP tool without a manifest entry fails, and it fails any capability
+that leaves a surface undecided or uses a reason outside the vocabulary.
+
+## The propagation step
+
+When a fix or a feature creates a recurring pattern — a guard, a normalization, an
+atomic write, a freshness stamp, a structured-error wrapper, a shared view layer — the
+same change extracts the shared helper and lands a parity test that enumerates every
+sibling call site and asserts the invariant across all of them.
+`tests/test_propagation_parity.py` is the home for these. A future sibling added
+without the fix then fails a test in the same commit, rather than becoming the next
+un-propagated straggler a later audit has to hunt down. This is the same discipline
+`scripts/surface-manifest.json` and the Surface parity section above apply to the four
+secondary surfaces: turn "remember to update the other places too" into a test.

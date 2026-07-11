@@ -562,6 +562,15 @@ keyness, and dispersion: is documented on the [Analysis](Analysis) page. The
 same commands, and the Greek side lives under [Greek NLP](Greek-NLP) /
 [Meters](Meters).
 
+One result belongs here specifically. A cross-script Procrustes alignment was calibrated
+as a Linear A to Linear B sign-correspondence generator and, by leave-one-out on the 53
+signs the two scripts already share, it recovered **no signal** (top-1 0.000, median rank
+26 of 73 against a chance median of 37), while the same method recovers 90% of signs when
+a script is aligned to itself. Distributional embedding alignment carries no recoverable
+Linear A to Linear B correspondence at this corpus scale: see
+[Cross-script alignment, and the null it measured](Analysis#cross-script-alignment-and-the-null-it-measured).
+It is an honest negative result, not a decipherment aid.
+
 ### Command reference (Linear A)
 
 | Command | What it does | Key flags |

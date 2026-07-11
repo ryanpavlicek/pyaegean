@@ -33,10 +33,12 @@ class TokenRecord:
     ``head`` refers to the ``index`` of another record **in the same sentence**
     (``0`` = sentence root, ``None`` = no parse). ``xpos``/``feats`` are filled
     only by the neural pipeline. ``lemma_source`` is the lemma's evidence class
-    (see `LemmaSource`): whether it was attested in a treebank, predicted by a
-    model, recovered by a rule, from the seed table, from a paradigm-table lookup
-    (the opt-in UniMorph inflection tables, ``use_paradigms()``), an identity
-    fall-through, or unresolved. ``lemma_known`` is the derived boolean (``False`` for an identity
+    (see `LemmaSource`, one of ``attested`` / ``neural`` / ``rule`` / ``seed`` /
+    ``paradigm`` / ``identity`` / ``unresolved`` / ``punct``): whether it was
+    attested in a treebank, predicted by the neural model, recovered by a rule,
+    from the seed table, from a paradigm-table lookup (the opt-in UniMorph
+    inflection tables, ``use_paradigms()``), an identity fall-through, unresolved,
+    or punctuation. ``lemma_known`` is the derived boolean (``False`` for an identity
     fall-through or an unresolved baseline miss, i.e. a lemma to verify).
 
     ``upos_confidence`` / ``lemma_confidence`` are **calibrated** confidences

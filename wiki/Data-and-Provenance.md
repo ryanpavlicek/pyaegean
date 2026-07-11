@@ -139,6 +139,8 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `autenrieth-index` | Prebuilt Autenrieth (Homeric) lemma→entry index | ~0.6 MB | public domain (1891); Perseus digitization CC BY-SA | Project-hosted; `use_lexicon("autenrieth")` |
 | `papygreek-fold` | Documentary-Koine dependency eval fold (1,696 sentences) | ~332 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_papygreek_fold.py` |
+| `papygreek-dev-tagging` | Documentary-Koine DEV tagging track (327 sentences), document-disjoint from the eval fold | ~93 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
+| `papygreek-dev-parse` | Documentary-Koine DEV parse track (126 sentences, directional only) | ~18 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
 | `grc-paradigms` | Nominal paradigm table (form→lemma+features), the offline `use_paradigms()` backend | ~233 KB | CC BY-SA 3.0 (derived from UniMorph grc) | Project-hosted derivative; rebuild: `scripts/build_paradigm_table.py` |
 | `ddbdp-uris` | DDbDP document-identifier map (file stem→ddb-hybrid) for papyri.info URIs in RDF export | ~337 KB | CC BY 3.0 (derived from papyri.info idp.data) | Project-hosted derivative; rebuild: `scripts/build_ddbdp_uri_map.py` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
@@ -521,10 +523,11 @@ aegean data remove --all               # clear every downloaded dataset
 ```
 
 The same store is visible to AI agents over MCP (`aegean-mcp`, the `[mcp]`
-extra), which exposes fifteen read/analysis tools: `list_corpora`, `corpus_info`,
+extra), which exposes seventeen read/analysis tools: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
-`cite_corpus`, `geo_sites`, `data_status`, `greek_pipeline`, `greek_scan`,
-`greek_catalog`, `greek_work`, `greek_gloss`, and `koine_gloss`. Three of them
+`cite_corpus`, `geo_sites`, `data_status`, `corpus_diagnose`, `greek_pipeline`,
+`greek_scan`, `greek_catalog`, `greek_work`, `greek_gloss`, `greek_explain`,
+and `koine_gloss`. Three of them
 touch the story this page tells: `data_status` exposes this listing read-only
 (downloaded state, on-disk size, license note), so an agent can see what a
 corpus load would fetch before triggering it; `cite_corpus` / `query_corpus`
@@ -597,7 +600,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.39.0'  (your installed version)
+v["package"]                                  # '0.40.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -668,7 +671,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.39.0'
+# '0.40.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

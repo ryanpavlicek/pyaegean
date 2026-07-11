@@ -33,7 +33,9 @@ _HELP = """[b]aegean — keys[/b]
   · Enter open a fetched work · x remove a downloaded work
 
 [b]Command console (:)[/b]  type any command without the 'aegean' prefix
-  (e.g. stats lineara --top 5) · use CORPUS sets a session corpus
+  (e.g. stats lineara --top 5) · a completion list opens as you type:
+  ↑/↓ pick · Tab/Enter complete · Esc close · ↑/↓ history when closed
+  · use CORPUS sets a session corpus
 
 [dim]Undeciphered scripts (Linear A, Cypro-Minoan) show exploratory analysis,
 never a reading.  Esc or q to close.[/dim]

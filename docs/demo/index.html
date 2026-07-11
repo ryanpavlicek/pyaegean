@@ -50,10 +50,11 @@
     word analysis, the bundled Koine lexicon, New Testament sample, and idiom lexicon, the offline
     work catalogue, the deciphered-syllabary Greek bridge, the bundled corpora of all four Aegean
     scripts (with statistics, queries, numerals, and sign inventories), the find-site gazetteer,
-    citation and fingerprinting, the file importer, EpiDoc in both directions, and cross-script
-    comparison. The neural and
-    AI layers, and the network-only backends (fetching real works, LSJ), don't run here. First
-    load fetches the package, so give it a few seconds.</p>
+    citation and fingerprinting, the file importer, EpiDoc in both directions, cross-script
+    comparison, the pipeline's evidence-class explanation, corpus-health and editorial-apparatus
+    reports, Linear B scribal dossiers, Linear A seriation, and catalogued sign-variant groups. The
+    neural and AI layers, and the network-only backends (fetching real works, LSJ), don't run here.
+    First load fetches the package, so give it a few seconds.</p>
 
   <div class="card">
     <h2>Beta Code → Unicode</h2>
@@ -69,6 +70,16 @@
     <textarea id="nlp">ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.</textarea>
     <div class="row"><button data-tool="nlp" disabled>Analyze</button></div>
     <pre id="nlp-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Pipeline explained — the lemma's evidence class</h2>
+    <label for="exl">The same sentence, but showing <em>how</em> each lemma was reached: its evidence
+      class (attested · rule · seed · paradigm · identity · unresolved · punct) and whether it needs
+      review. The class is the whole claim — there are no confidence numbers by design</label>
+    <textarea id="exl">ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.</textarea>
+    <div class="row"><button data-tool="exl" disabled>Explain</button></div>
+    <pre id="exl-out"></pre>
   </div>
 
   <div class="card">
@@ -402,6 +413,88 @@
     <pre id="cit-out"></pre>
   </div>
 
+  <div class="card">
+    <h2>Corpus health report</h2>
+    <label>A descriptive health report for a bundled corpus: reading-status profile, accounting
+      reconciliation (a discrepancy is a lead, not a verdict), numeral anomalies, provenance, and
+      review state. Tick <em>deep</em> to add the sign-frequency scan (Aegean scripts)</label>
+    <div class="row">
+      <select id="dgcorpus">
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cypriot">Cypriot</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+        <option value="greek">Greek samples</option>
+      </select>
+      <label style="flex:0 0 auto"><input type="checkbox" id="dgdeep" style="width:auto"> deep</label>
+      <button data-tool="dg" disabled>Diagnose</button>
+    </div>
+    <pre id="dg-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Editorial-apparatus profile</h2>
+    <label>The apparatus of a bundled corpus in one shape: the four reading-status counts (certain ·
+      unclear · restored · lost), how many documents carry non-certain text, alternate readings, and
+      a legend of only the apparatus that actually occurs (try <code>Cypriot</code> or
+      <code>Linear A</code>)</label>
+    <div class="row">
+      <select id="apcorpus">
+        <option value="cypriot">Cypriot</option>
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+        <option value="greek">Greek samples</option>
+      </select>
+      <button data-tool="ap" disabled>Profile apparatus</button>
+    </div>
+    <pre id="ap-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Linear B scribal dossiers</h2>
+    <label for="dos">Group the bundled Linear B tablets into archival dossiers by shared find-site
+      <em>and</em> series prefix (the standard Mycenological working unit, e.g. the Knossos Np
+      tablets). Show only groupings of at least this many tablets</label>
+    <input type="text" id="dos" value="2">
+    <div class="row"><button data-tool="dos" disabled>Group into dossiers</button></div>
+    <pre id="dos-out"></pre>
+    <p class="sub" style="margin:8px 0 0">The bundled sample records scribal hands for only a couple
+      of tablets, so hand breakdowns are usually empty here; the full DAMOS corpus fills them in.</p>
+  </div>
+
+  <div class="card">
+    <h2>Linear A seriation (by find-site)</h2>
+    <label for="ser">Order one find-site's tablets by Brainerd-Robinson sign similarity — a
+      deterministic sequence that puts compositionally similar tablets next to each other (try
+      <code>Zakros</code>, <code>Haghia Triada</code>, <code>Khania</code>)</label>
+    <input type="text" id="ser" value="Zakros">
+    <div class="row"><button data-tool="ser" disabled>Seriate</button></div>
+    <pre id="ser-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Exploratory: a relative-sequence hypothesis with no
+      direction and no calendar anchor — on undeciphered Linear A the axis may track scribal drift as
+      readily as time, not a date.</p>
+  </div>
+
+  <div class="card">
+    <h2>Sign-variant (allograph) groups</h2>
+    <label>The catalogued sign-variant groups a script's inventory records: numbered homophone series
+      (RA / RA₂ / RA₃) and Cypro-Minoan catalogue-suffix variants (CM012 / CM012B)</label>
+    <div class="row">
+      <select id="allo">
+        <option value="linearb">Linear B</option>
+        <option value="lineara">Linear A</option>
+        <option value="cypriot">Cypriot</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+      </select>
+      <button data-tool="allo" disabled>Show variant groups</button>
+    </div>
+    <pre id="allo-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Exploratory: this is the catalogue's <em>naming</em>, not
+      palaeographic allography (the same sign drawn differently by different hands), which the bundled
+      data does not carry.</p>
+  </div>
+
   <footer>
     Built on <a href="https://github.com/ryanpavlicek/pyaegean">pyaegean</a>
     (<a href="https://pypi.org/project/pyaegean/">PyPI</a>) — the released version runs here.
@@ -435,7 +528,8 @@ async function init() {
                         "epidoc_import", "accent_word", "sandhi", "prosody_word", "nt_verse",
                         "idioms", "lemmatize_word", "text_profile", "lineara_stats", "lineara_query",
                         "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
-                        "cite_bundled", "export_epidoc"]) {
+                        "cite_bundled", "export_epidoc", "explain", "diagnose_corpus", "apparatus",
+                        "linearb_dossiers", "seriate_site", "allographs"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = "ready"; status.className = "status ready";
@@ -632,6 +726,73 @@ const handlers = {
   exp: () => {
     const r = call("export_epidoc", val("expcorpus"), val("exp"));
     show("exp-out", r.error ? r.error : r.xml);
+  },
+  exl: () => {
+    const r = call("explain", val("exl"));
+    if (r.error) return show("exl-out", r);
+    show("exl-out", (r.tokens || []).map(t =>
+      `${t.token}\t${t.upos}\t${t.lemma}\t[${t.source}${t.review ? " · review" : ""}]` +
+      (t.morphology ? `\t${t.morphology}` : "") + `\n    ${t.note}`).join("\n"));
+  },
+  dg: () => {
+    const r = call("diagnose_corpus", val("dgcorpus"), document.getElementById("dgdeep").checked);
+    if (r.error) return show("dg-out", r);
+    const s = r.reading_status, a = r.accounting, rv = r.review;
+    let out = `${r.corpus}: ${r.documents} documents, ${r.tokens} tokens\n` +
+      `reading status: certain ${s.certain} · unclear ${s.unclear} · restored ${s.restored} ` +
+      `· lost ${s.lost}  (${s.documents_with_apparatus} docs carry apparatus)\n` +
+      `citation: ${r.provenance.can_cite ? "yes" : "no"}` +
+      (r.provenance.edition_fidelity ? `  ·  fidelity: ${r.provenance.edition_fidelity}` : "");
+    if (a.applicable)
+      out += `\naccounting: ${a.documents_with_total} with a stated total — ${a.balanced} balanced, ` +
+        `${a.discrepant} discrepant (leads), ${a.intact_and_balancing} intact & balancing\n  ${a.caveat}`;
+    else out += `\naccounting: n/a (${a.note})`;
+    out += r.numerals.applicable
+      ? `\nnumeral anomalies: ${r.numerals.anomalies}` : `\nnumeral anomalies: n/a`;
+    out += rv.applicable
+      ? `\nreview: ${rv.needs_review} of ${rv.word_tokens} word tokens need review`
+      : `\nreview: n/a (${rv.note})`;
+    if (r.signs)
+      out += `\nsign frequencies: ${r.signs.distinct} distinct · ${r.signs.hapax} hapax · ` +
+        `${r.signs.out_of_inventory_distinct} labels absent from the inventory ` +
+        `(${r.signs.out_of_inventory_occurrences} occurrences)`;
+    show("dg-out", out);
+  },
+  ap: () => {
+    const r = call("apparatus", val("apcorpus"));
+    if (r.error) return show("ap-out", r);
+    const c = r.status_counts;
+    show("ap-out", `${r.corpus}: ${r.documents} documents, ${r.tokens} tokens\n` +
+      `certain ${c.certain} · unclear ${c.unclear} · restored ${c.restored} · lost ${c.lost}\n` +
+      `${r.non_certain} non-certain tokens across ${r.documents_with_apparatus} documents; ` +
+      `${r.alt_reading_tokens} alternate-reading tokens\n\n` +
+      (r.marker_notes.length ? "apparatus that occurs:\n" +
+        r.marker_notes.map(n => "  · " + n).join("\n") : "no editorial apparatus recorded"));
+  },
+  dos: () => {
+    const r = call("linearb_dossiers", val("dos"));
+    if (r.error) return show("dos-out", r);
+    show("dos-out", r.total
+      ? `${r.total} dossier${r.total === 1 ? "" : "s"} (≥ ${r.min_docs} tablets each):\n` +
+        r.dossiers.map(d => `  ${d.site} · ${d.series}  (${d.documents} tablets)  ` +
+          `${d.doc_ids.join(", ")}`).join("\n")
+      : `no dossiers of at least ${r.min_docs} tablets`);
+  },
+  ser: () => {
+    const r = call("seriate_site", val("ser"));
+    if (r.error) return show("ser-out", r.error + (r.sites ? "\nsites: " + r.sites.join(", ") : ""));
+    show("ser-out", `${r.site}: ${r.seriated} of ${r.documents} documents seriated\n\n` +
+      r.order.join("  →  ") + `\n\n${r.note}`);
+  },
+  allo: () => {
+    const r = call("allographs", val("allo"));
+    if (r.error) return show("allo-out", r);
+    show("allo-out", `${r.script}: ${r.signs} signs\n\n` +
+      (r.groups.length ? "variant groups:\n" +
+        r.groups.map(g => `  ${g.base}: ${g.members.join(" / ")}  (${g.kind})`).join("\n")
+        : "no base-value variant groups") +
+      (r.composites.length ? `\n\ncomposite/ligature signs: ${r.composites.join(", ")}` : "") +
+      `\n\n${r.note}`);
   },
 };
 

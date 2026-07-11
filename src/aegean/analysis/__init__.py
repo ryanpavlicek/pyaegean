@@ -194,6 +194,17 @@ from .seriation import brainerd_robinson, chronology, seriate
 from .allographs import variant_groups
 from .segmentation import Segmentation, candidate_morphs, segment
 from .clustering import ClusterReport, SignClasses, induce_classes
+from .procrustes import (
+    Correspondence,
+    IdentityCheck,
+    ProcrustesAlignment,
+    RankReport,
+    align_embeddings,
+    align_scripts,
+    rank_known_pairs,
+    recover_identity,
+    shared_label_anchors,
+)
 
 __all__ = [
     # accounting
@@ -378,4 +389,14 @@ __all__ = [
     "SignClasses",
     "ClusterReport",
     "induce_classes",
+    # cross-script Procrustes alignment + its calibration (exploratory; ships a measured null)
+    "align_embeddings",
+    "align_scripts",
+    "shared_label_anchors",
+    "recover_identity",
+    "rank_known_pairs",
+    "Correspondence",
+    "ProcrustesAlignment",
+    "IdentityCheck",
+    "RankReport",
 ]
