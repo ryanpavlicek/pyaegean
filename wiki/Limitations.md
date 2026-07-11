@@ -118,6 +118,21 @@ release.
   model defect. Protocol notes:
   [Benchmarks](Benchmarks).
 
+- **There is no leakage-clean epic or tragedy gold to score against.** The
+  genre-conditioned evaluation (`greek.evaluate_by_genre`) can only report a register
+  pyaegean holds held-out gold for, and the leakage-clean UD-Perseus test/dev folds are
+  **100% prose** (a single author); epic and tragedy appear only in the *training* split,
+  so scoring the model on them would leak training data. This is a work-queue item, and
+  every existing treebank avenue has been checked and is blocked: the **AGDT** upstream is
+  unchanged (the same Perseus split), **Daphne** is a re-conversion of works pyaegean
+  already trains on, **PROIEL**'s Ancient Greek is prose (the NT, Herodotus), and
+  **GLAUx** is silver (model-tagged, not gold). The one route that would actually work is
+  **new expert annotation of a work absent from training** — Euripides beyond the Medea,
+  Sophocles' *Oedipus at Colonus* or *Philoctetes*, or Apollonius — on the order of
+  ~45–100 expert-hours per genre. That is a scoping / funding decision, not a code change;
+  it stays on the register to re-investigate as new treebanks are released. See
+  [Benchmarks](Benchmarks).
+
 The four undeciphered/partly-read scripts at a glance:
 
 | Script | `aegean.load(...)` id | Signs | Signs with a sound value | Lexicon | Status |
@@ -154,8 +169,8 @@ license-clean.
 
 - **SigLA's sign-level data** (Salgarella & Castellan) is **CC BY-NC-SA 4.0** and
   is integrated on the same fetch-to-cache, research-use, never-bundled pattern.
-  `aegean.load("sigla")` fetches the decoded **v2** dataset (**781 documents**)
-  with typology, dimensions, periods, **SigLA's own word division** (**1,376
+  `aegean.load("sigla")` fetches the decoded **v4** dataset (**802 documents**)
+  with typology, dimensions, periods, **SigLA's own word division** (**1,401
   words** grouped into `WORD` tokens) and commodity ideograms (`LOGOGRAM`
   tokens). SigLA is a *palaeographic* database: it records sign occurrences and
   word division, **not** the cardinal-number quantities of the accounts, so it
@@ -171,12 +186,25 @@ license-clean.
   rightsholders: referenced and fetched for academic use, never redistributed
   (~116 MB mirror, opt-in).
 
+- **The classic Greek lexica beyond the registry sit behind an OCR frontier.** Several
+  standard reference works — **Hesychius**, **Photius'** *Lexicon*, the **Etymologicum
+  Magnum**, and **Sophocles'** *Greek Lexicon of the Roman and Byzantine Periods* — have
+  public-domain print editions, so they *look* hostable. But every clean digital text of
+  them in circulation derives either from a copyrighted modern critical edition (Latte's
+  Hesychius is the standing example) or from the licensed TLG CD-ROM, so re-hosting one
+  would re-host someone else's rights-encumbered work. The avenue that is genuinely open is
+  a **Greek-HTR OCR** pass over the public-domain scans themselves — an active research
+  area whose accuracy on polytonic Greek keeps improving, so this stays on the register to
+  re-investigate periodically. **Sophocles' Lexicon** (cleaner single-column typography) is
+  the recommended first target. Until then these stay as deep-links, alongside the Suda On
+  Line (see [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry)).
+
 The fetched, never-bundled assets, and why:
 
 | `load` id / asset | What it is | License | Why fetched, not bundled |
 | --- | --- | --- | --- |
 | `damos` | Full Linear B, ~5,900 tablets | CC BY-NC-SA 4.0 | NonCommercial |
-| `sigla` | SigLA Linear A palaeography, 781 docs | CC BY-NC-SA 4.0 | NonCommercial |
+| `sigla` | SigLA Linear A palaeography, 802 docs | CC BY-NC-SA 4.0 | NonCommercial |
 | `isicily` / `iospe` / `edh` | Greek inscriptions (2,855 / 1,194 / 1,286 docs) | CC BY 4.0 / CC BY / CC BY-SA 4.0 | Size: fetched on demand |
 | `iip` / `igcyr` | Greek inscriptions (2,113 / 997 docs) | CC BY-NC 4.0 / CC BY-NC-SA 4.0 | NonCommercial |
 | `ddbdp` | Documentary papyri, 57,331 docs (SQLite + FTS) | CC BY 3.0 | Size (~219 MB download) |
@@ -199,7 +227,7 @@ Each of these is something code *can* fix, and each is on the
 
 | Limitation today | Plan |
 | --- | --- |
-| The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 781 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
+| The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 802 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
 | Linear B bundles an 18-tablet illustrative sample and a 149-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 149 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
 | Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |

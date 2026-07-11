@@ -9,6 +9,8 @@ from typing import Any
 
 import typer
 
+from aegean.io import EXPORT_FORMATS
+
 from ._common import (
     CORPUS_ARG,
     JSON_OPT,
@@ -671,7 +673,7 @@ def export(
     corpus: str = CORPUS_ARG,
     fmt: str = typer.Option(
         ..., "--format", "-f",
-        help="json, csv, parquet, epidoc, sqlite, workbench, ttl (RDF Turtle), or jsonld.",
+        help="One of: " + ", ".join(EXPORT_FORMATS) + " (ttl = RDF Turtle).",
     ),
     output: Path = typer.Option(..., "--output", "-o", help="Destination file."),
     level: str = typer.Option(
@@ -695,9 +697,8 @@ def export(
     annotations — the Greek NT's lemma/morph/Strong's/gloss — into columns. ``-f ttl`` / ``-f
     jsonld`` mint a stable per-document URI (from a Trismegistos or I.Sicily id where the corpus
     carries one, else a ``--base-uri`` fragment) and carry the corpus license through."""
-    formats = ("json", "csv", "parquet", "epidoc", "sqlite", "workbench", "ttl", "jsonld")
-    if fmt not in formats:
-        raise fail(f"unknown format {fmt!r}; use {', '.join(formats)}")
+    if fmt not in EXPORT_FORMATS:
+        raise fail(f"unknown format {fmt!r}; use {', '.join(EXPORT_FORMATS)}")
     if level not in ("document", "token", "word"):
         raise fail(f"--level must be 'document', 'token', or 'word'; got {level!r}")
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)

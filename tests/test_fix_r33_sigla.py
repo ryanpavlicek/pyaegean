@@ -156,12 +156,15 @@ _SIGLA_CACHED = data.is_downloaded(data._REMOTE["sigla-corpus"], data.cache_dir(
 @pytest.mark.skipif(not _SIGLA_CACHED, reason="sigla-corpus not cached (no network in CI)")
 def test_real_asset_homophone_counts_when_present():
     """On a fetched asset that carries the fix the homophone syllabograms tally
-    RA₂ 43 / PU₂ 7 / TA₂ 14 and HT 1 reads QE-RA₂-U, while the corpus size stays
-    781 documents / 2,578 tokens (the apparatus decoding is untouched). Skips on a
-    cached asset that predates the fix (RA₂ absent), so it never fails backward."""
+    RA₂ 43 / PU₂ 7 / TA₂ 14 and HT 1 reads QE-RA₂-U, while the corpus size is
+    802 documents / 2,616 tokens (the v4 refresh; the 21 new documents added no
+    RA₂/PU₂/TA₂ homophones). Skips on a cached asset that predates the fix (RA₂
+    absent), so it never fails backward."""
     import aegean
 
     c = aegean.load("sigla")
+    if len(c) != 802:
+        pytest.skip("cached sigla asset predates the v4 refresh")
     cnt: Counter[str] = Counter()
     for d in c:
         for t in d.tokens:
@@ -175,6 +178,6 @@ def test_real_asset_homophone_counts_when_present():
     assert cnt["TA₂"] == 14
     assert c.get("HT 1").tokens[0].text == "QE-RA₂-U"
     ntok = sum(len(d.tokens) for d in c)
-    assert (len(c), ntok) == (781, 2578)
+    assert (len(c), ntok) == (802, 2616)
     # no plain-RA sign leaks a subscript, and no marker leaks anywhere
     assert not any(m in s for d in c for t in d.tokens for s in t.signs for m in "?[]")

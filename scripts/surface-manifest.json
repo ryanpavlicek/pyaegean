@@ -2,7 +2,12 @@
   "manifest": "pyaegean surface-parity ledger",
   "schema_version": "1",
   "description": "A machine-readable record of every user-facing capability and how it is surfaced across the four secondary surfaces (the browser demo, the MCP server, the walkthrough notebooks, and the terminal UI). The primary surfaces (the Python API and the aegean CLI) carry every capability and are not tracked here. tests/test_surface_parity.py enforces this file against docs/demo (index.html + demo.py) and aegean.mcp_server.TOOLS in both directions, so a new demo card or MCP tool cannot land without a manifest entry, and no capability can exist without a decision recorded for all four surfaces.",
-  "surfaces": ["demo", "mcp", "notebooks", "tui"],
+  "surfaces": [
+    "demo",
+    "mcp",
+    "notebooks",
+    "tui"
+  ],
   "exclusion_reasons": {
     "needs-network": "requires a network call at use time (fetching a remote work, corpus, or asset).",
     "needs-fetch": "requires a one-time fetch-to-cache of a dataset or index before it works (paradigm table, registry lexicon indexes, fetch-on-demand corpora).",
@@ -20,10 +25,22 @@
       "python_api": "aegean.greek.pipeline",
       "summary": "The one-call offline Greek NLP pipeline: per-token UPOS and lemma.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "greek_pipeline"},
-        "mcp": {"status": "covered", "where": "greek_pipeline"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Greek workbench + corpus-reader offline analysis"}
+        "demo": {
+          "status": "covered",
+          "where": "greek_pipeline"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_pipeline"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Greek workbench + corpus-reader offline analysis"
+        }
       }
     },
     {
@@ -32,10 +49,22 @@
       "python_api": "aegean.greek.scan_line",
       "summary": "Metrical scansion of a Greek verse line.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "greek_scan"},
-        "mcp": {"status": "covered", "where": "greek_scan"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Greek workbench scansion"}
+        "demo": {
+          "status": "covered",
+          "where": "greek_scan"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_scan"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Greek workbench scansion"
+        }
       }
     },
     {
@@ -44,10 +73,22 @@
       "python_api": "aegean.greek.explain_pipeline",
       "summary": "A plain-language account of each token's lemma evidence class (no confidence numbers by design).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "explain"},
-        "mcp": {"status": "covered", "where": "greek_explain"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "corpus-reader offline analysis (lemma evidence-class column)"}
+        "demo": {
+          "status": "covered",
+          "where": "explain"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_explain"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "corpus-reader offline analysis (lemma evidence-class column)"
+        }
       }
     },
     {
@@ -56,10 +97,22 @@
       "python_api": "aegean.greek.catalog",
       "summary": "The offline discovery catalogue of ~1,800 loadable Greek works.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "catalog"},
-        "mcp": {"status": "covered", "where": "greek_catalog"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Works library screen"}
+        "demo": {
+          "status": "covered",
+          "where": "catalog"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_catalog"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Works library screen"
+        }
       }
     },
     {
@@ -68,10 +121,22 @@
       "python_api": "aegean.analysis.word_matches_sign_pattern",
       "summary": "Wildcard sign-pattern search over a corpus (KU-*-RO), with frequencies.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lineara_search"},
-        "mcp": {"status": "covered", "where": "search_signs"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser sign search"}
+        "demo": {
+          "status": "covered",
+          "where": "lineara_search"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "search_signs"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser sign search"
+        }
       }
     },
     {
@@ -80,10 +145,22 @@
       "python_api": "aegean.analysis.balance_check",
       "summary": "Accounting reconciliation: each stated total against the summed items.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lineara_balance"},
-        "mcp": {"status": "covered", "where": "balance_accounts"},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser document analysis"}
+        "demo": {
+          "status": "covered",
+          "where": "lineara_balance"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "balance_accounts"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser document analysis"
+        }
       }
     },
     {
@@ -92,10 +169,23 @@
       "python_api": "aegean.Corpus.query",
       "summary": "The compound query engine over a corpus, inscription- or word-scope.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lineara_query"},
-        "mcp": {"status": "covered", "where": "query_corpus"},
-        "notebooks": {"status": "covered", "where": "walkthrough-epigraphist.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the TUI command console; no dedicated query screen."}
+        "demo": {
+          "status": "covered",
+          "where": "lineara_query"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "query_corpus"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-epigraphist.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the TUI command console; no dedicated query screen."
+        }
       }
     },
     {
@@ -104,10 +194,23 @@
       "python_api": "aegean.Corpus.cite",
       "summary": "Citation automation (plain / BibTeX / APA), citing the exact subset used.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "cite_bundled"},
-        "mcp": {"status": "covered", "where": "cite_corpus"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the TUI command console; no dedicated citation screen."}
+        "demo": {
+          "status": "covered",
+          "where": "cite_bundled"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "cite_corpus"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the TUI command console; no dedicated citation screen."
+        }
       }
     },
     {
@@ -116,10 +219,23 @@
       "python_api": "aegean.geo.site_coordinates",
       "summary": "Find-site geography from the Pleiades-aligned gazetteer (coordinates, Pleiades ids, per-word attestations).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "geo_word"},
-        "mcp": {"status": "covered", "where": "geo_sites"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the TUI command console; no dedicated geo screen. The GeoDataFrame export is heavy-dep (geopandas)."}
+        "demo": {
+          "status": "covered",
+          "where": "geo_word"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "geo_sites"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the TUI command console; no dedicated geo screen. The GeoDataFrame export is heavy-dep (geopandas)."
+        }
       }
     },
     {
@@ -128,10 +244,23 @@
       "python_api": "aegean.Corpus.diagnose",
       "summary": "A descriptive corpus-health report (reading status, accounting, numerals, provenance, review).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "diagnose_corpus"},
-        "mcp": {"status": "covered", "where": "corpus_diagnose"},
-        "notebooks": {"status": "covered", "where": "walkthrough-epigraphist.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "aegean doctor corpus is reachable via the command console; the TUI's own doctor screen is the environment report, not the corpus report."}
+        "demo": {
+          "status": "covered",
+          "where": "diagnose_corpus"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "corpus_diagnose"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-epigraphist.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "aegean doctor corpus is reachable via the command console; the TUI's own doctor screen is the environment report, not the corpus report."
+        }
       }
     },
     {
@@ -140,10 +269,22 @@
       "python_api": "aegean.greek.gloss_nt",
       "summary": "Koine (New Testament) glossing from the bundled Dodson lexicon.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "gloss_nt"},
-        "mcp": {"status": "covered", "where": "koine_gloss"},
-        "notebooks": {"status": "covered", "where": "walkthrough-nt-koine.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus reader (NT token annotations)"}
+        "demo": {
+          "status": "covered",
+          "where": "gloss_nt"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "koine_gloss"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader (NT token annotations)"
+        }
       }
     },
     {
@@ -152,10 +293,24 @@
       "python_api": "aegean.greek.betacode_to_unicode",
       "summary": "Beta Code (plain ASCII polytonic) to Unicode conversion.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "betacode"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "text normalization is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "betacode"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "text normalization is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -164,10 +319,23 @@
       "python_api": "aegean.greek.analyze",
       "summary": "Whole-word analysis: syllables, accent class, reconstructed IPA, and candidate morphology.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "greek_word"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the composite word analysis is Python/CLI; greek_pipeline carries the UPOS+lemma."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Greek workbench (syllables, IPA)"}
+        "demo": {
+          "status": "covered",
+          "where": "greek_word"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the composite word analysis is Python/CLI; greek_pipeline carries the UPOS+lemma."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Greek workbench (syllables, IPA)"
+        }
       }
     },
     {
@@ -176,10 +344,24 @@
       "python_api": "aegean.greek.place_accent",
       "summary": "Predicts a word's accent from the accentuation laws (recessive / persistent).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "accent_word"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "accentuation is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "accent_word"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "accentuation is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -188,10 +370,24 @@
       "python_api": "aegean.greek.resolve_sandhi",
       "summary": "Resolves crasis, elision, and movable-nu from a curated lexicon (never guesses).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "sandhi"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "sandhi is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "sandhi"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "sandhi is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -200,10 +396,25 @@
       "python_api": "aegean.greek.scan",
       "summary": "Metrical quantity (heavy / light / common) of each syllable of a word.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "prosody_word"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "syllable-quantity scanning is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb", "note": "shown as the syllable weights underlying metrical scansion."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "the workbench scans whole lines; the per-syllable weights are reachable via the command console."}
+        "demo": {
+          "status": "covered",
+          "where": "prosody_word"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "syllable-quantity scanning is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb",
+          "note": "shown as the syllable weights underlying metrical scansion."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the workbench scans whole lines; the per-syllable weights are reachable via the command console."
+        }
       }
     },
     {
@@ -212,10 +423,23 @@
       "python_api": "aegean.greek.lemmatize",
       "summary": "The generalizing rule-based offline lemmatizer with honest misses.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lemmatize_word"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the lemma is a column of greek_pipeline / greek_explain."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "workbench / reader pipeline lemma column"}
+        "demo": {
+          "status": "covered",
+          "where": "lemmatize_word"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the lemma is a column of greek_pipeline / greek_explain."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "workbench / reader pipeline lemma column"
+        }
       }
     },
     {
@@ -224,10 +448,24 @@
       "python_api": "aegean.greek.profile_text",
       "summary": "Observable features of a raw text (writing system, polytonic, Beta Code look, editorial marks); never a genre guess.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "text_profile"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "profiling is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "text_profile"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "profiling is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -236,10 +474,52 @@
       "python_api": "aegean.greek.lexicon_link",
       "summary": "A Logeion deep-link to a word's dictionary entry (covers dictionaries not hosted here).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lexicon_link"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the deep-link builder is Python/CLI/demo; the MCP surface glosses via greek_gloss."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "lexicon_link"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the deep-link builder is Python/CLI/demo; the MCP surface glosses via greek_gloss."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
+      }
+    },
+    {
+      "id": "suda-deeplink",
+      "since": "0.41.0",
+      "python_api": "aegean.greek.lexica",
+      "summary": "Registers the Suda On Line (a Byzantine Greek encyclopedic lexicon) as a deep-link-only dictionary: surfaced by greek.lexica(), addressed by Adler number at its own site, not hosted and not gloss-capable.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "a deep-link registry record surfaced by greek.lexica(); no demo card of its own."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "deep-link lexica are not gloss-capable; greek_gloss rejects them and points at the hosted set."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "covered generically by the lexicon registry / lexicon_link material."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek lexica); no dedicated screen."
+        }
       }
     },
     {
@@ -248,10 +528,24 @@
       "python_api": "aegean.ai.idiom_glosses",
       "summary": "Detects curated non-compositional Greek idioms and glosses their real meaning (offline).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "idioms"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "idiom detection is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "idioms"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "idiom detection is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -260,10 +554,24 @@
       "python_api": "aegean.greek.load_nt",
       "summary": "New Testament reading with gold lemma, Robinson morph, Strong's, and UPOS per token.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "nt_verse", "note": "the browser uses the bundled offline sample (John 1 + Philemon 1)."},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "read the nt corpus via show_document."},
-        "notebooks": {"status": "covered", "where": "walkthrough-nt-koine.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser (nt corpus reader)"}
+        "demo": {
+          "status": "covered",
+          "where": "nt_verse",
+          "note": "the browser uses the bundled offline sample (John 1 + Philemon 1)."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "read the nt corpus via show_document."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser (nt corpus reader)"
+        }
       }
     },
     {
@@ -272,10 +580,24 @@
       "python_api": "aegean.io.from_text",
       "summary": "Turn a user's own text into a Corpus.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "import_text"},
-        "mcp": {"status": "excluded", "reason": "file-path-ux", "note": "the MCP server never reads local files or free-text corpora, by design."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "file-path-ux", "note": "read_corpus_spec opens registered ids, works, and .json/.db files, not free-text import."}
+        "demo": {
+          "status": "covered",
+          "where": "import_text"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the MCP server never reads local files or free-text corpora, by design."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "read_corpus_spec opens registered ids, works, and .json/.db files, not free-text import."
+        }
       }
     },
     {
@@ -284,10 +606,24 @@
       "python_api": "aegean.io.from_epidoc",
       "summary": "Read an EpiDoc TEI edition into a Corpus (stdlib XML parser).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "epidoc_import"},
-        "mcp": {"status": "excluded", "reason": "file-path-ux", "note": "the MCP server accepts no XML file/text input."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "file-path-ux", "note": "reachable via the command console (aegean import --epidoc)."}
+        "demo": {
+          "status": "covered",
+          "where": "epidoc_import"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the MCP server accepts no XML file/text input."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "reachable via the command console (aegean import --epidoc)."
+        }
       }
     },
     {
@@ -296,10 +632,25 @@
       "python_api": "aegean.io.to_epidoc",
       "summary": "Export a document as schema-valid EpiDoc TEI XML.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "export_epidoc", "note": "built in memory; the output round-trips through the Read EpiDoc card."},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the MCP server is read/analysis only, with no export tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean export)."}
+        "demo": {
+          "status": "covered",
+          "where": "export_epidoc",
+          "note": "built in memory; the output round-trips through the Read EpiDoc card."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the MCP server is read/analysis only, with no export tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean export)."
+        }
       }
     },
     {
@@ -308,10 +659,25 @@
       "python_api": "aegean.analysis.phonetic_compare",
       "summary": "Cross-script phonetic closeness of a syllabic spelling to a Greek word (defective-script aware).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "phonetic_compare"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "cross-script comparison is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "excluded", "reason": "not-applicable", "note": "no walkthrough cell; demonstrated in the browser demo and via analysis.phonetic_compare in the CLI/Python."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "phonetic_compare"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "cross-script comparison is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb",
+          "note": "Step 4: the per-segment alignment behind the nearest() ranking (po-me vs ποιμήν)."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -320,10 +686,23 @@
       "python_api": "aegean.scripts.linearb.greek_reading",
       "summary": "Read a deciphered syllabic word (Linear B / Cypriot) as Greek from the bundled lexicon.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "bridge"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the bridge reading is Python/CLI; read a document via show_document."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus reader in-reader bridge analysis"}
+        "demo": {
+          "status": "covered",
+          "where": "bridge"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the bridge reading is Python/CLI; read a document via show_document."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader in-reader bridge analysis"
+        }
       }
     },
     {
@@ -332,10 +711,23 @@
       "python_api": "aegean.load('cypriot')",
       "summary": "Read a real Cypriot syllabary inscription from the bundled IG XV 1 corpus.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "cypriot_inscription"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "reachable via show_document on the cypriot corpus."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser (cypriot)"}
+        "demo": {
+          "status": "covered",
+          "where": "cypriot_inscription"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via show_document on the cypriot corpus."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser (cypriot)"
+        }
       }
     },
     {
@@ -344,10 +736,23 @@
       "python_api": "aegean.load('linearb')",
       "summary": "Read a bundled Linear B tablet with its attested Greek readings.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "linearb_tablet"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "reachable via show_document on the linearb corpus."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser (linearb)"}
+        "demo": {
+          "status": "covered",
+          "where": "linearb_tablet"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via show_document on the linearb corpus."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser (linearb)"
+        }
       }
     },
     {
@@ -356,10 +761,23 @@
       "python_api": "aegean.load('cyprominoan')",
       "summary": "Display a bundled Cypro-Minoan document (sign groups only; undeciphered).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "cyprominoan_doc"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "reachable via show_document on the cyprominoan corpus."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser (cyprominoan)"}
+        "demo": {
+          "status": "covered",
+          "where": "cyprominoan_doc"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via show_document on the cyprominoan corpus."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser (cyprominoan)"
+        }
       }
     },
     {
@@ -368,10 +786,24 @@
       "python_api": "aegean.core.numerals.parse_value",
       "summary": "Parse Aegean numeral tokens (integers, fraction glyphs, approximations) and sum them.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "numerals"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "numeral parsing feeds balance_accounts; no standalone MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "numerals"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "numeral parsing feeds balance_accounts; no standalone MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -380,10 +812,23 @@
       "python_api": "aegean.core.get_script(...).sign_inventory",
       "summary": "Look a sign up in a script's inventory: glyph, Unicode codepoint, sound value.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "sign_info"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "search_signs does wildcard pattern search, not single-sign inventory lookup."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus reader in-reader signs analysis"}
+        "demo": {
+          "status": "covered",
+          "where": "sign_info"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "search_signs does wildcard pattern search, not single-sign inventory lookup."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader in-reader signs analysis"
+        }
       }
     },
     {
@@ -392,10 +837,24 @@
       "python_api": "aegean.analysis.dispersions",
       "summary": "Corpus statistics: Gries' DP dispersion and Dunning keyness (log-likelihood / log-ratio).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "lineara_stats"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "dispersion/keyness are Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "lineara_stats"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "dispersion/keyness are Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -404,10 +863,23 @@
       "python_api": "aegean.core.apparatus.apparatus_summary",
       "summary": "The editorial-apparatus profile of a corpus in one uniform shape (reading-status counts, alternate readings, marker legend).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "apparatus"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "folded into corpus_diagnose's reading-status profile."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus reader apparatus colouring"}
+        "demo": {
+          "status": "covered",
+          "where": "apparatus"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "folded into corpus_diagnose's reading-status profile."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader apparatus colouring"
+        }
       }
     },
     {
@@ -416,10 +888,24 @@
       "python_api": "aegean.analysis.hands.dossiers",
       "summary": "Group Linear B tablets into archival dossiers by find-site and series (with editorial hand attributions).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "linearb_dossiers"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "scribal-hand/dossier analysis is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean analyze dossiers)."}
+        "demo": {
+          "status": "covered",
+          "where": "linearb_dossiers"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "scribal-hand/dossier analysis is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean analyze dossiers)."
+        }
       }
     },
     {
@@ -428,10 +914,24 @@
       "python_api": "aegean.analysis.seriation.seriate",
       "summary": "Exploratory Brainerd-Robinson seriation of an assemblage into a deterministic sequence.",
       "surfaces": {
-        "demo": {"status": "covered", "where": "seriate_site"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "seriation is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "seriate_site"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "seriation is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -440,10 +940,24 @@
       "python_api": "aegean.analysis.allographs.variant_groups",
       "summary": "The catalogued sign-variant groups a script's inventory records (homophone numbers, catalogue suffixes).",
       "surfaces": {
-        "demo": {"status": "covered", "where": "allographs"},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "variant-group reporting is Python/CLI; no MCP tool."},
-        "notebooks": {"status": "covered", "where": "walkthrough-aegean.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console; no dedicated card."}
+        "demo": {
+          "status": "covered",
+          "where": "allographs"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "variant-group reporting is Python/CLI; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-aegean.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated card."
+        }
       }
     },
     {
@@ -452,10 +966,23 @@
       "python_api": "aegean.load",
       "summary": "List the corpora loadable by name.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "the demo loads only the bundled corpora, it does not list the loader registry."},
-        "mcp": {"status": "covered", "where": "list_corpora"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser overview"}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the demo loads only the bundled corpora, it does not list the loader registry."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "list_corpora"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser overview"
+        }
       }
     },
     {
@@ -464,10 +991,23 @@
       "python_api": "aegean.Corpus.provenance",
       "summary": "A corpus overview: script, document count, source, license, and citation.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "the browser surfaces per-corpus facts through the script-specific readers and the cite card."},
-        "mcp": {"status": "covered", "where": "corpus_info"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser metadata"}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the browser surfaces per-corpus facts through the script-specific readers and the cite card."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "corpus_info"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser metadata"
+        }
       }
     },
     {
@@ -476,10 +1016,23 @@
       "python_api": "aegean.Corpus.get",
       "summary": "One document's metadata and text, line by line.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "the demo has script-specific readers (linearb_tablet, cyprominoan_doc, cypriot_inscription) instead of a generic reader."},
-        "mcp": {"status": "covered", "where": "show_document"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Corpus browser document detail"}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the demo has script-specific readers (linearb_tablet, cyprominoan_doc, cypriot_inscription) instead of a generic reader."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "show_document"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus browser document detail"
+        }
       }
     },
     {
@@ -488,10 +1041,23 @@
       "python_api": "aegean.data.versions",
       "summary": "The local data store: every fetchable dataset with its downloaded state, size, and license.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "there is no local data store in the browser."},
-        "mcp": {"status": "covered", "where": "data_status"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Data store screen"}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "there is no local data store in the browser."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "data_status"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Data store screen"
+        }
       }
     },
     {
@@ -500,10 +1066,23 @@
       "python_api": "aegean.greek.load_work",
       "summary": "Load a real Greek work by catalogue id (fetched to the store on first use).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-network", "note": "load_work fetches a TEI file; the browser demo is offline."},
-        "mcp": {"status": "covered", "where": "greek_work"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "covered", "where": "Works library screen"}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-network",
+          "note": "load_work fetches a TEI file; the browser demo is offline."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_work"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Works library screen"
+        }
       }
     },
     {
@@ -512,10 +1091,24 @@
       "python_api": "aegean.greek.use_lexicon",
       "summary": "The pluggable dictionary registry (LSJ, Middle Liddell, Cunliffe, Autenrieth, Abbott-Smith, Dodson).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-fetch", "note": "the registry dictionaries download and build an index; the demo offers lexicon_link deep-links and the bundled Dodson gloss instead."},
-        "mcp": {"status": "covered", "where": "greek_gloss"},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean greek gloss --dict)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "the registry dictionaries download and build an index; the demo offers lexicon_link deep-links and the bundled Dodson gloss instead."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "greek_gloss"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek gloss --dict)."
+        }
       }
     },
     {
@@ -524,10 +1117,25 @@
       "python_api": "aegean.greek.use_neural_pipeline",
       "summary": "The joint neural tagger/parser/lemmatizer (best published on the UD Ancient Greek Perseus test).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-neural-model", "note": "onnxruntime does not run in the browser."},
-        "mcp": {"status": "excluded", "reason": "needs-neural-model", "note": "the server loads no model; greek_pipeline / greek_explain are the baseline pipeline."},
-        "notebooks": {"status": "covered", "where": "walkthrough-nt-koine.ipynb", "note": "behind the notebooks' RUN_HEAVY switch."},
-        "tui": {"status": "covered", "where": "Corpus reader in-reader neural analysis"}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "onnxruntime does not run in the browser."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the server loads no model; greek_pipeline / greek_explain are the baseline pipeline."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb",
+          "note": "behind the notebooks' RUN_HEAVY switch."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader in-reader neural analysis"
+        }
       }
     },
     {
@@ -536,10 +1144,25 @@
       "python_api": "aegean.greek.use_calibration",
       "summary": "Per-token calibrated confidence on the neural pipeline's UPOS and lemma predictions (temperature scaling; raw softmax never exposed).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-neural-model", "note": "confidence is model-only; the browser cannot load the model."},
-        "mcp": {"status": "excluded", "reason": "needs-neural-model", "note": "greek_explain is deliberately class-based with no confidence numbers; the model is not loaded."},
-        "notebooks": {"status": "covered", "where": "walkthrough-nt-koine.ipynb", "note": "behind the notebooks' RUN_HEAVY switch."},
-        "tui": {"status": "covered", "where": "Greek workbench / reader confidence column"}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "confidence is model-only; the browser cannot load the model."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "greek_explain is deliberately class-based with no confidence numbers; the model is not loaded."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb",
+          "note": "behind the notebooks' RUN_HEAVY switch."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Greek workbench / reader confidence column"
+        }
       }
     },
     {
@@ -548,10 +1171,82 @@
       "python_api": "aegean.greek.use_paradigms",
       "summary": "An offline UniMorph-derived nominal paradigm table slotted into the lemmatization cascade.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-fetch", "note": "use_paradigms fetches the paradigm table; the browser demo is offline."},
-        "mcp": {"status": "excluded", "reason": "needs-fetch", "note": "not wired into the read/analysis server; the table fetches on demand."},
-        "notebooks": {"status": "excluded", "reason": "needs-fetch", "note": "not shown in a walkthrough cell; the table fetches on demand."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "not wired into the TUI pipeline; reachable via the command console."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "use_paradigms fetches the paradigm table; the browser demo is offline."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "not wired into the read/analysis server; the table fetches on demand."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb",
+          "note": "behind the notebooks' RUN_HEAVY switch (a ~234 KB fetch); shows γυναικός resolving and φωτός staying an honest miss."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "not wired into the TUI pipeline; reachable via the command console."
+        }
+      }
+    },
+    {
+      "id": "documentary-reconciliation",
+      "since": "0.41.0",
+      "python_api": "aegean.greek.use_documentary_reconciliation",
+      "summary": "Opt-in closed-class coordinator reconciliation over the neural pipeline for the documentary-Koine register (relabels an X/b-drifted καί/δέ/τε… to CCONJ).",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "post-processes the neural pipeline, which the browser cannot load."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the server loads no model; there is nothing to post-process."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model and a documentary fold."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval papygreek --documentary)."
+        }
+      }
+    },
+    {
+      "id": "documentary-lemma-rescue",
+      "since": "0.41.0",
+      "python_api": "aegean.greek.use_documentary_lemma_rescue",
+      "summary": "Opt-in offline lemma OOV rescue over the neural pipeline: an unresolved neural lemma is rescued from the guarded seed/paradigm/rule cascade under its own evidence class, never NEURAL.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "post-processes the neural pipeline, which the browser cannot load."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the server loads no model; there is nothing to post-process."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model and a documentary fold."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval papygreek --documentary)."
+        }
       }
     },
     {
@@ -560,10 +1255,25 @@
       "python_api": "aegean.greek.inflect",
       "summary": "The inverse of lemmatization: generate a lemma's attested inflected forms and paradigm from the AGDT.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "no demo card; Python/CLI only."},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "no MCP tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean greek inflect)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "no demo card; Python/CLI only."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek inflect)."
+        }
       }
     },
     {
@@ -572,10 +1282,25 @@
       "python_api": "aegean.io.to_rdf",
       "summary": "Linked Open Data export (Turtle / JSON-LD) with authoritative subject URIs and machine-readable license triples.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "not-applicable", "note": "no demo card; DDbDP subject URIs need the fetched identifier map."},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "the read/analysis server has no export tool."},
-        "notebooks": {"status": "covered", "where": "walkthrough-epigraphist.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean export -f ttl|jsonld)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "no demo card; DDbDP subject URIs need the fetched identifier map."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the read/analysis server has no export tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-epigraphist.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean export -f ttl|jsonld)."
+        }
       }
     },
     {
@@ -584,10 +1309,26 @@
       "python_api": "aegean.viz",
       "summary": "Visualization: scansion plots and the findspot / timeline / sign-network plots.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "heavy-dep", "note": "matplotlib/plotly are not available in the browser demo."},
-        "mcp": {"status": "excluded", "reason": "heavy-dep", "note": "no plotting tool; the server returns structured data, not figures."},
-        "notebooks": {"status": "excluded", "reason": "heavy-dep", "note": "no walkthrough cell renders a figure (the [viz] extra is heavy)."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean plot)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "heavy-dep",
+          "note": "matplotlib/plotly are not available in the browser demo."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "heavy-dep",
+          "note": "no plotting tool; the server returns structured data, not figures."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-epigraphist.ipynb",
+          "note": "an offline plot_findspots figure renders in CI; the RUN_HEAVY branch runs plot_timeline on the fetched I.Sicily corpus."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean plot)."
+        }
       }
     },
     {
@@ -596,10 +1337,25 @@
       "python_api": "aegean.translate",
       "summary": "Grounded, exploratory, provenanced hybrid lexicon+LLM translation.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-api-key", "note": "generative; requires a provider key."},
-        "mcp": {"status": "excluded", "reason": "needs-api-key", "note": "the read/analysis server exposes no generative tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb", "note": "behind the notebooks' RUN_HEAVY switch."},
-        "tui": {"status": "covered", "where": "Corpus reader in-reader translate (BYOAI, optional)"}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-api-key",
+          "note": "generative; requires a provider key."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-api-key",
+          "note": "the read/analysis server exposes no generative tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb",
+          "note": "behind the notebooks' RUN_HEAVY switch."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader in-reader translate (BYOAI, optional)"
+        }
       }
     },
     {
@@ -608,10 +1364,25 @@
       "python_api": "aegean.io.to_review_table",
       "summary": "The human review loop: export annotations to a reviewable CSV, correct, and apply back (with multi-reviewer merge).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "file-path-ux", "note": "the review loop reads and writes CSV files."},
-        "mcp": {"status": "excluded", "reason": "file-path-ux", "note": "the server writes no files."},
-        "notebooks": {"status": "covered", "where": "walkthrough-nt-koine.ipynb"},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean review export|apply|merge)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the review loop reads and writes CSV files."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the server writes no files."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "walkthrough-nt-koine.ipynb"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean review export|apply|merge)."
+        }
       }
     },
     {
@@ -620,10 +1391,26 @@
       "python_api": "aegean.data.versioned_bytes",
       "summary": "Fetch and load a pinned historical version of a dataset for reproducibility.",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-network", "note": "fetches datasets; the browser demo is offline."},
-        "mcp": {"status": "excluded", "reason": "needs-network", "note": "data_status is read-only; the server has no fetch tool."},
-        "notebooks": {"status": "excluded", "reason": "needs-network", "note": "not shown in a walkthrough cell; fetches on demand."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "the data-store screen fetches the current pin; versioned fetch is via the command console."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-network",
+          "note": "fetches datasets; the browser demo is offline."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-network",
+          "note": "data_status is read-only; the server has no fetch tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-network",
+          "note": "not shown in a walkthrough cell; fetches on demand."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the data-store screen fetches the current pin; versioned fetch is via the command console."
+        }
       }
     },
     {
@@ -632,10 +1419,26 @@
       "python_api": "aegean.greek.evaluate_on_papygreek",
       "summary": "The first documentary-Greek dependency evaluation fold (leakage-checked PapyGreek Treebanks).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-neural-model", "note": "runs the neural pipeline over a fetched fold."},
-        "mcp": {"status": "excluded", "reason": "needs-neural-model", "note": "an evaluation over the neural model; no MCP tool."},
-        "notebooks": {"status": "excluded", "reason": "needs-neural-model", "note": "not shown in a walkthrough cell; needs the model and the fetched fold."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean greek eval papygreek)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "runs the neural pipeline over a fetched fold."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "an evaluation over the neural model; no MCP tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model and the fetched fold."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval papygreek)."
+        }
       }
     },
     {
@@ -644,10 +1447,26 @@
       "python_api": "aegean.greek.proiel_convention_report",
       "summary": "A measured decomposition of the PROIEL convention gap (scheme-absent vs shared feature/relation differences).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-neural-model", "note": "reproduces the neural evaluator; the model is out of the browser."},
-        "mcp": {"status": "excluded", "reason": "needs-neural-model", "note": "an evaluation over the neural model; no MCP tool."},
-        "notebooks": {"status": "excluded", "reason": "needs-neural-model", "note": "not shown in a walkthrough cell; needs the model."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "reachable via the command console (aegean greek eval ud --fold proiel --drift)."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "reproduces the neural evaluator; the model is out of the browser."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "an evaluation over the neural model; no MCP tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "not shown in a walkthrough cell; needs the model."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean greek eval ud --fold proiel --drift)."
+        }
       }
     },
     {
@@ -656,10 +1475,53 @@
       "python_api": "aegean.db",
       "summary": "SQLite persistence with full-text search and flat-memory streaming (the DDbDP access path).",
       "surfaces": {
-        "demo": {"status": "excluded", "reason": "needs-sqlite3", "note": "Pyodide unvendors sqlite3 from its stdlib."},
-        "mcp": {"status": "excluded", "reason": "not-applicable", "note": "search_signs is an in-memory pattern search; there is no SQLite/FTS tool."},
-        "notebooks": {"status": "covered", "where": "getting-started.ipynb", "note": "the DDbDP database sits behind the notebooks' RUN_HEAVY switch."},
-        "tui": {"status": "excluded", "reason": "not-applicable", "note": "ddbdp is not in the TUI corpus browser; db search is via the command console."}
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-sqlite3",
+          "note": "Pyodide unvendors sqlite3 from its stdlib."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "search_signs is an in-memory pattern search; there is no SQLite/FTS tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": "getting-started.ipynb",
+          "note": "the DDbDP database sits behind the notebooks' RUN_HEAVY switch."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "ddbdp is not in the TUI corpus browser; db search is via the command console."
+        }
+      }
+    },
+    {
+      "id": "citation-scheme-discovery",
+      "since": "0.41.0",
+      "python_api": "aegean.greek.citation_scheme",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-network",
+          "note": "operates on fetched Perseus works"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "greek_work errors now name the declared scheme; no separate tool needed"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "surfaced through the load_work error guidance shown in existing cells"
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console; no dedicated screen"
+        }
       }
     }
   ]

@@ -11,6 +11,7 @@ exclude_docs: |
   ROADMAP.md
   PLAN.md
   inquiries/
+  demo/__pycache__/
 
 
 theme:
@@ -69,6 +70,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Try it in your browser: https://ryanpavlicek.github.io/pyaegean/demo/
   - API reference:
       - Overview: api/index.md
       - aegean: api/aegean.md

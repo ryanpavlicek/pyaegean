@@ -27,7 +27,16 @@ from .tabular import to_csv, to_parquet
 from .text import from_csv, from_text, from_text_dir, from_text_file
 from .workbench import from_workbench_export, to_workbench
 
+# The corpus export formats `aegean export` accepts, in the order they are advertised.
+# The single source of truth: cli._corpus.export() validates against it and derives its
+# --format help from it, and tests/test_propagation_parity anchors to it — so a new
+# writer cannot reach the CLI (or drift out of the help / wiki table) unnoticed.
+EXPORT_FORMATS: tuple[str, ...] = (
+    "json", "csv", "parquet", "epidoc", "sqlite", "workbench", "ttl", "jsonld",
+)
+
 __all__ = [
+    "EXPORT_FORMATS",
     "REVIEW_COLUMNS",
     "MergedReview",
     "ReviewConflict",

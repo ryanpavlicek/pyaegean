@@ -427,6 +427,50 @@ slot where the model writes `-` (2.60). Forgiving those three, XPOS would read
 gender confusion. The 9-position tag is convention-capped on this fold, not
 broken.
 
+### Opt-in documentary levers
+
+Two optional post-processing layers reconcile the shipped neural pipeline's output
+to the documentary register named in the decomposition above, without touching the
+model, the default pipeline, or any published number. Both are **opt-in and off by
+default**, and the pipeline is **byte-identical to the shipped model until a lever is
+switched on** (a fresh session, or `disable_*`, restores exactly the model's own
+output). Each is a composition layer, exactly like `use_paradigms`, so it earns its
+**own** opt-in registry variant row rather than moving the published PapyGreek row,
+which is **unchanged**. Both post-process the active neural pipeline, so it must be
+active first (`greek.use_neural_pipeline()`).
+
+**Lever A — coordinator reconciliation** (`greek.use_documentary_reconciliation()`).
+The conservative default relabels only the closed coordinator set (καί, δέ, τε, ἀλλά,
+ἤ, οὐδέ, οὔτε, μηδέ, μήτε) and only when the model emits the always-wrong `X` / `b`
+reading — never a legitimate tag for a coordinator — so it cannot mislabel a correct
+token. Measured on the dev folds: documentary **+2.36 UPOS / +2.41 XPOS with zero
+regressions**, touching 9 literary-dev tokens. The aggressive variant
+(`aggressive=True`), which also folds in the adverbial `d` / `ADV` reading, is measured
+**against**: it clobbers the legitimate adverbial coordinators, regressing the literary
+dev fold by **−5.24 UPOS**, and is recommended against.
+
+**Lever B — lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When the model
+leaves a lemma unresolved (the honest identity fall-through), the guarded offline cascade
+is consulted — the bundled seed table and, when `use_paradigms()` is active, the UniMorph
+paradigm table: **seed and guarded-paradigm tiers only**. The generalizing
+ending-stripping rules are **deliberately excluded**: on the OOV residue the model already
+left unresolved they fabricate about as often as they fix (measured **break-even on the
+documentary dev fold, net-negative on the literary dev fold**), so the rescue keeps only
+the curated, correctly-accented tiers. A rescue only replaces an unresolved lemma, never
+overrides a resolved neural lemma, and carries its own evidence class (`SEED` / `PARADIGM`,
+never `NEURAL`). Measured on the dev fold with `use_paradigms` active: **+1.06 lemma**.
+
+Each lever is measured **once, sequentially**, on the pinned PapyGreek fold (batched
+inference is not prediction-identical on this fold, so these rows share the fold's
+CPU-sequential protocol) and pinned as its own registry variant row; the published
+PapyGreek row above is untouched. (Neural pipeline, CPU sequential; evidence:
+`training/results/documentary-levers-2026-07-11.json`.)
+
+| Variant on the PapyGreek fold | UPOS / UFeats / Lemma / UAS / LAS |
+| --- | --- |
+| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
+
 ### PROIEL convention decomposition
 
 The out-of-domain UD-PROIEL row above (UFeats 59.43, UAS 82.48, LAS 63.50) is held

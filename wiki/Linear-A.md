@@ -510,7 +510,7 @@ release asset and loads it on demand; the NonCommercial obligation passes to
 
 ```python
 sigla = aegean.load("sigla")        # ~1.2 MB fetch on first use, then cached
-len(sigla)                          # 781
+len(sigla)                          # 802
 doc = sigla.get("HT 13")            # note the space — SigLA ids are spaced
 doc.meta.name                       # 'HT 13 (6.1×10.5×0.8 cm)'  — physical dimensions!
 " ".join(t.text for t in doc.tokens)

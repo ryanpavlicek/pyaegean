@@ -321,6 +321,27 @@ def _register_builtins() -> None:
             ),
             _deeplink_only,
         )
+    # The Suda On Line, deep-link only. Unlike the Logeion-aggregated dictionaries above, the
+    # Suda (a Byzantine Greek encyclopedic lexicon) lives at its own site and is addressed by
+    # Adler number (a letter + reference number), not by a running word: the canonical entry URL
+    # is http://www.stoa.org/sol-entries/<letter>/<number> (e.g. .../alpha/1), which rewrites to
+    # a search.pl lookup by that Adler number. pyaegean holds no Adler-number index and SOL's
+    # Greek-text search keys on SOL's own transliteration, so the registry records the Suda's
+    # existence and home rather than minting an offline word->entry link. The ancient Suda text
+    # (Adler's 1928-1938 edition) is public domain; the SOL translations and annotations are
+    # CC BY-NC-SA (verified at the SOL rights page). The entry links to, and hosts, nothing.
+    register_lexicon(
+        LexiconInfo(
+            id="suda",
+            name="Suda On Line (Suda, ed. Adler)",
+            scope="Byzantine (encyclopedic)",
+            license="Greek text public domain (Adler 1928-1938); SOL translations/annotations "
+            "CC BY-NC-SA; linked, not hosted",
+            source="Suda On Line (stoa.org/sol-entries)",
+            hosted=False,
+        ),
+        _deeplink_only,
+    )
 
 
 _register_builtins()

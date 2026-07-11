@@ -1,0 +1,49 @@
+{
+  "what": "The opt-in documentary-Koine levers measured on the pinned PapyGreek test fold: one sequential run per shipped variant, after all iteration on the document-disjoint dev folds.",
+  "date": "2026-07-11",
+  "protocol": "greek.use_neural_pipeline(); the lever toggles; greek.evaluate_on_papygreek(); CPU sequential (canonical for this fold); fold papygreek-fold-v2 (sha 75304be2...). The pinned baseline row is unchanged; each variant is an opt-in registry sub-row.",
+  "levers": {
+    "A_coordinator_reconciliation": "conservative: relabels only the closed coordinator set (Smyth 2163 ff.) when the model emitted the always-wrong X/b reading; UPOS -> CCONJ, XPOS pos-code -> c; the aggressive d/ADV fold-in is measured-against (literary dev -5.24 UPOS) and not shipped as default",
+    "B_lemma_oov_rescue": "fires only on the neural identity fall-through (lemma_resolved False); consults seed then the guarded paradigm table (use_paradigms); the ending-rule tier deliberately excluded (dev-measured break-even documentary, net-negative literary); rescues carry SEED/PARADIGM evidence classes, never NEURAL"
+  },
+  "results_full_precision": {
+    "documentary_reconciliation": {
+      "upos": 0.9430823480605683,
+      "xpos": 0.800622277535781,
+      "ufeats": 0.8857498444306161,
+      "lemma": 0.8613150798589504,
+      "uas": 0.8570835926156399,
+      "las": 0.7989213856046463,
+      "clas": 0.7594068460935458,
+      "n_words": 24105,
+      "n_sentences": 1696
+    },
+    "documentary_full": {
+      "upos": 0.9430823480605683,
+      "xpos": 0.800622277535781,
+      "ufeats": 0.8857498444306161,
+      "lemma": 0.863638249325866,
+      "uas": 0.8570835926156399,
+      "las": 0.7989213856046463,
+      "clas": 0.7594068460935458,
+      "n_words": 24105,
+      "n_sentences": 1696
+    }
+  },
+  "anatomy_consistency_check": "the conservative UPOS lift (+3.26 points) equals the fold's 784 CCONJ->X errors / 24,105 words (3.25 points) to within rounding: the lever corrected essentially the whole always-wrong class and nothing else; UFeats/lemma/UAS/LAS/CLAS are byte-identical to the baseline run, as designed",
+  "dev_measurements_summary": {
+    "note": "all lever iteration happened here, never on the test fold; papygreek-dev-tagging 327 sents / 6,389 tokens; ud perseus dev 1,137 sents / 22,135 tokens (literary regression check)",
+    "papygreek_dev_tagging": {
+      "off": {"upos": 85.193, "xpos": 68.712, "lemma": 76.538},
+      "A_conservative": {"upos": 87.557, "xpos": 71.122, "lemma": 76.538, "fired": 165, "regressions": 0},
+      "A_aggressive": {"upos": 88.261, "xpos": 72.171, "lemma": 76.538, "fired": 281, "regressions": 34},
+      "B_with_paradigms_seed_paradigm_only": {"lemma_delta": 1.08, "regressions": 0}
+    },
+    "ud_perseus_dev": {
+      "off": {"upos": 98.333, "xpos": 95.785, "lemma": 95.853},
+      "A_conservative": {"upos": 98.351, "tokens_touched": 9, "regressions": 0},
+      "A_aggressive": {"upos": 93.092, "tokens_touched": 1200, "regressions": 1177},
+      "B_with_paradigms_seed_paradigm_only": {"lemma_delta": 0.005, "regressions": 0}
+    }
+  }
+}

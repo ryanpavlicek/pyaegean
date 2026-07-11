@@ -353,6 +353,54 @@ def _navigate(div: Any, components: list[str]) -> tuple[Any, list[str]]:
     return el, components[matched:]
 
 
+def _citation_scheme(root: Any) -> list[str]:
+    """The ordered citation levels a work declares, read from its TEI ``<refsDecl>``.
+
+    A CTS ``<cRefPattern n="LEVEL" matchPattern="(…)…">`` names one citation LEVEL
+    (the deepest it addresses); the number of capture groups in its ``matchPattern``
+    is that level's depth (1 = the top level). Read shallow→deep, the level names
+    are the work's citation scheme, exactly as the edition declares it and with no
+    author-specific guessing: the Iliad → ``["book", "line"]``, a Plato dialogue →
+    ``["section"]``, Xenophon's Anabasis → ``["book", "chapter", "section"]``,
+    Aristotle's Poetics → ``["chapter", "subchapter"]``. Returns ``[]`` when the
+    work declares no CTS ``refsDecl`` (nothing to name; the caller falls back to
+    generic wording). Descriptive only — this is what to try, not a promise every
+    value resolves."""
+    decls = list(root.iter(f"{_TEI}refsDecl"))
+    patterns: list[Any] = []
+    for decl in decls:  # prefer the CTS refsDecl when several are declared
+        if decl.get("n") == "CTS":
+            patterns = list(decl.iter(f"{_TEI}cRefPattern"))
+            break
+    if not patterns:
+        for decl in decls:
+            found = list(decl.iter(f"{_TEI}cRefPattern"))
+            if found:
+                patterns = found
+                break
+    by_depth: dict[int, str] = {}
+    for pat in patterns:  # a commented-out cRefPattern is XML comment text, not an element
+        name = (pat.get("n") or "").strip()
+        match_pattern = pat.get("matchPattern") or ""
+        if not name or not match_pattern:
+            continue
+        try:
+            depth = re.compile(match_pattern).groups
+        except re.error:
+            depth = match_pattern.count("(") - match_pattern.count("(?")
+        if depth < 1:
+            continue
+        by_depth.setdefault(depth, name)  # shallowest wins a depth (CTS declares one each)
+    return [by_depth[d] for d in sorted(by_depth)]
+
+
+def _scheme_path(scheme: list[str]) -> str:
+    """The citation scheme as a dotted path for a message (``"book.line"``); a
+    ``|``-alternated level name (the CapiTainS ``"epigraph|book"``) reads as
+    ``epigraph/book``."""
+    return ".".join(level.replace("|", "/") for level in scheme)
+
+
 def _tokens_for(blocks: list[str]) -> tuple[list[Token], list[list[int]]]:
     from ...greek.tokenize import tokenize
 
@@ -386,16 +434,24 @@ def _make_doc(
     )
 
 
-def _select_ref(edition_div: Any, work: str, title: str, ref: str) -> Document:
+def _select_ref(
+    edition_div: Any, work: str, title: str, ref: str, scheme: list[str]
+) -> Document:
     """Resolve ONE citation ref — a textpart (``"1"``), a nested div (``"1.2"``), or a
     verse line-range within one book (``"1.1-1.50"``); no comma — to a `Document`.
 
-    Raises `ValueError` for a range that crosses textparts, an endpoint that resolves
+    ``scheme`` is the work's declared citation levels (from `_citation_scheme`); when
+    present it makes the error messages name how the work is addressed (``"cited by
+    book.line"``) and label the available values by the declared level. Raises
+    `ValueError` for a range that crosses textparts, an endpoint that resolves
     nowhere, or a ref that selects no text (the message names the sections or line
     numbers that ARE present, so a wrong address is actionable)."""
     start, end = _parse_ref(ref)
     part, rest = _navigate(edition_div, start)
     end_part, end_rest = _navigate(edition_div, end)
+    # Named only when the TEI declares one; empty scheme keeps the generic wording so a
+    # work without a refsDecl (e.g. an authored fixture) reads exactly as before.
+    scheme_note = f" — cited by {_scheme_path(scheme)}" if scheme else ""
     if end_part is not part:
         # The two endpoints landed in different <div>s. Collecting across textparts isn't
         # supported (a Document is one textpart), and returning the start part labeled with
@@ -404,24 +460,38 @@ def _select_ref(edition_div: Any, work: str, title: str, ref: str) -> Document:
             matched = components[: len(components) - len(unmatched)]
             return f"textpart {'.'.join(matched)}" if matched else "no matching textpart"
 
+        lo_ref, _dash, hi_ref = ref.partition("-")
         raise ValueError(
-            f"{work}: ref {ref!r} crosses textparts: the range start resolves to "
-            f"{where(start, rest)} but the end to {where(end, end_rest)}. A range "
-            "must stay within one textpart; load each part separately (one "
-            "load_work call per book/chapter) and merge the corpora, or pass the parts "
-            "as a comma list (e.g. '1,2') to get one document each."
+            f"{work}: ref {ref!r} crosses textparts{scheme_note}: the range start resolves "
+            f"to {where(start, rest)} but the end to {where(end, end_rest)}. A hyphen range "
+            f"must stay within one textpart; pass a comma list "
+            f"('{lo_ref.strip()},{hi_ref.strip()}') to get one document per part, or load "
+            "each part separately and merge the corpora."
         )
 
     def selected_no_text(lo: "int | None") -> ValueError:
+        matched = len(start) - len(rest)  # how deep navigation reached before failing
         avail = [d.get("n") for d in part.iterfind(f"{_TEI}div") if d.get("n")]
         if avail:
-            hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
+            if scheme:
+                level = scheme[matched] if matched < len(scheme) else scheme[-1]
+                hint = (
+                    f"; {level.replace('|', '/')} values present: "
+                    f"{', '.join(str(a) for a in avail[:12])}"
+                )
+            else:
+                hint = f"; sections here: {', '.join(str(a) for a in avail[:12])}"
         elif lo is not None:
             nums = [n for n in (_line_num(el) for el in part.iter(f"{_TEI}l")) if n is not None]
-            hint = f"; lines present: {min(nums)}–{max(nums)}" if nums else ""
+            if not nums:
+                hint = ""
+            elif scheme:
+                hint = f"; {scheme[-1].replace('|', '/')} values present: {min(nums)}–{max(nums)}"
+            else:
+                hint = f"; lines present: {min(nums)}–{max(nums)}"
         else:
             hint = ""
-        return ValueError(f"{work}: ref {ref!r} selected no text{hint}")
+        return ValueError(f"{work}: ref {ref!r} selected no text{scheme_note}{hint}")
 
     # After navigation, the only legitimate leftover is a single numeric verse-line
     # selector. Anything else (a non-numeric component like "abc", or several unmatched
@@ -455,19 +525,22 @@ def _dedup_refs(ref: str) -> list[str]:
     return out
 
 
-def _select_refs(edition_div: Any, work: str, title: str, ref: str) -> list[Document]:
+def _select_refs(
+    edition_div: Any, work: str, title: str, ref: str, scheme: list[str]
+) -> list[Document]:
     """Resolve ``ref`` — one citation ref, or several comma-separated (``"1.1,1.5"``,
     ``"1,3"``) — to one `Document` per selection (source order preserved, exact
     duplicates dropped). Each comma entry is resolved independently, so a multi-ref may
-    span textparts (``"1.1,2.1"``) even though a single hyphen-range may not."""
+    span textparts (``"1.1,2.1"``) even though a single hyphen-range may not. ``scheme``
+    is the work's declared citation levels, threaded to each entry for its errors."""
     if "," not in ref:
-        return [_select_ref(edition_div, work, title, ref)]
+        return [_select_ref(edition_div, work, title, ref, scheme)]
     if any(raw.strip() == "" for raw in ref.split(",")):
         raise ValueError(
             f"malformed work ref {ref!r}: an empty entry in the comma list "
             "(use e.g. '1.1,1.5' or '1,3')"
         )
-    return [_select_ref(edition_div, work, title, seg) for seg in _dedup_refs(ref)]
+    return [_select_ref(edition_div, work, title, seg, scheme) for seg in _dedup_refs(ref)]
 
 
 def parse_tei_work(
@@ -489,7 +562,12 @@ def parse_tei_work(
     whole-part ``"1-2"``) raises `ValueError` naming both parts. A **comma list** has
     no such limit — each entry is resolved independently — so ``"1,2"`` returns both
     parts as separate documents. ``<note>``/``<bibl>`` are kept in
-    ``DocumentMeta.notes`` (excluded from the running text, not dropped)."""
+    ``DocumentMeta.notes`` (excluded from the running text, not dropped).
+
+    A ``ref`` that resolves nowhere raises `ValueError` naming the work's **declared
+    citation scheme** (read from the TEI ``<refsDecl>``, see `citation_scheme`): a
+    Plato dialogue reports ``cited by section``, the Iliad ``cited by book.line``, so
+    the message says how to address the work rather than only that the ref missed."""
     import xml.etree.ElementTree as ET
 
     root = ET.fromstring(blob)
@@ -513,7 +591,8 @@ def parse_tei_work(
         raise ValueError(f"{work}: no edition <div>")
 
     if ref is not None:
-        return title, author, _select_refs(edition_div, work, title, ref)
+        scheme = _citation_scheme(root)  # the declared citation levels, for the messages
+        return title, author, _select_refs(edition_div, work, title, ref, scheme)
 
     parts = [d for d in edition_div.iterfind(f"{_TEI}div")] or [edition_div]
     docs: list[Document] = []
@@ -554,7 +633,8 @@ def load_work(
     `canonical_citation`), so ``corpus.cite()`` echoes the selection.
     ``<note>``/``<bibl>`` ride along in ``Document.meta.notes``. Raises
     `aegean.data.DataNotAvailableError` when the work can't be found/fetched, or
-    `ValueError` when ``ref`` matches nothing."""
+    `ValueError` when ``ref`` matches nothing — that message names the work's declared
+    citation scheme (``cited by book.line``); `citation_scheme` returns it directly."""
     from ...core.corpus import Corpus
 
     blob, src, filename = _fetch_xml(work, source, edition, force)
@@ -595,6 +675,31 @@ def canonical_citation(
         return lead
     refs = "; ".join(_dedup_refs(ref))
     return f"{lead} {refs}" if refs else lead
+
+
+def citation_scheme(
+    work: str, *, source: str = "auto", edition: str | None = None, force: bool = False
+) -> list[str]:
+    """How a Greek work is addressed: its ordered citation levels, from the TEI edition.
+
+    Reads the work's declared CTS ``<refsDecl>`` and returns the citation levels
+    shallow→deep, exactly as the edition names them (no author-specific guessing):
+    the Iliad → ``["book", "line"]``, a Plato dialogue → ``["section"]``, Xenophon's
+    Anabasis → ``["book", "chapter", "section"]``, Aristotle's Poetics →
+    ``["chapter", "subchapter"]``. So ``["book", "line"]`` means a ``--ref`` looks
+    like ``1`` (a whole book) or ``1.1`` / ``1.1-1.50`` (a line or line-range within a
+    book); a single-level ``["section"]`` means ``--ref 17`` (one section).
+
+    Returns ``[]`` when the work declares no CTS ``refsDecl``. Like `load_work`, the
+    TEI file is fetched once to the cache (``source``/``edition``/``force`` as there);
+    this is metadata about the edition, not its text. It reports the addressable
+    levels the edition declares: finer references some editions print in the margin
+    (a Stephanus sub-page ``17a``, a Bekker line ``1447a10``) live in ``<milestone>``
+    markers the CTS scheme does not make addressable, and are not returned."""
+    import xml.etree.ElementTree as ET
+
+    blob, _src, _filename = _fetch_xml(work, source, edition, force)
+    return _citation_scheme(ET.fromstring(blob))
 
 
 # A small, curated catalog of well-known works for discovery. Every id below was verified to

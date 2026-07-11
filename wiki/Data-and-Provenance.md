@@ -145,7 +145,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `ddbdp-uris` | DDbDP document-identifier map (file stem→ddb-hybrid) for papyri.info URIs in RDF export | ~337 KB | CC BY 3.0 (derived from papyri.info idp.data) | Project-hosted derivative; rebuild: `scripts/build_ddbdp_uri_map.py` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
-| `sigla-corpus` | SigLA-derived Linear A dataset v3: 781 docs, 1,376 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
+| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs, 1,401 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
@@ -245,6 +245,14 @@ Dictionaries that are not openly redistributable (Slater, Montanari, DGE, Bailly
 are not hosted; `greek.lexicon_link(word)` builds a Logeion deep-link to them instead. None of
 these is bundled in the Apache-2.0 wheel. See [Greek NLP → the lexicon registry](Greek-NLP#more-dictionaries-the-lexicon-registry).
 
+The registry also records the **Suda On Line** (`id="suda"`), the Byzantine Greek
+encyclopedic lexicon, as deep-link only. It is addressed by **Adler number** at its own
+site (a canonical entry is `http://www.stoa.org/sol-entries/alpha/1`), not by a running
+word, so `greek.lexica()` records where it lives rather than minting an offline word→entry
+link. The ancient Suda text (Adler's 1928–1938 edition) is public domain; the Suda On
+Line's translations and annotations are **CC BY-NC-SA** (per the SOL rights statement).
+Nothing is hosted or bundled — the entry links, and hosts, nothing.
+
 #### The Greek neural lemmatizer model (`grc-lemma-neural`, `use_neural_lemmatizer`, `[neural]`)
 
 `aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer that
@@ -307,7 +315,7 @@ https://sigla.phis.me) publishes its dataset and drawings under
 copies can be hosted. pyaegean hosts the decoded dataset (the JSON form the paper
 describes, reconstructed from the published web-app payload by
 `scripts/build_sigla_corpus.py`) as the sha256-pinned `sigla-corpus` release
-asset: **781 documents** with SigLA's own word division (1,376 words) and
+asset: **802 documents** with SigLA's own word division (1,401 words) and
 commodity ideograms (~1.2 MB), fetched on demand, **never bundled** (NonCommercial
 data stays out of the Apache-2.0 wheel; the NC + ShareAlike obligations pass
 through to you). Attribution, citation, source sha256, and generation date are
@@ -317,7 +325,7 @@ sigla.phis.me. Cite SigLA in academic work.
 ```python
 import aegean
 s = aegean.load("sigla")
-len(s)                       # 781
+len(s)                       # 802
 s.provenance.license         # 'CC BY-NC-SA 4.0 (as published by SigLA; ...)'
 ```
 
@@ -600,7 +608,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.40.0'  (your installed version)
+v["package"]                                  # '0.41.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -671,7 +679,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.40.0'
+# '0.41.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

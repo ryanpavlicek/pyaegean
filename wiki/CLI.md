@@ -105,7 +105,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.40.0
+aegean --version          # pyaegean 0.41.0
 ```
 
 | Group | What's in it |
@@ -1199,7 +1199,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.40.0                    │
+│ OK │ pyaegean │ 0.41.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1601,9 +1601,18 @@ aegean greek works --remove tlg0059.tlg003
 # removed 1 work from the cache.
 ```
 
-`--ref` selects a section: `1` (book), `1.2` (chapter), or `1.1-1.50` (line
-range). `--source` is `auto`/`perseus`/`first1k`; `--edition` picks a specific
-edition file.
+`--ref` selects a section by the work's **declared citation scheme**: `1` (a book,
+or a Stephanus section), `1.2` (a chapter), or `1.1-1.50` (a line range). The scheme is
+read from the edition's TEI structure and varies by genre — verse is `book.line`, a
+Stephanus-paged Plato dialogue is a single `section`, Aristotle is `chapter.subchapter`,
+multi-book prose is `book.chapter.section` — so a **wrong `--ref` names the work's own
+scheme** (e.g. `cited by book.line`) instead of only reporting a miss. A hyphen range must
+stay within one textpart; for sibling sections, or a range that would cross textparts, use
+a **comma list** (`--ref 1.1,1.5` or `--ref 1,3`), one document per entry. To discover the
+scheme before loading, call `greek.citation_scheme("tlg0012.tlg001")` (it returns the
+ordered levels, e.g. `["book", "line"]`); the per-genre table is on
+[Greek Works and Books](Greek-Works-and-Books#citation-schemes-how-a-work-is-addressed).
+`--source` is `auto`/`perseus`/`first1k`; `--edition` picks a specific edition file.
 
 **The Greek New Testament** has its own loader, `nt` (Nestle 1904; fetched on
 first use, with a bundled John 1 + Philemon sample for offline use),
@@ -1917,7 +1926,7 @@ downloaded on demand, never bundled):
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
 | `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
-| `sigla-corpus` | SigLA Linear A dataset (781 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
+| `sigla-corpus` | SigLA Linear A dataset (802 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
 | `isicily-corpus` | I.Sicily Greek inscriptions (2,855 texts): `aegean.load('isicily')` | CC BY 4.0 |
 | `iip-corpus` | IIP Greek inscriptions of Israel/Palestine (2,113 texts): `aegean.load('iip')` | CC BY-NC 4.0 |

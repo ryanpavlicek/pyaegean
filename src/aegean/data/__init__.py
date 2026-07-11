@@ -346,12 +346,12 @@ _REMOTE: dict[str, DataSpec] = {
         name="sigla-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "sigla-corpus-v3/sigla-corpus.json"
+            "sigla-corpus-v4/sigla-corpus.json"
         ),
-        sha256="683fa0147f2b923a78f7c2c1da95cf42d8c05563f9ed53c5dfa8e520f4e38569",
+        sha256="9a5e4783146144fc5ac54c5dc2b372b39cc0e0ea40ca15207243f8c539f03dd8",
         license="CC BY-NC-SA 4.0 (SigLA — Salgarella & Castellan; NonCommercial, never bundled)",
-        note="SigLA-derived Linear A dataset v3: 781 documents with SigLA's own word "
-             "division (1,376 words), homophone subscripts (RA₂/PU₂/TA₂), and "
+        note="SigLA-derived Linear A dataset v4: 802 documents with SigLA's own word "
+             "division (1,401 words), homophone subscripts (RA₂/PU₂/TA₂), and "
              "commodity ideograms (~1.3 MB JSON). Drawings stay at sigla.phis.me.",
         extract=False,
     ),
@@ -668,6 +668,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "sigla-corpus": [
+        HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "sigla-corpus-v3/sigla-corpus.json"
+            ),
+            sha256="683fa0147f2b923a78f7c2c1da95cf42d8c05563f9ed53c5dfa8e520f4e38569",
+            superseded="v4",
+        ),
         HistoricalPin(
             version="v2",
             url=(

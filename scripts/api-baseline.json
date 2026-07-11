@@ -13325,6 +13325,10 @@
       "canonical": "aegean.greek.morphology.Analysis",
       "kind": "class"
     },
+    "aegean.greek.COORDINATORS": {
+      "canonical": "aegean.greek.documentary.COORDINATORS",
+      "kind": "attribute"
+    },
     "aegean.greek.Calibration": {
       "canonical": "aegean.greek.calibrate.Calibration",
       "kind": "class"
@@ -14434,6 +14438,33 @@
       ],
       "returns": true
     },
+    "aegean.greek.citation_scheme": {
+      "canonical": "aegean.scripts.greek.perseus.citation_scheme",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "work"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "edition"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "force"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.coverage": {
       "kind": "module"
     },
@@ -14505,6 +14536,18 @@
       "params": [],
       "returns": true
     },
+    "aegean.greek.disable_documentary_lemma_rescue": {
+      "canonical": "aegean.greek.documentary.disable_documentary_lemma_rescue",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.disable_documentary_reconciliation": {
+      "canonical": "aegean.greek.documentary.disable_documentary_reconciliation",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
     "aegean.greek.disable_inflector": {
       "canonical": "aegean.greek.inflect.disable_inflector",
       "kind": "function",
@@ -14567,6 +14610,109 @@
     },
     "aegean.greek.disable_treebank": {
       "canonical": "aegean.greek.treebank.disable_treebank",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary": {
+      "kind": "module"
+    },
+    "aegean.greek.documentary.COORDINATORS": {
+      "kind": "attribute"
+    },
+    "aegean.greek.documentary.coordinator_norm": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "form"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.documentary.disable_documentary_lemma_rescue": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary.disable_documentary_reconciliation": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary.documentary_lemma_rescue_active": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary.documentary_reconciliation_active": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary.reconcile_analysis": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "ana"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "aggressive"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.documentary.rescue_analysis": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "ana"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.documentary.rescue_lemma": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "form"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.documentary.use_documentary_lemma_rescue": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary.use_documentary_reconciliation": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "aggressive"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.documentary_lemma_rescue_active": {
+      "canonical": "aegean.greek.documentary.documentary_lemma_rescue_active",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.documentary_reconciliation_active": {
+      "canonical": "aegean.greek.documentary.documentary_reconciliation_active",
       "kind": "function",
       "params": [],
       "returns": true
@@ -19732,6 +19878,18 @@
       ],
       "returns": true
     },
+    "aegean.greek.rescue_lemma": {
+      "canonical": "aegean.greek.documentary.rescue_lemma",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "form"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.resolve_sandhi": {
       "canonical": "aegean.greek.sandhi.resolve_sandhi",
       "kind": "function",
@@ -21081,6 +21239,24 @@
       ],
       "returns": true
     },
+    "aegean.greek.use_documentary_lemma_rescue": {
+      "canonical": "aegean.greek.documentary.use_documentary_lemma_rescue",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.use_documentary_reconciliation": {
+      "canonical": "aegean.greek.documentary.use_documentary_reconciliation",
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "aggressive"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.use_dodson": {
       "canonical": "aegean.greek.koine.use_dodson",
       "kind": "function",
@@ -21260,6 +21436,9 @@
     },
     "aegean.io": {
       "kind": "module"
+    },
+    "aegean.io.EXPORT_FORMATS": {
+      "kind": "attribute"
     },
     "aegean.io.MergedReview": {
       "canonical": "aegean.io.review.MergedReview",
@@ -23206,6 +23385,32 @@
           "default": true,
           "kind": "keyword-only",
           "name": "source"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.scripts.greek.perseus.citation_scheme": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "work"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "edition"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "force"
         }
       ],
       "returns": true

@@ -18,16 +18,16 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-_TEI = "http://www.tei-c.org/ns/1.0"
-_XML = "http://www.w3.org/XML/1998/namespace"
-
-# The reading-text extractor (with per-token editorial ReadingStatus) is shared across the
-# epigraphy corpora; I.Sicily reuses it so a restored/damaged reading is preserved, not flattened.
-from _epidoc import edition_tokens  # noqa: E402
+# The shared driver + reading-text extractor (with per-token editorial ReadingStatus) are shared
+# across the epigraphy corpora; I.Sicily reuses them (choice_prefer=True resolves each editorial
+# <choice> to its corrected/regularized member) so a restored/damaged reading is preserved, not
+# flattened, and there is one driver rather than a per-corpus copy. edition_tokens stays imported
+# for the shared-extractor conformance battery (tests/test_epidoc_conformance.py), which references
+# it as a module attribute.
+from _epidoc import build_greek_corpus, edition_tokens  # noqa: E402,F401
 
 
 def _local(tag: object) -> str:
@@ -75,12 +75,22 @@ def _main_lang(root: ET.Element) -> str:
     return ""
 
 
-def _primary_edition(root: ET.Element) -> ET.Element | None:
-    editions = [d for d in root.iter(f"{{{_TEI}}}div") if d.get("type") == "edition"]
-    for d in editions:
-        if d.get("subtype") == "primary":
-            return d
-    return editions[0] if editions else None
+def _is_greek(root: ET.Element) -> bool:
+    return _main_lang(root) == "grc"
+
+
+def _metadata(root: ET.Element, stem: str):  # type: ignore[no-untyped-def]
+    from aegean.core.model import DocumentMeta
+
+    site, coords, pleiades = _place(root)
+    notes = tuple(n for n in (f"coords: {coords}" if coords else "", pleiades) if n)
+    return DocumentMeta(
+        name=_first(root, "title") or stem,
+        site=site,
+        period=_first(root, "origDate"),
+        findspot=coords,
+        notes=notes,
+    )
 
 
 def main() -> int:
@@ -90,71 +100,19 @@ def main() -> int:
     ap.add_argument("--limit", type=int, default=0, help="cap the number of Greek docs (0 = all)")
     args = ap.parse_args()
 
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-    from aegean.core.corpus import Corpus
-    from aegean.core.model import Document, DocumentMeta, Token, TokenKind
-    from aegean.core.provenance import Provenance
-
     insc = Path(args.source) / "inscriptions"
-    files = sorted(insc.glob("*.xml"))
-    docs: list[Document] = []
-    greek = 0
-    for f in files:
-        try:
-            root = ET.parse(str(f)).getroot()
-        except ET.ParseError:
-            continue
-        if _main_lang(root) != "grc":
-            continue
-        edition = _primary_edition(root)
-        if edition is None:
-            continue
-        # Resolve each editorial <choice> to its corrected/regularized member (expan>reg>corr)
-        # rather than concatenating both alternatives into one garbled token.
-        token_lines = edition_tokens(edition, choice_prefer=True)
-        if not token_lines:
-            continue  # no readable Greek text (fragment/uninscribed)
-        greek += 1
-        tokens: list[Token] = []
-        lines: list[list[int]] = []
-        pos = 0
-        for tl in token_lines:
-            idxs: list[int] = []
-            for word, status in tl:
-                if not word:
-                    continue
-                tokens.append(
-                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
-                )
-                idxs.append(pos)
-                pos += 1
-            if idxs:
-                lines.append(idxs)
-        if not tokens:
-            continue
-        site, coords, pleiades = _place(root)
-        notes = tuple(n for n in (f"coords: {coords}" if coords else "",
-                                  pleiades) if n)
-        meta = DocumentMeta(
-            name=_first(root, "title") or f.stem,
-            site=site,
-            period=_first(root, "origDate"),
-            findspot=coords,
-            notes=notes,
-        )
-        docs.append(Document(id=f.stem, script_id="greek", tokens=tokens, lines=lines, meta=meta))
-        if args.limit and len(docs) >= args.limit:
-            break
-
-    prov = Provenance(
+    greek, written = build_greek_corpus(
+        insc,
+        is_greek=_is_greek,
+        metadata=_metadata,
+        out=args.output,
         source="I.Sicily (ISicily/ISicily, CC BY 4.0), primary-Greek inscriptions",
         license="CC-BY-4.0 (I.Sicily; Jonathan Prag et al., University of Oxford)",
         url="https://github.com/ISicily/ISicily",
-        edition_fidelity="apparatus-preserved,normalized",
+        limit=args.limit,
+        choice_prefer=True,
     )
-    corpus = Corpus(docs, provenance=prov, script_id="greek")
-    Path(args.output).write_text(corpus.to_json(), encoding="utf-8")
-    print(f"Greek inscriptions with text: {greek}; documents written: {len(docs)}")
+    print(f"Greek inscriptions with text: {greek}; documents written: {written}")
     print(f"wrote {args.output} ({Path(args.output).stat().st_size} bytes)")
     return 0
 

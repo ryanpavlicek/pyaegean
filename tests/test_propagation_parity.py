@@ -554,20 +554,18 @@ def test_every_fetchable_corpus_has_a_cli_fetch_hint():
         # a bundled corpus (resolved not in _REMOTE) is always available: no hint needed
 
 
-# ── CLASS: export formats — the CLI validation set reaches help and the wiki ──
-# There is NO central export-format registry: the canonical set is the ``formats``
-# tuple validated inside cli._corpus.export(). The --format help and the wiki
-# CLI-Cheatsheet formats table must both enumerate it. The RDF formats (ttl/jsonld,
-# 0.36.0) reached the CLI but not the cheatsheet table (reported as a doc gap).
+# ── CLASS: export formats — the io.EXPORT_FORMATS registry reaches help and the wiki ──
+# The canonical set is the ``aegean.io.EXPORT_FORMATS`` constant (the single source of
+# truth). cli._corpus.export() validates against it and derives its --format help from
+# it; the --format help and the wiki CLI-Cheatsheet formats table must both enumerate
+# it. The RDF formats (ttl/jsonld, 0.36.0) reached the CLI but not the cheatsheet table
+# (reported as a doc gap). Anchoring here on the constant (not the CLI source) means the
+# CLI needs no rewrite for this guard, and a new writer added to the registry is checked
+# against the help and the wiki in the same commit.
 def _export_formats() -> tuple[str, ...]:
-    import inspect
+    from aegean.io import EXPORT_FORMATS
 
-    from aegean.cli import _corpus
-
-    src = inspect.getsource(_corpus.export)
-    m = re.search(r"formats\s*=\s*\(([^)]*)\)", src)
-    assert m, "could not locate the export() `formats` validation tuple"
-    return tuple(re.findall(r'"([a-z]+)"', m.group(1)))
+    return EXPORT_FORMATS
 
 
 def test_export_formats_enumerated_in_the_cli_format_help():

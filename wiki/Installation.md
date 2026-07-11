@@ -125,7 +125,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.40.0
+# pyaegean 0.41.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -141,7 +141,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.40.0
+print(aegean.__version__)                 # 0.41.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -158,7 +158,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.40.0
+# pyaegean 0.41.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -196,7 +196,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.40.0                    │
+│ OK │ pyaegean │ 0.41.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -239,7 +239,7 @@ aegean data list
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) |
 | `damos-corpus` | DAMOS-derived Linear B corpus v2: ~5,900 tablets: `load("damos")` | ~3 MB | CC BY-NC-SA 4.0 (DAMOS, F. Aurora) |
-| `sigla-corpus` | SigLA-derived Linear A dataset v3: 781 docs / 1,376 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
+| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs / 1,401 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
 | `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens: `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily: `load("isicily")` | ~7 MB | CC BY 4.0 (I.Sicily: Prag et al., Oxford) |
 | `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine: `load("iip")` | ~4 MB | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) |

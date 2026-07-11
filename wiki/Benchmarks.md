@@ -157,6 +157,27 @@ treebanks), and 13.62 of the 23.24 XPOS gap points are convention or encoding
 artifact); forgiving those three, XPOS would read 90.38%. A measurement
 decomposition only, mirroring the PROIEL one; the published row is unchanged.
 
+### Opt-in documentary levers
+
+Two **opt-in, default-off** post-processing layers reconcile the neural pipeline's
+output to the documentary register, byte-identical to the shipped model until switched
+on. Each is a composition layer (like `use_paradigms`) with its **own** registry variant
+row, so the published PapyGreek row is unchanged. **Lever A** —
+`greek.use_documentary_reconciliation()` — relabels only the closed coordinator set
+(καί, δέ, τε …) when the model emits the always-wrong `X`/`b` reading (dev-measured
+**+2.36 UPOS / +2.41 XPOS, zero regressions**; the aggressive `ADV`/`d` variant is
+recommended against — literary dev **−5.24 UPOS**). **Lever B** —
+`greek.use_documentary_lemma_rescue()` — rescues an unresolved neural lemma from the
+guarded **seed + paradigm** tiers only (ending rules excluded: break-even documentary,
+net-negative literary), under its own `SEED`/`PARADIGM` evidence class, never `NEURAL`
+(dev **+1.06 lemma** with `use_paradigms`). Each is measured once, sequentially, on the
+pinned fold:
+
+| Variant on the PapyGreek fold | UPOS / UFeats / Lemma / UAS / LAS |
+| --- | --- |
+| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
+
 ## Pure-Python offline baseline
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +

@@ -266,10 +266,17 @@ def build_greek_corpus(
     script_id: str = "greek",
     limit: int = 0,
     edition_fidelity: str = "apparatus-preserved,normalized",
+    choice_prefer: bool = False,
 ) -> tuple[int, int]:
     """Filter the Greek inscriptions of an EpiDoc directory, extract each primary edition's Greek
     reading (with per-token editorial status), and write a compact pyaegean ``Corpus`` JSON.
-    Returns (greek_with_text, documents)."""
+    Returns (greek_with_text, documents).
+
+    With ``choice_prefer=True`` each editorial ``<choice>`` contributes only its edited member
+    (expansion > regularization > correction; see `edition_tokens`) instead of concatenating both
+    alternatives into one garbled token; the inscription builders (I.Sicily, IIP, IOSPE, IGCyr)
+    pass it. The default keeps the historical both-members behaviour so a corpus built without the
+    flag is byte-identical to before."""
     from aegean.core.corpus import Corpus
     from aegean.core.model import Document, Token, TokenKind
     from aegean.core.provenance import Provenance
@@ -287,7 +294,7 @@ def build_greek_corpus(
         edition = primary_edition(root)
         if edition is None:
             continue
-        token_lines = edition_tokens(edition)
+        token_lines = edition_tokens(edition, choice_prefer=choice_prefer)
         if not token_lines:
             continue
         greek += 1

@@ -59,6 +59,16 @@ from .morphology import Analysis, analyze, best_pos, lemmas
 from .rarity import RarityResult, WordRarity, terminology_rarity
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
 from .paradigms import ParadigmLexicon, disable_paradigms, use_paradigms
+from .documentary import (
+    COORDINATORS,
+    disable_documentary_lemma_rescue,
+    disable_documentary_reconciliation,
+    documentary_lemma_rescue_active,
+    documentary_reconciliation_active,
+    rescue_lemma,
+    use_documentary_lemma_rescue,
+    use_documentary_reconciliation,
+)
 from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
 from .usage import UsageInfo, usage
 from .syntax import (
@@ -170,6 +180,7 @@ from ..scripts.greek.perseus import (
     catalog,
     fetch_works,
     list_fetched_works,
+    citation_scheme,
     load_work,
     popular_works,
     remove_fetched_works,
@@ -201,6 +212,7 @@ __all__ = [
     "unicode_to_betacode",
     "pipeline",
     "TokenRecord",
+    "citation_scheme",
     "load_work",
     "popular_works",
     "catalog",
@@ -262,6 +274,14 @@ __all__ = [
     "use_paradigms",
     "disable_paradigms",
     "ParadigmLexicon",
+    "use_documentary_reconciliation",
+    "disable_documentary_reconciliation",
+    "documentary_reconciliation_active",
+    "use_documentary_lemma_rescue",
+    "disable_documentary_lemma_rescue",
+    "documentary_lemma_rescue_active",
+    "rescue_lemma",
+    "COORDINATORS",
     "use_inflector",
     "disable_inflector",
     "inflect",

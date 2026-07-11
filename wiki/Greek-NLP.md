@@ -215,6 +215,62 @@ alone was about 4× over sequential CPU, and a data-center GPU with `batch_size=
 about 90×. **Every published benchmark number is measured on the CPU provider,
 sequentially** — the recorded protocol; GPU and batching are throughput conveniences.
 
+### Documentary-register post-processing (opt-in)
+
+Two optional layers reconcile the neural pipeline's output to the **documentary** register
+(papyrus letters and petitions, the PapyGreek fold), where the merged treebanks' annotation
+conventions cost the out-of-domain model the most. Both **post-process the active neural
+pipeline**, so activate it first (`greek.use_neural_pipeline()`); each is **opt-in and off by
+default**, and the pipeline is **byte-identical to the shipped model until you switch a lever
+on** (a fresh session, or `disable_*`, restores exactly the model's own output). Re-activating
+the neural pipeline drops the wrappers, so call the toggle again after any
+`use_neural_pipeline()`.
+
+```python
+greek.use_neural_pipeline()
+greek.use_documentary_reconciliation()   # Lever A (conservative default)
+greek.use_paradigms()                    # (optional) the UniMorph tables Lever B draws on
+greek.use_documentary_lemma_rescue()     # Lever B
+
+greek.documentary_reconciliation_active()   # True
+greek.documentary_lemma_rescue_active()     # True
+greek.rescue_lemma("ἄνθρωπον")              # ('ἄνθρωπος', <LemmaSource.SEED: 'seed'>) — or None on a miss
+
+greek.disable_documentary_reconciliation()
+greek.disable_documentary_lemma_rescue()
+```
+
+**Lever A — coordinator reconciliation** (`greek.use_documentary_reconciliation()`).
+The single largest documentary error source is the closed class of coordinating conjunctions
+(καί, δέ, τε, ἀλλά, ἤ, οὐδέ, οὔτε, μηδέ, μήτε): the merged training treebanks tag them under
+three incompatible conventions, so on the documentary register the model drifts to the `X` /
+`b` reading. This layer relabels such a token to `CCONJ` (XPOS pos-code `c`), leaving every
+other field consistent. The **conservative default** fires only on the `X` / `b` reading,
+which is *always* wrong for a coordinator, so it cannot mislabel a correct token. The
+**aggressive** form (`use_documentary_reconciliation(aggressive=True)`) additionally folds in
+the `ADV` / `d` reading, which is a *legitimate* adverbial tag for these forms in the literary
+convention — it clobbers those correct labels and is **documented against** (measured to
+regress literary text heavily).
+
+**Lever B — lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When the model leaves
+a lemma unresolved (the honest identity fall-through), this consults the guarded **offline**
+cascade: the bundled **seed** table, then the opt-in UniMorph **paradigm** table when
+`use_paradigms()` is active — **seed and guarded-paradigm tiers only**. The generalizing
+ending-stripping rules are **deliberately excluded** (on the residue the model already left
+unresolved they fabricate about as often as they fix). So Lever B is at its best paired with
+`use_paradigms()`. A rescue only *replaces* an unresolved lemma (never overrides a resolved
+neural lemma) and carries its **own** evidence class — `LemmaSource.SEED` or
+`LemmaSource.PARADIGM`, the curated offline source that produced it, **never** `NEURAL` — and
+the token keeps `lemma_resolved=False`, so nothing downstream ever credits the model for an
+offline rescue. `greek.rescue_lemma(form)` returns the `(lemma, source)` a rescue would use,
+or `None`.
+
+From the shell, `aegean greek eval {ud,nt,papygreek} --documentary` scores a run with both
+levers applied (it activates the neural pipeline and the conservative reconciliation, then
+restores a clean session afterward). The measured, opt-in variant rows on the PapyGreek fold
+are in [Benchmarks → Opt-in documentary levers](Benchmarks#opt-in-documentary-levers); the
+published PapyGreek row is unchanged by either lever.
+
 ## Normalization & Beta Code
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and
@@ -1117,6 +1173,17 @@ lemmatizing the word first; Logeion aggregates all of those dictionaries.
 ```python
 greek.lexicon_link("λόγος")   # 'https://logeion.uchicago.edu/λόγος'  (percent-encoded for the browser)
 ```
+
+The registry also records the **Suda On Line** (the Byzantine Greek encyclopedic
+lexicon), `id="suda"`, deep-link only. Unlike the Logeion-aggregated dictionaries
+above, the Suda lives at [its own site](http://www.stoa.org/sol/) and is addressed by
+**Adler number** (a letter plus a reference number), so a canonical entry is a URL like
+`http://www.stoa.org/sol-entries/alpha/1`, not a word lookup. pyaegean holds no
+Adler-number index, so `greek.lexica()` lists the Suda and where it lives rather than
+minting an offline word→entry link, and `use_lexicon("suda")` raises the deep-link guard
+(reach it online instead). The ancient Suda text (Adler's 1928–1938 edition) is public
+domain; the Suda On Line's translations and annotations are CC BY-NC-SA. It hosts, and
+links to, nothing.
 
 From the shell:
 

@@ -943,7 +943,10 @@ def work(
         None, help="With 'all': fetch every work by this author (case-insensitive)."
     ),
     ref: str | None = typer.Option(
-        None, "--ref", help="Select a section: '1' (book), '1.2' (chapter), '1.1-1.50' (lines)."
+        None, "--ref",
+        help="Select a section by the work's citation scheme: '1' (book/section), '1.2' "
+        "(chapter), '1.1-1.50' (lines); comma list for siblings. A wrong ref names the "
+        "work's declared scheme; greek.citation_scheme(id) reports it.",
     ),
     source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
     edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
@@ -1291,6 +1294,13 @@ def evaluate(
              "at a time (faster on long folds; the published numbers use the sequential "
              "default).",
     ),
+    documentary: bool = typer.Option(
+        False, "--documentary",
+        help="For ud/nt/papygreek score runs: apply the opt-in documentary-Koine post-"
+             "processing over the neural pipeline (closed-class coordinator reconciliation + "
+             "offline lemma OOV rescue). Off by default; a separate opt-in variant, not the "
+             "published number.",
+    ),
     neural: bool = NEURAL_OPT,
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -1322,10 +1332,28 @@ def evaluate(
         if target not in ("ud", "nt", "papygreek") or drift or (bootstrap and not by_genre):
             raise fail("--batch-size applies to `eval ud`, `eval nt`, and `eval papygreek` "
                        "score runs (not --drift/--bootstrap)")
+    if documentary and (
+        target not in ("ud", "nt", "papygreek") or drift or bootstrap or by_genre
+    ):
+        raise fail("--documentary applies to `eval ud`, `eval nt`, and `eval papygreek` score "
+                   "runs (not --drift/--bootstrap/--by-genre); it post-processes the neural "
+                   "pipeline's output.")
     _activate(
         tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
     )
+
+    def _apply_documentary() -> None:
+        # The two opt-in documentary levers post-process the neural pipeline, so it must be
+        # active (ud does not auto-activate it — force it on here); reconciliation is the
+        # conservative default (X/b drift only). Toggled off again before the result is emitted.
+        from aegean.greek import joint
+
+        if joint.active() is None:
+            _activate(neural=True)
+        greek.use_documentary_reconciliation()
+        greek.use_documentary_lemma_rescue()
+
     def emit_drift(report: object) -> None:  # ErrorAnalysis -> --json dict / text summary
         if emit_result(report.as_dict(), json_output=json_out, output=output):  # type: ignore[attr-defined]
             return
@@ -1376,6 +1404,8 @@ def evaluate(
             if unmapped:
                 print(f"unmapped authors (counted as 'other'): {', '.join(unmapped)}", file=sys.stderr)
             return
+        if documentary:
+            _apply_documentary()
         if bootstrap:
             cis = greek.bootstrap_ud(treebank=fold, split=split)
             result = {
@@ -1397,6 +1427,8 @@ def evaluate(
         if drift:
             emit_drift(greek.nt_error_analysis())
             return
+        if documentary:
+            _apply_documentary()
         if batch_size is not None:
             result = greek.evaluate_on_nt(progress=live_progress, batch_size=batch_size)
         else:
@@ -1409,6 +1441,8 @@ def evaluate(
             # One canonical SEQUENTIAL run (batch-32 is not prediction-identical on this fold).
             emit_drift(greek.papygreek_convention_report(progress=live_progress))
             return
+        if documentary:
+            _apply_documentary()
         if batch_size is not None:
             result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
         else:
@@ -1422,6 +1456,9 @@ def evaluate(
         result = greek.evaluate_parser()
     else:
         raise fail("target must be ud, proiel, nt, papygreek, tagger, lemmatizer, or parser")
+    if documentary:  # opt-in post-processing is per-run; leave the session clean afterwards
+        greek.disable_documentary_reconciliation()
+        greek.disable_documentary_lemma_rescue()
     if emit_result(result, json_output=json_out, output=output):
         return
     if isinstance(result, dict):

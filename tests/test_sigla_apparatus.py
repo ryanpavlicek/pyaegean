@@ -177,13 +177,15 @@ _SIGLA_CACHED = data.is_downloaded(data._REMOTE["sigla-corpus"], data.cache_dir(
 
 @pytest.mark.skipif(not _SIGLA_CACHED, reason="sigla-corpus not cached (no network in CI)")
 def test_real_corpus_status_counts():
-    """On the real SigLA asset the loader now decodes 309 UNCLEAR tokens across
-    205 documents (before this decoding every token defaulted to CERTAIN); the
-    2,578-token, 781-document corpus is otherwise unchanged. Recorded so the
+    """On the real SigLA asset (v4) the loader decodes 320 UNCLEAR tokens across
+    215 documents (before this decoding every token defaulted to CERTAIN); the
+    2,616-token, 802-document corpus is otherwise unchanged. Recorded so the
     decoded counts cannot drift silently where the asset is present."""
     import aegean
 
     c = aegean.load("sigla")
+    if len(c) != 802:
+        pytest.skip("cached sigla asset predates the v4 refresh")
     counts = {s: 0 for s in ReadingStatus}
     docs_app = 0
     ntok = 0
@@ -197,11 +199,11 @@ def test_real_corpus_status_counts():
             assert not any(m in s for s in t.signs for m in "?[]")  # no marker leaks
         if app:
             docs_app += 1
-    assert (len(c), ntok) == (781, 2578)
-    assert counts[ReadingStatus.CERTAIN] == 2269
-    assert counts[ReadingStatus.UNCLEAR] == 309
+    assert (len(c), ntok) == (802, 2616)
+    assert counts[ReadingStatus.CERTAIN] == 2296
+    assert counts[ReadingStatus.UNCLEAR] == 320
     assert counts[ReadingStatus.RESTORED] == 0 and counts[ReadingStatus.LOST] == 0
-    assert docs_app == 205
+    assert docs_app == 215
     # every unclear word/logogram is exactly one whose text carries ? [ or ]
     assert all(
         (any(m in t.text for m in "?[]")) == (t.status is ReadingStatus.UNCLEAR)

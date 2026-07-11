@@ -306,6 +306,42 @@ For a prose work, the middle component is a chapter rather than a verse line:
 greek.load_work("tlg0016.tlg001", ref="1.2")   # Herodotus, book 1, chapter 2
 ```
 
+### Citation schemes: how a work is addressed
+
+A `ref` is only meaningful against the work's **declared citation scheme** — the ordered
+levels the edition names in its TEI `<refsDecl>`. pyaegean reads that scheme straight from
+each edition (no author-specific guessing), so the shape of a `ref` differs by genre. The
+patterns below are typical; the authority is always the edition's own structure, which is
+why the levels are read, not assumed:
+
+| genre | scheme (levels) | a `ref` looks like | verified example |
+|-------|-----------------|--------------------|------------------|
+| epic / elegy (verse) | `book.line` | `1`, `1.1`, `1.1-1.50` | Iliad → `['book', 'line']` |
+| drama | `line` | `1`, `1-50` | Antigone, Medea → `['line']` |
+| Plato (Stephanus-paged) | `section` | `17` | Apology, Crito → `['section']` |
+| Aristotle | `chapter.subchapter` | `1`, `1.2` | Poetics → `['chapter', 'subchapter']` (Aristotle varies: the Nicomachean Ethics is `['book', 'section']`) |
+| multi-book prose | `book.chapter.section` | `1`, `1.2`, `1.2.3` | Herodotus, Xenophon's Anabasis → `['book', 'chapter', 'section']` |
+
+Discover a work's scheme before loading with `greek.citation_scheme(id)`, which returns the
+ordered levels exactly as the edition declares them (fetches the TEI once, like `load_work`):
+
+```python
+greek.citation_scheme("tlg0012.tlg001")   # ['book', 'line']   (Homer, Iliad)
+greek.citation_scheme("tlg0059.tlg002")   # ['section']        (Plato, Apology)
+greek.citation_scheme("tlg0032.tlg006")   # ['book', 'chapter', 'section']  (Xenophon, Anabasis)
+```
+
+Because the scheme is read from the edition, a `ref` that resolves nowhere reports the
+work's **own** scheme rather than only that the ref missed (`… cited by book.line`), so the
+error tells you how to address the work. Two rules follow from the scheme: a hyphen
+**range** must stay inside one top-level part (`1.1-1.50` is fine; `1.1-2.50`, which crosses
+from book 1 into book 2, is rejected — load each book and `Corpus.merge`, or use a comma
+list), and a **comma list** (`1.1,1.5` or `1,3`) selects siblings, or ranges that would
+cross a textpart, as one `Document` each, in source order. Finer references some editions
+print in the margin (a Stephanus sub-page `17a`, a Bekker line `1447a10`) live in TEI
+`<milestone>` markers the CTS scheme does not make addressable, so they are not selectable
+levels.
+
 ### The same thing on the command line
 
 ```bash

@@ -4,6 +4,49 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.41.0 (2026-07-11)
+
+The documentary levers land with their measured rows, SigLA grows to 802
+documents, and the work-addressing, lexicon, and distribution surfaces each take
+a step.
+
+### Added
+- **Opt-in documentary levers, measured**: `greek.use_documentary_reconciliation()`
+  relabels the closed coordinator class (καί, δέ, τε, ...) only where the model
+  emitted the always-wrong `X` reading, and `greek.use_documentary_lemma_rescue()`
+  consults the curated offline tiers (seed, then the guarded paradigm table; the
+  ending rules deliberately excluded by measurement) for lemmas the model honestly
+  left unresolved, each rescue carrying its own evidence class. Both are off by
+  default and byte-identical when off; CLI: `greek eval --documentary`. Measured
+  once, sequentially, on the pinned PapyGreek fold: reconciliation lifts the
+  opt-in row to UPOS 94.31 / XPOS 80.06 (from 91.05 / 76.76) with every other
+  metric byte-identical; adding the rescue lifts lemma to 86.36. On the literary
+  dev fold the conservative reconciliation touched 9 of 22,135 tokens with zero
+  regressions; the aggressive variant exists but is documented against. The
+  published baseline row is unchanged: the levers earn their own registry rows.
+- **SigLA corpus v4**: 802 documents (up from 781), adding the Thebes, Khania,
+  Gournia, Knossos, Phaistos, and Kea pieces of the newer SigLA release; homophone
+  subscripts and apparatus classification carried through; one upstream word
+  re-division (PE 2) accepted as legitimate re-editing.
+- **Citation-scheme awareness for fetched works**: `greek.citation_scheme(work)`
+  reports how an edition addresses itself (book.line for verse, Stephanus sections
+  for Plato, book.chapter.section for prose historians), read from each TEI's own
+  declared structure; a `--ref` that does not resolve now names the work's scheme
+  and suggests the exact comma list for sibling ranges.
+- **The Suda** joins the lexicon registry as a deep-link entry (the Suda On Line;
+  translations CC BY-NC-SA, the Adler Greek text public domain) alongside
+  Montanari and Slater: 9 registry lexica (6 hosted, 3 deep-link).
+- **The browser demo joins the documentation site's table of contents** ("Try it
+  in your browser" on https://ryanpavlicek.github.io/pyaegean/), and a conda-forge
+  recipe is prepared for submission.
+
+### Fixed
+- The four TEI choice-corpus builders share one extraction driver again
+  (`choice_prefer` threaded through `build_greek_corpus`, byte-identical output
+  proven against the conformance battery); the export-format registry is a single
+  canonical constant (`aegean.io.EXPORT_FORMATS`); the paradigms, phonetic-compare,
+  and visualization capabilities gained their missing notebook coverage.
+
 ## 0.40.0 (2026-07-11)
 
 Documentary-Greek research infrastructure, a measured cross-script null result,

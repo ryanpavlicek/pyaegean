@@ -124,6 +124,25 @@ def test_papygreek_decomposition_matches_registry_and_evidence() -> None:
             assert token in text, f"{token} missing from {doc}"
 
 
+def test_documentary_lever_variants_match_registry_and_evidence() -> None:
+    """The opt-in documentary-lever variant rows stay pinned to their one-shot
+    sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
+    row = _claims()["neural_papygreek_test"]
+    ev = json.loads(_read("training/results/documentary-levers-2026-07-11.json"))
+    for variant in ("documentary_reconciliation", "documentary_full"):
+        res = ev["results_full_precision"][variant]
+        reg = row[variant]
+        for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+            assert reg[metric] == round(res[metric] * 100, 2), f"{variant}.{metric}"
+    # the variants share every metric with the baseline except the ones each lever moves
+    rec = row["documentary_reconciliation"]
+    assert rec["ufeats"] == row["ufeats"] and rec["lemma"] == row["lemma"]
+    assert rec["uas"] == row["uas"] and rec["las"] == row["las"]
+    full = row["documentary_full"]
+    assert full["upos"] == rec["upos"] and full["xpos"] == rec["xpos"]
+    assert full["lemma"] > row["lemma"]
+
+
 def test_procrustes_null_matches_registry_and_evidence() -> None:
     """The measured Procrustes null (an exploratory negative result) stays pinned:
     registry block == evidence file, so a change that suddenly finds cross-script

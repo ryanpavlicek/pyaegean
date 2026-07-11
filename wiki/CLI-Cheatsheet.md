@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.40.0
+aegean --version                # pyaegean 0.41.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -464,10 +464,15 @@ aegean greek tag "…" --treebank --tagger             # AGDT lookup + perceptro
 ### Loading real Greek works
 
 `work` fetches a CC BY-SA text from Perseus canonical-greekLit / First1KGreek
-(commit-pinned, cached once) and parses it into a corpus. `--ref` selects a
-section: `1` (book), `1.2` (chapter), `1.1-1.50` (line range); `--source` is
-`auto` / `perseus` / `first1k`; `--edition` picks a specific edition file. Browse
-ids at scaife.perseus.org. Full reference: [Greek Works and Books](Greek-Works-and-Books).
+(commit-pinned, cached once) and parses it into a corpus. `--ref` selects a section by
+the work's **declared citation scheme**: `1` (book/section), `1.2` (chapter),
+`1.1-1.50` (line range) — verse is `book.line`, a Stephanus-paged Plato dialogue is one
+`section`, Aristotle is `chapter.subchapter`, prose is `book.chapter.section` — so a wrong
+`--ref` names the work's own scheme. For siblings or cross-textpart ranges use a comma
+list (`--ref 1.1,1.5`); `greek.citation_scheme(id)` returns the ordered levels.
+`--source` is `auto` / `perseus` / `first1k`; `--edition` picks a specific edition file.
+Browse ids at scaife.perseus.org. Full reference:
+[Greek Works and Books](Greek-Works-and-Books).
 
 ```bash
 aegean greek works                                # 25 curated highlights (table below)
@@ -689,7 +694,7 @@ The fetchable datasets (`aegean data list`):
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
 | `damos-corpus` | DAMOS Linear B corpus, ~5,900 tablets: `load('damos')` | CC BY-NC-SA 4.0 |
-| `sigla-corpus` | SigLA Linear A dataset, 781 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
+| `sigla-corpus` | SigLA Linear A dataset, 802 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek NT (Nestle 1904), 260 chapters / ~137,800 tokens: `load('nt')` | CC0-1.0 |
 | `isicily-corpus` | I.Sicily Greek inscriptions of Sicily, 2,855 texts: `load('isicily')` | CC BY 4.0 |
 | `iip-corpus` | IIP Greek inscriptions of Israel/Palestine, 2,113 texts: `load('iip')` | CC BY-NC 4.0 |

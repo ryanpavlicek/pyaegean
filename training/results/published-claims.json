@@ -121,7 +121,26 @@
     "n_words": 24105,
     "n_sentences": 1696,
     "source_evidence": "training/results/papygreek-eval-v2-2026-07-11.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v2"
+    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v2",
+    "documentary_reconciliation": {
+      "upos": 94.31,
+      "xpos": 80.06,
+      "ufeats": 88.57,
+      "lemma": 86.13,
+      "uas": 85.71,
+      "las": 79.89,
+      "note": "opt-in Lever A, conservative coordinator reconciliation (use_documentary_reconciliation); only UPOS/XPOS move, every other metric byte-identical to the baseline run"
+    },
+    "documentary_full": {
+      "upos": 94.31,
+      "xpos": 80.06,
+      "ufeats": 88.57,
+      "lemma": 86.36,
+      "uas": 85.71,
+      "las": 79.89,
+      "note": "opt-in Levers A+B (reconciliation + lemma OOV rescue with use_paradigms; the rescue is seed+paradigm only, ending rules excluded by measurement)"
+    },
+    "variant_evidence": "training/results/documentary-levers-2026-07-11.json"
   },
   "papygreek_convention_decomposition": {
     "upos_gap_points": 8.95,

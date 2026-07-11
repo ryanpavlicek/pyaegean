@@ -21,77 +21,20 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _epidoc import edition_tokens, first_text, geo_coords, primary_edition  # noqa: E402
+# The shared driver + reading-text extractor: build_greek_corpus(choice_prefer=True) resolves
+# each editorial <choice> to its corrected/regularized member (expan>reg>corr) instead of
+# fusing both alternatives. edition_tokens stays imported for the shared-extractor conformance
+# battery (tests/test_epidoc_conformance.py), which references it as a module attribute.
+from _epidoc import (  # noqa: E402,F401
+    build_greek_corpus,
+    edition_tokens,
+    first_text,
+    geo_coords,
+    primary_edition,
+)
 
 _XML = "http://www.w3.org/XML/1998/namespace"
 _CYRILLIC = re.compile(r"[А-Яа-яЁё]")
-
-
-def _build_choice_corpus(  # type: ignore[no-untyped-def]
-    insc_dir,
-    *,
-    is_greek,
-    metadata,
-    out,
-    source,
-    license,
-    url,
-    script_id="greek",
-    limit=0,
-    edition_fidelity="apparatus-preserved,normalized",
-):
-    """Mirror of ``_epidoc.build_greek_corpus`` that resolves each editorial ``<choice>`` to its
-    corrected/regularized member (``edition_tokens(choice_prefer=True)``) instead of concatenating
-    both alternatives into one garbled token. Inlined because ``build_greek_corpus`` does not expose
-    the flag; EDH/DDbDP already resolve choices this way (expan>reg>corr, lem>rdg)."""
-    from aegean.core.corpus import Corpus
-    from aegean.core.model import Document, Token, TokenKind
-    from aegean.core.provenance import Provenance
-
-    files = sorted(Path(insc_dir).glob("*.xml"))
-    docs: list = []
-    greek = 0
-    for f in files:
-        try:
-            root = ET.parse(str(f)).getroot()
-        except ET.ParseError:
-            continue
-        if not is_greek(root):
-            continue
-        edition = primary_edition(root)
-        if edition is None:
-            continue
-        token_lines = edition_tokens(edition, choice_prefer=True)
-        if not token_lines:
-            continue
-        greek += 1
-        tokens: list = []
-        lines: list = []
-        pos = 0
-        for tl in token_lines:
-            idxs: list = []
-            for word, status in tl:
-                if not word:
-                    continue
-                tokens.append(
-                    Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
-                )
-                idxs.append(pos)
-                pos += 1
-            if idxs:
-                lines.append(idxs)
-        if not tokens:
-            continue
-        docs.append(
-            Document(id=f.stem, script_id=script_id, tokens=tokens, lines=lines, meta=metadata(root, f.stem))
-        )
-        if limit and len(docs) >= limit:
-            break
-
-    prov = Provenance(source=source, license=license, url=url, edition_fidelity=edition_fidelity)
-    corpus = Corpus(docs, provenance=prov, script_id=script_id)
-    Path(out).write_text(corpus.to_json(), encoding="utf-8")
-    return greek, len(docs)
 
 
 def _english_tail(text: str) -> str:
@@ -129,7 +72,7 @@ def main() -> int:
     args = ap.parse_args()
 
     insc = Path(args.source) / "kiln" / "webapps" / "ROOT" / "content" / "xml" / "tei" / "inscriptions"
-    greek, written = _build_choice_corpus(
+    greek, written = build_greek_corpus(
         insc,
         is_greek=_is_greek,
         metadata=_metadata,
@@ -138,6 +81,7 @@ def main() -> int:
         license="CC-BY-4.0 (IOSPE III, King's College London; attribution; repo code is MIT)",
         url="https://github.com/kingsdigitallab/iospe",
         limit=args.limit,
+        choice_prefer=True,
     )
     print(f"Greek inscriptions with text: {greek}; documents written: {written}")
     print(f"wrote {args.output} ({Path(args.output).stat().st_size} bytes)")
