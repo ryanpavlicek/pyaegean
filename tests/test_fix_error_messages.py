@@ -319,7 +319,10 @@ def test_neuralextra_lemmatizer_checks_extra_before_fetch(monkeypatch) -> None: 
 def test_neuralextra_probe_passes_when_extra_present() -> None:
     """With the [neural] extra installed (the dev env), the probe is a no-op — it must not
     false-positive and block a real activation before the model even fetches. The assertion
-    is that neither call raises."""
+    is that neither call raises. Skips where the extra genuinely is absent (the plain CI
+    cells): there the probe raising is the correct behavior, covered by the tests above."""
+    pytest.importorskip("onnxruntime")
+    pytest.importorskip("tokenizers")
     _joint._require_neural_extra()
     _neural_lemmatizer._require_neural_extra()
 
@@ -344,7 +347,10 @@ def test_neuralextra_error_is_not_a_fetch_error(monkeypatch) -> None:  # type: i
 
 def test_neuralextra_block_helper_restores_modules() -> None:
     """The import-blocking helper fully restores onnxruntime/tokenizers afterward, so it
-    cannot poison later tests in the same worker."""
+    cannot poison later tests in the same worker. Only meaningful where the modules are
+    really installed (skips on the plain CI cells)."""
+    pytest.importorskip("onnxruntime")
+    pytest.importorskip("tokenizers")
     with _neuralextra_block_imports("onnxruntime", "tokenizers"):
         with pytest.raises(ModuleNotFoundError):
             importlib.import_module("onnxruntime")

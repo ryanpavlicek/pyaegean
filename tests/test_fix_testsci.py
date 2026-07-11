@@ -173,6 +173,9 @@ def test_use_neural_lemmatizer_activates_and_routes(monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(nl, "fetch", fake_fetch)
     monkeypatch.setattr(nl, "_NeuralModel", _StubNeural)
+    # the [neural]-extra probe runs before fetch since 0.34.0; this test exercises
+    # activation ROUTING with stubs, so neutralize the probe (it has its own tests)
+    monkeypatch.setattr(nl, "_require_neural_extra", lambda: None)
     # quiet the higher-priority backends so the cascade reaches the neural tier,
     # and record _ACTIVE so monkeypatch restores it after the test
     monkeypatch.setattr(joint, "_ACTIVE", None)

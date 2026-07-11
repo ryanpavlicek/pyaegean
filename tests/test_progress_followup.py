@@ -78,6 +78,7 @@ def test_to_csv_progress_counts_documents_and_is_byte_identical(tmp_path: Path, 
 def test_to_parquet_progress_counts_documents_and_is_byte_identical(
     tmp_path: Path, level: str
 ) -> None:
+    pytest.importorskip("pyarrow")
     c = _corpus(4)
     calls: list[tuple[int, int]] = []
     to_parquet(c, tmp_path / "with.parquet", level=level,
@@ -113,6 +114,7 @@ def test_to_csv_raising_progress_aborts_loudly_keeping_prior_export(tmp_path: Pa
 
 
 def test_to_parquet_raising_progress_aborts_loudly_keeping_prior_export(tmp_path: Path) -> None:
+    pytest.importorskip("pyarrow")
     out = tmp_path / "export.parquet"
     to_parquet(_corpus(2), out)
     before = out.read_bytes()
