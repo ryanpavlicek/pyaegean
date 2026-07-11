@@ -4,6 +4,46 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.37.0 (2026-07-11)
+
+Deeper Aegean scholarship: apparatus everywhere, scribal hands, and an offline
+paradigm backend for Greek.
+
+### Added
+- **The offline paradigm backend**: `greek.use_paradigms()` fetches a nominal
+  paradigm table derived from UniMorph Ancient Greek (CC BY-SA, 25,643 forms) and
+  slots it into the offline lemmatization and morphology cascade, covering the
+  irregular and third-declension nominals the ending rules cannot (γυναικός → γυνή,
+  πατράσι → πατήρ, ὕδατος → ὕδωρ, each verified against Smyth). Measured on the full
+  Nestle 1904 NT: offline lemma accuracy 66.98% → 71.96% with the backend active
+  (7,251 corrections, 420 regressions on genuine lexical ambiguities; evidence:
+  `training/results/paradigms-lift-2026-07-11.json`).
+- **SigLA editorial apparatus decoded**: the fetched 781-document SigLA Linear A
+  corpus now carries `ReadingStatus` like every other corpus — 309 tokens across 205
+  documents that previously loaded as securely read are now honestly UNCLEAR, with
+  each SigLA marker's meaning verified against the project's own documentation and
+  the composition notation deliberately left out of certainty judgments.
+- **A uniform apparatus surface** (`core.apparatus`): `alt_readings()` lists every
+  token carrying alternate readings in one shape across corpora, and
+  `apparatus_summary()` profiles a corpus's editorial state; `corpus.diagnose()` now
+  counts alternate-reading tokens in its status profile.
+- **Scribal hands and dossiers for Linear B** (`analysis.hands`): documents grouped
+  by the editors' hand attributions, per-hand profiles, and site-and-series dossiers
+  (the standard Mycenological working unit) over the DAMOS metadata — 291 hands and
+  212 dossiers in the full corpus. CLI: `aegean analyze hand`, `analyze dossiers`.
+- **Cypriot analysis parity** (`scripts.cypriot.analysis`): a syllabary profile
+  against the ICS grid (54 of 55 signs attested in IG XV 1; the gap is XA) and a
+  Greek-bridge coverage report by editorial status. CLI: `analyze syllabary`,
+  `analyze bridge`.
+- **Seriation and chronology tools** (`analysis.seriation`, exploratory):
+  Brainerd-Robinson similarity with a deterministic ordering for assemblage
+  hypothesis-generation, and `chronology()` parsing date metadata into spans with
+  the unparsed fraction always reported.
+- **Allograph reporting** (`analysis.allographs`, exploratory): the variant-form
+  groups the sign inventories actually encode (homophone numbers like RA/RA₂,
+  catalogue suffixes), with the line drawn explicitly at palaeographic allography,
+  which the data does not carry.
+
 ## 0.36.0 (2026-07-11)
 
 Linked Open Data, a wider gazetteer, and new ways to see the corpora.

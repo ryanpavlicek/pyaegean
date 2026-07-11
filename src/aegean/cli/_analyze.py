@@ -27,7 +27,8 @@ from ._corpus import PERIOD_OPT, SCRIBE_OPT, SITE_OPT, SUPPORT_OPT
 analyze_app = typer.Typer(
     pretty_exceptions_show_locals=False,
     help="Analysis: distance, alignment, cross-script compare/nearest, association stats, "
-    "co-occurrence, clusters, structure, scribal hands.",
+    "co-occurrence, clusters, structure, scribal hands, a single hand profile, "
+    "archival dossiers, the Cypriot syllabary, and Greek-bridge coverage.",
     no_args_is_help=True,
 )
 
@@ -349,4 +350,157 @@ def hands(
         ["hand", "tablets", "tokens", "top words"],
         [[p.hand, str(p.doc_count), str(p.token_count),
           ", ".join(w for w, _ in p.top_words[:5])] for p in profiles],
+    )
+
+
+@analyze_app.command()
+def hand(
+    corpus: str = CORPUS_ARG,
+    hand_id: str = typer.Argument(..., help="The scribal hand to profile, e.g. 117."),
+    top: int = typer.Option(15, "--top", "--limit", help="Top words to show (0 = all)."),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """One scribal hand's descriptive profile: its sites, series, and top words.
+
+    The single-hand companion to `hands`: where `hands --hand X` reports what is
+    *characteristic* of a hand (keyness), this reports what the hand actually is —
+    its tablets, find-sites, archival series, and most frequent words."""
+    from aegean.analysis.hands import hand_profile
+
+    c = load_corpus(corpus)
+    try:
+        rep = hand_profile(c, hand_id, top_n=top if top > 0 else 10_000)
+    except ValueError as exc:
+        raise fail(str(exc)) from None
+    data = {
+        "hand": rep.hand, "doc_count": rep.doc_count, "token_count": rep.token_count,
+        "word_count": rep.word_count, "sites": rep.sites, "series": rep.series,
+        "periods": rep.periods, "top_words": rep.top_words,
+    }
+    if emit_result(data, json_output=json_out, output=output):
+        return
+    print(
+        f"hand {rep.hand}: {rep.doc_count} tablet(s), {rep.token_count} tokens, "
+        f"{rep.word_count} lexical words"
+    )
+    if rep.sites:
+        print("sites:  " + ", ".join(f"{s} ({n})" for s, n in rep.sites.items()))
+    if rep.series:
+        print("series: " + ", ".join(f"{s} ({n})" for s, n in list(rep.series.items())[:8]))
+    table(
+        f"hand {rep.hand}: top words",
+        ["word", "count"],
+        [[w, str(n)] for w, n in rep.top_words],
+    )
+
+
+@analyze_app.command()
+def dossiers(
+    corpus: str = CORPUS_ARG,
+    top: int = typer.Option(20, "--top", "--limit", help="Dossiers to show (0 = all)."),
+    min_docs: int = typer.Option(1, "--min-docs", help="Minimum tablets for a dossier."),
+    site: str | None = SITE_OPT,
+    period: str | None = PERIOD_OPT,
+    scribe: str | None = SCRIBE_OPT,
+    support: str | None = SUPPORT_OPT,
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Archival dossiers: tablets sharing a find-site and an archival series (Linear B).
+
+    A dossier is a (site, series) grouping — e.g. the Knossos Da sheep-tablets —
+    the standard Mycenological working unit. The series is parsed from each
+    tablet's designation; documents without a parseable series are omitted."""
+    from aegean.analysis.hands import dossiers as _dossiers
+
+    c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
+    found = _dossiers(c, min_docs=min_docs)
+    shown = found[: top if top > 0 else None]
+    if not shown:
+        raise fail(f"no archival dossiers found in {corpus!r} (needs series in the document ids)")
+    payload = [
+        {"site": d.site, "series": d.series, "doc_count": d.doc_count,
+         "hands": d.hands, "periods": d.periods, "token_count": d.token_count,
+         "word_count": d.word_count, "doc_ids": d.doc_ids}
+        for d in shown
+    ]
+    if emit_result(payload, json_output=json_out, output=output):
+        return
+    table(
+        f"{corpus}: {len(found)} archival dossier(s) (site + series; showing {len(shown)})",
+        ["site", "series", "tablets", "hands"],
+        [[d.site, d.series, str(d.doc_count),
+          ", ".join(h for h, _ in list(d.hands.items())[:3])] for d in shown],
+    )
+
+
+@analyze_app.command()
+def syllabary(
+    corpus: str = typer.Argument("cypriot", help="Cypriot corpus id (default: the bundled cypriot)."),
+    top: int = typer.Option(20, "--top", "--limit", help="Signs to show (0 = all)."),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Cypriot sign frequency across the syllabary grid, and the grid's gaps.
+
+    Counts each syllabogram over the corpus and reports which grid cells are never
+    attested (gaps). Descriptive; a gap is "unattested in this corpus", not a claim
+    the sign never existed."""
+    from aegean.scripts.cypriot.analysis import syllabary_profile
+
+    c = load_corpus(corpus)
+    prof = syllabary_profile(c)
+    shown = prof.signs if top <= 0 else prof.signs[:top]
+    data = {
+        "grid_size": prof.grid_size, "attested_count": prof.attested_count,
+        "gap_count": prof.gap_count, "gaps": prof.gaps, "sign_tokens": prof.sign_tokens,
+        "signs": [{"label": s.label, "phonetic": s.phonetic, "count": s.count} for s in shown],
+    }
+    if emit_result(data, json_output=json_out, output=output):
+        return
+    print(
+        f"{corpus}: {prof.attested_count}/{prof.grid_size} grid signs attested "
+        f"({prof.sign_tokens} syllabogram tokens); gaps: {', '.join(prof.gaps) or 'none'}"
+    )
+    table(
+        f"{corpus}: sign frequency (showing {len(shown)})",
+        ["sign", "value", "count"],
+        [[s.label, s.phonetic or "", str(s.count)] for s in shown],
+    )
+
+
+@analyze_app.command()
+def bridge(
+    corpus: str = typer.Argument("cypriot", help="Cypriot corpus id (default: the bundled cypriot)."),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Cypriot Greek-reading coverage: how much of the corpus reads as Greek, by status.
+
+    Reports the share of lexical words the bundled Greek-reading lexicon resolves,
+    broken down by editorial reading status, plus the resolved forms. Coverage is
+    bounded by the deliberately small, securely-attested lexicon."""
+    from aegean.scripts.cypriot.analysis import bridge_coverage
+
+    c = load_corpus(corpus)
+    cov = bridge_coverage(c)
+    data = {
+        "word_tokens": cov.word_tokens, "read_tokens": cov.read_tokens,
+        "coverage_pct": cov.coverage_pct, "read_by_status": cov.read_by_status,
+        "words_by_status": cov.words_by_status, "distinct_forms": cov.distinct_forms,
+        "distinct_read_forms": cov.distinct_read_forms,
+        "readings": [{"form": r.form, "lemma": r.lemma, "gloss": r.gloss, "count": r.count}
+                     for r in cov.readings],
+    }
+    if emit_result(data, json_output=json_out, output=output):
+        return
+    print(
+        f"{corpus}: {cov.read_tokens}/{cov.word_tokens} word tokens read as Greek "
+        f"({cov.coverage_pct:.1f}%); {cov.distinct_read_forms}/{cov.distinct_forms} distinct forms"
+    )
+    table(
+        f"{corpus}: Greek-bridge readings",
+        ["form", "greek", "gloss", "count"],
+        [[r.form, r.lemma, r.gloss, str(r.count)] for r in cov.readings],
     )

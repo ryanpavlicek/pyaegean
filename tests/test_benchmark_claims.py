@@ -207,7 +207,14 @@ def test_readme_and_wiki_echoes_match_the_registry() -> None:
 def test_limitations_offline_lemma_claim_matches_the_registry() -> None:
     claims = _claims()["offline_nt_lemma"]
     text = _read("wiki/Limitations.md")
-    assert f"~{round(claims['lemma'])}%" in text  # "~66% on the full NT"
+    assert f"~{round(claims['lemma'])}%" in text  # "~67% on the full NT"
+    # the opt-in paradigm-backend lift is stated wherever the base figure is
+    lift = f"{claims['with_paradigms']:.2f}%"
+    assert lift in text
+    assert lift in _read("wiki/Benchmarks.md")
+    ev = json.loads(_read("training/results/paradigms-lift-2026-07-11.json"))
+    assert round(ev["results"]["with_paradigms_lemma"] * 100, 2) == claims["with_paradigms"]
+    assert round(ev["results"]["baseline_lemma"] * 100, 2) == claims["lemma"]
 
 
 def test_wiki_benchmarks_page_matches_the_registry() -> None:

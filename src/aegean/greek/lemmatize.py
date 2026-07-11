@@ -621,9 +621,11 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
     Tier order (identical to the historical cascade): the neural joint pipeline
     (`use_neural_pipeline`) → the AGDT treebank (`use_treebank`, an attested lemma) → the
     GreTa seq2seq backend (`use_neural_lemmatizer`) → the trained edit-tree lemmatizer
-    (`use_lemmatizer`) → the bundled seed table → the generalizing ending-stripping rule
-    layer. A backend that returns the surface form unchanged is reported ``IDENTITY`` (not
-    a real analysis); an exhausted baseline is ``UNRESOLVED``.
+    (`use_lemmatizer`) → the bundled seed table → the opt-in UniMorph paradigm table
+    (`use_paradigms`, a curated ``SEED``-class lookup for irregular/3rd-declension forms) →
+    the generalizing ending-stripping rule layer. A backend that returns the surface form
+    unchanged is reported ``IDENTITY`` (not a real analysis); an exhausted baseline is
+    ``UNRESOLVED``.
 
     The joint pipeline's ``IDENTITY`` is decided by *which branch composed the lemma*
     (`joint._compose_lemma`), not by a surface-string compare, so a nominative singular
@@ -658,6 +660,19 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
     lemma, known = seed_lemma_verbose(word)
     if known:
         return lemma, LemmaSource.SEED
+    from . import paradigms
+
+    plex = paradigms.active()  # opt-in UniMorph inflection tables (irregular / 3rd-decl nominals)
+    if plex is not None and (key := _fold_key(word)) not in _FUNCTION_KEYS and key not in _INDECLINABLE:
+        # A nominal paradigm table must not shadow a word pyaegean already knows to be a
+        # closed-class function word or indeclinable (the preposition ἐνώπιον is also an
+        # adjective's accusative ἐνώπιος → ἐνώπιον): the same guard the rule layer applies.
+        hit = plex.lemmatize(word)
+        if hit is not None:
+            # a curated inflection-table lookup: grounded + correctly accented, so the same
+            # SEED evidence class as the bundled seed table (a lexical lookup, not a review-bait
+            # identity fall-through); ranked below the seed and above the ending rules.
+            return hit, LemmaSource.SEED
     lemma, recovered = rule_lemma_verbose(word)  # generalize over the regular paradigms
     return lemma, LemmaSource.RULE if recovered else LemmaSource.UNRESOLVED
 

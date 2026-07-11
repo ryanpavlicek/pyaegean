@@ -70,6 +70,7 @@ class StatusProfile:
     lost: int
     documents_total: int
     documents_with_apparatus: int
+    alt_reading_tokens: int = 0  # tokens carrying editorial alternate readings (Token.alt)
 
 
 @dataclass(frozen=True)
@@ -403,6 +404,7 @@ def diagnose(corpus: "Corpus", level: str = "quick") -> DiagnoseReport:
     total_tokens = 0
     by_status: Counter[ReadingStatus] = Counter()
     docs_with_apparatus = 0
+    alt_reading_tokens = 0
     numeral_anomalies: list[tuple[str, str]] = []
     word_tokens = 0
     needs_review = 0
@@ -412,6 +414,8 @@ def diagnose(corpus: "Corpus", level: str = "quick") -> DiagnoseReport:
         for t in d.tokens:
             total_tokens += 1
             by_status[t.status] += 1
+            if t.alt:
+                alt_reading_tokens += 1
             if t.status is not ReadingStatus.CERTAIN:
                 apparatus = True
             if t.kind is TokenKind.NUMERAL and parse_value(t.text) is None:
@@ -433,6 +437,7 @@ def diagnose(corpus: "Corpus", level: str = "quick") -> DiagnoseReport:
         lost=by_status[ReadingStatus.LOST],
         documents_total=len(docs),
         documents_with_apparatus=docs_with_apparatus,
+        alt_reading_tokens=alt_reading_tokens,
     )
 
     # ── provenance / citation ──────────────────────────────────────────────────

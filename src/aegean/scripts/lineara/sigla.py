@@ -247,6 +247,74 @@ def parse_database_js(text: str) -> dict[str, Any]:
     return out
 
 
+# ── the SigLA editorial apparatus (loader-side decoding) ─────────────────────
+# SigLA's transcription carries editorial-certainty markers that map onto the
+# package's `ReadingStatus`. Interpretation verified against SigLA's own help
+# (https://sigla.phis.me/help) and Salgarella 2020, and aligned with the bundled
+# GORILA Linear A loader (``lineara/loader.py``), which decodes the same marks:
+#   ?      a sign of doubtful reading — SigLA help: "traces of a sign are visible,
+#          but the sign cannot be recognised" → UNCLEAR
+#   [ ]    standard epigraphic break/lacuna brackets (``]x`` a left break, ``x[`` a
+#          right break, ``[?]`` a sign lost in a lacuna) → UNCLEAR, matching the
+#          bundled GORILA loader, which reads ``[`` / ``]`` / ``?`` as UNCLEAR too
+#   *?     an in-word sign SigLA recorded but left unresolved (a ``blank``
+#          attestation): present but unread → UNCLEAR; it is kept in the word TEXT
+#          to mark the position, but is not a real syllabogram so it is dropped
+#          from ``signs``
+# The other symbols SigLA uses (``+`` ``|`` ``||`` ``(`` ``)`` ``{`` ``}``) are its
+# complex-sign DECOMPOSITION notation (Salgarella 2020, 54-59), not editorial
+# certainty — left untouched in both the token text and its sign labels. SigLA
+# does not editorially supply lost text, so its apparatus yields only CERTAIN and
+# UNCLEAR (never RESTORED/LOST): a lost, unread sign surfaces as ``[?]`` or a
+# blank, both UNCLEAR. Anything not securely interpretable stays the conservative
+# UNCLEAR, never a silent CERTAIN.
+_APPARATUS = "?[]"        # editorial-uncertainty markers → ReadingStatus.UNCLEAR
+_BLANK_SIGN = "*?"        # an unresolved in-word sign position (from a ``blank``)
+
+
+def _is_unclear(text: str) -> bool:
+    """A SigLA transcription that carries an editorial-uncertainty marker (``?[]``)."""
+    return any(ch in text for ch in _APPARATUS)
+
+
+def _clean_label(label: str) -> str:
+    """One sign label with the editorial apparatus (``?`` ``[`` ``]``) removed; the
+    complex-sign decomposition notation (``+`` ``|`` ``(`` ``)`` ``{`` ``}``) is
+    preserved. Removing a lost component (e.g. ``*16+[?]+*50`` → the middle sign is
+    gone) can orphan a composition operator, so a doubled or dangling ``+`` and any
+    emptied group are tidied, leaving a well-formed label of the *preserved*
+    components (``*16+*50``). Returns ``""`` if nothing legible remains."""
+    cleaned = " ".join("".join(c for c in label if c not in _APPARATUS).split())
+    prev = ""
+    while prev != cleaned:  # iterate to a fixed point (a removed run can chain)
+        prev = cleaned
+        cleaned = re.sub(r"\+\s*\+", "+", cleaned)          # *16 + [?] + *50 → *16++*50 → *16+*50
+        cleaned = re.sub(r"\+\s*(?=[)}|])", "", cleaned)    # an orphan '+' before a close/bar
+        cleaned = re.sub(r"(?<=[({|])\s*\+", "", cleaned)   # an orphan '+' after an open/bar
+        cleaned = re.sub(r"\(\s*\)|\{\s*\}", "", cleaned)   # a group emptied of its content
+    return cleaned.strip(" +|")
+
+
+def _word_signs(pending: list[str]) -> tuple[str, ...]:
+    """The real syllabogram labels of a word: the unresolved ``*?`` blank position is
+    dropped (kept in the token text to mark the gap, never counted as a sign), and the
+    editorial apparatus is stripped off each surviving label (`_clean_label`)."""
+    out: list[str] = []
+    for s in pending:
+        if s == _BLANK_SIGN:
+            continue
+        out.append(_clean_label(s) or s)
+    return tuple(out)
+
+
+def _logogram_signs(sign: str) -> tuple[str, ...]:
+    """A commodity/composite logogram as a single cleaned sign label (`_clean_label`).
+    Empty only if the whole label was apparatus (which does not occur in the SigLA
+    corpus)."""
+    cleaned = _clean_label(sign)
+    return (cleaned,) if cleaned else ()
+
+
 # ── the corpus loader (fetches the decoded, versioned release asset) ─────────
 
 
@@ -260,9 +328,12 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
     ``blank`` inside a word (its ``word`` index is set) is kept as ``*?`` so the
     word stays contiguous (KU-*?-NI); only a *standalone* fraction/blank (``word``
     is None) is skipped, as SigLA records no cardinal-number value for it. Each
-    word/standalone item is its own line. Falls back to one `UNKNOWN` token per
-    sign for a v1 asset (no ``word``/``kind`` keys)."""
-    from ...core.model import Token, TokenKind
+    word/standalone item is its own line. The edition's apparatus is decoded into
+    `ReadingStatus` (see the module notes above): a token whose transcription
+    carries ``?``/``[``/``]`` (or an unresolved ``*?``) reads UNCLEAR, with the
+    markers kept in the token text but dropped from its sign labels. Falls back to
+    one `UNKNOWN` token per sign for a v1 asset (no ``word``/``kind`` keys)."""
+    from ...core.model import ReadingStatus, Token, TokenKind
 
     tokens: list[Any] = []
     lines: list[list[int]] = []
@@ -275,7 +346,11 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
             return
         text = "-".join(pending)
         idx = len(tokens)
-        tokens.append(Token(text, TokenKind.WORD, tuple(pending), None, len(lines), idx))
+        status = ReadingStatus.UNCLEAR if _is_unclear(text) else ReadingStatus.CERTAIN
+        tokens.append(
+            Token(text, TokenKind.WORD, _word_signs(pending), None, len(lines), idx,
+                  status=status)
+        )
         lines.append([idx])
         pending = []
         pending_word = None
@@ -296,16 +371,28 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
             if pending_word is not None and word != pending_word:
                 flush()
             pending_word = word
-            pending.append(sign or "*?")
+            pending.append(sign or _BLANK_SIGN)
             continue
         flush()
         if kind == "logogram" and sign:
             idx = len(tokens)
-            tokens.append(Token(sign, TokenKind.LOGOGRAM, (sign,), None, len(lines), idx))
+            status = ReadingStatus.UNCLEAR if _is_unclear(sign) else ReadingStatus.CERTAIN
+            signs = _logogram_signs(sign)
+            # keep the raw marked composite when apparatus was stripped (mirrors the
+            # Cypriot loader's annotations["leiden"]); nothing is lost.
+            ann = {"sigla": sign} if signs != (sign,) else {}
+            tokens.append(
+                Token(sign, TokenKind.LOGOGRAM, signs, None, len(lines), idx,
+                      status=status, annotations=ann)
+            )
             lines.append([idx])
         elif kind == "syllable" and sign:  # a standalone single syllabogram (its own word)
             idx = len(tokens)
-            tokens.append(Token(sign, TokenKind.WORD, (sign,), None, len(lines), idx))
+            status = ReadingStatus.UNCLEAR if _is_unclear(sign) else ReadingStatus.CERTAIN
+            tokens.append(
+                Token(sign, TokenKind.WORD, _word_signs([sign]), None, len(lines), idx,
+                      status=status)
+            )
             lines.append([idx])
         # fraction / blank: no resolved value in SigLA — skipped
     flush()
@@ -370,7 +457,12 @@ def load_sigla() -> Any:
         notes=(
             "palaeographical corpus with SigLA's own word division (WORD tokens) "
             "and commodity ideograms (LOGOGRAM tokens); no cardinal-number values "
-            "(SigLA records sign occurrences, not quantities). Word division and "
+            "(SigLA records sign occurrences, not quantities). The edition's "
+            "apparatus is decoded into ReadingStatus: a doubtful reading (?), an "
+            "epigraphic break/lacuna bracket ([ ]), or an unresolved in-word sign "
+            "(*?) reads UNCLEAR, with the marker kept in the token text but dropped "
+            "from its sign labels; the complex-sign composition notation (+ | ( ) "
+            "{ }) is preserved, not read as apparatus. Word division and "
             "complex-sign notation differ editorially from GORILA."
             if version >= 2 else
             "sign-level paleographical corpus: one token per sign attestation, in "

@@ -1,0 +1,18 @@
+{
+  "what": "Measured lift of the opt-in UniMorph paradigm backend (use_paradigms) on the offline NT lemma protocol.",
+  "date": "2026-07-11",
+  "protocol": "no other backends active; greek.lemmatize per token via evaluate_on_nt scoring (the registry offline_nt_lemma protocol) with use_paradigms() toggled; asset grc-paradigms-v1 fetched sha-verified",
+  "results": {
+    "baseline_lemma": 0.6698,
+    "with_paradigms_lemma": 0.7196,
+    "n_tokens": 137303,
+    "corrections": 7251,
+    "regressions": 420,
+    "regression_note": "regressions are genuine lexical ambiguities (proper-noun vs common-noun capitalization, homographs), enumerated in the build report"
+  },
+  "asset": {
+    "name": "grc-paradigms",
+    "sha256": "c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a",
+    "source": "UniMorph grc, CC BY-SA 3.0, commit 7f4a58df733726c75c1355dd3a038e950d5e308f"
+  }
+}

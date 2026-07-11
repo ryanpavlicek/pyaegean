@@ -152,6 +152,11 @@ Find-site coordinates (bundled: src/aegean/data/bundled/geo/site_coordinates.jso
   Pleiades: A Gazetteer of Past Places (https://pleiades.stoa.org), used under CC BY 3.0 —
   attribution: Pleiades contributors. Rounded to ~1 km — for mapping, not survey work.
 
+Greek nominal paradigm table (fetched on demand, NOT bundled: grc-paradigms)
+  Derived from UniMorph Ancient Greek (https://github.com/unimorph/grc), CC BY-SA 3.0,
+  itself sourced from Wiktionary. The derived form->analysis table is redistributed under
+  the same CC BY-SA terms as a fetched release asset.
+
 DAMOS — Database of Mycenaean at Oslo (fetched on demand, NOT bundled)
   DAMOS (F. Aurora, University of Oslo; https://damos.hf.uio.no), the most complete edition
   of the Mycenaean (Linear B) corpus, published under CC BY-NC-SA 4.0. pyaegean's

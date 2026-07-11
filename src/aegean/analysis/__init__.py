@@ -189,6 +189,9 @@ from .significance import (
     paired_bootstrap,
 )
 from .embeddings import SignEmbeddings, sign_embeddings
+from .hands import HandGroup, HandReport, SeriesDossier, by_hand, dossiers, hand_profile, series_of
+from .seriation import brainerd_robinson, chronology, seriate
+from .allographs import variant_groups
 from .segmentation import Segmentation, candidate_morphs, segment
 from .clustering import ClusterReport, SignClasses, induce_classes
 
@@ -358,6 +361,17 @@ __all__ = [
     # distributional sign embeddings / segmentation / class induction (exploratory)
     "SignEmbeddings",
     "sign_embeddings",
+    "by_hand",
+    "hand_profile",
+    "dossiers",
+    "series_of",
+    "HandGroup",
+    "HandReport",
+    "SeriesDossier",
+    "brainerd_robinson",
+    "chronology",
+    "seriate",
+    "variant_groups",
     "Segmentation",
     "segment",
     "candidate_morphs",

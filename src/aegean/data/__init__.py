@@ -222,6 +222,30 @@ _REMOTE: dict[str, DataSpec] = {
         extract=False,
         on_disk=("abbott-smith-index.json.gz",),
     ),
+    # The UniMorph Ancient Greek paradigm index: form -> [{lemma, pos, case, number, gender?}]
+    # (AGDT record shape), harvested from github.com/unimorph/grc by
+    # scripts/build_paradigm_table.py. Supplies the irregular / third-declension / heteroclite
+    # nominal paradigms the offline seed+rule lemmatizer cannot reach (γυναικός -> γυνή,
+    # πατράσι -> πατήρ, ὕδατος -> ὕδωρ); opt-in via greek.use_paradigms(), fetched on demand,
+    # never bundled (ShareAlike + wheel size). CC BY-SA 3.0 (UniMorph / Wikipedia).
+    # PLACEHOLDER — integrator: after hosting the built grc-paradigms.json.gz (~233 KB gzip;
+    # reproducible build sha256 c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a,
+    # from unimorph/grc commit 7f4a58df733726c75c1355dd3a038e950d5e308f) as a release asset,
+    # confirm the URL/tag below match the upload. Until then use_paradigms(path=...) loads a
+    # local build, or set PYAEGEAN_GRC_PARADIGMS_URL to a mirror.
+    "grc-paradigms": DataSpec(
+        name="grc-paradigms",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "grc-paradigms-v1/grc-paradigms.json.gz"
+        ),
+        sha256="c275044ee1e71c49f0161938e7531c1967b7e723b62859b06f47776a765a186a",
+        license="CC-BY-SA-3.0 (UniMorph / Wikipedia); derived paradigm index, fetched, never bundled",
+        note="prebuilt UniMorph Ancient Greek paradigm index (~234 KB gzip); use_paradigms() "
+             "fetches it for offline irregular/third-declension lemma+feature coverage.",
+        extract=False,
+        on_disk=("grc-paradigms.json.gz",),
+    ),
     # Prebuilt AGDT-derived artifacts: the treebank lexicon + the trained POS
     # tagger / lemmatizer / arc-eager parser. Hosting them lets the use_treebank/
     # use_tagger/use_lemmatizer/use_parser backends skip the 75 MB AGDT download

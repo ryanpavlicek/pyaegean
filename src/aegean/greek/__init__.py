@@ -58,6 +58,7 @@ from .lemmatize import (
 from .morphology import Analysis, analyze, best_pos, lemmas
 from .rarity import RarityResult, WordRarity, terminology_rarity
 from .treebank import TreebankLexicon, disable_treebank, use_treebank
+from .paradigms import ParadigmLexicon, disable_paradigms, use_paradigms
 from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
 from .usage import UsageInfo, usage
 from .syntax import (
@@ -240,6 +241,9 @@ __all__ = [
     "use_treebank",
     "disable_treebank",
     "TreebankLexicon",
+    "use_paradigms",
+    "disable_paradigms",
+    "ParadigmLexicon",
     "use_inflector",
     "disable_inflector",
     "inflect",

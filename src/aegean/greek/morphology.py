@@ -474,7 +474,9 @@ def analyze(word: str) -> tuple[Analysis, ...]:
     yield the readings their ending permits. When the AGDT treebank backend is
     active (see `aegean.greek.use_treebank`), an attested form's analyses —
     correctly accented and covering irregular forms the rule engine can't — are
-    returned instead, with the rule engine as the fallback for unattested forms."""
+    returned instead; failing that, the opt-in UniMorph paradigm table
+    (`aegean.greek.use_paradigms`) supplies irregular/third-declension paradigm
+    cells, with the rule engine as the fallback for forms neither backend knows."""
     from . import treebank
 
     lex = treebank.active()
@@ -482,6 +484,13 @@ def analyze(word: str) -> tuple[Analysis, ...]:
         hit = lex.analyze(word)
         if hit:
             return hit
+    from . import paradigms
+
+    plex = paradigms.active()  # opt-in UniMorph paradigms: irregular/3rd-decl forms + features
+    if plex is not None:
+        phit = plex.analyze(word)
+        if phit:
+            return phit
     return _rule_analyze(word)
 
 

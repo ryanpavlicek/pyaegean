@@ -329,6 +329,8 @@ def test_analyze_group_help_names_every_command() -> None:
         "distance": "distance", "align": "alignment", "compare": "compare",
         "nearest": "nearest", "assoc": "association", "cooccur": "co-occurrence",
         "clusters": "clusters", "structure": "structure", "hands": "scribal hands",
+        "hand": "hand profile", "dossiers": "dossiers", "syllabary": "syllabary",
+        "bridge": "Greek-bridge",
     }
     assert registered == set(keyword)  # a new command must be added to this map + the help
     help_text = analyze_app.info.help or ""

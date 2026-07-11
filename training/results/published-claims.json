@@ -54,7 +54,9 @@
     "n_tokens": 137303,
     "measured": "2026-07-11",
     "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
-    "doc_claim": "wiki/Limitations.md states ~67% on the full NT"
+    "doc_claim": "wiki/Limitations.md states ~67% on the full NT",
+    "with_paradigms": 71.96,
+    "with_paradigms_note": "the opt-in use_paradigms() backend (UniMorph-derived, fetched); evidence: training/results/paradigms-lift-2026-07-11.json; the base row stays the no-backends protocol"
   },
   "quantization": {
     "tar_gz_bytes": 173068548,
