@@ -1,227 +1,217 @@
 {
-  "_comment": "The canonical registry of every measured number docs/benchmarks.md publishes. tests/test_benchmark_claims.py asserts the docs (and their README/wiki echoes) carry exactly these values, so a doc edit and a re-measurement can only land together; scripts/check_benchmarks.py --measure re-runs the offline-stack rows against this registry (the neural rows are pinned by the immutable sha256 release asset plus the evidence files named in source_evidence). To change a number: re-measure, update this file, the docs, and the evidence file in the same commit.",
-  "neural_ud_perseus_test": {
-    "lemma": 94.27,
-    "uas": 90.24,
-    "las": 85.65,
-    "upos": 97.02,
-    "ufeats": 96.04,
-    "xpos": 93.48,
-    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json (full-protocol re-measure, 2026-07-09; the lemma cell reflects the 0.32.0 lemma-composition fix, the other cells are the same run). The 2026-06 quantize-era record (training/results/v3-quantize-report.json) differs by a few hundredths on UPOS/UAS/LAS because of evaluation-path corrections since; it remains the historical record for the quantization size claims.",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator"
+ "_comment": "The canonical registry of every measured number docs/benchmarks.md publishes. tests/test_benchmark_claims.py asserts the docs (and their README/wiki echoes) carry exactly these values, so a doc edit and a re-measurement can only land together; scripts/check_benchmarks.py --measure re-runs the offline-stack rows against this registry (the neural rows are pinned by the immutable sha256 release asset plus the evidence files named in source_evidence). To change a number: re-measure, update this file, the docs, and the evidence file in the same commit.",
+ "neural_ud_perseus_test": {
+  "lemma": 94.27,
+  "uas": 90.24,
+  "las": 85.65,
+  "upos": 97.02,
+  "ufeats": 96.04,
+  "xpos": 93.48,
+  "source_evidence": "training/results/lemma-remeasure-2026-07-09.json (full-protocol re-measure, 2026-07-09; the lemma cell reflects the 0.32.0 lemma-composition fix, the other cells are the same run). The 2026-06 quantize-era record (training/results/v3-quantize-report.json) differs by a few hundredths on UPOS/UAS/LAS because of evaluation-path corrections since; it remains the historical record for the quantization size claims.",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator"
+ },
+ "neural_ud_proiel_test": {
+  "lemma": 90.51,
+  "uas": 82.48,
+  "las": 63.5,
+  "upos": 86.69,
+  "ufeats": 59.43,
+  "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain (never trained on PROIEL)"
+ },
+ "neural_seed_replicates": {
+  "las_mean": 85.58,
+  "las_std": 0.1,
+  "uas_mean": 90.15,
+  "uas_std": 0.12,
+  "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
+ },
+ "neural_nt": {
+  "lemma": 87.96,
+  "upos_reconciled": 86.75,
+  "n_tokens": 137303,
+  "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
+ },
+ "offline_baseline_ud": {
+  "perseus_test": {
+   "upos": 86.73,
+   "lemma": 97.65,
+   "uas": 37.43
   },
-  "neural_ud_proiel_test": {
-    "lemma": 90.51,
-    "uas": 82.48,
-    "las": 63.5,
-    "upos": 86.69,
-    "ufeats": 59.43,
-    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain (never trained on PROIEL)"
+  "proiel_test": {
+   "upos": 78.83,
+   "lemma": 85.63,
+   "uas": 35.41
   },
-  "neural_seed_replicates": {
-    "las_mean": 85.58,
-    "las_std": 0.1,
-    "uas_mean": 90.15,
-    "uas_std": 0.12,
-    "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
+  "proiel_lemma_with_neural_lemmatizer": 90.38,
+  "measured": "2026-07-03",
+  "protocol": "use_treebank()+use_tagger()+use_lemmatizer()+use_parser(); greek.evaluate_on_ud(fold,'test'); deterministic",
+  "note": "the offline stack changes with the code, so these are re-measured by scripts/check_benchmarks.py --measure (weekly CI + the pre-cut gate); the Perseus cells are an in-training upper bound by design"
+ },
+ "offline_nt_lemma": {
+  "lemma": 66.98,
+  "n_tokens": 137303,
+  "measured": "2026-07-11",
+  "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
+  "doc_claim": "wiki/Limitations.md states ~67% on the full NT",
+  "with_paradigms": 71.21,
+  "with_paradigms_note": "the opt-in use_paradigms() backend (UniMorph-derived, fetched, grc-paradigms-v2) under the honesty guards (capitalized-surface skip, intra-table-ambiguity skip, rule-first ordering); evidence: training/results/paradigms-guards-2026-07-11.json; the base row stays the no-backends protocol"
+ },
+ "quantization": {
+  "tar_gz_bytes": 173068548,
+  "onnx_bytes": 182121265,
+  "fp32_tar_gz_bytes": 518437922,
+  "fp32_onnx_bytes": 556555703,
+  "source_evidence": "training/results/v3-quantize-report.json"
+ },
+ "throughput_cpu": {
+  "quantized_words_per_s": "20–70",
+  "fp32_words_per_s_approx": 300,
+  "measured": "2026-07-03",
+  "note": "development machine, plain CPU, sentence-length dependent; the quantized MatMulNBits kernels trade CPU throughput for the 3x size win. Hardware-dependent and illustrative, NOT a pinned benchmark like the accuracy rows: check_benchmarks.py does not re-measure it (CI runners differ). Stated in docs/benchmarks.md and wiki/Greek-NLP.md. Dependency-drift trigger: re-measure on the same machine class only when the grc-joint model or the onnxruntime floor changes."
+ },
+ "bootstrap": {
+  "n_resamples": 999,
+  "note": "greek.bootstrap_ud's default; docs/benchmarks.md states the same so the reproduction command matches"
+ },
+ "out_of_domain_lead": {
+  "pyaegean_proiel_uas": 82.48,
+  "stanza_perseus_proiel_uas": 59.0,
+  "stated_lead": 23,
+  "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
+ },
+ "calibration_ece": {
+  "upos_temperature": 1.341,
+  "lemma_temperature": 0.6645,
+  "dev_ece_upos_before": 0.0094,
+  "dev_ece_upos_after": 0.0019,
+  "dev_ece_lemma_before": 0.0877,
+  "dev_ece_lemma_after": 0.0539,
+  "test_ece_upos_uncalibrated": 0.0195,
+  "test_ece_upos": 0.0111,
+  "test_ece_lemma": 0.0629,
+  "n_dev_tokens": 22135,
+  "n_test_tokens": 20959,
+  "source_evidence": "training/results/calibration-2026-07-11.json",
+  "protocol": "temperature fitted on the UD Perseus DEV fold only (the checkpoint-selection fold); test ECE is report-only, one shot; 15-bin equal-width ECE; CPU, batch_size=32; the lemma head calibrates the argmax-script probability against composed-lemma-vs-gold correctness (a documented proxy)",
+  "note": "the shipped bundled calibration (src/aegean/data/bundled/greek/calibration.json) carries exactly these temperatures; confidence is exposed ONLY through this calibration, never raw softmax; fitted on literary prose (the genre caveat travels with the number)"
+ },
+ "proiel_convention_decomposition": {
+  "ufeats_gap_points": 40.6,
+  "ufeats_scheme_absent_points": 24.2,
+  "ufeats_shared_disagreement_points": 16.4,
+  "ufeats_shared_subset_score": 78.4,
+  "scheme_absent_word_share": 24.2,
+  "las_gap_points": 36.5,
+  "las_attachment_points": 17.5,
+  "las_label_only_points": 19.0,
+  "label_only_tokens": 2526,
+  "top5_label_confusion_share": 68.9,
+  "source_evidence": "training/results/proiel-convention-decomp-2026-07-11.json",
+  "protocol": "greek.proiel_convention_report(); UD-PROIEL test, neural pipeline, decomposition of the published UFeats/UAS/LAS rows (reproduces the official evaluator to 4 decimals); measurement only — the published rows are unchanged"
+ },
+ "neural_papygreek_test": {
+  "upos": 91.05,
+  "xpos": 76.76,
+  "ufeats": 88.57,
+  "lemma": 86.13,
+  "uas": 85.71,
+  "las": 79.85,
+  "n_words": 24105,
+  "n_sentences": 1696,
+  "source_evidence": "training/results/papygreek-eval-v3-2026-07-11.json",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v3",
+  "documentary_reconciliation": {
+   "upos": 94.31,
+   "xpos": 80.06,
+   "ufeats": 88.57,
+   "lemma": 86.13,
+   "uas": 85.71,
+   "las": 79.85,
+   "note": "opt-in Lever A, conservative coordinator reconciliation (use_documentary_reconciliation); only UPOS/XPOS move, every other metric byte-identical to the baseline run"
   },
-  "neural_nt": {
-    "lemma": 87.96,
-    "upos_reconciled": 86.75,
-    "n_tokens": 137303,
-    "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_nt(); whole Nestle 1904 NT, corrected gold"
+  "documentary_full": {
+   "upos": 94.31,
+   "xpos": 80.06,
+   "ufeats": 88.57,
+   "lemma": 86.36,
+   "uas": 85.71,
+   "las": 79.85,
+   "note": "opt-in Levers A+B (reconciliation + lemma OOV rescue with use_paradigms; the rescue is seed+paradigm only, ending rules excluded by measurement)"
   },
-  "offline_baseline_ud": {
-    "perseus_test": {
-      "upos": 86.73,
-      "lemma": 97.65,
-      "uas": 37.43
-    },
-    "proiel_test": {
-      "upos": 78.83,
-      "lemma": 85.63,
-      "uas": 35.41
-    },
-    "proiel_lemma_with_neural_lemmatizer": 90.38,
-    "measured": "2026-07-03",
-    "protocol": "use_treebank()+use_tagger()+use_lemmatizer()+use_parser(); greek.evaluate_on_ud(fold,'test'); deterministic",
-    "note": "the offline stack changes with the code, so these are re-measured by scripts/check_benchmarks.py --measure (weekly CI + the pre-cut gate); the Perseus cells are an in-training upper bound by design"
-  },
-  "offline_nt_lemma": {
-    "lemma": 66.98,
-    "n_tokens": 137303,
-    "measured": "2026-07-11",
-    "protocol": "no backends active; greek.lemmatize per token via evaluate_on_nt scoring (NFC + homograph-digit clean-up)",
-    "doc_claim": "wiki/Limitations.md states ~67% on the full NT",
-    "with_paradigms": 71.21,
-    "with_paradigms_note": "the opt-in use_paradigms() backend (UniMorph-derived, fetched, grc-paradigms-v2) under the honesty guards (capitalized-surface skip, intra-table-ambiguity skip, rule-first ordering); evidence: training/results/paradigms-guards-2026-07-11.json; the base row stays the no-backends protocol"
-  },
-  "quantization": {
-    "tar_gz_bytes": 173068548,
-    "onnx_bytes": 182121265,
-    "fp32_tar_gz_bytes": 518437922,
-    "fp32_onnx_bytes": 556555703,
-    "source_evidence": "training/results/v3-quantize-report.json"
-  },
-  "throughput_cpu": {
-    "quantized_words_per_s": "20–70",
-    "fp32_words_per_s_approx": 300,
-    "measured": "2026-07-03",
-    "note": "development machine, plain CPU, sentence-length dependent; the quantized MatMulNBits kernels trade CPU throughput for the 3x size win. Hardware-dependent and illustrative, NOT a pinned benchmark like the accuracy rows: check_benchmarks.py does not re-measure it (CI runners differ). Stated in docs/benchmarks.md and wiki/Greek-NLP.md. Dependency-drift trigger: re-measure on the same machine class only when the grc-joint model or the onnxruntime floor changes."
-  },
-  "bootstrap": {
-    "n_resamples": 999,
-    "note": "greek.bootstrap_ud's default; docs/benchmarks.md states the same so the reproduction command matches"
-  },
-  "out_of_domain_lead": {
-    "pyaegean_proiel_uas": 82.48,
-    "stanza_perseus_proiel_uas": 59.0,
-    "stated_lead": 23,
-    "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
-  },
-  "calibration_ece": {
-    "upos_temperature": 1.341,
-    "lemma_temperature": 0.6645,
-    "dev_ece_upos_before": 0.0094,
-    "dev_ece_upos_after": 0.0019,
-    "dev_ece_lemma_before": 0.0877,
-    "dev_ece_lemma_after": 0.0539,
-    "test_ece_upos_uncalibrated": 0.0195,
-    "test_ece_upos": 0.0111,
-    "test_ece_lemma": 0.0629,
-    "n_dev_tokens": 22135,
-    "n_test_tokens": 20959,
-    "source_evidence": "training/results/calibration-2026-07-11.json",
-    "protocol": "temperature fitted on the UD Perseus DEV fold only (the checkpoint-selection fold); test ECE is report-only, one shot; 15-bin equal-width ECE; CPU, batch_size=32; the lemma head calibrates the argmax-script probability against composed-lemma-vs-gold correctness (a documented proxy)",
-    "note": "the shipped bundled calibration (src/aegean/data/bundled/greek/calibration.json) carries exactly these temperatures; confidence is exposed ONLY through this calibration, never raw softmax; fitted on literary prose (the genre caveat travels with the number)"
-  },
-  "proiel_convention_decomposition": {
-    "ufeats_gap_points": 40.6,
-    "ufeats_scheme_absent_points": 24.2,
-    "ufeats_shared_disagreement_points": 16.4,
-    "ufeats_shared_subset_score": 78.4,
-    "scheme_absent_word_share": 24.2,
-    "las_gap_points": 36.5,
-    "las_attachment_points": 17.5,
-    "las_label_only_points": 19.0,
-    "label_only_tokens": 2526,
-    "top5_label_confusion_share": 68.9,
-    "source_evidence": "training/results/proiel-convention-decomp-2026-07-11.json",
-    "protocol": "greek.proiel_convention_report(); UD-PROIEL test, neural pipeline, decomposition of the published UFeats/UAS/LAS rows (reproduces the official evaluator to 4 decimals); measurement only — the published rows are unchanged"
-  },
-  "neural_papygreek_test": {
-    "upos": 91.05,
-    "xpos": 76.76,
-    "ufeats": 88.57,
-    "lemma": 86.13,
-    "uas": 85.71,
-    "las": 79.89,
-    "n_words": 24105,
-    "n_sentences": 1696,
-    "source_evidence": "training/results/papygreek-eval-v2-2026-07-11.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD, the training convention); CPU sequential; fold papygreek-fold-v2",
-    "documentary_reconciliation": {
-      "upos": 94.31,
-      "xpos": 80.06,
-      "ufeats": 88.57,
-      "lemma": 86.13,
-      "uas": 85.71,
-      "las": 79.89,
-      "note": "opt-in Lever A, conservative coordinator reconciliation (use_documentary_reconciliation); only UPOS/XPOS move, every other metric byte-identical to the baseline run"
-    },
-    "documentary_full": {
-      "upos": 94.31,
-      "xpos": 80.06,
-      "ufeats": 88.57,
-      "lemma": 86.36,
-      "uas": 85.71,
-      "las": 79.89,
-      "note": "opt-in Levers A+B (reconciliation + lemma OOV rescue with use_paradigms; the rescue is seed+paradigm only, ending rules excluded by measurement)"
-    },
-    "variant_evidence": "training/results/documentary-levers-2026-07-11.json",
-    "orig_layer": {
-      "upos": 90.0,
-      "xpos": 74.1,
-      "ufeats": 85.9,
-      "lemma": 81.8,
-      "uas": 84.33,
-      "las": 77.64,
-      "note": "the diplomatic-orthography surface of the SAME sentences and gold (papygreek-fold-orig); the delta vs the reg row isolates the cost of scribal spelling",
-      "source_evidence": "training/results/papygreek-orig-eval-2026-07-11.json"
-    }
-  },
-  "papygreek_convention_decomposition": {
-    "upos_gap_points": 8.95,
-    "upos_coordinator_points": 5.13,
-    "coordinator_share_of_upos_errors": 57.3,
-    "xpos_gap_points": 23.24,
-    "xpos_coordinator_points": 5.12,
-    "xpos_common_gender_points": 5.91,
-    "xpos_underscore_encoding_points": 2.6,
-    "xpos_residual_real_points": 9.62,
-    "xpos_convention_encoding_subtotal_points": 13.62,
-    "xpos_forgiving_convention_pct": 90.38,
-    "source_evidence": "training/results/papygreek-convention-decomp-2026-07-11.json",
-    "protocol": "greek.papygreek_convention_report(); papygreek-fold-v2, neural pipeline, CPU sequential (batching is not prediction-identical on this fold); reproduces the official evaluator exactly; measurement only, the published row is unchanged"
-  },
-  "procrustes_null": {
-    "n_pairs": 53,
-    "n_targets": 73,
-    "loo_top1": 0.0,
-    "loo_top5": 0.0943,
-    "loo_median_rank": 26.0,
-    "loo_mean_rank": 29.08,
-    "chance_median": 37.0,
-    "chance_top5": 0.0685,
-    "identity_top1": 0.9012,
-    "identity_top5": 0.9568,
-    "n_identity": 162,
-    "la_vocab": 162,
-    "lb_syllabogram_vocab": 73,
-    "source_evidence": "training/results/procrustes-null-2026-07-11.json",
-    "protocol": "aegean.analysis.rank_known_pairs(la, lb, shared_label_anchors(la, lb), leave_one_out=True); source = bundled Linear A sign_embeddings; target = DAMOS Linear B sign_embeddings restricted to the 74 canonical syllabograms; dim=50, window=1; pure-Python deterministic; identity floor = recover_identity(la, anchor_fraction=1.0)",
-    "note": "EXPLORATORY negative result: distributional embedding alignment recovers NO Linear A -> Linear B correspondence at this corpus scale (top-1 0.000, top-5 at chance, median far short of recovery), while self-alignment recovers 90.1% (the 16 misses are distributional twins). The module ships as the instrument that measured this null; every output is exploratory-labelled."
-  },
-  "neural_verse_test": {
-    "tragedy": {
-      "upos": 90.88,
-      "xpos": 82.31,
-      "ufeats": 92.79,
-      "lemma": 87.35,
-      "uas": 79.73,
-      "las": 73.06,
-      "n_words": 735,
-      "n_sentences": 36,
-      "las_ci_95": [
-        69.53,
-        77.8
-      ]
-    },
-    "all": {
-      "upos": 91.05,
-      "xpos": 82.76,
-      "ufeats": 93.03,
-      "lemma": 87.37,
-      "uas": 79.87,
-      "las": 73.16,
-      "n_words": 760,
-      "n_sentences": 39
-    },
-    "note": "small-sample genre-conditioned datapoint (wide bootstrap CIs), never a headline number; the first leakage-clean tragedy evaluation; the hexameter track (3 sentences / 25 tokens) is directional only and not pinned",
-    "source_evidence": "training/results/verse-eval-2026-07-11.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track=...); verse fold verse-fold-v1 (Euripides Bacchae 1-169 tragedy + Maximus hexameter), out of domain, scheme-matched (AGDT->UD); CPU sequential"
-  },
-  "neural_dbbe_test": {
-    "upos": 86.61,
-    "xpos": 76.34,
-    "ufeats": 85.87,
-    "lemma": 76.74,
-    "n_words": 9203,
-    "n_sentences": 822,
-    "note": "tagging only (the gold has no trees); Byzantine book epigrams, unedited scribal orthography; DBBE tagset mapped to UPOS; lemma scored against normalized Attic headwords",
-    "source_evidence": "training/results/dbbe-eval-2026-07-11.json",
-    "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; fold dbbe-lingann-fold-v1"
+  "variant_evidence": "training/results/documentary-levers-v2-2026-07-11.json",
+  "orig_layer": {
+   "upos": 90.0,
+   "xpos": 74.1,
+   "ufeats": 85.9,
+   "lemma": 81.8,
+   "uas": 84.33,
+   "las": 77.61,
+   "note": "the diplomatic-orthography surface of the SAME sentences and gold (papygreek-fold-orig); the delta vs the reg row isolates the cost of the scribes' non-standard documentary usage (spelling and a minority of morphosyntactic regularizations)",
+   "source_evidence": "training/results/papygreek-orig-eval-v2-2026-07-11.json"
   }
+ },
+ "papygreek_convention_decomposition": {
+  "upos_gap_points": 8.95,
+  "upos_coordinator_points": 5.13,
+  "coordinator_share_of_upos_errors": 57.3,
+  "xpos_gap_points": 23.24,
+  "xpos_coordinator_points": 5.12,
+  "xpos_common_gender_points": 5.91,
+  "xpos_underscore_encoding_points": 2.6,
+  "xpos_residual_real_points": 9.62,
+  "xpos_convention_encoding_subtotal_points": 13.62,
+  "xpos_forgiving_convention_pct": 90.38,
+  "source_evidence": "training/results/papygreek-convention-decomp-2026-07-11.json",
+  "protocol": "greek.papygreek_convention_report(); papygreek-fold-v2, neural pipeline, CPU sequential (batching is not prediction-identical on this fold); reproduces the official evaluator exactly; measurement only, the published row is unchanged"
+ },
+ "procrustes_null": {
+  "n_pairs": 53,
+  "n_targets": 73,
+  "loo_top1": 0.0,
+  "loo_top5": 0.0943,
+  "loo_median_rank": 26.0,
+  "loo_mean_rank": 29.08,
+  "chance_median": 37.0,
+  "chance_top5": 0.0685,
+  "identity_top1": 0.9012,
+  "identity_top5": 0.9568,
+  "n_identity": 162,
+  "la_vocab": 162,
+  "lb_syllabogram_vocab": 73,
+  "source_evidence": "training/results/procrustes-null-2026-07-11.json",
+  "protocol": "aegean.analysis.rank_known_pairs(la, lb, shared_label_anchors(la, lb), leave_one_out=True); source = bundled Linear A sign_embeddings; target = DAMOS Linear B sign_embeddings restricted to the 74 canonical syllabograms; dim=50, window=1; pure-Python deterministic; identity floor = recover_identity(la, anchor_fraction=1.0)",
+  "note": "EXPLORATORY negative result: distributional embedding alignment recovers NO Linear A -> Linear B correspondence at this corpus scale (top-1 0.000, top-5 at chance, median far short of recovery), while self-alignment recovers 90.1% (the 16 misses are distributional twins). The module ships as the instrument that measured this null; every output is exploratory-labelled."
+ },
+ "neural_verse_test": {
+  "tragedy": {
+   "upos": 90.88,
+   "xpos": 82.31,
+   "ufeats": 92.79,
+   "lemma": 87.89,
+   "uas": 79.73,
+   "las": 73.33,
+   "n_words": 735,
+   "n_sentences": 36,
+   "las_ci_95": [
+    69.75,
+    78.28
+   ]
+  },
+  "note": "small-sample genre-conditioned datapoint (wide bootstrap CIs), never a headline number; a leakage-clean tragedy evaluation (no prior one is known to us); the fold is tragedy-only since v2 (the sliver once labeled hexameter was the Maximus prose paraphrase and was removed)",
+  "source_evidence": "training/results/verse-eval-v2-2026-07-11.json",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track='tragedy'); verse fold verse-fold-v2 (Euripides Bacchae 1-169, tragedy-only), out of domain, scheme-matched (AGDT->UD); CPU sequential"
+ },
+ "neural_dbbe_test": {
+  "upos": 86.74,
+  "xpos": 76.4,
+  "ufeats": 85.86,
+  "lemma": 76.71,
+  "n_words": 9191,
+  "n_sentences": 825,
+  "note": "tagging only (the gold has no trees); Byzantine book epigrams, unedited scribal orthography; DBBE tagset mapped to UPOS; lemma scored against normalized Attic headwords",
+  "source_evidence": "training/results/dbbe-eval-v2-2026-07-11.json",
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; fold dbbe-lingann-fold-v2"
+ }
 }

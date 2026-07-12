@@ -138,6 +138,10 @@ def _score_fold(
     from .ud import _eval_module, _score_conllu_text, load_conllu, pipeline_conllu
 
     sentences = load_conllu(gold_path)
+    # Zero sentences after loading would emit a lone "\n" that the official evaluator misparses
+    # into a misleading "multiple roots" UDError; refuse cleanly, naming the source.
+    if not sentences:
+        raise ValueError(f"{treebank} fold {gold_path} has zero sentences: nothing to score")
     if parse is None:
         from . import joint, syntax
 
@@ -236,8 +240,8 @@ def evaluate_on_papygreek_dev(
     path (tests pass a local CoNLL-U for an offline run). ``progress`` and ``batch_size`` are as
     for `evaluate_on_papygreek`.
 
-    Returns the same key set as `evaluate_on_papygreek`, with ``"split"`` set to the track
-    name."""
+    Returns the same key set as `evaluate_on_papygreek` **except** ``"layer"`` (the dev fold has
+    no orig variant), with ``"split"`` set to the track name."""
     if track not in _DEV_ASSETS:
         raise ValueError(f"track must be one of {sorted(_DEV_ASSETS)}; got {track!r}")
     gold_path = Path(source) if source is not None else papygreek_dev_path(track)

@@ -72,8 +72,14 @@ def annotate_corpus(
             elif use_joint:
                 ana = joint.analyze_sentence(forms)
                 resolved = ana.lemma_resolved or (True,) * len(forms)
+                override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
                 for k, i in enumerate(idxs):
-                    src = LemmaSource.NEURAL if resolved[k] else LemmaSource.IDENTITY
+                    if resolved[k]:
+                        src = LemmaSource.NEURAL
+                    elif override and override[k]:
+                        src = LemmaSource(override[k])  # grounded SEED / PARADIGM offline rescue
+                    else:
+                        src = LemmaSource.IDENTITY
                     ann = {**doc.tokens[i].annotations, "lemma": ana.lemma[k], "upos": ana.upos[k]}
                     _evidence(ann, src)
                     new_tokens[i] = replace(doc.tokens[i], annotations=ann)

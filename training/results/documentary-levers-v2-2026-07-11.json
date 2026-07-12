@@ -1,0 +1,38 @@
+{
+ "what": "The opt-in documentary-lever variant rows re-measured on papygreek-fold-v3 (registry sub-rows; the baseline row is the papygreek-eval-v3 evidence).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; one-shot after the 0.44.0 fold rebuilds (leaf-APOS cc->appos converter correction + per-fold gold repairs); greek.use_neural_pipeline(); the lever toggles (full = use_paradigms + use_documentary_reconciliation + use_documentary_lemma_rescue); greek.evaluate_on_papygreek(); fold papygreek-fold-v3 (sha de687474...). Dev-side lever selection evidence: documentary-levers-2026-07-11.json (unchanged; dev folds are experiment-only)",
+ "results_full_precision": {
+  "documentary_reconciliation": {
+   "treebank": "papygreek",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.9430823480605683,
+   "xpos": 0.800622277535781,
+   "ufeats": 0.8857498444306161,
+   "lemma": 0.8613150798589504,
+   "uas": 0.8570835926156399,
+   "las": 0.7984650487450736,
+   "clas": 0.757600443155528,
+   "n_words": 24105,
+   "n_sentences": 1696,
+   "layer": "reg"
+  },
+  "documentary_full": {
+   "treebank": "papygreek",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.9430823480605683,
+   "xpos": 0.800622277535781,
+   "ufeats": 0.8857498444306161,
+   "lemma": 0.863638249325866,
+   "uas": 0.8570835926156399,
+   "las": 0.7984650487450736,
+   "clas": 0.757600443155528,
+   "n_words": 24105,
+   "n_sentences": 1696,
+   "layer": "reg"
+  }
+ },
+ "invariants_checked": "reconciliation shares UFeats/lemma/UAS/LAS with the v3 baseline (Lever A touches UPOS/XPOS only); full shares UPOS/XPOS with reconciliation and moves only lemma (86.13->86.36, identical to the v2-fold measurement - the rescue is independent of the DEPREL correction)"
+}

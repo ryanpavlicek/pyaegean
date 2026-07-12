@@ -340,14 +340,17 @@ list), and a **comma list** (`1.1,1.5` or `1,3`) selects siblings, or ranges tha
 cross a textpart, as one `Document` each, in source order.
 
 Some editions print finer references in the margin, in TEI `<milestone>` markers that live
-**outside** the CTS `<div>` scheme — a Stephanus sub-page (`17a`) or a Bekker line
-(`1447a10`, the page `1447a` line `10`). `--ref` now addresses these too: it extracts the
-span between the named marker and the next of its kind, so `aegean greek work tlg0086.tlg035
---ref 1447a10` loads that Bekker line. A whole Bekker page resolves the same way (`1447a`),
-and milestone refs may appear in a **comma list** (`17a,17b`), one `Document` each. A hyphen
-**range** of milestones is **not yet** supported — only a single milestone ref is
-addressable; a range falls through to the scheme-naming error, so use a comma list of the
-individual markers instead.
+**outside** the CTS `<div>` scheme — a Stephanus sub-page (`17a`) or a Bekker line (`1447a10`,
+column `a` of page `1447`, line `10`). `--ref` now addresses these too: it extracts the span
+between the named marker and the next marker of its kind, so `aegean greek work tlg0086.tlg034
+--ref 1447a10` (the *Poetics*) returns the run from line 10 up to the next marked line.
+Perseus marks only every fifth Bekker line, so `1447a10` yields lines 10-14 and only the
+marked line numbers are addressable: `1447a11`-`1447a14` resolve to nothing. A whole Bekker
+page-*column* resolves the same way (`1447a` = column `a` of page 1447); the whole physical
+page is its two columns as a **comma list** (`1447a,1447b`), and milestone refs may appear
+in any comma list (`17a,17b`), one `Document` each. A hyphen **range** of milestones is
+**not yet** supported — only a single milestone ref is addressable; a range falls through to
+the scheme-naming error, so use a comma list of the individual markers instead.
 
 ### The same thing on the command line
 

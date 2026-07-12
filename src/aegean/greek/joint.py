@@ -82,6 +82,15 @@ class SentenceAnalysis:
     # `analyze` raises `UncalibratedConfidenceError` rather than filling these.
     upos_prob: tuple[float | None, ...] = ()
     lemma_script_prob: tuple[float | None, ...] = ()
+    # Per-token offline-rescue evidence class, populated ONLY by Lever B
+    # (`aegean.greek.documentary.rescue_analysis`) at the indices it rescues: the
+    # `aegean.greek.LemmaSource` value (``"seed"`` / ``"paradigm"``) of the offline source
+    # that recovered the lemma, ``""`` for a token it did not rescue. Empty ``()`` (the
+    # default) means no rescue ran, so every path that does not opt into Lever B stays
+    # byte-identical. A rescued token keeps ``lemma_resolved=False`` (an offline rescue is
+    # never credited to the neural model); this channel lets a consumer surface the true
+    # grounded source instead of the identity fall-through.
+    lemma_source_override: tuple[str, ...] = ()
 
 
 def _compose_lemma(

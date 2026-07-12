@@ -1,0 +1,51 @@
+{
+ "what": "Neural pipeline scored on verse-fold-v2 (tragedy-only: Euripides Bacchae 1-169): a leakage-clean tragedy dependency evaluation (gold from the UNESP Trees project, CC BY-SA 4.0).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; one-shot after the 0.44.0 fold rebuilds (leaf-APOS cc->appos converter correction + per-fold gold repairs); greek.evaluate_on_verse(track='tragedy'); fold verse-fold-v2 (sha 22c860f8...), built from perseids-publications/unesp-trees @ a6367b97; vs v1: the 3-sentence sliver mislabeled hexameter removed (the Maximus prose paraphrase), 15 leaf-apposition DEPREL cells corrected cc->appos, 11 malformed gold lemmas repaired; leakage 0/36, work-level disjointness asserted",
+ "results_full_precision": {
+  "tragedy": {
+   "treebank": "verse",
+   "track": "tragedy",
+   "split": "test",
+   "parsed": true,
+   "upos": 0.908843537414966,
+   "xpos": 0.8231292517006803,
+   "ufeats": 0.927891156462585,
+   "lemma": 0.8789115646258503,
+   "uas": 0.7972789115646258,
+   "las": 0.7333333333333333,
+   "clas": 0.6931067044381491,
+   "n_words": 735,
+   "n_sentences": 36
+  }
+ },
+ "tragedy_bootstrap_ci_95": {
+  "note": "percentile bootstrap over the fold's sentences (the v2 fold is tragedy-only), 999 resamples, seed 0",
+  "upos": [
+   88.4,
+   92.96
+  ],
+  "xpos": [
+   79.77,
+   84.46
+  ],
+  "ufeats": [
+   90.71,
+   94.77
+  ],
+  "lemma": [
+   85.44,
+   90.1
+  ],
+  "uas": [
+   75.84,
+   84.68
+  ],
+  "las": [
+   69.75,
+   78.28
+  ]
+ },
+ "vs_v1": "UPOS/XPOS/UFeats/UAS byte-identical to the v1 measurement (no gold cells of those kinds changed); lemma 87.35->87.89 (the 11 lemma repairs), LAS 73.06->73.33 (the 15 appos corrections)",
+ "gold_diligence": "the 0.42.0 eight-sentence scholarly spot-check plus the 0.44.0 specialist panel pass; the panel found the prose-paraphrase mislabel, the converter apposition defect, and the malformed lemmas the spot-check missed - all corrected in the v2 build, which now validates every emitted lemma is a clean Greek headword"
+}

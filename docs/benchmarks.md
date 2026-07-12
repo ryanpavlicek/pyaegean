@@ -397,7 +397,7 @@ overlaps.
 
 | Test set | UPOS | UFeats | Lemma | UAS | LAS | scored tokens |
 |---|---|---|---|---|---|---|
-| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.89 | 24,105 |
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.85 | 24,105 |
 
 Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
 Scheme-matched out-of-domain parsing runs ~16 LAS points above the
@@ -406,63 +406,70 @@ below. One measurement note: on this fold, batched inference is *not*
 prediction-identical to sequential (a handful of float-order flips), so the
 published numbers are CPU-sequential and batching stays off this row's protocol.
 
-### Verse, out of domain: the first leakage-clean tragedy evaluation
+### Verse, out of domain: a leakage-clean tragedy evaluation
 
 No manually-annotated Greek verse treebank outside the model's own training data
-was previously known: the canonical epic and tragedy treebanks are all in the
-AGDT+Gorman+Pedalion training set, so no honest verse accuracy existed anywhere
-(the leakage-clean UD-Perseus test fold is 100% prose). The verse fold changes
-that with gold from the UNESP Trees project (Perseids/Arethusa manual annotation,
-CC BY-SA 4.0): Euripides, *Bacchae* 1-169 (tragedy: 36 sentences / 735 tokens
-after the standard selection policy) plus a directional sliver of Maximus'
-didactic hexameter (3 sentences / 25 tokens, reported only as a footnote). The
-fold is leakage-checked sentence-by-sentence in its build (0 overlaps; the only
-Euripides in training is *Medea*), and the gold survived an eight-sentence
-scholarly spot-check against the grammar before any number was pinned.
+was previously known to us: the canonical epic and tragedy treebanks are all in
+the AGDT+Gorman+Pedalion training set (the leakage-clean UD-Perseus test fold is
+100% prose). The verse fold fills that gap with gold from the UNESP Trees
+project (Perseids/Arethusa manual annotation, CC BY-SA 4.0): **tragedy only** —
+Euripides, *Bacchae* 1-169, 36 sentences / 735 tokens after the standard
+selection policy. The fold is leakage-checked sentence-by-sentence in its build
+(0 overlaps; the only Euripides in training is *Medea*). Gold diligence: an
+eight-sentence scholarly spot-check preceded the first pin, and a subsequent
+specialist review pass corrected the fold build (v2) — a 25-token sliver first
+labeled hexameter was identified as the Maximus *prose paraphrase* and removed,
+15 leaf-apposition relations were corrected from the converter's `cc` to
+`appos`, and 11 malformed gold lemmas (Latin homoglyph vowels, LSJ citation-form
+tails) were repaired.
 
 **This is a small-sample datapoint with wide confidence intervals, never a
 headline number.**
 
 | Track | UPOS | UFeats | Lemma | UAS | LAS | tokens |
 |---|---|---|---|---|---|---|
-| Tragedy (Bacchae) | 90.88 | 92.79 | 87.35 | 79.73 | 73.06 | 735 |
-| All verse | 91.05 | 93.03 | 87.37 | 79.87 | 73.16 | 760 |
+| Tragedy (Bacchae) | 90.88 | 92.79 | 87.89 | 79.73 | 73.33 | 735 |
 
 Tragedy 95% CIs (percentile bootstrap, 999): UPOS [88.40, 92.96], lemma
-[84.79, 89.72], UAS [75.84, 84.68], LAS [69.53, 77.80]. The substantive finding:
+[85.44, 90.10], UAS [75.84, 84.68], LAS [69.75, 78.28]. The substantive finding:
 tragedy LAS (~73) runs well below the documentary fold (~80) — poetic word order
 and hyperbaton are materially harder to parse than either prose register, which
 is precisely what this fold exists to measure. Reproduce:
 `aegean greek eval verse --track tragedy` (evidence:
-`training/results/verse-eval-2026-07-11.json`).
+`training/results/verse-eval-v2-2026-07-11.json`).
 
 ### The diplomatic-orthography row, and Byzantine verse
 
 The orig-layer fold (`evaluate_on_papygreek(layer="orig")`) scores the same
 1,696 sentences and gold as the row above, with the FORM column carrying the
-scribes' actual spellings (1,637 tokens differ: itacism, vowel-quantity
-confusion, nasal assimilation). Measured once, CPU sequential:
+scribes' actual readings (1,637 tokens differ — mostly orthographic: itacism,
+vowel-quantity confusion, nasal assimilation, voicing, gemination; a minority
+are the editors' morphosyntactic regularizations, e.g. non-standard case,
+number, or εἰς/ἐν substitution, so the pair measures the cost of raw documentary
+usage, not spelling alone). Measured once, CPU sequential:
 
 | Fold | UPOS | XPOS | UFeats | Lemma | UAS | LAS |
 |---|---|---|---|---|---|---|
-| PapyGreek, regularized (above) | 91.05 | 76.76 | 88.57 | 86.13 | 85.71 | 79.89 |
-| PapyGreek, diplomatic (orig) | 90.00 | 74.10 | 85.90 | 81.80 | 84.33 | 77.64 |
+| PapyGreek, regularized (above) | 91.05 | 76.76 | 88.57 | 86.13 | 85.71 | 79.85 |
+| PapyGreek, diplomatic (orig) | 90.00 | 74.10 | 85.90 | 81.80 | 84.33 | 77.61 |
 
-The pair isolates the cost of scribal orthography: lemma takes the largest hit
-(−4.33 points — phonetic spellings break lemma composition), morphology loses
-~2.7, attachment the least. Only 6.8% of tokens differ in surface form, so the
-per-changed-token degradation is steep. (Evidence:
-`training/results/papygreek-orig-eval-2026-07-11.json`.)
+The pair isolates the cost of the scribes' non-standard documentary usage:
+lemma takes the largest hit (−4.33 points — phonetic spellings break lemma
+composition), morphology loses ~2.7, attachment the least. Only 6.8% of tokens
+differ in surface form, so the per-changed-token degradation is steep.
+(Evidence: `training/results/papygreek-orig-eval-2026-07-11.json`; the row was
+re-measured on fold v2/v3 after the apposition-label correction below —
+evidence `training/results/r44-remeasure-2026-07-11.json`.)
 
 **Byzantine verse (tagging only).** `greek.evaluate_on_dbbe()` scores the
 pipeline against the DBBE gold standard (Swaelens, De Vos & Lefever, LRE 2025;
-CC BY 4.0): 822 sentences / 9,203 tokens of unedited medieval book epigrams,
+CC BY 4.0): 825 sentences / 9,191 tokens of unedited medieval book epigrams,
 7th–15th c., non-normalized scribal orthography. The gold carries POS and lemma
 but no trees, so this is a tagging row; the DBBE tagset is mapped to UPOS and
 gold lemmas are normalized Attic headwords, both stated caveats. Measured once,
-CPU sequential: **UPOS 86.61 / XPOS 76.34 / UFeats 85.87 / lemma 76.74** —
+CPU sequential: **UPOS 86.74 / XPOS 76.40 / UFeats 85.86 / lemma 76.71** —
 leakage-checked (0 overlaps). (Evidence:
-`training/results/dbbe-eval-2026-07-11.json`.)
+`training/results/dbbe-eval-v2-2026-07-11.json`.)
 
 ### PapyGreek convention decomposition
 
@@ -487,6 +494,18 @@ slot where the model writes `-` (2.60). Forgiving those three, XPOS would read
 90.38%; the residual 9.62 points are genuine morphology error, dominated by real
 gender confusion. The 9-position tag is convention-capped on this fold, not
 broken.
+
+**A recorded conversion correction (0.44.0).** The AGDT→UD converter that builds
+both the training labels and the AGDT-derived evaluation folds mapped a *leaf*
+`APOS` relation (an appositive attached directly under its antecedent) to `cc` —
+a label UD reserves for coordinating-conjunction words. The converter now emits
+`appos`, and the folds were rebuilt and re-measured (73 gold cells in the
+PapyGreek fold, 15 in the verse fold; DEPREL only, every other cell
+byte-identical). The shipped `grc-joint` model was **trained under the old
+convention**, so it systematically predicts `cc` for bare appositives; against
+the corrected gold that surfaces as a genuine, measured `appos`/`cc` confusion
+in the LAS rows rather than being hidden inside matching-but-wrong labels. A
+future retraining absorbs the correction into the model itself.
 
 ### Opt-in documentary levers
 
@@ -529,8 +548,8 @@ PapyGreek row above is untouched. (Neural pipeline, CPU sequential; evidence:
 
 | Variant on the PapyGreek fold | UPOS / UFeats / Lemma / UAS / LAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
+| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.85 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.85 |
 
 ### PROIEL convention decomposition
 

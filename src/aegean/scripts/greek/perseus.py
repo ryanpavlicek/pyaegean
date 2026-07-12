@@ -674,9 +674,11 @@ def parse_tei_work(
       hi may drop the repeated prefix, ``"1.1-50"``);
     * a ``<milestone>`` marker the edition prints in the margin, outside the CTS ``<div>``
       scheme — a Stephanus sub-page (Plato ``"17a"``) or a Bekker line (Aristotle
-      ``"1447a10"``, the page ``1447a`` line ``10``): the addressed text is the span
-      between the marker and the next of its kind. A whole Bekker/Stephanus page also
-      resolves (``"1447a"``, ``"17"``);
+      ``"1447a10"``, column ``a`` of page ``1447``, line ``10``): the addressed text is the
+      span between the marker and the next marker of its kind, so only the marked line
+      numbers resolve (Perseus marks every fifth Bekker line). A whole Bekker page-column
+      (``"1447a"``) or Stephanus page (``"17"``) also resolves, and the whole physical page
+      is a comma list of its columns (``"1447a,1447b"``);
     * several of the above as a **comma list** (``"1.1,1.5"``, ``"1,3"``, ``"17a,17b"``),
       giving one `Document` per entry, in source order (exact duplicates dropped).
 
@@ -747,8 +749,9 @@ def load_work(
     a nested div path (``"1.2"`` = book 1, chapter 2 of a prose work), a verse
     line-range (``"1.1-1.50"`` = book 1, lines 1–50), a marginal ``<milestone>``
     marker outside the CTS ``<div>`` scheme (a Stephanus sub-page ``"17a"``, a Bekker
-    line ``"1447a10"`` or a whole Bekker page ``"1447a"``), or a comma list of any of
-    these (``"1.1,1.5"``, ``"1,3"``, ``"17a,17b"``) giving one `Document` per entry. A
+    line ``"1447a10"`` — the span to the next marked line — or a whole Bekker page-column
+    ``"1447a"``, the physical page being the comma list ``"1447a,1447b"``), or a comma list
+    of any of these (``"1.1,1.5"``, ``"1,3"``, ``"17a,17b"``) giving one `Document` per entry. A
     hyphen range must stay within a single textpart: ``"1.1-2.50"`` (crossing from book 1
     into book 2) raises `ValueError`; use a comma list, or load each book separately and
     `Corpus.merge` the results. Without ``ref``, the corpus is one `Document` per

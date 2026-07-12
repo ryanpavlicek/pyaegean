@@ -145,7 +145,7 @@ syntax. Full accounting: `training/results/papygreek-fold-manifest.json`.
 
 | Test set | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
-| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.89 |
+| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.85 |
 
 Scheme-matched out-of-domain parsing runs ~16 LAS points above the
 convention-capped PROIEL row. Reproduce: `aegean greek eval papygreek`.
@@ -177,26 +177,26 @@ pinned fold:
 
 | Variant on the PapyGreek fold | UPOS / UFeats / Lemma / UAS / LAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.89 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.89 |
+| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.85 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.85 |
 
 ## Diplomatic orthography and Byzantine verse
 
 The orig-layer PapyGreek fold (same sentences and gold, the scribes' actual
 spellings) measures the cost of documentary orthography directly: UPOS 90.00 /
-UFeats 85.90 / lemma 81.80 / UAS 84.33 / LAS 77.64 vs the regularized row's
-91.05 / 88.57 / 86.13 / 85.71 / 79.89 — lemma composition takes the biggest
+UFeats 85.90 / lemma 81.80 / UAS 84.33 / LAS 77.61 vs the regularized row's
+91.05 / 88.57 / 86.13 / 85.71 / 79.85 — lemma composition takes the biggest
 hit. And the DBBE Byzantine book-epigram gold (tagging only, unedited medieval
-verse) scores UPOS 86.61 / lemma 76.74 over 9,203 tokens. Reproduce:
+verse) scores UPOS 86.74 / lemma 76.71 over 9,191 tokens. Reproduce:
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 
 ## Verse, out of domain: tragedy
 
 The verse fold (gold manual annotation from the UNESP Trees project, CC BY-SA
-4.0; Euripides *Bacchae* 1-169, leakage-checked against training) provides the
-first leakage-clean tragedy evaluation anywhere. A small-sample datapoint with
-wide CIs, never a headline: tragedy UPOS 90.88 / lemma 87.35 / UAS 79.73 /
-LAS 73.06 over 735 tokens (LAS 95% CI [69.53, 77.80]). Tragedy parses ~7 LAS
+4.0; Euripides *Bacchae* 1-169, leakage-checked against training) is a
+leakage-clean tragedy evaluation; no prior one is known to us. A small-sample datapoint with
+wide CIs, never a headline: tragedy UPOS 90.88 / lemma 87.89 / UAS 79.73 /
+LAS 73.33 over 735 tokens (LAS 95% CI [69.75, 78.28]). Tragedy parses ~7 LAS
 points below the documentary fold: poetic word order is materially harder.
 Reproduce: `aegean greek eval verse --track tragedy`.
 

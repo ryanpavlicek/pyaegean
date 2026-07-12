@@ -615,23 +615,31 @@ def test_export_formats_enumerated_in_the_wiki_cheatsheet_table():
 # ``on_disk``, or `data list` / `doctor` probe cache_dir()/name (the wrong place) and
 # report a present dataset as not-downloaded, and `remove` cannot see it.
 def test_extract_false_on_disk_matches_the_hosted_artifact_name():
-    """Every ``extract=False`` DataSpec that declares ``on_disk`` names exactly one
-    file, and that name (a) differs from the dataset name — ``on_disk`` exists only for
-    a DISTINCT on-disk filename — and (b) equals the hosted asset's basename, so the
-    store, a backend's ``fetch_prebuilt`` dest, and a rebuild all agree on where the
-    file lands."""
+    """Every ``extract=False`` DataSpec that declares ``on_disk`` belongs to one of two
+    classes. Index-fetch class (0.27.2): exactly one file whose name (a) differs from
+    the dataset name — ``on_disk`` exists only for a DISTINCT on-disk filename — and
+    (b) equals the hosted asset's basename, so the store, a backend's ``fetch_prebuilt``
+    dest, and a rebuild all agree on where the file lands. fetch_text-materialization
+    class (0.44.0): the raw archive stays at ``cache_dir()/<name>`` (first entry == the
+    dataset name, which keeps ``fetch()``'s single-file rename path off) plus the
+    decompressed artifact(s) the fold's ``*_path()`` writes into a subdir, so
+    ``data list`` counts and ``data remove`` reclaims the materialization."""
     from aegean.data import _REMOTE
 
     for name, spec in _REMOTE.items():
         if spec.extract or not spec.on_disk:
             continue
+        if spec.on_disk[0] == name:
+            # fetch_text materialization: raw name first + at least one materialized path.
+            assert len(spec.on_disk) > 1, (
+                f"{name}: a single on_disk equal to the dataset name is a redundant declaration"
+            )
+            continue
+        # index-fetch class: exactly one distinct file == the hosted basename.
         assert len(spec.on_disk) == 1, (
-            f"{name}: an extract=False dataset occupies one on-disk file, got {spec.on_disk}"
+            f"{name}: an extract=False index dataset occupies one on-disk file, got {spec.on_disk}"
         )
         stored = spec.on_disk[0]
-        assert stored != name, (
-            f"{name}: a single on_disk equal to the dataset name is a redundant declaration"
-        )
         if spec.url:
             basename = spec.url.rsplit("/", 1)[-1]
             assert stored == basename, (

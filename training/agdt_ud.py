@@ -7,7 +7,7 @@ closed-class grammar (which conjunctions subordinate; how a 9-char positional ta
 out) under the UD-Perseus conversion's conventions:
 
 - UPOS is the AGDT postag's first character, except two real splits:
-  * ``c`` → CCONJ vs **SCONJ** — form-deterministic (a 67-form subordinator lexicon;
+  * ``c`` → CCONJ vs **SCONJ** — form-deterministic (a 68-form subordinator lexicon;
     note the convention keeps e.g. ἐπεί and μή under CCONJ).
   * ``v`` → VERB vs **AUX** — *contextual*: copular εἰμί is AUX. AGDT trees mark the
     copular construction (a PNOM dependent), so the label derives from the tree.

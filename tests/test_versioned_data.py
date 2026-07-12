@@ -61,12 +61,18 @@ def test_shipped_history_carries_the_real_recovered_v1_sha(name: str, sha: str) 
 
 
 # Datasets whose superseded releases stay hosted: the six 0.29.0-era epigraphy corpora
-# (v1 recovered) plus the assets rebuilt in the 0.39.0 fidelity pass.
+# (v1 recovered), the assets rebuilt in the 0.39.0 fidelity pass, and the evaluation
+# folds rebuilt in the 0.44.0 conversion-correction pass.
 _KEPT_HISTORY = set(_RECOVERED_V1) | {
     "sigla-corpus",
     "papygreek-fold",
     "autenrieth-index",
     "grc-paradigms",
+    "papygreek-fold-orig",
+    "verse-fold",
+    "papygreek-dev-tagging",
+    "papygreek-dev-parse",
+    "dbbe-lingann-fold",
 }
 
 

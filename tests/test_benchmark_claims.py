@@ -86,7 +86,7 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
 
 def test_papygreek_row_matches_registry_and_evidence() -> None:
     claims = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/papygreek-eval-v2-2026-07-11.json"))
+    ev = json.loads(_read("training/results/papygreek-eval-v3-2026-07-11.json"))
     res = ev["results_full_precision"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
         assert claims[metric] == round(res[metric] * 100, 2), metric
@@ -128,7 +128,7 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     """The opt-in documentary-lever variant rows stay pinned to their one-shot
     sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
     row = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/documentary-levers-2026-07-11.json"))
+    ev = json.loads(_read("training/results/documentary-levers-v2-2026-07-11.json"))
     for variant in ("documentary_reconciliation", "documentary_full"):
         res = ev["results_full_precision"][variant]
         reg = row[variant]
@@ -144,17 +144,18 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
 
 
 def test_verse_fold_row_matches_registry_and_evidence() -> None:
-    """The small-sample verse rows (the first leakage-clean tragedy evaluation) stay
-    pinned to the canonical sequential evidence; the hexameter track is directional
-    only and must never appear as a pinned registry track."""
+    """The small-sample verse row (a leakage-clean tragedy evaluation) stays pinned
+    to the canonical sequential evidence. The fold is tragedy-only since v2: the
+    sliver once labeled hexameter was the Maximus prose paraphrase, so neither a
+    'hexameter' nor an 'all' track may appear as a pinned registry row."""
     reg = _claims()["neural_verse_test"]
-    ev = json.loads(_read("training/results/verse-eval-2026-07-11.json"))
+    ev = json.loads(_read("training/results/verse-eval-v2-2026-07-11.json"))
     res = ev["results_full_precision"]
-    for track in ("tragedy", "all"):
-        for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
-            assert reg[track][metric] == round(res[track][metric] * 100, 2), f"{track}.{metric}"
-        assert reg[track]["n_words"] == res[track]["n_words"]
-    assert "hexameter" not in reg, "the 25-token hexameter track is directional only"
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+        assert reg["tragedy"][metric] == round(res["tragedy"][metric] * 100, 2), metric
+    assert reg["tragedy"]["n_words"] == res["tragedy"]["n_words"] == 735
+    assert "hexameter" not in reg, "the prose-paraphrase sliver must never be a pinned track"
+    assert "all" not in reg, "the fold is tragedy-only; an 'all' row would duplicate tragedy"
     assert "small-sample" in reg["note"]
     doc = _read("docs/benchmarks.md")
     for token in (f"{reg['tragedy']['las']:.2f}", f"{reg['tragedy']['uas']:.2f}"):
@@ -165,11 +166,11 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
     """The diplomatic-orthography and Byzantine-tagging rows stay pinned to their
     one-shot sequential evidence, and each carries its caveat note."""
     reg = _claims()
-    ev = json.loads(_read("training/results/papygreek-orig-eval-2026-07-11.json"))
+    ev = json.loads(_read("training/results/papygreek-orig-eval-v2-2026-07-11.json"))
     row = reg["neural_papygreek_test"]["orig_layer"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
         assert row[metric] == round(ev["results_full_precision"][metric] * 100, 2), metric
-    ev2 = json.loads(_read("training/results/dbbe-eval-2026-07-11.json"))
+    ev2 = json.loads(_read("training/results/dbbe-eval-v2-2026-07-11.json"))
     drow = reg["neural_dbbe_test"]
     for metric in ("upos", "xpos", "ufeats", "lemma"):
         assert drow[metric] == round(ev2["results_full_precision"][metric] * 100, 2), metric

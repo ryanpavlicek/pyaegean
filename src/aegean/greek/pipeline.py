@@ -125,11 +125,16 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
         if joint.active() is not None:
             ana = joint.analyze_sentence(words, with_probs=with_confidence)
             resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
+            override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
             for i in range(len(ana.tokens)):
                 if not is_word[i]:
                     source = LemmaSource.PUNCT  # a punctuation/number token is its own lemma
                 elif resolved[i]:
                     source = LemmaSource.NEURAL
+                elif override and override[i]:
+                    # an opt-in Lever B offline rescue: a grounded SEED / PARADIGM lemma the
+                    # model left unresolved, never NEURAL and never a review-bait identity
+                    source = LemmaSource(override[i])
                 else:
                     source = LemmaSource.IDENTITY  # the model returned the surface unchanged
                 # A calibrated confidence is model-only: UPOS is always a neural prediction

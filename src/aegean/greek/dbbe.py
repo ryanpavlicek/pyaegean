@@ -2,7 +2,8 @@
 
 A register neither the literary UD folds (`aegean.greek.ud`), the Koine NT
 (`aegean.greek.nt_eval`), nor the documentary-Koine PapyGreek fold (`aegean.greek.papygreek`)
-cover: **medieval (Byzantine) Greek verse**, 9th-15th c. This scores the active pipeline's
+cover: **medieval (Byzantine) Greek verse**, the 7th-15th c. of DBBE's documented scope. This
+scores the active pipeline's
 tagging (UPOS, XPOS, UFeats, lemma) on the DBBE linguistic-annotation gold standard with the
 *same* official CoNLL 2018 evaluator, over gold tokens.
 
@@ -15,8 +16,8 @@ The fold is fetched to the cache for **evaluation only**, never bundled.
 
 **Tagging only.** The DBBE gold standard annotates POS + morphology + lemma but **no dependency
 trees**, so this fold reports only the tagging metrics (UPOS/XPOS/UFeats/lemma); ``parse`` is
-forced ``False`` and UAS/LAS/CLAS are ``None``. It is a small, single-register datapoint (822
-sentences / 9,203 tokens), reported as such and never a headline number.
+forced ``False`` and UAS/LAS/CLAS are ``None``. It is a small, single-register datapoint (825
+sentences / 9,191 tokens), reported as such and never a headline number.
 
 **Two documented systematic caps** the AGDT-trained model structurally cannot close on this
 fold, so the row reads low by construction, not by model quality:

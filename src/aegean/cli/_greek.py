@@ -934,6 +934,14 @@ def _work_all(
         print(note, file=sys.stderr)
 
 
+def _bare_textpart(ref: str) -> bool:
+    """A ref that names one plain top-level textpart — the only shape a whole-work
+    ``aegean show`` can reconstruct. Milestones (a letter: '17a'/'1447a10'), nested
+    parts and line ranges (a '.'/'-': '1.2'/'1.1-1.50') and sibling lists (a ',')
+    address parts that reload as synthetic documents show cannot resolve."""
+    return not any(ch in ref for ch in ",.-") and not any(ch.isalpha() for ch in ref)
+
+
 @greek_app.command()
 def work(
     work_id: str | None = typer.Argument(
@@ -945,9 +953,9 @@ def work(
     ref: str | None = typer.Option(
         None, "--ref",
         help="Select a section by the work's citation scheme: '1' (book/section), '1.2' "
-        "(chapter), '1.1-1.50' (lines), a margin milestone ('17a' Stephanus, '1447a10' "
-        "Bekker); comma list for siblings. A wrong ref names the work's declared scheme; "
-        "greek.citation_scheme(id) reports it.",
+        "(chapter), '1.1-1.50' (lines), a margin milestone ('17a' Stephanus, or '1447a10' "
+        "Bekker for the span to the next marked line); comma list for siblings. A wrong ref "
+        "names the work's declared scheme; greek.citation_scheme(id) reports it.",
     ),
     source: str = typer.Option("auto", "--source", help="auto, perseus, or first1k."),
     edition: str | None = typer.Option(None, "--edition", help="Pick a specific edition file."),
@@ -1034,7 +1042,13 @@ def work(
         print(f"{status}  {path}", file=sys.stderr)
     if len(c):
         section = str(summary["first"]).split(":", 1)[-1]
-        print(f"read it:  aegean show {work_id} {section}")
+        if ref is None or _bare_textpart(ref):
+            # a plain top-level textpart resolves against a whole-work `aegean show`
+            print(f"read it:  aegean show {work_id} {section}")
+        else:
+            # milestone/nested/range/comma refs address parts a reloaded whole-work `show`
+            # cannot reconstruct; this call reproduces exactly this selection (the full ref)
+            print(f'read it:  aegean.greek.load_work("{work_id}", ref="{ref}")  (Python)')
     if c.provenance is not None and c.provenance.citation:
         print(f"cite it:  {c.provenance.citation}")
 
@@ -1277,7 +1291,7 @@ def evaluate(
     split: str = typer.Option("test", "--split", help="For ud: dev or test."),
     track: str = typer.Option(
         "all", "--track",
-        help="For verse: tragedy, hexameter, or all (both tracks). Small-sample, wide CIs.",
+        help="For verse: tragedy or all. Small-sample, wide CIs.",
     ),
     layer: str = typer.Option(
         "reg", "--layer",
@@ -1301,13 +1315,13 @@ def evaluate(
     ),
     batch_size: int | None = typer.Option(
         None, "--batch-size",
-        help="For ud/nt/papygreek with the neural pipeline: run the encoder over N sentences "
-             "at a time (faster on long folds; the published numbers use the sequential "
-             "default).",
+        help="For ud/nt/papygreek/dbbe/verse with the neural pipeline: run the encoder over N "
+             "sentences at a time (faster on long folds; the published numbers use the "
+             "sequential default).",
     ),
     documentary: bool = typer.Option(
         False, "--documentary",
-        help="For ud/nt/papygreek score runs: apply the opt-in documentary-Koine post-"
+        help="For ud/nt/papygreek/verse score runs: apply the opt-in documentary-Koine post-"
              "processing over the neural pipeline (closed-class coordinator reconciliation + "
              "offline lemma OOV rescue). Off by default; a separate opt-in variant, not the "
              "published number.",
@@ -1336,9 +1350,14 @@ def evaluate(
     if split not in ("dev", "test"):
         raise fail("--split must be dev or test")
     if track != "all" and target != "verse":
-        raise fail("--track applies to `eval verse` (tragedy/hexameter/all)")
-    if track not in ("all", "tragedy", "hexameter"):
-        raise fail("--track must be tragedy, hexameter, or all")
+        raise fail("--track applies to `eval verse` (tragedy/all)")
+    if track == "hexameter":
+        # the fold is tragedy-only since v2: the sliver once labeled hexameter was the
+        # Maximus prose paraphrase (see docs/benchmarks.md).
+        raise fail("--track hexameter was removed: the sliver was the Maximus prose "
+                   "paraphrase, not verse; the fold is tragedy-only (--track tragedy or all)")
+    if track not in ("all", "tragedy"):
+        raise fail("--track must be tragedy or all")
     if layer not in ("reg", "orig"):
         raise fail("--layer must be reg or orig")
     if layer != "reg" and target != "papygreek":
@@ -1353,6 +1372,15 @@ def evaluate(
         # tagging-only, so the drift decomposition / genre slices / bootstrap CIs do not apply.
         raise fail("`eval dbbe` is tagging-only (the DBBE fold has no dependency trees): it has "
                    "no --drift/--by-genre/--bootstrap; run the plain score (optionally --batch-size)")
+    if target == "verse" and drift:
+        # a small-sample genre fold: no convention decomposition, just the score. Rejected here
+        # so an invalid flag never triggers the model load.
+        raise fail("`eval verse` has no --drift decomposition; run the plain score "
+                   "(optionally --track tragedy)")
+    if target in ("papygreek", "nt") and (bootstrap or by_genre):
+        # --bootstrap (percentile CIs) and --by-genre (author→genre slices) are ud-only.
+        raise fail(f"`eval {target}` has no --bootstrap/--by-genre (those are ud-only): run "
+                   "the score (--drift/--documentary/--batch-size apply)")
     if batch_size is not None:
         if batch_size < 1:
             raise fail("--batch-size must be at least 1")
@@ -1375,16 +1403,23 @@ def evaluate(
         neural_lemmatizer=neural_lemmatizer, neural=neural,
     )
 
+    restore_paradigms_off = False  # set in _apply_documentary if we turned paradigms on
+
     def _apply_documentary() -> None:
         # The two opt-in documentary levers post-process the neural pipeline, so it must be
         # active (ud does not auto-activate it — force it on here); reconciliation is the
         # conservative default (X/b drift only). Toggled off again before the result is emitted.
-        from aegean.greek import joint
+        from aegean.greek import joint, paradigms
 
+        nonlocal restore_paradigms_off
         if joint.active() is None:
             _activate(neural=True)
         greek.use_documentary_reconciliation()
         greek.use_documentary_lemma_rescue()
+        # Lever B consults the paradigm table; the registry documentary_full lemma (86.36)
+        # was measured with it active, so activate it here too (seed-only can't reproduce it).
+        restore_paradigms_off = paradigms.active() is None
+        greek.use_paradigms()
 
     def emit_drift(report: object) -> None:  # ErrorAnalysis -> --json dict / text summary
         if emit_result(report.as_dict(), json_output=json_out, output=output):  # type: ignore[attr-defined]
@@ -1498,10 +1533,6 @@ def evaluate(
             result = greek.evaluate_on_dbbe(progress=live_progress)
     elif target == "verse":
         _activate(neural=True)  # the verse fold reports the shipped neural model's number
-        if drift:
-            # a small-sample genre fold: no convention decomposition, just the score
-            raise fail("`eval verse` has no --drift decomposition; run the score "
-                       "(optionally --track tragedy|hexameter)")
         tr = None if track == "all" else track
         if documentary:
             _apply_documentary()
@@ -1522,6 +1553,8 @@ def evaluate(
     if documentary:  # opt-in post-processing is per-run; leave the session clean afterwards
         greek.disable_documentary_reconciliation()
         greek.disable_documentary_lemma_rescue()
+        if restore_paradigms_off:  # only turn paradigms off if this run turned them on
+            greek.disable_paradigms()
     if emit_result(result, json_output=json_out, output=output):
         return
     if isinstance(result, dict):

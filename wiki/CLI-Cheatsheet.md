@@ -8,7 +8,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.43.0
+aegean --version                # pyaegean 0.44.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -471,7 +471,8 @@ the work's **declared citation scheme**: `1` (book/section), `1.2` (chapter),
 `--ref` names the work's own scheme. For siblings or cross-textpart ranges use a comma
 list (`--ref 1.1,1.5`); `greek.citation_scheme(id)` returns the ordered levels. `--ref`
 also reaches **margin milestones outside the `<div>` scheme** (a Stephanus sub-page `17a`,
-a Bekker line `1447a10`, or a whole Bekker page `1447a`), addressable singly or in a comma
+a Bekker line `1447a10` = the span to the next marked line, or a whole Bekker page-column
+`1447a`, the whole page being the comma list `1447a,1447b`), addressable singly or in a comma
 list (`17a,17b`) but not yet as a hyphen range.
 `--source` is `auto` / `perseus` / `first1k`; `--edition` picks a specific edition file.
 Browse ids at scaife.perseus.org. Full reference:

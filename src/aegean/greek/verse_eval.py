@@ -1,4 +1,4 @@
-"""Ancient Greek VERSE dependency evaluation (tragedy + didactic hexameter).
+"""Ancient Greek VERSE dependency evaluation (tragedy: Euripides, Bacchae 1-169).
 
 A companion to `aegean.greek.ud` (literary UD-Perseus/PROIEL), `aegean.greek.nt_eval`
 (Koine NT), and `aegean.greek.papygreek` (documentary Koine): this scores the active
@@ -6,13 +6,14 @@ pipeline on **poetic** Ancient Greek — a register the other folds do not cover
 *same* official CoNLL 2018 evaluator, over gold tokens, reporting the full UD metric set
 (UPOS, XPOS, UFeats, lemma, UAS, LAS, CLAS).
 
-Two labeled tracks share one fold, distinguished by a ``sent_id`` prefix:
-
-  * ``verse:tragedy:...`` — **Euripides, Bacchae 1-169** (spoken trimeter + the lyric
-    parodos): the **first leakage-clean tragedy dependency evaluation** for the shipped
-    model.
-  * ``verse:hexameter:...`` — **Maximus, Peri katarchon 1.4** (didactic hexameter); thin
-    after strict selection (a handful of sentences), directional only.
+The fold is **tragedy-only**: **Euripides, Bacchae 1-169** (spoken trimeter + the lyric
+parodos), carried under the ``verse:tragedy:...`` ``sent_id`` prefix — a leakage-clean
+tragedy dependency evaluation for the shipped model (no prior one is known to us). A former
+``verse:hexameter:...`` sliver (Maximus, Peri katarchon 1.4) was removed: on inspection it
+was the Maximus PROSE paraphrase (the sentences do not scan), so it was dropped rather than
+mislabeled as hexameter (see docs/benchmarks.md). ``track="tragedy"`` (or ``"all"``/``None``,
+which apply no filter and score whatever the fetched fold holds) selects the tragedy fold; the
+``"hexameter"`` filter value is rejected.
 
 Data: a UD CoNLL-U fold converted from the **unesp-trees** treebanks
 (github.com/perseids-publications/unesp-trees, **CC BY-SA 4.0**; the Perseids/Arethusa
@@ -29,11 +30,10 @@ disjointness (Bacchae / Maximus are absent from the training documents; the only
 Euripides is Medea). So the fold is leakage-clean for the shipped ``grc-joint`` model.
 
 **Read this before quoting any number.** This is a **SMALL-SAMPLE genre-conditioned
-datapoint** (tens of sentences per track) whose accuracy carries **wide bootstrap
-confidence intervals**; the tragedy track is the first leakage-clean tragedy evaluation
-anywhere, and the hexameter track is directional only. It is **never a headline number** —
-report it with the sample size and CI, alongside the leakage-clean literary/documentary
-folds, not on its own.
+datapoint** (tens of sentences) whose accuracy carries **wide bootstrap confidence
+intervals**; the tragedy fold is a leakage-clean tragedy evaluation (no prior one is
+known to us). It is **never a headline number** — report it with the sample size and CI,
+alongside the leakage-clean literary/documentary folds, not on its own.
 """
 
 from __future__ import annotations
@@ -57,8 +57,11 @@ _ASSET = "verse-fold"
 _CACHE_SUBDIR = "verse-grc"
 _FOLD_NAME = "verse-test.conllu"
 
-# The two labeled tracks carried in the one fold, keyed by their ``sent_id`` prefix.
-_TRACKS: tuple[str, ...] = ("tragedy", "hexameter")
+# The selectable ``track`` filter values. The fold is tragedy-only: the former ``hexameter``
+# sliver was the Maximus PROSE paraphrase (the sentences do not scan) and has been removed
+# (see docs/benchmarks.md). ``"all"`` (and ``None``) apply no filter and score whatever the
+# fetched fold holds; the ``"hexameter"`` filter value is rejected explicitly.
+_TRACKS: tuple[str, ...] = ("tragedy", "all")
 
 # The fold decompresses to well under 1 MB. This cap is far above that and far below what
 # would OOM: it guards a decompression bomb served through a ``PYAEGEAN_VERSE_FOLD_URL``
@@ -128,10 +131,12 @@ def evaluate_on_verse(
     only the gold data and the labels differ. Activate the backends you want measured first
     (`use_neural_pipeline` for the shipped model).
 
-    ``track`` selects ``"tragedy"`` (Euripides, Bacchae 1-169), ``"hexameter"`` (Maximus,
-    Peri katarchon 1.4), or ``None`` for both. ``parse`` defaults to whether a parser/joint
-    model is active; with ``parse=False`` UAS/LAS/CLAS are ``None``. ``progress`` is called
-    as ``progress(done, total)`` per analyzed sentence; ``batch_size`` batches the neural
+    ``track`` selects ``"tragedy"`` (Euripides, Bacchae 1-169) or ``"all"``/``None`` for the
+    whole fetched fold (no filter). The fold is tragedy-only, so the former ``"hexameter"``
+    filter value is rejected with guidance (see the module docstring). ``parse`` defaults to
+    whether a parser/joint model is active; with ``parse=False`` UAS/LAS/CLAS are ``None``.
+    ``progress`` is called as ``progress(done, total)`` per analyzed sentence; ``batch_size``
+    batches the neural
     encoder's passes (a throughput convenience — the recorded protocol is the sequential
     default). ``source`` overrides the fold path (tests pass a local CoNLL-U).
 
@@ -139,15 +144,30 @@ def evaluate_on_verse(
     "uas", "las", "clas", "n_words", "n_sentences"}`` — accuracies in [0, 1].
 
     This is a **SMALL-SAMPLE genre-conditioned datapoint with wide bootstrap confidence
-    intervals** (tens of sentences per track); the tragedy track is the first leakage-clean
-    tragedy evaluation anywhere and the hexameter track is directional only. **It is never a
-    headline number** — report it with the sample size and CI, not on its own."""
+    intervals** (tens of sentences); the tragedy fold is a leakage-clean tragedy evaluation
+    (no prior one is known to us). **It is never a headline number** — report it with the
+    sample size and CI, not on its own."""
+    if track == "hexameter":
+        raise ValueError(
+            "track 'hexameter' was removed: the hexameter sliver was identified as the Maximus "
+            "prose paraphrase (the sentences do not scan) and the verse fold is tragedy-only; "
+            "use track='tragedy' or 'all' (see docs/benchmarks.md)"
+        )
     if track is not None and track not in _TRACKS:
         raise ValueError(f"track must be one of {list(_TRACKS)} or None; got {track!r}")
     from .ud import _eval_module, _score_conllu_text, pipeline_conllu
 
     gold_path = Path(source) if source is not None else verse_path()
-    sentences, gold_text = _read_track(gold_path, track)
+    # 'all' (and None) apply no filter; only 'tragedy' filters by the sent_id prefix.
+    filter_track = None if track in (None, "all") else track
+    sentences, gold_text = _read_track(gold_path, filter_track)
+    # Zero sentences after filtering would emit a lone "\n" that the official evaluator
+    # misparses into a misleading "multiple roots" UDError; refuse cleanly, naming track+source.
+    if not sentences:
+        scope = f"track {track!r}" if filter_track is not None else "the fold"
+        raise ValueError(
+            f"verse {scope} matched zero sentences in {gold_path}: nothing to score"
+        )
     if parse is None:
         from . import joint, syntax
 

@@ -12,20 +12,33 @@ labels, so the fold scores under `aegean.greek.evaluate_on_verse` with the same 
 CoNLL 2018 evaluator every other UD fold uses. Evaluation only, never bundled, never
 trained on.
 
-Two labeled tracks, distinguished by a ``sent_id`` prefix in the one CoNLL-U file:
+One labeled track, carried under a ``sent_id`` prefix in the CoNLL-U file:
 
   * ``verse:tragedy:...`` — **Euripides, Bacchae 1-169** (spoken trimeter + the parodos'
     lyric): ``euripides-ba-1-22.xml`` + ``euripides-ba-23-169.xml`` (the 2021 aldt files).
     The **first leakage-clean tragedy dependency evaluation** for the shipped model.
-  * ``verse:hexameter:...`` — **Maximus, Peri katarchon 1.4** (didactic hexameter):
-    ``maximus-astrol-1-4.xml`` (the aldt file). Thin after strict selection (a handful of
-    fully-real sentences); directional only.
+
+The Maximus *Peri katarchon* 1.4 material (``maximus-astrol-1-4.xml``) is **not** built into
+the fold: its annotation is the prose paraphrase of the poem, not the verse — the annotated
+lines do not scan (``ἐν δὲ τῇ δευτέρᾳ ἡμέρᾳ ἐν μὲν νυκτὶ οὐ δεῖ ἀποδημεῖν`` is plain prose;
+``ἔμπρακτον γὰρ γίνεται`` is a 7-syllable clause) — so labelling it ``hexameter`` would
+misdescribe it. Maximus is retained only as a forbidden training work
+(``work_level_disjointness``) so a future re-addition stays leakage-guarded.
 
 **Near-duplicates excluded** (documented, never converted): ``eur-ba-23-169.xml`` is an
 earlier content-duplicate of ``euripides-ba-23-169.xml`` (same 733-token passage, older
-2020 header); ``max-astrol-I-4-1-14.xml`` is a near-duplicate annotation of the same
-Maximus passage in the ``smyth3`` format. Using both members of either pair would
-double-count the same gold sentences.
+2020 header); ``max-astrol-I-4-1-14.xml`` is a second annotation of the same Maximus material
+in the ``smyth3`` format (the Maximus material is excluded from the fold regardless; see
+above).
+
+The gold LEMMA is additionally repaired for two malformed-headword classes the UNESP source
+carries: Latin homoglyph vowels (Latin ``í``/``ó`` for Greek ``ί``/``ό``) embedded in an
+otherwise-Greek lemma are mapped to Greek, and an LSJ citation-form tail (a trailing
+enumeration of endings, an article, or a parenthetical gloss) is truncated at the first comma
+or opening parenthesis. Every repair is recorded in the manifest (``lemma_cleanings``,
+before -> after), and the build asserts every emitted lemma is a clean single Greek-script
+headword (elided apostrophe-final forms allowed), failing loudly otherwise. The FORM column
+is left untouched.
 
 Selection criteria (each counted in the manifest), applied per ``<sentence>`` via
 `build_papygreek_fold.sentence_status`:
@@ -53,8 +66,9 @@ Medea, via Pedalion).
 
 Output (``--out``): ``verse-test.conllu`` + ``verse-fold.conllu.gz`` (the release asset) +
 ``verse-fold-manifest.json`` (source commit, per-track/per-file exclusion accounting,
-near-duplicate exclusions, leakage + disjointness verdicts, annotator/provenance credits).
-Prints the sha256 of the gz asset for the ``_REMOTE`` DataSpec pin.
+near-duplicate exclusions, leakage + disjointness verdicts, lemma repairs,
+annotator/provenance credits). Prints the sha256 of the gz asset for the ``_REMOTE``
+DataSpec pin.
 
 Usage:
     python scripts/build_verse_fold.py [--repo DIR] [--out DIR]
@@ -71,6 +85,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import xml.etree.ElementTree as ET
 from collections import Counter
 from pathlib import Path
@@ -82,6 +97,8 @@ from typing import Any
 # are.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_papygreek_fold import (  # noqa: E402
+    _APOS,
+    _HYPHENS,
     is_leaked,
     sentence_status,
     sentence_to_conllu,
@@ -96,13 +113,12 @@ LICENSE = (
 )
 
 # track -> source XML files (repo-relative). Order is the fold's document order.
+# Tragedy only: the annotated Maximus material is prose paraphrase, not verse (see the
+# module docstring), so it is not built into the fold.
 TRACKS: dict[str, tuple[str, ...]] = {
     "tragedy": (
         "public/xml/euripides-ba-1-22.xml",
         "public/xml/euripides-ba-23-169.xml",
-    ),
-    "hexameter": (
-        "public/xml/maximus-astrol-1-4.xml",
     ),
 }
 
@@ -113,13 +129,16 @@ EXCLUDED_NEAR_DUPS: dict[str, str] = {
         "earlier content-duplicate of euripides-ba-23-169.xml (same 733-token Bacchae "
         "23-169 passage, older 2020 header)",
     "public/xml/max-astrol-I-4-1-14.xml":
-        "near-duplicate annotation of the same Maximus Peri katarchon 1.4 passage in the "
-        "smyth3 format (maximus-astrol-1-4.xml is the aldt primary)",
+        "second annotation of the same Maximus Peri katarchon 1.4 material in the smyth3 "
+        "format; the Maximus material is excluded from the fold regardless (it is the prose "
+        "paraphrase, not verse)",
 }
 
-# Work-level disjointness: no training document may be the same work as a track's source.
-# ``file`` values in training/data/full-{train,dev}.jsonl are matched against these; any
-# match fails the build. Bacchae = TLG tlg0006.tlg017; Maximus astrologus = TLG tlg1385.
+# Work-level disjointness: no training document may be the same work as any verse source
+# considered for this fold. ``file`` values in training/data/full-{train,dev}.jsonl are
+# matched against these; any match fails the build. Bacchae = TLG tlg0006.tlg017; Maximus
+# astrologus = TLG tlg1385 (Maximus is not built into the fold — see the module docstring —
+# but is kept here as a forbidden work so a future re-addition stays leakage-guarded).
 _FORBIDDEN_TRAINING: dict[str, re.Pattern[str]] = {
     "tragedy": re.compile(r"tlg0006\.tlg017|bacch", re.IGNORECASE),
     "hexameter": re.compile(r"tlg1385|maxim|astrol|katarch", re.IGNORECASE),
@@ -129,6 +148,83 @@ _FORBIDDEN_TRAINING: dict[str, re.Pattern[str]] = {
 _SAME_AUTHOR: dict[str, re.Pattern[str]] = {
     "tragedy": re.compile(r"tlg0006|eurip", re.IGNORECASE),
 }
+
+# --- gold lemma repair -----------------------------------------------------------
+# The UNESP gold carries two malformed-headword classes the shared clean_lemma does not
+# touch: Latin precomposed accented vowels used as homoglyphs for Greek tonos vowels, and
+# LSJ citation-form tails (a trailing enumeration of endings, an article, or a parenthetical
+# gloss). Repair both conservatively; the FORM column is untouched.
+_LATIN_TO_GREEK_VOWEL: dict[str, str] = {
+    "á": "ά",  # á -> ά (alpha with tonos)
+    "é": "έ",  # é -> έ (epsilon)
+    "í": "ί",  # í -> ί (iota)
+    "ó": "ό",  # ó -> ό (omicron)
+    "ú": "ύ",  # ú -> ύ (upsilon)
+    "Á": "Ά",  # Á -> Ά
+    "É": "Έ",  # É -> Έ
+    "Í": "Ί",  # Í -> Ί
+    "Ó": "Ό",  # Ó -> Ό
+    "Ú": "Ύ",  # Ú -> Ύ
+}
+# citation-form tail begins at the first comma or opening parenthesis (a real headword
+# contains neither); ASCII and fullwidth comma both covered.
+_TAIL_START = set(",(，")
+
+
+def _is_greek_char(c: str) -> bool:
+    return unicodedata.name(c, "").startswith("GREEK")
+
+
+def clean_verse_lemma(raw: str | None) -> str:
+    """Repair a malformed UNESP gold lemma to a clean single Greek-script headword.
+
+    Two conservative repairs, each firing only on structurally-invalid input a real lemma
+    never contains, so a well-formed lemma is returned unchanged (modulo NFC):
+      * an LSJ citation-form tail is dropped — the lemma is truncated at the first comma or
+        opening parenthesis, then surrounding whitespace and stray non-breaking hyphens are
+        stripped;
+      * Latin homoglyph vowels (á/é/í/ó/ú with acute) embedded in an otherwise-Greek lemma
+        are mapped to their Greek tonos equivalents."""
+    lemma = unicodedata.normalize("NFC", raw or "")
+    cut = next((i for i, c in enumerate(lemma) if c in _TAIL_START), len(lemma))
+    lemma = lemma[:cut]
+    lemma = lemma.strip().strip("".join(_HYPHENS)).strip()
+    if any(_is_greek_char(c) for c in lemma) and any(c in _LATIN_TO_GREEK_VOWEL for c in lemma):
+        lemma = "".join(_LATIN_TO_GREEK_VOWEL.get(c, c) for c in lemma)
+    return unicodedata.normalize("NFC", lemma)
+
+
+def is_clean_headword(lemma: str) -> bool:
+    """True when a lemma is a single Greek-script headword: every character is a Greek
+    letter, a combining diacritic, or an elision apostrophe (no Latin homoglyphs, no
+    citation punctuation, no whitespace), and at least one Greek letter is present."""
+    if not lemma:
+        return False
+    for c in lemma:
+        if unicodedata.combining(c) or c in _APOS:
+            continue
+        if not _is_greek_char(c):
+            return False
+    return any(_is_greek_char(c) for c in lemma)
+
+
+def assert_clean_lemmas(conllu: str) -> None:
+    """Fail the build (SystemExit) if any emitted non-punctuation lemma is not a clean
+    Greek-script headword (a punctuation token's lemma is the punctuation character)."""
+    bad: list[tuple[str, str]] = []
+    for ln in conllu.splitlines():
+        if not ln or ln.startswith("#"):
+            continue
+        cols = ln.split("\t")
+        if len(cols) < 5 or cols[4][:1] == "u":  # punctuation lemma = the punct char
+            continue
+        if not is_clean_headword(cols[2]):
+            bad.append((cols[1], cols[2]))
+    if bad:
+        raise SystemExit(
+            f"lemma validation FAILED: {len(bad)} emitted lemma(s) are not a clean "
+            f"Greek-script headword: {bad[:12]}"
+        )
 
 
 def agdt_reg_words(sentence: ET.Element) -> list[dict[str, Any]]:
@@ -204,25 +300,27 @@ def training_files(training_dir: Path) -> set[str]:
 
 
 def check_disjointness(train_files: set[str]) -> dict[str, Any]:
-    """Assert work-level disjointness of every track from the training document set.
+    """Assert work-level disjointness of every forbidden verse work from the training set.
 
-    Fails the build (SystemExit) if any training document is the same work as a track's
-    source; returns a per-track record of the forbidden-match verdict and the same-author
-    training files that DO legitimately exist (Euripides -> only Medea)."""
+    Every verse source considered for this fold (the tragedy source, and Maximus — retained
+    as a forbidden work though its prose-paraphrase annotation is not built into the fold)
+    must be absent from the training documents. Fails the build (SystemExit) if any training
+    document is the same work; returns a per-work record of the forbidden-match verdict and
+    the same-author training files that DO legitimately exist (Euripides -> only Medea)."""
     record: dict[str, Any] = {}
-    for track in TRACKS:
-        forbidden = sorted(f for f in train_files if _FORBIDDEN_TRAINING[track].search(f))
+    for work in _FORBIDDEN_TRAINING:
+        forbidden = sorted(f for f in train_files if _FORBIDDEN_TRAINING[work].search(f))
         if forbidden:
             raise SystemExit(
-                f"work-level disjointness FAILED for track {track!r}: the training set "
+                f"work-level disjointness FAILED for {work!r}: the training set "
                 f"contains the same work(s): {forbidden}"
             )
         entry: dict[str, Any] = {"forbidden_matches": forbidden}
-        if track in _SAME_AUTHOR:
+        if work in _SAME_AUTHOR:
             entry["same_author_in_training"] = sorted(
-                f for f in train_files if _SAME_AUTHOR[track].search(f)
+                f for f in train_files if _SAME_AUTHOR[work].search(f)
             )
-        record[track] = entry
+        record[work] = entry
     return record
 
 
@@ -237,6 +335,7 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
     n_tokens = 0
     track_stats: dict[str, Any] = {}
     sources: list[dict[str, Any]] = []
+    lemma_cleanings: list[dict[str, str]] = []
 
     for track, files in TRACKS.items():
         reasons: Counter[str] = Counter()
@@ -259,6 +358,19 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
                     reasons[status] += 1
                     continue
                 sent_id = f"verse:{track}:{stem}@{sent.get('id')}"
+                # repair malformed gold lemmas in place (logged before -> after); the FORM
+                # column is untouched, so selection/leakage are unaffected.
+                for w in words:
+                    raw = w["lemma_reg"] or ""
+                    repaired = clean_verse_lemma(raw)
+                    if repaired != unicodedata.normalize("NFC", raw):
+                        lemma_cleanings.append({
+                            "sent_id": sent_id,
+                            "form": w["form_reg"] or "",
+                            "before": raw,
+                            "after": repaired,
+                        })
+                        w["lemma_reg"] = repaired
                 block, forms = sentence_to_conllu(sent_id, words)
                 if is_leaked(forms, keys):
                     # mandatory: any leak fails the build (never silently drop)
@@ -289,10 +401,11 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
         }
 
     conllu = ("\n".join(blocks) + "\n") if blocks else ""
+    # every emitted lemma must be a clean single Greek-script headword (fail loudly otherwise)
+    assert_clean_lemmas(conllu)
     manifest: dict[str, Any] = {
-        "purpose": "Ancient Greek verse (tragedy + hexameter) dependency evaluation fold; "
-                   "eval only, SMALL-SAMPLE genre-conditioned datapoint, never a headline "
-                   "number",
+        "purpose": "Ancient Greek verse (tragedy) dependency evaluation fold; eval only, "
+                   "SMALL-SAMPLE genre-conditioned datapoint, never a headline number",
         "source_repo": "github.com/perseids-publications/unesp-trees",
         "source_commit": REPO_COMMIT,
         "license": LICENSE,
@@ -300,6 +413,15 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
         "converter": "build_papygreek_fold.sentence_to_conllu "
                      "(training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,"
                      "upos_from_xpos,feats_from_xpos}) — shared with the PapyGreek fold",
+        "maximus_excluded": "the annotated Maximus (Peri katarchon 1.4) material is the prose "
+                            "paraphrase, not the verse — the lines do not scan — so it is not "
+                            "built into the fold; it is retained as a forbidden training work "
+                            "(work_level_disjointness.hexameter) so a future re-addition stays "
+                            "leakage-guarded",
+        "lemma_repair": "malformed UNESP gold lemmas repaired to clean Greek-script headwords: "
+                        "Latin homoglyph vowels (Latin i/o-acute for Greek tonos) mapped to "
+                        "Greek, and LSJ citation-form tails truncated at the first comma or "
+                        "opening parenthesis; every emitted lemma validated as a clean headword",
         "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
                              "NFC form-tuple exclusion (full + punct-stripped); "
                              "re-run in-build, any leak fails the build",
@@ -309,6 +431,8 @@ def build(repo: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
         "sentences_in_source": n_sent_total,
         "sentences_kept": len(blocks),
         "tokens_kept": n_tokens,
+        "lemma_cleanings_count": len(lemma_cleanings),
+        "lemma_cleanings": lemma_cleanings,
         "sources": sources,
         "excluded_near_duplicates": EXCLUDED_NEAR_DUPS,
         "sent_id_scheme": "verse:<track>:<document-stem>@<sentence-id>",

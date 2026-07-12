@@ -122,8 +122,12 @@ class DataSpec:
     # prebuilt lexicon indexes are fetched then written under their built-index
     # filename (``lsj-perseus-index.json.gz``, not ``lsj-index``), and the
     # ``agdt-derived`` bundle's members are copied out to their own filenames
-    # (``agdt-postagger.json.gz`` etc.). Listing those real names here is what lets
-    # ``aegean data list`` / ``aegean doctor`` see a dataset that a backend fetched.
+    # (``agdt-postagger.json.gz`` etc.). The fold assets fetched via ``fetch_text``
+    # keep the raw ``.gz`` at ``cache_dir()/name`` AND materialize a decompressed file
+    # (+ a ``.sha256`` stamp) into a subdir, so they list the raw name FIRST and then
+    # the materialized artifacts (a ``/``-joined cache-relative path). Listing every
+    # real name here is what lets ``aegean data list`` / ``aegean doctor`` see the full
+    # footprint and ``aegean data remove`` reclaim it, not orphan the materialization.
     on_disk: tuple[str, ...] = ()
 
 
@@ -229,79 +233,118 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-fold",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-fold-v2/papygreek-fold.conllu.gz"
+            "papygreek-fold-v3/papygreek-fold.conllu.gz"
         ),
-        sha256="75304be2d12df23419e6486ddefb40ed7c70a1f9af49da9846cf08dbbf224dc1",
+        sha256="de6874740b4e985c94b2e1677a2970f85a821011b1e6b8a01915410b4c6aa030",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
         note="documentary-Koine dependency eval fold (1,696 sentences / 24,105 tokens) converted "
              "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, leakage-clean vs grc-joint training. "
              "Evaluation only.",
         extract=False,
+        # fetch() stores the raw .gz at cache_dir()/papygreek-fold; papygreek_path()
+        # then materializes the decompressed CoNLL-U (+ a .sha256 stamp) into the
+        # papygreek-grc/ subdir via fetch_text. Listing all three (the raw name MUST
+        # stay first so list/remove still see the archive) makes ``data list`` count
+        # the materialized bytes and ``data remove`` reclaim them, not orphan them.
+        on_disk=(
+            "papygreek-fold",
+            "papygreek-grc/papygreek-test.conllu",
+            "papygreek-grc/papygreek-test.conllu.sha256",
+        ),
     ),
     "papygreek-fold-orig": DataSpec(
         name="papygreek-fold-orig",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-fold-orig-v1/papygreek-fold-orig.conllu.gz"
+            "papygreek-fold-orig-v2/papygreek-fold-orig.conllu.gz"
         ),
-        sha256="5af592199bb14c211865cd9d9494cf015f9b667e30ae2d8ad59fb68dff758b85",
+        sha256="d920a0cd65ee7cf278f87f5a419e60f43d7680ef8d1b0564f94987fbb93afad2",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
         note="the ORIG diplomatic surface layer of papygreek-fold (same 1,696 sentences and gold; "
              "FORM = raw diplomatic orthography; 1,637 forms differ). Evaluation only.",
         extract=False,
+        # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
+        on_disk=(
+            "papygreek-fold-orig",
+            "papygreek-grc/papygreek-test-orig.conllu",
+            "papygreek-grc/papygreek-test-orig.conllu.sha256",
+        ),
     ),
     "verse-fold": DataSpec(
         name="verse-fold",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "verse-fold-v1/verse-fold.conllu.gz"
+            "verse-fold-v2/verse-fold.conllu.gz"
         ),
-        sha256="6e91adbe5096556f7fe6686b35f30b363b115325d7ee2843e39d16c75fbdf8bc",
+        sha256="22c860f8504706e63d4421be9c504c003e9186928949e63e9ec26f84c0af6e28",
         license="CC BY-SA 4.0 (unesp-trees, Perseids/Arethusa, UNESP); derived UD fold, fetched, never bundled",
-        note="Ancient Greek verse dependency eval fold (39 sentences / 760 tokens: tragedy = "
-             "Euripides Bacchae 1-169, 36/735; hexameter = Maximus Peri katarchon 1.4, 3/25, "
-             "directional only); AGDT->UD, leakage-clean. Small-sample genre-conditioned "
+        note="Ancient Greek verse dependency eval fold, tragedy-only (36 sentences / 735 tokens: "
+             "Euripides Bacchae 1-169); AGDT->UD, leakage-clean. Small-sample genre-conditioned "
              "datapoint, never a headline number. Evaluation only.",
         extract=False,
+        # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
+        on_disk=(
+            "verse-fold",
+            "verse-grc/verse-test.conllu",
+            "verse-grc/verse-test.conllu.sha256",
+        ),
     ),
     "papygreek-dev-tagging": DataSpec(
         name="papygreek-dev-tagging",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-dev-v1/papygreek-dev-tagging.conllu.gz"
+            "papygreek-dev-v2/papygreek-dev-tagging.conllu.gz"
         ),
-        sha256="f562021d4e57351b7f669a24148bf3c628fe024902a7614f331242ff4e05d7f7",
+        sha256="81ece456f70e13a1ab3c2d95d94d3e7e466bc5f02971fb8c1715d2d65e2c96c4",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
         note="documentary-Koine DEV tagging track (327 sentences / 6,389 tokens); "
              "document-disjoint from the papygreek-fold test set; UPOS/XPOS/UFeats/lemma. "
              "Experiment data only, never a published number.",
         extract=False,
+        # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
+        on_disk=(
+            "papygreek-dev-tagging",
+            "papygreek-grc/papygreek-dev-tagging.conllu",
+            "papygreek-grc/papygreek-dev-tagging.conllu.sha256",
+        ),
     ),
     "papygreek-dev-parse": DataSpec(
         name="papygreek-dev-parse",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-dev-v1/papygreek-dev-parse.conllu.gz"
+            "papygreek-dev-v2/papygreek-dev-parse.conllu.gz"
         ),
-        sha256="8044f3bc414d157fad556b4ea42876f2f62613d6adefaa5c15a22630569b025b",
+        sha256="967d519526353eb0d709ab32102e057d6a6463b415025396847770f70faebec1",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
         note="documentary-Koine DEV parse track (126 sentences / 1,285 tokens, directional "
              "only); document-disjoint from the papygreek-fold test set; UAS/LAS. "
              "Experiment data only, never a published number.",
         extract=False,
+        # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
+        on_disk=(
+            "papygreek-dev-parse",
+            "papygreek-grc/papygreek-dev-parse.conllu",
+            "papygreek-grc/papygreek-dev-parse.conllu.sha256",
+        ),
     ),
     "dbbe-lingann-fold": DataSpec(
         name="dbbe-lingann-fold",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "dbbe-lingann-fold-v1/dbbe-lingann-fold.conllu.gz"
+            "dbbe-lingann-fold-v2/dbbe-lingann-fold.conllu.gz"
         ),
-        sha256="d9953f739af27e2beaf37c7cce4b616aaaa6816f1cd02efe6054d8474a0e3253",
+        sha256="14b5496d3346cdd4df803896ee480ac1e7d05074b9ea52df7be2994e25e60008",
         license="CC BY 4.0 (DBBE gold standard, Swaelens/De Vos/Lefever, Ghent); derived fold, "
                 "fetched, never bundled",
-        note="Byzantine book-epigram tagging fold (822 sentences / 9,203 tokens, gold POS+lemma, "
+        note="Byzantine book-epigram tagging fold (825 sentences / 9,191 tokens, gold POS+lemma, "
              "no trees; scribal orthography). Evaluation only.",
         extract=False,
+        # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
+        on_disk=(
+            "dbbe-lingann-fold",
+            "dbbe-grc/dbbe-lingann-test.conllu",
+            "dbbe-grc/dbbe-lingann-test.conllu.sha256",
+        ),
     ),
     "autenrieth-index": DataSpec(
         name="autenrieth-index",
@@ -728,12 +771,76 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "papygreek-fold": [
         HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-fold-v2/papygreek-fold.conllu.gz"
+            ),
+            sha256="75304be2d12df23419e6486ddefb40ed7c70a1f9af49da9846cf08dbbf224dc1",
+            superseded="v3",
+        ),
+        HistoricalPin(
             version="v1",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
                 "papygreek-fold-v1/papygreek-fold.conllu.gz"
             ),
             sha256="29bc27b6717bcf3cc9abe37fde2fd927bfc567310aea2693f3a36de4fe79b0de",
+            superseded="v2",
+        ),
+    ],
+    "papygreek-fold-orig": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-fold-orig-v1/papygreek-fold-orig.conllu.gz"
+            ),
+            sha256="5af592199bb14c211865cd9d9494cf015f9b667e30ae2d8ad59fb68dff758b85",
+            superseded="v2",
+        ),
+    ],
+    "verse-fold": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "verse-fold-v1/verse-fold.conllu.gz"
+            ),
+            sha256="6e91adbe5096556f7fe6686b35f30b363b115325d7ee2843e39d16c75fbdf8bc",
+            superseded="v2",
+        ),
+    ],
+    "papygreek-dev-tagging": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-dev-v1/papygreek-dev-tagging.conllu.gz"
+            ),
+            sha256="f562021d4e57351b7f669a24148bf3c628fe024902a7614f331242ff4e05d7f7",
+            superseded="v2",
+        ),
+    ],
+    "papygreek-dev-parse": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-dev-v1/papygreek-dev-parse.conllu.gz"
+            ),
+            sha256="8044f3bc414d157fad556b4ea42876f2f62613d6adefaa5c15a22630569b025b",
+            superseded="v2",
+        ),
+    ],
+    "dbbe-lingann-fold": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "dbbe-lingann-fold-v1/dbbe-lingann-fold.conllu.gz"
+            ),
+            sha256="d9953f739af27e2beaf37c7cce4b616aaaa6816f1cd02efe6054d8474a0e3253",
             superseded="v2",
         ),
     ],
@@ -786,6 +893,18 @@ _VERSIONED_CORPORA: dict[str, tuple[str, str]] = {
     "edh": ("edh-corpus", "json"),
     "ddbdp": ("ddbdp-corpus", "sqlite"),
 }
+
+
+def _corpus_dataset_name(script_id: str) -> str | None:
+    """The registered dataset name backing a corpus id (``sigla`` -> ``sigla-corpus``,
+    ``damos`` -> ``damos-corpus``), or ``None`` when no registered dataset matches. The
+    reverse of the CLI's stem resolution, so a versioned-load error can name the
+    fetchable asset a corpus's kept pins live under."""
+    for candidate in (f"{script_id}-corpus", script_id):
+        if candidate in _REMOTE:
+            return candidate
+    return None
+
 
 # The version tag suffix of a pinned release URL: '.../isicily-corpus-v2/...' -> 'v2',
 # '.../workbench-app-v1.6.1/...' -> 'v1.6.1'.
@@ -1882,6 +2001,18 @@ def load_corpus_version(
 
     entry = _VERSIONED_CORPORA.get(script_id)
     if entry is None:
+        # A corpus whose dataset DOES keep historical pins (sigla, whose JSON layout is
+        # custom, not Corpus.to_json) has no versioned aegean.load path, but its pins are
+        # still fetchable — say so, instead of the false "has none".
+        name = _corpus_dataset_name(script_id)
+        pins = historical_versions(name) if name else []
+        if pins:
+            kept = ", ".join(p.version for p in pins)
+            raise DataNotAvailableError(
+                f"versioned load is not supported for {script_id!r} (its data layout is "
+                f"not a plain Corpus.to_json); its pinned versions can be fetched with "
+                f"`aegean data fetch {name} --version <v>` (kept: {kept})."
+            )
         raise DataNotAvailableError(
             f"aegean.load(..., version=...) is available only for corpora with kept "
             f"historical pins ({sorted(_VERSIONED_CORPORA)}); {script_id!r} has none. "

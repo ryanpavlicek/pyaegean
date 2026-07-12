@@ -1050,7 +1050,7 @@
         "mcp": {
           "status": "excluded",
           "reason": "not-applicable",
-          "note": "seriation is Python/CLI; no MCP tool."
+          "note": "seriation is a Python-API tool; no MCP tool."
         },
         "notebooks": {
           "status": "covered",
@@ -1062,7 +1062,7 @@
         "tui": {
           "status": "excluded",
           "reason": "not-applicable",
-          "note": "reachable via the command console; no dedicated card."
+          "note": "Python-API only (aegean.analysis.seriation.seriate); no CLI command, so the command console cannot reach it and there is no dedicated card."
         }
       }
     },
@@ -1079,7 +1079,7 @@
         "mcp": {
           "status": "excluded",
           "reason": "not-applicable",
-          "note": "variant-group reporting is Python/CLI; no MCP tool."
+          "note": "variant-group reporting is a Python-API tool; no MCP tool."
         },
         "notebooks": {
           "status": "covered",
@@ -1091,7 +1091,7 @@
         "tui": {
           "status": "excluded",
           "reason": "not-applicable",
-          "note": "reachable via the command console; no dedicated card."
+          "note": "Python-API only (aegean.analysis.allographs.variant_groups); no CLI command, so the command console cannot reach it and there is no dedicated card."
         }
       }
     },

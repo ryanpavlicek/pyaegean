@@ -4,6 +4,86 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.44.0 (2026-07-11)
+
+A correctness and fidelity release: every evaluation fold's gold reviewed and
+corrected where defective, the affected rows re-measured, and a set of fixes
+across the documentary levers, the CLI, the data store, and the docs.
+
+### Fixed — gold data and conversion
+
+- **AGDT→UD conversion, leaf apposition.** The converter mapped a leaf `APOS`
+  relation to `cc`, a label UD reserves for coordinating-conjunction words; it
+  now emits `appos`. The AGDT-derived folds were rebuilt on the corrected
+  conversion — 73 DEPREL cells in the PapyGreek fold (v3) and its orig layer
+  (v2), 15 in the verse fold (v2), 54 across the dev tracks (v2) — with every
+  other cell byte-identical. The shipped model was trained under the old
+  convention and now shows the confusion as a measured error (see
+  `docs/benchmarks.md` and the wiki Limitations page).
+- **The verse fold is tragedy-only (v2).** The 3-sentence sliver previously
+  labeled hexameter is the Maximus *prose paraphrase* (the sentences do not
+  scan) and was removed; `--track hexameter` is rejected with the reason. 11
+  malformed gold lemmas (Latin homoglyph vowels, LSJ citation-form tails) were
+  repaired, and the build now validates every emitted lemma is a clean Greek
+  headword.
+- **The DBBE fold drops mis-tagged marker glyphs (v2).** 11 non-linguistic
+  glyphs (crosses, dividers, a koronis) that the gold mis-filed as words are
+  now excluded like their mirror class, and a standalone `+` segments by form,
+  splitting one 59-token run-on: 825 sentences / 9,191 tokens. The register
+  wording follows DBBE's documented 7th–15th c. scope.
+- **Re-measured rows** (sequential, one-shot; unchanged-by-construction metrics
+  came back byte-identical): verse tragedy lemma 87.89 / LAS 73.33 (LAS CI
+  [69.75, 78.28]); DBBE UPOS 86.74 / XPOS 76.40 / UFeats 85.86 / lemma 76.71;
+  PapyGreek LAS 79.85 (reg, both lever variants) and 77.61 (orig) — the
+  apposition correction prices the trained-in `cc` reading into LAS honestly.
+
+### Fixed — documentary levers
+
+- The Greek numeral sign (keraia) is no longer folded into the elision-mark
+  set, so Milesian numerals (δʹ, τʹ) can never be relabeled CCONJ by the
+  coordinator reconciliation.
+- Lemma-rescue results now carry their true SEED/PARADIGM evidence class on
+  every surface (pipeline records, explain, review export, `lemmatize_sourced`)
+  instead of an incorrect IDENTITY "surface form unchanged" note, via the
+  additive `SentenceAnalysis.lemma_source_override` channel; default-off output
+  is byte-identical.
+- `aegean greek eval --documentary` now activates the paradigm table, so the
+  CLI reproduces the registry `documentary_full` lemma row; the rescue-cascade
+  docstring names the real tiers (seed → paradigm).
+
+### Fixed — CLI, evaluation entrances, data store, TUI
+
+- `greek eval verse --drift` is rejected before any model load; `eval
+  papygreek` and `eval nt` reject the ud-only `--bootstrap`/`--by-genre`
+  instead of silently ignoring them; the `--batch-size`/`--documentary` option
+  help lists the real target sets.
+- An empty fold or empty track raises a clean error naming the track and
+  source instead of a misleading evaluator crash.
+- `greek work --ref` prints a follow-up that actually works for
+  milestone/nested/range/comma refs, and a comma-list hint carries the full
+  ref.
+- `aegean data list` now counts, and `aegean data remove` now reclaims, the
+  decompressed CoNLL-U the evaluation folds materialize (previously invisible
+  and orphaned); `data fetch --version` prints a load hint only for corpora
+  `aegean.load(version=)` supports; `aegean.load("sigla", version=...)` no
+  longer falsely reports that no historical pins exist.
+- The TUI console's `:exit`/`:quit`/`:q`/`exit`/`quit` now leave the console.
+
+### Documentation and attribution
+
+- NOTICE gains the verse-fold (UNESP Trees, CC BY-SA 4.0) attribution and
+  corrects the DBBE author initial (C. Swaelens).
+- Bekker addressing is documented with its real semantics: a line ref opens
+  the span to the next *marked* line (Perseus marks every ~5th line; unmarked
+  line numbers resolve to nothing), `1447a` is a page-column, and the whole
+  page is the comma list `1447a,1447b`; the worked example cites the *Poetics*
+  (tlg0086.tlg034). The MCP `greek_work` docstring documents milestone and
+  comma-list refs.
+- The orig-layer framing states the reg/orig pair measures raw documentary
+  usage (orthography plus a minority of morphosyntactic regularizations); the
+  Data-and-Provenance table carries every fetchable dataset, with a guard
+  pinning table completeness.
+
 ## 0.43.0 (2026-07-11)
 
 Two more firsts for the evaluation record: the cost of scribal orthography,

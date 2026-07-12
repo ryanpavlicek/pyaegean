@@ -139,6 +139,9 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `abbott-smith-index` | Prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) | Project-hosted; `use_lexicon("abbott-smith")` |
 | `autenrieth-index` | Prebuilt Autenrieth (Homeric) lemma→entry index | ~0.6 MB | public domain (1891); Perseus digitization CC BY-SA | Project-hosted; `use_lexicon("autenrieth")` |
 | `papygreek-fold` | Documentary-Koine dependency eval fold (1,696 sentences) | ~332 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_papygreek_fold.py` |
+| `papygreek-fold-orig` | ORIG diplomatic surface layer of `papygreek-fold` (same 1,696 sentences and gold; the scribes' raw spellings, 1,637 forms differ) | ~335 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_papygreek_fold.py --layer orig` |
+| `verse-fold` | Ancient Greek verse dependency eval fold, tragedy-only (36 sentences / 735 tokens: Euripides *Bacchae* 1-169); small-sample, never a headline number | ~12 KB | CC BY-SA 4.0 (unesp-trees, Perseids/Arethusa, UNESP) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_verse_fold.py` |
+| `dbbe-lingann-fold` | Byzantine book-epigram tagging fold (825 sentences / 9,191 tokens, gold POS + lemma, no trees; scribal orthography) | ~120 KB | CC BY 4.0 (DBBE gold standard, Ghent) | Project-hosted derivative; evaluation only; rebuild: `scripts/build_dbbe_fold.py` |
 | `papygreek-dev-tagging` | Documentary-Koine DEV tagging track (327 sentences), document-disjoint from the eval fold | ~93 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
 | `papygreek-dev-parse` | Documentary-Koine DEV parse track (126 sentences, directional only) | ~18 KB | CC BY-SA 4.0 (PapyGreek Treebanks) | Experiment data only, never a published number; rebuild: `scripts/build_papygreek_dev.py` |
 | `grc-paradigms` | Nominal paradigm table (form→lemma+features), the offline `use_paradigms()` backend | ~233 KB | CC BY-SA 3.0 (derived from UniMorph grc) | Project-hosted derivative; rebuild: `scripts/build_paradigm_table.py` |
@@ -608,7 +611,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.43.0'  (your installed version)
+v["package"]                                  # '0.44.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -679,7 +682,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.43.0'
+# '0.44.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

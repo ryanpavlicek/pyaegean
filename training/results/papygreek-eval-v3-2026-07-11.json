@@ -1,0 +1,21 @@
+{
+ "what": "Neural pipeline scored on papygreek-fold-v3 (documentary-Koine dependency fold, reg layer).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; one-shot after the 0.44.0 fold rebuilds (leaf-APOS cc->appos converter correction + per-fold gold repairs); greek.evaluate_on_papygreek(); fold papygreek-fold-v3 (sha de687474...); vs v2: exactly 73 leaf-apposition DEPREL cells corrected cc->appos, all other cells byte-identical",
+ "results_full_precision": {
+  "treebank": "papygreek",
+  "split": "test",
+  "parsed": true,
+  "upos": 0.9104750051856462,
+  "xpos": 0.7676000829703381,
+  "ufeats": 0.8857498444306161,
+  "lemma": 0.8613150798589504,
+  "uas": 0.8570835926156399,
+  "las": 0.7984650487450736,
+  "clas": 0.757600443155528,
+  "n_words": 24105,
+  "n_sentences": 1696,
+  "layer": "reg"
+ },
+ "vs_v2": "UPOS/XPOS/UFeats/lemma/UAS byte-identical to the v2 measurement (the gold change is DEPREL-only); LAS 79.89->79.85 (the model, trained under the old convention, labels bare appositives cc; most of the 73 were already head-wrong, so only a handful flipped)"
+}

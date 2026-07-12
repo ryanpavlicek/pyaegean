@@ -205,13 +205,14 @@ def test_evaluate_on_verse_track_scopes_the_score(monkeypatch) -> None:
     _require_evaluator()
     monkeypatch.setattr(joint, "_ACTIVE", _StubModel())
     trag = verse_eval.evaluate_on_verse(track="tragedy", source=FIXTURE)
-    hexa = verse_eval.evaluate_on_verse(track="hexameter", source=FIXTURE)
+    everything = verse_eval.evaluate_on_verse(source=FIXTURE)
     assert trag["track"] == "tragedy" and trag["n_sentences"] == 2
-    assert hexa["track"] == "hexameter" and hexa["n_sentences"] == 1
-    # the two tracks together cover the whole fold
-    assert trag["n_words"] + hexa["n_words"] == verse_eval.evaluate_on_verse(
-        source=FIXTURE
-    )["n_words"]
+    # 'all' (the default) scores the whole fold; tragedy is the proper subset
+    assert everything["track"] == "all" and everything["n_sentences"] == 3
+    assert trag["n_words"] < everything["n_words"]
+    # the removed hexameter filter gets its own clean rejection
+    with pytest.raises(ValueError, match="prose paraphrase"):
+        verse_eval.evaluate_on_verse(track="hexameter", source=FIXTURE)
 
 
 def test_evaluate_on_verse_parse_false_drops_uas(monkeypatch) -> None:
@@ -276,7 +277,11 @@ def test_cli_verse_rejects_bad_track_and_drift(monkeypatch) -> None:
     runner = CliRunner()
     r = runner.invoke(_cli_app(), ["greek", "eval", "verse", "--track", "bogus"])
     assert r.exit_code != 0
-    assert "--track must be tragedy, hexameter, or all" in r.output
+    assert "--track must be tragedy or all" in r.output
+    # the removed hexameter track is rejected with the reason, before any model load
+    r = runner.invoke(_cli_app(), ["greek", "eval", "verse", "--track", "hexameter"])
+    assert r.exit_code != 0
+    assert "prose paraphrase" in r.output
     # verse has no --drift decomposition
     r = runner.invoke(_cli_app(), ["greek", "eval", "verse", "--drift"])
     assert r.exit_code != 0

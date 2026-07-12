@@ -88,6 +88,25 @@ def _entry_paths(root: Path, name: str, *, version: str | None = None) -> list[P
     return out
 
 
+def _prune_empty_parents(root: Path, paths: list[Path]) -> None:
+    """Delete now-empty subdirectories left after removing a dataset's files.
+
+    The fold assets materialize into a shared subdir (``papygreek-grc/``); removing one
+    dataset's files there can leave the subdir empty. Walk each removed path's parents up
+    to (never including) ``root`` and rmdir any that are now empty, so a remove leaves no
+    stray empty directory. ``rmdir`` refuses a non-empty dir, so a subdir another dataset
+    still occupies is untouched; ``root`` itself is never removed."""
+    root = root.resolve()
+    for p in paths:
+        parent = p.parent
+        while parent != root and root in parent.parents:
+            try:
+                parent.rmdir()  # fails on a non-empty dir — the intended guard
+            except OSError:
+                break
+            parent = parent.parent
+
+
 def _resolve_name(name: str) -> str:
     """Map a friendly stem to its registered dataset name (``damos`` -> ``damos-corpus``,
     ``nt`` -> ``nt-corpus``), passing an exact name through unchanged. So ``data fetch damos``
@@ -335,14 +354,26 @@ def fetch(
         return
     print(path)
     if version is not None:
-        # The current-copy load hint would load the CURRENT data, not this release; point
-        # at the versioned loader instead (only the *-corpus datasets have a load path).
+        from aegean.data import _VERSIONED_CORPORA
+
+        # The current-copy load hint would load the CURRENT data, not this release, so point
+        # at the versioned loader — but ONLY for corpora that actually have a versioned load
+        # path (_VERSIONED_CORPORA). Other datasets (sigla, the fold/lexicon assets) fetch to
+        # a version-suffixed store entry with no aegean.load(version=): a load hint there
+        # prints a command that errors, so guide to the fetched file instead.
         stem = name[: -len("-corpus")] if name.endswith("-corpus") else name
-        print(
-            f"historical pin — load it:  python -c \"import aegean; "
-            f"aegean.load('{stem}', version='{version}')\"",
-            file=sys.stderr,
-        )
+        if stem in _VERSIONED_CORPORA:
+            print(
+                f"historical pin — load it:  python -c \"import aegean; "
+                f"aegean.load('{stem}', version='{version}')\"",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"historical pin fetched to {path}; {name!r} has no versioned aegean.load() "
+                "— inspect the file directly (see `aegean data versions`)",
+                file=sys.stderr,
+            )
         return
     hint = _FETCH_HINTS.get(name)
     if hint is not None:
@@ -424,6 +455,7 @@ def remove(
                 f"could not remove {n!r}: a file is in use ({exc}); "
                 "if a fetch is running, retry after it finishes"
             ) from None
+        _prune_empty_parents(root, targets)  # a now-empty materialization subdir leaves nothing behind
         label = f"{n}@{version}" if version is not None else n
         removed.append({"name": label, "path": str(entry), "bytes": size})
 

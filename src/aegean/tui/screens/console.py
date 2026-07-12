@@ -133,7 +133,9 @@ def run_console_command(group: Any, line: str, session: Any) -> str:
     from aegean.cli._repl import _run_line
 
     def _dispatch() -> None:
-        _run_line(group, line, session)  # its bool return (stop-the-loop) is irrelevant here
+        # The screen intercepts exit words before dispatch (they are the only lines for which
+        # _run_line returns its stop signal), so the bool is always True here and discarded.
+        _run_line(group, line, session)
 
     return capture_dispatch(_dispatch)
 
@@ -351,12 +353,29 @@ class CommandConsoleScreen(Screen[None]):
         event.input.value = ""
         if not line:
             return
+        # An exit word is exactly where the REPL runner returns its stop signal; leave the
+        # console instead of dispatching it to a silent no-op (the runner produces no output
+        # for these, so a dispatched exit word would just clear the prompt and do nothing).
+        from aegean.cli._repl import _EXIT_WORDS
+
+        if line in _EXIT_WORDS:
+            self._leave_console()
+            return
         self._history.append(line)
         self._hist_pos = len(self._history)
         if self._group is None:
             return
         self.query_one("#console-log", RichLog).write(f"aegean> {line}")
         self._dispatch_worker(line)
+
+    def _leave_console(self) -> None:
+        """Leave the console the same way Esc does: blur the prompt, then walk the app's
+        screen-history back. This reuses the app-owned back-navigation (``action_go_back``)
+        rather than introducing a second navigation mechanism; blurring first collapses the
+        two-Esc dance (first Esc blurs the input, second walks back) into one step."""
+        app = self.app
+        app.set_focus(None)
+        app.action_go_back()  # type: ignore[attr-defined]
 
     def on_key(self, event: Any) -> None:
         """Keep every keystroke going to the prompt and drive the completion dropdown.

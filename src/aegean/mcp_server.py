@@ -585,7 +585,10 @@ def greek_work(work_id: str, ref: str | None = None, preview_lines: int = 10) ->
 
     ``work_id`` is an id from ``greek_catalog`` (Perseus canonical-greekLit /
     First1KGreek), never a filesystem path. ``ref`` selects a section by citation
-    address: '1' (a book), '1.2' (a chapter), or '1.1-1.50' (a verse line-range).
+    address: '1' (a book), '1.2' (a chapter), '1.1-1.50' (a verse line-range), a
+    margin milestone outside the CTS <div> scheme (a Stephanus sub-page '17a', a
+    Bekker line '1447a10' or a whole Bekker page-column '1447a'), or a comma list of
+    any of these ('1.1,1.5', '17a,17b') giving one section per entry.
     The first use of a work downloads its TEI file into the local data store (a
     one-time, commit-pinned network fetch); later calls are offline, exactly like
     ``greek_gloss``'s dictionaries. Returns the work summary (documents, tokens,

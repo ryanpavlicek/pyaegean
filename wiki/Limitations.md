@@ -291,6 +291,16 @@ training data doesn't share. Full tables and protocol:
 [Benchmarks](Benchmarks).
 See [Greek NLP](Greek-NLP) for how to switch tiers.
 
+**A known training-convention artifact: bare apposition parses as `cc`.** The
+AGDT→UD converter that built the training labels mapped a leaf `APOS` relation
+(an appositive attached directly under its antecedent) to `cc` until 0.44.0; it
+now emits the correct `appos`, and every AGDT-derived evaluation fold was
+rebuilt on the corrected conversion. The shipped `grc-joint` model, trained
+under the old convention, therefore systematically labels bare appositives
+`cc` — visible as an `appos`/`cc` confusion in the error analysis and priced
+into the LAS rows. A future retraining absorbs the correction; until then,
+treat a `cc` on a noun as probable apposition.
+
 ---
 
 ## By design (documented trade-offs, not on the roadmap)

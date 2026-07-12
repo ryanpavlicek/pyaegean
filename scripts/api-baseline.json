@@ -16387,6 +16387,11 @@
           "default": true,
           "kind": "positional or keyword",
           "name": "lemma_script_prob"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "lemma_source_override"
         }
       ],
       "returns": true
@@ -16407,6 +16412,9 @@
       "kind": "attribute"
     },
     "aegean.greek.joint.SentenceAnalysis.lemma_script_prob": {
+      "kind": "attribute"
+    },
+    "aegean.greek.joint.SentenceAnalysis.lemma_source_override": {
       "kind": "attribute"
     },
     "aegean.greek.joint.SentenceAnalysis.tokens": {

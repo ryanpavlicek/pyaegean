@@ -663,7 +663,13 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
     if joint.active() is not None:  # the neural pipeline: contextual scripts + big lookup
         ana = joint.analyze_sentence([word])
         resolved = ana.lemma_resolved[0] if ana.lemma_resolved else ana.lemma[0] != word
-        return ana.lemma[0], LemmaSource.NEURAL if resolved else LemmaSource.IDENTITY
+        if resolved:
+            return ana.lemma[0], LemmaSource.NEURAL
+        override = ana.lemma_source_override  # Lever B offline-rescue source, else ()
+        if override and override[0]:
+            # an opt-in Lever B offline rescue: a grounded SEED / PARADIGM lemma, never NEURAL
+            return ana.lemma[0], LemmaSource(override[0])
+        return ana.lemma[0], LemmaSource.IDENTITY
     from . import treebank
 
     lex = treebank.active()

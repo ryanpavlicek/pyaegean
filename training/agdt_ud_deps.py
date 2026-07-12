@@ -13,9 +13,13 @@ validation only). The Prague→UD differences are structural, not just labels:
   conjunction to ``mark``.
 - **Copula**: εἰμί heads its predicate (``PNOM``); UD promotes the predicate and demotes
   the copula to ``cop``, re-attaching its other dependents to the promoted node.
-- **AuxK** (final punctuation) re-attaches to the root token; ``APOS`` operators become
-  ``punct``/``appos`` chains. Everything else is a label map keyed on the AGDT relation
-  and coarse POS (note: the UD-Perseus convention prefers ``nmod`` over ``amod``).
+- **AuxK** (final punctuation) re-attaches to the root token. An ``APOS`` *coordinator*
+  restructures like ``COORD`` — its members become ``appos`` and the operator ``punct`` —
+  while a bare ``APOS`` *leaf* (an appositive attached straight to its antecedent, the
+  dominant style here) maps to ``appos``, never ``cc`` (which UD reserves for
+  coordinating-conjunction words; a noun can never be ``cc``). Everything else is a label
+  map keyed on the AGDT relation and coarse POS (note: the UD-Perseus convention prefers
+  ``nmod`` over ``amod``).
 
 The converter runs at dataset-build time on gold AGDT trees; the trained parser predicts
 UD heads/relations directly, so inference needs none of this.
@@ -85,8 +89,10 @@ def _label(rel: str, xpos: str, *, in_aux_p: bool = False, in_aux_c: bool = Fals
         return "mark"
     if base == "AuxV":
         return "aux"
-    if base in ("COORD", "APOS"):
+    if base == "COORD":
         return "cc"
+    if base == "APOS":
+        return "appos"  # a bare appositive attached to its antecedent (cc is conj-words only)
     if base == "ExD":
         return "vocative" if pos in ("n", "p", "a") else "advmod"
     return "dep"

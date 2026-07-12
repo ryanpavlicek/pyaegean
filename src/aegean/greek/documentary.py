@@ -94,7 +94,12 @@ _ACUTE = "́"       # combining acute accent
 _UNDERDOT = "̣"    # combining dot below: the Leiden "uncertain letter" apparatus mark
 _PSILI = "̓"       # combining comma above: smooth breathing on a vowel, OR a coronis
 _DASIA = "̔"       # combining reversed comma above: rough breathing on a vowel
-_APOSTROPHES = frozenset("ʼ᾽’'ʹ")  # elision marks seen in the corpora
+# The true elision marks seen in the corpora: the modifier apostrophe (U+02BC), the Greek
+# koronis (U+1FBD), the right single quote (U+2019), and the ASCII apostrophe. The GREEK
+# NUMERAL SIGN keraia (U+0374, which NFD-decomposes to U+02B9) and a bare U+02B9 prime are
+# DELIBERATELY excluded: they mark a Milesian numeral (δʹ = 4, τʹ = 300), not an elision, so
+# folding them to an apostrophe would relabel those numerals as the elided coordinator δ' / τ'.
+_APOSTROPHES = frozenset("ʼ᾽’'")
 _CANON_APOSTROPHE = "'"
 _VOWELS = frozenset("αεηιουω")
 
@@ -137,7 +142,9 @@ def coordinator_norm(form: str) -> str:
 
 
 #: The closed coordinator set, normalized (see `coordinator_norm`). Membership is the first of
-#: the two conditions Lever A requires (the second is a wrong model label).
+#: the two conditions Lever A requires (the second is a wrong model label). A Milesian numeral
+#: written with the keraia (δʹ = 4, τʹ = 300; U+0374 → U+02B9) is deliberately NOT a member: the
+#: numeral sign is not an elision mark (see `_APOSTROPHES`), so δʹ never collapses onto δ'.
 COORDINATORS: frozenset[str] = frozenset(coordinator_norm(f) for f in _COORDINATOR_FORMS)
 
 # The pos-code drift readings. ``b`` (→ UPOS X after the AGDT→UD conversion) is ALWAYS wrong
@@ -240,25 +247,29 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
     ``ana`` unchanged when nothing is rescued.
 
     For each token the model left UNRESOLVED (``lemma_resolved`` is ``False`` — the honest
-    identity fall-through), `rescue_lemma` is consulted; a hit replaces only the lemma string.
-    A token the model resolved is never touched (the model's lemma wins), and a rescued token
-    keeps ``lemma_resolved=False`` so nothing downstream ever labels an offline rescue as a
-    neural prediction (the offline source is available from `rescue_lemma`). Pure and
-    side-effect-free. When the model does not report ``lemma_resolved`` (an empty tuple), no
-    token can be known-unresolved, so nothing fires."""
+    identity fall-through), `rescue_lemma` is consulted; a hit replaces the lemma string and
+    records its offline source (``SEED`` / ``PARADIGM``) in ``lemma_source_override`` at that
+    index, so a consumer can surface the true grounded evidence class rather than the identity
+    fall-through. A token the model resolved is never touched (the model's lemma wins), and a
+    rescued token keeps ``lemma_resolved=False`` so nothing downstream ever labels an offline
+    rescue as a neural prediction (the source stays offline via the override channel and
+    `rescue_lemma`). Pure and side-effect-free. When the model does not report
+    ``lemma_resolved`` (an empty tuple), no token can be known-unresolved, so nothing fires."""
     if not ana.tokens or not ana.lemma_resolved:
         return ana
     lemma = list(ana.lemma)
+    override = [""] * len(ana.tokens)
     changed = False
     for i, resolved in enumerate(ana.lemma_resolved):
         if not resolved:
             rescued = rescue_lemma(ana.tokens[i])
             if rescued is not None:
                 lemma[i] = rescued[0]
+                override[i] = rescued[1].value  # the offline source: "seed" / "paradigm"
                 changed = True
     if not changed:
         return ana
-    return replace(ana, lemma=tuple(lemma))
+    return replace(ana, lemma=tuple(lemma), lemma_source_override=tuple(override))
 
 
 # --- the opt-in toggles + the composition wrapper -------------------------------------
@@ -372,7 +383,7 @@ def use_documentary_lemma_rescue() -> None:
 
     Requires the neural pipeline to be active (raises `NeuralPipelineNotLoadedError`
     otherwise). When the model leaves a lemma unresolved, the guarded offline cascade
-    (seed → rules → the opt-in paradigm table) is consulted for a rescue; a rescue never
+    (seed → the opt-in paradigm table) is consulted for a rescue; a rescue never
     overrides a resolved neural lemma and carries its own offline evidence class (see
     `rescue_lemma`). Default-off and byte-identical to the plain pipeline until called;
     `disable_*` restores that."""

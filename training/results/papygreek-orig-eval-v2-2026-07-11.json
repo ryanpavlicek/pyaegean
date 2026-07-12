@@ -1,0 +1,21 @@
+{
+ "what": "Neural pipeline scored on papygreek-fold-orig-v2 (the diplomatic FORM layer of papygreek-fold-v3; same sentences and gold).",
+ "date": "2026-07-11",
+ "protocol": "greek.use_neural_pipeline(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; one-shot after the 0.44.0 fold rebuilds (leaf-APOS cc->appos converter correction + per-fold gold repairs); greek.evaluate_on_papygreek(layer='orig'); fold papygreek-fold-orig-v2 (sha d920a0cd...); vs v1: the same 73 leaf-apposition DEPREL cells corrected cc->appos",
+ "results_full_precision": {
+  "treebank": "papygreek",
+  "split": "test",
+  "parsed": true,
+  "upos": 0.900020742584526,
+  "xpos": 0.7410080896079652,
+  "ufeats": 0.8589504252229828,
+  "lemma": 0.8179630781995436,
+  "uas": 0.8432690313213026,
+  "las": 0.7760630574569591,
+  "clas": 0.7303268568457989,
+  "n_words": 24105,
+  "n_sentences": 1696,
+  "layer": "orig"
+ },
+ "vs_v1": "UPOS/XPOS/UFeats/lemma/UAS byte-identical to the v1 measurement; LAS 77.64->77.61. The reg/orig pair still differs only in the FORM column, so the orig-vs-reg deltas (the cost of raw documentary usage) are unchanged in kind: lemma -4.33 remains the headline"
+}

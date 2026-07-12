@@ -5,7 +5,8 @@ The DBBE linguistic-annotation gold standard (github.com/coswaele/ByzantineGreek
 Byzantine book epigrams*, Language Resources and Evaluation 59.1 (2025) 109-134,
 doi:10.1007/s10579-023-09703-x) is ~10k tokens of **unedited** medieval-Greek verse from the
 Database of Byzantine Book Epigrams, manually annotated for part-of-speech, morphology and
-lemma. It is a register no other pyaegean fold covers: later (9th-15th c.) Byzantine verse in
+lemma. It is a register no other pyaegean fold covers: later Byzantine verse (7th-15th c., the
+DBBE's documented scope) in
 **non-normalised scribal orthography** (itacism, missing iota subscript, dropped breathings),
 with lemmas standardised to Attic dictionary headwords.
 
@@ -21,32 +22,37 @@ with ``parse=False``). Evaluation only, never bundled, never trained on.
 **Tagset note (why not dilemma's DBBE_TO_UPOS).** The `dilemma` project maps the postag's
 first character with a crude 12-entry table (``c``->CCONJ, ``g``->PART, no ``u``/``x``). That
 mis-handles the two real UD splits this gold exercises: ``c`` conflates coordinating (καί,
-ἀλλά) with SUBORDINATING (ὡς, εἰ, ὅπως, ἐπεί) conjunctions, and καί itself is tagged both
-``g`` (particle, 204x) and ``c`` (conj, 113x). pyaegean's converter resolves ``c`` ->
-CCONJ/SCONJ form-deterministically (its validated 67-form subordinator lexicon) and maps
+ἀλλά) with SUBORDINATING (ὡς, εἰ, ὅπως, ὅτι) conjunctions, and καί itself is tagged both
+``g`` (particle) and ``c`` (conj). pyaegean's converter resolves ``c`` ->
+CCONJ/SCONJ form-deterministically (its validated closed-class subordinator lexicon) and maps
 ``u``->PUNCT / ``x``->X, so the gold is mapped under the SAME conventions as the training
 labels. The one convention it cannot resolve here is ``v`` -> AUX (copular εἰμί), which is a
 TREE signal (a PNOM dependent) the tagging-only source lacks: every ``v`` stays VERB, so a
 copula the model predicts AUX is scored wrong (a small, documented systematic cap).
 
-**Selection (each counted in the manifest), applied per token, dropping the whole sentence
-that contains an unusable token (never silently corrupt):**
+**Selection (each counted in the manifest), applied per token; an unusable WORD token drops the
+whole sentence (never silently corrupt), while an unusable punctuation or marker-glyph token is
+dropped in place, keeping the words:**
   1. **empty** — a blank/tab-only row (empty form or empty postag).
   2. **illegible** — a form carrying an illegibility marker (``(...)`` / ``(…`` / ``…``) or an
      alphabetic token mis-filed under the punctuation postag (e.g. ``suprascr.``).
-  3. **malformed_tag** — a postag longer than 9 chars, or carrying an annotation artifact
+  3. **marker_glyph** — a non-linguistic marker glyph (no alphabetic character, e.g. ``+`` / ``∙``
+     / ``※`` / ``᾽`` / ``++:+``) that the gold mis-filed under a WORD postag (NOUN/CCONJ/PART/…);
+     the mirror of the alphabetic-under-punct case, dropped in place with its own counter.
+  4. **malformed_tag** — a postag longer than 9 chars, or carrying an annotation artifact
      (``_`` as in ``c_crasis``, or an embedded ``plus``), or whose first char is not an AGDT
      POS code. (A short postag missing only trailing ``-`` positions is padded, not dropped.)
-  4. **no_word** — a sentence left with only punctuation after segmentation.
-  5. **leaked** — a sentence whose NFC form tuple (full or punctuation-stripped) appears in the
+  5. **no_word** — a sentence left with only punctuation after segmentation.
+  6. **leaked** — a sentence whose NFC form tuple (full or punctuation-stripped) appears in the
      shipped model's training set (``training/data/full-{train,dev}.jsonl`` = AGDT + Gorman +
      Pedalion), the same form-tuple exclusion `agdt_ud_overlap` / build_papygreek_fold use.
      Expected ~0 for Byzantine verse; run anyway.
 
 **Sentence segmentation.** The source is one continuous token stream (no sentence column); the
-paper infers sentences from punctuation. This splits after a terminal punctuation token — a
-full stop ``.``, ano teleia ``·``/``·``, Greek/Latin ``;``, or the ``+`` epigram/verse marker
-(and any compound punctuation token containing one) — yielding verse/clause-sized sentences.
+paper infers sentences from punctuation. This splits after a terminal punctuation token (a full
+stop ``.``, ano teleia ``·``/``·``, Greek/Latin ``;``, or any compound punctuation token
+containing one) or after a standalone ``+`` epigram marker — the ``+`` recognised by FORM
+regardless of its (sometimes erroneous) gold POS — yielding verse/clause-sized sentences.
 Non-terminal punctuation (comma, colon) stays inline. Segmentation only affects the context
 window the model sees; the gold labels are per-token under gold tokenization.
 
@@ -123,7 +129,13 @@ def read_gold(path: Path) -> list[tuple[str, str, str]]:
 
 
 def _is_terminal(form: str, postag: str) -> bool:
-    """True when a punctuation token closes a sentence (contains a terminal mark)."""
+    """True when a token closes a sentence.
+
+    A standalone ``+`` is an epigram terminal by DBBE convention regardless of its
+    (sometimes erroneous) gold POS, so it is recognised by FORM not tag. Otherwise a
+    punctuation token closes a sentence when it carries a terminal mark."""
+    if form == "+":
+        return True
     if postag[:1] != "u":
         return False
     return any(ch in _TERMINALS for ch in form)
@@ -132,7 +144,8 @@ def _is_terminal(form: str, postag: str) -> bool:
 def token_reason(form: str, postag: str, lemma: str) -> str | None:
     """The exclusion reason for one token, or ``None`` when it is usable.
 
-    Reasons (module docstring): ``empty``, ``illegible``, ``malformed_tag``."""
+    Reasons (module docstring): ``empty``, ``illegible``, ``malformed_tag``,
+    ``marker_glyph``."""
     if not form or not postag:
         return "empty"
     if postag[:1] == "u":
@@ -148,6 +161,10 @@ def token_reason(form: str, postag: str, lemma: str) -> str | None:
         return "malformed_tag"
     if any(c not in _TAG_CHARS for c in postag):
         return "malformed_tag"
+    # mirror of the alphabetic-under-punct case: a non-linguistic marker glyph (no alphabetic
+    # character) that the gold mis-filed under a WORD postag (e.g. + / ∙ / ※ / ᾽ as NOUN/CCONJ)
+    if not any(c.isalpha() for c in form):
+        return "marker_glyph"
     return None
 
 
@@ -255,6 +272,7 @@ def build(gold_tsv: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
 
     reasons: Counter[str] = Counter()
     dropped_punct = 0  # noise punctuation tokens dropped in-sentence (no word context lost)
+    dropped_marker = 0  # non-linguistic marker glyphs mis-tagged as words, dropped in-sentence
     blocks: list[str] = []
     n_tokens = 0
     n_sent_total = 0
@@ -270,6 +288,8 @@ def build(gold_tsv: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
                 clean.append((form, postag, lemma))
             elif postag[:1] == "u":
                 dropped_punct += 1  # unusable punctuation → drop the token, keep the words
+            elif r == "marker_glyph":
+                dropped_marker += 1  # non-linguistic marker mis-tagged as a word → drop token
             else:
                 sent_bad = r  # unusable WORD token → the sentence cannot be scored cleanly
                 break
@@ -302,7 +322,8 @@ def build(gold_tsv: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
                     "book epigrams, Language Resources and Evaluation 59(1):109-134, "
                     "doi:10.1007/s10579-023-09703-x",
         "register": "unedited (non-normalised, scribal-orthography) medieval Greek verse, "
-                    "9th-15th c.; lemmas standardised to Attic dictionary headwords",
+                    "7th-15th c. (the DBBE's documented scope); lemmas standardised to "
+                    "Attic dictionary headwords",
         "annotation_scheme": "AGDT 9-position positional postag (POS/morph) + lemma",
         "converter": "training/agdt_ud.upos_from_xpos + aegean.greek.udfeats.feats_from_xpos "
                      "(no tree context: has_pnom_child=False, so copular εἰμί scores VERB)",
@@ -315,6 +336,7 @@ def build(gold_tsv: Path, training_dir: Path) -> tuple[str, dict[str, Any]]:
         "tokens_kept": n_tokens,
         "kept_tokens_with_padded_tag": non_canonical_tags,
         "dropped_noise_punct_tokens": dropped_punct,
+        "dropped_marker_glyph_tokens": dropped_marker,
         "excluded_sentences": dict(sorted(reasons.items())),
     }
     return conllu, manifest
