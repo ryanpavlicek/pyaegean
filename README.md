@@ -224,8 +224,8 @@ On the list next:
 
 - More public-domain dictionaries in the registry (Slater), as their open
   digitizations are confirmed license-clean
-- SigLA editorial-apparatus decoding, richer `load_work` addressing, and wider Pleiades /
-  gazetteer coverage, as the upstream apparatus data and verified coordinates become available
+- conda-forge packaging (recipe submitted, in review)
+- Wider Pleiades / gazetteer coverage, as verified coordinates become available
 
 
 ## About the author
