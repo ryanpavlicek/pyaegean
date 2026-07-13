@@ -343,6 +343,12 @@ rare-word flags); `mode="full"` adds concise dictionary glosses on the rare word
 below, and [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean) for
 choosing a mode.
 
+The hybrid wrapper uses whichever **module-level Greek backend is active**: a fresh
+process uses the baseline, while calling `greek.use_neural_pipeline()` first supplies
+contextual neural morphology and a UD parse. The CLI has no neural activation flag today.
+See [Hybrid translation](Translation#which-greek-backend-supplies-the-grounding) for the
+exact flow and the distinction from an isolated `GreekPipeline.neural()` instance.
+
 ```python
 from aegean import ai
 r = ai.translate("μῆνιν ἄειδε θεά", source="Ancient Greek", target="English", client=client)

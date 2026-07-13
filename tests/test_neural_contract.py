@@ -174,7 +174,7 @@ def test_receipt_runtime_comparison_reports_exact_mismatch(tmp_path: Path) -> No
 def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from aegean.greek import joint
+    from aegean.greek import joint, runtime
 
     _write_schema1_bundle(tmp_path)
     manifest = ModelBundleManifest.load(tmp_path)
@@ -187,6 +187,10 @@ def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
     )
 
     class Candidate:
+        def __init__(self) -> None:
+            self.manifest = manifest
+            self._sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
+
         def _receipt(self, **_status: object) -> AnalysisReceipt:
             return AnalysisReceipt.create(
                 manifest,
@@ -210,6 +214,9 @@ def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
     monkeypatch.setattr(joint, "fetch", lambda *_args, **_kwargs: tmp_path)
     monkeypatch.setattr(joint, "_JointModel", lambda *_args, **_kwargs: candidate)
     monkeypatch.setattr(joint, "_ACTIVE", None)
+    # Register the facade state with monkeypatch as well: activation replaces the
+    # default instance, while this test historically restored only joint._ACTIVE.
+    monkeypatch.setattr(runtime, "_DEFAULT", runtime.default_pipeline())
 
     joint.use_neural_pipeline(expected_receipt=expected)
     assert joint.active() is candidate

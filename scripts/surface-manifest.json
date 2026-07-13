@@ -1268,7 +1268,7 @@
       "id": "neural-pipeline",
       "since": "0.8.0",
       "python_api": "aegean.greek.use_neural_pipeline",
-      "summary": "The joint neural tagger/parser/lemmatizer, with explicit long-input coverage, exact lemma provenance, validated model bundles, and reproducible analysis receipts (best published on the UD Ancient Greek Perseus test).",
+      "summary": "The joint neural tagger/parser/lemmatizer, with isolated configured instances, explicit long-input coverage, exact lemma provenance, validated model bundles, and reproducible analysis receipts (best published on the UD Ancient Greek Perseus test).",
       "surfaces": {
         "demo": {
           "status": "excluded",

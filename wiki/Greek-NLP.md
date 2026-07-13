@@ -154,6 +154,53 @@ list(zip(ana.tokens, ana.upos, ana.deprel, ana.lemma))
 ana.feats[1]                       # 'Case=Dat|Gender=Fem|Number=Sing'
 ```
 
+The module-level calls above are a backward-compatible facade over
+`greek.default_pipeline()`. Applications that need simultaneous configurations can own
+isolated instances instead:
+
+| Similar name | What it does | What it changes |
+| --- | --- | --- |
+| `greek.pipeline(text)` | Analyzes text now | Nothing; it uses the current module-level default |
+| `greek.use_neural_pipeline()` | Loads neural support into the module-level facade | Future module-level POS, lemma, parse, and `pipeline` calls |
+| `greek.GreekPipeline.neural()` | Creates an isolated neural analyzer | Nothing outside that instance; call `instance.analyze(text)` |
+
+In short, lowercase `pipeline(...)` is an analysis operation, `use_neural_pipeline()` is
+a default-backend selector, and capitalized `GreekPipeline` is the independently configured
+instance type.
+
+```python
+literary = greek.GreekPipeline.neural()  # loads without changing the default facade
+baseline = greek.GreekPipeline()         # isolated zero-dependency baseline
+
+literary.analyze("ἐν ἀρχῇ ἦν ὁ λόγος.")
+baseline.analyze("ἐν ἀρχῇ ἦν ὁ λόγος.")
+
+config_json = literary.config.to_json()
+config = greek.GreekPipelineConfig.from_json(config_json)
+same_runtime = greek.GreekPipeline.from_config(config)
+```
+
+Each instance owns its neural model, tokenizer, annotation profile, normalization and
+segmentation identity, and execution-provider selection. Instance calls are context-local,
+so concurrent pipelines do not replace one another or observe module-level backend
+activation. `GreekPipelineConfig` is immutable and exact for configuration identity;
+per-analysis package and library versions, asset identity, input coverage, and other
+result-specific facts remain in the more detailed `AnalysisReceipt`. Loading several
+neural instances also loads several ONNX sessions, so reuse an instance when its
+configuration is shared.
+
+```mermaid
+flowchart LR
+    F["Module-level use_* and pipeline()"] --> D["Replaceable default facade"]
+    D --> C["Baseline cascade or activated neural backend"]
+    NB["GreekPipeline()"] --> B["Owned baseline"]
+    NN["GreekPipeline.neural()"] --> N["Owned neural backend and immutable config"]
+    B --> A["Instance analysis"]
+    N --> A
+    C -. "not consulted by explicit instances" .-> A
+    A --> R["Results plus exact analysis receipt"]
+```
+
 Neural input is strict by default. If a pretokenized sentence cannot fit the model
 bundle's subword limit, `analyze_sentence` raises `NeuralInputTooLongError` instead of
 returning plausible-looking placeholders. Split the sentence when its real boundary is

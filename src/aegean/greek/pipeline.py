@@ -2,10 +2,10 @@
 
 `pipeline` composes the individually-callable stages (tokenize → sentence split →
 POS-tag → lemmatize → optional parse) so a complete analysis doesn't require
-chaining nine functions. It uses whatever backends are **active**: activate them
-first with the ``use_*`` functions (`use_treebank`, `use_tagger`, `use_lemmatizer`,
-`use_neural_lemmatizer`, `use_parser`, `use_neural_pipeline`), and `pipeline`
-picks the best of what's loaded per stage — exactly as the individual functions do.
+chaining nine functions. The module-level function uses the backends selected by
+the ``use_*`` compatibility facade. Explicit `GreekPipeline` instances instead own
+their neural backend and configuration; an explicit baseline ignores facade-level
+backend activation, so simultaneous instance results remain isolated.
 
 With the neural pipeline active (``use_neural_pipeline()``, the ``[neural]``
 extra), each sentence is analyzed in **one model pass** and every field of every
@@ -121,7 +121,31 @@ def pipeline(
     with_confidence: bool = False,
     long_input: Literal["strict", "partial"] = "strict",
 ) -> list[TokenRecord]:
-    """Analyze ``text`` end-to-end and return one `TokenRecord` per token.
+    """Analyze text through the module-level default `GreekPipeline` instance.
+
+    This backward-compatible facade retains the historical signature and follows
+    `use_neural_pipeline()` / `disable_neural_pipeline()`. For isolated concurrent
+    configurations, construct `GreekPipeline` instances and call their `analyze` method.
+    Neural long-input and calibrated-confidence behavior is identical on both APIs.
+    """
+    from .runtime import default_pipeline
+
+    return default_pipeline().analyze(
+        text,
+        parse=parse,
+        with_confidence=with_confidence,
+        long_input=long_input,
+    )
+
+
+def _analyze_bound(
+    text: str,
+    *,
+    parse: bool = False,
+    with_confidence: bool = False,
+    long_input: Literal["strict", "partial"] = "strict",
+) -> list[TokenRecord]:
+    """Analyze text under the `GreekPipeline` bound in the current context.
 
     Tokenizes (words **and** punctuation — nothing is dropped), splits into
     sentences on Greek sentence-final punctuation, POS-tags, lemmatizes, and —

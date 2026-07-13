@@ -65,8 +65,9 @@ translate` routes through `translate.translate`.
 
 `grounding_for` returns the deterministic, local evidence, each item tagged with
 its **source** so the result's `trace()` names where it came from. It never
-raises: grounding is best-effort, and a missing backend simply yields fewer
-lines rather than an error.
+raises for a missing analysis backend: grounding is best-effort, and a backend
+failure simply yields fewer lines rather than an analysis traceback. Invalid
+arguments such as an unknown `mode` still raise `ValueError`.
 
 ```python
 from aegean import translate
@@ -87,6 +88,47 @@ rare-word flag, and an idiom gloss for any non-compositional phrase present. For
 Linear A, the grounding is the sign→sound transliteration of each hyphenated word
 (`analysis` of the signs, not a reading of them). Any other `script` yields no
 grounding.
+
+### Which Greek backend supplies the grounding?
+
+`aegean.translate` uses the **module-level default Greek pipeline**. In a fresh Python or
+CLI process that is the zero-dependency baseline. If the same Python process first calls
+`greek.use_neural_pipeline()`, translation grounding instead receives the neural model's
+contextual lemma, morphology, and UD dependency parse. An isolated
+`GreekPipeline.neural()` does not change this default, so merely constructing one does not
+affect translation.
+
+```python
+from aegean import greek, translate
+
+greek.use_neural_pipeline()  # changes the module-level facade used by translation
+result = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
+```
+
+The `aegean ai translate` command currently has no `--neural` switch, so a new CLI process
+uses baseline grounding and prints the baseline-quality warning. Use the Python sequence
+above when neural grounding is required. The lower-level `aegean.ai.translate` function is
+different again: it never builds Greek grounding automatically and only sends evidence
+passed explicitly through its `grounding=` argument.
+
+```mermaid
+flowchart TD
+    T["Source text"] --> G["translate.grounding_for()"]
+    G --> P["greek.pipeline() facade"]
+    P --> Q{"Default backend"}
+    Q -->|"fresh process"| B["Baseline rules and seed lemmas"]
+    Q -->|"use_neural_pipeline() called"| N["Contextual neural morphology and UD parse"]
+    B --> E["Auditable grounding items"]
+    N --> E
+    T --> V{"verify?"}
+    E --> V
+    V -->|"no"| O["One grounded AI call"]
+    V -->|"yes"| D["Raw, ungrounded draft"]
+    D --> C["Second call checks draft against full grounding"]
+    E --> C
+    O --> R["Exploratory result and provenance trace"]
+    C --> R
+```
 
 ### Grounding modes (Greek)
 
@@ -136,9 +178,9 @@ Greek backend is loaded. The bundled baseline seed table strips the regular
 second-declension and thematic-verb endings but misses irregular and
 unrecognized forms, so a grounded translation on those is only partly grounded.
 `translate.translate` raises a warning when only the baseline is active, naming
-the fix: call `greek.use_treebank()`, or `greek.use_neural_pipeline()` for gold
-morphology and a dependency parse, first. See [Greek NLP](Greek-NLP) for the
-backends and their measured accuracy.
+the fix: call `greek.use_treebank()`, or `greek.use_neural_pipeline()` for
+contextual, model-predicted morphology and a dependency parse, first. See
+[Greek NLP](Greek-NLP) for the backends and their measured accuracy.
 
 ---
 

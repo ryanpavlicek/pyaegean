@@ -9,7 +9,7 @@ and where to begin, see the [home page](../index.md).
 
 - [`aegean`](aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
 - [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
-- [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
+- [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), isolated `GreekPipeline` instances with serializable configuration, plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.io`](io.md): import your own text (`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) and export to EpiDoc / CSV / Parquet, plus the Linear A Research Workbench round-trip.
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).

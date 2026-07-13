@@ -36,6 +36,11 @@ Every stage is a plain function so it can be used standalone::
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .runtime import GreekPipeline, GreekPipelineConfig, default_pipeline
+
 from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
 from .accent import AccentInfo, accentuation
 from .accent_law import AccentPlacement, place_accent, persistent_accent, recessive_accent
@@ -214,6 +219,26 @@ from .pos import pos_tag, pos_tags
 from .syllabify import syllabify
 from .tokenize import sentences, tokenize, tokenize_words
 
+
+def __getattr__(name: str) -> Any:
+    """Load the explicit pipeline API only when it is requested.
+
+    The compatibility facade remains dependency-free and import-fast.  Importing
+    the instance API still has normal module semantics, while plain
+    ``import aegean`` does not pay for its configuration machinery.
+    """
+    if name in {"GreekPipeline", "GreekPipelineConfig", "default_pipeline"}:
+        from .runtime import GreekPipeline, GreekPipelineConfig, default_pipeline
+
+        exports = {
+            "GreekPipeline": GreekPipeline,
+            "GreekPipelineConfig": GreekPipelineConfig,
+            "default_pipeline": default_pipeline,
+        }
+        globals().update(exports)
+        return exports[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 __all__ = [
     "normalize",
     "NormalizationWarning",
@@ -222,6 +247,9 @@ __all__ = [
     "unicode_to_betacode",
     "pipeline",
     "TokenRecord",
+    "GreekPipeline",
+    "GreekPipelineConfig",
+    "default_pipeline",
     "citation_scheme",
     "load_work",
     "popular_works",

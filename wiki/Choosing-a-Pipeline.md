@@ -57,6 +57,13 @@ composes with any of the tagging tiers above.
 | Dictionary registry | `greek.use_lsj()`, `greek.use_dodson()`, `greek.use_lexicon(id)` | curated scholarly dictionaries | none heavy (index fetch; Dodson is bundled, no download) | instant after the fetch | glossing, not tagging |
 | Manual review | `aegean review export` / `apply`, or `greek.annotate_corpus(...)` | as good as the reviewer | none (the `[cli]` extra for the export and apply commands) | human-paced | whatever you choose to check |
 
+The `use_*` calls select the convenient module-level default. A server, notebook host, or
+test suite that needs configurations to coexist should construct `GreekPipeline()` for an
+isolated baseline or `GreekPipeline.neural()` for an isolated neural runtime. Its immutable
+`config` records the model, tokenizer, profile, normalization and segmentation policy, and
+live execution providers. `GreekPipeline.from_config(...)` refuses a different live
+configuration rather than silently substituting it.
+
 A few notes that decide most cases:
 
 - **The baseline costs nothing and hides nothing.** It has zero third-party

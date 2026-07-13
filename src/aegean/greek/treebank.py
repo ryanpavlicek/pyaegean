@@ -312,4 +312,8 @@ def disable_treebank() -> None:
 
 def active() -> TreebankLexicon | None:
     """The active lexicon, or ``None`` when the treebank backend is off (default)."""
+    from .runtime import _legacy_backends_allowed
+
+    if not _legacy_backends_allowed():
+        return None
     return _ACTIVE

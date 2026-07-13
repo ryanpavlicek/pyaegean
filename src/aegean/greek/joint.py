@@ -29,7 +29,7 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from ..data import fetch, versions
 from . import _ort
@@ -540,7 +540,12 @@ class _JointModel:
         )
 
 
-_ACTIVE: _JointModel | None = None
+# Private compatibility hook for older internal tests that injected a fake backend by
+# assigning ``joint._ACTIVE``. Production activation no longer writes it: the backend is
+# owned by the default `GreekPipeline` instance. Remove this shim after downstream private
+# users have migrated to explicit instances.
+_UNSET = object()
+_ACTIVE: Any = _UNSET
 
 
 def _require_neural_extra() -> None:
@@ -562,10 +567,30 @@ def _require_neural_extra() -> None:
         ) from e
 
 
+def _load_neural_backend(
+    *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
+) -> _JointModel:
+    """Load and validate one neural backend without changing facade state."""
+    _require_neural_extra()
+    asset = versions()["fetched"][_DATASET]
+    model_dir = fetch(_DATASET, force=force)
+    candidate = _JointModel(
+        model_dir,
+        asset_sha256=asset["sha256"] or None,
+        asset_sha256_enforced=bool(asset["sha256_enforced"]),
+    )
+    if expected_receipt is not None:
+        current = candidate._receipt(input_tokens=0, analyzed_tokens=0, truncated=False)
+        if current is None:  # pragma: no cover - a real _JointModel always has a receipt
+            raise ReceiptMismatchError("loaded neural runtime did not produce an analysis receipt")
+        expected_receipt.assert_same_runtime(current)
+    return candidate
+
+
 def use_neural_pipeline(
     *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
 ) -> None:
-    """Activate the neural pipeline (tags + morphology + trees + lemmas, one model).
+    """Activate the default neural pipeline facade (tags, morphology, trees, lemmas).
 
     Fetches the model bundle to the cache on first use — never bundled in the wheel —
     then loads it via onnxruntime. Requires the ``[neural]`` extra
@@ -581,31 +606,52 @@ def use_neural_pipeline(
     (checked before any download), and `aegean.data.DataNotAvailableError` if the
     download fails (set ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror)."""
     global _ACTIVE
-    _require_neural_extra()
-    asset = versions()["fetched"][_DATASET]
-    model_dir = fetch(_DATASET, force=force)
-    candidate = _JointModel(
-        model_dir,
-        asset_sha256=asset["sha256"] or None,
-        asset_sha256_enforced=bool(asset["sha256_enforced"]),
+    from .runtime import GreekPipeline, _set_default_pipeline
+
+    # A few older private callers assigned ``joint._ACTIVE`` directly.  A real
+    # activation supersedes that compatibility shim so stale test state cannot
+    # mask the newly selected default instance.
+    _ACTIVE = _UNSET
+    _set_default_pipeline(
+        GreekPipeline._from_backend(
+            _load_neural_backend(force=force, expected_receipt=expected_receipt)
+        )
     )
-    if expected_receipt is not None:
-        current = candidate._receipt(input_tokens=0, analyzed_tokens=0, truncated=False)
-        if current is None:  # pragma: no cover - a real _JointModel always has a receipt
-            raise ReceiptMismatchError("loaded neural runtime did not produce an analysis receipt")
-        expected_receipt.assert_same_runtime(current)
-    _ACTIVE = candidate
 
 
 def disable_neural_pipeline() -> None:
     """Deactivate the neural pipeline; every function falls back to its prior cascade."""
     global _ACTIVE
-    _ACTIVE = None
+    from .runtime import GreekPipeline, _set_default_pipeline
+
+    _ACTIVE = _UNSET
+    _set_default_pipeline(GreekPipeline())
 
 
 def active() -> _JointModel | None:
-    """The active joint model, or ``None`` (the default)."""
-    return _ACTIVE
+    """The bound instance's joint model, or the default facade model."""
+    # An explicitly bound ``GreekPipeline`` owns the backend for the duration of
+    # that call.  The legacy ``_ACTIVE`` assignment shim is retained for older
+    # tests and private users, but it must never override an explicit instance.
+    from .runtime import _bound_pipeline, _active_backend, default_pipeline
+
+    bound = _bound_pipeline()
+    if bound is not None and (bound is not default_pipeline() or _ACTIVE is _UNSET):
+        return cast("_JointModel | None", bound._backend)
+    if _ACTIVE is not _UNSET:  # private compatibility injection only
+        return cast("_JointModel | None", _ACTIVE)
+    return _active_backend()
+
+
+def _replace_active_backend(backend: Any | None) -> None:
+    """Replace the default facade backend, preserving the private injection shim."""
+    global _ACTIVE
+    if _ACTIVE is not _UNSET:
+        _ACTIVE = backend
+        return
+    from .runtime import _replace_default_backend
+
+    _replace_default_backend(backend)
 
 
 def analyze_sentence(
@@ -619,7 +665,8 @@ def analyze_sentence(
     ``with_probs=True`` additionally fills the calibrated confidence fields and requires
     a loaded calibration. ``long_input`` is strict by default; partial mode returns
     explicit coverage status and warnings (see `_JointModel.analyze`)."""
-    if _ACTIVE is None:
+    model = active()
+    if model is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
@@ -627,8 +674,8 @@ def analyze_sentence(
     # ``words`` only), so existing callers and test stubs are unaffected; only a
     # confidence request threads the keyword through.
     if with_probs or long_input != "strict":
-        return _ACTIVE.analyze(words, with_probs=with_probs, long_input=long_input)
-    return _ACTIVE.analyze(words)
+        return model.analyze(words, with_probs=with_probs, long_input=long_input)
+    return model.analyze(words)
 
 
 def analyze_sentences(
@@ -648,7 +695,8 @@ def analyze_sentences(
     reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
     behaves as in `analyze_sentence` (calibration required). ``long_input`` applies the
     same strict/partial contract independently to every sentence."""
-    if _ACTIVE is None:
+    model = active()
+    if model is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
@@ -656,9 +704,9 @@ def analyze_sentences(
     if batch_size is None:
         if with_probs or long_input != "strict":
             return [
-                _ACTIVE.analyze(s, with_probs=with_probs, long_input=long_input) for s in sents
+                model.analyze(s, with_probs=with_probs, long_input=long_input) for s in sents
             ]
-        return [_ACTIVE.analyze(s) for s in sents]
+        return [model.analyze(s) for s in sents]
     if batch_size < 1:
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
     out: list[SentenceAnalysis] = []
@@ -668,11 +716,11 @@ def analyze_sentences(
         # ``batch`` only), so existing callers and test spies are unaffected; only a
         # confidence request threads the keyword through.
         out.extend(
-            _ACTIVE.analyze_batch(
+            model.analyze_batch(
                 chunk, with_probs=with_probs, long_input=long_input
             )
             if with_probs or long_input != "strict"
-            else _ACTIVE.analyze_batch(chunk)
+            else model.analyze_batch(chunk)
         )
     return out
 
@@ -699,8 +747,9 @@ def neural_backend_info() -> dict[str, Any]:
     else:
         available = list(ort.get_available_providers())
     active_providers: list[str] | None = None
-    if _ACTIVE is not None:
-        active_providers = list(_ACTIVE._sess.get_providers())
+    model = active()
+    if model is not None:
+        active_providers = list(model._sess.get_providers())
     return {
         "model": _DATASET,
         "available_providers": available,

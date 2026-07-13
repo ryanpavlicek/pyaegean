@@ -29,15 +29,17 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _isolate_state():
-    """Save/restore the neural-model and calibration module globals around each test."""
-    from aegean.greek import calibrate, joint
+    """Save/restore the default runtime, compatibility shim, and calibration."""
+    from aegean.greek import calibrate, joint, runtime
 
     prev_active = joint._ACTIVE
+    prev_pipeline = runtime.default_pipeline()
     prev_cal = calibrate.active()
     joint._ACTIVE = None
     calibrate.disable_calibration()
     yield
     joint._ACTIVE = prev_active
+    runtime._set_default_pipeline(prev_pipeline)
     if prev_cal is None:
         calibrate.disable_calibration()
     else:

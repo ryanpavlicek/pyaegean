@@ -508,6 +508,10 @@ def disable_parser() -> None:
 
 
 def active() -> dict[str, Any] | None:
+    from .runtime import _legacy_backends_allowed
+
+    if not _legacy_backends_allowed():
+        return None
     return _ACTIVE
 
 
@@ -529,7 +533,8 @@ def parse(sentence: str | list[str]) -> DepTree:
                      head=ana.head[i], relation=ana.deprel[i], postag=ana.xpos[i])
             for i, f in enumerate(ana.tokens)
         ))
-    if _ACTIVE is None:
+    model = active()
+    if model is None:
         raise ParserNotLoadedError("parser not loaded — call aegean.greek.use_parser() first")
     from .lemmatize import lemmatize
     from .pos import pos_tag
@@ -538,8 +543,8 @@ def parse(sentence: str | list[str]) -> DepTree:
     form = ["<root>"] + words
     lemma = ["<root>"] + [lemmatize(w) for w in words]
     pos = ["ROOT"] + [pos_tag(w) for w in words]
-    weights = _ACTIVE["weights"]
-    rels = _ACTIVE["relations"]
+    weights = model["weights"]
+    rels = model["relations"]
     head, rel_of = _parse_arrays(form, lemma, pos, len(words), weights, rels)
     return _build_tree(form, lemma, pos, len(words), head, rel_of)
 

@@ -182,6 +182,10 @@ def disable_tagger() -> None:
 
 def active() -> dict[str, Any] | None:
     """The active tagger model, or ``None`` (the default)."""
+    from .runtime import _legacy_backends_allowed
+
+    if not _legacy_backends_allowed():
+        return None
     return _ACTIVE
 
 

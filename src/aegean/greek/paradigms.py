@@ -209,4 +209,8 @@ def disable_paradigms() -> None:
 
 def active() -> ParadigmLexicon | None:
     """The active paradigm lexicon, or ``None`` when the backend is off (default)."""
+    from .runtime import _legacy_backends_allowed
+
+    if not _legacy_backends_allowed():
+        return None
     return _ACTIVE

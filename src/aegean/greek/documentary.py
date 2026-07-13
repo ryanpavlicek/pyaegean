@@ -375,11 +375,11 @@ def _sync() -> None:
     wrapped = isinstance(active, _DocumentaryModel)
     want = _RECONCILE or _RESCUE
     if want and not wrapped:
-        # Install our composition wrapper as the active model. joint._ACTIVE is typed
-        # _JointModel | None; the wrapper is deliberately duck-typed (composed from outside).
-        joint._ACTIVE = _DocumentaryModel(active)  # type: ignore[assignment]
+        # Install the composition wrapper on the default facade. Explicit
+        # GreekPipeline instances remain isolated from module-level toggles.
+        joint._replace_active_backend(_DocumentaryModel(active))
     elif not want and wrapped:
-        joint._ACTIVE = active.inner
+        joint._replace_active_backend(active.inner)
 
 
 def use_documentary_reconciliation(*, aggressive: bool = False) -> None:

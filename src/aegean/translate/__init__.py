@@ -331,9 +331,10 @@ def grounding_for(
     on ``"morphology"`` (already gloss-free) or ``"none"``.
 
     The ``"morphology"`` grounding uses the active backends (``greek.pipeline(text,
-    parse=True)``): with `use_neural_pipeline` active it carries gold morphology and a UD
-    parse; without it, rule-based POS and lemmas still populate the token lines and the
-    clause skeleton is simply omitted. It never raises.
+    parse=True)``): with `use_neural_pipeline` active it carries the neural model's
+    predicted morphology and a UD parse; without it, rule-based POS and lemmas still
+    populate the token lines and the clause skeleton is simply omitted. Backend-analysis
+    failures degrade to fewer or no grounding items; invalid arguments still raise.
     """
     if script == "greek":
         return _greek_grounding(text, mode=mode, glosses=glosses)
@@ -392,16 +393,16 @@ def translate(
 
     Coverage of rare or inflected forms (and the clause skeleton) depends on the active
     backends, so a warning is raised when only the baseline seed table is loaded (call
-    ``aegean.greek.use_treebank()``, or ``use_neural_pipeline()`` for gold morphology and a
-    UD parse, first).
+    ``aegean.greek.use_treebank()``, or ``use_neural_pipeline()`` for contextual,
+    model-predicted morphology and a UD parse, first).
     """
     if script == "greek" and (verify or mode != "none") and not _rich_lemmatizer_active():
         warnings.warn(
             "Grounded Greek translation is using the baseline lemmatizer; morphology and "
             "lexical grounding will miss many rare or inflected forms and the clause "
             "skeleton will be omitted. Call aegean.greek.use_treebank() (or "
-            "aegean.greek.use_neural_pipeline() for gold morphology and a dependency parse) "
-            "first for fuller grounding.",
+            "aegean.greek.use_neural_pipeline() for contextual, model-predicted morphology "
+            "and a dependency parse) first for fuller grounding.",
             stacklevel=2,
         )
     source = _SOURCE_NAMES.get(script, script)
