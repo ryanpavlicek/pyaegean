@@ -45,7 +45,7 @@ class FileLock:
 
             try:
                 os.lseek(fd, 0, os.SEEK_SET)
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                getattr(msvcrt, "locking")(fd, getattr(msvcrt, "LK_NBLCK"), 1)
             except OSError:
                 return False
             return True
@@ -64,7 +64,7 @@ class FileLock:
             import msvcrt
 
             os.lseek(fd, 0, os.SEEK_SET)
-            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+            getattr(msvcrt, "locking")(fd, getattr(msvcrt, "LK_UNLCK"), 1)
             return
         import fcntl
 
