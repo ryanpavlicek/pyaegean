@@ -128,6 +128,17 @@ has the per-release history.
 
 **On the list next:**
 
+- Greek NLP quality program:
+  - Include the neural runtime in `[all]`; make long-input status, provenance, confidence,
+    source alignment, multiword/empty-node preservation, sentence segmentation, pipeline profiles,
+    streaming, interoperability, and reproducibility first-class
+  - Train a separately versioned joint model from corrected, canonicalized supervision, using
+    multi-domain selection, direct universal morphology, aligned structured parsing, improved
+    subword/character representations, ambiguity-aware lemmatization, and evidence-backed domain
+    profiles
+  - Export and calibrate task-complete fast/compact variants, publish locked cross-domain evidence
+    and a reviewer reproduction kit, and preserve the current model throughout any default migration
+  - Evaluate NER only after the core Greek work and a documented community/data review
 - More public-domain dictionaries in the registry (Slater), as their open digitizations are confirmed license-clean
 - conda-forge packaging (recipe submitted, in review)
 - Wider gazetteer / Pleiades coverage
