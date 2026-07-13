@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import tomllib
+from importlib import metadata
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -75,12 +75,14 @@ def _write_schema1_bundle(root: Path) -> None:
 
 
 def test_all_extra_recursively_includes_neural_but_not_parquet() -> None:
-    pyproject = tomllib.loads(
-        (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
-    )
-    all_requires = pyproject["project"]["optional-dependencies"]["all"]
-    assert all_requires == ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp,tui,neural]"]
-    assert "parquet" not in all_requires[0]
+    requirements = metadata.requires("pyaegean") or []
+    all_requires = [req for req in requirements if 'extra == "all"' in req]
+    assert len(all_requires) == 1
+    recursive = all_requires[0].split(";", 1)[0].strip()
+    assert recursive.startswith("pyaegean[") and recursive.endswith("]")
+    extras = set(recursive.removeprefix("pyaegean[").removesuffix("]").split(","))
+    assert extras == {"ai", "epidoc", "geo", "data", "cli", "viz", "mcp", "tui", "neural"}
+    assert "parquet" not in extras
 
 
 def test_v3_legacy_fixture_is_pinned_to_the_exact_published_file_table() -> None:
