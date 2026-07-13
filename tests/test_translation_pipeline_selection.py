@@ -9,6 +9,7 @@ from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
+from click import unstyle
 from typer.testing import CliRunner
 
 from aegean import translate
@@ -280,8 +281,12 @@ def test_cli_translation_backend_and_failure_options(monkeypatch: pytest.MonkeyP
 
     help_result = runner.invoke(app, ["ai", "translate", "--help"])
     assert help_result.exit_code == 0
-    assert "--greek-backend" in help_result.output
-    assert "--grounding-failure" in help_result.output
+    # Rich may inject ANSI spans inside an option or wrap at a hyphen depending on
+    # terminal/Python version. Assert the rendered help after removing those layout
+    # artifacts, not against one terminal's byte sequence.
+    compact_help = "".join(unstyle(help_result.output).split())
+    assert "--greek-backend" in compact_help
+    assert "--grounding-failure" in compact_help
 
     result = runner.invoke(
         app,
