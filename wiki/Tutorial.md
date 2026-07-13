@@ -627,7 +627,7 @@ active and you'll already see `ἄειδε VERB` here):
 
 ```python
 for r in greek.pipeline(line0)[:3]:
-    print(r.text, r.upos, r.lemma, r.lemma_known)
+    print(r.text, r.upos, r.lemma, r.review_recommended)
 # μῆνιν NOUN μῆνις True
 # ἄειδε NOUN ἀείδω True
 # θεὰ NOUN θεά True

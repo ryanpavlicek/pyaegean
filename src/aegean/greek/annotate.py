@@ -10,13 +10,15 @@ the input is not mutated.
 Word tokens are grouped by their line for context (the unit each corpus already provides);
 punctuation and numerals are left untouched. With the neural joint pipeline active, each
 line is analyzed in one pass; otherwise the zero-dependency lemmatize + POS baseline is used.
-``with_evidence`` also records ``lemma_source`` and ``lemma_known`` so the review table's
-"needs review" triage works (see `aegean.greek.LemmaSource`)."""
+``with_evidence`` also records exact ``lemma_source``, ``lemma_resolved``,
+``lemma_verified``, and ``review_recommended`` fields so review triage does not overload
+one boolean. The deprecated ``lemma_known`` compatibility annotation remains during its
+deprecation cycle (see `aegean.greek.LemmaSource`)."""
 
 from __future__ import annotations
 
 from dataclasses import replace
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Literal
 
 from .heldout import TagSentence
 
@@ -31,21 +33,31 @@ def annotate_corpus(
     *,
     tag_sentence: TagSentence | None = None,
     with_evidence: bool = True,
+    long_input: Literal["strict", "partial"] = "strict",
     progress: Callable[[int, int], None] | None = None,
 ) -> "Corpus":
     """Return a copy of ``corpus`` with each word token's ``lemma`` / ``upos`` annotations
-    filled by the pipeline (and, when ``with_evidence``, ``lemma_source`` / ``lemma_known``).
+    filled by the pipeline (plus explicit lemma provenance/review fields when
+    ``with_evidence``).
 
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
     baseline. Existing annotations on a token are preserved except for the keys written here.
+    Neural input is strict by default; pass ``long_input="partial"`` only when explicitly
+    marked placeholder annotations are useful, and inspect ``analysis_complete``.
     ``progress`` is called as ``progress(done, total)`` once per document (a large corpus under
     the neural pipeline is a long run)."""
     from ..core.corpus import Corpus
     from ..core.model import TokenKind
     from . import joint
-    from .lemmatize import LemmaSource, lemmatize_sourced, needs_review
+    from .lemmatize import (
+        LemmaSource,
+        lemma_resolved,
+        lemma_verified,
+        lemmatize_sourced,
+        needs_review,
+    )
     from .pos import pos_tag
 
     use_joint = tag_sentence is None and joint.active() is not None
@@ -53,6 +65,10 @@ def annotate_corpus(
     def _evidence(ann: dict[str, str], source: LemmaSource) -> None:
         if with_evidence:
             ann["lemma_source"] = source.value
+            ann["lemma_resolved"] = "true" if lemma_resolved(source) else "false"
+            ann["lemma_verified"] = "true" if lemma_verified(source) else "false"
+            ann["review_recommended"] = "true" if needs_review(source) else "false"
+            # Compatibility field retained through its deprecation cycle.
             ann["lemma_known"] = "false" if needs_review(source) else "true"
 
     total = len(corpus.documents)
@@ -70,11 +86,13 @@ def annotate_corpus(
                     ann = {**doc.tokens[i].annotations, "lemma": lemma, "upos": upos}
                     new_tokens[i] = replace(doc.tokens[i], annotations=ann)
             elif use_joint:
-                ana = joint.analyze_sentence(forms)
+                ana = joint.analyze_sentence(forms, long_input=long_input)
                 resolved = ana.lemma_resolved or (True,) * len(forms)
                 override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
                 for k, i in enumerate(idxs):
-                    if resolved[k]:
+                    if ana.lemma_source:
+                        src = ana.lemma_source[k]
+                    elif resolved[k]:
                         src = LemmaSource.NEURAL
                     elif override and override[k]:
                         src = LemmaSource(override[k])  # grounded SEED / PARADIGM offline rescue
@@ -82,6 +100,13 @@ def annotate_corpus(
                         src = LemmaSource.IDENTITY
                     ann = {**doc.tokens[i].annotations, "lemma": ana.lemma[k], "upos": ana.upos[k]}
                     _evidence(ann, src)
+                    if with_evidence:
+                        ann["neural_analyzed"] = (
+                            "true" if not ana.analyzed or ana.analyzed[k] else "false"
+                        )
+                        ann["analysis_complete"] = "true" if ana.complete else "false"
+                        if ana.warnings:
+                            ann["analysis_warning"] = ana.warnings[0]
                     new_tokens[i] = replace(doc.tokens[i], annotations=ann)
             else:
                 for i in idxs:

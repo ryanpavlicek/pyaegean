@@ -105,7 +105,7 @@ The core is zero-dependency; everything heavier is an opt-in extra:
 | `pip install "pyaegean[neural]"` | The neural Greek pipeline and lemmatizer (onnxruntime; no torch) |
 | `pip install "pyaegean[ai]"` | Anthropic / OpenAI / Grok / Gemini / OpenRouter clients, plus a local no-key option |
 | `pip install "pyaegean[mcp]"` | The `aegean-mcp` Model Context Protocol server (for agents) |
-| `pip install "pyaegean[all]"` | The data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras |
+| `pip install "pyaegean[all]"` | All supported runtime extras, including neural (except Parquet) |
 
 Large assets (corpora, models, lexica) are never bundled: they fetch to a local cache,
 sha256-pinned, only when you opt in.

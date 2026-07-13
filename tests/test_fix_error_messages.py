@@ -531,13 +531,26 @@ def _onnxcorrupt_extra_or_skip() -> None:
     pytest.importorskip("numpy")
 
 
-def test_onnxcorrupt_joint_model_is_wrapped(tmp_path) -> None:  # type: ignore[no-untyped-def]
+def test_onnxcorrupt_joint_model_is_wrapped(
+    tmp_path, monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
     _onnxcorrupt_extra_or_skip()
+    from types import SimpleNamespace
+
     from aegean.greek import joint
 
     # A non-protobuf blob where the largest bundle file (model.onnx) should be — the
     # realistic truncation/corruption onnxruntime parses into an INVALID_PROTOBUF error.
     (tmp_path / "model.onnx").write_bytes(b"not a real onnx protobuf " * 64)
+    # This test isolates the ONNX wrapper. Bundle-manifest corruption and missing files
+    # are rejected earlier and have their own adversarial tests in test_neural_contract.
+    monkeypatch.setattr(
+        joint.ModelBundleManifest,
+        "load",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            output_heads=("upos", *(f"x{i}" for i in range(9)), "arc", "rel", "lemma")
+        ),
+    )
     with pytest.raises(joint.NeuralPipelineNotLoadedError) as exc:
         joint._JointModel(tmp_path)
     msg = str(exc.value)

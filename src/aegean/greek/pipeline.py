@@ -17,13 +17,24 @@ and dependency fields are filled only when ``parse=True`` (which then requires
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal
 
-from .lemmatize import LemmaSource, lemmatize_sourced, needs_review
+from .lemmatize import (
+    LemmaSource,
+    lemma_resolved,
+    lemma_verified,
+    lemmatize_sourced,
+    needs_review,
+)
 from .tokenize import _SENTENCE_SPLIT_RE
 from .tokenize import tokenize as _tokenize
 
 __all__ = ["TokenRecord", "pipeline"]
+
+if TYPE_CHECKING:
+    from .neural_contract import AnalysisReceipt
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,13 +44,16 @@ class TokenRecord:
     ``head`` refers to the ``index`` of another record **in the same sentence**
     (``0`` = sentence root, ``None`` = no parse). ``xpos``/``feats`` are filled
     only by the neural pipeline. ``lemma_source`` is the lemma's evidence class
-    (see `LemmaSource`, one of ``attested`` / ``neural`` / ``rule`` / ``seed`` /
-    ``paradigm`` / ``identity`` / ``unresolved`` / ``punct``): whether it was
+    (see `LemmaSource`, one of ``attested`` / ``neural_lookup`` / ``neural_edit`` /
+    ``neural`` / ``rule`` / ``seed`` / ``paradigm`` / ``identity`` / ``unresolved`` /
+    ``punct`` / ``user``): whether it was
     attested in a treebank, predicted by the neural model, recovered by a rule,
     from the seed table, from a paradigm-table lookup (the opt-in UniMorph
     inflection tables, ``use_paradigms()``), an identity fall-through, unresolved,
-    or punctuation. ``lemma_known`` is the derived boolean (``False`` for an identity
-    fall-through or an unresolved baseline miss, i.e. a lemma to verify).
+    or punctuation. ``lemma_resolved``, ``lemma_verified``, and
+    ``review_recommended`` keep resolution, human verification, and review triage
+    separate. ``lemma_known`` is a deprecated compatibility alias for
+    ``lemma_resolved``.
 
     ``upos_confidence`` / ``lemma_confidence`` are **calibrated** confidences
     (temperature-scaled on the UD Perseus dev fold; see
@@ -68,16 +82,45 @@ class TokenRecord:
     feats: str | None = None  # UD FEATS string (neural pipeline only)
     upos_confidence: float | None = None  # calibrated; None unless with_confidence + calibration
     lemma_confidence: float | None = None  # calibrated; model-only (see the class docstring)
+    neural_analyzed: bool | None = None  # False only for an explicit partial-mode placeholder
+    analysis_complete: bool = True  # sentence-level neural coverage status
+    analysis_warning: str | None = None
+    analysis_receipt: AnalysisReceipt | None = None
+
+    @property
+    def lemma_resolved(self) -> bool:
+        """Whether the lemma is an actual decision rather than a surface fallback."""
+        return lemma_resolved(self.lemma_source)
+
+    @property
+    def lemma_verified(self) -> bool:
+        """Whether a human reviewer explicitly verified or corrected the lemma."""
+        return lemma_verified(self.lemma_source)
+
+    @property
+    def review_recommended(self) -> bool:
+        """Whether this lemma should be routed to human review."""
+        return needs_review(self.lemma_source)
 
     @property
     def lemma_known(self) -> bool:
-        """True when the lemma is a real analysis, not an identity fall-through or an
-        unresolved baseline miss. Derived from ``lemma_source``; kept as a stable
-        read-API (the record stores the richer ``lemma_source``)."""
-        return not needs_review(self.lemma_source)
+        """Deprecated alias for `lemma_resolved`; use the explicit epistemic fields."""
+        warnings.warn(
+            "TokenRecord.lemma_known is deprecated; use lemma_resolved, lemma_source, "
+            "lemma_verified, and review_recommended",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.lemma_resolved
 
 
-def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -> list[TokenRecord]:
+def pipeline(
+    text: str,
+    *,
+    parse: bool = False,
+    with_confidence: bool = False,
+    long_input: Literal["strict", "partial"] = "strict",
+) -> list[TokenRecord]:
     """Analyze ``text`` end-to-end and return one `TokenRecord` per token.
 
     Tokenizes (words **and** punctuation — nothing is dropped), splits into
@@ -101,7 +144,15 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
     `UncalibratedConfidenceError` (a raw softmax is never exposed); on the offline
     cascade, where there is no model prediction to calibrate, the confidence fields
     simply stay ``None``. ``with_confidence=False`` (the default) leaves both ``None``.
+
+    With the neural backend active, ``long_input="strict"`` (the default) raises
+    `NeuralInputTooLongError` when a sentence exceeds the model bundle's subword limit.
+    ``long_input="partial"`` retains every token but marks placeholders with
+    ``neural_analyzed=False``, sets ``analysis_complete=False`` across that sentence,
+    and includes ``analysis_warning`` and ``analysis_receipt``.
     """
+    if long_input not in ("strict", "partial"):
+        raise ValueError(f"long_input must be 'strict' or 'partial', got {long_input!r}")
     from ..core.model import TokenKind
     from . import joint, syntax
 
@@ -123,12 +174,16 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
     records: list[TokenRecord] = []
     for s_idx, (words, is_word) in enumerate(zip(sents, word_flags)):
         if joint.active() is not None:
-            ana = joint.analyze_sentence(words, with_probs=with_confidence)
+            ana = joint.analyze_sentence(
+                words, with_probs=with_confidence, long_input=long_input
+            )
             resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
             override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
             for i in range(len(ana.tokens)):
                 if not is_word[i]:
                     source = LemmaSource.PUNCT  # a punctuation/number token is its own lemma
+                elif ana.lemma_source:
+                    source = ana.lemma_source[i]
                 elif resolved[i]:
                     source = LemmaSource.NEURAL
                 elif override and override[i]:
@@ -145,7 +200,13 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
                 upos_conf = ana.upos_prob[i] if ana.upos_prob else None
                 lemma_conf = (
                     ana.lemma_script_prob[i]
-                    if ana.lemma_script_prob and source is LemmaSource.NEURAL
+                    if ana.lemma_script_prob
+                    and source
+                    in (
+                        LemmaSource.NEURAL,
+                        LemmaSource.NEURAL_LOOKUP,
+                        LemmaSource.NEURAL_EDIT,
+                    )
                     else None
                 )
                 records.append(
@@ -155,6 +216,10 @@ def pipeline(text: str, *, parse: bool = False, with_confidence: bool = False) -
                         head=ana.head[i], relation=ana.deprel[i],
                         xpos=ana.xpos[i], feats=ana.feats[i],
                         upos_confidence=upos_conf, lemma_confidence=lemma_conf,
+                        neural_analyzed=ana.analyzed[i] if ana.analyzed else True,
+                        analysis_complete=ana.complete,
+                        analysis_warning=ana.warnings[0] if ana.warnings else None,
+                        analysis_receipt=ana.receipt,
                     )
                 )
             continue

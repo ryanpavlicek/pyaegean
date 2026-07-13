@@ -16,6 +16,7 @@ import pytest
 import aegean
 from aegean.core.model import Document, Token, TokenKind
 from aegean.greek import joint
+from aegean.greek import LemmaSource
 from aegean.greek.annotate import annotate_corpus
 from aegean.greek.joint import SentenceAnalysis
 from aegean.io.review import from_review_table, needs_review_flag, to_review_table
@@ -53,6 +54,9 @@ class _StubJoint:
             deprel=("root", "dep"),
             lemma=("λόγος", "χψω"),
             lemma_resolved=(True, False),
+            lemma_source=(LemmaSource.NEURAL_EDIT, LemmaSource.IDENTITY),
+            lemma_verified=(False, False),
+            analyzed=(True, True),
         )
 
 
@@ -65,13 +69,17 @@ def test_annotate_corpus_joint_branch_writes_neural_and_identity_sources(monkeyp
     # token 0: a real analysis (lemma_resolved=True) → NEURAL evidence class
     assert t0.annotations["lemma"] == "λόγος"
     assert t0.annotations["upos"] == "NOUN"
-    assert t0.annotations["lemma_source"] == "neural"
+    assert t0.annotations["lemma_source"] == "neural_edit"
+    assert t0.annotations["lemma_resolved"] == "true"
+    assert t0.annotations["lemma_verified"] == "false"
+    assert t0.annotations["review_recommended"] == "false"
     assert t0.annotations["lemma_known"] == "true"
 
     # token 1: the identity fall-through (lemma_resolved=False) → IDENTITY class
     assert t1.annotations["lemma"] == "χψω"
     assert t1.annotations["upos"] == "X"
     assert t1.annotations["lemma_source"] == "identity"
+    assert t1.annotations["review_recommended"] == "true"
     assert t1.annotations["lemma_known"] == "false"
 
     # the review triage predicate agrees with the evidence classes
@@ -130,23 +138,28 @@ def test_compose_lemma_placeholder_script_is_never_the_literal_underscore():
     model = _StubComposeModel()
     assert apply_tree(model.trees[1], "ἀγορά") == "_"
 
-    lemma, resolved = joint._compose_lemma("ἀγορά", "NOUN", 1, model)
+    lemma, resolved, source = joint._compose_lemma("ἀγορά", "NOUN", 1, model)
     assert lemma == "ἀγορά"  # the surface form, never the "_" placeholder
     assert resolved is False
+    assert source is joint.LemmaSource.IDENTITY
 
 
 def test_compose_lemma_identity_script_on_unknown_form_is_unresolved():
     model = _StubComposeModel()
-    lemma, resolved = joint._compose_lemma("χψω", "X", 0, model)
-    assert (lemma, resolved) == ("χψω", False)  # identity fall-through, honestly flagged
+    lemma, resolved, source = joint._compose_lemma("χψω", "X", 0, model)
+    assert (lemma, resolved, source) == (
+        "χψω", False, joint.LemmaSource.IDENTITY,
+    )  # identity fall-through, honestly flagged
 
 
 def test_compose_lemma_lookup_hit_equal_to_the_form_stays_resolved():
     # the D1 nominative case: a lookup lemma that EQUALS the surface form is a real
     # analysis; resolved must come from the branch, not a string compare
     model = _StubComposeModel(form={"λόγος": "λόγος"})
-    lemma, resolved = joint._compose_lemma("λόγος", "NOUN", 0, model)
-    assert (lemma, resolved) == ("λόγος", True)
+    lemma, resolved, source = joint._compose_lemma("λόγος", "NOUN", 0, model)
+    assert (lemma, resolved, source) == (
+        "λόγος", True, joint.LemmaSource.NEURAL_LOOKUP,
+    )
 
 
 # --- 4. evaluate_by_genre: singleton buckets under bootstrap=True -------------------
@@ -216,6 +229,9 @@ def test_tei_work_annotate_review_correct_apply_journey(tmp_path: Path):
         for t in d.words:
             assert t.annotations["lemma"]  # every word got a lemma annotation
             assert t.annotations["lemma_source"]
+            assert t.annotations["lemma_resolved"] in ("true", "false")
+            assert t.annotations["lemma_verified"] == "false"
+            assert t.annotations["review_recommended"] in ("true", "false")
 
     # export: one row per word token, positions are digit strings
     table = tmp_path / "review.csv"
@@ -243,10 +259,24 @@ def test_tei_work_annotate_review_correct_apply_journey(tmp_path: Path):
     assert tok.text == "μῆνιν"
     assert tok.annotations["lemma"] == "δοκιμή"
     assert tok.annotations["lemma__pred"] == machine_lemma
+    assert tok.annotations["lemma_source"] == "user"
+    assert tok.annotations["lemma_source__pred"]
+    assert tok.annotations["lemma_resolved"] == "true"
+    assert tok.annotations["lemma_verified"] == "true"
+    assert tok.annotations["review_recommended"] == "false"
     assert tok.annotations["review_status"] == "corrected"
     assert tok.annotations["reviewed_by"] == "tester"
     # the pre-apply corpus is untouched
     assert annotated.documents[0].tokens[0].annotations.get("review_status") is None
+
+    # The explicit epistemic fields survive the corpus's persistent JSON format.
+    saved = tmp_path / "corrected.json"
+    corrected.to_json(saved)
+    reloaded = aegean.Corpus.from_json(saved)
+    persisted = reloaded.documents[0].tokens[0].annotations
+    assert persisted["lemma_source"] == "user"
+    assert persisted["lemma_verified"] == "true"
+    assert persisted["lemma_source__pred"] == tok.annotations["lemma_source__pred"]
 
     # token-level DataFrame carries the annotations as columns
     pytest.importorskip("pandas")

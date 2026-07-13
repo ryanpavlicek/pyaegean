@@ -176,7 +176,7 @@ class GreekWorkbenchScreen(Screen[None]):
         # calibration active), the same condition as the CLI's 'conf' column.
         lines = [
             f"{r['sentence']}:{r['index']:<3}  {r['text']}  {r['upos']}  {r['lemma']}"
-            + ("" if r.get("lemma_known", True) else f"  [{r.get('lemma_source', '?')}]")
+            + (f"  [{r.get('lemma_source', '?')}]" if r.get("review_recommended", False) else "")
             + (
                 f"  {format_confidence(r['upos_confidence'], r['lemma_confidence'])}"
                 if "upos_confidence" in r

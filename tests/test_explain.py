@@ -68,7 +68,7 @@ def test_explanations_mirror_pipeline_records_exactly():
     for r, e in zip(recs, exps):
         assert (e.token, e.upos, e.lemma) == (r.text, r.upos, r.lemma)
         assert e.lemma_source is r.lemma_source
-        assert e.needs_review is (not r.lemma_known)
+        assert e.needs_review is r.review_recommended
         assert e.morphology == r.feats
         assert e.note
 
@@ -136,10 +136,10 @@ def test_neural_records_reflected_with_joint_note(monkeypatch):
     assert [e.lemma for e in exps] == ["ὁ", "λόγος", "εἰμί"]
     assert [e.upos for e in exps] == ["DET", "NOUN", "VERB"]
     assert [e.lemma_source for e in exps] == [
-        LemmaSource.NEURAL, LemmaSource.IDENTITY, LemmaSource.NEURAL,
+        LemmaSource.NEURAL_LOOKUP, LemmaSource.IDENTITY, LemmaSource.NEURAL_LOOKUP,
     ]
     assert [e.needs_review for e in exps] == [False, True, False]
-    assert "joint neural pipeline" in exps[0].note  # says the neural stack produced it
+    assert "joint model's training-form lookup" in exps[0].note
     assert all(e.morphology == "_" for e in exps)  # FEATS reflected from the records
 
 

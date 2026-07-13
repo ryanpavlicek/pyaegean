@@ -76,7 +76,7 @@ def _wide_console(monkeypatch):  # type: ignore[no-untyped-def]
 # ── _view: the shared row mapping ────────────────────────────────────────────
 def test_view_rows_have_no_confidence_keys_by_default() -> None:
     # The offline cascade produces no confidence, so the rows are byte-identical to
-    # a build without the feature: exactly the historical 11 keys, no confidence.
+    # the epistemic and analysis-status keys remain independent of confidence.
     from aegean._view import pipeline_rows
 
     rows = pipeline_rows("ἦν ὁ λόγος.")
@@ -85,7 +85,9 @@ def test_view_rows_have_no_confidence_keys_by_default() -> None:
         assert "upos_confidence" not in r and "lemma_confidence" not in r
     assert set(rows[0]) == {
         "sentence", "index", "text", "upos", "lemma", "lemma_source",
-        "lemma_known", "head", "relation", "xpos", "feats",
+        "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
+        "head", "relation", "xpos", "feats", "neural_analyzed",
+        "analysis_complete", "analysis_warning", "analysis_receipt",
     }
 
 

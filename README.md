@@ -112,7 +112,7 @@ pip install "pyaegean[tui]"       # + the `aegean tui` full-screen terminal UI (
 pip install "pyaegean[neural]"    # + the neural Greek pipeline & lemmatizer (onnxruntime; no torch)
 pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local option)
 pip install "pyaegean[mcp]"       # + the `aegean-mcp` Model Context Protocol server (for agents)
-pip install "pyaegean[all]"       # the data, AI, EpiDoc, geo, viz, CLI, TUI, and MCP extras
+pip install "pyaegean[all]"       # all supported runtime extras, including neural (except Parquet)
 ```
 
 ## Try it
@@ -223,9 +223,8 @@ demo.
 On the list next:
 
 - Greek NLP quality program:
-  - Include the neural runtime in `[all]`; make long-input status, provenance, confidence,
-    source alignment, multiword/empty-node preservation, sentence segmentation, pipeline profiles,
-    streaming, interoperability, and reproducibility first-class
+  - Make confidence, source alignment, multiword/empty-node preservation, sentence segmentation,
+    pipeline profiles, streaming, interoperability, and training reproducibility first-class
   - Train a separately versioned joint model from corrected, canonicalized supervision, using
     multi-domain selection, direct universal morphology, aligned structured parsing, improved
     subword/character representations, ambiguity-aware lemmatization, and evidence-backed domain

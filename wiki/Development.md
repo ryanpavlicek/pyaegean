@@ -33,6 +33,11 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
+For full-stack work, including the neural Greek pipeline, install the aggregate
+extra as well: `pip install -e ".[dev,all]"`. The `[all]` extra includes
+`[neural]`; parquet remains a separate opt-in because its compiled dependency
+is substantially larger.
+
 Confirm it imported:
 
 ```bash

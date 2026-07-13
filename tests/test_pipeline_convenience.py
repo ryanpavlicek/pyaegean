@@ -17,23 +17,25 @@ def test_pipeline_baseline_records():
     assert (first.text, first.upos, first.lemma) == ("ἐν", "ADP", "ἐν")
     assert first.index == 1 and first.head is None and first.relation is None
     assert first.xpos is None and first.feats is None  # neural-only fields
-    assert first.lemma_source is LemmaSource.SEED and first.lemma_known  # ἐν is closed-class
+    assert first.lemma_source is LemmaSource.SEED and first.lemma_resolved
+    assert first.lemma_verified is False and first.review_recommended is False
 
 
 def test_pipeline_records_carry_the_lemma_source_class():
     # νόμου is recovered by the rule layer; πατρός is outside the baseline's scope.
     by_text = {r.text: r for r in greek.pipeline("νόμου πατρός.")}
     assert by_text["νόμου"].lemma_source is LemmaSource.RULE
-    assert by_text["νόμου"].lemma == "νόμος" and by_text["νόμου"].lemma_known
+    assert by_text["νόμου"].lemma == "νόμος" and by_text["νόμου"].lemma_resolved
     assert by_text["πατρός"].lemma_source is LemmaSource.UNRESOLVED
-    assert by_text["πατρός"].lemma_known is False  # an unresolved miss is flagged for review
+    assert by_text["πατρός"].lemma_resolved is False
+    assert by_text["πατρός"].review_recommended is True
     assert by_text["."].lemma_source is LemmaSource.PUNCT
 
 
 def test_pipeline_keeps_punctuation_as_records():
     recs = greek.pipeline("ἦν ὁ λόγος.")
     assert recs[-1].text == "." and recs[-1].upos == "PUNCT"
-    assert recs[-1].lemma == "." and recs[-1].lemma_known  # punct is its own lemma
+    assert recs[-1].lemma == "." and recs[-1].lemma_resolved  # punct is its own lemma
     assert recs[-1].lemma_source is LemmaSource.PUNCT
 
 
@@ -68,7 +70,13 @@ def test_pipeline_uses_the_joint_model_when_active(monkeypatch):
     # ὁ and ἐστί resolve via the model's lookups (NEURAL, known); λόγος comes out of the
     # edit script equal to its surface form with no lookup confirming it, so it is the
     # honest IDENTITY fall-through (needs review), not a grounded neural lemma
-    assert [r.lemma_known for r in recs] == [True, False, True]
+    assert [r.lemma_resolved for r in recs] == [True, False, True]
     assert [r.lemma_source for r in recs] == [
-        LemmaSource.NEURAL, LemmaSource.IDENTITY, LemmaSource.NEURAL,
+        LemmaSource.NEURAL_LOOKUP, LemmaSource.IDENTITY, LemmaSource.NEURAL_LOOKUP,
     ]
+
+
+def test_lemma_known_is_a_deprecated_compatibility_alias():
+    rec = greek.pipeline("πατρός")[0]
+    with pytest.deprecated_call(match="lemma_resolved"):
+        assert rec.lemma_known is rec.lemma_resolved

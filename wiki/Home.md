@@ -129,9 +129,8 @@ has the per-release history.
 **On the list next:**
 
 - Greek NLP quality program:
-  - Include the neural runtime in `[all]`; make long-input status, provenance, confidence,
-    source alignment, multiword/empty-node preservation, sentence segmentation, pipeline profiles,
-    streaming, interoperability, and reproducibility first-class
+  - Make confidence, source alignment, multiword/empty-node preservation, sentence segmentation,
+    pipeline profiles, streaming, interoperability, and training reproducibility first-class
   - Train a separately versioned joint model from corrected, canonicalized supervision, using
     multi-domain selection, direct universal morphology, aligned structured parsing, improved
     subword/character representations, ambiguity-aware lemmatization, and evidence-backed domain

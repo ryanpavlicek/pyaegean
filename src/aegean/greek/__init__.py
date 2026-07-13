@@ -50,6 +50,8 @@ from .inflect import (
 )
 from .lemmatize import (
     LemmaSource,
+    lemma_resolved,
+    lemma_verified,
     lemmatize,
     lemmatize_sourced,
     lemmatize_verbose,
@@ -93,7 +95,12 @@ from .neural_lemmatizer import (
     use_neural_lemmatizer,
 )
 from .joint import (
+    AnalysisReceipt,
+    ModelBundleError,
+    ModelBundleManifest,
+    NeuralInputTooLongError,
     NeuralPipelineNotLoadedError,
+    ReceiptMismatchError,
     SentenceAnalysis,
     analyze_sentence,
     analyze_sentences,
@@ -265,6 +272,8 @@ __all__ = [
     "lemmatize_verbose",
     "lemmatize_sourced",
     "LemmaSource",
+    "lemma_resolved",
+    "lemma_verified",
     "needs_review",
     "analyze",
     "lemmas",
@@ -376,6 +385,11 @@ __all__ = [
     "analyze_sentences",
     "neural_backend_info",
     "SentenceAnalysis",
+    "AnalysisReceipt",
+    "ModelBundleManifest",
+    "ModelBundleError",
+    "NeuralInputTooLongError",
+    "ReceiptMismatchError",
     "NeuralPipelineNotLoadedError",
     "agdt_ud_overlap",
     "load_proiel_gold",

@@ -113,11 +113,12 @@ def test_analyze_default_is_byte_identical_and_probs_empty():
     assert default.upos_prob == () and default.lemma_script_prob == ()
     # with_probs=False is exactly the default path
     assert m.analyze(words, with_probs=False) == default
-    # and the eight historical fields are untouched by the feature's presence
-    assert default == joint.SentenceAnalysis(
-        tokens=default.tokens, upos=default.upos, xpos=default.xpos, feats=default.feats,
-        head=default.head, deprel=default.deprel, lemma=default.lemma,
-        lemma_resolved=default.lemma_resolved,
+    # and confidence does not alter predictions or epistemic/coverage metadata
+    assert default.complete is True and default.truncated is False
+    assert default.analyzed == (True, True)
+    assert default.lemma_source == (
+        LemmaSource.NEURAL_EDIT,
+        LemmaSource.NEURAL_EDIT,
     )
 
 
@@ -170,7 +171,7 @@ def test_undecoded_token_carries_none_confidence():
     # word 1 is not in `kept` (a truncation fallback): no logits -> None confidence
     m = _controllable_stub([[2.0, 0, 0, 0], [0, 1.0, 0, 0]], [[1.0, 0.5], [0.3, 0.9]], kept=[0])
     calibrate.use_calibration(_synthetic_calibration())
-    ana = m.analyze(["a", "b"], with_probs=True)
+    ana = m.analyze(["a", "b"], with_probs=True, long_input="partial")
     assert ana.upos_prob[0] is not None and ana.lemma_script_prob[0] is not None
     assert ana.upos_prob[1] is None and ana.lemma_script_prob[1] is None
     assert ana.upos[1] == "X"  # the honest truncation fallback
@@ -207,7 +208,7 @@ def test_pipeline_confidence_fields_default_none_and_populate_on_request():
     assert all(r.upos_confidence is not None for r in recs)
     # lemma confidence is model-only: NEURAL yes, the IDENTITY fall-through (λόγος) None
     by_text = {r.text: r for r in recs}
-    assert by_text["ὁ"].lemma_source is LemmaSource.NEURAL
+    assert by_text["ὁ"].lemma_source is LemmaSource.NEURAL_LOOKUP
     assert by_text["ὁ"].lemma_confidence is not None
     assert by_text["ἐστί"].lemma_confidence is not None
     assert by_text["λόγος"].lemma_source is LemmaSource.IDENTITY
@@ -263,4 +264,4 @@ def test_explain_with_confidence_appends_the_calibrated_phrase():
     assert "UPOS " in by_token["λόγος"].note and "lemma " not in by_token["λόγος"].note
     # the evidence class / review flags are unchanged by adding confidence
     assert by_token["λόγος"].needs_review is True
-    assert by_token["ὁ"].lemma_source is LemmaSource.NEURAL
+    assert by_token["ὁ"].lemma_source is LemmaSource.NEURAL_LOOKUP

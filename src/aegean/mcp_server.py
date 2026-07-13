@@ -412,8 +412,9 @@ def greek_pipeline(text: str) -> list[dict[str, Any]]:
     """Run the (baseline, offline) Greek NLP pipeline: one row per token.
 
     Each row carries ``text``, ``upos``, ``lemma``, ``lemma_source`` (the lemma's
-    evidence class: attested / neural / rule / seed / paradigm / identity / unresolved / punct),
-    ``lemma_known`` (``False`` marks a lemma to verify), sentence/index position, and
+    evidence class: attested / neural_lookup / neural_edit / neural / rule / seed / paradigm /
+    identity / unresolved / punct / user), ``lemma_resolved``, ``lemma_verified``, and
+    ``review_recommended`` (plus the deprecated ``lemma_known`` alias), sentence/index position, and
     the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``; ``None`` under
     the baseline). The rows are the shared
     :func:`aegean._view.pipeline_rows` mapping, so this tool, the ``aegean greek pipeline``
@@ -427,8 +428,9 @@ def greek_explain(text: str) -> list[dict[str, Any]]:
     """Explain what the (baseline, offline) Greek pipeline did to each token.
 
     One row per token, in pipeline order, carrying ``token``, ``upos``, ``lemma``,
-    ``lemma_source`` (the lemma's evidence class: attested / neural / rule / seed /
-    paradigm / identity / unresolved / punct), ``needs_review`` (``True`` marks a lemma
+    ``lemma_source`` (the lemma's evidence class: attested / neural_lookup / neural_edit /
+    neural / rule / seed / paradigm / identity / unresolved / punct / user),
+    ``needs_review`` (``True`` marks a lemma
     a human should verify: an ``identity`` fall-through or an ``unresolved`` miss),
     ``morphology`` (the UD FEATS string when a neural backend filled one, else ``None``),
     and ``note`` (a one-line, plain-language account of what that evidence class means).

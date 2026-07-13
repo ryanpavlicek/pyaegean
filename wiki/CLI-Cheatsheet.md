@@ -338,7 +338,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
-| `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
+| `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
@@ -421,7 +421,7 @@ aegean greek morph λόγον
 # λόγος [NOUN acc sg masc]   λόγος [NOUN acc sg fem]   λόγος [NOUN nom sg neut]   …
 
 aegean greek pipeline "ἐν ἀρχῇ" --json
-# [{"sentence":0,"index":1,"text":"ἐν","upos":"ADP","lemma":"ἐν","lemma_source":"seed","lemma_known":true,…}, …]
+# [{"sentence":0,"index":1,"text":"ἐν","upos":"ADP","lemma":"ἐν","lemma_source":"seed","lemma_resolved":true,"lemma_verified":false,"review_recommended":false,…}, …]
 ```
 
 A lemma the lexicon doesn't know is still returned, marked `(fallback)` (and

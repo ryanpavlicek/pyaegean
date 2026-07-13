@@ -105,12 +105,18 @@ Each `TokenRecord` is a dataclass with these fields:
 | `text` | the surface token (punctuation included) |
 | `upos` | UD coarse part of speech |
 | `lemma` | the lemma |
-| `lemma_source` | the lemma's evidence class: `attested` (treebank), `neural`, `rule`, `seed`, `paradigm` (opt-in UniMorph inflection tables, `use_paradigms()`), `identity` (model returned the surface unchanged), `unresolved` (baseline miss), or `punct` |
-| `lemma_known` | derived: `False` for an `identity` fall-through or an `unresolved` miss (a lemma to verify), `True` otherwise |
+| `lemma_source` | exact lemma provenance: `attested`, `neural_lookup`, `neural_edit`, generic `neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or human-corrected `user` |
+| `lemma_resolved` | whether a real lemma decision exists, rather than a surface fallback |
+| `lemma_verified` | whether a human reviewer explicitly verified or corrected it |
+| `review_recommended` | whether the lemma should be routed to review |
+| `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `head` | head token index (only when parsed) |
 | `relation` | dependency relation (only when parsed) |
 | `xpos` | language-specific tag (neural pipeline only) |
 | `feats` | UD FEATS string (neural pipeline only) |
+| `neural_analyzed` | per-token neural coverage (`False` only for a partial-mode placeholder; `None` offline) |
+| `analysis_complete`, `analysis_warning` | sentence-level neural coverage and any partial-mode warning |
+| `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
 
 For a field-by-field guide to interpreting a record, including what each `lemma_source`
 class means for how far to trust a lemma, see [Reading a Parse](Reading-a-Parse).
@@ -135,6 +141,7 @@ from training).
 
 ```bash
 pip install "pyaegean[neural]"     # onnxruntime + tokenizers + numpy; no torch
+# or pyaegean[all], which includes the neural runtime (model fetch stays lazy)
 ```
 
 ```python
@@ -146,6 +153,45 @@ list(zip(ana.tokens, ana.upos, ana.deprel, ana.lemma))
 #  ('ὁ','DET','det','ὁ'), ('λόγος','NOUN','nsubj','λόγος')]
 ana.feats[1]                       # 'Case=Dat|Gender=Fem|Number=Sing'
 ```
+
+Neural input is strict by default. If a pretokenized sentence cannot fit the model
+bundle's subword limit, `analyze_sentence` raises `NeuralInputTooLongError` instead of
+returning plausible-looking placeholders. Split the sentence when its real boundary is
+known. For inspection workflows that must retain every input token, opt into partial mode
+and check the explicit coverage fields:
+
+```python
+ana = greek.analyze_sentence(words, long_input="partial")
+ana.complete, ana.truncated             # (False, True) when the limit was reached
+ana.analyzed                             # one bool per token
+ana.warnings                             # explains that uncovered values are placeholders
+
+records = greek.pipeline(text, long_input="partial")
+records[-1].neural_analyzed              # False for an uncovered token
+records[-1].analysis_complete            # sentence-level status
+```
+
+The maximum comes from the validated bundle contract, not a runtime constant. Activation
+checks the manifest, every listed file's byte length and SHA-256, tokenizer revision and
+special-token policy, label maps, lemma tables, output heads, and schema compatibility
+before installing the model as active. The immutable v3 archive predates the versioned
+schema, so it is accepted only through an exact published-file compatibility record; any
+different unversioned bundle must use a new model ID and schema.
+
+Every production `SentenceAnalysis` also carries `receipt`, a canonical, serializable
+`AnalysisReceipt`. It records the exact model ID, asset and manifest SHA-256 values, bundle
+schema, tokenizer revision, package/Python/neural-library versions, live execution
+providers, annotation profile, normalization and segmentation policies, limit, and
+truncation/window status. `receipt.to_json()` is stable and `receipt.sha256` content-addresses
+it. Passing a prior receipt as `use_neural_pipeline(expected_receipt=receipt)` refuses a
+runtime or artifact mismatch rather than silently approximating the old analysis.
+
+Lemma provenance is similarly explicit. Joint-model lookups use
+`LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts use `NEURAL_EDIT`, and a surface
+fallback uses `IDENTITY`. `TokenRecord.lemma_resolved` says whether a real lemma decision
+exists, `lemma_verified` is true only for an imported human correction, and
+`review_recommended` drives triage. The older `lemma_known` property remains for one
+deprecation cycle as an alias of `lemma_resolved`.
 
 Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, and
 `parse`: which then returns **UD relations** (`nsubj`, `obj`, `advcl`, …) with the

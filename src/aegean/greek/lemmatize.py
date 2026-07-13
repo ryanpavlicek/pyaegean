@@ -61,10 +61,13 @@ class LemmaSource(str, Enum):
 
     A ``str`` Enum (not ``StrEnum``: the floor is Python 3.10), so members are plain
     strings under ``json.dumps`` and comparisons; emit ``.value`` where a bare string
-    is wanted. Ordered from most to least trustworthy:
+    is wanted. Resolution and verification are separate, so this is not a confidence order:
 
     - ``ATTESTED``   — a treebank-lexicon hit (an attested, correctly accented lemma).
-    - ``NEURAL``     — a real prediction from the joint pipeline / seq2seq / edit-tree model.
+    - ``NEURAL_LOOKUP`` — the joint model selected a training-form lookup lemma.
+    - ``NEURAL_EDIT`` — the joint model produced a non-identity edit-script lemma.
+    - ``NEURAL``     — a neural backend produced a lemma but does not expose its internal
+      decision path (the older seq2seq and edit-tree backends).
     - ``RULE``       — the ending-stripping rule layer recovered a regular citation form.
     - ``SEED``       — the bundled seed table / a closed-class function word.
     - ``PARADIGM``   — a hit in the opt-in UniMorph paradigm table (`use_paradigms`): a
@@ -74,11 +77,14 @@ class LemmaSource(str, Enum):
       (no real analysis), so the "lemma" is just the input.
     - ``UNRESOLVED`` — the baseline cascade was exhausted; the normalized form is returned.
     - ``PUNCT``      — a non-word token (punctuation / numeral): trivially its own lemma.
+    - ``USER``       — a human correction imported through the review workflow.
 
     ``IDENTITY`` and ``UNRESOLVED`` are the classes a human should verify (see
     `needs_review`); the rest are grounded analyses."""
 
     ATTESTED = "attested"
+    NEURAL_LOOKUP = "neural_lookup"
+    NEURAL_EDIT = "neural_edit"
     NEURAL = "neural"
     RULE = "rule"
     SEED = "seed"
@@ -86,6 +92,7 @@ class LemmaSource(str, Enum):
     IDENTITY = "identity"
     UNRESOLVED = "unresolved"
     PUNCT = "punct"
+    USER = "user"
 
 
 def needs_review(source: LemmaSource) -> bool:
@@ -93,6 +100,16 @@ def needs_review(source: LemmaSource) -> bool:
     fall-through or an ``UNRESOLVED`` baseline miss. ``ATTESTED``/``NEURAL``/``RULE``/
     ``SEED``/``PARADIGM``/``PUNCT`` are grounded and do not need review."""
     return source in (LemmaSource.IDENTITY, LemmaSource.UNRESOLVED)
+
+
+def lemma_resolved(source: LemmaSource) -> bool:
+    """Whether ``source`` represents an actual lemma decision rather than a fallback."""
+    return source not in (LemmaSource.IDENTITY, LemmaSource.UNRESOLVED)
+
+
+def lemma_verified(source: LemmaSource) -> bool:
+    """Whether a human reviewer explicitly verified or corrected the lemma."""
+    return source is LemmaSource.USER
 
 _ACUTE = "́"
 _GRAVE = "̀"
@@ -662,6 +679,8 @@ def lemmatize_sourced(word: str) -> tuple[str, LemmaSource]:
 
     if joint.active() is not None:  # the neural pipeline: contextual scripts + big lookup
         ana = joint.analyze_sentence([word])
+        if ana.lemma_source:
+            return ana.lemma[0], ana.lemma_source[0]
         resolved = ana.lemma_resolved[0] if ana.lemma_resolved else ana.lemma[0] != word
         if resolved:
             return ana.lemma[0], LemmaSource.NEURAL

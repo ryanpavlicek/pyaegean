@@ -6,7 +6,9 @@ annotations to a plain CSV a scholar can open in a spreadsheet, correct, and han
 its evidence class and a "needs review" flag, and blank columns for the reviewer's
 corrections and notes); `from_review_table` reads the corrections back onto the corpus,
 keeping the machine's value under a ``<field>__pred`` key and stamping who reviewed it and a
-provenance note. The join key is ``doc_id`` + ``position``.
+provenance note. A lemma correction also becomes ``lemma_source=user`` and
+``lemma_verified=true`` while preserving the predicted source. The join key is
+``doc_id`` + ``position``.
 
 Several reviewers can correct their own copy of the SAME export and have the corrections
 combined: `merge_review_tables` merges the copies, applying every correction the reviewers
@@ -71,10 +73,13 @@ def _low_confidence() -> frozenset[str]:
 def needs_review_flag(annotations: dict[str, str], *, source_key: str = "lemma_source") -> bool:
     """Whether a token's annotation should be verified by a human.
 
-    True when its evidence class (``annotations[source_key]``, e.g. from
-    `aegean.greek.annotate.annotate_corpus`) is a low-confidence class (``identity`` /
-    ``unresolved``); failing that, when ``lemma_known`` is the string ``"false"``. A token
-    that carries neither signal (for example a gold-annotated corpus) is **not** flagged."""
+    Prefer the explicit ``review_recommended`` annotation. For older corpora, infer it
+    from a low-confidence evidence class (``identity`` / ``unresolved``), then from the
+    legacy ``lemma_known=false`` signal. A token that carries none of these (for example
+    a gold-annotated corpus) is **not** flagged."""
+    explicit = annotations.get("review_recommended")
+    if explicit is not None and explicit.lower() in ("true", "false"):
+        return explicit.lower() == "true"
     src = annotations.get(source_key)
     if src is not None:
         return src in _low_confidence()
@@ -276,6 +281,18 @@ def _apply_corrections(
                     edits[f"{akey}__pred"] = machine
             if not edits:
                 continue
+            if "lemma" in edits:
+                # A corrected lemma is human-verified evidence, not the machine source
+                # that produced the exported prediction. Preserve the old source beside
+                # the old value so provenance remains complete.
+                prior_source = tok.annotations.get("lemma_source") or _cell(crow, "evidence_class")
+                if prior_source:
+                    edits["lemma_source__pred"] = prior_source
+                edits["lemma_source"] = "user"
+                edits["lemma_resolved"] = "true"
+                edits["lemma_verified"] = "true"
+                edits["review_recommended"] = "false"
+                edits["lemma_known"] = "true"  # compatibility field during deprecation
             edits["review_status"] = "corrected"
             who = _cell(crow, "reviewer") or default_reviewer
             if who:

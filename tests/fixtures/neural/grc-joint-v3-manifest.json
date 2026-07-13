@@ -1,0 +1,29 @@
+{
+  "name": "grc-joint",
+  "variant": "int8-weight+fp16",
+  "model_name": "bowphs/GreBerta",
+  "quantization": "weight-only int8 (MatMulNBits, block 128, symmetric) + fp16 elsewhere",
+  "license": "CC BY-SA 4.0 — derived from AGDT (CC BY-SA 3.0), Gorman (CC BY-SA 4.0), Pedalion (CC BY-SA 4.0)",
+  "files": {
+    "labels.json": {
+      "bytes": 1317,
+      "sha256": "cd8c6bbca07b4330327c8cd366edeea4e46ce60c8490635a5863f77d2ac96712"
+    },
+    "lemma-lookup.json": {
+      "bytes": 17583957,
+      "sha256": "ba9638ece954a19aa8b7c8971c45c5ad65227830b1ccad1645b48c8c5b5391a7"
+    },
+    "lemma-scripts.json": {
+      "bytes": 1338849,
+      "sha256": "3bd2479fbbab5721f67bf58175ac48431d8305ff3e74be5f744ddd560db91f0d"
+    },
+    "model.onnx": {
+      "bytes": 182121265,
+      "sha256": "e3a191e778780c1bebfb9c924601dddd965922322f1e71022d4314614c5ef510"
+    },
+    "tokenizer.json": {
+      "bytes": 5415240,
+      "sha256": "6fdc5abfedb05942a3a59c327e96647f591ebda254eb0ec64d0dfd743cd330b9"
+    }
+  }
+}

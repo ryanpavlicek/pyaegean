@@ -14,8 +14,9 @@ zero-dependency offline cascade by default, or the joint neural pipeline when
 ``use_neural_pipeline()`` has been called (the notes say so, and morphology is
 filled from its FEATS output).
 
-The source classes are the honesty surface: ``attested`` / ``neural`` /
-``rule`` / ``seed`` / ``paradigm`` are grounded analyses, ``identity`` /
+The source classes are the honesty surface: ``attested`` / ``neural_lookup`` /
+``neural_edit`` / ``neural`` / ``rule`` / ``seed`` / ``paradigm`` / ``user`` are
+resolved analyses (``user`` alone means human-verified), while ``identity`` /
 ``unresolved`` are fall-throughs a human should verify. By default there are NO confidence numbers
 in this output: the evidence CLASS is the whole claim (source-class only). The
 one exception is opt-in: ``explain_pipeline(text, with_confidence=True)`` with
@@ -39,6 +40,8 @@ __all__ = ["TokenExplanation", "explain_pipeline", "render_explanations"]
 # wording picked at run time so the note can say which stack produced them.
 _NOTES: dict[LemmaSource, str] = {
     LemmaSource.ATTESTED: "lemma attested in the treebank lexicon",
+    LemmaSource.NEURAL_LOOKUP: "selected from the joint model's training-form lookup",
+    LemmaSource.NEURAL_EDIT: "produced by the joint model's contextual edit-script head",
     LemmaSource.RULE: "derived by a conservative inflection rule (ending substitution)",
     LemmaSource.SEED: "from the bundled seed table (closed-class or high-frequency form)",
     LemmaSource.PARADIGM: (
@@ -49,6 +52,7 @@ _NOTES: dict[LemmaSource, str] = {
         "no analysis found; the normalized surface form is shown and flagged for review"
     ),
     LemmaSource.PUNCT: "punctuation or numeral; trivially its own lemma",
+    LemmaSource.USER: "verified or corrected by a human reviewer",
 }
 _NEURAL_JOINT = "predicted by the joint neural pipeline (one contextual model pass)"
 _NEURAL_BACKEND = "predicted by an active trained lemmatizer backend"

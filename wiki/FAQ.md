@@ -121,7 +121,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `ai` | the AI Layer with all three provider SDKs (anthropic, openai, google-genai) |
 | `dev` | the test/lint/type toolchain (contributors) |
 | `docs` | the documentation toolchain (contributors) |
-| `all` | everything except `neural` and `parquet` (`dev`/`docs` are the contributor toolchains) |
+| `all` | every runtime extra, including `neural`, except `parquet` (`dev`/`docs` are contributor toolchains) |
 
 See [Installation](Installation) for the full breakdown. `aegean doctor` reports
 which of the runtime extras are importable in your environment, with the install

@@ -61,12 +61,13 @@ as far as your goal needs and no further:
 | --- | --- | --- |
 | Just the lemma | `greek.lemmatize(word)` | the citation form as a string |
 | The lemma and how it was reached | `greek.lemmatize_sourced(word)` | `(lemma, LemmaSource)`; `greek.needs_review(source)` gives a triage flag, and `greek.lemmatize_verbose` a plain `(lemma, known)` bool |
-| A full per-token analysis | `greek.pipeline(text)` | one `TokenRecord` per token carrying `lemma_source`, `lemma_known`, plus `head` / `relation` (under a parser or the neural pipeline) and `xpos` / `feats` (neural pipeline only) |
+| A full per-token analysis | `greek.pipeline(text)` | one `TokenRecord` per token carrying `lemma_source`, `lemma_resolved`, `lemma_verified`, and `review_recommended`, plus `head` / `relation` (under a parser or the neural pipeline) and `xpos` / `feats` (neural pipeline only) |
 | A table you can correct | `aegean review export` → fix → `aegean review apply` | machine annotations with a `needs_review` column, corrected columns, and a stamped reviewer |
 
-The evidence class (`LemmaSource`: `attested`, `neural`, `rule`, `seed`,
-`paradigm`, `identity`, `unresolved`, `punct`) is the key to reading a parse: an `identity`
-or `unresolved` lemma is the pipeline flagging a token you should check.
+The evidence class (`LemmaSource`: `attested`, `neural_lookup`, `neural_edit`, generic
+`neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or `user`) is
+the key to reading a parse: an `identity` or `unresolved` lemma is the pipeline flagging
+a token you should check.
 [Reading a Parse](Reading-a-Parse) explains every field, and
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) covers the export / fix /
 re-import loop in full.
@@ -132,8 +133,8 @@ examples a class can read.*
   [Choosing a Pipeline](Choosing-a-Pipeline) weighs them for your text, and
   [Benchmarks](Benchmarks) reports how far each generalizes off Classical
   literary Greek.
-- **Verbosity.** Keep full `TokenRecord`s. Triage with `needs_review` or
-  `lemma_known`, and for anything you will publish, run the human-in-the-loop
+- **Verbosity.** Keep full `TokenRecord`s. Triage with `review_recommended`,
+  and for anything you will publish, run the human-in-the-loop
   step: `aegean review export` (add `--only-needs-review` to see just the flagged
   tokens), correct the table, and `aegean review apply`. The corrected corpus
   records what a human changed. See

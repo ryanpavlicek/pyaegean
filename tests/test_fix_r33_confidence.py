@@ -5,7 +5,7 @@ Three pinned behaviours, matching the corrected prose in ``aegean.greek.pipeline
 
 1. **The calibrated lemma confidence covers the model's internal training-form lookup.**
    Within the neural pipeline a lemma resolved by the model's internal ``lookup_form`` /
-   ``lookup_form_upos`` table is ``LemmaSource.NEURAL`` and carries a float calibrated
+   ``lookup_form_upos`` table is ``LemmaSource.NEURAL_LOOKUP`` and carries a float calibrated
    confidence, *even when the lemma equals the surface form* (a nominative), because the
    calibration target is composed-lemma correctness (script + train-only lookup). Only a
    lemma the model does not itself produce (an identity fall-through / punctuation) carries
@@ -129,7 +129,7 @@ def test_lookup_composed_lemma_carries_float_confidence_even_when_identical_surf
 
     lookup = recs["λόγος"]
     assert lookup.lemma == logos                         # composed by the lookup
-    assert lookup.lemma_source is LemmaSource.NEURAL      # a model composition, not IDENTITY
+    assert lookup.lemma_source is LemmaSource.NEURAL_LOOKUP  # exact branch, not IDENTITY
     assert isinstance(lookup.lemma_confidence, float)     # ...and it carries confidence
     assert 0.0 <= lookup.lemma_confidence <= 1.0
 

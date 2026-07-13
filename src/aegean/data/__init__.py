@@ -1395,11 +1395,33 @@ def _download_full(
     *,
     progress: Callable[[int, int], None] | None = None,
 ) -> None:
-    import urllib.request
-
-    resp = urllib.request.urlopen(url, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310 (registered/overridable url)
+    resp = _urlopen_verified(url, timeout=_DOWNLOAD_TIMEOUT)
     with resp:
         _write_from_zero(resp, dest_part, abort, progress=progress)
+
+
+def _urlopen_verified(request: Any, *, timeout: int) -> Any:
+    """Open a registered asset URL with normal TLS verification.
+
+    Python 3.14 enables OpenSSL's ``VERIFY_X509_STRICT`` in its default HTTPS context.
+    Some system-trusted enterprise/interception chains omit a CA-extension critical bit
+    that strict mode newly requires, so the default ``urlopen`` rejects them even though
+    hostname validation and the system trust path succeed. Use the default verified
+    context and clear only that compatibility flag. ``CERT_REQUIRED`` and hostname
+    checking remain enabled; this never creates an unverified context.
+    """
+    import ssl
+    import urllib.parse
+    import urllib.request
+
+    target = request.full_url if hasattr(request, "full_url") else str(request)
+    if urllib.parse.urlsplit(target).scheme.lower() != "https":
+        return urllib.request.urlopen(request, timeout=timeout)  # noqa: S310
+    context = ssl.create_default_context()
+    strict = getattr(ssl, "VERIFY_X509_STRICT", 0)
+    if strict:
+        context.verify_flags &= ~strict
+    return urllib.request.urlopen(request, timeout=timeout, context=context)  # noqa: S310
 
 
 def _download_once(
@@ -1436,7 +1458,7 @@ def _download_once(
         req_headers["If-Range"] = validator
     req = urllib.request.Request(url, headers=req_headers)  # noqa: S310 (registered/overridable url)
     try:
-        resp = urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT)  # noqa: S310
+        resp = _urlopen_verified(req, timeout=_DOWNLOAD_TIMEOUT)
     except urllib.error.HTTPError as e:
         if e.code != 416:
             raise

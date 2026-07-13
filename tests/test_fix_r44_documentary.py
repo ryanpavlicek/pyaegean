@@ -139,10 +139,10 @@ def test_pipeline_surfaces_seed_rescue_and_leaves_unrescuable_as_identity() -> N
     r0, r1 = pipeline("κυρίου ξζψβ")
     # rescued by the seed table: grounded, not a review-bait identity fall-through
     assert (r0.text, r0.lemma, r0.lemma_source) == ("κυρίου", "κύριος", LemmaSource.SEED)
-    assert r0.lemma_known is True
+    assert r0.lemma_resolved is True
     # unrescuable OOV: unchanged IDENTITY / needs review
     assert (r1.text, r1.lemma, r1.lemma_source) == ("ξζψβ", "ξζψβ", LemmaSource.IDENTITY)
-    assert r1.lemma_known is False
+    assert r1.lemma_resolved is False
 
 
 def test_pipeline_surfaces_paradigm_rescue() -> None:
@@ -153,7 +153,7 @@ def test_pipeline_surfaces_paradigm_rescue() -> None:
     D.use_documentary_lemma_rescue()
     (r,) = pipeline("γυναικός")
     assert (r.lemma, r.lemma_source) == ("γυνή", LemmaSource.PARADIGM)
-    assert r.lemma_known is True
+    assert r.lemma_resolved is True
 
 
 def test_explain_note_does_not_claim_surface_unchanged_for_a_rescue() -> None:
@@ -231,7 +231,7 @@ def test_default_off_pipeline_and_explain_are_byte_identical() -> None:
 
     (logos,) = [r for r in pipeline("ὁ λόγος ἐστί") if r.text == "λόγος"]
     assert logos.lemma_source is LemmaSource.IDENTITY  # the model's identity fall-through
-    assert logos.lemma_known is False
+    assert logos.lemma_resolved is False
 
     (e,) = [x for x in explain_pipeline("ὁ λόγος ἐστί") if x.token == "λόγος"]
     assert e.lemma_source is LemmaSource.IDENTITY

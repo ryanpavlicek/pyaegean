@@ -259,6 +259,8 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
         return ana
     lemma = list(ana.lemma)
     override = [""] * len(ana.tokens)
+    sources = list(ana.lemma_source) if ana.lemma_source else []
+    verified = list(ana.lemma_verified) if ana.lemma_verified else []
     changed = False
     for i, resolved in enumerate(ana.lemma_resolved):
         if not resolved:
@@ -266,10 +268,20 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
             if rescued is not None:
                 lemma[i] = rescued[0]
                 override[i] = rescued[1].value  # the offline source: "seed" / "paradigm"
+                if sources:
+                    sources[i] = rescued[1]
+                if verified:
+                    verified[i] = False
                 changed = True
     if not changed:
         return ana
-    return replace(ana, lemma=tuple(lemma), lemma_source_override=tuple(override))
+    return replace(
+        ana,
+        lemma=tuple(lemma),
+        lemma_source_override=tuple(override),
+        lemma_source=tuple(sources) if sources else ana.lemma_source,
+        lemma_verified=tuple(verified) if verified else ana.lemma_verified,
+    )
 
 
 # --- the opt-in toggles + the composition wrapper -------------------------------------
@@ -304,13 +316,34 @@ class _DocumentaryModel:
             ana = rescue_analysis(ana)
         return ana
 
-    def analyze(self, words: list[str], *, with_probs: bool = False) -> SentenceAnalysis:
-        return self._apply(self.inner.analyze(words, with_probs=with_probs))
+    def analyze(
+        self,
+        words: list[str],
+        *,
+        with_probs: bool = False,
+        long_input: str = "strict",
+    ) -> SentenceAnalysis:
+        if with_probs or long_input != "strict":
+            return self._apply(
+                self.inner.analyze(words, with_probs=with_probs, long_input=long_input)
+            )
+        return self._apply(self.inner.analyze(words))
 
     def analyze_batch(
-        self, sentences: list[list[str]], *, with_probs: bool = False
+        self,
+        sentences: list[list[str]],
+        *,
+        with_probs: bool = False,
+        long_input: str = "strict",
     ) -> list[SentenceAnalysis]:
-        return [self._apply(a) for a in self.inner.analyze_batch(sentences, with_probs=with_probs)]
+        analyses = (
+            self.inner.analyze_batch(
+                sentences, with_probs=with_probs, long_input=long_input
+            )
+            if with_probs or long_input != "strict"
+            else self.inner.analyze_batch(sentences)
+        )
+        return [self._apply(a) for a in analyses]
 
     def __getattr__(self, name: str) -> Any:
         # Every attribute the wrapper does not define (lookup tables, the ONNX session, label

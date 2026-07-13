@@ -643,7 +643,7 @@ def _greek_offline(text: str) -> AnalysisResult:
     def _base(row: dict[str, Any]) -> tuple[str, ...]:
         return (
             str(row["index"]), row["text"], row["upos"], row["lemma"],
-            "" if row.get("lemma_known", True) else str(row.get("lemma_source", "")),
+            str(row.get("lemma_source", "")) if row.get("review_recommended", False) else "",
         )
 
     # A calibrated 'conf' column appears only when the rows carry a confidence (the same
@@ -702,7 +702,7 @@ def _greek_neural(text: str) -> AnalysisResult:
             str(r.index), r.text, r.upos,
             # an unresolved/identity lemma is flagged with its evidence class so a model
             # guess never displays like a grounded analysis
-            r.lemma if r.lemma_known else f"{r.lemma} [{r.lemma_source.value}]",
+            r.lemma if not r.review_recommended else f"{r.lemma} [{r.lemma_source.value}]",
             r.feats or "",
             f"{r.relation}→{r.head}" if r.relation and r.head is not None else "",
         )

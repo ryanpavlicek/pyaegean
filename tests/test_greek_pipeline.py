@@ -180,11 +180,30 @@ def test_needs_review_matches_the_lemma_known_flag():
     from aegean.greek import LemmaSource, needs_review
 
     assert needs_review(LemmaSource.IDENTITY) and needs_review(LemmaSource.UNRESOLVED)
-    for grounded in (LemmaSource.ATTESTED, LemmaSource.NEURAL, LemmaSource.RULE,
-                     LemmaSource.SEED, LemmaSource.PUNCT):
+    for grounded in (
+        LemmaSource.ATTESTED,
+        LemmaSource.NEURAL_LOOKUP,
+        LemmaSource.NEURAL_EDIT,
+        LemmaSource.NEURAL,
+        LemmaSource.RULE,
+        LemmaSource.SEED,
+        LemmaSource.PARADIGM,
+        LemmaSource.PUNCT,
+        LemmaSource.USER,
+    ):
         assert not needs_review(grounded)
     # derivation consistency: known == not needs_review(source), for real forms
     from aegean.greek import lemmatize_sourced
     for w in ("ἦν", "νόμου", "πατρός", "ὁ", "θεόν", "ἀγαθῷ"):
         _lemma, src = lemmatize_sourced(w)
         assert lemmatize_verbose(w)[1] is (not needs_review(src))
+
+
+def test_lemma_resolution_and_verification_are_separate() -> None:
+    from aegean.greek import LemmaSource, lemma_resolved, lemma_verified, needs_review
+
+    for source in LemmaSource:
+        assert lemma_resolved(source) is (not needs_review(source))
+        assert lemma_verified(source) is (source is LemmaSource.USER)
+    assert lemma_resolved(LemmaSource.NEURAL_LOOKUP) is True
+    assert lemma_verified(LemmaSource.NEURAL_LOOKUP) is False

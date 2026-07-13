@@ -71,7 +71,7 @@ some shells (notably zsh on macOS) treat square brackets specially:
 pip install "pyaegean[ai]"        # the full generative AI layer
 pip install "pyaegean[neural]"    # the state-of-the-art neural Greek pipeline
 pip install "pyaegean[cli,viz]"   # combine extras with a comma
-pip install "pyaegean[all]"       # everything except [neural] and [parquet]
+pip install "pyaegean[all]"       # every runtime extra except [parquet]
 ```
 
 The complete matrix:
@@ -94,13 +94,13 @@ The complete matrix:
 | `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui` | everything **except** `neural` and `parquet` |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | every runtime extra **except** `parquet` |
 
 A few things worth knowing:
 
-- **`[all]` deliberately omits `[neural]` and `[parquet]`.** The neural models pull
-  in `onnxruntime` and download large model bundles; `parquet` adds `pyarrow`.
-  Both are heavy and not everyone needs them, so you opt in to those by name.
+- **`[all]` includes `[neural]` but omits `[parquet]`.** It installs ONNX Runtime,
+  Tokenizers, and NumPy, but neural model bundles still download lazily on first use and
+  remain SHA-256 verified. Parquet remains a separate opt-in because it adds `pyarrow`.
 - **The neural pipeline uses a GPU automatically when one is available.** Replace
   the CPU wheel with a GPU build (`pip uninstall onnxruntime`, then
   `pip install onnxruntime-gpu` for NVIDIA or `onnxruntime-directml` on Windows)

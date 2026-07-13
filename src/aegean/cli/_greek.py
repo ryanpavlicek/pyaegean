@@ -395,7 +395,10 @@ def tag(
     from aegean import greek
 
     _activate(treebank=treebank, tagger=tagger, neural=neural)
-    pairs = greek.pos_tags(read_text(text))
+    try:
+        pairs = greek.pos_tags(read_text(text))
+    except greek.NeuralInputTooLongError as exc:
+        raise fail(str(exc)) from None
     if json_out:
         emit_json([{"token": t, "upos": u} for t, u in pairs])
         return
@@ -596,6 +599,8 @@ def parse(
         tree = greek.parse(read_text(sentence))
     except greek.ParserNotLoadedError:
         raise fail("no parser active — pass --neural (best) or --parser") from None
+    except greek.NeuralInputTooLongError as exc:
+        raise fail(str(exc)) from None
     if json_out:
         emit_json(
             [
@@ -749,6 +754,11 @@ def pipeline(
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
     confidence: bool = CONFIDENCE_OPT,
+    partial: bool = typer.Option(
+        False,
+        "--partial",
+        help="Return explicitly marked placeholders past the neural subword limit (default: fail).",
+    ),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -762,12 +772,22 @@ def pipeline(
     if confidence:
         _ensure_calibration()
     try:
-        records = greek.pipeline(read_text(text), parse=parse, with_confidence=confidence)
+        records = greek.pipeline(
+            read_text(text),
+            parse=parse,
+            with_confidence=confidence,
+            long_input="partial" if partial else "strict",
+        )
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
+    except greek.NeuralInputTooLongError as exc:
+        raise fail(str(exc)) from None
     from aegean._view import format_confidence, pipeline_rows_from_records
 
     rows = pipeline_rows_from_records(records)  # the row shape shared with the TUI
+    warning = next((r["analysis_warning"] for r in rows if r["analysis_warning"]), None)
+    if warning:
+        typer.echo(f"warning: {warning}", err=True)
     if emit_result(rows, json_output=json_out, output=output):
         return
     # A calibrated 'conf' column appears only when the rows actually carry a confidence
@@ -784,7 +804,7 @@ def pipeline(
         columns,
         [
             [str(r["sentence"]), str(r["index"]), r["text"], r["upos"], r["lemma"],
-             "" if r["lemma_known"] else r["lemma_source"],
+             r["lemma_source"] if r["review_recommended"] else "",
              "" if r["head"] is None else str(r["head"]), r["relation"] or "", r["feats"] or ""]
             + ([format_confidence(r["upos_confidence"], r["lemma_confidence"])] if has_conf else [])
             for r in rows
@@ -806,13 +826,15 @@ def explain(
 ) -> None:
     """Explain what the pipeline did to each token and why (lemma evidence classes).
 
-    Each row shows the analysis plus the lemma's evidence class (attested / neural /
-    rule / seed / paradigm / identity / unresolved / punct) and a plain-language note; identity
+    Each row shows the analysis plus the lemma's evidence class (attested / neural_lookup /
+    neural_edit / neural / rule / seed / paradigm / identity / unresolved / punct / user)
+    and a plain-language note; identity
     and unresolved rows are flagged for review. Source classes are the honesty
     surface: by default there are no confidence numbers. Pass --confidence (with
     --neural) to additionally append each token's calibrated confidence to its note
     (temperature-scaled, model-only; loads the shipped calibration).
     """
+    from aegean import greek
     from aegean.greek.explain import explain_pipeline, render_explanations
 
     _activate(
@@ -821,7 +843,10 @@ def explain(
     )
     if confidence:
         _ensure_calibration()
-    explanations = explain_pipeline(read_text(text), with_confidence=confidence)
+    try:
+        explanations = explain_pipeline(read_text(text), with_confidence=confidence)
+    except greek.NeuralInputTooLongError as exc:
+        raise fail(str(exc)) from None
     rows = [to_plain(e) for e in explanations]  # dataclass → dict, enum → value
     if emit_result(rows, json_output=json_out, output=output):
         return

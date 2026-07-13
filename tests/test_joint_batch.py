@@ -151,8 +151,8 @@ BATCH = [
 
 def test_analyze_batch_equals_sequential_field_for_field() -> None:
     m = _batch_stub_model()
-    seq = [m.analyze(list(s)) for s in BATCH]
-    bat = m.analyze_batch([list(s) for s in BATCH])
+    seq = [m.analyze(list(s), long_input="partial") for s in BATCH]
+    bat = m.analyze_batch([list(s) for s in BATCH], long_input="partial")
     assert bat == seq  # SentenceAnalysis is frozen — this compares every field
     # and the shared values are RIGHT, not merely mutually consistent:
     assert bat[0].upos == ("DET", "NOUN", "VERB")
@@ -166,6 +166,9 @@ def test_analyze_batch_equals_sequential_field_for_field() -> None:
     assert bat[3].upos[_TRUNCATE:] == ("X", "X")
     assert bat[3].lemma[_TRUNCATE:] == ("ἐστί", "λόγος")
     assert bat[3].lemma_resolved[_TRUNCATE:] == (False, False)
+    assert bat[3].complete is False and bat[3].truncated is True
+    assert bat[3].analyzed == (True, True, True, True, True, False, False)
+    assert "placeholders" in bat[3].warnings[0]
     # no decodable word positions → the whole-sentence fallback, single root
     assert bat[4].upos == ("X",) and bat[4].head == (0,) and bat[4].deprel == ("root",)
     assert bat[5].upos == ("X",)  # out-of-vocabulary form
@@ -174,7 +177,7 @@ def test_analyze_batch_equals_sequential_field_for_field() -> None:
 def test_analyze_batch_runs_one_padded_session_call() -> None:
     m = _batch_stub_model()
     sess = m._sess
-    m.analyze_batch([list(s) for s in BATCH])
+    m.analyze_batch([list(s) for s in BATCH], long_input="partial")
     assert type(sess).calls == 1  # the whole mixed batch = one ONNX run
 
 
@@ -186,6 +189,97 @@ def test_analyze_batch_empty_inputs_never_touch_the_session() -> None:
     assert type(sess).calls == 0
 
 
+def test_strict_mode_refuses_an_incomplete_sentence() -> None:
+    m = _batch_stub_model()
+    words = BATCH[3]
+    with pytest.raises(joint.NeuralInputTooLongError) as caught:
+        m.analyze(list(words))
+    assert caught.value.input_tokens == 7
+    assert caught.value.analyzed_tokens == _TRUNCATE
+    assert caught.value.max_subwords == 256
+    assert "long_input='partial'" in str(caught.value)
+
+
+@pytest.mark.parametrize("count", [_TRUNCATE - 1, _TRUNCATE])
+def test_strict_mode_accepts_sentences_at_and_below_the_stub_limit(count: int) -> None:
+    ana = _batch_stub_model().analyze(["λόγος"] * count)
+    assert len(ana.tokens) == count
+    assert ana.complete is True and ana.truncated is False
+    assert ana.analyzed == (True,) * count
+
+
+def test_strict_mode_rejects_the_first_token_above_the_stub_limit() -> None:
+    with pytest.raises(joint.NeuralInputTooLongError) as caught:
+        _batch_stub_model().analyze(["λόγος"] * (_TRUNCATE + 1))
+    assert caught.value.analyzed_tokens == _TRUNCATE
+
+
+def test_partial_mode_marks_every_placeholder_and_receipt_status() -> None:
+    ana = _batch_stub_model().analyze(list(BATCH[3]), long_input="partial")
+    assert ana.complete is False and ana.incomplete is True and ana.truncated is True
+    assert ana.analyzed == (True, True, True, True, True, False, False)
+    assert ana.upos[-2:] == ("X", "X")
+    assert ana.lemma_source[-2:] == (
+        joint.LemmaSource.IDENTITY,
+        joint.LemmaSource.IDENTITY,
+    )
+    assert ana.warnings and "placeholders, not predictions" in ana.warnings[0]
+
+
+def test_invalid_long_input_mode_is_a_clean_error() -> None:
+    with pytest.raises(ValueError, match="strict.*partial"):
+        _batch_stub_model().analyze(["λόγος"], long_input="guess")  # type: ignore[arg-type]
+
+
+def test_pathological_partial_input_stays_bounded() -> None:
+    words = ["λόγος"] * 100_000
+    ana = _batch_stub_model().analyze(words, long_input="partial")
+    assert len(ana.tokens) == 100_000
+    assert sum(ana.analyzed) == _TRUNCATE
+    assert ana.complete is False
+
+
+def test_pipeline_strict_and_partial_modes_propagate_status(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from aegean import greek
+
+    monkeypatch.setattr(joint, "_ACTIVE", _batch_stub_model())
+    text = "ὁ λόγος ἐστί ὁ λόγος ἐστί λόγος"
+    with pytest.raises(joint.NeuralInputTooLongError):
+        greek.pipeline(text)
+    records = greek.pipeline(text, long_input="partial")
+    assert len(records) == 7
+    assert [r.neural_analyzed for r in records] == [True] * 5 + [False, False]
+    assert all(r.analysis_complete is False for r in records)
+    assert records[-1].analysis_warning and "placeholders" in records[-1].analysis_warning
+
+
+def test_cli_long_input_is_cleanly_strict_and_partial_json_is_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from typer.testing import CliRunner
+
+    from aegean.cli import _build_app
+
+    monkeypatch.setattr(joint, "_ACTIVE", _batch_stub_model())
+    text = "ὁ λόγος ἐστί ὁ λόγος ἐστί λόγος"
+    runner = CliRunner()
+    strict = runner.invoke(_build_app(), ["greek", "pipeline", text, "--json"])
+    assert strict.exit_code == 1
+    assert "neural analysis would be incomplete" in strict.output
+    assert "Traceback" not in strict.output
+
+    partial = runner.invoke(
+        _build_app(), ["greek", "pipeline", text, "--partial", "--json"]
+    )
+    assert partial.exit_code == 0, partial.output
+    payload = json.loads(partial.stdout)
+    assert payload[-1]["neural_analyzed"] is False
+    assert payload[-1]["analysis_complete"] is False
+    assert "placeholders" in payload[-1]["analysis_warning"]
+
+
 # --- the analyze_sentences wrapper ---------------------------------------------------
 
 
@@ -194,10 +288,14 @@ def test_analyze_sentences_matches_sequential_across_chunk_sizes(
 ) -> None:
     m = _batch_stub_model()
     monkeypatch.setattr(joint, "_ACTIVE", m)
-    expected = [m.analyze(list(s)) for s in BATCH]
-    assert joint.analyze_sentences([list(s) for s in BATCH]) == expected  # None = sequential
+    expected = [m.analyze(list(s), long_input="partial") for s in BATCH]
+    assert joint.analyze_sentences(
+        [list(s) for s in BATCH], long_input="partial"
+    ) == expected  # None = sequential
     for size in (1, 2, 4, 100):  # chunk boundaries must not change anything
-        assert joint.analyze_sentences([list(s) for s in BATCH], batch_size=size) == expected
+        assert joint.analyze_sentences(
+            [list(s) for s in BATCH], batch_size=size, long_input="partial"
+        ) == expected
 
 
 def test_analyze_sentences_requires_activation(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -406,7 +504,10 @@ SENTS = [
     [],
     ["λόγος"],
 ]
-FIELDS = ("tokens", "upos", "xpos", "feats", "head", "deprel", "lemma", "lemma_resolved")
+FIELDS = (
+    "tokens", "upos", "xpos", "feats", "head", "deprel", "lemma", "lemma_resolved",
+    "lemma_source", "lemma_verified", "analyzed", "complete", "truncated", "warnings", "receipt",
+)
 
 m = _JointModel(Path(sys.argv[1]))
 seq = [m.analyze(list(s)) for s in SENTS]

@@ -29,15 +29,27 @@ import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from ..data import fetch
+from ..data import fetch, versions
 from . import _ort
+from .lemmatize import LemmaSource, lemma_verified
 from .mst import decode_mst
+from .neural_contract import (
+    AnalysisReceipt,
+    ModelBundleError,
+    ModelBundleManifest,
+    ReceiptMismatchError,
+)
 from .udfeats import feats_from_xpos
 
 __all__ = [
+    "AnalysisReceipt",
+    "ModelBundleError",
+    "ModelBundleManifest",
     "NeuralPipelineNotLoadedError",
+    "NeuralInputTooLongError",
+    "ReceiptMismatchError",
     "SentenceAnalysis",
     "active",
     "analyze_sentence",
@@ -49,7 +61,7 @@ __all__ = [
 
 # Registered in aegean.data._REMOTE; fetched + extracted to the cache on first use.
 _DATASET = "grc-joint"
-_MAX_LEN = 256
+LongInputMode = Literal["strict", "partial"]
 
 
 class NeuralPipelineNotLoadedError(RuntimeError):
@@ -57,9 +69,23 @@ class NeuralPipelineNotLoadedError(RuntimeError):
     the ``[neural]`` extra (onnxruntime/tokenizers/numpy) is not installed."""
 
 
+class NeuralInputTooLongError(ValueError):
+    """Raised when strict neural analysis cannot cover every input token."""
+
+    def __init__(self, *, input_tokens: int, analyzed_tokens: int, max_subwords: int) -> None:
+        self.input_tokens = input_tokens
+        self.analyzed_tokens = analyzed_tokens
+        self.max_subwords = max_subwords
+        super().__init__(
+            f"neural analysis would be incomplete: {analyzed_tokens} of {input_tokens} tokens "
+            f"fit the model's {max_subwords}-subword limit. Split the sentence, or pass "
+            "long_input='partial' and inspect SentenceAnalysis.complete/analyzed."
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class SentenceAnalysis:
-    """The joint model's full analysis of one sentence (parallel, per-token lists)."""
+    """The joint model's full analysis, coverage status, provenance, and receipt."""
 
     tokens: tuple[str, ...]
     upos: tuple[str, ...]
@@ -91,13 +117,32 @@ class SentenceAnalysis:
     # never credited to the neural model); this channel lets a consumer surface the true
     # grounded source instead of the identity fall-through.
     lemma_source_override: tuple[str, ...] = ()
+    # Exact decision provenance for each returned lemma. This separates a joint-model
+    # frequency lookup from an edit-script prediction and from the identity fallback.
+    # Empty only on legacy/custom SentenceAnalysis values that predate this field.
+    lemma_source: tuple[LemmaSource, ...] = ()
+    # Human verification is separate from model resolution or lexical attestation.
+    lemma_verified: tuple[bool, ...] = ()
+    # Per-token coverage plus sentence-level status. In strict mode an incomplete
+    # sentence raises before a SentenceAnalysis is returned. Partial mode returns every
+    # input token, marks undecoded tokens False here, and sets complete=False/truncated=True.
+    analyzed: tuple[bool, ...] = ()
+    complete: bool = True
+    truncated: bool = False
+    warnings: tuple[str, ...] = ()
+    receipt: AnalysisReceipt | None = None
+
+    @property
+    def incomplete(self) -> bool:
+        """Whether any input token lacks a neural analysis."""
+        return not self.complete
 
 
 def _compose_lemma(
     form: str, upos: str, script_id: int, model: "_JointModel"
-) -> tuple[str, bool]:
+) -> tuple[str, bool, LemmaSource]:
     """The dev-preferred ``lookup-first`` composition, with an honesty flag: returns
-    ``(lemma, resolved)``. ``resolved`` is True when a real analysis was found — a
+    ``(lemma, resolved, source)``. ``resolved`` is True when a real analysis was found: a
     (form|UPOS) or form lookup, a predicted non-identity edit script, or a lowercase
     lookup — and False for the identity fall-through (the form itself). A lemma that
     equals the surface form is still ``resolved=True`` when it came from a lookup (a
@@ -105,7 +150,7 @@ def _compose_lemma(
     from a string compare."""
     looked = model.lookup_form_upos.get(f"{form}|{upos}") or model.lookup_form.get(form)
     if looked:
-        return looked, True
+        return looked, True, LemmaSource.NEURAL_LOOKUP
     if 0 <= script_id < len(model.trees):
         from .lemmatizer import apply_tree
 
@@ -116,11 +161,11 @@ def _compose_lemma(
         # kept; a GENUINE identity lemma, a nominative, comes from the lookups above and
         # stays resolved). Both fall through to the remaining lookups / honest identity.
         if applied and applied != "_" and applied != form:
-            return applied, True
+            return applied, True, LemmaSource.NEURAL_EDIT
     low = model.lookup_lower.get(form.lower())
     if low:
-        return low, True
-    return form, False
+        return low, True, LemmaSource.NEURAL_LOOKUP
+    return form, False, LemmaSource.IDENTITY
 
 
 def _probs_calibration(with_probs: bool) -> Any:
@@ -142,10 +187,22 @@ def _probs_calibration(with_probs: bool) -> Any:
     return cal
 
 
+def _long_input_mode(value: str) -> LongInputMode:
+    if value not in ("strict", "partial"):
+        raise ValueError(f"long_input must be 'strict' or 'partial', got {value!r}")
+    return value  # type: ignore[return-value]
+
+
 class _JointModel:
     """A loaded joint ONNX model + tokenizer + label maps + lemma scripts/lookup."""
 
-    def __init__(self, model_dir: Path) -> None:
+    def __init__(
+        self,
+        model_dir: Path,
+        *,
+        asset_sha256: str | None = None,
+        asset_sha256_enforced: bool = False,
+    ) -> None:
         try:
             import numpy as np
             import onnxruntime as ort
@@ -161,6 +218,14 @@ class _JointModel:
             nested = [d for d in model_dir.iterdir() if d.is_dir()]
             if len(nested) == 1 and (nested[0] / "model.onnx").exists():
                 model_dir = nested[0]
+        # The manifest and every listed member are validated before ONNX Runtime parses
+        # model bytes. A corrupt or incompatible bundle therefore fails at activation,
+        # never after producing a partially configured analysis.
+        self.manifest = ModelBundleManifest.load(
+            model_dir,
+            asset_sha256=asset_sha256,
+            asset_sha256_enforced=asset_sha256_enforced,
+        )
         opts = ort.SessionOptions()
         opts.log_severity_level = 3
         # Provider policy lives in one place (_ort.resolve_providers): the published
@@ -183,6 +248,12 @@ class _JointModel:
                 f"run `aegean data remove {_DATASET}` and retry, or call "
                 f"use_neural_pipeline(force=True)."
             ) from e
+        actual_outputs = tuple(output.name for output in self._sess.get_outputs())
+        if set(actual_outputs) != set(self.manifest.output_heads):
+            raise ModelBundleError(
+                "model.onnx output heads disagree with the bundle manifest: "
+                f"expected {list(self.manifest.output_heads)!r}, got {list(actual_outputs)!r}"
+            )
         try:
             self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
         except Exception as e:
@@ -206,10 +277,12 @@ class _JointModel:
 
     def _encode(self, words: list[str]) -> tuple[list[int], list[int], list[int]]:
         """Tokenize one pre-tokenized sentence → ``(subword ids, first-subword position
-        per kept word, kept word indices)``. Truncation to ``_MAX_LEN`` happens here, so
-        the single and batched passes share the same kept/fallback bookkeeping."""
-        enc = self._tok.encode(words, is_pretokenized=True)
-        ids = enc.ids[:_MAX_LEN]
+        per kept word, kept word indices)``. The tokenizer manifest owns the subword
+        maximum. At most ``max_subwords`` input words are presented to the tokenizer,
+        which bounds pathological partial-mode input without changing any coverable
+        prefix (each non-empty pretokenized word needs at least one subword)."""
+        enc = self._tok.encode(words[: self.manifest.max_subwords], is_pretokenized=True)
+        ids = enc.ids[: self.manifest.max_subwords]
         word_ids = enc.word_ids[: len(ids)]
         word_pos: list[int] = []
         kept: list[int] = []
@@ -274,38 +347,98 @@ class _JointModel:
             results.append(one)
         return results
 
-    def analyze(self, words: list[str], *, with_probs: bool = False) -> SentenceAnalysis:
+    @property
+    def max_subwords(self) -> int:
+        """The manifest-declared subword limit."""
+        manifest = getattr(self, "manifest", None)
+        return manifest.max_subwords if manifest is not None else 256
+
+    def _receipt(
+        self, *, input_tokens: int, analyzed_tokens: int, truncated: bool
+    ) -> AnalysisReceipt | None:
+        manifest = getattr(self, "manifest", None)
+        session = getattr(self, "_sess", None)
+        if manifest is None or session is None or not hasattr(session, "get_providers"):
+            return None
+        return AnalysisReceipt.create(
+            manifest,
+            execution_providers=tuple(session.get_providers()),
+            input_tokens=input_tokens,
+            analyzed_tokens=analyzed_tokens,
+            truncated=truncated,
+        )
+
+    def analyze(
+        self,
+        words: list[str],
+        *,
+        with_probs: bool = False,
+        long_input: LongInputMode = "strict",
+    ) -> SentenceAnalysis:
         """Analyze one pre-tokenized sentence.
 
-        ``with_probs=False`` (the default) is the historical path, byte-identical to
-        before this feature — ``upos_prob`` / ``lemma_script_prob`` stay empty ``()``.
+        ``with_probs=False`` (the default) leaves ``upos_prob`` /
+        ``lemma_script_prob`` empty ``()`` and preserves the historical predictions.
         ``with_probs=True`` fills them with calibrated top-1 confidences, and REQUIRES a
         loaded calibration (`aegean.greek.use_calibration`): with none loaded it raises
-        `UncalibratedConfidenceError` rather than exposing a raw softmax."""
+        `UncalibratedConfidenceError` rather than exposing a raw softmax.
+
+        ``long_input="strict"`` refuses any sentence the manifest-declared subword
+        budget cannot cover. ``"partial"`` retains all tokens but explicitly marks
+        uncovered placeholders through ``complete``, ``analyzed``, and ``warnings``."""
+        mode = _long_input_mode(long_input)
         calibration = _probs_calibration(with_probs)
         forms = [unicodedata.normalize("NFC", w) for w in words]
         if not forms:
-            return SentenceAnalysis((), (), (), (), (), (), (), ())
-        return self._decode(forms, self._run(forms), calibration=calibration)
+            return SentenceAnalysis(
+                (), (), (), (), (), (), (), (), analyzed=(),
+                receipt=self._receipt(input_tokens=0, analyzed_tokens=0, truncated=False),
+            )
+        raw = self._run(forms)
+        analyzed_tokens = len(raw["_kept"])
+        truncated = analyzed_tokens != len(forms)
+        if truncated and mode == "strict":
+            raise NeuralInputTooLongError(
+                input_tokens=len(forms),
+                analyzed_tokens=analyzed_tokens,
+                max_subwords=self.max_subwords,
+            )
+        return self._decode(forms, raw, calibration=calibration)
 
     def analyze_batch(
-        self, sentences: list[list[str]], *, with_probs: bool = False
+        self,
+        sentences: list[list[str]],
+        *,
+        with_probs: bool = False,
+        long_input: LongInputMode = "strict",
     ) -> list[SentenceAnalysis]:
         """Analyses of several sentences, one padded encoder pass per call.
 
-        Produces the same fields as ``[self.analyze(s) for s in sentences]`` — empty
-        sentences and the truncation fallbacks included; only the number of ONNX calls
+        Produces the same fields as ``[self.analyze(s) for s in sentences]``; only the number of ONNX calls
         differs. Sequential per-sentence analysis is the recorded benchmark protocol
         (see `_run_batch` on float reduction order); batching is a throughput
         convenience. ``with_probs`` behaves as in `analyze` (calibration required)."""
+        mode = _long_input_mode(long_input)
         calibration = _probs_calibration(with_probs)
         norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
         out: list[SentenceAnalysis] = [
-            SentenceAnalysis((), (), (), (), (), (), (), ()) for _ in norm
+            SentenceAnalysis(
+                (), (), (), (), (), (), (), (), analyzed=(),
+                receipt=self._receipt(input_tokens=0, analyzed_tokens=0, truncated=False),
+            )
+            for _ in norm
         ]
         live = [i for i, forms in enumerate(norm) if forms]
         if live:
-            for i, res in zip(live, self._run_batch([norm[i] for i in live])):
+            results = self._run_batch([norm[i] for i in live])
+            for i, res in zip(live, results):
+                analyzed_tokens = len(res["_kept"])
+                if analyzed_tokens != len(norm[i]) and mode == "strict":
+                    raise NeuralInputTooLongError(
+                        input_tokens=len(norm[i]),
+                        analyzed_tokens=analyzed_tokens,
+                        max_subwords=self.max_subwords,
+                    )
                 out[i] = self._decode(norm[i], res, calibration=calibration)
         return out
 
@@ -331,6 +464,9 @@ class _JointModel:
         # default False = the identity fall-through (truncated / undecoded tokens keep
         # the surface form, which is not a real analysis)
         resolved = [False] * n
+        lemma_source = [LemmaSource.IDENTITY] * n
+        verified = [False] * n
+        analyzed = [False] * n
         # None = a token with no model logits to read (an undecoded truncation fallback);
         # a float only for decoded words, and only when a calibration is active.
         upos_prob: list[float | None] = [None] * n
@@ -347,6 +483,7 @@ class _JointModel:
                 t_upos = calibration.temperature["upos"]
                 t_lemma = calibration.temperature["lemma"]
             for wi, w in enumerate(kept):
+                analyzed[w] = True
                 sp = word_pos[wi]
                 upos[w] = self.inv["upos"][int(out["upos"][0, sp].argmax())]
                 xpos[w] = "".join(
@@ -356,7 +493,10 @@ class _JointModel:
                 rel[w] = self.inv["deprel"][int(rel_scores[:, wi, heads_w[wi]].argmax())]
                 if head[w] == 0:
                     rel[w] = "root"
-                lemma[w], resolved[w] = _compose_lemma(forms[w], upos[w], int(lem_ids[wi]), self)
+                lemma[w], resolved[w], lemma_source[w] = _compose_lemma(
+                    forms[w], upos[w], int(lem_ids[wi]), self
+                )
+                verified[w] = lemma_verified(lemma_source[w])
                 if calibration is not None:
                     # Same logit vectors the argmaxes above read — temperature-scaled.
                     upos_prob[w] = float(
@@ -373,6 +513,14 @@ class _JointModel:
             rel[i] = "parataxis"
         if not roots:
             head[0], rel[0] = 0, "root"
+        truncated = not all(analyzed)
+        warning = (
+            (
+                f"partial neural analysis: {sum(analyzed)} of {n} tokens fit the "
+                f"{self.max_subwords}-subword model limit; tokens marked analyzed=False "
+                "carry placeholders, not predictions"
+            ),
+        ) if truncated else ()
         return SentenceAnalysis(
             tokens=tuple(forms), upos=tuple(upos), xpos=tuple(xpos),
             feats=tuple(feats_from_xpos(x) for x in xpos),
@@ -380,6 +528,15 @@ class _JointModel:
             lemma_resolved=tuple(resolved),
             upos_prob=tuple(upos_prob) if calibration is not None else (),
             lemma_script_prob=tuple(lemma_prob) if calibration is not None else (),
+            lemma_source=tuple(lemma_source),
+            lemma_verified=tuple(verified),
+            analyzed=tuple(analyzed),
+            complete=not truncated,
+            truncated=truncated,
+            warnings=warning,
+            receipt=self._receipt(
+                input_tokens=n, analyzed_tokens=sum(analyzed), truncated=truncated
+            ),
         )
 
 
@@ -405,7 +562,9 @@ def _require_neural_extra() -> None:
         ) from e
 
 
-def use_neural_pipeline(*, force: bool = False) -> None:
+def use_neural_pipeline(
+    *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
+) -> None:
     """Activate the neural pipeline (tags + morphology + trees + lemmas, one model).
 
     Fetches the model bundle to the cache on first use — never bundled in the wheel —
@@ -414,13 +573,28 @@ def use_neural_pipeline(*, force: bool = False) -> None:
     `pos_tag`, `aegean.greek.parse` (UD relations), and `aegean.greek.lemmatize`
     all use it; `analyze_sentence` returns the full joint analysis in one call.
 
+    Pass ``expected_receipt`` to require the exact model, artifact, package/runtime
+    versions, provider, profile, and preprocessing identity from a prior analysis.
+    A mismatch raises `ReceiptMismatchError` before the candidate becomes active.
+
     Raises `NeuralPipelineNotLoadedError` if the optional dependencies are missing
     (checked before any download), and `aegean.data.DataNotAvailableError` if the
     download fails (set ``PYAEGEAN_GRC_JOINT_URL`` to fetch from your own mirror)."""
     global _ACTIVE
     _require_neural_extra()
+    asset = versions()["fetched"][_DATASET]
     model_dir = fetch(_DATASET, force=force)
-    _ACTIVE = _JointModel(model_dir)
+    candidate = _JointModel(
+        model_dir,
+        asset_sha256=asset["sha256"] or None,
+        asset_sha256_enforced=bool(asset["sha256_enforced"]),
+    )
+    if expected_receipt is not None:
+        current = candidate._receipt(input_tokens=0, analyzed_tokens=0, truncated=False)
+        if current is None:  # pragma: no cover - a real _JointModel always has a receipt
+            raise ReceiptMismatchError("loaded neural runtime did not produce an analysis receipt")
+        expected_receipt.assert_same_runtime(current)
+    _ACTIVE = candidate
 
 
 def disable_neural_pipeline() -> None:
@@ -434,11 +608,17 @@ def active() -> _JointModel | None:
     return _ACTIVE
 
 
-def analyze_sentence(words: list[str], *, with_probs: bool = False) -> SentenceAnalysis:
+def analyze_sentence(
+    words: list[str],
+    *,
+    with_probs: bool = False,
+    long_input: LongInputMode = "strict",
+) -> SentenceAnalysis:
     """The full joint analysis of one pre-tokenized sentence (raises if not active).
 
     ``with_probs=True`` additionally fills the calibrated confidence fields and requires
-    a loaded calibration (see `_JointModel.analyze`)."""
+    a loaded calibration. ``long_input`` is strict by default; partial mode returns
+    explicit coverage status and warnings (see `_JointModel.analyze`)."""
     if _ACTIVE is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
@@ -446,13 +626,17 @@ def analyze_sentence(words: list[str], *, with_probs: bool = False) -> SentenceA
     # Keep the default call byte-identical to the historical signature (positional
     # ``words`` only), so existing callers and test stubs are unaffected; only a
     # confidence request threads the keyword through.
-    if with_probs:
-        return _ACTIVE.analyze(words, with_probs=True)
+    if with_probs or long_input != "strict":
+        return _ACTIVE.analyze(words, with_probs=with_probs, long_input=long_input)
     return _ACTIVE.analyze(words)
 
 
 def analyze_sentences(
-    sentences: Iterable[list[str]], *, batch_size: int | None = None, with_probs: bool = False
+    sentences: Iterable[list[str]],
+    *,
+    batch_size: int | None = None,
+    with_probs: bool = False,
+    long_input: LongInputMode = "strict",
 ) -> list[SentenceAnalysis]:
     """Full joint analyses of several pre-tokenized sentences (raises if not active).
 
@@ -462,15 +646,18 @@ def analyze_sentences(
     int runs padded chunks of that many sentences through the encoder (one ONNX call per
     chunk), a throughput convenience producing the same analyses; batched matmuls can
     reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
-    behaves as in `analyze_sentence` (calibration required)."""
+    behaves as in `analyze_sentence` (calibration required). ``long_input`` applies the
+    same strict/partial contract independently to every sentence."""
     if _ACTIVE is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
     sents = [list(s) for s in sentences]
     if batch_size is None:
-        if with_probs:
-            return [_ACTIVE.analyze(s, with_probs=True) for s in sents]
+        if with_probs or long_input != "strict":
+            return [
+                _ACTIVE.analyze(s, with_probs=with_probs, long_input=long_input) for s in sents
+            ]
         return [_ACTIVE.analyze(s) for s in sents]
     if batch_size < 1:
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
@@ -481,8 +668,10 @@ def analyze_sentences(
         # ``batch`` only), so existing callers and test spies are unaffected; only a
         # confidence request threads the keyword through.
         out.extend(
-            _ACTIVE.analyze_batch(chunk, with_probs=True)
-            if with_probs
+            _ACTIVE.analyze_batch(
+                chunk, with_probs=with_probs, long_input=long_input
+            )
+            if with_probs or long_input != "strict"
             else _ACTIVE.analyze_batch(chunk)
         )
     return out

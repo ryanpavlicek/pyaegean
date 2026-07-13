@@ -1,0 +1,231 @@
+"""Authoritative neural bundle metadata and exact runtime receipt contracts."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import tomllib
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from aegean.greek import AnalysisReceipt, ModelBundleError, ModelBundleManifest
+from aegean.greek import neural_contract as contract
+
+FIXTURE = Path(__file__).parent / "fixtures" / "neural" / "grc-joint-v3-manifest.json"
+
+
+def _sha(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_schema1_bundle(root: Path) -> None:
+    tag_heads = ["upos", *(f"x{i}" for i in range(9))]
+    maps = {head: {"-": 0} for head in tag_heads}
+    maps["deprel"] = {"root": 0}
+    (root / "labels.json").write_text(
+        json.dumps({"tag_heads": tag_heads, "maps": maps, "n_scripts": 1}),
+        encoding="utf-8",
+    )
+    (root / "lemma-scripts.json").write_text(json.dumps(["[]"]), encoding="utf-8")
+    (root / "lemma-lookup.json").write_text(
+        json.dumps({"form": {}, "form_upos": {}, "form_lower": {}}), encoding="utf-8"
+    )
+    tokenizer = {
+        "truncation": {
+            "direction": "Right",
+            "max_length": 8,
+            "strategy": "LongestFirst",
+            "stride": 0,
+        },
+        "post_processor": {
+            "type": "RobertaProcessing",
+            "sep": ["</s>", 2],
+            "cls": ["<s>", 0],
+        },
+    }
+    (root / "tokenizer.json").write_text(json.dumps(tokenizer), encoding="utf-8")
+    (root / "model.onnx").write_bytes(b"fixture-onnx")
+    files = {
+        name: {"bytes": (root / name).stat().st_size, "sha256": _sha(root / name)}
+        for name in (
+            "labels.json",
+            "lemma-lookup.json",
+            "lemma-scripts.json",
+            "model.onnx",
+            "tokenizer.json",
+        )
+    }
+    manifest = {
+        "schema_version": 1,
+        "model_id": "fixture-v1",
+        "dataset": "fixture",
+        "annotation_profile": "fixture-profile",
+        "normalization": "NFC",
+        "segmentation": "pretokenized",
+        "preprocessing_version": "fixture-v1",
+        "output_heads": [*tag_heads, "arc", "rel", "lemma"],
+        "max_subwords": 8,
+        "tokenizer_revision": files["tokenizer.json"]["sha256"],
+        "special_token_policy": "roberta:<s>:0:</s>:2",
+        "files": files,
+    }
+    (root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+
+def test_all_extra_recursively_includes_neural_but_not_parquet() -> None:
+    pyproject = tomllib.loads(
+        (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    all_requires = pyproject["project"]["optional-dependencies"]["all"]
+    assert all_requires == ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp,tui,neural]"]
+    assert "parquet" not in all_requires[0]
+
+
+def test_v3_legacy_fixture_is_pinned_to_the_exact_published_file_table() -> None:
+    raw = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    assert contract._file_table(raw) == contract._V3_FILES
+    assert raw["name"] == "grc-joint" and raw["model_name"] == "bowphs/GreBerta"
+
+
+def test_schema1_manifest_validates_and_drives_runtime_fields(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(
+        tmp_path, asset_sha256="a" * 64, asset_sha256_enforced=True
+    )
+    assert manifest.model_id == "fixture-v1"
+    assert manifest.max_subwords == 8
+    assert manifest.tokenizer_revision == _sha(tmp_path / "tokenizer.json")
+    assert manifest.output_heads[-3:] == ("arc", "rel", "lemma")
+    assert manifest.to_dict()["special_token_policy"] == "roberta:<s>:0:</s>:2"
+
+
+def test_manifest_rejects_corruption_before_activation(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    (tmp_path / "labels.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(ModelBundleError, match="bytes|SHA-256"):
+        ModelBundleManifest.load(tmp_path)
+
+
+def test_manifest_rejects_incompatible_schema_and_tokenizer_policy(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    path = tmp_path / "manifest.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    raw["schema_version"] = 999
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    with pytest.raises(ModelBundleError, match="unsupported model bundle schema"):
+        ModelBundleManifest.load(tmp_path)
+
+
+def test_receipt_round_trip_and_content_address_are_stable(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    receipt = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=3,
+        analyzed_tokens=3,
+        truncated=False,
+    )
+    restored = AnalysisReceipt.from_json(receipt.to_json())
+    assert restored == receipt
+    assert restored.sha256 == hashlib.sha256(restored.to_json().encode("utf-8")).hexdigest()
+    assert restored.to_dict()["runtime_versions"]["onnxruntime"] != ""
+
+
+def test_receipt_reads_the_previous_coarse_backend_info_shape() -> None:
+    legacy = AnalysisReceipt.from_dict(
+        {
+            "model": "grc-joint",
+            "available_providers": ["CPUExecutionProvider"],
+            "active_providers": ["CPUExecutionProvider"],
+        }
+    )
+    assert legacy.source_schema_version == 0
+    assert legacy.model_id == "grc-joint"
+    assert legacy.execution_providers == ("CPUExecutionProvider",)
+    assert legacy.asset_sha256 is None and legacy.tokenizer_revision is None
+
+
+def test_receipt_runtime_comparison_reports_exact_mismatch(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    expected = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=1,
+        analyzed_tokens=1,
+        truncated=False,
+    )
+    actual = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CUDAExecutionProvider", "CPUExecutionProvider"),
+        input_tokens=0,
+        analyzed_tokens=0,
+        truncated=False,
+    )
+    with pytest.raises(contract.ReceiptMismatchError, match="execution_providers"):
+        expected.assert_same_runtime(actual)
+
+
+def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from aegean.greek import joint
+
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    expected = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=3,
+        analyzed_tokens=3,
+        truncated=False,
+    )
+
+    class Candidate:
+        def _receipt(self, **_status: object) -> AnalysisReceipt:
+            return AnalysisReceipt.create(
+                manifest,
+                execution_providers=("CPUExecutionProvider",),
+                input_tokens=0,
+                analyzed_tokens=0,
+                truncated=False,
+            )
+
+    candidate = Candidate()
+    monkeypatch.setattr(joint, "_require_neural_extra", lambda: None)
+    monkeypatch.setattr(
+        joint,
+        "versions",
+        lambda: {
+            "fetched": {
+                "grc-joint": {"sha256": "", "sha256_enforced": False}
+            }
+        },
+    )
+    monkeypatch.setattr(joint, "fetch", lambda *_args, **_kwargs: tmp_path)
+    monkeypatch.setattr(joint, "_JointModel", lambda *_args, **_kwargs: candidate)
+    monkeypatch.setattr(joint, "_ACTIVE", None)
+
+    joint.use_neural_pipeline(expected_receipt=expected)
+    assert joint.active() is candidate
+
+
+def test_model_encode_uses_manifest_limit_not_a_runtime_constant() -> None:
+    model = object.__new__(__import__("aegean.greek.joint", fromlist=["_JointModel"])._JointModel)
+    model.manifest = SimpleNamespace(max_subwords=4)
+    seen: list[str] = []
+
+    class Tok:
+        def encode(self, words: list[str], *, is_pretokenized: bool) -> SimpleNamespace:
+            assert is_pretokenized is True
+            seen.extend(words)
+            return SimpleNamespace(ids=[0, 10, 11, 2], word_ids=[None, 0, 1, None])
+
+    model._tok = Tok()
+    ids, positions, kept = model._encode([str(i) for i in range(100_000)])
+    assert seen == ["0", "1", "2", "3"]
+    assert ids == [0, 10, 11, 2]
+    assert positions == [1, 2] and kept == [0, 1]

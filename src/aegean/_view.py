@@ -64,10 +64,9 @@ def pipeline_rows(
 
     Wraps :func:`aegean.greek.pipeline`, mapping each `TokenRecord` to a row with
     ``sentence`` / ``index`` position, ``text``, ``upos``, ``lemma``,
-    ``lemma_source`` (the lemma's evidence class: ``"attested"`` / ``"neural"``
-    / ``"rule"`` / ``"seed"`` / ``"paradigm"`` / ``"identity"`` / ``"unresolved"`` /
-    ``"punct"``), ``lemma_known`` (``False`` marks a lemma to
-    verify — an identity fall-through or unresolved miss), and the optional
+    ``lemma_source`` (the lemma's exact evidence class), ``lemma_resolved``,
+    ``lemma_verified``, ``review_recommended``, and the deprecated ``lemma_known``
+    compatibility key, plus the optional
     ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
     the neural pipeline, ``None`` otherwise). Backends follow whatever is active,
     exactly as `pipeline` does.
@@ -109,11 +108,20 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
             "upos": r.upos,
             "lemma": r.lemma,
             "lemma_source": r.lemma_source.value,
-            "lemma_known": r.lemma_known,
+            "lemma_resolved": r.lemma_resolved,
+            "lemma_verified": r.lemma_verified,
+            "review_recommended": r.review_recommended,
+            "lemma_known": r.lemma_resolved,
             "head": r.head,
             "relation": r.relation,
             "xpos": r.xpos,
             "feats": r.feats,
+            "neural_analyzed": r.neural_analyzed,
+            "analysis_complete": r.analysis_complete,
+            "analysis_warning": r.analysis_warning,
+            "analysis_receipt": (
+                r.analysis_receipt.to_dict() if r.analysis_receipt is not None else None
+            ),
         }
         for r in records
     ]

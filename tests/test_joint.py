@@ -155,11 +155,15 @@ def test_compose_lemma_reports_whether_it_resolved() -> None:
         lookup_form_upos={}, lookup_form={"λόγος": "λόγος"}, lookup_lower={}, trees=[]
     )
     # lemma == form, yet it came from a lookup → resolved True (NOT an identity fall-through)
-    assert joint._compose_lemma("λόγος", "NOUN", 0, hit) == ("λόγος", True)
+    assert joint._compose_lemma("λόγος", "NOUN", 0, hit) == (
+        "λόγος", True, joint.LemmaSource.NEURAL_LOOKUP,
+    )
 
     miss = SimpleNamespace(lookup_form_upos={}, lookup_form={}, lookup_lower={}, trees=[])
     # nothing matched: the surface form is returned, flagged as not resolved
-    assert joint._compose_lemma("ζζζ", "NOUN", 0, miss) == ("ζζζ", False)
+    assert joint._compose_lemma("ζζζ", "NOUN", 0, miss) == (
+        "ζζζ", False, joint.LemmaSource.IDENTITY,
+    )
 
 
 def test_pipeline_neural_identity_fallthrough_is_not_known(monkeypatch) -> None:
@@ -178,7 +182,8 @@ def test_pipeline_neural_identity_fallthrough_is_not_known(monkeypatch) -> None:
     recs = greek.pipeline("ὁ λόγος ἐστί")
     assert [r.lemma for r in recs] == ["ὁ", "λόγος", "ἐστί"]  # all identity (surface form)
     for r in recs:  # lemma == surface, but honestly flagged as an unresolved fall-through
-        assert r.lemma_source is LemmaSource.IDENTITY and r.lemma_known is False
+        assert r.lemma_source is LemmaSource.IDENTITY
+        assert r.lemma_resolved is False and r.review_recommended is True
 
 
 # --- the dispatch hooks -------------------------------------------------------------

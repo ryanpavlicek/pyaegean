@@ -134,7 +134,7 @@ writes them:
 | Written by | Keys | Meaning |
 |---|---|---|
 | the NT corpus (gold) | `lemma`, `morph`, `strongs`, `gloss`, `normalized`, `upos`, `ref` | edition-supplied annotation |
-| `greek.annotate_corpus` | `lemma`, `upos`, `lemma_source`, `lemma_known` | machine analysis + its evidence class (§4) |
+| `greek.annotate_corpus` | `lemma`, `upos`, `lemma_source`, `lemma_resolved`, `lemma_verified`, `review_recommended` | machine analysis, exact provenance, and separate resolution/review state (§4) |
 | `aegean.io.from_review_table` | `<field>__pred`, `review_status`, `reviewed_by`, `review_note` | the human-correction audit trail (§7.3) |
 | you | anything else | your own per-token facts |
 
@@ -144,9 +144,11 @@ its normal key (`lemma`, `upos`, `morph` or `feats`) and the machine value the
 reviewer saw is preserved under `lemma__pred` / `upos__pred` / `morph__pred`.
 Nothing is overwritten silently; treat any key ending in `__pred` as reserved
 for that convention. `lemma_source` holds a `LemmaSource` evidence-class value
-(`attested` / `neural` / `rule` / `seed` / `paradigm` / `identity` / `unresolved` /
-`punct`), and `lemma_known` is its derived boolean; the review export's
-"needs review" triage reads them.
+(`attested` / `neural_lookup` / `neural_edit` / generic `neural` / `rule` / `seed` /
+`paradigm` / `identity` / `unresolved` / `punct` / `user`). `lemma_resolved`,
+`lemma_verified`, and `review_recommended` keep distinct questions separate; the
+review export uses the explicit review signal. The legacy `lemma_known` key is a
+deprecated compatibility alias for `lemma_resolved`.
 
 ---
 
@@ -202,10 +204,13 @@ corpus. They share nothing structurally.
 | `upos` | universal POS tag |
 | `lemma` | the lemma |
 | `lemma_source` | the lemma's evidence class (`LemmaSource`) |
+| `lemma_resolved` | whether a real lemma decision exists rather than a surface fallback |
+| `lemma_verified` | whether a human reviewer explicitly verified or corrected the lemma |
+| `review_recommended` | whether the lemma should be routed to human review |
 | `head` | `index` of the head record in the same sentence; `0` = root, `None` = no parse |
 | `relation` | dependency relation. Note the name: it is `relation`, **not** `deprel` |
 | `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
-| `lemma_known` | derived property: `False` when the lemma needs human review |
+| `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 
 ```python
 from aegean import greek
@@ -213,20 +218,21 @@ from aegean import greek
 records = greek.pipeline("ὁ λόγος σὰρξ ἐγένετο καὶ ἐσκήνωσεν ἐν ἡμῖν.")
 for r in records:
     print(f"{r.sentence} {r.index} {r.text:10} {r.upos:6} {r.lemma:10} "
-          f"{r.lemma_source.value:10} known={r.lemma_known!s:5} "
+          f"{r.lemma_source.value:14} resolved={r.lemma_resolved!s:5} "
+          f"verified={r.lemma_verified!s:5} review={r.review_recommended!s:5} "
           f"head={r.head} relation={r.relation} xpos={r.xpos} feats={r.feats}")
 ```
 
 ```
-0 1 ὁ          DET    ὁ          seed       known=True  head=None relation=None xpos=None feats=None
-0 2 λόγος      NOUN   λόγος      seed       known=True  head=None relation=None xpos=None feats=None
-0 3 σὰρξ       NOUN   σὰρξ       unresolved known=False head=None relation=None xpos=None feats=None
-0 4 ἐγένετο    NOUN   ἐγένετο    unresolved known=False head=None relation=None xpos=None feats=None
-0 5 καὶ        CCONJ  καί        seed       known=True  head=None relation=None xpos=None feats=None
-0 6 ἐσκήνωσεν  NOUN   ἐσκήνωσεν  unresolved known=False head=None relation=None xpos=None feats=None
-0 7 ἐν         ADP    ἐν         seed       known=True  head=None relation=None xpos=None feats=None
-0 8 ἡμῖν       NOUN   ἐγώ        seed       known=True  head=None relation=None xpos=None feats=None
-0 9 .          PUNCT  .          punct      known=True  head=None relation=None xpos=None feats=None
+0 1 ὁ          DET    ὁ          seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
+0 2 λόγος      NOUN   λόγος      seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
+0 3 σὰρξ       NOUN   σὰρξ       unresolved     resolved=False verified=False review=True  head=None relation=None xpos=None feats=None
+0 4 ἐγένετο    NOUN   ἐγένετο    unresolved     resolved=False verified=False review=True  head=None relation=None xpos=None feats=None
+0 5 καὶ        CCONJ  καί        seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
+0 6 ἐσκήνωσεν  NOUN   ἐσκήνωσεν  unresolved     resolved=False verified=False review=True  head=None relation=None xpos=None feats=None
+0 7 ἐν         ADP    ἐν         seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
+0 8 ἡμῖν       NOUN   ἐγώ        seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
+0 9 .          PUNCT  .          punct          resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 ```
 
 This is the zero-dependency baseline being honest: the forms it cannot ground
@@ -489,9 +495,9 @@ print("provenance note:", fixed.provenance.notes[-1])
 ```
 
 ```
-after annotate: {'lemma': 'ἐγένετο', 'lemma_known': 'false', 'lemma_source': 'unresolved', 'upos': 'NOUN'}
+after annotate: {'lemma': 'ἐγένετο', 'lemma_known': 'false', 'lemma_resolved': 'false', 'lemma_source': 'unresolved', 'lemma_verified': 'false', 'review_recommended': 'true', 'upos': 'NOUN'}
 rows exported: 2
-after apply: {'lemma': 'γίγνομαι', 'lemma__pred': 'ἐγένετο', 'lemma_known': 'false', 'lemma_source': 'unresolved', 'review_note': 'aor. mid. of γίγνομαι', 'review_status': 'corrected', 'reviewed_by': 'RP', 'upos': 'VERB', 'upos__pred': 'NOUN'}
+after apply: {'lemma': 'γίγνομαι', 'lemma__pred': 'ἐγένετο', 'lemma_known': 'true', 'lemma_resolved': 'true', 'lemma_source': 'user', 'lemma_source__pred': 'unresolved', 'lemma_verified': 'true', 'review_note': 'aor. mid. of γίγνομαι', 'review_recommended': 'false', 'review_status': 'corrected', 'reviewed_by': 'RP', 'upos': 'VERB', 'upos__pred': 'NOUN'}
 provenance note: review: 1 tokens corrected by RP (2026-07-10)
 ```
 
@@ -523,7 +529,8 @@ toolkit assumes:
 - **`kind` must be honest**: word-level analysis, review export, and
   annotation all gate on `TokenKind.WORD`.
 - **Keep `annotations` values strings**, and stay off the reserved
-  conventions (`<field>__pred`, `lemma_source`, `lemma_known`,
+  conventions (`<field>__pred`, `lemma_source`, `lemma_resolved`,
+  `lemma_verified`, `review_recommended`, `lemma_known`,
   `review_status`, `reviewed_by`, `review_note`) unless you mean them.
 - **Document ids must be unique** within a corpus (duplicates collapse with a
   warning, keeping the last).
