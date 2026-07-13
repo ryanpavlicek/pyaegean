@@ -31,7 +31,8 @@ pluggable multi-provider AI layer.
 Downloads and persistent caches are safer under connection resets, long transfers,
 concurrent clients, and interrupted archive extraction. Offline lexical grounding no
 longer derives rarity from the two-chapter bundled NT sample, and documentary evaluation
-restores the session's prior backend state even when scoring fails. See the
+restores the session's prior backend state even when scoring fails. SQLite search also
+stays available while another client appends documents to the same corpus database. See the
 [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) for details.
 
 ### New here?

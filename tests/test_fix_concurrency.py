@@ -145,9 +145,8 @@ def test_stream_never_yields_a_torn_document(tmp_path) -> None:  # type: ignore[
     assert torn == []
 
 
-def test_search_survives_a_concurrent_fts_rebuild(tmp_path) -> None:  # type: ignore[no-untyped-def]
-    """A reader landing in the append's DROP/CREATE window for the FTS index falls
-    back to the exact-match path instead of raising."""
+def test_search_survives_concurrent_fts_updates(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """Transactional FTS updates leave the table continuously available to readers."""
     from aegean import db
 
     p = tmp_path / "c.db"

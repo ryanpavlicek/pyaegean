@@ -121,8 +121,9 @@ def to_sqlite(
     By default this **overwrites** any existing file. With ``append=True`` it instead
     upserts ``corpus``'s documents into an existing database (by document id — a document
     with a matching id is replaced, others are added), keeping the rest intact; the FTS5
-    index is refreshed, and the appended corpus's provenance is recorded alongside the
-    original's, so the reloaded corpus cites every source that went in (see `from_sqlite`).
+    index is updated transactionally, and the appended corpus's provenance is recorded
+    alongside the original's, so the reloaded corpus cites every source that went in
+    (see `from_sqlite`).
     Documents and tokens become queryable rows; provenance and the sign inventory live in
     a ``meta`` table. Round-trips losslessly via `from_sqlite`.
 
@@ -206,6 +207,11 @@ def _append_sqlite(
         total = len(corpus.documents)
         for done, doc in enumerate(corpus.documents, start=1):
             dd = _document_to_dict(doc)
+            if has_fts:
+                # Keep the virtual table's schema stable for concurrent readers. Dropping
+                # and recreating the whole FTS table took a schema lock that could leak as
+                # ``database is locked`` from an otherwise read-only search.
+                conn.execute("DELETE FROM tokens_fts WHERE doc_id = ?", (dd["id"],))
             prev = conn.execute(
                 "SELECT doc_order FROM documents WHERE id = ?", (dd["id"],)
             ).fetchone()
@@ -216,11 +222,14 @@ def _append_sqlite(
             else:
                 order, next_order = next_order, next_order + 1
             _insert_document(conn, dd, order)
+            if has_fts:
+                conn.execute(
+                    "INSERT INTO tokens_fts(text, doc_id, position) "
+                    "SELECT text, doc_id, position FROM tokens WHERE doc_id = ?",
+                    (dd["id"],),
+                )
             if progress is not None:
                 progress(done, total)
-        if has_fts:  # rebuild from current tokens so replaced docs leave no stale hits
-            conn.execute("DROP TABLE tokens_fts")
-            _build_fts(conn)
         # provenance: keep every distinct source that went in. meta holds one dict for a
         # single-source DB; the first append of a second source turns it into a list.
         row = conn.execute("SELECT value FROM meta WHERE key = 'provenance'").fetchone()

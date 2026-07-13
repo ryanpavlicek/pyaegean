@@ -31,6 +31,9 @@ and repeated evaluation in long-lived sessions.
 - `aegean greek eval --documentary` restores reconciliation, lemma-rescue, and
   paradigm state even when scoring fails, and preserves settings that were already
   active in a long-lived REPL session.
+- SQLite corpus appends update only the affected full-text rows inside the append
+  transaction instead of dropping and recreating the FTS table, so concurrent searches
+  no longer fail intermittently with `database is locked`.
 
 ## 0.44.0 (2026-07-11)
 
