@@ -213,14 +213,18 @@ def _morphology_items(text: str) -> list[GroundingItem]:
 def _rare_word_line(text: str) -> str:
     """Comma-joined rare/uncommon content words in ``text``, or ``""``.
 
-    Rarity is measured against the Greek NT as a reference corpus (`greek.load_nt`),
-    a register-broad Koine baseline that is offline and bundled-on-demand. Best-effort:
-    if the corpus or the rarity computation is unavailable, returns ``""`` rather than
-    raising — the rest of the morphology grounding still stands."""
+    Rarity is measured against a previously fetched full Greek NT reference corpus.
+    The bundled two-book sample is not representative and is never used for frequency
+    claims. Best-effort: if the full corpus or computation is unavailable, returns
+    ``""`` rather than raising — the rest of the morphology grounding still stands."""
     try:
-        from ..greek import load_nt, terminology_rarity
+        from ..greek import terminology_rarity
+        from ..scripts.greek.nt import _load_cached_full_nt
 
-        result = terminology_rarity(text, load_nt())
+        reference = _load_cached_full_nt()
+        if reference is None:
+            return ""
+        result = terminology_rarity(text, reference)
     except Exception:
         return ""
     rare = [w.word for w in result.hardest(4) if w.label != "common"]

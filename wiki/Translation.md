@@ -116,6 +116,11 @@ translate.grounding_for("σπεῖρε τὴν ἄρουραν", "greek", mode="
 # dictionary is loaded.
 ```
 
+The rarity gate uses the full, SHA-256-verified NT only when that asset is already
+in the local data store. It never downloads an optional reference corpus during a
+translation, and it never substitutes the bundled John 1 + Philemon sample. Without
+the full corpus, morphology grounding continues and the rarity flag is simply absent.
+
 The gloss cascade is **never** taken from LSJ's first sense: LSJ orders senses
 etymologically, so its lead sense is frequently the archaic meaning (καιρός,
 βίος, λόγος), and asserting it would inject exactly the errors this layer exists

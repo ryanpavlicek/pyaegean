@@ -114,7 +114,9 @@ class DiskCache:
         _warn_if_dir_writable_by_others(self.path.parent)
         self._lock = threading.Lock()
         self._sqlite3 = sqlite3  # kept so the ops can catch a concurrent-close error
-        self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
+        self._conn = sqlite3.connect(
+            str(self.path), timeout=30.0, check_same_thread=False
+        )
         # Values are unpickled on read, so restrict the file to the owner: on a shared host
         # this stops another user from planting a malicious pickle (code execution on the
         # next cache hit). Best effort — a no-op where POSIX modes don't apply (Windows).
@@ -123,6 +125,14 @@ class DiskCache:
         except OSError:
             pass
         with self._lock:
+            self._conn.execute("PRAGMA busy_timeout = 30000")
+            # WAL lets independent processes read while another appends.  It is a
+            # performance hint only: a filesystem that cannot enable it must not
+            # make the optional cache change a program's result.
+            try:
+                self._conn.execute("PRAGMA journal_mode = WAL")
+            except sqlite3.OperationalError:
+                pass
             self._conn.execute(
                 "CREATE TABLE IF NOT EXISTS cache (key TEXT PRIMARY KEY, value BLOB)"
             )
@@ -134,7 +144,7 @@ class DiskCache:
                 row = self._conn.execute(
                     "SELECT value FROM cache WHERE key = ?", (key,)
                 ).fetchone()
-        except self._sqlite3.ProgrammingError:
+        except (self._sqlite3.ProgrammingError, self._sqlite3.OperationalError):
             # The connection was closed under us (enable()/disable() from another
             # thread while this worker held the cache): a miss, not a crash. A cache
             # is an optimization, so the caller recomputes — the never-changes-a-
@@ -158,7 +168,11 @@ class DiskCache:
                     "INSERT OR REPLACE INTO cache (key, value) VALUES (?, ?)", (key, blob)
                 )
                 self._conn.commit()
-        except self._sqlite3.ProgrammingError:  # closed concurrently: skip persisting
+        except (self._sqlite3.ProgrammingError, self._sqlite3.OperationalError):
+            # Closed concurrently, or another process held SQLite's writer lock
+            # for longer than the busy timeout: skip persisting.  This cache is an
+            # optimization and may never turn a successful analysis into an error.
+            self._rollback_quietly()
             return
 
     def clear(self) -> None:
@@ -166,14 +180,23 @@ class DiskCache:
             with self._lock:
                 self._conn.execute("DELETE FROM cache")
                 self._conn.commit()
-        except self._sqlite3.ProgrammingError:  # closed concurrently: nothing to clear
+        except (self._sqlite3.ProgrammingError, self._sqlite3.OperationalError):
+            self._rollback_quietly()
             return
+
+    def _rollback_quietly(self) -> None:
+        """End a failed write transaction without surfacing cache maintenance."""
+        try:
+            with self._lock:
+                self._conn.rollback()
+        except (self._sqlite3.ProgrammingError, self._sqlite3.OperationalError):
+            pass
 
     def __len__(self) -> int:
         try:
             with self._lock:
                 return int(self._conn.execute("SELECT COUNT(*) FROM cache").fetchone()[0])
-        except self._sqlite3.ProgrammingError:  # closed concurrently
+        except (self._sqlite3.ProgrammingError, self._sqlite3.OperationalError):
             return 0
 
     def close(self) -> None:
@@ -253,7 +276,11 @@ def _keyify(obj: Any) -> Any:
         return obj
     ck = getattr(obj, "cache_key", None)
     if callable(ck):
-        return ["K", ck()]
+        try:
+            keyed = _keyify(ck())
+        except Exception:
+            return _MISS
+        return _MISS if keyed is _MISS else ["K", keyed]
     if isinstance(obj, (list, tuple)):
         out = []
         for x in obj:
@@ -261,14 +288,19 @@ def _keyify(obj: Any) -> Any:
             if k is _MISS:
                 return _MISS
             out.append(k)
-        return ["L", out]
+        return ["L" if isinstance(obj, list) else "T", out]
     if isinstance(obj, dict):
         items = []
-        for key in sorted(obj):
-            k = _keyify(obj[key])
-            if k is _MISS:
+        for key, value in obj.items():
+            kk = _keyify(key)
+            k = _keyify(value)
+            if kk is _MISS or k is _MISS:
                 return _MISS
-            items.append([key, k])
+            items.append([kk, k])
+        # Sort canonical JSON encodings, not the original keys: unlike Python's
+        # ordering this works for heterogeneous key types and preserves their
+        # identity (1 and "1" remain different).
+        items.sort(key=lambda item: json.dumps(item[0], sort_keys=True, ensure_ascii=False))
         return ["D", items]
     return _MISS
 
@@ -279,11 +311,14 @@ def _make_key(
     parts = _keyify([list(args), kwargs])
     if parts is _MISS:
         return None
-    payload = json.dumps(
-        [_CACHE_FORMAT, version, f"{fn.__module__}.{fn.__qualname__}", parts],
-        sort_keys=True,
-        ensure_ascii=False,
-    )
+    try:
+        payload = json.dumps(
+            [_CACHE_FORMAT, version, f"{fn.__module__}.{fn.__qualname__}", parts],
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+    except (TypeError, ValueError):
+        return None
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

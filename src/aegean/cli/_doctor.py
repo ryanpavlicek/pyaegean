@@ -97,19 +97,24 @@ def doctor_corpus(
 
 
 def _write_corpus_report(report: Any, output: Path) -> None:
+    from aegean._atomic import atomic_path
+
     suffix = output.suffix.lower()
     if suffix in (".md", ".markdown"):
         with writing(output):
-            output.write_text(report.to_markdown(), encoding="utf-8")
+            with atomic_path(output) as tmp:
+                tmp.write_text(report.to_markdown(), encoding="utf-8")
     elif suffix == ".json":
         with writing(output):
-            output.write_text(
-                json.dumps(to_plain(report), ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
+            with atomic_path(output) as tmp:
+                tmp.write_text(
+                    json.dumps(to_plain(report), ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
     elif suffix in (".txt", ""):
         with writing(output):
-            output.write_text(report.to_text(), encoding="utf-8")
+            with atomic_path(output) as tmp:
+                tmp.write_text(report.to_text(), encoding="utf-8")
     else:
         raise fail(f"output {output.name!r}: use a .md, .json, or .txt extension")
     print(f"wrote {output}", file=sys.stderr)

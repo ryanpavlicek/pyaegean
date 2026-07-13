@@ -1,15 +1,14 @@
 """Regression tests for the post-0.44 defect-review follow-up.
 
 These are the cross-cutting cases not already pinned by the focused progress,
-translation, and CLI suites: checksum-confirmed reset completion, live stale-lock
-protection, extraction crash-window provenance, and multi-instance response-cache
+translation, and CLI suites: checksum-confirmed reset completion, long-held lock
+exclusivity, extraction crash-window provenance, and multi-instance response-cache
 merging. Every test is local/offline and exercises the production implementation.
 """
 
 from __future__ import annotations
 
 import hashlib
-import os
 import tarfile
 import threading
 import time
@@ -70,7 +69,7 @@ def test_unpinned_reset_is_never_accepted_as_complete(
     assert calls["n"] == data._DOWNLOAD_ATTEMPTS
 
 
-def test_live_lock_heartbeat_prevents_stale_break(tmp_path: Path) -> None:
+def test_kernel_lock_remains_exclusive_past_lease_timing(tmp_path: Path) -> None:
     from aegean._locking import FileLock
 
     path = tmp_path / "asset.lock"
@@ -92,14 +91,15 @@ def test_live_lock_heartbeat_prevents_stale_break(tmp_path: Path) -> None:
             acquired.set()
 
     with first:
-        time.sleep(0.12)  # older than stale_after, but heartbeats prove it is alive
+        time.sleep(0.12)  # older than the legacy lease threshold; kernel lock remains live
         waiter = threading.Thread(target=wait_for_lock, daemon=True)
         waiter.start()
         time.sleep(0.05)
-        assert not acquired.is_set()  # still exclusive after the former one-hour boundary
+        assert not acquired.is_set()  # still exclusive after the former lease boundary
     waiter.join(timeout=2)
     assert acquired.is_set()
-    assert not path.exists()
+    assert path.exists()  # persistent sentinel; kernel ownership, not existence, is the lock
+    assert FileLock.is_locked(path) is False
 
 
 def test_old_holder_never_unlinks_a_successor_lock(tmp_path: Path) -> None:
@@ -108,13 +108,12 @@ def test_old_holder_never_unlinks_a_successor_lock(tmp_path: Path) -> None:
     path = tmp_path / "asset.lock"
     old = FileLock(path, stale_after=1, poll_every=0.01, heartbeat_every=0.1)
     old.__enter__()
-    successor = f"{os.getpid()} successor-token\n"
-    path.write_text(successor, encoding="ascii")
     old.__exit__(None, None, None)
-    try:
-        assert path.read_text(encoding="ascii") == successor
-    finally:
-        path.unlink(missing_ok=True)
+    # The sentinel is never unlinked. A successor takes kernel ownership of the
+    # same inode, eliminating the former ownership-check/unlink ABA window.
+    assert path.exists()
+    with FileLock(path, poll_every=0.01):
+        assert FileLock.is_locked(path)
 
 
 def _archive(tmp_path: Path, label: str, content: bytes) -> tuple[Path, str]:

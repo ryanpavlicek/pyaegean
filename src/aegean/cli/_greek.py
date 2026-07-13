@@ -1408,6 +1408,7 @@ def evaluate(
     restore_reconciliation_off = False
     restore_rescue_off = False
     restore_paradigms_off = False
+    restore_neural_off = False
 
     def _apply_documentary() -> None:
         # The two opt-in documentary levers post-process the neural pipeline, so it must be
@@ -1415,9 +1416,11 @@ def evaluate(
         # conservative default (X/b drift only). Toggled off again before the result is emitted.
         from aegean.greek import joint, paradigms
 
-        nonlocal restore_reconciliation_off, restore_rescue_off, restore_paradigms_off
+        nonlocal restore_reconciliation_off, restore_rescue_off
+        nonlocal restore_paradigms_off, restore_neural_off
         if joint.active() is None:
             _activate(neural=True)
+            restore_neural_off = True
         # Preserve pre-existing session state: the REPL can keep these levers active
         # deliberately, and a one-shot eval must not disable or reconfigure them.
         if not greek.documentary_reconciliation_active():
@@ -1446,6 +1449,8 @@ def evaluate(
                 greek.disable_documentary_lemma_rescue()
             if restore_paradigms_off:
                 greek.disable_paradigms()
+            if restore_neural_off:
+                greek.disable_neural_pipeline()
 
     def emit_drift(report: object) -> None:  # ErrorAnalysis -> --json dict / text summary
         if emit_result(report.as_dict(), json_output=json_out, output=output):  # type: ignore[attr-defined]

@@ -117,9 +117,16 @@ def evaluate_on_nt(
     the clean metric; UPOS is compared under a reconciled tagset, mirroring
     ``evaluate_on_proiel``."""
     if corpus is None:
-        from ..scripts.greek.nt import load_nt
+        from ..data import DataNotAvailableError
+        from ..scripts.greek.nt import _is_bundled_nt_sample, load_nt
 
         corpus = load_nt(book)
+        if _is_bundled_nt_sample(corpus):
+            raise DataNotAvailableError(
+                "NT evaluation requires the full pinned 27-book gold corpus; the bundled "
+                "John 1 + Philemon sample is not an evaluation set. Fetch it with "
+                "'aegean data fetch nt-corpus' and retry."
+            )
     split = HeldoutSplit(
         sentences=_gold_sentences(corpus),
         train_forms=frozenset(),

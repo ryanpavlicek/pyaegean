@@ -466,26 +466,12 @@ def test_rarity_gate_glosses_only_the_rare_lemma(_reset_lexica, _rarity_referenc
 
 
 def test_rare_lemma_filter_refuses_the_bundled_sample_as_frequency_evidence(monkeypatch):
-    from aegean import greek
     from aegean.ai.grounding import _rare_lemma_filter
-    from aegean.core import Corpus, Document, Provenance, Token, TokenKind
+    from aegean.scripts.greek import nt
 
-    sample = Corpus(
-        [
-            Document(
-                id="John 1",
-                script_id="greek",
-                tokens=[Token("λόγος", TokenKind.WORD, annotations={"lemma": "λόγος"})],
-                lines=[[0]],
-            )
-        ],
-        provenance=Provenance(
-            source="test",
-            notes=("Loaded from the bundled offline sample (John 1 + Philemon).",),
-        ),
-        script_id="greek",
-    )
-    monkeypatch.setattr(greek, "load_nt", lambda: sample)
+    # The cached-only boundary returns no reference rather than loading or fetching
+    # the bundled sample as if it were representative frequency evidence.
+    monkeypatch.setattr(nt, "_load_cached_full_nt", lambda: None)
     assert _rare_lemma_filter("λόγος") is None  # no representative signal, degrade cleanly
 
 

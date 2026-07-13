@@ -78,9 +78,10 @@ def to_workbench(corpus: Corpus, path: str | Path | None = None) -> list[dict[st
             }
         )
     if path is not None:
-        Path(path).write_text(
-            json.dumps(records, ensure_ascii=False), encoding="utf-8"
-        )
+        from .._atomic import atomic_path
+
+        with atomic_path(path) as tmp:
+            tmp.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
     return records
 
 

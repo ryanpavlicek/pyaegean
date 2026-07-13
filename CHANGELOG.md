@@ -4,6 +4,32 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.44.2 (2026-07-12)
+
+A correctness and crash-safety patch for caches, downloads, derived artifacts,
+New Testament evaluation, and user-written outputs.
+
+### Fixed
+
+- Analysis-cache keys now distinguish lists from tuples, accept heterogeneous
+  dictionary keys, and bypass unkeyable custom fingerprints. Independent SQLite
+  cache instances use WAL/busy waiting and degrade to a cache miss or skipped write
+  instead of surfacing lock contention to an analysis.
+- Cross-process file locks now use kernel ownership on a persistent sentinel rather
+  than check-then-unlink leases, closing the stale-holder/successor ABA race. Direct
+  URL downloads also serialize by destination and recheck the completed artifact.
+- Downloads reject negative `Content-Length` values. Tar extraction rejects device
+  and FIFO members and caps both member count and expanded size.
+- Derived models, indexes, extracted members, CLI results, GeoJSON, calibration,
+  workbench, and exploratory-result files now replace their destination atomically.
+  Failed extraction swaps restore the prior directory, including recovery from an
+  interrupted swap that left it under `.old`.
+- Default NT evaluation and error analysis refuse the bundled two-chapter sample as
+  benchmark gold. Translation and AI rarity gates consult only an already-cached,
+  SHA-256-verified full NT and never trigger a download for optional grounding.
+- A documentary evaluation that implicitly activates the neural pipeline restores
+  the previous off state on both success and failure.
+
 ## 0.44.1 (2026-07-12)
 
 A reliability patch for downloads, persistent caches, offline lexical grounding,
@@ -15,9 +41,10 @@ and repeated evaluation in long-lived sessions.
   once more, and a reset after a complete close-delimited response is accepted only
   when the assembled file matches its pinned SHA-256. Unpinned mirror responses
   remain strict and resumable rather than accepting potentially truncated content.
-- Dataset and response-cache lock files now carry ownership tokens and live-holder
-  heartbeats. A long download cannot be mistaken for an abandoned lock, and an old
-  holder cannot delete a successor's lock after stale-lock recovery.
+- Dataset and response-cache lock files gained ownership tokens and live-holder
+  heartbeats, preventing a long active download from being mistaken for an abandoned
+  lock. Version 0.44.2 subsequently replaced that lease design with kernel ownership
+  to close its remaining check/unlink race.
 - Persistent AI response caches merge each writer's changed keys over the latest
   complete on-disk generation, so independent clients no longer erase one another's
   cached completions.

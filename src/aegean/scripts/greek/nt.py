@@ -321,6 +321,42 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
     return Corpus(docs, sign_inventory=greek_inventory(), provenance=provenance, script_id="greek")
 
 
+def _is_bundled_nt_sample(corpus: Any) -> bool:
+    """Whether ``corpus`` is the deliberately small offline NT fallback."""
+    provenance = getattr(corpus, "provenance", None)
+    notes = getattr(provenance, "notes", ()) if provenance is not None else ()
+    return any("bundled offline sample" in str(note).lower() for note in notes)
+
+
+def _load_cached_full_nt() -> Any | None:
+    """Load the pinned full NT only when it is already cached; never use the network.
+
+    Frequency-based helpers use this boundary so a convenience fallback cannot
+    masquerade as a representative reference corpus.
+    """
+    import json as _json
+
+    from ...core.corpus import Corpus
+    from ...data import _REMOTE, cache_dir, sha256_file
+    from .inventory import greek_inventory
+
+    spec = _REMOTE["nt-corpus"]
+    path = cache_dir() / "nt-corpus"
+    try:
+        if not path.is_file() or sha256_file(path) != spec.sha256:
+            return None
+        payload: dict[str, Any] = _json.loads(path.read_text(encoding="utf-8"))
+        docs = _select(payload["documents"], None, None)
+    except (OSError, ValueError, KeyError, TypeError, _json.JSONDecodeError):
+        return None
+    return Corpus(
+        docs,
+        sign_inventory=greek_inventory(),
+        provenance=_provenance(payload.get("_meta", {}), offline=False),
+        script_id="greek",
+    )
+
+
 # loadable by name: aegean.load("nt") — fetches the full corpus, or the bundled sample offline
 from ...core.corpus import register_loader  # noqa: E402
 

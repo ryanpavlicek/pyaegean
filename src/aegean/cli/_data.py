@@ -422,11 +422,13 @@ def remove(
         # transfer or be silently undone. The current-pin fetch holds ``<n>.lock``; a
         # versioned fetch holds ``<n>@<version>.lock``. Check the locks in scope.
         locked = []
-        if version is None and (root / (n + ".lock")).exists():
+        from aegean._locking import FileLock
+
+        if version is None and FileLock.is_locked(root / (n + ".lock")):
             locked.append(n)
         locked += [
             p.name for p in versioned_entry_paths(n, root, version=version)
-            if p.name.endswith(".lock")
+            if p.name.endswith(".lock") and FileLock.is_locked(p)
         ]
         if locked:
             scope = f"{n}@{version}" if version is not None else n

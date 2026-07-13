@@ -282,8 +282,11 @@ def train_lemmatizer(
         if fetch_prebuilt("agdt-derived", out, member=_MODEL_NAME):
             return out
     model = _train(_triples(source_dir), epochs)
-    with gzip.open(out, "wt", encoding="utf-8") as f:
-        json.dump(model, f, ensure_ascii=False)
+    from .._atomic import atomic_path
+
+    with atomic_path(out) as tmp:
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            json.dump(model, f, ensure_ascii=False)
     return out
 
 

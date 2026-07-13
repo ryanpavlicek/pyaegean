@@ -89,8 +89,9 @@ def test_write_leaves_no_partial_file_observable(tmp_path):
 
     on_disk = json.loads(path.read_text(encoding="utf-8"))  # parses cleanly = whole file
     assert list(on_disk.values()) == ["VALUE"]
-    # No ".tmp" siblings left behind by the atomic swap.
-    assert [q.name for q in path.parent.iterdir()] == [path.name]
+    # No ".tmp" siblings left behind by the atomic swap. The persistent lock
+    # sentinel is metadata; kernel ownership, not path existence, is transient.
+    assert sorted(q.name for q in path.parent.iterdir()) == [path.name, path.name + ".lock"]
     # And a fresh cache reading that file serves the entry (round-trip through disk).
     assert ResponseCache(path).get("p", "m", "s", "prompt", max_tokens=128) == "VALUE"
 

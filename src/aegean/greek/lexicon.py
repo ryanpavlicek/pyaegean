@@ -257,8 +257,11 @@ def build_index(*, source_dir: Path | str | None = None, force: bool = False) ->
                 if parsed is not None and parsed[0] not in index:  # first wins
                     index[parsed[0]] = _entry_to_dict(parsed[1])
                 elem.clear()
-    with gzip.open(out, "wt", encoding="utf-8") as f:
-        json.dump(index, f, ensure_ascii=False)
+    from .._atomic import atomic_path
+
+    with atomic_path(out) as tmp:
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            json.dump(index, f, ensure_ascii=False)
     return out
 
 

@@ -473,8 +473,11 @@ def train_parser(
     trees = load_gold_trees(source_dir=source_dir)
     weights, rels, n_proj = _train(trees, epochs)
     model = {"weights": weights, "relations": rels, "sentences": len(trees), "projective": n_proj}
-    with gzip.open(out, "wt", encoding="utf-8") as f:
-        json.dump(model, f, ensure_ascii=False)
+    from .._atomic import atomic_path
+
+    with atomic_path(out) as tmp:
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            json.dump(model, f, ensure_ascii=False)
     return out
 
 

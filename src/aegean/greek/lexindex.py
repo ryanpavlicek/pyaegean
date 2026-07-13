@@ -39,9 +39,12 @@ def concise(text: str, limit: int = 160) -> str:
 
 def write_index(path: Path, index: dict[str, dict[str, str]]) -> None:
     """Write a gzipped lemma→entry index."""
+    from .._atomic import atomic_path
+
     path.parent.mkdir(parents=True, exist_ok=True)
-    with gzip.open(path, "wt", encoding="utf-8") as f:
-        json.dump(index, f, ensure_ascii=False)
+    with atomic_path(path) as tmp:
+        with gzip.open(tmp, "wt", encoding="utf-8") as f:
+            json.dump(index, f, ensure_ascii=False)
 
 
 def load_index(path: Path) -> dict[str, dict[str, str]]:

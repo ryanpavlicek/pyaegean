@@ -1092,8 +1092,13 @@ def versioned_entry_paths(
 def versioned_bytes(name: str, root: pathlib.Path, *, version: str | None = None) -> int:
     """Total on-disk size of dataset ``name``'s versioned cache entries (0 if none).
 
-    See `versioned_entry_paths`; ``version`` narrows it to a single kept release."""
-    return sum(_dir_bytes(p) for p in versioned_entry_paths(name, root, version=version))
+    Persistent ``.lock`` sentinels are store metadata, not dataset payload, and are
+    excluded. See `versioned_entry_paths`; ``version`` narrows it to one release."""
+    return sum(
+        _dir_bytes(p)
+        for p in versioned_entry_paths(name, root, version=version)
+        if not p.name.endswith(".lock")
+    )
 
 
 def is_downloaded(spec: DataSpec, root: pathlib.Path) -> bool:
@@ -1278,9 +1283,12 @@ def _parse_content_range(value: str | None) -> tuple[int | None, int | None]:
 def _expected_length(headers: Any) -> int | None:
     value = headers.get("Content-Length") if headers is not None else None
     try:
-        return int(str(value).strip()) if value is not None else None
+        length = int(str(value).strip()) if value is not None else None
     except ValueError:
         return None
+    if length is not None and length < 0:
+        raise ValueError(f"negative Content-Length: {length}")
+    return length
 
 
 class FetchAborted(DataNotAvailableError):
@@ -1579,11 +1587,21 @@ def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.
     checksum mismatch. Shared by `fetch` and the on-demand dataset downloaders
     (e.g. the Greek treebank)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_name(dest.name + ".part")
-    _download(url, tmp, dest.name, expected_sha256=sha256)
-    _verify(tmp, sha256, dest.name)
-    tmp.replace(dest)  # atomic within the directory
+    lock = dest.with_name(dest.name + ".lock")
+    with FileLock(lock, poll_every=_LOCK_POLL_S):
+        # Recheck after waiting: a concurrent caller may have completed the exact
+        # destination while this caller was blocked on its shared .part file.
+        if dest.exists() and (not sha256 or sha256_file(dest) == sha256):
+            return dest
+        tmp = dest.with_name(dest.name + ".part")
+        _download(url, tmp, dest.name, expected_sha256=sha256)
+        _verify(tmp, sha256, dest.name)
+        tmp.replace(dest)  # atomic within the directory
     return dest
+
+
+_MAX_TAR_EXTRACT_BYTES = 4 * 1024**3
+_MAX_TAR_MEMBERS = 250_000
 
 
 def _safe_extract_tar(
@@ -1591,6 +1609,8 @@ def _safe_extract_tar(
     dest: pathlib.Path,
     *,
     progress: Callable[[int, int], None] | None = None,
+    max_bytes: int = _MAX_TAR_EXTRACT_BYTES,
+    max_members: int = _MAX_TAR_MEMBERS,
 ) -> None:
     """Extract a tar archive, refusing any member (or link target) that escapes ``dest``.
 
@@ -1605,7 +1625,20 @@ def _safe_extract_tar(
     root = dest.resolve()
     with tarfile.open(archive) as tf:
         members = tf.getmembers()
+        if len(members) > max_members:
+            raise DataNotAvailableError(
+                f"archive has {len(members):,} members; refusing more than {max_members:,}"
+            )
+        expanded = sum(member.size for member in members)
+        if expanded > max_bytes:
+            raise DataNotAvailableError(
+                f"archive expands to {expanded:,} bytes; refusing more than {max_bytes:,}"
+            )
         for member in members:
+            if member.size < 0 or member.isdev() or member.isfifo():
+                raise DataNotAvailableError(
+                    f"unsafe special file in archive: {member.name!r}"
+                )
             target = (root / member.name).resolve()
             if target != root and root not in target.parents:
                 raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
@@ -1786,7 +1819,10 @@ def fetch_prebuilt(name: str, dest: pathlib.Path, *, member: str | None = None) 
             # dataset), cache_dir()/name is the tracked unpacked directory: copy, keep.
             os.replace(src, dest)
         else:
-            shutil.copyfile(src, dest)
+            from .._atomic import atomic_path
+
+            with atomic_path(dest) as tmp:
+                shutil.copyfile(src, tmp)
     return True
 
 
@@ -1911,6 +1947,12 @@ def _fetch_and_extract(
     store = store_name or name
     target = cache_dir() / store  # a directory of unpacked files
     stamp = _extract_stamp(store)
+    trash = cache_dir() / (store + ".old")
+    # Recover an interrupted swap before consulting the cache.  The old directory
+    # is a complete prior generation; serving it is safer than downloading again
+    # with the public target temporarily missing.
+    if not target.exists() and trash.exists():
+        os.replace(trash, target)
     if target.exists() and not force:
         # Idempotent no-op ONLY when the extraction still matches the pinned archive.
         # An env-overridden URL disables sha enforcement (sha256==""), so trust the
@@ -1977,11 +2019,17 @@ def _fetch_and_extract(
         # just-rmtree'd directory can linger in a pending-delete state, so os.replace onto
         # it fails (WinError 5). Rename the old extraction aside first (a fast atomic move),
         # put the new one in place, then delete the old copy.
-        trash = cache_dir() / (store + ".old")
         if trash.exists():
             shutil.rmtree(trash, ignore_errors=True)
         os.replace(target, trash)
-        staging.replace(target)  # atomic within the cache dir; target is now free
+        try:
+            staging.replace(target)  # atomic within the cache dir; target is now free
+        except BaseException:
+            # A failed second rename must not strand the previously valid corpus
+            # under .old. Restore it before surfacing the replacement failure.
+            if not target.exists() and trash.exists():
+                os.replace(trash, target)
+            raise
         shutil.rmtree(trash, ignore_errors=True)
     else:
         staging.replace(target)  # atomic within the cache dir

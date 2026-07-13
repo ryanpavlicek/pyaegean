@@ -89,19 +89,23 @@ def _emit_result(result: object, json_out: bool, trace: bool = False) -> None:
 def _write_ai_result(result: object, output: Path) -> None:
     """Save an exploratory AI result: ``.json`` (text + provenance + grounding + parsed data,
     keeping the exploratory flag) or ``.txt`` (the labeled text). Never drops the label."""
+    from aegean._atomic import atomic_path
+
     suffix = output.suffix.lower()
     if suffix == ".json":
         to_dict = getattr(result, "to_dict", None)
         payload = to_dict() if callable(to_dict) else {"text": getattr(result, "text", str(result))}
         with writing(output):
-            output.write_text(
-                json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
+            with atomic_path(output) as tmp:
+                tmp.write_text(
+                    json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+                )
     elif suffix in (".txt", ""):
         labeled = getattr(result, "labeled", None)
         text = labeled() if callable(labeled) else getattr(result, "text", str(result))
         with writing(output):
-            output.write_text(text + "\n", encoding="utf-8")
+            with atomic_path(output) as tmp:
+                tmp.write_text(text + "\n", encoding="utf-8")
     else:
         raise fail(f"AI --output {output.name!r}: use a .json or .txt extension")
 

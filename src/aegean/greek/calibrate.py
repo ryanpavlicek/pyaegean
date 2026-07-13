@@ -320,9 +320,12 @@ class Calibration:
 
     def save(self, path: str | Path) -> None:
         """Write this calibration to ``path`` as JSON."""
-        Path(path).write_text(
-            json.dumps(self.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8"
-        )
+        from .._atomic import atomic_path
+
+        with atomic_path(path) as tmp:
+            tmp.write_text(
+                json.dumps(self.to_dict(), ensure_ascii=False, indent=1), encoding="utf-8"
+            )
 
     @classmethod
     def load(cls, path: str | Path) -> "Calibration":

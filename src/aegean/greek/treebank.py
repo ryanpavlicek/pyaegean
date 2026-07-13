@@ -220,7 +220,10 @@ def build_lexicon(*, source_dir: Path | str | None = None, force: bool = False) 
         form: [dict(dedup) for dedup, _count in counter.most_common()]
         for form, counter in agg.items()
     }
-    out.write_text(json.dumps(lexicon, ensure_ascii=False), encoding="utf-8")
+    from .._atomic import atomic_path
+
+    with atomic_path(out) as tmp:
+        tmp.write_text(json.dumps(lexicon, ensure_ascii=False), encoding="utf-8")
     return out
 
 

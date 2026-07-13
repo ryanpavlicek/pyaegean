@@ -257,6 +257,48 @@ def test_documentary_run_preserves_preexisting_levers(monkeypatch) -> None:
     disable_rescue.assert_not_called()
 
 
+@pytest.mark.parametrize("fail_score", [False, True])
+def test_documentary_restores_implicitly_activated_neural_pipeline(
+    monkeypatch, fail_score: bool
+) -> None:
+    """A one-run documentary activation never leaks into the long-lived session."""
+    from aegean import greek
+    from aegean.cli import _greek
+    from aegean.greek import joint
+
+    _stub_documentary(monkeypatch, prior_active=False)
+    sentinel = object()
+    state = {"neural": None, "disabled": 0}
+    monkeypatch.setattr(joint, "active", lambda: state["neural"])
+
+    def activate(**kwargs: object) -> None:
+        if kwargs.get("neural"):
+            state["neural"] = sentinel
+
+    def disable() -> None:
+        state["disabled"] += 1
+        state["neural"] = None
+
+    monkeypatch.setattr(_greek, "_activate", activate)
+    monkeypatch.setattr(greek, "disable_neural_pipeline", disable)
+    monkeypatch.setattr(
+        greek,
+        "evaluate_on_ud",
+        lambda **_kw: {"upos": 0.94, "lemma": 0.86, "uas": 0.80, "las": 0.75},
+    )
+    if fail_score:
+        monkeypatch.setattr(
+            greek,
+            "evaluate_on_ud",
+            lambda **_kw: (_ for _ in ()).throw(RuntimeError("score failed")),
+        )
+    result = CliRunner().invoke(
+        _app(), ["greek", "eval", "ud", "--documentary", "--json"]
+    )
+    assert result.exit_code == (1 if fail_score else 0)
+    assert state == {"neural": None, "disabled": 1}
+
+
 # --- FIX 5: the `greek work` "read it:" hint ---------------------------------------
 
 

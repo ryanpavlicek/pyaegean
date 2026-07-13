@@ -776,8 +776,11 @@ def geo(
                 gdf = word_distribution(c, word)
             except ImportError as exc:  # the missing extra's own pip-install one-liner
                 raise fail(str(exc)) from None
+            from aegean._atomic import atomic_path
+
             with writing(output):
-                output.write_text(gdf.to_json(), encoding="utf-8")
+                with atomic_path(output) as tmp:
+                    tmp.write_text(gdf.to_json(), encoding="utf-8")
             print(f"wrote {len(gdf)} features to {output}", file=sys.stderr)
             return
         from collections import Counter
@@ -816,8 +819,11 @@ def geo(
             gdf = to_geodataframe(c, level=level)
         except (ImportError, ValueError) as exc:  # missing extra, or a library-level bad value
             raise fail(str(exc)) from None
+        from aegean._atomic import atomic_path
+
         with writing(output):
-            output.write_text(gdf.to_json(), encoding="utf-8")
+            with atomic_path(output) as tmp:
+                tmp.write_text(gdf.to_json(), encoding="utf-8")
         print(f"wrote {len(gdf)} features to {output}", file=sys.stderr)
         return
     from aegean.geo import _normalize_site

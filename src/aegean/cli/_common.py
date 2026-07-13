@@ -137,21 +137,26 @@ def write_result(data: Any, output: Path) -> None:
     ``--json``), so per-command messages cannot diverge."""
     suffix = output.suffix.lower()
     plain = to_plain(data)
+    from aegean._atomic import atomic_path
+
     if suffix == ".json":
         with writing(output):
-            output.write_text(
-                json.dumps(plain, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
+            with atomic_path(output) as tmp:
+                tmp.write_text(
+                    json.dumps(plain, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+                )
     else:
         rows = _result_rows(plain)
         if suffix == ".csv":
             if rows is None:
                 raise fail("this result isn't a table; save it as .json")
             with writing(output):
-                _write_csv(rows, output)
+                with atomic_path(output) as tmp:
+                    _write_csv(rows, tmp)
         elif suffix in (".txt", ""):
             with writing(output):
-                output.write_text(_result_text(plain, rows), encoding="utf-8")
+                with atomic_path(output) as tmp:
+                    tmp.write_text(_result_text(plain, rows), encoding="utf-8")
         else:
             raise fail(f"output {output.name!r}: use a .json, .csv, or .txt extension")
     print(f"wrote {output}", file=sys.stderr)

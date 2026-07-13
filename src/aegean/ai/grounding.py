@@ -354,16 +354,11 @@ def _rare_lemma_filter(text: str) -> frozenset[str] | None:
     all-common passage must not be reported the same way as a missing corpus.
     """
     try:
-        from ..greek import load_nt, terminology_rarity
+        from ..greek import terminology_rarity
+        from ..scripts.greek.nt import _load_cached_full_nt
 
-        reference = load_nt()
-        provenance = getattr(reference, "provenance", None)
-        notes = getattr(provenance, "notes", ()) if provenance is not None else ()
-        if any("bundled offline sample" in str(note).lower() for note in notes):
-            # John 1 + Philemon is a loader fallback, not a representative frequency
-            # corpus. Treating four sample occurrences of λόγος as "rare" inverts the
-            # gate's purpose. No trustworthy signal is better than confidently wrong
-            # filtering, so the caller degrades to ordinary content-word glossing.
+        reference = _load_cached_full_nt()
+        if reference is None:
             return None
         result = terminology_rarity(text, reference)
     except Exception:

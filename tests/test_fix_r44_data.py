@@ -157,8 +157,8 @@ def test_data_remove_reclaims_raw_materialized_and_stamp(app, monkeypatch) -> No
 
     assert not raw.exists() and not mat.exists() and not stamp.exists()
     assert not subdir.exists()  # the now-empty materialization subdir is pruned
-    # nothing of this dataset orphaned anywhere under the store
-    assert [p for p in root.rglob("*") if p.is_file()] == []
+    # no payload is orphaned; a persistent unlocked lock sentinel is store metadata
+    assert [p for p in root.rglob("*") if p.is_file() and not p.name.endswith(".lock")] == []
 
 
 def test_remove_one_fold_leaves_a_sibling_in_the_shared_subdir(app, monkeypatch) -> None:  # type: ignore[no-untyped-def]

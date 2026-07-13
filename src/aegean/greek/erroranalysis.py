@@ -300,9 +300,16 @@ def nt_error_analysis(
     from .proiel import _canon_pos
 
     if corpus is None:
-        from ..scripts.greek.nt import load_nt
+        from ..data import DataNotAvailableError
+        from ..scripts.greek.nt import _is_bundled_nt_sample, load_nt
 
         corpus = load_nt(book)
+        if _is_bundled_nt_sample(corpus):
+            raise DataNotAvailableError(
+                "NT error analysis requires the full pinned 27-book gold corpus; the bundled "
+                "John 1 + Philemon sample is not an evaluation set. Fetch it with "
+                "'aegean data fetch nt-corpus' and retry."
+            )
     gold = nt_eval._gold_sentences(corpus)
     base = tag_sentence if tag_sentence is not None else nt_eval._neural_tagger()
 

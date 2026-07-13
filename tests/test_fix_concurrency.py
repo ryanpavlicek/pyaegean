@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from aegean import Corpus
+from aegean._locking import FileLock
 from aegean.core.model import Document, Token, TokenKind
 
 
@@ -216,7 +217,8 @@ def test_concurrent_fetch_same_dataset_yields_one_valid_artifact(tmp_path, monke
     assert len(results) == 4 and len({str(p) for p in results}) == 1
     got = results[0].read_bytes()
     assert hashlib.sha256(got).hexdigest() == spec.sha256  # one whole, valid artifact
-    assert not (tmp_path / "store" / "pyaegean" / f"{name}.lock").exists()  # released
+    lock = tmp_path / "store" / "pyaegean" / f"{name}.lock"
+    assert FileLock.is_locked(lock) is False  # persistent sentinel, ownership released
 
 
 def test_fetch_abort_hook_stops_the_transfer_and_keeps_the_part(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
@@ -243,4 +245,4 @@ def test_fetch_abort_hook_stops_the_transfer_and_keeps_the_part(tmp_path, monkey
     store = tmp_path / "store" / "pyaegean"
     assert (store / f"{name}.part").exists()  # kept for resume
     assert not (store / name).exists()
-    assert not (store / f"{name}.lock").exists()  # lock released on the abort path
+    assert FileLock.is_locked(store / f"{name}.lock") is False

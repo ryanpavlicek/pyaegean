@@ -673,6 +673,10 @@ r = translate.translate("σπεῖρε τὴν ἄρουραν", script="greek",
 print(r.trace())   # the morphology, rarity, and any gloss grounding all show
 ```
 
+Rarity is best-effort and local: the gate consults the pinned full NT only when it
+has already been fetched and verified. It does not initiate a download, and the
+bundled two-chapter reading sample is never treated as frequency evidence.
+
 The gate is what keeps the glosses from misleading the model. **Highly polysemous words
 are left to the model**: a first-sense gloss for a word like στάσις or κρίσις is often the
 wrong contextual sense, and forcing it in degrades a capable reading rather than helping it.

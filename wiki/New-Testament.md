@@ -356,6 +356,11 @@ never on the NT. The measured numbers and the honesty notes (lemma-convention
 differences, why finer features are not cross-comparable) are in
 [Benchmarks](Benchmarks).
 
+Evaluation requires the fetched, pinned **full 27-book corpus**. The bundled John 1
+and Philemon sample remains useful for offline reading and API examples, but it is too
+small to produce a representative benchmark; `evaluate_on_nt()` and `eval nt` stop
+with a fetch instruction instead of reporting a sample-derived score.
+
 ---
 
 ## Notes and limitations

@@ -6,7 +6,7 @@ deeply on Greek and the Aegean world: a script-agnostic corpus data layer, the
 analytical methods from the Linear A Research Workbench, translation, and a
 pluggable multi-provider AI layer.
 
-> **Status: v0.44.1 (beta).** The API is close to stable but may still shift before 1.0.
+> **Status: v0.44.2 (beta).** The API is close to stable but may still shift before 1.0.
 > The script-agnostic core, Linear A, **Linear B** (Mycenaean Greek),
 > the **Cypriot syllabary** (Arcado-Cypriot Greek), and the undeciphered **Cypro-Minoan** script
 > complete the Aegean set: each deciphered script with a sign inventory, transliteration, and a
@@ -25,6 +25,15 @@ pluggable multi-provider AI layer.
 > undeciphered Linear A material is **exploratory**: see [Limitations](Limitations) for the full
 > picture of what pyaegean can and cannot claim, and [Data & Provenance](Data-and-Provenance) for
 > where every dataset comes from.
+
+### New in v0.44.2
+
+Caches and downloads now remain correct under heterogeneous inputs, independent
+SQLite clients, malformed response lengths, and concurrent direct fetches. Kernel-owned
+file locks close a stale-holder race; failed model, index, extraction, and result writes
+preserve the prior complete artifact. NT benchmark commands require the full gold corpus,
+and optional rarity grounding never downloads or substitutes the bundled reading sample.
+See the [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) for details.
 
 ### New in v0.44.1
 
@@ -109,7 +118,7 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-**Current release: v0.44.1.** pyaegean covers all four Aegean scripts, fourteen loadable corpora
+**Current release: v0.44.2.** pyaegean covers all four Aegean scripts, fourteen loadable corpora
 (through the 57,000-papyrus DDbDP documentary corpus), and a deep, zero-dependency
 Greek NLP track (opt-in treebank, lexicon, and neural backends, including the state-of-the-art
 neural joint pipeline), a structured corpus and provenance data layer, the `aegean` CLI, the
