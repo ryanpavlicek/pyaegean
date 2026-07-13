@@ -77,9 +77,9 @@ def test_response_cache_concurrent_set_never_raises_or_corrupts(tmp_path) -> Non
     for t in threads:
         t.join()
     assert errors == []  # a persist failure degrades to memory-only, never raises
-    # the on-disk file is whole JSON (never torn), whatever subset of writes won
+    # the on-disk file is whole JSON and every serialized in-process write survives
     data = json.loads(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict) and data
+    assert isinstance(data, dict) and len(data) == 8 * 25
 
 
 def test_response_cache_set_survives_an_unwritable_disk(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]

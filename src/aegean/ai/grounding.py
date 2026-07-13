@@ -356,7 +356,16 @@ def _rare_lemma_filter(text: str) -> frozenset[str] | None:
     try:
         from ..greek import load_nt, terminology_rarity
 
-        result = terminology_rarity(text, load_nt())
+        reference = load_nt()
+        provenance = getattr(reference, "provenance", None)
+        notes = getattr(provenance, "notes", ()) if provenance is not None else ()
+        if any("bundled offline sample" in str(note).lower() for note in notes):
+            # John 1 + Philemon is a loader fallback, not a representative frequency
+            # corpus. Treating four sample occurrences of λόγος as "rare" inverts the
+            # gate's purpose. No trustworthy signal is better than confidently wrong
+            # filtering, so the caller degrades to ordinary content-word glossing.
+            return None
+        result = terminology_rarity(text, reference)
     except Exception:
         return None
     return frozenset(w.lemma for w in result.words if w.label != "common")

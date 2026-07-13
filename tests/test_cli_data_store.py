@@ -113,7 +113,9 @@ def test_list_sizes_an_extracted_dataset_directory_recursively(
     assert (store / "arch").is_dir()
     row = _list_row(app, "arch")
     assert row["downloaded"] is True
-    assert row["bytes"] == sum(len(b) for b in MEMBERS.values())  # 1500: files only
+    # Payload plus the embedded 64-byte source stamp that closes the post-swap
+    # crash window. `data list` promises actual recursive on-disk bytes.
+    assert row["bytes"] == sum(len(b) for b in MEMBERS.values()) + 64
 
 
 # ── (b) remove: deletes and reports the reclaimed size ──────────────────────
@@ -149,9 +151,9 @@ def test_remove_of_an_extracted_dataset_deletes_the_directory(
     _register_archive(monkeypatch, tmp_path, "arch")
     ok(app, "data", "fetch", "arch")
     payload = json.loads(ok(app, "data", "remove", "arch", "--json"))
-    # members + the <name>.sha256 extraction stamp (a 64-char hexdigest; written for
-    # mirror fetches too, so a later pinned fetch can re-validate the extraction)
-    assert payload["reclaimed_bytes"] == sum(len(b) for b in MEMBERS.values()) + 64
+    # Members + two 64-byte source stamps: one embedded for atomic crash consistency,
+    # one sibling for compatibility/store tooling. Removal reports every reclaimed byte.
+    assert payload["reclaimed_bytes"] == sum(len(b) for b in MEMBERS.values()) + 128
     assert not (store / "arch").exists()
 
 

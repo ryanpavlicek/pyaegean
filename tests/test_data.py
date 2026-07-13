@@ -153,6 +153,7 @@ def test_extract_legacy_unstamped_is_trusted(tmp_path, monkeypatch):
     )
     out = fetch("cx")
     (data.cache_dir() / "cx.sha256").unlink()  # simulate a pre-0.29 extraction
+    (out / data._EMBEDDED_EXTRACT_STAMP).unlink()  # new caches carry this; legacy did not
     mtime = out.stat().st_mtime_ns
     # a DIFFERENT pinned sha, but no stamp present → trust the legacy extraction, no re-fetch
     monkeypatch.setitem(

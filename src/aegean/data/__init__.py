@@ -31,6 +31,7 @@ from dataclasses import dataclass
 from importlib.resources import files
 from typing import IO, TYPE_CHECKING, Any
 
+from .._locking import FileLock
 from .._log import get_logger
 
 if TYPE_CHECKING:  # type-only: no runtime data -> core import edge
@@ -1340,10 +1341,14 @@ def _stream_body(
 
     expected = _expected_length(getattr(resp, "headers", None))
     written = 0
-    while True:
+    # When Content-Length is known, stop after exactly that many bytes instead of
+    # performing one extra socket read to discover EOF. On Windows that read can
+    # surface a connection reset even though the complete declared body arrived.
+    while expected is None or written < expected:
         if abort is not None and abort():
             raise FetchAborted("fetch canceled")
-        chunk = resp.read(1 << 20)
+        amount = 1 << 20 if expected is None else min(1 << 20, expected - written)
+        chunk = resp.read(amount)
         if not chunk:
             break
         out.write(chunk)
@@ -1472,6 +1477,7 @@ def _download(
     abort: Callable[[], bool] | None = None,
     *,
     progress: Callable[[int, int], None] | None = None,
+    expected_sha256: str = "",
 ) -> None:
     """Download ``url`` to ``dest_part``, resuming interrupted transfers.
 
@@ -1488,6 +1494,9 @@ def _download(
     ``progress`` (already `_guard_progress`-wrapped by the caller) reports absolute
     byte counts during the transfer; if it raises, the ``.part`` is kept and the
     original error is surfaced (a broken observer never discards the transfer).
+    ``expected_sha256`` lets an EOF-signaling connection reset be accepted only when
+    the assembled bytes are already the complete pinned artifact; an unpinned,
+    potentially truncated response still follows the normal retry path.
     """
     import http.client
     import urllib.error
@@ -1508,6 +1517,20 @@ def _download(
             _discard_part(dest_part)
             raise DataNotAvailableError(f"could not fetch {name!r} from {url}: {e}") from e
         except (http.client.HTTPException, OSError) as e:
+            # A close-delimited response (no Content-Length) can deliver every byte
+            # and then surface ConnectionResetError instead of a clean EOF on Windows.
+            # A pinned whole-file digest is decisive: if the assembled .part already
+            # matches it, the transfer completed and a Range retry would only duplicate
+            # progress calls (or fail a valid download). Never use this shortcut for an
+            # unpinned mirror, where a reset could have truncated arbitrary content.
+            if expected_sha256 and dest_part.exists():
+                try:
+                    complete = sha256_file(dest_part) == expected_sha256
+                except OSError:
+                    complete = False
+                if complete:
+                    _part_info_path(dest_part).unlink(missing_ok=True)
+                    return
             last_exc = e  # network-class: keep the .part and resume
         except Exception as e:
             _discard_part(dest_part)
@@ -1552,7 +1575,7 @@ def download_file(url: str, dest: pathlib.Path, *, sha256: str = "") -> pathlib.
     (e.g. the Greek treebank)."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_name(dest.name + ".part")
-    _download(url, tmp, dest.name)
+    _download(url, tmp, dest.name, expected_sha256=sha256)
     _verify(tmp, sha256, dest.name)
     tmp.replace(dest)  # atomic within the directory
     return dest
@@ -1616,35 +1639,17 @@ def _safe_extract_tar(
 # artifact via the normal idempotence check.
 _LOCK_STALE_S = 3600.0  # a holder that has been silent this long is presumed dead
 _LOCK_POLL_S = 0.5
+_LOCK_HEARTBEAT_S = 30.0
 
 
-class _DatasetLock:
+class _DatasetLock(FileLock):
     def __init__(self, name: str) -> None:
-        self._path = cache_dir() / (name + ".lock")
-
-    def __enter__(self) -> "_DatasetLock":
-        import time
-
-        while True:
-            try:
-                fd = os.open(self._path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError:
-                try:
-                    age = time.time() - self._path.stat().st_mtime
-                except OSError:
-                    continue  # the holder released between exists and stat: retry
-                if age > _LOCK_STALE_S:
-                    # the holder died without releasing: break the stale lock
-                    self._path.unlink(missing_ok=True)
-                    continue
-                time.sleep(_LOCK_POLL_S)
-                continue
-            os.write(fd, f"{os.getpid()}\n".encode("ascii"))
-            os.close(fd)
-            return self
-
-    def __exit__(self, *exc: object) -> None:
-        self._path.unlink(missing_ok=True)
+        super().__init__(
+            cache_dir() / (name + ".lock"),
+            stale_after=_LOCK_STALE_S,
+            poll_every=_LOCK_POLL_S,
+            heartbeat_every=_LOCK_HEARTBEAT_S,
+        )
 
 
 def fetch(
@@ -1733,7 +1738,14 @@ def fetch(
                 return final  # present and valid → idempotent no-op
         _LOG.info("fetching dataset %r", name)
         tmp = dest.with_name(dest.name + ".part")  # raw-named .part: resume + orphan probes key on it
-        _download(url, tmp, name, abort, progress=guarded)
+        _download(
+            url,
+            tmp,
+            name,
+            abort,
+            progress=guarded,
+            expected_sha256=sha256,
+        )
         _verify(tmp, sha256, name)
         tmp.replace(final)  # atomic within the cache dir
         return final
@@ -1873,6 +1885,9 @@ def _extract_stamp(name: str) -> pathlib.Path:
     return cache_dir() / (name + ".sha256")
 
 
+_EMBEDDED_EXTRACT_STAMP = ".pyaegean-source.sha256"
+
+
 def _fetch_and_extract(
     url: str,
     name: str,
@@ -1901,17 +1916,31 @@ def _fetch_and_extract(
         if not sha256:
             _LOG.debug("dataset %r already extracted at %s", name, target)
             return target
+        embedded_stamp = target / _EMBEDDED_EXTRACT_STAMP
+        stamp_exists = embedded_stamp.exists() or stamp.exists()
         try:
-            stamped = stamp.read_text(encoding="utf-8").strip() if stamp.exists() else ""
-        except OSError:
-            stamped = ""
-        if stamped == "" or stamped == sha256:
+            if embedded_stamp.exists():
+                stamped = embedded_stamp.read_text(encoding="ascii").strip()
+            elif stamp.exists():
+                stamped = stamp.read_text(encoding="ascii").strip()
+            else:
+                stamped = ""
+        except (OSError, UnicodeError):
+            stamped = ""  # an unreadable present stamp is not a legacy cache
+        if (not stamp_exists and stamped == "") or stamped == sha256:
             _LOG.debug("dataset %r already extracted at %s", name, target)
             return target
 
     _LOG.info("fetching dataset %r (archive to extract)", name)
     archive = cache_dir() / (store + ".part")
-    _download(url, archive, name, abort, progress=progress)
+    _download(
+        url,
+        archive,
+        name,
+        abort,
+        progress=progress,
+        expected_sha256=sha256,
+    )
     _verify(archive, sha256, name)  # removes the archive on mismatch + raises
     # Stamp what was ACTUALLY extracted, even on an unpinned (env-mirror) fetch: an
     # unstamped extraction is indistinguishable from a trusted pre-stamp legacy cache, so
@@ -1934,6 +1963,10 @@ def _fetch_and_extract(
         raise e.original from None
     finally:
         archive.unlink(missing_ok=True)
+    # This stamp moves atomically WITH the extracted directory. If the process dies
+    # after the target swap but before the compatibility sidecar below, the next fetch
+    # can still distinguish this new extraction from a genuinely pre-stamp legacy one.
+    (staging / _EMBEDDED_EXTRACT_STAMP).write_text(stamp_value, encoding="ascii")
     if target.exists():
         # Swap in the new extraction without an rmtree-then-replace race: on Windows a
         # just-rmtree'd directory can linger in a pending-delete state, so os.replace onto
@@ -1947,7 +1980,12 @@ def _fetch_and_extract(
         shutil.rmtree(trash, ignore_errors=True)
     else:
         staging.replace(target)  # atomic within the cache dir
-    stamp.write_text(stamp_value, encoding="utf-8")  # record what produced this extraction
+    # Keep the historical sibling sidecar for store tooling and older pyaegean versions,
+    # but write it atomically. The embedded stamp above is the crash-consistency source.
+    from .._atomic import atomic_path
+
+    with atomic_path(stamp) as tmp:
+        tmp.write_text(stamp_value, encoding="ascii")
     return target
 
 
@@ -1977,7 +2015,14 @@ def _fetch_versioned(
                 return dest  # present and valid → idempotent no-op
         _LOG.info("fetching dataset %r version %s", name, resolved)
         tmp = dest.with_name(dest.name + ".part")
-        _download(url, tmp, store_name, abort, progress=guarded)
+        _download(
+            url,
+            tmp,
+            store_name,
+            abort,
+            progress=guarded,
+            expected_sha256=sha256,
+        )
         _verify(tmp, sha256, store_name)
         tmp.replace(dest)  # atomic within the cache dir
         return dest

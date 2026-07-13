@@ -398,7 +398,34 @@ def test_content_glosses_cascade_empty_without_any_dictionary(_reset_lexica):
 
 
 # --- rarity gate: empty rare-set means "gloss nothing", not "gloss everything" ----------
-def test_rare_lemma_filter_distinguishes_all_common_from_no_signal():
+
+
+@pytest.fixture
+def _rarity_reference(monkeypatch):
+    """A hermetic full-reference stand-in: common >20, rare <=5.
+
+    The real loader may deliberately fall back to a two-chapter offline sample, which is
+    not a frequency corpus. These classification tests must never depend on network/cache
+    state, so they pin the exact counts that exercise terminology_rarity's public bands.
+    """
+    from aegean import greek
+    from aegean.core import Corpus, Document, Token, TokenKind
+
+    tokens = []
+    for lemma, count in (("λόγος", 25), ("καί", 25), ("θεός", 25), ("φαρμακεία", 3)):
+        tokens.extend(
+            Token(lemma, TokenKind.WORD, position=len(tokens), annotations={"lemma": lemma})
+            for _ in range(count)
+        )
+    reference = Corpus(
+        [Document(id="full-reference", script_id="greek", tokens=tokens, lines=[list(range(len(tokens)))])],
+        script_id="greek",
+    )
+    monkeypatch.setattr(greek, "load_nt", lambda: reference)
+    return reference
+
+
+def test_rare_lemma_filter_distinguishes_all_common_from_no_signal(_rarity_reference):
     from aegean.ai.grounding import _rare_lemma_filter
 
     # An all-common passage (consulted against the NT, nothing rare) returns an EMPTY
@@ -412,7 +439,9 @@ def test_rare_lemma_filter_distinguishes_all_common_from_no_signal():
     assert rare == frozenset({"φαρμακεία"})
 
 
-def test_rarity_gate_glosses_nothing_on_all_common_passage(_reset_lexica):
+def test_rarity_gate_glosses_nothing_on_all_common_passage(
+    _reset_lexica, _rarity_reference
+):
     # The gate's whole point: an all-common passage gets NO glosses (a gloss on πολύς/λόγος
     # is noise). Before the fix an empty rare-set was reported as "no signal", which made the
     # gate gloss every word — the exact opposite of its contract.
@@ -424,7 +453,7 @@ def test_rarity_gate_glosses_nothing_on_all_common_passage(_reset_lexica):
     assert items == []  # all common -> gate suppresses everything
 
 
-def test_rarity_gate_glosses_only_the_rare_lemma(_reset_lexica):
+def test_rarity_gate_glosses_only_the_rare_lemma(_reset_lexica, _rarity_reference):
     # The complement: a rare lemma in an otherwise-common passage is glossed, and ONLY it.
     _lexicons._ACTIVE["middle-liddell"] = _concise_lex(
         "middle-liddell",
@@ -434,6 +463,30 @@ def test_rarity_gate_glosses_only_the_rare_lemma(_reset_lexica):
     refs = {i.ref for i in items}
     assert refs == {"φαρμακεία"}  # the common λόγος is gated out
     assert any("use of drugs, sorcery" in i.content for i in items)
+
+
+def test_rare_lemma_filter_refuses_the_bundled_sample_as_frequency_evidence(monkeypatch):
+    from aegean import greek
+    from aegean.ai.grounding import _rare_lemma_filter
+    from aegean.core import Corpus, Document, Provenance, Token, TokenKind
+
+    sample = Corpus(
+        [
+            Document(
+                id="John 1",
+                script_id="greek",
+                tokens=[Token("λόγος", TokenKind.WORD, annotations={"lemma": "λόγος"})],
+                lines=[[0]],
+            )
+        ],
+        provenance=Provenance(
+            source="test",
+            notes=("Loaded from the bundled offline sample (John 1 + Philemon).",),
+        ),
+        script_id="greek",
+    )
+    monkeypatch.setattr(greek, "load_nt", lambda: sample)
+    assert _rare_lemma_filter("λόγος") is None  # no representative signal, degrade cleanly
 
 
 # --- clean_gloss must never emit an etymology fragment or a dangling open-paren ----------

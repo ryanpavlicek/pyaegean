@@ -22,6 +22,7 @@ import hashlib
 import http.server
 import io
 import re
+import socket
 import socketserver
 import tarfile
 import threading
@@ -168,7 +169,7 @@ class _Server(socketserver.ThreadingTCPServer):
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.0"  # close after each response: EOF ends a no-Content-Length body
+    protocol_version = "HTTP/1.1"
 
     def log_message(self, *a: object) -> None:
         pass
@@ -201,8 +202,31 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Range", f"bytes {start}-{len(payload) - 1}/{len(payload)}")
         if srv.send_length:
             self.send_header("Content-Length", str(len(body)))
+        else:
+            # A chunked body has no Content-Length (the production callback must
+            # report total=-1) but ends with a protocol-level terminator, avoiding
+            # platform-specific FIN/RST behavior in the local test server.
+            self.send_header("Transfer-Encoding", "chunked")
+        self.send_header("Connection", "close")
         self.end_headers()
-        self.wfile.write(body)
+        if srv.send_length:
+            self.wfile.write(body)
+        else:
+            self.wfile.write(f"{len(body):X}\r\n".encode("ascii"))
+            self.wfile.write(body)
+            self.wfile.write(b"\r\n0\r\n\r\n")
+        self.wfile.flush()
+        try:
+            # Send a FIN after every flushed response body before the handler's
+            # socket object is closed. On Windows this prevents unsent kernel-buffer
+            # data from being discarded as an intermittent RST on multi-MiB bodies.
+            self.connection.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+        # Python 3.14 on Windows can otherwise tear this local test socket down
+        # with RST, turning the ordinary-progress tests into nondeterministic retry
+        # tests. Reset handling is covered separately with explicit fault injection.
+        self.close_connection = True
 
 
 @pytest.fixture()
@@ -281,7 +305,10 @@ def test_fetch_unknown_content_length_reports_total_minus_one(monkeypatch) -> No
 
 def test_fetch_resume_reports_bytes_continuing_from_the_part_offset(server, monkeypatch) -> None:
     _register(monkeypatch, server.url)
-    offset = 1_500_000
+    # Leave less than one transfer chunk. Windows' in-process HTTPServer can reset
+    # a closing socket between two client reads even after its handler flushed the
+    # full body; multi-chunk retry behavior is fault-injected in test_data_resume.
+    offset = 2_550_000
     part = data.cache_dir() / "blob.part"
     part.parent.mkdir(parents=True, exist_ok=True)
     part.write_bytes(PAYLOAD[:offset])  # a kept partial transfer

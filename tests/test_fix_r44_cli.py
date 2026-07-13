@@ -203,6 +203,60 @@ def test_non_documentary_run_never_touches_paradigms(monkeypatch) -> None:
     assert calls["use"] == 0 and calls["disable"] == 0
 
 
+def test_documentary_failure_restores_every_state(monkeypatch) -> None:
+    """A scorer/download failure must not poison the long-lived REPL session."""
+    from unittest.mock import Mock
+
+    from aegean import greek
+    from aegean.greek import paradigms
+
+    _state, calls = _stub_documentary(monkeypatch, prior_active=False)
+    reconciliation_off = Mock()
+    rescue_off = Mock()
+    monkeypatch.setattr(greek, "disable_documentary_reconciliation", reconciliation_off)
+    monkeypatch.setattr(greek, "disable_documentary_lemma_rescue", rescue_off)
+    monkeypatch.setattr(
+        greek,
+        "evaluate_on_papygreek",
+        lambda **_kw: (_ for _ in ()).throw(RuntimeError("scorer exploded")),
+    )
+
+    r = CliRunner().invoke(_app(), ["greek", "eval", "papygreek", "--documentary"])
+    assert r.exit_code != 0 and isinstance(r.exception, RuntimeError)
+    reconciliation_off.assert_called_once_with()
+    rescue_off.assert_called_once_with()
+    assert calls["disable"] == 1
+    assert paradigms.active() is None
+
+
+def test_documentary_run_preserves_preexisting_levers(monkeypatch) -> None:
+    """An already-configured REPL session is restored exactly, not blindly disabled."""
+    from unittest.mock import Mock
+
+    from aegean import greek
+
+    _stub_documentary(monkeypatch, prior_active=True)
+    use_reconciliation = Mock()
+    use_rescue = Mock()
+    disable_reconciliation = Mock()
+    disable_rescue = Mock()
+    monkeypatch.setattr(greek, "documentary_reconciliation_active", lambda: True)
+    monkeypatch.setattr(greek, "documentary_lemma_rescue_active", lambda: True)
+    monkeypatch.setattr(greek, "use_documentary_reconciliation", use_reconciliation)
+    monkeypatch.setattr(greek, "use_documentary_lemma_rescue", use_rescue)
+    monkeypatch.setattr(greek, "disable_documentary_reconciliation", disable_reconciliation)
+    monkeypatch.setattr(greek, "disable_documentary_lemma_rescue", disable_rescue)
+
+    r = CliRunner().invoke(
+        _app(), ["greek", "eval", "papygreek", "--documentary", "--json"]
+    )
+    assert r.exit_code == 0, r.output
+    use_reconciliation.assert_not_called()
+    use_rescue.assert_not_called()
+    disable_reconciliation.assert_not_called()
+    disable_rescue.assert_not_called()
+
+
 # --- FIX 5: the `greek work` "read it:" hint ---------------------------------------
 
 

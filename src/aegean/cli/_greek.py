@@ -11,7 +11,9 @@ registry; `gloss --dict <id>` picks which dictionary to use.
 
 from __future__ import annotations
 
+import contextlib
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import typer
@@ -1403,7 +1405,9 @@ def evaluate(
         neural_lemmatizer=neural_lemmatizer, neural=neural,
     )
 
-    restore_paradigms_off = False  # set in _apply_documentary if we turned paradigms on
+    restore_reconciliation_off = False
+    restore_rescue_off = False
+    restore_paradigms_off = False
 
     def _apply_documentary() -> None:
         # The two opt-in documentary levers post-process the neural pipeline, so it must be
@@ -1411,15 +1415,37 @@ def evaluate(
         # conservative default (X/b drift only). Toggled off again before the result is emitted.
         from aegean.greek import joint, paradigms
 
-        nonlocal restore_paradigms_off
+        nonlocal restore_reconciliation_off, restore_rescue_off, restore_paradigms_off
         if joint.active() is None:
             _activate(neural=True)
-        greek.use_documentary_reconciliation()
-        greek.use_documentary_lemma_rescue()
+        # Preserve pre-existing session state: the REPL can keep these levers active
+        # deliberately, and a one-shot eval must not disable or reconfigure them.
+        if not greek.documentary_reconciliation_active():
+            greek.use_documentary_reconciliation()
+            restore_reconciliation_off = True
+        if not greek.documentary_lemma_rescue_active():
+            greek.use_documentary_lemma_rescue()
+            restore_rescue_off = True
         # Lever B consults the paradigm table; the registry documentary_full lemma (86.36)
         # was measured with it active, so activate it here too (seed-only can't reproduce it).
         restore_paradigms_off = paradigms.active() is None
-        greek.use_paradigms()
+        if restore_paradigms_off:
+            greek.use_paradigms()
+
+    @contextlib.contextmanager
+    def _documentary_scope() -> Iterator[None]:
+        """Apply the per-run levers and restore every prior state, even on failure."""
+        try:
+            if documentary:
+                _apply_documentary()
+            yield
+        finally:
+            if restore_reconciliation_off:
+                greek.disable_documentary_reconciliation()
+            if restore_rescue_off:
+                greek.disable_documentary_lemma_rescue()
+            if restore_paradigms_off:
+                greek.disable_paradigms()
 
     def emit_drift(report: object) -> None:  # ErrorAnalysis -> --json dict / text summary
         if emit_result(report.as_dict(), json_output=json_out, output=output):  # type: ignore[attr-defined]
@@ -1471,19 +1497,19 @@ def evaluate(
             if unmapped:
                 print(f"unmapped authors (counted as 'other'): {', '.join(unmapped)}", file=sys.stderr)
             return
-        if documentary:
-            _apply_documentary()
-        if bootstrap:
-            cis = greek.bootstrap_ud(treebank=fold, split=split)
-            result = {
-                k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]" for k, ci in cis.items()
-            }
-        elif batch_size is not None:
-            result = greek.evaluate_on_ud(
-                treebank=fold, split=split, progress=live_progress, batch_size=batch_size
-            )
-        else:
-            result = greek.evaluate_on_ud(treebank=fold, split=split, progress=live_progress)
+        with _documentary_scope():
+            if bootstrap:
+                cis = greek.bootstrap_ud(treebank=fold, split=split)
+                result = {
+                    k: f"{ci.estimate:.4f} [{ci.low:.4f}, {ci.high:.4f}]"
+                    for k, ci in cis.items()
+                }
+            elif batch_size is not None:
+                result = greek.evaluate_on_ud(
+                    treebank=fold, split=split, progress=live_progress, batch_size=batch_size
+                )
+            else:
+                result = greek.evaluate_on_ud(treebank=fold, split=split, progress=live_progress)
     elif target == "proiel":
         if drift:
             emit_drift(greek.proiel_error_analysis())
@@ -1494,12 +1520,11 @@ def evaluate(
         if drift:
             emit_drift(greek.nt_error_analysis())
             return
-        if documentary:
-            _apply_documentary()
-        if batch_size is not None:
-            result = greek.evaluate_on_nt(progress=live_progress, batch_size=batch_size)
-        else:
-            result = greek.evaluate_on_nt(progress=live_progress)
+        with _documentary_scope():
+            if batch_size is not None:
+                result = greek.evaluate_on_nt(progress=live_progress, batch_size=batch_size)
+            else:
+                result = greek.evaluate_on_nt(progress=live_progress)
     elif target == "papygreek":
         _activate(neural=True)  # the documentary-Koine fold reports the shipped neural model
         if drift:
@@ -1508,21 +1533,22 @@ def evaluate(
             # One canonical SEQUENTIAL run (batch-32 is not prediction-identical on this fold).
             emit_drift(greek.papygreek_convention_report(progress=live_progress))
             return
-        if documentary:
-            _apply_documentary()
-        # layer is forwarded only when non-default, so the reg (published-protocol) call stays
-        # byte-identical to evaluate_on_papygreek(progress=...); batch_size the same way.
-        if layer != "reg":
-            if batch_size is not None:
+        with _documentary_scope():
+            # layer is forwarded only when non-default, so the reg (published-protocol) call
+            # stays byte-identical to evaluate_on_papygreek(progress=...); batch_size likewise.
+            if layer != "reg":
+                if batch_size is not None:
+                    result = greek.evaluate_on_papygreek(
+                        layer=layer, progress=live_progress, batch_size=batch_size
+                    )
+                else:
+                    result = greek.evaluate_on_papygreek(layer=layer, progress=live_progress)
+            elif batch_size is not None:
                 result = greek.evaluate_on_papygreek(
-                    layer=layer, progress=live_progress, batch_size=batch_size
+                    progress=live_progress, batch_size=batch_size
                 )
             else:
-                result = greek.evaluate_on_papygreek(layer=layer, progress=live_progress)
-        elif batch_size is not None:
-            result = greek.evaluate_on_papygreek(progress=live_progress, batch_size=batch_size)
-        else:
-            result = greek.evaluate_on_papygreek(progress=live_progress)
+                result = greek.evaluate_on_papygreek(progress=live_progress)
     elif target == "dbbe":
         # tagging-only Byzantine-verse fold, reported by the shipped neural model; --documentary
         # (a documentary-Koine lever) is rejected above, so no post-processing branch here.
@@ -1534,12 +1560,13 @@ def evaluate(
     elif target == "verse":
         _activate(neural=True)  # the verse fold reports the shipped neural model's number
         tr = None if track == "all" else track
-        if documentary:
-            _apply_documentary()
-        if batch_size is not None:
-            result = greek.evaluate_on_verse(track=tr, progress=live_progress, batch_size=batch_size)
-        else:
-            result = greek.evaluate_on_verse(track=tr, progress=live_progress)
+        with _documentary_scope():
+            if batch_size is not None:
+                result = greek.evaluate_on_verse(
+                    track=tr, progress=live_progress, batch_size=batch_size
+                )
+            else:
+                result = greek.evaluate_on_verse(track=tr, progress=live_progress)
     elif target == "tagger":
         result = greek.evaluate_tagger()
     elif target == "lemmatizer":
@@ -1550,11 +1577,6 @@ def evaluate(
     else:
         raise fail("target must be ud, proiel, nt, papygreek, dbbe, verse, tagger, lemmatizer, "
                    "or parser")
-    if documentary:  # opt-in post-processing is per-run; leave the session clean afterwards
-        greek.disable_documentary_reconciliation()
-        greek.disable_documentary_lemma_rescue()
-        if restore_paradigms_off:  # only turn paradigms off if this run turned them on
-            greek.disable_paradigms()
     if emit_result(result, json_output=json_out, output=output):
         return
     if isinstance(result, dict):
