@@ -168,6 +168,13 @@ In short, lowercase `pipeline(...)` is an analysis operation, `use_neural_pipeli
 a default-backend selector, and capitalized `GreekPipeline` is the independently configured
 instance type.
 
+The hybrid translator follows the same distinction explicitly: omit
+`translate(..., greek_pipeline=...)` to use the module-default facade, or pass a
+`GreekPipeline` instance to isolate its grounding. From the shell, the matching choice is
+`aegean ai translate ... --greek-backend default|baseline|neural`. The selected
+configuration appears in translation provenance, separately from the evidence sent to the
+provider. See [Translation](Translation#which-greek-backend-supplies-the-grounding).
+
 ```python
 literary = greek.GreekPipeline.neural()  # loads without changing the default facade
 baseline = greek.GreekPipeline()         # isolated zero-dependency baseline

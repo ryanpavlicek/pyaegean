@@ -45,6 +45,7 @@ print(r.trace())       # the local facts that grounded it
 ```bash
 # the CLI translate command is the hybrid translator
 aegean ai translate "ἦν ὁ λόγος" --script greek --target English --trace
+aegean ai translate "ἦν ὁ λόγος" --greek-backend neural --trace
 aegean ai translate "KU-RO DA-RO" --script lineara    # exploratory: Linear A is undeciphered
 echo "μῆνιν ἄειδε θεά" | aegean ai translate -          # '-' reads stdin
 ```
@@ -53,8 +54,8 @@ Two functions make up the Python surface:
 
 | Function | Returns | What it does |
 | --- | --- | --- |
-| `translate.translate(text, *, script=, target=, mode=, verify=, client=)` | `ExploratoryResult` | Build local grounding, then translate. |
-| `translate.grounding_for(text, script, *, mode=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
+| `translate.translate(text, *, script=, target=, mode=, verify=, greek_pipeline=, grounding_failure=, client=)` | `ExploratoryResult` | Build local grounding, then translate. |
+| `translate.grounding_for(text, script, *, mode=, greek_pipeline=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
 
 Both are re-exported from `aegean.translate`. The CLI command `aegean ai
 translate` routes through `translate.translate`.
@@ -64,10 +65,20 @@ translate` routes through `translate.translate`.
 ## The grounding: what the model is told
 
 `grounding_for` returns the deterministic, local evidence, each item tagged with
-its **source** so the result's `trace()` names where it came from. It never
-raises for a missing analysis backend: grounding is best-effort, and a backend
-failure simply yields fewer lines rather than an analysis traceback. Invalid
-arguments such as an unknown `mode` still raise `ValueError`.
+its **source** so the result's `trace()` names where it came from. Grounding is
+**best-effort by default**: a required analysis failure yields the evidence still
+available, and `translate(...).trace()` records the failed stage and exception type.
+Use `grounding_failure="strict"` when a missing or incomplete required analysis must
+stop the operation. Strict failure raises `GroundingError`; `translate` performs this
+check before any provider call. Optional dictionaries, the optional rarity corpus, and
+an unmatched idiom remain normal absences under either policy. Invalid arguments such
+as an unknown `mode` still raise `ValueError`.
+
+In `morphology` and `full` modes, strict means the requested dependency analysis must
+exist too. An isolated baseline deliberately owns no parser, so combine
+`--greek-backend baseline` with the default best-effort policy, or select the neural
+backend when a strict morphology/parse contract is required. `lemma` mode requests no
+dependency parse.
 
 ```python
 from aegean import translate
@@ -91,34 +102,38 @@ grounding.
 
 ### Which Greek backend supplies the grounding?
 
-`aegean.translate` uses the **module-level default Greek pipeline**. In a fresh Python or
-CLI process that is the zero-dependency baseline. If the same Python process first calls
-`greek.use_neural_pipeline()`, translation grounding instead receives the neural model's
-contextual lemma, morphology, and UD dependency parse. An isolated
-`GreekPipeline.neural()` does not change this default, so merely constructing one does not
-affect translation.
+The Python API makes the owner explicit with `greek_pipeline=`. Omit it to preserve the
+historical **module-level default facade**: a fresh process uses the zero-dependency
+baseline, while `greek.use_neural_pipeline()` changes that facade for later module-level
+calls. Pass `greek.GreekPipeline()` for an isolated baseline or
+`greek.GreekPipeline.neural()` for an isolated neural analyzer. An explicit instance does
+not read or replace the module default, and the same analyzed records drive morphology,
+idiom lemma matching, rarity gating, and dictionary lookup.
 
 ```python
 from aegean import greek, translate
 
-greek.use_neural_pipeline()  # changes the module-level facade used by translation
-result = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
+neural = greek.GreekPipeline.neural()
+result = translate.translate(
+    "ἦν ὁ λόγος", script="greek", greek_pipeline=neural, client=client
+)
 ```
 
-The `aegean ai translate` command currently has no `--neural` switch, so a new CLI process
-uses baseline grounding and prints the baseline-quality warning. Use the Python sequence
-above when neural grounding is required. The lower-level `aegean.ai.translate` function is
-different again: it never builds Greek grounding automatically and only sends evidence
-passed explicitly through its `grounding=` argument.
+The CLI mirrors this with `--greek-backend default|baseline|neural`. `default` preserves
+the facade behavior; `baseline` and `neural` create isolated instances for that run. The
+lower-level `aegean.ai.translate` function is different again: it never builds Greek
+grounding automatically and only sends evidence passed explicitly through its
+`grounding=` argument.
 
 ```mermaid
 flowchart TD
     T["Source text"] --> G["translate.grounding_for()"]
-    G --> P["greek.pipeline() facade"]
-    P --> Q{"Default backend"}
-    Q -->|"fresh process"| B["Baseline rules and seed lemmas"]
-    Q -->|"use_neural_pipeline() called"| N["Contextual neural morphology and UD parse"]
-    B --> E["Auditable grounding items"]
+    G --> Q{"greek_pipeline / --greek-backend"}
+    Q -->|"default"| P["Module-default facade"]
+    Q -->|"baseline"| B["Isolated baseline"]
+    Q -->|"neural"| N["Isolated neural morphology and UD parse"]
+    P --> E["Auditable grounding items"]
+    B --> E
     N --> E
     T --> V{"verify?"}
     E --> V
@@ -126,9 +141,15 @@ flowchart TD
     V -->|"yes"| D["Raw, ungrounded draft"]
     D --> C["Second call checks draft against full grounding"]
     E --> C
-    O --> R["Exploratory result and provenance trace"]
+    O --> R["Exploratory result, evidence trace, and runtime config"]
     C --> R
+    Q -. "selection/config recorded, not prompted" .-> R
 ```
+
+`trace()`, `provenance()`, and JSON output record the selected pipeline, its immutable
+configuration, the grounding mode and failure policy, and any best-effort degradation.
+That runtime block is attached only after model completion. It is not a `GroundingItem`
+and never enters either the draft or repair prompt.
 
 ### Grounding modes (Greek)
 
@@ -173,13 +194,15 @@ mechanics and `ai.grounding.content_glosses` for the reusable builder.
 
 ### Grounding depends on the active lemmatizer
 
-Coverage of rare or inflected forms, and the clause skeleton, depends on which
-Greek backend is loaded. The bundled baseline seed table strips the regular
+Coverage of rare or inflected forms, and the clause skeleton, depends on the selected
+Greek backend. The bundled baseline seed table strips the regular
 second-declension and thematic-verb endings but misses irregular and
 unrecognized forms, so a grounded translation on those is only partly grounded.
-`translate.translate` raises a warning when only the baseline is active, naming
-the fix: call `greek.use_treebank()`, or `greek.use_neural_pipeline()` for
-contextual, model-predicted morphology and a dependency parse, first. See
+`translate.translate` raises a warning when the selected path has only the baseline.
+Pass `greek_pipeline=GreekPipeline.neural()` (CLI `--greek-backend neural`) for
+contextual, model-predicted morphology and a dependency parse. The compatibility
+facade also continues to support `greek.use_treebank()` and
+`greek.use_neural_pipeline()`. See
 [Greek NLP](Greek-NLP) for the backends and their measured accuracy.
 
 ---
@@ -253,6 +276,9 @@ sound as the grounding it checks against. `verify` supersedes `mode` for Greek
 (the checker always sees the full grounding); for non-Greek scripts it has no
 effect and the normal single call is used. For choosing between the modes and
 verify, see [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean).
+The full grounding is built before the raw draft call, so
+`grounding_failure="strict"` cannot spend the first provider call and fail only
+afterward.
 
 ---
 
@@ -304,8 +330,8 @@ layer, so the caveat and the grounding travel with the text:
 r = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
 
 r.labeled()      # the translation prefixed with an unmistakable EXPLORATORY tag
-r.trace()        # the local facts that grounded it, grouped by source
-r.provenance()   # a dict for logging/export: provider, model, prompt version, grounding
+r.trace()        # grounding facts plus the selected local runtime/configuration
+r.provenance()   # provider/model/prompt, grounding, and grounding_runtime
 r.exploratory    # always True — preserved through save and reload
 ```
 
@@ -320,7 +346,9 @@ verified fact:
 `trace()` names exactly which local facts anchored the translation, so a reader
 can check the output against its grounding rather than taking it on trust. When
 nothing was fed in, the trace flags the generation as ungrounded, the weakest
-case. The result also serializes to JSON with the `exploratory` flag intact
+case. Its separate `grounding_runtime` records the chosen backend/configuration,
+failure policy, and any degraded stage; those facts are provenance, not prompt
+evidence. The result also serializes to JSON with the `exploratory` flag intact
 (`.to_json()` / `ExploratoryResult.from_dict`), so a translation you wrote out
 last week is still a labeled hypothesis when you read it back. See the AI Layer's
 [result object](AI-Layer#what-every-result-looks-like-exploratoryresult) and
@@ -350,6 +378,8 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--mode` | `morphology` | Grounding style: `morphology`, `full`, `lemma` (legacy), `none`. |
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
+| `--greek-backend` | `default` | `default` (module facade), `baseline` (isolated), or `neural` (isolated joint model). Greek only. |
+| `--grounding-failure` | `best-effort` | `best-effort` keeps available evidence and records degradation; `strict` stops before a provider call if required grounding fails. |
 | `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |
 | `--model` | provider default | Model override. |
 | `--output` / `-o` | — | Save the result (`.json` full result, `.txt` labeled text). |
@@ -358,7 +388,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 
 ```bash
 aegean ai translate "σπεῖρε τὴν ἄρουραν" --script greek --mode full --trace
-aegean ai translate "ἦν ὁ λόγος" --script greek --verify
+aegean ai translate "ἦν ὁ λόγος" --greek-backend neural --verify --trace
 aegean ai translate "KU-RO DA-RO" --script lineara --trace   # exploratory
 ```
 

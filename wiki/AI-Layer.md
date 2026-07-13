@@ -217,6 +217,7 @@ verified fact.
 | `exploratory` | `bool` | Always `True`. |
 | `grounding` | `tuple[GroundingItem, …]` | The evidence fed in. |
 | `data` | `Any` | Parsed JSON (only `extract` sets it). |
+| `grounding_runtime` | `dict` or `None` | Local backend/configuration and degradation provenance for hybrid translation; never prompt evidence. |
 
 ---
 
@@ -343,11 +344,12 @@ rare-word flags); `mode="full"` adds concise dictionary glosses on the rare word
 below, and [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean) for
 choosing a mode.
 
-The hybrid wrapper uses whichever **module-level Greek backend is active**: a fresh
-process uses the baseline, while calling `greek.use_neural_pipeline()` first supplies
-contextual neural morphology and a UD parse. The CLI has no neural activation flag today.
-See [Hybrid translation](Translation#which-greek-backend-supplies-the-grounding) for the
-exact flow and the distinction from an isolated `GreekPipeline.neural()` instance.
+The hybrid wrapper can use the **module-level default facade** for compatibility or an
+explicit isolated `GreekPipeline`. Pass `greek_pipeline=greek.GreekPipeline.neural()` from
+Python, or `--greek-backend neural` on the CLI, for contextual neural morphology and a UD
+parse without changing process-global defaults. See
+[Hybrid translation](Translation#which-greek-backend-supplies-the-grounding) for the exact
+flow.
 
 ```python
 from aegean import ai
@@ -371,6 +373,8 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags + idiom meanings, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
 | `verify=` / `--verify` | off | Draft the translation first, then check it against the analysis and repair definite errors (a second model call). The analysis only checks the draft, so it cannot bias the initial translation, though a wrong analysis can still mislead the repair; recommended for hard or high-stakes passages. |
 | `glosses=` / `--glosses` / `--no-glosses` | on | Legacy flag, superseded by `mode`; still toggles glosses in `lemma`/`full` modes (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
+| `greek_pipeline=` / `--greek-backend` | module default / `default` | Select the compatibility facade, an isolated baseline, or an isolated neural pipeline. |
+| `grounding_failure=` / `--grounding-failure` | `"best-effort"` | Keep and trace available evidence, or use `strict` to stop before a provider call when required grounding fails. |
 | `--trace` | off | Print the grounding provenance under the answer. |
 
 The morphology grounding also flags **idiom meanings** for any non-compositional multiword expression it
@@ -635,7 +639,7 @@ clause skeleton; or Linear A sign→sound transliteration) and then delegates th
 trace names exactly which local facts anchored it.
 
 ```python
-from aegean import translate
+from aegean import greek, translate
 
 translate.grounding_for("ἦν ὁ λόγος", "greek")
 # [GroundingItem('ἦν = εἰμί (verb)',     'analysis:morphology', 'ἦν'),
@@ -646,10 +650,20 @@ translate.grounding_for("KU-RO DA-RO", "lineara")
 # [GroundingItem('KU-RO → /kuro/', 'transliteration', 'KU-RO'),
 #  GroundingItem('DA-RO → /daro/', 'transliteration', 'DA-RO')]
 
-r = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
+r = translate.translate(
+    "ἦν ὁ λόγος",
+    script="greek",
+    greek_pipeline=greek.GreekPipeline.neural(),
+    client=client,
+)
 print(r.labeled())
-print(r.trace())     # names the lemmatizer / transliteration grounding
+print(r.trace())     # evidence + selected pipeline config; config was not in the prompt
 ```
+
+Best-effort grounding is the compatibility default. Required-stage failures appear as
+degradations in the trace; `grounding_failure="strict"` instead raises before any provider
+call. Optional dictionaries, rarity data, and unmatched idioms remain optional under both
+policies.
 
 The grounding is real and local; the translation itself is generative and returned
 as an exploratory result, emphatically so for undeciphered Linear A, where the
@@ -694,7 +708,7 @@ modes, `glosses=False` drops them.
 
 ```bash
 aegean ai translate "σπεῖρε τὴν ἄρουραν" --script greek --mode full --trace # + gated glosses
-aegean ai translate "ἦν ὁ λόγος" --script greek --verify                    # draft, check, repair
+aegean ai translate "ἦν ὁ λόγος" --greek-backend neural --verify --trace    # draft, check, repair
 ```
 
 Coverage of rare and inflected forms depends on the **active lemmatizer**: the offline baseline
@@ -878,7 +892,7 @@ keeps cost down and makes notebooks reproducible.
 | Command | Purpose | Key options |
 | --- | --- | --- |
 | `aegean ai providers` | List registered providers | `--json` |
-| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
+| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--mode`, `--verify`, `--greek-backend`, `--grounding-failure`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai gloss TEXT` | Word-by-word gloss | `--source`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai summarize TEXT` | Grounded summary | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai hypotheses TEXT` | Decipherment hypotheses | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
@@ -944,9 +958,11 @@ python -c "from aegean import ai; ai.get_client('llama')"
   exist to keep that front of mind. Nothing the AI layer produces is citable as a
   fact, and on Linear A (and the other undeciphered scripts) nothing it produces
   is a *reading*.
-- **Grounding is best-effort.** The evidence builders return empty lists rather
-  than failing; an ungrounded generation is the weakest case and the trace flags
-  it. Feed real evidence whenever you can.
+- **Hybrid grounding is best-effort by default, not silently unknowable.** It keeps
+  available evidence and records required-stage failures in `grounding_runtime`; an
+  ungrounded generation is still the weakest case. Select `strict` when a missing or
+  incomplete required analysis should stop before generation. Optional enrichment
+  builders continue to return what they can.
 - **The eval is a coarse screen.** Substring containment catches gross failures,
   not subtle errors or genuine correctness. A clean score means "didn't obviously
   fail."

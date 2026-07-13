@@ -505,9 +505,11 @@ involved:
 ```python
 from aegean import greek, translate
 
-greek.use_neural_pipeline()     # [neural] extra: gold morphology feeds the grounding
-for item in translate.grounding_for("ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς.", "greek",
-                                    mode="morphology"):
+neural = greek.GreekPipeline.neural()  # [neural]: contextual model predictions + UD parse
+for item in translate.grounding_for(
+    "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς.", "greek",
+    mode="morphology", greek_pipeline=neural,
+):
     print(item)
 # Clause skeleton: main predicate 'ἐγείρει' (ἐγείρω, active pres sg 3rd); subject θεὸς; object νεκρούς
 # ὁ = ὁ (det, nom sg m)
@@ -523,16 +525,17 @@ grounding, then again with the post-hoc check that drafts first and repairs
 against the analysis:
 
 ```bash
-aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --mode morphology
-aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --verify
+aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural
+aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural --verify --trace
 # output is provider- and model-dependent, so none is shown here; every result
 # arrives labeled [EXPLORATORY · translate · <provider>], and -o keeps the
 # label and the grounding trace alongside the text
 ```
 
-Every answer is a labeled hypothesis, never a reading; `result.trace()` shows
-exactly which locally derived facts the model was given. Mode choice, and what
-grounding can and cannot fix, is recipe 26.
+Every answer is a labeled hypothesis, never a reading; `result.trace()` separates
+the locally derived facts the model received from the backend configuration it did
+not receive. Mode, backend, failure-policy choice, and what grounding can and cannot
+fix are covered in recipe 26.
 
 **Task recipes used:**
 [26 · the best AI translation](#26--get-the-best-ai-translation-out-of-pyaegean) ·
@@ -1561,10 +1564,10 @@ passage is.
 ```python
 from aegean import greek, translate
 
-greek.use_neural_pipeline()    # gold morphology + dependency parse feed the grounding
+neural = greek.GreekPipeline.neural()  # model-predicted morphology + UD parse
 
 text = "καὶ ἡγοῦμαι σκύβαλα εἶναι, ἵνα Χριστὸν κερδήσω."   # Philippians 3:8
-result = translate.translate(text, mode="morphology")       # the default
+result = translate.translate(text, mode="morphology", greek_pipeline=neural)
 print(result.labeled())        # [EXPLORATORY · translate · <provider>] <translation>
 ```
 
@@ -1583,7 +1586,9 @@ one-time dictionary fetch:
 ```python
 greek.use_lsj(); greek.use_lexicon("abbott-smith")   # a concise, common-sense-first dictionary
 
-for item in translate.grounding_for(text, "greek", mode="full"):
+for item in translate.grounding_for(
+    text, "greek", mode="full", greek_pipeline=neural
+):
     print(item)
 # Clause skeleton: main predicate 'ἡγοῦμαι' (ἡγέομαι, middle pres sg 1st); object σκύβαλα
 # σκύβαλα = σκύβαλον (noun, acc pl n)

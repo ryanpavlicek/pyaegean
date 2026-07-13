@@ -226,8 +226,8 @@ On the list next:
   - Make confidence, source alignment, multiword/empty-node preservation, sentence segmentation,
     explicit pipeline/backend selection, pipeline profiles, streaming, interoperability, and
     training reproducibility first-class
-  - Let hybrid translation select baseline or neural Greek analysis explicitly, expose the choice
-    in its trace and CLI, and measure both before changing any default
+  - Measure hybrid translation's explicitly selectable baseline and neural Greek grounding on
+    matched passages/providers before recommending or changing any default
   - Train a separately versioned joint model from corrected, canonicalized supervision, using
     multi-domain selection, direct universal morphology, aligned structured parsing, improved
     subword/character representations, ambiguity-aware lemmatization, and evidence-backed domain

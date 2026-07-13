@@ -36,10 +36,12 @@ model.
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Literal, get_args
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING, Any, Literal, get_args
 
 if TYPE_CHECKING:
     from ..greek.pipeline import TokenRecord
+    from ..greek.runtime import GreekPipeline
 
 from ..ai import translate as _ai_translate
 from ..ai import verify_translation as _ai_verify_translation
@@ -51,6 +53,36 @@ from ..ai.idioms import idiom_glosses
 _SOURCE_NAMES = {"greek": "Ancient Greek", "lineara": "Linear A"}
 
 GroundingMode = Literal["morphology", "lemma", "full", "none"]
+GroundingFailure = Literal["best-effort", "strict"]
+
+
+class GroundingError(RuntimeError):
+    """Required local grounding failed under the explicit ``"strict"`` policy.
+
+    The persisted/public message names the failed stage without copying arbitrary
+    exception text. The original exception remains available as ``__cause__``.
+    """
+
+    def __init__(
+        self,
+        *,
+        stage: str,
+        script: str,
+        backend: str | None,
+        config: dict[str, Any] | None,
+    ) -> None:
+        self.stage = stage
+        self.script = script
+        self.backend = backend
+        self.config = config
+        selected = f" {backend}" if backend else ""
+        super().__init__(f"{script} grounding failed during {stage} with the selected{selected} backend")
+
+
+@dataclass(frozen=True, slots=True)
+class _GroundingOutcome:
+    items: list[GroundingItem]
+    runtime: dict[str, Any]
 
 # Content parts of speech worth a clause role / rarity flag.
 _CONTENT_POS = frozenset({"NOUN", "VERB", "ADJ", "ADV", "PROPN"})
@@ -75,13 +107,59 @@ _FEAT_SHORT = {
 _FEAT_KEYS = ("Case", "Number", "Gender", "Voice", "Tense", "Mood", "Person")
 
 
-def _rich_lemmatizer_active() -> bool:
+def _rich_lemmatizer_active(greek_pipeline: GreekPipeline | None = None) -> bool:
     """Whether a lemmatizer better than the bundled seed table is loaded — the
     treebank, neural pipeline, GreTa, or edit-tree backend. Lexical grounding on rare
     or inflected forms depends on one of these being active."""
+    if greek_pipeline is not None:
+        # An explicit instance is isolated from every legacy module-level backend.
+        return greek_pipeline.neural_active
     from ..greek import joint, lemmatizer, neural_lemmatizer, treebank
 
     return any(m.active() is not None for m in (joint, treebank, neural_lemmatizer, lemmatizer))
+
+
+def _selected_pipeline(
+    greek_pipeline: GreekPipeline | None,
+) -> tuple[GreekPipeline, Literal["explicit", "module-default"]]:
+    """Resolve and type-check the Greek analysis owner without loading a backend."""
+    from ..greek.runtime import GreekPipeline, default_pipeline
+
+    if greek_pipeline is None:
+        return default_pipeline(), "module-default"
+    if not isinstance(greek_pipeline, GreekPipeline):
+        raise TypeError("greek_pipeline must be a GreekPipeline or None")
+    return greek_pipeline, "explicit"
+
+
+def _pipeline_runtime(
+    pipeline: GreekPipeline,
+    selection: Literal["explicit", "module-default"],
+) -> dict[str, Any]:
+    """JSON-ready pipeline identity for a result trace.
+
+    A module-default baseline may also consult the legacy ``use_*`` compatibility
+    cascade, which is intentionally outside `GreekPipelineConfig`; label that boundary
+    rather than claiming the config describes more than it does.
+    """
+    runtime: dict[str, Any] = {
+        "selection": selection,
+        "backend": pipeline.config.backend,
+        "config": pipeline.config.to_dict(),
+    }
+    if selection == "module-default":
+        runtime["note"] = (
+            "module-default config identifies its owned backend; active legacy use_* "
+            "extensions are outside GreekPipelineConfig"
+        )
+    return runtime
+
+
+def _validate_failure_policy(value: str) -> GroundingFailure:
+    if value not in get_args(GroundingFailure):
+        valid = ", ".join(repr(policy) for policy in get_args(GroundingFailure))
+        raise ValueError(f"unknown grounding failure policy {value!r}; valid policies: {valid}")
+    return value  # type: ignore[return-value]
 
 
 def _readable_feats(feats: str | None, *keys: str) -> str:
@@ -156,31 +234,80 @@ def _clause_skeleton(recs: list[TokenRecord]) -> str:
     return " | ".join(clauses)
 
 
-def _morphology_items(text: str) -> list[GroundingItem]:
+def _analysis_records(
+    text: str,
+    *,
+    pipeline: GreekPipeline,
+    parse: bool,
+    failure_policy: GroundingFailure,
+    failures: list[dict[str, str]],
+) -> list[TokenRecord]:
+    """Run the required Greek analysis with explicit degradation semantics."""
+
+    def failed(stage: str, exc: Exception) -> None:
+        failures.append({"stage": stage, "error_type": type(exc).__name__})
+        if failure_policy == "strict":
+            raise GroundingError(
+                stage=stage,
+                script="greek",
+                backend=pipeline.config.backend,
+                config=pipeline.config.to_dict(),
+            ) from exc
+
+    try:
+        records = pipeline.analyze(text, parse=parse)
+    except Exception as exc:
+        stage = "morphology and dependency analysis" if parse else "morphology analysis"
+        failed(stage, exc)
+        if not parse:
+            return []
+        try:
+            records = pipeline.analyze(text, parse=False)
+        except Exception as fallback_exc:
+            failed("morphology fallback analysis", fallback_exc)
+            return []
+
+    if any(
+        not record.analysis_complete or record.neural_analyzed is False
+        for record in records
+    ):
+        failures.append(
+            {"stage": "analysis coverage", "error_type": "IncompleteAnalysis"}
+        )
+        if failure_policy == "strict":
+            raise GroundingError(
+                stage="analysis coverage",
+                script="greek",
+                backend=pipeline.config.backend,
+                config=pipeline.config.to_dict(),
+            )
+    return records
+
+
+def _morphology_items(
+    text: str, *, analysis: list[TokenRecord] | None = None
+) -> list[GroundingItem]:
     """Deterministic morphology + syntax grounding for Greek, no dictionary glosses.
 
     Produces, in order: an optional clause-skeleton line from the dependency parse
     (predicate plus subject/object, with copular clauses presented as copula +
     predicate nominal/adjective rather than dropping the copula; see `_clause_skeleton`),
     one compact line per non-punct token (``word = lemma (pos, readable-morph)``), and an
-    optional rare-word flag line. Uses the active backends via `greek.pipeline(text,
-    parse=True)` and degrades gracefully: without a parser the skeleton is simply omitted;
-    rule-based POS/lemma still populate the token lines. Never raises."""
-    from ..greek import pipeline
-
-    try:
-        recs = pipeline(text, parse=True)
-    except Exception:
-        # No parser loaded (or a backend failed): fall back to the unparsed analysis,
-        # which still gives POS + lemma for the per-token lines.
-        try:
-            recs = pipeline(text, parse=False)
-        except Exception:
-            return []
+    optional rare-word flag line. ``analysis`` is normally produced once by the selected
+    `GreekPipeline` and reused by morphology, idiom, rarity, and gloss grounding."""
+    if analysis is None:
+        pipeline, _selection = _selected_pipeline(None)
+        analysis = _analysis_records(
+            text,
+            pipeline=pipeline,
+            parse=True,
+            failure_policy="best-effort",
+            failures=[],
+        )
 
     out: list[GroundingItem] = []
 
-    skeleton = _clause_skeleton(recs)
+    skeleton = _clause_skeleton(analysis)
     if skeleton:
         out.append(
             GroundingItem(
@@ -191,14 +318,14 @@ def _morphology_items(text: str) -> list[GroundingItem]:
         )
 
     # One compact morphology line per non-punctuation token.
-    for r in recs:
+    for r in analysis:
         if r.upos == "PUNCT":
             continue
         morph = _readable_feats(r.feats, *_FEAT_KEYS)
         body = f"{r.text} = {r.lemma} ({r.upos.lower()}{', ' + morph if morph else ''})"
         out.append(GroundingItem(body, source="analysis:morphology", ref=r.text))
 
-    rare_line = _rare_word_line(text)
+    rare_line = _rare_word_line(text, analysis=analysis)
     if rare_line:
         out.append(
             GroundingItem(
@@ -210,7 +337,7 @@ def _morphology_items(text: str) -> list[GroundingItem]:
     return out
 
 
-def _rare_word_line(text: str) -> str:
+def _rare_word_line(text: str, *, analysis: list[TokenRecord] | None = None) -> str:
     """Comma-joined rare/uncommon content words in ``text``, or ``""``.
 
     Rarity is measured against a previously fetched full Greek NT reference corpus.
@@ -224,6 +351,25 @@ def _rare_word_line(text: str) -> str:
         reference = _load_cached_full_nt()
         if reference is None:
             return ""
+        if analysis is not None:
+            import math
+
+            from ..greek.rarity import _corpus_lemma_freqs, _label, _norm
+
+            frequencies = _corpus_lemma_freqs(reference)
+            maximum = max(frequencies.values(), default=0)
+            denominator = math.log1p(maximum) or 1.0
+            ranked: list[tuple[float, str]] = []
+            for record in analysis:
+                if record.upos == "PUNCT":
+                    continue
+                count = frequencies.get(_norm(record.lemma), 0)
+                if _label(count) == "common":
+                    continue
+                rarity = 1.0 - math.log1p(count) / denominator
+                ranked.append((rarity, record.text))
+            ranked.sort(key=lambda item: -item[0])
+            return ", ".join(dict.fromkeys(word for _rarity, word in ranked[:4]))
         result = terminology_rarity(text, reference)
     except Exception:
         return ""
@@ -232,7 +378,13 @@ def _rare_word_line(text: str) -> str:
 
 
 def _greek_grounding(
-    text: str, *, mode: GroundingMode = "morphology", glosses: bool = True
+    text: str,
+    *,
+    mode: GroundingMode = "morphology",
+    glosses: bool = True,
+    pipeline: GreekPipeline,
+    failure_policy: GroundingFailure,
+    failures: list[dict[str, str]],
 ) -> list[GroundingItem]:
     # Reject an unknown mode loudly: a typo ("morfology") must never silently fall
     # through to the legacy lemma branch and change the grounding behavior.
@@ -240,36 +392,50 @@ def _greek_grounding(
         valid = ", ".join(repr(m) for m in get_args(GroundingMode))
         raise ValueError(f"unknown grounding mode {mode!r}; valid modes: {valid}")
 
-    from ..greek import lemmatize_verbose, tokenize_words
-
     if mode == "none":
         return []
 
+    records = _analysis_records(
+        text,
+        pipeline=pipeline,
+        parse=mode in ("morphology", "full"),
+        failure_policy=failure_policy,
+        failures=failures,
+    )
+
     if mode in ("morphology", "full"):
-        out = _morphology_items(text)
+        out = _morphology_items(text, analysis=records)
         # Idiom glosses ride with the morphology grounding in both modes. A
         # non-compositional multiword expression is the one error class per-token
         # morphology cannot reach (its lemmas/case only reinforce the literal reading), and
         # the curated lexicon matches deterministically with a low false-positive rate on
         # exact surface match, so it belongs in the safe default, not gated like sense
         # glosses. Best-effort: empty when no idiom is present. Source tag lexicon:idiom.
-        out.extend(idiom_glosses(text))
+        out.extend(idiom_glosses(text, analysis=records))
         if mode == "full" and glosses:
             # The validated-best gloss layer: a concise, common-sense-first dictionary
             # cascade (never LSJ-first-sense), cleaned, and gated to the rare content words
             # (where a gloss helps). Best-effort: empty if no concise dictionary is loaded.
-            out.extend(content_glosses(text, source="cascade", rarity_gate=True))
+            out.extend(
+                content_glosses(
+                    text, source="cascade", rarity_gate=True, analysis=records
+                )
+            )
         return out
 
-    # mode == "lemma": the original lemma-line + gated LSJ-gloss grounding, preserved exactly.
-    out = []
-    for w in tokenize_words(text):
-        lemma, known = lemmatize_verbose(w)
-        if known:
-            out.append(GroundingItem(f"{w} → lemma {lemma}", source="lemmatizer", ref=w))
+    # mode == "lemma": the original lemma-line format, driven by the selected pipeline.
+    out = [
+        GroundingItem(
+            f"{record.text} → lemma {record.lemma}",
+            source="lemmatizer",
+            ref=record.text,
+        )
+        for record in records
+        if record.upos != "PUNCT" and record.lemma_resolved
+    ]
     if glosses:
         # Gated LSJ glosses for content words — best-effort, empty without greek.use_lsj().
-        out.extend(content_glosses(text))
+        out.extend(content_glosses(text, analysis=records))
     return out
 
 
@@ -283,12 +449,80 @@ def _lineara_grounding(text: str) -> list[GroundingItem]:
     ]
 
 
+def _build_grounding(
+    text: str,
+    script: str,
+    *,
+    mode: GroundingMode,
+    glosses: bool,
+    greek_pipeline: GreekPipeline | None,
+    grounding_failure: GroundingFailure,
+) -> _GroundingOutcome:
+    """Build prompt evidence plus separate, non-prompt runtime provenance."""
+    failure_policy = _validate_failure_policy(grounding_failure)
+    failures: list[dict[str, str]] = []
+
+    if script == "greek":
+        pipeline, selection = _selected_pipeline(greek_pipeline)
+        items = _greek_grounding(
+            text,
+            mode=mode,
+            glosses=glosses,
+            pipeline=pipeline,
+            failure_policy=failure_policy,
+            failures=failures,
+        )
+        return _GroundingOutcome(
+            items,
+            {
+                "script": script,
+                "mode": mode,
+                "failure_policy": failure_policy,
+                "pipeline": _pipeline_runtime(pipeline, selection),
+                "failures": failures,
+            },
+        )
+
+    if greek_pipeline is not None:
+        raise ValueError("greek_pipeline is only valid when script='greek'")
+
+    if script == "lineara":
+        try:
+            items = _lineara_grounding(text)
+        except Exception as exc:
+            failures.append(
+                {"stage": "Linear A transliteration", "error_type": type(exc).__name__}
+            )
+            if failure_policy == "strict":
+                raise GroundingError(
+                    stage="Linear A transliteration",
+                    script=script,
+                    backend=None,
+                    config=None,
+                ) from exc
+            items = []
+    else:
+        items = []
+    return _GroundingOutcome(
+        items,
+        {
+            "script": script,
+            "mode": mode,
+            "failure_policy": failure_policy,
+            "pipeline": None,
+            "failures": failures,
+        },
+    )
+
+
 def grounding_for(
     text: str,
     script: str,
     *,
     mode: GroundingMode = "morphology",
     glosses: bool = True,
+    greek_pipeline: GreekPipeline | None = None,
+    grounding_failure: GroundingFailure = "best-effort",
 ) -> list[GroundingItem]:
     """Local, deterministic grounding evidence for ``text`` in ``script`` — each item
     tagged with its source (``analysis:morphology`` / ``analysis:syntax`` /
@@ -330,17 +564,29 @@ def grounding_for(
     ``glosses=False`` drops the glosses (lemma-only / morphology-only). It has no effect
     on ``"morphology"`` (already gloss-free) or ``"none"``.
 
+    ``greek_pipeline`` may be an isolated `GreekPipeline`; when omitted, the historical
+    module-default facade remains in use. Passing it for a non-Greek script raises
+    ``ValueError`` rather than silently ignoring it. ``grounding_failure`` is
+    ``"best-effort"`` by default: required analysis failures yield the evidence still
+    available. ``"strict"`` instead raises `GroundingError` on a required analysis or
+    transliteration failure. Missing optional dictionaries, the optional rarity corpus,
+    and an unmatched idiom are normal absences under either policy.
+
     The ``"morphology"`` grounding uses the active backends (``greek.pipeline(text,
     parse=True)``): with `use_neural_pipeline` active it carries the neural model's
     predicted morphology and a UD parse; without it, rule-based POS and lemmas still
     populate the token lines and the clause skeleton is simply omitted. Backend-analysis
-    failures degrade to fewer or no grounding items; invalid arguments still raise.
+    failures degrade to fewer or no grounding items under the default policy; strict mode
+    raises before a translation provider can be called. Invalid arguments always raise.
     """
-    if script == "greek":
-        return _greek_grounding(text, mode=mode, glosses=glosses)
-    if script == "lineara":
-        return _lineara_grounding(text)
-    return []
+    return _build_grounding(
+        text,
+        script,
+        mode=mode,
+        glosses=glosses,
+        greek_pipeline=greek_pipeline,
+        grounding_failure=grounding_failure,
+    ).items
 
 
 def translate(
@@ -351,6 +597,8 @@ def translate(
     mode: GroundingMode = "morphology",
     glosses: bool = True,
     verify: bool = False,
+    greek_pipeline: GreekPipeline | None = None,
+    grounding_failure: GroundingFailure = "best-effort",
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
     """Translate ``text`` (a ``greek`` or ``lineara`` string) into ``target``,
@@ -376,6 +624,11 @@ def translate(
     affects the gloss-bearing modes (``"lemma"``, ``"full"``), where ``glosses=False``
     drops the glosses.
 
+    ``greek_pipeline`` selects an isolated `GreekPipeline` for every Greek analysis
+    decision used by the grounding. ``None`` preserves the module-default compatibility
+    facade. ``grounding_failure="best-effort"`` keeps available evidence when required
+    analysis fails; ``"strict"`` raises `GroundingError` before any provider call.
+
     ``verify`` (Greek only) runs a **translate-then-check-and-repair** pass instead of a
     single grounded call. The text is first translated **raw**, with no grounding in the
     prompt, so the local analysis cannot bias the draft. The full grounding (morphology,
@@ -396,7 +649,20 @@ def translate(
     ``aegean.greek.use_treebank()``, or ``use_neural_pipeline()`` for contextual,
     model-predicted morphology and a UD parse, first).
     """
-    if script == "greek" and (verify or mode != "none") and not _rich_lemmatizer_active():
+    effective_mode: GroundingMode = "full" if verify and script == "greek" else mode
+    outcome = _build_grounding(
+        text,
+        script,
+        mode=effective_mode,
+        glosses=glosses,
+        greek_pipeline=greek_pipeline,
+        grounding_failure=grounding_failure,
+    )
+    if (
+        script == "greek"
+        and effective_mode != "none"
+        and not _rich_lemmatizer_active(greek_pipeline)
+    ):
         warnings.warn(
             "Grounded Greek translation is using the baseline lemmatizer; morphology and "
             "lexical grounding will miss many rare or inflected forms and the clause "
@@ -412,21 +678,28 @@ def translate(
         # bias the draft) and check that draft against the full grounding.
         c = client if client is not None else _get_client()
         draft = _ai_translate(text, source=source, target=target, grounding=(), client=c)
-        return _ai_verify_translation(
+        result = _ai_verify_translation(
             text,
             draft.text,
             source=source,
             target=target,
-            grounding=grounding_for(text, "greek", mode="full"),
+            grounding=outcome.items,
             client=c,
         )
-    return _ai_translate(
-        text,
-        source=source,
-        target=target,
-        grounding=grounding_for(text, script, mode=mode, glosses=glosses),
-        client=client,
-    )
+    else:
+        result = _ai_translate(
+            text,
+            source=source,
+            target=target,
+            grounding=outcome.items,
+            client=client,
+        )
+    return replace(result, grounding_runtime=outcome.runtime)
 
 
-__all__ = ["translate", "grounding_for"]
+__all__ = [
+    "GroundingError",
+    "GroundingFailure",
+    "grounding_for",
+    "translate",
+]

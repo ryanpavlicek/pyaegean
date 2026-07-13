@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import typer
 
@@ -148,6 +148,16 @@ def translate(
         "grounding and repair only definite errors. Catches more errors on hard text "
         "without letting the grounding bias the draft, at the cost of a second model call.",
     ),
+    greek_backend: str = typer.Option(
+        "default", "--greek-backend",
+        help="Greek analysis owner: default (module facade), baseline (isolated "
+        "zero-dependency), or neural (isolated grc-joint model; requires [neural]).",
+    ),
+    grounding_failure: str = typer.Option(
+        "best-effort", "--grounding-failure",
+        help="Grounding failure policy: best-effort keeps available evidence; strict "
+        "stops before a provider call when required local analysis fails.",
+    ),
     provider: str = PROVIDER_OPT,
     model: str | None = MODEL_OPT,
     output: Path | None = AI_OUTPUT_OPT,
@@ -164,6 +174,27 @@ def translate(
 
     from aegean import translate as tr
 
+    if greek_backend not in ("default", "baseline", "neural"):
+        raise fail("--greek-backend must be default, baseline, or neural")
+    if grounding_failure not in ("best-effort", "strict"):
+        raise fail("--grounding-failure must be best-effort or strict")
+    if script == "greek" and not verify and mode not in ("morphology", "full", "lemma", "none"):
+        raise fail("--mode must be morphology, full, lemma, or none")
+    if script != "greek" and greek_backend != "default":
+        raise fail("--greek-backend applies only to --script greek")
+
+    greek_pipeline = None
+    if greek_backend != "default":
+        from aegean.greek import GreekPipeline
+
+        if greek_backend == "baseline":
+            greek_pipeline = GreekPipeline()
+        else:
+            try:
+                greek_pipeline = GreekPipeline.neural()
+            except Exception as exc:
+                raise fail(f"could not activate the neural Greek pipeline: {exc}") from None
+
     client = _client(provider, model)
     try:
         with warnings.catch_warnings(record=True) as caught:
@@ -171,10 +202,13 @@ def translate(
             result = _run(
                 lambda: tr.translate(
                     read_text(text), script=script, target=target,
-                    mode=mode, glosses=glosses, verify=verify, client=client,  # type: ignore[arg-type]
+                    mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
+                    greek_pipeline=greek_pipeline,
+                    grounding_failure=cast(tr.GroundingFailure, grounding_failure),
+                    client=client,  # type: ignore[arg-type]
                 )
             )
-    except ValueError as exc:  # unknown grounding mode, validated before any model call
+    except (ValueError, tr.GroundingError) as exc:
         raise fail(str(exc)) from None
     for w in caught:  # e.g. the lemmatizer-quality note — surface it, not a raw UserWarning
         if issubclass(w.category, UserWarning):

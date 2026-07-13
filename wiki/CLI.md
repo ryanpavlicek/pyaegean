@@ -2114,7 +2114,7 @@ The commands (each takes `--provider` / `--model`, and most take `--trace`):
 ```bash
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"                      # grounded hybrid translation
 aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --mode full          # + rare-word glosses in the grounding
-aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --verify             # draft, then check + repair (2nd call)
+aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --greek-backend neural --verify --trace
 aegean ai translate "KU-RO 130" --script lineara              # exploratory (undeciphered!)
 aegean ai gloss "μῆνιν ἄειδε θεά"                             # interlinear word-by-word gloss
 aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt          # short, grounded summary
@@ -2136,6 +2136,16 @@ vocabulary); `--mode lemma` is the legacy lemma+LSJ grounding, and `--mode none`
 text ungrounded. `--verify` translates raw first, then checks and repairs the draft against
 the analysis (a second model call: the analysis cannot bias the draft, though a wrong
 analysis can still mislead the repair).
+
+`--greek-backend default|baseline|neural` makes the Greek analysis owner explicit.
+`default` preserves the module-level facade, `baseline` creates an isolated
+zero-dependency analyzer, and `neural` creates an isolated joint-model analyzer for that
+run. The choice and exact configuration appear in `--trace` and JSON provenance, but not
+in the provider prompt. `--grounding-failure best-effort|strict` controls required local
+analysis failures: best-effort keeps available evidence and records the degradation;
+strict stops before any provider call. Optional dictionaries and rarity data remain
+optional. Because morphology/full request a dependency analysis, an isolated baseline is
+normally paired with best-effort; use neural for a strict morphology/parse contract.
 
 #### Worked runs (provider-dependent)
 
@@ -2185,9 +2195,9 @@ $ aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --provider openrou
 exploratory · openrouter:openai/gpt-4o-mini · grounded on 5 item(s) (--trace to audit them)
 ```
 
-Each of these runs also printed a stderr note that the grounding came from the
-baseline lemmatizer, recommending `aegean.greek.use_treebank()` or
-`use_neural_pipeline()` first for fuller grounding; that note is about the
+The default-facade examples also printed a stderr note that the grounding came from the
+baseline lemmatizer, recommending `--greek-backend neural` (or the Python
+module-level `use_treebank()` / `use_neural_pipeline()` selectors) for fuller grounding; that note is about the
 *grounding* quality, not an error.
 
 **Save the output, label and all.** `translate`, `gloss`, `summarize`, `hypotheses`,

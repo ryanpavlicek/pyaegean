@@ -787,7 +787,7 @@ Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -813,6 +813,11 @@ exactly what the model was (and wasn't) told. `extract` always prints JSON. For 
 `translate` grounds with deterministic morphology by default; `--mode full` adds
 rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy or bare
 paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
+Choose `--greek-backend default|baseline|neural`; the isolated neural choice gives
+model-predicted contextual morphology and a UD parse without changing the module facade.
+`--grounding-failure best-effort|strict` either keeps and traces available evidence or
+stops before a provider call when required local analysis fails. Runtime configuration is
+saved in the trace/JSON but never added to the provider prompt.
 
 `-o FILE` saves the run for later: `.json` keeps the text **plus its provenance and
 grounding** (and the exploratory label is preserved on disk), while `.txt` writes the

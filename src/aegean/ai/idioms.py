@@ -43,6 +43,10 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import TYPE_CHECKING, Sequence
+
+if TYPE_CHECKING:
+    from ..greek.pipeline import TokenRecord
 
 from ..data import load_bundled_json
 from .grounding import GroundingItem
@@ -156,13 +160,21 @@ def _surface_span(tokens: list[str], idiom: _Idiom) -> tuple[int, int] | None:
     return None
 
 
-def _content_lemmas(text: str) -> list[str]:
+def _content_lemmas(
+    text: str, *, analysis: Sequence[TokenRecord] | None = None
+) -> list[str]:
     """Accent-stripped lemmas of ``text`` in order, via the active analysis backends.
 
     Prefers `greek.pipeline` (one pass, sentence-contextual lemmas under the neural
     pipeline); falls back to per-token `greek.lemmatize`. Punctuation is dropped.
     Returns ``[]`` rather than raising if no Greek backend is importable, so the
     lemma path simply yields nothing instead of failing the whole call."""
+    if analysis is not None:
+        return [
+            _strip(record.lemma)
+            for record in analysis
+            if record.upos != "PUNCT" and _strip(record.lemma)
+        ]
     try:
         from ..greek import pipeline
     except Exception:  # pragma: no cover - greek always importable, defensive
@@ -214,7 +226,9 @@ def _lemma_span(lemmas: list[str], wanted: tuple[str, ...]) -> tuple[int, int] |
     return None
 
 
-def idiom_glosses(text: str) -> list[GroundingItem]:
+def idiom_glosses(
+    text: str, *, analysis: Sequence[TokenRecord] | None = None
+) -> list[GroundingItem]:
     """Detect curated Greek idioms in ``text`` and gloss their real (non-literal) meaning.
 
     For each idiom from the bundled lexicon that is present in ``text``, returns one
@@ -236,6 +250,10 @@ def idiom_glosses(text: str) -> list[GroundingItem]:
       (the surface path catches them). Inflection coverage depends on the active
       lemmatizer; the path simply yields fewer matches without a rich backend loaded.
 
+    ``analysis`` may supply already-computed `TokenRecord`s. Their lemmas drive the
+    secondary path without consulting or rerunning a module-level Greek backend; hybrid
+    translation uses this to preserve explicit `GreekPipeline` isolation.
+
     When idioms overlap, the **longest** match wins and its shorter sub-idioms are
     suppressed, on both the surface path (by token span) and the lemma path (by
     lemma-index span); identical glosses are de-duplicated. Best-effort and offline:
@@ -247,7 +265,7 @@ def idiom_glosses(text: str) -> list[GroundingItem]:
         return []
 
     tokens = _tokens(text)
-    lemmas = _content_lemmas(text)
+    lemmas = _content_lemmas(text, analysis=analysis)
 
     # Pass 1: surface matches (already longest-first), recording covered token spans so a
     # shorter idiom nested inside a longer one is suppressed.

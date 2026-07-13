@@ -63,7 +63,8 @@ class ExploratoryResult:
     model (each a `GroundingItem` with a source and a ref). Use `labeled` when
     surfacing to a user so the caveat travels with the text, `trace` to audit
     which local facts grounded the output, and `data` (when set by a structured
-    capability) for the parsed JSON payload.
+    capability) for the parsed JSON payload. ``grounding_runtime`` is separate
+    execution provenance for local grounding; it is never prompt evidence.
     """
 
     text: str
@@ -74,6 +75,10 @@ class ExploratoryResult:
     grounding: tuple[GroundingItem, ...] = ()
     exploratory: bool = True
     data: Any = None     # parsed structured output, when a capability requested JSON
+    grounding_runtime: dict[str, Any] | None = None
+    # Local grounding execution facts (backend/config/failure policy). These are
+    # provenance only: capability prompts are composed before this result exists, so
+    # this mapping is never sent to the provider.
 
     def labeled(self) -> str:
         """The text prefixed with an unmistakable exploratory provenance tag."""
@@ -94,6 +99,37 @@ class ExploratoryResult:
             f"EXPLORATORY {self.kind} via {self.provider}/{self.model} "
             f"(prompt {self.prompt_version})",
         ]
+        if self.grounding_runtime is not None:
+            runtime = self.grounding_runtime
+            lines.append("  grounding runtime:")
+            lines.append(f"      script: {runtime.get('script', '')}")
+            lines.append(f"      mode: {runtime.get('mode', '')}")
+            lines.append(f"      failure policy: {runtime.get('failure_policy', '')}")
+            pipeline = runtime.get("pipeline")
+            if isinstance(pipeline, dict):
+                selection = pipeline.get("selection", "")
+                backend = pipeline.get("backend", "")
+                lines.append(f"      Greek pipeline: {selection} ({backend})")
+                config = pipeline.get("config")
+                if config is not None:
+                    import json
+
+                    lines.append(
+                        "      Greek pipeline config: "
+                        + json.dumps(config, ensure_ascii=False, sort_keys=True)
+                    )
+                note = pipeline.get("note")
+                if note:
+                    lines.append(f"      note: {note}")
+            failures = runtime.get("failures", ())
+            if isinstance(failures, (list, tuple)):
+                for failure in failures:
+                    if isinstance(failure, dict):
+                        lines.append(
+                            "      degraded: "
+                            f"{failure.get('stage', 'grounding')} "
+                            f"({failure.get('error_type', 'error')})"
+                        )
         if not self.grounding:
             lines.append("  grounding: none (ungrounded generation — weigh accordingly)")
             return "\n".join(lines)
@@ -108,7 +144,7 @@ class ExploratoryResult:
         return "\n".join(lines)
 
     def provenance(self) -> dict[str, Any]:
-        return {
+        result = {
             "provider": self.provider,
             "model": self.model,
             "prompt_version": self.prompt_version,
@@ -118,12 +154,15 @@ class ExploratoryResult:
                 {"content": g.content, "source": g.source, "ref": g.ref} for g in self.grounding
             ],
         }
+        if self.grounding_runtime is not None:
+            result["grounding_runtime"] = self.grounding_runtime
+        return result
 
     def to_dict(self) -> dict[str, Any]:
         """A stable, JSON-ready serialization. Keeps the ``exploratory`` flag, the text, the
         grounding, and any structured ``data`` — so a saved AI result can never be mistaken
         for ground truth when read back."""
-        return {
+        result = {
             "_meta": {"tool": "pyaegean", "type": "ExploratoryResult", "schemaVersion": 1},
             "kind": self.kind,
             "text": self.text,
@@ -136,6 +175,9 @@ class ExploratoryResult:
             ],
             "data": self.data,
         }
+        if self.grounding_runtime is not None:
+            result["grounding_runtime"] = self.grounding_runtime
+        return result
 
     def to_json(self, path: str | Path | None = None, *, indent: int | None = 2) -> str | None:
         """Serialize to JSON: returns the string, or writes it to ``path`` and returns ``None``."""
@@ -153,6 +195,9 @@ class ExploratoryResult:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ExploratoryResult":
         """Reconstruct an `ExploratoryResult` from `to_dict` output."""
+        grounding_runtime = data.get("grounding_runtime")
+        if grounding_runtime is not None and not isinstance(grounding_runtime, dict):
+            raise ValueError("grounding_runtime must be an object or null")
         return cls(
             text=data["text"],
             kind=data.get("kind", ""),
@@ -167,6 +212,9 @@ class ExploratoryResult:
             ),
             exploratory=data.get("exploratory", True),
             data=data.get("data"),
+            grounding_runtime=(
+                dict(grounding_runtime) if grounding_runtime is not None else None
+            ),
         )
 
     def _repr_html_(self) -> str:
