@@ -138,12 +138,13 @@ def test_progress_dataframe_bad_level_raises_like_to_dataframe(tmp_path: Path) -
 # data.fetch: progress reports BYTES on download, tar MEMBERS on extraction
 # ══════════════════════════════════════════════════════════════════════════════
 
-PAYLOAD = bytes(range(256)) * 10_000  # 2,560,000 bytes: several 1 MiB read chunks
+PAYLOAD = bytes(range(256)) * 128  # 32 KiB: four test-sized streaming chunks
 
 
 @pytest.fixture(autouse=True)
 def _isolated_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path / "cache"))
+    monkeypatch.setattr(data, "_DOWNLOAD_CHUNK_SIZE", 8 * 1024)
 
 
 class _Server(socketserver.ThreadingTCPServer):
@@ -217,15 +218,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b"\r\n0\r\n\r\n")
         self.wfile.flush()
         try:
-            # Send a FIN after every flushed response body before the handler's
-            # socket object is closed. On Windows this prevents unsent kernel-buffer
-            # data from being discarded as an intermittent RST on multi-MiB bodies.
             self.connection.shutdown(socket.SHUT_WR)
         except OSError:
             pass
-        # Python 3.14 on Windows can otherwise tear this local test socket down
-        # with RST, turning the ordinary-progress tests into nondeterministic retry
-        # tests. Reset handling is covered separately with explicit fault injection.
         self.close_connection = True
 
 
@@ -305,10 +300,9 @@ def test_fetch_unknown_content_length_reports_total_minus_one(monkeypatch) -> No
 
 def test_fetch_resume_reports_bytes_continuing_from_the_part_offset(server, monkeypatch) -> None:
     _register(monkeypatch, server.url)
-    # Leave less than one transfer chunk. Windows' in-process HTTPServer can reset
-    # a closing socket between two client reads even after its handler flushed the
-    # full body; multi-chunk retry behavior is fault-injected in test_data_resume.
-    offset = 2_550_000
+    # Leave less than one test-sized transfer chunk; multi-chunk retry behavior is
+    # fault-injected in test_data_resume.
+    offset = len(PAYLOAD) - 1_000
     part = data.cache_dir() / "blob.part"
     part.parent.mkdir(parents=True, exist_ok=True)
     part.write_bytes(PAYLOAD[:offset])  # a kept partial transfer

@@ -1218,6 +1218,7 @@ def sha256_file(path: pathlib.Path, *, chunk: int = 1 << 20) -> str:
 
 _DOWNLOAD_TIMEOUT = 30  # seconds per socket operation: a stall raises instead of hanging
 _DOWNLOAD_ATTEMPTS = 3  # one initial transfer plus two in-call resume retries
+_DOWNLOAD_CHUNK_SIZE = 1 << 20  # bounded-memory streaming; overridden by small semantic tests
 
 
 def _part_info_path(dest_part: pathlib.Path) -> pathlib.Path:
@@ -1347,7 +1348,11 @@ def _stream_body(
     while expected is None or written < expected:
         if abort is not None and abort():
             raise FetchAborted("fetch canceled")
-        amount = 1 << 20 if expected is None else min(1 << 20, expected - written)
+        amount = (
+            _DOWNLOAD_CHUNK_SIZE
+            if expected is None
+            else min(_DOWNLOAD_CHUNK_SIZE, expected - written)
+        )
         chunk = resp.read(amount)
         if not chunk:
             break

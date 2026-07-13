@@ -406,7 +406,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.44.0
+print(aegean.__version__)          # 0.44.1
 print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -1285,7 +1285,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.44.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.44.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

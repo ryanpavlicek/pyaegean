@@ -4,6 +4,34 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.44.1 (2026-07-12)
+
+A reliability patch for downloads, persistent caches, offline lexical grounding,
+and repeated evaluation in long-lived sessions.
+
+### Fixed
+
+- Downloads stop after the declared `Content-Length` instead of probing the socket
+  once more, and a reset after a complete close-delimited response is accepted only
+  when the assembled file matches its pinned SHA-256. Unpinned mirror responses
+  remain strict and resumable rather than accepting potentially truncated content.
+- Dataset and response-cache lock files now carry ownership tokens and live-holder
+  heartbeats. A long download cannot be mistaken for an abandoned lock, and an old
+  holder cannot delete a successor's lock after stale-lock recovery.
+- Persistent AI response caches merge each writer's changed keys over the latest
+  complete on-disk generation, so independent clients no longer erase one another's
+  cached completions.
+- Newly extracted datasets embed their source checksum inside the atomically swapped
+  directory while retaining the compatibility sidecar. A process interruption between
+  the directory swap and sidecar write can no longer make stale content look like a
+  trusted legacy extraction after an asset is re-pinned.
+- The translation rarity gate no longer treats the bundled John 1 + Philemon sample
+  as a representative New Testament frequency corpus. When the full corpus is
+  unavailable it reports no rarity signal and degrades to ordinary content glossing.
+- `aegean greek eval --documentary` restores reconciliation, lemma-rescue, and
+  paradigm state even when scoring fails, and preserves settings that were already
+  active in a long-lived REPL session.
+
 ## 0.44.0 (2026-07-11)
 
 A correctness and fidelity release: every evaluation fold's gold reviewed and
