@@ -52,6 +52,13 @@ conllu_app = typer.Typer(
 )
 greek_app.add_typer(conllu_app, name="conllu")
 
+interop_app = typer.Typer(
+    pretty_exceptions_show_locals=False,
+    help="Move lossless Greek annotations through CoNLL-U, spaCy, Stanza, or CLTK bundles.",
+    no_args_is_help=True,
+)
+greek_app.add_typer(interop_app, name="interop")
+
 TEXT_ARG = typer.Argument(..., help="Greek text ('-' reads stdin).")
 WORD_ARG = typer.Argument(..., help="One Greek word.")
 
@@ -274,6 +281,123 @@ def export(
     except OSError as exc:
         raise fail(f"cannot write {output}: {exc}") from None
     print(f"wrote {output}", file=sys.stderr)
+
+
+def _interop_report_payload(bundle: Any, source: Path) -> dict[str, Any]:
+    report = bundle.report
+    return {
+        "schema": bundle.schema,
+        "report_schema": report.schema,
+        "source": str(source),
+        "target": bundle.target,
+        "target_version": bundle.target_version,
+        "direction": report.direction,
+        "lossless": report.lossless,
+        "native_fields": list(report.native_fields),
+        "sidecar_fields": list(report.sidecar_fields),
+        "lost_fields": list(report.lost_fields),
+        "warnings": list(report.warnings),
+        "omitted_ids": list(report.omitted_ids),
+    }
+
+
+@interop_app.command("export")
+def interop_export(
+    source: Path = typer.Argument(..., metavar="INPUT", help="Strict CoNLL-U input file."),
+    target: str = typer.Option(
+        ...,
+        "--target",
+        help="Target projection: conllu, spacy, stanza, or cltk.",
+    ),
+    output: Path = typer.Option(
+        ...,
+        "--output",
+        "-o",
+        help="Destination .json interoperability bundle.",
+    ),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Export strict CoNLL-U through one adapter into a portable JSON bundle."""
+    from aegean.io._interop_bundle import bundle_from_document, write_interop_bundle
+    from aegean.io.interop import InteropError, from_conllu
+
+    target = target.casefold()
+    if target not in {"conllu", "spacy", "stanza", "cltk"}:
+        raise fail(
+            "could not export interoperability bundle: target must be one of "
+            "conllu, spacy, stanza, or cltk"
+        )
+    try:
+        imported = from_conllu(source, strict=True)
+        bundle = bundle_from_document(imported.value, target=target)
+        write_interop_bundle(bundle, output)
+    except (OSError, UnicodeError, TypeError, ValueError, InteropError) as exc:
+        raise fail(f"could not export interoperability bundle: {exc}") from None
+    print(f"wrote {output}", file=sys.stderr)
+    if json_out:
+        emit_json(_interop_report_payload(bundle, source))
+
+
+@interop_app.command("import")
+def interop_import(
+    source: Path = typer.Argument(..., metavar="BUNDLE", help="Interoperability bundle."),
+    output: Path = typer.Option(
+        ...,
+        "--output",
+        "-o",
+        help="Destination lossless CoNLL-U file.",
+    ),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Validate a portable bundle and recover its complete CoNLL-U document."""
+    from aegean._atomic import atomic_path
+    from aegean.io._interop_bundle import read_interop_bundle
+    from aegean.io.interop import InteropError, to_conllu
+
+    try:
+        bundle = read_interop_bundle(source)
+        exported = to_conllu(bundle.document)
+        with atomic_path(output) as temporary:
+            temporary.write_text(exported.value, encoding="utf-8", newline="")
+    except (OSError, UnicodeError, TypeError, ValueError, InteropError) as exc:
+        raise fail(f"could not import interoperability bundle: {exc}") from None
+    print(f"wrote {output}", file=sys.stderr)
+    if json_out:
+        payload = _interop_report_payload(bundle, source)
+        payload["output"] = str(output)
+        emit_json(payload)
+
+
+@interop_app.command("report")
+def interop_report(
+    source: Path = typer.Argument(..., metavar="BUNDLE", help="Interoperability bundle."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Validate a bundle and show exactly what is native, sidecar-held, or lost."""
+    from aegean.io._interop_bundle import read_interop_bundle
+    from aegean.io.interop import InteropError
+
+    try:
+        bundle = read_interop_bundle(source)
+        payload = _interop_report_payload(bundle, source)
+    except (OSError, UnicodeError, TypeError, ValueError, InteropError) as exc:
+        raise fail(f"could not read interoperability bundle: {exc}") from None
+    if json_out:
+        emit_json(payload)
+        return
+    table(
+        f"Interoperability: {source}",
+        ["measure", "value"],
+        [
+            ["target", f"{bundle.target} {bundle.target_version or '(unknown version)'}"],
+            ["lossless", "yes" if bundle.report.lossless else "no"],
+            ["native", ", ".join(bundle.report.native_fields) or "(none)"],
+            ["sidecar", ", ".join(bundle.report.sidecar_fields) or "(none)"],
+            ["lost", ", ".join(bundle.report.lost_fields) or "(none)"],
+            ["warnings", "; ".join(bundle.report.warnings) or "(none)"],
+            ["omitted IDs", ", ".join(bundle.report.omitted_ids) or "(none)"],
+        ],
+    )
 
 
 def _ensure_calibration() -> None:

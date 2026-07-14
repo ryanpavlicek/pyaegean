@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available in v0.49.0.** Typed source alignment, typed editorial form states,
+> **Available since v0.49.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
@@ -25,6 +25,16 @@ The universal resolver is [`aegean.read_corpus`](#aegeanread_corpus--one-resolve
 combining/slicing is [`merge`/`subset`/`combine`](#combining-and-slicing-corpora).
 
 ## The layered design
+
+### Interoperability is a projection boundary
+
+The complete `UDDocument` row stream remains the structural core. `aegean.io` wraps it
+in an `InteropDocument` carrying exact source alignment, typed form state, confidence,
+receipts, profile identity, and provenance when those values exist. Exports populate
+the target's native fields and carry the rest in a canonical `aegean.interop/v1`
+sidecar. `InteropReport` distinguishes native, sidecar-held, and genuinely lost fields;
+strict reimport validates the native projection and sidecar together. spaCy, Stanza, and
+CLTK stay optional, and `[all]` intentionally does not install them.
 
 pyaegean is built in **strict, downward-only layers**. Higher layers import
 lower ones; the core never imports a script.
@@ -206,7 +216,7 @@ and the [EpiDoc writer](#epidoc-tei-xml) emits them back out.
 
 ### Typed editorial forms and model input
 
-On `main`, a token can also carry `TokenFormState`. `diplomatic` records the
+A token can also carry `TokenFormState`. `diplomatic` records the
 original or diplomatic form, `regularized` an editorial correction or expansion,
 and `normalized` an optional preprocessing form. `segments` preserve ordered
 certain, supplied, unclear, and lost pieces with semantic source references.
@@ -515,7 +525,7 @@ lossy form carries its attribution.
 line/position, any non-default status/alt/annotations, optional source alignment,
 and optional typed form state), the exact document source text, physical lines,
 full document metadata, the sign inventory, and provenance. `from_json` reverses
-it exactly. Main-branch form-state files use schema 3; schema-1 and schema-2
+it exactly. Current form-state files use schema 3; schema-1 and schema-2
 files still load with `form_state=None`.
 
 ```python
@@ -579,7 +589,7 @@ df.shape                               # (6406, 7)
 
 At `token`/`word` level, any per-token `annotations` are **spread first**, so the
 Greek NT's `lemma` / `morph` / `strongs` / `gloss` become their own columns
-(canonical columns always win on a name clash). On `main`, tokens with a typed
+(canonical columns always win on a name clash). Tokens with a typed
 form state also expose canonical `form_diplomatic`, `form_regularized`,
 `form_normalized`, `form_model_input`, `form_model_input_ops`,
 `form_model_input_source`, `form_segments`, editorial-status, damage, and

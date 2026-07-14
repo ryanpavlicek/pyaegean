@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.49.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.50.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -102,6 +102,7 @@ prior programming.
 | **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (37 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Typed token form states distinguish diplomatic, regularized, normalized, and model-input strings. Source alignment and lossless CoNLL-U structure preserve exact mappings, multiword ranges, empty nodes, `DEPS`, and `MISC`. EpiDoc carries the diplomatic form plus one selected editorial form and apparatus; use JSON, SQLite, or CoNLL-U when every typed form must round-trip. Every corpus carries provenance and a one-line citation. |
+| **Loss-aware NLP interoperability** | Optional `aegean.io` adapters move complete Greek annotations through spaCy, Stanza, and CLTK document objects. Target-native fields and a SHA-256-bound `aegean.interop/v1` sidecar round-trip together, while `InteropReport` states exactly what is native, sidecar-held, or lost by an explicit projection. Portable JSON bundles support review and comparison from Python or `aegean greek interop export\|import\|report`. |
 | **A browser UI for any corpus** | `aegean.io.to_workbench(corpus, "my.json")` emits a file the [Linear A Research Workbench](https://linearaworkbench.xyz/) opens via `?corpus=`: your own inscriptions get its 50 analysis modules, maps, and imagery browser with zero setup. `from_workbench_export()` loads the workbench's corpus exports (and its static data API) back into Python. |
 | **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer, so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
 | **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Greek translation can use explicit deterministic or neural local grounding before generation. All generative readings are labeled **exploratory** with their provenance; callers of the lower-level AI API may also supply their own grounding or none. |
@@ -116,7 +117,8 @@ pip install "pyaegean[tui]"       # + the `aegean tui` full-screen terminal UI (
 pip install "pyaegean[neural]"    # + the neural Greek pipeline & lemmatizer (onnxruntime; no torch)
 pip install "pyaegean[ai]"        # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local option)
 pip install "pyaegean[mcp]"       # + the `aegean-mcp` Model Context Protocol server (for agents)
-pip install "pyaegean[all]"       # all supported runtime extras, including neural (except Parquet)
+pip install "pyaegean[interop]"   # + Python adapters; combine with [cli] for the interop commands
+pip install "pyaegean[all]"       # bundled runtime extras, including neural (not Parquet/framework adapters)
 ```
 
 ## Try it
@@ -183,6 +185,7 @@ aegean balance lineara --strict                # reconcile every stated total
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
 aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural --json
 printf '%s\n' '["μῆνιν","ἄειδε"]' | aegean greek stream -   # bounded neural JSONL
+aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
 aegean greek catalog --author plato            # search 1,778 loadable works (offline)
 aegean import myplato.txt -o myplato.json      # your own text → a corpus, then `aegean stats myplato.json`
 ```
@@ -209,6 +212,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)**: per-script guides
 - **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)**: end-to-end scholarly workflows, each ending in a citation
 - **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
+- **[Interoperability](https://github.com/ryanpavlicek/pyaegean/wiki/Interoperability)**: CoNLL-U, spaCy, Stanza, and CLTK projections, sidecars, reports, and serializer boundaries
 - **[API reference](https://pyaegean.xyz/api/)**: the supported facade modules, with public classes and functions generated from the source
 
 ## Roadmap
@@ -217,8 +221,7 @@ The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 what each release shipped. Current work is focused on:
 
 - completing empirical source/task calibration and cross-domain development gates on the
-  model-independent Greek foundations, alongside optional
-  spaCy/Stanza/CLTK adapters, and explicit annotation and domain profiles;
+  model-independent Greek foundations, alongside explicit annotation and domain profiles;
 - comparing deterministic and neural translation grounding on matched passages before changing
   any default;
 - training and independently evaluating a separately versioned successor to the current Greek
@@ -262,7 +265,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.49.0},
+  version = {0.50.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

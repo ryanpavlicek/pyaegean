@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.49.0.** The CoNLL-U and newer Greek pipeline controls are
+> **Available in v0.50.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.49.0
+aegean --version                # pyaegean 0.50.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -227,6 +227,19 @@ aegean export lineara -f workbench -o wb.json     # Linear A Workbench JSON
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
+
+### Interoperability bundles
+
+```bash
+aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
+aegean greek interop report treebank.spacy.json
+aegean greek interop import treebank.spacy.json -o treebank-restored.conllu
+```
+
+Install the CLI plus the required adapter, for example
+`pip install "pyaegean[cli,interop]"`; `[interop]` installs the available framework
+adapters. The JSON bundle is pyaegean's portable target projection plus its
+SHA-256-bound sidecar and report, not a framework-specific binary file.
 
 ### `combine` — merge corpora into one
 

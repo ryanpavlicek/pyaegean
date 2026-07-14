@@ -70,8 +70,10 @@ some shells (notably zsh on macOS) treat square brackets specially:
 ```bash
 pip install "pyaegean[ai]"        # the full generative AI layer
 pip install "pyaegean[neural]"    # the measured neural Greek pipeline
+pip install "pyaegean[interop]"   # spaCy/Stanza, plus CLTK when Python is 3.13+
+pip install "pyaegean[cli,interop]" # adapters plus the interop CLI commands
 pip install "pyaegean[cli,viz]"   # combine extras with a comma
-pip install "pyaegean[all]"       # every runtime extra except [parquet]
+pip install "pyaegean[all]"       # bundled runtime extras; excludes [parquet] and framework adapters
 ```
 
 The complete matrix:
@@ -80,6 +82,10 @@ The complete matrix:
 | --- | --- | --- |
 | `pyaegean[data]` | `pandas>=2.2.2` | DataFrame interop (`corpus.to_dataframe()`) |
 | `pyaegean[neural]` | `onnxruntime>=1.23`, `tokenizers>=0.20`, `numpy` | the neural Greek pipeline (`greek.use_neural_pipeline()`) and lemmatizer (`greek.use_neural_lemmatizer()`): torch-free |
+| `pyaegean[spacy]` | `spacy>=3.8.13` | loss-aware spaCy `Doc` import/export |
+| `pyaegean[stanza]` | `stanza>=1.13.0` | loss-aware Stanza `Document` import/export; Stanza installs its own PyTorch runtime |
+| `pyaegean[cltk]` | `cltk>=2.5.1` | current CLTK `Doc` import/export and explicit `Process` integration; Python 3.13+ |
+| `pyaegean[interop]` | `spacy`, `stanza`, and, on Python 3.13+, `cltk` | all available document adapters for the running Python |
 | `pyaegean[anthropic]` | `anthropic>=0.40` | Anthropic (the default) AI provider |
 | `pyaegean[openai]` | `openai>=1.55.3` | OpenAI provider |
 | `pyaegean[grok]` | `openai>=1.55.3` | xAI Grok (OpenAI-API-compatible) |
@@ -94,13 +100,15 @@ The complete matrix:
 | `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | every runtime extra **except** `parquet` |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet` and the separate framework adapters |
 
 A few things worth knowing:
 
-- **`[all]` includes `[neural]` but omits `[parquet]`.** It installs ONNX Runtime,
+- **`[all]` includes `[neural]` but omits `[parquet]` and `[interop]`.** It installs ONNX Runtime,
   Tokenizers, and NumPy, but neural model bundles still download lazily on first use and
-  remain SHA-256 verified. Parquet remains a separate opt-in because it adds `pyarrow`.
+  remain SHA-256 verified. Parquet remains separate because it adds `pyarrow`; the
+  interoperability frameworks remain separate because Stanza adds a second PyTorch runtime.
+  See [Interoperability](Interoperability) for target-specific installs and field support.
 - **The neural pipeline uses a GPU automatically when one is available.** Replace
   the CPU wheel with a GPU build (`pip uninstall onnxruntime`, then
   `pip install onnxruntime-gpu` for NVIDIA or `onnxruntime-directml` on Windows)
@@ -125,7 +133,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.49.0
+# pyaegean 0.50.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -141,7 +149,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.49.0
+print(aegean.__version__)                 # 0.50.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -158,7 +166,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.49.0
+# pyaegean 0.50.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -196,7 +204,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.49.0                    │
+│ OK │ pyaegean │ 0.50.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

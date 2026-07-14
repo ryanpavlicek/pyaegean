@@ -24,6 +24,14 @@ _MIN_PYTHON = (3, 10)
 _EXTRAS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     ("data", ("pandas",), "DataFrame interop (to_dataframe)"),
     ("neural", ("onnxruntime", "tokenizers", "numpy"), "the neural Greek pipeline"),
+    ("spacy", ("spacy",), "loss-aware spaCy Doc interoperability"),
+    ("stanza", ("stanza",), "loss-aware Stanza Document interoperability"),
+    ("cltk", ("cltk",), "loss-aware CLTK Doc and Process interoperability"),
+    (
+        "interop",
+        ("spacy", "stanza", "cltk"),
+        "spaCy and Stanza adapters, plus CLTK on Python 3.13+",
+    ),
     ("anthropic", ("anthropic",), "the Anthropic provider (aegean.ai)"),
     ("openai", ("openai",), "the OpenAI, Grok, OpenRouter, and local providers (aegean.ai)"),
     ("gemini", ("google.genai",), "the Gemini provider (aegean.ai)"),
@@ -106,9 +114,15 @@ def _module_present(name: str) -> bool:
         return False
 
 
-def _extras_section() -> list[dict[str, Any]]:
+def _extras_section(version_info: Any | None = None) -> list[dict[str, Any]]:
+    vi = sys.version_info if version_info is None else version_info
     out: list[dict[str, Any]] = []
     for extra, modules, unlocks in _EXTRAS:
+        if extra == "interop" and tuple(vi[:2]) < (3, 13):
+            # This mirrors the environment marker in pyproject.toml: installing
+            # [interop] on 3.10-3.12 intentionally installs spaCy and Stanza but
+            # cannot install CLTK 2.5, whose own Python floor is 3.13.
+            modules = tuple(module for module in modules if module != "cltk")
         missing = [m for m in modules if not _module_present(m)]
         out.append(
             {

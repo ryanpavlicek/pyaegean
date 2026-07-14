@@ -52,6 +52,33 @@ jobs:
       - name: Tests (geo + parquet extras installed, skips reported)
         run: pytest -rs
 
+  # The interoperability targets are large optional frameworks. Exercise their
+  # real object models in one Python 3.14 cell instead of widening the five-version
+  # core matrix; the ordinary matrix still runs the dependency-absent contract.
+  interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev,interop]"
+      - name: Real-framework adapter tests (opt-in suite)
+        run: >-
+          pytest -rs -m framework_interop
+          tests/test_a15_interop_spacy.py
+          tests/test_a15_interop_stanza.py
+          tests/test_a15_interop_cltk.py
+      - name: Framework-neutral interoperability contracts
+        run: >-
+          pytest -rs
+          tests/test_a15_interop_core.py
+          tests/test_a15_interop_bundle.py
+          tests/test_a15_interop_dependency_contract.py
+          tests/test_cli_interop.py
+          tests/test_cli_doctor.py
+
   notebooks:
     runs-on: ubuntu-latest
     steps:

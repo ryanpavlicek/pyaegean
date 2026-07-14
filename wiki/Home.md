@@ -5,7 +5,7 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, research tools, translation grounding,
 and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.49.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.50.0 (beta).** The API may still shift before 1.0.
 > This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
@@ -68,7 +68,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Analysis](Analysis) | Accounting checks, sign-pattern and phonetic search, cross-script comparison, clustering, collocation and corpus statistics, structure detection, and a query engine |
 | [Greek NLP](Greek-NLP) | Core text utilities, named source-preserving sentence policies, metre, IPA, tagging, morphology, lemmatization, parsing, dictionaries, and 1,778 discoverable works; optional treebank, pure-Python, and neural backends, with the neural pipeline measured at 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS on the UD Perseus test fold |
 | Greek corpora ([Data & Provenance](Data-and-Provenance)) | Beyond the bundled sample: the gold-annotated **Greek New Testament** (`aegean.load("nt")`, Nestle 1904: lemma, morphology, Strong's) and six fetch-on-demand epigraphic/papyrological corpora: **I.Sicily** (2,855), **IIP** (2,113), **IOSPE** (1,194), **IGCyr/GVCyr** (997), **EDH** (1,286), and the **DDbDP documentary papyri** (57,331 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp`) |
-| [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, Parquet, CoNLL-U, Turtle, and JSON-LD, with typed editorial forms |
+| [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, Parquet, CoNLL-U, Turtle, and JSON-LD, with typed editorial forms; [loss-aware adapters](Interoperability) carry complete analyses through spaCy, Stanza, and CLTK objects |
 | [CLI](CLI) | The toolkit from a terminal: guided quickstart, REPL, optional full-screen TUI, corpus and Greek commands, data management, diagnostics, JSON output, and stdin piping |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
@@ -84,7 +84,8 @@ with public classes and functions generated from docstrings and type hints.
 pip install pyaegean            # core + Linear A + Greek
 pip install "pyaegean[cli]"     # + the `aegean` command line
 pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local Ollama option)
-pip install "pyaegean[all]"     # all supported runtime extras, including neural (except Parquet)
+pip install "pyaegean[interop]" # + Python adapters; combine with [cli] for the interop commands
+pip install "pyaegean[all]"     # bundled runtime extras, including neural (not Parquet/framework adapters)
 ```
 
 See [Installation](Installation) for the full extras matrix, and
@@ -95,8 +96,7 @@ See [Installation](Installation) for the full extras matrix, and
 The changelog records what has shipped. Current work is focused on:
 
 - completing empirical source/task calibration and cross-domain development gates on the
-  model-independent Greek foundations, alongside optional
-  spaCy/Stanza/CLTK adapters, and explicit annotation and domain profiles;
+  model-independent Greek foundations, alongside explicit annotation and domain profiles;
 - comparing deterministic and neural translation grounding on matched passages
   before changing a default;
 - training and independently evaluating a separately versioned successor to the

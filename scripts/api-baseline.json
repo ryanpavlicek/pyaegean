@@ -22313,8 +22313,52 @@
     "aegean.io": {
       "kind": "module"
     },
+    "aegean.io.BUNDLE_SCHEMA": {
+      "canonical": "aegean.io._interop_bundle.BUNDLE_SCHEMA",
+      "kind": "attribute"
+    },
     "aegean.io.EXPORT_FORMATS": {
       "kind": "attribute"
+    },
+    "aegean.io.InteropBundle": {
+      "canonical": "aegean.io._interop_bundle.InteropBundle",
+      "kind": "class"
+    },
+    "aegean.io.InteropDependencyError": {
+      "canonical": "aegean.io.interop.InteropDependencyError",
+      "kind": "class"
+    },
+    "aegean.io.InteropDocument": {
+      "canonical": "aegean.io.interop.InteropDocument",
+      "kind": "class"
+    },
+    "aegean.io.InteropError": {
+      "canonical": "aegean.io.interop.InteropError",
+      "kind": "class"
+    },
+    "aegean.io.InteropLossError": {
+      "canonical": "aegean.io.interop.InteropLossError",
+      "kind": "class"
+    },
+    "aegean.io.InteropReport": {
+      "canonical": "aegean.io.interop.InteropReport",
+      "kind": "class"
+    },
+    "aegean.io.InteropResult": {
+      "canonical": "aegean.io.interop.InteropResult",
+      "kind": "class"
+    },
+    "aegean.io.InteropSchemaError": {
+      "canonical": "aegean.io.interop.InteropSchemaError",
+      "kind": "class"
+    },
+    "aegean.io.InteropSentenceMetadata": {
+      "canonical": "aegean.io.interop.InteropSentenceMetadata",
+      "kind": "class"
+    },
+    "aegean.io.InteropTokenMetadata": {
+      "canonical": "aegean.io.interop.InteropTokenMetadata",
+      "kind": "class"
     },
     "aegean.io.MergedReview": {
       "canonical": "aegean.io.review.MergedReview",
@@ -22332,6 +22376,10 @@
       "canonical": "aegean.io.review.ReviewerValue",
       "kind": "class"
     },
+    "aegean.io.SIDECAR_COMMENT_PREFIX": {
+      "canonical": "aegean.io.interop.SIDECAR_COMMENT_PREFIX",
+      "kind": "attribute"
+    },
     "aegean.io.apply_merged": {
       "canonical": "aegean.io.review.apply_merged",
       "kind": "function",
@@ -22345,6 +22393,91 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "corpus"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.bundle_from_document": {
+      "canonical": "aegean.io._interop_bundle.bundle_from_document",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "target"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.bundle_from_result": {
+      "canonical": "aegean.io._interop_bundle.bundle_from_result",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "result"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.decode_sidecar": {
+      "canonical": "aegean.io.interop.decode_sidecar",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sidecar"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "target"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "native_signature"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.dumps_interop_bundle": {
+      "canonical": "aegean.io._interop_bundle.dumps_interop_bundle",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "bundle"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.encode_sidecar": {
+      "canonical": "aegean.io.interop.encode_sidecar",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "target"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "native_signature"
         }
       ],
       "returns": true
@@ -22407,6 +22540,45 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "path"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.from_cltk": {
+      "canonical": "aegean.io._interop_cltk.from_cltk",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "doc"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sidecar"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.from_conllu": {
+      "canonical": "aegean.io.interop.from_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "strict"
         }
       ],
       "returns": true
@@ -22483,6 +22655,50 @@
           "default": true,
           "kind": "keyword-only",
           "name": "reviewer"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.from_spacy": {
+      "canonical": "aegean.io._interop_spacy.from_spacy",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "doc"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sidecar"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.from_stanza": {
+      "canonical": "aegean.io._interop_stanza.from_stanza",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "doc"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sidecar"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
         }
       ],
       "returns": true
@@ -22588,6 +22804,70 @@
       ],
       "returns": true
     },
+    "aegean.io.from_token_records": {
+      "canonical": "aegean.io.interop.from_token_records",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "records"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "source_text"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "document_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "provenance"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "annotation_profile"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.from_ud_document": {
+      "canonical": "aegean.io.interop.from_ud_document",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "source_text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "document_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "annotation_profile"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "provenance"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.from_workbench_export": {
       "canonical": "aegean.io.workbench.from_workbench_export",
       "kind": "function",
@@ -22601,6 +22881,40 @@
           "default": true,
           "kind": "keyword-only",
           "name": "script_id"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.loads_interop_bundle": {
+      "canonical": "aegean.io._interop_bundle.loads_interop_bundle",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "value"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.make_cltk_process": {
+      "canonical": "aegean.io._interop_cltk.make_cltk_process",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "pipeline"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
         }
       ],
       "returns": true
@@ -22686,6 +23000,18 @@
           "default": true,
           "kind": "keyword-only",
           "name": "script_id"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.read_interop_bundle": {
+      "canonical": "aegean.io._interop_bundle.read_interop_bundle",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
         }
       ],
       "returns": true
@@ -23147,6 +23473,45 @@
       ],
       "returns": true
     },
+    "aegean.io.to_cltk": {
+      "canonical": "aegean.io._interop_cltk.to_cltk",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.to_conllu": {
+      "canonical": "aegean.io.interop.to_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "include_sidecar"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.to_csv": {
       "canonical": "aegean.io.tabular.to_csv",
       "kind": "function",
@@ -23272,6 +23637,45 @@
       ],
       "returns": true
     },
+    "aegean.io.to_spacy": {
+      "canonical": "aegean.io._interop_spacy.to_spacy",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "vocab"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.to_stanza": {
+      "canonical": "aegean.io._interop_stanza.to_stanza",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "document"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "allow_lossy"
+        }
+      ],
+      "returns": true
+    },
     "aegean.io.to_workbench": {
       "canonical": "aegean.io.workbench.to_workbench",
       "kind": "function",
@@ -23332,6 +23736,23 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "obj"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.io.write_interop_bundle": {
+      "canonical": "aegean.io._interop_bundle.write_interop_bundle",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "bundle"
         },
         {
           "default": false,

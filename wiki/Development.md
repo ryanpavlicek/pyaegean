@@ -36,20 +36,27 @@ pip install -e ".[dev]"
 For full-stack work, including the neural Greek pipeline, install the aggregate
 extra as well: `pip install -e ".[dev,all]"`. The `[all]` extra includes
 `[neural]`; parquet remains a separate opt-in because its compiled dependency
-is substantially larger.
+is substantially larger. Framework-adapter work also needs
+`pip install -e ".[dev,all,interop]"`; CLTK is included only on Python 3.13+
+because of its upstream Python requirement.
+
+The ordinary `pytest` full suite deliberately excludes tests marked
+`framework_interop`; core schemas, bundles, CLI behavior, lazy imports, and missing-extra
+errors remain in every run. Real spaCy, Stanza, and CLTK objects run in the dedicated CI
+job, or explicitly with `pytest -m framework_interop` while changing those adapters.
 
 Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.49.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.50.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
 
 `pip install -e ".[dev]"` gives you the test runner, the linters, the build
-tools, and the optional runtime backends so the whole suite can run in one
-environment:
+tools, and the optional runtime backends used by the core test matrix. The
+framework-adapter tests additionally require `.[dev,interop]`:
 
 | Tool | Why it's there |
 | --- | --- |
@@ -62,6 +69,7 @@ environment:
 | `pandas` | exercise the `[data]` DataFrame interop in tests |
 | `typer`, `rich`, `prompt_toolkit` | the `aegean` CLI + REPL (the `[cli]` extra) |
 | `lxml` | Linear B DAMOS-style EpiDoc import and official-schema validation (the `[epidoc]` extra); generic token-carrier EpiDoc I/O uses the stdlib |
+| `spaCy`, `Stanza`, `CLTK` | real-object interoperability tests when `[interop]` is also installed; CLTK requires Python 3.13+ |
 | `matplotlib` | one-line plots (the `[viz]` extra) |
 | `mcp` | the `aegean-mcp` Model Context Protocol server |
 | `textual` | the `aegean tui` terminal UI (the `[tui]` extra) |
@@ -166,7 +174,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.49.0-py3-none-any.whl: 4633 KB uncompressed, 218 files
+# wheel dist/pyaegean-0.50.0-py3-none-any.whl: 4780 KB uncompressed, 223 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -175,7 +183,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.49.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.50.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail

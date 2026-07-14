@@ -17,7 +17,21 @@ and where to begin, see the [home page](../index.md).
 - [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, tokenize, named sentence policies, scan, tag, lemmatize, parse), `segment_text()` / `segment_sentences()` with validated plugin results and exact boundary spans, `pipeline_tokens()` for typed editorial forms, isolated `GreekPipeline` instances with serializable configuration, bounded `iter_analyze_sentences()` neural sentence streams, explicit long-input policies, optional typed `TokenConfidence`/`SentenceConfidence` evidence through `confidence_domain` and `confidence_policy`, exact `AnalysisReceipt` provenance (including schema-2 calibration/policy hashes), manifest-validated neural bundles, lossless CoNLL-U document I/O, plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
-- [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. JSON and SQLite are the full-fidelity archives.
+- [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
+
+### `aegean.io` interoperability facade
+
+The reviewed public entry points are the typed core envelope (`InteropDocument`,
+`InteropTokenMetadata`, `InteropSentenceMetadata`, `InteropResult`, and
+`InteropReport`), CoNLL-U conversion (`from_conllu`, `to_conllu`,
+`from_token_records`, `from_ud_document`), optional framework adapters
+(`to_spacy`/`from_spacy`, `to_stanza`/`from_stanza`, `to_cltk`/`from_cltk`), and
+portable `InteropBundle` helpers (`bundle_from_document`, `dumps_interop_bundle`,
+`loads_interop_bundle`, `read_interop_bundle`, `write_interop_bundle`), and the
+explicit CLTK seam (`make_cltk_process`). `bundle_from_result`, sidecar codecs,
+schema constants, and typed interoperability errors support advanced integrations
+and are listed in the generated [`aegean.io` reference](io.md). The adapter dependencies
+are lazy and remain outside the core import path.
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
@@ -88,7 +102,7 @@ $ aegean greek catalog --author plato --source perseus -n 2
 
 ```bash
 pip install pyaegean            # core + Linear A + Greek (zero heavy dependencies)
-pip install "pyaegean[all]"     # all supported runtime extras, including neural (except Parquet)
+pip install "pyaegean[all]"     # bundled runtime extras, including neural (not Parquet/framework adapters)
 ```
 
 See the [README](https://github.com/ryanpavlicek/pyaegean#install) for the full extras

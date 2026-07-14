@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.50.0 (2026-07-14)
+
+### Added
+
+- `aegean.io` now provides an immutable `InteropDocument` envelope, typed conversion
+  reports, strict schema/loss errors, and deterministic CoNLL-U conversion while retaining
+  complete row structure, source alignment, editorial forms, confidence, receipts, profile
+  identity, and provenance when present.
+- Optional lazy adapters exchange analyses with spaCy `Doc`, Stanza `Document`, and CLTK
+  `Doc` objects. Target-native annotations travel with a versioned, SHA-256-bound sidecar;
+  explicit lossy imports disclose every unavailable field and omitted structural row.
+- Portable JSON interoperability bundles bind the native projection, canonical sidecar, and
+  report. `aegean greek interop export`, `import`, and `report` provide the same validated
+  workflow from the command line.
+- Separate `[spacy]`, `[stanza]`, `[cltk]`, and `[interop]` extras keep framework runtimes out
+  of the zero-dependency core and the torch-free pyaegean `[neural]` installation.
+
+### Changed
+
+- `aegean doctor` reports each framework adapter and the combined interoperability extra.
+  CI exercises real spaCy, Stanza, and CLTK objects on Python 3.14 in addition to the
+  dependency-absent contract in the normal Python matrix.
+
 ## 0.49.0 (2026-07-14)
 
 ### Added

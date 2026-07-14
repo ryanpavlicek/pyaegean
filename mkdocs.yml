@@ -97,5 +97,6 @@ nav:
   - Benchmarks: benchmarks.md
   - Design notes:
       - Large corpora: large-corpora.md
+      - Interoperability: interoperability.md
       - Methodology: methodology.md
       - Pleiades candidates: pleiades-candidates.md

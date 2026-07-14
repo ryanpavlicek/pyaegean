@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.49.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.50.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -121,7 +121,8 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `ai` | the AI Layer with all three provider SDKs (anthropic, openai, google-genai) |
 | `dev` | the test/lint/type toolchain (contributors) |
 | `docs` | the documentation toolchain (contributors) |
-| `all` | every runtime extra, including `neural`, except `parquet` (`dev`/`docs` are contributor toolchains) |
+| `interop` | spaCy/Stanza document adapters plus CLTK on Python 3.13+; separate because Stanza installs PyTorch |
+| `all` | the bundled runtime stack, including `neural`; excludes `parquet` and the separate framework adapters (`dev`/`docs` are contributor toolchains) |
 
 See [Installation](Installation) for the full breakdown. `aegean doctor` reports
 which of the runtime extras are importable in your environment, with the install

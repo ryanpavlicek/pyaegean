@@ -107,8 +107,8 @@ def test_json_report_shape_and_measured_values(app, store, monkeypatch) -> None:
 
     extras = {e["extra"]: e for e in payload["extras"]}
     assert set(extras) == {
-        "data", "neural", "anthropic", "openai", "gemini", "epidoc", "geo",
-        "viz", "parquet", "cli", "mcp", "tui",
+        "data", "neural", "spacy", "stanza", "cltk", "interop", "anthropic",
+        "openai", "gemini", "epidoc", "geo", "viz", "parquet", "cli", "mcp", "tui",
     }
     for e in extras.values():
         assert set(e) == {"extra", "modules", "installed", "missing", "unlocks", "pip"}
@@ -136,6 +136,16 @@ def test_json_report_shape_and_measured_values(app, store, monkeypatch) -> None:
     assert payload["analysis_cache"] == {
         "enabled": False, "path": None, "entries": 0, "bytes": None, "error": None,
     }
+
+
+def test_interop_doctor_row_matches_the_cltk_python_marker(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr(_doctor, "_module_present", lambda _name: True)
+    rows = {
+        row["extra"]: row for row in _doctor._extras_section((3, 12, 0))
+    }
+    assert rows["interop"]["modules"] == ["spacy", "stanza"]
+    assert rows["interop"]["installed"] is True
+    assert rows["cltk"]["modules"] == ["cltk"]
 
 
 # ── orphan partial downloads: exit 1, file named, remove fix given ────────────

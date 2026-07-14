@@ -326,7 +326,8 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `tui` | textual | the `aegean tui` terminal UI |
   | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` | one provider SDK | the AI layer |
   | `ai` | all providers | the AI layer, any provider |
-  | `all` | `ai,epidoc,geo,data,cli,viz,mcp,tui,neural` | every runtime extra except `parquet` |
+  | `spacy` / `stanza` / `cltk` / `interop` | target framework(s) | optional loss-aware annotation adapters; Stanza adds PyTorch and CLTK requires Python 3.13+ |
+  | `all` | `ai,epidoc,geo,data,cli,viz,mcp,tui,neural` | bundled runtime stack; excludes `parquet` and framework adapters |
 
 - **`to_dict()` is a lossy summary** on purpose (words + metadata, for quick
   interop); the lossless, reversible path is `Corpus.to_json()` /

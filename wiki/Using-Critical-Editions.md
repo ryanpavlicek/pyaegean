@@ -91,7 +91,7 @@ corpus, and it is exactly the information a study should account for rather than
 Status round-trips through every persistence format: `Corpus.to_json` / `from_json`, the SQLite store
 (`aegean.db`), and EpiDoc export all preserve it, and the token-level tabular exports (`to_csv`,
 `to_parquet`, `to_dataframe`) carry it as a `status` column, so a spreadsheet can filter restored
-readings out. On the current `main` branch, schema-3 JSON and SQLite also preserve typed form
+readings out. Schema-3 JSON and SQLite also preserve typed form
 states, while CSV and Parquet expose them as `form_*` columns and a JSON `form_segments` cell. A
 corpus you load, filter, and re-save keeps the apparatus. Two caveats: the Workbench export format
 carries token text only, so a Workbench round-trip drops statuses, typed form state, and

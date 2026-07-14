@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.49.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.50.0 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
@@ -66,7 +66,8 @@ the core pipeline client-side.
 The current release includes source-preserving named sentence policies, isolated
 `GreekPipeline` instances, explicit safe handling for overlength neural input, exact
 analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
-structure. The
+structure. Optional [interoperability adapters](interoperability.md) carry complete
+analyses through spaCy, Stanza, and CLTK objects with explicit native/sidecar/loss reports. The
 [Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
 shows runnable examples.
 
@@ -113,9 +114,10 @@ The core is zero-dependency; everything heavier is an opt-in extra:
 | `pip install "pyaegean[cli]"` | The `aegean` command line |
 | `pip install "pyaegean[tui]"` | The `aegean tui` full-screen terminal UI |
 | `pip install "pyaegean[neural]"` | The neural Greek pipeline and lemmatizer (onnxruntime; no torch) |
+| `pip install "pyaegean[interop]"` | spaCy/Stanza adapters plus CLTK on Python 3.13+; Stanza installs PyTorch |
 | `pip install "pyaegean[ai]"` | Anthropic / OpenAI / Grok / Gemini / OpenRouter clients, plus a local no-key option |
 | `pip install "pyaegean[mcp]"` | The `aegean-mcp` Model Context Protocol server (for agents) |
-| `pip install "pyaegean[all]"` | All supported runtime extras, including neural (except Parquet) |
+| `pip install "pyaegean[all]"` | The bundled runtime stack, including neural; excludes Parquet and the separate framework adapters |
 
 Large assets (corpora, models, lexica) are never bundled: they fetch to a local cache,
 sha256-pinned, only when you opt in.

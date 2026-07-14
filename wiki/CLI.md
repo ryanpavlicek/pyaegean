@@ -11,9 +11,9 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.49.0.** The CoNLL-U commands and the long-input,
-> source-alignment, and analysis-receipt fields shown below are part of the
-> current release.
+> **Available in v0.50.0.** The interoperability bundle commands join the
+> CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields
+> described below.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.49.0
+aegean --version          # pyaegean 0.50.0
 ```
 
 | Group | What's in it |
@@ -907,7 +907,25 @@ aegean export edh -f ttl -o edh.ttl                       # Linked Open Data (Tu
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
-On `main`, typed form states add canonical `form_diplomatic`,
+
+### `greek interop` — portable annotation bundles
+
+These commands move a strict CoNLL-U document through one optional target adapter and
+write an inspectable JSON bundle containing the target projection, SHA-256-bound sidecar, and
+loss report. They do not run a model. Install the CLI plus the target extra first
+(`pip install "pyaegean[cli,interop]"`, or combine `[cli]` with one of `[spacy]`,
+`[stanza]`, or `[cltk]`).
+
+```bash
+aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
+aegean greek interop report treebank.spacy.json
+aegean greek interop import treebank.spacy.json -o treebank-restored.conllu
+```
+
+`report` validates the bundle without loading a model; `import` recovers the complete
+CoNLL-U document. The bundle is pyaegean's portable JSON format, not a claim to write a
+spaCy, Stanza, or CLTK binary serializer.
+Typed form states add canonical `form_diplomatic`,
 `form_regularized`, `form_normalized`, `form_model_input`,
 `form_model_input_ops`, `form_model_input_source`, `form_segments`, editorial
 status, damage, and uncertainty columns. `form_segments` is JSON in the table;
@@ -1220,7 +1238,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.49.0                    │
+│ OK │ pyaegean │ 0.50.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

@@ -14,7 +14,7 @@
     "needs-neural-model": "requires the [neural] extra and the downloaded ONNX model; the browser cannot run onnxruntime and the MCP server deliberately loads no model.",
     "needs-api-key": "requires a bring-your-own-AI provider key (a generative LLM call).",
     "needs-sqlite3": "requires the sqlite3 stdlib module, which Pyodide unvendors, so it cannot run in the browser demo.",
-    "heavy-dep": "requires a heavy optional dependency (matplotlib/plotly, geopandas) that the surface does not carry.",
+    "heavy-dep": "requires a heavy optional dependency (matplotlib/plotly, geopandas, or an external NLP framework) that the surface does not carry.",
     "file-path-ux": "reads or writes filesystem paths, which the surface cannot offer (the MCP server accepts no paths by design; the browser has no filesystem).",
     "not-applicable": "deliberately not surfaced here; the note says why (folded into another covered capability on the surface, or reachable only through the TUI command console with no dedicated screen)."
   },
@@ -41,7 +41,7 @@
         "label": "Design notes",
         "status": "excluded",
         "reason": "not-applicable",
-        "note": "a documentation section (Large corpora, Methodology, Pleiades candidates); design and methodology notes, not a capability surface."
+        "note": "a documentation section (Large corpora, Methodology, Interoperability, Pleiades candidates); design and methodology notes, not a capability surface."
       }
     ]
   },
@@ -71,6 +71,37 @@
           "status": "excluded",
           "reason": "not-applicable",
           "note": "there is no dedicated CoNLL-U screen; the commands remain reachable through the TUI command console."
+        }
+      }
+    },
+    {
+      "id": "interoperability-adapters",
+      "since": "0.50.0",
+      "python_api": "aegean.io.bundle_from_document",
+      "summary": "Lossless, reported CoNLL-U, spaCy, Stanza, and CLTK adapters with a SHA-256-bound portable JSON sidecar and bundle format.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "heavy-dep",
+          "note": "the optional framework adapters are not shipped in Pyodide; the dependency-free CoNLL-U path is a local-file workflow."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the read/analysis server accepts no local annotation files and writes no bundles."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "interop-adapters"
+          },
+          "note": "the offline CoNLL-U bundle journey verifies multiword ranges and empty nodes without installing a target framework."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "there is no dedicated interoperability screen; export, import, and report remain reachable through the TUI command console."
         }
       }
     },

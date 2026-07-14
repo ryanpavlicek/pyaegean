@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.49.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.50.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 
@@ -283,6 +283,17 @@ support can request the explicit error policy rather than accepting that project
 
 For a field-by-field guide to interpreting a record, including what each `lemma_source`
 class means for how far to trust a lemma, see [Reading a Parse](Reading-a-Parse).
+
+To compare this structure with a framework document, use the optional `aegean.io`
+interoperability adapters. `from_conllu()`/`to_conllu()` retain the complete row stream;
+`to_spacy()`/`from_spacy()`, `to_stanza()`/`from_stanza()`, and
+`to_cltk()`/`from_cltk()` populate each target's native fields and carry the remaining
+metadata in a SHA-256-bound `aegean.interop/v1` sidecar. The binding detects stale,
+mismatched, or hash-inconsistent data; it is not a digital signature or proof of
+authorship. The adapters do not run a model or
+turn preserved MWT, empty-node, or enhanced annotations into predictions. See
+[Interoperability](Interoperability) for field support, optional-install costs, and
+serializer caveats.
 
 `pipeline` uses whatever backends are **active**: with none, the zero-dependency
 baseline; after `use_treebank()`/`use_tagger()` etc., their better answers; after

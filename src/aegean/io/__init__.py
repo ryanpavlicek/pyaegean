@@ -8,12 +8,45 @@ intentionally lossy Workbench surface format. The
 Linear B-specific EpiDoc reader (DAMOS-style files, text-derived Aegean token kinds) lives
 in `aegean.scripts.linearb` and ``Corpus.load("linearb")``. For pyaegean's own lossless
 archive format, use ``Corpus.to_json`` / ``Corpus.from_json``; use JSON or SQLite
-when every typed field must survive.
+when every corpus field must survive. Loss-aware NLP adapters for CoNLL-U, spaCy,
+Stanza, and CLTK use ``InteropDocument`` plus an integrity-bound JSON sidecar so
+unsupported target fields are disclosed rather than silently discarded.
 """
 
 from __future__ import annotations
 
+from ._interop_bundle import (
+    BUNDLE_SCHEMA,
+    InteropBundle,
+    bundle_from_document,
+    bundle_from_result,
+    dumps_interop_bundle,
+    loads_interop_bundle,
+    read_interop_bundle,
+    write_interop_bundle,
+)
+from ._interop_cltk import from_cltk, make_cltk_process, to_cltk
+from ._interop_spacy import from_spacy, to_spacy
+from ._interop_stanza import from_stanza, to_stanza
 from .epidoc import from_epidoc, read_epidoc, to_epidoc, write_epidoc
+from .interop import (
+    SIDECAR_COMMENT_PREFIX,
+    InteropDependencyError,
+    InteropDocument,
+    InteropError,
+    InteropLossError,
+    InteropReport,
+    InteropResult,
+    InteropSchemaError,
+    InteropSentenceMetadata,
+    InteropTokenMetadata,
+    decode_sidecar,
+    encode_sidecar,
+    from_conllu,
+    from_token_records,
+    from_ud_document,
+    to_conllu,
+)
 from .rdf import to_rdf
 from .review import (
     REVIEW_COLUMNS,
@@ -39,27 +72,58 @@ EXPORT_FORMATS: tuple[str, ...] = (
 )
 
 __all__ = [
+    "BUNDLE_SCHEMA",
     "EXPORT_FORMATS",
+    "SIDECAR_COMMENT_PREFIX",
     "REVIEW_COLUMNS",
+    "InteropBundle",
+    "InteropDependencyError",
+    "InteropDocument",
+    "InteropError",
+    "InteropLossError",
+    "InteropReport",
+    "InteropResult",
+    "InteropSchemaError",
+    "InteropSentenceMetadata",
+    "InteropTokenMetadata",
     "MergedReview",
     "ReviewConflict",
     "ReviewerValue",
     "apply_merged",
+    "bundle_from_document",
+    "bundle_from_result",
+    "decode_sidecar",
+    "dumps_interop_bundle",
+    "encode_sidecar",
+    "from_cltk",
+    "from_conllu",
     "from_csv",
     "from_epidoc",
     "from_review_table",
+    "from_spacy",
+    "from_stanza",
     "from_text",
     "from_text_dir",
     "from_text_file",
     "from_workbench_export",
+    "from_token_records",
+    "from_ud_document",
+    "loads_interop_bundle",
+    "make_cltk_process",
     "merge_review_tables",
     "needs_review_flag",
     "read_epidoc",
+    "read_interop_bundle",
+    "to_cltk",
+    "to_conllu",
     "to_csv",
     "to_epidoc",
     "to_parquet",
     "to_rdf",
     "to_review_table",
+    "to_spacy",
+    "to_stanza",
     "to_workbench",
     "write_epidoc",
+    "write_interop_bundle",
 ]

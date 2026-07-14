@@ -177,7 +177,7 @@ appended to the token (not a color), so they read the same under every theme:
 | restored | `[ ]` after the token |
 | lost | `---` after the token |
 
-On the current `main` branch, a token imported from a token-carrier EpiDoc file
+A token imported from a token-carrier EpiDoc file
 may also have typed form state. When those values differ from the displayed token,
 the reader appends plain-text distinctions such as `[dipl. …]`, the selected
 regularized or normalized form, and `[model …]` for the exact analyzer input.
