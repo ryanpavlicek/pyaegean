@@ -190,6 +190,25 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
         for row, r in zip(rows, records):
             row["upos_confidence"] = r.upos_confidence
             row["lemma_confidence"] = r.lemma_confidence
+    if any(getattr(record, "lemma_source_path", None) is not None for record in records):
+        for row, record in zip(rows, records):
+            row["lemma_source_path"] = getattr(record, "lemma_source_path", None)
+    if any(
+        getattr(record, "token_confidence", None) is not None
+        or getattr(record, "sentence_confidence", None) is not None
+        for record in records
+    ):
+        for row, record in zip(rows, records):
+            token_confidence = getattr(record, "token_confidence", None)
+            sentence_confidence = getattr(record, "sentence_confidence", None)
+            row["token_confidence"] = (
+                token_confidence.to_dict() if token_confidence is not None else None
+            )
+            row["sentence_confidence"] = (
+                sentence_confidence.to_dict()
+                if sentence_confidence is not None
+                else None
+            )
     for row, record in zip(rows, records):
         alignment = record.alignment
         if alignment is None:

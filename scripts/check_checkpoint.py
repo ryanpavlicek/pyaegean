@@ -327,7 +327,21 @@ def build_commands(
     else:
         plan.extend(
             [
-                CommandSpec("ruff", (py, "-m", "ruff", "check", "src", "tests", "scripts/check_checkpoint.py")),
+                CommandSpec(
+                    "ruff",
+                    (
+                        py,
+                        "-m",
+                        "ruff",
+                        "check",
+                        "src",
+                        "tests",
+                        "scripts/check_checkpoint.py",
+                        "training/reproducibility.py",
+                        "training/validate_reproducibility.py",
+                        "training/tests",
+                    ),
+                ),
                 CommandSpec("mypy", (py, "-m", "mypy")),
                 CommandSpec("public-api", (py, "scripts/check_api.py")),
                 CommandSpec("footprint", (py, "scripts/check_footprint.py")),

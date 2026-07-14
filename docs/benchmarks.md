@@ -254,33 +254,33 @@ The quantized model requires **onnxruntime ≥ 1.23** (the 8-bit MatMulNBits CPU
 `[neural]` extra floor was raised from 1.17 to 1.23 accordingly. The fp32 model stays
 available at the `grc-joint-v2` release for reproducibility.
 
-### Calibrated confidence (temperature scaling + ECE)
+### Legacy aggregate calibration (temperature scaling + ECE)
 
-The pipeline can attach a per-token **calibrated confidence** to its UPOS and lemma
-predictions (`greek.use_calibration()` then `pipeline(text, with_confidence=True)`; CLI
-`--confidence`). The number is an estimate of the probability the prediction is correct,
-produced by temperature-scaling the model's own probability — never the raw softmax,
-which is uncalibrated and is deliberately not exposed. The protocol: one temperature per
-head, fitted on the UD Perseus **dev** fold only (the same fold already used for
-checkpoint selection; the test fold is never fitted on), quality measured as 15-bin
-expected calibration error (ECE — the average gap between stated confidence and actual
-accuracy; lower is better, 0 is perfect):
+The published schema-1 calibration remains readable through `greek.use_calibration()`
+and the compatibility `upos_confidence`/`lemma_confidence` fields. It is a legacy aggregate
+for the published `grc-joint-v3` UPOS and composed-lemma proxy, not source-, domain-, or
+task-complete evidence. The number is an estimate of prediction correctness produced by
+temperature scaling (never raw softmax), with one temperature per head fitted on the UD
+Perseus **dev** fold only (the test fold is report-only):
 
 | Head | Temperature | Dev ECE (raw → calibrated) | Test ECE (calibrated) |
 |---|---|---|---|
 | UPOS | 1.34 | 0.94% → 0.19% | 1.11% (raw was 1.95%) |
 | Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
 
-Dev n = 22,135 tokens; test n = 20,959 (report-only, one shot). Three honesty notes
-travel with the number: the lemma figure calibrates the edit-script head's probability
-against whether the *composed lemma* matched gold (a documented proxy — the lemma a user
-sees also passes through the training lookup, which is why the fitted temperature is
-below 1: the lookup rescues predictions the script head doubted); lemmas resolved by an
-offline lexicon backend (evidence class `attested`/`seed`) carry **no** model confidence — the
-evidence class speaks for them; and the calibration is fitted on literary prose, so the
-genre boundary described below applies to the confidence exactly as it applies to the
-accuracy. Reproduce with `training/calibrate_temperature.py`; evidence in
-`training/results/calibration-2026-07-11.json`.
+Dev n = 22,135 tokens; test n = 20,959 (report-only, one shot). The lemma figure calibrates
+the edit-script head against whether the *composed lemma* matched gold (a documented proxy),
+and offline lexicon/rule/seed/paradigm outputs carry no neural confidence. These figures are
+literary-prose evidence for this exact artifact; they do not establish equal calibration on
+other domains or an OOD detector. Reproduce with `training/calibrate_temperature.py`;
+evidence is in `training/results/calibration-2026-07-11.json`.
+
+The additive typed API (`token_confidence`, `sentence_confidence`) adds task/source/domain
+scope, explicit unavailable reasons, calibration hashes, and caller-owned
+`AbstentionPolicy` decisions. A schema-2 `CalibrationRegistry` and coverage-risk report for
+those scopes are still pending a fresh development-only inference gate. No bundled threshold
+is implied; until that evidence exists, do not turn a typed unavailable result into zero or
+claim out-of-domain calibration.
 
 ### Koine / New Testament (Nestle 1904 own gold)
 

@@ -36,6 +36,8 @@ for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος"):
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `head`, `relation` | the syntactic head (by `index`; `0` = sentence root) and its relation, filled only when a parser or the neural pipeline is active |
 | `xpos`, `feats` | the fine-grained morphological tag and its feature string, filled only by the neural pipeline |
+| `lemma_source_path` | the neural lemma composition path, when exposed (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
+| `token_confidence`, `sentence_confidence` | optional typed evidence with task/source/domain scope and explicit unavailable reasons; never a scholarly certainty |
 
 `head`/`relation`/`xpos`/`feats` are `None` under the zero-dependency baseline. They appear
 once you turn on a parser (`greek.use_parser()`) or the joint neural pipeline
@@ -87,6 +89,21 @@ know what kind of claim you are looking at:
 A `lemma_source` of `identity` or `unresolved` is the pipeline being honest that a particular
 token has slipped from "measured" toward "you are on your own here." That is the signal to
 reach for a dictionary or a commentary.
+
+## Confidence is scoped evidence, not a verdict
+
+With `with_confidence=True`, neural output may carry typed confidence for UPOS, XPOS,
+FEATS, lemma, head, relation, and a sentence aggregate. Every available value identifies
+the model, calibration, source path, optional domain, sample count, and measured metric; an
+unavailable value carries a reason such as `missing_calibration`, `unsupported_source`, or
+`unsupported_domain`. The legacy flat confidence fields are compatibility views and do not
+establish a domain claim. A `confidence_domain` label is supplied by the caller, not inferred
+by the model, and no out-of-domain warning is implied without evidence.
+
+If a review workflow needs thresholds, pass a caller-owned `AbstentionPolicy` as
+`confidence_policy`. It records its canonical hash and returns `accept`, `review`, or
+`unavailable` without changing the parse. There are no bundled thresholds: source/task
+calibration and coverage-risk measurements remain a development-only evidence task.
 
 ## See also
 

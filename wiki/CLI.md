@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.46.0.** The CoNLL-U commands and the long-input,
+> **Available in v0.47.0.** The CoNLL-U commands and the long-input,
 > source-alignment, and analysis-receipt fields shown below are part of the
 > current release.
 
@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.46.0
+aegean --version          # pyaegean 0.47.0
 ```
 
 | Group | What's in it |
@@ -1220,7 +1220,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.46.0                    │
+│ OK │ pyaegean │ 0.47.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1444,6 +1444,16 @@ token of each sentence as `boundary_policy`, `boundary_policy_id`,
 This per-call document policy is separate from the neural model manifest's
 `segmentation: pretokenized` contract: the model receives the already split word
 lists and does not choose document boundaries.
+
+Pass `--confidence` to request optional typed model evidence. `--confidence-domain TEXT`
+labels the caller's source/domain scope, and `--confidence-policy PATH` loads a JSON
+`AbstentionPolicy` whose task thresholds produce `accept`, `review`, or `unavailable`
+decisions. The JSON rows expose `token_confidence` and `sentence_confidence`; each value
+has a calibration id/hash and an explicit unavailable reason when evidence is missing or
+unsupported. Existing flat confidence fields remain compatibility output. These options do
+not install thresholds, infer an OOD label, or turn a model estimate into a reading. The
+scoped options apply to `pipeline`; `explain --confidence` continues to render the legacy
+aggregate confidence note rather than the typed row structure.
 
 A lemma that the lexicon doesn't know is still returned, marked `(fallback)` (and
 `"known": false` in JSON), so you can tell a real hit from a heuristic guess.

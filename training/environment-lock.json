@@ -1,0 +1,92 @@
+{
+  "accelerator": {
+    "allocation": {
+      "fallback_gpu_prefix": "NVIDIA A100",
+      "policy": "preferred-then-fallback",
+      "preferred_gpu_prefix": "NVIDIA RTX PRO 6000 Blackwell Server Edition"
+    },
+    "frozen": {
+      "cuda_runtime_version": null,
+      "cudnn_version": null,
+      "driver_version": null,
+      "torch_cuda_version": "12.8"
+    },
+    "kind": "cuda"
+  },
+  "backbone": {
+    "license": "Apache-2.0",
+    "repository": "bowphs/GreBerta",
+    "revision": "3dce05464f1f429d68acd9b09e117632490c92d4",
+    "revision_type": "git-commit",
+    "tokenizer_revision": "3dce05464f1f429d68acd9b09e117632490c92d4"
+  },
+  "dependencies": {
+    "complete": false,
+    "packages": [
+      {
+        "name": "accelerate",
+        "version": "1.12.0"
+      },
+      {
+        "name": "huggingface-hub",
+        "version": "0.36.2"
+      },
+      {
+        "name": "numpy",
+        "version": "2.3.5"
+      },
+      {
+        "name": "onnx",
+        "version": "1.20.1"
+      },
+      {
+        "name": "onnxruntime-gpu",
+        "version": "1.25.1"
+      },
+      {
+        "name": "safetensors",
+        "version": "0.7.0"
+      },
+      {
+        "name": "tokenizers",
+        "version": "0.22.2"
+      },
+      {
+        "name": "torch",
+        "version": "2.9.1+cu128"
+      },
+      {
+        "name": "transformers",
+        "version": "4.57.6"
+      }
+    ],
+    "resolver_evidence": null,
+    "scope": "direct-requirements"
+  },
+  "environment_definition_sha256": "83e694b765a03412fcf9c02472fa468dc6574caf510d811f0d2cb6785eb09068",
+  "format": "pyaegean-training-environment-lock/1",
+  "lock_sha256": "461323bbd1da5061b276dbcacba570967a5c3a78e315c714f76b8e73fd96e0bd",
+  "platform": {
+    "libc": {
+      "name": "glibc",
+      "version": "2.35"
+    },
+    "machine": "x86_64",
+    "release": "6.6.122+",
+    "system": "Linux"
+  },
+  "python": {
+    "implementation": "CPython",
+    "version": "3.12.13"
+  },
+  "provenance": {
+    "backbone_revision_source": "ref-only lookup of bowphs/GreBerta refs/heads/main on 2026-07-14; no model files downloaded",
+    "package_pin_source": "candidate selections whose individual availability was checked in package indexes; the combination and transitive closure have not been rehearsed",
+    "reference_evidence": "training/results/gpu-verify-2026-07-10.json",
+    "reference_scope": "runtime/provider reference only (pyaegean 0.32.0); not a training-environment capture"
+  },
+  "verification": {
+    "preflight_receipt_sha256": null,
+    "state": "unverified-template"
+  }
+}

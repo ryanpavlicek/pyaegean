@@ -168,6 +168,82 @@ def _coordinator_mislabeled(upos: str, xpos: str, *, aggressive: bool) -> bool:
     return False
 
 
+def _invalidate_token_confidence(
+    token_confidence: Any,
+    tasks: frozenset[str],
+    *,
+    reason: str,
+    source: str,
+) -> Any:
+    """Invalidate task confidence after an opt-in layer changes the returned decision."""
+
+    from .confidence import ConfidenceResult, PolicyDecision
+
+    updates: dict[str, Any] = {}
+    for task in tasks:
+        previous = getattr(token_confidence, task)
+        if previous is None:
+            continue
+        updates[task] = ConfidenceResult(
+            task=task,
+            value=None,
+            reason=reason,
+            model=previous.model,
+            source=source,
+            domain=previous.domain,
+        )
+    if not updates:
+        return token_confidence
+    policy = tuple(
+        PolicyDecision(
+            task=decision.task,
+            action="unavailable",
+            confidence=None,
+            threshold=decision.threshold,
+            reason=reason,
+            policy_sha256=decision.policy_sha256,
+        )
+        if decision.task in updates
+        else decision
+        for decision in token_confidence.policy
+    )
+    return replace(token_confidence, **updates, policy=policy)
+
+
+def _invalidate_sentence_confidence(
+    sentence_confidence: Any,
+    *,
+    reason: str,
+    source: str,
+) -> Any:
+    """Invalidate a sentence score whose declared component output was post-processed."""
+
+    if sentence_confidence is None:
+        return None
+    from .confidence import ConfidenceResult, PolicyDecision
+
+    previous = sentence_confidence.result
+    result = ConfidenceResult(
+        task="sentence",
+        value=None,
+        reason=reason,
+        model=previous.model,
+        source=source,
+        domain=previous.domain,
+    )
+    decision = sentence_confidence.policy
+    if decision is not None:
+        decision = PolicyDecision(
+            task="sentence",
+            action="unavailable",
+            confidence=None,
+            threshold=decision.threshold,
+            reason=reason,
+            policy_sha256=decision.policy_sha256,
+        )
+    return replace(sentence_confidence, result=result, policy=decision)
+
+
 def reconcile_analysis(ana: SentenceAnalysis, *, aggressive: bool = False) -> SentenceAnalysis:
     """Return ``ana`` with Lever A (coordinator reconciliation) applied — a NEW
     `SentenceAnalysis`, or ``ana`` unchanged when nothing fires.
@@ -176,14 +252,17 @@ def reconcile_analysis(ana: SentenceAnalysis, *, aggressive: bool = False) -> Se
     wrong one (`_coordinator_mislabeled`), UPOS becomes ``CCONJ`` and the XPOS pos-code
     (position 0) becomes ``c``; the UD FEATS are re-rendered from the corrected postag so they
     stay consistent, and any calibrated ``upos_prob`` for that token is cleared to ``None``
-    (a deterministic relabel is not a calibrated model prediction). Every other field is
-    untouched. Pure and side-effect-free (used by the eval wrapper and directly by tests)."""
+    (a deterministic relabel is not a calibrated model prediction). Typed UPOS/XPOS/FEATS
+    and sentence confidence are likewise marked unavailable rather than left attached to the
+    pre-reconciliation output. Every other field is untouched. Pure and side-effect-free
+    (used by the eval wrapper and directly by tests)."""
     if not ana.tokens:
         return ana
     upos = list(ana.upos)
     xpos = list(ana.xpos)
     feats = list(ana.feats)
     uprob = list(ana.upos_prob) if ana.upos_prob else None
+    changed_indices: set[int] = set()
     changed = False
     for i, tok in enumerate(ana.tokens):
         if coordinator_norm(tok) in COORDINATORS and _coordinator_mislabeled(
@@ -195,15 +274,33 @@ def reconcile_analysis(ana: SentenceAnalysis, *, aggressive: bool = False) -> Se
             feats[i] = feats_from_xpos(xpos[i])
             if uprob is not None:
                 uprob[i] = None
+            changed_indices.add(i)
             changed = True
     if not changed:
         return ana
+    token_confidences = tuple(
+        _invalidate_token_confidence(
+            confidence,
+            frozenset({"upos", "xpos", "feats"}),
+            reason="documentary_reconciliation",
+            source="documentary_reconciliation",
+        )
+        if index in changed_indices
+        else confidence
+        for index, confidence in enumerate(ana.token_confidences)
+    )
     return replace(
         ana,
         upos=tuple(upos),
         xpos=tuple(xpos),
         feats=tuple(feats),
         upos_prob=tuple(uprob) if uprob is not None else ana.upos_prob,
+        token_confidences=token_confidences,
+        sentence_confidence=_invalidate_sentence_confidence(
+            ana.sentence_confidence,
+            reason="documentary_reconciliation",
+            source="documentary_reconciliation",
+        ),
     )
 
 
@@ -253,7 +350,8 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
     fall-through. A token the model resolved is never touched (the model's lemma wins), and a
     rescued token keeps ``lemma_resolved=False`` so nothing downstream ever labels an offline
     rescue as a neural prediction (the source stays offline via the override channel and
-    `rescue_lemma`). Pure and side-effect-free. When the model does not report
+    `rescue_lemma`). Typed lemma and sentence confidence are marked unavailable because they
+    described the pre-rescue neural output. Pure and side-effect-free. When the model does not report
     ``lemma_resolved`` (an empty tuple), no token can be known-unresolved, so nothing fires."""
     if not ana.tokens or not ana.lemma_resolved:
         return ana
@@ -261,6 +359,7 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
     override = [""] * len(ana.tokens)
     sources = list(ana.lemma_source) if ana.lemma_source else []
     verified = list(ana.lemma_verified) if ana.lemma_verified else []
+    changed_indices: dict[int, str] = {}
     changed = False
     for i, resolved in enumerate(ana.lemma_resolved):
         if not resolved:
@@ -272,15 +371,33 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
                     sources[i] = rescued[1]
                 if verified:
                     verified[i] = False
+                changed_indices[i] = rescued[1].value
                 changed = True
     if not changed:
         return ana
+    token_confidences = tuple(
+        _invalidate_token_confidence(
+            confidence,
+            frozenset({"lemma"}),
+            reason="offline_lemma_override",
+            source=changed_indices[index],
+        )
+        if index in changed_indices
+        else confidence
+        for index, confidence in enumerate(ana.token_confidences)
+    )
     return replace(
         ana,
         lemma=tuple(lemma),
         lemma_source_override=tuple(override),
         lemma_source=tuple(sources) if sources else ana.lemma_source,
         lemma_verified=tuple(verified) if verified else ana.lemma_verified,
+        token_confidences=token_confidences,
+        sentence_confidence=_invalidate_sentence_confidence(
+            ana.sentence_confidence,
+            reason="offline_lemma_override",
+            source="mixed_offline_override",
+        ),
     )
 
 
@@ -322,11 +439,19 @@ class _DocumentaryModel:
         *,
         with_probs: bool = False,
         long_input: str = "strict",
+        domain: str | None = None,
+        policy: Any = None,
     ) -> SentenceAnalysis:
-        if with_probs or long_input != "strict":
-            return self._apply(
-                self.inner.analyze(words, with_probs=with_probs, long_input=long_input)
-            )
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs: dict[str, Any] = {
+                "with_probs": with_probs,
+                "long_input": long_input,
+            }
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            return self._apply(self.inner.analyze(words, **kwargs))
         return self._apply(self.inner.analyze(words))
 
     def analyze_batch(
@@ -335,14 +460,21 @@ class _DocumentaryModel:
         *,
         with_probs: bool = False,
         long_input: str = "strict",
+        domain: str | None = None,
+        policy: Any = None,
     ) -> list[SentenceAnalysis]:
-        analyses = (
-            self.inner.analyze_batch(
-                sentences, with_probs=with_probs, long_input=long_input
-            )
-            if with_probs or long_input != "strict"
-            else self.inner.analyze_batch(sentences)
-        )
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs: dict[str, Any] = {
+                "with_probs": with_probs,
+                "long_input": long_input,
+            }
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            analyses = self.inner.analyze_batch(sentences, **kwargs)
+        else:
+            analyses = self.inner.analyze_batch(sentences)
         return [self._apply(a) for a in analyses]
 
     def __getattr__(self, name: str) -> Any:

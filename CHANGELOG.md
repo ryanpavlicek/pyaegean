@@ -4,6 +4,36 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.47.0 (2026-07-14)
+
+### Added
+
+- Typed Greek confidence records now carry task, model, source path, optional domain,
+  calibration identity, measured support, and explicit unavailable reasons. Caller-supplied
+  `AbstentionPolicy` values produce hashed `accept`/`review`/`unavailable` decisions through
+  Python (`confidence_domain` / `confidence_policy`) and the matching CLI options.
+- Development-only fitting helpers now include `fit_temperature` and monotone
+  `fit_logit_affine`; they fit caller-provided pairs and do not imply a domain calibration,
+  threshold, or release claim.
+- Neural analysis receipts use schema 2 when confidence calibration or policy hashes
+  participate, while schema-1 receipts and the legacy flat confidence fields remain readable.
+- Training reproducibility contracts now validate content-addressed environment locks,
+  resolver-closure evidence, clean-repository closure-scoped preflight reports, and
+  completed run receipts.
+  The committed Colab lock remains an explicitly non-authorizing, unverified template until
+  a live G4-preferred or A100-fallback environment is captured and promoted.
+
+### Changed
+
+- Lemma output records the exact composition path (`lookup_form_upos`, `lookup_form`,
+  `edit_script`, `lookup_lower_fallback`, or `identity_fallback`). Typed confidence does not
+  invent thresholds or out-of-domain claims; empirical source/task calibration remains
+  evidence-gated.
+- The 2026-07-10 GPU verification note now distinguishes the 0.33.0 release it supported
+  from the captured runtime's structured 0.32.0 package version; measurements are unchanged.
+- The live asset-integrity checker now uses the same verified Python 3.14 TLS compatibility
+  path as package downloads; certificate and hostname verification remain enabled.
+
 ## 0.46.0 (2026-07-14)
 
 A source-preserving Greek sentence-segmentation release. It separates the

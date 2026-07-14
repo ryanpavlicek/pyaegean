@@ -299,6 +299,10 @@ fields and persistence roles are otherwise separate.
 | `relation` | dependency relation. Note the name: it is `relation`, **not** `deprel` |
 | `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
+| `lemma_source_path` | neural composition path (`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback`) |
+| `upos_confidence`, `lemma_confidence` | legacy flat confidence floats, retained without source/domain scope |
+| `token_confidence` | typed per-task `ConfidenceResult` values or explicit unavailable reasons |
+| `sentence_confidence` | typed sentence result, required component names, and optional abstention decision |
 | `alignment` | exact source identity, original/normalized text, span, and whitespace |
 | `form_state` | typed editorial forms and exact model input when records came from `pipeline_tokens()` |
 | `boundary_policy`, `boundary_policy_id` | named sentence policy and stable policy identity on the sentence's terminal record |
@@ -327,6 +331,25 @@ for r in records:
 0 8 ἡμῖν       NOUN   ἐγώ        seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 0 9 .          PUNCT  .          punct          resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 ```
+
+### Typed confidence and review policy
+
+The confidence fields are additive model evidence. `token_confidence` contains one
+`ConfidenceResult` for each supported task (UPOS, XPOS, FEATS, lemma, head, and relation),
+and `sentence_confidence` records its named components. A result is either an available
+value with model/source/domain scope, a calibration id, sample count, and measured ECE or
+Brier score, or an unavailable result with a stable reason such as `missing_calibration`,
+`unsupported_task`, `unsupported_source`, `unsupported_domain`, or
+`confidence_unavailable`. Do not treat an unavailable value as zero. The compatibility
+`upos_confidence`/`lemma_confidence` fields do not acquire this scope retroactively.
+
+`confidence_domain=` is an explicit query label, not an automatic genre or OOD detector.
+Schema-2 `CalibrationRegistry` resolution first tries an exact source/domain entry and only
+uses a broader entry when that entry is explicitly marked as a fallback. No bundled
+thresholds are implied. An `AbstentionPolicy` supplied through `confidence_policy=` applies
+caller-selected task thresholds and returns `accept`, `review`, or `unavailable`; its
+canonical `policy_sha256` travels with each decision. A registry or policy hash is included
+in the neural `AnalysisReceipt` schema 2; confidence-free analyses continue to use schema 1.
 
 ### Sentence boundaries and precedence
 

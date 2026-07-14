@@ -128,6 +128,10 @@ A few notes that decide most cases:
   `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or `user`) and
   an explicit `review_recommended`, so you can route the
   uncertain tokens to a human rather than trusting the whole output uniformly.
+  `lemma_source_path` records the exact neural composition path when available. Opt-in
+  typed `token_confidence` and `sentence_confidence` add task/source/domain scope and
+  explicit unavailable reasons; they do not provide bundled thresholds or an automatic
+  out-of-domain label.
   See [Reading a Parse](Reading-a-Parse).
 
 ## Reading the five materials in more depth

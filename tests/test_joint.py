@@ -6,11 +6,15 @@ artifact is integration-tested separately once published."""
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 np = pytest.importorskip("numpy")
 
 from aegean.greek import joint  # noqa: E402
+from aegean.greek import calibrate  # noqa: E402
+from aegean.greek.confidence import AbstentionPolicy, CalibrationEntry, CalibrationRegistry  # noqa: E402
 from aegean.greek.mst import decode_mst  # noqa: E402
 from aegean.greek.udfeats import feats_from_xpos  # noqa: E402
 
@@ -137,12 +141,150 @@ def test_joint_analyze_empty_sentence() -> None:
     assert _stub_model().analyze([]) == joint.SentenceAnalysis((), (), (), (), (), (), (), ())
 
 
+def test_joint_analyze_empty_with_probs_has_unavailable_sentence_confidence() -> None:
+    calibrate.use_calibration_registry(
+        CalibrationRegistry(
+            (
+                CalibrationEntry(
+                    model="legacy",
+                    task="sentence",
+                    source="neural",
+                    calibrator="logit_affine",
+                    parameters={"slope": 1.0, "intercept": 0.0},
+                    n=10,
+                    ece=0.1,
+                ),
+            )
+        )
+    )
+    try:
+        ana = _stub_model().analyze([], with_probs=True)
+    finally:
+        calibrate.disable_calibration()
+    assert ana.sentence_confidence is not None
+    assert not ana.sentence_confidence.result.available
+    assert ana.sentence_confidence.result.reason == "empty_sentence"
+
+
 def test_joint_analyze_populates_lemma_resolved() -> None:
     # ὁ resolves via the form lookup and ἐστί via the (form|UPOS) lookup; λόγος goes
     # through the edit script, whose output equals the surface form — no lookup confirms
     # it, so it is honestly flagged unresolved (needs review), not counted as grounded
     ana = _stub_model().analyze(["ὁ", "λόγος", "ἐστί"])
     assert ana.lemma_resolved == (True, False, True)
+
+
+def test_joint_typed_confidence_branches_policy_and_forced_root() -> None:
+    entries = [
+        CalibrationEntry(
+            model="legacy", task=task, source="neural", fallback=True,
+            temperature=1.0, n=10, ece=0.1,
+        )
+        for task in ("upos", "xpos", "feats", "head", "relation")
+    ]
+    entries.append(
+        CalibrationEntry(
+            model="legacy", task="sentence", source="neural", fallback=True,
+            calibrator="logit_affine", parameters={"slope": 1.0, "intercept": 0.0},
+            n=10, ece=0.1,
+        )
+    )
+    for path in ("lookup_form", "lookup_form_upos", "edit_script", "lookup_lower_fallback", "identity_fallback"):
+        entries.append(
+            CalibrationEntry(
+                model="legacy", task="lemma", source=path, fallback=True,
+                temperature=1.0, n=10, ece=0.1,
+            )
+        )
+    policy = AbstentionPolicy({"upos": 0.5, "relation": 0.5, "sentence": 0.5})
+    calibrate.use_calibration_registry(CalibrationRegistry(tuple(entries)))
+    try:
+        ana = _stub_model().analyze(["ὁ", "λόγος", "ἐστί"], with_probs=True, policy=policy)
+        assert len(ana.token_confidences) == 3
+        assert ana.lemma_source_path == (
+            "lookup_form", "identity_fallback", "lookup_form_upos"
+        )
+        assert ana.token_confidences[2].relation is not None
+        assert ana.token_confidences[2].relation.reason == "forced_root"
+        assert ana.sentence_confidence is not None
+        assert ana.sentence_confidence.result.available
+        assert ana.token_confidences[0].policy
+    finally:
+        calibrate.disable_calibration()
+
+
+def test_joint_policy_requires_with_probs() -> None:
+    policy = AbstentionPolicy({"upos": 0.5})
+    with pytest.raises(ValueError, match="with_probs"):
+        _stub_model().analyze(["ὁ"], policy=policy)
+    with pytest.raises(ValueError, match="with_probs"):
+        _stub_model().analyze(["ὁ"], domain="prose")
+
+
+def test_confidence_insufficient_evidence_retains_query_metadata() -> None:
+    entry = CalibrationEntry(
+        model="meta-model",
+        task="upos",
+        source="neural",
+        domain="prose",
+        temperature=1.0,
+        n=0,
+    )
+    registry = CalibrationRegistry((entry,))
+    context = {"registry": registry, "domain": "prose", "policy": None}
+    model = SimpleNamespace(manifest=SimpleNamespace(model_id="meta-model"))
+    resolution = registry.resolve("meta-model", "upos", "neural", "prose")
+    result = joint._confidence_result(
+        model,
+        context,
+        "upos",
+        0.8,
+        entry=entry,
+        resolution=resolution,
+    )
+    assert not result.available
+    assert result.reason == "insufficient_calibration_evidence"
+    assert result.model == "meta-model"
+    assert result.source == "neural"
+    assert result.domain == "prose"
+    assert result.scope == "exact"
+    assert result.calibration_id == entry.calibration_id
+
+
+def test_sentence_confidence_empty_missing_and_zero_are_honest() -> None:
+    entry = CalibrationEntry(
+        model="meta-model",
+        task="sentence",
+        source="neural",
+        domain="prose",
+        calibrator="logit_affine",
+        parameters={"slope": 1.0, "intercept": 0.0},
+        n=10,
+        ece=0.1,
+    )
+    registry = CalibrationRegistry((entry,))
+    context = {"registry": registry, "domain": "prose", "policy": None}
+    model = SimpleNamespace(manifest=SimpleNamespace(model_id="meta-model"))
+    empty = joint._sentence_confidence(model, context, [])
+    assert empty is not None and empty.result.reason == "empty_sentence"
+    missing = joint._sentence_confidence(
+        model,
+        context,
+        [{"upos": 1.0, "xpos": 1.0, "lemma": 1.0, "head": 1.0}],
+    )
+    assert missing is not None and missing.result.reason == "missing_relation"
+    zero = joint._sentence_confidence(
+        model,
+        context,
+        [{"upos": 0.0, "xpos": 1.0, "lemma": 1.0, "head": 1.0, "relation": 1.0}],
+    )
+    assert zero is not None and zero.result.available and zero.result.value == 0.0
+    invalid = joint._sentence_confidence(
+        model,
+        context,
+        [{"upos": 1.1, "xpos": 1.0, "lemma": 1.0, "head": 1.0, "relation": 1.0}],
+    )
+    assert invalid is not None and invalid.result.reason == "invalid_raw_aggregate"
 
 
 def test_compose_lemma_reports_whether_it_resolved() -> None:

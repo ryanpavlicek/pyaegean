@@ -116,5 +116,5 @@
     }
   ],
   "finished_utc": "2026-07-10 21:08:39",
-  "notes": "pyaegean 0.33.0 GPU verification. Published benchmark numbers are measured on CPU under the recorded protocol; GPU is a throughput convenience. Agreement and parity counts are exact field-level disagreement counts over the fixed John 1 + Philemon sentence set."
+  "notes": "GPU verification supporting the pyaegean 0.33.0 release, run while the package reported version 0.32.0. Published benchmark numbers are measured on CPU under the recorded protocol; GPU is a throughput convenience. Agreement and parity counts are exact field-level disagreement counts over the fixed John 1 + Philemon sentence set."
 }

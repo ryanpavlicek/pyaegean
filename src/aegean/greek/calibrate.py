@@ -47,13 +47,29 @@ __all__ = [
     "HEADS",
     "Calibration",
     "UncalibratedConfidenceError",
+    "AbstentionPolicy",
+    "CalibrationEntry",
+    "CalibrationRegistry",
+    "CalibrationResolution",
+    "ConfidenceResult",
+    "TokenConfidence",
+    "SentenceConfidence",
+    "CoverageRiskPoint",
+    "PolicyDecision",
+    "brier_score",
     "active",
+    "canonical_json",
+    "canonical_sha256",
+    "coverage_risk_curve",
     "disable_calibration",
     "ece",
+    "fit_logit_affine",
     "fit_temperature",
     "temperature_softmax",
     "top1_confidence",
     "use_calibration",
+    "use_calibration_registry",
+    "active_registry",
 ]
 
 # The two model heads pyaegean calibrates and surfaces a confidence for.
@@ -106,6 +122,10 @@ def temperature_softmax(
     if np is None:
         np = _numpy()
     z = np.asarray(logits, dtype=np.float64) / float(temperature)
+    if z.ndim == 0:
+        raise ValueError("logits must have at least one dimension")
+    if not np.isfinite(z).all():
+        raise ValueError("logits contain non-finite values (NaN/inf)")
     z = z - z.max(axis=-1, keepdims=True)
     e = np.exp(z)
     return e / e.sum(axis=-1, keepdims=True)
@@ -155,6 +175,10 @@ def ece(
         return 0.0
     if not np.isfinite(p).all():
         raise ValueError("probs contain non-finite values (NaN/inf)")
+    if (p < 0).any() or (p > 1).any():
+        raise ValueError("probs must be in [0, 1]")
+    if not np.isfinite(y).all() or ((y != 0) & (y != 1)).any():
+        raise ValueError("correct must contain only 0/1 values")
     n = int(p.size)
     bins = np.clip((p * n_bins).astype(int), 0, n_bins - 1)
     total = 0.0
@@ -234,6 +258,8 @@ def fit_temperature(
         raise ValueError(
             f"logits and correct must have the same number of items: {z.shape[0]} vs {y.shape[0]}"
         )
+    if not np.isfinite(y).all() or ((y != 0) & (y != 1)).any():
+        raise ValueError("correct must contain only 0/1 values")
     if z.shape[0] == 0:
         raise ValueError("cannot fit a temperature on an empty fold")
     if not np.isfinite(z).all():
@@ -259,6 +285,103 @@ def fit_temperature(
     if a == b:  # grid minimum at an endpoint
         return a
     return _golden_section(nll, a, b)
+
+
+def fit_logit_affine(
+    probs: Any,
+    correct: Any,
+    *,
+    slope_bracket: tuple[float, float] = (1e-3, 1e3),
+    intercept_bracket: tuple[float, float] = (-30.0, 30.0),
+    np: "_np_t | None" = None,
+) -> tuple[float, float]:
+    """Fit a monotone logit-affine calibrator to raw confidence/correctness pairs.
+
+    The returned ``(slope, intercept)`` parameters define
+    ``sigmoid(slope * logit(p) + intercept)``.  A strictly positive slope preserves
+    confidence ordering, so calibration cannot make a less-confident prediction rank
+    above a more-confident one.  The fit minimizes binary negative log-likelihood by a
+    deterministic nested grid/golden-section search and needs only NumPy.
+
+    ``probs`` must be a non-constant one-dimensional sequence in ``[0, 1]`` and
+    ``correct`` must contain both binary outcomes.  Exact endpoint probabilities are
+    clipped only while fitting so their logits remain finite; applying the fitted
+    :class:`CalibrationEntry` still maps exact 0 and 1 to themselves.
+    """
+    if np is None:
+        np = _numpy()
+    p = np.asarray(probs, dtype=np.float64).ravel()
+    y = np.asarray(correct, dtype=np.float64).ravel()
+    if p.shape != y.shape:
+        raise ValueError(
+            f"probs and correct must have the same length: {p.shape} vs {y.shape}"
+        )
+    if p.size == 0:
+        raise ValueError("cannot fit a logit-affine calibrator on an empty fold")
+    if not np.isfinite(p).all() or (p < 0).any() or (p > 1).any():
+        raise ValueError("probs must contain only finite values in [0, 1]")
+    if not np.isfinite(y).all() or ((y != 0) & (y != 1)).any():
+        raise ValueError("correct must contain only 0/1 values")
+    if not bool((y == 0).any()) or not bool((y == 1).any()):
+        raise ValueError("correct must contain both 0 and 1 to fit an affine calibrator")
+    slope_lo, slope_hi = slope_bracket
+    intercept_lo, intercept_hi = intercept_bracket
+    if not (0 < slope_lo < slope_hi):
+        raise ValueError(
+            "slope_bracket must satisfy 0 < lo < hi, "
+            f"got {slope_bracket!r}"
+        )
+    if not (intercept_lo < intercept_hi):
+        raise ValueError(
+            "intercept_bracket must satisfy lo < hi, "
+            f"got {intercept_bracket!r}"
+        )
+
+    clipped = np.clip(p, 1e-12, 1.0 - 1e-12)
+    logits = np.log(clipped / (1.0 - clipped))
+    if float(logits.max() - logits.min()) == 0.0:
+        raise ValueError("probs must not be constant")
+
+    def sigmoid(values: Any) -> Any:
+        out = np.empty_like(values)
+        nonnegative = values >= 0
+        out[nonnegative] = 1.0 / (1.0 + np.exp(-values[nonnegative]))
+        exp_values = np.exp(values[~nonnegative])
+        out[~nonnegative] = exp_values / (1.0 + exp_values)
+        return out
+
+    def best_intercept(slope: float) -> tuple[float, float]:
+        def objective(intercept: float) -> float:
+            return _binary_nll(sigmoid(slope * logits + intercept), y, np)
+
+        grid = np.linspace(intercept_lo, intercept_hi, 61)
+        values = [objective(float(value)) for value in grid]
+        index = int(np.argmin(values))
+        left = float(grid[max(index - 1, 0)])
+        right = float(grid[min(index + 1, len(grid) - 1)])
+        intercept = (
+            left
+            if left == right
+            else _golden_section(objective, left, right, tol=1e-6)
+        )
+        return intercept, objective(intercept)
+
+    slope_grid = np.geomspace(slope_lo, slope_hi, 50)
+    profile = [best_intercept(float(slope))[1] for slope in slope_grid]
+    index = int(np.argmin(profile))
+    left = float(slope_grid[max(index - 1, 0)])
+    right = float(slope_grid[min(index + 1, len(slope_grid) - 1)])
+
+    def profiled_objective(slope: float) -> float:
+        return best_intercept(slope)[1]
+
+    slope = (
+        left
+        if left == right
+        else _golden_section(profiled_objective, left, right, tol=1e-6)
+    )
+    intercept, _ = best_intercept(slope)
+    return float(slope), float(intercept)
 
 
 # --- the Calibration record + module state -----------------------------------------
@@ -334,6 +457,7 @@ class Calibration:
 
 
 _ACTIVE: Calibration | None = None
+_ACTIVE_REGISTRY: "CalibrationRegistry | None" = None
 
 
 def _load_bundled() -> Calibration:
@@ -364,7 +488,7 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
     mapping, or ``None`` for the bundled default calibration (shipped in the wheel). The
     no-arg form raises `UncalibratedConfidenceError` only when that file cannot be loaded
     (a missing or corrupt install), never a raw softmax. Returns the loaded `Calibration`."""
-    global _ACTIVE
+    global _ACTIVE, _ACTIVE_REGISTRY
     if source is None:
         cal = _load_bundled()
     elif isinstance(source, Calibration):
@@ -374,15 +498,68 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
     else:
         cal = Calibration.load(source)
     _ACTIVE = cal
+    # Keep a separate v2 scope registry for callers that request typed confidence.
+    # Legacy construction/JSON/active() remain unchanged; schema-1 aggregate entries
+    # are explicitly marked as unscoped fallbacks by the registry adapter.
+    from .confidence import CalibrationRegistry
+
+    _ACTIVE_REGISTRY = CalibrationRegistry.from_legacy(cal.to_dict())
     return cal
+
+
+def use_calibration_registry(
+    source: "str | Path | CalibrationRegistry | dict[str, Any]",
+) -> "CalibrationRegistry":
+    """Load and activate a version-2 task/source/domain calibration registry."""
+
+    from .confidence import CalibrationRegistry
+
+    if isinstance(source, CalibrationRegistry):
+        registry = source
+    elif isinstance(source, dict):
+        registry = CalibrationRegistry.from_dict(source)
+    else:
+        registry = CalibrationRegistry.load(source)
+    global _ACTIVE, _ACTIVE_REGISTRY
+    _ACTIVE = None
+    _ACTIVE_REGISTRY = registry
+    return registry
+
+
+def active_registry() -> "CalibrationRegistry | None":
+    """Return the active v2 registry, or ``None`` when no calibration is active."""
+
+    return _ACTIVE_REGISTRY
 
 
 def disable_calibration() -> None:
     """Unload the active calibration; the joint model then refuses to surface confidence."""
-    global _ACTIVE
+    global _ACTIVE, _ACTIVE_REGISTRY
     _ACTIVE = None
+    _ACTIVE_REGISTRY = None
 
 
 def active() -> Calibration | None:
     """The active `Calibration`, or ``None`` (the default — no confidence is exposed)."""
     return _ACTIVE
+
+
+# Additive confidence-policy and evidence helpers.  This import is stdlib-only and
+# intentionally does not pull NumPy into the import path; the legacy record above
+# remains unchanged.  Re-exporting here keeps ``aegean.greek.calibrate`` a convenient
+# compatibility surface while the implementation lives in its own module.
+from .confidence import (  # noqa: E402  (placed after Calibration to keep legacy state first)
+    AbstentionPolicy,
+    CalibrationEntry,
+    CalibrationRegistry,
+    CalibrationResolution,
+    ConfidenceResult,
+    TokenConfidence,
+    SentenceConfidence,
+    CoverageRiskPoint,
+    PolicyDecision,
+    brier_score,
+    canonical_json,
+    canonical_sha256,
+    coverage_risk_curve,
+)

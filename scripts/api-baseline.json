@@ -13355,6 +13355,10 @@
       "canonical": "aegean.greek.meter.AEOLIC_LINES",
       "kind": "attribute"
     },
+    "aegean.greek.AbstentionPolicy": {
+      "canonical": "aegean.greek.confidence.AbstentionPolicy",
+      "kind": "class"
+    },
     "aegean.greek.AccentInfo": {
       "canonical": "aegean.greek.accent.AccentInfo",
       "kind": "class"
@@ -13379,8 +13383,28 @@
       "canonical": "aegean.greek.calibrate.Calibration",
       "kind": "class"
     },
+    "aegean.greek.CalibrationEntry": {
+      "canonical": "aegean.greek.confidence.CalibrationEntry",
+      "kind": "class"
+    },
+    "aegean.greek.CalibrationRegistry": {
+      "canonical": "aegean.greek.confidence.CalibrationRegistry",
+      "kind": "class"
+    },
+    "aegean.greek.CalibrationResolution": {
+      "canonical": "aegean.greek.confidence.CalibrationResolution",
+      "kind": "class"
+    },
+    "aegean.greek.ConfidenceResult": {
+      "canonical": "aegean.greek.confidence.ConfidenceResult",
+      "kind": "class"
+    },
     "aegean.greek.ConventionReport": {
       "canonical": "aegean.greek.proiel.ConventionReport",
+      "kind": "class"
+    },
+    "aegean.greek.CoverageRiskPoint": {
+      "canonical": "aegean.greek.confidence.CoverageRiskPoint",
       "kind": "class"
     },
     "aegean.greek.DepToken": {
@@ -13527,6 +13551,10 @@
       "canonical": "aegean.greek.syntax.ParserNotLoadedError",
       "kind": "class"
     },
+    "aegean.greek.PolicyDecision": {
+      "canonical": "aegean.greek.confidence.PolicyDecision",
+      "kind": "class"
+    },
     "aegean.greek.PosStat": {
       "canonical": "aegean.greek.erroranalysis.PosStat",
       "kind": "class"
@@ -13563,6 +13591,10 @@
       "canonical": "aegean.greek.sentence_segmentation.SentenceBoundary",
       "kind": "class"
     },
+    "aegean.greek.SentenceConfidence": {
+      "canonical": "aegean.greek.confidence.SentenceConfidence",
+      "kind": "class"
+    },
     "aegean.greek.SentenceSegmenter": {
       "canonical": "aegean.greek.sentence_segmentation.SentenceSegmenter",
       "kind": "class"
@@ -13573,6 +13605,10 @@
     },
     "aegean.greek.TextProfile": {
       "canonical": "aegean.greek.profile.TextProfile",
+      "kind": "class"
+    },
+    "aegean.greek.TokenConfidence": {
+      "canonical": "aegean.greek.confidence.TokenConfidence",
       "kind": "class"
     },
     "aegean.greek.TokenExplanation": {
@@ -13935,6 +13971,12 @@
       "params": [],
       "returns": true
     },
+    "aegean.greek.active_registry": {
+      "canonical": "aegean.greek.calibrate.active_registry",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
     "aegean.greek.agdt_ud_overlap": {
       "canonical": "aegean.greek.ud.agdt_ud_overlap",
       "kind": "function",
@@ -14024,6 +14066,16 @@
           "default": true,
           "kind": "keyword-only",
           "name": "long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "domain"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
         }
       ],
       "returns": true
@@ -14051,6 +14103,16 @@
           "default": true,
           "kind": "keyword-only",
           "name": "long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "domain"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
         }
       ],
       "returns": true
@@ -14327,6 +14389,23 @@
       ],
       "returns": true
     },
+    "aegean.greek.brier_score": {
+      "canonical": "aegean.greek.confidence.brier_score",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "probs"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.calibrate": {
       "kind": "module"
     },
@@ -14580,6 +14659,30 @@
       ],
       "returns": true
     },
+    "aegean.greek.canonical_json": {
+      "canonical": "aegean.greek.confidence.canonical_json",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "value"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.canonical_sha256": {
+      "canonical": "aegean.greek.confidence.canonical_sha256",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "value"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.catalog": {
       "canonical": "aegean.scripts.greek.perseus.catalog",
       "kind": "function",
@@ -14695,6 +14798,28 @@
           "default": true,
           "kind": "keyword-only",
           "name": "limit"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.coverage_risk_curve": {
+      "canonical": "aegean.greek.confidence.coverage_risk_curve",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "probs"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "thresholds"
         }
       ],
       "returns": true
@@ -16093,6 +16218,38 @@
           "default": true,
           "kind": "keyword-only",
           "name": "abort"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.fit_logit_affine": {
+      "canonical": "aegean.greek.calibrate.fit_logit_affine",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "probs"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "correct"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "slope_bracket"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "intercept_bracket"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "np"
         }
       ],
       "returns": true
@@ -19297,6 +19454,16 @@
         {
           "default": true,
           "kind": "keyword-only",
+          "name": "confidence_domain"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "confidence_policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
           "name": "long_input"
         },
         {
@@ -21782,6 +21949,18 @@
       "params": [
         {
           "default": true,
+          "kind": "positional or keyword",
+          "name": "source"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.use_calibration_registry": {
+      "canonical": "aegean.greek.calibrate.use_calibration_registry",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
           "kind": "positional or keyword",
           "name": "source"
         }

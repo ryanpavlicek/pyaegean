@@ -23,12 +23,22 @@ np = pytest.importorskip("numpy")
 
 from aegean.greek import calibrate  # noqa: E402
 from aegean.greek.calibrate import (  # noqa: E402
+    CalibrationEntry,
+    CalibrationRegistry,
     Calibration,
+    ConfidenceResult,
     UncalibratedConfidenceError,
     ece,
+    fit_logit_affine,
     fit_temperature,
     temperature_softmax,
     top1_confidence,
+)
+from aegean.greek.confidence import (  # noqa: E402
+    AbstentionPolicy,
+    brier_score,
+    canonical_json,
+    coverage_risk_curve,
 )
 
 
@@ -150,6 +160,52 @@ def test_fit_temperature_adversarial_inputs():
         fit_temperature(good, [1, 0], bracket=(-1.0, 5.0))
 
 
+def test_fit_logit_affine_recovers_synthetic_monotone_calibration():
+    raw = np.linspace(0.05, 0.95, 400)
+    true_slope = 0.7
+    true_intercept = -0.35
+    transformed = 1.0 / (
+        1.0 + np.exp(-(true_slope * np.log(raw / (1.0 - raw)) + true_intercept))
+    )
+    # A deterministic, evenly distributed target avoids a stochastic test while
+    # approximating the empirical Bernoulli rate at each confidence level.
+    correct = np.asarray(
+        [int((index % 100) / 100.0 < probability) for index, probability in enumerate(transformed)]
+    )
+
+    slope, intercept = fit_logit_affine(raw, correct)
+    before = -np.mean(correct * np.log(raw) + (1 - correct) * np.log(1 - raw))
+    fitted = 1.0 / (1.0 + np.exp(-(slope * np.log(raw / (1.0 - raw)) + intercept)))
+    after = -np.mean(correct * np.log(fitted) + (1 - correct) * np.log(1 - fitted))
+
+    assert slope > 0.0
+    assert after < before
+    assert np.all(np.diff(fitted) > 0.0)
+
+
+@pytest.mark.parametrize(
+    ("probs", "correct", "message"),
+    [
+        ([], [], "empty fold"),
+        ([0.5, 0.5], [0, 1], "not be constant"),
+        ([0.2, 0.8], [1, 1], "both 0 and 1"),
+        ([0.2, float("nan")], [0, 1], "finite values"),
+        ([-0.1, 0.8], [0, 1], "finite values"),
+        ([0.2, 0.8], [0, 2], "only 0/1"),
+    ],
+)
+def test_fit_logit_affine_rejects_invalid_folds(probs, correct, message):
+    with pytest.raises(ValueError, match=message):
+        fit_logit_affine(probs, correct)
+
+
+def test_fit_logit_affine_rejects_invalid_search_brackets():
+    with pytest.raises(ValueError, match="slope_bracket"):
+        fit_logit_affine([0.2, 0.8], [0, 1], slope_bracket=(1.0, 1.0))
+    with pytest.raises(ValueError, match="intercept_bracket"):
+        fit_logit_affine([0.2, 0.8], [0, 1], intercept_bracket=(2.0, -2.0))
+
+
 # ── Calibration record: round-trip + validation ──────────────────────────────
 def _sample_calibration() -> Calibration:
     return Calibration(
@@ -209,6 +265,19 @@ def test_use_calibration_from_object_dict_and_path(tmp_path):
     assert from_path == cal and calibrate.active() == cal
 
 
+def test_legacy_and_v2_active_calibration_state_transitions():
+    cal = _sample_calibration()
+    calibrate.use_calibration(cal)
+    assert calibrate.active() == cal
+    assert calibrate.active_registry() is not None
+    registry = CalibrationRegistry.from_legacy(cal.to_dict())
+    calibrate.use_calibration_registry(registry)
+    assert calibrate.active() is None
+    assert calibrate.active_registry() == registry
+    calibrate.disable_calibration()
+    assert calibrate.active() is None and calibrate.active_registry() is None
+
+
 def test_bundled_default_missing_raises_clearly(monkeypatch):
     # The bundled calibration.json ships and loads; if the install is broken so the file
     # is missing, the no-arg form must fail loudly with actionable guidance, not fall
@@ -222,3 +291,209 @@ def test_bundled_default_missing_raises_clearly(monkeypatch):
     with pytest.raises(UncalibratedConfidenceError, match="bundled calibration could not be loaded"):
         calibrate.use_calibration()
     assert calibrate.active() is None  # nothing was loaded
+
+
+# ── versioned evidence entries and metrics ──────────────────────────────────
+def test_versioned_registry_exact_then_explicit_fallback_and_hash():
+    exact = CalibrationEntry(
+        model="m",
+        task="upos",
+        source="neural",
+        domain="prose",
+        temperature=1.2,
+    )
+    broad = CalibrationEntry(
+        model="m",
+        task="upos",
+        source="neural",
+        domain=None,
+        fallback=True,
+        temperature=1.4,
+    )
+    reg = CalibrationRegistry((broad, exact))
+    assert reg.resolve("m", "upos", "neural", "prose").entry == exact
+    assert reg.resolve(" m ", " upos ", " neural ", " prose ").entry == exact
+    fallback = reg.resolve("m", "upos", "neural", "verse")
+    assert fallback.entry == broad
+    assert fallback.fallback and fallback.scope == "domain_fallback"
+    missing = reg.resolve("m", "upos", "offline", "verse")
+    assert missing.entry is None and missing.reason == "unsupported_source"
+    # Entry order cannot alter the canonical hash or resolution.
+    assert CalibrationRegistry((exact, broad)).sha256 == reg.sha256
+    loaded = CalibrationRegistry.from_dict(reg.to_dict())
+    assert loaded == reg
+    domain_only = CalibrationRegistry((exact,))
+    unsupported_domain = domain_only.resolve("m", "upos", "neural", "verse")
+    assert unsupported_domain.entry is None
+    assert unsupported_domain.reason == "unsupported_domain"
+
+
+def test_schema_one_rejects_v2_logit_affine_calibrator():
+    with pytest.raises(ValueError, match="schema_version 1"):
+        CalibrationEntry(
+            model="m",
+            task="upos",
+            schema_version=1,
+            calibrator="logit_affine",
+            parameters={"slope": 1.0, "intercept": 0.0},
+        )
+
+
+def test_json_loaders_reject_duplicate_object_keys(tmp_path):
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(
+        '{"schema_version":2,"entries":[],"entries":[]}', encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        CalibrationRegistry.load(registry_path)
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(
+        '{"schema_version":1,"name":"x","thresholds":{"upos":0.5},'
+        '"thresholds":{"upos":0.6}}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        AbstentionPolicy.load(policy_path)
+    with pytest.raises(ValueError, match="duplicate"):
+        AbstentionPolicy.from_json(
+            '{"schema_version":1,"name":"x","thresholds":{},"thresholds":{}}'
+        )
+
+
+def test_entry_calibrator_is_monotone_finite_and_canonically_round_trips():
+    temperature = CalibrationEntry(
+        model=" m ", task="upos ", source=" neural ", domain=" prose ", temperature=2.0
+    )
+    assert (temperature.model, temperature.task, temperature.source, temperature.domain) == (
+        "m",
+        "upos",
+        "neural",
+        "prose",
+    )
+    assert temperature.calibrate([-1.0, 1.0])[0] < temperature.calibrate([-1.0, 1.0])[1]
+    assert float(temperature.calibrate([0.0, 0.0])[0]) == pytest.approx(0.5)
+    with pytest.raises(ValueError, match="class-logit vector"):
+        temperature.calibrate(0.5)
+    with pytest.raises(ValueError, match="finite number|class-logit vector"):
+        temperature.calibrate(np.array([[0.0, 1.0]]))
+    assert CalibrationEntry.from_dict(temperature.to_dict()) == temperature
+    assert CalibrationEntry.from_dict(temperature.to_dict()).sha256 == temperature.sha256
+
+    affine = CalibrationEntry(
+        model="m",
+        task="upos",
+        source="neural",
+        domain="prose",
+        calibrator="logit_affine",
+        parameters={"slope": 2.0, "intercept": -1.0},
+    )
+    assert affine.calibrate(0.25) < affine.calibrate(0.75)
+    assert affine.calibrate(0.0) == 0.0
+    assert affine.calibrate(1.0) == 1.0
+    with pytest.raises(ValueError, match="raw probability"):
+        affine.calibrate(2.0)
+    assert CalibrationEntry.from_dict(affine.to_dict()) == affine
+    with pytest.raises(ValueError, match="slope"):
+        CalibrationEntry(
+            model="m",
+            task="upos",
+            source="neural",
+            domain="prose",
+            calibrator="logit_affine",
+            parameters={"slope": 0.0, "intercept": 0.0},
+        )
+    with pytest.raises(ValueError, match="finite"):
+        CalibrationEntry(
+            model="m",
+            task="upos",
+            source="neural",
+            domain="prose",
+            calibrator="logit_affine",
+            parameters={"slope": 1.0, "intercept": float("nan")},
+        )
+
+
+def test_confidence_result_strict_evidence_round_trip_and_tamper_rejection():
+    result = ConfidenceResult(
+        task="upos",
+        value=0.8,
+        calibration_id="a" * 64,
+        scope="exact",
+        model="m",
+        source="neural",
+        domain="prose",
+        n=100,
+        ece=0.04,
+        brier=None,
+    )
+    assert ConfidenceResult.from_dict(result.to_dict()) == result
+    tampered = result.to_dict()
+    tampered["value"] = 0.2
+    with pytest.raises(ValueError, match="sha256"):
+        ConfidenceResult.from_dict(tampered)
+    with pytest.raises(ValueError, match="evidence scope"):
+        ConfidenceResult(
+            task="upos",
+            value=0.8,
+            model="m",
+            n=100,
+            ece=0.04,
+            brier=0.12,
+        )
+    with pytest.raises(ValueError, match="calibration_id"):
+        ConfidenceResult(
+            task="upos",
+            value=0.8,
+            calibration_id="not-a-hash",
+            scope="exact",
+            model="m",
+            n=100,
+            ece=0.04,
+        )
+    with pytest.raises(ValueError, match="calibration_id"):
+        ConfidenceResult(
+            task="upos",
+            value=0.8,
+            calibration_id=None,
+            scope="exact",
+            model="m",
+            n=100,
+            ece=0.04,
+        )
+    unavailable = ConfidenceResult(task="upos", value=None, reason="missing_calibration")
+    assert unavailable.to_dict()["value"] is None
+
+
+def test_legacy_calibration_json_is_read_as_aggregate_without_scope_claims():
+    legacy = _sample_calibration()
+    registry = CalibrationRegistry.from_legacy(
+        Calibration(temperature=legacy.temperature, fitted_on="development fold").to_dict()
+    )
+    result = registry.resolve("legacy", "upos", "neural", "prose")
+    assert result.entry is not None and result.fallback
+    assert result.entry.source is None and result.entry.domain is None
+    known = CalibrationRegistry.from_legacy(
+        Calibration(
+            temperature=legacy.temperature,
+            fitted_on="grc-joint-v3 development fold",
+        ).to_dict()
+    )
+    resolved = known.resolve("grc-joint-v3", "upos", "neural", "prose")
+    assert resolved.entry is not None and resolved.fallback
+    assert resolved.entry.source is None and resolved.entry.domain is None
+
+
+def test_brier_and_coverage_risk_are_deterministic_and_keep_unavailable_none():
+    assert brier_score([0.9, 0.2, 0.8], [1, 0, 1]) == pytest.approx((0.1**2 + 0.2**2 + 0.2**2) / 3)
+    points = coverage_risk_curve([0.2, 0.8, 0.8], [1, 0, 1], [0.8, 1.0, 0.8])
+    assert [p.threshold for p in points] == [0.8, 1.0]
+    assert points[0].coverage == pytest.approx(2 / 3)
+    assert points[0].risk == pytest.approx(0.5)
+    assert points[1].coverage == 0.0 and points[1].risk is None
+    with pytest.raises(ValueError, match="explicit sequence"):
+        coverage_risk_curve([0.5], [1], None)
+    with pytest.raises(ValueError, match="same length"):
+        brier_score([0.5], [1, 0])
+    with pytest.raises(ValueError, match="finite"):
+        brier_score([float("nan")], [1])
+    assert canonical_json({"β": 1, "a": 2}) == '{"a":2,"β":1}'

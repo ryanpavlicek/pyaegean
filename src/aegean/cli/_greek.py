@@ -15,7 +15,7 @@ import contextlib
 import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 
@@ -239,6 +239,16 @@ def _ensure_calibration() -> None:
             "the shipped calibration file is missing; reinstall pyaegean or run "
             "use_calibration(path)"
         ) from None
+
+
+def _load_confidence_policy(path: Path) -> Any:
+    """Load one caller-supplied abstention policy with strict public validation."""
+    from aegean.greek import AbstentionPolicy
+
+    try:
+        return AbstentionPolicy.load(path)
+    except (OSError, UnicodeError, TypeError, ValueError) as exc:
+        raise fail(f"could not load confidence policy {path}: {exc}") from None
 
 
 def _activate(
@@ -948,6 +958,18 @@ def pipeline(
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
     confidence: bool = CONFIDENCE_OPT,
+    confidence_domain: str | None = typer.Option(
+        None,
+        "--confidence-domain",
+        metavar="LABEL",
+        help="Scope calibrated confidence to an explicit evidence domain (requires --confidence).",
+    ),
+    confidence_policy: Path | None = typer.Option(
+        None,
+        "--confidence-policy",
+        metavar="PATH",
+        help="Load an explicit abstention policy JSON (requires --confidence).",
+    ),
     partial: bool = typer.Option(
         False,
         "--partial",
@@ -971,6 +993,15 @@ def pipeline(
 
     if partial and windowed:
         raise fail("--partial and --windowed are mutually exclusive")
+    if confidence_domain is not None and not confidence:
+        raise fail("--confidence-domain requires --confidence")
+    if confidence_policy is not None and not confidence:
+        raise fail("--confidence-policy requires --confidence")
+    loaded_policy = (
+        _load_confidence_policy(confidence_policy)
+        if confidence_policy is not None
+        else None
+    )
 
     _activate(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
@@ -979,13 +1010,17 @@ def pipeline(
     if confidence:
         _ensure_calibration()
     try:
-        records = greek.pipeline(
-            read_text(text),
-            parse=parse,
-            with_confidence=confidence,
-            long_input="partial" if partial else "windowed" if windowed else "strict",
-            sentence_policy=sentence_policy,
-        )
+        pipeline_kwargs: dict[str, Any] = {
+            "parse": parse,
+            "with_confidence": confidence,
+            "long_input": "partial" if partial else "windowed" if windowed else "strict",
+            "sentence_policy": sentence_policy,
+        }
+        if confidence_domain is not None:
+            pipeline_kwargs["confidence_domain"] = confidence_domain
+        if loaded_policy is not None:
+            pipeline_kwargs["confidence_policy"] = loaded_policy
+        records = greek.pipeline(read_text(text), **pipeline_kwargs)
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
     except (greek.NeuralInputTooLongError, greek.NeuralWindowingError) as exc:

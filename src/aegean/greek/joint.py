@@ -25,9 +25,10 @@ relations rather than the arc-eager baseline's Prague labels), and
 from __future__ import annotations
 
 import json
+import math
 import unicodedata
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -42,6 +43,16 @@ from .neural_contract import (
     ReceiptMismatchError,
 )
 from .udfeats import feats_from_xpos
+from .confidence import (
+    AbstentionPolicy,
+    CalibrationEntry,
+    CalibrationRegistry,
+    ConfidenceResult,
+    SentenceConfidence,
+    TokenConfidence,
+    UNAVAILABLE_CONFIDENCE,
+    UNAVAILABLE_MISSING_CALIBRATION,
+)
 
 __all__ = [
     "AnalysisReceipt",
@@ -52,6 +63,8 @@ __all__ = [
     "NeuralWindowingError",
     "ReceiptMismatchError",
     "SentenceAnalysis",
+    "TokenConfidence",
+    "SentenceConfidence",
     "active",
     "analyze_sentence",
     "analyze_sentences",
@@ -134,6 +147,9 @@ class SentenceAnalysis:
     lemma_source: tuple[LemmaSource, ...] = ()
     # Human verification is separate from model resolution or lexical attestation.
     lemma_verified: tuple[bool, ...] = ()
+    lemma_source_path: tuple[str, ...] = ()
+    token_confidences: tuple[TokenConfidence, ...] = ()
+    sentence_confidence: SentenceConfidence | None = None
     # Per-token coverage plus sentence-level status. In strict mode an incomplete
     # sentence raises before a SentenceAnalysis is returned. Partial mode returns every
     # input token, marks undecoded tokens False here, and sets complete=False/truncated=True.
@@ -149,9 +165,9 @@ class SentenceAnalysis:
         return not self.complete
 
 
-def _compose_lemma(
+def _compose_lemma_detail(
     form: str, upos: str, script_id: int, model: "_JointModel"
-) -> tuple[str, bool, LemmaSource]:
+) -> tuple[str, bool, LemmaSource, str]:
     """The dev-preferred ``lookup-first`` composition, with an honesty flag: returns
     ``(lemma, resolved, source)``. ``resolved`` is True when a real analysis was found: a
     (form|UPOS) or form lookup, a predicted non-identity edit script, or a lowercase
@@ -159,9 +175,12 @@ def _compose_lemma(
     equals the surface form is still ``resolved=True`` when it came from a lookup (a
     nominative singular is a genuine analysis), so callers must not infer the source
     from a string compare."""
-    looked = model.lookup_form_upos.get(f"{form}|{upos}") or model.lookup_form.get(form)
-    if looked:
-        return looked, True, LemmaSource.NEURAL_LOOKUP
+    looked_upos = model.lookup_form_upos.get(f"{form}|{upos}")
+    if looked_upos:
+        return looked_upos, True, LemmaSource.NEURAL_LOOKUP, "lookup_form_upos"
+    looked_form = model.lookup_form.get(form)
+    if looked_form:
+        return looked_form, True, LemmaSource.NEURAL_LOOKUP, "lookup_form"
     if 0 <= script_id < len(model.trees):
         from .lemmatizer import apply_tree
 
@@ -172,30 +191,209 @@ def _compose_lemma(
         # kept; a GENUINE identity lemma, a nominative, comes from the lookups above and
         # stays resolved). Both fall through to the remaining lookups / honest identity.
         if applied and applied != "_" and applied != form:
-            return applied, True, LemmaSource.NEURAL_EDIT
+            return applied, True, LemmaSource.NEURAL_EDIT, "edit_script"
     low = model.lookup_lower.get(form.lower())
     if low:
-        return low, True, LemmaSource.NEURAL_LOOKUP
-    return form, False, LemmaSource.IDENTITY
+        return low, True, LemmaSource.NEURAL_LOOKUP, "lookup_lower_fallback"
+    return form, False, LemmaSource.IDENTITY, "identity_fallback"
 
 
-def _probs_calibration(with_probs: bool) -> Any:
-    """Resolve the calibration to use when ``with_probs`` is requested, enforcing the
-    honesty rule: return ``None`` when probs are not asked for, the active `Calibration`
-    when one is loaded, and RAISE otherwise — a raw (uncalibrated) softmax is never
-    exposed. Returns a `aegean.greek.calibrate.Calibration` or ``None``."""
+def _compose_lemma(
+    form: str, upos: str, script_id: int, model: "_JointModel"
+) -> tuple[str, bool, LemmaSource]:
+    """Backward-compatible lemma composition tuple without internal branch metadata."""
+
+    lemma, resolved, source, _path = _compose_lemma_detail(form, upos, script_id, model)
+    return lemma, resolved, source
+
+
+def _confidence_context(
+    with_probs: bool,
+    *,
+    domain: str | None = None,
+    policy: AbstentionPolicy | None = None,
+) -> dict[str, Any] | None:
+    """Resolve confidence inputs without changing the no-confidence path."""
+    if (domain is not None or policy is not None) and not with_probs:
+        raise ValueError("confidence domain/policy requires with_probs=True")
     if not with_probs:
         return None
     from . import calibrate
 
-    cal = calibrate.active()
-    if cal is None:
+    legacy = calibrate.active()
+    registry = calibrate.active_registry()
+    if legacy is None and registry is None:
         raise calibrate.UncalibratedConfidenceError(
             "uncalibrated confidence is not exposed; load or fit a calibration first "
-            "(aegean.greek.use_calibration()). The project never surfaces a raw softmax "
-            "probability (measured-claims-only)."
+            "(aegean.greek.use_calibration())."
         )
-    return cal
+    return {"legacy": legacy, "registry": registry, "domain": domain, "policy": policy}
+
+
+def _model_id(model: Any) -> str:
+    manifest = getattr(model, "manifest", None)
+    value = getattr(manifest, "model_id", None)
+    return value if isinstance(value, str) and value.strip() else "legacy"
+
+
+def _resolve_confidence_entry(
+    model: Any,
+    context: dict[str, Any] | None,
+    task: str,
+    source: str | None = "neural",
+) -> tuple[CalibrationEntry | None, str | None, Any | None]:
+    if context is None:
+        return None, UNAVAILABLE_CONFIDENCE, None
+    registry = context.get("registry")
+    if not isinstance(registry, CalibrationRegistry):
+        return None, UNAVAILABLE_MISSING_CALIBRATION, None
+    resolved = registry.resolve(
+        _model_id(model), task, source, context.get("domain")
+    )
+    if resolved.entry is None:
+        return None, resolved.reason or UNAVAILABLE_MISSING_CALIBRATION, resolved
+    return resolved.entry, None, resolved
+
+
+def _confidence_result(
+    model: Any,
+    context: dict[str, Any] | None,
+    task: str,
+    value: float | None,
+    *,
+    entry: CalibrationEntry | None = None,
+    reason: str | None = None,
+    source: str | None = "neural",
+    resolution: Any | None = None,
+) -> ConfidenceResult:
+    if value is None or entry is None:
+        return ConfidenceResult(
+            task=task,
+            value=None,
+            reason=reason or UNAVAILABLE_CONFIDENCE,
+            model=_model_id(model) if context is not None else None,
+            source=source,
+            domain=(context or {}).get("domain"),
+            scope=resolution.scope if resolution is not None else None,
+        )
+    if entry.n is None or entry.n <= 0 or (entry.ece is None and entry.brier is None):
+        return ConfidenceResult(
+            task=task,
+            value=None,
+            reason="insufficient_calibration_evidence",
+            calibration_id=entry.calibration_id,
+            scope=resolution.scope if resolution is not None else None,
+            model=_model_id(model),
+            source=source,
+            domain=(context or {}).get("domain"),
+            n=entry.n,
+            ece=entry.ece,
+            brier=entry.brier,
+        )
+    return ConfidenceResult(
+        task=task,
+        value=value,
+        calibration_id=entry.calibration_id,
+        scope=(resolution.scope if resolution is not None else (
+            "global_fallback" if entry.fallback and entry.source is None and entry.domain is None else
+            "source_fallback" if entry.fallback and entry.source is None else
+            "domain_fallback" if entry.fallback else "exact"
+        )),
+        model=_model_id(model),
+        source=source,
+        domain=(context or {}).get("domain"),
+        n=entry.n,
+        ece=entry.ece,
+        brier=entry.brier,
+    )
+
+
+def _policy_decision(
+    policy: AbstentionPolicy | None, result: ConfidenceResult | None
+) -> Any:
+    return None if policy is None or result is None else policy.decide(result.task, result.value)
+
+
+def _entry_probability(
+    entry: CalibrationEntry | None,
+    logits: Any = None,
+    raw_probability: float | None = None,
+    *,
+    np: Any,
+    selected_index: int | None = None,
+) -> float | None:
+    if entry is None:
+        return None
+    from . import calibrate
+
+    if entry.calibrator == "temperature":
+        if logits is None or entry.temperature is None:
+            return None
+        if selected_index is None:
+            return float(calibrate.top1_confidence(logits, entry.temperature, np=np))
+        probabilities = calibrate.temperature_softmax(logits, entry.temperature, np=np)
+        return float(probabilities[selected_index])
+    if raw_probability is None:
+        return None
+    return float(entry.calibrate(raw_probability))
+
+
+def _sentence_confidence(
+    model: Any,
+    context: dict[str, Any] | None,
+    raw_components: list[dict[str, float]],
+) -> SentenceConfidence | None:
+    if context is None:
+        return None
+    required = ("upos", "xpos", "lemma", "head", "relation")
+    if not raw_components:
+        result = _confidence_result(model, context, "sentence", None, reason="empty_sentence")
+        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+    values: list[float] = []
+    for item in raw_components:
+        if not item or any(name not in item for name in ("upos", "xpos", "lemma", "head")):
+            result = _confidence_result(model, context, "sentence", None, reason="partial_token")
+            return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+        values.extend(item[name] for name in ("upos", "xpos", "lemma", "head"))
+        if "relation" not in item and item.get("forced_root"):
+            continue
+        if "relation" not in item:
+            result = _confidence_result(model, context, "sentence", None, reason="missing_relation")
+            return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+        values.append(item["relation"])
+    entry, reason, resolution = _resolve_confidence_entry(model, context, "sentence")
+    if entry is None:
+        result = _confidence_result(
+            model, context, "sentence", None, reason=reason or UNAVAILABLE_MISSING_CALIBRATION
+        )
+        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+    if entry.calibrator != "logit_affine":
+        result = _confidence_result(model, context, "sentence", None, reason="unsupported_calibrator")
+        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+    if any(value < 0.0 or value > 1.0 or not math.isfinite(value) for value in values):
+        result = _confidence_result(model, context, "sentence", None, reason="invalid_raw_aggregate")
+        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+    raw = (
+        0.0
+        if any(value == 0.0 for value in values)
+        else math.exp(math.fsum(math.log(value) for value in values))
+    )
+    value = float(entry.calibrate(raw))
+    result = _confidence_result(model, context, "sentence", value, entry=entry, resolution=resolution)
+    return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
+
+
+def _unavailable_sentence_confidence(
+    model: Any, context: dict[str, Any], reason: str
+) -> SentenceConfidence:
+    """Build an explicit sentence-level unavailable record for structural failures."""
+
+    result = _confidence_result(model, context, "sentence", None, reason=reason)
+    return SentenceConfidence(
+        result,
+        ("upos", "xpos", "lemma", "head", "relation"),
+        _policy_decision(context.get("policy"), result),
+    )
 
 
 def _long_input_mode(value: str) -> LongInputMode:
@@ -391,6 +589,7 @@ class _JointModel:
         analyzed_tokens: int,
         truncated: bool,
         windowed: bool = False,
+        context: dict[str, Any] | None = None,
     ) -> AnalysisReceipt | None:
         manifest = getattr(self, "manifest", None)
         session = getattr(self, "_sess", None)
@@ -403,6 +602,16 @@ class _JointModel:
             analyzed_tokens=analyzed_tokens,
             truncated=truncated,
             windowed=windowed,
+            calibration_sha256=(
+                context["registry"].sha256
+                if context is not None and isinstance(context.get("registry"), CalibrationRegistry)
+                else None
+            ),
+            confidence_policy_sha256=(
+                context["policy"].sha256
+                if context is not None and context.get("policy") is not None
+                else None
+            ),
         )
 
     def _window_body_budget(self) -> int:
@@ -536,6 +745,7 @@ class _JointModel:
         windows: list[tuple[int, int]],
         *,
         calibration: Any = None,
+        context: dict[str, Any] | None = None,
     ) -> SentenceAnalysis:
         """Analyze windows and reconcile owner fields plus one global dependency tree."""
         np = self._np
@@ -564,9 +774,12 @@ class _JointModel:
         lemma = list(forms)
         resolved = [False] * n
         lemma_source = [LemmaSource.IDENTITY] * n
+        lemma_source_path = ["identity_fallback"] * n
         verified = [False] * n
         upos_prob: list[float | None] = [None] * n
         lemma_prob: list[float | None] = [None] * n
+        token_confidences: list[TokenConfidence | None] = [None] * n
+        raw_components: list[dict[str, float]] = [{} for _ in range(n)]
         arc = np.full((n, n + 1), -np.inf, dtype=np.float32)
         # Relation IDs are bounded by the validated manifest label map.  A compact int16
         # candidate grid avoids an R x N² float tensor; -1 means no finite relation score.
@@ -576,6 +789,29 @@ class _JointModel:
                 "windowed neural analysis cannot compact a relation map larger than int16"
             )
         rel_ids = np.full((n, n + 1), -1, dtype=np.int16)
+        window_relation_entry, window_relation_reason, window_relation_resolution = (
+            _resolve_confidence_entry(self, context, "relation")
+            if context is not None
+            else (None, None, None)
+        )
+        window_relation_temperature: float | None = None
+        if (
+            window_relation_entry is not None
+            and window_relation_entry.calibrator == "temperature"
+            and window_relation_entry.temperature is not None
+        ):
+            window_relation_temperature = window_relation_entry.temperature
+        rel_raw_probs = (
+            np.full((n, n + 1), np.nan, dtype=np.float32)
+            if context is not None
+            else None
+        )
+        rel_cal_probs = (
+            np.full((n, n + 1), np.nan, dtype=np.float32)
+            if context is not None
+            and window_relation_temperature is not None
+            else None
+        )
 
         for wi, (ws, we) in enumerate(windows):
             chunk = forms[ws:we]
@@ -584,7 +820,7 @@ class _JointModel:
                 raise NeuralWindowingError(
                     "windowed tokenizer failed to return every complete word in a window"
                 )
-            local = self._decode(chunk, raw, calibration=calibration)
+            local = self._decode(chunk, raw, calibration=calibration, context=context)
             if local.analyzed != (True,) * len(chunk):
                 raise NeuralWindowingError(
                     "windowed neural analysis produced an incomplete window decode"
@@ -599,11 +835,44 @@ class _JointModel:
                 lemma[token] = local.lemma[local_i]
                 resolved[token] = local.lemma_resolved[local_i]
                 lemma_source[token] = local.lemma_source[local_i]
+                if local.lemma_source_path:
+                    lemma_source_path[token] = local.lemma_source_path[local_i]
                 verified[token] = local.lemma_verified[local_i]
                 if local.upos_prob:
                     upos_prob[token] = local.upos_prob[local_i]
                 if local.lemma_script_prob:
                     lemma_prob[token] = local.lemma_script_prob[local_i]
+                if context is not None:
+                    from . import calibrate
+
+                    local_sp = raw["_word_pos"][local_i]
+                    # Window outputs retain the same local word ordering; raw task values
+                    # are stored as one scalar per owned token until global MST selection.
+                    raw_upos = float(
+                        calibrate.top1_confidence(
+                            raw["upos"][0, local_sp], 1.0, np=np
+                        )
+                    )
+                    raw_x = [
+                        float(
+                            calibrate.top1_confidence(
+                                raw[f"x{x_index}"][0, local_sp], 1.0, np=np
+                            )
+                        )
+                        for x_index in range(9)
+                    ]
+                    raw_components[token].update(
+                        {
+                            "upos": raw_upos,
+                            "xpos": float(np.prod(raw_x, dtype=np.float64)),
+                            "lemma": float(
+                                calibrate.top1_confidence(raw["lemma"][0, local_i], 1.0, np=np)
+                            ),
+                        }
+                    )
+                    token_confidences[token] = replace(
+                        local.token_confidences[local_i], index=token
+                    )
                 for local_head, score in enumerate(local_arc[local_i]):
                     global_head = 0 if local_head == 0 else ws + local_head
                     if global_head < 0 or global_head > n:
@@ -612,6 +881,17 @@ class _JointModel:
                     rel_vector = np.asarray(local_rel[:, local_i, local_head])
                     if np.isfinite(rel_vector).any():
                         rel_ids[token, global_head] = np.int16(rel_vector.argmax())
+                        if context is not None and rel_raw_probs is not None:
+                            safe_rel = np.where(np.isfinite(rel_vector), rel_vector, -1.0e30)
+                            rel_raw_probs[token, global_head] = float(
+                                calibrate.top1_confidence(safe_rel, 1.0, np=np)
+                            )
+                            if rel_cal_probs is not None and window_relation_temperature is not None:
+                                rel_cal_probs[token, global_head] = float(
+                                    calibrate.top1_confidence(
+                                        safe_rel, window_relation_temperature, np=np
+                                    )
+                                )
             # Explicitly release the large per-window arrays before the next encoder pass.
             del raw, local, local_arc, local_rel
 
@@ -657,6 +937,92 @@ class _JointModel:
                     "global windowed decoder selected an arc without an observed relation"
                 )
             deprel[dep] = self.inv["deprel"][relation_id]
+        if context is not None:
+            from . import calibrate
+
+            for dep, head_value in enumerate(heads):
+                arc_row = arc[dep]
+                safe_arc = np.where(np.isfinite(arc_row), arc_row, -1.0e30)
+                raw_head = float(
+                    calibrate.temperature_softmax(safe_arc, 1.0, np=np)[head_value]
+                )
+                raw_components[dep]["head"] = raw_head
+                if head_value == 0:
+                    raw_components[dep]["forced_root"] = 1.0
+                else:
+                    if rel_raw_probs is None:
+                        raise NeuralWindowingError(
+                            "windowed confidence relation grid was not allocated"
+                        )
+                    raw_components[dep]["relation"] = float(rel_raw_probs[dep, head_value])
+                existing = token_confidences[dep]
+                if existing is None:
+                    continue
+                head_entry, head_reason, head_resolution = _resolve_confidence_entry(self, context, "head")
+                head_value_cal = _entry_probability(
+                    head_entry, safe_arc, raw_head, np=np, selected_index=head_value
+                )
+                head_result = _confidence_result(
+                    self, context, "head", head_value_cal,
+                    entry=head_entry, reason=head_reason, resolution=head_resolution,
+                )
+                if head_value == 0:
+                    relation_result = _confidence_result(
+                        self, context, "relation", None, reason="forced_root"
+                    )
+                else:
+                    relation_entry = window_relation_entry
+                    relation_reason = window_relation_reason
+                    relation_resolution = window_relation_resolution
+                    relation_value = (
+                        float(rel_cal_probs[dep, head_value])
+                        if rel_cal_probs is not None
+                        else _entry_probability(
+                            relation_entry,
+                            raw_probability=raw_components[dep]["relation"],
+                            np=np,
+                        )
+                    )
+                    relation_result = _confidence_result(
+                        self,
+                        context,
+                        "relation",
+                        relation_value,
+                        entry=relation_entry,
+                        reason=relation_reason,
+                        resolution=relation_resolution,
+                    )
+                updated_results = (
+                    existing.upos,
+                    existing.xpos,
+                    existing.feats,
+                    existing.lemma,
+                    head_result,
+                    relation_result,
+                )
+                decisions = tuple(
+                    decision
+                    for result in updated_results
+                    if (decision := _policy_decision(context.get("policy"), result)) is not None
+                )
+                token_confidences[dep] = replace(
+                    existing,
+                    index=dep,
+                    head=head_result,
+                    relation=relation_result,
+                    policy=decisions,
+                )
+            if any(item is None for item in token_confidences):
+                raise NeuralWindowingError(
+                    "windowed confidence decode did not produce every owner token"
+                )
+            token_confidences_final = tuple(
+                cast(TokenConfidence, item) for item in token_confidences
+            )
+            sentence_confidence = _sentence_confidence(self, context, raw_components)
+        else:
+            token_confidences_final = ()
+            sentence_confidence = None
         warning = (
             "windowed neural analysis: complete-word overlapping windows; token tags, "
             "lemmas, and confidence use the farthest-boundary owner (earlier on ties), "
@@ -671,19 +1037,23 @@ class _JointModel:
             deprel=tuple(deprel),
             lemma=tuple(lemma),
             lemma_resolved=tuple(resolved),
-            upos_prob=tuple(upos_prob) if calibration is not None else (),
-            lemma_script_prob=tuple(lemma_prob) if calibration is not None else (),
+            upos_prob=tuple(upos_prob) if calibration is not None or context is not None else (),
+            lemma_script_prob=tuple(lemma_prob) if calibration is not None or context is not None else (),
             lemma_source=tuple(lemma_source),
+            lemma_source_path=tuple(lemma_source_path) if context is not None else (),
             lemma_verified=tuple(verified),
             analyzed=(True,) * n,
             complete=True,
             truncated=False,
             warnings=warning,
+            token_confidences=token_confidences_final,
+            sentence_confidence=sentence_confidence,
             receipt=self._receipt(
                 input_tokens=n,
                 analyzed_tokens=n,
                 truncated=False,
                 windowed=True,
+                context=context,
             ),
         )
 
@@ -693,6 +1063,8 @@ class _JointModel:
         *,
         with_probs: bool = False,
         long_input: LongInputMode = "strict",
+        domain: str | None = None,
+        policy: AbstentionPolicy | None = None,
     ) -> SentenceAnalysis:
         """Analyze one pre-tokenized sentence.
 
@@ -708,12 +1080,20 @@ class _JointModel:
         ``"windowed"`` uses safe complete-word overlap windows and one global observed-arc
         tree; pathological or unsupported boundaries raise ``NeuralWindowingError``."""
         mode = _long_input_mode(long_input)
-        calibration = _probs_calibration(with_probs)
+        context = _confidence_context(with_probs, domain=domain, policy=policy)
+        calibration = None if context is None else context.get("legacy")
         forms = [unicodedata.normalize("NFC", w) for w in words]
         if not forms:
             return SentenceAnalysis(
                 (), (), (), (), (), (), (), (), analyzed=(),
-                receipt=self._receipt(input_tokens=0, analyzed_tokens=0, truncated=False),
+                sentence_confidence=(
+                    _unavailable_sentence_confidence(self, context, "empty_sentence")
+                    if context is not None
+                    else None
+                ),
+                receipt=self._receipt(
+                    input_tokens=0, analyzed_tokens=0, truncated=False, context=context
+                ),
             )
         if mode == "windowed":
             # Refuse pathological input before cloning/tokenizing the complete sentence or
@@ -729,9 +1109,9 @@ class _JointModel:
             lengths = self._full_word_lengths(forms)
             if sum(lengths) <= budget:
                 # Preserve ordinary in-limit output and receipt bytes exactly.
-                return self._decode(forms, self._run(forms), calibration=calibration)
+                return self._decode(forms, self._run(forms), calibration=calibration, context=context)
             windows = self._pack_windows(lengths, budget)
-            return self._analyze_windowed(forms, lengths, windows, calibration=calibration)
+            return self._analyze_windowed(forms, lengths, windows, calibration=calibration, context=context)
         raw = self._run(forms)
         analyzed_tokens = len(raw["_kept"])
         truncated = analyzed_tokens != len(forms)
@@ -741,7 +1121,7 @@ class _JointModel:
                 analyzed_tokens=analyzed_tokens,
                 max_subwords=self.max_subwords,
             )
-        return self._decode(forms, raw, calibration=calibration)
+        return self._decode(forms, raw, calibration=calibration, context=context)
 
     def analyze_batch(
         self,
@@ -749,6 +1129,8 @@ class _JointModel:
         *,
         with_probs: bool = False,
         long_input: LongInputMode = "strict",
+        domain: str | None = None,
+        policy: AbstentionPolicy | None = None,
     ) -> list[SentenceAnalysis]:
         """Analyses of several sentences, one padded encoder pass per call.
 
@@ -763,15 +1145,23 @@ class _JointModel:
             # Window reconciliation is intentionally sequential: chunking must never alter
             # owner assignment, global arc candidates, or the resulting tree.
             return [
-                self.analyze(words, with_probs=with_probs, long_input="windowed")
+                self.analyze(words, with_probs=with_probs, long_input="windowed", domain=domain, policy=policy)
                 for words in sentences
             ]
-        calibration = _probs_calibration(with_probs)
+        context = _confidence_context(with_probs, domain=domain, policy=policy)
+        calibration = None if context is None else context.get("legacy")
         norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
         out: list[SentenceAnalysis] = [
             SentenceAnalysis(
                 (), (), (), (), (), (), (), (), analyzed=(),
-                receipt=self._receipt(input_tokens=0, analyzed_tokens=0, truncated=False),
+                sentence_confidence=(
+                    _unavailable_sentence_confidence(self, context, "empty_sentence")
+                    if context is not None
+                    else None
+                ),
+                receipt=self._receipt(
+                    input_tokens=0, analyzed_tokens=0, truncated=False, context=context
+                ),
             )
             for _ in norm
         ]
@@ -786,11 +1176,16 @@ class _JointModel:
                         analyzed_tokens=analyzed_tokens,
                         max_subwords=self.max_subwords,
                     )
-                out[i] = self._decode(norm[i], res, calibration=calibration)
+                out[i] = self._decode(norm[i], res, calibration=calibration, context=context)
         return out
 
     def _decode(
-        self, forms: list[str], out: dict[str, Any], *, calibration: Any = None
+        self,
+        forms: list[str],
+        out: dict[str, Any],
+        *,
+        calibration: Any = None,
+        context: dict[str, Any] | None = None,
     ) -> SentenceAnalysis:
         """Decode one sentence's raw arrays (from `_run`, or one `_run_batch` slice).
 
@@ -799,6 +1194,7 @@ class _JointModel:
         in ``upos_prob`` / ``lemma_script_prob``; with ``calibration=None`` those fields
         stay empty ``()`` and the result is byte-identical to the pre-feature decode."""
         n = len(forms)
+        np = self._np
         word_pos: list[int] = out["_word_pos"]
         kept: list[int] = out["_kept"]
         nw = len(kept)
@@ -812,12 +1208,17 @@ class _JointModel:
         # the surface form, which is not a real analysis)
         resolved = [False] * n
         lemma_source = [LemmaSource.IDENTITY] * n
+        lemma_source_path = ["identity_fallback"] * n
         verified = [False] * n
         analyzed = [False] * n
         # None = a token with no model logits to read (an undecoded truncation fallback);
         # a float only for decoded words, and only when a calibration is active.
         upos_prob: list[float | None] = [None] * n
         lemma_prob: list[float | None] = [None] * n
+        token_confidences: list[TokenConfidence] = []
+        raw_components: list[dict[str, float]] = [{} for _ in range(n)]
+        if context is not None or calibration is not None:
+            from . import calibrate
 
         if nw:
             heads_w = decode_mst(out["arc"][0, :nw, : nw + 1])
@@ -840,7 +1241,7 @@ class _JointModel:
                 rel[w] = self.inv["deprel"][int(rel_scores[:, wi, heads_w[wi]].argmax())]
                 if head[w] == 0:
                     rel[w] = "root"
-                lemma[w], resolved[w], lemma_source[w] = _compose_lemma(
+                lemma[w], resolved[w], lemma_source[w], lemma_source_path[w] = _compose_lemma_detail(
                     forms[w], upos[w], int(lem_ids[wi]), self
                 )
                 verified[w] = lemma_verified(lemma_source[w])
@@ -852,14 +1253,198 @@ class _JointModel:
                     lemma_prob[w] = float(
                         calibrate.top1_confidence(out["lemma"][0, wi], t_lemma, np=self._np)
                     )
+                if context is not None:
+                    upos_logits = out["upos"][0, sp]
+                    raw_upos = float(calibrate.top1_confidence(upos_logits, 1.0, np=self._np))
+                    upos_entry, upos_reason, upos_resolution = _resolve_confidence_entry(self, context, "upos")
+                    upos_value = _entry_probability(upos_entry, upos_logits, raw_upos, np=self._np)
+                    upos_result = _confidence_result(
+                        self, context, "upos", upos_value,
+                        entry=upos_entry, reason=upos_reason, resolution=upos_resolution,
+                    )
+
+                    raw_x: list[float] = []
+                    for x_index in range(9):
+                        x_logits = out[f"x{x_index}"][0, sp]
+                        raw_x.append(float(calibrate.top1_confidence(x_logits, 1.0, np=self._np)))
+                    raw_xpos = float(np.prod(raw_x, dtype=np.float64))
+                    raw_feats = float(np.prod(raw_x[1:], dtype=np.float64))
+                    xpos_entry, xpos_reason, xpos_resolution = _resolve_confidence_entry(self, context, "xpos")
+                    feats_entry, feats_reason, feats_resolution = _resolve_confidence_entry(self, context, "feats")
+                    xpos_value = _entry_probability(xpos_entry, raw_probability=raw_xpos, np=self._np)
+                    feats_value = _entry_probability(feats_entry, raw_probability=raw_feats, np=self._np)
+                    xpos_result = _confidence_result(
+                        self, context, "xpos", xpos_value,
+                        entry=xpos_entry, reason=xpos_reason or (
+                            "unsupported_calibrator" if xpos_entry is not None and xpos_entry.calibrator != "logit_affine" else None
+                        ), resolution=xpos_resolution,
+                    )
+                    feats_result = _confidence_result(
+                        self, context, "feats", feats_value,
+                        entry=feats_entry, reason=feats_reason or (
+                            "unsupported_calibrator" if feats_entry is not None and feats_entry.calibrator != "logit_affine" else None
+                        ), resolution=feats_resolution,
+                    )
+
+                    lemma_entry, lemma_reason, lemma_resolution = _resolve_confidence_entry(
+                        self, context, "lemma", lemma_source_path[w]
+                    )
+                    lemma_logits = out["lemma"][0, wi]
+                    raw_lemma = float(calibrate.top1_confidence(lemma_logits, 1.0, np=self._np))
+                    lemma_value = _entry_probability(lemma_entry, lemma_logits, raw_lemma, np=self._np)
+                    lemma_result = _confidence_result(
+                        self, context, "lemma", lemma_value,
+                        entry=lemma_entry, reason=lemma_reason,
+                        source=lemma_source_path[w], resolution=lemma_resolution,
+                    )
+                    if calibration is None:
+                        # Preserve the historical flat fields as a compatibility view
+                        # of the structured registry result for v2-only activation.
+                        upos_prob[w] = upos_result.value
+                        lemma_prob[w] = lemma_result.value
+
+                    arc_row = out["arc"][0, wi, : nw + 1]
+                    selected_head = heads_w[wi]
+                    safe_arc_row = np.where(np.isfinite(arc_row), arc_row, -1.0e30)
+                    raw_head_vector = calibrate.temperature_softmax(safe_arc_row, 1.0, np=self._np)
+                    raw_head = float(raw_head_vector[selected_head])
+                    head_entry, head_reason, head_resolution = _resolve_confidence_entry(self, context, "head")
+                    head_value = _entry_probability(
+                        head_entry,
+                        safe_arc_row,
+                        raw_head,
+                        np=self._np,
+                        selected_index=selected_head,
+                    )
+                    head_result = _confidence_result(
+                        self, context, "head", head_value,
+                        entry=head_entry, reason=head_reason, resolution=head_resolution,
+                    )
+
+                    if selected_head == 0:
+                        relation_result = _confidence_result(
+                            self, context, "relation", None, reason="forced_root"
+                        )
+                    else:
+                        rel_logits = rel_scores[:, wi, selected_head]
+                        raw_relation = float(
+                            calibrate.top1_confidence(rel_logits, 1.0, np=self._np)
+                        )
+                        relation_entry, relation_reason, relation_resolution = _resolve_confidence_entry(
+                            self, context, "relation"
+                        )
+                        relation_value = _entry_probability(
+                            relation_entry, rel_logits, raw_relation, np=self._np
+                        )
+                        relation_result = _confidence_result(
+                            self, context, "relation", relation_value,
+                            entry=relation_entry, reason=relation_reason, resolution=relation_resolution,
+                        )
+                    results = {
+                        "upos": upos_result,
+                        "xpos": xpos_result,
+                        "feats": feats_result,
+                        "lemma": lemma_result,
+                        "head": head_result,
+                        "relation": relation_result,
+                    }
+                    decisions = tuple(
+                        decision
+                        for result in results.values()
+                        if (decision := _policy_decision(context.get("policy"), result)) is not None
+                    )
+                    token_confidences.append(
+                        TokenConfidence(
+                            index=w,
+                            upos=upos_result,
+                            xpos=xpos_result,
+                            feats=feats_result,
+                            lemma=lemma_result,
+                            head=head_result,
+                            relation=relation_result,
+                            policy=decisions,
+                        )
+                    )
+                    raw_components[w] = {
+                        "upos": raw_upos,
+                        "xpos": raw_xpos,
+                        "lemma": raw_lemma,
+                        "head": raw_head,
+                        **(
+                            {"relation": raw_relation}
+                            if selected_head != 0
+                            else {"forced_root": 1.0}
+                        ),
+                    }
         # exactly one root, even with truncation fallbacks in play
         roots = [i for i in range(n) if head[i] == 0]
+        repaired: set[int] = set()
         first = roots[0] if roots else 0
         for i in roots[1:]:
             head[i] = first + 1
             rel[i] = "parataxis"
+            repaired.add(i)
         if not roots:
             head[0], rel[0] = 0, "root"
+            repaired.add(0)
+        if context is not None:
+            known = {item.index: item for item in token_confidences}
+            normalized_confidences: list[TokenConfidence] = []
+            for index in range(n):
+                existing = known.get(index)
+                if existing is not None:
+                    if index in repaired:
+                        repaired_head = _confidence_result(
+                            self, context, "head", None, reason="post_decode_repair"
+                        )
+                        repaired_relation = _confidence_result(
+                            self, context, "relation", None, reason="post_decode_repair"
+                        )
+                        repaired_results = (
+                            existing.upos,
+                            existing.xpos,
+                            existing.feats,
+                            existing.lemma,
+                            repaired_head,
+                            repaired_relation,
+                        )
+                        decisions = tuple(
+                            decision
+                            for result in repaired_results
+                            if (decision := _policy_decision(context.get("policy"), result)) is not None
+                        )
+                        existing = replace(
+                            existing,
+                            head=repaired_head,
+                            relation=repaired_relation,
+                            policy=decisions,
+                        )
+                    normalized_confidences.append(existing)
+                    continue
+                unavailable = {
+                    name: _confidence_result(
+                        self, context, name, None, reason="partial_token"
+                    )
+                    for name in ("upos", "xpos", "feats", "lemma", "head", "relation")
+                }
+                decisions = tuple(
+                    decision
+                    for result in unavailable.values()
+                    if (decision := _policy_decision(context.get("policy"), result)) is not None
+                )
+                normalized_confidences.append(
+                    TokenConfidence(
+                        index=index,
+                        upos=unavailable["upos"],
+                        xpos=unavailable["xpos"],
+                        feats=unavailable["feats"],
+                        lemma=unavailable["lemma"],
+                        head=unavailable["head"],
+                        relation=unavailable["relation"],
+                        policy=decisions,
+                    )
+                )
+            token_confidences = normalized_confidences
         truncated = not all(analyzed)
         warning = (
             (
@@ -868,21 +1453,34 @@ class _JointModel:
                 "carry placeholders, not predictions"
             ),
         ) if truncated else ()
+        sentence_confidence = None
+        if context is not None:
+            sentence_confidence = _sentence_confidence(self, context, raw_components)
+            if repaired:
+                sentence_confidence = _unavailable_sentence_confidence(
+                    self, context, "post_decode_repair"
+                )
         return SentenceAnalysis(
             tokens=tuple(forms), upos=tuple(upos), xpos=tuple(xpos),
             feats=tuple(feats_from_xpos(x) for x in xpos),
             head=tuple(head), deprel=tuple(rel), lemma=tuple(lemma),
             lemma_resolved=tuple(resolved),
-            upos_prob=tuple(upos_prob) if calibration is not None else (),
-            lemma_script_prob=tuple(lemma_prob) if calibration is not None else (),
+            upos_prob=tuple(upos_prob) if calibration is not None or context is not None else (),
+            lemma_script_prob=tuple(lemma_prob) if calibration is not None or context is not None else (),
             lemma_source=tuple(lemma_source),
+            lemma_source_path=tuple(lemma_source_path) if context is not None else (),
             lemma_verified=tuple(verified),
             analyzed=tuple(analyzed),
             complete=not truncated,
             truncated=truncated,
             warnings=warning,
+            token_confidences=tuple(token_confidences) if context is not None else (),
+            sentence_confidence=sentence_confidence,
             receipt=self._receipt(
-                input_tokens=n, analyzed_tokens=sum(analyzed), truncated=truncated
+                input_tokens=n,
+                analyzed_tokens=sum(analyzed),
+                truncated=truncated,
+                context=context,
             ),
         )
 
@@ -1006,6 +1604,8 @@ def analyze_sentence(
     *,
     with_probs: bool = False,
     long_input: LongInputMode = "strict",
+    domain: str | None = None,
+    policy: AbstentionPolicy | None = None,
 ) -> SentenceAnalysis:
     """The full joint analysis of one pre-tokenized sentence (raises if not active).
 
@@ -1013,6 +1613,8 @@ def analyze_sentence(
     a loaded calibration. ``long_input`` is strict by default; partial mode returns
     explicit coverage status and warnings, while windowed mode reconciles complete-word
     overlap windows with one global observed-arc tree (see `_JointModel.analyze`)."""
+    if (domain is not None or policy is not None) and not with_probs:
+        raise ValueError("confidence domain/policy requires with_probs=True")
     model = active()
     if model is None:
         raise NeuralPipelineNotLoadedError(
@@ -1021,8 +1623,13 @@ def analyze_sentence(
     # Keep the default call byte-identical to the historical signature (positional
     # ``words`` only), so existing callers and test stubs are unaffected; only a
     # confidence request threads the keyword through.
-    if with_probs or long_input != "strict":
-        return model.analyze(words, with_probs=with_probs, long_input=long_input)
+    if with_probs or long_input != "strict" or domain is not None or policy is not None:
+        kwargs: dict[str, Any] = {"with_probs": with_probs, "long_input": long_input}
+        if domain is not None:
+            kwargs["domain"] = domain
+        if policy is not None:
+            kwargs["policy"] = policy
+        return model.analyze(words, **kwargs)
     return model.analyze(words)
 
 
@@ -1032,6 +1639,8 @@ def analyze_sentences(
     batch_size: int | None = None,
     with_probs: bool = False,
     long_input: LongInputMode = "strict",
+    domain: str | None = None,
+    policy: AbstentionPolicy | None = None,
 ) -> list[SentenceAnalysis]:
     """Full joint analyses of several pre-tokenized sentences (raises if not active).
 
@@ -1044,6 +1653,8 @@ def analyze_sentences(
     behaves as in `analyze_sentence` (calibration required). Strict and partial modes
     apply independently per sentence; windowed mode is always sequential, so batch
     chunking cannot change owner or global-tree reconciliation."""
+    if (domain is not None or policy is not None) and not with_probs:
+        raise ValueError("confidence domain/policy requires with_probs=True")
     model = active()
     if model is None:
         raise NeuralPipelineNotLoadedError(
@@ -1051,10 +1662,13 @@ def analyze_sentences(
         )
     sents = [list(s) for s in sentences]
     if batch_size is None:
-        if with_probs or long_input != "strict":
-            return [
-                model.analyze(s, with_probs=with_probs, long_input=long_input) for s in sents
-            ]
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs: dict[str, Any] = {"with_probs": with_probs, "long_input": long_input}
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            return [model.analyze(s, **kwargs) for s in sents]
         return [model.analyze(s) for s in sents]
     if batch_size < 1:
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
@@ -1064,13 +1678,15 @@ def analyze_sentences(
         # Keep the default call byte-identical to the historical signature (positional
         # ``batch`` only), so existing callers and test spies are unaffected; only a
         # confidence request threads the keyword through.
-        out.extend(
-            model.analyze_batch(
-                chunk, with_probs=with_probs, long_input=long_input
-            )
-            if with_probs or long_input != "strict"
-            else model.analyze_batch(chunk)
-        )
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs = {"with_probs": with_probs, "long_input": long_input}
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            out.extend(model.analyze_batch(chunk, **kwargs))
+        else:
+            out.extend(model.analyze_batch(chunk))
     return out
 
 

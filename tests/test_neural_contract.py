@@ -134,6 +134,97 @@ def test_receipt_round_trip_and_content_address_are_stable(tmp_path: Path) -> No
     assert restored == receipt
     assert restored.sha256 == hashlib.sha256(restored.to_json().encode("utf-8")).hexdigest()
     assert restored.to_dict()["runtime_versions"]["onnxruntime"] != ""
+    assert restored.schema_version == 1
+    assert "calibration_sha256" not in restored.to_dict()
+    assert "confidence_policy_sha256" not in restored.to_dict()
+
+
+def test_receipt_schema2_records_confidence_inputs_without_changing_schema1(
+    tmp_path: Path,
+) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    calibration_sha256 = "a" * 64
+    policy_sha256 = "b" * 64
+    receipt = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=3,
+        analyzed_tokens=3,
+        truncated=False,
+        calibration_sha256=calibration_sha256,
+        confidence_policy_sha256=policy_sha256,
+    )
+
+    assert receipt.schema_version == 2
+    assert receipt.calibration_sha256 == calibration_sha256
+    assert receipt.confidence_policy_sha256 == policy_sha256
+    assert receipt.to_dict()["calibration_sha256"] == calibration_sha256
+    assert AnalysisReceipt.from_json(receipt.to_json()) == receipt
+
+    plain = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=3,
+        analyzed_tokens=3,
+        truncated=False,
+    )
+    # Calibration and application policy are analysis inputs, not properties of the
+    # loaded ONNX runtime.  They remain exact in schema 2 without preventing the prior
+    # receipt from validating the same model/runtime during activation.
+    receipt.assert_same_runtime(plain)
+
+
+def test_receipt_rejects_malformed_confidence_hashes(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    with pytest.raises(ValueError, match="calibration_sha256"):
+        AnalysisReceipt.create(
+            manifest,
+            execution_providers=("CPUExecutionProvider",),
+            input_tokens=1,
+            analyzed_tokens=1,
+            truncated=False,
+            calibration_sha256="not-a-hash",
+        )
+    with pytest.raises(ValueError, match="lowercase"):
+        AnalysisReceipt.create(
+            manifest,
+            execution_providers=("CPUExecutionProvider",),
+            input_tokens=1,
+            analyzed_tokens=1,
+            truncated=False,
+            calibration_sha256="A" * 64,
+        )
+
+
+def test_receipt_schema_and_confidence_fields_cannot_disagree(tmp_path: Path) -> None:
+    _write_schema1_bundle(tmp_path)
+    manifest = ModelBundleManifest.load(tmp_path)
+    plain = AnalysisReceipt.create(
+        manifest,
+        execution_providers=("CPUExecutionProvider",),
+        input_tokens=1,
+        analyzed_tokens=1,
+        truncated=False,
+    ).to_dict()
+    plain["calibration_sha256"] = "a" * 64
+    with pytest.raises(ValueError, match="schema 1"):
+        AnalysisReceipt.from_dict(plain)
+
+    schema2 = dict(plain)
+    schema2["schema_version"] = 2
+    schema2["source_schema_version"] = 2
+    schema2.pop("confidence_policy_sha256", None)
+    with pytest.raises(ValueError, match="missing confidence"):
+        AnalysisReceipt.from_dict(schema2)
+
+    for invalid_schema in (True, 1.0, "1"):
+        invalid = dict(plain)
+        invalid.pop("calibration_sha256")
+        invalid["schema_version"] = invalid_schema
+        with pytest.raises(ValueError, match="must be an integer"):
+            AnalysisReceipt.from_dict(invalid)
 
 
 def test_receipt_reads_the_previous_coarse_backend_info_shape() -> None:
@@ -184,6 +275,8 @@ def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
         input_tokens=3,
         analyzed_tokens=3,
         truncated=False,
+        calibration_sha256="a" * 64,
+        confidence_policy_sha256="b" * 64,
     )
 
     class Candidate:

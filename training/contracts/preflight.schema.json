@@ -1,0 +1,154 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/training-preflight-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {"properties": {"ok": {"const": true}}},
+      "then": {
+        "properties": {
+          "issues": {"maxItems": 0},
+          "observed": {
+            "properties": {
+              "accelerator": {"$ref": "#/$defs/accelerator"},
+              "packages": {"minItems": 1},
+              "repository": {"$ref": "#/$defs/cleanRepository"}
+            }
+          }
+        }
+      },
+      "else": {"properties": {"issues": {"minItems": 1}}}
+    }
+  ],
+  "properties": {
+    "environment_definition_sha256": {"$ref": "#/$defs/sha256"},
+    "format": {"const": "pyaegean-training-preflight/1"},
+    "issues": {
+      "items": {"minLength": 1, "type": "string"},
+      "type": "array"
+    },
+    "observed": {"$ref": "#/$defs/observed"},
+    "ok": {"type": "boolean"},
+    "preflight_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "format",
+    "ok",
+    "environment_definition_sha256",
+    "observed",
+    "issues",
+    "preflight_sha256"
+  ],
+  "title": "pyaegean clean-machine training preflight receipt",
+  "type": "object",
+  "$defs": {
+    "accelerator": {
+      "additionalProperties": false,
+      "properties": {
+        "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
+        "cudnn_version": {"$ref": "#/$defs/exactVersion"},
+        "driver_version": {"$ref": "#/$defs/exactVersion"},
+        "gpu_names": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "kind": {"const": "cuda"},
+        "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": [
+        "kind",
+        "gpu_names",
+        "cuda_runtime_version",
+        "torch_cuda_version",
+        "cudnn_version",
+        "driver_version"
+      ],
+      "type": "object"
+    },
+    "cleanRepository": {
+      "$ref": "#/$defs/repository",
+      "properties": {"dirty": {"const": false}}
+    },
+    "exactVersion": {
+      "pattern": "^[0-9][0-9A-Za-z.!+_-]*$",
+      "type": "string"
+    },
+    "gitCommit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "observed": {
+      "additionalProperties": false,
+      "properties": {
+        "accelerator": {
+          "anyOf": [{"$ref": "#/$defs/accelerator"}, {"type": "null"}]
+        },
+        "packages": {
+          "items": {"$ref": "#/$defs/package"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "platform": {"$ref": "#/$defs/platform"},
+        "python": {"$ref": "#/$defs/python"},
+        "repository": {
+          "anyOf": [{"$ref": "#/$defs/repository"}, {"type": "null"}]
+        }
+      },
+      "required": ["python", "platform", "packages", "repository", "accelerator"],
+      "type": "object"
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "type": "string"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    },
+    "platform": {
+      "additionalProperties": false,
+      "properties": {
+        "libc": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {"minLength": 1, "type": "string"},
+            "version": {"$ref": "#/$defs/exactVersion"}
+          },
+          "required": ["name", "version"],
+          "type": "object"
+        },
+        "machine": {"minLength": 1, "type": "string"},
+        "release": {"minLength": 1, "type": "string"},
+        "system": {"minLength": 1, "type": "string"}
+      },
+      "required": ["system", "release", "machine", "libc"],
+      "type": "object"
+    },
+    "python": {
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {"minLength": 1, "type": "string"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["implementation", "version"],
+      "type": "object"
+    },
+    "repository": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "dirty": {"type": "boolean"},
+        "url": {"minLength": 1, "type": "string"}
+      },
+      "required": ["url", "commit", "dirty"],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  }
+}

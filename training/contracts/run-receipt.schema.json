@@ -1,0 +1,188 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/training-run-receipt-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "backbone": {"$ref": "#/$defs/backbone"},
+    "corpora": {
+      "items": {"$ref": "#/$defs/corpus"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "datasets": {
+      "items": {"$ref": "#/$defs/file"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "environment": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_inventory_complete": {"const": true},
+        "dependency_scope": {
+          "enum": ["training-dependency-closure", "full-environment"]
+        },
+        "lock": {"$ref": "#/$defs/file"},
+        "lock_sha256": {"$ref": "#/$defs/sha256"},
+        "preflight_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "packages": {
+          "items": {"$ref": "#/$defs/package"},
+          "minItems": 9,
+          "type": "array"
+        }
+      },
+      "required": [
+        "lock",
+        "lock_sha256",
+        "dependency_scope",
+        "dependency_inventory_complete",
+        "preflight_receipt_sha256",
+        "packages"
+      ],
+      "type": "object"
+    },
+    "format": {"const": "pyaegean-training-run-receipt/1"},
+    "hardware": {
+      "additionalProperties": false,
+      "properties": {
+        "compute_capability": {"$ref": "#/$defs/exactVersion"},
+        "cpu": {"minLength": 1, "type": "string"},
+        "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
+        "cudnn_version": {"$ref": "#/$defs/exactVersion"},
+        "driver_version": {"$ref": "#/$defs/exactVersion"},
+        "gpu": {"minLength": 1, "type": "string"},
+        "gpu_count": {"minimum": 1, "type": "integer"},
+        "gpu_memory_bytes": {"minimum": 1, "type": "integer"},
+        "machine": {"minLength": 1, "type": "string"},
+        "platform": {"minLength": 1, "type": "string"},
+        "precision": {"minLength": 1, "type": "string"},
+        "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": [
+        "platform",
+        "machine",
+        "cpu",
+        "gpu",
+        "gpu_count",
+        "gpu_memory_bytes",
+        "driver_version",
+        "cuda_runtime_version",
+        "torch_cuda_version",
+        "cudnn_version",
+        "compute_capability",
+        "precision"
+      ],
+      "type": "object"
+    },
+    "outputs": {
+      "items": {"$ref": "#/$defs/file"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "repository": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "dirty": {"const": false},
+        "url": {"minLength": 1, "type": "string"}
+      },
+      "required": ["url", "commit", "dirty"],
+      "type": "object"
+    },
+    "run": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "config": {"$ref": "#/$defs/file"},
+        "finished_utc": {"$ref": "#/$defs/timestamp"},
+        "id": {"minLength": 1, "type": "string"},
+        "seed": {"minimum": 0, "type": "integer"},
+        "started_utc": {"$ref": "#/$defs/timestamp"},
+        "status": {"const": "completed"}
+      },
+      "required": ["id", "status", "started_utc", "finished_utc", "command", "config", "seed"],
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "run",
+    "repository",
+    "environment",
+    "backbone",
+    "corpora",
+    "datasets",
+    "outputs",
+    "hardware",
+    "receipt_sha256"
+  ],
+  "title": "pyaegean completed training run receipt",
+  "type": "object",
+  "$defs": {
+    "backbone": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {"minLength": 1, "type": "string"},
+        "repository": {"minLength": 1, "type": "string"},
+        "revision": {"$ref": "#/$defs/gitCommit"},
+        "revision_type": {"const": "git-commit"},
+        "tokenizer_revision": {"$ref": "#/$defs/gitCommit"}
+      },
+      "required": ["repository", "revision", "tokenizer_revision", "revision_type", "license"],
+      "type": "object"
+    },
+    "corpus": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {"$ref": "#/$defs/gitCommit"},
+        "name": {"minLength": 1, "type": "string"},
+        "repository": {"minLength": 1, "type": "string"}
+      },
+      "required": ["name", "repository", "commit"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 0, "type": "integer"},
+        "path": {
+          "minLength": 1,
+          "not": {"pattern": "(^/|\\\\|(^|/)\\.\\.?(/|$))"},
+          "type": "string"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "bytes", "sha256"],
+      "type": "object"
+    },
+    "exactVersion": {
+      "pattern": "^[0-9][0-9A-Za-z.!+_-]*$",
+      "type": "string"
+    },
+    "gitCommit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "type": "string"},
+        "version": {"pattern": "^[0-9][0-9A-Za-z.!+_-]*$", "type": "string"}
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "timestamp": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+      "type": "string"
+    }
+  }
+}

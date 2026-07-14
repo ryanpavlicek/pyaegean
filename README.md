@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.46.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.47.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -77,8 +77,9 @@ we still *cannot read*: **Linear A** (Minoan) and **Cypro-Minoan**.
 full **Greek NLP pipeline**, the analytical methods of the [Linear A Research
 Workbench](https://github.com/ryanpavlicek/linearaworkbench) ported to Python, and a
 multi-provider **AI layer**. Generative results are labeled exploratory and carry their provider,
-model, prompt, and any grounding sources; neural confidence is available where it has been
-calibrated.
+model, prompt, and any grounding sources. Neural analyses can opt into typed, scoped
+confidence with explicit unavailable reasons; empirical source/task calibration and review
+thresholds remain evidence-gated.
 The core installs with **zero heavy dependencies** and imports instantly; heavier
 backends (models, treebanks, lexica) are opt-in and fetched to a local cache, never bundled.
 
@@ -214,7 +215,8 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) is the record of
 what each release shipped. Current work is focused on:
 
-- continuing the model-independent Greek foundations: source-aware confidence and abstention,
+- completing the empirical source/task calibration and caller-owned abstention gates on the
+  model-independent Greek foundations, alongside
   bounded-memory document analysis, optional
   spaCy/Stanza/CLTK adapters, explicit annotation and domain profiles, and shared versioned
   training/inference preprocessing;
@@ -261,7 +263,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.46.0},
+  version = {0.47.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

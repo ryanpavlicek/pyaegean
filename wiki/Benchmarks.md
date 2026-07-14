@@ -79,25 +79,28 @@ bounds (LAS 84.93, UAS 89.62) exceed the cited 83.98 / 88.20 rows. The cross-too
 sources for the comparison column are cited in
 [Cross-tool comparison](#cross-tool-comparison-with-citations).
 
-## Calibrated confidence
+## Legacy aggregate calibration
 
-The pipeline's opt-in per-token confidence (`use_calibration()` +
-`pipeline(text, with_confidence=True)`) is temperature-scaled, never raw softmax. One
-temperature per head, fitted on the UD Perseus **dev** fold only; quality measured as
-15-bin expected calibration error:
+The published schema-1 calibration remains available through `use_calibration()` and the
+legacy flat confidence fields. It is temperature-scaled, never raw softmax, and is an
+aggregate UPOS/composed-lemma proxy for `grc-joint-v3`, not source-, domain-, or
+task-complete evidence. One temperature per head was fitted on the UD Perseus **dev** fold:
 
 | Head | Temperature | Dev ECE (raw → calibrated) | Test ECE (calibrated) |
 | --- | --- | --- | --- |
 | UPOS | 1.34 | 0.94% → 0.19% | 1.11% (raw was 1.95%) |
 | Lemma | 0.66 | 8.77% → 5.39% | 6.29% |
 
-The lemma figure calibrates the edit-script head's probability against
-composed-lemma-vs-gold correctness (a documented proxy) over the model's full lemma
-composition, including its internal training-form lookup; lemmas resolved by an
-offline lexicon backend carry no model confidence (the evidence class speaks for
-them). The calibration is fitted on literary prose, so the genre boundary applies
-to the confidence exactly as to the accuracy. Full protocol in the canonical `docs/benchmarks.md`; evidence in
+The lemma figure calibrates the edit-script head against composed-lemma-vs-gold correctness
+(a documented proxy); offline lexicon, rule, seed, and paradigm outputs carry no neural
+confidence. These are literary-prose measurements for this artifact, not an OOD detector.
+Full protocol is in canonical `docs/benchmarks.md`; evidence is in
 `training/results/calibration-2026-07-11.json`.
+
+The additive typed API (`token_confidence`, `sentence_confidence`) carries task/source/domain
+scope and explicit unavailable reasons. A schema-2 registry, empirical coverage-risk curves,
+and caller-owned abstention thresholds remain pending a fresh development-only inference
+gate. No bundled threshold is implied.
 
 ## Out of domain: Koine / New Testament
 

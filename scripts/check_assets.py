@@ -29,7 +29,7 @@ import sys
 import urllib.error
 import urllib.request
 
-from aegean.data import _REMOTE, _resolve_url
+from aegean.data import _REMOTE, _resolve_url, _urlopen_verified
 
 _UA = "pyaegean-asset-check (+https://github.com/ryanpavlicek/pyaegean)"
 _TIMEOUT = 60
@@ -67,7 +67,7 @@ def _resolves(url: str) -> tuple[bool, str]:
         url, headers={"User-Agent": _UA, "Range": "bytes=0-0"}
     )
     try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:  # noqa: S310 (pinned hosts)
+        with _urlopen_verified(req, timeout=_TIMEOUT) as r:
             return 200 <= r.status < 400, str(r.status)
     except urllib.error.HTTPError as e:
         # 206 Partial Content and 416 Range Not Satisfiable both prove the URL resolves.
@@ -81,7 +81,7 @@ def _resolves(url: str) -> tuple[bool, str]:
 def _sha256_of_url(url: str) -> str:
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     h = hashlib.sha256()
-    with urllib.request.urlopen(req, timeout=_TIMEOUT) as r:  # noqa: S310 (pinned hosts)
+    with _urlopen_verified(req, timeout=_TIMEOUT) as r:
         for block in iter(lambda: r.read(1 << 20), b""):
             h.update(block)
     return h.hexdigest()

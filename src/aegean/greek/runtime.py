@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from ..core.model import Token
+    from .confidence import AbstentionPolicy
     from .joint import LongInputMode, SentenceAnalysis, _JointModel
     from .neural_contract import AnalysisReceipt
     from .pipeline import TokenRecord
@@ -318,6 +319,8 @@ class GreekPipeline:
         *,
         parse: bool = False,
         with_confidence: bool = False,
+        confidence_domain: str | None = None,
+        confidence_policy: AbstentionPolicy | None = None,
         long_input: Literal["strict", "partial", "windowed"] = "strict",
         document_id: str = "input",
         sentence_policy: str = "default",
@@ -332,7 +335,23 @@ class GreekPipeline:
         """
         from .pipeline import _analyze_bound
 
+        if confidence_policy is not None and not with_confidence:
+            raise ValueError("a confidence policy requires with_confidence=True")
+        if confidence_domain is not None and not with_confidence:
+            raise ValueError("a confidence domain requires with_confidence=True")
         with _bind(self):
+            if confidence_domain is not None or confidence_policy is not None:
+                return _analyze_bound(
+                    text,
+                    parse=parse,
+                    with_confidence=with_confidence,
+                    confidence_domain=confidence_domain,
+                    confidence_policy=confidence_policy,
+                    long_input=long_input,
+                    document_id=document_id,
+                    sentence_policy=sentence_policy,
+                    segmenter=segmenter,
+                )
             return _analyze_bound(
                 text,
                 parse=parse,
@@ -349,6 +368,8 @@ class GreekPipeline:
         *,
         parse: bool = False,
         with_confidence: bool = False,
+        confidence_domain: str | None = None,
+        confidence_policy: AbstentionPolicy | None = None,
         long_input: Literal["strict", "partial", "windowed"] = "strict",
         document_id: str = "input",
         sentence_policy: str = "default",
@@ -361,7 +382,24 @@ class GreekPipeline:
         """
         from .pipeline import _analyze_bound
 
+        if confidence_policy is not None and not with_confidence:
+            raise ValueError("a confidence policy requires with_confidence=True")
+        if confidence_domain is not None and not with_confidence:
+            raise ValueError("a confidence domain requires with_confidence=True")
         with _bind(self):
+            if confidence_domain is not None or confidence_policy is not None:
+                return _analyze_bound(
+                    "",
+                    parse=parse,
+                    with_confidence=with_confidence,
+                    confidence_domain=confidence_domain,
+                    confidence_policy=confidence_policy,
+                    long_input=long_input,
+                    document_id=document_id,
+                    typed_tokens=tokens,
+                    sentence_policy=sentence_policy,
+                    segmenter=segmenter,
+                )
             return _analyze_bound(
                 "",
                 parse=parse,
@@ -379,11 +417,25 @@ class GreekPipeline:
         *,
         with_probs: bool = False,
         long_input: LongInputMode = "strict",
+        confidence_domain: str | None = None,
+        confidence_policy: AbstentionPolicy | None = None,
     ) -> SentenceAnalysis:
         """Analyze one pre-tokenized sentence with this instance's neural backend."""
         from .joint import analyze_sentence
 
+        if confidence_policy is not None and not with_probs:
+            raise ValueError("a confidence policy requires with_probs=True")
+        if confidence_domain is not None and not with_probs:
+            raise ValueError("a confidence domain requires with_probs=True")
         with _bind(self):
+            if confidence_domain is not None or confidence_policy is not None:
+                return analyze_sentence(
+                    words,
+                    with_probs=with_probs,
+                    long_input=long_input,
+                    domain=confidence_domain,
+                    policy=confidence_policy,
+                )
             return analyze_sentence(words, with_probs=with_probs, long_input=long_input)
 
     def analyze_sentences(
@@ -393,11 +445,26 @@ class GreekPipeline:
         batch_size: int | None = None,
         with_probs: bool = False,
         long_input: LongInputMode = "strict",
+        confidence_domain: str | None = None,
+        confidence_policy: AbstentionPolicy | None = None,
     ) -> list[SentenceAnalysis]:
         """Analyze pre-tokenized sentences with this instance's neural backend."""
         from .joint import analyze_sentences
 
+        if confidence_policy is not None and not with_probs:
+            raise ValueError("a confidence policy requires with_probs=True")
+        if confidence_domain is not None and not with_probs:
+            raise ValueError("a confidence domain requires with_probs=True")
         with _bind(self):
+            if confidence_domain is not None or confidence_policy is not None:
+                return analyze_sentences(
+                    sentences,
+                    batch_size=batch_size,
+                    with_probs=with_probs,
+                    long_input=long_input,
+                    domain=confidence_domain,
+                    policy=confidence_policy,
+                )
             return analyze_sentences(
                 sentences,
                 batch_size=batch_size,

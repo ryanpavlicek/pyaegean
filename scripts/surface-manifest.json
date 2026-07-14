@@ -1382,6 +1382,34 @@
       }
     },
     {
+      "id": "typed-confidence-abstention",
+      "since": "0.47.0",
+      "python_api": "aegean.greek.use_calibration_registry",
+      "summary": "Scoped typed confidence with explicit unavailable reasons and caller-owned abstention thresholds.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "typed confidence needs the neural logits and a fitted registry; the browser does not load either."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the read/analysis server does not load the neural model or assume a caller's review policy."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "empirical source/task calibration remains behind the fresh development-inference gate."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the TUI retains its legacy confidence display and does not invent application thresholds."
+        }
+      }
+    },
+    {
       "id": "paradigm-backend",
       "since": "0.37.0",
       "python_api": "aegean.greek.use_paradigms",

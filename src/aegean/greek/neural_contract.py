@@ -30,6 +30,7 @@ __all__ = [
 ]
 
 _SCHEMA_VERSION = 1
+_RECEIPT_SCHEMA_VERSION = 2
 _DATASET = "grc-joint"
 _V3_MODEL_ID = "grc-joint-v3"
 _V3_ASSET_SHA256 = "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e"
@@ -373,6 +374,19 @@ def _installed_version(distribution: str) -> str:
         return "not-installed"
 
 
+def _receipt_sha256(value: Any, field: str) -> str | None:
+    """Validate an optional lowercase content hash carried by a receipt."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"analysis receipt {field} must be a SHA-256 string or null")
+    if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+        raise ValueError(
+            f"analysis receipt {field} must be a lowercase 64-character hexadecimal digest"
+        )
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class AnalysisReceipt:
     """Stable, content-addressed provenance for one joint sentence analysis."""
@@ -400,6 +414,22 @@ class AnalysisReceipt:
     analyzed_tokens: int
     truncated: bool
     windowed: bool
+    calibration_sha256: str | None = None
+    confidence_policy_sha256: str | None = None
+
+    def __post_init__(self) -> None:
+        calibration = _receipt_sha256(self.calibration_sha256, "calibration_sha256")
+        policy = _receipt_sha256(
+            self.confidence_policy_sha256, "confidence_policy_sha256"
+        )
+        if self.schema_version == _SCHEMA_VERSION:
+            if calibration is not None or policy is not None:
+                raise ValueError("analysis receipt schema 1 cannot carry confidence hashes")
+        elif self.schema_version == _RECEIPT_SCHEMA_VERSION:
+            if calibration is None and policy is None:
+                raise ValueError("analysis receipt schema 2 requires a confidence hash")
+        else:
+            raise ValueError(f"unsupported analysis receipt schema {self.schema_version!r}")
 
     @classmethod
     def create(
@@ -411,11 +441,22 @@ class AnalysisReceipt:
         analyzed_tokens: int,
         truncated: bool,
         windowed: bool = False,
+        calibration_sha256: str | None = None,
+        confidence_policy_sha256: str | None = None,
     ) -> "AnalysisReceipt":
         """Build a receipt from a validated bundle and the live execution session."""
+        calibration_sha256 = _receipt_sha256(calibration_sha256, "calibration_sha256")
+        confidence_policy_sha256 = _receipt_sha256(
+            confidence_policy_sha256, "confidence_policy_sha256"
+        )
+        receipt_schema = (
+            _RECEIPT_SCHEMA_VERSION
+            if calibration_sha256 is not None or confidence_policy_sha256 is not None
+            else _SCHEMA_VERSION
+        )
         return cls(
-            schema_version=_SCHEMA_VERSION,
-            source_schema_version=_SCHEMA_VERSION,
+            schema_version=receipt_schema,
+            source_schema_version=receipt_schema,
             model_id=manifest.model_id,
             dataset=manifest.dataset,
             asset_sha256=manifest.asset_sha256,
@@ -444,11 +485,13 @@ class AnalysisReceipt:
             analyzed_tokens=analyzed_tokens,
             truncated=truncated,
             windowed=windowed,
+            calibration_sha256=calibration_sha256,
+            confidence_policy_sha256=confidence_policy_sha256,
         )
 
     def to_dict(self) -> dict[str, Any]:
         """Return the receipt as JSON-compatible values in a stable schema."""
-        return {
+        value: dict[str, Any] = {
             "schema_version": self.schema_version,
             "source_schema_version": self.source_schema_version,
             "model_id": self.model_id,
@@ -473,6 +516,10 @@ class AnalysisReceipt:
             "truncated": self.truncated,
             "windowed": self.windowed,
         }
+        if self.schema_version >= _RECEIPT_SCHEMA_VERSION:
+            value["calibration_sha256"] = self.calibration_sha256
+            value["confidence_policy_sha256"] = self.confidence_policy_sha256
+        return value
 
     def to_json(self) -> str:
         """Serialize canonically for storage, comparison, or hashing."""
@@ -521,10 +568,23 @@ class AnalysisReceipt:
                 truncated=False,
                 windowed=False,
             )
-        if schema != _SCHEMA_VERSION:
+        if isinstance(schema, bool) or not isinstance(schema, int):
+            raise ValueError("analysis receipt schema_version must be an integer")
+        if schema not in (_SCHEMA_VERSION, _RECEIPT_SCHEMA_VERSION):
             raise ValueError(
-                f"unsupported analysis receipt schema {schema!r}; expected {_SCHEMA_VERSION}"
+                "unsupported analysis receipt schema "
+                f"{schema!r}; expected {_SCHEMA_VERSION} or {_RECEIPT_SCHEMA_VERSION}"
             )
+        confidence_fields = {"calibration_sha256", "confidence_policy_sha256"}
+        if schema == _SCHEMA_VERSION and confidence_fields.intersection(value):
+            raise ValueError("analysis receipt schema 1 cannot carry confidence hash fields")
+        if schema == _RECEIPT_SCHEMA_VERSION:
+            missing = confidence_fields - set(value)
+            if missing:
+                raise ValueError(
+                    "analysis receipt schema 2 missing confidence field(s): "
+                    + ", ".join(sorted(missing))
+                )
         runtimes = value.get("runtime_versions")
         if not isinstance(runtimes, Mapping):
             raise ValueError("analysis receipt runtime_versions must be an object")
@@ -533,8 +593,8 @@ class AnalysisReceipt:
             raise ValueError("analysis receipt execution_providers must be a list")
         try:
             return cls(
-                schema_version=_SCHEMA_VERSION,
-                source_schema_version=int(value.get("source_schema_version", _SCHEMA_VERSION)),
+                schema_version=int(schema),
+                source_schema_version=int(value.get("source_schema_version", schema)),
                 model_id=str(value["model_id"]),
                 dataset=str(value["dataset"]),
                 asset_sha256=(
@@ -576,6 +636,19 @@ class AnalysisReceipt:
                 analyzed_tokens=int(value["analyzed_tokens"]),
                 truncated=bool(value["truncated"]),
                 windowed=bool(value["windowed"]),
+                calibration_sha256=(
+                    _receipt_sha256(value.get("calibration_sha256"), "calibration_sha256")
+                    if schema == _RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                confidence_policy_sha256=(
+                    _receipt_sha256(
+                        value.get("confidence_policy_sha256"),
+                        "confidence_policy_sha256",
+                    )
+                    if schema == _RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"invalid analysis receipt: {exc}") from exc

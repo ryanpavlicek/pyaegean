@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.46.0.** The CoNLL-U and newer Greek pipeline controls are
+> **Available in v0.47.0.** The CoNLL-U and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.46.0
+aegean --version                # pyaegean 0.47.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -341,7 +341,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
-| `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
+| `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --confidence-domain --confidence-policy --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
 | `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
@@ -356,6 +356,12 @@ named `prose`, `verse`, `inscription`, or `papyrus` rules. Add `--rich` (only wi
 `--sentences`) to see exact source spans, stable policy IDs, and provenance; use
 `--json --rich` for the schema-1 object. The pipeline accepts the same policy
 option, and its terminal records carry the boundary metadata.
+
+On `pipeline`, `--confidence-domain TEXT` labels the requested evidence scope and
+`--confidence-policy PATH` applies caller-supplied abstention thresholds; both require
+`--confidence`. Its JSON rows return explicit unavailable reasons. `explain --confidence`
+continues to render the legacy aggregate confidence note. No default threshold or automatic
+OOD label is provided.
 
 ### Stages that work immediately
 

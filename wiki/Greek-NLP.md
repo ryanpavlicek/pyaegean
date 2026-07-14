@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.46.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.47.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 
@@ -117,6 +117,7 @@ Each `TokenRecord` is a dataclass with these fields:
 | `upos` | UD coarse part of speech |
 | `lemma` | the lemma |
 | `lemma_source` | exact lemma provenance: `attested`, `neural_lookup`, `neural_edit`, generic `neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or human-corrected `user` |
+| `lemma_source_path` | exact neural composition path: `lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback` (when typed neural confidence is requested) |
 | `lemma_resolved` | whether a real lemma decision exists, rather than a surface fallback |
 | `lemma_verified` | whether a human reviewer explicitly verified or corrected it |
 | `review_recommended` | whether the lemma should be routed to review |
@@ -125,6 +126,9 @@ Each `TokenRecord` is a dataclass with these fields:
 | `relation` | dependency relation (only when parsed) |
 | `xpos` | language-specific tag (neural pipeline only) |
 | `feats` | UD FEATS string (neural pipeline only) |
+| `upos_confidence`, `lemma_confidence` | legacy flat confidence fields retained for compatibility; they are not source- or domain-scoped |
+| `token_confidence` | typed per-task confidence records (UPOS, XPOS, FEATS, lemma, head, relation), each available value or explicit unavailable reason |
+| `sentence_confidence` | typed sentence-level aggregate, component names, evidence scope, and optional policy decision |
 | `neural_analyzed` | per-token neural coverage (`False` only for a partial-mode placeholder; `None` offline) |
 | `analysis_complete`, `analysis_warning` | sentence-level neural coverage and any partial-mode warning |
 | `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
@@ -384,7 +388,7 @@ known. Two explicit alternatives serve different needs:
 - `long_input="partial"` keeps the model's fitting prefix and marks every uncovered token
   as a placeholder. Use it for inspection, never as an apparently complete parse.
 - `long_input="windowed"` analyzes supported long sentences in overlapping whole-word
-  windows. Each token's tags, lemma script, and calibrated confidence come from the window
+  windows. Each token's tags, lemma script, and any typed confidence evidence come from the window
   where the token is farthest from a boundary. Candidate dependency arcs and relations come
   from that same owner window, are mapped back to sentence indexes, and are decoded once as
   a sentence-global single-root tree. The result warns that distant token pairs which never
@@ -469,21 +473,44 @@ model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data
 leakage controls, and the comparison tables are documented in
 [Benchmarks](Benchmarks).
 
-### Calibrated confidence (opt-in)
+### Confidence, scope, and abstention (opt-in)
 
-The neural pipeline can attach a per-token confidence to its UPOS and lemma
-predictions: `greek.use_calibration()` loads the shipped calibration, then
-`greek.pipeline(text, with_confidence=True)` (CLI: `--confidence` on `pipeline` and
-`explain`). The number is temperature-scaled, never the raw softmax (uncalibrated
-probabilities are deliberately not exposed), with the calibration quality measured as
-expected calibration error: UPOS 1.11% and lemma 6.29% on the UD Perseus test fold
-(protocol, table, and caveats in [Benchmarks](Benchmarks#calibrated-confidence)).
-Lemmas resolved by an offline lexicon backend carry no model confidence: their
-evidence class (`attested`/`seed`) speaks for them. Within the neural pipeline the
-calibrated lemma confidence deliberately covers the model's full lemma composition,
-including its internal training-form lookup: composed-lemma correctness is exactly
-what the calibration was fitted on. The calibration is fitted on literary prose, so
-the genre boundary on the accuracy numbers applies to the confidence too.
+Confidence is optional model evidence, not a reading or a guarantee. Pass
+`with_confidence=True` to `greek.pipeline()` (or `GreekPipeline.analyze()`), then inspect
+the additive `token_confidence` and `sentence_confidence` values. Each typed
+`ConfidenceResult` names its task, model, source path, optional domain, calibration hash,
+sample count, measured ECE/Brier value, and either a value in `[0, 1]` or an explicit
+unavailable reason. Missing confidence is never converted to zero. Stable reasons include
+`missing_calibration`, `unsupported_task`, `unsupported_source`, `unsupported_domain`,
+`no_threshold_for_task`, and `confidence_unavailable`.
+
+The old `upos_confidence` and `lemma_confidence` floats remain as compatibility fields;
+they do not carry the typed scope and must not be interpreted as source- or domain-specific.
+For a scoped result, load a schema-2 `CalibrationRegistry` (or activate the legacy
+`use_calibration()` aggregate as an explicitly unscoped fallback) and provide the optional
+`confidence_domain=` value. Registry resolution prefers an exact model/task/source/domain
+entry; an explicitly marked broader entry is reported as a fallback. Offline lexicon, rule,
+seed, and paradigm lemmas do not borrow neural confidence. `lemma_source_path` records the
+composition path (`lookup_form_upos`, `lookup_form`, `edit_script`,
+`lookup_lower_fallback`, or `identity_fallback`) so a calibration can describe the final
+decision rather than a hidden intermediate score.
+
+Development fitting helpers are available as `fit_temperature(logits, correct)` for a
+multiclass top-1 temperature and `fit_logit_affine(probs, correct)` for a monotone
+`sigmoid(slope * logit(p) + intercept)` calibrator. They only fit parameters from the
+caller-provided development pairs; calling either helper does not create evidence for a
+domain, choose a threshold, or validate a released model.
+
+Abstention is caller policy, not a bundled model claim. Supply an immutable,
+caller-owned `AbstentionPolicy` through `confidence_policy=` with task thresholds you have
+chosen; each decision is `accept`, `review`, or `unavailable` and carries the canonical
+`policy_sha256`. The `greek pipeline` CLI command mirrors these names as
+`--confidence-domain` and `--confidence-policy PATH`. No default thresholds or
+out-of-domain warning are bundled:
+empirical source/task calibration and coverage-risk gates still require a fresh,
+development-only inference pass. When a registry or policy is used, the neural
+`AnalysisReceipt` is schema 2 and records the calibration/policy hashes; schema 1 receipts
+remain valid for confidence-free or legacy analyses.
 
 ### GPU execution and batching
 

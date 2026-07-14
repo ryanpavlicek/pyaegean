@@ -14,10 +14,18 @@ byte-identical output.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from aegean.greek import documentary as D
 from aegean.greek import joint, paradigms
+from aegean.greek.confidence import (
+    AbstentionPolicy,
+    ConfidenceResult,
+    SentenceConfidence,
+    TokenConfidence,
+)
 from aegean.greek.joint import SentenceAnalysis
 from aegean.greek.lemmatize import LemmaSource
 from aegean.greek.paradigms import ParadigmLexicon
@@ -56,6 +64,46 @@ def _analysis(
         deprel=tuple("root" if i == 0 else "dep" for i in range(n)),
         lemma=tuple(lemma),
         lemma_resolved=tuple(resolved),
+    )
+
+
+def _confidence(task: str) -> ConfidenceResult:
+    return ConfidenceResult(
+        task=task,
+        value=0.8,
+        calibration_id="a" * 64,
+        scope="exact",
+        model="test-model",
+        source="neural",
+        domain="papyri",
+        n=10,
+        ece=0.1,
+    )
+
+
+def _with_confidence(ana: SentenceAnalysis) -> SentenceAnalysis:
+    tasks = ("upos", "xpos", "feats", "lemma")
+    policy = AbstentionPolicy({task: 0.5 for task in (*tasks, "sentence")})
+    tokens = tuple(
+        TokenConfidence(
+            index=index,
+            upos=_confidence("upos"),
+            xpos=_confidence("xpos"),
+            feats=_confidence("feats"),
+            lemma=_confidence("lemma"),
+            policy=tuple(policy.decide(task, 0.8) for task in tasks),
+        )
+        for index in range(len(ana.tokens))
+    )
+    sentence_result = _confidence("sentence")
+    return replace(
+        ana,
+        token_confidences=tokens,
+        sentence_confidence=SentenceConfidence(
+            sentence_result,
+            ("upos", "xpos", "lemma"),
+            policy.decide("sentence", sentence_result.value),
+        ),
     )
 
 
@@ -160,8 +208,6 @@ def test_reconcile_rerenders_feats_from_the_corrected_postag():
 def test_reconcile_clears_stale_upos_probability_on_a_relabel():
     """A calibrated ``upos_prob`` is a model prediction; a deterministic relabel clears it to
     None (the reconciled label is not a calibrated model output)."""
-    from dataclasses import replace
-
     ana = replace(
         _analysis(
             tokens=["καὶ", "λόγου"], upos=["X", "NOUN"],
@@ -172,6 +218,31 @@ def test_reconcile_clears_stale_upos_probability_on_a_relabel():
     r = D.reconcile_analysis(ana, aggressive=False)
     assert r.upos_prob[0] is None      # relabeled token: cleared
     assert r.upos_prob[1] == 0.99      # untouched token: preserved
+
+
+def test_reconcile_invalidates_typed_task_and_sentence_confidence():
+    ana = _with_confidence(
+        _analysis(
+            tokens=["καὶ", "λόγου"],
+            upos=["X", "NOUN"],
+            xpos=["b--------", "n-s---mg-"],
+            lemma=["καὶ", "λόγος"],
+            resolved=[True, True],
+        )
+    )
+    result = D.reconcile_analysis(ana)
+    changed = result.token_confidences[0]
+    untouched = result.token_confidences[1]
+    for task in ("upos", "xpos", "feats"):
+        confidence = getattr(changed, task)
+        assert confidence.value is None
+        assert confidence.reason == "documentary_reconciliation"
+        decision = next(item for item in changed.policy if item.task == task)
+        assert decision.action == "unavailable" and decision.confidence is None
+    assert changed.lemma == ana.token_confidences[0].lemma
+    assert untouched == ana.token_confidences[1]
+    assert result.sentence_confidence is not None
+    assert result.sentence_confidence.result.reason == "documentary_reconciliation"
 
 
 def test_reconcile_no_op_returns_same_object():
@@ -218,6 +289,29 @@ def test_rescue_never_overrides_a_resolved_lemma():
     assert r.lemma_resolved == (True, False)  # rescue does not flip the honesty flag -> never NEURAL
 
 
+def test_rescue_invalidates_typed_lemma_and_sentence_confidence():
+    ana = _with_confidence(
+        _analysis(
+            tokens=["λόγος", "κυρίου"],
+            upos=["NOUN", "NOUN"],
+            xpos=["n-s---mn-", "n-s---mg-"],
+            lemma=["λόγος", "κυρίου"],
+            resolved=[True, False],
+        )
+    )
+    result = D.rescue_analysis(ana)
+    assert result.token_confidences[0] == ana.token_confidences[0]
+    rescued = result.token_confidences[1]
+    assert rescued.lemma is not None
+    assert rescued.lemma.value is None
+    assert rescued.lemma.reason == "offline_lemma_override"
+    assert rescued.lemma.source == "seed"
+    lemma_policy = next(item for item in rescued.policy if item.task == "lemma")
+    assert lemma_policy.action == "unavailable" and lemma_policy.confidence is None
+    assert result.sentence_confidence is not None
+    assert result.sentence_confidence.result.reason == "offline_lemma_override"
+
+
 def test_rescue_no_op_when_nothing_unresolved_or_no_flags():
     """Nothing to rescue → the analysis is returned unchanged; and with no lemma_resolved
     tuple (a model that does not report it) nothing can fire."""
@@ -225,9 +319,56 @@ def test_rescue_no_op_when_nothing_unresolved_or_no_flags():
         tokens=["κυρίου"], upos=["NOUN"], xpos=["n-s---mg-"], lemma=["κύριος"], resolved=[True]
     )
     assert D.rescue_analysis(ana) is ana
-    from dataclasses import replace
     no_flag = replace(ana, lemma_resolved=())
     assert D.rescue_analysis(no_flag) is no_flag
+
+
+def test_documentary_wrapper_forwards_confidence_scope_and_policy():
+    analysis = _analysis(
+        tokens=["λόγος"],
+        upos=["NOUN"],
+        xpos=["n-s---mn-"],
+        lemma=["λόγος"],
+        resolved=[True],
+    )
+    calls: list[tuple[str | None, AbstentionPolicy | None]] = []
+
+    class ConfidenceModel:
+        def analyze(
+            self,
+            words: list[str],
+            *,
+            with_probs: bool,
+            long_input: str,
+            domain: str | None,
+            policy: AbstentionPolicy | None,
+        ) -> SentenceAnalysis:
+            assert words == ["λόγος"] and with_probs and long_input == "strict"
+            calls.append((domain, policy))
+            return analysis
+
+        def analyze_batch(
+            self,
+            sentences: list[list[str]],
+            *,
+            with_probs: bool,
+            long_input: str,
+            domain: str | None,
+            policy: AbstentionPolicy | None,
+        ) -> list[SentenceAnalysis]:
+            assert sentences == [["λόγος"]] and with_probs and long_input == "strict"
+            calls.append((domain, policy))
+            return [analysis]
+
+    policy = AbstentionPolicy({"lemma": 0.5})
+    wrapped = D._DocumentaryModel(ConfidenceModel())
+    assert wrapped.analyze(
+        ["λόγος"], with_probs=True, domain="papyri", policy=policy
+    ) is analysis
+    assert wrapped.analyze_batch(
+        [["λόγος"]], with_probs=True, domain="papyri", policy=policy
+    ) == [analysis]
+    assert calls == [("papyri", policy), ("papyri", policy)]
 
 
 # --- default-off byte-identity + toggle lifecycle (through the wrapper) --------------------

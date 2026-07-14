@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available in v0.46.0.** Typed source alignment, typed editorial form states,
+> **Available in v0.47.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
@@ -82,6 +82,23 @@ identity: the baseline uses `pyaegean-punctuation-v1`, while a neural instance c
 the value from its `ModelBundleManifest` (`pretokenized` for the published
 `grc-joint-v3` model). Neither value is the document splitter. The neural model
 receives already split word lists and never chooses document boundaries.
+
+### Confidence is a separate evidence layer
+
+`aegean.greek.confidence` is a standard-library-only contract shared by the neural
+pipeline, tabular views, and the CLI. A schema-2 `CalibrationRegistry` is keyed by model,
+task, lemma source path, and optional domain; exact entries win and explicitly marked
+fallback entries are reported as fallback rather than masquerading as exact evidence.
+`TokenConfidence` and `SentenceConfidence` hold either a scoped value (with calibration
+hash, sample count, and measured ECE/Brier support) or a stable unavailable reason. The
+legacy flat confidence fields remain for compatibility and are not retrofitted with scope.
+
+`AbstentionPolicy` is caller-owned: thresholds are supplied by the application and its
+canonical SHA-256 is attached to `accept`/`review`/`unavailable` decisions. The runtime
+ships no default threshold and does not infer an OOD warning. When a calibration registry
+or policy participates in neural analysis, schema-2 `AnalysisReceipt` output records the
+calibration and policy hashes; the receipt records provenance but does not authorize an
+empirical calibration claim.
 
 ---
 

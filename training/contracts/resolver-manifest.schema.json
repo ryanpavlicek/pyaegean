@@ -1,0 +1,56 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/training-resolver-manifest-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "direct_roots": {
+      "items": {"$ref": "#/$defs/packageName"},
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "format": {"const": "pyaegean-training-resolver-manifest/1"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "resolved_packages": {
+      "items": {"$ref": "#/$defs/package"},
+      "minItems": 9,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "tool": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {"minLength": 1, "type": "string"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    }
+  },
+  "required": ["format", "tool", "direct_roots", "resolved_packages", "manifest_sha256"],
+  "title": "pyaegean normalized training resolver manifest",
+  "type": "object",
+  "$defs": {
+    "exactVersion": {
+      "pattern": "^[0-9][0-9A-Za-z.!+_-]*$",
+      "type": "string"
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/packageName"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    },
+    "packageName": {
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  }
+}

@@ -26,7 +26,9 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - name: Lint
-        run: ruff check src tests
+        run: >-
+          ruff check src tests training/reproducibility.py
+          training/validate_reproducibility.py training/tests
       - name: Type-check
         run: mypy
       - name: Public-API stability (baseline diff)

@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 
 from aegean.greek import joint
+from aegean.greek import calibrate
+from aegean.greek.confidence import AbstentionPolicy, CalibrationEntry, CalibrationRegistry
 
 
 class _Encoding:
@@ -103,6 +105,65 @@ def _model(max_subwords: int = 8, *, vary_windows: bool = True) -> joint._JointM
     return m
 
 
+def _registry(*, relation_temperature: float = 1.0) -> CalibrationRegistry:
+    entries = [
+        CalibrationEntry(
+            model="fake-window-model",
+            task="upos",
+            source="neural",
+            temperature=1.0,
+            n=10,
+            ece=0.1,
+        ),
+        CalibrationEntry(
+            model="fake-window-model",
+            task="head",
+            source="neural",
+            temperature=1.0,
+            n=10,
+            ece=0.1,
+        ),
+        CalibrationEntry(
+            model="fake-window-model",
+            task="relation",
+            source="neural",
+            temperature=relation_temperature,
+            n=10,
+            ece=0.1,
+        ),
+        CalibrationEntry(
+            model="fake-window-model",
+            task="lemma",
+            source="identity_fallback",
+            temperature=1.0,
+            n=10,
+            ece=0.1,
+        ),
+        *(
+            CalibrationEntry(
+                model="fake-window-model",
+                task=task,
+                source="neural",
+                calibrator="logit_affine",
+                parameters={"slope": 1.0, "intercept": 0.0},
+                n=10,
+                ece=0.1,
+            )
+            for task in ("xpos", "feats")
+        ),
+        CalibrationEntry(
+            model="fake-window-model",
+            task="sentence",
+            source="neural",
+            calibrator="logit_affine",
+            parameters={"slope": 1.0, "intercept": 0.0},
+            n=10,
+            ece=0.1,
+        ),
+    ]
+    return CalibrationRegistry(tuple(entries))
+
+
 def test_pack_windows_keeps_complete_words_and_progress() -> None:
     assert joint._JointModel._pack_windows([2] * 8, 6) == [
         (0, 3),
@@ -160,6 +221,8 @@ def test_global_arc_allocation_is_compact_float32(monkeypatch: pytest.MonkeyPatc
     m.analyze(["aa"] * 8, long_input="windowed")
     assert ((8, 9), np.dtype("float32")) in captured
     assert ((8, 9), np.dtype("int16")) in captured
+    assert captured.count(((8, 9), np.dtype("float32"))) == 1
+    assert ((8, 9), np.dtype("float64")) not in captured
 
 
 def test_windowed_safety_cap_rejects_before_tokenizer(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -221,3 +284,48 @@ def test_window_confidence_comes_from_the_same_owner_as_the_tag() -> None:
         expected.append(calibrate.top1_confidence(logits, 1.0, np=np))
     assert ana.upos_prob == pytest.approx(expected)
     assert ana.lemma_script_prob == pytest.approx([1.0] * 8)
+
+
+def test_window_v2_registry_keeps_flat_fields_and_global_policy_indices() -> None:
+    policy = AbstentionPolicy({"head": 0.5, "relation": 0.5})
+    calibrate.use_calibration_registry(_registry())
+    try:
+        ana = _model().analyze(["aa"] * 8, with_probs=True, long_input="windowed", policy=policy)
+    finally:
+        calibrate.disable_calibration()
+    assert len(ana.upos_prob) == 8 and all(value is not None for value in ana.upos_prob)
+    assert len(ana.lemma_script_prob) == 8 and all(
+        value is not None for value in ana.lemma_script_prob
+    )
+    assert [item.index for item in ana.token_confidences] == list(range(8))
+    for item in ana.token_confidences:
+        decisions = {decision.task: decision for decision in item.policy}
+        assert len(decisions) == len(item.policy)
+        assert decisions["head"].confidence == item.head.value
+        assert decisions["head"].threshold == 0.5
+
+
+def test_window_relation_temperature_uses_selected_global_head() -> None:
+    m = _model()
+    m.inv["deprel"] = {0: "dep", 1: "obj"}
+    original_run = m._run
+
+    def run(words: list[str]) -> dict[str, object]:
+        output = original_run(words)
+        relation = np.asarray(output["rel"])
+        output["rel"] = np.concatenate((relation, np.zeros_like(relation)), axis=1)
+        return output
+
+    m._run = run  # type: ignore[method-assign]
+    calibrate.use_calibration_registry(_registry(relation_temperature=2.0))
+    try:
+        ana = m.analyze(["aa"] * 8, with_probs=True, long_input="windowed")
+    finally:
+        calibrate.disable_calibration()
+    expected = calibrate.top1_confidence(np.asarray([9.0, 0.0]), 2.0, np=np)
+    observed = [
+        item.relation.value
+        for item in ana.token_confidences
+        if item.relation is not None and item.relation.available
+    ]
+    assert observed and observed == pytest.approx([expected] * len(observed))

@@ -51,3 +51,34 @@ def test_no_network_in_registry_helpers(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", _boom)
     ca = _load_check_assets()
     assert ca.release_assets()
+
+
+def test_network_probes_use_the_verified_tls_compatibility_path(monkeypatch):
+    ca = _load_check_assets()
+    seen = []
+
+    class Response:
+        status = 206
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, _size):
+            return b""
+
+    def verified(request, *, timeout):
+        seen.append((request.full_url, timeout))
+        return Response()
+
+    monkeypatch.setattr(ca, "_urlopen_verified", verified)
+    assert ca._resolves("https://example.invalid/asset") == (True, "206")
+    assert ca._sha256_of_url("https://example.invalid/asset") == (
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
+    assert seen == [
+        ("https://example.invalid/asset", ca._TIMEOUT),
+        ("https://example.invalid/asset", ca._TIMEOUT),
+    ]

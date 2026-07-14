@@ -45,6 +45,7 @@ __all__ = ["TokenRecord", "pipeline", "pipeline_tokens"]
 
 if TYPE_CHECKING:
     from ..core.model import SourceAlignment, Token, TokenFormState
+    from .confidence import AbstentionPolicy, SentenceConfidence, TokenConfidence
     from .neural_contract import AnalysisReceipt
 
 
@@ -85,7 +86,9 @@ class TokenRecord:
     record in each sentence, the ``boundary_*`` fields identify the document
     segmentation policy, stable policy ID, provenance, optional plugin confidence,
     and exact source span when one is provable. Rules and explicit user IDs carry
-    no invented confidence."""
+    no invented confidence. ``lemma_source_path`` is the exact internal neural
+    composition path when typed confidence requested it; it is ``None`` for an
+    offline/punctuation replacement and on the legacy default path."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
@@ -111,6 +114,9 @@ class TokenRecord:
     boundary_confidence: float | None = None
     boundary_start_char: int | None = None
     boundary_end_char: int | None = None
+    lemma_source_path: str | None = None
+    token_confidence: TokenConfidence | None = None
+    sentence_confidence: SentenceConfidence | None = None
 
     @property
     def lemma_resolved(self) -> bool:
@@ -144,6 +150,8 @@ def pipeline(
     *,
     parse: bool = False,
     with_confidence: bool = False,
+    confidence_domain: str | None = None,
+    confidence_policy: AbstentionPolicy | None = None,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
     sentence_policy: str = "default",
@@ -161,6 +169,22 @@ def pipeline(
     """
     from .runtime import default_pipeline
 
+    if confidence_policy is not None and not with_confidence:
+        raise ValueError("a confidence policy requires with_confidence=True")
+    if confidence_domain is not None and not with_confidence:
+        raise ValueError("a confidence domain requires with_confidence=True")
+    if confidence_domain is not None or confidence_policy is not None:
+        return default_pipeline().analyze(
+            text,
+            parse=parse,
+            with_confidence=with_confidence,
+            confidence_domain=confidence_domain,
+            confidence_policy=confidence_policy,
+            long_input=long_input,
+            document_id=document_id,
+            sentence_policy=sentence_policy,
+            segmenter=segmenter,
+        )
     return default_pipeline().analyze(
         text,
         parse=parse,
@@ -177,6 +201,8 @@ def pipeline_tokens(
     *,
     parse: bool = False,
     with_confidence: bool = False,
+    confidence_domain: str | None = None,
+    confidence_policy: AbstentionPolicy | None = None,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
     sentence_policy: str = "default",
@@ -193,6 +219,22 @@ def pipeline_tokens(
     """
     from .runtime import default_pipeline
 
+    if confidence_policy is not None and not with_confidence:
+        raise ValueError("a confidence policy requires with_confidence=True")
+    if confidence_domain is not None and not with_confidence:
+        raise ValueError("a confidence domain requires with_confidence=True")
+    if confidence_domain is not None or confidence_policy is not None:
+        return default_pipeline().analyze_tokens(
+            tokens,
+            parse=parse,
+            with_confidence=with_confidence,
+            confidence_domain=confidence_domain,
+            confidence_policy=confidence_policy,
+            long_input=long_input,
+            document_id=document_id,
+            sentence_policy=sentence_policy,
+            segmenter=segmenter,
+        )
     return default_pipeline().analyze_tokens(
         tokens,
         parse=parse,
@@ -242,6 +284,8 @@ def _analyze_bound(
     *,
     parse: bool = False,
     with_confidence: bool = False,
+    confidence_domain: str | None = None,
+    confidence_policy: AbstentionPolicy | None = None,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
     typed_tokens: Sequence[Token] | None = None,
@@ -288,6 +332,10 @@ def _analyze_bound(
             "long_input must be 'strict', 'partial', or 'windowed', "
             f"got {long_input!r}"
         )
+    if confidence_policy is not None and not with_confidence:
+        raise ValueError("a confidence policy requires with_confidence=True")
+    if confidence_domain is not None and not with_confidence:
+        raise ValueError("a confidence domain requires with_confidence=True")
     if not isinstance(sentence_policy, str):
         raise TypeError("sentence_policy must be a string")
     if sentence_policy not in POLICY_RULES:
@@ -470,9 +518,18 @@ def _analyze_bound(
     ):
         sentence_span = boundary_spans[s_idx] if s_idx < len(boundary_spans) else None
         if joint.active() is not None:
-            ana = joint.analyze_sentence(
-                words, with_probs=with_confidence, long_input=long_input
-            )
+            if confidence_domain is not None or confidence_policy is not None:
+                ana = joint.analyze_sentence(
+                    words,
+                    with_probs=with_confidence,
+                    long_input=long_input,
+                    domain=confidence_domain,
+                    policy=confidence_policy,
+                )
+            else:
+                ana = joint.analyze_sentence(
+                    words, with_probs=with_confidence, long_input=long_input
+                )
             if len(ana.tokens) != len(words):
                 raise ValueError(
                     "neural backend returned a different token count than the input "
@@ -480,17 +537,46 @@ def _analyze_bound(
                 )
             resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
             override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
+            lemma_paths = ana.lemma_source_path
+            if lemma_paths and len(lemma_paths) != len(ana.tokens):
+                raise ValueError(
+                    "neural backend returned a different lemma-source-path count than "
+                    f"the input ({len(lemma_paths)} != {len(ana.tokens)})"
+                )
+            confidence_by_index = {
+                item.index: item for item in ana.token_confidences
+            }
+            if len(confidence_by_index) != len(ana.token_confidences):
+                raise ValueError("neural backend returned duplicate token confidence indices")
+            invalid_confidence_indices = sorted(
+                set(confidence_by_index) - set(range(len(ana.tokens)))
+            )
+            if invalid_confidence_indices:
+                raise ValueError(
+                    "neural backend returned token confidence indices outside the sentence: "
+                    f"{invalid_confidence_indices}"
+                )
+            sentence_confidence = ana.sentence_confidence
+            if sentence_confidence is not None and (
+                (override and any(override)) or any(not flag for flag in is_word)
+            ):
+                sentence_confidence = _invalidate_sentence_confidence(
+                    sentence_confidence,
+                    confidence_policy=confidence_policy,
+                    reason="non_neural_lemma_output",
+                    source="mixed_non_neural_output",
+                )
             for i in range(len(ana.tokens)):
                 if not is_word[i]:
                     source = LemmaSource.PUNCT  # a punctuation/number token is its own lemma
+                elif override and override[i]:
+                    # An opt-in Lever B offline rescue replaces the neural fallback and
+                    # therefore owns the returned lemma's evidence class.
+                    source = LemmaSource(override[i])
                 elif ana.lemma_source:
                     source = ana.lemma_source[i]
                 elif resolved[i]:
                     source = LemmaSource.NEURAL
-                elif override and override[i]:
-                    # an opt-in Lever B offline rescue: a grounded SEED / PARADIGM lemma the
-                    # model left unresolved, never NEURAL and never a review-bait identity
-                    source = LemmaSource(override[i])
                 else:
                     source = LemmaSource.IDENTITY  # the model returned the surface unchanged
                 # A calibrated confidence is model-only: UPOS is always a neural prediction
@@ -510,6 +596,16 @@ def _analyze_bound(
                     )
                     else None
                 )
+                token_confidence = confidence_by_index.get(i)
+                if token_confidence is not None and (
+                    not is_word[i] or bool(override and override[i])
+                ):
+                    token_confidence = _invalidate_token_lemma_confidence(
+                        token_confidence,
+                        source=source,
+                        confidence_domain=confidence_domain,
+                        confidence_policy=confidence_policy,
+                    )
                 record_state = sentence_states[i]
                 if record_state is not None:
                     actual_input = ana.tokens[i]
@@ -551,6 +647,17 @@ def _analyze_bound(
                         else None,
                         boundary_end_char=sentence_span[1]
                         if i == len(words) - 1 and sentence_span is not None
+                        else None,
+                        lemma_source_path=(
+                            lemma_paths[i]
+                            if lemma_paths
+                            and is_word[i]
+                            and not bool(override and override[i])
+                            else None
+                        ),
+                        token_confidence=token_confidence,
+                        sentence_confidence=sentence_confidence
+                        if i == len(words) - 1
                         else None,
                     )
                 )
@@ -616,6 +723,142 @@ def _analyze_bound(
                 )
             )
     return records
+
+
+def _invalidate_token_lemma_confidence(
+    confidence: TokenConfidence,
+    *,
+    source: LemmaSource,
+    confidence_domain: str | None,
+    confidence_policy: AbstentionPolicy | None,
+) -> TokenConfidence:
+    """Replace neural lemma evidence after punctuation/offline pipeline overrides."""
+    from .confidence import (
+        ConfidenceResult,
+        PolicyDecision,
+        UNAVAILABLE_UNSUPPORTED_SOURCE,
+    )
+
+    previous_lemma = confidence.lemma
+    lemma_decisions = tuple(
+        decision for decision in confidence.policy if decision.task == "lemma"
+    )
+    decision_is_current = (
+        confidence_policy is None
+        or (
+            bool(lemma_decisions)
+            and all(
+                decision.action == "unavailable"
+                and decision.policy_sha256 == confidence_policy.sha256
+                for decision in lemma_decisions
+            )
+        )
+    )
+    if (
+        previous_lemma is not None
+        and previous_lemma.value is None
+        and previous_lemma.source == source.value
+        and decision_is_current
+        and all(decision.action == "unavailable" for decision in lemma_decisions)
+    ):
+        return confidence
+    evidence = next(
+        (
+            result
+            for result in (
+                confidence.lemma,
+                confidence.upos,
+                confidence.xpos,
+                confidence.feats,
+                confidence.head,
+                confidence.relation,
+            )
+            if result is not None
+        ),
+        None,
+    )
+    lemma = ConfidenceResult(
+        task="lemma",
+        value=None,
+        reason=UNAVAILABLE_UNSUPPORTED_SOURCE,
+        model=evidence.model if evidence is not None else None,
+        source=source.value,
+        domain=evidence.domain if evidence is not None else confidence_domain,
+    )
+    decisions = []
+    replaced_decision = False
+    for decision in confidence.policy:
+        if decision.task == "lemma":
+            replaced_decision = True
+            if confidence_policy is not None:
+                decisions.append(confidence_policy.decide("lemma", None))
+            else:
+                decisions.append(
+                    PolicyDecision(
+                        task="lemma",
+                        action="unavailable",
+                        confidence=None,
+                        threshold=decision.threshold,
+                        reason=UNAVAILABLE_UNSUPPORTED_SOURCE,
+                        policy_sha256=decision.policy_sha256,
+                    )
+                )
+        else:
+            decisions.append(decision)
+    if confidence_policy is not None and not replaced_decision:
+        decisions.append(confidence_policy.decide("lemma", None))
+    return replace(confidence, lemma=lemma, policy=tuple(decisions))
+
+
+def _invalidate_sentence_confidence(
+    confidence: SentenceConfidence,
+    *,
+    confidence_policy: AbstentionPolicy | None,
+    reason: str,
+    source: str,
+) -> SentenceConfidence:
+    """Invalidate a sentence score when a public lemma output is not neural."""
+    from .confidence import ConfidenceResult, PolicyDecision, SentenceConfidence
+
+    previous = confidence.result
+    if previous.value is None and (
+        (
+            confidence_policy is None
+            and (
+                confidence.policy is None
+                or confidence.policy.action == "unavailable"
+            )
+        )
+        or (
+            confidence_policy is not None
+            and confidence.policy is not None
+            and confidence.policy.action == "unavailable"
+            and confidence.policy.policy_sha256 == confidence_policy.sha256
+        )
+    ):
+        return confidence
+    result = ConfidenceResult(
+        task="sentence",
+        value=None,
+        reason=reason,
+        model=previous.model,
+        source=source,
+        domain=previous.domain,
+    )
+    if confidence_policy is not None:
+        decision = confidence_policy.decide("sentence", None)
+    elif confidence.policy is not None:
+        decision = PolicyDecision(
+            task="sentence",
+            action="unavailable",
+            confidence=None,
+            threshold=confidence.policy.threshold,
+            reason=reason,
+            policy_sha256=confidence.policy.policy_sha256,
+        )
+    else:
+        decision = None
+    return SentenceConfidence(result, confidence.components, decision)
 
 
 def _token_boundary_is_editorial(token: Token) -> bool:

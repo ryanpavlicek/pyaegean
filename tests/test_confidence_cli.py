@@ -192,6 +192,145 @@ def test_pipeline_confidence_missing_calibration_is_one_clean_line(app, monkeypa
     assert "Traceback" not in msg
 
 
+def test_pipeline_confidence_controls_appear_in_help(app) -> None:
+    res = runner.invoke(app, ["greek", "pipeline", "--help"])
+    assert res.exit_code == 0, res.output
+    assert "--confidence-domain" in res.output and "LABEL" in res.output
+    assert "--confidence-policy" in res.output and "PATH" in res.output
+
+
+@pytest.mark.parametrize("option", ["--confidence-domain", "--confidence-policy"])
+def test_pipeline_confidence_controls_require_confidence(app, option, tmp_path) -> None:
+    value = "papyri" if option == "--confidence-domain" else str(tmp_path / "policy.json")
+    res = runner.invoke(app, ["greek", "pipeline", TEXT, option, value])
+    assert res.exit_code != 0
+    assert f"{option} requires --confidence" in res.output
+
+
+@pytest.mark.parametrize("payload", ["{", '{"schema_version":99,"thresholds":{"upos":0.5}}'])
+def test_pipeline_confidence_policy_rejects_malformed_json(app, tmp_path, payload) -> None:
+    path = tmp_path / "policy.json"
+    path.write_text(payload, encoding="utf-8")
+    res = runner.invoke(
+        app,
+        ["greek", "pipeline", TEXT, "--confidence", "--confidence-policy", str(path)],
+    )
+    assert res.exit_code != 0
+    assert "could not load confidence policy" in res.output
+    assert "Traceback" not in res.output
+
+
+def test_pipeline_confidence_policy_rejects_tampering_and_missing_file(app, tmp_path) -> None:
+    from aegean.greek import AbstentionPolicy
+
+    policy = AbstentionPolicy({"upos": 0.75}, name="cli-test")
+    tampered = policy.to_dict()
+    tampered["thresholds"]["upos"] = 0.8
+    tampered_path = tmp_path / "tampered.json"
+    tampered_path.write_text(json.dumps(tampered), encoding="utf-8")
+    missing_path = tmp_path / "missing.json"
+    for path in (tampered_path, missing_path):
+        res = runner.invoke(
+            app,
+            ["greek", "pipeline", TEXT, "--confidence", "--confidence-policy", str(path)],
+        )
+        assert res.exit_code != 0
+        assert "could not load confidence policy" in res.output
+
+
+def test_pipeline_confidence_forwarding_preserves_default_shape(app, monkeypatch) -> None:
+    from aegean import greek
+    from aegean.cli import _greek
+
+    seen: dict[str, object] = {}
+
+    def fake_pipeline(text: str, **kwargs: object) -> list[object]:
+        seen["text"] = text
+        seen.update(kwargs)
+        return []
+
+    monkeypatch.setattr(_greek, "_activate", lambda **_kwargs: None)
+    monkeypatch.setattr(greek, "pipeline", fake_pipeline)
+    res = runner.invoke(app, ["greek", "pipeline", TEXT, "--json"])
+    assert res.exit_code == 0, res.output
+    assert seen == {
+        "text": TEXT,
+        "parse": False,
+        "with_confidence": False,
+        "long_input": "strict",
+        "sentence_policy": "default",
+    }
+
+
+def test_pipeline_confidence_forwards_only_explicit_controls(app, monkeypatch, tmp_path) -> None:
+    from aegean import greek
+    from aegean.cli import _greek
+    from aegean.greek import AbstentionPolicy
+
+    policy = AbstentionPolicy({"upos": 0.75}, name="cli-test")
+    path = tmp_path / "policy.json"
+    policy.save(path)
+    seen: dict[str, object] = {}
+
+    def fake_pipeline(_text: str, **kwargs: object) -> list[object]:
+        seen.update(kwargs)
+        return []
+
+    monkeypatch.setattr(_greek, "_activate", lambda **_kwargs: None)
+    monkeypatch.setattr(_greek, "_ensure_calibration", lambda: None)
+    monkeypatch.setattr(greek, "pipeline", fake_pipeline)
+    res = runner.invoke(
+        app,
+        [
+            "greek",
+            "pipeline",
+            TEXT,
+            "--confidence",
+            "--confidence-domain",
+            "papyri",
+            "--confidence-policy",
+            str(path),
+            "--json",
+        ],
+    )
+    assert res.exit_code == 0, res.output
+    assert seen["with_confidence"] is True
+    assert seen["confidence_domain"] == "papyri"
+    assert seen["confidence_policy"] == policy
+
+
+def test_pipeline_json_surfaces_structured_policy_and_unavailable_detail(app, monkeypatch) -> None:
+    from aegean import greek
+    from aegean.cli import _greek
+    from aegean.greek.confidence import ConfidenceResult, SentenceConfidence, TokenConfidence
+    from aegean.greek.lemmatize import LemmaSource
+    from aegean.greek.pipeline import TokenRecord
+
+    unavailable = ConfidenceResult(task="upos", value=None, reason="missing_calibration")
+    token_confidence = TokenConfidence(index=0, upos=unavailable)
+    sentence_confidence = SentenceConfidence(
+        ConfidenceResult(task="sentence", value=None, reason="missing_calibration")
+    )
+    record = TokenRecord(
+        0,
+        1,
+        "λόγος",
+        "NOUN",
+        "λόγος",
+        LemmaSource.NEURAL,
+        token_confidence=token_confidence,
+        sentence_confidence=sentence_confidence,
+    )
+    monkeypatch.setattr(_greek, "_activate", lambda **_kwargs: None)
+    monkeypatch.setattr(_greek, "_ensure_calibration", lambda: None)
+    monkeypatch.setattr(greek, "pipeline", lambda _text, **_kwargs: [record])
+    res = runner.invoke(app, ["greek", "pipeline", TEXT, "--confidence", "--json"])
+    assert res.exit_code == 0, res.output
+    row = json.loads(res.stdout)[0]
+    assert row["token_confidence"]["upos"]["reason"] == "missing_calibration"
+    assert row["sentence_confidence"]["result"]["reason"] == "missing_calibration"
+
+
 # ── CLI: greek explain --confidence ──────────────────────────────────────────
 def test_explain_confidence_appends_the_calibrated_phrase(app, monkeypatch) -> None:
     pytest.importorskip("numpy")

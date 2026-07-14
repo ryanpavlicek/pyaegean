@@ -1,0 +1,301 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/training-environment-lock-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verification": {
+            "properties": {
+              "state": {"enum": ["captured-candidate", "validated"]}
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "accelerator": {
+            "properties": {
+              "frozen": {
+                "properties": {
+                  "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
+                  "cudnn_version": {"$ref": "#/$defs/exactVersion"},
+                  "driver_version": {"$ref": "#/$defs/exactVersion"},
+                  "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"verification": {"properties": {"state": {"const": "validated"}}}}
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "properties": {
+              "complete": {"const": true},
+              "scope": {"enum": ["training-dependency-closure", "full-environment"]}
+            }
+          },
+          "verification": {
+            "properties": {"preflight_receipt_sha256": {"$ref": "#/$defs/sha256"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verification": {"properties": {"state": {"const": "unverified-template"}}}
+        }
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "properties": {
+              "complete": {"const": false},
+              "scope": {"const": "direct-requirements"}
+            }
+          },
+          "verification": {"properties": {"preflight_receipt_sha256": {"type": "null"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verification": {"properties": {"state": {"const": "captured-candidate"}}}
+        }
+      },
+      "then": {
+        "properties": {
+          "dependencies": {
+            "properties": {
+              "complete": {"const": true},
+              "scope": {"enum": ["training-dependency-closure", "full-environment"]}
+            }
+          },
+          "verification": {"properties": {"preflight_receipt_sha256": {"type": "null"}}}
+        }
+      }
+    }
+  ],
+  "properties": {
+    "accelerator": {
+      "additionalProperties": false,
+      "properties": {
+        "allocation": {
+          "additionalProperties": false,
+          "properties": {
+            "fallback_gpu_prefix": {"minLength": 1, "type": "string"},
+            "policy": {"const": "preferred-then-fallback"},
+            "preferred_gpu_prefix": {"minLength": 1, "type": "string"}
+          },
+          "required": ["policy", "preferred_gpu_prefix", "fallback_gpu_prefix"],
+          "type": "object"
+        },
+        "frozen": {
+          "additionalProperties": false,
+          "properties": {
+            "cuda_runtime_version": {"$ref": "#/$defs/nullableExactVersion"},
+            "cudnn_version": {"$ref": "#/$defs/nullableExactVersion"},
+            "driver_version": {"$ref": "#/$defs/nullableExactVersion"},
+            "torch_cuda_version": {"$ref": "#/$defs/nullableExactVersion"}
+          },
+          "required": [
+            "cuda_runtime_version",
+            "torch_cuda_version",
+            "cudnn_version",
+            "driver_version"
+          ],
+          "type": "object"
+        },
+        "kind": {"const": "cuda"}
+      },
+      "required": ["kind", "allocation", "frozen"],
+      "type": "object"
+    },
+    "backbone": {"$ref": "#/$defs/backbone"},
+    "dependencies": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"scope": {"const": "direct-requirements"}}},
+          "then": {
+            "properties": {
+              "complete": {"const": false},
+              "resolver_evidence": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "complete": {"const": true},
+              "scope": {"const": "training-dependency-closure"}
+            }
+          },
+          "then": {"properties": {"resolver_evidence": {"$ref": "#/$defs/resolverEvidence"}}}
+        },
+        {
+          "if": {"properties": {"scope": {"const": "full-environment"}}},
+          "then": {"properties": {"resolver_evidence": {"type": "null"}}}
+        }
+      ],
+      "properties": {
+        "complete": {"type": "boolean"},
+        "packages": {
+          "items": {"$ref": "#/$defs/package"},
+          "minItems": 9,
+          "type": "array"
+        },
+        "resolver_evidence": {
+          "anyOf": [{"$ref": "#/$defs/resolverEvidence"}, {"type": "null"}]
+        },
+        "scope": {
+          "enum": [
+            "direct-requirements",
+            "training-dependency-closure",
+            "full-environment"
+          ]
+        }
+      },
+      "required": ["scope", "complete", "resolver_evidence", "packages"],
+      "type": "object"
+    },
+    "format": {"const": "pyaegean-training-environment-lock/1"},
+    "environment_definition_sha256": {"$ref": "#/$defs/sha256"},
+    "lock_sha256": {"$ref": "#/$defs/sha256"},
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "backbone_revision_source": {"minLength": 1, "type": "string"},
+        "package_pin_source": {"minLength": 1, "type": "string"},
+        "reference_evidence": {"minLength": 1, "type": "string"},
+        "reference_scope": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "reference_evidence",
+        "reference_scope",
+        "package_pin_source",
+        "backbone_revision_source"
+      ],
+      "type": "object"
+    },
+    "platform": {
+      "additionalProperties": false,
+      "properties": {
+        "libc": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {"minLength": 1, "type": "string"},
+            "version": {"$ref": "#/$defs/exactVersion"}
+          },
+          "required": ["name", "version"],
+          "type": "object"
+        },
+        "machine": {"minLength": 1, "type": "string"},
+        "release": {"minLength": 1, "type": "string"},
+        "system": {"minLength": 1, "type": "string"}
+      },
+      "required": ["system", "release", "machine", "libc"],
+      "type": "object"
+    },
+    "python": {
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {"minLength": 1, "type": "string"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["implementation", "version"],
+      "type": "object"
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "preflight_receipt_sha256": {
+          "anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "state": {"enum": ["unverified-template", "captured-candidate", "validated"]}
+      },
+      "required": ["state", "preflight_receipt_sha256"],
+      "type": "object"
+    }
+  },
+  "required": [
+    "format",
+    "verification",
+    "provenance",
+    "python",
+    "platform",
+    "dependencies",
+    "accelerator",
+    "backbone",
+    "environment_definition_sha256",
+    "lock_sha256"
+  ],
+  "title": "pyaegean exact training environment lock",
+  "type": "object",
+  "$defs": {
+    "backbone": {
+      "additionalProperties": false,
+      "properties": {
+        "license": {"minLength": 1, "type": "string"},
+        "repository": {"minLength": 1, "type": "string"},
+        "revision": {"$ref": "#/$defs/gitCommit"},
+        "revision_type": {"const": "git-commit"},
+        "tokenizer_revision": {"$ref": "#/$defs/gitCommit"}
+      },
+      "required": ["repository", "revision", "tokenizer_revision", "revision_type", "license"],
+      "type": "object"
+    },
+    "exactVersion": {
+      "pattern": "^[0-9][0-9A-Za-z.!+_-]*$",
+      "type": "string"
+    },
+    "gitCommit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "nullableExactVersion": {
+      "anyOf": [{"$ref": "#/$defs/exactVersion"}, {"type": "null"}]
+    },
+    "package": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "type": "string"},
+        "version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": ["name", "version"],
+      "type": "object"
+    },
+    "resolverEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {"$ref": "#/$defs/file"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["file", "manifest_sha256"],
+      "type": "object"
+    },
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 0, "type": "integer"},
+        "path": {"minLength": 1, "type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "bytes", "sha256"],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  }
+}

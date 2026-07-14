@@ -55,14 +55,102 @@ Training data is leakage-clean against the evaluation folds:
 `training/data/` and `training/out/` are gitignored; datasets rebuild deterministically
 from the cache.
 
+## Reproducible training contract
+
+`environment-lock.json` is an honestly labelled training-environment **template**, not a captured Colab
+environment. It records `verification.state = "unverified-template"`,
+`dependencies.scope = "direct-requirements"`, and `dependencies.complete = false`; the
+validator therefore reports `ready_for_training = false` and refuses to bind a completed
+run receipt to it. The nine package versions are candidate direct requirements whose
+individual availability was checked, not a rehearsed combination or dependency closure.
+
+The template's Python/Linux/libc values and CUDA 12.8 reference came from
+`results/gpu-verify-2026-07-10.json`, a prior runtime/provider check for pyaegean 0.32.0,
+not a training-environment capture. Driver, CUDA runtime, and cuDNN are deliberately not
+frozen from that result. The allocation policy is G4-class RTX PRO 6000 Blackwell preferred,
+with NVIDIA A100 fallback; the completed receipt must record the exact allocated GPU,
+memory, compute capability, driver, CUDA runtime and Torch build, cuDNN, and precision.
+Candidate capture inspects the live G4/A100 allocation and freezes its driver, CUDA runtime,
+Torch CUDA build, and cuDNN versions; captured and validated locks require every field.
+
+Before training, the live allocation must resolve the complete training dependency closure
+and capture a normalized resolver manifest: resolver tool/version, direct roots, every
+resolved distribution/version, and the manifest's file record and content digest. The
+captured candidate uses `scope = "training-dependency-closure"` and `complete = true`.
+Preflight compares every member of that closure but ignores unrelated Colab preinstalls;
+`full-environment` remains available when whole-image identity is desired. Missing,
+additional, or version-divergent closure members and absent/tampered resolver evidence fail
+closed.
+
+The transition is automated and content-addressed. `environment_definition_sha256` hashes
+only the frozen Python/platform/dependencies/accelerator/backbone definition. A preflight
+receipt binds that stable digest. Promotion adds the receipt digest and changes
+`captured-candidate` to `validated`, then recomputes the document `lock_sha256` without
+changing the definition digest; this avoids a self-hash cycle. CUDA runtime is queried from
+the loaded `libcudart` API independently of the Torch CUDA build value. The GreBerta encoder
+and tokenizer are already pinned to the immutable Git commit in `backbone.revision`;
+training code and notebooks must pass that value as the Hugging Face `revision`, never
+resolve mutable `main`. This prospective contract does not rebuild or change the
+identity/evidence of `grc-joint-v3`.
+
+Promotion revalidates the receipt's full observation: exact Python, platform, package
+inventory, clean repository state, allowed non-null GPU allocation, and every frozen
+accelerator version. An `ok` flag with missing or hand-authored observations is insufficient.
+
+The standard-library-only validator performs no download, training, or model inference:
+
+```bash
+# Validate the template structure, immutable revisions, provenance, and lock digest.
+# This succeeds structurally but reports ready_for_training=false.
+python training/validate_reproducibility.py lock
+
+# Normalize a complete pip --report (generated with the full intended roots/closure).
+python training/validate_reproducibility.py resolver-manifest \
+    --pip-report training/out/RUN/pip-report.json \
+    --output training/out/RUN/resolver-manifest.json
+
+# Verify the exact closure and capture the live platform plus approved CUDA allocation.
+python training/validate_reproducibility.py capture \
+    --resolver-manifest training/out/RUN/resolver-manifest.json \
+    --output training/out/RUN/environment-candidate.json --repository-root .
+
+# Compare closure, resolver evidence, frozen accelerator fields, allocation, and clean Git.
+python training/validate_reproducibility.py preflight \
+    --lock training/out/RUN/environment-candidate.json --repository-root . \
+    --output training/out/RUN/preflight.json
+
+# Bind the successful receipt without changing the stable environment-definition digest.
+python training/validate_reproducibility.py promote \
+    --lock training/out/RUN/environment-candidate.json \
+    --preflight training/out/RUN/preflight.json \
+    --output training/out/RUN/environment-validated.json
+
+# After a run writes a completed receipt, verify its digest and re-hash every recorded
+# lock, config, generated dataset, and output artifact.
+python training/validate_reproducibility.py receipt training/out/RUN/run-receipt.json \
+    --lock training/out/RUN/environment-validated.json --repository-root .
+```
+
+The exact schemas are `contracts/environment-lock.schema.json`,
+`contracts/resolver-manifest.schema.json`, `contracts/preflight.schema.json`, and
+`contracts/run-receipt.schema.json`. `reproducibility.py` supplies canonical hashing,
+repository-relative file records, resolver normalization, capture/promotion, package/Git and
+CUDA metadata capture, completed-receipt construction, and offline verification. A validated
+lock requires a complete evidence-bound training closure or full environment. A completed
+receipt must record the identical inventory, a clean repository commit, exact backbone and
+corpus commits, command/config/seed, generated-data/output hashes, and allocated hardware.
+
 ## Running
 
 The `training/` scripts are not in the wheel, so clone the repo and run them from the
 clone. Training runs on a single GPU (the scripts auto-detect bf16/fp16); datasets fetch
-the AGDT and UD folds to the cache on first build.
+the AGDT and UD folds to the cache on first build. The commands below describe the legacy
+stage flow; they are not compliant with the reproducibility contract until the orchestrating
+script or notebook reads `backbone.revision` from the lock and passes it to every
+`from_pretrained` call.
 
 ```bash
-pip install "git+https://github.com/ryanpavlicek/pyaegean" torch transformers numpy
+# The candidate direct versions in the template are not yet a runnable environment lock.
 git clone https://github.com/ryanpavlicek/pyaegean.git
 python pyaegean/training/build_full_dataset.py
 python pyaegean/training/train_full.py --model bowphs/GreBerta

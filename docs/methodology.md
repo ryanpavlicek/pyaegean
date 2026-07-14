@@ -201,11 +201,22 @@ generalization result. Its PROIEL row is the more informative baseline compariso
 
 ### Calibration and scope
 
-Accuracy and confidence answer different questions. Where calibrated confidence
-is available, expected calibration error and reliability information are
-measured for the exact exported artifact. A high confidence value is still a
-model estimate, not scholarly certainty, and it does not override editorial
-status.
+Accuracy and confidence answer different questions. The additive typed confidence
+contract (`TokenConfidence`, `SentenceConfidence`, and `ConfidenceResult`) records the
+task, model, source path, optional domain, calibration hash, sample count, and measured
+ECE/Brier support. It returns either a value in `[0, 1]` or an explicit unavailable reason;
+the compatibility `upos_confidence`/`lemma_confidence` fields do not become scoped merely
+because typed output is available. A high confidence value is still a model estimate, not
+scholarly certainty, and it does not override editorial status.
+
+Scope is resolved by the schema-2 `CalibrationRegistry`: exact model/task/source/domain
+entries take precedence, and only explicitly marked broad entries may be used as a
+fallback. `confidence_domain=` is a caller-supplied label, not a genre detector. An
+`AbstentionPolicy` is likewise caller-owned; its thresholds produce accept/review/unavailable
+decisions and carry a canonical policy hash. No bundled threshold and no OOD claim is
+implied. The source/task calibration and coverage-risk measurements needed for an empirical
+release gate remain pending a fresh, development-only inference pass; the existing legacy
+aggregate calibration is not generalized by label.
 
 The evaluation suite deliberately exposes scope limits:
 
@@ -223,6 +234,21 @@ The evaluation suite deliberately exposes scope limits:
   convention.
 
 These are properties of the evidence, not exceptions to be normalized away.
+
+### Training reproducibility environment
+
+The training environment files define an inference-free reproducibility contract. The
+committed `training/environment-lock.json` and validator describe the required direct
+dependencies, immutable backbone resolution, repository/data/config hashes, and the
+completed run-receipt fields; they do not run inference or certify a model. The checked-in
+lock is intentionally labelled `unverified-template` and is not an authorization to train
+or a validated result. Live capture and preflight record the allocated GPU identity,
+driver/CUDA/Torch/cuDNN builds, resolver closure, and clean commit before promotion. The
+completed run receipt additionally records VRAM, compute capability, precision, config,
+inputs, and artifact digests. The preferred Colab target is G4 (RTX PRO 6000 Blackwell
+Server Edition); A100 is the documented fallback, and hardware changes must remain visible
+in receipts. Until that live capture and promotion exist, no reproducibility or performance
+claim is made for the template.
 
 ## Aegean-script analysis
 
