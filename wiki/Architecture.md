@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available in v0.48.0.** Typed source alignment, typed editorial form states,
+> **Available in v0.49.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
@@ -307,6 +307,22 @@ next(iter(c.iter_words()))             # 'QE-RA₂-U'
 # (iter_documents() yields a list_iterator over the materialized documents;
 #  only iter_tokens() and iter_words() are true generators)
 ```
+
+Neural analysis has a separate pre-tokenized sentence stream:
+
+```python
+from aegean import greek
+
+greek.use_neural_pipeline()
+analyses = greek.iter_analyze_sentences(sentence_source(), batch_size=8)
+for analysis in analyses:              # ordered, receipt-bearing, backpressure-driven
+    persist(analysis)
+```
+
+This iterator holds at most one batch plus the largest sentence and captures one
+backend configuration before it touches the source. `analyze_sentences()` collects
+the same engine into a list. It does not change the collecting contracts of raw-text
+`pipeline()`, `annotate_corpus()`, or CoNLL-U parsing/serialization.
 
 A corpus has a cheap, stable **fingerprint**: a content hash over its script,
 document ids, and everything a token-level analysis can see (each token's text,

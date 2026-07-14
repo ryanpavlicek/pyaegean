@@ -4,6 +4,37 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.49.0 (2026-07-14)
+
+### Added
+
+- `greek.iter_analyze_sentences` and the matching isolated-pipeline method provide
+  backpressure-driven neural analysis for pre-tokenized sentence iterables. Sequential
+  mode retains one sentence at a time; optional batching retains one transactional chunk
+  and preserves source order and per-sentence analysis receipts.
+- `aegean greek stream` reads tokenized sentences as JSONL from a file or standard input
+  and emits each completed analysis as flushed JSONL. Long-input and calibrated-confidence
+  controls match the Python iterator.
+
+### Changed
+
+- The existing `analyze_sentences` list API now collects the same bounded input engine.
+  Streams capture their neural backend, calibration evidence, and opt-in documentary state
+  when created, so later global changes cannot alter a stream in progress.
+- Enabled documentary post-processing is restored automatically when the default neural
+  pipeline is temporarily disabled and activated again.
+- Package-version discovery no longer loads distribution metadata during top-level import;
+  the bundled-data manifest uses the same release identity, and the analysis/visualization
+  namespaces now load on first use.
+
+### Fixed
+
+- Neural batch analysis now rejects missing backend results instead of silently dropping
+  sentences. Streaming also rejects malformed result counts, result types, and reordered or
+  mutated tokens before yielding a failed chunk.
+- Calibration activation now publishes legacy and typed-registry state atomically, preventing
+  concurrent stream construction from observing mixed confidence evidence.
+
 ## 0.48.0 (2026-07-14)
 
 ### Added

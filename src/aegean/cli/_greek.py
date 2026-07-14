@@ -6,16 +6,18 @@ Backend flags mirror the `use_*` activation functions: ``--treebank``,
 pipeline), ``--lsj``. Each activation may download its data/model to the cache on
 first use (a note goes to stderr); afterwards everything is offline. The lexicon
 commands (`gloss`, `gloss-nt`, `lexica`, `lexicon-link`) reach the dictionary
-registry; `gloss --dict <id>` picks which dictionary to use.
+registry; `gloss --dict <id>` picks which dictionary to use. `stream` consumes
+pre-tokenized JSONL sentences and emits neural `SentenceAnalysis` values incrementally.
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 import sys
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import typer
 
@@ -65,6 +67,55 @@ CONFIDENCE_OPT = typer.Option(
     "it is model-only, so identity/punctuation lemmas carry none (a lookup-composed lemma "
     "does — the calibration covers the model's internal training-form lookup).",
 )
+
+
+def _jsonl_sentences(source: str | Path) -> Iterator[list[str]]:
+    """Yield pre-tokenized sentences from a JSONL path or stdin.
+
+    The neural streaming API takes an iterable of token iterables.  Keeping parsing in
+    this generator means a file is consumed only as the backend asks for another
+    sentence, rather than being read into memory before inference starts.
+    """
+    source_name = str(source)
+    stream = sys.stdin
+    owned = False
+    if source_name != "-":
+        try:
+            stream = Path(source_name).open("r", encoding="utf-8")
+            owned = True
+        except (OSError, UnicodeError) as exc:
+            raise ValueError(f"could not open JSONL input {source_name!r}: {exc}") from None
+    try:
+        for line_number, line in enumerate(stream, start=1):
+            # Blank lines are harmless in JSONL pipelines and are not sentences.
+            if not line.strip():
+                continue
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"JSONL input line {line_number} is not valid JSON: {exc.msg}"
+                ) from None
+            if not isinstance(value, list):
+                raise TypeError(
+                    f"JSONL input line {line_number} must be a JSON array of token strings"
+                )
+            for token_number, token in enumerate(value):
+                if not isinstance(token, str):
+                    raise TypeError(
+                        f"JSONL input line {line_number} token {token_number} must be a string"
+                    )
+            yield value
+    finally:
+        if owned:
+            stream.close()
+
+
+def _emit_jsonl(value: Any) -> None:
+    """Write one JSONL result and flush it so downstream consumers get backpressure."""
+    sys.stdout.write(json.dumps(to_plain(value), ensure_ascii=False, separators=(",", ":")))
+    sys.stdout.write("\n")
+    sys.stdout.flush()
 
 
 def _read_conllu_document(source: Path, *, strict: bool) -> UDDocument:
@@ -945,6 +996,106 @@ def lexicon_link(
         emit_json({"word": word, "service": service, "url": url})
     else:
         print(url)
+
+
+@greek_app.command("stream")
+def stream(
+    source: str = typer.Argument(
+        "-",
+        metavar="INPUT",
+        help="JSONL file of token arrays; '-' reads JSONL from stdin.",
+    ),
+    batch_size: int | None = typer.Option(
+        None,
+        "--batch-size",
+        min=1,
+        help="Analyze up to N sentences per backend batch (default: one at a time).",
+    ),
+    long_input: str = typer.Option(
+        "strict",
+        "--long-input",
+        help="Long-sentence handling: strict, partial, or windowed.",
+    ),
+    partial: bool = typer.Option(
+        False,
+        "--partial",
+        help="Alias for --long-input partial.",
+    ),
+    windowed: bool = typer.Option(
+        False,
+        "--windowed",
+        help="Alias for --long-input windowed.",
+    ),
+    with_probs: bool = typer.Option(
+        False,
+        "--confidence",
+        "--with-probs",
+        help="Include calibrated per-token confidence (loads the shipped calibration).",
+    ),
+    domain: str | None = typer.Option(
+        None,
+        "--confidence-domain",
+        "--domain",
+        metavar="LABEL",
+        help="Calibration domain label (requires --with-probs).",
+    ),
+    policy: Path | None = typer.Option(
+        None,
+        "--confidence-policy",
+        "--policy",
+        metavar="PATH",
+        help="Abstention policy JSON (requires --with-probs).",
+    ),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Stream neural analyses from JSONL token arrays to JSONL stdout.
+
+    Each non-empty input line must be a JSON array of token strings, for example
+    ``["token-1", "token-2"]``. One complete ``SentenceAnalysis`` object is emitted for
+    every line as soon as it is ready, with no document-sized result list held in
+    memory.  Output is JSONL even when ``--json`` is supplied; the flag is accepted
+    for consistency with the other data-producing Greek commands.
+    """
+    from aegean import greek
+
+    del json_out  # JSONL is the only output format for this streaming command.
+    if long_input not in ("strict", "partial", "windowed"):
+        raise fail("--long-input must be strict, partial, or windowed")
+    if partial and windowed:
+        raise fail("--partial and --windowed are mutually exclusive")
+    if (partial or windowed) and long_input != "strict":
+        raise fail("--partial/--windowed cannot be combined with --long-input")
+    if partial:
+        long_input = "partial"
+    elif windowed:
+        long_input = "windowed"
+    if domain is not None and not with_probs:
+        raise fail("--confidence-domain requires --confidence")
+    if policy is not None and not with_probs:
+        raise fail("--confidence-policy requires --confidence")
+
+    loaded_policy = _load_confidence_policy(policy) if policy is not None else None
+    _activate(neural=True)
+    if with_probs:
+        _ensure_calibration()
+
+    # The source is a generator, so this call validates options and captures the
+    # active backend before opening/consuming a path or stdin.
+    try:
+        analyses = greek.iter_analyze_sentences(
+            _jsonl_sentences(source),
+            batch_size=batch_size,
+            with_probs=with_probs,
+            long_input=cast(Literal["strict", "partial", "windowed"], long_input),
+            domain=domain,
+            policy=loaded_policy,
+        )
+        for analysis in analyses:
+            _emit_jsonl(analysis)
+    except (BrokenPipeError, KeyboardInterrupt):
+        raise
+    except Exception as exc:
+        raise fail(f"could not stream neural analyses: {exc}") from None
 
 
 @greek_app.command()

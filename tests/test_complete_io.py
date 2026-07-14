@@ -99,8 +99,7 @@ def test_cache_dir_prefers_pyaegean_over_xdg(tmp_path: Path, monkeypatch: pytest
 
 def test_bundled_data_version_matches_package_version() -> None:
     """Bundled data is immutable per release, so its version IS the installed package
-    version. Derived independently from importlib.metadata (or the uninstalled-tree
-    sentinel the function documents)."""
+    version. Verify the source value against the installed distribution metadata."""
     from importlib.metadata import PackageNotFoundError, version
 
     try:

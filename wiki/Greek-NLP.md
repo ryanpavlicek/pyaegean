@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.48.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.49.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 
@@ -527,8 +527,37 @@ pip uninstall onnxruntime && pip install onnxruntime-gpu   # NVIDIA CUDA
 # (PyPI's current onnxruntime-gpu targets CUDA 13). DirectML: onnxruntime-directml.
 ```
 
-Batched inference runs many sentences per model call:
-`greek.analyze_sentences(sentences, batch_size=32)`, and the evaluators accept the
+For a generator, database cursor, or other one-shot sentence source, use the
+bounded iterator rather than collecting every result:
+
+```python
+greek.use_neural_pipeline()
+for analysis in greek.iter_analyze_sentences(sentence_source(), batch_size=32):
+    save(analysis)  # source order; each result keeps its own AnalysisReceipt
+```
+
+Creating the iterator pulls nothing. With no `batch_size`, it pulls, copies,
+analyzes, and yields one pre-tokenized sentence at a time. A positive size holds
+at most one chunk and yields that chunk in source order. The backend, opt-in
+documentary settings, and (when requested) calibration registry are captured at
+construction, so a long stream cannot switch models or evidence halfway through.
+Pausing the consumer pulls nothing further; closing it
+closes a source generator. A source or backend failure is never retried: earlier
+chunks remain usable, while a failed or incomplete chunk yields nothing. The memory
+bound is the batch plus the largest sentence, not a fixed cap on one pathological
+sentence. `GreekPipeline.iter_analyze_sentences()` provides the same contract for
+an isolated instance.
+
+The per-sentence receipt is the unchanged neural inference receipt. If the opt-in
+documentary reconciliation or lemma-rescue layer post-processes that result, record
+those lever settings (and whether the paradigm lexicon was active) alongside the
+receipt; the current receipt schema does not claim to identify post-processing.
+
+`greek.analyze_sentences(...)` still returns the historical complete list; it is a
+collector over that bounded engine. Raw-text `greek.pipeline`, corpus annotation,
+and CoNLL-U serialization/evaluation also remain collecting APIs.
+
+Batched inference runs many sentences per model call. The evaluators accept the
 same `batch_size` (CLI: `aegean greek eval ud --batch-size 32`). Both are verified
 prediction-identical to sequential CPU inference on a fixed verification set
 (`training/results/gpu-verify-2026-07-10.json`): identical predictions from CPU vs
@@ -544,9 +573,9 @@ Two optional layers reconcile the neural pipeline's output to the **documentary*
 conventions cost the out-of-domain model the most. Both **post-process the active neural
 pipeline**, so activate it first (`greek.use_neural_pipeline()`); each is **opt-in and off by
 default**, and the pipeline is **byte-identical to the shipped model until you switch a lever
-on** (a fresh session, or `disable_*`, restores exactly the model's own output). Re-activating
-the neural pipeline drops the wrappers, so call the toggle again after any
-`use_neural_pipeline()`.
+on** (a fresh session, or `disable_*`, restores exactly the model's own output). If a lever
+remains enabled while the neural pipeline is temporarily disabled, the next
+`use_neural_pipeline()` call restores its wrapper automatically.
 
 ```python
 greek.use_neural_pipeline()

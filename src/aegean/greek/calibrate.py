@@ -38,6 +38,7 @@ import json
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
+from threading import RLock
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # keep this module import-clean (numpy is imported lazily at call time)
@@ -458,6 +459,14 @@ class Calibration:
 
 _ACTIVE: Calibration | None = None
 _ACTIVE_REGISTRY: "CalibrationRegistry | None" = None
+_STATE_LOCK = RLock()
+
+
+def _active_state() -> tuple[Calibration | None, "CalibrationRegistry | None"]:
+    """Return one coherent legacy/registry calibration snapshot."""
+
+    with _STATE_LOCK:
+        return _ACTIVE, _ACTIVE_REGISTRY
 
 
 def _load_bundled() -> Calibration:
@@ -497,13 +506,15 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
         cal = Calibration.from_dict(source)
     else:
         cal = Calibration.load(source)
-    _ACTIVE = cal
     # Keep a separate v2 scope registry for callers that request typed confidence.
     # Legacy construction/JSON/active() remain unchanged; schema-1 aggregate entries
     # are explicitly marked as unscoped fallbacks by the registry adapter.
     from .confidence import CalibrationRegistry
 
-    _ACTIVE_REGISTRY = CalibrationRegistry.from_legacy(cal.to_dict())
+    registry = CalibrationRegistry.from_legacy(cal.to_dict())
+    with _STATE_LOCK:
+        _ACTIVE = cal
+        _ACTIVE_REGISTRY = registry
     return cal
 
 
@@ -521,27 +532,31 @@ def use_calibration_registry(
     else:
         registry = CalibrationRegistry.load(source)
     global _ACTIVE, _ACTIVE_REGISTRY
-    _ACTIVE = None
-    _ACTIVE_REGISTRY = registry
+    with _STATE_LOCK:
+        _ACTIVE = None
+        _ACTIVE_REGISTRY = registry
     return registry
 
 
 def active_registry() -> "CalibrationRegistry | None":
     """Return the active v2 registry, or ``None`` when no calibration is active."""
 
-    return _ACTIVE_REGISTRY
+    with _STATE_LOCK:
+        return _ACTIVE_REGISTRY
 
 
 def disable_calibration() -> None:
     """Unload the active calibration; the joint model then refuses to surface confidence."""
     global _ACTIVE, _ACTIVE_REGISTRY
-    _ACTIVE = None
-    _ACTIVE_REGISTRY = None
+    with _STATE_LOCK:
+        _ACTIVE = None
+        _ACTIVE_REGISTRY = None
 
 
 def active() -> Calibration | None:
     """The active `Calibration`, or ``None`` (the default — no confidence is exposed)."""
-    return _ACTIVE
+    with _STATE_LOCK:
+        return _ACTIVE
 
 
 # Additive confidence-policy and evidence helpers.  This import is stdlib-only and

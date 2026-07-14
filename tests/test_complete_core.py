@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
+import sys
 
 import pytest
 
@@ -43,6 +45,20 @@ PROV = Provenance(
     citation="Editor, B. (2018). A Small Edition.",
     url="https://example.org/ed",
 )
+
+
+def test_analysis_and_viz_namespaces_are_lazy_and_discoverable() -> None:
+    code = (
+        "import sys, aegean\n"
+        "assert {'analysis', 'viz'} <= set(dir(aegean))\n"
+        "assert 'aegean.analysis' not in sys.modules\n"
+        "assert 'aegean.viz' not in sys.modules\n"
+        "assert aegean.analysis.__name__ == 'aegean.analysis'\n"
+        "assert 'aegean.analysis' in sys.modules\n"
+        "assert aegean.viz.__name__ == 'aegean.viz'\n"
+        "assert 'aegean.viz' in sys.modules\n"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)
 
 
 def _doc(doc_id: str, site: str, words: list[str], *, line_breaks: list[int] | None = None) -> Document:

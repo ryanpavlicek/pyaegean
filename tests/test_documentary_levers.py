@@ -19,7 +19,7 @@ from dataclasses import replace
 import pytest
 
 from aegean.greek import documentary as D
-from aegean.greek import joint, paradigms
+from aegean.greek import joint, paradigms, runtime
 from aegean.greek.confidence import (
     AbstentionPolicy,
     ConfidenceResult,
@@ -114,6 +114,7 @@ def _clean_state():
     D.disable_documentary_lemma_rescue()
     saved = joint._ACTIVE
     saved_par = paradigms._ACTIVE
+    saved_default = runtime.default_pipeline()
     joint._ACTIVE = None
     paradigms._ACTIVE = None
     yield
@@ -121,6 +122,7 @@ def _clean_state():
     D.disable_documentary_lemma_rescue()
     joint._ACTIVE = saved
     paradigms._ACTIVE = saved_par
+    runtime._set_default_pipeline(saved_default)
 
 
 # --- the closed coordinator set + its normalization ---------------------------------------
@@ -419,6 +421,42 @@ def test_toggle_installs_and_removes_the_wrapper_and_round_trips():
     D.disable_documentary_lemma_rescue()
     assert joint.active() is model  # wrapper removed once no lever remains
     assert joint.active().analyze(["καὶ", "κυρίου"]) == base  # byte-identical again
+
+
+def test_neural_reactivation_restores_enabled_documentary_wrapper(monkeypatch):
+    """A temporary neural shutdown must not make enabled-lever state lie about behavior."""
+
+    first = _FakeModel(_default_analysis())
+    joint._ACTIVE = first
+    D.use_documentary_reconciliation()
+    assert isinstance(joint.active(), D._DocumentaryModel)
+
+    joint.disable_neural_pipeline()
+    assert D.documentary_reconciliation_active() is True
+    assert joint.active() is None
+
+    replacement = _FakeModel(_default_analysis())
+    config = runtime.GreekPipelineConfig(
+        schema_version=1,
+        backend="neural",
+        model_id="test-model",
+        dataset="test-dataset",
+        bundle_manifest_sha256="a" * 64,
+        tokenizer_revision="test-revision",
+        annotation_profile="test-profile",
+        normalization="NFC",
+        segmentation="test-segmentation",
+        preprocessing_version="test-preprocessing",
+        execution_providers=("CPUExecutionProvider",),
+    )
+    monkeypatch.setattr(joint, "_load_neural_backend", lambda **_kwargs: replacement)
+    monkeypatch.setattr(runtime, "_config_for_backend", lambda _backend: config)
+    joint.use_neural_pipeline()
+
+    assert isinstance(joint.active(), D._DocumentaryModel)
+    assert joint.active().inner is replacement
+    assert joint.active().analyze(["καὶ", "κυρίου"]).upos[0] == "CCONJ"
+    D.disable_documentary_reconciliation()
 
 
 def test_analyze_batch_applies_levers_through_the_wrapper():

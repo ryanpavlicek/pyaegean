@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.48.0.** The CoNLL-U commands and the long-input,
+> **Available in v0.49.0.** The CoNLL-U commands and the long-input,
 > source-alignment, and analysis-receipt fields shown below are part of the
 > current release.
 
@@ -109,13 +109,13 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.48.0
+aegean --version          # pyaegean 0.49.0
 ```
 
 | Group | What's in it |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, bounded neural `stream`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -1220,7 +1220,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.48.0                    │
+│ OK │ pyaegean │ 0.49.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1287,6 +1287,8 @@ explanations live on [Greek NLP](Greek-NLP); metre is on [Meters](Meters).
 Every text argument accepts `-` for stdin, and every data-producing command takes
 `--json` (the plain text transforms `normalize`, `betacode`, `strip`, and `ipa`
 just print the converted text, ready for the next pipe).
+`greek stream` is the deliberate exception to the text-argument shape: it accepts
+a path or `-` containing one JSON token array per line and always emits JSONL.
 
 ### The stages that work immediately
 
@@ -1454,6 +1456,31 @@ unsupported. Existing flat confidence fields remain compatibility output. These 
 not install thresholds, infer an OOD label, or turn a model estimate into a reading. The
 scoped options apply to `pipeline`; `explain --confidence` continues to render the legacy
 aggregate confidence note rather than the typed row structure.
+
+### Bounded neural sentence streams (`stream`)
+
+`stream` is for a large or one-shot source that already supplies tokenized
+sentences. Each nonblank input line is a JSON array of strings; each output line is
+the matching complete `SentenceAnalysis`, including its per-sentence receipt. The
+command activates the neural pipeline automatically and flushes every result, so a
+downstream process receives incremental output and controls backpressure.
+
+```bash
+printf '%s\n' '["μῆνιν","ἄειδε","θεὰ"]' '["ἄνδρα","μοι","ἔννεπε"]' \
+  | aegean greek stream - --batch-size 2 > analyses.jsonl
+```
+
+With no `--batch-size`, the canonical path pulls and analyzes one sentence at a
+time. A positive size holds at most one transactional chunk and preserves source
+order. `--long-input strict|partial|windowed` (or `--partial` / `--windowed`)
+controls overlength sentences. `--confidence`, `--confidence-domain`, and
+`--confidence-policy` match the pipeline evidence controls. Blank lines are
+ignored; malformed JSON, a non-array row, or a non-string token names its input
+line and exits cleanly. Results emitted before a later source/backend error remain
+valid. Redirect stdout to keep the JSONL; progress and activation notes use stderr.
+
+This is a pre-tokenized neural sentence stream. It does not turn raw-text
+`pipeline`, `annotate_corpus`, or CoNLL-U serialization into streaming commands.
 
 A lemma that the lexicon doesn't know is still returned, marked `(fallback)` (and
 `"known": false` in JSON), so you can tell a real hit from a heuristic guess.

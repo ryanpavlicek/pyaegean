@@ -1157,12 +1157,9 @@ def bundled_data_version() -> str:
 
     Bundled data ships inside the wheel and is immutable for a given release, so
     its version *is* the package version; `versions` gives per-file sha256s."""
-    from importlib.metadata import PackageNotFoundError, version
+    from .. import __version__
 
-    try:
-        return version("pyaegean")
-    except PackageNotFoundError:  # pragma: no cover — running from an uninstalled tree
-        return "0.0.0+unknown"
+    return __version__
 
 
 def versions() -> dict[str, Any]:

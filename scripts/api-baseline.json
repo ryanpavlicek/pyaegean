@@ -16687,6 +16687,43 @@
       ],
       "returns": true
     },
+    "aegean.greek.iter_analyze_sentences": {
+      "canonical": "aegean.greek.joint.iter_analyze_sentences",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sentences"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "batch_size"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_probs"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "domain"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.joint": {
       "kind": "module"
     },

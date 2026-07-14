@@ -11,17 +11,18 @@ and imports instantly; the heavier backends are opt-in and fetched to cache.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from importlib.metadata import PackageNotFoundError, version as _pkg_version
+
+# Keep top-level import independent of importlib.metadata's comparatively large
+# discovery stack. The release gate pins this value to pyproject.toml.
+__version__ = "0.49.0"
 
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
-from . import analysis  # noqa: F401
 from . import cache  # noqa: F401 — opt-in persistent cache for expensive analyses (off by default)
 from . import geo  # noqa: F401 — geographic analysis (geopandas/shapely lazy/optional)
 from . import greek  # noqa: F401 — Greek NLP pipeline
 from . import io  # noqa: F401 — corpus interchange, review, and persistence adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
-from . import viz  # noqa: F401 — one-line plots (matplotlib lazy/optional, the [viz] extra)
 from ._log import set_verbosity  # opt-in library logging (off by default; stdlib logging)
 from .core import (
     Corpus,
@@ -43,12 +44,6 @@ from .core import (
     registered_scripts,
 )
 
-try:
-    __version__ = _pkg_version("pyaegean")
-except PackageNotFoundError:  # pragma: no cover - running from a source tree, uninstalled
-    __version__ = "0.0.0+unknown"
-
-
 def load(script_id: str, *, version: str | None = None) -> Corpus:
     """Load a registered corpus by id, e.g. ``aegean.load("lineara")``.
 
@@ -69,6 +64,25 @@ def load(script_id: str, *, version: str | None = None) -> Corpus:
 
 from .core.resolve import read_corpus  # noqa: E402 — flexible loader (id/work/file/stdin)
 from .core.diagnose import DiagnoseReport, diagnose  # noqa: E402 — corpus health report
+
+
+def __getattr__(name: str) -> object:
+    """Load the mutually dependent analysis/visualization facades on first use."""
+
+    if name in {"analysis", "viz"}:
+        from importlib import import_module
+
+        # Analysis owns the established cycle-breaking order: its seriation module
+        # imports viz only after the multivariate records viz needs are available.
+        import_module(".analysis", __name__)
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    """Include lazily exported namespaces in module discovery."""
+
+    return sorted({*globals(), "analysis", "viz"})
 
 
 def combine(corpora: "Iterable[Corpus]", *, dedupe: str = "error") -> Corpus:

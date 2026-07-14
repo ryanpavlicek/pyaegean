@@ -1352,6 +1352,37 @@
       }
     },
     {
+      "id": "greek-streaming-analysis",
+      "since": "0.49.0",
+      "python_api": "aegean.greek.iter_analyze_sentences",
+      "summary": "Backpressure-driven neural analysis of pre-tokenized sentence iterables with bounded batches, stable source order, per-sentence receipts, and isolated-pipeline support.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the Pyodide demo runs the baseline and cannot load the ONNX neural model."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the request/response server intentionally loads no neural model and offers no incremental transport."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "iter_analyze_sentences("
+          },
+          "note": "the bounded sentence-source example is behind RUN_HEAVY."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the corpus reader analyzes selected text; it has no long-running tokenized-sentence stream screen."
+        }
+      }
+    },
+    {
       "id": "calibrated-confidence",
       "since": "0.35.0",
       "python_api": "aegean.greek.use_calibration",

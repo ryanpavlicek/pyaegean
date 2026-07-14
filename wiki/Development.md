@@ -42,7 +42,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.48.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.49.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -166,7 +166,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.48.0-py3-none-any.whl: 4612 KB uncompressed, 218 files
+# wheel dist/pyaegean-0.49.0-py3-none-any.whl: 4633 KB uncompressed, 218 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -175,7 +175,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.48.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.49.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail

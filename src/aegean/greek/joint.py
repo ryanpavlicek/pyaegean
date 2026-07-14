@@ -26,7 +26,10 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Iterable
+import sys
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -68,6 +71,7 @@ __all__ = [
     "active",
     "analyze_sentence",
     "analyze_sentences",
+    "iter_analyze_sentences",
     "disable_neural_pipeline",
     "neural_backend_info",
     "use_neural_pipeline",
@@ -76,6 +80,10 @@ __all__ = [
 # Registered in aegean.data._REMOTE; fetched + extracted to the cache on first use.
 _DATASET = "grc-joint"
 LongInputMode = Literal["strict", "partial", "windowed"]
+_STREAM_CONFIDENCE_UNSET = object()
+_STREAM_CONFIDENCE_CONTEXT: ContextVar[Any] = ContextVar(
+    "pyaegean_stream_confidence_context", default=_STREAM_CONFIDENCE_UNSET
+)
 
 
 class NeuralPipelineNotLoadedError(RuntimeError):
@@ -214,16 +222,38 @@ def _confidence_context(
         raise ValueError("confidence domain/policy requires with_probs=True")
     if not with_probs:
         return None
+    captured = _STREAM_CONFIDENCE_CONTEXT.get()
+    if captured is not _STREAM_CONFIDENCE_UNSET:
+        if not isinstance(captured, dict):  # pragma: no cover - private invariant
+            raise RuntimeError("invalid captured stream confidence context")
+        if captured.get("domain") != domain or captured.get("policy") != policy:
+            raise RuntimeError("captured stream confidence scope changed during analysis")
+        return cast(dict[str, Any], captured)
     from . import calibrate
 
-    legacy = calibrate.active()
-    registry = calibrate.active_registry()
+    legacy, registry = calibrate._active_state()
     if legacy is None and registry is None:
         raise calibrate.UncalibratedConfidenceError(
             "uncalibrated confidence is not exposed; load or fit a calibration first "
             "(aegean.greek.use_calibration())."
         )
     return {"legacy": legacy, "registry": registry, "domain": domain, "policy": policy}
+
+
+@contextmanager
+def _bind_stream_confidence_context(
+    context: dict[str, Any] | None,
+) -> Iterator[None]:
+    """Bind one captured calibration only for a synchronous backend call."""
+
+    if context is None:
+        yield
+        return
+    token = _STREAM_CONFIDENCE_CONTEXT.set(context)
+    try:
+        yield
+    finally:
+        _STREAM_CONFIDENCE_CONTEXT.reset(token)
 
 
 def _model_id(model: Any) -> str:
@@ -1149,6 +1179,11 @@ class _JointModel:
         live = [i for i, forms in enumerate(norm) if forms]
         if live:
             results = self._run_batch([norm[i] for i in live])
+            if len(results) != len(live):
+                raise RuntimeError(
+                    "joint batch backend returned "
+                    f"{len(results)} result(s) for {len(live)} non-empty sentence(s)"
+                )
             for i, res in zip(live, results):
                 analyzed_tokens = len(res["_kept"])
                 if analyzed_tokens != len(norm[i]) and mode == "strict":
@@ -1159,6 +1194,39 @@ class _JointModel:
                     )
                 out[i] = self._decode(norm[i], res, calibration=calibration, context=context)
         return out
+
+    def _validate_stream_options(
+        self,
+        *,
+        with_probs: bool,
+        long_input: LongInputMode,
+        domain: str | None,
+        policy: AbstentionPolicy | None,
+    ) -> dict[str, Any] | None:
+        """Capture real-backend confidence state before a one-shot source is consumed."""
+
+        _long_input_mode(long_input)
+        context = _confidence_context(with_probs, domain=domain, policy=policy)
+        if context is None:
+            return None
+        # Legacy Calibration owns mutable dictionaries despite being a frozen dataclass;
+        # clone it so later caller mutation cannot change a live stream. Registry entries
+        # are immutable too, but round-trip them for the same ownership guarantee.
+        from .calibrate import Calibration
+
+        legacy = context.get("legacy")
+        registry = context.get("registry")
+        return {
+            **context,
+            "legacy": (
+                Calibration.from_dict(legacy.to_dict()) if legacy is not None else None
+            ),
+            "registry": (
+                CalibrationRegistry.from_dict(registry.to_dict())
+                if registry is not None
+                else None
+            ),
+        }
 
     def _decode(
         self,
@@ -1543,6 +1611,12 @@ def use_neural_pipeline(
             _load_neural_backend(force=force, expected_receipt=expected_receipt)
         )
     )
+    # Documentary levers are process-level opt-ins. Disabling the neural
+    # backend temporarily must not leave their introspection flags true while
+    # silently dropping their post-processing when a new backend is selected.
+    from . import documentary
+
+    documentary._sync()
 
 
 def disable_neural_pipeline() -> None:
@@ -1614,16 +1688,60 @@ def analyze_sentence(
     return model.analyze(words)
 
 
-def analyze_sentences(
-    sentences: Iterable[list[str]],
+def _copy_stream_sentence(sentence: Iterable[str], *, sentence_index: int) -> list[str]:
+    """Own and validate one source sentence without retaining the caller's container."""
+
+    if isinstance(sentence, (str, bytes)):
+        raise TypeError(
+            f"sentence {sentence_index} must be an iterable of token strings, not "
+            f"{type(sentence).__name__}"
+        )
+    try:
+        words = list(sentence)
+    except TypeError as exc:
+        raise TypeError(
+            f"sentence {sentence_index} must be an iterable of token strings"
+        ) from exc
+    for token_index, word in enumerate(words):
+        if not isinstance(word, str):
+            raise TypeError(
+                f"sentence {sentence_index} token {token_index} must be a string, "
+                f"not {type(word).__name__}"
+            )
+    return words
+
+
+def _stream_backend(model: Any) -> Any:
+    """Capture optional wrapper state so one stream has one analysis configuration."""
+
+    snapshot = getattr(model, "_snapshot_for_stream", None)
+    return snapshot() if callable(snapshot) else model
+
+
+def iter_analyze_sentences(
+    sentences: Iterable[Iterable[str]],
     *,
     batch_size: int | None = None,
     with_probs: bool = False,
     long_input: LongInputMode = "strict",
     domain: str | None = None,
     policy: AbstentionPolicy | None = None,
-) -> list[SentenceAnalysis]:
-    """Full joint analyses of several pre-tokenized sentences (raises if not active).
+) -> Iterator[SentenceAnalysis]:
+    """Yield joint analyses lazily from a pre-tokenized sentence iterable.
+
+    The active backend and its opt-in wrapper state are captured when this function is
+    called, before the source is touched. ``batch_size=None`` pulls and yields one sentence
+    at a time. A positive integer pulls at most that many sentences, analyzes one
+    transactional chunk, then yields it in source order. Pausing or closing the returned
+    iterator never pulls another sentence. Once iteration begins, it takes ownership of
+    that source iterator for cleanup: closing the result also calls a source ``close()``
+    when one is provided.
+
+    Memory therefore does not grow with the number of source sentences: it is bounded by
+    one result/chunk plus the largest individual sentence. Results from completed chunks
+    remain valid if a later source or backend operation fails. A failed chunk yields
+    nothing, is not retried, and propagates the original backend/source exception. Every
+    yielded ``SentenceAnalysis`` keeps its own unmodified receipt.
 
     ``batch_size=None`` (the default) analyzes each sentence with its own encoder pass —
     identical to calling `analyze_sentence` in a loop, and the code path the published
@@ -1632,43 +1750,192 @@ def analyze_sentences(
     chunk), a throughput convenience producing the same analyses; batched matmuls can
     reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
     behaves as in `analyze_sentence` (calibration required). Strict and partial modes
-    apply independently per sentence; windowed mode is always sequential, so batch
-    chunking cannot change owner or global-tree reconciliation."""
+    apply independently per sentence; windowed mode is always sequential inside the
+    captured backend, so batch chunking cannot change owner or global-tree reconciliation.
+
+    This is sentence-level streaming only. Raw-text analysis, corpus annotation, and
+    CoNLL-U serialization retain their collecting contracts.
+    """
     if (domain is not None or policy is not None) and not with_probs:
         raise ValueError("confidence domain/policy requires with_probs=True")
+    _long_input_mode(long_input)
+    if batch_size is not None:
+        if not isinstance(batch_size, int) or isinstance(batch_size, bool):
+            raise TypeError(
+                f"batch_size must be a positive integer or None, got {batch_size!r}"
+            )
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
+    if isinstance(sentences, (str, bytes)):
+        raise TypeError("sentences must be an iterable of token-string iterables")
     model = active()
     if model is None:
         raise NeuralPipelineNotLoadedError(
             "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
         )
-    sents = [list(s) for s in sentences]
-    if batch_size is None:
-        if with_probs or long_input != "strict" or domain is not None or policy is not None:
-            kwargs: dict[str, Any] = {"with_probs": with_probs, "long_input": long_input}
-            if domain is not None:
-                kwargs["domain"] = domain
-            if policy is not None:
-                kwargs["policy"] = policy
-            return [model.analyze(s, **kwargs) for s in sents]
-        return [model.analyze(s) for s in sents]
-    if batch_size < 1:
-        raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
-    out: list[SentenceAnalysis] = []
-    for start in range(0, len(sents), batch_size):
-        chunk = sents[start : start + batch_size]
-        # Keep the default call byte-identical to the historical signature (positional
-        # ``batch`` only), so existing callers and test spies are unaffected; only a
-        # confidence request threads the keyword through.
-        if with_probs or long_input != "strict" or domain is not None or policy is not None:
-            kwargs = {"with_probs": with_probs, "long_input": long_input}
-            if domain is not None:
-                kwargs["domain"] = domain
-            if policy is not None:
-                kwargs["policy"] = policy
-            out.extend(model.analyze_batch(chunk, **kwargs))
-        else:
-            out.extend(model.analyze_batch(chunk))
-    return out
+    model = _stream_backend(model)
+    method_name = "analyze" if batch_size is None else "analyze_batch"
+    if not callable(getattr(model, method_name, None)):
+        raise TypeError(f"active neural backend does not provide callable {method_name}()")
+    captured_confidence: dict[str, Any] | None = None
+    preflight = getattr(model, "_validate_stream_options", None)
+    if callable(preflight):
+        captured = preflight(
+            with_probs=with_probs,
+            long_input=long_input,
+            domain=domain,
+            policy=policy,
+        )
+        if isinstance(captured, dict):
+            captured_confidence = captured
+
+    use_options = (
+        with_probs or long_input != "strict" or domain is not None or policy is not None
+    )
+    kwargs: dict[str, Any] = {"with_probs": with_probs, "long_input": long_input}
+    if domain is not None:
+        kwargs["domain"] = domain
+    if policy is not None:
+        kwargs["policy"] = policy
+
+    def _iterator() -> Iterator[SentenceAnalysis]:
+        source = iter(sentences)
+        sentence_index = 0
+        try:
+            if batch_size is None:
+                for sentence in source:
+                    source_index = sentence_index
+                    words = _copy_stream_sentence(
+                        sentence, sentence_index=source_index
+                    )
+                    expected_tokens = tuple(_prep.normalize_tokens(words))
+                    sentence_index += 1
+                    with _bind_stream_confidence_context(captured_confidence):
+                        analysis = (
+                            model.analyze(words, **kwargs)
+                            if use_options
+                            else model.analyze(words)
+                        )
+                    if not isinstance(analysis, SentenceAnalysis):
+                        raise TypeError(
+                            "joint backend result at source index "
+                            f"{source_index} must be SentenceAnalysis, not "
+                            f"{type(analysis).__name__}"
+                        )
+                    if analysis.tokens != expected_tokens:
+                        raise RuntimeError(
+                            "joint backend did not preserve source order at index "
+                            f"{source_index}: expected tokens {expected_tokens!r}, "
+                            f"got {analysis.tokens!r}"
+                        )
+                    yield analysis
+                return
+
+            while True:
+                chunk_start = sentence_index
+                chunk: list[list[str]] = []
+                for _ in range(batch_size):
+                    try:
+                        sentence = next(source)
+                    except StopIteration:
+                        break
+                    chunk.append(
+                        _copy_stream_sentence(sentence, sentence_index=sentence_index)
+                    )
+                    sentence_index += 1
+                if not chunk:
+                    return
+                # Do not retain the producer's last sentence object in addition to the
+                # owned copies in this chunk while results are yielded.
+                del sentence
+                expected_batch = [
+                    tuple(_prep.normalize_tokens(words)) for words in chunk
+                ]
+                with _bind_stream_confidence_context(captured_confidence):
+                    analyses = (
+                        model.analyze_batch(chunk, **kwargs)
+                        if use_options
+                        else model.analyze_batch(chunk)
+                    )
+                if not isinstance(analyses, list):
+                    raise TypeError(
+                        "joint batch backend must return a list of SentenceAnalysis values"
+                    )
+                if len(analyses) != len(chunk):
+                    chunk_end = chunk_start + len(chunk) - 1
+                    raise RuntimeError(
+                        "joint batch backend returned "
+                        f"{len(analyses)} result(s) for {len(chunk)} sentence(s) "
+                        f"at source indices {chunk_start}..{chunk_end}"
+                    )
+                for offset, analysis in enumerate(analyses):
+                    if not isinstance(analysis, SentenceAnalysis):
+                        raise TypeError(
+                            "joint batch backend result at source index "
+                            f"{chunk_start + offset} must be SentenceAnalysis, not "
+                            f"{type(analysis).__name__}"
+                        )
+                    expected_tokens = expected_batch[offset]
+                    if analysis.tokens != expected_tokens:
+                        raise RuntimeError(
+                            "joint batch backend did not preserve source order at index "
+                            f"{chunk_start + offset}: expected tokens {expected_tokens!r}, "
+                            f"got {analysis.tokens!r}"
+                        )
+                chunk_size = len(chunk)
+                yield from analyses
+                # `yield from` has completed: release this entire chunk before pulling
+                # the next one, keeping live token ownership at one batch rather than two.
+                del analysis, analyses, chunk, expected_batch, expected_tokens
+                if chunk_size < batch_size:
+                    return
+        finally:
+            primary_error = sys.exc_info()[1]
+            try:
+                close = getattr(source, "close", None)
+            except BaseException:
+                if primary_error is None:
+                    raise
+                close = None
+            if callable(close):
+                try:
+                    close()
+                except BaseException:
+                    # Never replace a backend/source failure or consumer GeneratorExit
+                    # with a secondary cleanup error. On ordinary exhaustion, however,
+                    # a source's failing close remains visible to the caller.
+                    if primary_error is None:
+                        raise
+
+    return _iterator()
+
+
+def analyze_sentences(
+    sentences: Iterable[Iterable[str]],
+    *,
+    batch_size: int | None = None,
+    with_probs: bool = False,
+    long_input: LongInputMode = "strict",
+    domain: str | None = None,
+    policy: AbstentionPolicy | None = None,
+) -> list[SentenceAnalysis]:
+    """Collect `iter_analyze_sentences` into a list for compatibility.
+
+    Use `iter_analyze_sentences` when output memory must remain bounded or results should
+    become visible incrementally. This collector still returns the historical list, but it
+    no longer materializes a second complete copy of the input before analysis starts.
+    """
+
+    return list(
+        iter_analyze_sentences(
+            sentences,
+            batch_size=batch_size,
+            with_probs=with_probs,
+            long_input=long_input,
+            domain=domain,
+            policy=policy,
+        )
+    )
 
 
 def neural_backend_info() -> dict[str, Any]:

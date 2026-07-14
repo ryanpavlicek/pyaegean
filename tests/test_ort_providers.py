@@ -173,3 +173,5 @@ def test_backend_info_is_exported_from_the_greek_package() -> None:
     assert greek.neural_backend_info is joint.neural_backend_info
     assert "analyze_sentences" in greek.__all__
     assert greek.analyze_sentences is joint.analyze_sentences
+    assert "iter_analyze_sentences" in greek.__all__
+    assert greek.iter_analyze_sentences is joint.iter_analyze_sentences

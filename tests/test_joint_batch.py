@@ -181,6 +181,13 @@ def test_analyze_batch_runs_one_padded_session_call() -> None:
     assert type(sess).calls == 1  # the whole mixed batch = one ONNX run
 
 
+def test_analyze_batch_rejects_internal_result_count_mismatch() -> None:
+    m = _batch_stub_model()
+    m._run_batch = lambda _sentences: []  # type: ignore[method-assign]
+    with pytest.raises(RuntimeError, match="1 result|2 non-empty|returned 0"):
+        m.analyze_batch([["λόγος"], ["ἐστί"]])
+
+
 def test_analyze_batch_empty_inputs_never_touch_the_session() -> None:
     m = _batch_stub_model()
     sess = m._sess
@@ -488,6 +495,7 @@ def test_evaluate_on_nt_batch_size_is_inert_with_a_custom_tagger(
 _PROBE = '''
 import json, sys
 from pathlib import Path
+from aegean.greek import joint
 from aegean.greek.joint import _JointModel
 
 SENTS = [
@@ -512,9 +520,15 @@ FIELDS = (
 m = _JointModel(Path(sys.argv[1]))
 seq = [m.analyze(list(s)) for s in SENTS]
 bat = m.analyze_batch([list(s) for s in SENTS])
+joint._ACTIVE = m
+stream_seq = list(joint.iter_analyze_sentences((list(s) for s in SENTS)))
+stream_bat = list(joint.iter_analyze_sentences((list(s) for s in SENTS), batch_size=4))
 diffs = [
-    {"i": i, "fields": [f for f in FIELDS if getattr(a, f) != getattr(b, f)]}
-    for i, (a, b) in enumerate(zip(seq, bat)) if a != b
+    {"i": i, "variant": variant,
+     "fields": [f for f in FIELDS if getattr(expected, f) != getattr(actual, f)]}
+    for variant, values in (("batch", bat), ("stream_seq", stream_seq),
+                            ("stream_batch", stream_bat))
+    for i, (expected, actual) in enumerate(zip(seq, values)) if expected != actual
 ]
 print(json.dumps({"identical": not diffs, "diffs": diffs, "n": len(SENTS),
                   "providers": m._sess.get_providers()}))

@@ -16,6 +16,7 @@ Covers the whole `aegean.greek.calibrate` surface:
 from __future__ import annotations
 
 import math
+from threading import Event, Thread
 
 import pytest
 
@@ -276,6 +277,51 @@ def test_legacy_and_v2_active_calibration_state_transitions():
     assert calibrate.active_registry() == registry
     calibrate.disable_calibration()
     assert calibrate.active() is None and calibrate.active_registry() is None
+
+
+def test_calibration_activation_publishes_legacy_and_registry_atomically(monkeypatch):
+    """Readers must not observe a new legacy calibration with the previous registry."""
+
+    old = CalibrationRegistry.from_legacy(_sample_calibration().to_dict())
+    calibrate.use_calibration_registry(old)
+    new_data = _sample_calibration().to_dict()
+    new_data["temperature"]["upos"] = 2.42
+    new_calibration = Calibration.from_dict(new_data)
+    entered = Event()
+    release = Event()
+    errors: list[BaseException] = []
+    original = CalibrationRegistry.from_legacy
+
+    def blocked_from_legacy(cls, value):
+        entered.set()
+        if not release.wait(5):
+            raise AssertionError("timed out waiting to publish calibration state")
+        return original(value)
+
+    monkeypatch.setattr(
+        CalibrationRegistry, "from_legacy", classmethod(blocked_from_legacy)
+    )
+
+    def activate() -> None:
+        try:
+            calibrate.use_calibration(new_calibration)
+        except BaseException as exc:  # pragma: no cover - asserted in the parent thread
+            errors.append(exc)
+
+    worker = Thread(target=activate)
+    worker.start()
+    try:
+        assert entered.wait(5)
+        assert calibrate._active_state() == (None, old)
+    finally:
+        release.set()
+        worker.join(5)
+
+    assert not worker.is_alive()
+    assert not errors
+    legacy, registry = calibrate._active_state()
+    assert legacy is not None
+    assert registry is not None and registry != old
 
 
 def test_bundled_default_missing_raises_clearly(monkeypatch):

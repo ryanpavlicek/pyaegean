@@ -40,14 +40,15 @@ the true offline source is available from `rescue_lemma`.
 
 Both levers post-process the **active** neural pipeline, so the neural pipeline must be
 activated first (`aegean.greek.use_neural_pipeline`); toggling a lever on with no pipeline
-active raises. Re-activating the neural pipeline drops the wrapper — call the toggle again
-after any `use_neural_pipeline` call.
+active raises. If a lever is still enabled after the neural pipeline is temporarily disabled,
+activating a new neural backend restores its wrapper automatically.
 """
 
 from __future__ import annotations
 
 import unicodedata
 from dataclasses import replace
+from threading import RLock
 from typing import TYPE_CHECKING, Any
 
 from .lemmatize import (
@@ -304,6 +305,26 @@ def reconcile_analysis(ana: SentenceAnalysis, *, aggressive: bool = False) -> Se
     )
 
 
+def _rescue_lemma_with_paradigms(form: str, plex: Any | None) -> tuple[str, LemmaSource] | None:
+    """Apply the curated rescue against one already-selected paradigm lexicon."""
+
+    lemma, known = seed_lemma_verbose(form)
+    if known:
+        return lemma, LemmaSource.SEED
+    if plex is not None:
+        key = _fold_key(form)
+        if (
+            key not in _FUNCTION_KEYS
+            and key not in _INDECLINABLE
+            and not _is_capitalized(form)
+            and len(plex.lemma_options(form)) == 1
+        ):
+            hit = plex.lemmatize(form)
+            if hit is not None:
+                return hit, LemmaSource.PARADIGM
+    return None
+
+
 def rescue_lemma(form: str) -> tuple[str, LemmaSource] | None:
     """The guarded **offline** lemma rescue for one form: ``(lemma, source)`` or ``None``.
 
@@ -319,29 +340,15 @@ def rescue_lemma(form: str) -> tuple[str, LemmaSource] | None:
     they fix (measured on the documentary dev fold: roughly break-even there, and net-negative
     on the literary dev fold, where they were the sole source of regressions), so the rescue
     keeps only the curated, correctly-accented tiers."""
-    lemma, known = seed_lemma_verbose(form)
-    if known:
-        return lemma, LemmaSource.SEED
     from . import paradigms
 
-    plex = paradigms.active()
-    if plex is not None:
-        key = _fold_key(form)
-        if (
-            key not in _FUNCTION_KEYS
-            and key not in _INDECLINABLE
-            and not _is_capitalized(form)
-            and len(plex.lemma_options(form)) == 1
-        ):
-            hit = plex.lemmatize(form)
-            if hit is not None:
-                return hit, LemmaSource.PARADIGM
-    return None
+    return _rescue_lemma_with_paradigms(form, paradigms.active())
 
 
-def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
-    """Return ``ana`` with Lever B (lemma OOV rescue) applied — a NEW `SentenceAnalysis`, or
-    ``ana`` unchanged when nothing is rescued.
+def _rescue_analysis_with_paradigms(
+    ana: SentenceAnalysis, plex: Any | None
+) -> SentenceAnalysis:
+    """Apply documentary rescue with one selected (possibly frozen) paradigm lexicon.
 
     For each token the model left UNRESOLVED (``lemma_resolved`` is ``False`` — the honest
     identity fall-through), `rescue_lemma` is consulted; a hit replaces the lemma string and
@@ -363,7 +370,7 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
     changed = False
     for i, resolved in enumerate(ana.lemma_resolved):
         if not resolved:
-            rescued = rescue_lemma(ana.tokens[i])
+            rescued = _rescue_lemma_with_paradigms(ana.tokens[i], plex)
             if rescued is not None:
                 lemma[i] = rescued[0]
                 override[i] = rescued[1].value  # the offline source: "seed" / "paradigm"
@@ -401,6 +408,22 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
     )
 
 
+def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
+    """Return ``ana`` with Lever B (lemma OOV rescue) applied: a new value, or
+    ``ana`` unchanged when nothing is rescued.
+
+    For each token the model left unresolved, `rescue_lemma` is consulted. A hit replaces
+    the lemma and records its offline source (``SEED`` / ``PARADIGM``), while keeping
+    ``lemma_resolved=False`` so it is never credited to the neural model. Typed lemma and
+    sentence confidence are invalidated because they described the pre-rescue output.
+    The current opt-in paradigm state is captured once for this call.
+    """
+
+    from . import paradigms
+
+    return _rescue_analysis_with_paradigms(ana, paradigms.active())
+
+
 # --- the opt-in toggles + the composition wrapper -------------------------------------
 #
 # The levers post-process the ACTIVE joint model's output. Rather than edit the pipeline, the
@@ -412,6 +435,8 @@ def rescue_analysis(ana: SentenceAnalysis) -> SentenceAnalysis:
 _RECONCILE = False
 _RESCUE = False
 _AGGRESSIVE = False
+_STATE_LOCK = RLock()
+_LIVE_PARADIGMS = object()
 
 
 class _DocumentaryModel:
@@ -423,14 +448,43 @@ class _DocumentaryModel:
     reconciled/rescued analyses. It applies whichever levers are currently on, so it is
     installed once and reads the toggles live."""
 
-    def __init__(self, inner: Any) -> None:
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        _frozen_state: tuple[bool, bool, bool] | None = None,
+        _frozen_paradigms: Any = _LIVE_PARADIGMS,
+    ) -> None:
         self.inner = inner
+        self._frozen_state = _frozen_state
+        self._frozen_paradigms = _frozen_paradigms
+
+    def _state(self) -> tuple[bool, bool, bool]:
+        with _STATE_LOCK:
+            if self._frozen_state is not None:
+                return self._frozen_state
+            return _RECONCILE, _RESCUE, _AGGRESSIVE
+
+    def _snapshot_for_stream(self) -> _DocumentaryModel:
+        """Freeze the opt-in levers for one lazy sentence stream."""
+
+        from . import paradigms
+
+        return _DocumentaryModel(
+            self.inner,
+            _frozen_state=self._state(),
+            _frozen_paradigms=paradigms.active(),
+        )
 
     def _apply(self, ana: SentenceAnalysis) -> SentenceAnalysis:
-        if _RECONCILE:
-            ana = reconcile_analysis(ana, aggressive=_AGGRESSIVE)
-        if _RESCUE:
-            ana = rescue_analysis(ana)
+        reconcile, rescue, aggressive = self._state()
+        if reconcile:
+            ana = reconcile_analysis(ana, aggressive=aggressive)
+        if rescue:
+            if self._frozen_paradigms is _LIVE_PARADIGMS:
+                ana = rescue_analysis(ana)
+            else:
+                ana = _rescue_analysis_with_paradigms(ana, self._frozen_paradigms)
         return ana
 
     def analyze(
@@ -501,17 +555,18 @@ def _sync() -> None:
     """Install or remove the wrapper so `joint.active()` reflects the current toggles."""
     from . import joint
 
-    active: Any = joint.active()  # Any: the wrapper composes outside joint's declared type
-    if active is None:
-        return
-    wrapped = isinstance(active, _DocumentaryModel)
-    want = _RECONCILE or _RESCUE
-    if want and not wrapped:
-        # Install the composition wrapper on the default facade. Explicit
-        # GreekPipeline instances remain isolated from module-level toggles.
-        joint._replace_active_backend(_DocumentaryModel(active))
-    elif not want and wrapped:
-        joint._replace_active_backend(active.inner)
+    with _STATE_LOCK:
+        active: Any = joint.active()  # Any: wrapper composes outside joint's declared type
+        if active is None:
+            return
+        wrapped = isinstance(active, _DocumentaryModel)
+        want = _RECONCILE or _RESCUE
+        if want and not wrapped:
+            # Install the composition wrapper on the default facade. Explicit
+            # GreekPipeline instances remain isolated from module-level toggles.
+            joint._replace_active_backend(_DocumentaryModel(active))
+        elif not want and wrapped:
+            joint._replace_active_backend(active.inner)
 
 
 def use_documentary_reconciliation(*, aggressive: bool = False) -> None:
@@ -526,21 +581,24 @@ def use_documentary_reconciliation(*, aggressive: bool = False) -> None:
     restores that."""
     global _RECONCILE, _AGGRESSIVE
     _require_active()
-    _RECONCILE = True
-    _AGGRESSIVE = aggressive
-    _sync()
+    with _STATE_LOCK:
+        _RECONCILE = True
+        _AGGRESSIVE = aggressive
+        _sync()
 
 
 def disable_documentary_reconciliation() -> None:
     """Deactivate Lever A; remove the wrapper if no lever remains active."""
     global _RECONCILE
-    _RECONCILE = False
-    _sync()
+    with _STATE_LOCK:
+        _RECONCILE = False
+        _sync()
 
 
 def documentary_reconciliation_active() -> bool:
     """Whether Lever A (coordinator reconciliation) is currently active."""
-    return _RECONCILE
+    with _STATE_LOCK:
+        return _RECONCILE
 
 
 def use_documentary_lemma_rescue() -> None:
@@ -554,17 +612,20 @@ def use_documentary_lemma_rescue() -> None:
     `disable_*` restores that."""
     global _RESCUE
     _require_active()
-    _RESCUE = True
-    _sync()
+    with _STATE_LOCK:
+        _RESCUE = True
+        _sync()
 
 
 def disable_documentary_lemma_rescue() -> None:
     """Deactivate Lever B; remove the wrapper if no lever remains active."""
     global _RESCUE
-    _RESCUE = False
-    _sync()
+    with _STATE_LOCK:
+        _RESCUE = False
+        _sync()
 
 
 def documentary_lemma_rescue_active() -> bool:
     """Whether Lever B (lemma OOV rescue) is currently active."""
-    return _RESCUE
+    with _STATE_LOCK:
+        return _RESCUE

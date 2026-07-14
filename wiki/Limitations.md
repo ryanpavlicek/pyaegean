@@ -356,6 +356,12 @@ These are deliberate. They're listed here so you can judge them, not so they get
   `aegean.db.stream` (design
   note:
   [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).
+  The neural API also streams an iterable of already tokenized sentences with
+  `greek.iter_analyze_sentences`; raw-text pipelines, corpus annotation, and
+  CoNLL-U serialization still collect their full results.
+  A `SentenceAnalysis.receipt` identifies the neural inference path; opt-in
+  documentary reconciliation/rescue is post-processing and its settings must be
+  recorded separately when used.
 
 - **Try it without installing anything**: the core pipeline runs client-side via
   Pyodide at [the web demo](https://pyaegean.xyz/demo/); the

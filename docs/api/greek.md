@@ -2,6 +2,22 @@
 
 ::: aegean.greek
 
+## Streaming neural sentence analysis
+
+`iter_analyze_sentences(sentences, batch_size=None)` is the bounded-memory API for
+an iterable of already tokenized Greek sentences. It captures the active neural
+backend, opt-in documentary state, and (when requested) confidence calibration when
+called, pulls and yields one sentence at a time by default, preserves
+source order and each result's `AnalysisReceipt`, and applies synchronous
+backpressure. A positive `batch_size` holds at most one transactional chunk; a
+failed chunk yields nothing, while earlier yielded results remain valid.
+
+`analyze_sentences(...)` is the compatibility collector over that engine and still
+returns a complete list. `GreekPipeline.iter_analyze_sentences(...)` provides the
+same iterator against an isolated instance. These APIs do not make raw-text
+`pipeline()`, corpus annotation, or CoNLL-U serialization streaming. Batching is a
+throughput option; the published benchmark protocol remains sequential CPU inference.
+
 ## Sentence-policy registries
 
 The facade also exports two immutable mappings that document the supported rule

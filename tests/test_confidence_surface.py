@@ -149,6 +149,30 @@ def test_with_probs_without_calibration_raises_everywhere():
         explain_pipeline("ὁ λόγος", with_confidence=True)
 
 
+def test_stream_captures_calibration_before_global_state_changes():
+    logits = [[2.0, 0.0, 0.0, 0.0]]
+    lemma_logits = [[1.0, 0.5]]
+    m = _controllable_stub(logits, lemma_logits)
+    joint._ACTIVE = m
+    calibrate.use_calibration(_synthetic_calibration(1.5, 1.5))
+    stream = joint.iter_analyze_sentences(
+        (["a"] for _ in range(2)), with_probs=True
+    )
+
+    first = next(stream)
+    calibrate.use_calibration(_synthetic_calibration(9.0, 9.0))
+    second = next(stream)
+
+    assert first.upos_prob == second.upos_prob
+    assert first.lemma_script_prob == second.lemma_script_prob
+    assert first.upos_prob[0] == pytest.approx(
+        float(calibrate.top1_confidence(np.array(logits[0]), 1.5))
+    )
+    assert first.upos_prob[0] != pytest.approx(
+        float(calibrate.top1_confidence(np.array(logits[0]), 9.0))
+    )
+
+
 # ── the calibrated path: same logits, temperature applied ────────────────────
 def test_probs_are_the_temperature_scaled_top1_of_the_same_logits():
     upos_logits = [[2.0, 0.0, 0.0, 0.0], [0.0, 1.5, 0.0, 0.0]]

@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
+import aegean
 from aegean import data, geo
 from aegean.mcp_server import TOOLS
 
@@ -21,6 +22,10 @@ def _project_version() -> str:
     match = re.search(r'^version = "([^"]+)"$', _read("pyproject.toml"), re.MULTILINE)
     assert match is not None
     return match.group(1)
+
+
+def test_package_version_matches_project_version() -> None:
+    assert aegean.__version__ == _project_version()
 
 
 def test_home_is_an_evergreen_front_door() -> None:

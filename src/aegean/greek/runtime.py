@@ -440,7 +440,7 @@ class GreekPipeline:
 
     def analyze_sentences(
         self,
-        sentences: Iterable[list[str]],
+        sentences: Iterable[Iterable[str]],
         *,
         batch_size: int | None = None,
         with_probs: bool = False,
@@ -466,6 +466,44 @@ class GreekPipeline:
                     policy=confidence_policy,
                 )
             return analyze_sentences(
+                sentences,
+                batch_size=batch_size,
+                with_probs=with_probs,
+                long_input=long_input,
+            )
+
+    def iter_analyze_sentences(
+        self,
+        sentences: Iterable[Iterable[str]],
+        *,
+        batch_size: int | None = None,
+        with_probs: bool = False,
+        long_input: LongInputMode = "strict",
+        confidence_domain: str | None = None,
+        confidence_policy: AbstentionPolicy | None = None,
+    ) -> Iterator[SentenceAnalysis]:
+        """Yield analyses lazily from this instance's captured neural backend."""
+
+        from .joint import iter_analyze_sentences
+
+        if confidence_policy is not None and not with_probs:
+            raise ValueError("a confidence policy requires with_probs=True")
+        if confidence_domain is not None and not with_probs:
+            raise ValueError("a confidence domain requires with_probs=True")
+        # `iter_analyze_sentences` is a normal function returning a nested generator: it
+        # captures this bound backend synchronously, so no ContextVar token spans yields or
+        # follows the consumer to another thread.
+        with _bind(self):
+            if confidence_domain is not None or confidence_policy is not None:
+                return iter_analyze_sentences(
+                    sentences,
+                    batch_size=batch_size,
+                    with_probs=with_probs,
+                    long_input=long_input,
+                    domain=confidence_domain,
+                    policy=confidence_policy,
+                )
+            return iter_analyze_sentences(
                 sentences,
                 batch_size=batch_size,
                 with_probs=with_probs,

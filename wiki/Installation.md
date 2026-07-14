@@ -125,7 +125,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.48.0
+# pyaegean 0.49.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -141,7 +141,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.48.0
+print(aegean.__version__)                 # 0.49.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -158,7 +158,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.48.0
+# pyaegean 0.49.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -196,7 +196,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.48.0                    │
+│ OK │ pyaegean │ 0.49.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -428,9 +428,8 @@ pip install -e ".[dev]"
 - **The AI layer needs your own API key** (or a no-key local server via the `local`
   provider) and is explicitly exploratory; it does not ship a model. See
   [AI Layer](AI-Layer).
-- **`aegean.__version__` reads installed package metadata.** If it ever prints
-  `0.0.0+unknown`, the package metadata wasn't found (an unusual editable/zip
-  setup): reinstall normally and it resolves.
+- **`aegean.__version__` is the package release identity.** The release gate checks it
+  against `pyproject.toml`, and the bundled-data manifest uses the same value.
 
 For anything that didn't go to plan, see [FAQ & Troubleshooting](FAQ) and the
 project-wide [Limitations](Limitations) page. To start using it, head to

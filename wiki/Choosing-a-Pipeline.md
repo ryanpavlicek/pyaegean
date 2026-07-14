@@ -105,6 +105,13 @@ the document's `sentence_policy`.
 Choose `sentence_policy` on each `analyze()`/`pipeline()` call. `GreekPipeline.from_config(...)`
 refuses a different live configuration rather than silently substituting it.
 
+For a large or one-shot source that already supplies tokenized sentences, use
+`greek.iter_analyze_sentences(source)` or the isolated instance method. It yields
+incrementally in source order and, with `batch_size=N`, holds no more than one
+N-sentence chunk plus the largest sentence. `analyze_sentences()` returns a complete
+list instead. This sentence iterator does not stream raw text, a `Corpus`, or CoNLL-U;
+those interfaces keep their whole-result contracts.
+
 A few notes that decide most cases:
 
 - **The baseline costs nothing and hides nothing.** It has zero third-party
