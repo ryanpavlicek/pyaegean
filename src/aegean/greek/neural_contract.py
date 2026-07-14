@@ -14,19 +14,33 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
+import tempfile
 from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Mapping
 
 from ..data import sha256_file
+from .neural_preprocessing import (
+    ANNOTATION_PROFILE,
+    NORMALIZATION,
+    PREPROCESSING_VERSION,
+    SEGMENTATION,
+    SPECIAL_TOKEN_POLICY,
+    TAG_HEADS,
+    tokenizer_json_contract,
+)
 
 __all__ = [
     "AnalysisReceipt",
+    "build_schema1_manifest",
     "ModelBundleError",
     "ModelBundleManifest",
+    "prepare_schema1_artifact_dir",
     "ReceiptMismatchError",
+    "write_schema1_manifest",
 ]
 
 _SCHEMA_VERSION = 1
@@ -34,10 +48,18 @@ _RECEIPT_SCHEMA_VERSION = 2
 _DATASET = "grc-joint"
 _V3_MODEL_ID = "grc-joint-v3"
 _V3_ASSET_SHA256 = "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e"
-_TAG_HEADS = ("upos", *(f"x{i}" for i in range(9)))
+_TAG_HEADS = TAG_HEADS
 _OUTPUT_HEADS = (*_TAG_HEADS, "arc", "rel", "lemma")
 _REQUIRED_FILES = frozenset(
     {"labels.json", "lemma-lookup.json", "lemma-scripts.json", "model.onnx", "tokenizer.json"}
+)
+_ARTIFACT_FILES = frozenset(
+    {
+        *_REQUIRED_FILES,
+        "model.fp32.onnx",
+        "model.int8.onnx",
+        "manifest.json",
+    }
 )
 
 # The root archive SHA in aegean.data authenticates a normal fetch. This table also pins
@@ -178,29 +200,284 @@ def _validate_labels(model_dir: Path) -> tuple[tuple[str, ...], int]:
 
 def _tokenizer_contract(model_dir: Path) -> tuple[int, str, str]:
     tokenizer = _json_object(model_dir / "tokenizer.json")
-    truncation = tokenizer.get("truncation")
-    if not isinstance(truncation, dict):
-        raise ModelBundleError("tokenizer.json must declare a truncation policy")
-    max_subwords = _positive_int(truncation.get("max_length"), "tokenizer.truncation.max_length")
-    if (
-        truncation.get("direction") != "Right"
-        or truncation.get("strategy") != "LongestFirst"
-        or truncation.get("stride") != 0
-    ):
-        raise ModelBundleError(
-            "tokenizer.json uses an unsupported truncation policy; expected right/longest-first/stride-0"
-        )
-    post = tokenizer.get("post_processor")
-    if not isinstance(post, dict) or post.get("type") != "RobertaProcessing":
-        raise ModelBundleError("tokenizer.json must use the declared Roberta special-token policy")
-    cls = post.get("cls")
-    sep = post.get("sep")
-    if cls != ["<s>", 0] or sep != ["</s>", 2]:
-        raise ModelBundleError(
-            "tokenizer.json has incompatible special tokens; expected <s>:0 and </s>:2"
-        )
+    try:
+        max_subwords, special_policy = tokenizer_json_contract(tokenizer)
+    except ValueError as exc:
+        raise ModelBundleError(f"invalid tokenizer.json contract: {exc}") from exc
     revision = sha256_file(model_dir / "tokenizer.json")
-    return max_subwords, revision, "roberta:<s>:0:</s>:2"
+    return max_subwords, revision, special_policy
+
+
+def validate_joint_checkpoint_sidecars(
+    model_dir: str | Path, metadata: Mapping[str, Any]
+) -> None:
+    """Validate joint labels, lemma data, and tokenizer before ONNX export."""
+    root = Path(model_dir)
+    _validate_labels(root)
+    max_subwords, _revision, special_policy = _tokenizer_contract(root)
+    if metadata.get("max_subwords") != max_subwords:
+        raise ModelBundleError(
+            f"checkpoint max_subwords {metadata.get('max_subwords')!r} disagrees with "
+            f"tokenizer max_length {max_subwords}"
+        )
+    if metadata.get("special_token_policy") != special_policy:
+        raise ModelBundleError(
+            "checkpoint special_token_policy disagrees with tokenizer.json"
+        )
+
+
+def prepare_schema1_artifact_dir(out: str | Path, artifact_name: str) -> Path:
+    """Create a clean named artifact directory without deleting stale user data."""
+    root = Path(out)
+    if (
+        not artifact_name
+        or Path(artifact_name).name != artifact_name
+        or artifact_name in {".", ".."}
+    ):
+        raise ModelBundleError("artifact name must be one non-empty path-safe component")
+    root.mkdir(parents=True, exist_ok=True)
+    artifact = root / artifact_name
+    if artifact.exists():
+        if not artifact.is_dir():
+            raise ModelBundleError(
+                f"refusing stale export path that is not a directory: {artifact}"
+            )
+        entries = sorted(path.name for path in artifact.iterdir())
+        if entries:
+            unknown = sorted(set(entries) - _ARTIFACT_FILES)
+            if unknown:
+                raise ModelBundleError(
+                    f"refusing export: artifact directory contains foreign entries {unknown}"
+                )
+            raise ModelBundleError(
+                f"refusing export: artifact directory is not empty ({entries}); "
+                "choose a new --out or remove the stale generated artifact"
+            )
+    else:
+        artifact.mkdir()
+    return artifact
+
+
+def _manifest_metadata_value(
+    metadata: Mapping[str, Any] | None,
+    explicit: str | None,
+    field: str,
+    *aliases: str,
+) -> str:
+    """Return one required exporter metadata value.
+
+    Checkpoint metadata has had a couple of useful names during development.  The
+    writer accepts the canonical field and a small set of aliases, but always emits
+    the canonical schema-1 name.  Missing metadata is an error: silently filling in a
+    preprocessing value would make a bundle look reproducible when it is not.
+    """
+    value: Any = explicit
+    if value is None and metadata is not None:
+        for key in (field, *aliases):
+            if key in metadata:
+                value = metadata[key]
+                break
+    return _string(value, field)
+
+
+def validate_artifact_metadata(
+    artifact_metadata: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate optional model provenance before an expensive export starts."""
+    if artifact_metadata is None:
+        return {}
+    allowed = {
+        "model_name",
+        "model_revision",
+        "epochs",
+        "license",
+        "training_receipt_sha256",
+    }
+    unknown = set(artifact_metadata) - allowed
+    if unknown:
+        raise ModelBundleError(f"unsupported artifact metadata fields: {sorted(unknown)}")
+    result: dict[str, Any] = {}
+    for field in ("model_name", "model_revision", "license"):
+        if field in artifact_metadata:
+            result[field] = _string(artifact_metadata[field], field)
+    if "epochs" in artifact_metadata:
+        result["epochs"] = _positive_int(artifact_metadata["epochs"], "epochs")
+    if "training_receipt_sha256" in artifact_metadata:
+        digest = _string(
+            artifact_metadata["training_receipt_sha256"],
+            "training_receipt_sha256",
+        ).lower()
+        if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+            raise ModelBundleError(
+                "training_receipt_sha256 must be a 64-character hexadecimal digest"
+            )
+        result["training_receipt_sha256"] = digest
+    return result
+
+
+def build_schema1_manifest(
+    model_dir: str | Path,
+    *,
+    model_id: str,
+    annotation_profile: str | None = None,
+    normalization: str | None = None,
+    segmentation: str | None = None,
+    preprocessing_version: str | None = None,
+    dataset: str = _DATASET,
+    variant: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    artifact_metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Construct a validated schema-1 bundle manifest without neural dependencies.
+
+    The helper intentionally hashes only the five files required by the runtime
+    contract.  Temporary ONNX variants (``model.fp32.onnx`` and
+    ``model.int8.onnx``) may therefore coexist during an export without becoming
+    stale manifest entries.  ``manifest.json`` itself is not self-hashed; its
+    content-addressed identity is computed by :meth:`ModelBundleManifest.load`.
+    """
+    root = Path(model_dir)
+    model_id = _string(model_id, "model_id")
+    if model_id in {_DATASET, _V3_MODEL_ID}:
+        raise ModelBundleError(
+            "schema-1 manifests cannot reuse the grc-joint data key or immutable "
+            "grc-joint-v3 model ID"
+        )
+    dataset = _string(dataset, "dataset")
+    profile = _manifest_metadata_value(metadata, annotation_profile, "annotation_profile")
+    norm = _manifest_metadata_value(
+        metadata, normalization, "normalization", "normalization_form"
+    )
+    segmentation_value = _manifest_metadata_value(
+        metadata, segmentation, "segmentation", "input_segmentation"
+    )
+    preprocessing = _manifest_metadata_value(
+        metadata, preprocessing_version, "preprocessing_version", "shared_preprocessing_version"
+    )
+    if profile != ANNOTATION_PROFILE:
+        raise ModelBundleError(
+            f"schema-1 neural bundles require annotation profile {ANNOTATION_PROFILE!r}; "
+            f"got {profile!r}"
+        )
+    if norm != NORMALIZATION:
+        raise ModelBundleError(
+            f"schema-1 neural bundles require NFC normalization; got {norm!r}"
+        )
+    if segmentation_value != SEGMENTATION:
+        raise ModelBundleError(
+            "schema-1 neural bundles require pretokenized segmentation; "
+            f"got {segmentation_value!r}"
+        )
+    if preprocessing != PREPROCESSING_VERSION:
+        raise ModelBundleError(
+            f"schema-1 neural bundles require preprocessing version "
+            f"{PREPROCESSING_VERSION!r}; got {preprocessing!r}"
+        )
+    if variant is not None:
+        variant = _string(variant, "variant")
+
+    # Validate all sidecars and derive the tokenizer fields before hashing.  This
+    # gives callers a clean ModelBundleError for malformed synthetic/checkpoint data.
+    label_heads, _n_scripts = _validate_labels(root)
+    max_subwords, tokenizer_revision, special_policy = _tokenizer_contract(root)
+    if special_policy != SPECIAL_TOKEN_POLICY:
+        raise ModelBundleError(
+            f"tokenizer special-token policy must be {SPECIAL_TOKEN_POLICY!r}"
+        )
+    if metadata is not None:
+        declared_max = metadata.get("max_subwords")
+        if declared_max != max_subwords:
+            raise ModelBundleError(
+                f"checkpoint max_subwords {declared_max!r} disagrees with tokenizer "
+                f"max_length {max_subwords}"
+            )
+        declared_policy = metadata.get("special_token_policy")
+        if declared_policy != special_policy:
+            raise ModelBundleError(
+                "checkpoint special_token_policy disagrees with tokenizer.json"
+            )
+    files: dict[str, dict[str, Any]] = {}
+    for name in sorted(_REQUIRED_FILES):
+        path = root / name
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            raise ModelBundleError(f"model bundle is missing {name!r}") from exc
+        files[name] = {"bytes": size, "sha256": sha256_file(path)}
+
+    manifest: dict[str, Any] = {
+        "schema_version": _SCHEMA_VERSION,
+        "model_id": model_id,
+        "dataset": dataset,
+        "annotation_profile": profile,
+        "normalization": norm,
+        "segmentation": segmentation_value,
+        "preprocessing_version": preprocessing,
+        "output_heads": list(_OUTPUT_HEADS),
+        "label_heads": list(label_heads),
+        "max_subwords": max_subwords,
+        "tokenizer_revision": tokenizer_revision,
+        "special_token_policy": special_policy,
+        "files": files,
+    }
+    if variant is not None:
+        manifest["variant"] = variant
+    manifest.update(validate_artifact_metadata(artifact_metadata))
+    return manifest
+
+
+def write_schema1_manifest(
+    model_dir: str | Path,
+    *,
+    model_id: str,
+    annotation_profile: str | None = None,
+    normalization: str | None = None,
+    segmentation: str | None = None,
+    preprocessing_version: str | None = None,
+    dataset: str = _DATASET,
+    variant: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    artifact_metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Atomically write and return a schema-1 manifest for ``model_dir``."""
+    root = Path(model_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    manifest = build_schema1_manifest(
+        root,
+        model_id=model_id,
+        annotation_profile=annotation_profile,
+        normalization=normalization,
+        segmentation=segmentation,
+        preprocessing_version=preprocessing_version,
+        dataset=dataset,
+        variant=variant,
+        metadata=metadata,
+        artifact_metadata=artifact_metadata,
+    )
+    temp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=root,
+            prefix=".manifest-",
+            suffix=".tmp",
+            delete=False,
+        ) as temp:
+            temp_name = temp.name
+            json.dump(manifest, temp, ensure_ascii=False, indent=1)
+            temp.write("\n")
+            temp.flush()
+            os.fsync(temp.fileno())
+        os.replace(temp_name, root / "manifest.json")
+        temp_name = None
+    finally:
+        if temp_name is not None:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+    return manifest
 
 
 @dataclass(frozen=True, slots=True)
@@ -275,6 +552,11 @@ class ModelBundleManifest:
             output_heads = _OUTPUT_HEADS
         elif source_schema == _SCHEMA_VERSION:
             model_id = _string(raw.get("model_id"), "model_id")
+            if model_id in {_DATASET, _V3_MODEL_ID}:
+                raise ModelBundleError(
+                    "schema-1 manifests cannot reuse the grc-joint data key or immutable "
+                    "grc-joint-v3 model ID"
+                )
             dataset = _string(raw.get("dataset"), "dataset")
             profile = _string(raw.get("annotation_profile"), "annotation_profile")
             normalization = _string(raw.get("normalization"), "normalization")
@@ -310,6 +592,20 @@ class ModelBundleManifest:
                 raise ModelBundleError("manifest tokenizer_revision disagrees with tokenizer.json")
             if raw.get("special_token_policy") != special_policy:
                 raise ModelBundleError("manifest special_token_policy disagrees with tokenizer.json")
+
+            # ``label_heads`` was absent from the first schema-1 fixture, so it is
+            # optional for migration compatibility.  New manifests emit it and any
+            # supplied value is checked against labels.json rather than trusted.
+            declared_labels = raw.get("label_heads")
+            if declared_labels is not None:
+                if not isinstance(declared_labels, list) or any(
+                    not isinstance(v, str) or not v for v in declared_labels
+                ):
+                    raise ModelBundleError("invalid model manifest field label_heads")
+                if tuple(declared_labels) != label_heads:
+                    raise ModelBundleError(
+                        "manifest label_heads disagrees with labels.json"
+                    )
 
         if asset_sha256 is not None:
             asset_sha256 = asset_sha256.lower()

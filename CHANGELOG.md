@@ -4,6 +4,35 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.48.0 (2026-07-14)
+
+### Added
+
+- Neural training, evaluation, and package inference now share a dependency-free,
+  versioned preprocessing contract for NFC forms, pretokenized Roberta alignment,
+  whole-word truncation, label supervision, and lemma composition.
+- Candidate joint-model checkpoints record their annotation profile, preprocessing version,
+  tokenizer policy, and subword limit. The ONNX exporter requires a new model
+  identity and produces a schema-1 content manifest under a distinct asset name.
+
+### Changed
+
+- Candidate joint-model training and evaluation configure and validate the serialized tokenizer
+  once, use the same manifest-owned subword limit, and reject incompatible non-Roberta
+  tokenizers before training.
+- Export manifests retain model/license provenance, bind required sidecars and tokenizer
+  bytes, and are refreshed for every exported graph variant.
+  The published `grc-joint-v3` artifact, default, and measurements are unchanged.
+
+### Fixed
+
+- Training no longer supervises a final word split by subword truncation, accepts
+  out-of-range lemma-script targets, or treats the CoNLL-U `_` placeholder and unchanged
+  identity edits as resolved neural lemmas.
+- New-model export refuses the existing `grc-joint` data key, immutable v3 identity,
+  stale/foreign output directories, malformed checkpoint metadata, and mismatched
+  preprocessing or tokenizer contracts.
+
 ## 0.47.0 (2026-07-14)
 
 ### Added

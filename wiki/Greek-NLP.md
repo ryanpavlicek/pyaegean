@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.47.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.48.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 

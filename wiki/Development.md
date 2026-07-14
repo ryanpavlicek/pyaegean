@@ -42,7 +42,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.47.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.48.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -129,7 +129,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 161 source files
+# Success: no issues found in 187 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:
@@ -166,7 +166,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.47.0-py3-none-any.whl: 4577 KB uncompressed, 217 files
+# wheel dist/pyaegean-0.48.0-py3-none-any.whl: 4612 KB uncompressed, 218 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -175,7 +175,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.47.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.48.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -324,7 +324,8 @@ snapshot refuses to discard a legacy name.
 3. **The CHANGELOG records both ends**: the release that deprecates and the
    release that removes.
 4. **Data and models version forward.** Fetched artifacts are sha256-pinned
-   release assets; a new model is a new asset name (`grc-joint-v3`), never a
+   release assets; a new model is a new asset name (for example, a v4 candidate
+   cannot reuse `grc-joint-v3`), never a
    mutation of an existing one, so cached environments keep working.
 
 ---

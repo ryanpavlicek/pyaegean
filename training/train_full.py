@@ -9,7 +9,7 @@ whichever the dev data prefers:
 
   neural-only    apply the predicted script; identity on failure
   lookup-first   (form|UPOS) lookup → form lookup → neural → lowercase lookup → identity
-  neural-first   neural → lookups → identity
+  neural-first   neural → lookups → lowercase lookup → identity
   unseen-neural  form lookup if the form was seen in training, else neural (the shipped
                  hybrid's shape, leakage-clean)
 
@@ -40,6 +40,7 @@ from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 
 sys.path.insert(0, str(Path(__file__).parent))
 from train_parser import TAG_HEADS, JointParser  # noqa: E402
+from aegean.greek import neural_preprocessing as prep  # noqa: E402
 
 from aegean.greek.lemmatizer import apply_tree  # noqa: E402
 
@@ -49,42 +50,23 @@ def load_jsonl(path: Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def encode(example: dict, tokenizer, maps: dict[str, dict[str, int]], max_len: int) -> dict:
-    enc = tokenizer(example["tokens"], is_split_into_words=True, truncation=True,
-                    max_length=max_len)
-    word_ids = enc.word_ids()
-    out = {k: enc[k] for k in ("input_ids", "attention_mask")}
-    tag_labels: dict[str, list[int]] = {h: [] for h in TAG_HEADS}
-    word_pos: list[int] = []
-    kept: list[int] = []
-    prev = None
-    for si, wid in enumerate(word_ids):
-        first = wid is not None and wid != prev
-        tag_labels["upos"].append(maps["upos"][example["upos"][wid]] if first else -100)
-        for i in range(9):
-            tag_labels[f"x{i}"].append(maps[f"x{i}"][example["xpos"][wid][i]] if first else -100)
-        if first:
-            word_pos.append(si)
-            kept.append(wid)
-        prev = wid
-    for h in TAG_HEADS:
-        out[f"labels_{h}"] = tag_labels[h]
-    out["word_pos"] = word_pos
-    old2new = {w: i for i, w in enumerate(kept)}
-    heads, rels, scripts = [], [], []
-    for w in kept:
-        g = example["head"][w]
-        if g == 0:
-            heads.append(0)
-        else:
-            heads.append(old2new[g - 1] + 1 if (g - 1) in old2new else -100)
-        rels.append(maps["deprel"][example["deprel"][w]])
-        scripts.append(example["script"][w])
-    out["arc_heads"] = heads
-    out["arc_rels"] = [r if h != -100 else -100 for h, r in zip(heads, rels)]
-    out["scripts"] = scripts
-    out["kept"] = kept
-    return out
+def encode(
+    example: dict,
+    tokenizer,
+    maps: dict[str, dict[str, int]],
+    max_len: int,
+    *,
+    script_count: int | None = None,
+) -> dict:
+    return prep.build_supervision(
+        example,
+        tokenizer,
+        maps,
+        max_len,
+        include_parser=True,
+        include_scripts=True,
+        script_count=script_count,
+    )
 
 
 def collate(batch: list[dict], pad_id: int) -> dict[str, torch.Tensor]:
@@ -121,18 +103,17 @@ class LemmaComposer:
         return None
 
     def resolve(self, mode: str, form: str, upos: str, sid: int) -> str:
-        looked = self.form_upos.get(f"{form}|{upos}") or self.form.get(form)
-        low = self.form_lower.get(form.lower())
-        neur = self.neural(form, sid)
-        if mode == "neural-only":
-            return neur or form
-        if mode == "lookup-first":
-            return looked or neur or low or form
-        if mode == "neural-first":
-            return neur or looked or low or form
-        if mode == "unseen-neural":
-            return looked or low or neur or form
-        raise ValueError(mode)
+        return prep.compose_lemma(
+            form,
+            upos,
+            sid,
+            lookup_form_upos=self.form_upos,
+            lookup_form=self.form,
+            lookup_lower=self.form_lower,
+            trees=self.trees,
+            apply_edit_script=apply_tree,
+            mode=mode,
+        )
 
 
 MODES = ("neural-only", "lookup-first", "neural-first", "unseen-neural")
@@ -239,12 +220,20 @@ def main() -> None:
     composer = LemmaComposer(scripts, lookup)
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
+    prep.configure_tokenizer(tokenizer, args.max_len)
+    prep.validate_tokenizer_contract(tokenizer, args.max_len)
     model = JointParser(args.model, {h: len(maps[h]) for h in TAG_HEADS},
                         n_rels=len(maps["deprel"]), n_scripts=len(scripts)).to(device)
     pad_id = tokenizer.pad_token_id or 0
 
-    enc_train = [encode(r, tokenizer, maps, args.max_len) for r in train_rows]
-    enc_dev = [encode(r, tokenizer, maps, args.max_len) for r in dev_rows]
+    enc_train = [
+        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts))
+        for r in train_rows
+    ]
+    enc_dev = [
+        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts))
+        for r in dev_rows
+    ]
     g = torch.Generator().manual_seed(args.seed)
     dl_train = DataLoader(enc_train, batch_size=args.batch, shuffle=True, generator=g,
                           collate_fn=lambda b: collate(b, pad_id))
@@ -306,11 +295,13 @@ def main() -> None:
         if score > best:
             best = score
             torch.save(model.state_dict(), out / "model" / "joint_full.pt")
+            prep.configure_tokenizer(tokenizer, args.max_len)
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
                 json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps,
                             "n_scripts": len(scripts), "epochs": args.epochs,
-                            "seed": args.seed, "best_epoch": epoch},
+                            "seed": args.seed, "best_epoch": epoch,
+                            **prep.contract_metadata(args.max_len)},
                            ensure_ascii=False), encoding="utf-8")
             shutil.copy(data_dir / "lemma-scripts.json", out / "model" / "lemma-scripts.json")
             shutil.copy(data_dir / "lemma-lookup.json", out / "model" / "lemma-lookup.json")

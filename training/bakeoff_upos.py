@@ -40,6 +40,8 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 
+from aegean.greek import neural_preprocessing as prep
+
 
 def load_jsonl(path: Path) -> list[dict]:
     with open(path, encoding="utf-8") as f:
@@ -48,10 +50,8 @@ def load_jsonl(path: Path) -> list[dict]:
 
 def encode(example: dict, tokenizer, label2id: dict[str, int], max_len: int) -> dict:
     """Tokenize a pre-split sentence; label the first subword of each word (-100 elsewhere)."""
-    enc = tokenizer(
-        example["tokens"], is_split_into_words=True, truncation=True, max_length=max_len
-    )
-    word_ids = enc.word_ids()
+    alignment = prep.align_pretokenized(tokenizer, example["tokens"], max_len)
+    word_ids = alignment.word_ids
     labels, first_subword_word = [], []
     prev = None
     for wid in word_ids:
@@ -61,7 +61,10 @@ def encode(example: dict, tokenizer, label2id: dict[str, int], max_len: int) -> 
             labels.append(label2id[example["upos"][wid]])
             first_subword_word.append(wid)
         prev = wid
-    enc = {k: enc[k] for k in ("input_ids", "attention_mask")}
+    enc = {
+        "input_ids": list(alignment.input_ids),
+        "attention_mask": list(alignment.attention_mask),
+    }
     enc["labels"] = labels
     enc["word_index"] = [w if lab != -100 else -100 for w, lab in zip(
         [wid if wid is not None else -100 for wid in word_ids], labels)]
@@ -140,6 +143,7 @@ def main() -> None:
     config = AutoConfig.from_pretrained(args.model)
     tok_kwargs = {"add_prefix_space": True} if config.model_type in ("roberta", "gpt2", "bart") else {}
     tokenizer = AutoTokenizer.from_pretrained(args.model, **tok_kwargs)
+    prep.configure_tokenizer(tokenizer, args.max_len)
     model = AutoModelForTokenClassification.from_pretrained(
         args.model, num_labels=len(labels), id2label={i: lab for lab, i in label2id.items()},
         label2id=label2id,

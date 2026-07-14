@@ -36,8 +36,8 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Linear A accounting | Only ~37 of 1,721 tablets carry a checkable total | [Evidence](#limits-of-the-evidence-not-fixable-by-code) |
 | Full Linear B corpus | NonCommercial → fetched, not bundled (`load("damos")`) | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
 | SigLA / UD / PROIEL data | NonCommercial → fetched for research/eval only | [Licensing](#limits-of-licensing-fixable-only-by-permission) |
-| Offline morphology | Misses irregular/3rd-decl./contract paradigms | [Engineering](#engineering-limits-we-plan-to-lift) |
-| Neural model size | ~173 MB quantized download | [Engineering](#engineering-limits-we-plan-to-lift) |
+| Offline morphology | Misses irregular/3rd-decl./contract paradigms | [Engineering](#engineering-status-and-remaining-limits) |
+| Neural model size | ~173 MB quantized download | [Engineering](#engineering-status-and-remaining-limits) |
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
 | AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
@@ -222,10 +222,10 @@ the integrity-check workflow.
 
 ---
 
-## Engineering limits we plan to lift
+## Engineering status and remaining limits
 
-Each of these is something code *can* fix, and each is on the
-[roadmap](Home#roadmap).
+These rows distinguish remaining engineering work from scope that is already covered or
+deliberately bounded. Open items are tracked on the [roadmap](Home#roadmap).
 
 | Limitation today | Plan |
 | --- | --- |

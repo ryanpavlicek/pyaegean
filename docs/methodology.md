@@ -250,6 +250,15 @@ Server Edition); A100 is the documented fallback, and hardware changes must rema
 in receipts. Until that live capture and promotion exist, no reproducibility or performance
 claim is made for the template.
 
+Candidate joint-model checkpoints record one executable preprocessing contract:
+the annotation profile, NFC normalization, pretokenized segmentation, tokenizer
+specials and subword limit, alignment policy, supervision mappings, and lemma
+composition order. Training and evaluation import the same dependency-free
+implementation used by package inference. Export validates those checkpoint fields
+against the serialized tokenizer, requires a new model and asset identity, and writes
+a content-addressed schema-1 manifest for each exported graph variant. The published
+`grc-joint-v3` artifact retains its exact legacy manifest, behavior, and measurements.
+
 ## Aegean-script analysis
 
 Linear B and the Cypriot syllabary are deciphered writing systems for Greek, so

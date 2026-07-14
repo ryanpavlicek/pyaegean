@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.47.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.48.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -215,11 +215,9 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) is the record of
 what each release shipped. Current work is focused on:
 
-- completing the empirical source/task calibration and caller-owned abstention gates on the
-  model-independent Greek foundations, alongside
-  bounded-memory document analysis, optional
-  spaCy/Stanza/CLTK adapters, explicit annotation and domain profiles, and shared versioned
-  training/inference preprocessing;
+- completing empirical source/task calibration and cross-domain development gates on the
+  model-independent Greek foundations, alongside bounded-memory document analysis, optional
+  spaCy/Stanza/CLTK adapters, and explicit annotation and domain profiles;
 - comparing deterministic and neural translation grounding on matched passages before changing
   any default;
 - training and independently evaluating a separately versioned successor to the current Greek
@@ -263,7 +261,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.47.0},
+  version = {0.48.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

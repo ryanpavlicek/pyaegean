@@ -548,7 +548,8 @@ def test_onnxcorrupt_joint_model_is_wrapped(
         joint.ModelBundleManifest,
         "load",
         lambda *_args, **_kwargs: SimpleNamespace(
-            output_heads=("upos", *(f"x{i}" for i in range(9)), "arc", "rel", "lemma")
+            output_heads=("upos", *(f"x{i}" for i in range(9)), "arc", "rel", "lemma"),
+            preprocessing_version="grc-joint-v3",
         ),
     )
     with pytest.raises(joint.NeuralPipelineNotLoadedError) as exc:

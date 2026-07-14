@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available in v0.47.0.** Typed source alignment, typed editorial form states,
+> **Available in v0.48.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 

@@ -36,8 +36,9 @@ from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warm
 
 sys.path.insert(0, str(Path(__file__).parent))
 from agdt_ud import feats_from_xpos  # noqa: E402
+from aegean.greek import neural_preprocessing as prep  # noqa: E402
 
-HEADS = ["upos"] + [f"x{i}" for i in range(9)]  # upos + the 9 XPOS positions
+HEADS = list(prep.TAG_HEADS)  # upos + the 9 XPOS positions
 
 
 class JointTagger(nn.Module):
@@ -63,27 +64,7 @@ def load_jsonl(path: Path) -> list[dict]:
 
 
 def encode(example: dict, tokenizer, maps: dict[str, dict[str, int]], max_len: int) -> dict:
-    enc = tokenizer(
-        example["tokens"], is_split_into_words=True, truncation=True, max_length=max_len
-    )
-    word_ids = enc.word_ids()
-    out = {k: enc[k] for k in ("input_ids", "attention_mask")}
-    labels: dict[str, list[int]] = {h: [] for h in HEADS}
-    word_index: list[int] = []
-    prev = None
-    for wid in word_ids:
-        first = wid is not None and wid != prev
-        word_index.append(wid if first else -100)
-        labels["upos"].append(maps["upos"][example["upos"][wid]] if first else -100)
-        for i in range(9):
-            labels[f"x{i}"].append(
-                maps[f"x{i}"][example["xpos"][wid][i]] if first else -100
-            )
-        prev = wid
-    for h in HEADS:
-        out[f"labels_{h}"] = labels[h]
-    out["word_index"] = word_index
-    return out
+    return prep.build_supervision(example, tokenizer, maps, max_len)
 
 
 def collate(batch: list[dict], pad_id: int) -> dict[str, torch.Tensor]:
@@ -176,6 +157,8 @@ def main() -> None:
     inv_x = [{j: ch for ch, j in maps[f"x{i}"].items()} for i in range(9)]
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
+    prep.configure_tokenizer(tokenizer, args.max_len)
+    prep.validate_tokenizer_contract(tokenizer, args.max_len)
     model = JointTagger(args.model, {h: len(maps[h]) for h in HEADS}).to(device)
     pad_id = tokenizer.pad_token_id or 0
 
@@ -222,9 +205,11 @@ def main() -> None:
         if score > best:
             best = score
             torch.save(model.state_dict(), out / "model" / "joint_tagger.pt")
+            prep.configure_tokenizer(tokenizer, args.max_len)
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
-                json.dumps({"model_name": args.model, "heads": HEADS, "maps": maps},
+                json.dumps({"model_name": args.model, "heads": HEADS, "tag_heads": HEADS, "maps": maps,
+                            **prep.contract_metadata(args.max_len)},
                            ensure_ascii=False), encoding="utf-8")
 
     metrics = {

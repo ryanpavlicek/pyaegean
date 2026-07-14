@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.47.0.** The CoNLL-U and newer Greek pipeline controls are
+> **Available in v0.48.0.** The CoNLL-U and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.47.0
+aegean --version                # pyaegean 0.48.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command

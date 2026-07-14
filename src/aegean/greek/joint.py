@@ -26,7 +26,6 @@ from __future__ import annotations
 
 import json
 import math
-import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -36,6 +35,7 @@ from ..data import fetch, versions
 from . import _ort
 from .lemmatize import LemmaSource, lemma_verified
 from .mst import decode_mst
+from . import neural_preprocessing as _prep
 from .neural_contract import (
     AnalysisReceipt,
     ModelBundleError,
@@ -175,27 +175,23 @@ def _compose_lemma_detail(
     equals the surface form is still ``resolved=True`` when it came from a lookup (a
     nominative singular is a genuine analysis), so callers must not infer the source
     from a string compare."""
-    looked_upos = model.lookup_form_upos.get(f"{form}|{upos}")
-    if looked_upos:
-        return looked_upos, True, LemmaSource.NEURAL_LOOKUP, "lookup_form_upos"
-    looked_form = model.lookup_form.get(form)
-    if looked_form:
-        return looked_form, True, LemmaSource.NEURAL_LOOKUP, "lookup_form"
-    if 0 <= script_id < len(model.trees):
-        from .lemmatizer import apply_tree
+    from .lemmatizer import apply_tree
 
-        applied = apply_tree(model.trees[script_id], form)
-        # Two edit-script outputs are never a grounded lemma: the literal "_" (a CoNLL-U
-        # empty-LEMMA placeholder that leaked into the training scripts) and the surface
-        # form unchanged (the identity script — an out-of-vocabulary form the model just
-        # kept; a GENUINE identity lemma, a nominative, comes from the lookups above and
-        # stays resolved). Both fall through to the remaining lookups / honest identity.
-        if applied and applied != "_" and applied != form:
-            return applied, True, LemmaSource.NEURAL_EDIT, "edit_script"
-    low = model.lookup_lower.get(form.lower())
-    if low:
-        return low, True, LemmaSource.NEURAL_LOOKUP, "lookup_lower_fallback"
-    return form, False, LemmaSource.IDENTITY, "identity_fallback"
+    value, resolved, path = _prep.compose_lemma_detail(
+        form,
+        upos,
+        script_id,
+        lookup_form_upos=model.lookup_form_upos,
+        lookup_form=model.lookup_form,
+        lookup_lower=model.lookup_lower,
+        trees=model.trees,
+        apply_edit_script=apply_tree,
+    )
+    source = {
+        "edit_script": LemmaSource.NEURAL_EDIT,
+        "identity_fallback": LemmaSource.IDENTITY,
+    }.get(path, LemmaSource.NEURAL_LOOKUP)
+    return value, resolved, source, path
 
 
 def _compose_lemma(
@@ -437,6 +433,10 @@ class _JointModel:
             asset_sha256=asset_sha256,
             asset_sha256_enforced=asset_sha256_enforced,
         )
+        try:
+            _prep.validate_manifest_contract(self.manifest)
+        except ValueError as exc:
+            raise ModelBundleError(str(exc)) from exc
         opts = ort.SessionOptions()
         opts.log_severity_level = 3
         # Provider policy lives in one place (_ort.resolve_providers): the published
@@ -495,33 +495,14 @@ class _JointModel:
         truncation cuts through the final word, that incomplete word is removed from the
         kept set; strict mode must refuse it and partial mode must never label a fragment
         as a complete token prediction."""
-        enc = self._tok.encode(words[: self.manifest.max_subwords], is_pretokenized=True)
-        ids = enc.ids[: self.manifest.max_subwords]
-        word_ids = enc.word_ids[: len(ids)]
-        # With stride=0, the first overflow retains the rest of a word that straddled the
-        # right-truncation boundary. Its first real word ID equals the last ID in the main
-        # encoding only when that last word is incomplete; a clean between-word boundary
-        # starts the overflow at the next ID. Remove every fragment of the incomplete word
-        # while preserving special tokens, so coverage is whole-token honest.
-        overflowing = getattr(enc, "overflowing", ())
-        if overflowing:
-            first_overflow = next(
-                (wid for wid in overflowing[0].word_ids if wid is not None), None
-            )
-            last_main = next((wid for wid in reversed(word_ids) if wid is not None), None)
-            if first_overflow is not None and first_overflow == last_main:
-                complete = [wid != last_main for wid in word_ids]
-                ids = [token_id for token_id, keep in zip(ids, complete) if keep]
-                word_ids = [wid for wid, keep in zip(word_ids, complete) if keep]
-        word_pos: list[int] = []
-        kept: list[int] = []
-        prev = None
-        for si, wid in enumerate(word_ids):
-            if wid is not None and wid != prev:
-                word_pos.append(si)
-                kept.append(wid)
-            prev = wid
-        return ids, word_pos, kept
+        alignment = _prep.align_pretokenized(
+            self._tok, words, self.manifest.max_subwords
+        )
+        return (
+            list(alignment.input_ids),
+            list(alignment.first_subword_positions),
+            list(alignment.kept_indices),
+        )
 
     def _run(self, words: list[str]) -> dict[str, Any]:
         """One encoder pass over a pre-tokenized sentence → raw arrays + word bookkeeping."""
@@ -618,10 +599,10 @@ class _JointModel:
         """Return the manifest subword budget available to complete input words."""
         manifest = getattr(self, "manifest", None)
         policy = getattr(manifest, "special_token_policy", None)
-        if manifest is not None and policy != "roberta:<s>:0:</s>:2":
+        if manifest is not None and policy != _prep.SPECIAL_TOKEN_POLICY:
             raise NeuralWindowingError(
                 "windowed neural analysis requires the validated two-token policy "
-                "roberta:<s>:0:</s>:2"
+                f"{_prep.SPECIAL_TOKEN_POLICY}"
             )
         budget = self.max_subwords - 2  # <s> and </s> are validated by the manifest.
         if budget < 1:
@@ -1082,7 +1063,7 @@ class _JointModel:
         mode = _long_input_mode(long_input)
         context = _confidence_context(with_probs, domain=domain, policy=policy)
         calibration = None if context is None else context.get("legacy")
-        forms = [unicodedata.normalize("NFC", w) for w in words]
+        forms = _prep.normalize_tokens(words)
         if not forms:
             return SentenceAnalysis(
                 (), (), (), (), (), (), (), (), analyzed=(),
@@ -1150,7 +1131,7 @@ class _JointModel:
             ]
         context = _confidence_context(with_probs, domain=domain, policy=policy)
         calibration = None if context is None else context.get("legacy")
-        norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
+        norm = [_prep.normalize_tokens(words) for words in sentences]
         out: list[SentenceAnalysis] = [
             SentenceAnalysis(
                 (), (), (), (), (), (), (), (), analyzed=(),

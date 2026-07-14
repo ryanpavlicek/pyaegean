@@ -36,8 +36,9 @@ from transformers import AutoModel, AutoTokenizer, get_linear_schedule_with_warm
 
 sys.path.insert(0, str(Path(__file__).parent))
 from agdt_ud import feats_from_xpos  # noqa: E402,F401  (re-exported for eval)
+from aegean.greek import neural_preprocessing as prep  # noqa: E402
 
-TAG_HEADS = ["upos"] + [f"x{i}" for i in range(9)]
+TAG_HEADS = list(prep.TAG_HEADS)
 
 
 class Biaffine(nn.Module):
@@ -105,39 +106,7 @@ def load_jsonl(path: Path) -> list[dict]:
 
 
 def encode(example: dict, tokenizer, maps: dict[str, dict[str, int]], max_len: int) -> dict:
-    enc = tokenizer(example["tokens"], is_split_into_words=True, truncation=True,
-                    max_length=max_len)
-    word_ids = enc.word_ids()
-    out = {k: enc[k] for k in ("input_ids", "attention_mask")}
-    tag_labels: dict[str, list[int]] = {h: [] for h in TAG_HEADS}
-    word_pos: list[int] = []
-    kept: list[int] = []                          # word ids that survived truncation
-    prev = None
-    for si, wid in enumerate(word_ids):
-        first = wid is not None and wid != prev
-        tag_labels["upos"].append(maps["upos"][example["upos"][wid]] if first else -100)
-        for i in range(9):
-            tag_labels[f"x{i}"].append(maps[f"x{i}"][example["xpos"][wid][i]] if first else -100)
-        if first:
-            word_pos.append(si)
-            kept.append(wid)
-        prev = wid
-    for h in TAG_HEADS:
-        out[f"labels_{h}"] = tag_labels[h]
-    out["word_pos"] = word_pos
-    # parser labels over the KEPT words; a gold head beyond truncation maps to -100
-    old2new = {w: i for i, w in enumerate(kept)}
-    heads, rels = [], []
-    for w in kept:
-        g = example["head"][w]                    # 0 = root, else 1-based old index
-        if g == 0:
-            heads.append(0)
-        else:
-            heads.append(old2new[g - 1] + 1 if (g - 1) in old2new else -100)
-        rels.append(maps["deprel"][example["deprel"][w]])
-    out["arc_heads"] = heads
-    out["arc_rels"] = [r if h != -100 else -100 for h, r in zip(heads, rels)]
-    return out
+    return prep.build_supervision(example, tokenizer, maps, max_len, include_parser=True)
 
 
 def collate(batch: list[dict], pad_id: int) -> dict[str, torch.Tensor]:
@@ -236,6 +205,8 @@ def main() -> None:
         maps[f"x{i}"] = {ch: j for j, ch in enumerate(chars)}
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
+    prep.configure_tokenizer(tokenizer, args.max_len)
+    prep.validate_tokenizer_contract(tokenizer, args.max_len)
     model = JointParser(args.model, {h: len(maps[h]) for h in TAG_HEADS},
                         n_rels=len(maps["deprel"])).to(device)
     pad_id = tokenizer.pad_token_id or 0
@@ -292,9 +263,11 @@ def main() -> None:
         if m["las"] > best:
             best = m["las"]
             torch.save(model.state_dict(), out / "model" / "joint_parser.pt")
+            prep.configure_tokenizer(tokenizer, args.max_len)
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
-                json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps},
+                json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps,
+                            **prep.contract_metadata(args.max_len)},
                            ensure_ascii=False), encoding="utf-8")
 
     metrics = {

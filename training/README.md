@@ -55,6 +55,23 @@ Training data is leakage-clean against the evaluation folds:
 `training/data/` and `training/out/` are gitignored; datasets rebuild deterministically
 from the cache.
 
+## Shared preprocessing contract
+
+Candidate joint checkpoints use the dependency-free
+`aegean.greek.neural_preprocessing` contract in both training and package inference. Its
+version is saved in `labels.json` together with the canonical annotation profile, NFC
+normalization, pretokenized segmentation, Roberta special-token policy, and subword limit.
+The same implementation performs first-subword alignment, removes a final word split by
+right truncation, builds tag/dependency/edit-script supervision, and composes lookup,
+edit-script, lowercase, and identity lemma paths. This prevents a training checkpoint and
+its exported runtime from silently interpreting the same token sequence differently.
+
+`export_onnx.py` requires an explicit new candidate identity. It refuses
+`grc-joint-v3`, validates the checkpoint metadata against the saved tokenizer, and writes a
+schema-1 content manifest for each exported graph variant. Reusing an output directory with
+stale artifact files is refused.
+The published v3 archive retains its exact legacy manifest and preprocessing behavior.
+
 ## Reproducible training contract
 
 `environment-lock.json` is an honestly labelled training-environment **template**, not a captured Colab
@@ -154,6 +171,9 @@ script or notebook reads `backbone.revision` from the lock and passes it to ever
 git clone https://github.com/ryanpavlicek/pyaegean.git
 python pyaegean/training/build_full_dataset.py
 python pyaegean/training/train_full.py --model bowphs/GreBerta
+python pyaegean/training/export_onnx.py \
+    --checkpoint pyaegean/training/out/full/model \
+    --model-id grc-joint-v4-dev1
 python pyaegean/training/eval_full_ud.py \
     --checkpoint pyaegean/training/out/full/model --treebank perseus --split test
 ```

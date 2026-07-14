@@ -303,6 +303,15 @@ in five stages, each with a dataset builder and a training script:
   inference: the reproducibility `grc-joint-v2` asset), then quantize weight-only
   to produce the shipped `grc-joint-v3` asset.
 
+Candidate joint checkpoints use the shared, dependency-free
+`pyaegean-neural-preprocessing-v1` contract for training, evaluation, and package
+inference. The checkpoint records its annotation profile, NFC normalization,
+pretokenized Roberta policy, alignment rules, and subword limit; export validates
+those fields against the serialized tokenizer. The exporter requires a distinct
+model identity, refuses stale or foreign output files, and binds every required
+artifact in a schema-1 content manifest. The published `grc-joint-v3` archive keeps
+its legacy manifest, behavior, and measurements unchanged.
+
 ### The quantization discipline
 
 The shipped model is **quantized at about 173 MB** (tar.gz; 182 MB uncompressed

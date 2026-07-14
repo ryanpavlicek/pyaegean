@@ -27,6 +27,7 @@ from train_full import MODES, LemmaComposer, collate, encode  # noqa: E402
 from train_parser import TAG_HEADS, JointParser, decode_mst  # noqa: E402
 
 from aegean.greek.ud import _eval_module, load_conllu, ud_path  # noqa: E402
+from aegean.greek import neural_preprocessing as prep  # noqa: E402
 
 
 def main() -> None:
@@ -50,6 +51,10 @@ def main() -> None:
     amp_dtype = (torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported()
                  else torch.float16 if device == "cuda" else None)
     tokenizer = AutoTokenizer.from_pretrained(ckpt, add_prefix_space=True)
+    max_len = int(spec.get("max_subwords", 256))
+    prep.configure_tokenizer(tokenizer, max_len)
+    if spec.get("preprocessing_version") == prep.PREPROCESSING_VERSION:
+        prep.validate_tokenizer_contract(tokenizer, max_len)
     model = JointParser(spec["model_name"], {h: len(maps[h]) for h in TAG_HEADS},
                         n_rels=len(maps["deprel"]), n_scripts=spec["n_scripts"])
     model.load_state_dict(torch.load(ckpt / "joint_full.pt", map_location=device))
@@ -63,7 +68,10 @@ def main() -> None:
              "script": [-100] * len(s.tokens), "lemma": ["_"] * len(s.tokens)}
             for s in sentences]
     pad_id = tokenizer.pad_token_id or 0
-    enc = [encode(r, tokenizer, maps, 256) for r in rows]
+    enc = [
+        encode(r, tokenizer, maps, max_len, script_count=spec["n_scripts"])
+        for r in rows
+    ]
     dl = DataLoader(enc, batch_size=32, collate_fn=lambda b: collate(b, pad_id))
 
     lines: list[str] = []
