@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -16,12 +17,19 @@ def _read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
+def _project_version() -> str:
+    match = re.search(r'^version = "([^"]+)"$', _read("pyproject.toml"), re.MULTILINE)
+    assert match is not None
+    return match.group(1)
+
+
 def test_home_is_an_evergreen_front_door() -> None:
     home = _read("wiki/Home.md")
+    version = _project_version()
 
     assert "### New in v" not in home
     assert "## Choose where to start" in home
-    assert "Latest PyPI release: v0.44.2" in home
+    assert f"Latest PyPI release: v{version}" in home
     assert "main-branch previews" in home
 
 
@@ -57,10 +65,11 @@ def test_main_only_features_are_not_attributed_to_the_latest_release() -> None:
     readme = _read("README.md")
     home = _read("wiki/Home.md")
     greek_nlp = _read("wiki/Greek-NLP.md")
+    version = _project_version()
 
-    assert "Latest PyPI release: v0.44.2" in readme
+    assert f"Latest PyPI release: v{version}" in readme
     assert "Main-branch preview:" in readme
-    assert "not in PyPI v0.44.2" in greek_nlp
+    assert f"not in PyPI v{version}" in greek_nlp
     assert "for **180 bundled documents** total" in readme
     assert "(**180 documents** total)" in home
 
@@ -86,3 +95,19 @@ def test_mkdocs_excludes_local_planning_documents_generically() -> None:
 
     assert "*ROADMAP*.md" in config
     assert "*PLAN*.md" in config
+
+
+def test_pages_methodology_is_substantive_and_self_contained() -> None:
+    methodology = _read("docs/methodology.md")
+
+    assert len(methodology.splitlines()) >= 150
+    for heading in (
+        "## Source data and editorial evidence",
+        "## Greek analysis methods",
+        "### Evaluation protocol",
+        "## Aegean-script analysis",
+        "## Grounded translation and generative AI",
+        "## Claims, review, and reproduction",
+    ):
+        assert heading in methodology
+    assert "documented in the workbench `docs/METHODOLOGY.md`" not in methodology

@@ -76,8 +76,8 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter, plus a local Ollama/LM Studio/llama.cpp option), grounding, caching, exploratory-labeled capabilities, hybrid translation |
 | [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
 
-The **[API reference](https://pyaegean.xyz/)** documents every public module, class,
-and function, generated from the docstrings and type hints, complementing the guides above.
+The **[API reference](https://pyaegean.xyz/api/)** documents the supported facade modules,
+with public classes and functions generated from docstrings and type hints.
 
 ## Install
 

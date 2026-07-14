@@ -282,7 +282,15 @@ def build_commands(
         plan.append(_pytest(f"focused-test-{number}", (str(test_path),), py))
 
     profile_tests: dict[str, tuple[str, ...]] = {
-        "docs": ("tests/test_cli_ux_docs.py", "tests/test_mcp_docs.py"),
+        "docs": (
+            "tests/test_docs_staleness.py",
+            "tests/test_wiki_integrity.py",
+            "tests/test_cli_ux_docs.py",
+            "tests/test_mcp_docs.py",
+            "tests/test_surface_parity.py",
+            "tests/test_benchmark_claims.py",
+            "tests/test_corpus_facts.py",
+        ),
         "code": (),
         "public-api": ("tests/test_check_api.py", "tests/test_surface_parity.py"),
         "persistence": (

@@ -101,7 +101,8 @@ published number; the wiki
 [Benchmarks](https://github.com/ryanpavlicek/pyaegean/wiki/Benchmarks) page adds the cited
 cross-tool comparison tables, and
 [Choosing a Pipeline](https://github.com/ryanpavlicek/pyaegean/wiki/Choosing-a-Pipeline)
-maps material to the right backend.
+maps material to the right backend. [Methodology](methodology.md) explains the evidence
+registers, provenance, leakage controls, Aegean-script methods, and grounded-AI boundary.
 
 ## Install
 
@@ -122,8 +123,8 @@ sha256-pinned, only when you opt in.
 
 ## On this site
 
-- **[API reference](api/index.md)**: every public module, class, and function, generated
-  from the source.
+- **[API reference](api/index.md)**: the supported facade modules, with their public
+  classes and functions generated from the source.
 - **[Benchmarks](benchmarks.md)**: the measured accuracy numbers and the evaluation
   protocol behind them.
 - The **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)** holds the guides,

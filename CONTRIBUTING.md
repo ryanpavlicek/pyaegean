@@ -39,6 +39,12 @@ worktree, and untracked nonignored files. Any public-tree change invalidates the
 receipt. GitHub Actions remains the authoritative supported-Python matrix after a
 push.
 
+For a documentation-only change, run the `docs` profile plus any directly
+affected executable-example or demo test, and omit `--full`. If the same change
+touches source code, a script, dependencies, a data or persistence format, or an
+input to a measured claim, use the corresponding broader profile and run one
+full suite on the final reviewed tree.
+
 ## Good first contributions (a menu)
 
 Small, well-scoped facts that make the toolkit better without touching the

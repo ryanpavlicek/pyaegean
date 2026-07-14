@@ -18,15 +18,34 @@ to cache). Exit 0 = every cell reproduces; exit 1 = drift, with a per-cell repor
 
 from __future__ import annotations
 
+import argparse
 import json
 import pathlib
 import sys
+from collections.abc import Sequence
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TOLERANCE = 0.005  # published cells are 2-decimal; anything past rounding noise is drift
 
 
-def main() -> int:
+def _parse_args(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0],
+        epilog=(
+            "Running with no options or --measure performs the network-backed offline "
+            "benchmark remeasurement."
+        ),
+    )
+    parser.add_argument(
+        "--measure",
+        action="store_true",
+        help="explicitly request the remeasurement (also the default action)",
+    )
+    parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    _parse_args(argv)
     claims = json.loads(
         (ROOT / "training/results/published-claims.json").read_text(encoding="utf-8")
     )

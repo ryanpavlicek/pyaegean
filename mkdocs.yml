@@ -78,6 +78,13 @@ nav:
       - aegean.core: api/core.md
       - aegean.greek: api/greek.md
       - aegean.analysis: api/analysis.md
+      - Built-in script plugins:
+          - aegean.scripts: api/scripts.md
+          - aegean.scripts.lineara: api/scripts-lineara.md
+          - aegean.scripts.linearb: api/scripts-linearb.md
+          - aegean.scripts.cypriot: api/scripts-cypriot.md
+          - aegean.scripts.cyprominoan: api/scripts-cyprominoan.md
+          - aegean.scripts.greek: api/scripts-greek.md
       - aegean.io: api/io.md
       - aegean.geo: api/geo.md
       - aegean.ai: api/ai.md
