@@ -35,7 +35,7 @@ from .core.corpus import (
     _provenance_from_dict,
     _provenance_to_dict,
 )
-from .core.model import Document
+from .core.model import Document, SourceAlignment
 from .core.provenance import SCHEMA_VERSION, Provenance
 
 __all__ = ["to_sqlite", "from_sqlite", "search", "stream"]
@@ -47,11 +47,11 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE documents (
     doc_order INTEGER, id TEXT PRIMARY KEY, script_id TEXT, glyphs TEXT, transcription TEXT,
     translations TEXT, site TEXT, support TEXT, scribe TEXT, findspot TEXT, period TEXT,
-    name TEXT, images TEXT, notes TEXT, lines TEXT
+    name TEXT, images TEXT, notes TEXT, lines TEXT, source_text TEXT
 );
 CREATE TABLE tokens (
     doc_id TEXT, token_order INTEGER, position INTEGER, line_no INTEGER, text TEXT, kind TEXT,
-    glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT
+    glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT, alignment TEXT
 );
 CREATE INDEX idx_tokens_doc ON tokens(doc_id);
 CREATE INDEX idx_tokens_text ON tokens(text);
@@ -77,23 +77,138 @@ def _build_fts(conn: sqlite3.Connection) -> None:
     )
 
 
+_ALIGNMENT_FIELDS = (
+    "document_id", "sentence_id", "source_token_id", "original_text",
+    "start_char", "end_char", "whitespace_before", "normalized_text",
+    "normalization_ops",
+)
+
+
+def _alignment_to_dict(value: SourceAlignment | dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return the deliberately small, stable SQLite representation of an alignment."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        # Core JSON serialization may already have produced the same wire mapping.
+        # Normalize through the constructor so SQLite never stores an unchecked object.
+        try:
+            if set(value) != set(_ALIGNMENT_FIELDS):
+                raise ValueError("wrong fields")
+            if not isinstance(value["normalization_ops"], (list, tuple)):
+                raise TypeError("normalization_ops must be a sequence")
+            value = SourceAlignment(
+                document_id=value["document_id"], sentence_id=value["sentence_id"],
+                source_token_id=value["source_token_id"], original_text=value["original_text"],
+                start_char=value["start_char"], end_char=value["end_char"],
+                whitespace_before=value["whitespace_before"], normalized_text=value["normalized_text"],
+                normalization_ops=tuple(value["normalization_ops"]),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("invalid token alignment") from exc
+    return {
+        "document_id": value.document_id,
+        "sentence_id": value.sentence_id,
+        "source_token_id": value.source_token_id,
+        "original_text": value.original_text,
+        "start_char": value.start_char,
+        "end_char": value.end_char,
+        "whitespace_before": value.whitespace_before,
+        "normalized_text": value.normalized_text,
+        "normalization_ops": list(value.normalization_ops),
+    }
+
+
+def _alignment_from_json(raw: str | None, *, context: str) -> SourceAlignment | None:
+    """Decode an alignment column, rejecting malformed rows with a useful error.
+
+    A nullable column is the compatibility representation for pre-A4 databases.  A
+    non-null value is intentionally strict: accepting a partial object would make a
+    persisted alignment look complete while silently losing its source identity/span.
+    """
+    if raw is None or raw in ("", "null"):
+        return None
+    try:
+        value = json.loads(raw)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"malformed token alignment in {context}: invalid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"malformed token alignment in {context}: expected a JSON object")
+    if set(value) != set(_ALIGNMENT_FIELDS):
+        missing = sorted(set(_ALIGNMENT_FIELDS) - set(value))
+        extra = sorted(set(value) - set(_ALIGNMENT_FIELDS))
+        detail = []
+        if missing:
+            detail.append("missing " + ", ".join(missing))
+        if extra:
+            detail.append("unknown " + ", ".join(extra))
+        raise ValueError(f"malformed token alignment in {context}: {('; '.join(detail))}")
+    if (
+        not isinstance(value["document_id"], str)
+        or not isinstance(value["source_token_id"], str)
+        or not isinstance(value["original_text"], str)
+        or not isinstance(value["whitespace_before"], str)
+        or not isinstance(value["normalized_text"], str)
+        or (value["sentence_id"] is not None and not isinstance(value["sentence_id"], str))
+    ):
+        raise ValueError(f"malformed token alignment in {context}: text fields must be strings")
+    if (
+        isinstance(value["start_char"], bool)
+        or isinstance(value["end_char"], bool)
+        or not isinstance(value["start_char"], int)
+        or not isinstance(value["end_char"], int)
+        or value["start_char"] < 0
+        or value["end_char"] < value["start_char"]
+    ):
+        raise ValueError(f"malformed token alignment in {context}: invalid character span")
+    ops = value["normalization_ops"]
+    if not isinstance(ops, list) or not all(isinstance(op, str) for op in ops):
+        raise ValueError(f"malformed token alignment in {context}: normalization_ops must be a string list")
+    try:
+        return SourceAlignment(
+            document_id=value["document_id"], sentence_id=value["sentence_id"],
+            source_token_id=value["source_token_id"], original_text=value["original_text"],
+            start_char=value["start_char"], end_char=value["end_char"],
+            whitespace_before=value["whitespace_before"], normalized_text=value["normalized_text"],
+            normalization_ops=tuple(ops),
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"malformed token alignment in {context}: invalid value") from exc
+
+
+def _alignment_json(value: SourceAlignment | dict[str, Any] | None) -> str | None:
+    mapped = _alignment_to_dict(value)
+    return json.dumps(mapped) if mapped is not None else None
+
+
+def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    return any(row[1] == column for row in conn.execute(f"PRAGMA table_info({table})"))
+
+
+def _ensure_alignment_columns(conn: sqlite3.Connection) -> None:
+    """Add A4 columns to a schema-1 database, without touching existing rows."""
+    if not _has_column(conn, "documents", "source_text"):
+        conn.execute("ALTER TABLE documents ADD COLUMN source_text TEXT")
+    if not _has_column(conn, "tokens", "alignment"):
+        conn.execute("ALTER TABLE tokens ADD COLUMN alignment TEXT")
+
+
 def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -> None:
     """Insert one ``_document_to_dict`` dict and its tokens at ``doc_order = order``."""
     m = dd["meta"]
     conn.execute(
         "INSERT INTO documents(doc_order, id, script_id, glyphs, transcription, "
         "translations, site, support, scribe, findspot, period, name, images, notes, "
-        "lines) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "lines, source_text) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             order, dd["id"], dd["script_id"], dd["glyphs"], dd["transcription"],
             json.dumps(dd["translations"]), m["site"], m["support"], m["scribe"],
             m["findspot"], m["period"], m["name"], json.dumps(m["images"]),
-            json.dumps(m["notes"]), json.dumps(dd["lines"]),
+            json.dumps(m["notes"]), json.dumps(dd["lines"]), dd.get("source_text"),
         ),
     )
     conn.executemany(
         "INSERT INTO tokens(doc_id, token_order, position, line_no, text, kind, glyphs, "
-        "status, signs, alt, annotations) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        "status, signs, alt, annotations, alignment) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
                 # token_order is the token's index in the document's list, so the round trip
@@ -102,6 +217,7 @@ def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -
                 t.get("glyphs"), t.get("status", "certain"),
                 json.dumps(t.get("signs", [])), json.dumps(t.get("alt", [])),
                 json.dumps(t.get("annotations", {})),
+                _alignment_json(t.get("alignment")),
             )
             for i, t in enumerate(dd["tokens"])
         ],
@@ -195,6 +311,13 @@ def _append_sqlite(
         # second simultaneous appender now waits (sqlite's busy timeout) or gets a clean
         # "database is locked" instead of silently corrupting the ordering.
         conn.execute("BEGIN IMMEDIATE")
+        _ensure_alignment_columns(conn)
+        # The append now writes schema-2 alignment rows.  Do not leave the file
+        # labelled schema 1: an older reader could otherwise silently discard them.
+        conn.execute(
+            "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
+            (str(SCHEMA_VERSION),),
+        )
         _ensure_token_order(conn)
         has_fts = bool(
             conn.execute(
@@ -349,6 +472,12 @@ def _document_from_row(
             "signs": json.loads(t["signs"] or "[]"), "alt": json.loads(t["alt"] or "[]"),
             "annotations": json.loads(t["annotations"] or "{}"),
         }
+        if "alignment" in t.keys():
+            alignment = _alignment_from_json(
+                t["alignment"], context=f"document {row['id']!r}, token {t['position']!r}"
+            )
+            if alignment is not None:
+                td["alignment"] = alignment
         if t["status"] and t["status"] != "certain":
             td["status"] = t["status"]
         tokens.append(td)
@@ -364,6 +493,8 @@ def _document_from_row(
         },
         "tokens": tokens, "lines": json.loads(row["lines"] or "[]"),
     }
+    if "source_text" in row.keys():
+        dd["source_text"] = row["source_text"]
     return _document_from_dict(dd)
 
 

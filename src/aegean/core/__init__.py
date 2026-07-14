@@ -3,7 +3,16 @@
 from __future__ import annotations
 
 from .corpus import Corpus, register_loader
-from .model import Document, DocumentMeta, ReadingStatus, Sign, SignInventory, Token, TokenKind
+from .model import (
+    Document,
+    DocumentMeta,
+    ReadingStatus,
+    Sign,
+    SignInventory,
+    SourceAlignment,
+    Token,
+    TokenKind,
+)
 from .provenance import SCHEMA_VERSION, Provenance
 from .script import Script, get_script, register, registered_scripts
 
@@ -14,6 +23,7 @@ __all__ = [
     "DocumentMeta",
     "Sign",
     "SignInventory",
+    "SourceAlignment",
     "Token",
     "TokenKind",
     "ReadingStatus",

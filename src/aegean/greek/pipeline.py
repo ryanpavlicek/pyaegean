@@ -18,7 +18,7 @@ and dependency fields are filled only when ``parse=True`` (which then requires
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 from .lemmatize import (
@@ -29,11 +29,12 @@ from .lemmatize import (
     needs_review,
 )
 from .tokenize import _SENTENCE_SPLIT_RE
-from .tokenize import tokenize as _tokenize
+from .tokenize import tokenize_aligned as _tokenize_aligned
 
 __all__ = ["TokenRecord", "pipeline"]
 
 if TYPE_CHECKING:
+    from ..core.model import SourceAlignment
     from .neural_contract import AnalysisReceipt
 
 
@@ -68,7 +69,9 @@ class TokenRecord:
     lookup, by design (the calibration target is composed-lemma correctness); it is
     ``None`` only for a token the model does not itself lemmatize (an identity
     fall-through or punctuation). The number is fitted on literary prose, so it
-    carries that genre caveat."""
+    carries that genre caveat. ``alignment`` maps the record to the exact input
+    token, including original and normalized text, source IDs, half-open Unicode
+    code-point offsets, whitespace, and normalization operations."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
@@ -86,6 +89,7 @@ class TokenRecord:
     analysis_complete: bool = True  # sentence-level neural coverage status
     analysis_warning: str | None = None
     analysis_receipt: AnalysisReceipt | None = None
+    alignment: SourceAlignment | None = field(default=None, compare=False)
 
     @property
     def lemma_resolved(self) -> bool:
@@ -119,7 +123,8 @@ def pipeline(
     *,
     parse: bool = False,
     with_confidence: bool = False,
-    long_input: Literal["strict", "partial"] = "strict",
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
+    document_id: str = "input",
 ) -> list[TokenRecord]:
     """Analyze text through the module-level default `GreekPipeline` instance.
 
@@ -127,6 +132,8 @@ def pipeline(
     `use_neural_pipeline()` / `disable_neural_pipeline()`. For isolated concurrent
     configurations, construct `GreekPipeline` instances and call their `analyze` method.
     Neural long-input and calibrated-confidence behavior is identical on both APIs.
+    ``document_id`` scopes deterministic source and sentence identities; use a stable
+    value when records will be exported or reviewed.
     """
     from .runtime import default_pipeline
 
@@ -135,6 +142,7 @@ def pipeline(
         parse=parse,
         with_confidence=with_confidence,
         long_input=long_input,
+        document_id=document_id,
     )
 
 
@@ -143,7 +151,8 @@ def _analyze_bound(
     *,
     parse: bool = False,
     with_confidence: bool = False,
-    long_input: Literal["strict", "partial"] = "strict",
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
+    document_id: str = "input",
 ) -> list[TokenRecord]:
     """Analyze text under the `GreekPipeline` bound in the current context.
 
@@ -174,29 +183,47 @@ def _analyze_bound(
     ``long_input="partial"`` retains every token but marks placeholders with
     ``neural_analyzed=False``, sets ``analysis_complete=False`` across that sentence,
     and includes ``analysis_warning`` and ``analysis_receipt``.
+    ``long_input="windowed"`` explicitly opts long sentences into overlapping,
+    whole-word neural windows. Token outputs come from their most central window and
+    dependency arcs are reconciled once at sentence scope; successful multi-window
+    output is complete and carries a window-policy warning and receipt flag.
     """
-    if long_input not in ("strict", "partial"):
-        raise ValueError(f"long_input must be 'strict' or 'partial', got {long_input!r}")
+    if long_input not in ("strict", "partial", "windowed"):
+        raise ValueError(
+            "long_input must be 'strict', 'partial', or 'windowed', "
+            f"got {long_input!r}"
+        )
     from ..core.model import TokenKind
     from . import joint, syntax
+
+    if long_input != "strict" and joint.active() is None:
+        raise ValueError(
+            f"long_input={long_input!r} requires an active neural Greek pipeline"
+        )
 
     # One tokenization pass over the whole text; sentence boundaries fall after
     # any PUNCT token containing a sentence-final mark, so punctuation tokens
     # stay in their sentence rather than being discarded.
     sents: list[list[str]] = [[]]
     word_flags: list[list[bool]] = [[]]
-    for tok in _tokenize(text):
+    alignments: list[list[SourceAlignment | None]] = [[]]
+    for tok in _tokenize_aligned(text, document_id=document_id):
         sents[-1].append(tok.text)
         word_flags[-1].append(tok.kind is TokenKind.WORD)
+        alignments[-1].append(tok.alignment)
         if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(tok.text):
             sents.append([])
             word_flags.append([])
+            alignments.append([])
     if sents and not sents[-1]:
         sents.pop()
         word_flags.pop()
+        alignments.pop()
 
     records: list[TokenRecord] = []
-    for s_idx, (words, is_word) in enumerate(zip(sents, word_flags)):
+    for s_idx, (words, is_word, sentence_alignments) in enumerate(
+        zip(sents, word_flags, alignments)
+    ):
         if joint.active() is not None:
             ana = joint.analyze_sentence(
                 words, with_probs=with_confidence, long_input=long_input
@@ -244,6 +271,7 @@ def _analyze_bound(
                         analysis_complete=ana.complete,
                         analysis_warning=ana.warnings[0] if ana.warnings else None,
                         analysis_receipt=ana.receipt,
+                        alignment=sentence_alignments[i],
                     )
                 )
             continue
@@ -277,6 +305,7 @@ def _analyze_bound(
                 TokenRecord(
                     sentence=s_idx, index=i + 1, text=tok_text,
                     upos=tag, lemma=lemma, lemma_source=source, head=head, relation=rel,
+                    alignment=sentence_alignments[i],
                 )
             )
     return records

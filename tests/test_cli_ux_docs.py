@@ -63,10 +63,15 @@ def _walk_leaves(cmd: Any, path: tuple[str, ...] = ()) -> Iterator[tuple[tuple[s
 
 def _groups(root: Any) -> dict[tuple[str, ...], Any]:
     """Every group in the tree as {invocation path tuple: click group}."""
-    found: dict[tuple[str, ...], Any] = {(): root}
-    for name, sub in (_subcommands(root) or {}).items():
-        if _subcommands(sub):
-            found[(name,)] = sub
+    found: dict[tuple[str, ...], Any] = {}
+
+    def visit(path: tuple[str, ...], group: Any) -> None:
+        found[path] = group
+        for name, sub in (_subcommands(group) or {}).items():
+            if _subcommands(sub):
+                visit(path + (name,), sub)
+
+    visit((), root)
     return found
 
 
@@ -120,6 +125,7 @@ _NON_DATA_PRODUCING = {
     ("greek", "betacode"),
     ("greek", "strip"),
     ("greek", "ipa"),
+    ("greek", "conllu", "export"),
 }
 
 

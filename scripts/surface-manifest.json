@@ -47,6 +47,34 @@
   },
   "capabilities": [
     {
+      "id": "conllu-lossless-structure",
+      "since": "0.45.0",
+      "python_api": "aegean.greek.load_conllu_document",
+      "summary": "Lossless CoNLL-U ingest, inspection, and export with typed multiword ranges, empty nodes, enhanced dependencies, MISC annotations, and explicit syntactic-word projection metadata.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the browser demo has no local-file workflow for treebank documents."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "file-path-ux",
+          "note": "the read/analysis server accepts no filesystem paths and writes no files."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the specialist file round-trip is documented in the Greek NLP and CLI references rather than a general walkthrough notebook."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "there is no dedicated CoNLL-U screen; the commands remain reachable through the TUI command console."
+        }
+      }
+    },
+    {
       "id": "greek-pipeline",
       "since": "0.8.0",
       "python_api": "aegean.greek.pipeline",

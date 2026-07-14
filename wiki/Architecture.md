@@ -74,7 +74,7 @@ Everything in the core is importable from the top level:
 import aegean
 from aegean import (
     Corpus, Document, DocumentMeta,
-    Token, TokenKind, Sign, SignInventory,
+    Token, TokenKind, SourceAlignment, Sign, SignInventory,
     Provenance, ReadingStatus, Script,
 )
 ```
@@ -84,8 +84,9 @@ from aegean import (
 | Object | What it is | Key fields / methods |
 |---|---|---|
 | **`Sign`** | one graphic unit (syllabogram, letter, logogram) | `label`, `glyph`, `codepoint`, `phonetic`, `script_id`, `attrs` |
-| **`Token`** | one unit in a document's text stream | `text`, `kind`, `signs`, `glyphs`, `line_no`, `position`, `status`, `alt`, `annotations` |
-| **`Document`** | one inscription / tablet / text | `id`, `script_id`, `tokens`, `lines`, `meta`; props `.words`, `.numerals`, `.logograms`, `.line_tokens` |
+| **`Token`** | one unit in a document's text stream | `text`, `kind`, `signs`, `glyphs`, `line_no`, `position`, `status`, `alt`, `annotations`, optional `alignment` |
+| **`SourceAlignment`** | immutable mapping to exact source | document/sentence/token IDs, original and normalized text, half-open character span, whitespace, normalization operations |
+| **`Document`** | one inscription / tablet / text | `id`, `script_id`, `tokens`, `lines`, `meta`, optional exact `source_text`; props `.words`, `.numerals`, `.logograms`, `.line_tokens` |
 | **`DocumentMeta`** | bibliographic / archaeological metadata | `site`, `support`, `scribe`, `findspot`, `period`, `name`, `images`, `notes` |
 | **`Corpus`** | a collection of documents + inventory + provenance | `.load()`, `.get()`, `.filter()`, `.query()`, `.word_frequencies()`, `.to_dataframe()`, `.to_json()`, `.cite()`, … |
 | **`SignInventory`** | a script's signs, indexed | `by_label()`, `by_glyph()`, `by_codepoint()`, `to_dataframe()` |
@@ -434,9 +435,9 @@ lossy form carries its attribution.
 ### `to_json` / `from_json` — lossless
 
 `to_json` serializes *everything*: every token (with its kind, signs, glyphs,
-line/position, and any non-default status/alt/annotations), the physical lines,
-full document metadata, the sign inventory, and the provenance. `from_json`
-reverses it exactly.
+line/position, any non-default status/alt/annotations, and optional source
+alignment), the exact document source text, physical lines, full document
+metadata, the sign inventory, and provenance. `from_json` reverses it exactly.
 
 ```python
 import aegean
@@ -679,7 +680,7 @@ sign-pattern lookups, where `*` matches any one sign: see
 For a queryable, on-disk corpus, write it to SQLite: stdlib `sqlite3` only, no
 extra dependency. Documents and tokens become normalized rows (so SQL and
 full-text search work over them); the nested structure (signs, alternate
-readings, annotations, line groupings, image refs, notes) is kept in JSON
+readings, annotations, source alignment, line groupings, image refs, notes) is kept in JSON
 columns; provenance and the sign inventory live in a small key/value `meta`
 table. It's a lossless round-trip.
 
@@ -1093,7 +1094,7 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   [download-to-cache](Data-and-Provenance) layer is for. CI's
   `scripts/check_footprint.py` enforces import-clean, import-fast, and a
   code+JSON-only wheel.
-- **One schema version.** Exports stamp `schemaVersion` (currently `1`) so
+- **One schema version.** Exports stamp `schemaVersion` (currently `2`) so
   consumers can tell what they're reading; `to_json` omits default fields (e.g.
   a `CERTAIN` status) to stay compact and back-compatible.
 - **Every exploratory method carries its caveat.** Cross-linguistic distance,

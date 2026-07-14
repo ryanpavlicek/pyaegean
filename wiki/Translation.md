@@ -54,8 +54,8 @@ Two functions make up the Python surface:
 
 | Function | Returns | What it does |
 | --- | --- | --- |
-| `translate.translate(text, *, script=, target=, mode=, verify=, greek_pipeline=, grounding_failure=, client=)` | `ExploratoryResult` | Build local grounding, then translate. |
-| `translate.grounding_for(text, script, *, mode=, greek_pipeline=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
+| `translate.translate(text, *, script=, target=, mode=, verify=, greek_pipeline=, greek_long_input=, grounding_failure=, client=)` | `ExploratoryResult` | Build local grounding, then translate. |
+| `translate.grounding_for(text, script, *, mode=, greek_pipeline=, greek_long_input=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
 
 Both are re-exported from `aegean.translate`. The CLI command `aegean ai
 translate` routes through `translate.translate`.
@@ -115,7 +115,11 @@ from aegean import greek, translate
 
 neural = greek.GreekPipeline.neural()
 result = translate.translate(
-    "ἦν ὁ λόγος", script="greek", greek_pipeline=neural, client=client
+    "ἦν ὁ λόγος",
+    script="greek",
+    greek_pipeline=neural,
+    greek_long_input="strict",
+    client=client,
 )
 ```
 
@@ -125,6 +129,14 @@ lower-level `aegean.ai.translate` function is different again: it never builds G
 grounding automatically and only sends evidence passed explicitly through its
 `grounding=` argument.
 
+Pipeline ownership and long-input handling are separate choices. `greek_long_input`
+(CLI `--greek-long-input`) is `"strict"` by default. `"partial"` retains explicitly marked
+placeholders and normally produces an analysis-coverage degradation; `"windowed"` requests
+the neural pipeline's overlapping whole-word reconciliation. The selected policy appears
+in runtime provenance and is never added to the provider prompt. These choices apply only
+to Greek and require a neural backend; non-Greek or baseline calls reject a non-default
+Greek policy rather than ignoring it.
+
 ```mermaid
 flowchart TD
     T["Source text"] --> G["translate.grounding_for()"]
@@ -132,9 +144,10 @@ flowchart TD
     Q -->|"default"| P["Module-default facade"]
     Q -->|"baseline"| B["Isolated baseline"]
     Q -->|"neural"| N["Isolated neural morphology and UD parse"]
+    N --> L{"greek_long_input / --greek-long-input"}
+    L -->|"strict, partial, or windowed"| E
     P --> E["Auditable grounding items"]
     B --> E
-    N --> E
     T --> V{"verify?"}
     E --> V
     V -->|"no"| O["One grounded AI call"]
@@ -147,7 +160,8 @@ flowchart TD
 ```
 
 `trace()`, `provenance()`, and JSON output record the selected pipeline, its immutable
-configuration, the grounding mode and failure policy, and any best-effort degradation.
+configuration, the grounding mode, long-input policy and failure policy, and any
+best-effort degradation.
 That runtime block is attached only after model completion. It is not a `GroundingItem`
 and never enters either the draft or repair prompt.
 
@@ -379,6 +393,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
 | `--greek-backend` | `default` | `default` (module facade), `baseline` (isolated), or `neural` (isolated joint model). Greek only. |
+| `--greek-long-input` | `strict` | Neural sentence policy: `strict`, explicitly incomplete `partial`, or overlapping `windowed`. Greek only. |
 | `--grounding-failure` | `best-effort` | `best-effort` keeps available evidence and records degradation; `strict` stops before a provider call if required grounding fails. |
 | `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |
 | `--model` | provider default | Model override. |

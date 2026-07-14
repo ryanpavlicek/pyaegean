@@ -13,10 +13,14 @@ from __future__ import annotations
 
 import contextlib
 import sys
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
+
+if TYPE_CHECKING:
+    from aegean.greek.ud import UDDocument, UDRow
 
 from ._common import (
     JSON_OPT,
@@ -39,6 +43,13 @@ greek_app = typer.Typer(
     no_args_is_help=True,
 )
 
+conllu_app = typer.Typer(
+    pretty_exceptions_show_locals=False,
+    help="Inspect and losslessly export CoNLL-U gold files (no model inference).",
+    no_args_is_help=True,
+)
+greek_app.add_typer(conllu_app, name="conllu")
+
 TEXT_ARG = typer.Argument(..., help="Greek text ('-' reads stdin).")
 WORD_ARG = typer.Argument(..., help="One Greek word.")
 
@@ -54,6 +65,164 @@ CONFIDENCE_OPT = typer.Option(
     "it is model-only, so identity/punctuation lemmas carry none (a lookup-composed lemma "
     "does — the calibration covers the model's internal training-form lookup).",
 )
+
+
+def _read_conllu_document(source: Path, *, strict: bool) -> UDDocument:
+    """Load one local CoNLL-U document with the CLI's one-line error contract."""
+    from aegean.greek.ud import load_conllu_document
+
+    try:
+        return load_conllu_document(source, strict=strict)
+    except (OSError, UnicodeError, ValueError, TypeError) as exc:
+        raise fail(f"could not read CoNLL-U {source}: {exc}") from None
+
+
+def _conllu_row_counts(rows: Sequence[UDRow]) -> dict[str, int]:
+    """Count structural row kinds without coupling the CLI to private row classes."""
+    counts = {"n_syntactic_tokens": 0, "n_multiword_ranges": 0,
+              "n_empty_nodes": 0, "n_opaque_rows": 0}
+    for row in rows:
+        name = type(row).__name__
+        if name == "UDToken":
+            counts["n_syntactic_tokens"] += 1
+        elif name == "UDMultiwordToken":
+            counts["n_multiword_ranges"] += 1
+        elif name == "UDEmptyNode":
+            counts["n_empty_nodes"] += 1
+        elif name == "UDOpaqueRow":
+            counts["n_opaque_rows"] += 1
+    return counts
+
+
+def _conllu_summary(source: Path, document: UDDocument) -> dict[str, object]:
+    """Build deterministic, prediction-free inspect output for a CoNLL-U document."""
+    sentences = document.sentences
+    sentence_rows: list[dict[str, object]] = []
+    try:
+        total_comments = sum(
+            line.startswith("#")
+            for line in source.read_text(encoding="utf-8").splitlines()
+        )
+    except (OSError, UnicodeError) as exc:
+        raise fail(f"could not read CoNLL-U {source}: {exc}") from None
+    total_rows = 0
+    total_counts = {"n_syntactic_tokens": 0, "n_multiword_ranges": 0,
+                    "n_empty_nodes": 0, "n_opaque_rows": 0}
+    enhanced = False
+    for index, sentence in enumerate(sentences, start=1):
+        rows = sentence.rows or sentence.tokens
+        counts = _conllu_row_counts(rows)
+        total_rows += len(rows)
+        for key in total_counts:
+            total_counts[key] += counts[key]
+        projection = sentence.projection
+        enhanced = enhanced or projection.enhanced_dependencies_present
+        sentence_rows.append(
+            {
+                "index": index,
+                "sent_id": sentence.sent_id,
+                "text": sentence.text,
+                "n_comments": len(sentence.comments),
+                "n_data_rows": len(rows),
+                **counts,
+                "projection": {
+                    "ordinal_to_id": [list(pair) for pair in projection.ordinal_to_id],
+                    "omitted_multiword_ranges": list(projection.omitted_ranges),
+                    "omitted_empty_nodes": list(projection.omitted_empty_nodes),
+                    "enhanced_dependencies_present": projection.enhanced_dependencies_present,
+                },
+            }
+        )
+    omitted = total_counts["n_multiword_ranges"] + total_counts["n_empty_nodes"]
+    return {
+        "format": "CoNLL-U",
+        "source": str(source),
+        "n_sentences": len(sentences),
+        "n_comments": total_comments,
+        "n_data_rows": total_rows,
+        **total_counts,
+        "projection": {
+            "policy": "syntactic_words_v1",
+            "kind": "syntactic_words",
+            "model_tokens": total_counts["n_syntactic_tokens"],
+            "structural_rows_omitted": omitted,
+            "omitted_multiword_ranges": total_counts["n_multiword_ranges"],
+            "omitted_empty_nodes": total_counts["n_empty_nodes"],
+            "enhanced_dependencies_present": enhanced,
+        },
+        "sentences": sentence_rows,
+    }
+
+
+@conllu_app.command()
+def inspect(
+    source: Path = typer.Argument(..., metavar="INPUT", help="CoNLL-U file to inspect."),
+    strict: bool = typer.Option(
+        False, "--strict", help="Reject malformed rows, IDs, dependencies, and references."
+    ),
+    output: Path | None = RESULT_OPT,
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Inspect lossless CoNLL-U structure and its explicit model projection."""
+    document = _read_conllu_document(source, strict=strict)
+    summary = _conllu_summary(source, document)
+    if emit_result(summary, json_output=json_out, output=output):
+        return
+    table(
+        f"CoNLL-U: {source}",
+        ["measure", "value"],
+        [
+            [label, str(summary[key])]
+            for key, label in (
+                ("n_sentences", "sentences"),
+                ("n_comments", "comments"),
+                ("n_data_rows", "data rows"),
+                ("n_syntactic_tokens", "syntactic words"),
+                ("n_multiword_ranges", "multiword ranges"),
+                ("n_empty_nodes", "empty nodes"),
+                ("n_opaque_rows", "opaque rows"),
+            )
+        ],
+    )
+
+
+@conllu_app.command()
+def export(
+    source: Path = typer.Argument(..., metavar="INPUT", help="CoNLL-U file to copy."),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Destination path; omit to write CoNLL-U to stdout."
+    ),
+    strict: bool = typer.Option(
+        False, "--strict", help="Validate structure before exporting the original bytes."
+    ),
+) -> None:
+    """Export a CoNLL-U file byte-for-byte, without invoking any pipeline model."""
+    if strict:
+        _read_conllu_document(source, strict=True)
+    try:
+        raw = source.read_bytes()
+    except (OSError, UnicodeError) as exc:
+        raise fail(f"could not read CoNLL-U {source}: {exc}") from None
+    if output is None:
+        stream = getattr(sys.stdout, "buffer", None)
+        try:
+            if stream is not None:
+                stream.write(raw)
+                stream.flush()
+            else:
+                sys.stdout.write(raw.decode("utf-8"))
+                sys.stdout.flush()
+        except (OSError, UnicodeError) as exc:
+            raise fail(f"could not write CoNLL-U to stdout: {exc}") from None
+        return
+    from aegean._atomic import atomic_path
+
+    try:
+        with atomic_path(output) as temporary:
+            temporary.write_bytes(raw)
+    except OSError as exc:
+        raise fail(f"cannot write {output}: {exc}") from None
+    print(f"wrote {output}", file=sys.stderr)
 
 
 def _ensure_calibration() -> None:
@@ -759,11 +928,19 @@ def pipeline(
         "--partial",
         help="Return explicitly marked placeholders past the neural subword limit (default: fail).",
     ),
+    windowed: bool = typer.Option(
+        False,
+        "--windowed",
+        help="Analyze supported long neural input in overlapping whole-word windows.",
+    ),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """The one-call pipeline: per-token records for a whole text."""
     from aegean import greek
+
+    if partial and windowed:
+        raise fail("--partial and --windowed are mutually exclusive")
 
     _activate(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
@@ -776,11 +953,13 @@ def pipeline(
             read_text(text),
             parse=parse,
             with_confidence=confidence,
-            long_input="partial" if partial else "strict",
+            long_input="partial" if partial else "windowed" if windowed else "strict",
         )
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None
-    except greek.NeuralInputTooLongError as exc:
+    except (greek.NeuralInputTooLongError, greek.NeuralWindowingError) as exc:
+        raise fail(str(exc)) from None
+    except ValueError as exc:
         raise fail(str(exc)) from None
     from aegean._view import format_confidence, pipeline_rows_from_records
 

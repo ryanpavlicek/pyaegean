@@ -49,6 +49,7 @@ def _progress_dataframe(
                     "name": d.meta.name,
                     "n_tokens": len(d.tokens),
                     "n_words": len(d.words),
+                    "source_text": d.source_text,
                 }
             )
             progress(i, total)
@@ -74,6 +75,33 @@ def _progress_dataframe(
                         "status": tok.status.value,
                         "site": d.meta.site,
                         "period": d.meta.period,
+                        "alignment_document_id": (
+                            tok.alignment.document_id if tok.alignment is not None else None
+                        ),
+                        "alignment_sentence_id": (
+                            tok.alignment.sentence_id if tok.alignment is not None else None
+                        ),
+                        "alignment_source_token_id": (
+                            tok.alignment.source_token_id if tok.alignment is not None else None
+                        ),
+                        "alignment_original_text": (
+                            tok.alignment.original_text if tok.alignment is not None else None
+                        ),
+                        "alignment_start_char": (
+                            tok.alignment.start_char if tok.alignment is not None else None
+                        ),
+                        "alignment_end_char": (
+                            tok.alignment.end_char if tok.alignment is not None else None
+                        ),
+                        "alignment_whitespace_before": (
+                            tok.alignment.whitespace_before if tok.alignment is not None else None
+                        ),
+                        "alignment_normalized_text": (
+                            tok.alignment.normalized_text if tok.alignment is not None else None
+                        ),
+                        "alignment_normalization_ops": (
+                            tok.alignment.normalization_ops if tok.alignment is not None else None
+                        ),
                     }
                 )
             progress(i, total)

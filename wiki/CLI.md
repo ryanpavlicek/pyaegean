@@ -111,7 +111,7 @@ aegean --version          # pyaegean 0.44.2
 | Group | What's in it |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
@@ -1712,6 +1712,25 @@ aegean greek catalog sappho
 The same in Python is `greek.catalog(query=None, *, author=None, title=None,
 source=None)`, returning a list of `{id, author, title, greek_title, source}` dicts;
 `greek.popular_works()` stays the curated 25.
+
+### Inspecting and preserving CoNLL-U files
+
+The `conllu` group reads complete treebank documents without running a model. `inspect`
+reports syntactic words, multiword ranges, empty nodes, enhanced-annotation presence,
+and the explicit original-ID projection. Add `--strict` to reject malformed columns,
+identifiers, row placement, references, and basic trees. `--json` or `-o` gives the
+machine-readable summary.
+
+```bash
+aegean greek conllu inspect treebank.conllu --strict --json
+aegean greek conllu export treebank.conllu -o checked-copy.conllu --strict
+```
+
+`export` copies the source bytes atomically, including comments, all ten columns, MWT
+ranges, empty nodes, `DEPS`, `MISC`, and line endings. It never invokes the baseline or
+neural pipeline. The separate `greek eval ud` path still predicts and scores only the
+integer-ID syntactic-word projection, so gold structural annotations are not credited to
+the model.
 
 ### Reproducing the published numbers (`eval`)
 

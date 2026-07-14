@@ -46,7 +46,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `explain` `work` `nt` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `explain` `conllu inspect` `conllu export` `work` `nt` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -338,8 +338,9 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
-| `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
+| `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial --windowed -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
 | `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
+| `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
@@ -578,6 +579,18 @@ accept:
 In Python: `from aegean import greek; greek.load_nt("John", ref="1.1-18")` and
 `greek.load_work("tlg0012.tlg001", ref="1.1-1.50")`.
 
+### Lossless CoNLL-U files
+
+`conllu inspect` reports sentence, comment, syntactic-word, multiword-range, empty-node,
+and opaque-row counts. Its JSON includes the exact syntactic projection policy and
+original-ID mapping. `conllu export` copies the original UTF-8 bytes atomically. Neither
+command runs a model or presents preserved gold structure as predictions.
+
+```bash
+aegean greek conllu inspect treebank.conllu --strict --json
+aegean greek conllu export treebank.conllu -o checked-copy.conllu --strict
+```
+
 ### Reproducing the published numbers (`eval`)
 
 `aegean greek eval TARGET` runs the official evaluators against fetched gold data
@@ -787,7 +800,7 @@ Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -815,6 +828,8 @@ rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy o
 paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
 Choose `--greek-backend default|baseline|neural`; the isolated neural choice gives
 model-predicted contextual morphology and a UD parse without changing the module facade.
+`--greek-long-input strict|partial|windowed` separately selects the neural sentence policy;
+the default remains strict and the choice is recorded in runtime provenance.
 `--grounding-failure best-effort|strict` either keeps and traces available evidence or
 stops before a provider call when required local analysis fails. Runtime configuration is
 saved in the trace/JSON but never added to the provider prompt.

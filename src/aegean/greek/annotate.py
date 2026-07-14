@@ -33,7 +33,7 @@ def annotate_corpus(
     *,
     tag_sentence: TagSentence | None = None,
     with_evidence: bool = True,
-    long_input: Literal["strict", "partial"] = "strict",
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
     progress: Callable[[int, int], None] | None = None,
 ) -> "Corpus":
     """Return a copy of ``corpus`` with each word token's ``lemma`` / ``upos`` annotations
@@ -44,8 +44,10 @@ def annotate_corpus(
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
     baseline. Existing annotations on a token are preserved except for the keys written here.
-    Neural input is strict by default; pass ``long_input="partial"`` only when explicitly
-    marked placeholder annotations are useful, and inspect ``analysis_complete``.
+    Neural input is strict by default. Pass ``long_input="partial"`` only when explicitly
+    marked placeholder annotations are useful, or ``long_input="windowed"`` to reconcile
+    supported long lines from overlapping whole-word windows; inspect
+    ``analysis_complete`` and the analysis receipt in either non-default mode.
     ``progress`` is called as ``progress(done, total)`` once per document (a large corpus under
     the neural pipeline is a long run)."""
     from ..core.corpus import Corpus
@@ -61,6 +63,10 @@ def annotate_corpus(
     from .pos import pos_tag
 
     use_joint = tag_sentence is None and joint.active() is not None
+    if long_input != "strict" and not use_joint:
+        raise ValueError(
+            f"long_input={long_input!r} requires the active neural Greek pipeline"
+        )
 
     def _evidence(ann: dict[str, str], source: LemmaSource) -> None:
         if with_evidence:

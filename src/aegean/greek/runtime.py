@@ -316,9 +316,13 @@ class GreekPipeline:
         *,
         parse: bool = False,
         with_confidence: bool = False,
-        long_input: Literal["strict", "partial"] = "strict",
+        long_input: Literal["strict", "partial", "windowed"] = "strict",
+        document_id: str = "input",
     ) -> list[TokenRecord]:
-        """Analyze text with this instance's backend."""
+        """Analyze text with this instance's backend and exact source alignment.
+
+        ``document_id`` scopes the deterministic sentence and source-token IDs.
+        """
         from .pipeline import _analyze_bound
 
         with _bind(self):
@@ -327,6 +331,7 @@ class GreekPipeline:
                 parse=parse,
                 with_confidence=with_confidence,
                 long_input=long_input,
+                document_id=document_id,
             )
 
     def analyze_sentence(

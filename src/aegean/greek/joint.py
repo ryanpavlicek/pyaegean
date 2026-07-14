@@ -49,6 +49,7 @@ __all__ = [
     "ModelBundleManifest",
     "NeuralPipelineNotLoadedError",
     "NeuralInputTooLongError",
+    "NeuralWindowingError",
     "ReceiptMismatchError",
     "SentenceAnalysis",
     "active",
@@ -61,7 +62,7 @@ __all__ = [
 
 # Registered in aegean.data._REMOTE; fetched + extracted to the cache on first use.
 _DATASET = "grc-joint"
-LongInputMode = Literal["strict", "partial"]
+LongInputMode = Literal["strict", "partial", "windowed"]
 
 
 class NeuralPipelineNotLoadedError(RuntimeError):
@@ -79,8 +80,18 @@ class NeuralInputTooLongError(ValueError):
         super().__init__(
             f"neural analysis would be incomplete: {analyzed_tokens} of {input_tokens} tokens "
             f"fit the model's {max_subwords}-subword limit. Split the sentence, or pass "
-            "long_input='partial' and inspect SentenceAnalysis.complete/analyzed."
+            "long_input='partial' and inspect SentenceAnalysis.complete/analyzed, or "
+            "long_input='windowed' for safe complete-word overlap windows."
         )
+
+
+class NeuralWindowingError(ValueError):
+    """Raised when safe overlapping-window analysis cannot be supported.
+
+    Windowed inference is deliberately conservative: pathological inputs are refused
+    before tokenizer/dense allocation, and every window must contain complete words with
+    a useful overlap and at least one observed arc for each dependent.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,8 +199,10 @@ def _probs_calibration(with_probs: bool) -> Any:
 
 
 def _long_input_mode(value: str) -> LongInputMode:
-    if value not in ("strict", "partial"):
-        raise ValueError(f"long_input must be 'strict' or 'partial', got {value!r}")
+    if value not in ("strict", "partial", "windowed"):
+        raise ValueError(
+            f"long_input must be 'strict', 'partial', or 'windowed', got {value!r}"
+        )
     return value  # type: ignore[return-value]
 
 
@@ -280,10 +293,28 @@ class _JointModel:
         per kept word, kept word indices)``. The tokenizer manifest owns the subword
         maximum. At most ``max_subwords`` input words are presented to the tokenizer,
         which bounds pathological partial-mode input without changing any coverable
-        prefix (each non-empty pretokenized word needs at least one subword)."""
+        prefix (each non-empty pretokenized word needs at least one subword). If right
+        truncation cuts through the final word, that incomplete word is removed from the
+        kept set; strict mode must refuse it and partial mode must never label a fragment
+        as a complete token prediction."""
         enc = self._tok.encode(words[: self.manifest.max_subwords], is_pretokenized=True)
         ids = enc.ids[: self.manifest.max_subwords]
         word_ids = enc.word_ids[: len(ids)]
+        # With stride=0, the first overflow retains the rest of a word that straddled the
+        # right-truncation boundary. Its first real word ID equals the last ID in the main
+        # encoding only when that last word is incomplete; a clean between-word boundary
+        # starts the overflow at the next ID. Remove every fragment of the incomplete word
+        # while preserving special tokens, so coverage is whole-token honest.
+        overflowing = getattr(enc, "overflowing", ())
+        if overflowing:
+            first_overflow = next(
+                (wid for wid in overflowing[0].word_ids if wid is not None), None
+            )
+            last_main = next((wid for wid in reversed(word_ids) if wid is not None), None)
+            if first_overflow is not None and first_overflow == last_main:
+                complete = [wid != last_main for wid in word_ids]
+                ids = [token_id for token_id, keep in zip(ids, complete) if keep]
+                word_ids = [wid for wid, keep in zip(word_ids, complete) if keep]
         word_pos: list[int] = []
         kept: list[int] = []
         prev = None
@@ -354,7 +385,12 @@ class _JointModel:
         return manifest.max_subwords if manifest is not None else 256
 
     def _receipt(
-        self, *, input_tokens: int, analyzed_tokens: int, truncated: bool
+        self,
+        *,
+        input_tokens: int,
+        analyzed_tokens: int,
+        truncated: bool,
+        windowed: bool = False,
     ) -> AnalysisReceipt | None:
         manifest = getattr(self, "manifest", None)
         session = getattr(self, "_sess", None)
@@ -366,6 +402,289 @@ class _JointModel:
             input_tokens=input_tokens,
             analyzed_tokens=analyzed_tokens,
             truncated=truncated,
+            windowed=windowed,
+        )
+
+    def _window_body_budget(self) -> int:
+        """Return the manifest subword budget available to complete input words."""
+        manifest = getattr(self, "manifest", None)
+        policy = getattr(manifest, "special_token_policy", None)
+        if manifest is not None and policy != "roberta:<s>:0:</s>:2":
+            raise NeuralWindowingError(
+                "windowed neural analysis requires the validated two-token policy "
+                "roberta:<s>:0:</s>:2"
+            )
+        budget = self.max_subwords - 2  # <s> and </s> are validated by the manifest.
+        if budget < 1:
+            raise NeuralWindowingError(
+                f"model subword limit {self.max_subwords} cannot hold two special tokens "
+                "and a complete input word"
+            )
+        return budget
+
+    def _full_word_lengths(self, words: list[str]) -> list[int]:
+        """Measure every word with an untruncated clone of the active tokenizer."""
+        tok = getattr(self, "_tok", None)
+        if tok is None:
+            raise NeuralWindowingError("windowed neural analysis has no tokenizer")
+        clone: Any = None
+        # Tokenizer.from_str is the tokenizers API's independent clone operation.  The
+        # fallbacks keep the test/fake backend contract small without mutating the live
+        # tokenizer, whose truncation policy is still used by ordinary inference.
+        try:
+            from tokenizers import Tokenizer
+
+            if hasattr(tok, "to_str"):
+                clone = Tokenizer.from_str(tok.to_str())
+        except Exception:
+            clone = None
+        if clone is None and hasattr(tok, "clone"):
+            try:
+                clone = tok.clone()
+            except Exception:
+                clone = None
+        if clone is None:
+            import copy
+
+            try:
+                clone = copy.deepcopy(tok)
+            except Exception as exc:  # pragma: no cover - defensive fake/runtime guard
+                raise NeuralWindowingError(
+                    "could not clone the tokenizer for untruncated window measurement"
+                ) from exc
+        try:
+            no_truncation = getattr(clone, "no_truncation")
+            no_truncation()
+        except (AttributeError, TypeError) as exc:
+            raise NeuralWindowingError(
+                "tokenizer cannot disable truncation for whole-word window measurement"
+            ) from exc
+        try:
+            enc = clone.encode(words, is_pretokenized=True)
+        except TypeError:
+            # Small deterministic fakes often omit the keyword while preserving the
+            # same pretokenized semantics.
+            enc = clone.encode(words)
+        word_ids = getattr(enc, "word_ids", None)
+        if callable(word_ids):
+            word_ids = word_ids()
+        if word_ids is None:
+            raise NeuralWindowingError("tokenizer did not expose complete word positions")
+        lengths = [0] * len(words)
+        for wid in word_ids:
+            if wid is None:
+                continue
+            if not isinstance(wid, int) or wid < 0 or wid >= len(words):
+                raise NeuralWindowingError("tokenizer returned an invalid whole-word position")
+            lengths[wid] += 1
+        if any(length < 1 for length in lengths):
+            raise NeuralWindowingError(
+                "windowed neural analysis cannot preserve a complete word boundary: "
+                "the untruncated tokenizer produced no subwords for an input token"
+            )
+        return lengths
+
+    @staticmethod
+    def _pack_windows(lengths: list[int], budget: int) -> list[tuple[int, int]]:
+        """Pack complete-word windows with a subword-bounded suffix overlap."""
+        if any(length > budget for length in lengths):
+            raise NeuralWindowingError(
+                "windowed neural analysis refused an individual token whose complete "
+                f"subword span exceeds the {budget}-subword body budget"
+            )
+        target = min(64, budget // 4)
+        windows: list[tuple[int, int]] = []
+        start = 0
+        n = len(lengths)
+        while start < n:
+            used = 0
+            end = start
+            while end < n and used + lengths[end] <= budget:
+                used += lengths[end]
+                end += 1
+            if end == start:  # guarded above, retained as a clean boundary error
+                raise NeuralWindowingError(
+                    "windowed neural analysis cannot place a complete token in a model window"
+                )
+            windows.append((start, end))
+            if end == n:
+                break
+
+            # Prefer the largest complete suffix not exceeding the target body-subword
+            # overlap.  If a single token is wider than that target, retain that one whole
+            # token anyway: every boundary must overlap at least one token.
+            overlap_start = end - 1
+            overlap_used = lengths[overlap_start]
+            while overlap_start > start:
+                candidate = overlap_used + lengths[overlap_start - 1]
+                if candidate > target:
+                    break
+                overlap_start -= 1
+                overlap_used = candidate
+            if overlap_start <= start or overlap_start >= end:
+                raise NeuralWindowingError(
+                    "windowed neural analysis cannot provide a whole-token overlap with "
+                    "forward progress at a window boundary"
+                )
+            start = overlap_start
+        return windows
+
+    def _analyze_windowed(
+        self,
+        forms: list[str],
+        lengths: list[int],
+        windows: list[tuple[int, int]],
+        *,
+        calibration: Any = None,
+    ) -> SentenceAnalysis:
+        """Analyze windows and reconcile owner fields plus one global dependency tree."""
+        np = self._np
+        # Assign owners before any window encoder pass.  This lets us process each window
+        # sequentially and drop its logits immediately, keeping the 4,096-token dense cap
+        # honest even for many windows.
+        n = len(forms)
+        owners: list[int | None] = [None] * n
+        owner_scores = [-1] * n
+        prefix = [0]
+        for length in lengths:
+            prefix.append(prefix[-1] + length)
+        for wi, (ws, we) in enumerate(windows):
+            for token in range(ws, we):
+                score = min(prefix[token] - prefix[ws], prefix[we] - prefix[token + 1])
+                # Windows were built left-to-right, so retaining an equal score gives the
+                # required deterministic earlier-window tie break.
+                if score > owner_scores[token]:
+                    owner_scores[token] = score
+                    owners[token] = wi
+        if any(owner is None for owner in owners):  # pragma: no cover - packer invariant
+            raise NeuralWindowingError("windowed analysis could not assign every token an owner")
+
+        upos = ["X"] * n
+        xpos = ["---------"] * n
+        lemma = list(forms)
+        resolved = [False] * n
+        lemma_source = [LemmaSource.IDENTITY] * n
+        verified = [False] * n
+        upos_prob: list[float | None] = [None] * n
+        lemma_prob: list[float | None] = [None] * n
+        arc = np.full((n, n + 1), -np.inf, dtype=np.float32)
+        # Relation IDs are bounded by the validated manifest label map.  A compact int16
+        # candidate grid avoids an R x N² float tensor; -1 means no finite relation score.
+        relation_count = len(self.inv["deprel"])
+        if relation_count > int(np.iinfo(np.int16).max):
+            raise NeuralWindowingError(
+                "windowed neural analysis cannot compact a relation map larger than int16"
+            )
+        rel_ids = np.full((n, n + 1), -1, dtype=np.int16)
+
+        for wi, (ws, we) in enumerate(windows):
+            chunk = forms[ws:we]
+            raw = self._run(chunk)
+            if raw.get("_kept") != list(range(we - ws)):
+                raise NeuralWindowingError(
+                    "windowed tokenizer failed to return every complete word in a window"
+                )
+            local = self._decode(chunk, raw, calibration=calibration)
+            if local.analyzed != (True,) * len(chunk):
+                raise NeuralWindowingError(
+                    "windowed neural analysis produced an incomplete window decode"
+                )
+            local_arc = np.asarray(raw["arc"][0], dtype=np.float32)
+            local_rel = np.asarray(raw["rel"][0])
+            for local_i, token in enumerate(range(ws, we)):
+                if owners[token] != wi:
+                    continue
+                upos[token] = local.upos[local_i]
+                xpos[token] = local.xpos[local_i]
+                lemma[token] = local.lemma[local_i]
+                resolved[token] = local.lemma_resolved[local_i]
+                lemma_source[token] = local.lemma_source[local_i]
+                verified[token] = local.lemma_verified[local_i]
+                if local.upos_prob:
+                    upos_prob[token] = local.upos_prob[local_i]
+                if local.lemma_script_prob:
+                    lemma_prob[token] = local.lemma_script_prob[local_i]
+                for local_head, score in enumerate(local_arc[local_i]):
+                    global_head = 0 if local_head == 0 else ws + local_head
+                    if global_head < 0 or global_head > n:
+                        continue
+                    arc[token, global_head] = score
+                    rel_vector = np.asarray(local_rel[:, local_i, local_head])
+                    if np.isfinite(rel_vector).any():
+                        rel_ids[token, global_head] = np.int16(rel_vector.argmax())
+            # Explicitly release the large per-window arrays before the next encoder pass.
+            del raw, local, local_arc, local_rel
+
+        if not np.isfinite(arc).any(axis=1).all():
+            raise NeuralWindowingError(
+                "windowed neural analysis did not observe at least one finite arc for "
+                "every dependent"
+            )
+        try:
+            heads = decode_mst(arc)
+        except Exception as exc:  # pragma: no cover - defensive decoder guard
+            raise NeuralWindowingError("global windowed dependency decoding failed") from exc
+        if len(heads) != n or heads.count(0) != 1:
+            raise NeuralWindowingError(
+                "global windowed dependency decoding did not produce exactly one root"
+            )
+        for dep, head_value in enumerate(heads):
+            if head_value < 0 or head_value > n or head_value == dep + 1:
+                raise NeuralWindowingError("global windowed decoder selected an invalid arc")
+            if not np.isfinite(arc[dep, head_value]):
+                raise NeuralWindowingError(
+                    "global windowed decoder selected an unobserved or non-finite arc"
+                )
+        # The MST decoder promises an arborescence; retain a cheap explicit cycle check as
+        # a safety assertion because malformed all--inf candidate matrices must never leak.
+        for start in range(n):
+            seen: set[int] = set()
+            node = start + 1
+            while node:
+                if node in seen:
+                    raise NeuralWindowingError("global windowed dependency tree contains a cycle")
+                seen.add(node)
+                node = heads[node - 1]
+
+        deprel: list[str] = ["dep"] * n
+        for dep, head_value in enumerate(heads):
+            if head_value == 0:
+                deprel[dep] = "root"
+                continue
+            relation_id = int(rel_ids[dep, head_value])
+            if relation_id < 0:
+                raise NeuralWindowingError(
+                    "global windowed decoder selected an arc without an observed relation"
+                )
+            deprel[dep] = self.inv["deprel"][relation_id]
+        warning = (
+            "windowed neural analysis: complete-word overlapping windows; token tags, "
+            "lemmas, and confidence use the farthest-boundary owner (earlier on ties), "
+            "and dependencies use one global observed-arc MST",
+        )
+        return SentenceAnalysis(
+            tokens=tuple(forms),
+            upos=tuple(upos),
+            xpos=tuple(xpos),
+            feats=tuple(feats_from_xpos(x) for x in xpos),
+            head=tuple(heads),
+            deprel=tuple(deprel),
+            lemma=tuple(lemma),
+            lemma_resolved=tuple(resolved),
+            upos_prob=tuple(upos_prob) if calibration is not None else (),
+            lemma_script_prob=tuple(lemma_prob) if calibration is not None else (),
+            lemma_source=tuple(lemma_source),
+            lemma_verified=tuple(verified),
+            analyzed=(True,) * n,
+            complete=True,
+            truncated=False,
+            warnings=warning,
+            receipt=self._receipt(
+                input_tokens=n,
+                analyzed_tokens=n,
+                truncated=False,
+                windowed=True,
+            ),
         )
 
     def analyze(
@@ -385,7 +704,9 @@ class _JointModel:
 
         ``long_input="strict"`` refuses any sentence the manifest-declared subword
         budget cannot cover. ``"partial"`` retains all tokens but explicitly marks
-        uncovered placeholders through ``complete``, ``analyzed``, and ``warnings``."""
+        uncovered placeholders through ``complete``, ``analyzed``, and ``warnings``.
+        ``"windowed"`` uses safe complete-word overlap windows and one global observed-arc
+        tree; pathological or unsupported boundaries raise ``NeuralWindowingError``."""
         mode = _long_input_mode(long_input)
         calibration = _probs_calibration(with_probs)
         forms = [unicodedata.normalize("NFC", w) for w in words]
@@ -394,6 +715,23 @@ class _JointModel:
                 (), (), (), (), (), (), (), (), analyzed=(),
                 receipt=self._receipt(input_tokens=0, analyzed_tokens=0, truncated=False),
             )
+        if mode == "windowed":
+            # Refuse pathological input before cloning/tokenizing the complete sentence or
+            # allocating any dense model/global-arc arrays.
+            char_count = sum(len(form) for form in forms)
+            if len(forms) > 4096 or char_count > 1_000_000:
+                raise NeuralWindowingError(
+                    "windowed neural analysis refuses inputs above its safety cap "
+                    f"(4096 tokens and 1,000,000 characters; got {len(forms)} tokens and "
+                    f"{char_count} characters)"
+                )
+            budget = self._window_body_budget()
+            lengths = self._full_word_lengths(forms)
+            if sum(lengths) <= budget:
+                # Preserve ordinary in-limit output and receipt bytes exactly.
+                return self._decode(forms, self._run(forms), calibration=calibration)
+            windows = self._pack_windows(lengths, budget)
+            return self._analyze_windowed(forms, lengths, windows, calibration=calibration)
         raw = self._run(forms)
         analyzed_tokens = len(raw["_kept"])
         truncated = analyzed_tokens != len(forms)
@@ -417,8 +755,17 @@ class _JointModel:
         Produces the same fields as ``[self.analyze(s) for s in sentences]``; only the number of ONNX calls
         differs. Sequential per-sentence analysis is the recorded benchmark protocol
         (see `_run_batch` on float reduction order); batching is a throughput
-        convenience. ``with_probs`` behaves as in `analyze` (calibration required)."""
+        convenience. ``with_probs`` behaves as in `analyze` (calibration required).
+        Windowed mode is always sequential and delegates to ``analyze`` so chunk size
+        cannot change owner or tree reconciliation."""
         mode = _long_input_mode(long_input)
+        if mode == "windowed":
+            # Window reconciliation is intentionally sequential: chunking must never alter
+            # owner assignment, global arc candidates, or the resulting tree.
+            return [
+                self.analyze(words, with_probs=with_probs, long_input="windowed")
+                for words in sentences
+            ]
         calibration = _probs_calibration(with_probs)
         norm = [[unicodedata.normalize("NFC", w) for w in words] for words in sentences]
         out: list[SentenceAnalysis] = [
@@ -664,7 +1011,8 @@ def analyze_sentence(
 
     ``with_probs=True`` additionally fills the calibrated confidence fields and requires
     a loaded calibration. ``long_input`` is strict by default; partial mode returns
-    explicit coverage status and warnings (see `_JointModel.analyze`)."""
+    explicit coverage status and warnings, while windowed mode reconciles complete-word
+    overlap windows with one global observed-arc tree (see `_JointModel.analyze`)."""
     model = active()
     if model is None:
         raise NeuralPipelineNotLoadedError(
@@ -693,8 +1041,9 @@ def analyze_sentences(
     int runs padded chunks of that many sentences through the encoder (one ONNX call per
     chunk), a throughput convenience producing the same analyses; batched matmuls can
     reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
-    behaves as in `analyze_sentence` (calibration required). ``long_input`` applies the
-    same strict/partial contract independently to every sentence."""
+    behaves as in `analyze_sentence` (calibration required). Strict and partial modes
+    apply independently per sentence; windowed mode is always sequential, so batch
+    chunking cannot change owner or global-tree reconciliation."""
     model = active()
     if model is None:
         raise NeuralPipelineNotLoadedError(

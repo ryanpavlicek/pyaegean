@@ -21,6 +21,7 @@ Corpus                          a collection of documents + shared context
 ├── documents: list[Document]   one per inscription / tablet / text
 │   ├── tokens: list[Token]     the transliterated text stream, in order
 │   ├── lines:  list[list[int]] each physical line = a list of indices into tokens
+│   ├── source_text: str | None exact source snapshot for aligned documents
 │   └── meta:   DocumentMeta    site, period, scribe, support, findspot, name, …
 ├── sign_inventory: SignInventory | None    the script's Sign objects, indexed
 ├── provenance: Provenance | None           source, license, citation, notes
@@ -36,6 +37,9 @@ Three things to internalize:
   `dataclasses.replace`), each with a single mutable escape hatch: the
   per-token `annotations` dict and the per-sign `attrs` dict. `Document` is
   mutable.
+- **Source alignment is typed, not an annotation convention.** An aligned token
+  carries an immutable `SourceAlignment`; its document retains the exact
+  `source_text` those offsets address.
 - **Document ids are unique within a corpus.** Constructing a `Corpus` with
   duplicate ids collapses them (keeping the last) with a warning; `merge`
   refuses duplicates by default (`dedupe="error"`).
@@ -76,13 +80,15 @@ line 2 text: ['RE-ZA', '5', '¹⁄₂']
 | `status` | `ReadingStatus` | editorial certainty (§3); defaults to `CERTAIN` |
 | `alt` | `tuple[str, ...]` | alternate readings (EpiDoc `<app>`/`<rdg>`); `text` is the preferred reading |
 | `annotations` | `dict[str, str]` | script-specific per-token facts; the extension surface (below) |
+| `alignment` | `SourceAlignment \| None` | exact source identity, span, whitespace, and normalization provenance |
 
 `kind` is load-bearing: `document.words`, word-scope queries, the review
 export, and `annotate_corpus` all gate on `TokenKind.WORD`, so a token
 mislabeled `unknown` silently disappears from every word-level analysis.
 `position` is pure data (it may be `None`, and persistence never reorders by
-it, see §6); it is also the stable join key the review loop uses, so keep it
-equal to the token's list index when you build your own documents.
+it, see §6). The review loop prefers `alignment.source_token_id` when present
+and retains `document.id` + `position` as the compatibility join for older
+tables, so keep `position` equal to the token's list index in unaligned documents.
 
 A gold-annotated token from the New Testament corpus shows a full set of
 fields in the wild:
@@ -150,6 +156,54 @@ for that convention. `lemma_source` holds a `LemmaSource` evidence-class value
 review export uses the explicit review signal. The legacy `lemma_known` key is a
 deprecated compatibility alias for `lemma_resolved`.
 
+### Lossless source alignment
+
+`SourceAlignment` keeps source mapping out of the free-form annotations dict:
+
+| Field | Meaning |
+|---|---|
+| `document_id`, `sentence_id` | owning source and sentence identities |
+| `source_token_id` | stable identity for an unchanged exact source snapshot |
+| `original_text` | exact source slice |
+| `start_char`, `end_char` | half-open Python Unicode code-point offsets |
+| `whitespace_before` | exact Unicode whitespace since the preceding token |
+| `normalized_text` | model-facing normalized form |
+| `normalization_ops` | ordered operations, currently `unicode:nfc` when NFC changes text |
+
+An aligned `Document` sets `source_text`; `validate_source_alignment()` checks
+every slice, gap, document ID, source-token ID, order, and overlap. Schema-2 JSON
+and SQLite preserve the value. A schema-1 corpus still loads with
+`source_text=None` and `alignment=None`.
+
+```python
+from aegean import Document
+from aegean import greek
+
+source = "  α\u0301\tλόγος."
+tokens = greek.tokenize_aligned(source, document_id="demo")
+doc = Document("demo", "greek", tokens, [list(range(len(tokens)))], source_text=source)
+doc.validate_source_alignment()
+
+tokens[0].alignment.original_text       # 'ά'
+tokens[0].alignment.normalized_text     # 'ά'
+source[tokens[0].alignment.start_char:tokens[0].alignment.end_char] == "α\u0301"  # True
+```
+
+### CoNLL-U uses a separate lossless structural model
+
+Treebank rows are not forced into `Corpus.Token`. `greek.UDDocument` preserves ordered
+comments and complete ten-column CoNLL-U rows through `UDSentence.rows` and
+`UDSentence.items`. Integer-ID words remain available through `UDSentence.tokens`, while
+`UDMultiwordToken`, `UDEmptyNode`, typed enhanced dependencies, and ordered MISC entries
+retain structures that are not syntactic words. `UDSentence.projection` makes the mapping
+between those two views explicit.
+
+`greek.load_conllu_document()` plus `greek.write_conllu()` is the exact document
+round-trip. Use `strict=True` when validation is required; the lenient default retains
+valid structure and opaque malformed rows for inspection while keeping the legacy word
+projection stable. The v3 neural model consumes only that word projection, so structural
+gold rows are never presented as its predictions.
+
 ---
 
 ## 3. `ReadingStatus`: where each status comes from
@@ -194,7 +248,8 @@ print([(t.text, t.status.value) for t in corpus.get("HT23b").tokens][:8])
 A common confusion. `Token` is **corpus data**: what an edition says, stored
 in documents, persisted and cited. `greek.TokenRecord` is **pipeline output**:
 one token's analysis from `greek.pipeline()`, ephemeral, never stored in a
-corpus. They share nothing structurally.
+corpus. Both may carry the same immutable `SourceAlignment`, but their linguistic
+fields and persistence roles are otherwise separate.
 
 | `TokenRecord` field | Meaning |
 |---|---|
@@ -211,6 +266,7 @@ corpus. They share nothing structurally.
 | `relation` | dependency relation. Note the name: it is `relation`, **not** `deprel` |
 | `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
+| `alignment` | exact source identity, original/normalized text, span, and whitespace |
 
 ```python
 from aegean import greek
@@ -317,8 +373,9 @@ fresh load clean: True
 
 Three formats, three different promises:
 
-- **JSON (`to_json` / `from_json`) is lossless.** Every token field, the
-  lines, full document metadata, the sign inventory, and provenance survive
+- **JSON (`to_json` / `from_json`) is lossless.** Every token field, optional
+  source alignment and exact source text, the lines, full document metadata,
+  the sign inventory, and provenance survive
   exactly. (`to_dict` is the *lossy* quick-interop summary; don't round-trip
   through it.)
 - **SQLite (`to_sql` / `from_sql`, `aegean.db`) is lossless and adds FTS
@@ -328,7 +385,8 @@ Three formats, three different promises:
   (SQL `NULL`, which would otherwise sort first) or out-of-order positions
   survive in place. Databases written before 0.19.4 lack the column; they are
   read via a `position` fallback and migrated in place on the first
-  `append=True` write.
+  `append=True` write. Schema-1 databases also lack A4 source/alignment columns;
+  they load with absent values and migrate to schema 2 on append.
 - **Schema versions gate forward-compatibility only.** `SCHEMA_VERSION`
   (stored as `_meta.schemaVersion` in JSON, `schema_version` in the SQLite
   `meta` table and on `Provenance`) is bumped only for changes an older reader
@@ -501,11 +559,11 @@ after apply: {'lemma': 'γίγνομαι', 'lemma__pred': 'ἐγένετο', 'le
 provenance note: review: 1 tokens corrected by RP (2026-07-10)
 ```
 
-Note what the loop relies on: the token had a `position` (a token without one
-is excluded from the export, because a correction on it could never be
-applied), and the applied-to corpus still had the same token text at that
-position (a mismatch raises rather than landing a correction on the wrong
-word). The full workflow, including the CLI form, is on
+Note what the loop relies on: an aligned token has a stable source-token ID and
+its exported source span is verified on apply. Older unaligned tables fall back
+to `doc_id` + `position`; a token without a position is excluded, and the
+applied-to corpus must still have the same token text (a mismatch raises rather
+than landing a correction on the wrong word). The full workflow, including the CLI form, is on
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong).
 
 ### 7.4 Invariants your extension must hold
@@ -519,10 +577,10 @@ toolkit assumes:
   an in-memory violation surfaces later as an `IndexError` from `line_tokens`
   or an export.
 - **`position` should be the token's index in the document's list, unique per
-  document.** Persistence tolerates `None` and disorder (§6), but the review
-  join key is `doc_id` + `position`: a `None` drops the token from review
-  export, and a duplicated position can land one correction on more than one
-  token.
+  document.** Persistence tolerates `None` and disorder (§6). Source-aware
+  review prefers `source_token_id`; older tables use `doc_id` + `position`, so
+  a `None` drops the token from review export and a duplicated position can
+  land one legacy correction on more than one token.
 - **`status` must be one of the four `ReadingStatus` values** and `kind` one
   of the six `TokenKind` values; unknown strings raise at construction, so
   invent nothing here.
@@ -568,7 +626,7 @@ except ValueError as e:
 ```
 ValueError: document 'D1': line 0 references token index 7, but the document has 1 token(s); the source is malformed
 ValueError: 'probable' is not a valid ReadingStatus
-ValueError: this corpus file uses schema version 99, but this pyaegean understands up to 1 — upgrade pyaegean to read it
+ValueError: this corpus file uses schema version 99, but this pyaegean understands up to 2 — upgrade pyaegean to read it
 ```
 
 The one sharp edge that is *not* loud, worth restating: an invalid `lines`

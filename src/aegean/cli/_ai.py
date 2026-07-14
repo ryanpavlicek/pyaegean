@@ -153,6 +153,11 @@ def translate(
         help="Greek analysis owner: default (module facade), baseline (isolated "
         "zero-dependency), or neural (isolated grc-joint model; requires [neural]).",
     ),
+    greek_long_input: str = typer.Option(
+        "strict",
+        "--greek-long-input",
+        help="Greek neural long-input policy: strict, partial, or windowed.",
+    ),
     grounding_failure: str = typer.Option(
         "best-effort", "--grounding-failure",
         help="Grounding failure policy: best-effort keeps available evidence; strict "
@@ -178,10 +183,14 @@ def translate(
         raise fail("--greek-backend must be default, baseline, or neural")
     if grounding_failure not in ("best-effort", "strict"):
         raise fail("--grounding-failure must be best-effort or strict")
+    if greek_long_input not in ("strict", "partial", "windowed"):
+        raise fail("--greek-long-input must be strict, partial, or windowed")
     if script == "greek" and not verify and mode not in ("morphology", "full", "lemma", "none"):
         raise fail("--mode must be morphology, full, lemma, or none")
     if script != "greek" and greek_backend != "default":
         raise fail("--greek-backend applies only to --script greek")
+    if script != "greek" and greek_long_input != "strict":
+        raise fail("--greek-long-input applies only to --script greek")
 
     greek_pipeline = None
     if greek_backend != "default":
@@ -204,6 +213,7 @@ def translate(
                     read_text(text), script=script, target=target,
                     mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
                     greek_pipeline=greek_pipeline,
+                    greek_long_input=cast(tr.GreekLongInput, greek_long_input),
                     grounding_failure=cast(tr.GroundingFailure, grounding_failure),
                     client=client,  # type: ignore[arg-type]
                 )

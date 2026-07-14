@@ -16,7 +16,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .._log import get_logger
-from .model import Document, DocumentMeta, ReadingStatus, Sign, SignInventory, Token, TokenKind
+from .model import (
+    Document,
+    DocumentMeta,
+    ReadingStatus,
+    Sign,
+    SignInventory,
+    SourceAlignment,
+    Token,
+    TokenKind,
+)
 from .provenance import SCHEMA_VERSION, Provenance
 
 if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependency on L3 analysis
@@ -203,12 +212,37 @@ class Corpus:
                 for s in t.signs:
                     field(s)
                 count(len(t.alt))
-                for a in t.alt:
-                    field(a)
+                for alt_value in t.alt:
+                    field(alt_value)
                 count(len(t.annotations))
                 for k in sorted(t.annotations):
                     field(k)
                     field(str(t.annotations[k]))
+            # Keep the pre-A4 fingerprint byte-for-byte identical for corpora with
+            # no alignment.  Once a source snapshot or token mapping is present,
+            # append a clearly framed block so cache keys distinguish source edits,
+            # normalization changes, and token identity changes.
+            if d.source_text is not None or any(t.alignment is not None for t in d.tokens):
+                field("A4-source-alignment")
+                field("present" if d.source_text is not None else "absent")
+                field(d.source_text or "")
+                count(len(d.tokens))
+                for t in d.tokens:
+                    alignment = t.alignment
+                    field("aligned" if alignment is not None else "unaligned")
+                    if alignment is None:
+                        continue
+                    field(alignment.document_id)
+                    field(alignment.sentence_id or "")
+                    field(alignment.source_token_id)
+                    field(alignment.original_text)
+                    field(str(alignment.start_char))
+                    field(str(alignment.end_char))
+                    field(alignment.whitespace_before)
+                    field(alignment.normalized_text)
+                    count(len(alignment.normalization_ops))
+                    for op in alignment.normalization_ops:
+                        field(op)
         notes = [
             n
             for n in (self.provenance.notes if self.provenance is not None else ())
@@ -267,6 +301,7 @@ class Corpus:
                 glyphs=d.glyphs, transcription=d.transcription,
                 translations=list(d.translations),
                 meta=d.meta,
+                source_text=d.source_text,
             )
             for d in self.documents
         ]
@@ -428,7 +463,7 @@ class Corpus:
             ) from exc
 
         if level == "document":
-            rows = [
+            token_rows: list[dict[str, Any]] = [
                 {
                     "id": d.id,
                     "script_id": d.script_id,
@@ -440,10 +475,11 @@ class Corpus:
                     "name": d.meta.name,
                     "n_tokens": len(d.tokens),
                     "n_words": len(d.words),
+                    "source_text": d.source_text,
                 }
                 for d in self.documents
             ]
-            return pd.DataFrame(rows)
+            return pd.DataFrame(token_rows)
 
         if level in ("token", "word"):
             want_word = level == "word"
@@ -463,6 +499,33 @@ class Corpus:
                     "status": tok.status.value,
                     "site": d.meta.site,
                     "period": d.meta.period,
+                    "alignment_document_id": (
+                        tok.alignment.document_id if tok.alignment is not None else None
+                    ),
+                    "alignment_sentence_id": (
+                        tok.alignment.sentence_id if tok.alignment is not None else None
+                    ),
+                    "alignment_source_token_id": (
+                        tok.alignment.source_token_id if tok.alignment is not None else None
+                    ),
+                    "alignment_original_text": (
+                        tok.alignment.original_text if tok.alignment is not None else None
+                    ),
+                    "alignment_start_char": (
+                        tok.alignment.start_char if tok.alignment is not None else None
+                    ),
+                    "alignment_end_char": (
+                        tok.alignment.end_char if tok.alignment is not None else None
+                    ),
+                    "alignment_whitespace_before": (
+                        tok.alignment.whitespace_before if tok.alignment is not None else None
+                    ),
+                    "alignment_normalized_text": (
+                        tok.alignment.normalized_text if tok.alignment is not None else None
+                    ),
+                    "alignment_normalization_ops": (
+                        tok.alignment.normalization_ops if tok.alignment is not None else None
+                    ),
                 }
                 for d in self.documents
                 for tok in d.tokens
@@ -760,20 +823,78 @@ def _token_to_dict(t: Token) -> dict[str, Any]:
         d["alt"] = list(t.alt)
     if t.annotations:
         d["annotations"] = dict(t.annotations)
+    if t.alignment is not None:
+        d["alignment"] = _alignment_to_dict(t.alignment)
     return d
 
 
 def _token_from_dict(d: dict[str, Any]) -> Token:
+    raw_alignment = d.get("alignment")
+    if raw_alignment is None:
+        alignment = None
+    elif isinstance(raw_alignment, SourceAlignment):
+        # SQLite reconstruction already has a validated typed value.  Reusing it
+        # keeps this central decoder the single validation seam.
+        alignment = raw_alignment
+    elif isinstance(raw_alignment, dict):
+        alignment = _alignment_from_dict(raw_alignment)
+    else:
+        raise TypeError("token alignment must be an object or SourceAlignment")
     return Token(
         text=d["text"], kind=TokenKind(d["kind"]), signs=tuple(d.get("signs") or ()),
         glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
         status=ReadingStatus(d["status"]) if d.get("status") else ReadingStatus.CERTAIN,
         alt=tuple(d.get("alt") or ()),
         annotations=dict(d.get("annotations") or {}),
+        alignment=alignment,
+    )
+
+
+def _alignment_to_dict(a: SourceAlignment) -> dict[str, Any]:
+    """Serialize a typed alignment value without exposing dataclass internals."""
+    return {
+        "document_id": a.document_id,
+        "sentence_id": a.sentence_id,
+        "source_token_id": a.source_token_id,
+        "original_text": a.original_text,
+        "start_char": a.start_char,
+        "end_char": a.end_char,
+        "whitespace_before": a.whitespace_before,
+        "normalized_text": a.normalized_text,
+        "normalization_ops": list(a.normalization_ops),
+    }
+
+
+def _alignment_from_dict(d: dict[str, Any]) -> SourceAlignment:
+    """Deserialize one alignment object, retaining strict constructor checks."""
+    if not isinstance(d, dict):
+        raise TypeError("token alignment must be an object")
+    raw_ops = d.get("normalization_ops")
+    if raw_ops is not None and not isinstance(raw_ops, (list, tuple)):
+        raise TypeError("normalization_ops must be a JSON array")
+    start_char = d.get("start_char")
+    end_char = d.get("end_char")
+    if not isinstance(start_char, int) or isinstance(start_char, bool):
+        raise TypeError("start_char must be an integer")
+    if not isinstance(end_char, int) or isinstance(end_char, bool):
+        raise TypeError("end_char must be an integer")
+    return SourceAlignment(
+        document_id=d.get("document_id", ""),
+        sentence_id=d.get("sentence_id"),
+        source_token_id=d.get("source_token_id", ""),
+        original_text=d.get("original_text", ""),
+        start_char=start_char,
+        end_char=end_char,
+        whitespace_before=d.get("whitespace_before", ""),
+        normalized_text=d.get("normalized_text", ""),
+        normalization_ops=tuple(raw_ops or ()),
     )
 
 
 def _document_to_dict(d: Document) -> dict[str, Any]:
+    # Persistence is a trust boundary: never serialize a source snapshot whose
+    # token spans, gaps, or identities are internally inconsistent.
+    d.validate_source_alignment()
     return {
         "id": d.id, "script_id": d.script_id, "glyphs": d.glyphs,
         "transcription": d.transcription, "translations": list(d.translations),
@@ -784,6 +905,7 @@ def _document_to_dict(d: Document) -> dict[str, Any]:
         },
         "tokens": [_token_to_dict(t) for t in d.tokens],
         "lines": [list(line) for line in d.lines],
+        "source_text": d.source_text,
     }
 
 
@@ -795,6 +917,20 @@ def _document_from_dict(d: dict[str, Any]) -> Document:
         images=tuple(m.get("images") or ()), notes=tuple(m.get("notes") or ()),
     )
     tokens = [_token_from_dict(t) for t in d.get("tokens", [])]
+    source_text = d.get("source_text")
+    if source_text is not None and not isinstance(source_text, str):
+        raise TypeError("document source_text must be a string or None")
+    document_id = d["id"]
+    for token in tokens:
+        if token.alignment is None:
+            continue
+        if token.alignment.document_id != document_id:
+            raise ValueError(
+                f"document {document_id!r}: token alignment belongs to "
+                f"document {token.alignment.document_id!r}"
+            )
+        if source_text is not None:
+            token.alignment.validate_source(source_text, document_id=document_id)
     lines = [list(line) for line in d.get("lines", [])]
     # Validate the line index lists against the token count up front: an out-of-range index
     # (a corpus file whose lines got out of sync with tokens) otherwise loads fine and then
@@ -808,9 +944,12 @@ def _document_from_dict(d: dict[str, Any]) -> Document:
                     f"document {d.get('id', '?')!r}: line {li} references token index {i!r}, "
                     f"but the document has {n} token(s); the source is malformed"
                 )
-    return Document(
+    document = Document(
         id=d["id"], script_id=d.get("script_id", ""),
         tokens=tokens, lines=lines,
         glyphs=d.get("glyphs", ""), transcription=d.get("transcription", ""),
         translations=list(d.get("translations") or []), meta=meta,
+        source_text=source_text,
     )
+    document.validate_source_alignment()
+    return document

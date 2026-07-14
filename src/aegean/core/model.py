@@ -46,6 +46,94 @@ class ReadingStatus(str, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class SourceAlignment:
+    """Lossless provenance for one token in an exact source snapshot.
+
+    Character positions are half-open Python string offsets, not encoded-byte
+    positions.  ``original_text`` is the exact source slice; ``normalized_text``
+    is the value handed to a model and never changes that slice.  The value is
+    intentionally immutable so annotation and export code cannot silently alter
+    the source mapping after it has been created.
+    """
+
+    document_id: str
+    sentence_id: str | None
+    source_token_id: str
+    original_text: str
+    start_char: int
+    end_char: int
+    whitespace_before: str
+    normalized_text: str
+    normalization_ops: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Reject malformed mappings at their boundary rather than later in exports."""
+        for name in ("document_id", "source_token_id"):
+            value = getattr(self, name)
+            if not isinstance(value, str):
+                raise TypeError(f"{name} must be a string")
+            if not value:
+                raise ValueError(f"{name} must be non-empty")
+        if self.sentence_id is not None:
+            if not isinstance(self.sentence_id, str):
+                raise TypeError("sentence_id must be a string or None")
+            if not self.sentence_id:
+                raise ValueError("sentence_id must be non-empty when provided")
+        for name in ("original_text", "whitespace_before", "normalized_text"):
+            if not isinstance(getattr(self, name), str):
+                raise TypeError(f"{name} must be a string")
+        if any(not character.isspace() for character in self.whitespace_before):
+            raise ValueError("whitespace_before must contain only Unicode whitespace")
+        for name in ("start_char", "end_char"):
+            value = getattr(self, name)
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(f"{name} must be an integer")
+            if value < 0:
+                raise ValueError(f"{name} must be non-negative")
+        if self.end_char < self.start_char:
+            raise ValueError("end_char must be greater than or equal to start_char")
+        if len(self.original_text) != self.end_char - self.start_char:
+            raise ValueError(
+                "original_text length must equal end_char - start_char "
+                "(Python code-point offsets)"
+            )
+        if not isinstance(self.normalization_ops, tuple):
+            raise TypeError("normalization_ops must be a tuple of strings")
+        if any(not isinstance(op, str) or not op for op in self.normalization_ops):
+            raise ValueError("normalization_ops must contain non-empty strings")
+        if bool(self.normalization_ops) != (self.normalized_text != self.original_text):
+            raise ValueError(
+                "normalization_ops must be non-empty exactly when normalized_text "
+                "differs from original_text"
+            )
+
+    def validate_source(self, source_text: str, document_id: str | None = None) -> None:
+        """Validate the owning document and exact source slice.
+
+        ``ValueError`` identifies either a document mismatch or a changed source
+        snapshot.  This is deliberately a strict check: a mapping must never be
+        projected against a merely similar normalized string.
+        """
+        if not isinstance(source_text, str):
+            raise TypeError("source_text must be a string")
+        if document_id is not None and document_id != self.document_id:
+            raise ValueError(
+                f"alignment belongs to document {self.document_id!r}, "
+                f"not {document_id!r}"
+            )
+        if self.end_char > len(source_text):
+            raise ValueError(
+                f"source slice [{self.start_char}:{self.end_char}] falls outside "
+                f"the {len(source_text)}-character source"
+            )
+        if source_text[self.start_char:self.end_char] != self.original_text:
+            raise ValueError(
+                f"source slice [{self.start_char}:{self.end_char}] does not match "
+                f"original_text for token {self.source_token_id!r}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class Sign:
     """One graphic unit of a script (syllabogram, letter, or logogram)."""
 
@@ -74,6 +162,9 @@ class Token:
     # Script-specific per-token facts kept flexible (mirrors Sign.attrs): e.g. the
     # Greek NT carries lemma, morph, strongs, gloss, normalized, upos, ref here.
     annotations: dict[str, str] = field(default_factory=dict)
+    # Optional lossless source mapping.  Excluded from legacy equality so old
+    # positional/value semantics remain stable while callers can inspect it.
+    alignment: SourceAlignment | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +193,60 @@ class Document:
     transcription: str = ""
     translations: list[str] = field(default_factory=list)
     meta: DocumentMeta = field(default_factory=DocumentMeta)
+    # Exact source snapshot used by any token alignments.  Excluded from legacy
+    # equality for compatibility with pre-A4 Document values.
+    source_text: str | None = field(default=None, compare=False)
+
+    def validate_source_alignment(self) -> None:
+        """Validate all token mappings against this document's exact source.
+
+        Legacy documents (no source snapshot and no alignments) remain valid.  A
+        source-bearing document is intentionally all-or-nothing: every token must
+        have a mapping, mappings must point to this document, be ordered without
+        overlap, use unique IDs, and record the exact whitespace gap preceding
+        each source slice.
+        """
+        has_alignment = any(token.alignment is not None for token in self.tokens)
+        if self.source_text is None and not has_alignment:
+            return
+        if self.source_text is None:
+            raise ValueError(
+                f"document {self.id!r} has token alignment but no source_text"
+            )
+        seen_ids: set[str] = set()
+        previous_start = -1
+        previous_end = 0
+        for ordinal, token in enumerate(self.tokens):
+            alignment = token.alignment
+            if alignment is None:
+                raise ValueError(
+                    f"document {self.id!r} token {ordinal} is missing source alignment"
+                )
+            alignment.validate_source(self.source_text, document_id=self.id)
+            if alignment.source_token_id in seen_ids:
+                raise ValueError(
+                    f"document {self.id!r} has duplicate source_token_id "
+                    f"{alignment.source_token_id!r}"
+                )
+            seen_ids.add(alignment.source_token_id)
+            if alignment.start_char <= previous_start:
+                raise ValueError(
+                    f"document {self.id!r} token alignments are not in strict "
+                    "monotonic source order"
+                )
+            if alignment.start_char < previous_end:
+                raise ValueError(
+                    f"document {self.id!r} token alignments overlap at "
+                    f"[{alignment.start_char}:{alignment.end_char}]"
+                )
+            expected_gap = self.source_text[previous_end:alignment.start_char]
+            if alignment.whitespace_before != expected_gap:
+                raise ValueError(
+                    f"document {self.id!r} token {ordinal} has incorrect "
+                    "whitespace_before"
+                )
+            previous_start = alignment.start_char
+            previous_end = alignment.end_char
 
     def _of_kind(self, kind: TokenKind) -> list[Token]:
         return [t for t in self.tokens if t.kind is kind]

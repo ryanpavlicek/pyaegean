@@ -75,8 +75,8 @@ def _wide_console(monkeypatch):  # type: ignore[no-untyped-def]
 
 # ── _view: the shared row mapping ────────────────────────────────────────────
 def test_view_rows_have_no_confidence_keys_by_default() -> None:
-    # The offline cascade produces no confidence, so the rows are byte-identical to
-    # the epistemic and analysis-status keys remain independent of confidence.
+    # The offline cascade produces no confidence. A4 source-alignment columns are
+    # independent of the optional calibrated-confidence columns.
     from aegean._view import pipeline_rows
 
     rows = pipeline_rows("ἦν ὁ λόγος.")
@@ -88,6 +88,11 @@ def test_view_rows_have_no_confidence_keys_by_default() -> None:
         "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
         "head", "relation", "xpos", "feats", "neural_analyzed",
         "analysis_complete", "analysis_warning", "analysis_receipt",
+        "alignment_document_id", "alignment_sentence_id",
+        "alignment_source_token_id", "alignment_original_text",
+        "alignment_start_char", "alignment_end_char",
+        "alignment_whitespace_before", "alignment_normalized_text",
+        "alignment_normalization_ops",
     }
 
 

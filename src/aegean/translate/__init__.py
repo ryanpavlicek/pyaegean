@@ -54,6 +54,7 @@ _SOURCE_NAMES = {"greek": "Ancient Greek", "lineara": "Linear A"}
 
 GroundingMode = Literal["morphology", "lemma", "full", "none"]
 GroundingFailure = Literal["best-effort", "strict"]
+GreekLongInput = Literal["strict", "partial", "windowed"]
 
 
 class GroundingError(RuntimeError):
@@ -239,6 +240,7 @@ def _analysis_records(
     *,
     pipeline: GreekPipeline,
     parse: bool,
+    long_input: GreekLongInput,
     failure_policy: GroundingFailure,
     failures: list[dict[str, str]],
 ) -> list[TokenRecord]:
@@ -255,14 +257,14 @@ def _analysis_records(
             ) from exc
 
     try:
-        records = pipeline.analyze(text, parse=parse)
+        records = pipeline.analyze(text, parse=parse, long_input=long_input)
     except Exception as exc:
         stage = "morphology and dependency analysis" if parse else "morphology analysis"
         failed(stage, exc)
         if not parse:
             return []
         try:
-            records = pipeline.analyze(text, parse=False)
+            records = pipeline.analyze(text, parse=False, long_input=long_input)
         except Exception as fallback_exc:
             failed("morphology fallback analysis", fallback_exc)
             return []
@@ -301,6 +303,7 @@ def _morphology_items(
             text,
             pipeline=pipeline,
             parse=True,
+            long_input="strict",
             failure_policy="best-effort",
             failures=[],
         )
@@ -383,6 +386,7 @@ def _greek_grounding(
     mode: GroundingMode = "morphology",
     glosses: bool = True,
     pipeline: GreekPipeline,
+    long_input: GreekLongInput,
     failure_policy: GroundingFailure,
     failures: list[dict[str, str]],
 ) -> list[GroundingItem]:
@@ -399,6 +403,7 @@ def _greek_grounding(
         text,
         pipeline=pipeline,
         parse=mode in ("morphology", "full"),
+        long_input=long_input,
         failure_policy=failure_policy,
         failures=failures,
     )
@@ -456,19 +461,30 @@ def _build_grounding(
     mode: GroundingMode,
     glosses: bool,
     greek_pipeline: GreekPipeline | None,
+    greek_long_input: GreekLongInput,
     grounding_failure: GroundingFailure,
 ) -> _GroundingOutcome:
     """Build prompt evidence plus separate, non-prompt runtime provenance."""
     failure_policy = _validate_failure_policy(grounding_failure)
+    if greek_long_input not in get_args(GreekLongInput):
+        valid = ", ".join(repr(mode) for mode in get_args(GreekLongInput))
+        raise ValueError(
+            f"unknown Greek long-input mode {greek_long_input!r}; valid modes: {valid}"
+        )
     failures: list[dict[str, str]] = []
 
     if script == "greek":
         pipeline, selection = _selected_pipeline(greek_pipeline)
+        if greek_long_input != "strict" and not pipeline.neural_active:
+            raise ValueError(
+                f"greek_long_input={greek_long_input!r} requires a neural Greek pipeline"
+            )
         items = _greek_grounding(
             text,
             mode=mode,
             glosses=glosses,
             pipeline=pipeline,
+            long_input=greek_long_input,
             failure_policy=failure_policy,
             failures=failures,
         )
@@ -477,6 +493,7 @@ def _build_grounding(
             {
                 "script": script,
                 "mode": mode,
+                "long_input": greek_long_input,
                 "failure_policy": failure_policy,
                 "pipeline": _pipeline_runtime(pipeline, selection),
                 "failures": failures,
@@ -485,6 +502,8 @@ def _build_grounding(
 
     if greek_pipeline is not None:
         raise ValueError("greek_pipeline is only valid when script='greek'")
+    if greek_long_input != "strict":
+        raise ValueError("greek_long_input is only valid when script='greek'")
 
     if script == "lineara":
         try:
@@ -522,6 +541,7 @@ def grounding_for(
     mode: GroundingMode = "morphology",
     glosses: bool = True,
     greek_pipeline: GreekPipeline | None = None,
+    greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
 ) -> list[GroundingItem]:
     """Local, deterministic grounding evidence for ``text`` in ``script`` — each item
@@ -566,7 +586,10 @@ def grounding_for(
 
     ``greek_pipeline`` may be an isolated `GreekPipeline`; when omitted, the historical
     module-default facade remains in use. Passing it for a non-Greek script raises
-    ``ValueError`` rather than silently ignoring it. ``grounding_failure`` is
+    ``ValueError`` rather than silently ignoring it. ``greek_long_input`` selects the
+    neural sentence contract: strict refusal (the default), explicitly incomplete
+    ``"partial"`` output, or reconciled ``"windowed"`` analysis. It is also rejected for
+    a non-Greek script rather than ignored. ``grounding_failure`` is
     ``"best-effort"`` by default: required analysis failures yield the evidence still
     available. ``"strict"`` instead raises `GroundingError` on a required analysis or
     transliteration failure. Missing optional dictionaries, the optional rarity corpus,
@@ -585,6 +608,7 @@ def grounding_for(
         mode=mode,
         glosses=glosses,
         greek_pipeline=greek_pipeline,
+        greek_long_input=greek_long_input,
         grounding_failure=grounding_failure,
     ).items
 
@@ -598,6 +622,7 @@ def translate(
     glosses: bool = True,
     verify: bool = False,
     greek_pipeline: GreekPipeline | None = None,
+    greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
@@ -626,8 +651,10 @@ def translate(
 
     ``greek_pipeline`` selects an isolated `GreekPipeline` for every Greek analysis
     decision used by the grounding. ``None`` preserves the module-default compatibility
-    facade. ``grounding_failure="best-effort"`` keeps available evidence when required
-    analysis fails; ``"strict"`` raises `GroundingError` before any provider call.
+    facade. ``greek_long_input`` explicitly selects strict, partial, or overlapping-window
+    neural analysis and remains strict by default. ``grounding_failure="best-effort"``
+    keeps available evidence when required analysis fails; ``"strict"`` raises
+    `GroundingError` before any provider call.
 
     ``verify`` (Greek only) runs a **translate-then-check-and-repair** pass instead of a
     single grounded call. The text is first translated **raw**, with no grounding in the
@@ -656,6 +683,7 @@ def translate(
         mode=effective_mode,
         glosses=glosses,
         greek_pipeline=greek_pipeline,
+        greek_long_input=greek_long_input,
         grounding_failure=grounding_failure,
     )
     if (
@@ -700,6 +728,7 @@ def translate(
 __all__ = [
     "GroundingError",
     "GroundingFailure",
+    "GreekLongInput",
     "grounding_for",
     "translate",
 ]

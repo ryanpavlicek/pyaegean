@@ -68,15 +68,17 @@ def pipeline_rows(
     ``lemma_verified``, ``review_recommended``, and the deprecated ``lemma_known``
     compatibility key, plus the optional
     ``head`` / ``relation`` / ``xpos`` / ``feats`` fields (filled by the parser or
-    the neural pipeline, ``None`` otherwise). Backends follow whatever is active,
-    exactly as `pipeline` does.
+    the neural pipeline, ``None`` otherwise). Source-aligned records additionally
+    carry ``alignment_*`` fields for exact original text, code-point offsets,
+    whitespace, normalization provenance, and stable source identity. Backends
+    follow whatever is active, exactly as `pipeline` does.
 
     ``with_confidence=True`` threads through to `pipeline`; when it yields tokens
     that carry a calibrated confidence (the neural pipeline active AND a calibration
     loaded), every row additionally gains ``upos_confidence`` / ``lemma_confidence``
-    (floats or ``None``). With the feature off — the default, or the offline cascade
-    where there is no model prediction to calibrate — those keys are absent, so the
-    rows are byte-identical to before (see `pipeline_rows_from_records`)."""
+    (floats or ``None``). With the feature off, the default or the offline cascade
+    where there is no model prediction to calibrate, those confidence keys are absent;
+    source-alignment keys remain independent (see `pipeline_rows_from_records`)."""
     from .greek import pipeline
 
     return pipeline_rows_from_records(
@@ -94,12 +96,12 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
     Calibrated confidence is an optional COLUMN, not a per-row field: only when at
     least one record carries a non-``None`` ``upos_confidence`` / ``lemma_confidence``
     (the neural pipeline active, a calibration loaded, and the call asked for it) do
-    all rows gain the two keys — the per-row value may still be ``None`` for a head
+    all rows gain the two keys. The per-row value may still be ``None`` for a head
     the model does not itself produce (within the neural pipeline: an identity
     fall-through, punctuation, or an undecoded token; a lookup-composed lemma still
     carries one, since the calibration covers the model's internal training-form
-    lookup). Absent otherwise, so a call without confidence produces byte-identical
-    rows to a build without the feature."""
+    lookup). They are absent otherwise; alignment fields are added independently for
+    records that carry a source mapping."""
     rows: list[dict[str, Any]] = [
         {
             "sentence": r.sentence,
@@ -131,6 +133,23 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
         for row, r in zip(rows, records):
             row["upos_confidence"] = r.upos_confidence
             row["lemma_confidence"] = r.lemma_confidence
+    for row, record in zip(rows, records):
+        alignment = record.alignment
+        if alignment is None:
+            continue
+        row.update(
+            {
+                "alignment_document_id": alignment.document_id,
+                "alignment_sentence_id": alignment.sentence_id,
+                "alignment_source_token_id": alignment.source_token_id,
+                "alignment_original_text": alignment.original_text,
+                "alignment_start_char": alignment.start_char,
+                "alignment_end_char": alignment.end_char,
+                "alignment_whitespace_before": alignment.whitespace_before,
+                "alignment_normalized_text": alignment.normalized_text,
+                "alignment_normalization_ops": list(alignment.normalization_ops),
+            }
+        )
     return rows
 
 

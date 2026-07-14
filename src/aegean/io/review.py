@@ -8,7 +8,8 @@ corrections and notes); `from_review_table` reads the corrections back onto the 
 keeping the machine's value under a ``<field>__pred`` key and stamping who reviewed it and a
 provenance note. A lemma correction also becomes ``lemma_source=user`` and
 ``lemma_verified=true`` while preserving the predicted source. The join key is
-``doc_id`` + ``position``.
+the stable ``alignment_source_token_id`` when present, with ``doc_id`` +
+``position`` retained for pre-A4 tables.
 
 Several reviewers can correct their own copy of the SAME export and have the corrections
 combined: `merge_review_tables` merges the copies, applying every correction the reviewers
@@ -25,6 +26,7 @@ the New Testament, the gold lemma/morph/Strong's are already there; for other co
 from __future__ import annotations
 
 import csv
+import json
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -35,6 +37,7 @@ from .._atomic import atomic_path
 
 if TYPE_CHECKING:
     from ..core.corpus import Corpus
+    from ..core.model import Token
 
 __all__ = [
     "REVIEW_COLUMNS",
@@ -54,6 +57,10 @@ __all__ = [
 # in which case the merge falls back to the file name).
 REVIEW_COLUMNS: tuple[str, ...] = (
     "doc_id", "position", "line_no", "ref", "token",       # identity / join key (read-only)
+    "alignment_document_id", "alignment_sentence_id", "alignment_source_token_id",
+    "alignment_original_text",
+    "alignment_start_char", "alignment_end_char", "alignment_whitespace_before",
+    "alignment_normalized_text", "alignment_normalization_ops",
     "pred_lemma", "pred_pos", "pred_morph",                # machine prediction (read-only)
     "evidence_class", "source_citation", "needs_review",   # provenance + triage (read-only)
     "correct_lemma", "correct_pos", "correct_morph",       # reviewer fills
@@ -116,7 +123,8 @@ def to_review_table(
 ) -> int:
     """Write one reviewable row per WORD token of ``corpus`` to ``path`` (CSV, UTF-8 BOM).
 
-    Each row carries the token's identity (``doc_id``/``position``/``line_no``/``ref``), the
+    Each row carries the token's identity (stable source-token ID plus
+    ``doc_id``/``position``/``line_no``/``ref``), exact source span and normalization,
     machine ``pred_lemma``/``pred_pos``/``pred_morph`` from its annotations, the
     ``evidence_class`` and a ``needs_review`` flag, the corpus citation, and blank
     ``correct_*`` / ``reviewer_note`` columns for the reviewer. With ``only_needs_review`` only
@@ -150,6 +158,23 @@ def to_review_table(
                 str(tok.line_no if tok.line_no is not None else ""),
                 _guard_cell(a.get("ref", ref_base)),
                 _guard_cell(tok.text),
+                _guard_cell(tok.alignment.document_id if tok.alignment is not None else ""),
+                _guard_cell(tok.alignment.sentence_id or "" if tok.alignment is not None else ""),
+                _guard_cell(tok.alignment.source_token_id if tok.alignment is not None else ""),
+                _guard_cell(tok.alignment.original_text if tok.alignment is not None else ""),
+                str(tok.alignment.start_char if tok.alignment is not None else ""),
+                str(tok.alignment.end_char if tok.alignment is not None else ""),
+                _guard_cell(tok.alignment.whitespace_before if tok.alignment is not None else ""),
+                _guard_cell(tok.alignment.normalized_text if tok.alignment is not None else ""),
+                _guard_cell(
+                    json.dumps(
+                        list(tok.alignment.normalization_ops),
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    )
+                    if tok.alignment is not None
+                    else ""
+                ),
                 _guard_cell(a.get("lemma", "")),
                 _guard_cell(a.get("upos", "")),
                 _guard_cell(_morph(a)),
@@ -176,6 +201,11 @@ def _cell(row: Mapping[str, str | None], col: str) -> str:
     return _unguard_cell((row.get(col) or "").strip())
 
 
+def _exact_cell(row: Mapping[str, str | None], col: str) -> str:
+    """A read-only source cell with formula protection removed but no whitespace loss."""
+    return _unguard_cell(row.get(col) or "")
+
+
 def _has_corrections(row: Mapping[str, str | None]) -> bool:
     return any(_cell(row, col) for col, _pred, _key in _CORRECTIONS)
 
@@ -190,6 +220,36 @@ def _morph_key(annotations: dict[str, str]) -> str:
     return "morph"
 
 
+def _alignment_matches_row(token: "Token", row: Mapping[str, str | None]) -> bool:
+    """Whether a source-aware review row still names this exact source token."""
+    source_id = _cell(row, "alignment_source_token_id")
+    if not source_id:
+        return True  # schema-1 review table: legacy doc/position/text checks apply
+    alignment = token.alignment
+    if alignment is None or source_id != alignment.source_token_id:
+        return False
+    row_ops = _cell(row, "alignment_normalization_ops")
+    expected_ops = json.dumps(
+        list(alignment.normalization_ops), ensure_ascii=False, separators=(",", ":")
+    )
+    return (
+        (not _cell(row, "alignment_document_id")
+         or _cell(row, "alignment_document_id") == alignment.document_id)
+        and (not _cell(row, "alignment_sentence_id")
+             or _cell(row, "alignment_sentence_id") == (alignment.sentence_id or ""))
+        and (not _cell(row, "alignment_start_char")
+             or _cell(row, "alignment_start_char") == str(alignment.start_char))
+        and (not _cell(row, "alignment_end_char")
+             or _cell(row, "alignment_end_char") == str(alignment.end_char))
+        and (not _cell(row, "alignment_original_text")
+             or _cell(row, "alignment_original_text") == alignment.original_text)
+        and _exact_cell(row, "alignment_whitespace_before") == alignment.whitespace_before
+        and (not _cell(row, "alignment_normalized_text")
+             or _cell(row, "alignment_normalized_text") == alignment.normalized_text)
+        and (not row_ops or row_ops == expected_ops)
+    )
+
+
 def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str | None]]:
     """Read a review CSV into a ``(doc_id, position) -> row`` map, None-safely.
 
@@ -199,6 +259,7 @@ def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str 
     ``csv.Error``. This is the shared parse behind `from_review_table` and
     `merge_review_tables`."""
     corrections: dict[tuple[str, int], dict[str, str | None]] = {}
+    source_keys: dict[str, tuple[str, int]] = {}
     try:
         with open(path, encoding="utf-8-sig", newline="") as f:
             for row in csv.DictReader(f):
@@ -206,6 +267,15 @@ def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str 
                 if not pos.isdigit():
                     continue
                 key = (row.get("doc_id") or "", int(pos))
+                source_key = _cell(row, "alignment_source_token_id")
+                if source_key:
+                    prior_key = source_keys.get(source_key)
+                    if prior_key is not None and prior_key != key:
+                        raise ValueError(
+                            f"review table {path}: source token id {source_key!r} appears "
+                            "on more than one row"
+                        )
+                    source_keys[source_key] = key
                 prev = corrections.get(key)
                 if prev is not None:
                     same = all(_cell(prev, c) == _cell(row, c) for c, _p, _k in _CORRECTIONS)
@@ -231,8 +301,9 @@ def _apply_corrections(
 ) -> "Corpus":
     """Land ``corrections`` onto ``corpus``, returning a NEW corpus (the input is not mutated).
 
-    Rows are matched to tokens by ``doc_id`` + ``position``, and each matched row's exported
-    ``token`` text is verified against the token it matched: a mismatch raises `ValueError`
+    Rows prefer stable source-token identity and fall back to ``doc_id`` + ``position`` for
+    old tables. Each matched row's source identity/span and exported ``token`` text are
+    verified against the token it matched: a mismatch raises `ValueError`
     (naming the rows in ``label``) rather than silently landing a correction on the wrong word,
     and a correction whose row matches no token likewise raises. Each corrected field keeps the
     machine value under ``<field>__pred`` and the token is stamped ``review_status="corrected"``
@@ -249,15 +320,36 @@ def _apply_corrections(
     applied_keys: set[tuple[str, int]] = set()
     applied_reviewers: set[str] = set()
     new_docs = []
+    by_source_id = {
+        _cell(row, "alignment_source_token_id"): (key, row)
+        for key, row in corrections.items()
+        if _cell(row, "alignment_source_token_id")
+    }
     for doc in corpus.documents:
         new_tokens = list(doc.tokens)
         for i, tok in enumerate(doc.tokens):
             if tok.position is None:
                 continue
-            crow = corrections.get((doc.id, tok.position))
+            legacy_key = (doc.id, tok.position)
+            source_match = (
+                by_source_id.get(tok.alignment.source_token_id)
+                if tok.alignment is not None
+                else None
+            )
+            matched_key, crow = (
+                source_match if source_match is not None else (legacy_key, corrections.get(legacy_key))
+            )
             if crow is None:
                 continue
-            applied_keys.add((doc.id, tok.position))
+            applied_keys.add(matched_key)
+            source_id = _cell(crow, "alignment_source_token_id")
+            if source_id and not _alignment_matches_row(tok, crow):
+                    if _has_corrections(crow):
+                        mismatched.append(
+                            f"{doc.id} position {tok.position}: source alignment does not "
+                            "match the exported row"
+                        )
+                    continue
             row_token = _cell(crow, "token")
             if row_token and row_token != tok.text:
                 if _has_corrections(crow):
@@ -350,8 +442,8 @@ def _apply_corrections(
 def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "") -> "Corpus":
     """Read reviewer corrections from ``path`` back onto ``corpus``, returning a NEW corpus.
 
-    Rows are matched to tokens by ``doc_id`` + ``position``, and each matched row's exported
-    ``token`` text is verified against the token it matched: a mismatch (the corpus changed
+    Rows prefer stable source-token identity and fall back to ``doc_id`` + ``position`` for
+    old tables. Source alignment and exported ``token`` text are verified: a mismatch (the corpus changed
     between export and apply, or the wrong corpus was passed) raises `ValueError` naming the
     rows rather than silently landing a correction on the wrong word. Duplicate rows for one
     token with conflicting corrections, corrections whose row matches no token, and a
@@ -460,25 +552,39 @@ def _verify_against_corpus(
     token there. A row that names a different token (a table exported from another corpus) or one
     that matches no token raises `ValueError` — the same 0.32.0 guards `from_review_table`
     applies, checked once up front across every table."""
-    corpus_tokens: dict[tuple[str, int], str] = {}
+    corpus_tokens: dict[tuple[str, int], Token] = {}
+    corpus_source_tokens: dict[str, tuple[str, int, Token]] = {}
     for doc in corpus.documents:
         for tok in doc.tokens:
             if tok.position is not None:
-                corpus_tokens[(doc.id, tok.position)] = tok.text
+                corpus_tokens[(doc.id, tok.position)] = tok
+                if tok.alignment is not None:
+                    corpus_source_tokens[tok.alignment.source_token_id] = (
+                        doc.id,
+                        tok.position,
+                        tok,
+                    )
     mismatched: list[str] = []
     orphaned: list[str] = []
     for name, corr, _path in files:
         for (doc_id, pos), row in corr.items():
             if not _has_corrections(row):
                 continue  # only corrected rows are load-bearing (mirrors from_review_table)
-            if (doc_id, pos) not in corpus_tokens:
+            source_id = _cell(row, "alignment_source_token_id")
+            source_match = corpus_source_tokens.get(source_id) if source_id else None
+            token = source_match[2] if source_match is not None else corpus_tokens.get((doc_id, pos))
+            if token is None:
                 orphaned.append(f"{doc_id} position {pos} ({name})")
                 continue
             row_token = _cell(row, "token")
-            if row_token and row_token != corpus_tokens[(doc_id, pos)]:
+            if not _alignment_matches_row(token, row):
+                mismatched.append(
+                    f"{doc_id} position {pos}: {name} has changed source alignment"
+                )
+            elif row_token and row_token != token.text:
                 mismatched.append(
                     f"{doc_id} position {pos}: {name} has {row_token!r}, "
-                    f"corpus has {corpus_tokens[(doc_id, pos)]!r}"
+                    f"corpus has {token.text!r}"
                 )
     if mismatched:
         shown = "; ".join(sorted(mismatched)[:5]) + ("; …" if len(mismatched) > 5 else "")

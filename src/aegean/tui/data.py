@@ -194,6 +194,7 @@ class TokenCell:
     status: str
     alt: tuple[str, ...]
     annotations: dict[str, str]
+    alignment: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -219,6 +220,7 @@ class DocDetail:
     structure: str
     lines: tuple[DocLine, ...]
     undeciphered: bool
+    source_text: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -368,6 +370,21 @@ def document_detail(corpus: "Corpus", doc_id: str) -> DocDetail:
                     status=t.status.value,
                     alt=tuple(t.alt),
                     annotations=dict(t.annotations),
+                    alignment=(
+                        {
+                            "document_id": t.alignment.document_id,
+                            "sentence_id": t.alignment.sentence_id,
+                            "source_token_id": t.alignment.source_token_id,
+                            "original_text": t.alignment.original_text,
+                            "start_char": t.alignment.start_char,
+                            "end_char": t.alignment.end_char,
+                            "whitespace_before": t.alignment.whitespace_before,
+                            "normalized_text": t.alignment.normalized_text,
+                            "normalization_ops": t.alignment.normalization_ops,
+                        }
+                        if t.alignment is not None
+                        else None
+                    ),
                 )
                 for t in toks
             ),
@@ -385,6 +402,7 @@ def document_detail(corpus: "Corpus", doc_id: str) -> DocDetail:
         structure=classify_structure(doc),
         lines=lines,
         undeciphered=corpus.script_id in UNDECIPHERED or doc.script_id in UNDECIPHERED,
+        source_text=doc.source_text,
     )
 
 

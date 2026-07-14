@@ -46,7 +46,7 @@ backends layer in extra accuracy without changing the call you make.
 | Beta Code ↔ Unicode | `betacode_to_unicode` / `unicode_to_betacode` | `aegean greek betacode` | no |
 | Normalize (NFC, OCR repair) | `normalize` | `aegean greek normalize` | no |
 | Strip diacritics | `strip_diacritics` | `aegean greek strip` | no |
-| Tokenize / sentences | `tokenize` / `tokenize_words` / `sentences` | `aegean greek tokenize` | no |
+| Tokenize / sentences | `tokenize` / `tokenize_aligned` / `tokenize_words` / `sentences` | `aegean greek tokenize` | no |
 | Syllabify | `syllabify` | `aegean greek syllabify` | no |
 | Accent analysis | `accentuation` | `aegean greek accent` | no |
 | Accent placement | `place_accent` / `recessive_accent` / `persistent_accent` | `aegean greek accentuate` | no |
@@ -117,6 +117,81 @@ Each `TokenRecord` is a dataclass with these fields:
 | `neural_analyzed` | per-token neural coverage (`False` only for a partial-mode placeholder; `None` offline) |
 | `analysis_complete`, `analysis_warning` | sentence-level neural coverage and any partial-mode warning |
 | `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
+| `alignment` | exact original text, source IDs, Unicode code-point span, preceding whitespace, and normalization provenance |
+
+### Exact source alignment
+
+Every `pipeline()` record carries an immutable `SourceAlignment`. Its `start_char` and
+`end_char` are half-open Python Unicode code-point offsets into the exact input string,
+not UTF-8 bytes and not offsets into normalized text. `original_text` is the exact source
+slice. `normalized_text` is the NFC form used by the current neural path, and
+`normalization_ops` records `unicode:nfc` only when that operation changed the token.
+This keeps decomposed accents, canonical Greek punctuation, and numeral signs available
+even when a model consumes a canonically equivalent form.
+
+```python
+text = "  α\u0301\tλόγος."
+records = greek.pipeline(text, document_id="example")
+a = records[0].alignment
+
+(a.original_text, a.normalized_text, a.start_char, a.end_char)
+# ('ά', 'ά', 2, 4)
+text[a.start_char:a.end_char] == a.original_text       # True
+a.whitespace_before                                   # '  '
+a.normalization_ops                                   # ('unicode:nfc',)
+```
+
+`document_id` defaults to `"input"`; pass a stable identifier when results will be
+exported or reviewed. `sentence_id` is stable for unchanged segmentation, and
+`source_token_id` is deterministic for the same document ID and exact source snapshot.
+The pipeline maps analyses back by token ordinal, so repeated words and NFC-equivalent
+spellings cannot be confused by string matching. JSON CLI, MCP, and TUI pipeline rows
+flatten the value as `alignment_*` fields.
+
+For tokenization without analysis, `greek.tokenize_aligned(text, document_id=...)`
+returns ordinary `Token` values carrying the same mappings. The older `tokenize()` and
+`sentences()` result shapes remain unchanged. Corpus `Token.alignment` and
+`Document.source_text` persist through schema-2 JSON and SQLite; schema-1 artifacts still
+load with these fields absent. CoNLL-U structure uses its own lossless document model
+(below), while editorial restoration/damage state remains distinct from Unicode
+normalization.
+
+### Lossless CoNLL-U structure and the model projection
+
+`greek.load_conllu_document(path)` preserves the complete CoNLL-U document: ordered
+comments, all ten columns, multiword-token ranges, empty decimal nodes (including
+`0.1`), enhanced `DEPS`, `MISC`, row order, and the original line endings. Its
+sentences deliberately expose both views:
+
+- `sentence.rows` is the complete ordered row stream.
+- `sentence.tokens` contains only integer-ID syntactic words, preserving the earlier
+  `UDSentence` contract used by training and evaluation code.
+- `sentence.items` interleaves comments and rows for structural inspection.
+- `sentence.projection` maps model ordinals to original integer IDs and lists omitted
+  range and empty-node IDs. It also reports whether enhanced dependencies are present.
+
+```python
+from aegean import greek
+
+document = greek.load_conllu_document("treebank.conllu", strict=True)
+sentence = document.sentences[0]
+
+sentence.projection.ordinal_to_id
+sentence.projection.omitted_empty_nodes
+greek.write_conllu(document, "treebank-copy.conllu")
+```
+
+An unchanged document writes back exactly; `canonical=True` produces deterministic
+ten-column output after an immutable value has been changed or constructed. The default
+loader remains lenient for older research folds, while `strict=True` rejects malformed
+columns, identifiers, row placement, references, and basic trees with line-aware errors.
+The CLI mirrors this as `aegean greek conllu inspect` and `conllu export`.
+
+This is a representation capability, not a new model claim. The current v3 pipeline
+still analyzes and predicts only the syntactic-word projection. It does not predict
+multiword rows, empty nodes, or enhanced arcs, and those preserved gold annotations are
+not copied into system output or scores. Callers that require complete predictive
+support can request the explicit error policy rather than accepting that projection.
 
 For a field-by-field guide to interpreting a record, including what each `lemma_source`
 class means for how far to trust a lemma, see [Reading a Parse](Reading-a-Parse).
@@ -171,9 +246,11 @@ instance type.
 The hybrid translator follows the same distinction explicitly: omit
 `translate(..., greek_pipeline=...)` to use the module-default facade, or pass a
 `GreekPipeline` instance to isolate its grounding. From the shell, the matching choice is
-`aegean ai translate ... --greek-backend default|baseline|neural`. The selected
-configuration appears in translation provenance, separately from the evidence sent to the
-provider. See [Translation](Translation#which-greek-backend-supplies-the-grounding).
+`aegean ai translate ... --greek-backend default|baseline|neural`. Long-input handling is a
+separate explicit choice through `greek_long_input=` or `--greek-long-input`; both the
+selected configuration and sentence policy appear in translation provenance, separately
+from the evidence sent to the provider. See
+[Translation](Translation#which-greek-backend-supplies-the-grounding).
 
 ```python
 literary = greek.GreekPipeline.neural()  # loads without changing the default facade
@@ -211,8 +288,18 @@ flowchart LR
 Neural input is strict by default. If a pretokenized sentence cannot fit the model
 bundle's subword limit, `analyze_sentence` raises `NeuralInputTooLongError` instead of
 returning plausible-looking placeholders. Split the sentence when its real boundary is
-known. For inspection workflows that must retain every input token, opt into partial mode
-and check the explicit coverage fields:
+known. Two explicit alternatives serve different needs:
+
+- `long_input="partial"` keeps the model's fitting prefix and marks every uncovered token
+  as a placeholder. Use it for inspection, never as an apparently complete parse.
+- `long_input="windowed"` analyzes supported long sentences in overlapping whole-word
+  windows. Each token's tags, lemma script, and calibrated confidence come from the window
+  where the token is farthest from a boundary. Candidate dependency arcs and relations come
+  from that same owner window, are mapped back to sentence indexes, and are decoded once as
+  a sentence-global single-root tree. The result warns that distant token pairs which never
+  share a window were not arc candidates, and its receipt records `windowed=True`.
+
+Both modes preserve every input token and expose their status:
 
 ```python
 ana = greek.analyze_sentence(words, long_input="partial")
@@ -223,7 +310,21 @@ ana.warnings                             # explains that uncovered values are pl
 records = greek.pipeline(text, long_input="partial")
 records[-1].neural_analyzed              # False for an uncovered token
 records[-1].analysis_complete            # sentence-level status
+
+long_ana = greek.analyze_sentence(long_words, long_input="windowed")
+long_ana.complete, long_ana.truncated     # (True, False) when all windows reconcile
+long_ana.receipt.windowed                 # True when multiple windows were actually used
 ```
+
+Window boundaries are measured from complete untruncated word pieces and never split a
+word. The overlap target is the lesser of 64 body subwords or one quarter of the model's
+body budget; when one whole token alone exceeds that target, the runtime retains that token
+to preserve overlap. It refuses input that cannot keep at least one complete overlapping
+token with forward progress. To bound dense global dependency decoding, windowed sentences
+are limited to 4,096 tokens and 1,000,000 input characters. Short input still uses the
+ordinary one-pass path exactly; requesting windowed mode does not change its predictions or
+mark its receipt as windowed. Partial and windowed modes require a neural backend rather
+than being silently ignored by the baseline pipeline.
 
 The maximum comes from the validated bundle contract, not a runtime constant. Activation
 checks the manifest, every listed file's byte length and SHA-256, tokenizer revision and

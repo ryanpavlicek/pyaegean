@@ -126,14 +126,15 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
     """One document's metadata and text, line by line.
 
     ``doc_id`` is e.g. 'HT13'; case and spacing are forgiven ('ht13', 'py ta 641'
-    resolve), and a miss reports the closest ids."""
+    resolve), and a miss reports the closest ids. A source-aligned document also
+    includes its exact ``source_text`` and one alignment object per token."""
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
     doc, err = _find_doc(c, corpus, doc_id)
     if err is not None:
         return err
-    return {
+    result: dict[str, Any] = {
         "id": doc.id,
         "site": doc.meta.site,
         "period": doc.meta.period,
@@ -142,6 +143,27 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
         "lines": [[t.text for t in line] for line in doc.line_tokens],
         "transcription": doc.transcription,
     }
+    if doc.source_text is not None:
+        result["source_text"] = doc.source_text
+        result["token_alignment"] = [
+            (
+                {
+                    "document_id": token.alignment.document_id,
+                    "sentence_id": token.alignment.sentence_id,
+                    "source_token_id": token.alignment.source_token_id,
+                    "original_text": token.alignment.original_text,
+                    "start_char": token.alignment.start_char,
+                    "end_char": token.alignment.end_char,
+                    "whitespace_before": token.alignment.whitespace_before,
+                    "normalized_text": token.alignment.normalized_text,
+                    "normalization_ops": list(token.alignment.normalization_ops),
+                }
+                if token.alignment is not None
+                else None
+            )
+            for token in doc.tokens
+        ]
+    return result
 
 
 def search_signs(
@@ -416,7 +438,8 @@ def greek_pipeline(text: str) -> list[dict[str, Any]]:
     identity / unresolved / punct / user), ``lemma_resolved``, ``lemma_verified``, and
     ``review_recommended`` (plus the deprecated ``lemma_known`` alias), sentence/index position, and
     the parser/neural fields (``head``, ``relation``, ``xpos``, ``feats``; ``None`` under
-    the baseline). The rows are the shared
+    the baseline), plus ``alignment_*`` source identity, exact text, Unicode span,
+    whitespace, and normalization fields. The rows are the shared
     :func:`aegean._view.pipeline_rows` mapping, so this tool, the ``aegean greek pipeline``
     command, and the terminal UI emit identical rows."""
     from ._view import pipeline_rows

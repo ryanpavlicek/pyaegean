@@ -105,6 +105,7 @@ from .joint import (
     ModelBundleManifest,
     NeuralInputTooLongError,
     NeuralPipelineNotLoadedError,
+    NeuralWindowingError,
     ReceiptMismatchError,
     SentenceAnalysis,
     analyze_sentence,
@@ -147,7 +148,32 @@ from .proiel import (
     proiel_dir,
     proiel_drift,
 )
-from .ud import agdt_ud_overlap, bootstrap_ud, evaluate_by_genre, evaluate_on_ud
+from .ud import (
+    UDComment,
+    UDDependency,
+    UDDocument,
+    UDEmptyNode,
+    UDItem,
+    UDMiscEntry,
+    UDMultiwordToken,
+    UDNodeID,
+    UDOpaqueRow,
+    UDProjection,
+    UDRow,
+    UDSentence,
+    UDToken,
+    UnsupportedUDStructureError,
+    agdt_ud_overlap,
+    bootstrap_ud,
+    dump_conllu,
+    dumps_conllu,
+    evaluate_by_genre,
+    evaluate_on_ud,
+    load_conllu,
+    load_conllu_document,
+    loads_conllu,
+    write_conllu,
+)
 from .papygreek import (
     PapyGreekConventionReport,
     evaluate_on_papygreek,
@@ -217,7 +243,7 @@ from .meter import (
 from .phonology import to_ipa
 from .pos import pos_tag, pos_tags
 from .syllabify import syllabify
-from .tokenize import sentences, tokenize, tokenize_words
+from .tokenize import sentences, tokenize, tokenize_aligned, tokenize_words
 
 
 def __getattr__(name: str) -> Any:
@@ -269,6 +295,7 @@ __all__ = [
     "DodsonNotLoadedError",
     "evaluate_on_nt",
     "tokenize",
+    "tokenize_aligned",
     "tokenize_words",
     "sentences",
     "syllabify",
@@ -362,6 +389,26 @@ __all__ = [
     "use_neural_lemmatizer",
     "disable_neural_lemmatizer",
     "bootstrap_ud",
+    "UDComment",
+    "UDDependency",
+    "UDDocument",
+    "UDEmptyNode",
+    "UDItem",
+    "UDMiscEntry",
+    "UDMultiwordToken",
+    "UDNodeID",
+    "UDOpaqueRow",
+    "UDProjection",
+    "UDRow",
+    "UDSentence",
+    "UDToken",
+    "UnsupportedUDStructureError",
+    "dump_conllu",
+    "dumps_conllu",
+    "load_conllu",
+    "load_conllu_document",
+    "loads_conllu",
+    "write_conllu",
     "evaluate_on_proiel",
     "proiel_drift",
     "DriftReport",
@@ -417,6 +464,7 @@ __all__ = [
     "ModelBundleManifest",
     "ModelBundleError",
     "NeuralInputTooLongError",
+    "NeuralWindowingError",
     "ReceiptMismatchError",
     "NeuralPipelineNotLoadedError",
     "agdt_ud_overlap",

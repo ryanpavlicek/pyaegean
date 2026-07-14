@@ -20,7 +20,7 @@ pluggable multi-provider AI layer.
 > 90.2 UAS / 85.6 LAS on the Perseus test fold, end-to-end from raw text). The track also
 > includes real works on demand (`load_work("tlg0012.tlg001")` → the Iliad), a benchmark
 > harness, and a neutral out-of-AGDT (PROIEL) evaluator. The multi-provider AI layer + hybrid translation are
-> implemented, over a corpus data layer with a lossless JSON round-trip (`to_json`/`from_json`)
+> implemented, over a corpus data layer with typed source alignment and a lossless JSON round-trip (`to_json`/`from_json`)
 > and a compound `query()`, plus EpiDoc/CSV/Parquet export. Analytical and generative output on the
 > undeciphered Linear A material is **exploratory**: see [Limitations](Limitations) for the full
 > picture of what pyaegean can and cannot claim, and [Data & Provenance](Data-and-Provenance) for
@@ -86,7 +86,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 
 | Module | What it does |
 | --- | --- |
-| [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()` |
+| [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `SourceAlignment`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()` |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (342 signs; 50 carry conventional sound values), sign→sound map, transliteration |
 | [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, the full DAMOS corpus on demand (`aegean.load("damos")`, ~5,900 tablets) |
 | [Cypriot](Cypriot) | Chiefly Arcado-Cypriot Greek (the corpus also carries Eteocypriot and undetermined material): 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`), and a bundled **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) |
@@ -129,7 +129,7 @@ has the per-release history.
 **On the list next:**
 
 - Greek NLP quality program:
-  - Make confidence, source alignment, multiword/empty-node preservation, sentence segmentation,
+  - Make confidence, sentence segmentation,
     explicit pipeline/backend selection, pipeline profiles, streaming, interoperability, and
     training reproducibility first-class
   - Measure hybrid translation's explicitly selectable baseline and neural Greek grounding on

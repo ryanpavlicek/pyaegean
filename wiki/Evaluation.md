@@ -117,9 +117,13 @@ results, and a swapped or tampered scorer fails the hash check before it can run
 The gold folds are pinned too: each UD treebank is fetched from a fixed upstream
 commit, so a re-run reads byte-identical data. `greek.ud.ud_path(treebank, split)`
 returns the cached fold path (fetching on first use), and `greek.ud.load_conllu(path)`
-parses a CoNLL-U file into `UDSentence` / `UDToken` objects (multiword-token
-ranges and empty nodes are skipped, so each sentence holds exactly the syntactic
-words the evaluator scores).
+parses each sentence into two linked views. `UDSentence.rows` preserves every
+ten-column row, including multiword ranges, empty nodes, enhanced `DEPS`, and
+`MISC`; `UDSentence.tokens` remains the syntactic-word projection the evaluator
+and v3 model consume. `UDSentence.projection` records the original word IDs and
+every structural ID omitted from model input. The scoring path predicts only
+syntactic words, so preserved gold structural or enhanced annotations are never
+reported as model predictions.
 
 ## Confidence intervals: `bootstrap_ud`
 

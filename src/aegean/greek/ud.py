@@ -33,28 +33,46 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import tempfile
 import unicodedata
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..data import cache_dir, download_file
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from ..analysis.stats import BootstrapCI
 
 __all__ = [
+    "UDDependency",
+    "UDDocument",
+    "UDEmptyNode",
+    "UDComment",
+    "UDItem",
+    "UDMiscEntry",
+    "UDMultiwordToken",
+    "UDNodeID",
+    "UDOpaqueRow",
+    "UDProjection",
+    "UDRow",
     "UDSentence",
     "UDToken",
     "agdt_ud_overlap",
     "bootstrap_ud",
     "evaluate_on_ud",
     "evaluate_by_genre",
+    "dump_conllu",
+    "dumps_conllu",
     "load_conllu",
+    "load_conllu_document",
+    "loads_conllu",
+    "write_conllu",
+    "UnsupportedUDStructureError",
     "ud_path",
 ]
 
@@ -112,9 +130,132 @@ _EVAL_SHA256 = "1072e02af00b1a56205b5e8216d51dee9b8944a104d80744afaccc78859fcb16
 _EXCLUSION_NAME = "agdt-ud-exclusion.json"
 
 
+_WORD_ID_RE = re.compile(r"(?:0|[1-9][0-9]*)\Z")
+_RANGE_ID_RE = re.compile(r"([1-9][0-9]*)-([1-9][0-9]*)\Z")
+_EMPTY_ID_RE = re.compile(r"(0|[1-9][0-9]*)\.([1-9][0-9]*)\Z")
+
+
+@dataclass(frozen=True, slots=True)
+class UDNodeID:
+    """A structurally typed CoNLL-U identifier, retained without float coercion.
+
+    ``kind`` is ``word``, ``root``, ``range``, ``empty``, or ``unknown``.  The
+    ``unknown`` form is used only by lenient parsing so malformed input can be
+    inspected and re-exported; strict parsing rejects it with a line number.
+    """
+
+    raw: str
+    kind: Literal["word", "root", "range", "empty", "unknown"]
+    major: int | None = None
+    minor: int | None = None
+    end: int | None = None
+
+    @classmethod
+    def parse(cls, raw: str, *, strict: bool = True) -> "UDNodeID":
+        if not isinstance(raw, str) or not raw:
+            if strict:
+                raise ValueError("CoNLL-U ID must be a non-empty string")
+            return cls(str(raw), "unknown")
+        if _WORD_ID_RE.fullmatch(raw):
+            number = int(raw)
+            return cls(raw, "root" if number == 0 else "word", major=number)
+        match = _RANGE_ID_RE.fullmatch(raw)
+        if match:
+            start, end = (int(value) for value in match.groups())
+            if start >= end:
+                if strict:
+                    raise ValueError("multiword ID range must have start < end")
+                return cls(raw, "unknown")
+            return cls(raw, "range", major=start, end=end)
+        match = _EMPTY_ID_RE.fullmatch(raw)
+        if match:
+            major, minor = (int(value) for value in match.groups())
+            # Official UD permits 0.1; preserving it is important because it is
+            # a valid enhanced/empty identifier, not a malformed float.
+            return cls(raw, "empty", major=major, minor=minor)
+        if strict:
+            raise ValueError(f"invalid CoNLL-U ID {raw!r}")
+        return cls(raw, "unknown")
+
+    @property
+    def is_word(self) -> bool:
+        return self.kind == "word"
+
+    @property
+    def is_range(self) -> bool:
+        return self.kind == "range"
+
+    @property
+    def is_empty(self) -> bool:
+        return self.kind == "empty"
+
+
+@dataclass(frozen=True, slots=True)
+class UDDependency:
+    """One parsed ``DEPS`` arc; raw head text remains available on the row."""
+
+    head: UDNodeID
+    relation: str
+
+
+@dataclass(frozen=True, slots=True)
+class UDMiscEntry:
+    """One ordered ``MISC`` item; a bare key has ``value=None``."""
+
+    key: str
+    value: str | None = None
+
+
+def _parse_deps(raw: str, *, strict: bool) -> tuple[UDDependency, ...]:
+    if raw in ("", "_"):
+        return ()
+    out: list[UDDependency] = []
+    for item in raw.split("|"):
+        head, sep, relation = item.partition(":")
+        if not sep or not relation:
+            if strict:
+                raise ValueError(f"invalid DEPS item {item!r}")
+            continue
+        try:
+            node_id = UDNodeID.parse(head, strict=True)
+        except ValueError:
+            if strict:
+                raise
+            continue
+        if node_id.kind == "range" or node_id.kind == "unknown":
+            if strict:
+                raise ValueError(f"invalid enhanced DEPS head {head!r}")
+            continue
+        out.append(UDDependency(node_id, relation))
+    return tuple(out)
+
+
+def _parse_misc(raw: str, *, strict: bool) -> tuple[UDMiscEntry, ...]:
+    if raw in ("", "_"):
+        return ()
+    out: list[UDMiscEntry] = []
+    for item in raw.split("|"):
+        if not item:
+            if strict:
+                raise ValueError("empty MISC item")
+            continue
+        key, sep, value = item.partition("=")
+        if not key:
+            if strict:
+                raise ValueError("MISC key must be non-empty")
+            continue
+        out.append(UDMiscEntry(key, value if sep else None))
+    return tuple(out)
+
+
 @dataclass(frozen=True, slots=True)
 class UDToken:
-    """One syntactic word from a CoNLL-U sentence (multiword ranges and empty nodes skipped)."""
+    """One syntactic word, retaining additive enhanced/raw annotations.
+
+    The first eight fields and their positional/equality behavior are the legacy
+    projection.  Additive raw/typed fields are excluded from equality so old
+    callers comparing parsed words remain compatible.
+    """
 
     id: int
     form: str
@@ -124,15 +265,173 @@ class UDToken:
     feats: str
     head: int
     deprel: str
+    deps: tuple[UDDependency, ...] = field(default=(), compare=False)
+    deps_raw: str = field(default="_", compare=False)
+    misc: tuple[UDMiscEntry, ...] = field(default=(), compare=False)
+    misc_raw: str = field(default="_", compare=False)
+    raw_columns: tuple[str, ...] = field(default=(), compare=False)
+    line_number: int | None = field(default=None, compare=False)
+
+
+@dataclass(frozen=True, slots=True)
+class UDMultiwordToken:
+    """One CoNLL-U range row such as ``4-5``."""
+
+    start: int
+    end: int
+    form: str
+    raw_columns: tuple[str, ...] = ()
+    deps: tuple[UDDependency, ...] = field(default=(), compare=False)
+    deps_raw: str = field(default="_", compare=False)
+    misc: tuple[UDMiscEntry, ...] = field(default=(), compare=False)
+    misc_raw: str = field(default="_", compare=False)
+    line_number: int | None = field(default=None, compare=False)
+
+    @property
+    def id(self) -> str:
+        return f"{self.start}-{self.end}"
+
+
+@dataclass(frozen=True, slots=True)
+class UDEmptyNode:
+    """One CoNLL-U empty node such as ``5.1`` (including valid ``0.1``)."""
+
+    major: int
+    minor: int
+    raw_columns: tuple[str, ...] = ()
+    deps: tuple[UDDependency, ...] = field(default=(), compare=False)
+    deps_raw: str = field(default="_", compare=False)
+    misc: tuple[UDMiscEntry, ...] = field(default=(), compare=False)
+    misc_raw: str = field(default="_", compare=False)
+    line_number: int | None = field(default=None, compare=False)
+
+    @property
+    def id(self) -> str:
+        return f"{self.major}.{self.minor}"
+
+
+@dataclass(frozen=True, slots=True)
+class UDOpaqueRow:
+    """A malformed row retained by lenient parsing for forensic re-export."""
+
+    raw_columns: tuple[str, ...]
+    line_number: int | None = field(default=None, compare=False)
+
+    @property
+    def id(self) -> str:
+        return self.raw_columns[0] if self.raw_columns else ""
+
+
+UDRow = UDToken | UDMultiwordToken | UDEmptyNode | UDOpaqueRow
+
+
+@dataclass(frozen=True, slots=True)
+class UDComment:
+    """A preserved comment item in the original sentence order."""
+
+    text: str
+
+
+UDItem = UDRow | UDComment
+
+
+@dataclass(frozen=True, slots=True)
+class UDProjection:
+    """Explicit mapping from model ordinals to original word IDs."""
+
+    ordinal_to_id: tuple[tuple[int, int], ...]
+    omitted_ranges: tuple[str, ...] = ()
+    omitted_empty_nodes: tuple[str, ...] = ()
+    enhanced_dependencies_present: bool = False
+
+    @property
+    def word_ids(self) -> tuple[int, ...]:
+        return tuple(original for _ordinal, original in self.ordinal_to_id)
+
+    @property
+    def omitted_ids(self) -> tuple[str, ...]:
+        return self.omitted_ranges + self.omitted_empty_nodes
 
 
 @dataclass(frozen=True, slots=True)
 class UDSentence:
-    """One CoNLL-U sentence: its ``# sent_id``, raw ``# text`` (when present), and tokens."""
+    """One sentence with a legacy word projection and optional full row stream."""
 
     sent_id: str
     text: str
     tokens: tuple[UDToken, ...]
+    rows: tuple[UDRow, ...] = field(default=(), compare=False)
+    comments: tuple[str, ...] = field(default=(), compare=False)
+    items: tuple[UDItem, ...] = field(default=(), compare=False)
+    _raw_block: str | None = field(default=None, init=False, compare=False, repr=False)
+    _raw_signature: tuple[Any, ...] = field(default=(), init=False, compare=False, repr=False)
+    _document_raw_text: str | None = field(
+        default=None, init=False, compare=False, repr=False
+    )
+    _document_raw_signature: tuple[Any, ...] = field(
+        default=(), init=False, compare=False, repr=False
+    )
+    _document_leading_comments: tuple[str, ...] = field(
+        default=(), init=False, compare=False, repr=False
+    )
+    _document_trailing_comments: tuple[str, ...] = field(
+        default=(), init=False, compare=False, repr=False
+    )
+
+    @property
+    def multiword_tokens(self) -> tuple[UDMultiwordToken, ...]:
+        return tuple(row for row in self.rows if isinstance(row, UDMultiwordToken))
+
+    @property
+    def empty_nodes(self) -> tuple[UDEmptyNode, ...]:
+        return tuple(row for row in self.rows if isinstance(row, UDEmptyNode))
+
+    @property
+    def projection(self) -> UDProjection:
+        rows = _effective_rows(self)
+        word_ordinal = 0
+        ordinal_to_id_list: list[tuple[int, int]] = []
+        for row in rows:
+            if isinstance(row, UDToken):
+                word_ordinal += 1
+                ordinal_to_id_list.append((word_ordinal, row.id))
+        ordinal_to_id = tuple(ordinal_to_id_list)
+        return UDProjection(
+            ordinal_to_id=ordinal_to_id,
+            omitted_ranges=tuple(row.id for row in rows if isinstance(row, UDMultiwordToken)),
+            omitted_empty_nodes=tuple(row.id for row in rows if isinstance(row, UDEmptyNode)),
+            enhanced_dependencies_present=any(
+                isinstance(row, (UDToken, UDMultiwordToken, UDEmptyNode))
+                and row.deps_raw not in ("", "_")
+                for row in rows
+            ),
+        )
+
+    @property
+    def surface_projection(self) -> UDProjection:
+        """Alias naming the model-facing word projection explicitly."""
+        return self.projection
+
+
+@dataclass(frozen=True, slots=True)
+class UDDocument:
+    """A complete CoNLL-U document, including sentence order and document comments."""
+
+    sentences: tuple[UDSentence, ...]
+    leading_comments: tuple[str, ...] = ()
+    trailing_comments: tuple[str, ...] = ()
+    _raw_text: str | None = field(default=None, init=False, compare=False, repr=False)
+    _raw_signature: tuple[Any, ...] = field(default=(), init=False, compare=False, repr=False)
+
+    def dumps(self, *, canonical: bool = False) -> str:
+        if not canonical and self._raw_text is not None and _document_signature(self) == self._raw_signature:
+            return self._raw_text
+        body = dump_conllu(self.sentences, canonical=True)
+        if self.leading_comments:
+            body = "\n".join(self.leading_comments) + "\n" + body
+        if self.trailing_comments:
+            body += "\n".join(self.trailing_comments) + "\n"
+        return body
 
 
 def ud_path(treebank: str = "perseus", split: str = "test", *, download: bool = True) -> Path:
@@ -151,40 +450,618 @@ def ud_path(treebank: str = "perseus", split: str = "test", *, download: bool = 
     return dest
 
 
-def load_conllu(source: Path | str) -> list[UDSentence]:
-    """Parse a CoNLL-U file into `UDSentence` objects.
+def _read_conllu_source(source: Path | str) -> str:
+    """Read a path or raw CoNLL-U string without making string callers write temp files."""
+    if isinstance(source, Path):
+        with source.open("r", encoding="utf-8", newline="") as handle:
+            return handle.read()
+    if not isinstance(source, str):
+        raise TypeError("CoNLL-U source must be a path or string")
+    if "\n" in source or "\r" in source:
+        return source
+    path = Path(source)
+    if path.exists() or path.suffix.lower() in {".conllu", ".conll", ".conll-u"}:
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return handle.read()
+    return source
 
-    Multiword-token ranges (``3-4``) and empty nodes (``3.1``) are skipped, so each
-    sentence holds exactly the syntactic words the evaluator scores."""
-    sentences: list[UDSentence] = []
-    sent_id = text = ""
-    tokens: list[UDToken] = []
-    for raw in Path(source).read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line:
-            if tokens:
-                sentences.append(UDSentence(sent_id, text, tuple(tokens)))
-            sent_id = text = ""
-            tokens = []
+
+def _effective_rows(sent: UDSentence) -> tuple[UDRow, ...]:
+    """Return structural rows, reflecting a legacy ``tokens=`` replacement if present."""
+    if not sent.rows:
+        return sent.tokens
+    row_tokens = tuple(row for row in sent.rows if isinstance(row, UDToken))
+    if len(row_tokens) == len(sent.tokens) and all(
+        _row_signature(original) == _row_signature(replacement)
+        for original, replacement in zip(row_tokens, sent.tokens, strict=True)
+    ):
+        return sent.rows
+    replacements = iter(sent.tokens)
+    result: list[UDRow] = []
+    for row in sent.rows:
+        if isinstance(row, UDToken):
+            try:
+                result.append(next(replacements))
+            except StopIteration:
+                continue
+        else:
+            result.append(row)
+    result.extend(replacements)
+    return tuple(result)
+
+
+def _row_signature(row: UDRow) -> tuple[Any, ...]:
+    if isinstance(row, UDToken):
+        return (
+            "word", row.id, row.form, row.lemma, row.upos, row.xpos, row.feats,
+            row.head, row.deprel, row.deps, row.deps_raw, row.misc, row.misc_raw,
+            row.raw_columns,
+        )
+    if isinstance(row, UDMultiwordToken):
+        return (
+            "range", row.start, row.end, row.form, row.deps, row.deps_raw,
+            row.misc, row.misc_raw, row.raw_columns,
+        )
+    if isinstance(row, UDEmptyNode):
+        return (
+            "empty", row.major, row.minor, row.deps, row.deps_raw,
+            row.misc, row.misc_raw, row.raw_columns,
+        )
+    return ("opaque", row.raw_columns)
+
+
+def _sentence_signature(
+    sent_id: str, text: str, tokens: tuple[UDToken, ...], rows: tuple[UDRow, ...],
+    comments: tuple[str, ...], items: tuple[UDItem, ...] = (),
+) -> tuple[Any, ...]:
+    item_signature = tuple(
+        ("comment", item.text) if isinstance(item, UDComment) else ("row", _row_signature(item))
+        for item in items
+    )
+    return (
+        sent_id, text, comments,
+        tuple(_row_signature(row) for row in rows),
+        tuple(_row_signature(token) for token in tokens),
+        item_signature,
+    )
+
+
+def _document_signature(document: UDDocument) -> tuple[Any, ...]:
+    return (
+        document.leading_comments,
+        document.trailing_comments,
+        tuple(
+            _sentence_signature(
+                sent.sent_id,
+                sent.text,
+                sent.tokens,
+                _effective_rows(sent),
+                sent.comments,
+                sent.items,
+            )
+            for sent in document.sentences
+        ),
+    )
+
+
+def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | None = None) -> None:
+    if not strict:
+        return
+    word_ids: set[int] = set()
+    row_ids: set[str] = set()
+    ranges: list[UDMultiwordToken] = []
+    empty_ids: set[tuple[int, int]] = set()
+    positions: dict[str, int] = {}
+
+    def where(row: UDRow) -> str:
+        number = getattr(row, "line_number", None) or line_number
+        return f" on line {number}" if number is not None else ""
+
+    for row in rows:
+        if isinstance(row, UDOpaqueRow):
+            raise ValueError(f"invalid CoNLL-U row{where(row)}")
+        if isinstance(row, UDToken):
+            if row.id <= 0 or row.id in word_ids:
+                raise ValueError(f"duplicate or non-positive word ID {row.id}{where(row)}")
+            word_ids.add(row.id)
+            row_ids.add(str(row.id))
+            positions[str(row.id)] = len(positions)
+            if row.head < 0 or (row.head != 0 and row.head not in word_ids):
+                # Forward basic heads are legal in UD, so defer reference checks below.
+                if row.head < 0:
+                    raise ValueError(
+                        f"invalid basic HEAD {row.head!r} for word {row.id}{where(row)}"
+                    )
+            if row.deprel in ("", "_"):
+                raise ValueError(f"empty basic DEPREL for word {row.id}{where(row)}")
             continue
+        if isinstance(row, UDMultiwordToken):
+            if row.start <= 0 or row.start >= row.end:
+                raise ValueError(f"invalid multiword range {row.id!r}{where(row)}")
+            if row.id in row_ids:
+                raise ValueError(f"duplicate row ID {row.id!r}{where(row)}")
+            row_ids.add(row.id)
+            ranges.append(row)
+            positions[row.id] = len(positions)
+            if row.deps_raw not in ("", "_") and not row.deps:
+                raise ValueError(f"invalid DEPS for multiword row {row.id!r}{where(row)}")
+            if row.raw_columns and (
+                any(row.raw_columns[index] != "_" for index in (2, 3, 4, 6, 7, 8))
+                or row.raw_columns[5] not in ("_", "Typo=Yes")
+            ):
+                raise ValueError(
+                    f"multiword row {row.id!r} has invalid non-FORM fields{where(row)}"
+                )
+            continue
+        if row.major < 0 or row.minor <= 0:
+            raise ValueError(f"invalid empty-node ID {row.id!r}{where(row)}")
+        if row.id in row_ids or (row.major, row.minor) in empty_ids:
+            raise ValueError(f"duplicate empty-node ID {row.id!r}{where(row)}")
+        row_ids.add(row.id)
+        empty_ids.add((row.major, row.minor))
+        positions[row.id] = len(positions)
+        if row.raw_columns and any(row.raw_columns[index] != "_" for index in (6, 7)):
+            raise ValueError(f"empty node {row.id!r} must use '_' for HEAD/DEPREL{where(row)}")
+        if not row.deps:
+            raise ValueError(f"empty node {row.id!r} must have non-empty DEPS{where(row)}")
+    ordered_ranges = sorted(ranges, key=lambda item: (item.start, item.end))
+    for current, following in zip(ordered_ranges, ordered_ranges[1:]):
+        if following.start <= current.end:
+            raise ValueError(f"overlapping multiword-token ranges{where(following)}")
+    expected = 1
+    for row in rows:
+        if isinstance(row, UDToken):
+            if row.id != expected:
+                raise ValueError(
+                    f"word IDs must be sequential: expected {expected}, got {row.id}{where(row)}"
+                )
+            expected += 1
+    for range_row in ranges:
+        if any(index not in word_ids for index in range(range_row.start, range_row.end + 1)):
+            raise ValueError(
+                f"multiword range {range_row.id} does not cover all word IDs{where(range_row)}"
+            )
+        range_position = positions[range_row.id]
+        first_position = next(
+            position
+            for position, row in enumerate(rows)
+            if isinstance(row, UDToken) and row.id == range_row.start
+        )
+        if range_position + 1 != first_position:
+            raise ValueError(
+                f"multiword range {range_row.id} must immediately precede its words"
+                f"{where(range_row)}"
+            )
+    for row in rows:
+        if isinstance(row, UDEmptyNode) and row.major > 0:
+            major_position = next(
+                (position for position, candidate in enumerate(rows)
+                 if isinstance(candidate, UDToken) and candidate.id == row.major),
+                None,
+            )
+            row_position = positions[row.id]
+            if major_position is None or row_position <= major_position:
+                raise ValueError(
+                    f"empty node {row.id!r} must follow word {row.major}{where(row)}"
+                )
+            next_word_position = next(
+                (
+                    position
+                    for position, candidate in enumerate(rows)
+                    if isinstance(candidate, UDToken) and candidate.id == row.major + 1
+                ),
+                None,
+            )
+            if next_word_position is not None and row_position >= next_word_position:
+                raise ValueError(
+                    f"empty node {row.id!r} must precede word {row.major + 1}{where(row)}"
+                )
+        if isinstance(row, UDEmptyNode) and row.major == 0:
+            first_word_position = next(
+                (
+                    position
+                    for position, candidate in enumerate(rows)
+                    if isinstance(candidate, UDToken)
+                ),
+                None,
+            )
+            if first_word_position is not None and positions[row.id] >= first_word_position:
+                raise ValueError(f"empty node {row.id!r} must precede word 1{where(row)}")
+    for major in sorted({row.major for row in rows if isinstance(row, UDEmptyNode)}):
+        major_rows = [
+            row for row in rows if isinstance(row, UDEmptyNode) and row.major == major
+        ]
+        suffixes = [row.minor for row in major_rows]
+        if suffixes != list(range(1, len(suffixes) + 1)):
+            raise ValueError(
+                f"empty-node suffixes for major {major} must be ordered and sequential"
+                f"{where(major_rows[0])}"
+            )
+    for row in rows:
+        if isinstance(row, UDToken) and (row.head != 0 and row.head not in word_ids):
+            raise ValueError(
+                f"invalid basic HEAD {row.head!r} for word {row.id}{where(row)}"
+            )
+        if not isinstance(row, (UDToken, UDMultiwordToken, UDEmptyNode)):
+            continue
+        for dep in row.deps:
+            if dep.head.kind == "range" or dep.head.kind == "unknown":
+                raise ValueError(f"invalid enhanced DEPS head {dep.head.raw!r}{where(row)}")
+            if dep.head.kind != "root" and dep.head.raw not in row_ids:
+                raise ValueError(f"unknown enhanced DEPS head {dep.head.raw!r}{where(row)}")
+    root_rows = [row for row in rows if isinstance(row, UDToken) and row.head == 0]
+    if rows and word_ids and len(root_rows) != 1:
+        first_word = next(row for row in rows if isinstance(row, UDToken))
+        raise ValueError(
+            f"basic tree must contain exactly one root, found {len(root_rows)}"
+            f"{where(root_rows[0] if root_rows else first_word)}"
+        )
+    for row in rows:
+        if not isinstance(row, UDToken) or row.head == 0:
+            continue
+        seen: set[int] = set()
+        head = row.head
+        while head:
+            if head in seen:
+                raise ValueError(f"cycle in basic tree at word {row.id}{where(row)}")
+            seen.add(head)
+            parent = next((candidate for candidate in rows if isinstance(candidate, UDToken) and candidate.id == head), None)
+            if parent is None or parent.head == 0:
+                break
+            head = parent.head
+
+
+def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
+    if strict and text and re.search(r"(?:\r\n|\n){2}\Z", text) is None:
+        raise ValueError(f"line {len(text.splitlines())}: final blank line is required")
+    sentences: list[UDSentence] = []
+    sent_id = text_value = ""
+    comments: list[str] = []
+    rows: list[UDRow] = []
+    items: list[UDItem] = []
+    raw_lines: list[str] = []
+    leading_comments: list[str] = []
+    trailing_comments: list[str] = []
+
+    def finish() -> None:
+        nonlocal sent_id, text_value, comments, rows, items, raw_lines
+        if not rows:
+            if comments:
+                (leading_comments if not sentences else trailing_comments).extend(comments)
+                comments = []
+                items = []
+                raw_lines = []
+            return
+        row_tuple = tuple(rows)
+        tokens = tuple(row for row in row_tuple if isinstance(row, UDToken))
+        comment_tuple = tuple(comments)
+        _validate_rows(row_tuple, strict=strict)
+        item_tuple = tuple(items)
+        signature = _sentence_signature(
+            sent_id, text_value, tokens, row_tuple, comment_tuple, item_tuple
+        )
+        sentence = UDSentence(
+            sent_id=sent_id,
+            text=text_value,
+            tokens=tokens,
+            rows=row_tuple,
+            comments=comment_tuple,
+            items=item_tuple,
+        )
+        object.__setattr__(sentence, "_raw_block", "".join(raw_lines))
+        object.__setattr__(sentence, "_raw_signature", signature)
+        sentences.append(sentence)
+        sent_id = text_value = ""
+        comments = []
+        rows = []
+        items = []
+        raw_lines = []
+
+    for line_number, raw in enumerate(text.splitlines(keepends=True), start=1):
+        line = raw.rstrip("\r\n")
+        if not line.strip():
+            raw_lines.append(raw)
+            finish()
+            continue
+        raw_lines.append(raw)
         if line.startswith("#"):
-            if line.startswith("# sent_id"):
-                sent_id = line.split("=", 1)[1].strip() if "=" in line else ""
-            elif line.startswith("# text"):
-                text = line.split("=", 1)[1].strip() if "=" in line else ""
+            if strict and rows:
+                raise ValueError(
+                    f"line {line_number}: comments must precede sentence data rows"
+                )
+            comments.append(line)
+            items.append(UDComment(line))
+            if line.startswith("# sent_id") and "=" in line:
+                sent_id = line.split("=", 1)[1].strip()
+            elif line.startswith("# text") and "=" in line:
+                text_value = line.split("=", 1)[1].strip()
             continue
         cols = line.split("\t")
-        if len(cols) < 8 or not cols[0].isdigit():  # skip MWT ranges + empty nodes
+        if len(cols) != 10:
+            if strict:
+                raise ValueError(
+                    f"line {line_number}: expected 10 tab-separated CoNLL-U columns, "
+                    f"got {len(cols)}"
+                )
+            rows.append(UDOpaqueRow(tuple(cols), line_number))
+            items.append(rows[-1])
             continue
-        tokens.append(
-            UDToken(
-                id=int(cols[0]), form=cols[1], lemma=cols[2], upos=cols[3], xpos=cols[4],
-                feats=cols[5], head=int(cols[6]) if cols[6].isdigit() else 0, deprel=cols[7],
+        if strict and any(column == "" for column in cols):
+            raise ValueError(f"line {line_number}: empty CoNLL-U column")
+        raw_id = cols[0]
+        try:
+            node_id = UDNodeID.parse(raw_id, strict=strict)
+        except ValueError as exc:
+            raise ValueError(f"line {line_number}: {exc}") from exc
+        if node_id.kind == "unknown":
+            rows.append(UDOpaqueRow(tuple(cols), line_number))
+            items.append(rows[-1])
+            continue
+        if node_id.kind == "root":
+            if strict:
+                raise ValueError(f"line {line_number}: ID 0 is only valid as an enhanced HEAD")
+            rows.append(UDOpaqueRow(tuple(cols), line_number))
+            items.append(rows[-1])
+            continue
+        if node_id.kind == "word":
+            head_raw = cols[6]
+            if _WORD_ID_RE.fullmatch(head_raw) or (not strict and head_raw.isdigit()):
+                head = int(head_raw)
+            elif strict:
+                raise ValueError(f"line {line_number}: invalid basic HEAD {head_raw!r}")
+            else:
+                head = 0
+            try:
+                deps = _parse_deps(cols[8], strict=strict)
+                misc = _parse_misc(cols[9], strict=strict)
+            except ValueError as exc:
+                raise ValueError(f"line {line_number}: {exc}") from exc
+            word_row = UDToken(
+                    id=node_id.major or 0, form=cols[1], lemma=cols[2], upos=cols[3],
+                    xpos=cols[4], feats=cols[5], head=head, deprel=cols[7],
+                    deps=deps, deps_raw=cols[8], misc=misc, misc_raw=cols[9],
+                    raw_columns=tuple(cols),
+                    line_number=line_number,
+                )
+            rows.append(word_row)
+            items.append(word_row)
+        elif node_id.kind == "range":
+            try:
+                deps = _parse_deps(cols[8], strict=strict)
+                misc = _parse_misc(cols[9], strict=strict)
+            except ValueError as exc:
+                raise ValueError(f"line {line_number}: {exc}") from exc
+            range_row = UDMultiwordToken(
+                node_id.major or 0, node_id.end or 0, cols[1], tuple(cols),
+                deps=deps, deps_raw=cols[8], misc=misc, misc_raw=cols[9],
+                line_number=line_number,
             )
+            rows.append(range_row)
+            items.append(range_row)
+        elif node_id.kind == "empty":
+            try:
+                deps = _parse_deps(cols[8], strict=strict)
+                misc = _parse_misc(cols[9], strict=strict)
+            except ValueError as exc:
+                raise ValueError(f"line {line_number}: {exc}") from exc
+            empty_row = UDEmptyNode(
+                node_id.major or 0, node_id.minor or 0, tuple(cols),
+                deps=deps, deps_raw=cols[8], misc=misc, misc_raw=cols[9],
+                line_number=line_number,
+            )
+            rows.append(empty_row)
+            items.append(empty_row)
+    finish()
+    document = UDDocument(
+        tuple(sentences),
+        leading_comments=tuple(leading_comments),
+        trailing_comments=tuple(trailing_comments),
+    )
+    object.__setattr__(document, "_raw_text", text)
+    signature = _document_signature(document)
+    for sentence in document.sentences:
+        object.__setattr__(sentence, "_document_raw_text", text)
+        object.__setattr__(sentence, "_document_raw_signature", signature)
+        object.__setattr__(
+            sentence, "_document_leading_comments", document.leading_comments
         )
-    if tokens:
-        sentences.append(UDSentence(sent_id, text, tuple(tokens)))
-    return sentences
+        object.__setattr__(
+            sentence, "_document_trailing_comments", document.trailing_comments
+        )
+    object.__setattr__(document, "_raw_signature", signature)
+    return document
+
+
+def load_conllu(source: Path | str, *, strict: bool = False) -> list[UDSentence]:
+    """Load CoNLL-U from a path or raw string.
+
+    The default is compatibility-lenient: valid words, ranges, empty nodes, comments,
+    and all ten raw columns are retained, while malformed rows become opaque rows.
+    ``strict=True`` turns malformed columns, IDs, structural ranges, DEPS, MISC, and
+    references into line-aware ``ValueError`` exceptions.
+    """
+    return [
+        sentence
+        for sentence in _parse_conllu_text(_read_conllu_source(source), strict=strict).sentences
+        if sentence.tokens
+    ]
+
+
+def loads_conllu(text: str, *, strict: bool = False) -> list[UDSentence]:
+    """Load CoNLL-U directly from a string."""
+    return load_conllu(text, strict=strict)
+
+
+def load_conllu_document(source: Path | str, *, strict: bool = False) -> UDDocument:
+    """Load a complete CoNLL-U document wrapper, retaining raw source text."""
+    return _parse_conllu_text(_read_conllu_source(source), strict=strict)
+
+
+def _word_columns(token: UDToken) -> tuple[str, ...]:
+    expected = (
+        str(token.id), token.form, token.lemma, token.upos, token.xpos, token.feats,
+        str(token.head), token.deprel, token.deps_raw, token.misc_raw,
+    )
+    if (
+        len(token.raw_columns) == 10
+        and tuple(token.raw_columns) == expected
+        and token.deps == _parse_deps(token.deps_raw, strict=False)
+        and token.misc == _parse_misc(token.misc_raw, strict=False)
+    ):
+        return token.raw_columns
+    columns = (
+        str(token.id), token.form, token.lemma, token.upos, token.xpos, token.feats,
+        str(token.head), token.deprel, token.deps_raw, token.misc_raw,
+    )
+    return _annotation_columns(
+        columns, token.deps_raw, token.deps, token.misc_raw, token.misc
+    )
+
+
+def _annotation_columns(
+    raw_columns: tuple[str, ...],
+    deps_raw: str,
+    deps: tuple[UDDependency, ...],
+    misc_raw: str,
+    misc: tuple[UDMiscEntry, ...],
+) -> tuple[str, ...]:
+    """Apply typed annotation edits while retaining every unrelated raw column."""
+    columns = list(raw_columns) if len(raw_columns) == 10 else ["_"] * 10
+    parsed_deps = _parse_deps(deps_raw, strict=False)
+    deps_value = deps_raw or "_"
+    if deps != parsed_deps:
+        deps_value = "_"
+    if deps:
+        deps_value = "|".join(f"{dep.head.raw}:{dep.relation}" for dep in deps)
+    parsed_misc = _parse_misc(misc_raw, strict=False)
+    misc_value = misc_raw or "_"
+    if misc != parsed_misc:
+        misc_value = "_"
+    if misc:
+        misc_value = "|".join(
+            entry.key if entry.value is None else f"{entry.key}={entry.value}"
+            for entry in misc
+        )
+    columns[8] = deps_value
+    columns[9] = misc_value
+    return tuple(columns)
+
+
+def _row_columns(row: UDRow) -> tuple[str, ...]:
+    if isinstance(row, UDToken):
+        return _word_columns(row)
+    if isinstance(row, UDMultiwordToken):
+        if len(row.raw_columns) == 10 and row.raw_columns[0] == row.id and row.raw_columns[1] == row.form:
+            return _annotation_columns(
+                row.raw_columns, row.deps_raw, row.deps, row.misc_raw, row.misc
+            )
+        columns = (row.id, row.form, "_", "_", "_", "_", "_", "_", "_", "_")
+        return _annotation_columns(columns, row.deps_raw, row.deps, row.misc_raw, row.misc)
+    if isinstance(row, UDEmptyNode):
+        if len(row.raw_columns) == 10 and row.raw_columns[0] == row.id:
+            return _annotation_columns(
+                row.raw_columns, row.deps_raw, row.deps, row.misc_raw, row.misc
+            )
+        columns = (row.id, "_", "_", "_", "_", "_", "_", "_", "_", "_")
+        return _annotation_columns(columns, row.deps_raw, row.deps, row.misc_raw, row.misc)
+    return row.raw_columns
+
+
+def _canonical_comments(sent: UDSentence) -> list[str]:
+    """Update standard metadata comments while retaining every unknown comment."""
+    comments: list[str] = []
+    saw_sent_id = False
+    saw_text = False
+    for comment in sent.comments:
+        if comment.startswith("# sent_id") and "=" in comment:
+            saw_sent_id = True
+            if sent.sent_id:
+                comments.append(f"# sent_id = {sent.sent_id}")
+        elif comment.startswith("# text") and "=" in comment:
+            saw_text = True
+            if sent.text:
+                comments.append(f"# text = {sent.text}")
+        else:
+            comments.append(comment)
+    additions: list[str] = []
+    if sent.sent_id and not saw_sent_id:
+        additions.append(f"# sent_id = {sent.sent_id}")
+    if sent.text and not saw_text:
+        additions.append(f"# text = {sent.text}")
+    return additions + comments
+
+
+def _canonical_sentence(sent: UDSentence) -> str:
+    comments = _canonical_comments(sent)
+    rows = _effective_rows(sent)
+    item_rows = tuple(
+        item for item in sent.items
+        if isinstance(item, (UDToken, UDMultiwordToken, UDEmptyNode, UDOpaqueRow))
+    )
+    item_comments = tuple(item.text for item in sent.items if isinstance(item, UDComment))
+    if sent.items and item_comments == tuple(comments) and len(item_rows) == len(rows) and all(
+        _row_signature(left) == _row_signature(right)
+        for left, right in zip(item_rows, rows, strict=True)
+    ):
+        lines = [
+            item.text if isinstance(item, UDComment) else "\t".join(_row_columns(item))
+            for item in sent.items
+        ]
+    else:
+        lines = comments + ["\t".join(_row_columns(row)) for row in rows]
+    return "\n".join(lines) + "\n\n"
+
+
+def dump_conllu(
+    sentences: Iterable[UDSentence] | UDDocument, *, canonical: bool = False
+) -> str:
+    """Serialize sentences, preserving unchanged parsed blocks or using canonical rows."""
+    if isinstance(sentences, UDDocument):
+        return sentences.dumps(canonical=canonical)
+    sequence = tuple(sentences)
+    if not canonical and sequence:
+        document_raw = sequence[0]._document_raw_text
+        document_signature = sequence[0]._document_raw_signature
+        if document_raw is not None and document_signature == _document_signature(
+            UDDocument(
+                sequence,
+                leading_comments=sequence[0]._document_leading_comments,
+                trailing_comments=sequence[0]._document_trailing_comments,
+            )
+        ):
+            return document_raw
+    blocks: list[str] = []
+    for sent in sequence:
+        rows = _effective_rows(sent)
+        signature = _sentence_signature(sent.sent_id, sent.text, sent.tokens, rows, sent.comments, sent.items)
+        if not canonical and sent._raw_block is not None and signature == sent._raw_signature:
+            blocks.append(sent._raw_block)
+        else:
+            blocks.append(_canonical_sentence(sent))
+    return "".join(blocks)
+
+
+def dumps_conllu(
+    sentences: Iterable[UDSentence] | UDDocument, *, canonical: bool = False
+) -> str:
+    """Alias for :func:`dump_conllu` for string-oriented callers."""
+    return dump_conllu(sentences, canonical=canonical)
+
+
+def write_conllu(
+    sentences: Iterable[UDSentence] | UDDocument, path: Path | str, *, canonical: bool = False
+) -> None:
+    """Write CoNLL-U text atomically to ``path``."""
+    from .._atomic import atomic_path
+
+    content = (
+        sentences.dumps(canonical=canonical)
+        if isinstance(sentences, UDDocument)
+        else dump_conllu(sentences, canonical=canonical)
+    )
+    with atomic_path(path) as tmp:
+        with tmp.open("w", encoding="utf-8", newline="") as handle:
+            handle.write(content)
 
 
 # --- running the pipeline over gold tokens -------------------------------------
@@ -215,12 +1092,17 @@ def _tag_forms(forms: list[str]) -> list[str]:
     return out
 
 
+class UnsupportedUDStructureError(ValueError):
+    """Raised when a complete CoNLL-U prediction is requested for unsupported rows."""
+
+
 def pipeline_conllu(
     sentences: list[UDSentence],
     *,
     parse: bool = False,
     progress: Callable[[int, int], None] | None = None,
     batch_size: int | None = None,
+    on_unsupported: Literal["project", "error"] = "project",
 ) -> str:
     """Run the active pyaegean pipeline over gold-tokenized sentences, emitting CoNLL-U.
 
@@ -234,9 +1116,30 @@ def pipeline_conllu(
     the **neural** pipeline's encoder over that many sentences at a time (one ONNX call
     per chunk) — a throughput convenience; the recorded benchmark protocol is the
     sequential default (``None``), and without an active joint model the value has no
-    effect."""
+    effect. Structural rows and enhanced annotations are deliberately projected out of
+    predictions; pass ``on_unsupported="error"`` when a caller requires a complete
+    predictive output.
+    """
     from . import joint
     from .lemmatize import lemmatize
+
+    if on_unsupported not in ("project", "error"):
+        raise ValueError("on_unsupported must be 'project' or 'error'")
+    if on_unsupported == "error":
+        unsupported: list[str] = []
+        for sent in sentences:
+            projection = sent.projection
+            if any(isinstance(row, UDOpaqueRow) for row in sent.rows):
+                unsupported.append(sent.sent_id or "<anonymous>")
+            elif projection.omitted_ranges or projection.omitted_empty_nodes:
+                unsupported.append(sent.sent_id or "<anonymous>")
+            elif projection.enhanced_dependencies_present:
+                unsupported.append(sent.sent_id or "<anonymous>")
+        if unsupported:
+            raise UnsupportedUDStructureError(
+                "complete predictive CoNLL-U output is unsupported for sentence(s): "
+                + ", ".join(unsupported)
+            )
 
     if parse:
         from .syntax import parse as parse_tree
@@ -555,7 +1458,14 @@ def evaluate_by_genre(
     for genre, pairs in buckets.items():
         gold_text = "".join(g for g, _ in pairs)
         sys_text = "".join(s for _, s in pairs)
-        n_words = sum(1 for line in gold_text.splitlines() if line[:1].isdigit() and "-" not in line.split("\t", 1)[0])
+        n_words = sum(
+            1
+            for line in gold_text.splitlines()
+            if "\t" in line
+            and (row_id := line.split("\t", 1)[0])
+            and _WORD_ID_RE.fullmatch(row_id)
+            and int(row_id) > 0
+        )
         entry: dict[str, Any] = {
             "n_sentences": len(pairs),
             "n_words": n_words,
