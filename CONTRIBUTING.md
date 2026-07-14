@@ -13,6 +13,32 @@ ruff check src tests
 mypy
 ```
 
+## Efficient local validation
+
+The checkpoint runner orders local checks from fastest to most expensive and stops
+at the first failure. Choose the profile that matches the highest-risk part of the
+change and name every directly affected test file:
+
+```bash
+python scripts/check_checkpoint.py --profile code --test tests/test_example.py --dry-run
+python scripts/check_checkpoint.py --profile code --test tests/test_example.py
+python scripts/check_checkpoint.py --profile code --test tests/test_example.py --full
+```
+
+Use `docs` for documentation-only changes, `code` for internal implementation,
+`public-api` when exported behavior or signatures change, and `persistence` for a
+stored schema or interchange format. The profiles add relevant static, API,
+documentation, footprint, and compatibility guards; they do not replace the
+focused correctness, adversarial, or journey tests required below.
+Install `.[dev,docs]` before using the `docs` profile.
+
+Reserve `--full` for the reviewed, final code tree. A successful run writes an
+ignored receipt under `build/`; `python scripts/check_checkpoint.py
+--verify-receipt` confirms whether it still describes the current HEAD, index,
+worktree, and untracked nonignored files. Any public-tree change invalidates the
+receipt. GitHub Actions remains the authoritative supported-Python matrix after a
+push.
+
 ## Good first contributions (a menu)
 
 Small, well-scoped facts that make the toolkit better without touching the
