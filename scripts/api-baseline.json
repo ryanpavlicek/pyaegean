@@ -13507,6 +13507,14 @@
       "canonical": "aegean.greek.normalize.NormalizationWarning",
       "kind": "class"
     },
+    "aegean.greek.POLICY_IDS": {
+      "canonical": "aegean.greek.sentence_segmentation.POLICY_IDS",
+      "kind": "attribute"
+    },
+    "aegean.greek.POLICY_RULES": {
+      "canonical": "aegean.greek.sentence_segmentation.POLICY_RULES",
+      "kind": "attribute"
+    },
     "aegean.greek.PapyGreekConventionReport": {
       "canonical": "aegean.greek.papygreek.PapyGreekConventionReport",
       "kind": "class"
@@ -13535,12 +13543,28 @@
       "canonical": "aegean.greek.sandhi.ResolvedForm",
       "kind": "class"
     },
+    "aegean.greek.RuleBasedSentenceSegmenter": {
+      "canonical": "aegean.greek.sentence_segmentation.RuleBasedSentenceSegmenter",
+      "kind": "class"
+    },
     "aegean.greek.ScansionError": {
       "canonical": "aegean.greek.meter.ScansionError",
       "kind": "class"
     },
+    "aegean.greek.SegmentationResult": {
+      "canonical": "aegean.greek.sentence_segmentation.SegmentationResult",
+      "kind": "class"
+    },
     "aegean.greek.SentenceAnalysis": {
       "canonical": "aegean.greek.joint.SentenceAnalysis",
+      "kind": "class"
+    },
+    "aegean.greek.SentenceBoundary": {
+      "canonical": "aegean.greek.sentence_segmentation.SentenceBoundary",
+      "kind": "class"
+    },
+    "aegean.greek.SentenceSegmenter": {
+      "canonical": "aegean.greek.sentence_segmentation.SentenceSegmenter",
       "kind": "class"
     },
     "aegean.greek.TaggerNotLoadedError": {
@@ -19279,6 +19303,16 @@
           "default": true,
           "kind": "keyword-only",
           "name": "document_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sentence_policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "segmenter"
         }
       ],
       "returns": true
@@ -20576,6 +20610,50 @@
       ],
       "returns": true
     },
+    "aegean.greek.segment_sentences": {
+      "canonical": "aegean.greek.sentence_segmentation.segment_sentences",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "segmenter"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.segment_text": {
+      "canonical": "aegean.greek.sentence_segmentation.segment_text",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "segmenter"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.sentences": {
       "canonical": "aegean.greek.tokenize.sentences",
       "kind": "function",
@@ -20584,6 +20662,16 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sentence_policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "segmenter"
         }
       ],
       "returns": true
@@ -21063,6 +21151,16 @@
           "default": true,
           "kind": "keyword-only",
           "name": "document_id"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "sentence_policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "segmenter"
         }
       ],
       "returns": true
@@ -21886,6 +21984,33 @@
           "default": true,
           "kind": "keyword-only",
           "name": "force"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.validate_segmentation_result": {
+      "canonical": "aegean.greek.sentence_segmentation.validate_segmentation_result",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "value"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "policy"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "plugin_policy_id"
         }
       ],
       "returns": true

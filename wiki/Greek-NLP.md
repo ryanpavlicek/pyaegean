@@ -22,6 +22,10 @@ Import the module once for the Python side:
 from aegean import greek
 ```
 
+The supported facade signatures and generated docstrings are collected in the
+[Greek API reference](https://pyaegean.xyz/api/greek/); this page explains the
+behavioral choices and source-evidence contracts around them.
+
 The CLI lives behind one extra (`pip install "pyaegean[cli]"`) and every command
 takes `--json` for machine-readable output. See the [CLI](CLI) page for the rest
 of the shell tooling, [Getting Started](Getting-Started) if you are new to
@@ -45,7 +49,7 @@ backends layer in extra accuracy without changing the call you make.
 | Beta Code ↔ Unicode | `betacode_to_unicode` / `unicode_to_betacode` | `aegean greek betacode` | no |
 | Normalize (NFC, OCR repair) | `normalize` | `aegean greek normalize` | no |
 | Strip diacritics | `strip_diacritics` | `aegean greek strip` | no |
-| Tokenize / sentences | `tokenize` / `tokenize_aligned` / `tokenize_words` / `sentences` | `aegean greek tokenize` | no |
+| Tokenize / sentences | `tokenize` / `tokenize_aligned` / `tokenize_words` / `sentences` / `segment_text` / `segment_sentences` | `aegean greek tokenize` | no |
 | Syllabify | `syllabify` | `aegean greek syllabify` | no |
 | Accent analysis | `accentuation` | `aegean greek accent` | no |
 | Accent placement | `place_accent` / `recessive_accent` / `persistent_accent` | `aegean greek accentuate` | no |
@@ -71,13 +75,17 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.45.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.46.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 
 Every stage below is independently callable, but you don't have to compose them:
 `pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
-text and returns one record per token (punctuation included: nothing is dropped):
+text and returns one record per token (punctuation included: nothing is dropped).
+Pass `sentence_policy="prose"`, `"verse"`, `"inscription"`, or `"papyrus"` when
+the material needs a named rule set; `segmenter=` accepts a validated caller
+segmenter for edition-specific evidence. The policy is applied per call, before
+the backend sees the sentence-sized word lists:
 
 ```python
 records = greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος.")
@@ -122,6 +130,9 @@ Each `TokenRecord` is a dataclass with these fields:
 | `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
 | `alignment` | exact original text, source IDs, Unicode code-point span, preceding whitespace, and normalization provenance |
 | `form_state` | typed diplomatic, regularized, normalized, and exact model-input forms when analyzing pre-tokenized corpus tokens |
+| `boundary_policy`, `boundary_policy_id` | the named policy and stable identity that ended this sentence (on its terminal token) |
+| `boundary_provenance`, `boundary_confidence` | `rule`, `explicit`, or `plugin`; built-in rules have no confidence, while a plugin may provide a finite `[0, 1]` estimate |
+| `boundary_start_char`, `boundary_end_char` | the half-open source span for the sentence boundary, when alignment proves it |
 
 ### Exact source alignment
 
@@ -150,7 +161,9 @@ exported or reviewed. `sentence_id` is stable for unchanged segmentation, and
 `source_token_id` is deterministic for the same document ID and exact source snapshot.
 The pipeline maps analyses back by token ordinal, so repeated words and NFC-equivalent
 spellings cannot be confused by string matching. JSON CLI, MCP, and TUI pipeline rows
-flatten the value as `alignment_*` fields.
+flatten the value as `alignment_*` fields. The terminal token of each sentence also
+receives the `boundary_*` fields above; those fields are metadata about the boundary,
+not a per-token prediction.
 
 For tokenization without analysis, `greek.tokenize_aligned(text, document_id=...)`
 returns ordinary `Token` values carrying the same mappings. The older `tokenize()` and
@@ -176,6 +189,47 @@ The returned `TokenRecord.form_state` contains the selected input. A neural NFC
 conversion is added to the ordered operations when it changes the string. Plain
 `greek.pipeline(text)` tokenizes raw text and therefore has no typed editorial
 state unless callers use `pipeline_tokens()` with pre-tokenized values.
+
+### Sentence segmentation: named policies and an extension seam
+
+`greek.segment_text(text)` returns an immutable `SegmentationResult` with the exact
+source, ordered `SentenceBoundary` records, `policy`, `policy_id`, and
+`provenance`. Each boundary is a half-open Python code-point span (`start`, `end`),
+so its `text` slice retains terminal punctuation and any closing mark. The older
+`greek.sentences(text)` projection keeps its historical shape: trimmed strings with
+terminal sentence marks removed. `segment_sentences()` is an alias for
+`segment_text()`; use either when spans or metadata matter. The result has a strict JSON
+schema (`to_json()` / `SegmentationResult.from_json()`).
+
+The built-in `RuleBasedSentenceSegmenter` has five named policies. Their stable IDs
+are available in `greek.POLICY_IDS` and their plain-language descriptions in
+`greek.POLICY_RULES`:
+
+| Policy | Rule |
+| --- | --- |
+| `default` | Conservative period, semicolon/Greek question mark, ano teleia/middle dot, `!`, and `?`; dotted abbreviations and numbers are protected. |
+| `prose` | The same conservative punctuation policy, named for literary prose. |
+| `verse` | The prose punctuation rules plus every non-empty physical line as a boundary. |
+| `inscription` | Only strong `.`, `!`, and `?`; semicolon and ano teleia remain uncommitted. |
+| `papyrus` | Strong `.`, `!`, and `?`; marks inside balanced `[]`, `⟦⟧`, or `<>` editorial brackets are ignored. |
+
+The rules are deterministic and deliberately carry no confidence score. A caller
+can pass `RuleBasedSentenceSegmenter(policy="prose", abbreviations=["sig."])`
+to add protected abbreviations. A plugin implements `segment(text)` (or is a
+callable) and may return a `SegmentationResult`, boundary mappings, or `(start, end)`
+pairs. `segment_text(..., segmenter=plugin)` normalizes every form and rejects
+unknown fields, out-of-range or overlapping spans, uncovered non-whitespace text,
+and boundary/result-policy mismatches. When tokenization consumes a plugin result, it additionally
+rejects boundaries that bisect a token. Plugin output is stamped
+`provenance="plugin"`; a plugin cannot claim a reserved built-in policy ID. An
+optional plugin confidence is metadata in `[0, 1]`, not a measured accuracy claim.
+
+For pre-tokenized `pipeline_tokens()` input, complete contiguous runs of
+`Token.alignment.sentence_id` take precedence over punctuation, `sentence_policy`,
+and the plugin seam. Partial, non-contiguous, or cross-document sentence IDs are
+rejected before analysis. When those IDs are absent, the selected policy is applied
+to the typed token stream and editorial punctuation (`UNCLEAR`, `RESTORED`, or
+`LOST`) is not treated as observed sentence evidence.
 
 ### Lossless CoNLL-U structure and the model projection
 
@@ -277,9 +331,10 @@ The hybrid translator follows the same distinction explicitly: omit
 `translate(..., greek_pipeline=...)` to use the module-default facade, or pass a
 `GreekPipeline` instance to isolate its grounding. From the shell, the matching choice is
 `aegean ai translate ... --greek-backend default|baseline|neural`. Long-input handling is a
-separate explicit choice through `greek_long_input=` or `--greek-long-input`; both the
-selected configuration and sentence policy appear in translation provenance, separately
-from the evidence sent to the provider. See
+separate explicit choice through `greek_long_input=` or `--greek-long-input`; the
+selected configuration and long-input mode appear in translation provenance, separately
+from the evidence sent to the provider. Translation currently uses the pipeline's default
+document sentence policy; its interface does not expose a separate `sentence_policy` option. See
 [Translation](Translation#which-greek-backend-supplies-the-grounding).
 
 ```python
@@ -294,8 +349,14 @@ config = greek.GreekPipelineConfig.from_json(config_json)
 same_runtime = greek.GreekPipeline.from_config(config)
 ```
 
-Each instance owns its neural model, tokenizer, annotation profile, normalization and
-segmentation identity, and execution-provider selection. Instance calls are context-local,
+Each instance owns its neural model, tokenizer, annotation profile, normalization,
+backend segmentation contract, and execution-provider selection. For a neural
+instance, `GreekPipelineConfig.segmentation` is copied from the model bundle's
+preprocessing contract (`pretokenized` for the published `grc-joint-v3` artifact):
+the joint model receives already tokenized sentence word lists. It is not a document
+sentence splitter and it does not override a call's `sentence_policy`.
+
+Instance calls are context-local,
 so concurrent pipelines do not replace one another or observe module-level backend
 activation. `GreekPipelineConfig` is immutable and exact for configuration identity;
 per-analysis package and library versions, asset identity, input coverage, and other
@@ -368,7 +429,7 @@ different unversioned bundle must use a new model ID and schema.
 Every production `SentenceAnalysis` also carries `receipt`, a canonical, serializable
 `AnalysisReceipt`. It records the exact model ID, asset and manifest SHA-256 values, bundle
 schema, tokenizer revision, package/Python/neural-library versions, live execution
-providers, annotation profile, normalization and segmentation policies, limit, and
+providers, annotation profile, normalization and model-input segmentation contract, limit, and
 truncation/window status. `receipt.to_json()` is stable and `receipt.sha256` content-addresses
 it. Passing a prior receipt as `use_neural_pipeline(expected_receipt=receipt)` refuses a
 runtime or artifact mismatch rather than silently approximating the old analysis.

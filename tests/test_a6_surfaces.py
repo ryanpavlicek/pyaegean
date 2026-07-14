@@ -86,6 +86,12 @@ def _record_with_state() -> SimpleNamespace:
         analysis_complete=True,
         analysis_warning=None,
         analysis_receipt=None,
+        boundary_policy=None,
+        boundary_policy_id=None,
+        boundary_provenance=None,
+        boundary_confidence=None,
+        boundary_start_char=None,
+        boundary_end_char=None,
         alignment=None,
         upos_confidence=None,
         lemma_confidence=None,
@@ -107,6 +113,8 @@ def test_pipeline_rows_are_json_ready_and_state_is_distinct() -> None:
     assert row["form_editorial_status"] == "lost"
     assert row["form_has_damage"] is True
     assert row["form_has_uncertainty"] is False
+    assert row["boundary_policy"] is None
+    assert row["boundary_start_char"] is None
 
 
 def test_tabular_progress_matches_corpus_with_canonical_form_columns() -> None:

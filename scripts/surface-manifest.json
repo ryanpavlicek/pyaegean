@@ -1816,6 +1816,36 @@
           "note": "reachable via the command console; no dedicated screen"
         }
       }
+    },
+    {
+      "id": "sentence-segmentation",
+      "since": "0.46.0",
+      "python_api": "aegean.greek.segment_text",
+      "summary": "Conservative, source-span-preserving Greek sentence segmentation with named domain policies and a validated plugin seam.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the browser demo keeps a compact word-token workflow and has no sentence-policy control."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the MCP server exposes analysis rows rather than a separate segmentation tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "greek.segment_text("
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "sentence policy selection remains available through the CLI command console."
+        }
+      }
     }
   ]
 }

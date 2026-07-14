@@ -21,6 +21,8 @@ import warnings
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Literal, Sequence
 
+from ..core.model import TokenKind
+
 from .lemmatize import (
     LemmaSource,
     lemma_resolved,
@@ -28,8 +30,16 @@ from .lemmatize import (
     lemmatize_sourced,
     needs_review,
 )
-from .tokenize import _SENTENCE_SPLIT_RE
-from .tokenize import tokenize_aligned as _tokenize_aligned
+from .sentence_segmentation import (
+    POLICY_IDS,
+    POLICY_RULES,
+    RuleBasedSentenceSegmenter,
+    SegmenterLike,
+    _balanced_editorial_positions,
+    _protected_periods,
+    segment_text,
+)
+from .tokenize import _tokenize_aligned_result
 
 __all__ = ["TokenRecord", "pipeline", "pipeline_tokens"]
 
@@ -71,7 +81,11 @@ class TokenRecord:
     fall-through or punctuation). The number is fitted on literary prose, so it
     carries that genre caveat. ``alignment`` maps the record to the exact input
     token, including original and normalized text, source IDs, half-open Unicode
-    code-point offsets, whitespace, and normalization operations."""
+    code-point offsets, whitespace, and normalization operations. On the final
+    record in each sentence, the ``boundary_*`` fields identify the document
+    segmentation policy, stable policy ID, provenance, optional plugin confidence,
+    and exact source span when one is provable. Rules and explicit user IDs carry
+    no invented confidence."""
 
     sentence: int  # 0-based sentence number within the input text
     index: int  # 1-based token position within the sentence
@@ -91,6 +105,12 @@ class TokenRecord:
     analysis_receipt: AnalysisReceipt | None = None
     alignment: SourceAlignment | None = field(default=None, compare=False)
     form_state: TokenFormState | None = field(default=None, compare=False)
+    boundary_policy: str | None = None
+    boundary_policy_id: str | None = None
+    boundary_provenance: str | None = None
+    boundary_confidence: float | None = None
+    boundary_start_char: int | None = None
+    boundary_end_char: int | None = None
 
     @property
     def lemma_resolved(self) -> bool:
@@ -126,6 +146,8 @@ def pipeline(
     with_confidence: bool = False,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
+    sentence_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
 ) -> list[TokenRecord]:
     """Analyze text through the module-level default `GreekPipeline` instance.
 
@@ -134,7 +156,8 @@ def pipeline(
     configurations, construct `GreekPipeline` instances and call their `analyze` method.
     Neural long-input and calibrated-confidence behavior is identical on both APIs.
     ``document_id`` scopes deterministic source and sentence identities; use a stable
-    value when records will be exported or reviewed.
+    value when records will be exported or reviewed. ``sentence_policy`` selects the
+    document splitter; ``segmenter`` can provide a validated external implementation.
     """
     from .runtime import default_pipeline
 
@@ -144,6 +167,8 @@ def pipeline(
         with_confidence=with_confidence,
         long_input=long_input,
         document_id=document_id,
+        sentence_policy=sentence_policy,
+        segmenter=segmenter,
     )
 
 
@@ -154,13 +179,17 @@ def pipeline_tokens(
     with_confidence: bool = False,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
+    sentence_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
 ) -> list[TokenRecord]:
     """Analyze already-tokenized core ``Token`` values without re-tokenizing them.
 
     A token's typed ``form_state`` chooses the analyzer input in the deterministic
     order model input, regularized, normalized, diplomatic, then legacy ``Token.text``.
     The returned record retains the token's alignment and form state; one input token
-    always produces one output record.
+    always produces one output record. Complete, contiguous alignment ``sentence_id``
+    runs take precedence over ``sentence_policy`` and ``segmenter``. Without them, the
+    named policy or external segmenter groups the atomic typed tokens.
     """
     from .runtime import default_pipeline
 
@@ -170,6 +199,8 @@ def pipeline_tokens(
         with_confidence=with_confidence,
         long_input=long_input,
         document_id=document_id,
+        sentence_policy=sentence_policy,
+        segmenter=segmenter,
     )
 
 
@@ -214,11 +245,14 @@ def _analyze_bound(
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
     typed_tokens: Sequence[Token] | None = None,
+    sentence_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
 ) -> list[TokenRecord]:
     """Analyze text under the `GreekPipeline` bound in the current context.
 
-    Tokenizes (words **and** punctuation — nothing is dropped), splits into
-    sentences on Greek sentence-final punctuation, POS-tags, lemmatizes, and —
+    Tokenizes (words **and** punctuation — nothing is dropped), applies the selected
+    conservative sentence policy or validated external segmenter, POS-tags,
+    lemmatizes, and —
     when ``parse=True`` or the neural pipeline is active — attaches dependency
     heads/relations. Backends are chosen by what is active (see the module
     docstring); the zero-dependency baseline needs no setup::
@@ -254,7 +288,14 @@ def _analyze_bound(
             "long_input must be 'strict', 'partial', or 'windowed', "
             f"got {long_input!r}"
         )
-    from ..core.model import Token, TokenKind
+    if not isinstance(sentence_policy, str):
+        raise TypeError("sentence_policy must be a string")
+    if sentence_policy not in POLICY_RULES:
+        raise ValueError(
+            f"unknown segmentation policy {sentence_policy!r}; "
+            f"expected one of {tuple(POLICY_RULES)}"
+        )
+    from ..core.model import Token
     from . import joint, syntax
 
     if typed_tokens is not None:
@@ -269,47 +310,165 @@ def _analyze_bound(
             f"long_input={long_input!r} requires an active neural Greek pipeline"
         )
 
-    # One tokenization pass over the whole text; sentence boundaries fall after
-    # any PUNCT token containing a sentence-final mark, so punctuation tokens
-    # stay in their sentence rather than being discarded.
+    # One tokenization pass over the whole text. The shared segmenter preserves
+    # punctuation tokens inside their exact sentence span rather than discarding them.
     sents: list[list[str]] = [[]]
     word_flags: list[list[bool]] = [[]]
     alignments: list[list[SourceAlignment | None]] = [[]]
     form_states: list[list[TokenFormState | None]] = [[]]
+    boundary_meta: list[tuple[str, str, str | None, float | None]] = []
+    boundary_spans: list[tuple[int, int] | None] = []
     if typed_tokens is None:
-        source_tokens: Sequence[Token] = _tokenize_aligned(text, document_id=document_id)
+        segmentation = segment_text(
+            text, policy=sentence_policy, segmenter=segmenter
+        )
+        source_tokens: Sequence[Token] = _tokenize_aligned_result(
+            text,
+            document_id=document_id,
+            segmentation_policy=sentence_policy,
+            segmenter=segmenter,
+            segmentation_result=segmentation,
+        )
+        boundary_meta = [
+            (boundary.policy, boundary.provenance, boundary.policy_id, boundary.confidence)
+            for boundary in segmentation.boundaries
+        ]
+        boundary_spans = [
+            (boundary.start, boundary.end) for boundary in segmentation.boundaries
+        ]
+        current_sentence_id: str | None = None
         for tok in source_tokens:
+            sentence_id = tok.alignment.sentence_id if tok.alignment is not None else None
+            if current_sentence_id is not None and sentence_id != current_sentence_id:
+                sents.append([])
+                word_flags.append([])
+                alignments.append([])
+                form_states.append([])
+            current_sentence_id = sentence_id
             sents[-1].append(tok.text)
             word_flags[-1].append(tok.kind is TokenKind.WORD)
             alignments[-1].append(tok.alignment)
             form_states[-1].append(None)
-            if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(tok.text):
-                sents.append([])
-                word_flags.append([])
-                alignments.append([])
-                form_states.append([])
     else:
-        for tok in typed_tokens:
-            selected, state = _select_token_form(tok)
-            sents[-1].append(selected)
-            word_flags[-1].append(tok.kind is TokenKind.WORD)
-            alignments[-1].append(tok.alignment)
-            form_states[-1].append(state)
-            if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(selected):
-                sents.append([])
-                word_flags.append([])
-                alignments.append([])
-                form_states.append([])
+        typed_tokens = tuple(typed_tokens)
+        _validate_explicit_sentence_ids(typed_tokens)
+        explicit_ids = [
+            token.alignment.sentence_id if token.alignment is not None else None
+            for token in typed_tokens
+        ]
+        has_explicit_ids = bool(explicit_ids) and all(item is not None for item in explicit_ids)
+        selected_values = [_select_token_form(token) for token in typed_tokens]
+        if has_explicit_ids:
+            current_id: str | None = None
+            for tok, explicit_id, (selected, state) in zip(
+                typed_tokens, explicit_ids, selected_values
+            ):
+                if current_id is not None and explicit_id != current_id:
+                    sents.append([])
+                    word_flags.append([])
+                    alignments.append([])
+                    form_states.append([])
+                current_id = explicit_id
+                sents[-1].append(selected)
+                word_flags[-1].append(tok.kind is TokenKind.WORD)
+                alignments[-1].append(tok.alignment)
+                form_states[-1].append(state)
+        else:
+            if segmenter is None or type(segmenter) is RuleBasedSentenceSegmenter:
+                rule_policy = (
+                    segmenter.policy
+                    if type(segmenter) is RuleBasedSentenceSegmenter
+                    else sentence_policy
+                )
+                abbreviations = (
+                    segmenter.abbreviations
+                    if type(segmenter) is RuleBasedSentenceSegmenter
+                    else None
+                )
+                break_after = _typed_rule_breaks(
+                    typed_tokens,
+                    [item[0] for item in selected_values],
+                    rule_policy,
+                    abbreviations,
+                )
+                for index, ((selected, state), tok) in enumerate(
+                    zip(selected_values, typed_tokens)
+                ):
+                    sents[-1].append(selected)
+                    word_flags[-1].append(tok.kind is TokenKind.WORD)
+                    alignments[-1].append(tok.alignment)
+                    form_states[-1].append(state)
+                    if break_after[index]:
+                        sents.append([])
+                        word_flags.append([])
+                        alignments.append([])
+                        form_states.append([])
+                boundary_meta = [
+                    (rule_policy, "rule", POLICY_IDS[rule_policy], None)
+                    for _ in sents
+                ]
+            else:
+                joined_parts = [item[0] for item in selected_values]
+                separators: list[str] = []
+                for index, token in enumerate(typed_tokens):
+                    if index == 0:
+                        separators.append("")
+                    elif token.alignment is not None:
+                        separators.append(token.alignment.whitespace_before)
+                    else:
+                        separators.append(" ")
+                joined = "".join(
+                    separator + value
+                    for separator, value in zip(separators, joined_parts)
+                )
+                result = segment_text(joined, policy=sentence_policy, segmenter=segmenter)
+                token_ranges: list[tuple[int, int]] = []
+                cursor = 0
+                for separator, selected in zip(separators, joined_parts):
+                    cursor += len(separator)
+                    token_ranges.append((cursor, cursor + len(selected)))
+                    cursor += len(selected)
+                _validate_token_boundary_ranges(result, token_ranges)
+                boundary_by_end = {boundary.end: boundary for boundary in result.boundaries}
+                for tok, (selected, state), (_start, end) in zip(
+                    typed_tokens, selected_values, token_ranges
+                ):
+                    sents[-1].append(selected)
+                    word_flags[-1].append(tok.kind is TokenKind.WORD)
+                    alignments[-1].append(tok.alignment)
+                    form_states[-1].append(state)
+                    boundary = boundary_by_end.get(end)
+                    if boundary is not None:
+                        boundary_meta.append(
+                            (
+                                boundary.policy,
+                                boundary.provenance,
+                                boundary.policy_id,
+                                boundary.confidence,
+                            )
+                        )
+                        sents.append([])
+                        word_flags.append([])
+                        alignments.append([])
+                        form_states.append([])
+        if has_explicit_ids:
+            boundary_meta = [
+                ("explicit", "explicit", "pyaegean-sentence-explicit-v1", None)
+            ] * len(sents)
+            boundary_spans = [None] * len(sents)
     if sents and not sents[-1]:
         sents.pop()
         word_flags.pop()
         alignments.pop()
         form_states.pop()
+    if typed_tokens is not None:
+        boundary_spans = [_aligned_sentence_span(items) for items in alignments]
 
     records: list[TokenRecord] = []
     for s_idx, (words, is_word, sentence_alignments, sentence_states) in enumerate(
         zip(sents, word_flags, alignments, form_states)
     ):
+        sentence_span = boundary_spans[s_idx] if s_idx < len(boundary_spans) else None
         if joint.active() is not None:
             ana = joint.analyze_sentence(
                 words, with_probs=with_confidence, long_input=long_input
@@ -375,6 +534,24 @@ def _analyze_bound(
                         analysis_receipt=ana.receipt,
                         alignment=sentence_alignments[i],
                         form_state=record_state,
+                        boundary_policy=boundary_meta[s_idx][0]
+                        if i == len(words) - 1 and s_idx < len(boundary_meta)
+                        else None,
+                        boundary_policy_id=boundary_meta[s_idx][2]
+                        if i == len(words) - 1 and s_idx < len(boundary_meta)
+                        else None,
+                        boundary_provenance=boundary_meta[s_idx][1]
+                        if i == len(words) - 1 and s_idx < len(boundary_meta)
+                        else None,
+                        boundary_confidence=boundary_meta[s_idx][3]
+                        if i == len(words) - 1 and s_idx < len(boundary_meta)
+                        else None,
+                        boundary_start_char=sentence_span[0]
+                        if i == len(words) - 1 and sentence_span is not None
+                        else None,
+                        boundary_end_char=sentence_span[1]
+                        if i == len(words) - 1 and sentence_span is not None
+                        else None,
                     )
                 )
             continue
@@ -398,9 +575,12 @@ def _analyze_bound(
             # as the tokenizer), so its 1-based ids map onto the WORD records
             word_positions = [i for i, w in enumerate(is_word) if w]
             tree = syntax.parse(sent_str)  # raises ParserNotLoadedError if not loaded
+            if len(tree.tokens) != len(word_positions):
+                raise ValueError(
+                    "baseline parser returned a different token count than the input "
+                    f"({len(tree.tokens)} != {len(word_positions)})"
+                )
             for k, dep in enumerate(tree.tokens):
-                if k >= len(word_positions):
-                    break  # defensive: tokenizer/parser disagreement
                 rec_head = 0 if dep.head == 0 else word_positions[dep.head - 1] + 1
                 heads[word_positions[k]] = (rec_head, dep.relation)
         for i, (tok_text, tag) in enumerate(tags):
@@ -415,6 +595,202 @@ def _analyze_bound(
                     upos=tag, lemma=lemma, lemma_source=source, head=head, relation=rel,
                     alignment=sentence_alignments[i],
                     form_state=sentence_states[i],
+                    boundary_policy=boundary_meta[s_idx][0]
+                    if i == len(words) - 1 and s_idx < len(boundary_meta)
+                    else None,
+                    boundary_policy_id=boundary_meta[s_idx][2]
+                    if i == len(words) - 1 and s_idx < len(boundary_meta)
+                    else None,
+                    boundary_provenance=boundary_meta[s_idx][1]
+                    if i == len(words) - 1 and s_idx < len(boundary_meta)
+                    else None,
+                    boundary_confidence=boundary_meta[s_idx][3]
+                    if i == len(words) - 1 and s_idx < len(boundary_meta)
+                    else None,
+                    boundary_start_char=sentence_span[0]
+                    if i == len(words) - 1 and sentence_span is not None
+                    else None,
+                    boundary_end_char=sentence_span[1]
+                    if i == len(words) - 1 and sentence_span is not None
+                    else None,
                 )
             )
     return records
+
+
+def _token_boundary_is_editorial(token: Token) -> bool:
+    """Whether a typed token's punctuation is editorial, rather than observed evidence."""
+    state = token.form_state
+    if state is not None and state.editorial_status.value != "certain":
+        return True
+    return getattr(token.status, "value", token.status) != "certain"
+
+
+def _typed_rule_breaks(
+    tokens: Sequence[Token],
+    selected: Sequence[str],
+    policy: str,
+    abbreviations: frozenset[str] | None,
+) -> list[bool]:
+    """Apply sentence rules only to observed punctuation-token boundaries."""
+    terminal = frozenset(".!?") if policy in ("inscription", "papyrus") else frozenset(".!?;;··")
+    known_abbreviations = abbreviations or frozenset(
+        {"cf", "sc", "fr", "ed", "p", "pp", "l", "ll", "col", "ca", "κτλ", "δηλ", "κ", "δ"}
+    )
+    editorial_positions = (
+        _balanced_editorial_positions("".join(selected))
+        if policy == "papyrus"
+        else []
+    )
+    selected_starts: list[int] = []
+    selected_cursor = 0
+    for value in selected:
+        selected_starts.append(selected_cursor)
+        selected_cursor += len(value)
+    dotted_chain_periods: set[int] = set()
+    index = 0
+    while index < len(tokens):
+        if len(selected[index]) != 1 or not selected[index].isalpha():
+            index += 1
+            continue
+        cursor = index
+        periods: list[int] = []
+        while (
+            cursor + 1 < len(tokens)
+            and tokens[cursor + 1].kind is TokenKind.PUNCT
+            and selected[cursor + 1] == "."
+        ):
+            periods.append(cursor + 1)
+            if (
+                cursor + 2 >= len(tokens)
+                or len(selected[cursor + 2]) != 1
+                or not selected[cursor + 2].isalpha()
+            ):
+                cursor += 1
+                break
+            cursor += 2
+        if len(periods) >= 2:
+            dotted_chain_periods.update(periods)
+        index = max(index + 1, cursor + 1)
+    breaks = [False] * len(tokens)
+    for index, (token, value) in enumerate(zip(tokens, selected)):
+        if token.kind is not TokenKind.PUNCT or _token_boundary_is_editorial(token):
+            continue
+        protected_periods = _protected_periods(value, known_abbreviations)
+        marks = [
+            char
+            for char_index, char in enumerate(value)
+            if char in terminal
+            and not (char == "." and char_index in protected_periods)
+            and (
+                policy != "papyrus"
+                or not editorial_positions[selected_starts[index] + char_index]
+            )
+        ]
+        if not marks:
+            continue
+        if policy in ("inscription", "papyrus") and not any(char in ".!?" for char in marks):
+            continue
+        if value == ".":
+            if index in dotted_chain_periods:
+                continue
+            if (index and selected[index - 1].endswith(".")) or (
+                index + 1 < len(selected) and selected[index + 1].startswith(".")
+            ):
+                continue
+            previous = selected[index - 1].casefold().rstrip(".") if index else ""
+            if previous in known_abbreviations:
+                continue
+            if index and index + 1 < len(selected):
+                left = selected[index - 1]
+                right = selected[index + 1]
+                if (
+                    len(left) == 1
+                    and left.isascii()
+                    and left.isupper()
+                    and right.islower()
+                ):
+                    continue
+                if left.isdigit() and right.isdigit():
+                    continue
+        breaks[index] = True
+    if policy == "verse":
+        for index in range(1, len(tokens)):
+            alignment = tokens[index].alignment
+            if alignment is not None and "\n" in alignment.whitespace_before:
+                breaks[index - 1] = True
+    # Attach a terminal mark to its contiguous terminal/closing punctuation cluster.
+    for index, value in enumerate(selected):
+        if not breaks[index]:
+            continue
+        end = index
+        while end + 1 < len(tokens) and tokens[end + 1].kind is TokenKind.PUNCT:
+            next_alignment = tokens[end + 1].alignment
+            if next_alignment is not None and next_alignment.whitespace_before:
+                break
+            breaks[end] = False
+            end += 1
+        breaks[end] = True
+    return breaks
+
+
+def _validate_token_boundary_ranges(
+    result: object, token_ranges: Sequence[tuple[int, int]]
+) -> None:
+    """Reject plugin boundaries that fall inside an atomic typed token."""
+    boundaries = getattr(result, "boundaries", ())
+    points = [point for boundary in boundaries for point in (boundary.start, boundary.end)]
+    token_index = 0
+    for point in points:
+        while token_index < len(token_ranges) and token_ranges[token_index][1] <= point:
+            token_index += 1
+        if token_index < len(token_ranges):
+            start, end = token_ranges[token_index]
+            if start < point < end:
+                raise ValueError("sentence segmenter boundary bisects a typed token")
+
+
+def _validate_explicit_sentence_ids(tokens: Sequence[Token]) -> None:
+    """Reject partial or non-contiguous user sentence metadata before backend work."""
+    ids = [token.alignment.sentence_id if token.alignment is not None else None for token in tokens]
+    present = [item is not None for item in ids]
+    if any(present) and not all(present):
+        raise ValueError("explicit sentence IDs must be complete for every token")
+    if not all(present):
+        return
+    document_ids = {
+        token.alignment.document_id
+        for token in tokens
+        if token.alignment is not None
+    }
+    if len(document_ids) > 1:
+        raise ValueError("explicit sentence IDs must belong to one document")
+    seen: set[str] = set()
+    previous: str | None = None
+    for sentence_id in ids:
+        assert sentence_id is not None
+        if sentence_id != previous:
+            if sentence_id in seen:
+                raise ValueError("explicit sentence IDs must form contiguous runs")
+            seen.add(sentence_id)
+            previous = sentence_id
+
+
+def _aligned_sentence_span(
+    sentence_alignments: Sequence[SourceAlignment | None],
+) -> tuple[int, int] | None:
+    """Return exact source offsets only when every typed token proves one span."""
+    if not sentence_alignments or any(item is None for item in sentence_alignments):
+        return None
+    alignments = [item for item in sentence_alignments if item is not None]
+    document_id = alignments[0].document_id
+    previous_end = alignments[0].end_char
+    for alignment in alignments[1:]:
+        if alignment.document_id != document_id:
+            return None
+        if alignment.start_char < previous_end:
+            return None
+        if alignment.start_char - previous_end != len(alignment.whitespace_before):
+            return None
+        previous_end = alignment.end_char
+    return alignments[0].start_char, alignments[-1].end_char

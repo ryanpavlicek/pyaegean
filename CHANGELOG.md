@@ -4,6 +4,45 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.46.0 (2026-07-14)
+
+A source-preserving Greek sentence-segmentation release. It separates the
+document boundary policy selected for an analysis from the preprocessing
+contract recorded by a pipeline backend, while preserving the published
+`grc-joint-v3` model and its measured results.
+
+### Added
+
+- `segment_text()` and its `segment_sentences()` alias return immutable sentence
+  boundaries with half-open source spans, stable policy identities, provenance,
+  and strict JSON round trips.
+- Named `default`, `prose`, `verse`, `inscription`, and `papyrus` policies expose
+  their deterministic rules. A validated plugin seam accepts edition-specific
+  segmenters without adding a runtime dependency or presenting rule scores as
+  calibrated confidence.
+- The Greek tokenize and pipeline commands accept `--sentence-policy`; sentence
+  tokenization also offers `--rich` source-span and provenance output.
+
+### Changed
+
+- Raw and typed Greek analysis now use the same sentence-policy component.
+  Complete, contiguous source `sentence_id` runs take precedence over inferred
+  punctuation; partial, non-contiguous, and cross-document IDs are rejected.
+- Terminal token records and shared interface rows carry boundary policy,
+  provenance, optional confidence, and source spans when alignments prove them.
+- `GreekPipelineConfig.segmentation` continues to identify backend preprocessing:
+  the baseline records `pyaegean-punctuation-v1`, and the published neural bundle
+  records `pretokenized`. Per-call `sentence_policy` independently chooses document
+  boundaries before backend analysis.
+
+### Fixed
+
+- Sentence rules protect dotted abbreviations and numeric forms, keep punctuation
+  clusters source-aligned, and avoid treating restored, unclear, or lost typed
+  punctuation as observed boundary evidence.
+- Baseline parser output with a token-count mismatch now fails with a clear error
+  instead of producing misaligned records.
+
 ## 0.45.0 (2026-07-14)
 
 A model-independent Greek foundation release. It makes runtime configuration,

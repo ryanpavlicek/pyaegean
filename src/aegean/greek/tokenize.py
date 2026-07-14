@@ -3,9 +3,9 @@
 A word is a run of Greek letters (with their combining diacritics) plus edge and
 internal elision apostrophes: a trailing one for ordinary elision (``δ'``) and a
 leading one for prodelision / aphaeresis (``'στι`` for ``ἐστι`` after a long vowel).
-Everything else is punctuation or whitespace. Sentence
-boundaries are the Greek full stop ``.``, the question mark ``;`` / ``;``,
-and the ano teleia ``·`` / ``·``.
+Everything else is punctuation or whitespace. Sentence boundaries come from the
+shared conservative segmenter: callers can select a documented domain policy or
+provide a validated external segmenter without changing tokenization.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ import re
 import unicodedata
 
 from ..core.model import SourceAlignment, Token, TokenKind
+from .sentence_segmentation import SegmentationResult, SegmenterLike, segment_text
 
 # Greek + Coptic (U+0370–03FF) minus its two punctuation code points, plus the
 # polytonic Extended Greek block (U+1F00–1FFF). U+037E GREEK QUESTION MARK and
@@ -69,13 +70,20 @@ def tokenize(text: str) -> list[Token]:
     ]
 
 
-def tokenize_aligned(text: str, *, document_id: str = "input") -> list[Token]:
+def _tokenize_aligned_result(
+    text: str,
+    *,
+    document_id: str = "input",
+    segmentation_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
+    segmentation_result: SegmentationResult | None = None,
+) -> list[Token]:
     """Tokenize *text* while retaining an immutable, lossless source mapping.
 
-    The token boundaries and sentence transitions intentionally use the exact same
-    regexes as :func:`tokenize` and the pipeline.  Model-facing text is NFC-normalized
-    in the alignment only; ``Token.text`` remains the original token text so legacy
-    callers retain their established values.
+    Token pieces are exactly those returned by :func:`tokenize`; sentence identities
+    come from the shared segmenter and may not bisect one of those atomic pieces.
+    Model-facing text is NFC-normalized in the alignment only; ``Token.text`` remains
+    the original token text so legacy callers retain their established values.
     """
     if not isinstance(text, str):
         raise TypeError("text must be a string")
@@ -84,16 +92,43 @@ def tokenize_aligned(text: str, *, document_id: str = "input") -> list[Token]:
     if not document_id:
         raise ValueError("document_id must be a non-empty string")
 
+    segmentation = (
+        segmentation_result
+        if segmentation_result is not None
+        else segment_text(text, policy=segmentation_policy, segmenter=segmenter)
+    )
+    if segmentation.source != text:
+        raise ValueError("segmentation_result belongs to a different source")
+    raw_spans = _token_spans(text)
+    boundary_points = [
+        point
+        for boundary in segmentation.boundaries
+        for point in (boundary.start, boundary.end)
+    ]
+    token_index = 0
+    for point in boundary_points:
+        while token_index < len(raw_spans) and raw_spans[token_index][3] <= point:
+            token_index += 1
+        if token_index < len(raw_spans):
+            token_start, token_end = raw_spans[token_index][2:]
+            if token_start < point < token_end:
+                raise ValueError("sentence boundary bisects a token")
     source_digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     tokens: list[Token] = []
     previous_end = 0
     sentence_ordinal = 0
-    for ordinal, (token_text, kind, start, end) in enumerate(_token_spans(text)):
+    for ordinal, (token_text, kind, start, end) in enumerate(raw_spans):
+        while (
+            sentence_ordinal + 1 < len(segmentation.boundaries)
+            and start >= segmentation.boundaries[sentence_ordinal].end
+        ):
+            sentence_ordinal += 1
+        sentence_id = f"{document_id}:sentence:{sentence_ordinal}"
         normalized = unicodedata.normalize("NFC", token_text)
         ops = ("unicode:nfc",) if normalized != token_text else ()
         alignment = SourceAlignment(
             document_id=document_id,
-            sentence_id=f"{document_id}:sentence:{sentence_ordinal}",
+            sentence_id=sentence_id,
             source_token_id=f"{document_id}:{source_digest}:{ordinal}:{start}-{end}",
             original_text=token_text,
             start_char=start,
@@ -104,11 +139,30 @@ def tokenize_aligned(text: str, *, document_id: str = "input") -> list[Token]:
         )
         tokens.append(Token(token_text, kind, position=ordinal, alignment=alignment))
         previous_end = end
-        if kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(token_text):
-            sentence_ordinal += 1
     return tokens
 
 
-def sentences(text: str) -> list[str]:
-    """Split into trimmed sentences on Greek sentence-final punctuation."""
-    return [s.strip() for s in _SENTENCE_SPLIT_RE.split(text) if s.strip()]
+def tokenize_aligned(
+    text: str,
+    *,
+    document_id: str = "input",
+    sentence_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
+) -> list[Token]:
+    """Tokenize with lossless alignment under one named sentence policy."""
+    return _tokenize_aligned_result(
+        text,
+        document_id=document_id,
+        segmentation_policy=sentence_policy,
+        segmenter=segmenter,
+    )
+
+
+def sentences(
+    text: str,
+    *,
+    sentence_policy: str = "default",
+    segmenter: SegmenterLike | None = None,
+) -> list[str]:
+    """Project rich, policy-aware segmentation to the legacy list-of-strings shape."""
+    return list(segment_text(text, policy=sentence_policy, segmenter=segmenter).sentences)

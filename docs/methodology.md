@@ -77,9 +77,26 @@ as `greek.use_treebank()`, `greek.use_tagger()`, and
 `greek.use_neural_pipeline()` deliberately change the active backend. For
 concurrent or independently configured work, `GreekPipeline()` creates an
 isolated baseline and `GreekPipeline.neural()` creates an isolated neural
-runtime. Its immutable configuration records the model, tokenizer,
-normalization, segmentation policy, and execution provider. This makes the
-meaning of "the pipeline" inspectable rather than implicit.
+runtime. Its immutable configuration records the model, tokenizer, annotation
+profile, normalization, backend segmentation contract, and execution provider.
+The baseline contract is `pyaegean-punctuation-v1`; for the published
+`grc-joint-v3` bundle the neural contract is `pretokenized`, meaning that the model
+receives sentence-sized word lists and does not choose document boundaries. Neither
+backend identity is the per-call document splitter: `sentence_policy` is the separate
+choice that groups raw or typed text before analysis.
+
+The public segmentation API is deterministic and source-preserving. `greek.segment_text()`
+exposes the named `default`, `prose`, `verse`,
+`inscription`, and `papyrus` policies as `SegmentationResult` objects with ordered
+half-open source spans, stable policy IDs, and provenance. Built-in rules do not
+claim confidence. A caller-supplied segmenter may provide confidence metadata, but
+the runtime validates bounds, ordering, coverage, and policy identity; the
+tokenization path additionally rejects token-bisecting spans before using them.
+For pre-tokenized input, complete contiguous explicit
+`SourceAlignment.sentence_id` runs take precedence over policy and punctuation;
+partial or non-contiguous IDs are rejected. This preserves edition-provided
+sentence structure without silently merging it with heuristics.
+`greek.segment_sentences()` is an alias for `segment_text()`.
 
 Randomized analytical methods accept or record their seed. An
 `AnalysisReceipt` records the model and dataset identities, model-manifest

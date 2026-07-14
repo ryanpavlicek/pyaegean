@@ -250,6 +250,17 @@ from .meter import (
 from .phonology import to_ipa
 from .pos import pos_tag, pos_tags
 from .syllabify import syllabify
+from .sentence_segmentation import (
+    RuleBasedSentenceSegmenter,
+    POLICY_RULES,
+    POLICY_IDS,
+    SegmentationResult,
+    SentenceBoundary,
+    SentenceSegmenter,
+    segment_sentences,
+    segment_text,
+    validate_segmentation_result,
+)
 from .tokenize import sentences, tokenize, tokenize_aligned, tokenize_words
 
 
@@ -306,6 +317,15 @@ __all__ = [
     "tokenize_aligned",
     "tokenize_words",
     "sentences",
+    "segment_text",
+    "segment_sentences",
+    "SentenceSegmenter",
+    "SentenceBoundary",
+    "SegmentationResult",
+    "RuleBasedSentenceSegmenter",
+    "POLICY_RULES",
+    "POLICY_IDS",
+    "validate_segmentation_result",
     "syllabify",
     "accentuation",
     "AccentInfo",

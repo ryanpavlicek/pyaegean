@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:  # type-only: keep this module import-clean
     from .core.model import Document
     from .greek.pipeline import TokenRecord
+    from .greek.sentence_segmentation import SegmenterLike
 
 __all__ = [
     "balance_rows",
@@ -88,7 +89,12 @@ def balance_rows(document: "Document") -> list[dict[str, Any]]:
 
 
 def pipeline_rows(
-    text: str, *, parse: bool = False, with_confidence: bool = False
+    text: str,
+    *,
+    parse: bool = False,
+    with_confidence: bool = False,
+    sentence_policy: str = "default",
+    segmenter: "SegmenterLike | None" = None,
 ) -> list[dict[str, Any]]:
     """One row per token from the Greek analysis pipeline.
 
@@ -112,7 +118,13 @@ def pipeline_rows(
     from .greek import pipeline
 
     return pipeline_rows_from_records(
-        pipeline(text, parse=parse, with_confidence=with_confidence)
+        pipeline(
+            text,
+            parse=parse,
+            with_confidence=with_confidence,
+            sentence_policy=sentence_policy,
+            segmenter=segmenter,
+        )
     )
 
 
@@ -157,6 +169,17 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
         }
         for r in records
     ]
+    for row, record in zip(rows, records):
+        row.update(
+            {
+                "boundary_policy": record.boundary_policy,
+                "boundary_policy_id": record.boundary_policy_id,
+                "boundary_provenance": record.boundary_provenance,
+                "boundary_confidence": record.boundary_confidence,
+                "boundary_start_char": record.boundary_start_char,
+                "boundary_end_char": record.boundary_end_char,
+            }
+        )
     for row, record in zip(rows, records):
         form_state = getattr(record, "form_state", None)
         if form_state is not None:

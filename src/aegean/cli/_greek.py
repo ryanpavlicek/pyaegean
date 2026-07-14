@@ -322,14 +322,39 @@ def strip(text: str = TEXT_ARG) -> None:
 def tokenize(
     text: str = TEXT_ARG,
     sentences: bool = typer.Option(False, "--sentences", help="Split into sentences instead."),
+    sentence_policy: str = typer.Option("default", "--sentence-policy", help="Sentence policy: default, prose, verse, inscription, or papyrus."),
+    rich: bool = typer.Option(False, "--rich", help="Include source spans and boundary provenance with --sentences."),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Tokenize into words+punctuation (or sentences with --sentences)."""
     from aegean import greek
 
     s = read_text(text)
+    if rich and not sentences:
+        raise fail("--rich requires --sentences")
     if sentences:
-        out = greek.sentences(s)
+        try:
+            result = greek.segment_text(s, policy=sentence_policy)
+        except (TypeError, ValueError) as exc:
+            raise fail(str(exc)) from None
+        if rich and not json_out:
+            typer.echo(f"policy: {result.policy} ({result.policy_id})")
+            table(
+                "sentence boundaries",
+                ["start", "end", "provenance", "confidence", "text"],
+                [
+                    [
+                        str(item.start),
+                        str(item.end),
+                        item.provenance,
+                        "" if item.confidence is None else str(item.confidence),
+                        item.text(s),
+                    ]
+                    for item in result.boundaries
+                ],
+            )
+            return
+        out = result.to_dict() if rich else list(result.sentences)
     else:
         out = [t.text for t in greek.tokenize(s)]
     if json_out:
@@ -933,6 +958,11 @@ def pipeline(
         "--windowed",
         help="Analyze supported long neural input in overlapping whole-word windows.",
     ),
+    sentence_policy: str = typer.Option(
+        "default",
+        "--sentence-policy",
+        help="Sentence policy: default, prose, verse, inscription, or papyrus.",
+    ),
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -954,6 +984,7 @@ def pipeline(
             parse=parse,
             with_confidence=confidence,
             long_input="partial" if partial else "windowed" if windowed else "strict",
+            sentence_policy=sentence_policy,
         )
     except greek.ParserNotLoadedError:
         raise fail("--parse needs a parser — pass --neural (best) or --parser") from None

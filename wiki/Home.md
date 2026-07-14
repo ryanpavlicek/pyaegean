@@ -5,7 +5,7 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, research tools, translation grounding,
 and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.45.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.46.0 (beta).** The API may still shift before 1.0.
 > This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
@@ -66,7 +66,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Cypriot](Cypriot) | Chiefly Arcado-Cypriot Greek (the corpus also carries Eteocypriot and undetermined material): 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`), and a bundled **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) plus two illustrative samples (**180 documents** total) |
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge: the script is undeciphered) |
 | [Analysis](Analysis) | Accounting checks, sign-pattern and phonetic search, cross-script comparison, clustering, collocation and corpus statistics, structure detection, and a query engine |
-| [Greek NLP](Greek-NLP) | Core text utilities, metre, IPA, tagging, morphology, lemmatization, parsing, dictionaries, and 1,778 discoverable works; optional treebank, pure-Python, and neural backends, with the neural pipeline measured at 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS on the UD Perseus test fold |
+| [Greek NLP](Greek-NLP) | Core text utilities, named source-preserving sentence policies, metre, IPA, tagging, morphology, lemmatization, parsing, dictionaries, and 1,778 discoverable works; optional treebank, pure-Python, and neural backends, with the neural pipeline measured at 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS on the UD Perseus test fold |
 | Greek corpora ([Data & Provenance](Data-and-Provenance)) | Beyond the bundled sample: the gold-annotated **Greek New Testament** (`aegean.load("nt")`, Nestle 1904: lemma, morphology, Strong's) and six fetch-on-demand epigraphic/papyrological corpora: **I.Sicily** (2,855), **IIP** (2,113), **IOSPE** (1,194), **IGCyr/GVCyr** (997), **EDH** (1,286), and the **DDbDP documentary papyri** (57,331 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp`) |
 | [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, Parquet, CoNLL-U, Turtle, and JSON-LD, with typed editorial forms |
 | [CLI](CLI) | The toolkit from a terminal: guided quickstart, REPL, optional full-screen TUI, corpus and Greek commands, data management, diagnostics, JSON output, and stdin piping |
@@ -94,8 +94,8 @@ See [Installation](Installation) for the full extras matrix, and
 
 The changelog records what has shipped. Current work is focused on:
 
-- finishing the model-independent Greek foundations: edition-aware sentence segmentation,
-  source-aware confidence and abstention, bounded-memory document analysis, optional
+- continuing the model-independent Greek foundations: source-aware confidence and abstention,
+  bounded-memory document analysis, optional
   spaCy/Stanza/CLTK adapters, explicit annotation and domain profiles, and shared
   versioned training/inference preprocessing;
 - comparing deterministic and neural translation grounding on matched passages

@@ -244,6 +244,67 @@ def test_greek_tokenize(app):
     assert sents.splitlines() == ["ἦν ὁ λόγος", "καὶ θεός ἦν"]
 
 
+def test_greek_sentence_policy_cli(app):
+    rich = json.loads(
+        ok(
+            app,
+            "greek",
+            "tokenize",
+            "α\nβ",
+            "--sentences",
+            "--sentence-policy",
+            "verse",
+            "--rich",
+            "--json",
+        )
+    )
+    assert rich["policy"] == "verse"
+    assert rich["policy_id"] == "pyaegean-sentence-verse-v1"
+    assert [item["text"] for item in rich["boundaries"]] == ["α", "β"]
+
+    rendered = ok(
+        app,
+        "greek",
+        "tokenize",
+        "α\nβ",
+        "--sentences",
+        "--sentence-policy",
+        "verse",
+        "--rich",
+    )
+    assert "pyaegean-sentence-verse-v1" in rendered
+    assert "confidence" in rendered
+
+    invalid = err(
+        app,
+        "greek",
+        "tokenize",
+        "α",
+        "--sentences",
+        "--sentence-policy",
+        "unknown",
+    )
+    assert "unknown segmentation policy" in invalid
+    assert "Traceback" not in invalid
+    assert "requires --sentences" in err(app, "greek", "tokenize", "α", "--rich")
+
+    rows = json.loads(
+        ok(
+            app,
+            "greek",
+            "pipeline",
+            "α\nβ",
+            "--sentence-policy",
+            "verse",
+            "--json",
+        )
+    )
+    assert [row["boundary_policy_id"] for row in rows] == [
+        "pyaegean-sentence-verse-v1",
+        "pyaegean-sentence-verse-v1",
+    ]
+
+
 def test_greek_syllabify_with_exception(app):
     out = ok(app, "greek", "syllabify", "εἰσφέρω", "ἄνθρωπος")
     assert "εἰσ-φέ-ρω" in out and "ἄν-θρω-πος" in out

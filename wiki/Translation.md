@@ -393,7 +393,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
 | `--greek-backend` | `default` | `default` (module facade), `baseline` (isolated), or `neural` (isolated joint model). Greek only. |
-| `--greek-long-input` | `strict` | Neural sentence policy: `strict`, explicitly incomplete `partial`, or overlapping `windowed`. Greek only. |
+| `--greek-long-input` | `strict` | Neural long-input handling: `strict`, explicitly incomplete `partial`, or overlapping `windowed`. Greek only. |
 | `--grounding-failure` | `best-effort` | `best-effort` keeps available evidence and records degradation; `strict` stops before a provider call if required grounding fails. |
 | `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |
 | `--model` | provider default | Model override. |

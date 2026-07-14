@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available in v0.45.0.** Typed source alignment, typed editorial form states,
+> **Available in v0.46.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
@@ -36,7 +36,7 @@ L7  interfaces            cli (the aegean CLI and REPL) · tui (aegean tui)
                           aegean._view, so those surfaces cannot drift
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
 L5  translate             hybrid: lexicon/morphology grounding → LLM
-L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/syllabify/…)
+L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/sentence policies/…)
 L4  io · geo · data · db  aegean.io (text/CSV import · EpiDoc/CSV/Parquet export)
                           · aegean.geo (GeoDataFrame) · bundled registry + cache
                           · aegean.db (SQLite)
@@ -61,6 +61,27 @@ third-party packages.** pandas, lxml, the provider SDKs, matplotlib: all of
 them are lazy-imported inside the functions that need them, and each lives behind
 an [extra](Installation) you opt into. So the data model below is always
 available, even on a bare Python install.
+
+### Sentence segmentation is a validated seam
+
+The Greek layer keeps document sentence segmentation separate from model inference.
+`segment_text()` applies one of the named rule policies (`default`, `prose`, `verse`,
+`inscription`, or `papyrus`) and returns immutable, source-preserving boundaries.
+`segmenter=` is an extension seam for an edition-specific callback or
+`SentenceSegmenter` implementation. Results are normalized and checked for complete
+non-whitespace coverage, ordering, bounds, and a non-spoofed policy identity.
+Tokenization additionally rejects token-bisecting spans before analysis uses them.
+Built-in boundaries are rules,
+not calibrated confidence values; a plugin may attach finite confidence metadata.
+
+The seam is intentionally independent of script plugins: it does not add a script
+or loader and it does not make the core import any model runtime. The per-call
+`sentence_policy` controls how raw or typed text is grouped. In contrast,
+`GreekPipelineConfig.segmentation` records the backend's versioned preprocessing
+identity: the baseline uses `pyaegean-punctuation-v1`, while a neural instance copies
+the value from its `ModelBundleManifest` (`pretokenized` for the published
+`grc-joint-v3` model). Neither value is the document splitter. The neural model
+receives already split word lists and never chooses document boundaries.
 
 ---
 

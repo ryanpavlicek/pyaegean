@@ -37,14 +37,51 @@ then match what you see against the table below and decide.
 | Your material | Start with | The call that enables it | The trade-off |
 | --- | --- | --- | --- |
 | **Clean digital text** (a well-edited literary passage or `load_work` corpus) | the neural pipeline for measured generalization, or the treebank lexicon for attested-gold lemmas without heavy deps | `greek.use_neural_pipeline()` / `greek.use_treebank()` | the neural pipeline has published in-domain and out-of-domain measurements (see [Benchmarks](Benchmarks)) but needs the `[neural]` extra and a model fetch; the treebank stays light but only covers attested forms |
-| **A damaged inscription or papyrus** (restorations, lacunae, unclear readings) | any Greek tier on the *certain* text, plus the reading-status apparatus and a manual review of anything editorial | a Greek tier above, then `greek.needs_review(...)` and the `ReadingStatus` on each token | analysis of restored or lost text is editorial, not attested; treat it as a lead to check, not a result (see [Using Critical Editions](Using-Critical-Editions)) |
+| **A damaged inscription or papyrus** (restorations, lacunae, unclear readings) | any Greek tier on the *certain* text, plus the reading-status apparatus and a manual review of anything editorial | a Greek tier above, then `sentence_policy="inscription"` or `"papyrus"`, `greek.needs_review(...)`, and the `ReadingStatus` on each token | analysis of restored or lost text is editorial, not attested; treat it as a lead to check, not a result (see [Using Critical Editions](Using-Critical-Editions)) |
 | **OCR'd or noisy text** | lenient normalization to repair, then a tier, then a review pass | `greek.normalize(text, lenient=True)` first, then a backend | repair fixes common artifacts and warns about each, but garbage in is still garbage out: plan to review |
 | **Teaching** | the offline baseline plus a concise dictionary | default (no backend), with `greek.use_dodson()` or `greek.use_lexicon("middle-liddell")` for glosses | favours transparency, an instant import, and reproducibility over the last points of accuracy; the rules are inspectable and the same for every student |
+| **Verse or line-oriented material** | the same backend, with physical-line boundaries made explicit | `greek.pipeline(text, sentence_policy="verse")` or `greek.segment_text(text, policy="verse")` | every non-empty physical line becomes a sentence boundary; confirm that this matches the edition's sentence convention |
 | **Benchmarking** | the evaluation harness on leakage-clean folds | `greek.evaluate_on_ud(...)` / `greek.bootstrap_ud(...)` | scores what the code actually does against gold, with out-of-domain always reported next to in-family (see [Benchmarks](Benchmarks)) |
 
 Glossing is a separate axis from tagging: the **dictionary registry**
 (`use_lsj`, `use_dodson`, `use_lexicon`) answers "what does this word mean" and
 composes with any of the tagging tiers above.
+
+## Choose sentence segmentation explicitly
+
+Sentence segmentation is a document decision, separate from the choice of tagger,
+lemmatizer, parser, or neural model. The default is conservative and protects dotted
+abbreviations and numbers. Use a named policy when the source has a different
+boundary convention:
+
+| Policy | Best fit | Boundary behavior |
+| --- | --- | --- |
+| `default` | mixed or unknown text | period, semicolon/Greek question mark, ano teleia/middle dot, `!`, and `?`, with dotted abbreviations/numbers protected |
+| `prose` | literary prose | the same conservative punctuation rules, with a descriptive name |
+| `verse` | lineated verse | prose rules plus each non-empty physical line |
+| `inscription` | epigraphic text | only strong `.`, `!`, and `?`; weak marks stay in the current sentence |
+| `papyrus` | papyrological text with editorial brackets | strong `.`, `!`, and `?`; marks inside balanced `[]`, `⟦⟧`, and `<>` are ignored |
+
+```python
+from aegean import greek
+
+result = greek.segment_text(text, policy="papyrus")
+records = greek.pipeline(text, sentence_policy="papyrus")
+```
+
+`segment_text()` returns exact source spans and a stable `policy_id`; the historical
+`greek.sentences()` projection still returns trimmed strings without terminal marks.
+For a source-specific rule, pass a `SentenceSegmenter`-compatible object or callable
+as `segmenter=`. pyaegean validates that plugin output is ordered, non-overlapping,
+in range, and gap-free over non-whitespace text; tokenization additionally rejects
+boundaries that bisect a token. Built-in
+rules have no confidence score; a plugin confidence, when supplied, is only metadata
+in `[0, 1]`, not a calibration claim.
+
+When using `pipeline_tokens()`, complete contiguous `SourceAlignment.sentence_id`
+runs take precedence over punctuation, the selected policy, and any plugin. Partial
+or non-contiguous IDs are rejected. This lets an edition's explicit sentence IDs win
+without silently mixing them with a heuristic splitter.
 
 ## The backends, and their trade-offs
 
@@ -60,9 +97,13 @@ composes with any of the tagging tiers above.
 The `use_*` calls select the convenient module-level default. A server, notebook host, or
 test suite that needs configurations to coexist should construct `GreekPipeline()` for an
 isolated baseline or `GreekPipeline.neural()` for an isolated neural runtime. Its immutable
-`config` records the model, tokenizer, profile, normalization and segmentation policy, and
-live execution providers. `GreekPipeline.from_config(...)` refuses a different live
-configuration rather than silently substituting it.
+`config` records the model, tokenizer, profile, normalization, and the backend's
+segmentation contract (for a neural instance, copied from the model manifest), plus
+live execution providers. The baseline's contract is `pyaegean-punctuation-v1`; a
+neural instance copies its `pretokenized` value from the model manifest. Neither is
+the document's `sentence_policy`.
+Choose `sentence_policy` on each `analyze()`/`pipeline()` call. `GreekPipeline.from_config(...)`
+refuses a different live configuration rather than silently substituting it.
 
 A few notes that decide most cases:
 

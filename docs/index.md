@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.45.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.46.0 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
@@ -63,9 +63,10 @@ The [getting-started notebook](https://colab.research.google.com/github/ryanpavl
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-The current release includes isolated `GreekPipeline` instances, explicit safe policies for
-overlength neural input, exact analysis receipts, source alignment, typed editorial form states,
-and lossless CoNLL-U structure. The
+The current release includes source-preserving named sentence policies, isolated
+`GreekPipeline` instances, explicit safe handling for overlength neural input, exact
+analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
+structure. The
 [Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
 shows runnable examples.
 

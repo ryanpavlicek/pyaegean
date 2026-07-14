@@ -88,6 +88,8 @@ def test_view_rows_have_no_confidence_keys_by_default() -> None:
         "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
         "head", "relation", "xpos", "feats", "neural_analyzed",
         "analysis_complete", "analysis_warning", "analysis_receipt",
+        "boundary_policy", "boundary_policy_id", "boundary_provenance",
+        "boundary_confidence", "boundary_start_char", "boundary_end_char",
         "alignment_document_id", "alignment_sentence_id",
         "alignment_source_token_id", "alignment_original_text",
         "alignment_start_char", "alignment_end_char",

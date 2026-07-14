@@ -301,6 +301,9 @@ fields and persistence roles are otherwise separate.
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `alignment` | exact source identity, original/normalized text, span, and whitespace |
 | `form_state` | typed editorial forms and exact model input when records came from `pipeline_tokens()` |
+| `boundary_policy`, `boundary_policy_id` | named sentence policy and stable policy identity on the sentence's terminal record |
+| `boundary_provenance`, `boundary_confidence` | boundary evidence class; built-in rules have `None` confidence, while plugins may supply `[0, 1]` metadata |
+| `boundary_start_char`, `boundary_end_char` | half-open source span for that sentence when all token alignments prove it; otherwise `None` |
 
 ```python
 from aegean import greek
@@ -324,6 +327,27 @@ for r in records:
 0 8 ἡμῖν       NOUN   ἐγώ        seed           resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 0 9 .          PUNCT  .          punct          resolved=True  verified=False review=False head=None relation=None xpos=None feats=None
 ```
+
+### Sentence boundaries and precedence
+
+`greek.segment_text()` returns a `SegmentationResult` containing the exact source,
+ordered `SentenceBoundary` values, a named policy, a stable `policy_id`, and a
+`provenance` value (`rule`, `explicit`, or `plugin`). Boundary `start`/`end` (also
+exposed as `start_char`/`end_char`) are half-open Python code-point offsets. The
+rich result retains punctuation in each source slice; `greek.sentences()` remains
+the compatibility projection with trimmed strings and terminal marks removed.
+`SegmentationResult.to_json()` and `.from_json()` use a strict schema and verify
+that boundary text, spans, policy, and IDs agree.
+
+For raw `pipeline()` input, `sentence_policy` selects the named rules before
+tokenization. For `pipeline_tokens()` input, complete contiguous runs of
+`Token.alignment.sentence_id` are explicit sentence metadata and take precedence
+over punctuation, the named policy, and any segmenter callback. Partial,
+non-contiguous, or cross-document IDs are rejected. If explicit IDs are absent,
+the selected policy is applied to the typed token stream; editorial punctuation
+whose status is `UNCLEAR`, `RESTORED`, or `LOST` does not create an observed boundary.
+Only the terminal record receives `boundary_*` metadata. A missing source span means
+the alignments did not prove one, not that an approximate offset was invented.
 
 This is the zero-dependency baseline being honest: the forms it cannot ground
 come back `unresolved` with the surface form as the lemma, never a fabricated

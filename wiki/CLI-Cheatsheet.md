@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.45.0.** The CoNLL-U and newer Greek pipeline controls are
+> **Available in v0.46.0.** The CoNLL-U and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.45.0
+aegean --version                # pyaegean 0.46.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -320,7 +320,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `normalize` | Unicode-normalize; `--lenient` repairs OCR/Beta-Code | `--form --lenient` | `aegean greek normalize "λόγoς" --lenient` |
 | `betacode` | Beta Code → polytonic Greek (`--reverse` for back) | `--reverse` | `aegean greek betacode "mh=nin"` |
 | `strip` | Strip all diacritics |— | `aegean greek strip "μῆνιν"` |
-| `tokenize` | Words + punctuation (or `--sentences`) | `--sentences --json` | `aegean greek tokenize "ἐν ἀρχῇ ἦν ὁ λόγος."` |
+| `tokenize` | Words + punctuation, or named-policy sentences | `--sentences --sentence-policy {default\|prose\|verse\|inscription\|papyrus} --rich --json` | `aegean greek tokenize "ἐν ἀρχῇ ἦν ὁ λόγος." --sentences --sentence-policy prose` |
 | `syllabify` | Split word(s) into syllables | `--json` | `aegean greek syllabify εἰσφέρω` |
 | `accent` | Accent type, position, classification | `--json` | `aegean greek accent λόγος` |
 | `accentuate` | **Predict** the accent from the accentuation laws (dichrona flagged) | `--recessive/--persistent --lemma --json` | `aegean greek accentuate λυε --recessive` |
@@ -341,7 +341,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
 | `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
-| `pipeline` | The one-call pipeline: per-token records | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial --windowed -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --json` |
+| `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
 | `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
@@ -350,6 +350,12 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
 | `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `verse` `dbbe` `tagger` `lemmatizer` `parser` | `--fold --split --track --layer --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
+
+`tokenize --sentences` defaults to `default`. `--sentence-policy` selects the
+named `prose`, `verse`, `inscription`, or `papyrus` rules. Add `--rich` (only with
+`--sentences`) to see exact source spans, stable policy IDs, and provenance; use
+`--json --rich` for the schema-1 object. The pipeline accepts the same policy
+option, and its terminal records carry the boundary metadata.
 
 ### Stages that work immediately
 
@@ -835,7 +841,7 @@ rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy o
 paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
 Choose `--greek-backend default|baseline|neural`; the isolated neural choice gives
 model-predicted contextual morphology and a UD parse without changing the module facade.
-`--greek-long-input strict|partial|windowed` separately selects the neural sentence policy;
+`--greek-long-input strict|partial|windowed` separately selects neural long-input handling;
 the default remains strict and the choice is recorded in runtime provenance.
 `--grounding-failure best-effort|strict` either keeps and traces available evidence or
 stops before a provider call when required local analysis fails. Runtime configuration is

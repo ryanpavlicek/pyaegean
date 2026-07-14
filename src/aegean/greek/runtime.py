@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from .joint import LongInputMode, SentenceAnalysis, _JointModel
     from .neural_contract import AnalysisReceipt
     from .pipeline import TokenRecord
+    from .sentence_segmentation import SegmenterLike
 
 __all__ = ["GreekPipeline", "GreekPipelineConfig", "default_pipeline"]
 
@@ -319,10 +320,15 @@ class GreekPipeline:
         with_confidence: bool = False,
         long_input: Literal["strict", "partial", "windowed"] = "strict",
         document_id: str = "input",
+        sentence_policy: str = "default",
+        segmenter: SegmenterLike | None = None,
     ) -> list[TokenRecord]:
         """Analyze text with this instance's backend and exact source alignment.
 
         ``document_id`` scopes the deterministic sentence and source-token IDs.
+        ``sentence_policy`` controls document splitting independently of the model
+        configuration's pretokenized-input segmentation contract. A caller-supplied
+        ``segmenter`` is validated before its boundaries reach the backend.
         """
         from .pipeline import _analyze_bound
 
@@ -333,6 +339,8 @@ class GreekPipeline:
                 with_confidence=with_confidence,
                 long_input=long_input,
                 document_id=document_id,
+                sentence_policy=sentence_policy,
+                segmenter=segmenter,
             )
 
     def analyze_tokens(
@@ -343,8 +351,14 @@ class GreekPipeline:
         with_confidence: bool = False,
         long_input: Literal["strict", "partial", "windowed"] = "strict",
         document_id: str = "input",
+        sentence_policy: str = "default",
+        segmenter: SegmenterLike | None = None,
     ) -> list[TokenRecord]:
-        """Analyze typed core tokens while retaining their alignment and form state."""
+        """Analyze typed tokens while retaining alignment and editorial form state.
+
+        Complete, contiguous alignment sentence IDs are authoritative. Otherwise,
+        ``sentence_policy`` or the validated external ``segmenter`` groups tokens.
+        """
         from .pipeline import _analyze_bound
 
         with _bind(self):
@@ -355,6 +369,8 @@ class GreekPipeline:
                 long_input=long_input,
                 document_id=document_id,
                 typed_tokens=tokens,
+                sentence_policy=sentence_policy,
+                segmenter=segmenter,
             )
 
     def analyze_sentence(

@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.45.0.** The CoNLL-U commands and the long-input,
+> **Available in v0.46.0.** The CoNLL-U commands and the long-input,
 > source-alignment, and analysis-receipt fields shown below are part of the
 > current release.
 
@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.45.0
+aegean --version          # pyaegean 0.46.0
 ```
 
 | Group | What's in it |
@@ -1220,7 +1220,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.45.0                    │
+│ OK │ pyaegean │ 0.46.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1308,6 +1308,24 @@ aegean greek gloss μῆνις --dict cunliffe           # gloss from a chosen d
 aegean greek lexica                                # list the available dictionaries
 aegean greek lexicon-link λόγον                    # a Logeion deep-link (→ …/λόγος when the offline lemmatizer resolves the form, else the word as typed)
 ```
+
+### Sentence policies and rich boundaries
+
+`tokenize --sentences` uses the conservative `default` policy. Choose a named
+policy with `--sentence-policy {default|prose|verse|inscription|papyrus}`:
+
+```bash
+cat poem.txt | aegean greek tokenize --sentences --sentence-policy verse -
+aegean greek tokenize --sentences --sentence-policy papyrus "[λόγος.] καί."
+```
+
+Add `--rich` to inspect source spans and boundary provenance. It requires
+`--sentences`; with `--json` the result is a schema-1 object containing the exact
+`source`, `policy`, stable `policy_id`, `provenance`, `boundaries` (`start`/`end`
+and `start_char`/`end_char`), and the historical `sentences` projection. Without
+`--json`, `--rich` renders a boundary table. Built-in rules are deterministic and
+report an empty confidence cell. A caller-supplied segmenter is available in Python
+(`greek.segment_text(..., segmenter=...)`), where output is validated before use.
 
 Real runs:
 
@@ -1418,6 +1436,14 @@ aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."          # UPOS per to
 aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --json   # per-token records in one call
 aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."           # what each stage did, in plain language
 ```
+
+`pipeline` accepts the same `--sentence-policy` values as `tokenize`. The
+selected policy determines sentence indexes and is recorded on the terminal
+token of each sentence as `boundary_policy`, `boundary_policy_id`,
+`boundary_provenance`, optional `boundary_confidence`, and source span fields.
+This per-call document policy is separate from the neural model manifest's
+`segmentation: pretokenized` contract: the model receives the already split word
+lists and does not choose document boundaries.
 
 A lemma that the lexicon doesn't know is still returned, marked `(fallback)` (and
 `"known": false` in JSON), so you can tell a real hit from a heuristic guess.
