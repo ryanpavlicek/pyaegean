@@ -3,7 +3,7 @@ workbench ``src/lib/algorithms.properties.test.ts``."""
 
 from __future__ import annotations
 
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from aegean.analysis import (
@@ -21,6 +21,9 @@ from aegean.analysis import (
 # same-class / far branches are all exercised.
 _phoneme = st.text(alphabet="aeioukgptdbmnrlsz", max_size=8)
 _tokens = st.lists(st.sampled_from(["a", "b", "c", "d"]), max_size=8)
+_BOUNDED_SEQUENCE_SETTINGS = settings(
+    suppress_health_check=[HealthCheck.too_slow]
+)
 
 
 @st.composite
@@ -58,17 +61,20 @@ def test_distance_positive_for_distinct(a, b):
 
 
 # ── sequence distance / similarity ───────────────────────────────────────────
+@_BOUNDED_SEQUENCE_SETTINGS
 @given(_tokens, _tokens)
 def test_sequence_symmetric_and_zero(a, b):
     assert sequence_distance(a, b) == sequence_distance(b, a)
     assert sequence_distance(a, a) == 0
 
 
+@_BOUNDED_SEQUENCE_SETTINGS
 @given(_tokens, _tokens)
 def test_sequence_bounded(a, b):
     assert sequence_distance(a, b) <= max(len(a), len(b))
 
 
+@_BOUNDED_SEQUENCE_SETTINGS
 @given(_tokens, _tokens)
 def test_sequence_similarity_bounds(a, b):
     sim = sequence_similarity(a, b)

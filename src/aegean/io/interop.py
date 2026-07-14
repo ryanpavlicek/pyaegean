@@ -382,6 +382,42 @@ class InteropDocument:
         known_sentences = {sent.sent_id for sent in self.ud_document.sentences}
         if any(key not in known_sentences for key in sentences):
             raise InteropSchemaError("sentence metadata references a non-existent sentence")
+        receipts_by_sentence: dict[str, set[AnalysisReceipt]] = {
+            sent_id: set() for sent_id in known_sentences
+        }
+        for (sent_id, _token_id), metadata in tokens.items():
+            if metadata.analysis_receipt is not None:
+                receipts_by_sentence[sent_id].add(metadata.analysis_receipt)
+        for sent_id, sentence_metadata in sentences.items():
+            if sentence_metadata.analysis_receipt is not None:
+                receipts_by_sentence[sent_id].add(sentence_metadata.analysis_receipt)
+        if any(len(receipts) > 1 for receipts in receipts_by_sentence.values()):
+            raise InteropSchemaError("analysis receipts must agree within a sentence")
+        analysis_receipts = tuple(
+            next(iter(receipts)) for receipts in receipts_by_sentence.values() if receipts
+        )
+        inference_profiles = {receipt.annotation_profile for receipt in analysis_receipts}
+        if len(inference_profiles) > 1:
+            raise InteropSchemaError(
+                "analysis receipts contain more than one annotation profile"
+            )
+        if self.annotation_profile is not None and any(
+            receipt.annotation_profile != self.annotation_profile
+            for receipt in analysis_receipts
+        ):
+            raise InteropSchemaError("annotation_profile disagrees with analysis receipt")
+        output_profiles = {
+            (
+                receipt.output_profile_id,
+                receipt.output_profile_sha256,
+                receipt.postprocessing,
+            )
+            for receipt in analysis_receipts
+        }
+        if len(output_profiles) > 1:
+            raise InteropSchemaError(
+                "analysis receipts contain more than one output analysis profile"
+            )
         alignments: list[SourceAlignment] = []
         for key, metadata in tokens.items():
             if metadata.alignment is None:

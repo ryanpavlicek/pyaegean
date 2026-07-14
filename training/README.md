@@ -59,7 +59,8 @@ from the cache.
 
 Candidate joint checkpoints use the dependency-free
 `aegean.greek.neural_preprocessing` contract in both training and package inference. Its
-version is saved in `labels.json` together with the canonical annotation profile, NFC
+version is saved in `labels.json` together with the canonical annotation profile
+`pyaegean-canonical-v1`, NFC
 normalization, pretokenized segmentation, Roberta special-token policy, and subword limit.
 The same implementation performs first-subword alignment, removes a final word split by
 right truncation, builds tag/dependency/edit-script supervision, and composes lookup,

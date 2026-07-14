@@ -13367,12 +13367,24 @@
       "canonical": "aegean.greek.accent_law.AccentPlacement",
       "kind": "class"
     },
+    "aegean.greek.AmbiguityDisclosure": {
+      "canonical": "aegean.greek.annotation_profiles.AmbiguityDisclosure",
+      "kind": "class"
+    },
     "aegean.greek.Analysis": {
       "canonical": "aegean.greek.morphology.Analysis",
       "kind": "class"
     },
+    "aegean.greek.AnalysisProfile": {
+      "canonical": "aegean.greek.annotation_profiles.AnalysisProfile",
+      "kind": "class"
+    },
     "aegean.greek.AnalysisReceipt": {
       "canonical": "aegean.greek.neural_contract.AnalysisReceipt",
+      "kind": "class"
+    },
+    "aegean.greek.AnnotationProfile": {
+      "canonical": "aegean.greek.annotation_profiles.AnnotationProfile",
       "kind": "class"
     },
     "aegean.greek.COORDINATORS": {
@@ -13427,6 +13439,10 @@
       "canonical": "aegean.greek.koine.DodsonNotLoadedError",
       "kind": "class"
     },
+    "aegean.greek.DomainProfile": {
+      "canonical": "aegean.greek.annotation_profiles.DomainProfile",
+      "kind": "class"
+    },
     "aegean.greek.DriftReport": {
       "canonical": "aegean.greek.proiel.DriftReport",
       "kind": "class"
@@ -13473,6 +13489,10 @@
     },
     "aegean.greek.LSJLexicon": {
       "canonical": "aegean.greek.lexicon.LSJLexicon",
+      "kind": "class"
+    },
+    "aegean.greek.LabelMapping": {
+      "canonical": "aegean.greek.annotation_profiles.LabelMapping",
       "kind": "class"
     },
     "aegean.greek.LemmaSource": {
@@ -13557,6 +13577,26 @@
     },
     "aegean.greek.PosStat": {
       "canonical": "aegean.greek.erroranalysis.PosStat",
+      "kind": "class"
+    },
+    "aegean.greek.PostprocessingStep": {
+      "canonical": "aegean.greek.annotation_profiles.PostprocessingStep",
+      "kind": "class"
+    },
+    "aegean.greek.ProfileError": {
+      "canonical": "aegean.greek.annotation_profiles.ProfileError",
+      "kind": "class"
+    },
+    "aegean.greek.ProfileEvidence": {
+      "canonical": "aegean.greek.annotation_profiles.ProfileEvidence",
+      "kind": "class"
+    },
+    "aegean.greek.ProfileMappingError": {
+      "canonical": "aegean.greek.annotation_profiles.ProfileMappingError",
+      "kind": "class"
+    },
+    "aegean.greek.ProfileSchemaError": {
+      "canonical": "aegean.greek.annotation_profiles.ProfileSchemaError",
       "kind": "class"
     },
     "aegean.greek.RarityResult": {
@@ -14657,6 +14697,12 @@
           "name": "source"
         }
       ],
+      "returns": true
+    },
+    "aegean.greek.canonical_analysis_profile": {
+      "canonical": "aegean.greek.annotation_profiles.canonical_analysis_profile",
+      "kind": "function",
+      "params": [],
       "returns": true
     },
     "aegean.greek.canonical_json": {
@@ -16277,6 +16323,30 @@
           "default": true,
           "kind": "keyword-only",
           "name": "np"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.get_annotation_profile": {
+      "canonical": "aegean.greek.annotation_profiles.get_annotation_profile",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "profile_id"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.get_domain_profile": {
+      "canonical": "aegean.greek.annotation_profiles.get_domain_profile",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "profile_id"
         }
       ],
       "returns": true
@@ -17972,6 +18042,18 @@
           "name": "index"
         }
       ],
+      "returns": true
+    },
+    "aegean.greek.list_annotation_profiles": {
+      "canonical": "aegean.greek.annotation_profiles.list_annotation_profiles",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.greek.list_domain_profiles": {
+      "canonical": "aegean.greek.annotation_profiles.list_domain_profiles",
+      "kind": "function",
+      "params": [],
       "returns": true
     },
     "aegean.greek.list_fetched_works": {

@@ -19,8 +19,10 @@ torch-free ONNX.
 
 The structural source of truth is the complete `UDDocument` row stream. An
 `InteropDocument` adds exact source alignment, typed editorial forms, confidence,
-receipts, profile identity, and provenance when present. Fields a target cannot
-represent are carried in the canonical `aegean.interop/v1` JSON sidecar.
+receipts, inference annotation-profile identity, any composed output-profile identity,
+and provenance when present. Fields a target cannot represent are carried in the
+canonical `aegean.interop/v1` JSON sidecar. The v1 sidecar carries profile identities
+through receipts; it does not embed custom profile objects.
 
 ```mermaid
 flowchart LR
@@ -45,7 +47,7 @@ signature or proof of authorship.
 | Exact arbitrary whitespace/source alignment | sidecar | native where supported + sidecar | exact raw offsets + sidecar |
 | MWT ranges | sidecar | native + sidecar | sidecar |
 | Empty nodes, opaque rows, exact row order | sidecar | sidecar | sidecar |
-| Confidence, receipt, profile, provenance | sidecar | sidecar | selected native metadata + sidecar |
+| Confidence, receipt, inference/output profile identity, provenance | sidecar | sidecar | selected native metadata + sidecar |
 
 Strict framework import refuses missing, mismatched, or hash-inconsistent sidecars. Plain native CoNLL-U
 without a sidecar remains a valid native-only import. `allow_lossy=True` is an
@@ -66,4 +68,6 @@ portable and inspectable, and is not presented as a framework-specific binary
 format.
 
 The adapters move existing analysis. They do not invoke a model, convert treebank
-conventions, or turn preserved gold MWT/empty-node structure into a prediction.
+conventions, or turn preserved gold MWT/empty-node structure into a prediction. The
+annotation registry exposes declared diagnostic mappings, but no adapter applies a
+source-compatible profile conversion.

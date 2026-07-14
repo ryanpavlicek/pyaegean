@@ -46,6 +46,23 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .annotation_profiles import (
+        AmbiguityDisclosure,
+        AnalysisProfile,
+        AnnotationProfile,
+        DomainProfile,
+        LabelMapping,
+        PostprocessingStep,
+        ProfileError,
+        ProfileEvidence,
+        ProfileMappingError,
+        ProfileSchemaError,
+        canonical_analysis_profile,
+        get_annotation_profile,
+        get_domain_profile,
+        list_annotation_profiles,
+        list_domain_profiles,
+    )
     from .runtime import GreekPipeline, GreekPipelineConfig, default_pipeline
 
 from . import benchmark  # noqa: F401 — CLTK benchmark harness (run_benchmark, compare_lemmatizers)
@@ -281,6 +298,27 @@ from .sentence_segmentation import (
 from .tokenize import sentences, tokenize, tokenize_aligned, tokenize_words
 
 
+_ANNOTATION_PROFILE_EXPORTS = frozenset(
+    {
+        "AmbiguityDisclosure",
+        "AnalysisProfile",
+        "AnnotationProfile",
+        "DomainProfile",
+        "LabelMapping",
+        "PostprocessingStep",
+        "ProfileError",
+        "ProfileEvidence",
+        "ProfileMappingError",
+        "ProfileSchemaError",
+        "canonical_analysis_profile",
+        "get_annotation_profile",
+        "get_domain_profile",
+        "list_annotation_profiles",
+        "list_domain_profiles",
+    }
+)
+
+
 def __getattr__(name: str) -> Any:
     """Load the explicit pipeline API only when it is requested.
 
@@ -298,6 +336,12 @@ def __getattr__(name: str) -> Any:
         }
         globals().update(exports)
         return exports[name]
+    if name in _ANNOTATION_PROFILE_EXPORTS:
+        from . import annotation_profiles
+
+        value = getattr(annotation_profiles, name)
+        globals()[name] = value
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -493,6 +537,21 @@ __all__ = [
     "temperature_softmax",
     "top1_confidence",
     "profile_text",
+    "list_annotation_profiles",
+    "list_domain_profiles",
+    "get_annotation_profile",
+    "get_domain_profile",
+    "canonical_analysis_profile",
+    "AnnotationProfile",
+    "DomainProfile",
+    "LabelMapping",
+    "AmbiguityDisclosure",
+    "ProfileEvidence",
+    "PostprocessingStep",
+    "AnalysisProfile",
+    "ProfileError",
+    "ProfileSchemaError",
+    "ProfileMappingError",
     "render_explanations",
     "TextProfile",
     "TokenExplanation",

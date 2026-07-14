@@ -17,10 +17,13 @@ import json
 import os
 import platform
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
+
+if TYPE_CHECKING:
+    from .annotation_profiles import AnalysisProfile
 
 from ..data import sha256_file
 from .neural_preprocessing import (
@@ -45,6 +48,7 @@ __all__ = [
 
 _SCHEMA_VERSION = 1
 _RECEIPT_SCHEMA_VERSION = 2
+_PROFILE_RECEIPT_SCHEMA_VERSION = 3
 _DATASET = "grc-joint"
 _V3_MODEL_ID = "grc-joint-v3"
 _V3_ASSET_SHA256 = "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e"
@@ -61,6 +65,17 @@ _ARTIFACT_FILES = frozenset(
         "manifest.json",
     }
 )
+
+
+def _reject_duplicate_receipt_pairs(
+    pairs: list[tuple[str, Any]],
+) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError(f"duplicate JSON object key {key!r}")
+        value[key] = item
+    return value
 
 # The root archive SHA in aegean.data authenticates a normal fetch. This table also pins
 # the identity of a directly supplied or mirror-served legacy extraction: a different set
@@ -94,7 +109,7 @@ class ModelBundleError(RuntimeError):
 
 
 class ReceiptMismatchError(RuntimeError):
-    """Raised when a requested analysis receipt does not match the active runtime."""
+    """Raised when a requested analysis receipt identity does not match."""
 
 
 def _json_object(path: Path) -> dict[str, Any]:
@@ -712,18 +727,44 @@ class AnalysisReceipt:
     windowed: bool
     calibration_sha256: str | None = None
     confidence_policy_sha256: str | None = None
+    # Schema 3 records the output annotation profile and the ordered, explicit
+    # post-processing steps that produced it.  These defaults keep direct
+    # construction of legacy schema-1/2 receipts source compatible.
+    output_profile_id: str | None = None
+    output_profile_sha256: str | None = None
+    postprocessing: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         calibration = _receipt_sha256(self.calibration_sha256, "calibration_sha256")
         policy = _receipt_sha256(
             self.confidence_policy_sha256, "confidence_policy_sha256"
         )
+        profile_sha = _receipt_sha256(self.output_profile_sha256, "output_profile_sha256")
+        if self.output_profile_id is not None and (
+            not isinstance(self.output_profile_id, str)
+            or not self.output_profile_id
+            or self.output_profile_id != self.output_profile_id.strip()
+        ):
+            raise ValueError(
+                "analysis receipt output_profile_id must be a non-empty trimmed string or null"
+            )
+        if not isinstance(self.postprocessing, tuple) or any(
+            not isinstance(step, str) or not step for step in self.postprocessing
+        ):
+            raise ValueError("analysis receipt postprocessing must be a tuple of non-empty strings")
         if self.schema_version == _SCHEMA_VERSION:
             if calibration is not None or policy is not None:
                 raise ValueError("analysis receipt schema 1 cannot carry confidence hashes")
+            if self.output_profile_id is not None or profile_sha is not None or self.postprocessing:
+                raise ValueError("analysis receipt schema 1 cannot carry output profile fields")
         elif self.schema_version == _RECEIPT_SCHEMA_VERSION:
             if calibration is None and policy is None:
                 raise ValueError("analysis receipt schema 2 requires a confidence hash")
+            if self.output_profile_id is not None or profile_sha is not None or self.postprocessing:
+                raise ValueError("analysis receipt schema 2 cannot carry output profile fields")
+        elif self.schema_version == _PROFILE_RECEIPT_SCHEMA_VERSION:
+            if self.output_profile_id is None or profile_sha is None:
+                raise ValueError("analysis receipt schema 3 requires an output profile id and hash")
         else:
             raise ValueError(f"unsupported analysis receipt schema {self.schema_version!r}")
 
@@ -812,9 +853,16 @@ class AnalysisReceipt:
             "truncated": self.truncated,
             "windowed": self.windowed,
         }
-        if self.schema_version >= _RECEIPT_SCHEMA_VERSION:
+        if self.schema_version == _RECEIPT_SCHEMA_VERSION or (
+            self.schema_version == _PROFILE_RECEIPT_SCHEMA_VERSION
+            and (self.calibration_sha256 is not None or self.confidence_policy_sha256 is not None)
+        ):
             value["calibration_sha256"] = self.calibration_sha256
             value["confidence_policy_sha256"] = self.confidence_policy_sha256
+        if self.schema_version >= _PROFILE_RECEIPT_SCHEMA_VERSION:
+            value["output_profile_id"] = self.output_profile_id
+            value["output_profile_sha256"] = self.output_profile_sha256
+            value["postprocessing"] = list(self.postprocessing)
         return value
 
     def to_json(self) -> str:
@@ -866,14 +914,24 @@ class AnalysisReceipt:
             )
         if isinstance(schema, bool) or not isinstance(schema, int):
             raise ValueError("analysis receipt schema_version must be an integer")
-        if schema not in (_SCHEMA_VERSION, _RECEIPT_SCHEMA_VERSION):
+        if schema not in (
+            _SCHEMA_VERSION,
+            _RECEIPT_SCHEMA_VERSION,
+            _PROFILE_RECEIPT_SCHEMA_VERSION,
+        ):
             raise ValueError(
                 "unsupported analysis receipt schema "
-                f"{schema!r}; expected {_SCHEMA_VERSION} or {_RECEIPT_SCHEMA_VERSION}"
+                f"{schema!r}; expected {_SCHEMA_VERSION}, {_RECEIPT_SCHEMA_VERSION}, or "
+                f"{_PROFILE_RECEIPT_SCHEMA_VERSION}"
             )
         confidence_fields = {"calibration_sha256", "confidence_policy_sha256"}
         if schema == _SCHEMA_VERSION and confidence_fields.intersection(value):
             raise ValueError("analysis receipt schema 1 cannot carry confidence hash fields")
+        profile_fields = {"output_profile_id", "output_profile_sha256", "postprocessing"}
+        if schema in (_SCHEMA_VERSION, _RECEIPT_SCHEMA_VERSION) and profile_fields.intersection(value):
+            raise ValueError(
+                f"analysis receipt schema {schema} cannot carry output profile fields"
+            )
         if schema == _RECEIPT_SCHEMA_VERSION:
             missing = confidence_fields - set(value)
             if missing:
@@ -881,6 +939,15 @@ class AnalysisReceipt:
                     "analysis receipt schema 2 missing confidence field(s): "
                     + ", ".join(sorted(missing))
                 )
+        if schema == _PROFILE_RECEIPT_SCHEMA_VERSION:
+            missing = profile_fields - set(value)
+            if missing:
+                raise ValueError(
+                    "analysis receipt schema 3 missing output profile field(s): "
+                    + ", ".join(sorted(missing))
+                )
+            if not isinstance(value.get("postprocessing"), list):
+                raise ValueError("analysis receipt postprocessing must be a list")
         runtimes = value.get("runtime_versions")
         if not isinstance(runtimes, Mapping):
             raise ValueError("analysis receipt runtime_versions must be an object")
@@ -934,7 +1001,7 @@ class AnalysisReceipt:
                 windowed=bool(value["windowed"]),
                 calibration_sha256=(
                     _receipt_sha256(value.get("calibration_sha256"), "calibration_sha256")
-                    if schema == _RECEIPT_SCHEMA_VERSION
+                    if schema >= _RECEIPT_SCHEMA_VERSION
                     else None
                 ),
                 confidence_policy_sha256=(
@@ -942,8 +1009,23 @@ class AnalysisReceipt:
                         value.get("confidence_policy_sha256"),
                         "confidence_policy_sha256",
                     )
-                    if schema == _RECEIPT_SCHEMA_VERSION
+                    if schema >= _RECEIPT_SCHEMA_VERSION
                     else None
+                ),
+                output_profile_id=(
+                    value["output_profile_id"]
+                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                output_profile_sha256=(
+                    _receipt_sha256(value.get("output_profile_sha256"), "output_profile_sha256")
+                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                postprocessing=(
+                    tuple(value["postprocessing"])
+                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    else ()
                 ),
             )
         except (KeyError, TypeError, ValueError) as exc:
@@ -953,8 +1035,8 @@ class AnalysisReceipt:
     def from_json(cls, value: str) -> "AnalysisReceipt":
         """Deserialize a receipt from JSON."""
         try:
-            raw = json.loads(value)
-        except json.JSONDecodeError as exc:
+            raw = json.loads(value, object_pairs_hook=_reject_duplicate_receipt_pairs)
+        except (json.JSONDecodeError, ValueError) as exc:
             raise ValueError(f"invalid analysis receipt JSON: {exc}") from exc
         if not isinstance(raw, dict):
             raise ValueError("invalid analysis receipt JSON: expected an object")
@@ -989,4 +1071,55 @@ class AnalysisReceipt:
         if mismatches:
             raise ReceiptMismatchError(
                 "analysis receipt does not match this runtime: " + "; ".join(mismatches)
+            )
+
+    def with_analysis_profile(self, profile: AnalysisProfile) -> "AnalysisReceipt":
+        """Return a schema-3 receipt bound to an output ``AnalysisProfile``.
+
+        The profile module is imported lazily to keep contract import order cycle-safe.
+        A validated profile contributes its stable id/hash and the ordered step ids;
+        all runtime and confidence provenance stays unchanged.
+        """
+        from .annotation_profiles import AnalysisProfile
+
+        if not isinstance(profile, AnalysisProfile):
+            raise TypeError("analysis receipt binding requires an AnalysisProfile")
+        if profile.inference_annotation_profile != self.annotation_profile:
+            raise ReceiptMismatchError(
+                "analysis profile inference convention does not match the receipt: "
+                f"expected {self.annotation_profile!r}, got "
+                f"{profile.inference_annotation_profile!r}"
+            )
+        profile_id = profile.profile_id
+        profile_sha = profile.sha256
+        steps = profile.postprocessing
+        step_ids = tuple(step.step_id for step in steps)
+        return replace(
+            self,
+            schema_version=_PROFILE_RECEIPT_SCHEMA_VERSION,
+            source_schema_version=_PROFILE_RECEIPT_SCHEMA_VERSION,
+            output_profile_id=profile_id,
+            output_profile_sha256=profile_sha,
+            postprocessing=step_ids,
+        )
+
+    def assert_same_analysis_profile(self, actual: "AnalysisReceipt") -> None:
+        """Require runtime identity and the complete output analysis profile to match."""
+        self.assert_same_runtime(actual)
+        if (
+            self.schema_version != _PROFILE_RECEIPT_SCHEMA_VERSION
+            or actual.schema_version != _PROFILE_RECEIPT_SCHEMA_VERSION
+        ):
+            raise ReceiptMismatchError(
+                "complete analysis-profile comparison requires two schema-3 receipts"
+            )
+        fields = ("output_profile_id", "output_profile_sha256", "postprocessing")
+        mismatches = [
+            f"{field}: expected {getattr(self, field)!r}, got {getattr(actual, field)!r}"
+            for field in fields
+            if getattr(self, field) != getattr(actual, field)
+        ]
+        if mismatches:
+            raise ReceiptMismatchError(
+                "analysis receipt does not match this analysis profile: " + "; ".join(mismatches)
             )

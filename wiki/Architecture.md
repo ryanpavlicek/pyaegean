@@ -105,10 +105,11 @@ legacy flat confidence fields remain for compatibility and are not retrofitted w
 
 `AbstentionPolicy` is caller-owned: thresholds are supplied by the application and its
 canonical SHA-256 is attached to `accept`/`review`/`unavailable` decisions. The runtime
-ships no default threshold and does not infer an OOD warning. When a calibration registry
-or policy participates in neural analysis, schema-2 `AnalysisReceipt` output records the
-calibration and policy hashes; the receipt records provenance but does not authorize an
-empirical calibration claim.
+ships no default threshold and does not infer an OOD warning. For the shipped canonical
+runtime, schema-3 `AnalysisReceipt` output records the calibration and policy hashes plus
+the composed output and post-processing identity. Schema 2 remains readable for legacy
+or custom output without a composed profile. The receipt records provenance but does not
+authorize an empirical calibration claim.
 
 ---
 

@@ -235,6 +235,31 @@ The evaluation suite deliberately exposes scope limits:
 
 These are properties of the evidence, not exceptions to be normalized away.
 
+### Annotation and domain profile methodology
+
+A16 records annotation conventions and provenance; it does not retrain the model,
+change the decoder, or introduce a new score. `AnnotationProfile` describes output
+labels, relation scheme, segmentation, normalization, mappings, reversibility/loss,
+and evidence. `DomainProfile` describes declared source scope and layer; it is not a
+genre detector and is never inferred from `TextProfile` or `profile_text`. The
+caller-supplied confidence `domain` remains a separate calibration scope label.
+
+Registry values are typed, immutable, canonically serialized, and SHA-256 identified.
+Mappings that collapse labels, depend on lexical/contextual information, omit source
+rows, or restructure dependencies are disclosed as non-invertible rather than guessed.
+The canonical output convention remains the supported inference path. UD-PROIEL and
+Perseus/AGDT convention differences are diagnostic, not a source-compatible output
+mode. The separate native-PROIEL XML evaluation projection strips `#N` homograph
+suffixes and omits empty tokens; exact UD-fold scoring does not. PapyGreek's `orig`
+variant changes the diplomatic `FORM` surface while retaining
+regularized-layer gold analyses and documented fallbacks.
+
+When documentary reconciliation, lemma rescue, or a paradigm resource contributes to
+returned output, receipt schema 3 binds the composed output profile ID/SHA-256 and the
+ordered post-processing identity. Schemas 1 and 2, the schema-1 pipeline configuration,
+and the published `grc-joint-v3` identity remain unchanged. This binding is provenance,
+not a model or accuracy claim.
+
 ### Training reproducibility environment
 
 The training environment files define an inference-free reproducibility contract. The

@@ -38,10 +38,51 @@ identity as a measured confidence value.
 Their `TokenRecord` results carry `TokenConfidence`/`SentenceConfidence` values with task,
 source-path, domain, calibration, and explicit unavailable-reason fields. `AbstentionPolicy` thresholds are
 caller-supplied and hashed into each decision; no default threshold or automatic OOD claim
-is provided. A schema-2 `AnalysisReceipt` records calibration and policy hashes when those
-artifacts participate in analysis.
+is provided. For the shipped canonical runtime, schema-3 `AnalysisReceipt` output records
+calibration/policy hashes together with the composed output and post-processing identity.
+Schema 2 remains readable for legacy or custom output without a composed profile.
 
 For development data, `fit_temperature(logits, correct)` fits a top-1 temperature and
 `fit_logit_affine(probs, correct)` fits monotone `(slope, intercept)` parameters for a
 logit-affine `CalibrationEntry`. Both are parameter-fitting helpers only: they do not select
 domains, thresholds, or release evidence.
+
+## Annotation, domain, and output profiles
+
+The Greek facade exposes an immutable registry for annotation conventions and
+descriptive domain scope:
+
+```python
+from aegean import greek
+
+greek.list_annotation_profiles()            # tuple[AnnotationProfile, ...]
+greek.list_domain_profiles()                # tuple[DomainProfile, ...]
+greek.get_annotation_profile("pyaegean-canonical-v1")
+greek.get_domain_profile("...")
+greek.canonical_analysis_profile()          # shipped inference/output convention
+```
+
+The typed values are `AnnotationProfile`, `DomainProfile`, `LabelMapping`,
+`AmbiguityDisclosure`, `ProfileEvidence`, `PostprocessingStep`, and
+`AnalysisProfile`. Each profile has a stable `profile_id`, canonical compact
+`to_json()` form, and SHA-256 `sha256` identity. Registry values are read-only;
+these APIs inspect declared conventions and never infer a domain or alter model
+predictions.
+
+This registry is distinct from `TextProfile`/`profile_text`, which describe
+observable input characters, and from the caller-supplied confidence `domain`,
+which scopes calibration evidence. The canonical profile is the supported
+inference/output convention. PROIEL and Perseus/AGDT differences are documented
+diagnostics rather than a general source-compatible conversion mode. The UD-PROIEL
+profile records POS, feature, token-row, and dependency differences that include
+non-invertible losses. Separately, `evaluate_on_proiel()`'s native-XML projection
+strips `#N` homograph suffixes, omits empty tokens, and receives presentation
+punctuation outside token rows; exact UD-fold scoring does not use that cleanup.
+PapyGreek's `orig` convention changes the diplomatic
+`FORM` surface while retaining the regularized-layer gold analyses and its
+documented fallbacks.
+
+When a composed output profile or documentary post-processing chain is attached,
+receipt schema 3 binds its output/composed profile ID and SHA-256 plus the ordered
+post-processing identity. Receipt schemas 1 and 2 and the `grc-joint-v3` model
+identity remain readable and unchanged.

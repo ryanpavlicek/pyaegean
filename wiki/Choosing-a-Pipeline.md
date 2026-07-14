@@ -32,6 +32,38 @@ the zero-dependency baseline already resolves. It is **descriptive**: it
 reports these features and does not pick a pipeline for you. Read the profile,
 then match what you see against the table below and decide.
 
+### Keep input description separate from annotation conventions
+
+`TextProfile` is about the characters in an input string. The annotation registry
+is a different, explicit piece of provenance: `AnnotationProfile` names the output
+label and relation convention, while `DomainProfile` records the declared source
+scope and layer. Neither is inferred from `TextProfile`, and neither is the
+caller-supplied confidence `domain` used to scope calibration evidence.
+
+Inspect the immutable registry from Python or the shell:
+
+```python
+greek.list_annotation_profiles()
+greek.list_domain_profiles()
+greek.canonical_analysis_profile()
+```
+
+```bash
+aegean greek annotation-profiles list
+aegean greek annotation-profiles show pyaegean-canonical-v1 --json
+```
+
+The canonical profile is the supported inference/output convention. UD-PROIEL and
+Perseus/AGDT conventions are documented for comparison and loss diagnostics, not
+as an automatic conversion switch; POS collapse, token-row differences, feature
+gaps, and dependency changes can be non-invertible. Separately,
+`evaluate_on_proiel()`'s native-XML projection strips `#N` homograph suffixes and
+omits empty tokens; exact UD-fold scoring does not use that cleanup.
+For PapyGreek, the `orig` profile changes the diplomatic `FORM` surface while the
+regularized-layer gold analyses and documented fallbacks remain in force. Receipt
+schema 3 records a composed output profile and ordered post-processing identity
+when such a chain is attached; older receipt schemas remain compatible.
+
 ## Material to pipeline
 
 | Your material | Start with | The call that enables it | The trade-off |

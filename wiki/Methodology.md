@@ -347,6 +347,26 @@ reproducibility.
 Both models run **torch-free** at inference, on numpy + onnxruntime, loaded only
 on activation.
 
+### Annotation and domain profile records
+
+The annotation registry is a provenance layer, not another model evaluation. Typed
+`AnnotationProfile` values declare output labels, relation scheme, segmentation,
+normalization, mapping direction, reversibility/loss, and evidence. `DomainProfile`
+values describe the source scope and layer; they are not detectors and are not
+selected from `TextProfile`/`profile_text` or from the confidence `domain` label.
+Profiles are immutable, canonically serialized, and SHA-256 identified.
+
+The canonical output convention remains the supported inference path. Perseus/AGDT
+and UD-PROIEL differences (including POS collapse, token-row differences, feature
+gaps, and dependency restructuring) are diagnostic and can be non-invertible, not a
+general source-compatible conversion mode. The separate native-PROIEL XML evaluation
+projection strips `#N` homograph suffixes and omits empty tokens; exact UD-fold
+scoring does not use that cleanup. The
+PapyGreek `orig` convention changes the diplomatic `FORM` surface while retaining
+regularized-layer gold analyses and documented fallbacks. Receipt schema 3 binds a
+composed output profile and ordered post-processing identity when present; schemas 1
+and 2 and the `grc-joint-v3` identity remain unchanged.
+
 ---
 
 ## 5. Data provenance, licensing, and reproducibility

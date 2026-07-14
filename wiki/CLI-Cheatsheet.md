@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.50.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
+> **Available in v0.51.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.50.0
+aegean --version                # pyaegean 0.51.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -342,6 +342,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `scan` | Metrical scansion against a fixed template | `--meter --json` | `aegean greek scan "…" --meter hexameter` |
 | `ipa` | Reconstructed IPA pronunciation | `--period` | `aegean greek ipa "λόγος" --period koine` |
 | `profile` | Observable features of a text (script, polytonic, Beta Code, editorial marks) | `--json` | `aegean greek profile "μῆνιν ἄειδε θεά"` |
+| `annotation-profiles list` / `show` | Inspect immutable annotation conventions and descriptive domain scopes (no inference or conversion) | `--json` | `aegean greek annotation-profiles list` · `aegean greek annotation-profiles show pyaegean-canonical-v1 --json` |
 | `tag` | POS-tag (UD coarse tags) | `--treebank --tagger --neural --json` | `aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
 | `morph` | Candidate morphological parses | `--treebank --json` | `aegean greek morph λόγον` |
@@ -364,6 +365,13 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
 | `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
 | `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `verse` `dbbe` `tagger` `lemmatizer` `parser` | `--fold --split --track --layer --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
+
+`greek profile TEXT` remains the observable text-feature report. The
+`annotation-profiles` commands inspect immutable annotation/output conventions and
+descriptive domain scope; they do not select a domain, change model predictions,
+or provide an automatic source-compatible conversion. A composed output profile
+and ordered documentary post-processing identity are bound in receipt schema 3;
+receipt schemas 1 and 2 remain valid.
 
 `tokenize --sentences` defaults to `default`. `--sentence-policy` selects the
 named `prose`, `verse`, `inscription`, or `papyrus` rules. Add `--rich` (only with

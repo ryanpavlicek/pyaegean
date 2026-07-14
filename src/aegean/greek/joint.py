@@ -606,7 +606,7 @@ class _JointModel:
         session = getattr(self, "_sess", None)
         if manifest is None or session is None or not hasattr(session, "get_providers"):
             return None
-        return AnalysisReceipt.create(
+        receipt = AnalysisReceipt.create(
             manifest,
             execution_providers=tuple(session.get_providers()),
             input_tokens=input_tokens,
@@ -624,6 +624,16 @@ class _JointModel:
                 else None
             ),
         )
+        # The joint model emits the canonical annotation profile.  Keep this lazy
+        # so loading the contract itself remains independent of the profile registry.
+        from .annotation_profiles import canonical_analysis_profile
+
+        profile = canonical_analysis_profile()
+        if receipt.annotation_profile == profile.inference_annotation_profile:
+            return receipt.with_analysis_profile(profile)
+        # A future/custom manifest must declare its own composed output profile rather
+        # than being mislabeled as the shipped canonical convention.
+        return receipt
 
     def _window_body_budget(self) -> int:
         """Return the manifest subword budget available to complete input words."""

@@ -30,13 +30,15 @@ keeps the wheel small). Build recipe: ``scripts/build_paradigm_table.py``.
 
 from __future__ import annotations
 
+import copy
 import gzip
+import hashlib
 import json
 import unicodedata
 from pathlib import Path
 from typing import Any
 
-from ..data import DataNotAvailableError, cache_dir, fetch_prebuilt, load_gzip_json
+from ..data import DataNotAvailableError, cache_dir, fetch_prebuilt, load_gzip_json, sha256_file
 from .morphology import Analysis
 
 __all__ = [
@@ -71,9 +73,17 @@ def _validate(data: Any, source: str) -> dict[str, list[dict[str, str]]]:
     if not isinstance(data, dict):
         raise DataNotAvailableError(f"{source}: not a paradigm index (expected a JSON object)")
     for key, entries in data.items():
-        if not isinstance(key, str) or not isinstance(entries, list) or not all(
-            isinstance(e, dict) and "lemma" in e for e in entries
-        ):
+        valid_entries = isinstance(entries, list) and all(
+            isinstance(entry, dict)
+            and isinstance(entry.get("lemma"), str)
+            and bool(entry["lemma"].strip())
+            and all(
+                isinstance(field, str) and isinstance(value, str)
+                for field, value in entry.items()
+            )
+            for entry in entries
+        )
+        if not isinstance(key, str) or not key or not valid_entries:
             raise DataNotAvailableError(
                 f"{source}: malformed paradigm index (form {key!r} is not mapped to a list of "
                 "analysis records)"
@@ -99,8 +109,36 @@ def _load_json_gz(path: Path) -> dict[str, list[dict[str, str]]]:
 class ParadigmLexicon:
     """A form→analyses paradigm lexicon (UniMorph grc), served like `TreebankLexicon`."""
 
-    def __init__(self, data: dict[str, list[dict[str, str]]]) -> None:
-        self._data = data
+    def __init__(
+        self,
+        data: dict[str, list[dict[str, str]]],
+        *,
+        resource_id: str = _PREBUILT,
+        resource_sha256: str | None = None,
+    ) -> None:
+        # Keep a private snapshot: callers often build fixture dictionaries and then
+        # reuse/mutate them, but an active lexicon's behavior and identity must remain
+        # bound to the bytes that were loaded.
+        self._data = copy.deepcopy(_validate(data, "ParadigmLexicon data"))
+        self._resource_id = resource_id
+        # Directly constructed test/fixture lexicons have no source file.  Derive
+        # a deterministic content hash so they still produce an auditable receipt;
+        # loaded resources use the exact bytes hash below.
+        if resource_sha256 is None:
+            blob = json.dumps(
+                self._data, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode("utf-8")
+            resource_sha256 = hashlib.sha256(blob).hexdigest()
+        if (
+            not isinstance(resource_id, str)
+            or not resource_id
+            or resource_id != resource_id.strip()
+            or not isinstance(resource_sha256, str)
+            or len(resource_sha256) != 64
+            or any(c not in "0123456789abcdef" for c in resource_sha256)
+        ):
+            raise ValueError("paradigm resource identity must be a non-empty id and SHA-256")
+        self._resource_sha256 = resource_sha256
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> "ParadigmLexicon":
@@ -110,7 +148,21 @@ class ParadigmLexicon:
             raise DataNotAvailableError(
                 f"no paradigm index at {p}; call use_paradigms() first (fetches grc-paradigms)"
             )
-        return cls(_load_json_gz(p))
+        return cls(
+            _load_json_gz(p),
+            resource_id=_PREBUILT,
+            resource_sha256=sha256_file(p),
+        )
+
+    @property
+    def resource_id(self) -> str:
+        """Stable dataset identifier recorded by documentary analysis receipts."""
+        return self._resource_id
+
+    @property
+    def resource_sha256(self) -> str:
+        """SHA-256 of the loaded resource bytes (or canonical fixture data)."""
+        return self._resource_sha256
 
     def __len__(self) -> int:
         return len(self._data)

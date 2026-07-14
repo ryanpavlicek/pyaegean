@@ -15,7 +15,7 @@ from __future__ import annotations
 import contextlib
 import json
 import sys
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -59,6 +59,13 @@ interop_app = typer.Typer(
 )
 greek_app.add_typer(interop_app, name="interop")
 
+annotation_profiles_app = typer.Typer(
+    pretty_exceptions_show_locals=False,
+    help="Inspect immutable annotation and domain profiles (no model inference).",
+    no_args_is_help=True,
+)
+greek_app.add_typer(annotation_profiles_app, name="annotation-profiles")
+
 TEXT_ARG = typer.Argument(..., help="Greek text ('-' reads stdin).")
 WORD_ARG = typer.Argument(..., help="One Greek word.")
 
@@ -74,6 +81,139 @@ CONFIDENCE_OPT = typer.Option(
     "it is model-only, so identity/punctuation lemmas carry none (a lookup-composed lemma "
     "does — the calibration covers the model's internal training-form lookup).",
 )
+
+
+def _profile_payload(profile: Any) -> dict[str, Any]:
+    """Return a JSON-ready profile mapping, including its content identity.
+
+    The registry values are immutable typed objects.  Keeping this small adapter in
+    the CLI lets the command remain compatible with the public ``to_dict`` contract
+    without importing the implementation module at CLI import time.
+    """
+    if hasattr(profile, "to_dict"):
+        raw = profile.to_dict()
+    else:  # pragma: no cover - defensive for third-party registry adapters
+        raw = to_plain(profile)
+    payload = to_plain(raw)
+    if not isinstance(payload, dict):
+        raise TypeError("profile.to_dict() must return a mapping")
+    profile_id = getattr(profile, "profile_id", None)
+    if profile_id is not None:
+        payload.setdefault("profile_id", str(profile_id))
+    sha256 = getattr(profile, "sha256", None)
+    if sha256 is not None:
+        payload.setdefault("sha256", str(sha256))
+    return payload
+
+
+def _profile_field(payload: dict[str, Any], *names: str) -> str:
+    """Choose a concise human-table value from a profile mapping."""
+    for name in names:
+        value = payload.get(name)
+        if value is None or value == "":
+            continue
+        if isinstance(value, (dict, list, tuple)):
+            return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        return str(value)
+    return "—"
+
+
+def _profile_registries() -> tuple[tuple[Any, ...], tuple[Any, ...]]:
+    """Load the read-only annotation/domain registries through the facade."""
+    from aegean import greek
+
+    annotation_registry = greek.list_annotation_profiles()
+    domain_registry = greek.list_domain_profiles()
+    annotations = tuple(annotation_registry.values()) if isinstance(annotation_registry, Mapping) else tuple(annotation_registry)
+    domains = tuple(domain_registry.values()) if isinstance(domain_registry, Mapping) else tuple(domain_registry)
+    return annotations, domains
+
+
+@annotation_profiles_app.command("list")
+def annotation_profiles_list(json_out: bool = JSON_OPT) -> None:
+    """List registered annotation conventions and descriptive domain scopes."""
+    try:
+        annotations, domains = _profile_registries()
+    except Exception as exc:
+        raise fail(f"could not inspect annotation/domain profiles: {exc}") from None
+
+    annotation_payloads = [_profile_payload(profile) for profile in annotations]
+    domain_payloads = [_profile_payload(profile) for profile in domains]
+    if json_out:
+        emit_json({
+            "annotation_profiles": annotation_payloads,
+            "domain_profiles": domain_payloads,
+        })
+        return
+
+    table(
+        "annotation profiles",
+        ["id", "compatibility", "source convention"],
+        [
+            [
+                _profile_field(payload, "profile_id", "id"),
+                _profile_field(payload, "compatibility", "compatibility_class"),
+                _profile_field(payload, "source_convention", "source", "convention", "source_revision"),
+            ]
+            for payload in annotation_payloads
+        ],
+    )
+    table(
+        "domain profiles",
+        ["id", "source layer"],
+        [
+            [
+                _profile_field(payload, "profile_id", "id"),
+                _profile_field(payload, "source_layer", "source_layer_id", "layer", "source"),
+            ]
+            for payload in domain_payloads
+        ],
+    )
+
+
+@annotation_profiles_app.command("show")
+def annotation_profiles_show(
+    profile_id: str = typer.Argument(..., help="Exact annotation or domain profile id."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Show one immutable annotation or domain profile by its exact id."""
+    try:
+        annotations, domains = _profile_registries()
+    except Exception as exc:
+        raise fail(f"could not inspect annotation/domain profiles: {exc}") from None
+
+    matches: list[tuple[str, Any]] = []
+    for profile in annotations:
+        if str(getattr(profile, "profile_id", "")) == profile_id:
+            matches.append(("annotation", profile))
+    for profile in domains:
+        if str(getattr(profile, "profile_id", "")) == profile_id:
+            matches.append(("domain", profile))
+    if not matches:
+        available = [
+            str(getattr(profile, "profile_id", ""))
+            for profile in (*annotations, *domains)
+        ]
+        hint = f" Available ids: {', '.join(available)}." if available else ""
+        raise fail(f"unknown annotation/domain profile {profile_id!r}.{hint}")
+    if len(matches) > 1:
+        kinds = ", ".join(kind for kind, _ in matches)
+        raise fail(f"profile id {profile_id!r} is ambiguous ({kinds}); use a unique id")
+
+    kind, profile = matches[0]
+    payload = _profile_payload(profile)
+    if json_out:
+        emit_json({"kind": kind, **payload})
+        return
+
+    table(
+        f"{kind} profile: {profile_id}",
+        ["field", "value"],
+        [
+            [key, value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)]
+            for key, value in payload.items()
+        ],
+    )
 
 
 def _jsonl_sentences(source: str | Path) -> Iterator[list[str]]:
@@ -708,7 +848,7 @@ def profile(text: str = TEXT_ARG, json_out: bool = JSON_OPT) -> None:
 
     from aegean import greek
 
-    p = greek.profile_text(read_text(text))  # type: ignore[arg-type]
+    p = greek.profile_text(read_text(text))
     d = dataclasses.asdict(p)
     if emit_result(d, json_output=json_out, output=None):
         return
@@ -2035,7 +2175,7 @@ def evaluate(
                 )
             else:
                 by = greek.evaluate_by_genre(fold, split, bootstrap=bootstrap, progress=live_progress)
-            unmapped = by.pop("_unmapped", {}).get("authors", [])  # type: ignore[union-attr]
+            unmapped = by.pop("_unmapped", {}).get("authors", [])
             if emit_result({**by, "_unmapped": unmapped}, json_output=json_out, output=output):
                 return
             rows = []

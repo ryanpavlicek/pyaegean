@@ -6,7 +6,7 @@ substitution, and mixed-tool research workflows. They do not make pyaegean a wra
 around those frameworks, and they do not claim that every framework has the same data
 model.
 
-> **Available in pyaegean 0.50.0.** The adapters preserve a complete pyaegean document with a
+> **Available in pyaegean 0.51.0.** The adapters preserve a complete pyaegean document with a
 > versioned sidecar and report exactly which fields are native to the target, retained
 > in the sidecar, or lost by an explicitly requested projection.
 
@@ -35,7 +35,9 @@ The structural source of truth is pyaegean's complete CoNLL-U document model: co
 all ten columns, multiword-token ranges, empty nodes, enhanced dependencies, MISC,
 opaque lenient rows, and original line endings. An `InteropDocument` adds source text,
 stable source alignment, typed editorial forms, confidence, analysis receipts, the
-annotation-profile identity, and provenance when those values exist.
+inference annotation-profile identity, any composed output-profile identity, and
+provenance when those values exist. The v1 sidecar carries identities through receipts;
+it does not embed custom profile objects.
 
 No target document type natively represents all of that. Each export therefore has two
 parts:
@@ -80,7 +82,7 @@ annotation.
 | Enhanced dependencies and ordered MISC | native | sidecar | native word strings where supported, exact state in sidecar | sidecar |
 | Typed editorial form state | native reserved MISC + sidecar | sidecar | sidecar | sidecar |
 | Calibrated confidence and abstention evidence | sidecar | sidecar | sidecar | selected native confidence/source fields + complete sidecar |
-| Analysis receipt, profile identity, provenance | sidecar | sidecar | sidecar | namespaced metadata sidecar |
+| Analysis receipt, inference/output profile identity, provenance | sidecar | sidecar | sidecar | namespaced metadata sidecar |
 
 The adapters never infer offsets with `str.find()`. Repeated words, combining marks, and
 normalization make that unsafe; exact alignment must already be present or the report says
@@ -165,9 +167,9 @@ pipelines can use different pyaegean instances without changing module-global st
 - They do not train, improve, or benchmark any model.
 - A sidecar-preserved MWT or empty node is not a pyaegean model prediction.
 - They do not make spaCy, Stanza, or CLTK hard dependencies of pyaegean.
-- They do not convert annotation conventions. The current profile identity travels with
-  the analysis; explicit Perseus/PROIEL/papyrological profile mappings are a separate,
-  evidence-gated capability.
+- They do not convert annotation conventions. The inference and composed output identities
+  travel with the analysis, and the registry exposes declared diagnostic mappings, but the
+  adapters do not perform a source-compatible conversion.
 - They do not make a stripped native projection lossless. The report always distinguishes
   target-native support from sidecar preservation.
 

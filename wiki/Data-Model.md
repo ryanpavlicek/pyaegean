@@ -348,8 +348,10 @@ Schema-2 `CalibrationRegistry` resolution first tries an exact source/domain ent
 uses a broader entry when that entry is explicitly marked as a fallback. No bundled
 thresholds are implied. An `AbstentionPolicy` supplied through `confidence_policy=` applies
 caller-selected task thresholds and returns `accept`, `review`, or `unavailable`; its
-canonical `policy_sha256` travels with each decision. A registry or policy hash is included
-in the neural `AnalysisReceipt` schema 2; confidence-free analyses continue to use schema 1.
+canonical `policy_sha256` travels with each decision. For the shipped canonical runtime,
+schema-3 `AnalysisReceipt` output records registry/policy hashes together with the composed
+output and post-processing identity. Schema 2 remains readable for legacy or custom output
+without a composed profile, and schema 1 remains readable for older confidence-free analyses.
 
 ### Sentence boundaries and precedence
 

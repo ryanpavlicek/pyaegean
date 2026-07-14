@@ -46,6 +46,8 @@ activating a new neural backend restores its wrapper automatically.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import unicodedata
 from dataclasses import replace
 from threading import RLock
@@ -437,6 +439,107 @@ _RESCUE = False
 _AGGRESSIVE = False
 _STATE_LOCK = RLock()
 _LIVE_PARADIGMS = object()
+_SEED_RESOURCE_SHA256: str | None = None
+
+
+def _seed_resource_sha256() -> str:
+    """Return the cached digest of the merged bundled seed lemma table."""
+    global _SEED_RESOURCE_SHA256
+    if _SEED_RESOURCE_SHA256 is None:
+        from .lemmatize import _lemma_table
+
+        seed_blob = json.dumps(
+            _lemma_table(), ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode("utf-8")
+        _SEED_RESOURCE_SHA256 = hashlib.sha256(seed_blob).hexdigest()
+    return _SEED_RESOURCE_SHA256
+
+
+def _documentary_analysis_profile(
+    *,
+    reconcile: bool,
+    rescue: bool,
+    aggressive: bool,
+    paradigm_lexicon: Any | None,
+    inference_annotation_profile: str = "pyaegean-canonical-v1",
+) -> Any | None:
+    """Compose the frozen documentary profile for one wrapper snapshot.
+
+    Profile construction is intentionally lazy and isolated from the post-processing
+    functions.  This keeps the default/off path byte-identical while requiring every
+    active documentary receipt to carry the shipped A16 registry identity.
+    """
+    if not (reconcile or rescue):
+        return None
+    from .annotation_profiles import (
+        PostprocessingStep,
+        canonical_analysis_profile,
+        get_domain_profile,
+    )
+
+    base = canonical_analysis_profile()
+    step_type = PostprocessingStep
+    domain_profile = get_domain_profile("papygreek-regularized-v1")
+    evidence = domain_profile.evidence
+
+    steps: list[Any] = []
+    if reconcile:
+        steps.append(
+            step_type(
+                step_id="pyaegean-documentary-reconciliation-v1",
+                parameters=(("mode", "aggressive" if aggressive else "conservative"),),
+                evidence=evidence,
+            )
+        )
+    if rescue:
+        # The rescue chain is explicit even when no token in a sentence is rescued:
+        # a receipt describes configuration, not just observed mutations.
+        seed_id = "pyaegean-seed-lemma-table-v1"
+        seed_kwargs: dict[str, Any] = {
+            "resource_id": seed_id,
+            "resource_sha256": _seed_resource_sha256(),
+            "evidence": evidence,
+        }
+        steps.append(
+            step_type(
+                step_id="pyaegean-documentary-lemma-rescue-v1",
+                parameters=(
+                    (
+                        "source",
+                        "seed_then_paradigm" if paradigm_lexicon is not None else "seed_only",
+                    ),
+                ),
+                evidence=evidence,
+            )
+        )
+        steps.append(step_type(step_id="pyaegean-seed-lemma-table-v1", **seed_kwargs))
+        if paradigm_lexicon is not None:
+            resource_id = getattr(paradigm_lexicon, "resource_id", None)
+            resource_sha = getattr(paradigm_lexicon, "resource_sha256", None)
+            if not resource_id or not resource_sha:
+                raise ValueError("active paradigm lexicon is missing its resource identity")
+            steps.append(
+                step_type(
+                    step_id="pyaegean-paradigm-lexicon-v1",
+                    resource_id=resource_id,
+                    resource_sha256=resource_sha,
+                    evidence=evidence,
+                )
+            )
+    # ``AnalysisProfile`` is immutable.  Preserve the receipt's actual inference
+    # convention for custom/future backends instead of mislabelling it canonical.
+    # Reconciliation deliberately changes the output convention to PapyGreek;
+    # lemma rescue alone retains the incoming convention.
+    return replace(
+        base,
+        profile_id="pyaegean-documentary-papygreek-v1",
+        inference_annotation_profile=inference_annotation_profile,
+        output_annotation_profile=(
+            "papygreek-agdt-v1" if reconcile else inference_annotation_profile
+        ),
+        domain_profile=domain_profile.profile_id,
+        postprocessing=tuple(steps),
+    )
 
 
 class _DocumentaryModel:
@@ -478,13 +581,28 @@ class _DocumentaryModel:
 
     def _apply(self, ana: SentenceAnalysis) -> SentenceAnalysis:
         reconcile, rescue, aggressive = self._state()
+        paradigm_lexicon = self._frozen_paradigms
+        if paradigm_lexicon is _LIVE_PARADIGMS:
+            from . import paradigms
+
+            paradigm_lexicon = paradigms.active()
         if reconcile:
             ana = reconcile_analysis(ana, aggressive=aggressive)
         if rescue:
-            if self._frozen_paradigms is _LIVE_PARADIGMS:
-                ana = rescue_analysis(ana)
-            else:
-                ana = _rescue_analysis_with_paradigms(ana, self._frozen_paradigms)
+            # Use the same snapshot for the transform and its receipt.  In
+            # particular, a concurrent paradigm toggle cannot make the output
+            # differ from the resource identity recorded below.
+            ana = _rescue_analysis_with_paradigms(ana, paradigm_lexicon)
+        if ana.receipt is not None and (reconcile or rescue):
+            profile = _documentary_analysis_profile(
+                reconcile=reconcile,
+                rescue=rescue,
+                aggressive=aggressive,
+                paradigm_lexicon=paradigm_lexicon,
+                inference_annotation_profile=ana.receipt.annotation_profile,
+            )
+            if profile is not None:
+                ana = replace(ana, receipt=ana.receipt.with_analysis_profile(profile))
         return ana
 
     def analyze(

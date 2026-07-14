@@ -17,7 +17,7 @@ page is organized around them:
 2. **Limits of licensing**: data the project may use but not redistribute, so it
    is fetched on demand rather than bundled.
 3. **Engineering limits**: things code *can* fix, tracked on the
-   [roadmap](Home#roadmap), each paired with the plan.
+   [roadmap](Home#roadmap).
 
 Then two reference sections: the **measured accuracy boundaries** (the weak
 numbers, published alongside the strong ones) and the **by-design trade-offs**

@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.51.0 (2026-07-14)
+
+### Added
+
+- `aegean.greek` now exposes immutable, versioned annotation, domain, mapping,
+  post-processing, and composed-analysis profile records. Canonical JSON and SHA-256
+  identities make convention and resource choices inspectable without running a model.
+- Built-in profiles describe the shipped canonical convention, Perseus/AGDT and PROIEL
+  diagnostic differences, and PapyGreek regularized/diplomatic scope. The new
+  `aegean greek annotation-profiles list|show` commands inspect the same registry.
+- Analysis receipt schema 3 binds the complete returned output profile and ordered
+  post-processing identity while retaining schema-1/2 readability and the unchanged
+  `grc-joint-v3` model identity.
+
+### Changed
+
+- Opt-in documentary reconciliation and lemma rescue now record their configuration,
+  evidence, seed-table identity, and active paradigm resource digest even when a
+  particular sentence does not change.
+- Interoperability documents require one inference and output-profile identity across
+  their embedded analysis receipts. Exact UD-PROIEL scoring and the separate native-XML
+  evaluation projection are now distinguished explicitly in the documentation.
+
 ## 0.50.0 (2026-07-14)
 
 ### Added

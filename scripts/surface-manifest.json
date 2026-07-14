@@ -1936,6 +1936,36 @@
           "note": "sentence policy selection remains available through the CLI command console."
         }
       }
+    },
+    {
+      "id": "annotation-domain-profiles",
+      "since": "0.51.0",
+      "python_api": "aegean.greek.list_annotation_profiles",
+      "summary": "Immutable annotation/domain profile registry and receipt-bound post-processing identities; inspection only, with no automatic profile conversion.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "The browser demo has no annotation-profile selector."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Profiles are local registry metadata; MCP exposes no profile selector."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "list_annotation_profiles()"
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Profiles are reachable through the CLI, with no dedicated TUI screen."
+        }
+      }
     }
   ]
 }

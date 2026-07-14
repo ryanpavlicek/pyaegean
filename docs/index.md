@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.50.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.51.0 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
@@ -68,6 +68,8 @@ The current release includes source-preserving named sentence policies, isolated
 analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 structure. Optional [interoperability adapters](interoperability.md) carry complete
 analyses through spaCy, Stanza, and CLTK objects with explicit native/sidecar/loss reports. The
+[Greek API](api/greek.md) also exposes immutable annotation and domain profiles, with
+content-addressed output and post-processing identity in current analysis receipts. The
 [Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
 shows runnable examples.
 

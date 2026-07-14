@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.50.0.** Isolated pipeline instances, explicit long-input policies,
+> **Available in v0.51.0.** Isolated pipeline instances, explicit long-input policies,
 > analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
 > representation are part of the current release.
 
@@ -364,7 +364,7 @@ config = greek.GreekPipelineConfig.from_json(config_json)
 same_runtime = greek.GreekPipeline.from_config(config)
 ```
 
-Each instance owns its neural model, tokenizer, annotation profile, normalization,
+Each instance owns its neural model, tokenizer, inference annotation profile, normalization,
 backend segmentation contract, and execution-provider selection. For a neural
 instance, `GreekPipelineConfig.segmentation` is copied from the model bundle's
 preprocessing contract (`pretokenized` for the published `grc-joint-v3` artifact):
@@ -444,8 +444,9 @@ different unversioned bundle must use a new model ID and schema.
 Every production `SentenceAnalysis` also carries `receipt`, a canonical, serializable
 `AnalysisReceipt`. It records the exact model ID, asset and manifest SHA-256 values, bundle
 schema, tokenizer revision, package/Python/neural-library versions, live execution
-providers, annotation profile, normalization and model-input segmentation contract, limit, and
-truncation/window status. `receipt.to_json()` is stable and `receipt.sha256` content-addresses
+providers, inference annotation profile, normalization and model-input segmentation contract,
+limit, and truncation/window status. Schema 3 separately binds the composed output profile
+and ordered post-processing identity. `receipt.to_json()` is stable and `receipt.sha256` content-addresses
 it. Passing a prior receipt as `use_neural_pipeline(expected_receipt=receipt)` refuses a
 runtime or artifact mismatch rather than silently approximating the old analysis.
 
@@ -519,9 +520,10 @@ chosen; each decision is `accept`, `review`, or `unavailable` and carries the ca
 `--confidence-domain` and `--confidence-policy PATH`. No default thresholds or
 out-of-domain warning are bundled:
 empirical source/task calibration and coverage-risk gates still require a fresh,
-development-only inference pass. When a registry or policy is used, the neural
-`AnalysisReceipt` is schema 2 and records the calibration/policy hashes; schema 1 receipts
-remain valid for confidence-free or legacy analyses.
+development-only inference pass. For the shipped canonical runtime, schema-3
+`AnalysisReceipt` output records calibration/policy hashes alongside the composed output
+profile. Schema 2 remains readable for legacy or custom output without a composed profile,
+and schema 1 remains readable for older confidence-free analyses.
 
 ### GPU execution and batching
 
@@ -559,10 +561,13 @@ bound is the batch plus the largest sentence, not a fixed cap on one pathologica
 sentence. `GreekPipeline.iter_analyze_sentences()` provides the same contract for
 an isolated instance.
 
-The per-sentence receipt is the unchanged neural inference receipt. If the opt-in
-documentary reconciliation or lemma-rescue layer post-processes that result, record
-those lever settings (and whether the paradigm lexicon was active) alongside the
-receipt; the current receipt schema does not claim to identify post-processing.
+The per-sentence receipt keeps the immutable neural inference identity. If the
+opt-in documentary reconciliation or lemma-rescue layer post-processes that result,
+receipt schema 3 additionally binds the composed output profile ID and SHA-256 plus
+the ordered post-processing identity (including the configured lever and resource
+hashes). Schemas 1 and 2 remain readable and retain their historical fields; a
+schema-3 receipt does not turn post-processing into a new model or a new accuracy
+claim.
 
 `greek.analyze_sentences(...)` still returns the historical complete list; it is a
 collector over that bounded engine. Raw-text `greek.pipeline`, corpus annotation,
@@ -632,6 +637,37 @@ levers applied (it activates the neural pipeline and the conservative reconcilia
 restores a clean session afterward). The measured, opt-in variant rows on the PapyGreek fold
 are in [Benchmarks → Opt-in documentary levers](Benchmarks#opt-in-documentary-levers); the
 published PapyGreek row is unchanged by either lever.
+
+### Annotation and domain profiles
+
+The immutable annotation registry makes the shipped convention explicit without
+confusing it with input inspection or confidence scope:
+
+```python
+greek.list_annotation_profiles()
+greek.list_domain_profiles()
+greek.get_annotation_profile("pyaegean-canonical-v1")
+greek.canonical_analysis_profile()
+```
+
+`AnnotationProfile` describes output labels, relation scheme, normalization,
+segmentation, mappings, reversibility, and evidence. `DomainProfile` is descriptive
+scope and source layer, not a detector. These values are separate from
+`TextProfile`/`profile_text` (observable input features) and from the caller's
+confidence `domain`. The shell equivalent is
+`aegean greek annotation-profiles list|show`; there is deliberately no automatic
+`--output-profile` conversion switch for the currently lossy or contextual source
+conventions.
+
+The registry records Perseus/AGDT and UD-PROIEL differences as diagnostics,
+including POS collapse, token-row differences, feature gaps, and dependency changes
+that are not generally invertible. The separate native-PROIEL XML evaluation
+projection strips `#N` homograph suffixes and omits empty tokens; exact UD-fold
+scoring does not use that cleanup. PapyGreek's `orig`
+profile changes only the diplomatic `FORM` surface while retaining regularized-layer
+gold analyses and documented fallbacks. When a post-processing chain is attached,
+receipt schema 3 binds its composed output profile and ordered step identity;
+schemas 1 and 2 and `grc-joint-v3` remain unchanged.
 
 ## Normalization & Beta Code
 

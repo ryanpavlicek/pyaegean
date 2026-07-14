@@ -439,6 +439,9 @@ def test_documentary_rescue_captures_paradigm_backend(
     form = "ἀδοκίμου"
 
     class Lexicon:
+        resource_id = "fixture-paradigms-v1"
+        resource_sha256 = "f" * 64
+
         def lemma_options(self, value: str) -> set[str]:
             assert value == form
             return {"ἀδόκιμος"}
