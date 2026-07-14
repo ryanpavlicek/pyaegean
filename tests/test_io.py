@@ -13,7 +13,16 @@ import pytest
 
 import aegean
 from aegean.core.corpus import Corpus
-from aegean.core.model import Document, DocumentMeta, ReadingStatus, Token, TokenKind
+from aegean.core.model import (
+    Document,
+    DocumentMeta,
+    FormSegment,
+    ReadingStatus,
+    SourceMarkupRef,
+    Token,
+    TokenFormState,
+    TokenKind,
+)
 from aegean.io import to_csv, to_epidoc, to_parquet, write_epidoc
 
 FIXTURE = Path(__file__).parent / "fixtures" / "linearb-epidoc"
@@ -174,11 +183,40 @@ def test_epidoc_export_validates_against_epidoc_schema(epidoc_rng) -> None:  # t
         ],
         lines=[[0, 1]], meta=DocumentMeta(site="Knossos"),
     )
+    typed_doc = Document(
+        id="P.Oxy. A6",
+        script_id="greek",
+        tokens=[
+            Token(
+                "λόγος",
+                TokenKind.WORD,
+                status=ReadingStatus.RESTORED,
+                form_state=TokenFormState(
+                    diplomatic="λογος",
+                    regularized="λόγος",
+                    segments=(
+                        FormSegment(
+                            "λόγος",
+                            ReadingStatus.RESTORED,
+                            SourceMarkupRef(
+                                "P.Oxy. A6",
+                                "supplied[1]",
+                                "supplied",
+                                (("reason", "lost"),),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ],
+        lines=[[0]],
+    )
     samples = [
         to_epidoc(_doc()),                                  # hand-built Linear B doc
         to_epidoc(aegean.load("lineara").get("HT13")),      # a bundled Linear A tablet
         to_epidoc(variant_doc),                             # <app>/<lem>/<rdg> variant readings
         to_epidoc(status_doc),                              # <supplied> restored + lost markup
+        to_epidoc(typed_doc),                               # typed reg/orig + partial apparatus
     ]
     for xml in samples:
         tree = etree.fromstring(xml.encode("utf-8"))

@@ -71,9 +71,9 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Main-branch preview.** The isolated pipeline instances, explicit long-input policies,
-> analysis receipts, source alignment, and lossless CoNLL-U representation described in this
-> section are on `main` and planned for the next release; they are not in PyPI v0.44.2.
+> **Available in v0.45.0.** Isolated pipeline instances, explicit long-input policies,
+> analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
+> representation are part of the current release.
 
 Every stage below is independently callable, but you don't have to compose them:
 `pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
@@ -121,6 +121,7 @@ Each `TokenRecord` is a dataclass with these fields:
 | `analysis_complete`, `analysis_warning` | sentence-level neural coverage and any partial-mode warning |
 | `analysis_receipt` | exact model, asset, manifest, runtime, provider, profile, and preprocessing receipt |
 | `alignment` | exact original text, source IDs, Unicode code-point span, preceding whitespace, and normalization provenance |
+| `form_state` | typed diplomatic, regularized, normalized, and exact model-input forms when analyzing pre-tokenized corpus tokens |
 
 ### Exact source alignment
 
@@ -155,9 +156,26 @@ For tokenization without analysis, `greek.tokenize_aligned(text, document_id=...
 returns ordinary `Token` values carrying the same mappings. The older `tokenize()` and
 `sentences()` result shapes remain unchanged. Corpus `Token.alignment` and
 `Document.source_text` persist through schema-2 JSON and SQLite; schema-1 artifacts still
-load with these fields absent. CoNLL-U structure uses its own lossless document model
-(below), while editorial restoration/damage state remains distinct from Unicode
-normalization.
+load with these fields absent. Typed `Token.form_state` is persisted by schema-3 JSON and
+SQLite. CoNLL-U structure uses its own lossless document model (below), while editorial
+restoration/damage state remains distinct from Unicode normalization.
+
+### Editorial form state and the analyzer input
+
+Pre-tokenized input can carry a `TokenFormState` alongside the display `Token.text`.
+`diplomatic` is the source or original spelling, `regularized` is an editorial
+correction or expansion, and `normalized` is an optional preprocessing form.
+`model_input` records the exact value sent to the analyzer, with
+`model_input_source` and `model_input_ops` explaining its selection and any
+normalization. These evidence fields are not interchangeable: a model input is a
+record of computation, not a new reading of the source.
+
+`greek.pipeline_tokens(tokens)` selects an explicit model input first, then
+regularized, normalized, diplomatic, and finally the legacy `Token.text` value.
+The returned `TokenRecord.form_state` contains the selected input. A neural NFC
+conversion is added to the ordered operations when it changes the string. Plain
+`greek.pipeline(text)` tokenizes raw text and therefore has no typed editorial
+state unless callers use `pipeline_tokens()` with pre-tokenized values.
 
 ### Lossless CoNLL-U structure and the model projection
 
@@ -172,6 +190,12 @@ sentences deliberately expose both views:
 - `sentence.items` interleaves comments and rows for structural inspection.
 - `sentence.projection` maps model ordinals to original integer IDs and lists omitted
   range and empty-node IDs. It also reports whether enhanced dependencies are present.
+
+A word row may carry typed editorial state in the reserved `AegeanFormState` MISC
+entry, encoded as URL-safe base64 JSON with schema 1. The loader decodes that entry
+into `UDToken.form_state`; unknown MISC entries remain ordered and untouched. Strict
+loading rejects malformed, duplicate, unknown-schema, or oversized state values,
+while lenient loading retains the original MISC entry without a typed state.
 
 ```python
 from aegean import greek
@@ -193,7 +217,10 @@ The CLI mirrors this as `aegean greek conllu inspect` and `conllu export`.
 This is a representation capability, not a new model claim. The current v3 pipeline
 still analyzes and predicts only the syntactic-word projection. It does not predict
 multiword rows, empty nodes, or enhanced arcs, and those preserved gold annotations are
-not copied into system output or scores. Callers that require complete predictive
+not copied into system output or scores. Typed form state is an input annotation, not
+a predicted CoNLL-U structure. `pipeline_conllu()` does not emit it; use
+`dump_conllu()` or `write_conllu()` to serialize a `UDToken` that carries state.
+Callers that require complete predictive
 support can request the explicit error policy rather than accepting that projection.
 
 For a field-by-field guide to interpreting a record, including what each `lemma_source`

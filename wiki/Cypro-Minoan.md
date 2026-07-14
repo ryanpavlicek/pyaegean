@@ -19,7 +19,7 @@ scripts, while staying honest that everything stops at the sign level.
 import aegean
 from aegean.core.script import get_script
 
-aegean.__version__                                # '0.44.2'
+aegean.__version__                                # '0.45.0'
 aegean.registered_scripts()                       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 len(get_script("cyprominoan").sign_inventory)     # 99
 ```
@@ -292,7 +292,7 @@ aegean search cyprominoan "CM005-*"
 ### Export
 
 The corpus exports through the same paths as every other script: lossless JSON, tabular CSV/Parquet,
-EpiDoc TEI, or SQLite:
+EpiDoc TEI, SQLite, or RDF Turtle/JSON-LD:
 
 ```bash
 aegean export cyprominoan -f csv -o cm.csv
@@ -314,7 +314,7 @@ cm-ugarit-tablet,cyprominoan,Ugarit,Clay tablet,,,Late Bronze Age (CM3),Illustra
 | `aegean stats cyprominoan [--signs]` | Word (default) or sign frequencies |
 | `aegean search cyprominoan "<pattern>"` | Wildcard sign-pattern matches (`*` = one sign) |
 | `aegean query cyprominoan …` | Compound text / prefix / sign-pattern queries |
-| `aegean export cyprominoan -f … -o …` | JSON / CSV / Parquet / EpiDoc / SQLite |
+| `aegean export cyprominoan -f … -o …` | JSON / CSV / Parquet / EpiDoc / SQLite / RDF Turtle / JSON-LD |
 | `aegean cite cyprominoan` | One-line citation (Ferrara) |
 | `aegean sign cyprominoan <label\|glyph>` | One sign's glyph + codepoint |
 

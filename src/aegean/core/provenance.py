@@ -7,9 +7,10 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-# Corpus JSON/SQLite schema.  Version 2 adds lossless source/token alignment;
-# readers continue to accept schema-1 artifacts and default the additive fields.
-SCHEMA_VERSION = 2
+# Corpus JSON/SQLite schema.  Version 2 added lossless source/token alignment;
+# version 3 adds the typed per-token form-state record.  Readers continue to
+# accept schema-1/2 artifacts and default the additive fields to ``None``.
+SCHEMA_VERSION = 3
 
 _YEAR_RE = re.compile(r"\b(1[5-9]\d{2}|20\d{2})\b")
 

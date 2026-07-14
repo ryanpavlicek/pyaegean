@@ -98,7 +98,11 @@ def combine(
 
 def import_(
     source: str = typer.Argument(
-        ..., help="A .txt file, a folder of text files, or a .csv to import."
+        ...,
+        help=(
+            "A .txt file, text folder, .csv, Workbench JSON (--workbench), or "
+            "token-carrier EpiDoc path (--epidoc)."
+        ),
     ),
     output: Path = typer.Option(..., "--output", "-o", help="Destination .json or .db corpus file."),
     script: str = typer.Option(
@@ -120,7 +124,9 @@ def import_(
         False, "--workbench", help="Treat SOURCE as a Linear A Workbench export (JSON) and import that."
     ),
     epidoc: bool = typer.Option(
-        False, "--epidoc", help="Treat SOURCE as EpiDoc TEI (a file or a folder of .xml) and import it."
+        False,
+        "--epidoc",
+        help="Treat SOURCE as token-carrier EpiDoc TEI (a file or .xml folder).",
     ),
     json_out: bool = JSON_OPT,
 ) -> None:
@@ -132,7 +138,7 @@ def import_(
       aegean import myplato.txt -o myplato.json   &&   aegean stats myplato.json
       aegean import poems/ -o corpus.db --split line
       aegean import rows.csv -o corpus.json --text-col line --id-col id
-      aegean import inscriptions/ -o ins.json --epidoc --script greek   # any EpiDoc TEI edition"""
+      aegean import inscriptions/ -o ins.json --epidoc --script greek   # token-carrier EpiDoc TEI"""
     import json
     import xml.etree.ElementTree as ET
 
@@ -277,6 +283,19 @@ def show(
         return
 
     def _doc_json(doc: Any) -> dict[str, Any]:
+        from aegean._view import _form_state_fields
+
+        tokens: list[dict[str, Any]] = []
+        for token in doc.tokens:
+            row: dict[str, Any] = {
+                "text": token.text,
+                "kind": token.kind.value,
+                "status": token.status.value,
+                **_form_state_fields(token.form_state),
+            }
+            if token.form_state is not None:
+                row["form_state"] = token.form_state.to_dict()
+            tokens.append(row)
         return {
             "id": doc.id,
             "script": doc.script_id,
@@ -286,6 +305,7 @@ def show(
                 "findspot": doc.meta.findspot, "name": doc.meta.name,
             },
             "lines": [[doc.tokens[i].text for i in line] for line in doc.lines],
+            "tokens": tokens,
         }
 
     if json_out:
@@ -303,8 +323,26 @@ def show(
             if v
         ]
         console().print(f"{doc.id}  {'  '.join(meta_bits)}", style="bold", markup=False)
-        for n, line in enumerate(lines, 1):
+        for n, (line, line_tokens) in enumerate(zip(lines, doc.line_tokens), 1):
             console().print(f"  {n}: {' '.join(line)}", markup=False)
+            for ordinal, token in enumerate(line_tokens, 1):
+                state = token.form_state
+                if state is None:
+                    continue
+                details = [
+                    f"diplomatic={state.diplomatic!r}",
+                    f"status={state.editorial_status.value}",
+                ]
+                if state.regularized is not None:
+                    details.append(f"regularized={state.regularized!r}")
+                if state.normalized is not None:
+                    details.append(f"normalized={state.normalized!r}")
+                if state.model_input is not None:
+                    details.append(f"model_input={state.model_input!r}")
+                console().print(
+                    f"      form {ordinal}: {'  '.join(details)}",
+                    markup=False,
+                )
 
 
 def search(

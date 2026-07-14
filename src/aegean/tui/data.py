@@ -195,6 +195,7 @@ class TokenCell:
     alt: tuple[str, ...]
     annotations: dict[str, str]
     alignment: dict[str, Any] | None = None
+    form_state: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -384,6 +385,9 @@ def document_detail(corpus: "Corpus", doc_id: str) -> DocDetail:
                         }
                         if t.alignment is not None
                         else None
+                    ),
+                    form_state=(
+                        t.form_state.to_dict() if t.form_state is not None else None
                     ),
                 )
                 for t in toks

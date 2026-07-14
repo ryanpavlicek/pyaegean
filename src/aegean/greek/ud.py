@@ -31,6 +31,8 @@ Protocol (spelled out in ``docs/benchmarks.md``):
 
 from __future__ import annotations
 
+import base64
+import binascii
 import importlib.util
 import json
 import re
@@ -42,6 +44,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 from ..data import cache_dir, download_file
+from ..core.model import TokenFormState
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -206,6 +209,77 @@ class UDMiscEntry:
     value: str | None = None
 
 
+_FORM_STATE_MISC_KEY = "AegeanFormState"
+_FORM_STATE_MISC_SCHEMA = 1
+_MAX_FORM_STATE_MISC_CHARS = 1_000_000
+
+
+def _encode_form_state(state: TokenFormState) -> str:
+    """Encode A6 state as a reserved-character-safe, URL-safe MISC value."""
+    payload = json.dumps(
+        {"schema": _FORM_STATE_MISC_SCHEMA, "state": state.to_dict()},
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    encoded = base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    if len(encoded) > _MAX_FORM_STATE_MISC_CHARS:
+        raise ValueError(
+            "AegeanFormState MISC value exceeds the 1,000,000-character limit"
+        )
+    return encoded
+
+
+def _decode_form_state(value: str | None, *, strict: bool) -> TokenFormState | None:
+    if value is None or not value:
+        if strict:
+            raise ValueError("AegeanFormState MISC value must be non-empty")
+        return None
+    if len(value) > _MAX_FORM_STATE_MISC_CHARS:
+        if strict:
+            raise ValueError(
+                "AegeanFormState MISC value exceeds the 1,000,000-character limit"
+            )
+        return None
+    try:
+        value = value.rstrip("=")
+        padded = value + "=" * (-len(value) % 4)
+        payload = base64.b64decode(padded.encode("ascii"), altchars=b"-_", validate=True)
+        decoded = json.loads(payload.decode("utf-8"))
+        if not isinstance(decoded, dict) or set(decoded) != {"schema", "state"}:
+            raise ValueError("AegeanFormState payload must contain schema and state")
+        if decoded["schema"] != _FORM_STATE_MISC_SCHEMA:
+            raise ValueError(
+                f"unsupported AegeanFormState schema {decoded['schema']!r}"
+            )
+        return TokenFormState.from_dict(decoded["state"])
+    except (ValueError, TypeError, UnicodeError, json.JSONDecodeError, binascii.Error) as exc:
+        if strict:
+            raise ValueError("invalid AegeanFormState MISC value") from exc
+        return None
+
+
+def _split_form_state_misc(
+    entries: tuple[UDMiscEntry, ...], *, strict: bool
+) -> tuple[tuple[UDMiscEntry, ...], TokenFormState | None]:
+    """Decode exactly one recognized A6 entry, leaving unknown MISC entries untouched."""
+    recognized = [entry for entry in entries if entry.key == _FORM_STATE_MISC_KEY]
+    if not recognized:
+        return entries, None
+    if len(recognized) != 1:
+        if strict:
+            raise ValueError("duplicate AegeanFormState MISC entries")
+        return entries, None
+    state = _decode_form_state(recognized[0].value, strict=strict)
+    if state is None:
+        return entries, None
+    return tuple(entry for entry in entries if entry.key != _FORM_STATE_MISC_KEY), state
+
+
+def _typed_misc(raw: str, *, strict: bool = False) -> tuple[tuple[UDMiscEntry, ...], TokenFormState | None]:
+    entries = _parse_misc(raw, strict=strict)
+    return _split_form_state_misc(entries, strict=strict)
+
+
 def _parse_deps(raw: str, *, strict: bool) -> tuple[UDDependency, ...]:
     if raw in ("", "_"):
         return ()
@@ -271,6 +345,9 @@ class UDToken:
     misc_raw: str = field(default="_", compare=False)
     raw_columns: tuple[str, ...] = field(default=(), compare=False)
     line_number: int | None = field(default=None, compare=False)
+    # Optional documentary/editorial form states.  This is additive and excluded from legacy
+    # equality so positional callers and model projections remain unchanged.
+    form_state: TokenFormState | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -495,7 +572,7 @@ def _row_signature(row: UDRow) -> tuple[Any, ...]:
         return (
             "word", row.id, row.form, row.lemma, row.upos, row.xpos, row.feats,
             row.head, row.deprel, row.deps, row.deps_raw, row.misc, row.misc_raw,
-            row.raw_columns,
+            row.raw_columns, row.form_state,
         )
     if isinstance(row, UDMultiwordToken):
         return (
@@ -813,7 +890,7 @@ def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
                 head = 0
             try:
                 deps = _parse_deps(cols[8], strict=strict)
-                misc = _parse_misc(cols[9], strict=strict)
+                misc, form_state = _typed_misc(cols[9], strict=strict)
             except ValueError as exc:
                 raise ValueError(f"line {line_number}: {exc}") from exc
             word_row = UDToken(
@@ -822,6 +899,7 @@ def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
                     deps=deps, deps_raw=cols[8], misc=misc, misc_raw=cols[9],
                     raw_columns=tuple(cols),
                     line_number=line_number,
+                    form_state=form_state,
                 )
             rows.append(word_row)
             items.append(word_row)
@@ -906,7 +984,7 @@ def _word_columns(token: UDToken) -> tuple[str, ...]:
         len(token.raw_columns) == 10
         and tuple(token.raw_columns) == expected
         and token.deps == _parse_deps(token.deps_raw, strict=False)
-        and token.misc == _parse_misc(token.misc_raw, strict=False)
+        and (token.misc, token.form_state) == _typed_misc(token.misc_raw, strict=False)
     ):
         return token.raw_columns
     columns = (
@@ -914,7 +992,7 @@ def _word_columns(token: UDToken) -> tuple[str, ...]:
         str(token.head), token.deprel, token.deps_raw, token.misc_raw,
     )
     return _annotation_columns(
-        columns, token.deps_raw, token.deps, token.misc_raw, token.misc
+        columns, token.deps_raw, token.deps, token.misc_raw, token.misc, token.form_state
     )
 
 
@@ -924,6 +1002,7 @@ def _annotation_columns(
     deps: tuple[UDDependency, ...],
     misc_raw: str,
     misc: tuple[UDMiscEntry, ...],
+    form_state: TokenFormState | None = None,
 ) -> tuple[str, ...]:
     """Apply typed annotation edits while retaining every unrelated raw column."""
     columns = list(raw_columns) if len(raw_columns) == 10 else ["_"] * 10
@@ -937,11 +1016,21 @@ def _annotation_columns(
     misc_value = misc_raw or "_"
     if misc != parsed_misc:
         misc_value = "_"
-    if misc:
+    serialized_misc = (
+        tuple(entry for entry in misc if entry.key != _FORM_STATE_MISC_KEY)
+        if form_state is not None
+        else misc
+    )
+    if serialized_misc:
         misc_value = "|".join(
             entry.key if entry.value is None else f"{entry.key}={entry.value}"
-            for entry in misc
+            for entry in serialized_misc
         )
+    elif form_state is not None:
+        misc_value = "_"
+    if form_state is not None:
+        encoded = f"{_FORM_STATE_MISC_KEY}={_encode_form_state(form_state)}"
+        misc_value = encoded if misc_value in ("", "_") else f"{misc_value}|{encoded}"
     columns[8] = deps_value
     columns[9] = misc_value
     return tuple(columns)

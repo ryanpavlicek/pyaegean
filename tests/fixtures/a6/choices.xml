@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt><title>A6 fixture</title></titleStmt>
+      <publicationStmt><p>test</p></publicationStmt>
+      <sourceDesc><p>A6</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text><body><div type="edition"><ab>
+    <lb n="1"/>
+    <w><choice><reg>λόγος</reg><orig>λογος</orig></choice></w>
+    <w><choice><corr>ἔχει</corr><sic>εχει</sic></choice></w>
+    <w><choice><expan>δραχ<ex>μάς</ex></expan><abbr>δρ</abbr></choice></w>
+    <w>Μου<supplied reason="lost">σαίου</supplied><unclear>ς</unclear><gap reason="lost"/></w>
+  </ab></div></body></text>
+</TEI>

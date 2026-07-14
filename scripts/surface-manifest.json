@@ -75,6 +75,35 @@
       }
     },
     {
+      "id": "editorial-form-states",
+      "since": "0.45.0",
+      "python_api": "aegean.TokenFormState",
+      "summary": "Typed diplomatic, regularized, normalized, model-input, supplied, unclear, and lost token states with semantic source-markup provenance.",
+      "surfaces": {
+          "demo": {
+            "status": "excluded",
+            "reason": "not-applicable",
+            "note": "typed form state is shown inside the existing epidoc_import card tracked by the epidoc-read capability, not exposed as a duplicate demo function."
+          },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "form state is nested and flattened inside the existing show_document tool tracked by the document-reader capability, not exposed as a second tool."
+        },
+          "notebooks": {
+            "status": "covered",
+            "where": {
+              "notebook": "walkthrough-epigraphist.ipynb",
+              "marker": "editorial-form-states"
+            }
+          },
+        "tui": {
+          "status": "covered",
+          "where": "Corpus reader token details (typed form_state)"
+        }
+      }
+    },
+    {
       "id": "greek-pipeline",
       "since": "0.8.0",
       "python_api": "aegean.greek.pipeline",
@@ -1296,7 +1325,7 @@
       "id": "neural-pipeline",
       "since": "0.8.0",
       "python_api": "aegean.greek.use_neural_pipeline",
-      "summary": "The joint neural tagger/parser/lemmatizer, with isolated configured instances, explicit long-input coverage, exact lemma provenance, validated model bundles, and reproducible analysis receipts (best published on the UD Ancient Greek Perseus test).",
+        "summary": "The joint neural tagger/parser/lemmatizer, with isolated configured instances, explicit long-input coverage, exact lemma provenance, validated model bundles, reproducible analysis receipts, and measured UD Ancient Greek Perseus results.",
       "surfaces": {
         "demo": {
           "status": "excluded",

@@ -5,9 +5,10 @@ deprecate in a minor, remove no sooner than the next minor, warnings name the
 replacement. This script enforces the mechanical half of that contract: nothing
 public disappears or changes signature without showing up red at the gate.
 
-  1. snapshot   `python scripts/check_api.py --snapshot` walks the public surface
-     of the ``aegean`` package and writes ``scripts/api-baseline.json`` (sorted,
-     deterministic). Re-run it at each release cut to fold in additions.
+  1. snapshot   `python scripts/check_api.py --snapshot` preserves the existing
+     format-1 compatibility names and merges additions from the reviewed facade
+     manifest (``scripts/api-manifest.json``) into ``scripts/api-baseline.json``.
+     Unlisted internal paths are never snapshotted automatically.
   2. check      `python scripts/check_api.py` re-walks the current source and
      diffs it against the baseline. REMOVED names, REMOVED/RENAMED parameters,
      and CHANGED signatures exit 1 with a per-item report (these need a
@@ -19,9 +20,13 @@ The walk is purely static (griffe, ``allow_inspection=False``): no module under
 ``src/`` is imported, so the lazy/optional heavy extras never load and the check
 stays offline and fast (a couple of seconds).
 
-What counts as public:
+Compatibility names are checked against a full static walk. Additions are
+limited to modules and symbols selected by the reviewed manifest, so adding
+an unlisted implementation module does not silently make it public.
 
-  * every module whose dotted path has no ``_``-prefixed segment;
+What counts as public in a manifest-selected module:
+
+  * the module itself, after its dotted path passes manifest validation;
   * in a module WITH ``__all__``: exactly the exported names (aliases resolve to
     their target's signature, recorded at the exported location);
   * in a module WITHOUT ``__all__``: names defined there that do not start with
@@ -43,9 +48,11 @@ import griffe
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_BASELINE = ROOT / "scripts" / "api-baseline.json"
+DEFAULT_MANIFEST = ROOT / "scripts" / "api-manifest.json"
 DEFAULT_SEARCH_PATH = ROOT / "src"
 DEFAULT_PACKAGE = "aegean"
 BASELINE_FORMAT = 1
+MANIFEST_FORMAT = 1
 
 Entry = dict[str, Any]
 
@@ -53,7 +60,7 @@ _VARIADIC_KINDS = {"variadic positional", "variadic keyword"}
 _POSITIONAL_KINDS = {"positional-only", "positional or keyword"}
 
 
-# ── walking ──────────────────────────────────────────────────────────────────
+# -- walking -----------------------------------------------------------------
 
 
 def _function_entry(fn: griffe.Function) -> Entry:
@@ -109,19 +116,45 @@ def _export_names(mod: griffe.Module) -> set[str] | None:
         return None
     out: set[str] = set()
     for item in mod.exports:
-        out.add(item if isinstance(item, str) else getattr(item, "name", str(item)))
+        if not isinstance(item, str):
+            raise ValueError(f"{mod.path}: __all__ entries must be strings, got {item!r}")
+        out.add(item)
     return out
 
 
-def _walk_module(mod: griffe.Module, names: dict[str, Entry]) -> None:
+def _walk_module(
+    mod: griffe.Module,
+    names: dict[str, Entry],
+    *,
+    recurse_modules: bool = True,
+) -> None:
+    """Walk one module, optionally descending into imported submodules.
+
+    The compatibility walk descends through every public module so that old
+    baseline names can never disappear silently.  A facade walk visits only
+    the explicitly listed module itself; imported submodules are selected by
+    their own manifest entries.  This distinction is what keeps a newly-added
+    internal module out of the contract while retaining legacy obligations.
+    """
     names[mod.path] = {"kind": "module"}
     exports = _export_names(mod)
+    if exports is not None:
+        missing = sorted(name for name in exports if name not in mod.members)
+        if missing:
+            raise ValueError(
+                f"{mod.path}: __all__ names not defined or imported: {', '.join(missing)}"
+            )
     for name, member in sorted(mod.members.items()):
         if not member.is_alias and isinstance(member, griffe.Module):
-            # A real submodule is importable directly regardless of the parent's
-            # __all__; recurse into every non-private one.
-            if not name.startswith("_"):
-                _walk_module(member, names)
+            if recurse_modules:
+                # A real submodule is importable directly regardless of the parent's
+                # __all__; recurse into every non-private one.
+                if not name.startswith("_"):
+                    _walk_module(member, names, recurse_modules=True)
+            elif exports is not None and name in exports:
+                # The module itself is a formally exported member, but its
+                # implementation descendants require a separate manifest entry.
+                names[f"{mod.path}.{name}"] = {"kind": "module"}
             continue
         if exports is not None:
             if name not in exports:
@@ -144,11 +177,136 @@ def walk_api(package: str, search_path: pathlib.Path) -> dict[str, Entry]:
     if not isinstance(loaded, griffe.Module):
         raise SystemExit(f"FAIL public-api: {package!r} did not load as a module")
     names: dict[str, Entry] = {}
-    _walk_module(loaded, names)
+    try:
+        _walk_module(loaded, names)
+    except ValueError as exc:
+        raise SystemExit(f"FAIL public-api: {exc}") from None
     return names
 
 
-# ── diffing ──────────────────────────────────────────────────────────────────
+def _load_static_module(module_path: str, search_path: pathlib.Path) -> griffe.Module:
+    loaded = griffe.load(
+        module_path,
+        search_paths=[search_path],
+        submodules=True,
+        allow_inspection=False,
+        store_source=False,
+    )
+    if not isinstance(loaded, griffe.Module):
+        raise ValueError(f"{module_path!r} did not load as a module")
+    return loaded
+
+
+def _lookup_member(mod: griffe.Module, dotted_path: str) -> griffe.Object | griffe.Alias:
+    current: griffe.Object | griffe.Alias = mod
+    for segment in dotted_path.split("."):
+        members = getattr(current, "members", None)
+        if members is None or segment not in members:
+            raise ValueError(f"{dotted_path}: no such member in {mod.path}")
+        current = members[segment]
+    return current
+
+
+def _record_selected_symbol(
+    symbol_path: str,
+    search_path: pathlib.Path,
+    names: dict[str, Entry],
+    root: griffe.Module | None = None,
+) -> None:
+    parent_path, _, symbol = symbol_path.rpartition(".")
+    if not parent_path or not symbol:
+        raise ValueError(f"manifest symbol {symbol_path!r} is not a dotted member path")
+    if root is None:
+        parent = _load_static_module(parent_path, search_path)
+    else:
+        if parent_path == root.path:
+            parent = root
+        else:
+            parent = _lookup_member(root, parent_path[len(root.path) + 1 :])
+        if not isinstance(parent, griffe.Module):
+            raise ValueError(f"{parent_path!r} did not resolve to a module")
+    exports = _export_names(parent)
+    if exports is not None and symbol not in exports:
+        raise ValueError(
+            f"{symbol_path}: selected symbol is not explicitly exported by {parent_path}"
+        )
+    member = _lookup_member(parent, symbol)
+    _record(symbol_path, member, names)
+
+
+def _validate_manifest_shape(payload: Any, package: str) -> tuple[list[str], list[str]]:
+    if not isinstance(payload, dict):
+        raise ValueError("manifest must be a JSON object")
+    if payload.get("format") != MANIFEST_FORMAT:
+        raise ValueError(
+            f"manifest format {payload.get('format')!r} != {MANIFEST_FORMAT}"
+        )
+    if payload.get("package") != package:
+        raise ValueError(
+            f"manifest package {payload.get('package')!r} != requested package {package!r}"
+        )
+    modules = payload.get("modules")
+    if not isinstance(modules, list) or not modules or not all(
+        isinstance(item, str) for item in modules
+    ):
+        raise ValueError("manifest 'modules' must be a non-empty list of dotted strings")
+    symbols = payload.get("symbols", [])
+    if not isinstance(symbols, list) or not all(isinstance(item, str) for item in symbols):
+        raise ValueError("manifest 'symbols' must be a list of dotted strings")
+    if len(set(modules)) != len(modules):
+        raise ValueError("manifest 'modules' contains duplicates")
+    if len(set(symbols)) != len(symbols):
+        raise ValueError("manifest 'symbols' contains duplicates")
+    prefix = package + "."
+    for path in [*modules, *symbols]:
+        if not path or (path != package and not path.startswith(prefix)):
+            raise ValueError(f"manifest path {path!r} is outside package {package!r}")
+        if any(not part or part.startswith("_") for part in path.split(".")):
+            raise ValueError(f"manifest path {path!r} contains a private/empty segment")
+    for path in symbols:
+        if "." not in path:
+            raise ValueError(f"manifest symbol {path!r} must include a parent module")
+    return modules, symbols
+
+
+def load_manifest(path: pathlib.Path, package: str) -> tuple[list[str], list[str]]:
+    """Load and validate the reviewed facade manifest."""
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"FAIL public-api: cannot read manifest {path}: {exc}") from None
+    try:
+        return _validate_manifest_shape(payload, package)
+    except ValueError as exc:
+        raise SystemExit(f"FAIL public-api: {exc}") from None
+
+
+def walk_facade(
+    package: str,
+    search_path: pathlib.Path,
+    modules: list[str],
+    symbols: list[str] | None = None,
+) -> dict[str, Entry]:
+    """Static walk of only the manifest-selected facade modules and symbols."""
+    names: dict[str, Entry] = {}
+    try:
+        root = _load_static_module(package, search_path)
+        for module_path in modules:
+            if module_path == package:
+                mod = root
+            else:
+                mod = _lookup_member(root, module_path[len(package) + 1 :])
+                if not isinstance(mod, griffe.Module):
+                    raise ValueError(f"{module_path!r} did not resolve to a module")
+            _walk_module(mod, names, recurse_modules=False)
+        for symbol_path in symbols or []:
+            _record_selected_symbol(symbol_path, search_path, names, root)
+    except (ValueError, griffe.LoadingError) as exc:
+        raise SystemExit(f"FAIL public-api: {exc}") from None
+    return names
+
+
+# -- diffing -----------------------------------------------------------------
 
 
 def _diff_params(path: str, old: Entry, new: Entry, breaking: list[str], info: list[str]) -> None:
@@ -244,11 +402,86 @@ def compare(
     return breaking, info
 
 
-# ── modes ────────────────────────────────────────────────────────────────────
+# -- modes -------------------------------------------------------------------
 
 
-def write_snapshot(baseline_path: pathlib.Path, package: str, search_path: pathlib.Path) -> None:
-    names = walk_api(package, search_path)
+def _read_baseline(path: pathlib.Path, package: str) -> dict[str, Entry] | None:
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"FAIL public-api: cannot read baseline {path}: {exc}") from None
+    if not isinstance(payload, dict):
+        raise SystemExit("FAIL public-api: baseline must be a JSON object")
+    if payload.get("format") != BASELINE_FORMAT:
+        raise SystemExit(
+            f"FAIL public-api: baseline format {payload.get('format')!r} != "
+            f"{BASELINE_FORMAT} - re-run `python scripts/check_api.py --snapshot`"
+        )
+    baseline_package = payload.get("package")
+    if baseline_package is not None and baseline_package != package:
+        raise SystemExit(
+            f"FAIL public-api: baseline package {baseline_package!r} != requested package "
+            f"{package!r}"
+        )
+    names = payload.get("names")
+    if not isinstance(names, dict) or not all(
+        isinstance(path, str) and isinstance(entry, dict) for path, entry in names.items()
+    ):
+        raise SystemExit("FAIL public-api: baseline 'names' must be an object of entries")
+    return names
+
+
+def _manifest_for(
+    package: str, manifest_path: pathlib.Path | None
+) -> tuple[list[str], list[str]] | None:
+    if manifest_path is None:
+        if package != DEFAULT_PACKAGE or not DEFAULT_MANIFEST.is_file():
+            return None
+        manifest_path = DEFAULT_MANIFEST
+    return load_manifest(manifest_path, package)
+
+
+def write_snapshot(
+    baseline_path: pathlib.Path,
+    package: str,
+    search_path: pathlib.Path,
+    manifest_path: pathlib.Path | None = None,
+    accept_breaking: bool = False,
+) -> None:
+    old = _read_baseline(baseline_path, package)
+    current_full = walk_api(package, search_path)
+    retained: dict[str, Entry] = old or {}
+    if old is not None:
+        breaking, _ = compare(old, current_full)
+        if breaking and not accept_breaking:
+            print(f"breaking ({len(breaking)}) - snapshot refused due to legacy breaks:")
+            for line in breaking:
+                print(f"  - {line}")
+            raise SystemExit(
+                "FAIL public-api: snapshot would discard or change grandfathered names; "
+                "complete the deprecation cycle, then review and repeat with "
+                "--accept-breaking-snapshot"
+            )
+        if breaking:
+            print(f"accepted breaking snapshot ({len(breaking)}) after explicit review:")
+            for line in breaking:
+                print(f"  - {line}")
+            # Explicit acceptance retires removed names and refreshes surviving
+            # grandfathered entries.  An ordinary old-first merge would otherwise
+            # preserve a retired contract forever after its deprecation cycle.
+            retained = {path: current_full[path] for path in old if path in current_full}
+    manifest = _manifest_for(package, manifest_path)
+    if manifest is None:
+        # Synthetic/custom packages used by callers that have no reviewed
+        # manifest retain the historical full-walk behavior.  The shipped
+        # package always has a manifest, so its snapshot is facade-selected.
+        names = {**retained, **current_full}
+    else:
+        modules, symbols = manifest
+        current_facade = walk_facade(package, search_path, modules, symbols)
+        names = {**retained, **current_facade}
     payload = {"format": BASELINE_FORMAT, "package": package, "names": names}
     baseline_path.write_text(
         json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
@@ -258,28 +491,48 @@ def write_snapshot(baseline_path: pathlib.Path, package: str, search_path: pathl
     print("OK  snapshot")
 
 
-def run_check(baseline_path: pathlib.Path, package: str, search_path: pathlib.Path) -> int:
+def run_check(
+    baseline_path: pathlib.Path,
+    package: str,
+    search_path: pathlib.Path,
+    manifest_path: pathlib.Path | None = None,
+) -> int:
     if not baseline_path.is_file():
         raise SystemExit(
-            f"FAIL public-api: no baseline at {baseline_path} — run "
+            f"FAIL public-api: no baseline at {baseline_path} - run "
             "`python scripts/check_api.py --snapshot` first"
         )
-    payload = json.loads(baseline_path.read_text(encoding="utf-8"))
-    if payload.get("format") != BASELINE_FORMAT:
-        raise SystemExit(
-            f"FAIL public-api: baseline format {payload.get('format')!r} != "
-            f"{BASELINE_FORMAT} — re-run `python scripts/check_api.py --snapshot`"
-        )
-    baseline: dict[str, Entry] = payload["names"]
+    baseline = _read_baseline(baseline_path, package)
+    assert baseline is not None  # guarded by the is_file check above
     current = walk_api(package, search_path)
-    breaking, info = compare(baseline, current)
-    print(f"baseline {len(baseline)} public names; current {len(current)}")
+    manifest = _manifest_for(package, manifest_path)
+    if manifest is None:
+        supported = current
+    else:
+        modules, symbols = manifest
+        supported = walk_facade(package, search_path, modules, symbols)
+
+    # Legacy compatibility is always checked against the entire static tree.
+    # Only additions come from the reviewed facade selection.
+    breaking, legacy_info = compare(baseline, current)
+    if manifest is None:
+        info = legacy_info
+    else:
+        # ``compare`` also reports baseline removals as breaking.  Those were
+        # already computed from the full walk above; retain only additions and
+        # compatible signature loosenings from the selected facade walk.
+        _facade_breaking, facade_info = compare(baseline, supported)
+        info = facade_info
+    print(
+        f"baseline {len(baseline)} public names; current {len(current)} "
+        f"({len(supported)} supported facade names)"
+    )
     if info:
-        print(f"informational ({len(info)}) — additions fold into the snapshot at release:")
+        print(f"informational ({len(info)}) - additions fold into the snapshot at release:")
         for line in info:
             print(f"  + {line}")
     if breaking:
-        print(f"breaking ({len(breaking)}) — these need a deprecation cycle:")
+        print(f"breaking ({len(breaking)}) - these need a deprecation cycle:")
         for line in breaking:
             print(f"  - {line}")
         print(
@@ -299,14 +552,36 @@ def main() -> int:
     ap.add_argument(
         "--snapshot", action="store_true", help="write the baseline instead of checking"
     )
+    ap.add_argument(
+        "--accept-breaking-snapshot",
+        action="store_true",
+        help=(
+            "after a completed deprecation cycle, explicitly accept the reported "
+            "removals/signature breaks while writing the snapshot"
+        ),
+    )
     ap.add_argument("--baseline", type=pathlib.Path, default=DEFAULT_BASELINE)
     ap.add_argument("--package", default=DEFAULT_PACKAGE)
     ap.add_argument("--search-path", type=pathlib.Path, default=DEFAULT_SEARCH_PATH)
+    ap.add_argument(
+        "--manifest",
+        type=pathlib.Path,
+        default=None,
+        help="reviewed facade manifest (defaults to scripts/api-manifest.json for aegean)",
+    )
     args = ap.parse_args()
+    if args.accept_breaking_snapshot and not args.snapshot:
+        ap.error("--accept-breaking-snapshot requires --snapshot")
     if args.snapshot:
-        write_snapshot(args.baseline, args.package, args.search_path)
+        write_snapshot(
+            args.baseline,
+            args.package,
+            args.search_path,
+            args.manifest,
+            args.accept_breaking_snapshot,
+        )
         return 0
-    return run_check(args.baseline, args.package, args.search_path)
+    return run_check(args.baseline, args.package, args.search_path, args.manifest)
 
 
 if __name__ == "__main__":

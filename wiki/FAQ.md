@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.44.2`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.45.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -109,7 +109,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `geo` | GeoJSON / geographic output |
 | `viz` | plotting (`matplotlib`): figures and the scansion grid |
 | `viz-interactive` | interactive plots (`plotly`): findspots, timelines, sign networks |
-| `neural` | the neural pipeline + neural lemmatizer (most accurate Greek NLP) |
+| `neural` | the measured neural pipeline + neural lemmatizer |
 | `cli` | the `aegean` command-line interface |
 | `tui` | the `aegean tui` full-screen terminal UI (`textual`) |
 | `mcp` | the MCP server, to drive pyaegean from an MCP client (e.g. Claude Code) |
@@ -493,7 +493,8 @@ Perseus TEI), and `greek.use_treebank()` / `use_tagger()` / `use_lemmatizer()` /
 `use_parser()` one shared ~15 MB AGDT-derived bundle (no 75 MB download or local
 training), falling back to building from source if an asset is unreachable. The
 `[neural]` models are larger: `greek.use_neural_lemmatizer()` (~232 MB) and
-`greek.use_neural_pipeline()` (~173 MB; quantized and lossless, needs
+`greek.use_neural_pipeline()` (~173 MB; quantized with unchanged scores on the
+measured UD accuracy gate, needs
 `onnxruntime>=1.23`). Everything else, including the rule-based pipeline, works
 fully offline.
 

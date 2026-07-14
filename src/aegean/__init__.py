@@ -18,7 +18,7 @@ from . import analysis  # noqa: F401
 from . import cache  # noqa: F401 — opt-in persistent cache for expensive analyses (off by default)
 from . import geo  # noqa: F401 — geographic analysis (geopandas/shapely lazy/optional)
 from . import greek  # noqa: F401 — Greek NLP pipeline
-from . import io  # noqa: F401 — EpiDoc/CSV/Parquet export adapters
+from . import io  # noqa: F401 — corpus interchange, review, and persistence adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
 from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
 from . import viz  # noqa: F401 — one-line plots (matplotlib lazy/optional, the [viz] extra)
@@ -27,13 +27,16 @@ from .core import (
     Corpus,
     Document,
     DocumentMeta,
+    FormSegment,
     Provenance,
     ReadingStatus,
     Script,
     Sign,
     SignInventory,
     SourceAlignment,
+    SourceMarkupRef,
     Token,
+    TokenFormState,
     TokenKind,
     get_script,
     register,
@@ -83,10 +86,13 @@ __all__ = [
     "Corpus",
     "Document",
     "DocumentMeta",
+    "FormSegment",
     "Sign",
     "SignInventory",
     "SourceAlignment",
+    "SourceMarkupRef",
     "Token",
+    "TokenFormState",
     "TokenKind",
     "ReadingStatus",
     "Provenance",

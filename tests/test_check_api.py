@@ -85,6 +85,22 @@ def _check(tmp_path: Path, baseline: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _manifest(tmp_path: Path, package: str = "mini", *, modules: list[str] | None = None) -> Path:
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        json.dumps(
+            {
+                "format": 1,
+                "package": package,
+                "modules": modules or [package],
+                "symbols": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_unchanged_package_checks_clean(tmp_path: Path) -> None:
     baseline = _snapshot(tmp_path)
     r = _check(tmp_path, baseline)
@@ -148,6 +164,266 @@ def test_additions_are_informational(tmp_path: Path) -> None:
     assert r.returncode == 0, r.stdout + r.stderr
     assert "mini.wave: added (function)" in r.stdout
     assert "OK  public-api" in r.stdout
+
+
+def test_manifest_selected_snapshot_ignores_unlisted_internal_addition(tmp_path: Path) -> None:
+    body = '''\
+__all__ = ["greet"]
+from . import hidden
+
+def greet(name):
+    return name
+'''
+    _write_mini(tmp_path, body)
+    (tmp_path / "mini" / "hidden.py").write_text(
+        "def old_internal():\n    return 1\n", encoding="utf-8"
+    )
+    manifest = _manifest(tmp_path)
+    baseline = tmp_path / "baseline.json"
+    # An initial compatibility snapshot (without a manifest) grandfathered
+    # the imported internal module and its old public definition.
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    names = json.loads(baseline.read_text(encoding="utf-8"))["names"]
+    assert "mini.greet" in names
+    assert "mini.hidden.old_internal" in names
+
+    (tmp_path / "mini" / "hidden.py").write_text(
+        "def old_internal():\n    return 1\n\ndef new_internal():\n    return 2\n",
+        encoding="utf-8",
+    )
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+        "--manifest",
+        str(manifest),
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    names = json.loads(baseline.read_text(encoding="utf-8"))["names"]
+    assert "mini.hidden.old_internal" in names
+    assert "mini.hidden.new_internal" not in names
+
+    check = _run(
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+        "--manifest",
+        str(manifest),
+    )
+    assert check.returncode == 0, check.stdout + check.stderr
+
+    (tmp_path / "mini" / "hidden.py").write_text(
+        "def new_internal():\n    return 2\n", encoding="utf-8"
+    )
+    before = baseline.read_text(encoding="utf-8")
+    check = _run(
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+        "--manifest",
+        str(manifest),
+    )
+    assert check.returncode == 1, check.stdout + check.stderr
+    assert "mini.hidden.old_internal: removed" in check.stdout
+    snap = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+        "--manifest",
+        str(manifest),
+    )
+    assert snap.returncode == 1, snap.stdout + snap.stderr
+    assert "snapshot refused" in snap.stdout
+    assert baseline.read_text(encoding="utf-8") == before
+
+
+def test_snapshot_refuses_grandfathered_removal(tmp_path: Path) -> None:
+    baseline = _snapshot(tmp_path)
+    before = baseline.read_text(encoding="utf-8")
+    _write_mini(tmp_path, _MINI.replace('"Greeter", "farewell", "greet"', '"Greeter", "greet"').replace(
+        'def farewell(name):\n    return "bye " + name\n', ""
+    ))
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+    )
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "snapshot refused" in r.stdout
+    assert baseline.read_text(encoding="utf-8") == before
+
+
+def test_explicit_breaking_snapshot_retires_only_after_review_flag(tmp_path: Path) -> None:
+    baseline = _snapshot(tmp_path)
+    _write_mini(
+        tmp_path,
+        _MINI.replace(
+            '"Greeter", "farewell", "greet"', '"Greeter", "greet"'
+        ).replace('def farewell(name):\n    return "bye " + name\n', ""),
+    )
+    accepted = _run(
+        "--snapshot",
+        "--accept-breaking-snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+    )
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    assert "accepted breaking snapshot" in accepted.stdout
+    names = json.loads(baseline.read_text(encoding="utf-8"))["names"]
+    assert "mini.farewell" not in names
+    assert _check(tmp_path, baseline).returncode == 0
+
+
+def test_breaking_snapshot_flag_requires_snapshot_mode(tmp_path: Path) -> None:
+    baseline = _snapshot(tmp_path)
+    result = _run(
+        "--accept-breaking-snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+    )
+    assert result.returncode == 2
+    assert "requires --snapshot" in result.stderr
+
+
+def test_manifest_package_mismatch_is_a_clean_error(tmp_path: Path) -> None:
+    baseline = _snapshot(tmp_path)
+    manifest = _manifest(tmp_path, package="other")
+    r = _run(
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+        "--manifest",
+        str(manifest),
+    )
+    assert r.returncode == 1
+    assert "manifest package" in r.stdout + r.stderr
+
+
+def test_snapshot_baseline_package_mismatch_is_a_clean_error(tmp_path: Path) -> None:
+    baseline = _snapshot(tmp_path)
+    payload = json.loads(baseline.read_text(encoding="utf-8"))
+    payload["package"] = "other"
+    baseline.write_text(json.dumps(payload), encoding="utf-8")
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(baseline),
+    )
+    assert r.returncode == 1
+    assert "baseline package" in r.stdout + r.stderr
+
+
+def test_malformed_manifest_is_a_clean_error(tmp_path: Path) -> None:
+    _write_mini(tmp_path, _MINI)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps({"format": 1, "package": "mini", "modules": "mini"}),
+        encoding="utf-8",
+    )
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(tmp_path / "baseline.json"),
+        "--manifest",
+        str(manifest),
+    )
+    assert r.returncode == 1
+    assert "manifest 'modules'" in r.stdout + r.stderr
+
+
+def test_malformed_explicit_all_is_a_clean_error(tmp_path: Path) -> None:
+    _write_mini(tmp_path, '__all__ = ["missing"]\n')
+    manifest = _manifest(tmp_path)
+    r = _run(
+        "--snapshot",
+        "--package",
+        "mini",
+        "--search-path",
+        str(tmp_path),
+        "--baseline",
+        str(tmp_path / "baseline.json"),
+        "--manifest",
+        str(manifest),
+    )
+    assert r.returncode == 1
+    assert "__all__ names" in r.stdout + r.stderr
+
+
+def test_mcp_documented_tools_are_explicit_exports() -> None:
+    from aegean import mcp_server
+
+    expected = {
+        "TOOLS",
+        "build_server",
+        "main",
+        "list_corpora",
+        "corpus_info",
+        "show_document",
+        "search_signs",
+        "balance_accounts",
+        "query_corpus",
+        "cite_corpus",
+        "geo_sites",
+        "data_status",
+        "greek_pipeline",
+        "greek_explain",
+        "greek_scan",
+        "greek_catalog",
+        "greek_work",
+        "greek_gloss",
+        "koine_gloss",
+        "corpus_diagnose",
+    }
+    assert expected <= set(mcp_server.__all__)
+    assert expected - {"TOOLS", "build_server", "main"} == {
+        fn.__name__ for fn in mcp_server.TOOLS
+    }
 
 
 def test_missing_baseline_is_a_clean_error(tmp_path: Path) -> None:

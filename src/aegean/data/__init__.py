@@ -34,6 +34,32 @@ from typing import IO, TYPE_CHECKING, Any
 from .._locking import FileLock
 from .._log import get_logger
 
+__all__ = [
+    "DataNotAvailableError",
+    "DataSpec",
+    "FetchAborted",
+    "HistoricalPin",
+    "available_versions",
+    "bundled_data_version",
+    "cache_dir",
+    "download_file",
+    "downloaded_bytes",
+    "fetch",
+    "fetch_prebuilt",
+    "fetch_text",
+    "historical_versions",
+    "is_downloaded",
+    "load_bundled_json",
+    "load_corpus_version",
+    "load_gzip_json",
+    "on_disk_paths",
+    "present_paths",
+    "sha256_file",
+    "versioned_bytes",
+    "versioned_entry_paths",
+    "versions",
+]
+
 if TYPE_CHECKING:  # type-only: no runtime data -> core import edge
     from ..core.corpus import Corpus
 
@@ -176,8 +202,8 @@ _REMOTE: dict[str, DataSpec] = {
     # The opt-in [neural] joint Greek pipeline: one GreBerta-based model for UPOS, the
     # 9-position AGDT morphology (rendered as UD FEATS), UD dependency trees (biaffine +
     # MST), and lemmas (edit-script head + train-only lookup). Trained leakage-clean on
-    # AGDT + Gorman + Pedalion; the best published result on every UD Ancient Greek (Perseus) test metric
-    # (docs/benchmarks.md). URL is pinned to the grc-joint-v3 release asset; set
+    # AGDT + Gorman + Pedalion; measured UD Ancient Greek (Perseus) results and the
+    # comparison protocol are in docs/benchmarks.md. URL is pinned to the grc-joint-v3 release asset; set
     # PYAEGEAN_GRC_JOINT_URL to fetch from your own mirror instead.
     "grc-joint": DataSpec(
         name="grc-joint",

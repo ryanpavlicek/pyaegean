@@ -61,10 +61,23 @@ REVIEW_COLUMNS: tuple[str, ...] = (
     "alignment_original_text",
     "alignment_start_char", "alignment_end_char", "alignment_whitespace_before",
     "alignment_normalized_text", "alignment_normalization_ops",
+    "form_diplomatic", "form_regularized", "form_normalized", "form_model_input",
+    "form_model_input_source", "form_model_input_ops", "form_segments",
+    "form_editorial_status", "form_supplied_text", "form_unclear_text", "form_lost_text",
+    "form_supplied", "form_unclear", "form_lost", "form_has_damage",
+    "form_has_uncertainty", "form_state_json",
     "pred_lemma", "pred_pos", "pred_morph",                # machine prediction (read-only)
     "evidence_class", "source_citation", "needs_review",   # provenance + triage (read-only)
     "correct_lemma", "correct_pos", "correct_morph",       # reviewer fills
     "reviewer_note", "reviewer",                            # reviewer fills
+)
+
+FORM_STATE_COLUMNS: tuple[str, ...] = (
+    "form_diplomatic", "form_regularized", "form_normalized", "form_model_input",
+    "form_model_input_source", "form_model_input_ops", "form_segments",
+    "form_editorial_status", "form_supplied_text", "form_unclear_text", "form_lost_text",
+    "form_supplied", "form_unclear", "form_lost", "form_has_damage",
+    "form_has_uncertainty", "form_state_json",
 )
 
 
@@ -137,6 +150,7 @@ def to_review_table(
     that would open as a live formula in a spreadsheet are neutralized with a leading
     apostrophe (stripped again by `from_review_table`)."""
     from ..core.model import TokenKind
+    from .._view import _form_state_fields
 
     prov = corpus.provenance
     citation = (prov.citation or prov.source) if prov is not None else ""
@@ -152,6 +166,17 @@ def to_review_table(
             flag = needs_review_flag(a, source_key=source_key)
             if only_needs_review and not flag:
                 continue
+            form_fields = _form_state_fields(tok.form_state)
+            form_fields["form_state_json"] = (
+                json.dumps(
+                    tok.form_state.to_dict(),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                if tok.form_state is not None
+                else None
+            )
+            form_cells = _review_form_state_cells(form_fields)
             rows.append([
                 doc.id,
                 str(tok.position),
@@ -175,6 +200,7 @@ def to_review_table(
                     if tok.alignment is not None
                     else ""
                 ),
+                *(_guard_cell(form_cells[col]) for col in FORM_STATE_COLUMNS),
                 _guard_cell(a.get("lemma", "")),
                 _guard_cell(a.get("upos", "")),
                 _guard_cell(_morph(a)),
@@ -204,6 +230,46 @@ def _cell(row: Mapping[str, str | None], col: str) -> str:
 def _exact_cell(row: Mapping[str, str | None], col: str) -> str:
     """A read-only source cell with formula protection removed but no whitespace loss."""
     return _unguard_cell(row.get(col) or "")
+
+
+def _review_form_state_cells(fields: Mapping[str, object]) -> dict[str, str]:
+    """Serialize JSON-ready form fields into stable CSV cells."""
+    out: dict[str, str] = {}
+    for col in FORM_STATE_COLUMNS:
+        value = fields.get(col)
+        if value is None:
+            out[col] = ""
+        elif isinstance(value, bool):
+            out[col] = "true" if value else "false"
+        elif isinstance(value, (list, dict)):
+            out[col] = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        else:
+            out[col] = str(value)
+    return out
+
+
+def _form_state_matches_row(token: "Token", row: Mapping[str, str | None]) -> bool:
+    """Check a new-format review row still describes this token's typed form state.
+
+    Legacy review files have no ``form_*`` columns and intentionally skip this
+    check; their existing identity/text guards remain unchanged.
+    """
+    if not any(col in row for col in FORM_STATE_COLUMNS):
+        return True
+    from .._view import _form_state_fields
+
+    fields = _form_state_fields(token.form_state)
+    fields["form_state_json"] = (
+        json.dumps(
+            token.form_state.to_dict(),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        if token.form_state is not None
+        else None
+    )
+    expected = _review_form_state_cells(fields)
+    return all(_exact_cell(row, col) == expected[col] for col in FORM_STATE_COLUMNS)
 
 
 def _has_corrections(row: Mapping[str, str | None]) -> bool:
@@ -350,6 +416,12 @@ def _apply_corrections(
                             "match the exported row"
                         )
                     continue
+            if not _form_state_matches_row(tok, crow):
+                if _has_corrections(crow):
+                    mismatched.append(
+                        f"{doc.id} position {tok.position}: form state does not match the exported row"
+                    )
+                continue
             row_token = _cell(crow, "token")
             if row_token and row_token != tok.text:
                 if _has_corrections(crow):
@@ -581,6 +653,8 @@ def _verify_against_corpus(
                 mismatched.append(
                     f"{doc_id} position {pos}: {name} has changed source alignment"
                 )
+            elif not _form_state_matches_row(token, row):
+                mismatched.append(f"{doc_id} position {pos}: {name} has changed form state")
             elif row_token and row_token != token.text:
                 mismatched.append(
                     f"{doc_id} position {pos}: {name} has {row_token!r}, "

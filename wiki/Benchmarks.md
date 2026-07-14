@@ -379,7 +379,7 @@ difference of ~23 UAS.
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
-uncompressed) and **lossless on accuracy**: UD Perseus test scores are unchanged
+uncompressed), while UD Perseus test scores are unchanged
 within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.6). The recipe
 is weight-only int8 (onnxruntime MatMulNBits, block 128, symmetric) plus fp16 on
 everything else, keeping activations at fp32 by design. Full int8 (quantized

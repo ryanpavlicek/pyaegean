@@ -341,7 +341,7 @@ anchored to real local facts. By default the Greek grounding is **morphology-fir
 (`mode="morphology"`: lemma, part of speech, voice, case-role, clause structure, and
 rare-word flags); `mode="full"` adds concise dictionary glosses on the rare words,
 `mode="none"` sends the bare text. See [Hybrid translation](#hybrid-translation)
-below, and [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean) for
+below, and [Recipe 26](Recipes#26--choose-a-greek-ai-translation-workflow) for
 choosing a mode.
 
 The hybrid wrapper can use the **module-level default facade** for compatibility or an

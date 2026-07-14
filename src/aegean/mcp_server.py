@@ -36,7 +36,28 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-__all__ = ["build_server", "main"]
+__all__ = [
+    "TOOLS",
+    "build_server",
+    "main",
+    "list_corpora",
+    "corpus_info",
+    "show_document",
+    "search_signs",
+    "balance_accounts",
+    "query_corpus",
+    "cite_corpus",
+    "geo_sites",
+    "data_status",
+    "greek_pipeline",
+    "greek_explain",
+    "greek_scan",
+    "greek_catalog",
+    "greek_work",
+    "greek_gloss",
+    "koine_gloss",
+    "corpus_diagnose",
+]
 
 
 def _did_you_mean(name: str, candidates: Iterable[str]) -> str:
@@ -134,6 +155,8 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
     doc, err = _find_doc(c, corpus, doc_id)
     if err is not None:
         return err
+    from ._view import _form_state_fields
+
     result: dict[str, Any] = {
         "id": doc.id,
         "site": doc.meta.site,
@@ -142,7 +165,21 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
         "scribe": doc.meta.scribe,
         "lines": [[t.text for t in line] for line in doc.line_tokens],
         "transcription": doc.transcription,
+        # ``lines`` is the historical text-only shape.  ``tokens`` is additive
+        # and carries editorial form state without replacing or mutating it.
+        "tokens": [],
     }
+    for token in doc.tokens:
+        form_fields = _form_state_fields(token.form_state)
+        row: dict[str, Any] = {
+            "text": token.text,
+            "kind": token.kind.value,
+            "status": token.status.value,
+            **form_fields,
+        }
+        if token.form_state is not None:
+            row["form_state"] = token.form_state.to_dict()
+        result["tokens"].append(row)
     if doc.source_text is not None:
         result["source_text"] = doc.source_text
         result["token_alignment"] = [

@@ -101,9 +101,12 @@ def test_append_migrates_schema1_and_preserves_old_and_new_rows(tmp_path: Path) 
     with sqlite3.connect(path) as conn:
         assert "source_text" in {row[1] for row in conn.execute("PRAGMA table_info(documents)")}
         assert "alignment" in {row[1] for row in conn.execute("PRAGMA table_info(tokens)")}
+        assert "form_state_json" in {
+            row[1] for row in conn.execute("PRAGMA table_info(tokens)")
+        }
         assert conn.execute(
             "SELECT value FROM meta WHERE key = 'schema_version'"
-        ).fetchone()[0] == "2"
+        ).fetchone()[0] == "3"
 
 
 def test_malformed_alignment_is_a_clean_value_error(tmp_path: Path) -> None:

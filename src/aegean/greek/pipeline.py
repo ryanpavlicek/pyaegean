@@ -18,8 +18,8 @@ and dependency fields are filled only when ``parse=True`` (which then requires
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from dataclasses import dataclass, field, replace
+from typing import TYPE_CHECKING, Literal, Sequence
 
 from .lemmatize import (
     LemmaSource,
@@ -31,10 +31,10 @@ from .lemmatize import (
 from .tokenize import _SENTENCE_SPLIT_RE
 from .tokenize import tokenize_aligned as _tokenize_aligned
 
-__all__ = ["TokenRecord", "pipeline"]
+__all__ = ["TokenRecord", "pipeline", "pipeline_tokens"]
 
 if TYPE_CHECKING:
-    from ..core.model import SourceAlignment
+    from ..core.model import SourceAlignment, Token, TokenFormState
     from .neural_contract import AnalysisReceipt
 
 
@@ -90,6 +90,7 @@ class TokenRecord:
     analysis_warning: str | None = None
     analysis_receipt: AnalysisReceipt | None = None
     alignment: SourceAlignment | None = field(default=None, compare=False)
+    form_state: TokenFormState | None = field(default=None, compare=False)
 
     @property
     def lemma_resolved(self) -> bool:
@@ -146,6 +147,65 @@ def pipeline(
     )
 
 
+def pipeline_tokens(
+    tokens: Sequence[Token],
+    *,
+    parse: bool = False,
+    with_confidence: bool = False,
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
+    document_id: str = "input",
+) -> list[TokenRecord]:
+    """Analyze already-tokenized core ``Token`` values without re-tokenizing them.
+
+    A token's typed ``form_state`` chooses the analyzer input in the deterministic
+    order model input, regularized, normalized, diplomatic, then legacy ``Token.text``.
+    The returned record retains the token's alignment and form state; one input token
+    always produces one output record.
+    """
+    from .runtime import default_pipeline
+
+    return default_pipeline().analyze_tokens(
+        tokens,
+        parse=parse,
+        with_confidence=with_confidence,
+        long_input=long_input,
+        document_id=document_id,
+    )
+
+
+def _select_token_form(token: Token) -> tuple[str, TokenFormState | None]:
+    """Select and validate one typed token's deterministic analyzer form."""
+    state = token.form_state
+    source: Literal["diplomatic", "regularized", "normalized", "explicit"] = "diplomatic"
+    if state is None:
+        if not isinstance(token.text, str):
+            raise TypeError("selected token form must be a string")
+        if not token.text:
+            raise ValueError("selected token form must be non-empty")
+        return token.text, None
+    elif state.model_input is not None:
+        selected = state.model_input
+        if state.model_input_source is None:
+            raise ValueError("token form state has model_input without a source")
+        source = state.model_input_source
+    elif state.regularized is not None:
+        selected = state.regularized
+        source = "regularized"
+    elif state.normalized is not None:
+        selected = state.normalized
+        source = "normalized"
+    else:
+        # An empty diplomatic field can represent an unavailable original form in a
+        # partial import; retain the compatibility/display token as the final fallback.
+        selected = state.diplomatic or token.text
+        source = "diplomatic" if state.diplomatic else "explicit"
+    if not isinstance(selected, str):
+        raise TypeError("selected token form must be a string")
+    if not selected:
+        raise ValueError("selected token form must be non-empty")
+    return selected, replace(state, model_input=selected, model_input_source=source)
+
+
 def _analyze_bound(
     text: str,
     *,
@@ -153,6 +213,7 @@ def _analyze_bound(
     with_confidence: bool = False,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     document_id: str = "input",
+    typed_tokens: Sequence[Token] | None = None,
 ) -> list[TokenRecord]:
     """Analyze text under the `GreekPipeline` bound in the current context.
 
@@ -193,8 +254,15 @@ def _analyze_bound(
             "long_input must be 'strict', 'partial', or 'windowed', "
             f"got {long_input!r}"
         )
-    from ..core.model import TokenKind
+    from ..core.model import Token, TokenKind
     from . import joint, syntax
+
+    if typed_tokens is not None:
+        if isinstance(typed_tokens, (str, bytes)):
+            raise TypeError("tokens must be a sequence of core Token values")
+        typed_tokens = tuple(typed_tokens)
+        if any(not isinstance(token, Token) for token in typed_tokens):
+            raise TypeError("tokens must contain only core Token values")
 
     if long_input != "strict" and joint.active() is None:
         raise ValueError(
@@ -207,27 +275,50 @@ def _analyze_bound(
     sents: list[list[str]] = [[]]
     word_flags: list[list[bool]] = [[]]
     alignments: list[list[SourceAlignment | None]] = [[]]
-    for tok in _tokenize_aligned(text, document_id=document_id):
-        sents[-1].append(tok.text)
-        word_flags[-1].append(tok.kind is TokenKind.WORD)
-        alignments[-1].append(tok.alignment)
-        if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(tok.text):
-            sents.append([])
-            word_flags.append([])
-            alignments.append([])
+    form_states: list[list[TokenFormState | None]] = [[]]
+    if typed_tokens is None:
+        source_tokens: Sequence[Token] = _tokenize_aligned(text, document_id=document_id)
+        for tok in source_tokens:
+            sents[-1].append(tok.text)
+            word_flags[-1].append(tok.kind is TokenKind.WORD)
+            alignments[-1].append(tok.alignment)
+            form_states[-1].append(None)
+            if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(tok.text):
+                sents.append([])
+                word_flags.append([])
+                alignments.append([])
+                form_states.append([])
+    else:
+        for tok in typed_tokens:
+            selected, state = _select_token_form(tok)
+            sents[-1].append(selected)
+            word_flags[-1].append(tok.kind is TokenKind.WORD)
+            alignments[-1].append(tok.alignment)
+            form_states[-1].append(state)
+            if tok.kind is TokenKind.PUNCT and _SENTENCE_SPLIT_RE.search(selected):
+                sents.append([])
+                word_flags.append([])
+                alignments.append([])
+                form_states.append([])
     if sents and not sents[-1]:
         sents.pop()
         word_flags.pop()
         alignments.pop()
+        form_states.pop()
 
     records: list[TokenRecord] = []
-    for s_idx, (words, is_word, sentence_alignments) in enumerate(
-        zip(sents, word_flags, alignments)
+    for s_idx, (words, is_word, sentence_alignments, sentence_states) in enumerate(
+        zip(sents, word_flags, alignments, form_states)
     ):
         if joint.active() is not None:
             ana = joint.analyze_sentence(
                 words, with_probs=with_confidence, long_input=long_input
             )
+            if len(ana.tokens) != len(words):
+                raise ValueError(
+                    "neural backend returned a different token count than the input "
+                    f"({len(ana.tokens)} != {len(words)})"
+                )
             resolved = ana.lemma_resolved or (True,) * len(ana.tokens)
             override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
             for i in range(len(ana.tokens)):
@@ -260,6 +351,17 @@ def _analyze_bound(
                     )
                     else None
                 )
+                record_state = sentence_states[i]
+                if record_state is not None:
+                    actual_input = ana.tokens[i]
+                    ops = record_state.model_input_ops
+                    if actual_input != words[i] and "unicode:nfc" not in ops:
+                        ops = (*ops, "unicode:nfc")
+                    record_state = replace(
+                        record_state,
+                        model_input=actual_input,
+                        model_input_ops=ops,
+                    )
                 records.append(
                     TokenRecord(
                         sentence=s_idx, index=i + 1, text=ana.tokens[i],
@@ -272,6 +374,7 @@ def _analyze_bound(
                         analysis_warning=ana.warnings[0] if ana.warnings else None,
                         analysis_receipt=ana.receipt,
                         alignment=sentence_alignments[i],
+                        form_state=record_state,
                     )
                 )
             continue
@@ -284,6 +387,11 @@ def _analyze_bound(
         tags = pos_tags(sent_str)
         if len(tags) != len(words):  # defensive: fall back to per-token tagging
             tags = [(w, pos_tag(w)) for w in words]
+        if len(tags) != len(words):
+            raise ValueError(
+                "baseline backend returned a different token count than the input "
+                f"({len(tags)} != {len(words)})"
+            )
         heads: dict[int, tuple[int, str]] = {}  # token position → (head record index, rel)
         if parse:
             # the baseline parser works over word tokens only (same word regex
@@ -306,6 +414,7 @@ def _analyze_bound(
                     sentence=s_idx, index=i + 1, text=tok_text,
                     upos=tag, lemma=lemma, lemma_source=source, head=head, relation=rel,
                     alignment=sentence_alignments[i],
+                    form_state=sentence_states[i],
                 )
             )
     return records

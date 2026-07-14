@@ -24,6 +24,7 @@ from .model import (
     SignInventory,
     SourceAlignment,
     Token,
+    TokenFormState,
     TokenKind,
 )
 from .provenance import SCHEMA_VERSION, Provenance
@@ -243,6 +244,43 @@ class Corpus:
                     count(len(alignment.normalization_ops))
                     for op in alignment.normalization_ops:
                         field(op)
+        # A6 form state is additive: leave the byte stream exactly as it was for
+        # legacy corpora with no state, but frame a deterministic block whenever at
+        # least one token carries one so state cannot collide with an unannotated cache.
+        if any(t.form_state is not None for d in self.documents for t in d.tokens):
+            field("A6-token-form-state")
+            for d in self.documents:
+                for t in d.tokens:
+                    state = t.form_state
+                    field("present" if state is not None else "absent")
+                    if state is None:
+                        continue
+                    field(state.diplomatic)
+                    field("present" if state.regularized is not None else "absent")
+                    field(state.regularized or "")
+                    field("present" if state.normalized is not None else "absent")
+                    field(state.normalized or "")
+                    field("present" if state.model_input is not None else "absent")
+                    field(state.model_input or "")
+                    field(state.model_input_source or "")
+                    count(len(state.model_input_ops))
+                    for op in state.model_input_ops:
+                        field(op)
+                    count(len(state.segments))
+                    for segment in state.segments:
+                        field(segment.text)
+                        field(segment.status.value)
+                        ref = segment.source_ref
+                        field("present" if ref is not None else "absent")
+                        if ref is None:
+                            continue
+                        field(ref.source_id)
+                        field(ref.path)
+                        field(ref.tag)
+                        count(len(ref.attrs))
+                        for key, value in ref.attrs:
+                            field(key)
+                            field(value)
         notes = [
             n
             for n in (self.provenance.notes if self.provenance is not None else ())
@@ -488,6 +526,64 @@ class Corpus:
                     # token annotations (lemma/morph/strongs/gloss for the Greek NT, etc.)
                     # spread first so the canonical columns below always win on a name clash.
                     **tok.annotations,
+                    # A6 canonical form-state columns.  These are written after arbitrary
+                    # annotations deliberately: user metadata cannot spoof the typed values.
+                    "form_diplomatic": (
+                        tok.form_state.diplomatic if tok.form_state is not None else None
+                    ),
+                    "form_regularized": (
+                        tok.form_state.regularized if tok.form_state is not None else None
+                    ),
+                    "form_normalized": (
+                        tok.form_state.normalized if tok.form_state is not None else None
+                    ),
+                    "form_model_input": (
+                        tok.form_state.model_input if tok.form_state is not None else None
+                    ),
+                    "form_model_input_ops": (
+                        tok.form_state.model_input_ops if tok.form_state is not None else None
+                    ),
+                    "form_model_input_source": (
+                        tok.form_state.model_input_source if tok.form_state is not None else None
+                    ),
+                    "form_segments": (
+                        json.dumps(
+                            [segment.to_dict() for segment in tok.form_state.segments],
+                            ensure_ascii=False,
+                            separators=(",", ":"),
+                        )
+                        if tok.form_state is not None
+                        else None
+                    ),
+                    "form_editorial_status": (
+                        tok.form_state.editorial_status.value
+                        if tok.form_state is not None
+                        else None
+                    ),
+                    "form_supplied_text": (
+                        tok.form_state.supplied_text if tok.form_state is not None else None
+                    ),
+                    "form_unclear_text": (
+                        tok.form_state.unclear_text if tok.form_state is not None else None
+                    ),
+                    "form_lost_text": (
+                        tok.form_state.lost_text if tok.form_state is not None else None
+                    ),
+                    "form_supplied": (
+                        tok.form_state.supplied if tok.form_state is not None else None
+                    ),
+                    "form_unclear": (
+                        tok.form_state.unclear if tok.form_state is not None else None
+                    ),
+                    "form_lost": (
+                        tok.form_state.lost if tok.form_state is not None else None
+                    ),
+                    "form_has_damage": (
+                        tok.form_state.has_damage if tok.form_state is not None else None
+                    ),
+                    "form_has_uncertainty": (
+                        tok.form_state.has_uncertainty if tok.form_state is not None else None
+                    ),
                     "doc_id": d.id,
                     "line_no": tok.line_no,
                     "position": tok.position,
@@ -708,8 +804,12 @@ class Corpus:
                 f"this corpus file uses schema version {stored}, but this pyaegean "
                 f"understands up to {SCHEMA_VERSION} — upgrade pyaegean to read it"
             )
+        # Form state was introduced in schema 3.  A schema-1/2 artifact may carry
+        # unrelated future-looking keys, but an older writer cannot establish the
+        # A6 contract, so those values are intentionally ignored.
+        allow_form_state = isinstance(stored, int) and stored >= 3
         return cls(
-            [_document_from_dict(d) for d in data.get("documents", [])],
+            [_document_from_dict(d, allow_form_state=allow_form_state) for d in data.get("documents", [])],
             sign_inventory=_inventory_from_dict(data.get("signInventory")),
             provenance=_provenance_from_dict(data.get("provenance")),
             script_id=meta.get("scriptId", ""),
@@ -825,10 +925,16 @@ def _token_to_dict(t: Token) -> dict[str, Any]:
         d["annotations"] = dict(t.annotations)
     if t.alignment is not None:
         d["alignment"] = _alignment_to_dict(t.alignment)
+    if t.form_state is not None:
+        if not isinstance(t.form_state, TokenFormState):
+            raise TypeError("token form_state must be a TokenFormState or None")
+        d["form_state"] = t.form_state.to_dict()
     return d
 
 
-def _token_from_dict(d: dict[str, Any]) -> Token:
+def _token_from_dict(
+    d: dict[str, Any], *, allow_form_state: bool = True, context: str = "token"
+) -> Token:
     raw_alignment = d.get("alignment")
     if raw_alignment is None:
         alignment = None
@@ -840,6 +946,18 @@ def _token_from_dict(d: dict[str, Any]) -> Token:
         alignment = _alignment_from_dict(raw_alignment)
     else:
         raise TypeError("token alignment must be an object or SourceAlignment")
+    raw_form_state = d.get("form_state") if allow_form_state else None
+    if raw_form_state is None:
+        form_state = None
+    elif isinstance(raw_form_state, TokenFormState):
+        form_state = raw_form_state
+    elif isinstance(raw_form_state, dict):
+        try:
+            form_state = TokenFormState.from_dict(raw_form_state)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ValueError(f"malformed token form_state in {context}: {exc}") from exc
+    else:
+        raise TypeError(f"malformed token form_state in {context}: expected an object")
     return Token(
         text=d["text"], kind=TokenKind(d["kind"]), signs=tuple(d.get("signs") or ()),
         glyphs=d.get("glyphs"), line_no=d.get("line_no"), position=d.get("position"),
@@ -847,6 +965,7 @@ def _token_from_dict(d: dict[str, Any]) -> Token:
         alt=tuple(d.get("alt") or ()),
         annotations=dict(d.get("annotations") or {}),
         alignment=alignment,
+        form_state=form_state,
     )
 
 
@@ -909,14 +1028,22 @@ def _document_to_dict(d: Document) -> dict[str, Any]:
     }
 
 
-def _document_from_dict(d: dict[str, Any]) -> Document:
+def _document_from_dict(d: dict[str, Any], *, allow_form_state: bool = True) -> Document:
     m = d.get("meta") or {}
     meta = DocumentMeta(
         site=m.get("site", ""), support=m.get("support", ""), scribe=m.get("scribe", ""),
         findspot=m.get("findspot", ""), period=m.get("period", ""), name=m.get("name", ""),
         images=tuple(m.get("images") or ()), notes=tuple(m.get("notes") or ()),
     )
-    tokens = [_token_from_dict(t) for t in d.get("tokens", [])]
+    document_id = d.get("id", "?")
+    tokens = [
+        _token_from_dict(
+            t,
+            allow_form_state=allow_form_state,
+            context=f"document {document_id!r}, token {i}",
+        )
+        for i, t in enumerate(d.get("tokens", []))
+    ]
     source_text = d.get("source_text")
     if source_text is not None and not isinstance(source_text, str):
         raise TypeError("document source_text must be a string or None")

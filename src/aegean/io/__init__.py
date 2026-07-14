@@ -2,10 +2,13 @@
 
 Import your own material with ``from_text`` / ``from_text_file`` / ``from_text_dir`` /
 ``from_csv`` (plain text, a folder of texts, or a CSV → a `Corpus`), or ``from_epidoc``
-(any EpiDoc TEI edition → a `Corpus`); export with the CSV/Parquet/EpiDoc writers. The
+(pyaegean output or token-carrier EpiDoc TEI → a `Corpus`). Export as tabular
+CSV/Parquet, semantic EpiDoc, RDF Turtle/JSON-LD, SQLite, review CSV, or the
+intentionally lossy Workbench surface format. The
 Linear B-specific EpiDoc reader (DAMOS-style files, text-derived Aegean token kinds) lives
 in `aegean.scripts.linearb` and ``Corpus.load("linearb")``. For pyaegean's own lossless
-archive format, use ``Corpus.to_json`` / ``Corpus.from_json``.
+archive format, use ``Corpus.to_json`` / ``Corpus.from_json``; use JSON or SQLite
+when every typed field must survive.
 """
 
 from __future__ import annotations

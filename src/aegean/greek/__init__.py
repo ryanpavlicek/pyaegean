@@ -6,12 +6,19 @@ analysis (``accentuation``), ``prosody``/``meter`` scansion, ``phonology`` (IPA)
 a seed+rule ``lemmatize``, baseline ``pos``, and a rule-based ``morphology`` analyzer
 (``analyze``). ``pipeline`` runs the whole stack over a text in one call.
 
+``GreekPipeline`` instances isolate backend and profile configuration;
+``pipeline_tokens`` analyzes typed corpus tokens without discarding editorial forms.
+Neural calls expose explicit long-input policies, task support, exact receipts, and
+manifest-validated runtime configuration. Lossless CoNLL-U document I/O retains
+comments, multiword ranges, empty nodes, enhanced dependencies, and MISC alongside
+the word-only predictive projection.
+
 Opt-in backends layer on richer data and models:
 
-- ``use_neural_pipeline`` (the ``[neural]`` extra) loads the joint neural model —
+- ``use_neural_pipeline`` (the ``[neural]`` extra) loads the joint neural model:
   one pass serving UPOS, full morphology (UD FEATS), UD dependency trees, and
-  lemmas, state of the art on the UD Ancient Greek (Perseus) benchmark (measured numbers
-  in ``docs/benchmarks.md``). Once active, ``pos_tag``/``pos_tags``,
+  lemmas, with measured UD Ancient Greek (Perseus) results and comparisons in
+  ``docs/benchmarks.md``. Once active, ``pos_tag``/``pos_tags``,
   ``lemmatize``, ``parse``, and ``pipeline`` all use it.
 - ``use_treebank`` (Perseus AGDT) supplies attested, correctly-accented lemmas and
   full features for known forms.
@@ -214,7 +221,7 @@ from .lexicons import (
 )
 from . import abbott_smith, scaife_lex  # noqa: F401  -- register the new lexica
 from .nt_eval import evaluate_on_nt
-from .pipeline import TokenRecord, pipeline
+from .pipeline import TokenRecord, pipeline, pipeline_tokens
 from ..scripts.greek.perseus import (
     GitHubRateLimitError,
     WorkFetchResult,
@@ -272,6 +279,7 @@ __all__ = [
     "betacode_to_unicode",
     "unicode_to_betacode",
     "pipeline",
+    "pipeline_tokens",
     "TokenRecord",
     "GreekPipeline",
     "GreekPipelineConfig",

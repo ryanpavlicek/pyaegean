@@ -30,7 +30,7 @@ def test_home_is_an_evergreen_front_door() -> None:
     assert "### New in v" not in home
     assert "## Choose where to start" in home
     assert f"Latest PyPI release: v{version}" in home
-    assert "main-branch previews" in home
+    assert "This wiki documents the current release" in home
 
 
 def test_geography_counts_follow_the_live_gazetteer() -> None:
@@ -61,15 +61,20 @@ def test_registry_and_mcp_counts_are_not_stale() -> None:
     assert f"# {len(TOOLS)} tools:" in recipes
 
 
-def test_main_only_features_are_not_attributed_to_the_latest_release() -> None:
+def test_current_release_features_are_not_described_as_previews() -> None:
     readme = _read("README.md")
     home = _read("wiki/Home.md")
     greek_nlp = _read("wiki/Greek-NLP.md")
     version = _project_version()
 
     assert f"Latest PyPI release: v{version}" in readme
-    assert "Main-branch preview:" in readme
-    assert f"not in PyPI v{version}" in greek_nlp
+    assert f"Available in v{version}" in greek_nlp
+    for stale_phrase in (
+        "main-branch preview",
+        "main branch preview",
+        f"not in PyPI v{version}",
+    ):
+        assert stale_phrase not in "\n".join((readme, home, greek_nlp))
     assert "for **180 bundled documents** total" in readme
     assert "(**180 documents** total)" in home
 

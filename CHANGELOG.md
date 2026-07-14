@@ -4,6 +4,72 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.45.0 (2026-07-14)
+
+A model-independent Greek foundation release. It makes runtime configuration,
+long-input handling, source alignment, documentary form state, CoNLL-U structure,
+analysis provenance, and the supported Python API explicit while preserving the
+published `grc-joint-v3` model and its measured results.
+
+### Added
+
+- `GreekPipeline` instances isolate neural, treebank, lemmatizer, reconciliation,
+  and profile configuration. Existing module-level helpers delegate to a default
+  instance, while independent pipelines can run concurrently without changing one
+  another.
+- Neural analysis now returns a versioned contract with task support, completion
+  status, warnings, confidence availability, and an exact analysis receipt. The
+  receipt records model and asset identity, tokenizer and preprocessing versions,
+  provider, profile, normalization, segmentation, and long-input behavior.
+- Long neural inputs have explicit `strict`, `partial`, and `windowed` policies.
+  Strict mode refuses overflow, partial mode marks omitted analysis, and windowed
+  mode recombines overlapping windows with deterministic ownership and a valid
+  single-root dependency tree.
+- `SourceAlignment` records exact source slices, offsets, whitespace, normalization,
+  and stable token identity. JSON, SQLite, tabular/review exports, CLI/MCP views, and
+  Greek pipeline records preserve or display the alignment where applicable.
+- CoNLL-U documents now preserve comments, multiword-token ranges, empty nodes,
+  enhanced dependencies, and MISC fields. Predictive helpers remain word-only and
+  refuse unsupported copied structures rather than presenting gold data as a model
+  prediction.
+- `TokenFormState`, `FormSegment`, and `SourceMarkupRef` distinguish diplomatic,
+  regularized, normalized, and exact analyzer-input forms while retaining supplied,
+  unclear, and lost segments with semantic markup provenance. Token-carrier EpiDoc,
+  CoNLL-U, JSON, SQLite, CSV/Parquet, review files, CLI/MCP output, the TUI reader,
+  and typed-token Greek analysis carry the distinction. Existing downloadable
+  inscription and papyrus assets retain their legacy aggregate reading status.
+- Lemma output now separates resolution, source, confidence, human verification,
+  and review recommendation. Lookup, edit-script, identity fallback, and user
+  correction remain distinct through runtime and review surfaces.
+- The neural bundle manifest is versioned and authoritative for compatible runtime
+  configuration. Corrupt, incomplete, or incompatible bundles fail before activation,
+  while the existing v3 bundle retains its established behavior.
+- `scripts/api-manifest.json` defines the reviewed facade modules and explicit public
+  symbols. `scripts/check_api.py` protects all grandfathered names and signatures,
+  rejects unsupported facade drift, and provides an explicit reviewed snapshot path
+  after a completed deprecation cycle.
+
+### Changed
+
+- `pyaegean[all]` now includes the neural runtime. Translation can select deterministic
+  or neural local grounding explicitly; provider generation remains separate from the
+  local linguistic analysis supplied as grounding.
+- Checkpoint validation uses risk profiles for documentation, code, persistence, and
+  public-API changes. Documentation guards cover wiki integrity, help output, surface
+  parity, benchmark claims, corpus facts, and a strict documentation-site build.
+
+### Fixed
+
+- `scripts/check_benchmarks.py --help` now exits after displaying help instead of
+  continuing into benchmark checks.
+- Checkpoint output configures UTF-8 before replaying captured command output, so
+  box-drawing and Greek text do not crash a legacy Windows console.
+- Neural activation and annotation preserve prior runtime state after both success and
+  failure, and typed-token annotation retains the established rule-based behavior when
+  no neural backend is active.
+- Review-file integrity distinguishes an absent optional form from an explicitly empty
+  form, and SQLite schema migration rolls back completely if an append fails.
+
 ## 0.44.2 (2026-07-12)
 
 A correctness and crash-safety patch for caches, downloads, derived artifacts,

@@ -6,6 +6,7 @@ Parquet additionally needs a parquet engine (the ``[parquet]`` extra — pyarrow
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -31,6 +32,7 @@ def _progress_dataframe(
     import pandas as pd  # lazy, optional [data] extra
 
     from ..core.model import TokenKind
+    from .._view import _form_state_fields
 
     docs = corpus.documents
     total = len(docs)
@@ -62,11 +64,55 @@ def _progress_dataframe(
             for tok in d.tokens:
                 if want_word and tok.kind is not TokenKind.WORD:
                     continue
+                form_fields = _form_state_fields(tok.form_state)
+                if form_fields:
+                    form_fields = {
+                        "form_diplomatic": form_fields["form_diplomatic"],
+                        "form_regularized": form_fields["form_regularized"],
+                        "form_normalized": form_fields["form_normalized"],
+                        "form_model_input": form_fields["form_model_input"],
+                        "form_model_input_ops": tuple(form_fields["form_model_input_ops"]),
+                        "form_model_input_source": form_fields["form_model_input_source"],
+                        "form_segments": json.dumps(
+                            form_fields["form_segments"],
+                            ensure_ascii=False,
+                            separators=(",", ":"),
+                        ),
+                        "form_editorial_status": form_fields["form_editorial_status"],
+                        "form_supplied_text": form_fields["form_supplied_text"],
+                        "form_unclear_text": form_fields["form_unclear_text"],
+                        "form_lost_text": form_fields["form_lost_text"],
+                        "form_supplied": form_fields["form_supplied"],
+                        "form_unclear": form_fields["form_unclear"],
+                        "form_lost": form_fields["form_lost"],
+                        "form_has_damage": form_fields["form_has_damage"],
+                        "form_has_uncertainty": form_fields["form_has_uncertainty"],
+                    }
+                else:
+                    form_fields = {
+                        "form_diplomatic": None,
+                        "form_regularized": None,
+                        "form_normalized": None,
+                        "form_model_input": None,
+                        "form_model_input_ops": None,
+                        "form_model_input_source": None,
+                        "form_segments": None,
+                        "form_editorial_status": None,
+                        "form_supplied_text": None,
+                        "form_unclear_text": None,
+                        "form_lost_text": None,
+                        "form_supplied": None,
+                        "form_unclear": None,
+                        "form_lost": None,
+                        "form_has_damage": None,
+                        "form_has_uncertainty": None,
+                    }
                 rows.append(
                     {
                         # token annotations spread first so the canonical columns
                         # below always win on a name clash (as in to_dataframe).
                         **tok.annotations,
+                        **form_fields,
                         "doc_id": d.id,
                         "line_no": tok.line_no,
                         "position": tok.position,

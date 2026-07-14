@@ -47,6 +47,31 @@ The plain reading text is unchanged from before status tracking: `" ".join(t.tex
 doc.tokens)` reads exactly as the edition does. Status is additional information, not a rewrite of
 the text.
 
+### Diplomatic, regularized, and model-input forms
+
+`ReadingStatus` is an aggregate word-level signal. A token-carrier EpiDoc import
+can also preserve the pieces behind that signal in `Token.form_state`:
+
+- `diplomatic` is the original or diplomatic spelling.
+- `regularized` is an editorial spelling, for example a correction or expansion.
+- `normalized` is an optional normalized preprocessing form.
+- `model_input` is the exact string later handed to an analyzer, with
+  `model_input_source` and ordered operations recording how it was selected.
+- `segments` retain the order and status of certain, supplied, unclear, and lost
+  pieces, plus semantic references to source markup when available.
+
+These are not interchangeable. The first three fields and the segments describe
+the evidence or an editorial representation. `model_input` describes a computation
+and is not a claim that the source contained that spelling. `pipeline_tokens()`
+selects an explicit model input first, then regularized, normalized, or diplomatic
+text, and returns the selected value in the `TokenRecord` state.
+
+The generic reader recognizes these states when they occur on token carriers such
+as `<w>`, `<num>`, `<g>`, or `<seg>`, including `<choice>` and apparatus markup.
+It does not turn arbitrary free-text TEI into a structured token state. The six
+currently hosted epigraphy and papyri assets retain their legacy aggregate
+`ReadingStatus` values and do not yet carry `TokenFormState`.
+
 ### Working with status
 
 Filter to the securely-read text, or measure how much of a corpus is reconstruction:
@@ -66,8 +91,11 @@ corpus, and it is exactly the information a study should account for rather than
 Status round-trips through every persistence format: `Corpus.to_json` / `from_json`, the SQLite store
 (`aegean.db`), and EpiDoc export all preserve it, and the token-level tabular exports (`to_csv`,
 `to_parquet`, `to_dataframe`) carry it as a `status` column, so a spreadsheet can filter restored
-readings out. A corpus you load, filter, and re-save keeps the apparatus. Two caveats: the
-workbench export format carries token text only (a workbench round-trip returns every token as
+readings out. On the current `main` branch, schema-3 JSON and SQLite also preserve typed form
+states, while CSV and Parquet expose them as `form_*` columns and a JSON `form_segments` cell. A
+corpus you load, filter, and re-save keeps the apparatus. Two caveats: the Workbench export format
+carries token text only, so a Workbench round-trip drops statuses, typed form state, and
+annotations and returns every token as
 `CERTAIN`), and merging corpora keeps `edition_fidelity` only when every input agrees on one value
 (a mixed merge reports it unknown).
 
@@ -116,7 +144,9 @@ not editorial reconstructions of a damaged object, so they do not use reading st
 
 Documentary papyri record editorial choices differently from stone inscriptions. Where an editor
 regularized a spelling, corrected a scribal error, or expanded an abbreviation, the DDbDP EpiDoc
-encodes both the raw and the edited form. pyaegean takes the editor's preferred reading:
+encodes both the raw and the edited form. The currently hosted DDbDP asset exposes the preferred
+reading and aggregate status, not a typed `TokenFormState`; a token-carrier EpiDoc file imported
+directly can retain both forms. pyaegean takes the editor's preferred reading:
 
 - a regularized spelling (`<reg>`) over the raw one (`<orig>`),
 - the lemmatized/corrected reading (`<lem>`) over a rejected variant (`<rdg>`),

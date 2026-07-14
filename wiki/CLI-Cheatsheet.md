@@ -5,14 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Release note.** This cheatsheet follows `main`. The CoNLL-U and newer Greek
-> pipeline controls are main-branch previews planned for the next release, not
-> PyPI v0.44.2.
+> **Available in v0.45.0.** The CoNLL-U and newer Greek pipeline controls are
+> part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.44.2
+aegean --version                # pyaegean 0.45.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -88,7 +87,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | `cite` | Cite the corpus, or the exact filtered subset | `--style --site/... --json` | `aegean cite lineara --site Zakros --style bibtex` |
 | `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF (Turtle, JSON-LD) | `-f/--format -o/--output --level --base-uri --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict --json` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
-| `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc --json` | `aegean import john.txt -o john.json --script nt` |
+| `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or token-carrier EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc --json` | `aegean import john.txt -o john.json --script nt` |
 | `geo` | Find-site coordinates, or `--word`'s per-site map (case-insensitive); GeoJSON with `-o` (`.json`/`.geojson` only) | `--word --level --site --period --scribe --support -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
@@ -222,7 +221,7 @@ aegean export lineara -f workbench -o wb.json     # Linear A Workbench JSON
 | `parquet` | same, columnar | `[parquet]` extra |
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
-| `workbench` | Linear A Workbench JSON (round-trips via `import --workbench`) | core |
+| `workbench` | Linear A Workbench JSON; text/surface round-trip, but statuses, annotations, and typed forms are lossy | core |
 | `ttl` | RDF Turtle (export only; `--base-uri` for the minted subjects) | core |
 | `jsonld` | RDF JSON-LD (export only; same graph as `ttl`) | core |
 

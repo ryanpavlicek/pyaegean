@@ -105,7 +105,7 @@ def test_alignment_preserves_unicode_codepoint_slices_and_legacy_equality() -> N
 def test_json_roundtrip_and_fingerprint_sense_alignment_fields() -> None:
     corpus = _corpus_with_alignment()
     payload = json.loads(corpus.to_json())
-    assert payload["_meta"]["schemaVersion"] == 2
+    assert payload["_meta"]["schemaVersion"] == 3
     raw_doc = payload["documents"][0]
     assert raw_doc["source_text"] == "λόγος\tκαί"
     assert raw_doc["tokens"][1]["alignment"]["whitespace_before"] == "\t"
@@ -152,8 +152,8 @@ def test_legacy_no_alignment_fingerprint_and_schema_fixture_are_compatible() -> 
     assert loaded.documents[0].tokens[0].alignment is None
 
     future = json.loads(json.dumps(raw))
-    future["_meta"]["schemaVersion"] = 3
-    with pytest.raises(ValueError, match="schema version 3"):
+    future["_meta"]["schemaVersion"] = 4
+    with pytest.raises(ValueError, match="schema version 4"):
         Corpus.from_dict(future)
 
 

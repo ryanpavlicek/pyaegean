@@ -280,9 +280,9 @@ forward pass, measured on the UD Ancient Greek (Perseus) benchmark (see
 numbers and protocol). The model bundle (quantized ONNX + tokenizer + label maps + lemma
 scripts/lookup, ~173 MB tar.gz, sha256-pinned) is fetched to the cache, never bundled,
 and runs torch-free on numpy + onnxruntime, loaded only on activation. The released
-model is quantized and lossless (weight-only int8 on the MatMul weights plus fp16
-elsewhere, activations kept fp32), so the UD Ancient Greek scores are unchanged from
-the full-precision model; it needs `onnxruntime>=1.23` for the 8-bit kernel. The
+model uses weight-only int8 on the MatMul weights plus fp16 elsewhere, with
+activations kept fp32. Its measured UD Ancient Greek scores remain within ±0.02
+of the full-precision model; it needs `onnxruntime>=1.23` for the 8-bit kernel. The
 full-precision (fp32) model stays available at the `grc-joint-v2` release for
 reproducibility.
 
@@ -611,7 +611,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.44.2'  (your installed version)
+v["package"]                                  # '0.45.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -682,7 +682,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.44.2'
+# '0.45.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -696,8 +696,9 @@ the two statuses together touch 366 documents.
 The **full** Leiden apparatus (restorations, dotted readings) was dropped by the
 upstream digitization and remains absent; for edition-grade readings consult
 **GORILA** and **SigLA**. `aegean.ReadingStatus` round-trips through JSON and
-EpiDoc (`<unclear>`/`<supplied>`/`<gap>`), so bring-your-own corpora keep their
-apparatus through a load/export cycle.
+token-carrier EpiDoc. The reader accepts `<unclear>`, `<supplied>`, and `<gap>`;
+the writer emits `LOST` as `<supplied reason="undefined">`. This is a semantic
+apparatus round-trip, while JSON or SQLite preserves every pyaegean field.
 
 ---
 
@@ -749,9 +750,11 @@ Tokens may be plain strings (kinds inferred: parseable numerals vs words,
 hyphenated tokens get their signs split) or dicts carrying `kind`, `status`
 (editorial certainty), and `alt` (variant readings). Make it loadable by name with
 `aegean.core.corpus.register_loader("myfind", lambda: corpus)`; for EpiDoc
-sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads any EpiDoc TEI
-edition into the same model — id, find-place, token/line stream, `<unclear>`/`<supplied>`
-status, and `<app>`/`<rdg>` variants — on the stdlib XML parser, no extra needed.
+sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads pyaegean output
+and other EpiDoc TEI whose tokens are carried by `<w>`, `<num>`, `<g>`, or `<seg>`
+into the same model: id, find-place, token/line stream, `<unclear>`/`<supplied>`
+status, and `<app>`/`<rdg>` variants, on the stdlib XML parser with no extra needed.
+Arbitrary free-text TEI needs a source-specific extractor.
 
 ### Variant readings
 

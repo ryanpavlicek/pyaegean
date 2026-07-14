@@ -4,8 +4,7 @@ This page explains how pyaegean turns source material into data, analysis, and
 measured claims. It is meant to stand on its own: links point to detailed tables
 and API entries, but the methodological contract is stated here.
 
-This site is built from `main`. APIs identified as main-branch previews on the
-[home page](index.md) may not yet be present in the latest PyPI release.
+This site documents the current PyPI release.
 
 The central distinction is between three kinds of result:
 
@@ -40,6 +39,21 @@ Every token can carry one of four editorial states:
 An analysis over restored text is therefore distinguishable from an analysis
 over preserved text. The status does not make an editorial restoration true or
 false; it keeps the evidential boundary visible.
+
+Imports that expose more than one spelling can also
+carry a typed `TokenFormState`. `diplomatic` is the supplied or original form,
+`regularized` and `normalized` are optional editorial or preprocessing forms, and
+`model_input` records the exact string sent to an analyzer. The latter is model
+provenance, not a claim about what the source says. Ordered segments retain which
+pieces are certain, supplied, unclear, or lost, together with semantic source
+references where the edition provides them. `pipeline_tokens()` selects a model
+form deterministically and records the selection and any normalization operations,
+so a prediction can be traced back to its editorial evidence.
+
+This typed state is available when a token-carrier EpiDoc source exposes the
+corresponding choices or apparatus. The six currently
+hosted epigraphy and papyri assets remain legacy aggregate-status data and do not
+yet provide `TokenFormState`.
 
 Small, redistributable datasets may be bundled. Larger corpora, dictionaries,
 and models are registered assets that are fetched on demand, checked against a

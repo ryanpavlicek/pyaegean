@@ -20,7 +20,7 @@ from textual.message import Message
 from textual.widgets import DataTable, ListItem, ListView, Static
 
 if TYPE_CHECKING:
-    from .data import BalanceRow, CorpusEntry, DocDetail, DocRow
+    from .data import BalanceRow, CorpusEntry, DocDetail, DocRow, TokenCell
 
 __all__ = ["CorpusList", "DocTable", "DetailPane", "KeyValueTable"]
 
@@ -33,6 +33,29 @@ _STATUS_MARK = {
     "restored": "[ ]",
     "lost": "---",
 }
+
+
+def _reader_token_text(token: "TokenCell") -> str:
+    """Render a token with editorial-form distinctions only when they differ."""
+    mark = _STATUS_MARK.get(token.status, "")
+    text = f"{token.text}{mark}" if mark else token.text
+    state = token.form_state
+    if state is None:
+        return text
+    diplomatic = state["diplomatic"]
+    selected = (
+        state.get("regularized")
+        if state.get("regularized") is not None
+        else state.get("normalized")
+    )
+    model_input = state.get("model_input")
+    if diplomatic != token.text:
+        text += f" [dipl. {diplomatic}]"
+    if selected is not None and selected != token.text:
+        text += f" [regularized {selected}]"
+    if model_input is not None and model_input not in {token.text, selected}:
+        text += f" [model {model_input}]"
+    return text
 
 
 class CorpusList(ListView):
@@ -183,8 +206,7 @@ class DetailPane(Static):
         for i, line in enumerate(detail.lines):
             cells = []
             for tok in line.tokens:
-                mark = _STATUS_MARK.get(tok.status, "")
-                cells.append(f"{tok.text}{mark}" if mark else tok.text)
+                cells.append(_reader_token_text(tok))
             row_text = escape(f"{line.number:>3}  " + " ".join(cells))
             out.append(f"[reverse]{row_text}[/reverse]" if i == self._cursor else row_text)
         if self._balances:

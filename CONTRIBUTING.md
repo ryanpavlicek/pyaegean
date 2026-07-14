@@ -156,6 +156,19 @@ their own sources and methods in their module docstrings.
 
 pyaegean is pre-1.0, but the public API is treated as a contract:
 
+The supported entry points are the facade modules listed in the
+[API reference](https://pyaegean.xyz/api/). Existing lower-level paths that were
+already released remain compatibility-protected, but new implementation modules
+are not added to the contract automatically. `scripts/api-manifest.json` is the
+reviewed facade list, while `scripts/api-baseline.json` retains both supported and
+grandfathered names. Run `python scripts/check_api.py` before proposing an API
+change; release snapshots refuse legacy breaks and add only reviewed facade names.
+Add a new supported facade by reviewing `api-manifest.json` before the release
+snapshot. After the required deprecation cycle is complete, a deliberate removal
+still requires reviewing the reported break and passing
+`--snapshot --accept-breaking-snapshot`; ordinary snapshots never erase or rewrite
+grandfathered contracts.
+
 1. **Deprecate in a minor release, remove no sooner than the next minor.**
    A symbol deprecated in 0.x.0 keeps working through every 0.x.* and may be
    removed in 0.(x+1).0 at the earliest.

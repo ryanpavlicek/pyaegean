@@ -108,16 +108,25 @@ def test_demo_phonetic_compare() -> None:
 
 def test_demo_epidoc_import() -> None:
     demo = _load_demo()
-    from aegean.core.model import Document, DocumentMeta, Token, TokenKind
+    from aegean.core.model import Document, DocumentMeta, FormSegment, Token, TokenFormState, TokenKind
     from aegean.io import to_epidoc
 
     doc = Document(
         id="IG1", script_id="greek",
-        tokens=[Token("λόγος", TokenKind.WORD, line_no=0, position=0)],
+        tokens=[Token(
+            "λόγος", TokenKind.WORD, line_no=0, position=0,
+            form_state=TokenFormState(
+                diplomatic="λογος", regularized="λόγος", segments=(FormSegment("λόγος"),)
+            ),
+        )],
         lines=[[0]], meta=DocumentMeta(site="Athens", name="t"),
     )
     r = json.loads(demo.epidoc_import(to_epidoc(doc)))
     assert r["id"] == "IG1" and r["site"] == "Athens" and r["tokens"] == 1 and r["preview"] == ["λόγος"]
+    assert r["form_states"] == [{
+        "text": "λόγος", "diplomatic": "λογος", "regularized": "λόγος",
+        "normalized": None, "editorial_status": "certain",
+    }]
     assert "error" in json.loads(demo.epidoc_import("not xml"))
 
 

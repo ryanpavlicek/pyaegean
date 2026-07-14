@@ -9,9 +9,8 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.44.2 (beta).** Usable and tested, but the API may still shift
-> before 1.0. This README follows the current `main` branch, so features explicitly marked as
-> main-branch previews are not part of the PyPI release yet.
+> **Latest PyPI release: v0.45.0 (beta).** Usable and tested, but the API may still shift
+> before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
 > never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
@@ -101,7 +100,7 @@ prior programming.
 | **The Greek New Testament, annotated** | `greek.load_nt("John", ref="1.1-18")` loads the Nestle 1904 NT with a gold **lemma**, **morphology**, and **Strong's number** on every token; `greek.use_dodson()` adds Koine glosses (`gloss_strongs("3056") → "a word, speech…"`). So you can lemmatize, gloss, and cite a chapter, offline. Public-domain text + CC0 annotations; a two-chapter reading sample (John 1 and Philemon 1) is bundled, and the full 27-book corpus fetches on demand. |
 | **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (37 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
-| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and **schema-valid EpiDoc / CSV / Parquet** export via `aegean.io` (the EpiDoc validates against the official EpiDoc RelaxNG and round-trips editorial status, and any EpiDoc edition **reads back in** with `from_epidoc`). Every corpus carries provenance and a one-line citation. **Main-branch preview:** typed lossless source alignment and lossless CoNLL-U structure, including multiword ranges, empty nodes, `DEPS`, and `MISC`, are planned for the next release. |
+| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Typed token form states distinguish diplomatic, regularized, normalized, and model-input strings. Source alignment and lossless CoNLL-U structure preserve exact mappings, multiword ranges, empty nodes, `DEPS`, and `MISC`. EpiDoc carries the diplomatic form plus one selected editorial form and apparatus; use JSON, SQLite, or CoNLL-U when every typed form must round-trip. Every corpus carries provenance and a one-line citation. |
 | **A browser UI for any corpus** | `aegean.io.to_workbench(corpus, "my.json")` emits a file the [Linear A Research Workbench](https://linearaworkbench.xyz/) opens via `?corpus=`: your own inscriptions get its 50 analysis modules, maps, and imagery browser with zero setup. `from_workbench_export()` loads the workbench's corpus exports (and its static data API) back into Python. |
 | **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer, so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
 | **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Greek translation can use explicit deterministic or neural local grounding before generation. All generative readings are labeled **exploratory** with their provenance; callers of the lower-level AI API may also supply their own grounding or none. |
@@ -211,9 +210,10 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) is the record of
 what each release shipped. Current work is focused on:
 
-- finishing the model-independent Greek foundations: richer token states, modular sentence
-  segmentation, source-aware confidence and abstention, streaming, interoperability, profiles,
-  and reproducible training inputs;
+- finishing the model-independent Greek foundations: edition-aware sentence segmentation,
+  source-aware confidence and abstention, bounded-memory document analysis, optional
+  spaCy/Stanza/CLTK adapters, explicit annotation and domain profiles, and shared versioned
+  training/inference preprocessing;
 - comparing deterministic and neural translation grounding on matched passages before changing
   any default;
 - training and independently evaluating a separately versioned successor to the current Greek
@@ -257,7 +257,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.44.2},
+  version = {0.45.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

@@ -28,6 +28,36 @@ __all__ = [
 ]
 
 
+def _form_state_fields(state: Any) -> dict[str, Any]:
+    """Return one token's editorial form state as JSON-ready ``form_*`` fields.
+
+    The helper deliberately reads the typed state, never ``Token.annotations``.
+    It is private because the public contract is the row keys, not this adapter;
+    tabular, review, MCP, and TUI surfaces share it to prevent divergent
+    serialization or a dataclass object leaking into JSON.
+    """
+    if state is None:
+        return {}
+    return {
+        "form_diplomatic": state.diplomatic,
+        "form_regularized": state.regularized,
+        "form_normalized": state.normalized,
+        "form_model_input": state.model_input,
+        "form_model_input_ops": list(state.model_input_ops),
+        "form_model_input_source": state.model_input_source,
+        "form_segments": [segment.to_dict() for segment in state.segments],
+        "form_editorial_status": state.editorial_status.value,
+        "form_supplied_text": state.supplied_text,
+        "form_unclear_text": state.unclear_text,
+        "form_lost_text": state.lost_text,
+        "form_supplied": state.supplied,
+        "form_unclear": state.unclear,
+        "form_lost": state.lost,
+        "form_has_damage": state.has_damage,
+        "form_has_uncertainty": state.has_uncertainty,
+    }
+
+
 def balance_rows(document: "Document") -> list[dict[str, Any]]:
     """Every reconciled total line of one document as row dicts.
 
@@ -127,6 +157,10 @@ def pipeline_rows_from_records(records: "list[TokenRecord]") -> list[dict[str, A
         }
         for r in records
     ]
+    for row, record in zip(rows, records):
+        form_state = getattr(record, "form_state", None)
+        if form_state is not None:
+            row.update(_form_state_fields(form_state))
     if any(
         r.upos_confidence is not None or r.lemma_confidence is not None for r in records
     ):

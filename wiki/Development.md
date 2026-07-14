@@ -42,7 +42,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.44.2 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.45.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -61,7 +61,7 @@ environment:
 | `nbmake`, `ipykernel` | execute the example notebooks under pytest |
 | `pandas` | exercise the `[data]` DataFrame interop in tests |
 | `typer`, `rich`, `prompt_toolkit` | the `aegean` CLI + REPL (the `[cli]` extra) |
-| `lxml` | EpiDoc TEI export (the `[epidoc]` extra) |
+| `lxml` | Linear B DAMOS-style EpiDoc import and official-schema validation (the `[epidoc]` extra); generic token-carrier EpiDoc I/O uses the stdlib |
 | `matplotlib` | one-line plots (the `[viz]` extra) |
 | `mcp` | the `aegean-mcp` Model Context Protocol server |
 | `textual` | the `aegean tui` terminal UI (the `[tui]` extra) |
@@ -166,7 +166,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.44.2-py3-none-any.whl: 4179 KB uncompressed, 213 files
+# wheel dist/pyaegean-0.45.0-py3-none-any.whl: 4415 KB uncompressed, 215 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -175,7 +175,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.44.2-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.45.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -300,6 +300,20 @@ write code.
 ### Deprecation policy
 
 pyaegean is pre-1.0, but the public API is treated as a contract:
+
+The [API reference](https://pyaegean.xyz/api/) lists the supported facade modules.
+Use those entry points in new code. Previously released lower-level import paths
+remain compatibility-protected, but newly added implementation modules do not
+become supported automatically. The release guard checks the reviewed facade
+manifest and the complete grandfathered baseline separately.
+
+The reviewed facade modules and selected symbols live in
+`scripts/api-manifest.json`; `scripts/api-baseline.json` retains every released
+and grandfathered name. Run `python scripts/check_api.py` for the compatibility
+check. A new supported facade is added to the manifest before a release snapshot.
+After a minor-release deprecation cycle, a deliberate retirement is recorded with
+`python scripts/check_api.py --snapshot --accept-breaking-snapshot`; an ordinary
+snapshot refuses to discard a legacy name.
 
 1. **Deprecate in a minor release, remove no sooner than the next minor.** A
    symbol deprecated in 0.x.0 keeps working through every 0.x.* and may be

@@ -62,7 +62,7 @@ narrow interval means the number is stable, not a lucky fold.
 - **Train / dev / test discipline.** Training is the AGDT minus the UD-Perseus dev+test
   exclusion manifest. The **dev** fold (the AGDT sentences behind UD-Perseus dev) is used for
   early stopping, checkpoint selection, light schedule tuning (epochs / lr), and the
-  quantization gate (weight-only int8 + fp16 passes losslessly; full int8 activations are
+  quantization gate (weight-only int8 + fp16 leaves measured scores unchanged; full int8 activations are
   rejected there, see below); the **test** folds are scored once on the finished model and never used
   for any selection. Full protocol in `training/README.md`.
 - **Lemma scoring.** On the UD folds, lemmas use the evaluator's exact string match with
@@ -231,24 +231,24 @@ Three things keep these honest:
   changes (a dependency-drift trigger), not automatically per release.
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
-about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed) and lossless on
-**accuracy**: UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 /
+about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed). The measured
+UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 /
 lemma 94.3 / UAS 90.2 / LAS 85.6). The trade-off is **CPU throughput**: the int8 MatMulNBits
 kernels run several times slower than fp32 MatMul on this workload (roughly 20–70 words/s
 quantized vs roughly 300 words/s fp32 on the development machine), so the quantized default
-optimizes download size and disk, not speed — throughput-sensitive work can fetch the fp32
-`grc-joint-v2` asset instead. The measured file sizes and the lossless comparison are recorded
+optimizes download size and disk, not speed; throughput-sensitive work can fetch the fp32
+`grc-joint-v2` asset instead. The measured file sizes and score comparison are recorded
 in `training/results/v3-quantize-report.json` (the rejected full-int8 recipe in
 `gate-report.json`). The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
 else (crucially the 160 MB word-embedding table). Activations stay fp32 by design.
 
-This is the recipe that works because the obvious one does not: **full int8 (quantized
-activations) collapses the GreBerta encoder.** Its activation outliers do not survive
-8-bit quantization, so every dynamic or static int8-activation recipe we tried dropped
-UPOS from 97 to 16–32 and LAS from 86 to 1–13 (an earlier dynamic-quantization attempt
-broke it on the dev set, UPOS 98.30 → 23.34). Keeping activations fp32 and quantizing only
-the weights avoids the outlier problem and ships the size win at no accuracy cost.
+**Full int8 (quantized activations) is excluded because it collapses the GreBerta
+encoder.** Its activation outliers do not survive 8-bit quantization: the recorded
+dynamic and static recipes dropped UPOS from 97 to 16–32 and LAS from 86 to 1–13,
+including a development-set dynamic result of UPOS 98.30 → 23.34. Keeping activations
+fp32 and quantizing only the weights avoids the outlier problem and reduces the artifact
+size without a measured accuracy loss.
 
 The quantized model requires **onnxruntime ≥ 1.23** (the 8-bit MatMulNBits CPU kernel); the
 `[neural]` extra floor was raised from 1.17 to 1.23 accordingly. The fp32 model stays

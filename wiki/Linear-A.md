@@ -495,8 +495,9 @@ lost, unclear, docs            # (552, 120, 366)
 So **366 of 1,721** documents carry editorial status (552 `LOST` tokens, 120
 `UNCLEAR`). The **full** Leiden apparatus (restorations, dotted readings) is
 still absent (the upstream digitization dropped it), so for edition-grade work
-consult **GORILA** and **SigLA** (below). The EpiDoc reader/writer round-trips
-these as `<unclear>` / `<supplied>` / `<gap>`.
+consult **GORILA** and **SigLA** (below). The EpiDoc reader accepts `<unclear>`,
+`<supplied>`, and `<gap>`; the writer emits `LOST` as
+`<supplied reason="undefined">`, preserving the same editorial status.
 
 ---
 
@@ -585,7 +586,7 @@ It is an honest negative result, not a decipherment aid.
 | `aegean balance lineara [HT13]` | KU-RO reconciliation | `--strict --json` |
 | `aegean analyze structure lineara [HT13]` | Heuristic categories | `--json` |
 | `aegean cite lineara` | Cite the corpus (or a subset) | `--style --site --period --scribe --support` |
-| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench | (see [CLI](CLI)) |
+| `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF Turtle / JSON-LD | (see [CLI](CLI)) |
 
 ---
 

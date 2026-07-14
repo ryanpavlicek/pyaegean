@@ -64,7 +64,7 @@ through the EpiDoc and JSON round-trips. The four states are exhaustive:
 | `certain` | securely read (the default) |— |
 | `unclear` | damaged but read | `<unclear>` / underdot |
 | `restored` | editorially supplied | `<supplied>` / `[ ]` |
-| `lost` | not preserved / lacuna | `<gap>` / `[---]` |
+| `lost` | not preserved / lacuna | `<gap>` or `<supplied reason="undefined">` / `[---]` |
 
 The bundled corpora are normalized transcriptions, mostly `certain` with a real
 fraction damaged. In the bundled Linear A corpus 552 tokens load as `LOST` and
@@ -307,21 +307,21 @@ in five stages, each with a dataset builder and a training script:
 
 The shipped model is **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), roughly 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
-uncompressed) and **lossless on accuracy**: the UD Perseus test scores are
+uncompressed), while the measured UD Perseus test scores are
 unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 /
 LAS 85.6). The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on
 everything else (crucially the ~160 MB word-embedding table), activations fp32 by
 design.
 
-This is the recipe that works **because the obvious one does not.** Full int8
-(quantized activations) collapses the GreBerta encoder: its activation outliers do
-not survive 8-bit quantization, so every dynamic or static int8-activation recipe
-tried dropped UPOS from 97 to 16–32 and LAS from 86 to 1–13. That recipe was gated
-on a ≤0.3-point drop and **rejected**; keeping activations fp32 and quantizing only
-the weights ships the size win at no accuracy cost. The rejected recipe is recorded
-in `training/results/gate-report.json`, and the shipped sizes plus the lossless
-comparison in `training/results/v3-quantize-report.json`.
+**Full int8 (quantized activations) is excluded because it collapses the GreBerta
+encoder.** Its activation outliers do not survive 8-bit quantization: the recorded
+dynamic and static recipes dropped UPOS from 97 to 16–32 and LAS from 86 to 1–13.
+Full int8 exceeded the ≤0.3-point acceptance limit and is not shipped. Keeping
+activations fp32 and quantizing only the weights reduces the artifact size without
+a measured accuracy loss. The excluded recipe is recorded
+in `training/results/gate-report.json`, and the shipped sizes plus the measured
+score comparison in `training/results/v3-quantize-report.json`.
 
 The trade-off the quantization *does* carry is **CPU throughput**, not accuracy:
 the int8 MatMulNBits kernels run several times slower than fp32 MatMul on this

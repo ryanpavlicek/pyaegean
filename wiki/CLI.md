@@ -11,9 +11,9 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Release note.** This guide follows `main`. The CoNLL-U commands and the
-> long-input, source-alignment, and analysis-receipt fields shown below are
-> main-branch previews planned for the next release, not PyPI v0.44.2.
+> **Available in v0.45.0.** The CoNLL-U commands and the long-input,
+> source-alignment, and analysis-receipt fields shown below are part of the
+> current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.44.2
+aegean --version          # pyaegean 0.45.0
 ```
 
 | Group | What's in it |
@@ -632,7 +632,11 @@ aegean show tlg0012.tlg001 2         # read Book 2
 An ambiguous short id is never guessed: the candidates are listed, and an
 unknown id's error names the closest matches.
 
-`--json` gives the full metadata block plus `lines` as nested token lists.
+`--json` gives the full metadata block plus `lines` as nested token lists and,
+when present, a `tokens` array with flattened `form_*` fields and a nested
+`form_state`. Human output adds a `form N:` line below a token when its typed
+state has diplomatic, regularized, normalized, or model-input distinctions.
+These fields describe editorial evidence and analyzer input separately.
 
 ### `search` — wildcard sign-pattern word search
 
@@ -898,12 +902,17 @@ aegean export edh -f ttl -o edh.ttl                       # Linked Open Data (Tu
 | `parquet` | same, columnar | `[parquet]` extra |
 | `epidoc` | EpiDoc TEI XML | core |
 | `sqlite` | queryable DB with FTS5 | core |
-| `workbench` | Linear A Research Workbench JSON (round-trips via `import --workbench`) | core |
+| `workbench` | Linear A Research Workbench JSON; text and surface metadata round-trip, while statuses, annotations, and typed forms are lossy | core |
 | `ttl` / `jsonld` | Linked Open Data (Turtle / JSON-LD): stable subject URIs from the authoritative identifiers in the data (papyri.info document URIs for DDbDP, with Trismegistos as `rdfs:seeAlso` and the offline fallback; Trismegistos ids for EDH; the I.Sicily URI; else a documented `urn:` fallback or `--base-uri`), Dublin Core terms, WGS84 coordinates, and the corpus license attached to every document | core |
 
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
-Filters (`--site` etc.) apply before export.
+On `main`, typed form states add canonical `form_diplomatic`,
+`form_regularized`, `form_normalized`, `form_model_input`,
+`form_model_input_ops`, `form_model_input_source`, `form_segments`, editorial
+status, damage, and uncertainty columns. `form_segments` is JSON in the table;
+tokens without a state have empty or null values. Filters (`--site` etc.) apply
+before export.
 
 #### The whole matrix, run once
 
@@ -935,7 +944,7 @@ spreadsheet:
 ```bash
 aegean export nt -f csv --level token -o nt-tokens.csv   # wrote 260 documents to nt-tokens.csv (csv)
 head -2 nt-tokens.csv
-# lemma,morph,strongs,normalized,upos,ref,gloss,doc_id,line_no,position,text,kind,site,period
+# lemma,morph,strongs,normalized,upos,ref,gloss,form_diplomatic,form_regularized,form_normalized,form_model_input,doc_id,line_no,position,text,kind,site,period
 # βίβλος,N-NSF,976,Βίβλος,NOUN,Matt.1.1,"a written book, roll, or volume",Matt 1,1,0,Βίβλος,word,,Koine
 ```
 
@@ -1057,16 +1066,24 @@ aegean export lineara -f workbench -o wb.json   # corpus → Workbench JSON
 aegean import wb.json --workbench -o back.json  # Workbench JSON → corpus
 ```
 
-**EpiDoc TEI** imports back the same way — any EpiDoc edition (a file or a folder of `.xml`),
-not just pyaegean's own output — via `--epidoc`, the inverse of `export -f epidoc`:
+Workbench JSON carries token text and surface metadata only. It drops
+`ReadingStatus`, typed `TokenFormState`, and token annotations, so an imported
+Workbench file returns CERTAIN, unannotated tokens. Use JSON or SQLite when the
+editorial and analysis layers must survive.
+
+**EpiDoc TEI** imports back the same way, for a token-carrier EpiDoc edition (a file or a
+folder of `.xml`), not just pyaegean's own output, via `--epidoc`, the inverse of
+`export -f epidoc`:
 
 ```bash
 aegean export lineara -f epidoc -o ins/                    # corpus → EpiDoc TEI (one file per doc)
-aegean import ins/ --epidoc --script lineara -o back.json  # any EpiDoc edition → corpus
+aegean import ins/ --epidoc --script lineara -o back.json  # token-carrier EpiDoc → corpus
 ```
 
 It recovers the id, find-place, token/line stream, editorial certainty
-(`<unclear>`/`<supplied>`), and `<app>` variants, using only the stdlib XML parser.
+(`<unclear>`/`<supplied>`), typed choices and apparatus segments, and `<app>` variants,
+using only the stdlib XML parser. The mapping is semantic, not byte-identical, and
+arbitrary free-text TEI is not converted into typed token state.
 
 `import` is the **only** way plain text enters a corpus: `read_corpus` and every
 corpus argument still load only `.json`/`.db` files (and work ids), so feeding a raw
@@ -1203,7 +1220,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.44.2                    │
+│ OK │ pyaegean │ 0.45.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1734,7 +1751,10 @@ aegean greek conllu export treebank.conllu -o checked-copy.conllu --strict
 ranges, empty nodes, `DEPS`, `MISC`, and line endings. It never invokes the baseline or
 neural pipeline. The separate `greek eval ud` path still predicts and scores only the
 integer-ID syntactic-word projection, so gold structural annotations are not credited to
-the model.
+the model. A typed editorial form on a word row is encoded in the reserved
+`AegeanFormState` MISC entry as URL-safe base64 JSON (schema 1); strict inspection
+rejects malformed, duplicate, unknown-schema, or oversized entries, while lenient
+inspection preserves the raw MISC value without decoding it.
 
 ### Reproducing the published numbers (`eval`)
 
@@ -2118,6 +2138,11 @@ export's printed next-step command includes it. See
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context and
 [Data & Provenance](Data-and-Provenance) for the table columns.
 
+Review exports also include guarded `form_*` columns and `form_state_json` when
+typed editorial forms are present. Applying a correction refuses a row whose
+form state no longer matches the exported corpus. Review files written before
+these columns remain readable and use the existing identity and token-text checks.
+
 ---
 
 ## AI — `aegean ai …` (exploratory, key-gated)
@@ -2163,8 +2188,8 @@ what it was (and wasn't) told. `extract` always prints JSON, so it pipes straigh
 into `jq`. For Greek, `translate` grounds with deterministic **morphology** by default
 (`--mode morphology`): lemma, part of speech, voice, case roles, and the clause skeleton,
 with rare words flagged but no auto-selected dictionary senses. `--mode full` adds concise,
-rarity-gated glosses (a common-sense-first dictionary cascade, best on rare or documentary
-vocabulary); `--mode lemma` is the legacy lemma+LSJ grounding, and `--mode none` sends the
+rarity-gated glosses from the available dictionary cascade; `--mode lemma` is the
+legacy lemma+LSJ grounding, and `--mode none` sends the
 text ungrounded. `--verify` translates raw first, then checks and repairs the draft against
 the analysis (a second model call: the analysis cannot bias the draft, though a wrong
 analysis can still mislead the repair).

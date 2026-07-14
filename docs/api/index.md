@@ -1,8 +1,11 @@
 # API reference
 
 The supported facade modules are listed below, with their public classes and
-functions generated from the source. Lower-level implementation modules remain
-importable but are not all separate reference pages. For guides, tutorials, and
+functions generated from the source. These facades are the stable entry points
+for new code. Lower-level modules remain importable, and paths that already formed
+part of a released API remain compatibility-protected, but a new lower-level path
+does not become supported merely because Python can import it. The release guard
+enforces both the reviewed facade list and those grandfathered paths. For guides, tutorials, and
 the per-script handbooks, see the
 **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**; for what pyaegean is
 and where to begin, see the [home page](../index.md).
@@ -10,13 +13,27 @@ and where to begin, see the [home page](../index.md).
 ## Where to start
 
 - [`aegean`](aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
-- [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
-- [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), isolated `GreekPipeline` instances with serializable configuration, plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
+- [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `TokenFormState`, `FormSegment`, `SourceMarkupRef`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
+- [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, scan, tag, lemmatize, parse), `pipeline_tokens()` for typed editorial forms, isolated `GreekPipeline` instances with serializable configuration, explicit long-input policies, exact `AnalysisReceipt` provenance, manifest-validated neural bundles, lossless CoNLL-U document I/O, plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
-- [`aegean.io`](io.md): import your own text (`from_text`, `from_text_file`, `from_text_dir`, `from_csv`) and export to EpiDoc / CSV / Parquet, plus the Linear A Research Workbench round-trip.
+- [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. JSON and SQLite are the full-fidelity archives.
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
+
+### API contract and retirement
+
+The facade modules listed here are the supported entry points for new code. The
+reviewed list of facade modules and explicitly selected symbols is kept in
+`scripts/api-manifest.json`; `scripts/api-baseline.json` retains every released
+name, including older lower-level paths that are still compatibility-protected.
+Importability alone does not add a new implementation module to the supported
+API. `python scripts/check_api.py` checks both the current source and the
+grandfathered baseline. A new facade name is added by reviewing the manifest and
+then taking a release snapshot. To retire a name, deprecate it in a minor release,
+keep the replacement and warning through the next minor release, and only then
+refresh the baseline with `--snapshot --accept-breaking-snapshot` after the
+removal has been explicitly reviewed. A normal snapshot refuses legacy removals.
 
 ## Build a corpus from your own text
 

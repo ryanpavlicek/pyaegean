@@ -60,6 +60,7 @@ def annotate_corpus(
         lemmatize_sourced,
         needs_review,
     )
+    from .pipeline import _select_token_form, pipeline_tokens
     from .pos import pos_tag
 
     use_joint = tag_sentence is None and joint.active() is not None
@@ -86,41 +87,64 @@ def annotate_corpus(
             if tok.kind is TokenKind.WORD:
                 groups.setdefault(tok.line_no if tok.line_no is not None else 0, []).append(i)
         for idxs in groups.values():
-            forms = [doc.tokens[i].text for i in idxs]
+            selected = [_select_token_form(doc.tokens[i]) for i in idxs]
+            forms = [form for form, _ in selected]
             if tag_sentence is not None:
-                for i, (lemma, upos) in zip(idxs, tag_sentence(forms)):
+                tagged = list(tag_sentence(forms))
+                if len(tagged) != len(idxs):
+                    raise ValueError(
+                        "tag_sentence returned a different token count than the input"
+                    )
+                for i, (lemma, upos), (_, form_state) in zip(idxs, tagged, selected):
                     ann = {**doc.tokens[i].annotations, "lemma": lemma, "upos": upos}
-                    new_tokens[i] = replace(doc.tokens[i], annotations=ann)
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=form_state
+                    )
             elif use_joint:
-                ana = joint.analyze_sentence(forms, long_input=long_input)
-                resolved = ana.lemma_resolved or (True,) * len(forms)
-                override = ana.lemma_source_override  # Lever B offline-rescue sources, else ()
-                for k, i in enumerate(idxs):
-                    if ana.lemma_source:
-                        src = ana.lemma_source[k]
-                    elif resolved[k]:
-                        src = LemmaSource.NEURAL
-                    elif override and override[k]:
-                        src = LemmaSource(override[k])  # grounded SEED / PARADIGM offline rescue
-                    else:
-                        src = LemmaSource.IDENTITY
-                    ann = {**doc.tokens[i].annotations, "lemma": ana.lemma[k], "upos": ana.upos[k]}
-                    _evidence(ann, src)
-                    if with_evidence:
+                analyzed = pipeline_tokens(
+                    [doc.tokens[i] for i in idxs],
+                    long_input=long_input,
+                    document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
+                )
+                if len(analyzed) != len(idxs):
+                    raise ValueError(
+                        "typed-token analysis returned a different token count than the input"
+                    )
+                for rec, i in zip(analyzed, idxs):
+                    ann = {
+                        **doc.tokens[i].annotations,
+                        "lemma": rec.lemma,
+                        "upos": rec.upos,
+                    }
+                    _evidence(ann, rec.lemma_source)
+                    if with_evidence and use_joint:
                         ann["neural_analyzed"] = (
-                            "true" if not ana.analyzed or ana.analyzed[k] else "false"
+                            "true" if rec.neural_analyzed is not False else "false"
                         )
-                        ann["analysis_complete"] = "true" if ana.complete else "false"
-                        if ana.warnings:
-                            ann["analysis_warning"] = ana.warnings[0]
-                    new_tokens[i] = replace(doc.tokens[i], annotations=ann)
+                        ann["analysis_complete"] = (
+                            "true" if rec.analysis_complete else "false"
+                        )
+                        if rec.analysis_warning:
+                            ann["analysis_warning"] = rec.analysis_warning
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=rec.form_state
+                    )
             else:
-                for i in idxs:
-                    form = doc.tokens[i].text
-                    lemma, src = lemmatize_sourced(form)
-                    ann = {**doc.tokens[i].annotations, "lemma": lemma, "upos": pos_tag(form)}
-                    _evidence(ann, src)
-                    new_tokens[i] = replace(doc.tokens[i], annotations=ann)
+                # Preserve the established rule-based annotation contract: the
+                # pre-A6 path tagged each word independently.  The typed form is
+                # additive input selection, not permission to switch the default
+                # annotator to the contextual ``pos_tags`` path.
+                for i, (form, form_state) in zip(idxs, selected, strict=True):
+                    lemma, source = lemmatize_sourced(form)
+                    ann = {
+                        **doc.tokens[i].annotations,
+                        "lemma": lemma,
+                        "upos": pos_tag(form),
+                    }
+                    _evidence(ann, source)
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=form_state
+                    )
         new_docs.append(replace(doc, tokens=new_tokens))
         if progress is not None:
             progress(done, total)

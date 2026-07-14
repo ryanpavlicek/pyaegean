@@ -92,6 +92,21 @@ def _utf8_env() -> dict[str, str]:
     return env
 
 
+def _configure_utf8_stream(stream: object) -> None:
+    """Make a reconfigurable text stream accept checkpoint Unicode output."""
+
+    reconfigure = getattr(stream, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="replace")
+
+
+def _configure_console_encoding() -> None:
+    """Keep captured Unicode command output printable on legacy Windows shells."""
+
+    _configure_utf8_stream(sys.stdout)
+    _configure_utf8_stream(sys.stderr)
+
+
 def _run_git(root: Path, *args: str) -> bytes:
     """Run git without a shell and return bytes, preserving unusual filenames."""
 
@@ -501,6 +516,7 @@ def _print_plan(commands: Sequence[CommandSpec]) -> None:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    _configure_console_encoding()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--profile", choices=PROFILES, default="code", help="risk profile to run")
     parser.add_argument("--test", dest="tests", action="append", metavar="PATH", help="focused pytest path; repeatable")

@@ -515,7 +515,7 @@ file itself). `corpus` accepts `linearb` (the sample) or
 | `aegean dispersion CORPUS ITEM` | How evenly an item spreads (Gries' DP) |
 | `aegean keyness CORPUS …` | Key items vs a reference (log-likelihood G²) |
 | `aegean balance CORPUS [DOC_ID]` | Accounting check (`--strict` exits 1 on a fail) |
-| `aegean export CORPUS …` | Export to JSON / CSV / Parquet / EpiDoc / SQLite |
+| `aegean export CORPUS …` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / RDF Turtle / JSON-LD |
 | `aegean data list` / `fetch` / `versions` | The fetchable datasets and the cache manifest |
 
 ## Limitations and honest notes

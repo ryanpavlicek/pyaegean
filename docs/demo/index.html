@@ -366,13 +366,17 @@
 
   <div class="card">
     <h2>Read EpiDoc TEI</h2>
-    <label for="epi">Paste an EpiDoc TEI edition and read it into a corpus — id, find-place, token preview
-      (<code>io.from_epidoc</code>, behind <code>aegean import --epidoc</code>; stdlib-only, no extra)</label>
+    <label for="epi">Paste token-carrier EpiDoc TEI and read it into a corpus: id, find-place,
+      token preview, and typed editorial forms. Tokens must use <code>&lt;w&gt;</code>,
+      <code>&lt;num&gt;</code>, <code>&lt;g&gt;</code>, or <code>&lt;seg&gt;</code>; arbitrary free-text
+      TEI needs a source-specific extractor. (<code>io.from_epidoc</code>, behind
+      <code>aegean import --epidoc</code>; stdlib-only, no extra)</label>
     <textarea id="epi"><TEI xmlns="http://www.tei-c.org/ns/1.0">
  <teiHeader><fileDesc><sourceDesc><msDesc><msIdentifier><idno>IG-1</idno></msIdentifier>
  <history><origin><origPlace>Athens</origPlace></origin></history></msDesc></sourceDesc></fileDesc></teiHeader>
  <text><body><div type="edition"><ab><lb n="1"/>
- <w>ἐν</w> <w>ἀρχῇ</w> <w>ἦν</w> <w>ὁ</w> <w>λόγος</w></ab></div></body></text>
+ <w>ἐν</w> <w><choice><orig>αρχη</orig><reg>ἀρχῇ</reg></choice></w>
+ <w>ἦν</w> <w>ὁ</w> <w>λόγος</w></ab></div></body></text>
 </TEI></textarea>
     <div class="row"><button data-tool="epi" disabled>Read EpiDoc</button></div>
     <pre id="epi-out"></pre>

@@ -44,12 +44,14 @@ states are exhaustive:
 | `certain` | securely read (the default) |— |
 | `unclear` | damaged but read | `<unclear>` / underdot |
 | `restored` | editorially supplied | `<supplied>` / `[ ]` |
-| `lost` | not preserved / lacuna | `<gap>` / `[---]` |
+| `lost` | not preserved / lacuna | `<gap>` or `<supplied reason="undefined">` / `[---]` |
 
 The bundled corpora are normalized transcriptions (mostly `certain`, with a
 real fraction `lost`/`unclear` where the originals are damaged).
-If you bring your own EpiDoc, these are populated from the markup and round-trip
-back out: see [Linear A](Linear-A) and the I/O notes on [Data & Provenance](Data-and-Provenance).
+If you import token-carrier EpiDoc, these are populated from the markup and
+round-trip semantically back out: see [Linear A](Linear-A) and the I/O notes on
+[Data & Provenance](Data-and-Provenance). Arbitrary free-text TEI needs a
+source-specific extractor.
 The field-by-field tour of these objects, the annotation conventions, and the invariants an extension must hold are on [Data Model](Data-Model).
 
 ```python

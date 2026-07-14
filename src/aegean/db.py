@@ -35,7 +35,7 @@ from .core.corpus import (
     _provenance_from_dict,
     _provenance_to_dict,
 )
-from .core.model import Document, SourceAlignment
+from .core.model import Document, SourceAlignment, TokenFormState
 from .core.provenance import SCHEMA_VERSION, Provenance
 
 __all__ = ["to_sqlite", "from_sqlite", "search", "stream"]
@@ -51,7 +51,8 @@ CREATE TABLE documents (
 );
 CREATE TABLE tokens (
     doc_id TEXT, token_order INTEGER, position INTEGER, line_no INTEGER, text TEXT, kind TEXT,
-    glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT, alignment TEXT
+    glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT, alignment TEXT,
+    form_state_json TEXT
 );
 CREATE INDEX idx_tokens_doc ON tokens(doc_id);
 CREATE INDEX idx_tokens_text ON tokens(text);
@@ -180,6 +181,36 @@ def _alignment_json(value: SourceAlignment | dict[str, Any] | None) -> str | Non
     return json.dumps(mapped) if mapped is not None else None
 
 
+def _form_state_json(value: TokenFormState | dict[str, Any] | None) -> str | None:
+    """Encode one typed A6 state for the nullable canonical SQLite column."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        try:
+            value = TokenFormState.from_dict(value)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ValueError("invalid token form_state") from exc
+    if not isinstance(value, TokenFormState):
+        raise TypeError("token form_state must be a TokenFormState or object")
+    return json.dumps(value.to_dict(), ensure_ascii=False, separators=(",", ":"))
+
+
+def _form_state_from_json(raw: str | None, *, context: str) -> TokenFormState | None:
+    """Decode a form-state column with contextual, clean malformed-value errors."""
+    if raw is None or raw in ("", "null"):
+        return None
+    try:
+        value = json.loads(raw)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"malformed token form_state in {context}: invalid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"malformed token form_state in {context}: expected a JSON object")
+    try:
+        return TokenFormState.from_dict(value)
+    except (TypeError, ValueError, KeyError) as exc:
+        raise ValueError(f"malformed token form_state in {context}: {exc}") from exc
+
+
 def _has_column(conn: sqlite3.Connection, table: str, column: str) -> bool:
     return any(row[1] == column for row in conn.execute(f"PRAGMA table_info({table})"))
 
@@ -190,6 +221,12 @@ def _ensure_alignment_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE documents ADD COLUMN source_text TEXT")
     if not _has_column(conn, "tokens", "alignment"):
         conn.execute("ALTER TABLE tokens ADD COLUMN alignment TEXT")
+
+
+def _ensure_form_state_columns(conn: sqlite3.Connection) -> None:
+    """Add the nullable A6 column to schema-1/2 databases during append."""
+    if not _has_column(conn, "tokens", "form_state_json"):
+        conn.execute("ALTER TABLE tokens ADD COLUMN form_state_json TEXT")
 
 
 def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -> None:
@@ -208,7 +245,8 @@ def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -
     )
     conn.executemany(
         "INSERT INTO tokens(doc_id, token_order, position, line_no, text, kind, glyphs, "
-        "status, signs, alt, annotations, alignment) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "status, signs, alt, annotations, alignment, form_state_json) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
         [
             (
                 # token_order is the token's index in the document's list, so the round trip
@@ -218,6 +256,7 @@ def _insert_document(conn: sqlite3.Connection, dd: dict[str, Any], order: int) -
                 json.dumps(t.get("signs", [])), json.dumps(t.get("alt", [])),
                 json.dumps(t.get("annotations", {})),
                 _alignment_json(t.get("alignment")),
+                _form_state_json(t.get("form_state")),
             )
             for i, t in enumerate(dd["tokens"])
         ],
@@ -311,9 +350,14 @@ def _append_sqlite(
         # second simultaneous appender now waits (sqlite's busy timeout) or gets a clean
         # "database is locked" instead of silently corrupting the ordering.
         conn.execute("BEGIN IMMEDIATE")
+        _check_schema_version(
+            {r[0]: r[1] for r in conn.execute("SELECT key, value FROM meta")}
+        )
         _ensure_alignment_columns(conn)
-        # The append now writes schema-2 alignment rows.  Do not leave the file
-        # labelled schema 1: an older reader could otherwise silently discard them.
+        _ensure_form_state_columns(conn)
+        # The append now writes schema-2 alignment and schema-3 form-state rows.  Do
+        # not leave the file labelled with an older schema: an older reader could
+        # otherwise silently discard additive state.
         conn.execute(
             "INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', ?)",
             (str(SCHEMA_VERSION),),
@@ -459,7 +503,11 @@ def _ensure_token_order(conn: sqlite3.Connection) -> None:
 
 
 def _document_from_row(
-    conn: sqlite3.Connection, row: sqlite3.Row, *, order_col: str = "token_order"
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    order_col: str = "token_order",
+    allow_form_state: bool = True,
 ) -> Document:
     tokens: list[dict[str, Any]] = []
     # order_col is one of two module literals ("token_order" / "position"), never user input.
@@ -478,6 +526,13 @@ def _document_from_row(
             )
             if alignment is not None:
                 td["alignment"] = alignment
+        if allow_form_state and "form_state_json" in t.keys():
+            form_state = _form_state_from_json(
+                t["form_state_json"],
+                context=f"document {row['id']!r}, token {t['position']!r}",
+            )
+            if form_state is not None:
+                td["form_state"] = form_state
         if t["status"] and t["status"] != "certain":
             td["status"] = t["status"]
         tokens.append(td)
@@ -544,6 +599,11 @@ def from_sqlite(
         ]
         inventory = _inventory_from_dict(json.loads(meta.get("sign_inventory") or "null"))
         order_col = "token_order" if _has_token_order(conn) else "position"
+        raw_schema = meta.get("schema_version")
+        try:
+            allow_form_state = int(raw_schema) >= 3 if raw_schema is not None else False
+        except (TypeError, ValueError):
+            allow_form_state = False
         total = (
             int(conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0])
             if progress is not None
@@ -553,7 +613,11 @@ def from_sqlite(
         for done, r in enumerate(
             conn.execute("SELECT * FROM documents ORDER BY doc_order"), start=1
         ):
-            docs.append(_document_from_row(conn, r, order_col=order_col))
+            docs.append(
+                _document_from_row(
+                    conn, r, order_col=order_col, allow_form_state=allow_form_state
+                )
+            )
             if progress is not None:
                 progress(done, total)
     except sqlite3.Error as exc:
@@ -677,6 +741,19 @@ def stream(path: str | Path) -> Iterator[Document]:
             {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
         )
         order_col = "token_order" if _has_token_order(conn) else "position"
+        raw_schema = None
+        try:
+            raw_schema = next(
+                r[0] for r in conn.execute(
+                    "SELECT value FROM meta WHERE key = 'schema_version'"
+                )
+            )
+        except StopIteration:
+            pass
+        try:
+            allow_form_state = int(raw_schema) >= 3 if raw_schema is not None else False
+        except (TypeError, ValueError):
+            allow_form_state = False
         ids = [r["id"] for r in conn.execute("SELECT id FROM documents ORDER BY doc_order")]
         _LOG.debug("streaming %d documents from SQLite database %s", len(ids), path)
         for doc_id in ids:
@@ -689,7 +766,13 @@ def stream(path: str | Path) -> Iterator[Document]:
                 row = conn.execute(
                     "SELECT * FROM documents WHERE id = ?", (doc_id,)
                 ).fetchone()
-                doc = _document_from_row(conn, row, order_col=order_col) if row else None
+                doc = (
+                    _document_from_row(
+                        conn, row, order_col=order_col, allow_form_state=allow_form_state
+                    )
+                    if row
+                    else None
+                )
             finally:
                 conn.rollback()
             if doc is not None:  # dropped by a concurrent append between listing and read

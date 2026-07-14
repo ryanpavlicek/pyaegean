@@ -199,7 +199,7 @@ def import_text(text: str) -> str:
 
 
 def epidoc_import(xml: str) -> str:
-    """Read a pasted EpiDoc TEI document into a Corpus (stdlib XML parser, fully offline)."""
+    """Read pasted token-carrier EpiDoc into a Corpus (stdlib-only and offline)."""
     import os
     import tempfile
     import xml.etree.ElementTree as ET
@@ -225,6 +225,17 @@ def epidoc_import(xml: str) -> str:
             "documents": len(corpus),
             "tokens": len(doc.tokens),
             "preview": [t.text for t in doc.tokens[:12]],
+            "form_states": [
+                {
+                    "text": token.text,
+                    "diplomatic": token.form_state.diplomatic,
+                    "regularized": token.form_state.regularized,
+                    "normalized": token.form_state.normalized,
+                    "editorial_status": token.form_state.editorial_status.value,
+                }
+                for token in doc.tokens[:12]
+                if token.form_state is not None
+            ],
         },
         ensure_ascii=False,
     )

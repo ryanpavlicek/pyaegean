@@ -39,7 +39,7 @@ you used lands in your paper's references. If you're brand new, start with
 | 23 | [Save a stats or keyness table to CSV](#23--save-a-stats-or-keyness-table-to-csv) | any | no |
 | 24 | [Save a query as a reusable corpus, then reload it](#24--save-a-query-as-a-reusable-corpus-then-reload-it) | any | no |
 | 25 | [Find a work in the catalogue, or bring in your own text](#25--find-a-work-in-the-catalogue-or-bring-in-your-own-text) | Greek | no |
-| 26 | [Get the best AI translation out of pyaegean](#26--get-the-best-ai-translation-out-of-pyaegean) | Greek | API key (generation only) |
+| 26 | [Choose a Greek AI translation workflow](#26--choose-a-greek-ai-translation-workflow) | Greek | API key (generation only) |
 | 27 | [Search 57,000 papyri without loading them (DDbDP)](#27--search-57000-papyri-without-loading-them-ddbdp) | Greek papyri / DDbDP | yes (DDbDP, ~219 MB) |
 
 Those are the single moves. For whole projects there is a second index:
@@ -124,7 +124,7 @@ Text is kept as inscribed, so fragmentary tokens (τα, ευτέρα) rank along
 whole words: inspect before you interpret.
 
 **Bring your own EpiDoc.** The same path works for editions pyaegean does not
-ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`
+ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`/`<seg>`
 elements imports directly; this is the edition div of `myinscription.xml`
 (its TEI header carries the `<idno>` and `<origPlace>`):
 
@@ -406,7 +406,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.44.2
+print(aegean.__version__)          # 0.45.0
 print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -538,7 +538,7 @@ not receive. Mode, backend, failure-policy choice, and what grounding can and ca
 fix are covered in recipe 26.
 
 **Task recipes used:**
-[26 · the best AI translation](#26--get-the-best-ai-translation-out-of-pyaegean) ·
+[26 · choose a Greek AI translation workflow](#26--choose-a-greek-ai-translation-workflow) ·
 [7 · ask a grounded question](#7--ask-a-grounded-question--and-audit-the-answer)
 
 ### H · The toolsmith: one database, and tools for agents
@@ -1288,7 +1288,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.44.2 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.45.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into
@@ -1553,7 +1553,7 @@ full catalogue.
 
 ---
 
-## 26 · Get the best AI translation out of pyaegean
+## 26 · Choose a Greek AI translation workflow
 
 *(The grounding is offline and deterministic; only the final generation needs a
 provider key.)* A specialist toolkit should make a general model translate

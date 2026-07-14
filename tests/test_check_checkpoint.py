@@ -7,6 +7,7 @@ short-circuiting.  They never launch the project-wide suite.
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import subprocess
 import sys
@@ -193,6 +194,17 @@ def test_common_gates_precede_profile_specific_gates() -> None:
         "profile-docs",
         "docs-build",
     ]
+
+
+def test_checkpoint_console_reconfigures_legacy_text_stream_to_utf8() -> None:
+    raw = io.BytesIO()
+    stream = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+
+    check_checkpoint._configure_utf8_stream(stream)
+    stream.write("│ Greek")
+    stream.flush()
+
+    assert raw.getvalue().decode("utf-8") == "│ Greek"
 
 
 def test_failing_command_short_circuits_later_gates(tmp_path: Path, monkeypatch) -> None:

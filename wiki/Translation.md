@@ -289,7 +289,7 @@ draft. A wrong analysis can still mislead the repair step, so the pass is only a
 sound as the grounding it checks against. `verify` supersedes `mode` for Greek
 (the checker always sees the full grounding); for non-Greek scripts it has no
 effect and the normal single call is used. For choosing between the modes and
-verify, see [Recipe 26](Recipes#26--get-the-best-ai-translation-out-of-pyaegean).
+verify, see [Recipe 26](Recipes#26--choose-a-greek-ai-translation-workflow).
 The full grounding is built before the raw draft call, so
 `grounding_failure="strict"` cannot spend the first provider call and fail only
 afterward.

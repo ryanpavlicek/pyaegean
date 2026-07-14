@@ -412,7 +412,7 @@ greek.pos_tags(line)
 Now every word is tagged correctly. The treebank covers known forms, and it is
 also what turns the earlier `analyze("ἄνδρα")` into its gold reading; unattested
 forms still use the baseline, so it's always worth knowing which mode you're in.
-The most accurate option is the **neural pipeline** (`greek.use_neural_pipeline()`,
+The measured neural option is the **neural pipeline** (`greek.use_neural_pipeline()`,
 the `[neural]` extra), which tags, lemmatizes, and parses in one pass and
 generalizes to unseen forms; see [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in).
 

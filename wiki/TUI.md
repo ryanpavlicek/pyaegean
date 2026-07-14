@@ -177,6 +177,15 @@ appended to the token (not a color), so they read the same under every theme:
 | restored | `[ ]` after the token |
 | lost | `---` after the token |
 
+On the current `main` branch, a token imported from a token-carrier EpiDoc file
+may also have typed form state. When those values differ from the displayed token,
+the reader appends plain-text distinctions such as `[dipl. …]`, the selected
+regularized or normalized form, and `[model …]` for the exact analyzer input.
+These annotations are read-only evidence and input provenance. The model form is
+not presented as a new editorial reading. The six currently hosted epigraphy and
+papyri assets expose aggregate status only, so their reader lines do not gain this
+typed state until their source assets are rebuilt.
+
 ### The undeciphered-corpus caveat
 
 For the undeciphered corpora (`lineara`, `sigla`, `cyprominoan`) the reader header
@@ -197,7 +206,7 @@ line's script, and runs the first available one immediately:
   fetched Greek works all read as script `greek`):
   - `offline parser / tagger`: an instant table of token, POS, and lemma from the
     zero-dependency pipeline;
-  - `neural pipeline`: the most accurate tags plus morphological features and a
+  - `neural pipeline`: measured neural tags plus morphological features and a
     dependency parse; needs the `[neural]` extra, and downloads the model
     (~170 MB) on first run;
   - `IPA (reconstructed)`: the Attic transcription, word by word;
@@ -305,7 +314,7 @@ Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **anal
 popup** for that line. What it offers depends on the script:
 
 - **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
-  tagger** (lemma + POS, instant), the **neural pipeline** (the most accurate tags + a
+  tagger** (lemma + POS, instant), the **neural pipeline** (measured neural tags + a
   dependency parse; needs the `[neural]` extra, and downloads the model on first use),
   **IPA**, and **translation**. Translation is **optional** and requires a configured
   BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says

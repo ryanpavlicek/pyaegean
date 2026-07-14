@@ -6,11 +6,14 @@ from .corpus import Corpus, register_loader
 from .model import (
     Document,
     DocumentMeta,
+    FormSegment,
     ReadingStatus,
     Sign,
     SignInventory,
     SourceAlignment,
+    SourceMarkupRef,
     Token,
+    TokenFormState,
     TokenKind,
 )
 from .provenance import SCHEMA_VERSION, Provenance
@@ -21,10 +24,13 @@ __all__ = [
     "register_loader",
     "Document",
     "DocumentMeta",
+    "FormSegment",
     "Sign",
     "SignInventory",
     "SourceAlignment",
+    "SourceMarkupRef",
     "Token",
+    "TokenFormState",
     "TokenKind",
     "ReadingStatus",
     "Provenance",

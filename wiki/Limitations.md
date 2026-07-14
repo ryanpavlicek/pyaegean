@@ -318,7 +318,7 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `neural` | onnxruntime, tokenizers, numpy | the joint NLP pipeline (torch-free) |
   | `data` | pandas | tabular export / DataFrames |
   | `parquet` | pyarrow | Parquet export |
-  | `epidoc` | lxml | EpiDoc TEI in/out |
+  | `epidoc` | lxml | Linear B DAMOS-style EpiDoc import and official-schema validation; generic token-carrier EpiDoc I/O is stdlib-only |
   | `geo` | geopandas, shapely | GeoJSON / GeoDataFrames |
   | `viz` | matplotlib | the `plot` figures |
   | `viz-interactive` | plotly | interactive findspot/timeline/sign-network plots |

@@ -1,0 +1,6 @@
+# sent_id = a6
+# text = λόγος
+1-2	λόγος	_	_	_	_	_	_	_	MWT=Yes|Note=a|b=c
+1	λόγ	λόγος	NOUN	_	_	0	root	_	SpaceAfter=No|Unknown=x
+2	ος	ος	X	_	_	1	flat	_	_
+2.1	ο	ο	X	_	_	_	_	1:dep	_

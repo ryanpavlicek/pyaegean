@@ -4,9 +4,9 @@ The opt-in ``[neural]`` backend's flagship: a jointly-trained GreBerta encoder w
 token-classification heads (UPOS + the 9 AGDT postag positions), biaffine arc/relation
 scorers decoded by a single-root MST (`aegean.greek.mst`), and an edit-script lemma head
 composed with a train-only lookup. Trained leakage-clean on AGDT + Gorman + Pedalion
-(1.41M tokens); measured on the UD Ancient Greek (Perseus) test fold as the **best published
-result on every metric** (UD Perseus: UPOS 97.0, UFeats 96.0, lemma 94.3, XPOS 93.5,
-UAS 90.2, LAS 85.6 — see ``docs/benchmarks.md`` for protocol, seeds, and bootstrap CIs;
+(1.41M tokens); measured on the UD Ancient Greek (Perseus) test fold at UPOS 97.0,
+UFeats 96.0, lemma 94.3, XPOS 93.5, UAS 90.2, and LAS 85.6. See
+``docs/benchmarks.md`` for the protocol, seeds, comparisons, and bootstrap CIs;
 shipped-artifact numbers are re-measured through this module and recorded there).
 
 Inference is **torch-free** (onnxruntime + tokenizers + numpy — the ``[neural]`` extra),

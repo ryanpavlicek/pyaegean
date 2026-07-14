@@ -81,6 +81,7 @@ line 2 text: ['RE-ZA', '5', '¹⁄₂']
 | `alt` | `tuple[str, ...]` | alternate readings (EpiDoc `<app>`/`<rdg>`); `text` is the preferred reading |
 | `annotations` | `dict[str, str]` | script-specific per-token facts; the extension surface (below) |
 | `alignment` | `SourceAlignment \| None` | exact source identity, span, whitespace, and normalization provenance |
+| `form_state` | `TokenFormState \| None` | typed diplomatic, editorial, and model-input forms with ordered apparatus segments |
 
 `kind` is load-bearing: `document.words`, word-scope queries, the review
 export, and `annotate_corpus` all gate on `TokenKind.WORD`, so a token
@@ -189,6 +190,36 @@ tokens[0].alignment.normalized_text     # 'ά'
 source[tokens[0].alignment.start_char:tokens[0].alignment.end_char] == "α\u0301"  # True
 ```
 
+### Typed editorial forms and model input
+
+`Token.text` is the preferred/display token used by corpus views. When an edition
+exposes more than one spelling, `Token.form_state` keeps the distinctions explicit:
+
+| Field | Meaning |
+|---|---|
+| `diplomatic` | the original or diplomatic form supplied by the edition |
+| `regularized` | an optional editorial spelling, such as a corrected or expanded form |
+| `normalized` | an optional normalized form used by a preprocessing convention |
+| `model_input` | the exact string handed to an analyzer, after the selected form and any recorded operations |
+| `model_input_source` | whether that input came from `diplomatic`, `regularized`, `normalized`, or an explicit value |
+| `segments` | ordered pieces with `certain`, `restored`, `unclear`, or `lost` status and optional semantic source references |
+
+These fields have different evidential roles. `diplomatic`, `regularized`,
+`normalized`, and the segment statuses describe the source or an editorial
+representation. `model_input` describes a computation. It must not be read as a
+new edition reading. For `pipeline_tokens()`, selection is deterministic:
+explicit `model_input`, then `regularized`, then `normalized`, then `diplomatic`,
+then the legacy `Token.text` fallback. The returned `TokenRecord` retains the
+state and records the exact input and ordered operations, including an NFC
+operation when a neural backend changes the string's Unicode normalization.
+
+Token-carrier EpiDoc choices such as
+`<choice><reg>…</reg><orig>…</orig></choice>` and apparatus elements such as
+`<supplied>`, `<unclear>`, and `<gap>` populate this typed value. The generic
+EpiDoc writer emits semantic choices and apparatus, but does not promise
+byte-identical XML. A state with no apparatus can still be constructed directly
+with `TokenFormState` for a controlled preprocessing step.
+
 ### CoNLL-U uses a separate lossless structural model
 
 Treebank rows are not forced into `Corpus.Token`. `greek.UDDocument` preserves ordered
@@ -220,11 +251,13 @@ at construction, so the enum is a real invariant:
 | `lost` | not preserved / lacuna | Leiden `[---]`; EpiDoc `<gap>` or `<supplied reason="undefined">` |
 
 Concretely: the bundled Linear A and Cypriot loaders decode their editions'
-Leiden apparatus; the six epigraphy corpora (`isicily`, `iip`, `iospe`,
-`igcyr`, `edh`, `ddbdp`) decode EpiDoc markup, and a word touched by more than
-one state carries the most severe one; a bring-your-own EpiDoc import
-populates them from the same elements, and the EpiDoc writer emits them back
-out; `Corpus.from_records` takes a `"status"` string per token (§7.1). See
+Leiden apparatus; the six currently hosted epigraphy and papyri assets
+(`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`) expose aggregate
+`ReadingStatus` values, and a word touched by more than one state carries the
+most severe one. Their legacy assets do not carry the newer typed
+`TokenFormState`. A token-carrier EpiDoc import can populate both the aggregate
+status and the typed state from the same elements, and the EpiDoc writer emits
+them semantically; `Corpus.from_records` takes a `"status"` string per token (§7.1). See
 [Using Critical Editions](Using-Critical-Editions) for working with them.
 
 ```python
@@ -267,6 +300,7 @@ fields and persistence roles are otherwise separate.
 | `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `alignment` | exact source identity, original/normalized text, span, and whitespace |
+| `form_state` | typed editorial forms and exact model input when records came from `pipeline_tokens()` |
 
 ```python
 from aegean import greek
@@ -325,8 +359,9 @@ themselves, see [Reading a Parse](Reading-a-Parse) and [Greek NLP](Greek-NLP).
 `corpus.fingerprint()` is a stable sha256 over everything a **token-level
 analysis** can see: the script id, the provenance `data_version`, each
 document's id, and every token's `text`, `kind`, `status`, `signs`, `glyphs`,
-`alt`, and `annotations` (plus any `subset:` / `merged:` / `appended:`
-provenance note). Fields are length-prefixed, so no crafted value can collide
+`alt`, and `annotations` (plus source alignment and typed form state when
+present, and any `subset:` / `merged:` / `appended:` provenance note). Fields
+are length-prefixed, so no crafted value can collide
 two corpora. It deliberately **excludes** document metadata (site, period, …),
 `lines`, `line_no`, `position`, translations, and transcriptions: two corpora
 with equal fingerprints have the same analysable content in the same token
@@ -374,10 +409,9 @@ fresh load clean: True
 Three formats, three different promises:
 
 - **JSON (`to_json` / `from_json`) is lossless.** Every token field, optional
-  source alignment and exact source text, the lines, full document metadata,
-  the sign inventory, and provenance survive
-  exactly. (`to_dict` is the *lossy* quick-interop summary; don't round-trip
-  through it.)
+  source alignment and exact source text, optional typed form state, the lines,
+  full document metadata, the sign inventory, and provenance survive exactly.
+  (`to_dict` is the *lossy* quick-interop summary; don't round-trip through it.)
 - **SQLite (`to_sql` / `from_sql`, `aegean.db`) is lossless and adds FTS
   search.** The tokens table carries an explicit `token_order` column: the
   token's index in the document's list, written at save time. Reload order
@@ -386,14 +420,18 @@ Three formats, three different promises:
   survive in place. Databases written before 0.19.4 lack the column; they are
   read via a `position` fallback and migrated in place on the first
   `append=True` write. Schema-1 databases also lack A4 source/alignment columns;
-  they load with absent values and migrate to schema 2 on append.
+  they load with absent values and migrate to schema 2 on append. Schema-1 and
+  schema-2 databases have no A6 form-state column; an append migrates them to
+  schema 3 atomically, and old rows keep `form_state=None`.
 - **Schema versions gate forward-compatibility only.** `SCHEMA_VERSION`
   (stored as `_meta.schemaVersion` in JSON, `schema_version` in the SQLite
   `meta` table and on `Provenance`) is bumped only for changes an older reader
   would *misread*. Loading a file with a **newer** version raises a
   `ValueError` naming the fix; an older or missing version loads normally.
   Additive optional fields (e.g. `edition_fidelity`) deliberately do not bump
-  it.
+  it. A schema-1 or schema-2 JSON corpus loads with no typed form state even if
+  unrelated future-looking keys are present; it is not silently interpreted as
+  schema 3.
 
 ```python
 import aegean
@@ -514,6 +552,10 @@ imports scripts. See [Architecture](Architecture).)
 
 Adding keys to `Token.annotations` is always round-trip-safe through JSON and
 SQLite; the built-in machinery only ever adds keys, never strips unknown ones.
+The review CSV also carries guarded `form_*` columns and a `form_state_json`
+column when a token has typed editorial forms. Applying corrections refuses a
+row whose typed state no longer matches the exported corpus, while an older
+review file without those columns remains compatible.
 The full annotate → export → correct → apply loop, showing the `<field>__pred`
 audit trail land on the token:
 
@@ -626,7 +668,7 @@ except ValueError as e:
 ```
 ValueError: document 'D1': line 0 references token index 7, but the document has 1 token(s); the source is malformed
 ValueError: 'probable' is not a valid ReadingStatus
-ValueError: this corpus file uses schema version 99, but this pyaegean understands up to 2 — upgrade pyaegean to read it
+ValueError: this corpus file uses schema version 99, but this pyaegean understands up to 3 — upgrade pyaegean to read it
 ```
 
 The one sharp edge that is *not* loud, worth restating: an invalid `lines`

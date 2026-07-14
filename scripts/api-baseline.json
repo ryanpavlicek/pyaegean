@@ -20,6 +20,10 @@
       "canonical": "aegean.core.model.DocumentMeta",
       "kind": "class"
     },
+    "aegean.FormSegment": {
+      "canonical": "aegean.core.model.FormSegment",
+      "kind": "class"
+    },
     "aegean.Provenance": {
       "canonical": "aegean.core.provenance.Provenance",
       "kind": "class"
@@ -40,8 +44,20 @@
       "canonical": "aegean.core.model.SignInventory",
       "kind": "class"
     },
+    "aegean.SourceAlignment": {
+      "canonical": "aegean.core.model.SourceAlignment",
+      "kind": "class"
+    },
+    "aegean.SourceMarkupRef": {
+      "canonical": "aegean.core.model.SourceMarkupRef",
+      "kind": "class"
+    },
     "aegean.Token": {
       "canonical": "aegean.core.model.Token",
+      "kind": "class"
+    },
+    "aegean.TokenFormState": {
+      "canonical": "aegean.core.model.TokenFormState",
       "kind": "class"
     },
     "aegean.TokenKind": {
@@ -891,6 +907,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "rarity_gate"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "analysis"
         }
       ],
       "returns": true
@@ -1509,6 +1530,11 @@
           "default": false,
           "kind": "positional or keyword",
           "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "analysis"
         }
       ],
       "returns": true
@@ -10227,6 +10253,10 @@
       "canonical": "aegean.core.model.DocumentMeta",
       "kind": "class"
     },
+    "aegean.core.FormSegment": {
+      "canonical": "aegean.core.model.FormSegment",
+      "kind": "class"
+    },
     "aegean.core.Provenance": {
       "canonical": "aegean.core.provenance.Provenance",
       "kind": "class"
@@ -10251,8 +10281,20 @@
       "canonical": "aegean.core.model.SignInventory",
       "kind": "class"
     },
+    "aegean.core.SourceAlignment": {
+      "canonical": "aegean.core.model.SourceAlignment",
+      "kind": "class"
+    },
+    "aegean.core.SourceMarkupRef": {
+      "canonical": "aegean.core.model.SourceMarkupRef",
+      "kind": "class"
+    },
     "aegean.core.Token": {
       "canonical": "aegean.core.model.Token",
+      "kind": "class"
+    },
+    "aegean.core.TokenFormState": {
+      "canonical": "aegean.core.model.TokenFormState",
       "kind": "class"
     },
     "aegean.core.TokenKind": {
@@ -13325,6 +13367,10 @@
       "canonical": "aegean.greek.morphology.Analysis",
       "kind": "class"
     },
+    "aegean.greek.AnalysisReceipt": {
+      "canonical": "aegean.greek.neural_contract.AnalysisReceipt",
+      "kind": "class"
+    },
     "aegean.greek.COORDINATORS": {
       "canonical": "aegean.greek.documentary.COORDINATORS",
       "kind": "attribute"
@@ -13381,6 +13427,14 @@
       "canonical": "aegean.scripts.greek.perseus.GitHubRateLimitError",
       "kind": "class"
     },
+    "aegean.greek.GreekPipeline": {
+      "canonical": "aegean.greek.runtime.GreekPipeline",
+      "kind": "class"
+    },
+    "aegean.greek.GreekPipelineConfig": {
+      "canonical": "aegean.greek.runtime.GreekPipelineConfig",
+      "kind": "class"
+    },
     "aegean.greek.Inflector": {
       "canonical": "aegean.greek.inflect.Inflector",
       "kind": "class"
@@ -13425,12 +13479,28 @@
       "canonical": "aegean.greek.coverage.MissingForm",
       "kind": "class"
     },
+    "aegean.greek.ModelBundleError": {
+      "canonical": "aegean.greek.neural_contract.ModelBundleError",
+      "kind": "class"
+    },
+    "aegean.greek.ModelBundleManifest": {
+      "canonical": "aegean.greek.neural_contract.ModelBundleManifest",
+      "kind": "class"
+    },
+    "aegean.greek.NeuralInputTooLongError": {
+      "canonical": "aegean.greek.joint.NeuralInputTooLongError",
+      "kind": "class"
+    },
     "aegean.greek.NeuralLemmatizerNotLoadedError": {
       "canonical": "aegean.greek.neural_lemmatizer.NeuralLemmatizerNotLoadedError",
       "kind": "class"
     },
     "aegean.greek.NeuralPipelineNotLoadedError": {
       "canonical": "aegean.greek.joint.NeuralPipelineNotLoadedError",
+      "kind": "class"
+    },
+    "aegean.greek.NeuralWindowingError": {
+      "canonical": "aegean.greek.joint.NeuralWindowingError",
       "kind": "class"
     },
     "aegean.greek.NormalizationWarning": {
@@ -13455,6 +13525,10 @@
     },
     "aegean.greek.RarityResult": {
       "canonical": "aegean.greek.rarity.RarityResult",
+      "kind": "class"
+    },
+    "aegean.greek.ReceiptMismatchError": {
+      "canonical": "aegean.greek.neural_contract.ReceiptMismatchError",
       "kind": "class"
     },
     "aegean.greek.ResolvedForm": {
@@ -13489,8 +13563,64 @@
       "canonical": "aegean.greek.treebank.TreebankLexicon",
       "kind": "class"
     },
+    "aegean.greek.UDComment": {
+      "canonical": "aegean.greek.ud.UDComment",
+      "kind": "class"
+    },
+    "aegean.greek.UDDependency": {
+      "canonical": "aegean.greek.ud.UDDependency",
+      "kind": "class"
+    },
+    "aegean.greek.UDDocument": {
+      "canonical": "aegean.greek.ud.UDDocument",
+      "kind": "class"
+    },
+    "aegean.greek.UDEmptyNode": {
+      "canonical": "aegean.greek.ud.UDEmptyNode",
+      "kind": "class"
+    },
+    "aegean.greek.UDItem": {
+      "canonical": "aegean.greek.ud.UDItem",
+      "kind": "attribute"
+    },
+    "aegean.greek.UDMiscEntry": {
+      "canonical": "aegean.greek.ud.UDMiscEntry",
+      "kind": "class"
+    },
+    "aegean.greek.UDMultiwordToken": {
+      "canonical": "aegean.greek.ud.UDMultiwordToken",
+      "kind": "class"
+    },
+    "aegean.greek.UDNodeID": {
+      "canonical": "aegean.greek.ud.UDNodeID",
+      "kind": "class"
+    },
+    "aegean.greek.UDOpaqueRow": {
+      "canonical": "aegean.greek.ud.UDOpaqueRow",
+      "kind": "class"
+    },
+    "aegean.greek.UDProjection": {
+      "canonical": "aegean.greek.ud.UDProjection",
+      "kind": "class"
+    },
+    "aegean.greek.UDRow": {
+      "canonical": "aegean.greek.ud.UDRow",
+      "kind": "attribute"
+    },
+    "aegean.greek.UDSentence": {
+      "canonical": "aegean.greek.ud.UDSentence",
+      "kind": "class"
+    },
+    "aegean.greek.UDToken": {
+      "canonical": "aegean.greek.ud.UDToken",
+      "kind": "class"
+    },
     "aegean.greek.UncalibratedConfidenceError": {
       "canonical": "aegean.greek.calibrate.UncalibratedConfidenceError",
+      "kind": "class"
+    },
+    "aegean.greek.UnsupportedUDStructureError": {
+      "canonical": "aegean.greek.ud.UnsupportedUDStructureError",
       "kind": "class"
     },
     "aegean.greek.UsageInfo": {
@@ -13865,6 +13995,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "with_probs"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "long_input"
         }
       ],
       "returns": true
@@ -13887,6 +14022,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "with_probs"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "long_input"
         }
       ],
       "returns": true
@@ -13938,6 +14078,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "with_evidence"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "long_input"
         },
         {
           "default": true,
@@ -14577,6 +14722,12 @@
       ],
       "returns": true
     },
+    "aegean.greek.default_pipeline": {
+      "canonical": "aegean.greek.runtime.default_pipeline",
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
     "aegean.greek.disable_calibration": {
       "canonical": "aegean.greek.calibrate.disable_calibration",
       "kind": "function",
@@ -14762,6 +14913,40 @@
       "canonical": "aegean.greek.documentary.documentary_reconciliation_active",
       "kind": "function",
       "params": [],
+      "returns": true
+    },
+    "aegean.greek.dump_conllu": {
+      "canonical": "aegean.greek.ud.dump_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sentences"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "canonical"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.dumps_conllu": {
+      "canonical": "aegean.greek.ud.dumps_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sentences"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "canonical"
+        }
+      ],
       "returns": true
     },
     "aegean.greek.ece": {
@@ -16676,6 +16861,30 @@
       ],
       "returns": true
     },
+    "aegean.greek.lemma_resolved": {
+      "canonical": "aegean.greek.lemmatize.lemma_resolved",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.lemma_verified": {
+      "canonical": "aegean.greek.lemmatize.lemma_verified",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.lemmas": {
       "canonical": "aegean.greek.morphology.lemmas",
       "kind": "function",
@@ -17553,6 +17762,40 @@
       "params": [],
       "returns": true
     },
+    "aegean.greek.load_conllu": {
+      "canonical": "aegean.greek.ud.load_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "strict"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.load_conllu_document": {
+      "canonical": "aegean.greek.ud.load_conllu_document",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "strict"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.load_nt": {
       "canonical": "aegean.scripts.greek.nt.load_nt",
       "kind": "function",
@@ -17620,6 +17863,23 @@
           "default": true,
           "kind": "keyword-only",
           "name": "force"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.loads_conllu": {
+      "canonical": "aegean.greek.ud.loads_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "strict"
         }
       ],
       "returns": true
@@ -18987,6 +19247,38 @@
           "default": true,
           "kind": "keyword-only",
           "name": "with_confidence"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.pipeline_tokens": {
+      "canonical": "aegean.greek.pipeline.pipeline_tokens",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "tokens"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "parse"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "with_confidence"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "document_id"
         }
       ],
       "returns": true
@@ -20758,6 +21050,23 @@
       ],
       "returns": true
     },
+    "aegean.greek.tokenize_aligned": {
+      "canonical": "aegean.greek.tokenize.tokenize_aligned",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "document_id"
+        }
+      ],
+      "returns": true
+    },
     "aegean.greek.tokenize_words": {
       "canonical": "aegean.greek.tokenize.tokenize_words",
       "kind": "function",
@@ -21499,6 +21808,11 @@
           "default": true,
           "kind": "keyword-only",
           "name": "force"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "expected_receipt"
         }
       ],
       "returns": true
@@ -21629,6 +21943,28 @@
           "default": true,
           "kind": "keyword-only",
           "name": "download"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.greek.write_conllu": {
+      "canonical": "aegean.greek.ud.write_conllu",
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "sentences"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "path"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "canonical"
         }
       ],
       "returns": true
@@ -22683,7 +23019,237 @@
     "aegean.mcp_server": {
       "kind": "module"
     },
+    "aegean.mcp_server.TOOLS": {
+      "kind": "attribute"
+    },
+    "aegean.mcp_server.balance_accounts": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "doc_id"
+        }
+      ],
+      "returns": true
+    },
     "aegean.mcp_server.build_server": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.mcp_server.cite_corpus": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "style"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "site"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "period"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "scribe"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "support"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.corpus_diagnose": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "deep"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.corpus_info": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.data_status": {
+      "kind": "function",
+      "params": [],
+      "returns": true
+    },
+    "aegean.mcp_server.geo_sites": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "word"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_catalog": {
+      "kind": "function",
+      "params": [
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "query"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "author"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "title"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "source"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "limit"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_explain": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_gloss": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "word"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "dictionary"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "full"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_pipeline": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_scan": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "text"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "meter"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.greek_work": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "work_id"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "ref"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "preview_lines"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.koine_gloss": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "word"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.list_corpora": {
       "kind": "function",
       "params": [],
       "returns": true
@@ -22691,6 +23257,69 @@
     "aegean.mcp_server.main": {
       "kind": "function",
       "params": [],
+      "returns": true
+    },
+    "aegean.mcp_server.query_corpus": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "where"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "output_kind"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "limit"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.search_signs": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "pattern"
+        },
+        {
+          "default": true,
+          "kind": "positional or keyword",
+          "name": "limit"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.mcp_server.show_document": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "corpus"
+        },
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "doc_id"
+        }
+      ],
       "returns": true
     },
     "aegean.read_corpus": {
@@ -24284,6 +24913,58 @@
     "aegean.translate": {
       "kind": "module"
     },
+    "aegean.translate.GreekLongInput": {
+      "kind": "attribute"
+    },
+    "aegean.translate.GroundingError": {
+      "kind": "class"
+    },
+    "aegean.translate.GroundingError.__init__": {
+      "kind": "function",
+      "params": [
+        {
+          "default": false,
+          "kind": "positional or keyword",
+          "name": "self"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "stage"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "script"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "backend"
+        },
+        {
+          "default": false,
+          "kind": "keyword-only",
+          "name": "config"
+        }
+      ],
+      "returns": true
+    },
+    "aegean.translate.GroundingError.backend": {
+      "kind": "attribute"
+    },
+    "aegean.translate.GroundingError.config": {
+      "kind": "attribute"
+    },
+    "aegean.translate.GroundingError.script": {
+      "kind": "attribute"
+    },
+    "aegean.translate.GroundingError.stage": {
+      "kind": "attribute"
+    },
+    "aegean.translate.GroundingFailure": {
+      "kind": "attribute"
+    },
     "aegean.translate.grounding_for": {
       "kind": "function",
       "params": [
@@ -24306,6 +24987,21 @@
           "default": true,
           "kind": "keyword-only",
           "name": "glosses"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "greek_pipeline"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "greek_long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "grounding_failure"
         }
       ],
       "returns": true
@@ -24342,6 +25038,21 @@
           "default": true,
           "kind": "keyword-only",
           "name": "verify"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "greek_pipeline"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "greek_long_input"
+        },
+        {
+          "default": true,
+          "kind": "keyword-only",
+          "name": "grounding_failure"
         },
         {
           "default": true,

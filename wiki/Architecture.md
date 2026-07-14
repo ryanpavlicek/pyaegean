@@ -13,9 +13,9 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Release note.** This page follows `main`. Typed source alignment and its
-> schema-2 JSON/SQLite persistence are main-branch previews planned for the next
-> release, not PyPI v0.44.2.
+> **Available in v0.45.0.** Typed source alignment, typed editorial form states,
+> lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
+> the current release.
 
 The CLI is a first-class way in: **every `aegean` corpus argument
 accepts any source**: a registered id, a Greek work id, a path to a saved
@@ -88,7 +88,10 @@ from aegean import (
 | Object | What it is | Key fields / methods |
 |---|---|---|
 | **`Sign`** | one graphic unit (syllabogram, letter, logogram) | `label`, `glyph`, `codepoint`, `phonetic`, `script_id`, `attrs` |
-| **`Token`** | one unit in a document's text stream | `text`, `kind`, `signs`, `glyphs`, `line_no`, `position`, `status`, `alt`, `annotations`, optional `alignment` |
+| **`Token`** | one unit in a document's text stream | `text`, `kind`, `signs`, `glyphs`, `line_no`, `position`, `status`, `alt`, `annotations`, optional `alignment` and `form_state` |
+| **`TokenFormState`** | typed source/editorial/model forms for one token | `diplomatic`, optional `regularized` / `normalized` / `model_input`, ordered `segments`, model-input provenance |
+| **`FormSegment`** | one ordered piece of a typed form | text, `ReadingStatus`, optional `SourceMarkupRef` |
+| **`SourceMarkupRef`** | semantic reference to source markup | source id, path, tag, ordered attributes; not an XML-byte offset |
 | **`SourceAlignment`** | immutable mapping to exact source | document/sentence/token IDs, original and normalized text, half-open character span, whitespace, normalization operations |
 | **`Document`** | one inscription / tablet / text | `id`, `script_id`, `tokens`, `lines`, `meta`, optional exact `source_text`; props `.words`, `.numerals`, `.logograms`, `.line_tokens` |
 | **`DocumentMeta`** | bibliographic / archaeological metadata | `site`, `support`, `scribe`, `findspot`, `period`, `name`, `images`, `notes` |
@@ -162,6 +165,22 @@ A token's `alt` tuple holds alternate readings (EpiDoc `<app>`/`<rdg>`); `text`
 is the lemma. The bundled corpora are normalized transcriptions (almost entirely
 `CERTAIN`), but a bring-your-own EpiDoc corpus populates these from the markup,
 and the [EpiDoc writer](#epidoc-tei-xml) emits them back out.
+
+### Typed editorial forms and model input
+
+On `main`, a token can also carry `TokenFormState`. `diplomatic` records the
+original or diplomatic form, `regularized` an editorial correction or expansion,
+and `normalized` an optional preprocessing form. `segments` preserve ordered
+certain, supplied, unclear, and lost pieces with semantic source references.
+`model_input` is different: it records the exact string sent to an analyzer,
+along with `model_input_source` and ordered operations. It documents a computation,
+not a new reading of the edition.
+
+`greek.pipeline_tokens()` chooses an explicit model input first, then regularized,
+normalized, diplomatic, and finally the legacy `Token.text` value. Its returned
+`TokenRecord` retains the state and the selected input. Token-carrier EpiDoc choices
+and apparatus can populate the state; the six currently hosted epigraphy and papyri
+assets remain legacy aggregate-status data and do not yet carry `TokenFormState`.
 
 ### `Document`
 
@@ -439,9 +458,11 @@ lossy form carries its attribution.
 ### `to_json` / `from_json` — lossless
 
 `to_json` serializes *everything*: every token (with its kind, signs, glyphs,
-line/position, any non-default status/alt/annotations, and optional source
-alignment), the exact document source text, physical lines, full document
-metadata, the sign inventory, and provenance. `from_json` reverses it exactly.
+line/position, any non-default status/alt/annotations, optional source alignment,
+and optional typed form state), the exact document source text, physical lines,
+full document metadata, the sign inventory, and provenance. `from_json` reverses
+it exactly. Main-branch form-state files use schema 3; schema-1 and schema-2
+files still load with `form_state=None`.
 
 ```python
 import aegean
@@ -504,7 +525,12 @@ df.shape                               # (6406, 7)
 
 At `token`/`word` level, any per-token `annotations` are **spread first**, so the
 Greek NT's `lemma` / `morph` / `strongs` / `gloss` become their own columns
-(canonical columns always win on a name clash). pandas is the `[data]` extra:
+(canonical columns always win on a name clash). On `main`, tokens with a typed
+form state also expose canonical `form_diplomatic`, `form_regularized`,
+`form_normalized`, `form_model_input`, `form_model_input_ops`,
+`form_model_input_source`, `form_segments`, editorial-status, damage, and
+uncertainty columns. `form_segments` is a JSON string for tabular files; tokens
+without a state have null values. pandas is the `[data]` extra:
 
 ```bash
 pip install "pyaegean[data]"
@@ -684,9 +710,9 @@ sign-pattern lookups, where `*` matches any one sign: see
 For a queryable, on-disk corpus, write it to SQLite: stdlib `sqlite3` only, no
 extra dependency. Documents and tokens become normalized rows (so SQL and
 full-text search work over them); the nested structure (signs, alternate
-readings, annotations, source alignment, line groupings, image refs, notes) is kept in JSON
-columns; provenance and the sign inventory live in a small key/value `meta`
-table. It's a lossless round-trip.
+readings, annotations, source alignment, typed form state, line groupings, image
+refs, notes) is kept in JSON columns; provenance and the sign inventory live in a
+small key/value `meta` table. It's a lossless round-trip.
 
 ```python
 import aegean, aegean.db as db
@@ -706,7 +732,10 @@ for doc in db.stream("lineara.db"):
     ...
 ```
 
-The schema is two main tables (`documents`, `tokens`) with indices on
+Schema 3 adds the nullable `tokens.form_state_json` column for typed editorial
+forms. Schema-1 and schema-2 databases load with that field absent; an
+`append=True` write migrates the column and schema marker atomically, leaving
+legacy rows with no typed state. The schema is two main tables (`documents`, `tokens`) with indices on
 `tokens(doc_id)` and `tokens(text)`, plus a `tokens_fts` FTS5 virtual table (with the
 hyphen kept as a token character) when the local SQLite build supports it; token search
 confirms an exact match on top of the index, and uses the `tokens(text)` index directly
@@ -788,14 +817,15 @@ one:
 | Lossless JSON | `Corpus.to_json` | `export -f json` | yes | none |
 | CSV | `io.to_csv` | `export -f csv` | tabular view | `[data]` |
 | Parquet | `io.to_parquet` | `export -f parquet` | tabular view | `[parquet]` |
-| EpiDoc TEI XML | `io.to_epidoc`/`write_epidoc` ↔ `io.from_epidoc`/`read_epidoc` | `export -f epidoc` / `import --epidoc` | content EpiDoc preserves | none |
+| EpiDoc TEI XML | `io.to_epidoc`/`write_epidoc` ↔ `io.from_epidoc`/`read_epidoc` | `export -f epidoc` / `import --epidoc` | token-carrier semantic fields, not arbitrary TEI | none |
 | SQLite DB | `Corpus.to_sql` / `db.to_sqlite` | `export -f sqlite` | yes | none |
-| Workbench JSON | `io.to_workbench` / `io.from_workbench_export` | `aegean workbench` (serves the app) | tokenized text + surface forms | none |
+| Workbench JSON | `io.to_workbench` / `io.from_workbench_export` | `aegean workbench` (serves the app) | tokenized text + surface forms; statuses, annotations, and typed form state are lossy | none |
+| RDF Turtle / JSON-LD | `io.to_rdf` | `export -f ttl` / `export -f jsonld` | graph view (export only) | none |
 
 The one command that covers the file formats:
 
 ```bash
-aegean export CORPUS -f {json|csv|parquet|epidoc|sqlite|workbench} -o PATH [--level …] \
+aegean export CORPUS -f {json|csv|parquet|epidoc|sqlite|workbench|ttl|jsonld} -o PATH [--level …] \
               [--site …] [--period …] [--scribe …] [--support …]
 ```
 
@@ -809,7 +839,8 @@ export exactly the subset you want, and the provenance records the filter.
 directory of `{id}.xml` files. The transliteration lives in a TEI `<div
 type="edition">` as `<lb/>`-delimited lines of `<w>` (words), `<num>`
 (numerals), and `<g>` (logograms); a token whose `ReadingStatus` isn't `CERTAIN`
-is wrapped in the matching apparatus element (`<unclear>` / `<supplied>`), and
+is wrapped in the matching apparatus element (`<unclear>` / `<supplied>`; LOST
+uses `<supplied reason="undefined">`, and the reader also accepts `<gap>`), and
 alternates become `<app><lem>…</lem><rdg>…</rdg></app>`. The writer uses the
 stdlib XML module (lazy-imported), so **EpiDoc export needs no extra**.
 
@@ -840,8 +871,10 @@ undetermined for the undeciphered scripts, `grc` Greek, `gmy` Mycenaean Greek):
 
 The output validates against the EpiDoc RelaxNG schema and round-trips through the
 generic EpiDoc *reader* (`io.from_epidoc` / `io.read_epidoc`, stdlib-only, no extra)
-for the content EpiDoc preserves: id, find-place, the token/line stream, editorial
-certainty, and `<app>` variants. A separate Linear B-specific reader,
+for token-carrier content it understands: id, find-place, the token/line stream,
+editorial certainty, typed choices and apparatus segments, and `<app>` variants.
+This is a semantic round-trip, not a byte-identical XML promise, and it is not a
+general free-text TEI structured-state importer. A separate Linear B-specific reader,
 `aegean.scripts.linearb.parse_epidoc`, handles DAMOS-style files with lxml (the
 `[epidoc]` extra), re-deriving Aegean token kinds from the transliteration text.
 
@@ -875,7 +908,9 @@ picker) at a `to_workbench` file and every analysis module runs against your
 data. `from_workbench_export` accepts the schema-v1 full-corpus export object
 (records under `"inscriptions"`, provenance under `"_meta"`, per-record
 `"derived"` analyses: ignored) or a plain array of records; image *files* are
-never embedded, only references. The `aegean workbench` CLI command fetches the
+never embedded, only references. Workbench records carry token text and surface
+metadata, not `ReadingStatus`, annotations, or `TokenFormState`; importing one
+therefore returns CERTAIN, unannotated tokens. The `aegean workbench` CLI command fetches the
 app's static build to your cache and serves it locally so you can run the whole
 UI offline; see the [CLI](CLI) page.
 
@@ -1098,9 +1133,10 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   [download-to-cache](Data-and-Provenance) layer is for. CI's
   `scripts/check_footprint.py` enforces import-clean, import-fast, and a
   code+JSON-only wheel.
-- **One schema version.** Exports stamp `schemaVersion` (currently `2`) so
+- **One schema version.** Exports stamp `schemaVersion` (currently `3`) so
   consumers can tell what they're reading; `to_json` omits default fields (e.g.
-  a `CERTAIN` status) to stay compact and back-compatible.
+  a `CERTAIN` status) to stay compact and back-compatible. Schema 3 adds typed
+  form state; schema-1 and schema-2 artifacts load without it.
 - **Every exploratory method carries its caveat.** Cross-linguistic distance,
   morphology clustering, accounting reconciliation, decipherment, and AI readings
   are labeled unverified at point of use. The Linear A material is undeciphered:
@@ -1110,11 +1146,12 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
 
 - `to_dict` is deliberately **lossy** (words + metadata only); for anything you
   need to reconstruct, use `to_json`/`from_json` or the SQLite round-trip.
-- EpiDoc export is lossless only for **what EpiDoc preserves**: the id,
-  find-place, token/line stream, and editorial certainty. The *reader* re-derives
-  token kinds from text; the generic reader (`io.from_epidoc`) is stdlib-only,
-  while the DAMOS-style Linear B reader (`scripts.linearb.parse_epidoc`) needs
-  lxml (the `[epidoc]` extra).
+- EpiDoc export is semantic rather than byte-identical. For token-carrier content
+  it preserves the id, find-place, token/line stream, editorial certainty, typed
+  choices and apparatus segments. The *reader* re-derives token kinds from text;
+  the generic reader (`io.from_epidoc`) is stdlib-only but is not a general
+  free-text TEI structured-state importer, while the DAMOS-style Linear B reader
+  (`scripts.linearb.parse_epidoc`) needs lxml (the `[epidoc]` extra).
 - The query engine's word predicates operate on **multi-sign words** (tokens
   containing a `-`); single-sign tokens and logograms are matched by the
   inscription-scope predicates, not the word-scope ones.

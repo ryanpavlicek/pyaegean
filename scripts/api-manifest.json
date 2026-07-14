@@ -1,0 +1,31 @@
+{
+  "format": 1,
+  "package": "aegean",
+  "modules": [
+    "aegean",
+    "aegean.core",
+    "aegean.greek",
+    "aegean.analysis",
+    "aegean.scripts",
+    "aegean.scripts.lineara",
+    "aegean.scripts.linearb",
+    "aegean.scripts.cypriot",
+    "aegean.scripts.cyprominoan",
+    "aegean.scripts.greek",
+    "aegean.io",
+    "aegean.geo",
+    "aegean.ai",
+    "aegean.translate",
+    "aegean.data",
+    "aegean.viz",
+    "aegean.cache",
+    "aegean.db",
+    "aegean.mcp_server",
+    "aegean.cli",
+    "aegean.tui"
+  ],
+  "symbols": [
+    "aegean.cli.main",
+    "aegean.tui.run_tui"
+  ]
+}

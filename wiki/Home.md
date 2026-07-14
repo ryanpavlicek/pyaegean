@@ -5,9 +5,8 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, research tools, translation grounding,
 and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.44.2 (beta).** The API may still shift before 1.0.
-> This wiki follows the current `main` branch; features explicitly marked as
-> main-branch previews are not in the PyPI release yet. See the
+> **Latest PyPI release: v0.45.0 (beta).** The API may still shift before 1.0.
+> This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
 
@@ -61,7 +60,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 
 | Module | What it does |
 | --- | --- |
-| [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, and a compound `query()`; typed `SourceAlignment` is a main-branch preview |
+| [`aegean.core`](Architecture) | Script-agnostic model: `Corpus`, `Document`, `Token`, `Sign`, `SignInventory`, `Numeral`, the `Script` plugin registry, provenance, a lossless JSON round-trip, typed `SourceAlignment` and `TokenFormState`, and a compound `query()` |
 | [Linear A](Linear-A) | Bundled 1,721-inscription corpus, the full Unicode Linear A repertoire (342 signs; 50 carry conventional sound values), sign→sound map, transliteration |
 | [Linear B](Linear-B) | Mycenaean Greek: 211-sign Unicode inventory, transliteration, a Greek-reading bridge (`po-me → ποιμήν`), accounting, the full DAMOS corpus on demand (`aegean.load("damos")`, ~5,900 tablets) |
 | [Cypriot](Cypriot) | Chiefly Arcado-Cypriot Greek (the corpus also carries Eteocypriot and undetermined material): 55-sign Unicode syllabary, transliteration, a Greek-reading bridge (`pa-si-le-u-se → βασιλεύς`), and a bundled **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) plus two illustrative samples (**180 documents** total) |
@@ -69,7 +68,7 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Analysis](Analysis) | Accounting checks, sign-pattern and phonetic search, cross-script comparison, clustering, collocation and corpus statistics, structure detection, and a query engine |
 | [Greek NLP](Greek-NLP) | Core text utilities, metre, IPA, tagging, morphology, lemmatization, parsing, dictionaries, and 1,778 discoverable works; optional treebank, pure-Python, and neural backends, with the neural pipeline measured at 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS on the UD Perseus test fold |
 | Greek corpora ([Data & Provenance](Data-and-Provenance)) | Beyond the bundled sample: the gold-annotated **Greek New Testament** (`aegean.load("nt")`, Nestle 1904: lemma, morphology, Strong's) and six fetch-on-demand epigraphic/papyrological corpora: **I.Sicily** (2,855), **IIP** (2,113), **IOSPE** (1,194), **IGCyr/GVCyr** (997), **EDH** (1,286), and the **DDbDP documentary papyri** (57,331 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp`) |
-| [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, and Parquet |
+| [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, Parquet, CoNLL-U, Turtle, and JSON-LD, with typed editorial forms |
 | [CLI](CLI) | The toolkit from a terminal: guided quickstart, REPL, optional full-screen TUI, corpus and Greek commands, data management, diagnostics, JSON output, and stdin piping |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
@@ -95,9 +94,10 @@ See [Installation](Installation) for the full extras matrix, and
 
 The changelog records what has shipped. Current work is focused on:
 
-- finishing the model-independent Greek foundations: richer token states,
-  sentence segmentation, source-aware confidence and abstention, streaming,
-  interoperability, profiles, and reproducible training inputs;
+- finishing the model-independent Greek foundations: edition-aware sentence segmentation,
+  source-aware confidence and abstention, bounded-memory document analysis, optional
+  spaCy/Stanza/CLTK adapters, explicit annotation and domain profiles, and shared
+  versioned training/inference preprocessing;
 - comparing deterministic and neural translation grounding on matched passages
   before changing a default;
 - training and independently evaluating a separately versioned successor to the

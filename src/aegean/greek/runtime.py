@@ -9,7 +9,7 @@ pipelines can analyze concurrently without observing or mutating one another.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -17,6 +17,7 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
+    from ..core.model import Token
     from .joint import LongInputMode, SentenceAnalysis, _JointModel
     from .neural_contract import AnalysisReceipt
     from .pipeline import TokenRecord
@@ -332,6 +333,28 @@ class GreekPipeline:
                 with_confidence=with_confidence,
                 long_input=long_input,
                 document_id=document_id,
+            )
+
+    def analyze_tokens(
+        self,
+        tokens: Sequence[Token],
+        *,
+        parse: bool = False,
+        with_confidence: bool = False,
+        long_input: Literal["strict", "partial", "windowed"] = "strict",
+        document_id: str = "input",
+    ) -> list[TokenRecord]:
+        """Analyze typed core tokens while retaining their alignment and form state."""
+        from .pipeline import _analyze_bound
+
+        with _bind(self):
+            return _analyze_bound(
+                "",
+                parse=parse,
+                with_confidence=with_confidence,
+                long_input=long_input,
+                document_id=document_id,
+                typed_tokens=tokens,
             )
 
     def analyze_sentence(
