@@ -772,7 +772,7 @@ def make_cltk_process(
     except Exception as exc:
         raise _dependency_error() from exc
 
-    class AegeanCLTKProcess(Process):
+    class AegeanCLTKProcess(Process):  # type: ignore[misc]
         process_id = _PROCESS_ID
         _aegean_pipeline: Any
 
