@@ -192,13 +192,14 @@ def test_pipeline_confidence_missing_calibration_is_one_clean_line(app, monkeypa
     assert "Traceback" not in msg
 
 
-def test_pipeline_confidence_controls_appear_in_help(app) -> None:
-    # Rich/Typer derives its layout from the host terminal; pin the width so
-    # this assertion is deterministic across platforms.
-    res = runner.invoke(app, ["greek", "pipeline", "--help"], terminal_width=100)
+def test_pipeline_confidence_controls_are_registered(app) -> None:
+    res = runner.invoke(app, ["greek", "pipeline", "--help"])
     assert res.exit_code == 0, res.output
-    assert "--confidence-domain" in res.output
-    assert "--confidence-policy" in res.output
+
+    root = typer.main.get_command(app)
+    pipeline = root.commands["greek"].commands["pipeline"]
+    options = {option for parameter in pipeline.params for option in getattr(parameter, "opts", ())}
+    assert {"--confidence-domain", "--confidence-policy"} <= options
 
 
 @pytest.mark.parametrize("option", ["--confidence-domain", "--confidence-policy"])
