@@ -6,17 +6,25 @@ short-circuiting.  They never launch the project-wide suite.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
 
-from scripts.check_checkpoint import (
-    PROFILES,
-    build_commands,
-    run_checkpoint,
-    verify_receipt,
-    worktree_fingerprint,
-)
+_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "check_checkpoint.py"
+_SPEC = importlib.util.spec_from_file_location("check_checkpoint_under_test", _SCRIPT)
+if _SPEC is None or _SPEC.loader is None:  # pragma: no cover - repository layout guard
+    raise RuntimeError(f"cannot load {_SCRIPT}")
+check_checkpoint = importlib.util.module_from_spec(_SPEC)
+sys.modules[_SPEC.name] = check_checkpoint
+_SPEC.loader.exec_module(check_checkpoint)
+
+PROFILES = check_checkpoint.PROFILES
+build_commands = check_checkpoint.build_commands
+run_checkpoint = check_checkpoint.run_checkpoint
+verify_receipt = check_checkpoint.verify_receipt
+worktree_fingerprint = check_checkpoint.worktree_fingerprint
 
 
 def _git(root: Path, *args: str) -> None:
@@ -191,7 +199,7 @@ def test_failing_command_short_circuits_later_gates(tmp_path: Path, monkeypatch)
     calls: list[tuple[str, ...]] = []
     environments: list[dict[str, str]] = []
 
-    monkeypatch.setattr("scripts.check_checkpoint.worktree_fingerprint", lambda root: "a" * 64)
+    monkeypatch.setattr(check_checkpoint, "worktree_fingerprint", lambda root: "a" * 64)
 
     def runner(argv, **kwargs):
         calls.append(tuple(argv))
@@ -218,10 +226,7 @@ def test_failing_command_short_circuits_later_gates(tmp_path: Path, monkeypatch)
 
 def test_tree_mutation_stops_later_gates(tmp_path: Path, monkeypatch) -> None:
     fingerprints = iter(("a" * 64, "b" * 64, "b" * 64))
-    monkeypatch.setattr(
-        "scripts.check_checkpoint.worktree_fingerprint",
-        lambda root: next(fingerprints),
-    )
+    monkeypatch.setattr(check_checkpoint, "worktree_fingerprint", lambda root: next(fingerprints))
     calls: list[tuple[str, ...]] = []
 
     def runner(argv, **kwargs):
@@ -238,7 +243,7 @@ def test_tree_mutation_stops_later_gates(tmp_path: Path, monkeypatch) -> None:
 
 def test_receipt_verification_requires_current_fingerprint(tmp_path: Path, monkeypatch) -> None:
     fingerprint = "c" * 64
-    monkeypatch.setattr("scripts.check_checkpoint.worktree_fingerprint", lambda root: fingerprint)
+    monkeypatch.setattr(check_checkpoint, "worktree_fingerprint", lambda root: fingerprint)
 
     def runner(argv, **kwargs):
         return subprocess.CompletedProcess(argv, 0, "", "")
@@ -248,10 +253,10 @@ def test_receipt_verification_requires_current_fingerprint(tmp_path: Path, monke
     assert result.status == "passed"
     assert verify_receipt(receipt, tmp_path) is True
 
-    monkeypatch.setattr("scripts.check_checkpoint.worktree_fingerprint", lambda root: "d" * 64)
+    monkeypatch.setattr(check_checkpoint, "worktree_fingerprint", lambda root: "d" * 64)
     assert verify_receipt(receipt, tmp_path) is False
 
-    monkeypatch.setattr("scripts.check_checkpoint.worktree_fingerprint", lambda root: fingerprint)
+    monkeypatch.setattr(check_checkpoint, "worktree_fingerprint", lambda root: fingerprint)
     result = run_checkpoint(tmp_path, receipt_path=receipt, command_runner=runner)
     assert result.status == "passed"
     payload = json.loads(receipt.read_text(encoding="utf-8"))
