@@ -13,7 +13,11 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-As of 0.8.2 the CLI is a first-class way in: **every `aegean` corpus argument
+> **Release note.** This page follows `main`. Typed source alignment and its
+> schema-2 JSON/SQLite persistence are main-branch previews planned for the next
+> release, not PyPI v0.44.2.
+
+The CLI is a first-class way in: **every `aegean` corpus argument
 accepts any source**: a registered id, a Greek work id, a path to a saved
 `.json` or `.db` corpus, or `-` for JSON on stdin, and you can **combine**,
 **slice**, and **save** corpora and results without writing a line of Python.
@@ -879,8 +883,8 @@ UI offline; see the [CLI](CLI) page.
 
 ## Saving results and AI outputs (`--output`)
 
-The corpus exporters above turn a *corpus* into a file. 0.8.2 adds the same
-`--output/-o` convenience to the **analysis and AI commands**, so a result
+The corpus exporters above turn a *corpus* into a file. The same
+`--output/-o` convention applies to the **analysis and AI commands**, so a result
 (not just the data behind it) lands on disk. The format is chosen by the file
 extension, all on the stdlib (no pandas needed): `.json` (structured), `.csv`
 (tabular), or `.txt` (plain text). Which extensions a command accepts depends on

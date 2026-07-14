@@ -559,10 +559,10 @@ classes (article, prepositions, pronouns…) and regular paradigms, but they mis
 irregular, third-declension, contract, and most open-class forms — and they tell you
 when a result is reconstructed (`lemma_certain=False`).
 
-Several opt-in backends raise accuracy well past that baseline. The strongest is the
+Several opt-in backends raise accuracy past that baseline. The highest-scoring shipped option is the
 **neural pipeline**, `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
-model for POS, morphology, UD dependency parsing, and lemmatization, state of the art
-on the UD Ancient Greek (Perseus) benchmark (97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
+model for POS, morphology, UD dependency parsing, and lemmatization, measured at
+97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
 85.6 LAS on the Perseus test fold, measured end-to-end from raw text: see
 [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
 `greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,

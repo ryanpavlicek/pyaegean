@@ -123,8 +123,8 @@ release.
   only in the *training* split, so scoring the model on them would leak training data.
   A deep multi-avenue search (the register-as-work-queue rule in action) found exactly
   one leakage-clean gold source: the UNESP Trees project's Euripides *Bacchae* 1-169,
-  now the shipped **verse fold** (36 tragedy sentences / 735 tokens: the first honest
-  tragedy evaluation anywhere, reported with wide CIs as a small-sample datapoint on
+  now the shipped **verse fold** (36 tragedy sentences / 735 tokens: a leakage-clean
+  tragedy evaluation, reported with wide CIs as a small-sample datapoint on
   [Benchmarks](Benchmarks)). Everything else checked is blocked: the **AGDT** upstream
   is unchanged, **Daphne** re-converts works pyaegean already trains on, **PROIEL**'s
   Greek is prose, **GLAUx** is silver, and Ezekiel's *Exagoge* (a real tragedy treebank)

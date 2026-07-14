@@ -18,7 +18,7 @@ Both fetch their text once to a local cache and then work offline, and both retu
 the same standard `Corpus` object you get everywhere else in pyaegean. Once a work
 is loaded, everything on [Greek NLP](Greek-NLP) applies to it.
 
-> **A work id works everywhere now.** As of 0.8.2 you can hand a Greek work id
+> **A work id works anywhere a corpus is accepted.** You can hand a Greek work id
 > straight to almost any `aegean` command: no Python required. `aegean stats
 > tlg0012.tlg001`, `aegean export tlg0012.tlg002 -f csv -o odyssey.csv`, and
 > `aegean db build tlg0012.tlg001 -o iliad.db` all resolve the id through
@@ -427,8 +427,8 @@ to (searching it, joining it with another work, sharing it) write it once into a
 **SQLite database** and read from that. The database carries the documents and their
 tokens, plus an FTS5 full-text index, so searches are instant and need no network.
 
-The key change in 0.8.2 is that `aegean db build` (and `combine`, `stats`, `export`,
-…: anything taking a `CORPUS`) accepts a **Greek work id directly**, so you can do
+`aegean db build` (and `combine`, `stats`, `export`, …: anything taking a
+`CORPUS`) accepts a **Greek work id directly**, so you can do
 all of this without writing a line of Python.
 
 ### One work → one database

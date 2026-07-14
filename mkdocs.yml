@@ -8,8 +8,8 @@ docs_dir: docs
 
 # Local-only working docs that are not part of the published site (and not in the repo).
 exclude_docs: |
-  ROADMAP.md
-  PLAN.md
+  *ROADMAP*.md
+  *PLAN*.md
   inquiries/
   demo/__pycache__/
 

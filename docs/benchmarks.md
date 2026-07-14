@@ -132,18 +132,19 @@ in **bold**.
 | CLTK | 96.95 | 90.76 | 96.50 | 57.61 | 54.57 |
 | UDPipe (proiel) | 95.97 | 88.62 | 93.17 | 72.40 | 67.48 |
 
-(The same paper shows every single-treebank model collapsing on the *other* treebank:
-e.g. Stanza-perseus scores 59.00 UAS on PROIEL, which is why pyaegean keeps out-of-domain
-and unseen-form measurement first-class.)
+(The same paper shows substantial cross-treebank degradation: for example,
+Stanza-perseus scores 59.00 UAS on PROIEL, which is why pyaegean keeps
+out-of-domain and unseen-form measurement first-class.)
 
-A newer baseline raises the parsing bar above that table: Riemenschneider & Frank 2023,
-*“Exploring Large Language Models for Classical Philology”* (ACL 2023,
+Riemenschneider & Frank's 2023 paper,
+*“Exploring Large Language Models for Classical Philology”* (ACL,
 <https://aclanthology.org/2023.acl-long.846/>), reports on the UD Perseus test fold
 (models trained on the UD train fold, UD 2.10; gold tokenization; the official CoNLL
 evaluator; mean of three seeds): GreBERTa **UAS 88.20 / LAS 83.98**, UPOS 95.83,
-XPOS 91.09, and a GreTa seq2seq lemmatizer at **91.14** (the best published UD-Perseus
-lemma). Separately, Celano 2025, *“A State-of-the-Art Morphosyntactic Parser and
-Lemmatizer for Ancient Greek”* (LM4DH 2025, <https://arxiv.org/abs/2410.12055>),
+XPOS 91.09, and a GreTa seq2seq lemmatizer at **91.14** (the published UD-Perseus
+lemma comparison used below). Separately, Celano 2025, *“A State-of-the-Art
+Morphosyntactic Parser and Lemmatizer for Ancient Greek”* (LM4DH 2025,
+<https://arxiv.org/abs/2410.12055>),
 fine-tunes Trankit and GreTa on AGDT + Gorman + Pedalion (~1.26 M tokens, normalized to
 the AGDT scheme) and reports on his own folds (Trankit UAS 82.28 / LAS 76.67; GreTa
 lemma 91.17), reprinting the Riemenschneider & Frank UD rows for loose comparison only
@@ -158,9 +159,9 @@ reference rather than rows in the single-protocol table above:
   (<https://stanfordnlp.github.io/stanza/performance.html>), under Stanza's own tokenization,
   give **grc_perseus** UPOS 92.41 / UFeats 91.11 / lemma 87.86 / UAS 79.46 / LAS 73.97, and
   **grc_proiel** (in-domain for that model) UPOS 97.42 / lemma 97.18 / LAS 79.02. Its
-  self-reported Perseus lemma (87.86) edges the 87.58 measured in the table above; pyaegean's
-  94.27 still leads it by +6.4.
-- **DILEMMA** (<https://github.com/ciscoriordan/dilemma>) is the closest *architectural* peer: a
+  self-reported Perseus lemma (87.86) is 0.28 above the 87.58 measured in the table above;
+  pyaegean's row is 94.27, an arithmetic difference of +6.4 from Stanza's value.
+- **DILEMMA** (<https://github.com/ciscoriordan/dilemma>) is an *architectural* peer: a
   Greek tagger/lemmatizer on the same torch-free ONNX inference path pyaegean uses. But it is
   lemmatizer-first and publishes accuracy only on its own multi-period benchmarks (93.7%
   equiv-adjusted on its DiGreC treebank, 99.7% on Classical Greek), not UD Ancient Greek Perseus
@@ -188,11 +189,10 @@ onnxruntime CPU):
 The shipped checkpoint is one of five seed replicates of this recipe; across those seeds the
 UD Perseus test mean ± standard deviation is **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12,
 UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04, lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL
-LAS 63.50 ± 0.04), so the headline figures are representative, not a lucky seed. On UD
-Perseus test every metric is above the best published number we could find, and each lead
-clears both that seed spread and a within-fold bootstrap confidence interval:
+LAS 63.50 ± 0.04). The table places the shipped checkpoint and its confidence intervals beside
+the cited published comparison rows; the margin column is the arithmetic difference:
 
-| Metric | pyaegean | 95% CI | best published | margin |
+| Metric | pyaegean | 95% CI | cited comparison | margin |
 |---|---|---|---|---|
 | UPOS | 97.02 | [96.76, 97.29] | 95.83 (2023) | +1.19 |
 | XPOS | 93.48 | [93.09, 93.91] | 91.09 (2023) | +2.39 |
@@ -206,15 +206,15 @@ default, so the reproduction command matches; the 2-decimal bounds are stable ac
 
 Three things keep these honest:
 
-- **The leads are robust, LAS and UAS included.** The +1.67 LAS and +2.04 UAS margins are
-  large next to both the seed spread (±0.10 / ±0.12) and the within-fold CIs above, whose lower
-  bounds (84.93 / 89.62) sit well above the published 83.98 / 88.20. An earlier single-run build
-  had a thin, within-noise LAS lead; the converter comma fix and the predicted-arc relation
-  training above turned it into a robust one (and tightened the seed spread fourfold).
+- **Confidence intervals and replication.** The +1.67 LAS and +2.04 UAS margins are
+  large next to the seed spread (±0.10 / ±0.12), and the within-fold lower bounds
+  (84.93 / 89.62) exceed the cited 83.98 / 88.20 rows. The converter comma fix and
+  predicted-arc relation training also tightened the seed spread fourfold relative to an
+  earlier single-run build.
 - **PROIEL is out of domain.** The in-domain published systems train on the PROIEL fold
   itself; pyaegean never does. Against a *Perseus-trained* published system, the like-for-like
-  out-of-domain comparison, pyaegean leads by ~23 UAS (82.48 vs the Perseus-trained Stanza
-  baseline's 59.00 on this fold). The remaining PROIEL
+  out-of-domain comparison is 82.48 versus the Perseus-trained Stanza baseline's 59.00 on
+  this fold, an arithmetic difference of ~23 UAS. The remaining PROIEL
   LAS and UFeats gaps are largely deprel- and feature-convention divergence between the two
   treebanks' UD conversions (PROIEL annotates five feature types the Perseus scheme lacks,
   and PROIEL XPOS is a different tagset entirely).
@@ -400,8 +400,8 @@ overlaps.
 | PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.85 | 24,105 |
 
 Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
-Scheme-matched out-of-domain parsing runs ~16 LAS points above the
-convention-capped PROIEL row, the quantitative confirmation of the decomposition
+Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL row
+by about +16 LAS points, the quantitative confirmation of the decomposition
 below. One measurement note: on this fold, batched inference is *not*
 prediction-identical to sequential (a handful of float-order flips), so the
 published numbers are CPU-sequential and batching stays off this row's protocol.

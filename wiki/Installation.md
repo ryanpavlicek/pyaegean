@@ -69,7 +69,7 @@ some shells (notably zsh on macOS) treat square brackets specially:
 
 ```bash
 pip install "pyaegean[ai]"        # the full generative AI layer
-pip install "pyaegean[neural]"    # the state-of-the-art neural Greek pipeline
+pip install "pyaegean[neural]"    # the measured neural Greek pipeline
 pip install "pyaegean[cli,viz]"   # combine extras with a comma
 pip install "pyaegean[all]"       # every runtime extra except [parquet]
 ```

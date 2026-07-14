@@ -5,6 +5,10 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
+> **Release note.** This cheatsheet follows `main`. The CoNLL-U and newer Greek
+> pipeline controls are main-branch previews planned for the next release, not
+> PyPI v0.44.2.
+
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
@@ -699,7 +703,9 @@ re-fetched, evicted, or expired, and stays until `remove` deletes it.
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |
 
-The fetchable datasets (`aegean data list`):
+`aegean data list` is the authoritative live registry (currently 28 entries).
+The table below lists the common runtime and corpus assets; the live output also
+includes evaluation folds and supporting indexes used by benchmark commands.
 
 | name | what | license |
 |---|---|---|
@@ -709,7 +715,9 @@ The fetchable datasets (`aegean data list`):
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
 | `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
+| `autenrieth-index` | prebuilt Autenrieth (Homeric) lemma→entry index | public domain (1891) |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
+| `grc-paradigms` | Ancient Greek inflection paradigms used by `greek.inflect` | CC BY-SA 4.0 (derived) |
 | `damos-corpus` | DAMOS Linear B corpus, ~5,900 tablets: `load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset, 802 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek NT (Nestle 1904), 260 chapters / ~137,800 tokens: `load('nt')` | CC0-1.0 |

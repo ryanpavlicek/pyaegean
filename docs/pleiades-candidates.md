@@ -2,14 +2,22 @@
 
 The find-site gazetteer (`src/aegean/data/bundled/geo/site_coordinates.json`)
 aligns each site to a [Pleiades](https://pleiades.stoa.org/) place id for
-linked-open-data work. **40 of 56** sites are aligned; every id is **verified by
+linked-open-data work. **78 of 94** entries are aligned; every id is **verified by
 coordinate** (the Pleiades representative point is within a few km of ours and the
 place description matches the site), never guessed, and re-checked weekly by
 `scripts/check_gazetteer.py` so a stray coordinate cannot quietly slip in.
 
-## Trust pass (2026-06-29)
+## Current coverage
 
-A full validation of all 56 sites against their Pleiades representative points:
+The 94-entry gazetteer covers nine regions: Crete (40), the Levant (14), Sicily
+(13), mainland Greece (7), the Aegean (5), Cyrenaica (5), the Pontic region
+(5), Anatolia (4), and the contested remote entry Margiana (1). Sixteen entries
+remain unaligned and are listed below.
+
+## Earlier trust pass (2026-06-29)
+
+At that stage the gazetteer contained 56 sites. All were checked against their
+Pleiades representative points:
 
 - **Corrected five drifted coordinates** — Zominthos (~7.5 km), Kythera (~8.4 km),
   Pylos (~9.4 km), and the Cyprus and Margiana island centroids — each realigned to
@@ -37,14 +45,15 @@ candidates to **contribute upstream** (a Pleiades place submission), which both
 fills our nulls and improves the shared gazetteer:
 
 - **Crete:** Vrysinas, Kophinas, Larani, Kannia (the Minoan villa, distinct from
-  nearby Gortyn), Nerokourou, Platanos, Traostalos, Trypiti, Armenoi, Papoura,
-  Prassa, Selakano, Schinias, Kalo Chorafi.
-- **Mainland:** Hagios Stefanos (Laconia) — a dedicated Pleiades entry could not be
+  nearby Gortyn), Nerokurou (also spelled Nerokourou), Platanos, Traostalos,
+  Trypiti, Armenoi, Papourou (Papoura), Prassa, Selakanos (Selakano), Skhinia
+  (Schinias), Kalo Chorafi.
+- **Mainland:** Haghios Stehanos (Hagios Stefanos, Laconia) — a dedicated
+  Pleiades entry could not be
   confirmed (the only homonym is a Cypriot place ~930 km away), so it is left null
   pending a manual lookup rather than a guessed id.
 
-"Crete (unspecified)" is a region placeholder, not a place, and is intentionally
-left null.
+`Crete` is a region placeholder, not a place, and is intentionally left null.
 
 *ToposText cross-ids* are a possible future addition, but ToposText has no clean
 id API, so they are out of scope here.

@@ -573,7 +573,7 @@ client at the `aegean-mcp` command):
 ```python
 from aegean.mcp_server import TOOLS
 print(len(TOOLS), "tools:", ", ".join(t.__name__ for t in TOOLS[:6]), "…")
-# 15 tools: list_corpora, corpus_info, show_document, search_signs, balance_accounts, query_corpus …
+# 17 tools: list_corpora, corpus_info, show_document, search_signs, balance_accounts, query_corpus …
 ```
 
 The tools address corpora by registry name only (never by filesystem path) and
@@ -698,7 +698,7 @@ That's a curated subset (25 works in all); the full canon is at
 `aegean greek work tlg0012.tlg001 --ref 1.1-1.10`.
 
 The offline pipeline is the honest baseline; activate `--treebank` or
-`--neural` (the `[neural]` extra) for attested-gold or state-of-the-art lemmas:
+`--neural` (the `[neural]` extra) for attested-gold or measured neural lemmas:
 see [Greek NLP](Greek-NLP) for the measured accuracy of each tier.
 
 ## 4 · What vocabulary distinguishes a site? (keyness)

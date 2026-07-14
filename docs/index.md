@@ -11,9 +11,13 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
+**Latest PyPI release: v0.44.2 (beta).** This site is built from `main`, so
+features explicitly identified as main-branch previews are not in that PyPI
+release yet.
+
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
-asserted: the opt-in neural pipeline is state of the art on the UD Ancient Greek (Perseus)
-benchmark, measured end-to-end through the shipped package at
+asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
+benchmark through the shipped package at
 **97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS** on the test fold
 ([protocol and tables](benchmarks.md)). Analytical output on the *undeciphered* material
 (Linear A, Cypro-Minoan) is always labeled **exploratory**: leads for a human expert, never
@@ -60,6 +64,12 @@ Everything above runs offline with zero heavy dependencies. Prefer not to instal
 The [getting-started notebook](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
+
+If you are testing the current `main` branch, the next-release previews include isolated
+`GreekPipeline` instances, explicit safe policies for overlength neural input, exact analysis
+receipts and source alignment, and lossless CoNLL-U structure. The
+[Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
+marks their release status and shows runnable examples.
 
 ## Find your path
 

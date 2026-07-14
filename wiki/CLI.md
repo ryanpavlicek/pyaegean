@@ -11,6 +11,10 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
+> **Release note.** This guide follows `main`. The CoNLL-U commands and the
+> long-input, source-alignment, and analysis-receipt fields shown below are
+> main-branch previews planned for the next release, not PyPI v0.44.2.
+
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help
@@ -112,10 +116,10 @@ aegean --version          # pyaegean 0.44.2
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
-| **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` |
+| **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
-| **`aegean review …`** | `export` `apply` (the human-in-the-loop annotation round-trip) |
+| **`aegean review …`** | `export` `merge` `apply` (the human-in-the-loop annotation round-trip, including multi-reviewer agreement) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
 
@@ -1938,9 +1942,13 @@ aegean data list        # downloaded again, with its real on-disk size:
 `aegean data store` shows the same thing from the disk's point of view: the
 store's location and a name/MB table of everything in it.
 
-`aegean data list` shows the full registry, with a **downloaded** column giving
+`aegean data list` shows the full live registry (currently 28 entries), with a **downloaded** column giving
 each present dataset's actual on-disk size. The fetchable datasets (all
 downloaded on demand, never bundled):
+
+The table below lists the common runtime and corpus assets. The live command is
+authoritative and also shows evaluation folds and supporting indexes used by the
+benchmark commands.
 
 | name | what | license |
 |---|---|---|
@@ -1950,7 +1958,9 @@ downloaded on demand, never bundled):
 | `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
 | `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
+| `autenrieth-index` | prebuilt Autenrieth (Homeric) lemma→entry index | public domain (1891) |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
+| `grc-paradigms` | Ancient Greek inflection paradigms used by `greek.inflect` | CC BY-SA 4.0 (derived) |
 | `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset (802 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
@@ -2080,6 +2090,7 @@ record of it.
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `review export` | Write one reviewable CSV row per word: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--only-needs-review` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv` |
+| `review merge` | Combine two or more corrected copies of the same export; agreed or single-reviewer corrections are kept, while genuine disagreements are reported or rejected | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report` |
 | `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ backend flags — repeat whatever the export used, so accepted predictions persist too) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
 
 ```bash
@@ -2090,10 +2101,12 @@ aegean review export nt -o review.csv
 
 # 2. open review.csv in a spreadsheet, fill correct_lemma / correct_pos / correct_morph /
 #    reviewer_note on the rows you want to change (the needs_review column flags the shaky ones;
-#    --only-needs-review exports just those), then:
+#    --only-needs-review exports just those). If several people review copies of the same export,
+#    merge them first:
+aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report
 
-aegean review apply nt review.csv -o nt-reviewed.json --reviewer "A. Scholar"
-#    wrote nt-reviewed.json  (review: 12 tokens corrected by A. Scholar (2026-…))
+aegean review apply nt merged.csv -o nt-reviewed.json --reviewer "Review team"
+#    wrote nt-reviewed.json  (review: 12 tokens corrected by Review team (2026-…))
 ```
 
 The join is by document id and token position, and each row's exported token text is
@@ -2281,7 +2294,7 @@ aegean info linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 
 aegean data fetch grc-jiont
-# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 19)
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 28)
 ```
 
 The fix is in the message: take the suggestion, or list the valid names

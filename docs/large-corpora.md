@@ -13,7 +13,7 @@ fetches:
 | --- | --- | --- |
 | Linear A (bundled) | 1,721 | tens of thousands of tokens |
 | DAMOS Linear B (`load("damos")`) | ~5,900 | ~hundreds of thousands of tokens |
-| SigLA Linear A (`load("sigla")`) | ~780 | sign-level |
+| SigLA Linear A (`load("sigla")`) | 802 | sign-level |
 | A single Greek work (`greek.load_work`) | 1 work | the Iliad is ~127k tokens |
 | Greek inscriptions (`isicily`, `iip`, `iospe`, `igcyr`, `edh`) | ~1,000-2,900 each | tens of thousands of tokens each |
 | DDbDP papyri (`load("ddbdp")`) | 57,331 | ~4.4M tokens; SQLite-hosted, streamed via `aegean.db.stream` |

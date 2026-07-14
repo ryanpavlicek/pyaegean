@@ -227,7 +227,7 @@ references: fine for mapping, not survey work.
 from aegean import geo
 
 coords = geo.site_coordinates()
-len(coords)                       # 56
+len(coords)                       # 94
 coords["Haghia Triada"]
 # SiteCoord(name='Haghia Triada', lat=35.06, lon=24.79, region='crete', pleiades=589672, contested=None)
 ```
@@ -241,7 +241,7 @@ A frozen dataclass. Fields:
 | `name` | str | display name (may be fuller than the corpus's site label) |
 | `lat` | float | latitude, WGS84 |
 | `lon` | float | longitude, WGS84 |
-| `region` | str | one of the six region codes below |
+| `region` | str | one of the nine region codes below |
 | `pleiades` | int / None | Pleiades place id, if aligned (default `None`) |
 | `pleiades_uri` | property → str / None | full `https://pleiades.stoa.org/places/<id>` URI, or `None` |
 | `contested` | str / None | reason string if the find-spot's provenance is disputed; `None` for ordinary sites (default `None`); see [Contested find-spots](#contested-find-spots) |
@@ -258,22 +258,25 @@ coords["Vrysinas"].pleiades_uri # None  (a peak sanctuary, not in Pleiades)
 coords["Margiana"].is_contested # True  (disputed provenance)
 ```
 
-The gazetteer covers the find-sites in all four Aegean-script corpora: the Cretan and Aegean Linear
-A sites, plus Pylos (Linear B), Cyprus, and the Cypro-Minoan sites Enkomi and Ugarit, and a few
-outliers like Tel Haror (Negev) and Margiana (Turkmenistan), the last of which is flagged
-[contested](#contested-find-spots).
+The gazetteer covers the find-sites in all four Aegean-script corpora and extends into the Greek
+epigraphic collections: Crete and the Aegean, mainland Greece, Cyprus and the Levant, Anatolia,
+Cyrenaica, the Pontic region, and Sicily. Margiana (Turkmenistan), the one remote outlier, is
+flagged [contested](#contested-find-spots).
 
 ### Regions
 
-`region` is a controlled vocabulary of six values. The breakdown of the 56 gazetteer sites:
+`region` is a controlled vocabulary of nine values. The breakdown of the 94 gazetteer sites:
 
 | Region | Sites | What it covers |
 |---|---|---|
 | `crete` | 40 | the island of Crete (the bulk of Linear A) |
 | `aegean` | 5 | the Aegean islands (Thera, Kea, Milos, Kythera, Samothrace) |
-| `mainland` | 4 | the Greek mainland (Mycenae, Tiryns, Pylos, Hagios Stefanos) |
-| `anatolia` | 2 | the Anatolian coast (Miletus, Troy) |
-| `levant` | 4 | Cyprus and the Levantine coast (Enkomi, Ugarit, Tel Haror, Cyprus) |
+| `mainland` | 7 | the Greek mainland |
+| `anatolia` | 4 | the Anatolian coast |
+| `levant` | 14 | Cyprus and the Levantine coast |
+| `cyrenaica` | 5 | Cyrenaica |
+| `pontic` | 5 | the northern Black Sea region |
+| `sicily` | 13 | Sicily |
 | `remote` | 1 | far-flung outliers (Margiana, Turkmenistan, a [contested](#contested-find-spots) find-spot) |
 
 ### Contested find-spots
@@ -296,7 +299,7 @@ m.contested               # 'Disputed: no Linear A inscription is accepted from 
 
 ## Pleiades alignment
 
-**40 of the 56** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
+**78 of the 94** find-sites are aligned to a [Pleiades](https://pleiades.stoa.org/) place id, for
 linked-open-data work. Every id is **verified by coordinate** (the Pleiades representative point is
 within a few km of ours and its description matches the site), so a match is confirmed, never
 guessed, and `scripts/check_gazetteer.py` re-checks each one against its live Pleiades point on a
@@ -309,7 +312,8 @@ geo.site_coordinates()["Haghia Triada"].pleiades_uri
 # 'https://pleiades.stoa.org/places/589672'
 ```
 
-The remaining 16 sites are mostly minor findspots, peak sanctuaries, and caves not yet in Pleiades,
+The remaining 16 entries are mostly minor findspots, peak sanctuaries, caves, and one region-level
+placeholder not yet represented by a suitable Pleiades place,
 left null, and listed as upstream-contribution candidates in
 [docs/pleiades-candidates.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/pleiades-candidates.md).
 
@@ -427,9 +431,9 @@ anything else is dropped. Per corpus:
 | `cypriot` | 180 | 1 of 5 | bundled IG XV 1 corpus + samples (only the generic Cyprus label is in the gazetteer) |
 | `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | small bundled sample |
 
-The gazetteer holds 56 sites total (more than any single corpus uses), so it already covers
-find-sites across all four scripts. The few Linear A inscriptions with no row simply carry no usable
-`meta.site` value.
+The gazetteer holds 94 entries total (more than any single corpus uses), including all 52 named
+Linear A sites and coverage for the other three Aegean scripts. The few Linear A inscriptions with
+no row simply carry no usable `meta.site` value.
 
 ---
 
@@ -445,8 +449,9 @@ find-sites across all four scripts. The few Linear A inscriptions with no row si
   column schema intact. Test `wd.empty` to tell "attested nowhere" apart from a mapping gap.
 - **`pleiades` shows as a float in the GeoDataFrame** because the column mixes ids with nulls; the id
   is still integral. Use `SiteCoord.pleiades` for the clean `int`.
-- **16 sites have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves. They're
-  tracked as upstream-contribution candidates, not errors.
+- **16 entries have no Pleiades id**: mostly minor findspots, peak sanctuaries, and caves, plus
+  the region-level `Crete` placeholder. They're tracked as upstream-contribution candidates, not
+  guessed into place records.
 - **`word_distribution` matches the surface form case-insensitively.** It won't otherwise normalise
   or fuzzy-match; pass the word as the corpus transliterates it.
 

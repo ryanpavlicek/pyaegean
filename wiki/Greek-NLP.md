@@ -30,11 +30,10 @@ Python, [Meters](Meters) for the metrical scansion in depth, and
 
 > **Where this fits.** The zero-dependency core optimizes for portability, an instant
 > import, transparent leakage-free evaluation, metrical scansion, and a scriptable data
-> layer. For maximum accuracy, the opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
-> (`use_neural_pipeline`, the `[neural]` extra) is **state of the art on the UD Ancient
-> Greek (Perseus) benchmark**: measured end-to-end through this package (the full protocol and
-> comparison tables live in
-> [Benchmarks](Benchmarks)).
+> layer. The opt-in **[neural pipeline](#the-neural-pipeline-opt-in)**
+> (`use_neural_pipeline`, the `[neural]` extra) is measured end-to-end on the UD Ancient
+> Greek (Perseus) benchmark; the full protocol, numbers, comparison rows, and limitations live in
+> [Benchmarks](Benchmarks).
 
 ## The stages at a glance
 
@@ -71,6 +70,10 @@ backends layer in extra accuracy without changing the call you make.
 | Reproduce the numbers | `evaluate_on_ud` / `evaluate_on_proiel` / … | `aegean greek eval` | yes (gold data) |
 
 ## One call: `pipeline()`
+
+> **Main-branch preview.** The isolated pipeline instances, explicit long-input policies,
+> analysis receipts, source alignment, and lossless CoNLL-U representation described in this
+> section are on `main` and planned for the next release; they are not in PyPI v0.44.2.
 
 Every stage below is independently callable, but you don't have to compose them:
 `pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
@@ -302,6 +305,8 @@ known. Two explicit alternatives serve different needs:
 Both modes preserve every input token and expose their status:
 
 ```python
+greek.use_neural_pipeline()
+
 ana = greek.analyze_sentence(words, long_input="partial")
 ana.complete, ana.truncated             # (False, True) when the limit was reached
 ana.analyzed                             # one bool per token
@@ -364,13 +369,14 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 
 Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.51,
 UAS 82.48, UPOS 86.69. Inference is torch-free, at roughly 20–70 words/second on a plain
-CPU for the shipped quantized bundle (sentence-length dependent; the full-precision
-`grc-joint-v2` asset is several times faster where throughput matters more than download
-size). The bundle ships **quantized** at about 173 MB (down from 518 MB) with **no loss of
-accuracy**: the scores above are unchanged from the full-precision model. The recipe is
+CPU for the shipped quantized **`grc-joint-v3`** bundle (sentence-length dependent). The
+full-precision `grc-joint-v2` reference asset is several times faster where throughput matters
+more than download size. The shipped v3 bundle is about 173 MB (down from the 518 MB fp32
+reference) with **no measured accuracy loss**: the scores above are unchanged from the
+full-precision model. The recipe is
 weight-only int8 (onnxruntime MatMulNBits) plus fp16, keeping activations at full
-precision; it needs **onnxruntime>=1.23** (the `[neural]` floor), and the full-precision
-model stays available at the `grc-joint-v2` release for reproducibility. The
+precision; it needs **onnxruntime>=1.23** (the `[neural]` floor), and the fp32
+reference stays available at the `grc-joint-v2` release for reproducibility. The
 model bundle is CC BY-SA 4.0, fetched to the cache, never bundled; training data,
 leakage controls, and the comparison tables are documented in
 [Benchmarks](Benchmarks).

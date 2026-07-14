@@ -275,9 +275,9 @@ See [Greek NLP → Neural lemmatizer](Greek-NLP#neural-lemmatizer-opt-in).
 
 `aegean.greek.use_neural_pipeline()` activates one jointly-trained model serving
 POS, full morphology (UD FEATS), UD dependency trees, and lemmas from a single
-forward pass: state of the art on the UD Ancient Greek (Perseus) benchmark (see
+forward pass, measured on the UD Ancient Greek (Perseus) benchmark (see
 [Greek NLP → The neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the
-measured numbers). The model bundle (quantized ONNX + tokenizer + label maps + lemma
+numbers and protocol). The model bundle (quantized ONNX + tokenizer + label maps + lemma
 scripts/lookup, ~173 MB tar.gz, sha256-pinned) is fetched to the cache, never bundled,
 and runs torch-free on numpy + onnxruntime, loaded only on activation. The released
 model is quantized and lossless (weight-only int8 on the MatMul weights plus fp16
