@@ -305,36 +305,20 @@ Small facts with an obvious home and an automatic test: the menu from
 For anything larger, open an issue first so the design can be agreed before you
 write code.
 
-### Deprecation policy
-
-pyaegean is pre-1.0, but the public API is treated as a contract:
+### Pre-1.0 API policy
 
 The [API reference](https://pyaegean.xyz/api/) lists the supported facade modules.
-Use those entry points in new code. Previously released lower-level import paths
-remain compatibility-protected, but newly added implementation modules do not
-become supported automatically. The release guard checks the reviewed facade
-manifest and the complete grandfathered baseline separately.
+Use those entry points in new code. Newly added implementation modules do not
+become supported automatically. The reviewed facade modules and selected symbols
+live in `scripts/api-manifest.json`; `python scripts/check_api.py` verifies that
+the current facade resolves statically without importing optional dependencies.
 
-The reviewed facade modules and selected symbols live in
-`scripts/api-manifest.json`; `scripts/api-baseline.json` retains every released
-and grandfathered name. Run `python scripts/check_api.py` for the compatibility
-check. A new supported facade is added to the manifest before a release snapshot.
-After a minor-release deprecation cycle, a deliberate retirement is recorded with
-`python scripts/check_api.py --snapshot --accept-breaking-snapshot`; an ordinary
-snapshot refuses to discard a legacy name.
-
-1. **Deprecate in a minor release, remove no sooner than the next minor.** A
-   symbol deprecated in 0.x.0 keeps working through every 0.x.* and may be
-   removed in 0.(x+1).0 at the earliest.
-2. **Warnings carry the replacement.** Every deprecation emits a
-   `DeprecationWarning` that names the replacement API and the release that
-   introduced the deprecation.
-3. **The CHANGELOG records both ends**: the release that deprecates and the
-   release that removes.
-4. **Data and models version forward.** Fetched artifacts are sha256-pinned
-   release assets; a new model is a new asset name (for example, a v4 candidate
-   cannot reuse `grc-joint-v3`), never a
-   mutation of an existing one, so cached environments keep working.
+Until the v4 Greek NLP segment is complete, the API may change directly when the
+design improves. User-visible changes belong in the CHANGELOG, and the manifest,
+docs, and tests must describe the resulting current interface. Compatibility is
+still required for hosted assets, models, and evidence that the current package
+uses. Fetched artifacts version forward under new content-addressed asset names;
+a v4 candidate cannot reuse or mutate `grc-joint-v3`.
 
 ---
 

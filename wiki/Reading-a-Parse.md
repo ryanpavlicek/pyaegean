@@ -65,7 +65,8 @@ you build on it:
 `review_recommended` is `True` for `identity` and `unresolved`, so a quick filter for
 "what should I check?" is `[r for r in records if r.review_recommended]`. The
 same signal drives the ["needs review" column](When-the-Tool-Is-Wrong) in a review table.
-`lemma_known` remains temporarily as a deprecated alias of `lemma_resolved`.
+`lemma_known` is a deprecated alias of `lemma_resolved`; new code should use the
+explicit evidence fields.
 
 A subtle but important point: a lemma that equals the surface form is not automatically a
 guess. `λόγος` is the lemma of `λόγος`; the neural model reports that as `neural` (a genuine

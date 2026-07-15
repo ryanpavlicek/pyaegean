@@ -1,11 +1,10 @@
 # API reference
 
 The supported facade modules are listed below, with their public classes and
-functions generated from the source. These facades are the stable entry points
-for new code. Lower-level modules remain importable, and paths that already formed
-part of a released API remain compatibility-protected, but a new lower-level path
+functions generated from the source. These facades are the intended entry points
+for new code. Lower-level modules may remain importable, but a lower-level path
 does not become supported merely because Python can import it. The release guard
-enforces both the reviewed facade list and those grandfathered paths. For guides, tutorials, and
+validates the reviewed current facade. For guides, tutorials, and
 the per-script handbooks, see the
 **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**; for what pyaegean is
 and where to begin, see the [home page](../index.md).
@@ -35,19 +34,15 @@ are lazy and remain outside the core import path.
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
-### API contract and retirement
+### API policy
 
 The facade modules listed here are the supported entry points for new code. The
 reviewed list of facade modules and explicitly selected symbols is kept in
-`scripts/api-manifest.json`; `scripts/api-baseline.json` retains every released
-name, including older lower-level paths that are still compatibility-protected.
-Importability alone does not add a new implementation module to the supported
-API. `python scripts/check_api.py` checks both the current source and the
-grandfathered baseline. A new facade name is added by reviewing the manifest and
-then taking a release snapshot. To retire a name, deprecate it in a minor release,
-keep the replacement and warning through the next minor release, and only then
-refresh the baseline with `--snapshot --accept-breaking-snapshot` after the
-removal has been explicitly reviewed. A normal snapshot refuses legacy removals.
+`scripts/api-manifest.json`. Importability alone does not add a new implementation
+module to the supported API. `python scripts/check_api.py` statically verifies
+that the reviewed modules and symbols resolve. During pre-1.0 development through
+the v4 Greek NLP segment, the facade may change directly when the design improves;
+the CHANGELOG, manifest, docs, and tests must describe the resulting current API.
 
 ## Build a corpus from your own text
 

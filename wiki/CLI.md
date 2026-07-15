@@ -2014,7 +2014,7 @@ CC BY-NC-SA 4.0). **LiBER** (liber.cnr.it) is browse-only: it has no public down
 rights-restricted, so it cannot be fetched. To use your own licensed Linear B export, import it
 (`aegean import x.xml --epidoc --script linearb`) or set `PYAEGEAN_LINEARB_CORPUS_URL`.
 
-(`aegean data cache` remains a deprecated alias for `data store` this minor: it
+(`aegean data cache` is an older deprecated alias for `data store`: it
 still works but warns, naming the replacement.)
 
 ### A worked round trip

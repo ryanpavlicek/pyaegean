@@ -510,7 +510,7 @@ subcommands:
 | `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
 | `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--version v1` (delete only that one kept release, leaving the current copy in place), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
-| `aegean data store` | Show the store location and its current contents (entries are permanent until removed). `aegean data cache` remains a deprecated alias this minor: it warns, naming the replacement | `--json` (machine-readable on stdout), `-h/--help` |
+| `aegean data store` | Show the store location and its current contents (entries are permanent until removed). The older `aegean data cache` alias warns and names the replacement | `--json` (machine-readable on stdout), `-h/--help` |
 
 ```bash
 aegean data store

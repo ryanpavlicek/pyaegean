@@ -75,7 +75,7 @@ def annotate_corpus(
             ann["lemma_resolved"] = "true" if lemma_resolved(source) else "false"
             ann["lemma_verified"] = "true" if lemma_verified(source) else "false"
             ann["review_recommended"] = "true" if needs_review(source) else "false"
-            # Compatibility field retained through its deprecation cycle.
+            # Existing deprecated field; new code uses the explicit evidence fields above.
             ann["lemma_known"] = "false" if needs_review(source) else "true"
 
     total = len(corpus.documents)

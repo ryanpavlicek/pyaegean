@@ -28,7 +28,7 @@ python scripts/check_checkpoint.py --profile code --test tests/test_example.py -
 Use `docs` for documentation-only changes, `code` for internal implementation,
 `public-api` when exported behavior or signatures change, and `persistence` for a
 stored schema or interchange format. The profiles add relevant static, API,
-documentation, footprint, and compatibility guards; they do not replace the
+documentation, footprint, and current-format guards; they do not replace the
 focused correctness, adversarial, or journey tests required below.
 Install `.[dev,docs]` before using the `docs` profile.
 
@@ -152,34 +152,24 @@ their own sources and methods in their module docstrings.
   on the wiki's Benchmarks page (both pinned to the claims registry), never in
   the README.
 
-## Deprecation policy
-
-pyaegean is pre-1.0, but the public API is treated as a contract:
+## Pre-1.0 API policy
 
 The supported entry points are the facade modules listed in the
-[API reference](https://pyaegean.xyz/api/). Existing lower-level paths that were
-already released remain compatibility-protected, but new implementation modules
-are not added to the contract automatically. `scripts/api-manifest.json` is the
-reviewed facade list, while `scripts/api-baseline.json` retains both supported and
-grandfathered names. Run `python scripts/check_api.py` before proposing an API
-change; release snapshots refuse legacy breaks and add only reviewed facade names.
-Add a new supported facade by reviewing `api-manifest.json` before the release
-snapshot. After the required deprecation cycle is complete, a deliberate removal
-still requires reviewing the reported break and passing
-`--snapshot --accept-breaking-snapshot`; ordinary snapshots never erase or rewrite
-grandfathered contracts.
+[API reference](https://pyaegean.xyz/api/). New implementation modules are not
+supported automatically. `scripts/api-manifest.json` records the reviewed current
+facade, and `python scripts/check_api.py` verifies that every selected module and
+symbol still resolves without importing the package.
 
-1. **Deprecate in a minor release, remove no sooner than the next minor.**
-   A symbol deprecated in 0.x.0 keeps working through every 0.x.* and may be
-   removed in 0.(x+1).0 at the earliest.
-2. **Warnings carry the replacement.** Every deprecation emits a
-   `DeprecationWarning` that names the replacement API and the release that
-   introduced the deprecation: never a bare "this is deprecated".
-3. **The CHANGELOG records both ends**: the release that deprecates and the
-   release that removes.
-4. **Data and models version forward.** Fetched artifacts are sha256-pinned
-   release assets; a new model is a new asset name (`grc-joint-v2`), never a
-   mutation of an existing one, so cached environments keep working.
+Until the v4 Greek NLP segment is complete, the API may change directly as the
+design improves. Record user-visible changes in the CHANGELOG and update the
+facade manifest, docs, and tests in the same checkpoint. Do not add deprecation
+shims or preserve old signatures solely for hypothetical callers. Compatibility
+remains required where the current package depends on an existing hosted asset,
+model, or published evidence record.
+
+Fetched artifacts still version forward: a new model uses a new asset name (for
+example, a v4 candidate cannot reuse `grc-joint-v3`) rather than mutating an
+existing content-addressed release.
 
 ## Tests
 

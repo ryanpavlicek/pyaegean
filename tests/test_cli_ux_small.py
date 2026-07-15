@@ -375,7 +375,7 @@ def test_data_cache_is_a_deprecated_alias_that_names_the_replacement(
     root.mkdir(parents=True, exist_ok=True)  # cache_dir() may already create it
     (root / "thing.bin").write_bytes(b"z" * 100)
     res = runner.invoke(app, ["data", "cache", "--json"])
-    assert res.exit_code == 0  # the alias still works (deprecation policy: warn first)
+    assert res.exit_code == 0  # the existing alias warns and names its replacement
     store_res = runner.invoke(app, ["data", "store", "--json"])
     assert json.loads(_stdout(res)) == json.loads(_stdout(store_res))  # same payload
     out = _output(res)

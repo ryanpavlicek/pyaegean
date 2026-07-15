@@ -454,8 +454,8 @@ Lemma provenance is similarly explicit. Joint-model lookups use
 `LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts use `NEURAL_EDIT`, and a surface
 fallback uses `IDENTITY`. `TokenRecord.lemma_resolved` says whether a real lemma decision
 exists, `lemma_verified` is true only for an imported human correction, and
-`review_recommended` drives triage. The older `lemma_known` property remains for one
-deprecation cycle as an alias of `lemma_resolved`.
+`review_recommended` drives triage. The older deprecated `lemma_known` property is
+an alias of `lemma_resolved`; new code should use the explicit fields.
 
 Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, and
 `parse`: which then returns **UD relations** (`nsubj`, `obj`, `advcl`, …) with the

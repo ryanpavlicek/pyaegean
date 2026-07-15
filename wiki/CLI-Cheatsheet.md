@@ -773,7 +773,7 @@ aegean data store                                 # store path + contents (overr
 
 There are **two** caches: this **data** download store (`aegean data store`,
 permanent until `aegean data remove`, override with `PYAEGEAN_CACHE`; `aegean data
-cache` remains a deprecated alias this minor) and the opt-in **analysis**
+cache` is an older deprecated alias) and the opt-in **analysis**
 memoization cache
 (`aegean cache`, enabled with `PYAEGEAN_ANALYSIS_CACHE=1`). Licensing details are
 on [Data & Provenance](Data-and-Provenance).

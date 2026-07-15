@@ -60,7 +60,7 @@ interop = ["spacy>=3.8.13", "stanza>=1.13.0", "cltk>=2.5.1; python_version >= '3
 cli = ["typer>=0.16", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean` command-line interface (+ `aegean repl`); typer>=0.16: first compatible with click>=8.2
 mcp = ["mcp>=1.2"]                 # the `aegean-mcp` Model Context Protocol server; >=1.2: mcp.server.fastmcp
 tui = ["textual>=8.0", "typer>=0.16", "rich>=13", "prompt_toolkit>=3.0"]  # the `aegean tui` terminal UI (Textual); `aegean tui` is a CLI subcommand, so the CLI deps ride along
-dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.2.2", "typer>=0.16", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.2", "textual>=8.0", "griffelib>=2.0.2"]  # griffelib: the `griffe` static analyzer behind scripts/check_api.py (dev-only, never a runtime extra)
+dev = ["pytest>=8", "pytest-cov", "hypothesis", "mypy", "ruff", "build", "twine", "nbmake", "ipykernel", "pandas>=2.2.2", "typer>=0.16", "rich>=13", "prompt_toolkit>=3.0", "lxml>=5.0", "matplotlib>=3.8", "mcp>=1.2", "textual>=8.0", "griffelib>=2.0.2"]  # griffelib: static validation of the reviewed current API facade (dev-only, never a runtime extra)
 docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.26"]  # API reference (mkdocs → GitHub Pages); build-time only
 all = ["pyaegean[ai,epidoc,geo,data,cli,viz,mcp,tui,neural]"]
 
