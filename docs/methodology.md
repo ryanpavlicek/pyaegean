@@ -193,10 +193,20 @@ checked by full and punctuation-stripped NFC form tuples against all three train
 sources. This catches both cross-repository work copies and sentence copies under
 different provenance paths.
 
-The development fold is used for early stopping, checkpoint selection, schedule
+Development material is used for early stopping, checkpoint selection, schedule
 decisions, calibration, and export or quantization gates. A locked test fold is
 not used to choose an architecture or threshold. The finished candidate is then
 measured under the recorded protocol.
+
+Successor-model selection uses the checked-in multi-domain development manifest rather
+than the historical v3 script's single `(LAS + lemma) / 2` field. A content-addressed gate
+declares the exact decoder, protected task/source slices, target weights, operational limits,
+promotion floor, and deterministic tie breakers before training. It gives Perseus and
+PapyGreek equal total target weight and permits at most 0.01 percentage point of regression
+on any protected development value. The selector requires the actual manifest, recomputes
+scores from verified item counts, and rejects mismatched or unavailable evidence. It never
+runs inference or reads a locked test fold; the final locked matrix remains a one-shot release
+measurement after the candidate is frozen.
 
 The pure-Python treebank baseline has a different epistemic status: its AGDT
 lookup data includes the source of the UD Perseus test material. Its Perseus
@@ -292,6 +302,10 @@ implementation used by package inference. Export validates those checkpoint fiel
 against the serialized tokenizer, requires a new model and asset identity, and writes
 a content-addressed schema-1 manifest for each exported graph variant. The published
 `grc-joint-v3` artifact retains its exact legacy manifest, behavior, and measurements.
+
+Completed successor-model training receipts also bind the exact declarative selection-gate
+file and its canonical digest. This keeps the policy that selected a checkpoint attached to
+the run instead of leaving it as an editable score hidden in a training script.
 
 ## Aegean-script analysis
 

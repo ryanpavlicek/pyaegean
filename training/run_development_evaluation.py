@@ -462,7 +462,7 @@ def _build_run(*, environment_sha256: str, prediction_sha256: str, git_revision:
             "tasks": ["parsing", "tagging"],
         },
         "decoder": {
-            "identity": "aegean.greek.ud.pipeline_conllu",
+            "identity": "pyaegean-release-single-root-mst-v1",
             "mode": "sequential",
             "long_input": "windowed",
         },

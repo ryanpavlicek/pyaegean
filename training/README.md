@@ -79,6 +79,40 @@ and development reports remain private and gitignored; only the source manifest 
 This freezes an auditable gate population without turning development performance into a
 published benchmark claim.
 
+## Declarative candidate selection
+
+`model-selection-gate-v1.json` replaces an implicit checkpoint score with a frozen,
+content-addressed policy for successor-model experiments. It is bound to the checked-in
+development manifest and requires the package's sequential, complete-window, single-root MST
+decoder. The reference policy protects UPOS, XPOS, UFeats, lemma, UAS, LAS, and CLAS globally
+and on both available sources, plus OOV lemma behavior. Each protected value may fall no more
+than 0.01 percentage point below its baseline. Literary Perseus and documentary PapyGreek each
+receive half of the target weight, so a gain on the larger source cannot silently erase a loss
+on the smaller one.
+
+`model_selection.py` consumes the actual verified manifest, one baseline descriptor, and one
+or more candidate descriptors. Each descriptor embeds a verified development report and binds
+the selection-gate and completed training-receipt digests plus measurements under the gate's
+named operational profile. The selector recomputes every score from integer item counts,
+rejects manifest/decoder/profile mismatches and hard regressions, forms Pareto fronts across
+all target task/source values, then applies only the recorded deterministic tie breakers. It
+does not load a model, run inference, or inspect a locked test fold.
+
+```bash
+python training/model_selection.py \
+    --gate training/model-selection-gate-v1.json \
+    --manifest training/results/development-source-manifest.json \
+    --baseline training/out/selection/baseline.json \
+    --candidate training/out/selection/candidate-seed-1.json \
+    --candidate training/out/selection/candidate-seed-2.json \
+    --output training/out/selection/result.json
+```
+
+The output records every rejection and the deterministic ranking under the exact gate digest;
+it remains development-only evidence. The old `(LAS + lemma) / 2` local field in
+`train_full.py` belongs to the historical v3 recipe and is not a valid successor-model
+selection or release gate.
+
 ## Shared preprocessing contract
 
 Candidate joint checkpoints use the dependency-free
@@ -196,22 +230,27 @@ python training/a17_colab.py reviewed-summary \
 
 The exact schemas are `contracts/environment-lock.schema.json`,
 `contracts/resolver-manifest.schema.json`, `contracts/preflight.schema.json`,
-`contracts/run-receipt.schema.json`, `contracts/backbone-resolution.schema.json`, and
-`contracts/evidence-summary.schema.json`. `reproducibility.py` supplies canonical hashing,
+`contracts/run-receipt.schema.json`, `contracts/run-receipt-v2.schema.json`,
+`contracts/model-selection-gate.schema.json`, `contracts/backbone-resolution.schema.json`,
+and `contracts/evidence-summary.schema.json`. `reproducibility.py` supplies canonical hashing,
 repository-relative file records, resolver normalization, capture/promotion, package/Git and
 CUDA metadata capture, completed-receipt construction, and offline verification. A validated
 lock requires a complete evidence-bound training closure or full environment. A completed
 receipt must record the identical inventory, a clean repository commit, exact backbone and
-corpus commits, command/config/seed, generated-data/output hashes, and allocated hardware.
+corpus commits, command/config/seed, generated-data/output hashes, allocated hardware, and the
+selection gate's file and canonical digest. New model-training receipts use schema 2. Schema 1
+remains readable only for the already-reviewed inference-free environment fixture.
 
 ## Running
 
 The `training/` scripts are not in the wheel, so clone the repo and run them from the
 clone. Training runs on a single GPU (the scripts auto-detect bf16/fp16); datasets fetch
-the AGDT and UD folds to the cache on first build. The commands below describe the legacy
-stage flow; they are not compliant with the reproducibility contract until the orchestrating
-script or notebook reads `backbone.revision` from the lock and passes it to every
-`from_pretrained` call.
+the AGDT and UD folds to the cache on first build. The commands below describe the historical
+v3 stage flow only. They are not the v4 orchestration and are not compliant with the current
+reproducibility and selection contracts until an orchestrating script or notebook reads
+`backbone.revision` from the lock, passes it to every `from_pretrained` call, writes a schema-2
+training receipt, and applies the frozen development gate. The test command is shown only to
+reproduce the historical recipe; a new candidate must not use a locked test fold for selection.
 
 ```bash
 # The candidate direct versions in the template are not yet a runnable environment lock.

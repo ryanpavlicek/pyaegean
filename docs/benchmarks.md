@@ -59,12 +59,13 @@ narrow interval means the number is stable, not a lucky fold.
   gaps (e.g. the AGDT scheme has no PROPN/SCONJ on the PROIEL fold's conventions) count
   against pyaegean here, unlike `greek.evaluate_on_proiel`, which reconciles tagsets to
   isolate real errors.
-- **Train / dev / test discipline.** Training is the AGDT minus the UD-Perseus dev+test
-  exclusion manifest. The **dev** fold (the AGDT sentences behind UD-Perseus dev) is used for
-  early stopping, checkpoint selection, light schedule tuning (epochs / lr), and the
-  quantization gate (weight-only int8 + fp16 leaves measured scores unchanged; full int8 activations are
-  rejected there, see below); the **test** folds are scored once on the finished model and never used
-  for any selection. Full protocol in `training/README.md`.
+- **Train / dev / test discipline.** The shipped v3 recipe trained on AGDT minus the
+  UD-Perseus dev+test exclusion manifest and used the AGDT sentences behind UD-Perseus dev for
+  early stopping, checkpoint selection, light schedule tuning, and its quantization gate.
+  Successor experiments use the frozen, leakage-audited Perseus/PapyGreek development manifest
+  and a declarative seven-task, source-balanced gate; they do not use any locked test fold for
+  selection. Test folds are scored once on the finished candidate. Full protocol in
+  `training/README.md`.
 - **Lemma scoring.** On the UD folds, lemmas use the evaluator's exact string match with
   **no** added normalization: the UD-Ancient-Greek gold is already NFC and carries no
   homograph-index digits, so none is stripped, and there is no case- or diacritic-folding.

@@ -139,9 +139,24 @@ convention, cross-tool comparisons stay in the benchmarks doc).
   `evaluate_on_proiel`) apply a light clean-up (NFC plus homograph-digit
   stripping) because those golds are not pre-normalized.
 - **Train / dev / test discipline.** Training is the leakage-clean corpus (below).
-  The **dev** fold is used for early stopping, checkpoint selection, light
+  The **dev** material is used for early stopping, checkpoint selection, light
   schedule tuning, and the quantization gate; the **test** folds are scored once
   on the finished model and never used for any selection.
+
+### How successor checkpoints are selected
+
+The historical v3 training script kept a local average of LAS and lemma accuracy. Future
+successor experiments instead use one frozen, machine-readable selection policy over the
+leakage-checked Perseus and PapyGreek development sources. The policy names the exact release
+decoder, protects all seven reported tasks globally and by source plus OOV lemma behavior,
+and gives the literary and documentary sources equal total weight. No protected development
+value may fall more than 0.01 percentage point below its baseline.
+
+The selector verifies the real source manifest and each candidate's report, recomputes scores
+from integer counts, rejects missing or mismatched evidence, and ranks surviving candidates by
+Pareto fronts and declared deterministic tie breakers. This is development-only work: the
+selector neither runs a model nor sees a locked test fold. The locked tests remain a one-shot
+measurement only after the complete candidate has been frozen.
 
 ### What the metrics mean
 
@@ -311,6 +326,9 @@ those fields against the serialized tokenizer. The exporter requires a distinct
 model identity, refuses stale or foreign output files, and binds every required
 artifact in a schema-1 content manifest. The published `grc-joint-v3` archive keeps
 its legacy manifest, behavior, and measurements unchanged.
+
+Each successor training receipt binds the exact selection-policy file and digest, so the
+checkpoint cannot be separated from the rule that selected it.
 
 ### The quantization discipline
 

@@ -26,7 +26,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Mapping, Sequence
 
 ENVIRONMENT_LOCK_FORMAT = "pyaegean-training-environment-lock/1"
-RUN_RECEIPT_FORMAT = "pyaegean-training-run-receipt/1"
+LEGACY_RUN_RECEIPT_FORMAT = "pyaegean-training-run-receipt/1"
+RUN_RECEIPT_FORMAT = "pyaegean-training-run-receipt/2"
 PREFLIGHT_FORMAT = "pyaegean-training-preflight/1"
 RESOLVER_MANIFEST_FORMAT = "pyaegean-training-resolver-manifest/1"
 
@@ -920,6 +921,13 @@ def _validate_git_source(value: Any, context: str, *, include_name: bool) -> Non
     _commit(source["commit"], f"{context}.commit")
 
 
+def _validate_selection_gate_binding(value: Any, context: str) -> None:
+    binding = _expect_mapping(value, context)
+    _expect_keys(binding, required={"config", "gate_sha256"}, context=context)
+    _validate_file_record(binding["config"], f"{context}.config")
+    _sha256(binding["gate_sha256"], f"{context}.gate_sha256")
+
+
 def validate_run_receipt(
     receipt: Mapping[str, Any],
     *,
@@ -930,24 +938,30 @@ def validate_run_receipt(
     """Validate a completed training receipt and optionally bind it to its lock."""
 
     receipt = _expect_mapping(receipt, "run receipt")
+    receipt_format = receipt.get("format")
+    if receipt_format not in {LEGACY_RUN_RECEIPT_FORMAT, RUN_RECEIPT_FORMAT}:
+        raise ContractError(f"unsupported run receipt format: {receipt_format!r}")
+    required_fields = {
+        "format",
+        "run",
+        "repository",
+        "environment",
+        "backbone",
+        "corpora",
+        "datasets",
+        "outputs",
+        "hardware",
+        "receipt_sha256",
+    }
+    if receipt_format == RUN_RECEIPT_FORMAT:
+        required_fields.add("selection_gate")
     _expect_keys(
         receipt,
-        required={
-            "format",
-            "run",
-            "repository",
-            "environment",
-            "backbone",
-            "corpora",
-            "datasets",
-            "outputs",
-            "hardware",
-            "receipt_sha256",
-        },
+        required=required_fields,
         context="run receipt",
     )
-    if receipt["format"] != RUN_RECEIPT_FORMAT:
-        raise ContractError(f"unsupported run receipt format: {receipt['format']!r}")
+    if receipt_format == RUN_RECEIPT_FORMAT:
+        _validate_selection_gate_binding(receipt["selection_gate"], "run receipt.selection_gate")
 
     run = _expect_mapping(receipt["run"], "run receipt.run")
     _expect_keys(
@@ -1155,22 +1169,30 @@ def build_run_receipt(
     datasets: Sequence[Mapping[str, Any]],
     outputs: Sequence[Mapping[str, Any]],
     hardware: Mapping[str, Any],
+    selection_gate: Mapping[str, Any] | None = None,
     environment_lock: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build and validate one immutable completed-run receipt."""
+    """Build one immutable receipt.
 
+    Model-training runs supply ``selection_gate`` and emit schema 2.  Omitting it
+    emits schema 1 only for the existing A17 inference-free environment fixture.
+    """
+
+    payload: dict[str, Any] = {
+        "format": RUN_RECEIPT_FORMAT if selection_gate is not None else LEGACY_RUN_RECEIPT_FORMAT,
+        "run": dict(run),
+        "repository": dict(repository),
+        "environment": dict(environment),
+        "backbone": dict(backbone),
+        "corpora": [dict(item) for item in corpora],
+        "datasets": [dict(item) for item in datasets],
+        "outputs": [dict(item) for item in outputs],
+        "hardware": dict(hardware),
+    }
+    if selection_gate is not None:
+        payload["selection_gate"] = dict(selection_gate)
     receipt = stamp_document(
-        {
-            "format": RUN_RECEIPT_FORMAT,
-            "run": dict(run),
-            "repository": dict(repository),
-            "environment": dict(environment),
-            "backbone": dict(backbone),
-            "corpora": [dict(item) for item in corpora],
-            "datasets": [dict(item) for item in datasets],
-            "outputs": [dict(item) for item in outputs],
-            "hardware": dict(hardware),
-        },
+        payload,
         "receipt_sha256",
     )
     validate_run_receipt(receipt, environment_lock=environment_lock)
@@ -1183,6 +1205,19 @@ def verify_receipt_files(receipt: Mapping[str, Any], *, root: Path | str) -> Non
     validate_run_receipt(receipt)
     verify_file_record(receipt["environment"]["lock"], root=root)
     verify_file_record(receipt["run"]["config"], root=root)
+    if receipt["format"] == RUN_RECEIPT_FORMAT:
+        binding = receipt["selection_gate"]
+        verify_file_record(binding["config"], root=root)
+        gate_path = Path(root).resolve() / PurePosixPath(binding["config"]["path"])
+        gate = load_json_document(gate_path)
+        if gate.get("format") != "pyaegean-model-selection-gate/1":
+            raise ContractError("selection gate file uses an unknown format")
+        if gate.get("claim_status") != "development-only-not-published":
+            raise ContractError("selection gate file has an invalid claim status")
+        embedded = _sha256(gate.get("gate_sha256"), "selection gate file.gate_sha256")
+        actual = document_sha256(gate, "gate_sha256")
+        if embedded != actual or embedded != binding["gate_sha256"]:
+            raise ContractError("run receipt selection gate digest differs from its config")
     for field in ("datasets", "outputs"):
         for record in receipt[field]:
             verify_file_record(record, root=root)
@@ -1672,6 +1707,7 @@ def write_json_document(path: Path | str, document: Mapping[str, Any]) -> None:
 __all__ = [
     "ContractError",
     "ENVIRONMENT_LOCK_FORMAT",
+    "LEGACY_RUN_RECEIPT_FORMAT",
     "PREFLIGHT_FORMAT",
     "RESOLVER_MANIFEST_FORMAT",
     "RUN_RECEIPT_FORMAT",

@@ -1,0 +1,68 @@
+{
+  "format": "pyaegean-model-selection-gate/1",
+  "gate_id": "greek-joint-multidomain-reference-v1",
+  "claim_status": "development-only-not-published",
+  "development_manifest_sha256": "ae6f511c8d75cb7a7dca397006298518bafb59dfb06174c9a768aed4ba74c4c8",
+  "decoder": {
+    "identity": "pyaegean-release-single-root-mst-v1",
+    "mode": "sequential",
+    "long_input": "windowed"
+  },
+  "protected_metrics": [
+    {"metric": "upos", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "xpos", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "ufeats", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "lemma", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "uas", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "las", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "clas", "slice": "aggregate", "max_regression": 0.0001},
+    {"metric": "upos", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "xpos", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "ufeats", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "lemma", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "uas", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "las", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "clas", "slice": "source:perseus", "max_regression": 0.0001},
+    {"metric": "upos", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "xpos", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "ufeats", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "lemma", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "uas", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "las", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "clas", "slice": "source:papygreek", "max_regression": 0.0001},
+    {"metric": "lemma", "slice": "oov", "max_regression": 0.0001}
+  ],
+  "target_metrics": [
+    {"metric": "upos", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "xpos", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "ufeats", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "lemma", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "uas", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "las", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "clas", "slice": "source:perseus", "weight": 0.07142857142857142},
+    {"metric": "upos", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "xpos", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "ufeats", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "lemma", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "uas", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "las", "slice": "source:papygreek", "weight": 0.07142857142857142},
+    {"metric": "clas", "slice": "source:papygreek", "weight": 0.07142857142857142}
+  ],
+  "operational_limits": {
+    "profile_id": "pyaegean-cpu-sequential-100-token-v1",
+    "max_artifact_size_bytes": 1000000000,
+    "max_latency_ms_per_100_tokens": 10000.0
+  },
+  "promotion": {
+    "minimum_weighted_target_gain": 0.0,
+    "require_pareto_non_dominated": true
+  },
+  "tie_breaking": [
+    {"field": "weighted_target_gain", "direction": "descending"},
+    {"field": "worst_protected_delta", "direction": "descending"},
+    {"field": "latency_ms_per_100_tokens", "direction": "ascending"},
+    {"field": "artifact_size_bytes", "direction": "ascending"},
+    {"field": "candidate_id", "direction": "ascending"}
+  ],
+  "gate_sha256": "c40f454c97f7c08138a125796bb5187a79dc67ab65647e81c6287311de319e07"
+}

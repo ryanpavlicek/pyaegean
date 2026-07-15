@@ -4,6 +4,26 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.54.0 (2026-07-15)
+
+### Added
+
+- Successor-model experiments now use a versioned, content-addressed selection gate over the
+  frozen Perseus/PapyGreek development manifest. The gate protects all seven reported tasks
+  globally and by source, protects OOV lemma behavior, balances the two source domains, and
+  records operational limits and deterministic Pareto tie breakers.
+- Candidate selection requires the actual verified development manifest, recomputes scores
+  from integer item counts, rejects mismatched or unavailable evidence, and independently
+  verifies the saved decision and ranking without model inference or locked-test access.
+- Completed model-training receipts use schema 2 and bind the exact selection-gate file and
+  digest. The reviewed inference-free environment fixture remains verifiable under schema 1.
+
+### Changed
+
+- The frozen reference gate permits at most 0.01 percentage point below baseline on each
+  protected development value and requires non-negative weighted target gain. Historical v3
+  scripts, model identity, runtime asset, defaults, and published measurements are unchanged.
+
 ## 0.53.0 (2026-07-15)
 
 ### Added

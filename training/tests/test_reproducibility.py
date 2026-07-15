@@ -117,14 +117,17 @@ def _validated_lock(
     return repro.promote_environment_lock(captured, _successful_preflight(captured))
 
 
-def _materialize_run(tmp_path: Path) -> tuple[dict, Path, dict]:
+def _materialize_run(
+    tmp_path: Path, *, with_selection_gate: bool = False
+) -> tuple[dict, Path, dict]:
     manifest = _resolver_manifest()
     manifest_path = tmp_path / "training" / "out" / "resolver-manifest.json"
     lock_path = tmp_path / "training" / "environment-lock.json"
     config_path = tmp_path / "training" / "run-config.json"
     dataset_path = tmp_path / "training" / "data" / "full.jsonl"
     output_path = tmp_path / "training" / "out" / "weights.safetensors"
-    for path in (manifest_path, lock_path, config_path, dataset_path, output_path):
+    gate_path = tmp_path / "training" / "model-selection-gate-v1.json"
+    for path in (manifest_path, lock_path, config_path, dataset_path, output_path, gate_path):
         path.parent.mkdir(parents=True, exist_ok=True)
     repro.write_json_document(manifest_path, manifest)
     resolver_file = repro.file_record(manifest_path, root=tmp_path)
@@ -133,6 +136,10 @@ def _materialize_run(tmp_path: Path) -> tuple[dict, Path, dict]:
     config_path.write_text('{"epochs":4,"seed":7}\n', encoding="utf-8")
     dataset_path.write_text('{"forms":["λόγος"]}\n', encoding="utf-8")
     output_path.write_bytes(b"fixed artifact bytes")
+    gate = json.loads(
+        (TRAINING / "model-selection-gate-v1.json").read_text(encoding="utf-8")
+    )
+    repro.write_json_document(gate_path, gate)
 
     receipt = repro.build_run_receipt(
         run={
@@ -181,6 +188,14 @@ def _materialize_run(tmp_path: Path) -> tuple[dict, Path, dict]:
             "compute_capability": lock["accelerator"]["frozen"]["compute_capabilities"][0],
             "precision": lock["accelerator"]["frozen"]["precision"],
         },
+        selection_gate=(
+            {
+                "config": repro.file_record(gate_path, root=tmp_path),
+                "gate_sha256": gate["gate_sha256"],
+            }
+            if with_selection_gate
+            else None
+        ),
         environment_lock=lock,
     )
     return receipt, output_path, lock
@@ -190,8 +205,11 @@ def test_contract_schemas_are_committed_json_documents() -> None:
     environment = json.loads(
         (TRAINING / "contracts" / "environment-lock.schema.json").read_text(encoding="utf-8")
     )
-    receipt = json.loads(
+    legacy_receipt = json.loads(
         (TRAINING / "contracts" / "run-receipt.schema.json").read_text(encoding="utf-8")
+    )
+    receipt = json.loads(
+        (TRAINING / "contracts" / "run-receipt-v2.schema.json").read_text(encoding="utf-8")
     )
     resolver = json.loads(
         (TRAINING / "contracts" / "resolver-manifest.schema.json").read_text(encoding="utf-8")
@@ -201,6 +219,7 @@ def test_contract_schemas_are_committed_json_documents() -> None:
     )
     assert environment["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert environment["properties"]["format"]["const"] == repro.ENVIRONMENT_LOCK_FORMAT
+    assert legacy_receipt["properties"]["format"]["const"] == repro.LEGACY_RUN_RECEIPT_FORMAT
     assert receipt["properties"]["format"]["const"] == repro.RUN_RECEIPT_FORMAT
     assert resolver["properties"]["format"]["const"] == repro.RESOLVER_MANIFEST_FORMAT
     assert preflight["properties"]["format"]["const"] == repro.PREFLIGHT_FORMAT
@@ -291,6 +310,7 @@ def test_file_records_are_relative_and_detect_changed_bytes(tmp_path: Path) -> N
 
 def test_run_receipt_binds_lock_inputs_outputs_and_hardware(tmp_path: Path) -> None:
     receipt, output_path, lock = _materialize_run(tmp_path)
+    assert receipt["format"] == repro.LEGACY_RUN_RECEIPT_FORMAT
     assert receipt["receipt_sha256"] == repro.document_sha256(receipt, "receipt_sha256")
     repro.validate_run_receipt(receipt, environment_lock=lock)
     repro.verify_receipt_files(receipt, root=tmp_path)
@@ -298,6 +318,23 @@ def test_run_receipt_binds_lock_inputs_outputs_and_hardware(tmp_path: Path) -> N
     output_path.write_bytes(b"changed artifact")
     with pytest.raises(repro.ContractError, match="mismatch"):
         repro.verify_receipt_files(receipt, root=tmp_path)
+
+
+def test_training_run_receipt_binds_the_predeclared_selection_gate(tmp_path: Path) -> None:
+    receipt, _, lock = _materialize_run(tmp_path, with_selection_gate=True)
+    assert receipt["format"] == repro.RUN_RECEIPT_FORMAT
+    assert receipt["selection_gate"]["gate_sha256"] == (
+        "c40f454c97f7c08138a125796bb5187a79dc67ab65647e81c6287311de319e07"
+    )
+    repro.validate_run_receipt(receipt, environment_lock=lock)
+    repro.verify_receipt_files(receipt, root=tmp_path)
+
+    divergent = copy.deepcopy(receipt)
+    divergent["selection_gate"]["gate_sha256"] = "f" * 64
+    divergent = repro.stamp_document(divergent, "receipt_sha256")
+    repro.validate_run_receipt(divergent, environment_lock=lock)
+    with pytest.raises(repro.ContractError, match="selection gate digest"):
+        repro.verify_receipt_files(divergent, root=tmp_path)
 
 
 def test_run_receipt_rejects_dirty_or_lock_divergent_runs(tmp_path: Path) -> None:

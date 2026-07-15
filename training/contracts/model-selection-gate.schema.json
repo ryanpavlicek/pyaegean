@@ -1,0 +1,124 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/model-selection-gate-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "claim_status": {"const": "development-only-not-published"},
+    "decoder": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {"minLength": 1, "type": "string"},
+        "long_input": {"const": "windowed"},
+        "mode": {"const": "sequential"}
+      },
+      "required": ["identity", "mode", "long_input"],
+      "type": "object"
+    },
+    "development_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "format": {"const": "pyaegean-model-selection-gate/1"},
+    "gate_id": {"minLength": 1, "type": "string"},
+    "gate_sha256": {"$ref": "#/$defs/sha256"},
+    "operational_limits": {
+      "additionalProperties": false,
+      "properties": {
+        "max_artifact_size_bytes": {"minimum": 1, "type": "integer"},
+        "max_latency_ms_per_100_tokens": {"exclusiveMinimum": 0, "type": "number"},
+        "profile_id": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "profile_id",
+        "max_artifact_size_bytes",
+        "max_latency_ms_per_100_tokens"
+      ],
+      "type": "object"
+    },
+    "promotion": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum_weighted_target_gain": {"type": "number"},
+        "require_pareto_non_dominated": {"const": true}
+      },
+      "required": ["minimum_weighted_target_gain", "require_pareto_non_dominated"],
+      "type": "object"
+    },
+    "protected_metrics": {
+      "items": {"$ref": "#/$defs/protectedMetric"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "target_metrics": {
+      "items": {"$ref": "#/$defs/targetMetric"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "tie_breaking": {
+      "items": {"$ref": "#/$defs/tieBreak"},
+      "maxItems": 5,
+      "minItems": 5,
+      "type": "array"
+    }
+  },
+  "required": [
+    "format",
+    "gate_id",
+    "claim_status",
+    "development_manifest_sha256",
+    "decoder",
+    "protected_metrics",
+    "target_metrics",
+    "operational_limits",
+    "promotion",
+    "tie_breaking",
+    "gate_sha256"
+  ],
+  "title": "pyaegean declarative model-selection gate",
+  "type": "object",
+  "$defs": {
+    "metric": {
+      "enum": ["upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"],
+      "type": "string"
+    },
+    "protectedMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "max_regression": {"maximum": 1, "minimum": 0, "type": "number"},
+        "metric": {"$ref": "#/$defs/metric"},
+        "slice": {"minLength": 1, "type": "string"}
+      },
+      "required": ["metric", "slice", "max_regression"],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "targetMetric": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {"$ref": "#/$defs/metric"},
+        "slice": {"minLength": 1, "type": "string"},
+        "weight": {"exclusiveMinimum": 0, "type": "number"}
+      },
+      "required": ["metric", "slice", "weight"],
+      "type": "object"
+    },
+    "tieBreak": {
+      "additionalProperties": false,
+      "properties": {
+        "direction": {"enum": ["ascending", "descending"], "type": "string"},
+        "field": {
+          "enum": [
+            "weighted_target_gain",
+            "worst_protected_delta",
+            "artifact_size_bytes",
+            "latency_ms_per_100_tokens",
+            "candidate_id"
+          ],
+          "type": "string"
+        }
+      },
+      "required": ["field", "direction"],
+      "type": "object"
+    }
+  }
+}
