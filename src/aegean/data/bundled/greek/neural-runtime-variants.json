@@ -1,0 +1,47 @@
+{
+  "format": "pyaegean-neural-runtime-variants/1",
+  "default_variant": "default",
+  "variants": [
+    {
+      "label": "default",
+      "availability": "available",
+      "model_id": "grc-joint-v3",
+      "dataset": "grc-joint",
+      "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+      "bundle_manifest_sha256": "db17b79df0a88d927870a708ecd666f3afdfd5cd890302854cab700b581ade5b",
+      "award_sha256": null,
+      "qualification_sha256": null
+    },
+    {
+      "label": "fast",
+      "availability": "reserved",
+      "model_id": null,
+      "dataset": null,
+      "asset_sha256": null,
+      "bundle_manifest_sha256": null,
+      "award_sha256": null,
+      "qualification_sha256": null
+    },
+    {
+      "label": "compact",
+      "availability": "reserved",
+      "model_id": null,
+      "dataset": null,
+      "asset_sha256": null,
+      "bundle_manifest_sha256": null,
+      "award_sha256": null,
+      "qualification_sha256": null
+    },
+    {
+      "label": "balanced",
+      "availability": "reserved",
+      "model_id": null,
+      "dataset": null,
+      "asset_sha256": null,
+      "bundle_manifest_sha256": null,
+      "award_sha256": null,
+      "qualification_sha256": null
+    }
+  ],
+  "registry_sha256": "0d20622e2f9f3743c253bbaa7c18873f31aea0cda636930f361affc7ca6c3e63"
+}

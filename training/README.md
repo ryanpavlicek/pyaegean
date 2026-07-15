@@ -134,7 +134,7 @@ resident memory, runtime versions, and the active provider. CPU is mandatory. CU
 installed; an absent optional provider is recorded without failing, while an installed provider
 must run and remain inside the same decoded-output limit. The absolute size, latency, and memory
 ceilings are safeguards, not performance claims. In particular, weight-only quantization is not
-called fast merely because it is smaller; later variant labels require separate evidence.
+called fast merely because it is smaller; runtime labels require the separate award below.
 
 Reference and candidate preprocessing/output contracts must match. Runtime evidence is bound to
 the report's model identity and complete artifact digest, and optimization additionally requires
@@ -170,6 +170,32 @@ python training/quantize_grc_joint.py \
 
 The source paths and content-addressed prediction filename are examples; use the exact private
 artifacts emitted by the frozen run.
+
+## Runtime variant awards
+
+`runtime-variant-policy-v1.json` freezes the operational meaning of `fast`, `compact`, and
+optional `balanced`; `default` is the release-selected artifact and makes no speed or size
+claim. `runtime_variant_award.py` accepts only a passing `optimization` qualification and
+the exact complete-CPU operational records bound to it. It checks artifact identity, manifest,
+development population, provider, environment, repetition count, and every label threshold,
+then writes a deterministic content-addressed award.
+
+```bash
+python training/runtime_variant_award.py \
+    --label compact \
+    --qualification training/out/qualification/candidate/qualification-report.json \
+    --reference-operational training/out/reference/operational-evidence.json \
+    --candidate-operational training/out/qualification/candidate/operational-evidence.json \
+    --output training/out/qualification/candidate/compact-award.json
+```
+
+`compact` uses one deterministic size pair. `fast` and `balanced` require exactly five
+same-environment records for both reference and candidate, supplied by repeating the two
+operational options. The tool emits operational summaries and hashes, not development task
+scores, predictions, rejected artifacts, or raw timing series. A report does not activate a
+label by itself: a released artifact must also receive its own immutable dataset key and asset
+pin, and the package registry must bind the exact qualification, award, bundle, and asset
+digests. Until then, `fast`, `compact`, and `balanced` remain reserved and unavailable.
 
 ## Shared preprocessing contract
 

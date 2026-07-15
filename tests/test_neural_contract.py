@@ -283,6 +283,11 @@ def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
         def __init__(self) -> None:
             self.manifest = manifest
             self._sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
+            self.runtime_variant = SimpleNamespace(
+                label="default",
+                award_sha256="c" * 64,
+                qualification_sha256="d" * 64,
+            )
 
         def _receipt(self, **_status: object) -> AnalysisReceipt:
             return AnalysisReceipt.create(
@@ -294,13 +299,17 @@ def test_activation_can_recreate_the_exact_runtime_from_a_receipt(
             )
 
     candidate = Candidate()
+    selected = joint._resolve_neural_variant("default")
     monkeypatch.setattr(joint, "_require_neural_extra", lambda: None)
     monkeypatch.setattr(
         joint,
         "versions",
         lambda: {
             "fetched": {
-                "grc-joint": {"sha256": "", "sha256_enforced": False}
+                "grc-joint": {
+                    "sha256": selected.asset_sha256,
+                    "sha256_enforced": True,
+                }
             }
         },
     )

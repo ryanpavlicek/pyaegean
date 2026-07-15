@@ -4,6 +4,33 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.56.0 (2026-07-15)
+
+### Added
+
+- Neural runtime selection now has four stable labels: `default`, `fast`, `compact`, and
+  `balanced`. `neural_variant()` / `neural_variants()`,
+  `use_neural_pipeline(variant=...)`, and `GreekPipeline.neural(variant=...)` expose exact,
+  dependency-free artifact and evidence identities without fetching a model.
+- A content-addressed runtime-label policy and verifier award `compact`, `fast`, or `balanced`
+  only from a passing artifact qualification and exact same-environment operational records.
+  Public award reports contain operational summaries and hashes, never development task scores,
+  predictions, rejected artifacts, or raw timing series.
+- Greek CLI neural commands accept `--neural-variant`; translation accepts
+  `--greek-backend neural --greek-variant LABEL`. Saved neural configuration and analysis
+  receipts bind the label, registry, bundle, qualification, and award identities.
+
+### Changed
+
+- `default` remains the exact published `grc-joint-v3` artifact and makes no performance claim.
+  The other three labels are reserved and unavailable until qualified successor artifacts exist;
+  unavailable requests fail before dependency probing, network access, or cache mutation and
+  never fall back. Variants with different artifact bytes must use distinct cache keys.
+- `GreekPipelineConfig` uses schema 2 and `AnalysisReceipt` uses schema 4 for production neural
+  provenance. Receipt schemas 1 through 3 remain readable for current hosted evidence without
+  fabricating missing variant fields. No model, default, release asset, benchmark evidence, or
+  published accuracy number changed, and no neural inference or locked-fold evaluation ran.
+
 ## 0.55.0 (2026-07-15)
 
 ### Added
@@ -23,7 +50,8 @@ All notable changes to pyaegean are documented here. The format follows
   and private reference evidence, and neither assumes that a smaller artifact is faster.
 - Development runs can bind a caller-supplied candidate artifact identity while the default v3
   runner remains unchanged. The published `grc-joint-v3` asset, defaults, evidence, and benchmark
-  measurements are unchanged; A20 runs no locked test fold and publishes no development scores.
+  measurements are unchanged; artifact qualification reads no locked test fold and publishes no
+  development scores.
 - The local release gate passes 4,028 tests with 18 expected skips and 5 known warnings, strict
   documentation, Ruff, strict mypy, public-API/import/footprint checks, all four notebooks, live
   asset integrity, build/Twine, and the unchanged 4,849 KB/224-file wheel.

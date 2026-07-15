@@ -345,8 +345,9 @@ below, and [Recipe 26](Recipes#26--choose-a-greek-ai-translation-workflow) for
 choosing a mode.
 
 The hybrid wrapper can use the **module-level default facade** for compatibility or an
-explicit isolated `GreekPipeline`. Pass `greek_pipeline=greek.GreekPipeline.neural()` from
-Python, or `--greek-backend neural` on the CLI, for contextual neural morphology and a UD
+explicit isolated `GreekPipeline`. Pass
+`greek_pipeline=greek.GreekPipeline.neural(variant="default")` from Python, or
+`--greek-backend neural --greek-variant default` on the CLI, for contextual neural morphology and a UD
 parse without changing process-global defaults. See
 [Hybrid translation](Translation#which-greek-backend-supplies-the-grounding) for the exact
 flow.
@@ -373,7 +374,8 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags + idiom meanings, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
 | `verify=` / `--verify` | off | Draft the translation first, then check it against the analysis and repair definite errors (a second model call). The analysis only checks the draft, so it cannot bias the initial translation, though a wrong analysis can still mislead the repair; recommended for hard or high-stakes passages. |
 | `glosses=` / `--glosses` / `--no-glosses` | on | Legacy flag, superseded by `mode`; still toggles glosses in `lemma`/`full` modes (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
-| `greek_pipeline=` / `--greek-backend` | module default / `default` | Select the compatibility facade, an isolated baseline, or an isolated neural pipeline. |
+| `greek_pipeline=` / `--greek-backend` | module default / `default` | Select the module-level facade, an isolated baseline, or an isolated neural pipeline. |
+| neural `variant=` / `--greek-variant` | `default` | Select `default`, `fast`, `compact`, or `balanced`; only qualified runtime artifacts are available. |
 | `grounding_failure=` / `--grounding-failure` | `"best-effort"` | Keep and trace available evidence, or use `strict` to stop before a provider call when required grounding fails. |
 | `--trace` | off | Print the grounding provenance under the answer. |
 

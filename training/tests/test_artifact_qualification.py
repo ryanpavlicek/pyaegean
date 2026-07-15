@@ -1,4 +1,4 @@
-"""Correctness, adversarial, and journey tests for A20 artifact qualification."""
+"""Correctness, adversarial, and journey tests for artifact qualification."""
 
 from __future__ import annotations
 

@@ -122,7 +122,7 @@ without silently mixing them with a heuristic splitter.
 | Offline baseline | nothing (the default) | reliable on closed classes and regular paradigms; limited on open-class and irregular forms | none (standard library only) | instant import, fast | every token, fully offline |
 | Treebank lexicon | `greek.use_treebank()` | gold lemmas and features for attested forms | none heavy (one prebuilt index fetch, then cached) | instant after the fetch | attested forms only |
 | Pure-Python trained | `greek.use_tagger()`, then `greek.use_lemmatizer()`, `greek.use_parser()` | generalizes to unseen forms (figures in [Greek NLP](Greek-NLP)) | none heavy (small models fetched, then cached) | fast | open-class and unseen forms |
-| Neural pipeline | `greek.use_neural_pipeline()` | the highest measured on the UD Perseus benchmark (see [Benchmarks](Benchmarks)) | the `[neural]` extra (onnxruntime, no torch) | one model fetch, then CPU inference (throughput in [Greek NLP](Greek-NLP)) | UPOS, UD FEATS, dependency trees, and lemmas from one pass |
+| Neural pipeline | `greek.use_neural_pipeline(variant="default")` | the highest measured on the UD Perseus benchmark (see [Benchmarks](Benchmarks)); only `default` is currently available | the `[neural]` extra (onnxruntime, no torch) | one model fetch, then CPU inference (throughput in [Greek NLP](Greek-NLP)) | UPOS, UD FEATS, dependency trees, and lemmas from one pass |
 | Dictionary registry | `greek.use_lsj()`, `greek.use_dodson()`, `greek.use_lexicon(id)` | curated scholarly dictionaries | none heavy (index fetch; Dodson is bundled, no download) | instant after the fetch | glossing, not tagging |
 | Manual review | `aegean review export` / `apply`, or `greek.annotate_corpus(...)` | as good as the reviewer | none (the `[cli]` extra for the export and apply commands) | human-paced | whatever you choose to check |
 
@@ -131,7 +131,10 @@ test suite that needs configurations to coexist should construct `GreekPipeline(
 isolated baseline or `GreekPipeline.neural()` for an isolated neural runtime. Its immutable
 `config` records the model, tokenizer, profile, normalization, and the backend's
 segmentation contract (for a neural instance, copied from the model manifest), plus
-live execution providers. The baseline's contract is `pyaegean-punctuation-v1`; a
+live execution providers. It also records the runtime label and registry digest. The stable
+`fast`, `compact`, and `balanced` names are reservations, not available alternatives: asking
+for one fails without falling back until a qualified successor earns that label. The baseline's
+contract is `pyaegean-punctuation-v1`; a
 neural instance copies its `pretokenized` value from the model manifest. Neither is
 the document's `sentence_policy`.
 Choose `sentence_policy` on each `analyze()`/`pipeline()` call. `GreekPipeline.from_config(...)`

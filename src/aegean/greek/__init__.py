@@ -123,6 +123,15 @@ from .neural_lemmatizer import (
     disable_neural_lemmatizer,
     use_neural_lemmatizer,
 )
+from .model_variants import (
+    NeuralRuntimeVariant,
+    NeuralVariantError,
+    NeuralVariantLabel,
+    NeuralVariantUnavailableError,
+    neural_variant,
+    neural_variants,
+    variant_registry_sha256,
+)
 from .joint import (
     AnalysisReceipt,
     ModelBundleError,
@@ -575,6 +584,9 @@ __all__ = [
     "eval_receipt",
     "EvalReceipt",
     "use_neural_pipeline",
+    "neural_variant",
+    "neural_variants",
+    "variant_registry_sha256",
     "disable_neural_pipeline",
     "analyze_sentence",
     "analyze_sentences",
@@ -588,6 +600,10 @@ __all__ = [
     "NeuralWindowingError",
     "ReceiptMismatchError",
     "NeuralPipelineNotLoadedError",
+    "NeuralRuntimeVariant",
+    "NeuralVariantLabel",
+    "NeuralVariantError",
+    "NeuralVariantUnavailableError",
     "agdt_ud_overlap",
     "load_proiel_gold",
     "proiel_dir",

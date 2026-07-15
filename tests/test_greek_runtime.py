@@ -19,14 +19,19 @@ from aegean.greek.runtime import (
     _set_default_pipeline,
     default_pipeline,
 )
+from aegean.greek.model_variants import NeuralRuntimeVariant, variant_registry_sha256
 
 
 def _config(*, provider: str = "CPUExecutionProvider") -> GreekPipelineConfig:
     return GreekPipelineConfig(
-        schema_version=1,
+        schema_version=2,
         backend="neural",
         model_id="test-model",
         dataset="test-dataset",
+        runtime_variant="default",
+        variant_registry_sha256=variant_registry_sha256(),
+        variant_award_sha256="c" * 64,
+        qualification_sha256="d" * 64,
         bundle_manifest_sha256="a" * 64,
         tokenizer_revision="b" * 64,
         annotation_profile="test-profile",
@@ -40,7 +45,7 @@ def _config(*, provider: str = "CPUExecutionProvider") -> GreekPipelineConfig:
 class _Backend:
     """Small backend seam with a deterministic identity distinct per instance."""
 
-    def __init__(self, marker: str) -> None:
+    def __init__(self, marker: str, *, variant: str = "default") -> None:
         self.marker = marker
         self.manifest = SimpleNamespace(
             model_id="test-model",
@@ -51,6 +56,11 @@ class _Backend:
             normalization="NFC",
             segmentation="pretokenized",
             preprocessing_version="test-preprocessing-v1",
+        )
+        self.runtime_variant = SimpleNamespace(
+            label=variant,
+            award_sha256="c" * 64,
+            qualification_sha256="d" * 64,
         )
         self._sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
 
@@ -92,7 +102,7 @@ def test_config_is_frozen_and_canonical_round_trip() -> None:
 
 def test_config_rejects_unknown_schema_and_malformed_keys() -> None:
     raw = _config().to_dict()
-    raw["schema_version"] = 2
+    raw["schema_version"] = 999
     with pytest.raises(ValueError, match="unsupported.*schema"):
         GreekPipelineConfig.from_dict(raw)
     raw = _config().to_dict()
@@ -112,21 +122,64 @@ def test_config_rejects_unknown_schema_and_malformed_keys() -> None:
 
 
 def test_from_config_recreates_exact_identity(monkeypatch: pytest.MonkeyPatch) -> None:
-    backend = _Backend("same")
-    monkeypatch.setattr(joint, "_load_neural_backend", lambda **_: backend)
-    config = _config()
+    backend = _Backend("same", variant="compact")
+    seen: list[str] = []
+    compact = NeuralRuntimeVariant(
+        label="compact",
+        availability="available",
+        model_id="test-model",
+        dataset="test-dataset",
+        asset_sha256="e" * 64,
+        bundle_manifest_sha256="a" * 64,
+        award_sha256="c" * 64,
+        qualification_sha256="d" * 64,
+    )
+
+    def load(**kwargs: object) -> _Backend:
+        seen.append(str(kwargs["variant"]))
+        return backend
+
+    monkeypatch.setattr(joint, "_load_neural_backend", load)
+    monkeypatch.setattr("aegean.greek.runtime.neural_variant", lambda _label: compact)
+    config = replace(_config(), runtime_variant="compact")
     recreated = GreekPipeline.from_config(config)
+    assert seen == ["compact"]
     assert recreated.config == config
     assert recreated._backend is backend  # type: ignore[attr-defined]
     with pytest.raises(ValueError, match="configuration mismatch"):
         GreekPipeline.from_config(replace(config, annotation_profile="other"))
 
 
+def test_from_config_rejects_registry_drift_before_loading(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        joint,
+        "_load_neural_backend",
+        lambda **_kwargs: pytest.fail("registry drift must fail before model loading"),
+    )
+    with pytest.raises(ValueError, match="variant_registry_sha256"):
+        GreekPipeline.from_config(
+            replace(_config(), variant_registry_sha256="f" * 64)
+        )
+
+
 def test_saved_config_recreates_analyzing_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     backend = _Backend("restored")
+    selected = NeuralRuntimeVariant(
+        label="default",
+        availability="available",
+        model_id="test-model",
+        dataset="test-dataset",
+        asset_sha256="e" * 64,
+        bundle_manifest_sha256="a" * 64,
+        award_sha256="c" * 64,
+        qualification_sha256="d" * 64,
+    )
     monkeypatch.setattr(joint, "_load_neural_backend", lambda **_: backend)
+    monkeypatch.setattr("aegean.greek.runtime.neural_variant", lambda _label: selected)
     path = tmp_path / "greek-pipeline.json"
     path.write_text(_config().to_json(), encoding="utf-8")
 

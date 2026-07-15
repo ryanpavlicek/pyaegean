@@ -11,7 +11,7 @@ If you've never used a terminal, start with [Getting Started](Getting-Started).
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.55.0
+aegean --version                # pyaegean 0.56.0
 ```
 
 If you only ran `pip install pyaegean`, the library works but the `aegean` command
@@ -343,21 +343,21 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `ipa` | Reconstructed IPA pronunciation | `--period` | `aegean greek ipa "λόγος" --period koine` |
 | `profile` | Observable features of a text (script, polytonic, Beta Code, editorial marks) | `--json` | `aegean greek profile "μῆνιν ἄειδε θεά"` |
 | `annotation-profiles list` / `show` | Inspect immutable annotation conventions and descriptive domain scopes (no inference or conversion) | `--json` | `aegean greek annotation-profiles list` · `aegean greek annotation-profiles show pyaegean-canonical-v1 --json` |
-| `tag` | POS-tag (UD coarse tags) | `--treebank --tagger --neural --json` | `aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."` |
-| `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
+| `tag` | POS-tag (UD coarse tags) | `--treebank --tagger --neural --neural-variant --json` | `aegean greek tag "ἐν ἀρχῇ ἦν ὁ λόγος."` |
+| `lemmatize` | Lemmatize every word | `--treebank --lemmatizer --neural-lemmatizer --neural --neural-variant --json` | `aegean greek lemmatize "μῆνιν ἄειδε θεά"` |
 | `morph` | Candidate morphological parses | `--treebank --json` | `aegean greek morph λόγον` |
 | `inflect` | Inflection synthesis (inverse lemmatizer): attested form(s) of a lemma | `--case --number --gender --tense --voice --mood --person --pos --paradigm --json` | `aegean greek inflect λόγος --case gen --number sg` |
-| `parse` | Dependency-parse a sentence | `--neural --parser --json` | `aegean greek parse "…" --neural` |
+| `parse` | Dependency-parse a sentence | `--neural --neural-variant --parser --json` | `aegean greek parse "…" --neural` |
 | `gloss` | Gloss from a registry dictionary (LSJ by default) | `--dict/-d --full --json` | `aegean greek gloss μῆνις --dict cunliffe` |
 | `gloss-nt` | Koine gloss from bundled Dodson lexicon (no download) | `--strongs --full --json` | `aegean greek gloss-nt λόγος --full` |
 | `lexica` | List the available dictionaries (hosted + deep-link) | `--json` | `aegean greek lexica` |
 | `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
 | `rarity` | Terminology rarity of a text vs a reference corpus: a translation-difficulty signal | `--corpus --top --treebank --json` | `aegean greek rarity "μῆνιν ἄειδε θεά" --corpus nt` |
-| `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --json` | `aegean greek missing-forms mytext.json` |
-| `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence --confidence-domain --confidence-policy --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
+| `missing-forms` | Word forms the active lemmatizer cannot resolve, ranked by frequency (candidates for a sourced contribution) | `--limit --treebank --tagger --lemmatizer --neural-lemmatizer --neural --neural-variant --json` | `aegean greek missing-forms mytext.json` |
+| `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --neural-variant --confidence --confidence-domain --confidence-policy --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
 | `stream [INPUT]` | Neural JSONL token arrays → ordered JSONL `SentenceAnalysis` records; `-` reads stdin | `--batch-size N --long-input {strict\|partial\|windowed} --partial --windowed --confidence --confidence-domain --confidence-policy --json` | `printf '%s\n' '["μῆνιν","ἄειδε"]' \| aegean greek stream - --batch-size 2` |
-| `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
+| `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --neural-variant --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
 | `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
@@ -370,8 +370,8 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 `annotation-profiles` commands inspect immutable annotation/output conventions and
 descriptive domain scope; they do not select a domain, change model predictions,
 or provide an automatic source-compatible conversion. A composed output profile
-and ordered documentary post-processing identity are bound in receipt schema 3;
-receipt schemas 1 and 2 remain valid.
+and ordered documentary post-processing identity are bound with runtime-variant evidence
+in receipt schema 4; schemas 1 through 3 remain readable for current hosted evidence.
 
 `tokenize --sentences` defaults to `default`. `--sentence-policy` selects the
 named `prose`, `verse`, `inscription`, or `papyrus` rules. Add `--rich` (only with
@@ -491,6 +491,7 @@ stderr); after that it's offline.
 | `--parser` | the pure-Python arc-eager dependency parser | trains from the AGDT |
 | `--neural-lemmatizer` | the GreTa seq2seq lemmatizer (`[neural]`) | ~232 MB model |
 | `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~173 MB model |
+| `--neural-variant LABEL` | Runtime artifact for `--neural`; `default` is currently the only available label | no extra download unless a different artifact is selected |
 
 ```bash
 # heavy — fetches on first use, then offline:
@@ -841,7 +842,7 @@ Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --greek-variant --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -867,8 +868,10 @@ exactly what the model was (and wasn't) told. `extract` always prints JSON. For 
 `translate` grounds with deterministic morphology by default; `--mode full` adds
 rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy or bare
 paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
-Choose `--greek-backend default|baseline|neural`; the isolated neural choice gives
-model-predicted contextual morphology and a UD parse without changing the module facade.
+Choose `--greek-backend default|baseline|neural`. The isolated neural choice gives
+model-predicted contextual morphology and a UD parse without changing the module facade;
+`--greek-variant default|fast|compact|balanced` selects its runtime artifact. Only
+`default` is currently available.
 `--greek-long-input strict|partial|windowed` separately selects neural long-input handling;
 the default remains strict and the choice is recorded in runtime provenance.
 `--grounding-failure best-effort|strict` either keeps and traces available evidence or

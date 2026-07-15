@@ -35,10 +35,12 @@ __all__ = [
     "build_qualification_report",
     "load_gate",
     "load_operational_evidence",
+    "load_qualification_report",
     "stamp_gate",
     "stamp_operational_evidence",
     "validate_gate",
     "validate_operational_evidence",
+    "validate_qualification_report",
     "verify_qualification_report",
 ]
 
@@ -125,7 +127,7 @@ def _validate_fraction_map(value: Any, *, where: str) -> None:
 
 
 def validate_gate(gate: Mapping[str, Any], *, verify_digest: bool = True) -> None:
-    """Validate an A20 gate and its binding to A18/A19 evidence."""
+    """Validate an artifact gate and its development/selection evidence bindings."""
 
     _exact_fields(
         gate,
@@ -908,6 +910,17 @@ def verify_qualification_report(
     expected = build_qualification_report(**inputs)
     if expected != report:
         raise QualificationError("qualification report does not reproduce from its bound evidence")
+
+
+def validate_qualification_report(report: Mapping[str, Any]) -> None:
+    """Validate a saved decision envelope without rebuilding private development data.
+
+    Full verification still requires :func:`verify_qualification_report` and all
+    bound development inputs. Runtime-label selection uses this narrower seam only after matching the
+    decision to independently digest-verified operational records.
+    """
+
+    _validate_report_shape(report)
 
 
 def load_qualification_report(path: str | Path) -> dict[str, Any]:

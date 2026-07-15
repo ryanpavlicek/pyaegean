@@ -153,6 +153,12 @@ def translate(
         help="Greek analysis owner: default (module facade), baseline (isolated "
         "zero-dependency), or neural (isolated grc-joint model; requires [neural]).",
     ),
+    greek_variant: str = typer.Option(
+        "default",
+        "--greek-variant",
+        help="For --greek-backend neural: default, fast, compact, or balanced. "
+        "Reserved labels fail until a qualified artifact is released.",
+    ),
     greek_long_input: str = typer.Option(
         "strict",
         "--greek-long-input",
@@ -189,6 +195,10 @@ def translate(
         raise fail("--mode must be morphology, full, lemma, or none")
     if script != "greek" and greek_backend != "default":
         raise fail("--greek-backend applies only to --script greek")
+    if script != "greek" and greek_variant != "default":
+        raise fail("--greek-variant applies only to --script greek")
+    if greek_backend != "neural" and greek_variant != "default":
+        raise fail("--greek-variant requires --greek-backend neural")
     if script != "greek" and greek_long_input != "strict":
         raise fail("--greek-long-input applies only to --script greek")
 
@@ -200,7 +210,7 @@ def translate(
             greek_pipeline = GreekPipeline()
         else:
             try:
-                greek_pipeline = GreekPipeline.neural()
+                greek_pipeline = GreekPipeline.neural(variant=greek_variant)
             except Exception as exc:
                 raise fail(f"could not activate the neural Greek pipeline: {exc}") from None
 

@@ -348,6 +348,17 @@ bundle digest. Optimization accepts only the exact fp32 source named by its refe
 and passing candidates receive reproducible archives. Labels such as `fast` or `compact` require a
 separate evidence-backed variant decision; an ONNX numeric format does not earn a label by itself.
 
+The runtime registry freezes `default`, `fast`, `compact`, and optional `balanced` independently
+of any successor artifact. `default` means the release-selected artifact and makes no speed or
+size claim; it remains the exact `grc-joint-v3` asset. `compact` requires artifact bytes no greater
+than 90% of the reference. `fast` requires five same-environment complete CPU runs, median latency
+no greater than 90% of the reference, and at least four candidate runs below the reference median.
+`balanced` combines the compact bound with five runs whose median latency and median peak resident
+memory are each no greater than 105% of the reference. These are label definitions, not accuracy
+claims. Until a qualified successor earns them, the three non-default labels remain reserved and
+unavailable. Public award receipts contain operational summaries and hashes, not development
+scores, predictions, rejected candidates, or raw timing series.
+
 ### The quantization discipline
 
 The shipped model is **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
@@ -399,9 +410,10 @@ general source-compatible conversion mode. The separate native-PROIEL XML evalua
 projection strips `#N` homograph suffixes and omits empty tokens; exact UD-fold
 scoring does not use that cleanup. The
 PapyGreek `orig` convention changes the diplomatic `FORM` surface while retaining
-regularized-layer gold analyses and documented fallbacks. Receipt schema 3 binds a
-composed output profile and ordered post-processing identity when present; schemas 1
-and 2 and the `grc-joint-v3` identity remain unchanged.
+regularized-layer gold analyses and documented fallbacks. Receipt schema 4 binds the
+runtime variant, composed output profile, and ordered post-processing identity when
+present. Schemas 1 through 3 remain readable for current hosted evidence, and the
+`grc-joint-v3` identity remains unchanged.
 
 ---
 

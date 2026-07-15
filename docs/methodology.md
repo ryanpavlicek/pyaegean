@@ -99,8 +99,8 @@ sentence structure without silently merging it with heuristics.
 `greek.segment_sentences()` is an alias for `segment_text()`.
 
 Randomized analytical methods accept or record their seed. An
-`AnalysisReceipt` records the model and dataset identities, model-manifest
-digest, tokenizer revision, runtime provider, and analyzed token counts. An
+`AnalysisReceipt` records the model, dataset, runtime-variant registry/evidence identities,
+model-manifest digest, tokenizer revision, runtime provider, and analyzed token counts. An
 `EvalReceipt` records the data manifest and model id, evaluation fold, declared
 protocol, and scores, with an extension field for additional metadata. Receipts
 identify what was run and make mismatched artifacts visible; they do not by
@@ -283,10 +283,11 @@ variant changes the diplomatic `FORM` surface while retaining
 regularized-layer gold analyses and documented fallbacks.
 
 When documentary reconciliation, lemma rescue, or a paradigm resource contributes to
-returned output, receipt schema 3 binds the composed output profile ID/SHA-256 and the
-ordered post-processing identity. Schemas 1 and 2, the schema-1 pipeline configuration,
-and the published `grc-joint-v3` identity remain unchanged. This binding is provenance,
-not a model or accuracy claim.
+production neural output, receipt schema 4 binds the composed output profile ID/SHA-256,
+ordered post-processing identity, runtime label, and registry/evidence digests. Receipt
+schemas 1 through 3 remain readable for current hosted evidence; the current pipeline
+configuration is schema 2. The published `grc-joint-v3` identity remains unchanged. This
+binding is provenance, not a model or accuracy claim.
 
 ### Training reproducibility environment
 
@@ -322,6 +323,18 @@ complete bundle digest. An optimization source must exactly match its reference 
 record. Passing candidates receive deterministic archives; rejected candidates remain private
 staging material. Runtime labels such as `fast` or `compact` are separate decisions that must be
 earned from the measured record rather than inferred from ONNX numeric format.
+
+The runtime-label registry freezes four names independently of any successor artifact.
+`default` means the release-selected artifact and makes no operational claim; it remains the
+exact `grc-joint-v3` asset. `fast`, `compact`, and optional `balanced` remain unavailable until
+a qualified optimization earns a runtime-variant award. `compact` requires artifact bytes no greater
+than 90% of the reference. `fast` requires five same-environment complete CPU runs, median
+latency no greater than 90% of the reference, and at least four candidate runs below the
+reference median. `balanced` combines the compact bound with five runs whose median latency and
+median peak resident memory are each no greater than 105% of the reference. These thresholds
+define labels; they are not task-accuracy claims. Public award receipts contain identities,
+operational summaries, checks, and hashes, while development scores, predictions, rejected
+candidates, and raw timing series remain private.
 
 ## Aegean-script analysis
 

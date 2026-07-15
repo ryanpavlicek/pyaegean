@@ -62,10 +62,14 @@ class _StubPipeline(GreekPipeline):
         if neural:
             self._backend = object()
             self._config = GreekPipelineConfig(
-                schema_version=1,
+                schema_version=2,
                 backend="neural",
                 model_id="test-joint",
                 dataset="test-data",
+                runtime_variant="default",
+                variant_registry_sha256="9" * 64,
+                variant_award_sha256="8" * 64,
+                qualification_sha256="7" * 64,
                 bundle_manifest_sha256="a" * 64,
                 tokenizer_revision="test-tokenizer",
                 annotation_profile="test-ud",
@@ -286,6 +290,7 @@ def test_cli_translation_backend_and_failure_options(monkeypatch: pytest.MonkeyP
     # artifacts, not against one terminal's byte sequence.
     compact_help = "".join(unstyle(help_result.output).split())
     assert "--greek-backend" in compact_help
+    assert "--greek-variant" in compact_help
     assert "--grounding-failure" in compact_help
 
     result = runner.invoke(
@@ -298,6 +303,26 @@ def test_cli_translation_backend_and_failure_options(monkeypatch: pytest.MonkeyP
     assert result.exit_code == 0, result.output
     assert isinstance(seen["greek_pipeline"], GreekPipeline)
     assert seen["grounding_failure"] == "best-effort"
+
+    selected: list[str] = []
+
+    def fake_neural(
+        cls: type[GreekPipeline], *, variant: str = "default", **_kwargs: object
+    ) -> GreekPipeline:
+        selected.append(variant)
+        return cls()
+
+    monkeypatch.setattr(GreekPipeline, "neural", classmethod(fake_neural))
+    seen.clear()
+    neural_result = runner.invoke(
+        app,
+        [
+            "ai", "translate", "λόγος", "--greek-backend", "neural",
+            "--greek-variant", "compact",
+        ],
+    )
+    assert neural_result.exit_code == 0, neural_result.output
+    assert selected == ["compact"]
 
     seen.clear()
     default_result = runner.invoke(app, ["ai", "translate", "λόγος"])
@@ -332,8 +357,14 @@ def test_cli_rejects_invalid_grounding_options_before_client(
         app,
         ["ai", "translate", "KU-RO", "--script", "lineara", "--greek-backend", "neural"],
     )
+    orphan_variant = runner.invoke(
+        app,
+        ["ai", "translate", "λόγος", "--greek-variant", "compact"],
+    )
 
-    def unavailable_neural(cls: type[GreekPipeline]) -> GreekPipeline:
+    def unavailable_neural(
+        cls: type[GreekPipeline], **_kwargs: object
+    ) -> GreekPipeline:
         raise RuntimeError("test asset unavailable")
 
     monkeypatch.setattr(GreekPipeline, "neural", classmethod(unavailable_neural))
@@ -345,12 +376,14 @@ def test_cli_rejects_invalid_grounding_options_before_client(
         bad_backend.exit_code
         == bad_failure.exit_code
         == wrong_script.exit_code
+        == orphan_variant.exit_code
         == unavailable.exit_code
         == 1
     )
     assert "must be default, baseline, or neural" in bad_backend.output
     assert "must be best-effort or strict" in bad_failure.output
     assert "applies only to --script greek" in wrong_script.output
+    assert "requires --greek-backend neural" in orphan_variant.output
     assert "could not activate the neural Greek pipeline" in unavailable.output
     assert calls == 0
 

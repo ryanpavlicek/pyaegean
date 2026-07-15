@@ -16,6 +16,13 @@ from dataclasses import dataclass
 from threading import RLock
 from typing import TYPE_CHECKING, Any, Literal
 
+from .model_variants import (
+    NeuralVariantLabel,
+    NeuralVariantUnavailableError,
+    neural_variant,
+    variant_registry_sha256,
+)
+
 if TYPE_CHECKING:
     from ..core.model import Token
     from .confidence import AbstentionPolicy
@@ -26,7 +33,18 @@ if TYPE_CHECKING:
 
 __all__ = ["GreekPipeline", "GreekPipelineConfig", "default_pipeline"]
 
-_CONFIG_SCHEMA = 1
+_CONFIG_SCHEMA = 2
+_VARIANT_LABELS = {"default", "fast", "compact", "balanced"}
+_V3_MODEL_ID = "grc-joint-v3"
+_V3_DATASET = "grc-joint"
+
+
+def _config_sha256(value: str | None, field: str) -> str | None:
+    if value is None:
+        return None
+    if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+        raise TypeError(f"{field} must be a lowercase SHA-256 string or null")
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,6 +55,10 @@ class GreekPipelineConfig:
     backend: Literal["baseline", "neural"]
     model_id: str | None
     dataset: str | None
+    runtime_variant: NeuralVariantLabel | None
+    variant_registry_sha256: str | None
+    variant_award_sha256: str | None
+    qualification_sha256: str | None
     bundle_manifest_sha256: str | None
     tokenizer_revision: str | None
     annotation_profile: str
@@ -67,6 +89,10 @@ class GreekPipelineConfig:
         optional = (
             "model_id",
             "dataset",
+            "runtime_variant",
+            "variant_registry_sha256",
+            "variant_award_sha256",
+            "qualification_sha256",
             "bundle_manifest_sha256",
             "tokenizer_revision",
         )
@@ -74,6 +100,13 @@ class GreekPipelineConfig:
             value = getattr(self, field)
             if value is not None and (not isinstance(value, str) or not value):
                 raise TypeError(f"{field} must be a non-empty string or null")
+        for field in (
+            "variant_registry_sha256",
+            "variant_award_sha256",
+            "qualification_sha256",
+            "bundle_manifest_sha256",
+        ):
+            _config_sha256(getattr(self, field), field)
         required = (
             "annotation_profile",
             "normalization",
@@ -87,8 +120,30 @@ class GreekPipelineConfig:
         if self.backend == "baseline":
             if any(getattr(self, field) is not None for field in optional) or providers:
                 raise ValueError("a baseline pipeline cannot declare a model or execution provider")
-        elif self.model_id is None or self.dataset is None:
-            raise ValueError("a neural pipeline requires model_id and dataset")
+        else:
+            if (
+                self.model_id is None
+                or self.dataset is None
+                or self.runtime_variant is None
+                or self.variant_registry_sha256 is None
+            ):
+                raise ValueError(
+                    "a neural pipeline requires model_id, dataset, runtime_variant, "
+                    "and variant_registry_sha256"
+                )
+            if self.runtime_variant not in _VARIANT_LABELS:
+                raise ValueError(f"invalid neural runtime variant {self.runtime_variant!r}")
+            evidence = (self.variant_award_sha256, self.qualification_sha256)
+            if (evidence[0] is None) != (evidence[1] is None):
+                raise ValueError("variant award and qualification hashes must appear together")
+            if evidence[0] is None and (
+                self.runtime_variant != "default"
+                or self.model_id != _V3_MODEL_ID
+                or self.dataset != _V3_DATASET
+            ):
+                raise ValueError(
+                    "only the immutable grc-joint-v3 default may omit variant award evidence"
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a stable JSON-compatible representation."""
@@ -97,6 +152,10 @@ class GreekPipelineConfig:
             "backend": self.backend,
             "model_id": self.model_id,
             "dataset": self.dataset,
+            "runtime_variant": self.runtime_variant,
+            "variant_registry_sha256": self.variant_registry_sha256,
+            "variant_award_sha256": self.variant_award_sha256,
+            "qualification_sha256": self.qualification_sha256,
             "bundle_manifest_sha256": self.bundle_manifest_sha256,
             "tokenizer_revision": self.tokenizer_revision,
             "annotation_profile": self.annotation_profile,
@@ -123,6 +182,10 @@ class GreekPipelineConfig:
             "backend",
             "model_id",
             "dataset",
+            "runtime_variant",
+            "variant_registry_sha256",
+            "variant_award_sha256",
+            "qualification_sha256",
             "bundle_manifest_sha256",
             "tokenizer_revision",
             "annotation_profile",
@@ -174,6 +237,10 @@ class GreekPipelineConfig:
             backend=backend,
             model_id=optional_string("model_id"),
             dataset=optional_string("dataset"),
+            runtime_variant=optional_string("runtime_variant"),  # type: ignore[arg-type]
+            variant_registry_sha256=optional_string("variant_registry_sha256"),
+            variant_award_sha256=optional_string("variant_award_sha256"),
+            qualification_sha256=optional_string("qualification_sha256"),
             bundle_manifest_sha256=optional_string("bundle_manifest_sha256"),
             tokenizer_revision=optional_string("tokenizer_revision"),
             annotation_profile=required_string("annotation_profile"),
@@ -188,13 +255,15 @@ class GreekPipelineConfig:
                 for item in (
                     config.model_id,
                     config.dataset,
+                    config.runtime_variant,
+                    config.variant_registry_sha256,
+                    config.variant_award_sha256,
+                    config.qualification_sha256,
                     config.bundle_manifest_sha256,
                     config.tokenizer_revision,
                 )
             ) or config.execution_providers:
                 raise ValueError("a baseline pipeline cannot declare a model or execution provider")
-        elif config.model_id is None or config.dataset is None:
-            raise ValueError("a neural pipeline requires model_id and dataset")
         return config
 
     @classmethod
@@ -214,6 +283,10 @@ _BASELINE_CONFIG = GreekPipelineConfig(
     backend="baseline",
     model_id=None,
     dataset=None,
+    runtime_variant=None,
+    variant_registry_sha256=None,
+    variant_award_sha256=None,
+    qualification_sha256=None,
     bundle_manifest_sha256=None,
     tokenizer_revision=None,
     annotation_profile="pyaegean-baseline-v1",
@@ -226,11 +299,18 @@ _BASELINE_CONFIG = GreekPipelineConfig(
 
 def _config_for_backend(backend: Any) -> GreekPipelineConfig:
     manifest = backend.manifest
+    variant = getattr(backend, "runtime_variant", None)
+    if variant is None:
+        raise ValueError("a neural backend must carry a registered runtime variant")
     return GreekPipelineConfig(
         schema_version=_CONFIG_SCHEMA,
         backend="neural",
         model_id=manifest.model_id,
         dataset=manifest.dataset,
+        runtime_variant=variant.label,
+        variant_registry_sha256=variant_registry_sha256(),
+        variant_award_sha256=variant.award_sha256,
+        qualification_sha256=variant.qualification_sha256,
         bundle_manifest_sha256=manifest.manifest_sha256,
         tokenizer_revision=manifest.tokenizer_revision,
         annotation_profile=manifest.annotation_profile,
@@ -272,13 +352,21 @@ class GreekPipeline:
 
     @classmethod
     def neural(
-        cls, *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
+        cls,
+        *,
+        variant: str = "default",
+        force: bool = False,
+        expected_receipt: AnalysisReceipt | None = None,
     ) -> GreekPipeline:
-        """Load an isolated neural pipeline without changing the default facade."""
+        """Load one explicit neural variant without changing the default facade."""
         from .joint import _load_neural_backend
 
         return cls._from_backend(
-            _load_neural_backend(force=force, expected_receipt=expected_receipt)
+            _load_neural_backend(
+                variant=variant,
+                force=force,
+                expected_receipt=expected_receipt,
+            )
         )
 
     @classmethod
@@ -292,7 +380,37 @@ class GreekPipeline:
             if config != _BASELINE_CONFIG:
                 raise ValueError("baseline configuration does not match this runtime")
             return cls()
-        candidate = cls.neural(force=force)
+        assert config.runtime_variant is not None
+        selected = neural_variant(config.runtime_variant)
+        registry_sha = variant_registry_sha256()
+        if config.variant_registry_sha256 != registry_sha:
+            raise ValueError(
+                "neural pipeline configuration mismatch: "
+                f"variant_registry_sha256: expected {config.variant_registry_sha256!r}, "
+                f"got {registry_sha!r}"
+            )
+        if not selected.available:
+            raise NeuralVariantUnavailableError(
+                f"neural runtime variant {selected.label!r} is reserved but unavailable"
+            )
+        early_fields = {
+            "model_id": selected.model_id,
+            "dataset": selected.dataset,
+            "runtime_variant": selected.label,
+            "variant_award_sha256": selected.award_sha256,
+            "qualification_sha256": selected.qualification_sha256,
+            "bundle_manifest_sha256": selected.bundle_manifest_sha256,
+        }
+        early_mismatches = [
+            f"{field}: expected {getattr(config, field)!r}, got {actual!r}"
+            for field, actual in early_fields.items()
+            if getattr(config, field) != actual
+        ]
+        if early_mismatches:
+            raise ValueError(
+                "neural pipeline configuration mismatch: " + "; ".join(early_mismatches)
+            )
+        candidate = cls.neural(variant=config.runtime_variant, force=force)
         if candidate.config != config:
             mismatches = [
                 f"{field}: expected {getattr(config, field)!r}, "

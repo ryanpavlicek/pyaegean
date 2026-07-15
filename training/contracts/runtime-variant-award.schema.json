@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pyaegean.xyz/contracts/runtime-variant-award.schema.json",
+  "title": "pyaegean neural runtime variant award",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "claim_status",
+    "label",
+    "policy_sha256",
+    "qualification_sha256",
+    "qualification_gate_sha256",
+    "development_manifest_sha256",
+    "measurement_profile_id",
+    "reference",
+    "candidate",
+    "measurements",
+    "checks",
+    "failures",
+    "awarded",
+    "award_sha256"
+  ],
+  "properties": {
+    "format": {"const": "pyaegean-runtime-variant-award/1"},
+    "claim_status": {"const": "artifact-operational-selection-not-task-score"},
+    "label": {"enum": ["fast", "compact", "balanced"]},
+    "policy_sha256": {"$ref": "#/$defs/sha256"},
+    "qualification_sha256": {"$ref": "#/$defs/sha256"},
+    "qualification_gate_sha256": {"$ref": "#/$defs/sha256"},
+    "development_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "measurement_profile_id": {"type": "string", "minLength": 1},
+    "reference": {"$ref": "#/$defs/identity"},
+    "candidate": {"$ref": "#/$defs/identity"},
+    "measurements": {"$ref": "#/$defs/measurements"},
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {"$ref": "#/$defs/qualificationCheck"},
+          {"$ref": "#/$defs/maximumCheck"},
+          {"$ref": "#/$defs/minimumCheck"}
+        ]
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "awarded": {"type": "boolean"},
+    "award_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "positiveNumber": {"type": "number", "exclusiveMinimum": 0},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_identity",
+        "artifact_directory_sha256",
+        "model_sha256",
+        "bundle_manifest_sha256",
+        "operational_evidence_sha256"
+      ],
+      "properties": {
+        "model_identity": {"type": "string", "minLength": 1},
+        "artifact_directory_sha256": {"$ref": "#/$defs/sha256"},
+        "model_sha256": {"$ref": "#/$defs/sha256"},
+        "bundle_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "operational_evidence_sha256": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_size_bytes",
+        "median_latency_ms_per_100_tokens",
+        "median_peak_resident_memory_bytes"
+      ],
+      "properties": {
+        "artifact_size_bytes": {"type": "integer", "minimum": 1},
+        "median_latency_ms_per_100_tokens": {"$ref": "#/$defs/positiveNumber"},
+        "median_peak_resident_memory_bytes": {"$ref": "#/$defs/positiveNumber"}
+      }
+    },
+    "measurements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operational_runs",
+        "reference",
+        "candidate",
+        "artifact_size_ratio",
+        "median_latency_ratio",
+        "median_peak_resident_memory_ratio",
+        "candidate_runs_below_reference_median_latency"
+      ],
+      "properties": {
+        "operational_runs": {"type": "integer", "minimum": 1},
+        "reference": {"$ref": "#/$defs/summary"},
+        "candidate": {"$ref": "#/$defs/summary"},
+        "artifact_size_ratio": {"$ref": "#/$defs/positiveNumber"},
+        "median_latency_ratio": {"$ref": "#/$defs/positiveNumber"},
+        "median_peak_resident_memory_ratio": {"$ref": "#/$defs/positiveNumber"},
+        "candidate_runs_below_reference_median_latency": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "qualificationCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value", "maximum", "passed"],
+      "properties": {
+        "field": {"const": "a20_qualification"},
+        "value": {"type": "boolean"},
+        "maximum": {"const": true},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "maximumCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value", "maximum", "passed"],
+      "properties": {
+        "field": {
+          "enum": [
+            "artifact_size_ratio",
+            "median_latency_ratio",
+            "median_peak_resident_memory_ratio"
+          ]
+        },
+        "value": {"$ref": "#/$defs/positiveNumber"},
+        "maximum": {"$ref": "#/$defs/positiveNumber"},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "minimumCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "value", "minimum", "passed"],
+      "properties": {
+        "field": {"const": "candidate_runs_below_reference_median_latency"},
+        "value": {"type": "integer", "minimum": 0},
+        "minimum": {"type": "integer", "minimum": 0},
+        "passed": {"type": "boolean"}
+      }
+    }
+  }
+}

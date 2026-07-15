@@ -1383,6 +1383,36 @@
       }
     },
     {
+      "id": "neural-runtime-variants",
+      "since": "0.56.0",
+      "python_api": "aegean.greek.neural_variants",
+      "summary": "Stable default, fast, compact, and balanced neural runtime labels with explicit selection, cache coexistence, exact configuration/receipt provenance, and evidence-gated availability.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "The Pyodide demo cannot load or compare ONNX neural artifacts."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "The server intentionally keeps its Greek analysis tools on the dependency-free baseline."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "variant=\"default\""
+          },
+          "note": "The guarded heavy cell demonstrates explicit selection without claiming that reserved labels are available."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Command console: aegean greek pipeline --neural --neural-variant"
+        }
+      }
+    },
+    {
       "id": "greek-streaming-analysis",
       "since": "0.49.0",
       "python_api": "aegean.greek.iter_analyze_sentences",

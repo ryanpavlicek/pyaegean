@@ -1,4 +1,4 @@
-"""Offline runtime and whole-path tests for integrated A20 qualification."""
+"""Offline runtime and whole-path tests for integrated artifact qualification."""
 
 from __future__ import annotations
 

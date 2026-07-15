@@ -14,7 +14,7 @@ from collections.abc import Iterable
 
 # Keep top-level import independent of importlib.metadata's comparatively large
 # discovery stack. The release gate pins this value to pyproject.toml.
-__version__ = "0.55.0"
+__version__ = "0.56.0"
 
 from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
 from . import cache  # noqa: F401 — opt-in persistent cache for expensive analyses (off by default)

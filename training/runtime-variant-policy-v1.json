@@ -1,0 +1,31 @@
+{
+  "format": "pyaegean-runtime-variant-policy/1",
+  "policy_id": "greek-joint-runtime-variant-policy-v1",
+  "claim_status": "selection-policy-not-performance-evidence",
+  "qualification_gate_sha256": "d1d451aa87ce5f9128c325ca60d7a06b4a7dc4b9f28f46701c77c097ab3094e3",
+  "measurement_profile_id": "pyaegean-cpu-sequential-complete-dev-v1",
+  "labels": {
+    "fast": {
+      "operational_runs": 5,
+      "max_artifact_size_ratio": null,
+      "max_median_latency_ratio": 0.9,
+      "max_median_peak_resident_memory_ratio": null,
+      "minimum_runs_below_reference_median_latency": 4
+    },
+    "compact": {
+      "operational_runs": 1,
+      "max_artifact_size_ratio": 0.9,
+      "max_median_latency_ratio": null,
+      "max_median_peak_resident_memory_ratio": null,
+      "minimum_runs_below_reference_median_latency": 0
+    },
+    "balanced": {
+      "operational_runs": 5,
+      "max_artifact_size_ratio": 0.9,
+      "max_median_latency_ratio": 1.05,
+      "max_median_peak_resident_memory_ratio": 1.05,
+      "minimum_runs_below_reference_median_latency": 0
+    }
+  },
+  "policy_sha256": "563ee211e5e0d20acabea515c9d502e3d8173a90c8041134e18e50fa27c1c224"
+}

@@ -113,7 +113,7 @@ idiom lemma matching, rarity gating, and dictionary lookup.
 ```python
 from aegean import greek, translate
 
-neural = greek.GreekPipeline.neural()
+neural = greek.GreekPipeline.neural(variant="default")
 result = translate.translate(
     "ἦν ὁ λόγος",
     script="greek",
@@ -124,7 +124,10 @@ result = translate.translate(
 ```
 
 The CLI mirrors this with `--greek-backend default|baseline|neural`. `default` preserves
-the facade behavior; `baseline` and `neural` create isolated instances for that run. The
+the facade behavior; `baseline` and `neural` create isolated instances for that run. With
+the neural owner, `--greek-variant default|fast|compact|balanced` selects the runtime artifact.
+Only `default` is currently available; reserved labels fail before any provider call and never
+fall back. The
 lower-level `aegean.ai.translate` function is different again: it never builds Greek
 grounding automatically and only sends evidence passed explicitly through its
 `grounding=` argument.
@@ -393,6 +396,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
 | `--greek-backend` | `default` | `default` (module facade), `baseline` (isolated), or `neural` (isolated joint model). Greek only. |
+| `--greek-variant` | `default` | Runtime artifact for `--greek-backend neural`: `default`, `fast`, `compact`, or `balanced`. Only qualified labels are available. Greek only. |
 | `--greek-long-input` | `strict` | Neural long-input handling: `strict`, explicitly incomplete `partial`, or overlapping `windowed`. Greek only. |
 | `--grounding-failure` | `best-effort` | `best-effort` keeps available evidence and records degradation; `strict` stops before a provider call if required grounding fails. |
 | `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pyaegean.xyz/contracts/runtime-variant-policy.schema.json",
+  "title": "pyaegean neural runtime variant policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "policy_id",
+    "claim_status",
+    "qualification_gate_sha256",
+    "measurement_profile_id",
+    "labels",
+    "policy_sha256"
+  ],
+  "properties": {
+    "format": {"const": "pyaegean-runtime-variant-policy/1"},
+    "policy_id": {"type": "string", "minLength": 1},
+    "claim_status": {"const": "selection-policy-not-performance-evidence"},
+    "qualification_gate_sha256": {"$ref": "#/$defs/sha256"},
+    "measurement_profile_id": {"const": "pyaegean-cpu-sequential-complete-dev-v1"},
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fast", "compact", "balanced"],
+      "properties": {
+        "fast": {"$ref": "#/$defs/label"},
+        "compact": {"$ref": "#/$defs/label"},
+        "balanced": {"$ref": "#/$defs/label"}
+      }
+    },
+    "policy_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ratio": {"type": ["number", "null"], "exclusiveMinimum": 0},
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operational_runs",
+        "max_artifact_size_ratio",
+        "max_median_latency_ratio",
+        "max_median_peak_resident_memory_ratio",
+        "minimum_runs_below_reference_median_latency"
+      ],
+      "properties": {
+        "operational_runs": {"type": "integer", "minimum": 1},
+        "max_artifact_size_ratio": {"$ref": "#/$defs/ratio"},
+        "max_median_latency_ratio": {"$ref": "#/$defs/ratio"},
+        "max_median_peak_resident_memory_ratio": {"$ref": "#/$defs/ratio"},
+        "minimum_runs_below_reference_median_latency": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

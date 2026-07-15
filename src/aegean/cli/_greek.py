@@ -74,6 +74,12 @@ TAGGER_OPT = typer.Option(False, "--tagger", help="Activate the generalizing POS
 LEMMATIZER_OPT = typer.Option(False, "--lemmatizer", help="Activate the edit-tree lemmatizer (trains from the AGDT on first use).")
 NEURAL_LEMM_OPT = typer.Option(False, "--neural-lemmatizer", help="Activate the seq2seq lemmatizer (~232 MB model, \\[neural] extra).")
 NEURAL_OPT = typer.Option(False, "--neural", help="Activate the joint neural pipeline (~173 MB model, \\[neural] extra).")
+NEURAL_VARIANT_OPT = typer.Option(
+    "default",
+    "--neural-variant",
+    help="Joint-model runtime variant: default, fast, compact, or balanced. "
+    "Reserved labels fail until a qualified artifact is released.",
+)
 LSJ_OPT = typer.Option(False, "--lsj", help="Activate LSJ glossing (~270 MB fetch on first use).")
 CONFIDENCE_OPT = typer.Option(
     False, "--confidence",
@@ -573,6 +579,7 @@ def _activate(
     lemmatizer: bool = False,
     neural_lemmatizer: bool = False,
     neural: bool = False,
+    neural_variant: str = "default",
     lsj: bool = False,
     parser: bool = False,
 ) -> None:
@@ -581,12 +588,23 @@ def _activate(
 
     from aegean import greek
 
-    steps: list[tuple[bool, str, Callable[[], object]]] = [
+    if not neural and neural_variant != "default":
+        raise fail("--neural-variant requires --neural")
+
+    def activate_neural() -> None:
+        greek.use_neural_pipeline(variant=neural_variant)
+
+    neural_name = (
+        "neural joint pipeline"
+        if neural_variant == "default"
+        else f"neural joint pipeline ({neural_variant})"
+    )
+    steps: list[tuple[bool, str, Callable[[], object | None]]] = [
         (treebank, "treebank (Perseus AGDT)", greek.use_treebank),
         (tagger, "POS tagger", greek.use_tagger),
         (lemmatizer, "edit-tree lemmatizer", greek.use_lemmatizer),
         (neural_lemmatizer, "neural lemmatizer", greek.use_neural_lemmatizer),
-        (neural, "neural joint pipeline", greek.use_neural_pipeline),
+        (neural, neural_name, activate_neural),
         (lsj, "LSJ lexicon", greek.use_lsj),
         (parser, "dependency parser", greek.use_parser),
     ]
@@ -805,6 +823,7 @@ def missing_forms_cmd(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """The Greek word forms the active lemmatizer cannot resolve, ranked by frequency.
@@ -816,8 +835,13 @@ def missing_forms_cmd(
     """
     from aegean import greek
 
-    _activate(tagger=tagger, lemmatizer=lemmatizer,
-              neural_lemmatizer=neural_lemmatizer, neural=neural)
+    _activate(
+        tagger=tagger,
+        lemmatizer=lemmatizer,
+        neural_lemmatizer=neural_lemmatizer,
+        neural=neural,
+        neural_variant=neural_variant,
+    )
     c = load_corpus(corpus)
     forms = greek.missing_forms(c, limit=limit)
     if json_out:
@@ -908,12 +932,18 @@ def tag(
     treebank: bool = TREEBANK_OPT,
     tagger: bool = TAGGER_OPT,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """POS-tag a text (UD coarse tags), with the activated backends."""
     from aegean import greek
 
-    _activate(treebank=treebank, tagger=tagger, neural=neural)
+    _activate(
+        treebank=treebank,
+        tagger=tagger,
+        neural=neural,
+        neural_variant=neural_variant,
+    )
     try:
         pairs = greek.pos_tags(read_text(text))
     except greek.NeuralInputTooLongError as exc:
@@ -931,6 +961,7 @@ def lemmatize(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Lemmatize every word of a text, with the activated backends."""
@@ -939,6 +970,7 @@ def lemmatize(
     _activate(
         treebank=treebank, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
+        neural_variant=neural_variant,
     )
     words = greek.tokenize_words(read_text(text))
     rows = []
@@ -1105,6 +1137,7 @@ def usage(
 def parse(
     sentence: str = TEXT_ARG,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     parser: bool = typer.Option(
         False, "--parser", help="Activate the pure-Python arc-eager parser (trains on first use)."
     ),
@@ -1113,7 +1146,7 @@ def parse(
     """Dependency-parse a sentence (UD relations with --neural; AGDT with --parser)."""
     from aegean import greek
 
-    _activate(neural=neural, parser=parser)
+    _activate(neural=neural, neural_variant=neural_variant, parser=parser)
     try:
         tree = greek.parse(read_text(sentence))
     except greek.ParserNotLoadedError:
@@ -1310,6 +1343,7 @@ def stream(
         metavar="PATH",
         help="Abstention policy JSON (requires --with-probs).",
     ),
+    neural_variant: str = NEURAL_VARIANT_OPT,
     json_out: bool = JSON_OPT,
 ) -> None:
     """Stream neural analyses from JSONL token arrays to JSONL stdout.
@@ -1339,7 +1373,7 @@ def stream(
         raise fail("--confidence-policy requires --confidence")
 
     loaded_policy = _load_confidence_policy(policy) if policy is not None else None
-    _activate(neural=True)
+    _activate(neural=True, neural_variant=neural_variant)
     if with_probs:
         _ensure_calibration()
 
@@ -1372,6 +1406,7 @@ def pipeline(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     confidence: bool = CONFIDENCE_OPT,
     confidence_domain: str | None = typer.Option(
         None,
@@ -1420,7 +1455,8 @@ def pipeline(
 
     _activate(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
-        neural_lemmatizer=neural_lemmatizer, neural=neural, parser=parser,
+        neural_lemmatizer=neural_lemmatizer, neural=neural,
+        neural_variant=neural_variant, parser=parser,
     )
     if confidence:
         _ensure_calibration()
@@ -1480,6 +1516,7 @@ def explain(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    neural_variant: str = NEURAL_VARIANT_OPT,
     confidence: bool = CONFIDENCE_OPT,
     output: Path | None = RESULT_OPT,
     json_out: bool = JSON_OPT,
@@ -1500,6 +1537,7 @@ def explain(
     _activate(
         treebank=treebank, tagger=tagger, lemmatizer=lemmatizer,
         neural_lemmatizer=neural_lemmatizer, neural=neural,
+        neural_variant=neural_variant,
     )
     if confidence:
         _ensure_calibration()

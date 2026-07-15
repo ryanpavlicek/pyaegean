@@ -45,6 +45,13 @@ from .neural_contract import (
     ModelBundleManifest,
     ReceiptMismatchError,
 )
+from .model_variants import (
+    NeuralRuntimeVariant,
+    NeuralVariantError,
+    _resolve_neural_variant,
+    neural_variants,
+    variant_registry_sha256,
+)
 from .udfeats import feats_from_xpos
 from .confidence import (
     AbstentionPolicy,
@@ -439,6 +446,7 @@ class _JointModel:
         *,
         asset_sha256: str | None = None,
         asset_sha256_enforced: bool = False,
+        runtime_variant: NeuralRuntimeVariant | None = None,
     ) -> None:
         try:
             import numpy as np
@@ -463,6 +471,37 @@ class _JointModel:
             asset_sha256=asset_sha256,
             asset_sha256_enforced=asset_sha256_enforced,
         )
+        self.runtime_variant = runtime_variant
+        if runtime_variant is not None:
+            mismatches: list[str] = []
+            if self.manifest.model_id != runtime_variant.model_id:
+                mismatches.append(
+                    f"model_id: registry={runtime_variant.model_id!r}, "
+                    f"bundle={self.manifest.model_id!r}"
+                )
+            if self.manifest.dataset != runtime_variant.dataset:
+                mismatches.append(
+                    f"dataset: registry={runtime_variant.dataset!r}, "
+                    f"bundle={self.manifest.dataset!r}"
+                )
+            if self.manifest.manifest_sha256 != runtime_variant.bundle_manifest_sha256:
+                mismatches.append(
+                    "bundle_manifest_sha256: "
+                    f"registry={runtime_variant.bundle_manifest_sha256!r}, "
+                    f"bundle={self.manifest.manifest_sha256!r}"
+                )
+            if not self.manifest.asset_sha256_enforced:
+                mismatches.append("asset_sha256: fetched artifact is not SHA-256 enforced")
+            elif self.manifest.asset_sha256 != runtime_variant.asset_sha256:
+                mismatches.append(
+                    f"asset_sha256: registry={runtime_variant.asset_sha256!r}, "
+                    f"fetched={self.manifest.asset_sha256!r}"
+                )
+            if mismatches:
+                raise ModelBundleError(
+                    f"neural runtime variant {runtime_variant.label!r} does not match "
+                    "the fetched bundle: " + "; ".join(mismatches)
+                )
         try:
             _prep.validate_manifest_contract(self.manifest)
         except ValueError as exc:
@@ -486,7 +525,9 @@ class _JointModel:
             raise NeuralPipelineNotLoadedError(
                 f"could not load the joint model at {model_path} (onnxruntime: {e}) — "
                 f"the cached model looks corrupt or incompletely downloaded. Re-fetch it: "
-                f"run `aegean data remove {_DATASET}` and retry, or call "
+                f"run `aegean data remove "
+                f"{runtime_variant.dataset if runtime_variant is not None else _DATASET}` "
+                "and retry, or call "
                 f"use_neural_pipeline(force=True)."
             ) from e
         actual_outputs = tuple(output.name for output in self._sess.get_outputs())
@@ -606,6 +647,7 @@ class _JointModel:
         session = getattr(self, "_sess", None)
         if manifest is None or session is None or not hasattr(session, "get_providers"):
             return None
+        runtime_variant = getattr(self, "runtime_variant", None)
         receipt = AnalysisReceipt.create(
             manifest,
             execution_providers=tuple(session.get_providers()),
@@ -622,6 +664,18 @@ class _JointModel:
                 context["policy"].sha256
                 if context is not None and context.get("policy") is not None
                 else None
+            ),
+            runtime_variant=(
+                runtime_variant.label if runtime_variant is not None else None
+            ),
+            variant_registry_sha256=(
+                variant_registry_sha256() if runtime_variant is not None else None
+            ),
+            variant_award_sha256=(
+                runtime_variant.award_sha256 if runtime_variant is not None else None
+            ),
+            qualification_sha256=(
+                runtime_variant.qualification_sha256 if runtime_variant is not None else None
             ),
         )
         # The joint model emits the canonical annotation profile.  Keep this lazy
@@ -1572,16 +1626,34 @@ def _require_neural_extra() -> None:
 
 
 def _load_neural_backend(
-    *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
+    *,
+    variant: str = "default",
+    force: bool = False,
+    expected_receipt: AnalysisReceipt | None = None,
 ) -> _JointModel:
     """Load and validate one neural backend without changing facade state."""
+    selected = _resolve_neural_variant(variant)
     _require_neural_extra()
-    asset = versions()["fetched"][_DATASET]
-    model_dir = fetch(_DATASET, force=force)
+    assert selected.dataset is not None
+    assert selected.asset_sha256 is not None
+    assets = versions()["fetched"]
+    try:
+        asset = assets[selected.dataset]
+    except KeyError as exc:
+        raise NeuralVariantError(
+            f"neural runtime variant {variant!r} names unregistered dataset "
+            f"{selected.dataset!r}"
+        ) from exc
+    if not asset["sha256_enforced"] or asset["sha256"] != selected.asset_sha256:
+        raise NeuralVariantError(
+            f"neural runtime variant {variant!r} requires the exact enforced data-registry pin"
+        )
+    model_dir = fetch(selected.dataset, force=force)
     candidate = _JointModel(
         model_dir,
         asset_sha256=asset["sha256"] or None,
         asset_sha256_enforced=bool(asset["sha256_enforced"]),
+        runtime_variant=selected,
     )
     if expected_receipt is not None:
         current = candidate._receipt(input_tokens=0, analyzed_tokens=0, truncated=False)
@@ -1592,7 +1664,10 @@ def _load_neural_backend(
 
 
 def use_neural_pipeline(
-    *, force: bool = False, expected_receipt: AnalysisReceipt | None = None
+    *,
+    variant: str = "default",
+    force: bool = False,
+    expected_receipt: AnalysisReceipt | None = None,
 ) -> None:
     """Activate the default neural pipeline facade (tags, morphology, trees, lemmas).
 
@@ -1602,7 +1677,10 @@ def use_neural_pipeline(
     `pos_tag`, `aegean.greek.parse` (UD relations), and `aegean.greek.lemmatize`
     all use it; `analyze_sentence` returns the full joint analysis in one call.
 
-    Pass ``expected_receipt`` to require the exact model, artifact, package/runtime
+    ``variant`` selects an evidence-bound runtime label. The default remains the
+    release-selected artifact; a reserved label fails before dependency checks or
+    network access rather than silently falling back. Pass ``expected_receipt`` to
+    require the exact model, artifact, package/runtime
     versions, provider, profile, and preprocessing identity from a prior analysis.
     A mismatch raises `ReceiptMismatchError` before the candidate becomes active.
 
@@ -1618,7 +1696,11 @@ def use_neural_pipeline(
     _ACTIVE = _UNSET
     _set_default_pipeline(
         GreekPipeline._from_backend(
-            _load_neural_backend(force=force, expected_receipt=expected_receipt)
+            _load_neural_backend(
+                variant=variant,
+                force=force,
+                expected_receipt=expected_receipt,
+            )
         )
     )
     # Documentary levers are process-level opt-ins. Disabling the neural
@@ -1951,7 +2033,7 @@ def analyze_sentences(
 def neural_backend_info() -> dict[str, Any]:
     """Which ONNX Runtime execution providers the neural pipeline can and does use.
 
-    Returns ``{"model", "available_providers", "active_providers"}``: ``model`` is the
+    Returns provider facts plus the stable available/default/active runtime labels. ``model`` is the
     joint model's dataset name (the pinned ``grc-joint`` release asset);
     ``available_providers`` is what the installed onnxruntime offers (``None`` when the
     ``[neural]`` extra is not installed); ``active_providers`` is what the live joint
@@ -1970,11 +2052,17 @@ def neural_backend_info() -> dict[str, Any]:
     else:
         available = list(ort.get_available_providers())
     active_providers: list[str] | None = None
+    active_variant: str | None = None
     model = active()
     if model is not None:
         active_providers = list(model._sess.get_providers())
+        selected = getattr(model, "runtime_variant", None)
+        active_variant = selected.label if selected is not None else None
     return {
         "model": _DATASET,
+        "default_variant": "default",
+        "available_variants": [item.label for item in neural_variants(available_only=True)],
+        "active_variant": active_variant,
         "available_providers": available,
         "active_providers": active_providers,
     }

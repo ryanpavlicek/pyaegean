@@ -156,10 +156,14 @@ class _GroundingPipeline(GreekPipeline):
         self.calls: list[tuple[bool, str]] = []
         self._backend = object()
         self._config = GreekPipelineConfig(
-            schema_version=1,
+            schema_version=2,
             backend="neural",
             model_id="fake-window-model",
             dataset="fake-window-data",
+            runtime_variant="default",
+            variant_registry_sha256="9" * 64,
+            variant_award_sha256="8" * 64,
+            qualification_sha256="7" * 64,
             bundle_manifest_sha256="0" * 64,
             tokenizer_revision="fake-tokenizer",
             annotation_profile="test",

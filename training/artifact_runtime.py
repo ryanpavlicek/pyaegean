@@ -1,4 +1,4 @@
-"""Run A20 artifact evaluation, operational measurement, and qualification.
+"""Run artifact evaluation, operational measurement, and qualification.
 
 The command evaluates one already-created schema-1 model bundle in an isolated
 process.  It measures the complete A18 development manifest on CPU, probes the

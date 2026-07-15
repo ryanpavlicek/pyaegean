@@ -1,7 +1,7 @@
 """Export a trained Greek joint checkpoint to a qualified fp32 ONNX artifact.
 
 The command writes into a private staging directory, exports the graph, validates
-its schema-1 bundle, then runs the complete A20 development, parity, provider,
+its schema-1 bundle, then runs the complete development, parity, provider,
 latency, memory, and size gate in an isolated process.  Only a passing artifact is
 promoted to ``<out>/<model-id>`` and archived.  Optimization is a separate command
 (``quantize_grc_joint.py``) with its own gate profile.
@@ -78,7 +78,7 @@ def _export_graph(
         from train_parser import TAG_HEADS, JointParser
     except ImportError as exc:
         raise ArtifactCommandError(
-            "export requires the A20 training environment with torch and transformers installed"
+            "export requires the training environment with torch and transformers installed"
         ) from exc
 
     class ExportWrapper(torch.nn.Module):

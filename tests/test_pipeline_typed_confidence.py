@@ -122,6 +122,11 @@ class _ConfidenceBackend:
             segmentation="pretokenized",
             preprocessing_version="test-preprocessing-v1",
         )
+        self.runtime_variant = SimpleNamespace(
+            label="default",
+            award_sha256="d" * 64,
+            qualification_sha256="e" * 64,
+        )
         self._sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
 
     def analyze(

@@ -49,6 +49,7 @@ __all__ = [
 _SCHEMA_VERSION = 1
 _RECEIPT_SCHEMA_VERSION = 2
 _PROFILE_RECEIPT_SCHEMA_VERSION = 3
+_VARIANT_RECEIPT_SCHEMA_VERSION = 4
 _DATASET = "grc-joint"
 _V3_MODEL_ID = "grc-joint-v3"
 _V3_ASSET_SHA256 = "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e"
@@ -733,6 +734,14 @@ class AnalysisReceipt:
     output_profile_id: str | None = None
     output_profile_sha256: str | None = None
     postprocessing: tuple[str, ...] = ()
+    # Schema 4 binds the user-visible runtime selection to the exact registry and
+    # Qualification and runtime-variant award identities. The immutable v3 default
+    # predates those gates,
+    # so only that non-performance label may carry null award/qualification hashes.
+    runtime_variant: str | None = None
+    variant_registry_sha256: str | None = None
+    variant_award_sha256: str | None = None
+    qualification_sha256: str | None = None
 
     def __post_init__(self) -> None:
         calibration = _receipt_sha256(self.calibration_sha256, "calibration_sha256")
@@ -740,6 +749,13 @@ class AnalysisReceipt:
             self.confidence_policy_sha256, "confidence_policy_sha256"
         )
         profile_sha = _receipt_sha256(self.output_profile_sha256, "output_profile_sha256")
+        registry_sha = _receipt_sha256(
+            self.variant_registry_sha256, "variant_registry_sha256"
+        )
+        award_sha = _receipt_sha256(self.variant_award_sha256, "variant_award_sha256")
+        qualification_sha = _receipt_sha256(
+            self.qualification_sha256, "qualification_sha256"
+        )
         if self.output_profile_id is not None and (
             not isinstance(self.output_profile_id, str)
             or not self.output_profile_id
@@ -752,19 +768,60 @@ class AnalysisReceipt:
             not isinstance(step, str) or not step for step in self.postprocessing
         ):
             raise ValueError("analysis receipt postprocessing must be a tuple of non-empty strings")
+        if self.runtime_variant is not None and (
+            not isinstance(self.runtime_variant, str)
+            or self.runtime_variant not in {"default", "fast", "compact", "balanced"}
+        ):
+            raise ValueError("analysis receipt runtime_variant is invalid")
+        variant_fields_present = any(
+            value is not None
+            for value in (
+                self.runtime_variant,
+                registry_sha,
+                award_sha,
+                qualification_sha,
+            )
+        )
         if self.schema_version == _SCHEMA_VERSION:
             if calibration is not None or policy is not None:
                 raise ValueError("analysis receipt schema 1 cannot carry confidence hashes")
             if self.output_profile_id is not None or profile_sha is not None or self.postprocessing:
                 raise ValueError("analysis receipt schema 1 cannot carry output profile fields")
+            if variant_fields_present:
+                raise ValueError("analysis receipt schema 1 cannot carry runtime variant fields")
         elif self.schema_version == _RECEIPT_SCHEMA_VERSION:
             if calibration is None and policy is None:
                 raise ValueError("analysis receipt schema 2 requires a confidence hash")
             if self.output_profile_id is not None or profile_sha is not None or self.postprocessing:
                 raise ValueError("analysis receipt schema 2 cannot carry output profile fields")
+            if variant_fields_present:
+                raise ValueError("analysis receipt schema 2 cannot carry runtime variant fields")
         elif self.schema_version == _PROFILE_RECEIPT_SCHEMA_VERSION:
             if self.output_profile_id is None or profile_sha is None:
                 raise ValueError("analysis receipt schema 3 requires an output profile id and hash")
+            if variant_fields_present:
+                raise ValueError("analysis receipt schema 3 cannot carry runtime variant fields")
+        elif self.schema_version == _VARIANT_RECEIPT_SCHEMA_VERSION:
+            if self.runtime_variant is None or registry_sha is None:
+                raise ValueError(
+                    "analysis receipt schema 4 requires runtime_variant and registry hash"
+                )
+            if (award_sha is None) != (qualification_sha is None):
+                raise ValueError(
+                    "analysis receipt variant award and qualification hashes must appear together"
+                )
+            if award_sha is None and (
+                self.runtime_variant != "default"
+                or self.model_id != _V3_MODEL_ID
+                or self.dataset != _DATASET
+            ):
+                raise ValueError(
+                    "only the immutable grc-joint-v3 default may omit variant award evidence"
+                )
+            if (self.output_profile_id is None) != (profile_sha is None):
+                raise ValueError(
+                    "analysis receipt schema 4 output profile id/hash must appear together"
+                )
         else:
             raise ValueError(f"unsupported analysis receipt schema {self.schema_version!r}")
 
@@ -780,6 +837,10 @@ class AnalysisReceipt:
         windowed: bool = False,
         calibration_sha256: str | None = None,
         confidence_policy_sha256: str | None = None,
+        runtime_variant: str | None = None,
+        variant_registry_sha256: str | None = None,
+        variant_award_sha256: str | None = None,
+        qualification_sha256: str | None = None,
     ) -> "AnalysisReceipt":
         """Build a receipt from a validated bundle and the live execution session."""
         calibration_sha256 = _receipt_sha256(calibration_sha256, "calibration_sha256")
@@ -787,9 +848,13 @@ class AnalysisReceipt:
             confidence_policy_sha256, "confidence_policy_sha256"
         )
         receipt_schema = (
-            _RECEIPT_SCHEMA_VERSION
-            if calibration_sha256 is not None or confidence_policy_sha256 is not None
-            else _SCHEMA_VERSION
+            _VARIANT_RECEIPT_SCHEMA_VERSION
+            if runtime_variant is not None
+            else (
+                _RECEIPT_SCHEMA_VERSION
+                if calibration_sha256 is not None or confidence_policy_sha256 is not None
+                else _SCHEMA_VERSION
+            )
         )
         return cls(
             schema_version=receipt_schema,
@@ -824,6 +889,10 @@ class AnalysisReceipt:
             windowed=windowed,
             calibration_sha256=calibration_sha256,
             confidence_policy_sha256=confidence_policy_sha256,
+            runtime_variant=runtime_variant,
+            variant_registry_sha256=variant_registry_sha256,
+            variant_award_sha256=variant_award_sha256,
+            qualification_sha256=qualification_sha256,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -863,6 +932,13 @@ class AnalysisReceipt:
             value["output_profile_id"] = self.output_profile_id
             value["output_profile_sha256"] = self.output_profile_sha256
             value["postprocessing"] = list(self.postprocessing)
+        if self.schema_version == _VARIANT_RECEIPT_SCHEMA_VERSION:
+            value["calibration_sha256"] = self.calibration_sha256
+            value["confidence_policy_sha256"] = self.confidence_policy_sha256
+            value["runtime_variant"] = self.runtime_variant
+            value["variant_registry_sha256"] = self.variant_registry_sha256
+            value["variant_award_sha256"] = self.variant_award_sha256
+            value["qualification_sha256"] = self.qualification_sha256
         return value
 
     def to_json(self) -> str:
@@ -876,9 +952,9 @@ class AnalysisReceipt:
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "AnalysisReceipt":
-        """Read schema 1 or the pre-receipt ``neural_backend_info`` shape.
+        """Read supported receipt schemas or the pre-receipt backend-info shape.
 
-        The legacy shape preserves only ``model`` and active providers. Unknown fields
+        The pre-receipt shape preserves only ``model`` and active providers. Unknown fields
         are represented honestly as empty or ``None`` rather than guessed.
         """
         schema = value.get("schema_version")
@@ -918,11 +994,12 @@ class AnalysisReceipt:
             _SCHEMA_VERSION,
             _RECEIPT_SCHEMA_VERSION,
             _PROFILE_RECEIPT_SCHEMA_VERSION,
+            _VARIANT_RECEIPT_SCHEMA_VERSION,
         ):
             raise ValueError(
                 "unsupported analysis receipt schema "
                 f"{schema!r}; expected {_SCHEMA_VERSION}, {_RECEIPT_SCHEMA_VERSION}, or "
-                f"{_PROFILE_RECEIPT_SCHEMA_VERSION}"
+                f"{_PROFILE_RECEIPT_SCHEMA_VERSION}, or {_VARIANT_RECEIPT_SCHEMA_VERSION}"
             )
         confidence_fields = {"calibration_sha256", "confidence_policy_sha256"}
         if schema == _SCHEMA_VERSION and confidence_fields.intersection(value):
@@ -944,6 +1021,26 @@ class AnalysisReceipt:
             if missing:
                 raise ValueError(
                     "analysis receipt schema 3 missing output profile field(s): "
+                    + ", ".join(sorted(missing))
+                )
+            if not isinstance(value.get("postprocessing"), list):
+                raise ValueError("analysis receipt postprocessing must be a list")
+        variant_fields = {
+            "runtime_variant",
+            "variant_registry_sha256",
+            "variant_award_sha256",
+            "qualification_sha256",
+        }
+        if schema != _VARIANT_RECEIPT_SCHEMA_VERSION and variant_fields.intersection(value):
+            raise ValueError(
+                f"analysis receipt schema {schema} cannot carry runtime variant fields"
+            )
+        if schema == _VARIANT_RECEIPT_SCHEMA_VERSION:
+            required = variant_fields | confidence_fields | profile_fields
+            missing = required - set(value)
+            if missing:
+                raise ValueError(
+                    "analysis receipt schema 4 missing field(s): "
                     + ", ".join(sorted(missing))
                 )
             if not isinstance(value.get("postprocessing"), list):
@@ -1014,18 +1111,47 @@ class AnalysisReceipt:
                 ),
                 output_profile_id=(
                     value["output_profile_id"]
-                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    if schema >= _PROFILE_RECEIPT_SCHEMA_VERSION
                     else None
                 ),
                 output_profile_sha256=(
                     _receipt_sha256(value.get("output_profile_sha256"), "output_profile_sha256")
-                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    if schema >= _PROFILE_RECEIPT_SCHEMA_VERSION
                     else None
                 ),
                 postprocessing=(
                     tuple(value["postprocessing"])
-                    if schema == _PROFILE_RECEIPT_SCHEMA_VERSION
+                    if schema >= _PROFILE_RECEIPT_SCHEMA_VERSION
                     else ()
+                ),
+                runtime_variant=(
+                    str(value["runtime_variant"])
+                    if schema == _VARIANT_RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                variant_registry_sha256=(
+                    _receipt_sha256(
+                        value.get("variant_registry_sha256"),
+                        "variant_registry_sha256",
+                    )
+                    if schema == _VARIANT_RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                variant_award_sha256=(
+                    _receipt_sha256(
+                        value.get("variant_award_sha256"),
+                        "variant_award_sha256",
+                    )
+                    if schema == _VARIANT_RECEIPT_SCHEMA_VERSION
+                    else None
+                ),
+                qualification_sha256=(
+                    _receipt_sha256(
+                        value.get("qualification_sha256"),
+                        "qualification_sha256",
+                    )
+                    if schema == _VARIANT_RECEIPT_SCHEMA_VERSION
+                    else None
                 ),
             )
         except (KeyError, TypeError, ValueError) as exc:
@@ -1062,6 +1188,10 @@ class AnalysisReceipt:
             "preprocessing_version",
             "special_token_policy",
             "max_subwords",
+            "runtime_variant",
+            "variant_registry_sha256",
+            "variant_award_sha256",
+            "qualification_sha256",
         )
         mismatches = [
             f"{field}: expected {getattr(self, field)!r}, got {getattr(actual, field)!r}"
@@ -1074,7 +1204,7 @@ class AnalysisReceipt:
             )
 
     def with_analysis_profile(self, profile: AnalysisProfile) -> "AnalysisReceipt":
-        """Return a schema-3 receipt bound to an output ``AnalysisProfile``.
+        """Bind an output profile, preserving schema-4 runtime-variant identity.
 
         The profile module is imported lazily to keep contract import order cycle-safe.
         A validated profile contributes its stable id/hash and the ordered step ids;
@@ -1096,8 +1226,10 @@ class AnalysisReceipt:
         step_ids = tuple(step.step_id for step in steps)
         return replace(
             self,
-            schema_version=_PROFILE_RECEIPT_SCHEMA_VERSION,
-            source_schema_version=_PROFILE_RECEIPT_SCHEMA_VERSION,
+            schema_version=max(self.schema_version, _PROFILE_RECEIPT_SCHEMA_VERSION),
+            source_schema_version=max(
+                self.source_schema_version, _PROFILE_RECEIPT_SCHEMA_VERSION
+            ),
             output_profile_id=profile_id,
             output_profile_sha256=profile_sha,
             postprocessing=step_ids,
@@ -1107,11 +1239,11 @@ class AnalysisReceipt:
         """Require runtime identity and the complete output analysis profile to match."""
         self.assert_same_runtime(actual)
         if (
-            self.schema_version != _PROFILE_RECEIPT_SCHEMA_VERSION
-            or actual.schema_version != _PROFILE_RECEIPT_SCHEMA_VERSION
+            self.schema_version < _PROFILE_RECEIPT_SCHEMA_VERSION
+            or actual.schema_version < _PROFILE_RECEIPT_SCHEMA_VERSION
         ):
             raise ReceiptMismatchError(
-                "complete analysis-profile comparison requires two schema-3 receipts"
+                "complete analysis-profile comparison requires schema-3 or schema-4 receipts"
             )
         fields = ("output_profile_id", "output_profile_sha256", "postprocessing")
         mismatches = [

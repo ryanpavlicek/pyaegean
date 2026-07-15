@@ -437,10 +437,14 @@ def test_neural_reactivation_restores_enabled_documentary_wrapper(monkeypatch):
 
     replacement = _FakeModel(_default_analysis())
     config = runtime.GreekPipelineConfig(
-        schema_version=1,
+        schema_version=2,
         backend="neural",
         model_id="test-model",
         dataset="test-dataset",
+        runtime_variant="default",
+        variant_registry_sha256="9" * 64,
+        variant_award_sha256="8" * 64,
+        qualification_sha256="7" * 64,
         bundle_manifest_sha256="a" * 64,
         tokenizer_revision="test-revision",
         annotation_profile="test-profile",

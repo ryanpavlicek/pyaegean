@@ -286,6 +286,14 @@ of the full-precision model; it needs `onnxruntime>=1.23` for the 8-bit kernel. 
 full-precision (fp32) model stays available at the `grc-joint-v2` release for
 reproducibility.
 
+The packaged runtime registry identifies the exact release asset and bundle manifest under the
+stable `default` label; it does not bundle model weights. `fast`, `compact`, and `balanced` are
+reserved records with no artifact identity until a qualified successor earns the corresponding
+operational award. Any future available non-default record must bind a distinct cache key when
+its bytes differ, the release-asset SHA-256, bundle-manifest SHA-256, artifact qualification, and
+runtime-variant award. The label registry and public award summaries contain no private development task scores
+or raw timing series.
+
 Model card: the base encoder is **bowphs/GreBerta** (Riemenschneider & Frank,
 Apache-2.0). pyaegean fine-tunes it: tagging heads, a biaffine dependency parser,
 and an edit-script lemma head: on the **AGDT** (CC BY-SA 3.0), **Gorman**
@@ -611,7 +619,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.55.0'  (your installed version)
+v["package"]                                  # '0.56.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -682,7 +690,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.55.0'
+# '0.56.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation

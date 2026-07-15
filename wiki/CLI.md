@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.55.0
+aegean --version          # pyaegean 0.56.0
 ```
 
 | Group | What's in it |
@@ -1238,7 +1238,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.55.0                    │
+│ OK │ pyaegean │ 0.56.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -1607,11 +1607,13 @@ to stderr); after that, everything is offline.
 | `--parser` | the pure-Python arc-eager dependency parser | trains from the AGDT |
 | `--neural-lemmatizer` | the GreTa seq2seq lemmatizer (`[neural]`) | ~232 MB model |
 | `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~173 MB model |
+| `--neural-variant LABEL` | Runtime artifact for `--neural`: `default`, `fast`, `compact`, or `balanced`; only `default` is currently available | no additional download unless that label identifies a different released artifact |
 | `--lsj` | LSJ glossing (also set by `greek gloss`) | ~270 MB (or ~15 MB index) |
 
 ```bash
 # heavy — fetches the model on first use, then offline:
 aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural
+aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural --neural-variant default
 aegean greek parse "ἐν ἀρχῇ ἦν ὁ λόγος" --neural          # UD dependency tree
 aegean greek tag "…" --treebank --tagger                  # AGDT lookup + perceptron tagger
 ```
@@ -2276,6 +2278,9 @@ the analysis (a second model call: the analysis cannot bias the draft, though a 
 analysis can still mislead the repair).
 
 `--greek-backend default|baseline|neural` makes the Greek analysis owner explicit.
+With `neural`, add `--greek-variant default|fast|compact|balanced` to select its runtime
+artifact. Only `default` is currently available; a reserved label fails without fallback and
+before the translation provider is created.
 `default` preserves the module-level facade, `baseline` creates an isolated
 zero-dependency analyzer, and `neural` creates an isolated joint-model analyzer for that
 run. The choice and exact configuration appear in `--trace` and JSON provenance, but not

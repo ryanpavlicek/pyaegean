@@ -1,4 +1,4 @@
-"""Shared staging and A20 qualification helpers for conversion commands."""
+"""Shared staging and qualification helpers for conversion commands."""
 
 from __future__ import annotations
 

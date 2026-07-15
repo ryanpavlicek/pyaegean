@@ -1,4 +1,4 @@
-"""Staging, fail-closed promotion, and archive-input tests for A20 commands."""
+"""Staging, fail-closed promotion, and archive-input tests for artifact commands."""
 
 from __future__ import annotations
 

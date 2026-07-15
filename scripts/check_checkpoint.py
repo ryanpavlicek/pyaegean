@@ -345,6 +345,7 @@ def build_commands(
                         "training/export_onnx.py",
                         "training/quantize_grc_joint.py",
                         "training/run_development_evaluation.py",
+                        "training/runtime_variant_award.py",
                         "training/tests",
                     ),
                 ),

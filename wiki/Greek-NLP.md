@@ -75,9 +75,9 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.55.0.** Isolated pipeline instances, explicit long-input policies,
-> analysis receipts, source alignment, typed editorial form states, and lossless CoNLL-U
-> representation are part of the current release.
+> **Available in v0.56.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> selection, analysis receipts, source alignment, typed editorial form states, and lossless
+> CoNLL-U representation are part of the current release.
 
 Every stage below is independently callable, but you don't have to compose them:
 `pipeline` runs tokenize → sentence split → POS-tag → lemmatize (→ parse) over a
@@ -328,7 +328,40 @@ list(zip(ana.tokens, ana.upos, ana.deprel, ana.lemma))
 ana.feats[1]                       # 'Case=Dat|Gender=Fem|Number=Sing'
 ```
 
-The module-level calls above are a backward-compatible facade over
+### Runtime variants: what the names mean
+
+Runtime variants are different packaged forms of a neural model, not different Greek
+analysis modes. The stable labels are:
+
+| Label | Meaning now | Claim |
+| --- | --- | --- |
+| `default` | Available; the unchanged `grc-joint-v3` artifact | The artifact selected by this release. The name itself makes no speed or size claim. |
+| `fast` | Reserved, unavailable | Will require repeated same-environment CPU measurements that meet the frozen latency rule. |
+| `compact` | Reserved, unavailable | Will require a qualified artifact no larger than 90% of its reference. |
+| `balanced` | Reserved, unavailable | Optional; will require the compact rule plus the frozen latency and peak-memory bounds. |
+
+No label is inferred from a filename, ONNX precision, or a developer's expectation. A
+reserved label raises an error before optional-dependency checks, download, or cache changes;
+it never falls back to `default`. Omitting `variant=` is exactly the same as asking for
+`variant="default"`:
+
+```python
+greek.neural_variants()                         # inspect all four stable labels
+greek.neural_variants(available_only=True)      # currently: default only
+
+greek.use_neural_pipeline(variant="default")
+owned = greek.GreekPipeline.neural(variant="default")
+```
+
+Different available artifacts use different dataset/cache keys, so they can coexist and
+`force=True` refreshes only the selected artifact. `GreekPipelineConfig` schema 2 records
+the label, registry digest, artifact manifest, and any award/qualification digests.
+`AnalysisReceipt` schema 4 carries the same selection provenance with the exact execution
+environment. `GreekPipeline.from_config()` refuses registry drift or an unavailable label
+before loading a model. The CLI uses `--neural-variant` alongside `--neural`; translation's
+isolated neural owner uses `--greek-backend neural --greek-variant LABEL`.
+
+The module-level calls above are a facade over
 `greek.default_pipeline()`. Applications that need simultaneous configurations can own
 isolated instances instead:
 
@@ -345,7 +378,8 @@ instance type.
 The hybrid translator follows the same distinction explicitly: omit
 `translate(..., greek_pipeline=...)` to use the module-default facade, or pass a
 `GreekPipeline` instance to isolate its grounding. From the shell, the matching choice is
-`aegean ai translate ... --greek-backend default|baseline|neural`. Long-input handling is a
+`aegean ai translate ... --greek-backend default|baseline|neural`. When that owner is
+`neural`, `--greek-variant` selects its runtime artifact. Long-input handling is a
 separate explicit choice through `greek_long_input=` or `--greek-long-input`; the
 selected configuration and long-input mode appear in translation provenance, separately
 from the evidence sent to the provider. Translation currently uses the pipeline's default
@@ -445,10 +479,13 @@ Every production `SentenceAnalysis` also carries `receipt`, a canonical, seriali
 `AnalysisReceipt`. It records the exact model ID, asset and manifest SHA-256 values, bundle
 schema, tokenizer revision, package/Python/neural-library versions, live execution
 providers, inference annotation profile, normalization and model-input segmentation contract,
-limit, and truncation/window status. Schema 3 separately binds the composed output profile
-and ordered post-processing identity. `receipt.to_json()` is stable and `receipt.sha256` content-addresses
-it. Passing a prior receipt as `use_neural_pipeline(expected_receipt=receipt)` refuses a
-runtime or artifact mismatch rather than silently approximating the old analysis.
+limit, and truncation/window status. Schema 4 also binds the runtime label, complete variant
+registry, qualification/award identities when applicable, composed output profile, and ordered
+post-processing identity. Receipt schemas 1 through 3 remain readable for current hosted
+evidence, but they do not invent the missing runtime-label provenance. `receipt.to_json()` is
+stable and `receipt.sha256` content-addresses it. Passing a prior receipt as
+`use_neural_pipeline(expected_receipt=receipt)` refuses a runtime or artifact mismatch rather
+than silently approximating the old analysis.
 
 Lemma provenance is similarly explicit. Joint-model lookups use
 `LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts use `NEURAL_EDIT`, and a surface
@@ -461,8 +498,9 @@ Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, a
 `parse`: which then returns **UD relations** (`nsubj`, `obj`, `advcl`, …) with the
 predicted 9-character morphological tag on each token. `disable_neural_pipeline()`
 restores the cascades above. From the shell, add `--neural` to `tag`, `lemmatize`,
-`parse`, `pipeline`, or `eval` to use it for that command (the `[neural]` extra is
-required either way).
+`parse`, or `pipeline` to use it for that command, and optionally add
+`--neural-variant LABEL`. Evaluation commands intentionally reproduce the release-selected
+default and do not accept a variant override. The `[neural]` extra is required either way.
 
 **Measured: UD Ancient Greek test folds, official CoNLL 2018 evaluator, through the
 shipped package, end-to-end from raw text** (tokens F1 99.97):
@@ -563,11 +601,10 @@ an isolated instance.
 
 The per-sentence receipt keeps the immutable neural inference identity. If the
 opt-in documentary reconciliation or lemma-rescue layer post-processes that result,
-receipt schema 3 additionally binds the composed output profile ID and SHA-256 plus
-the ordered post-processing identity (including the configured lever and resource
-hashes). Schemas 1 and 2 remain readable and retain their historical fields; a
-schema-3 receipt does not turn post-processing into a new model or a new accuracy
-claim.
+receipt schema 4 additionally binds the runtime label, registry/evidence digests, composed
+output profile ID and SHA-256, and ordered post-processing identity (including the configured
+lever and resource hashes). Schemas 1 through 3 remain readable for current hosted evidence;
+a richer receipt does not turn post-processing into a new model or accuracy claim.
 
 `greek.analyze_sentences(...)` still returns the historical complete list; it is a
 collector over that bounded engine. Raw-text `greek.pipeline`, corpus annotation,
@@ -666,8 +703,9 @@ projection strips `#N` homograph suffixes and omits empty tokens; exact UD-fold
 scoring does not use that cleanup. PapyGreek's `orig`
 profile changes only the diplomatic `FORM` surface while retaining regularized-layer
 gold analyses and documented fallbacks. When a post-processing chain is attached,
-receipt schema 3 binds its composed output profile and ordered step identity;
-schemas 1 and 2 and `grc-joint-v3` remain unchanged.
+receipt schema 4 binds its runtime variant, composed output profile, and ordered step
+identity. Schemas 1 through 3 remain readable for current hosted evidence, and
+`grc-joint-v3` remains unchanged.
 
 ## Normalization & Beta Code
 

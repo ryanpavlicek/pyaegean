@@ -161,6 +161,9 @@ def test_backend_info_survives_a_missing_neural_extra(
     info = joint.neural_backend_info()
     assert info == {
         "model": "grc-joint",
+        "default_variant": "default",
+        "available_variants": ["default"],
+        "active_variant": None,
         "available_providers": None,
         "active_providers": None,
     }

@@ -3,7 +3,7 @@
 The transform applies 8-bit symmetric MatMulNBits weights and converts remaining
 eligible graph values to fp16 while keeping I/O types stable.  The command makes no
 speed or accuracy assumption from that recipe: it stages the result and runs the
-complete A20 optimization profile against a qualified fp32 reference.  Only a
+complete optimization profile against a qualified fp32 reference. Only a
 passing artifact receives a final directory and archive.
 """
 
@@ -136,7 +136,7 @@ def _convert_model(source: Path, intermediate: Path, target: Path) -> None:
         from onnxruntime.quantization.matmul_nbits_quantizer import MatMulNBitsQuantizer
     except ImportError as exc:
         raise ArtifactCommandError(
-            "quantization requires the A20 conversion environment with onnx, "
+            "quantization requires the conversion environment with onnx, "
             "onnxconverter-common, and onnxruntime installed"
         ) from exc
 

@@ -2,6 +2,21 @@
 
 ::: aegean.greek
 
+## Neural runtime variants
+
+`neural_variants()` returns the four stable runtime labels and their exact artifact/evidence
+identities; pass `available_only=True` to hide reservations. `neural_variant(label)` inspects
+one record without fetching a model. `default` remains the current `grc-joint-v3` artifact and
+makes no speed or size claim. `fast`, `compact`, and `balanced` are reserved until a qualified
+successor artifact earns the corresponding operational label.
+
+Select explicitly with `use_neural_pipeline(variant=...)` or
+`GreekPipeline.neural(variant=...)`. An unavailable label fails before dependency probing,
+network access, or cache mutation and never falls back. `GreekPipelineConfig` schema 2 and
+`AnalysisReceipt` schema 4 bind the selected label and registry digest; non-default available
+artifacts also bind their qualification and runtime-variant award digests. Different artifact variants
+use different dataset keys so their cached files coexist.
+
 ## Streaming neural sentence analysis
 
 `iter_analyze_sentences(sentences, batch_size=None)` is the bounded-memory API for
@@ -38,9 +53,10 @@ identity as a measured confidence value.
 Their `TokenRecord` results carry `TokenConfidence`/`SentenceConfidence` values with task,
 source-path, domain, calibration, and explicit unavailable-reason fields. `AbstentionPolicy` thresholds are
 caller-supplied and hashed into each decision; no default threshold or automatic OOD claim
-is provided. For the shipped canonical runtime, schema-3 `AnalysisReceipt` output records
+is provided. For the shipped canonical runtime, schema-4 `AnalysisReceipt` output records
 calibration/policy hashes together with the composed output and post-processing identity.
-Schema 2 remains readable for legacy or custom output without a composed profile.
+Schemas 1 through 3 remain readable where current hosted evidence uses them, without
+fabricating runtime-label provenance.
 
 For development data, `fit_temperature(logits, correct)` fits a top-1 temperature and
 `fit_logit_affine(probs, correct)` fits monotone `(slope, intercept)` parameters for a
@@ -83,6 +99,7 @@ PapyGreek's `orig` convention changes the diplomatic
 documented fallbacks.
 
 When a composed output profile or documentary post-processing chain is attached,
-receipt schema 3 binds its output/composed profile ID and SHA-256 plus the ordered
-post-processing identity. Receipt schemas 1 and 2 and the `grc-joint-v3` model
-identity remain readable and unchanged.
+receipt schema 4 binds its output/composed profile ID and SHA-256 plus the ordered
+post-processing identity and runtime-variant evidence. Receipt schemas 1 through 3
+remain readable for current hosted evidence, and the `grc-joint-v3` model identity is
+unchanged.

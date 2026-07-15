@@ -92,6 +92,9 @@ identity: the baseline uses `pyaegean-punctuation-v1`, while a neural instance c
 the value from its `ModelBundleManifest` (`pretokenized` for the published
 `grc-joint-v3` model). Neither value is the document splitter. The neural model
 receives already split word lists and never chooses document boundaries.
+Configuration schema 2 also records the explicit runtime-variant label, the complete registry
+digest, and any qualification/award digests. Restoring it refuses registry drift or an
+unavailable label before model loading; different variant artifacts use different cache keys.
 
 ### Confidence is a separate evidence layer
 
@@ -106,10 +109,10 @@ legacy flat confidence fields remain for compatibility and are not retrofitted w
 `AbstentionPolicy` is caller-owned: thresholds are supplied by the application and its
 canonical SHA-256 is attached to `accept`/`review`/`unavailable` decisions. The runtime
 ships no default threshold and does not infer an OOD warning. For the shipped canonical
-runtime, schema-3 `AnalysisReceipt` output records the calibration and policy hashes plus
-the composed output and post-processing identity. Schema 2 remains readable for legacy
-or custom output without a composed profile. The receipt records provenance but does not
-authorize an empirical calibration claim.
+runtime, schema-4 `AnalysisReceipt` output records the calibration and policy hashes, runtime
+variant and registry, and composed output/post-processing identity. Schemas 1 through 3
+remain readable for current hosted evidence without inventing those newer fields. The receipt
+records provenance but does not authorize an empirical calibration claim.
 
 ---
 
