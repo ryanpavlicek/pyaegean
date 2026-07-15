@@ -433,6 +433,24 @@ upstream commit as `Provenance.data_version`, and every `Corpus` carries a
 you used. Cite the underlying edition, not pyaegean's wrapper: the mechanics are
 on [For Specialists](For-Specialists) and [Data & Provenance](Data-and-Provenance).
 
+### Training-environment evidence
+
+The prospective `training/environment-lock.json` remains an explicitly
+non-authorizing template. The separately reviewed records under
+`training/results/a17-environment/` bind the complete 48-package resolver closure,
+CPython 3.12.13, a clean source commit, and one NVIDIA RTX PRO 6000 Blackwell
+Server Edition allocation with CUDA runtime and Torch CUDA 12.8, cuDNN 9.10.2,
+compute capability 12.0, 96 GB-class VRAM, and bf16 precision. The preflight was
+re-observed before promotion; GreBerta was resolved at its immutable commit through
+metadata only; and a deterministic fixture receipt binds the config, input, output,
+hardware, environment, and artifact hashes without model execution.
+
+These records establish that the reproduction environment and receipt path were
+captured consistently. They do not show that v4 has been trained, and they make no
+model-quality or performance claim. The published evidence summary indexes only the
+normalized reviewed records; raw package-manager metadata remains private because it
+contains a large amount of unrelated project-link metadata.
+
 ---
 
 ## See also

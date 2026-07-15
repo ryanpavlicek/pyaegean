@@ -22,6 +22,10 @@ def _captured_accelerator() -> dict:
     return {
         "kind": "cuda",
         "gpu_names": ["NVIDIA A100-SXM4-80GB"],
+        "gpu_count": 1,
+        "gpu_memory_bytes": [85_899_345_920],
+        "compute_capabilities": ["8.0"],
+        "precision": "bf16",
         "cuda_runtime_version": "12.7.1",
         "torch_cuda_version": "12.8",
         "cudnn_version": "9.10.2",
@@ -38,7 +42,7 @@ def _resolver_manifest() -> dict:
     return repro.build_resolver_manifest(
         tool_name="pip",
         tool_version="26.1",
-        direct_roots=["accelerate", "numpy", "onnx", "onnxruntime-gpu", "torch", "transformers"],
+        direct_roots=[package["name"] for package in lock["dependencies"]["packages"]],
         resolved_packages=lock["dependencies"]["packages"],
     )
 
@@ -55,14 +59,25 @@ def _captured_lock(
     }
     lock["dependencies"]["scope"] = "training-dependency-closure"
     lock["dependencies"]["complete"] = True
+    lock["dependencies"]["direct_roots"] = manifest["direct_roots"]
     lock["dependencies"]["resolver_evidence"] = {
         "file": evidence_file,
         "manifest_sha256": manifest["manifest_sha256"],
     }
+    accelerator = _captured_accelerator()
     lock["accelerator"]["frozen"] = {
-        field: value
-        for field, value in _captured_accelerator().items()
-        if field not in {"kind", "gpu_names"}
+        field: accelerator[field]
+        for field in (
+            "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision",
+            "cuda_runtime_version",
+            "torch_cuda_version",
+            "cudnn_version",
+            "driver_version",
+        )
     }
     lock = repro.stamp_environment_lock(lock)
     repro.validate_environment_lock(lock)
@@ -158,13 +173,13 @@ def _materialize_run(tmp_path: Path) -> tuple[dict, Path, dict]:
             "cpu": "fixture cpu",
             "gpu": "NVIDIA A100-SXM4-80GB",
             "gpu_count": 1,
-            "gpu_memory_bytes": 1024,
+            "gpu_memory_bytes": lock["accelerator"]["frozen"]["gpu_memory_bytes"][0],
             "driver_version": lock["accelerator"]["frozen"]["driver_version"],
             "cuda_runtime_version": lock["accelerator"]["frozen"]["cuda_runtime_version"],
             "torch_cuda_version": lock["accelerator"]["frozen"]["torch_cuda_version"],
             "cudnn_version": lock["accelerator"]["frozen"]["cudnn_version"],
-            "compute_capability": "8.0",
-            "precision": "bf16",
+            "compute_capability": lock["accelerator"]["frozen"]["compute_capabilities"][0],
+            "precision": lock["accelerator"]["frozen"]["precision"],
         },
         environment_lock=lock,
     )
@@ -363,6 +378,15 @@ def test_preflight_is_content_addressed_and_fails_closed(monkeypatch: pytest.Mon
     assert report["issues"] == []
     assert report["preflight_sha256"] == repro.document_sha256(report, "preflight_sha256")
     assert report["environment_definition_sha256"] == lock["environment_definition_sha256"]
+    exact = repro.preflight_environment(
+        lock, repository_root=ROOT, expected_repository_commit="c" * 40
+    )
+    assert exact["ok"] is True
+    wrong_commit = repro.preflight_environment(
+        lock, repository_root=ROOT, expected_repository_commit="d" * 40
+    )
+    assert wrong_commit["ok"] is False
+    assert "repository commit differs from the required candidate commit" in wrong_commit["issues"]
 
     promoted = repro.promote_environment_lock(lock, report)
     assert promoted["verification"]["state"] == "validated"
@@ -413,6 +437,10 @@ def test_unverified_template_and_unapproved_gpu_fail_preflight(
         lambda: {
             "kind": "cuda",
             "gpu_names": ["NVIDIA H100"],
+            "gpu_count": 1,
+            "gpu_memory_bytes": [85_899_345_920],
+            "compute_capabilities": ["9.0"],
+            "precision": "bf16",
             "cuda_runtime_version": "12.8",
             "torch_cuda_version": "12.8",
             "cudnn_version": "9.99.0",
@@ -531,10 +559,20 @@ def test_candidate_capture_uses_resolver_closure_and_live_platform(
     assert candidate["verification"]["state"] == "captured-candidate"
     assert candidate["python"]["version"] == "3.12.99"
     assert candidate["dependencies"]["packages"] == manifest["resolved_packages"]
+    assert candidate["dependencies"]["direct_roots"] == manifest["direct_roots"]
     assert candidate["accelerator"]["frozen"] == {
-        field: value
-        for field, value in accelerator.items()
-        if field not in {"kind", "gpu_names"}
+        field: accelerator[field]
+        for field in (
+            "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision",
+            "cuda_runtime_version",
+            "torch_cuda_version",
+            "cudnn_version",
+            "driver_version",
+        )
     }
     assert candidate["environment_definition_sha256"] == repro.environment_definition_sha256(
         candidate
@@ -557,7 +595,7 @@ def test_candidate_capture_uses_resolver_closure_and_live_platform(
 
 def test_pip_report_normalization_records_tool_roots_and_complete_list() -> None:
     packages = _lock()["dependencies"]["packages"]
-    direct = {"accelerate", "numpy", "onnx", "onnxruntime-gpu", "torch", "transformers"}
+    direct = {package["name"] for package in packages}
     report = {
         "pip_version": "26.1",
         "install": [
@@ -586,6 +624,9 @@ def test_accelerator_captures_runtime_and_torch_build_independently(
             is_available=lambda: True,
             device_count=lambda: 1,
             get_device_name=lambda index: "NVIDIA A100-SXM4-80GB",
+            get_device_properties=lambda index: SimpleNamespace(total_memory=85_899_345_920),
+            get_device_capability=lambda index: (8, 0),
+            is_bf16_supported=lambda: True,
         ),
         backends=SimpleNamespace(cudnn=SimpleNamespace(version=lambda: 91002)),
     )
@@ -600,3 +641,44 @@ def test_accelerator_captures_runtime_and_torch_build_independently(
     assert observed["cuda_runtime_version"] == "12.7.1"
     assert observed["torch_cuda_version"] == "12.8"
     assert observed["cuda_runtime_version"] != observed["torch_cuda_version"]
+
+
+def test_cuda_runtime_prefers_active_wheel_over_system_library(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    wheel_library = Path("C:/venv/nvidia/cuda_runtime/lib/libcudart.so.12")
+
+    class Distribution:
+        files = [Path("nvidia/cuda_runtime/lib/libcudart.so.12")]
+
+        @staticmethod
+        def locate_file(relative: Path) -> Path:
+            assert relative.name == "libcudart.so.12"
+            return wheel_library
+
+    class VersionFunction:
+        argtypes: object = None
+        restype: object = None
+
+        @staticmethod
+        def __call__(pointer: object) -> int:
+            pointer._obj.value = 12080  # type: ignore[attr-defined]
+            return 0
+
+    class Runtime:
+        cudaRuntimeGetVersion = VersionFunction()
+
+    seen: list[str] = []
+
+    def load(candidate: object) -> Runtime:
+        seen.append(str(candidate))
+        if str(candidate) != str(wheel_library):
+            raise OSError("wrong runtime")
+        return Runtime()
+
+    monkeypatch.setattr(repro.importlib.metadata, "distribution", lambda name: Distribution())
+    monkeypatch.setattr(repro.importlib.util, "find_spec", lambda name: None)
+    monkeypatch.setattr(repro.ctypes.util, "find_library", lambda name: "system-libcudart.so")
+    monkeypatch.setattr(repro.ctypes, "CDLL", load)
+    assert repro.capture_cuda_runtime_version() == "12.8.0"
+    assert seen == [str(wheel_library)]

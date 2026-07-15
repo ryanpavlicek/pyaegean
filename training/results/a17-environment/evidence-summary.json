@@ -1,0 +1,58 @@
+{
+  "artifacts": [
+    {
+      "bytes": 3741,
+      "path": "training/results/a17-environment/resolver-manifest.json",
+      "sha256": "8f88611639d1671ab4c1ebf0c4493ef7ca615970c837617567770e7544fc4032"
+    },
+    {
+      "bytes": 4901,
+      "path": "training/results/a17-environment/preflight.json",
+      "sha256": "221834d415c55bdfa0914369c9b3a0c93da4b1999ef885f2dadd3cfc98f13d66"
+    },
+    {
+      "bytes": 6404,
+      "path": "training/results/a17-environment/environment-lock.json",
+      "sha256": "ad9f82deed37b555effea0c999dfb17133eaa539ae4ba86939e86f2699c208ce"
+    },
+    {
+      "bytes": 813,
+      "path": "training/results/a17-environment/backbone-resolution.json",
+      "sha256": "68c4db357da011f3eaf6b7e98d45a750b76ce3463f040a3554b6ca1d99a81e99"
+    },
+    {
+      "bytes": 872,
+      "path": "training/results/a17-environment/dry-run-output.json",
+      "sha256": "b3f02dbc69b7530de854e7e2ca6638a5b2ccbabef18646219ba4e0c0dd24793b"
+    },
+    {
+      "bytes": 6557,
+      "path": "training/results/a17-environment/run-receipt.json",
+      "sha256": "e5fd6e668de02a23f80001dec4d5421183b2bb311ccca7679d7cbb58350702f4"
+    }
+  ],
+  "backbone_resolution_sha256": "9f8933a9acbe81e68113ef37fc6cfc9d0aceb570fb7281cc5639d104cc2f1526",
+  "environment_definition_sha256": "0fbb9551a33355b37d3683523936234c74e2b53b9b878bf5c572347c695eb90d",
+  "format": "pyaegean-a17-evidence-summary/1",
+  "hardware": {
+    "compute_capability": "12.0",
+    "cpu": "x86_64",
+    "cuda_runtime_version": "12.8.0",
+    "cudnn_version": "9.10.2",
+    "driver_version": "580.82.07",
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "gpu_count": 1,
+    "gpu_memory_bytes": 101974081536,
+    "machine": "x86_64",
+    "platform": "Linux-6.6.122+-x86_64-with-glibc2.35",
+    "precision": "bf16",
+    "torch_cuda_version": "12.8"
+  },
+  "lock_sha256": "df5e93dafa345bc53feeb4e0bd2abdbf3397b2cd88156ff29ad25fe174e10135",
+  "preflight_sha256": "17a53ee5d1d2bd15812ebeae97d43842d46a10b1fff903922406c66f6790f925",
+  "resolver_manifest_sha256": "2b2415795417aa8609fe3529555642379fd25a8f0fa42744b76cca58a058e3cc",
+  "run_receipt_sha256": "3b6b79f05d0f5d0e6f0549ab12ff019a94e5a8523ff1578797c6e3a384b4991f",
+  "source_commit": "bc6f06fae0a2a41de5e65a25b80bef1dc1549f04",
+  "source_repository": "https://github.com/ryanpavlicek/pyaegean.git",
+  "summary_sha256": "61adabb162ee1d82a4ca87d440a1a5ff6a467862d4e13c62ccaa2f6f54fed72d"
+}

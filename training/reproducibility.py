@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.util
 import json
 import platform
 import re
@@ -279,7 +280,7 @@ def _validate_dependencies(value: Any, context: str) -> None:
     dependencies = _expect_mapping(value, context)
     _expect_keys(
         dependencies,
-        required={"scope", "complete", "resolver_evidence", "packages"},
+        required={"scope", "complete", "direct_roots", "resolver_evidence", "packages"},
         context=context,
     )
     scope = dependencies["scope"]
@@ -294,6 +295,15 @@ def _validate_dependencies(value: Any, context: str) -> None:
         )
     if not isinstance(dependencies["complete"], bool):
         raise ContractError(f"{context}.complete must be boolean")
+    direct_roots = dependencies["direct_roots"]
+    if not isinstance(direct_roots, list) or not direct_roots:
+        raise ContractError(f"{context}.direct_roots must be a non-empty array")
+    normalized_roots = [
+        _canonical_package_name(_string(root, f"{context}.direct_roots[{index}]"))
+        for index, root in enumerate(direct_roots)
+    ]
+    if direct_roots != sorted(set(normalized_roots)):
+        raise ContractError(f"{context}.direct_roots must be canonical, unique, and sorted")
     if scope == "direct-requirements" and dependencies["complete"]:
         raise ContractError(f"{context} cannot call direct requirements a complete environment")
     evidence = dependencies["resolver_evidence"]
@@ -318,6 +328,10 @@ def _validate_dependencies(value: Any, context: str) -> None:
         f"{context}.packages",
         require_training_set=True,
     )
+    package_names = {package["name"] for package in dependencies["packages"]}
+    missing_roots = sorted(set(direct_roots) - package_names)
+    if missing_roots:
+        raise ContractError(f"{context}.direct_roots absent from packages: {', '.join(missing_roots)}")
 
 
 def validate_resolver_manifest(
@@ -467,6 +481,8 @@ def verify_resolver_evidence(
         raise ContractError("resolver evidence manifest digest differs from environment lock")
     if manifest["resolved_packages"] != dependencies["packages"]:
         raise ContractError("environment lock packages differ from resolver evidence")
+    if manifest["direct_roots"] != dependencies["direct_roots"]:
+        raise ContractError("environment lock direct roots differ from resolver evidence")
     return manifest
 
 
@@ -492,6 +508,10 @@ def _validate_accelerator_observation(value: Any, context: str) -> Mapping[str, 
         required={
             "kind",
             "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision",
             "cuda_runtime_version",
             "torch_cuda_version",
             "cudnn_version",
@@ -507,8 +527,22 @@ def _validate_accelerator_observation(value: Any, context: str) -> Mapping[str, 
     normalized_names = [
         _string(name, f"{context}.gpu_names[{index}]") for index, name in enumerate(gpu_names)
     ]
-    if normalized_names != sorted(set(normalized_names)):
-        raise ContractError(f"{context}.gpu_names must be unique and sorted")
+    gpu_count = _integer(accelerator["gpu_count"], f"{context}.gpu_count", minimum=1)
+    if len(normalized_names) != gpu_count:
+        raise ContractError(f"{context}.gpu_names length differs from gpu_count")
+    memories = accelerator["gpu_memory_bytes"]
+    if not isinstance(memories, list) or len(memories) != gpu_count:
+        raise ContractError(f"{context}.gpu_memory_bytes must have one value per GPU")
+    for index, memory in enumerate(memories):
+        _integer(memory, f"{context}.gpu_memory_bytes[{index}]", minimum=1)
+    capabilities = accelerator["compute_capabilities"]
+    if not isinstance(capabilities, list) or len(capabilities) != gpu_count:
+        raise ContractError(f"{context}.compute_capabilities must have one value per GPU")
+    for index, capability in enumerate(capabilities):
+        _version(capability, f"{context}.compute_capabilities[{index}]")
+    precision = accelerator["precision"]
+    if precision not in {"bf16", "fp16"}:
+        raise ContractError(f"{context}.precision must be 'bf16' or 'fp16'")
     for field in (
         "cuda_runtime_version",
         "torch_cuda_version",
@@ -802,6 +836,11 @@ def validate_environment_lock(
     _expect_keys(
         frozen,
         required={
+            "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision",
             "cuda_runtime_version",
             "torch_cuda_version",
             "cudnn_version",
@@ -821,6 +860,34 @@ def validate_environment_lock(
             raise ContractError(
                 "captured/validated lock must freeze every accelerator software version"
             )
+    hardware_values = (
+        frozen["gpu_names"],
+        frozen["gpu_count"],
+        frozen["gpu_memory_bytes"],
+        frozen["compute_capabilities"],
+        frozen["precision"],
+    )
+    if all(value is None for value in hardware_values):
+        if state in {"captured-candidate", "validated"}:
+            raise ContractError("captured/validated lock must freeze accelerator hardware")
+    elif any(value is None for value in hardware_values):
+        raise ContractError("accelerator hardware fields must be all null or all frozen")
+    else:
+        _validate_accelerator_observation(
+            {
+                "kind": "cuda",
+                "gpu_names": frozen["gpu_names"],
+                "gpu_count": frozen["gpu_count"],
+                "gpu_memory_bytes": frozen["gpu_memory_bytes"],
+                "compute_capabilities": frozen["compute_capabilities"],
+                "precision": frozen["precision"],
+                "cuda_runtime_version": frozen["cuda_runtime_version"],
+                "torch_cuda_version": frozen["torch_cuda_version"],
+                "cudnn_version": frozen["cudnn_version"],
+                "driver_version": frozen["driver_version"],
+            },
+            "environment lock.accelerator.frozen",
+        )
 
     _validate_backbone(lock["backbone"], "environment lock.backbone")
     definition = _sha256(
@@ -1058,6 +1125,24 @@ def validate_run_receipt(
                 raise ContractError(
                     f"run receipt hardware.{field} differs from the environment lock"
                 )
+        if len(set(frozen["gpu_names"])) != 1:
+            raise ContractError("run receipt schema cannot represent a heterogeneous GPU lock")
+        if len(set(frozen["gpu_memory_bytes"])) != 1:
+            raise ContractError("run receipt schema cannot represent mixed GPU memory capacities")
+        if len(set(frozen["compute_capabilities"])) != 1:
+            raise ContractError("run receipt schema cannot represent mixed GPU compute capabilities")
+        exact_hardware = {
+            "gpu": frozen["gpu_names"][0],
+            "gpu_count": frozen["gpu_count"],
+            "gpu_memory_bytes": frozen["gpu_memory_bytes"][0],
+            "compute_capability": frozen["compute_capabilities"][0],
+            "precision": frozen["precision"],
+        }
+        for field, expected in exact_hardware.items():
+            if receipt["hardware"][field] != expected:
+                raise ContractError(
+                    f"run receipt hardware.{field} differs from the environment lock"
+                )
 
 
 def build_run_receipt(
@@ -1219,11 +1304,42 @@ def _cuda_version_text(raw: int) -> str:
 def capture_cuda_runtime_version() -> str:
     """Query the loaded CUDA runtime API, independently of Torch's build version."""
 
-    candidates = [ctypes.util.find_library("cudart"), "libcudart.so"]
+    candidates: list[str] = []
+
+    def add(candidate: object) -> None:
+        if candidate is None:
+            return
+        value = str(candidate)
+        if value and value not in candidates:
+            candidates.append(value)
+
+    # Prefer the CUDA runtime installed with the active Torch environment. CUDA wheels
+    # need not add their private library directories to ldconfig, and a system cudart
+    # can be a different version from the runtime Torch actually loads.
+    try:
+        distribution = importlib.metadata.distribution("nvidia-cuda-runtime-cu12")
+    except importlib.metadata.PackageNotFoundError:
+        distribution = None
+    if distribution is not None:
+        for relative in distribution.files or ():
+            if relative.name.startswith("libcudart.so"):
+                add(distribution.locate_file(relative))
+
+    torch_spec = importlib.util.find_spec("torch")
+    if torch_spec is not None and torch_spec.origin:
+        torch_root = Path(torch_spec.origin).resolve().parent
+        for pattern in ("lib/libcudart.so*", "../nvidia/cuda_runtime/lib/libcudart.so*"):
+            for path in sorted(torch_root.glob(pattern)):
+                if path.is_file():
+                    add(path)
+
+    # Fall back to the process-global/system loader only after wheel-local candidates.
+    add(ctypes.util.find_library("cudart"))
+    add("libcudart.so")
+    add("libcudart.so.12")
+
     errors: list[str] = []
     for candidate in candidates:
-        if not candidate:
-            continue
         try:
             runtime = ctypes.CDLL(candidate)
             version = ctypes.c_int()
@@ -1265,14 +1381,22 @@ def capture_accelerator() -> dict[str, Any]:
     drivers = sorted({line.strip() for line in process.stdout.splitlines() if line.strip()})
     if len(drivers) != 1:
         raise ContractError("all visible GPUs must report the same driver version")
-    gpu_names = sorted(
-        {str(torch.cuda.get_device_name(index)) for index in range(torch.cuda.device_count())}
-    )
+    gpu_count = int(torch.cuda.device_count())
+    gpu_names = [str(torch.cuda.get_device_name(index)) for index in range(gpu_count)]
     if not gpu_names:
         raise ContractError("torch did not report any visible CUDA devices")
     return {
         "kind": "cuda",
         "gpu_names": gpu_names,
+        "gpu_count": gpu_count,
+        "gpu_memory_bytes": [
+            int(torch.cuda.get_device_properties(index).total_memory) for index in range(gpu_count)
+        ],
+        "compute_capabilities": [
+            ".".join(str(part) for part in torch.cuda.get_device_capability(index))
+            for index in range(gpu_count)
+        ],
+        "precision": "bf16" if bool(torch.cuda.is_bf16_supported()) else "fp16",
         "cuda_runtime_version": capture_cuda_runtime_version(),
         "torch_cuda_version": str(cuda_version),
         "cudnn_version": _cudnn_version_text(torch.backends.cudnn.version()),
@@ -1285,6 +1409,7 @@ def preflight_environment(
     *,
     repository_root: Path | str,
     check_accelerator: bool = True,
+    expected_repository_commit: str | None = None,
 ) -> dict[str, Any]:
     """Compare a clean machine with the lock; never downloads or executes a model."""
 
@@ -1317,6 +1442,10 @@ def preflight_environment(
         observed["repository"] = capture_repository(repository_root)
         if observed["repository"]["dirty"]:
             issues.append("repository has uncommitted or untracked files")
+        if expected_repository_commit is not None:
+            _commit(expected_repository_commit, "expected repository commit")
+            if observed["repository"]["commit"] != expected_repository_commit:
+                issues.append("repository commit differs from the required candidate commit")
     except ContractError as exc:
         issues.append(f"repository inspection failed: {exc}")
         observed["repository"] = None
@@ -1428,6 +1557,12 @@ def validate_preflight_report(
         ):
             raise ContractError("preflight report binds a different environment definition")
         _validate_preflight_observed(report["observed"], environment_lock)
+        verification = environment_lock["verification"]
+        if (
+            verification["state"] == "validated"
+            and verification["preflight_receipt_sha256"] != recorded
+        ):
+            raise ContractError("validated environment lock binds a different preflight receipt")
 
 
 def capture_candidate_environment_lock(
@@ -1443,6 +1578,8 @@ def capture_candidate_environment_lock(
     if template["verification"]["state"] != "unverified-template":
         raise ContractError("candidate capture requires an unverified template")
     validate_resolver_manifest(resolver_manifest)
+    if resolver_manifest["direct_roots"] != template["dependencies"]["direct_roots"]:
+        raise ContractError("resolver manifest direct roots differ from the frozen template")
     _validate_file_record(resolver_file, "resolver manifest file")
     packages = resolver_manifest["resolved_packages"]
     installed = capture_packages(package["name"] for package in packages)
@@ -1468,6 +1605,7 @@ def capture_candidate_environment_lock(
     candidate["dependencies"] = {
         "scope": "training-dependency-closure",
         "complete": True,
+        "direct_roots": deepcopy(resolver_manifest["direct_roots"]),
         "resolver_evidence": {
             "file": dict(resolver_file),
             "manifest_sha256": resolver_manifest["manifest_sha256"],
@@ -1477,6 +1615,11 @@ def capture_candidate_environment_lock(
     candidate["accelerator"]["frozen"] = {
         field: observed_accelerator[field]
         for field in (
+            "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision",
             "cuda_runtime_version",
             "torch_cuda_version",
             "cudnn_version",

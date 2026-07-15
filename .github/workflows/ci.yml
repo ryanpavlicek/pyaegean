@@ -28,7 +28,7 @@ jobs:
       - name: Lint
         run: >-
           ruff check src tests training/reproducibility.py
-          training/validate_reproducibility.py training/tests
+          training/validate_reproducibility.py training/a17_colab.py training/tests
       - name: Type-check
         run: mypy
       - name: Public-API facade validation

@@ -1,0 +1,8 @@
+{
+  "format": "pyaegean-a17-dry-run-config/1",
+  "purpose": "environment-and-receipt-contract-smoke-test",
+  "seed": 17,
+  "training_performed": false,
+  "inference_performed": false,
+  "evaluation_performed": false
+}

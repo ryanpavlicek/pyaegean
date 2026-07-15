@@ -1,0 +1,92 @@
+{
+  "$id": "https://pyaegean.xyz/schemas/training-a17-evidence-summary-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "items": {"$ref": "#/$defs/file"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "backbone_resolution_sha256": {"$ref": "#/$defs/sha256"},
+    "environment_definition_sha256": {"$ref": "#/$defs/sha256"},
+    "format": {"const": "pyaegean-a17-evidence-summary/1"},
+    "hardware": {
+      "additionalProperties": false,
+      "properties": {
+        "compute_capability": {"$ref": "#/$defs/exactVersion"},
+        "cpu": {"minLength": 1, "type": "string"},
+        "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
+        "cudnn_version": {"$ref": "#/$defs/exactVersion"},
+        "driver_version": {"$ref": "#/$defs/exactVersion"},
+        "gpu": {"minLength": 1, "type": "string"},
+        "gpu_count": {"minimum": 1, "type": "integer"},
+        "gpu_memory_bytes": {"minimum": 1, "type": "integer"},
+        "machine": {"minLength": 1, "type": "string"},
+        "platform": {"minLength": 1, "type": "string"},
+        "precision": {"enum": ["bf16", "fp16"]},
+        "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
+      },
+      "required": [
+        "platform",
+        "machine",
+        "cpu",
+        "gpu",
+        "gpu_count",
+        "gpu_memory_bytes",
+        "driver_version",
+        "cuda_runtime_version",
+        "torch_cuda_version",
+        "cudnn_version",
+        "compute_capability",
+        "precision"
+      ],
+      "type": "object"
+    },
+    "lock_sha256": {"$ref": "#/$defs/sha256"},
+    "preflight_sha256": {"$ref": "#/$defs/sha256"},
+    "resolver_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "run_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "source_commit": {"$ref": "#/$defs/gitCommit"},
+    "source_repository": {"minLength": 1, "type": "string"},
+    "summary_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "format",
+    "source_repository",
+    "source_commit",
+    "hardware",
+    "environment_definition_sha256",
+    "lock_sha256",
+    "preflight_sha256",
+    "resolver_manifest_sha256",
+    "backbone_resolution_sha256",
+    "run_receipt_sha256",
+    "artifacts",
+    "summary_sha256"
+  ],
+  "title": "pyaegean A17 live-environment evidence summary",
+  "type": "object",
+  "$defs": {
+    "file": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {"minimum": 0, "type": "integer"},
+        "path": {
+          "minLength": 1,
+          "not": {"pattern": "(^/|\\\\|(^|/)\\.\\.?(/|$))"},
+          "type": "string"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "bytes", "sha256"],
+      "type": "object"
+    },
+    "exactVersion": {
+      "pattern": "^[0-9][0-9A-Za-z.!+_-]*$",
+      "type": "string"
+    },
+    "gitCommit": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}
+  }
+}

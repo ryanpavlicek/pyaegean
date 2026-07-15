@@ -1,0 +1,277 @@
+{
+  "accelerator": {
+    "allocation": {
+      "fallback_gpu_prefix": "NVIDIA A100",
+      "policy": "preferred-then-fallback",
+      "preferred_gpu_prefix": "NVIDIA RTX PRO 6000 Blackwell Server Edition"
+    },
+    "frozen": {
+      "compute_capabilities": [
+        "12.0"
+      ],
+      "cuda_runtime_version": "12.8.0",
+      "cudnn_version": "9.10.2",
+      "driver_version": "580.82.07",
+      "gpu_count": 1,
+      "gpu_memory_bytes": [
+        101974081536
+      ],
+      "gpu_names": [
+        "NVIDIA RTX PRO 6000 Blackwell Server Edition"
+      ],
+      "precision": "bf16",
+      "torch_cuda_version": "12.8"
+    },
+    "kind": "cuda"
+  },
+  "backbone": {
+    "license": "Apache-2.0",
+    "repository": "bowphs/GreBerta",
+    "revision": "3dce05464f1f429d68acd9b09e117632490c92d4",
+    "revision_type": "git-commit",
+    "tokenizer_revision": "3dce05464f1f429d68acd9b09e117632490c92d4"
+  },
+  "dependencies": {
+    "complete": true,
+    "direct_roots": [
+      "accelerate",
+      "huggingface-hub",
+      "numpy",
+      "onnx",
+      "onnxruntime-gpu",
+      "safetensors",
+      "tokenizers",
+      "torch",
+      "transformers"
+    ],
+    "packages": [
+      {
+        "name": "accelerate",
+        "version": "1.12.0"
+      },
+      {
+        "name": "certifi",
+        "version": "2026.6.17"
+      },
+      {
+        "name": "charset-normalizer",
+        "version": "3.4.9"
+      },
+      {
+        "name": "filelock",
+        "version": "3.29.7"
+      },
+      {
+        "name": "flatbuffers",
+        "version": "25.12.19"
+      },
+      {
+        "name": "fsspec",
+        "version": "2026.6.0"
+      },
+      {
+        "name": "hf-xet",
+        "version": "1.5.1"
+      },
+      {
+        "name": "huggingface-hub",
+        "version": "0.36.2"
+      },
+      {
+        "name": "idna",
+        "version": "3.18"
+      },
+      {
+        "name": "jinja2",
+        "version": "3.1.6"
+      },
+      {
+        "name": "markupsafe",
+        "version": "3.0.3"
+      },
+      {
+        "name": "ml-dtypes",
+        "version": "0.5.4"
+      },
+      {
+        "name": "mpmath",
+        "version": "1.3.0"
+      },
+      {
+        "name": "networkx",
+        "version": "3.6.1"
+      },
+      {
+        "name": "numpy",
+        "version": "2.3.5"
+      },
+      {
+        "name": "nvidia-cublas-cu12",
+        "version": "12.8.4.1"
+      },
+      {
+        "name": "nvidia-cuda-cupti-cu12",
+        "version": "12.8.90"
+      },
+      {
+        "name": "nvidia-cuda-nvrtc-cu12",
+        "version": "12.8.93"
+      },
+      {
+        "name": "nvidia-cuda-runtime-cu12",
+        "version": "12.8.90"
+      },
+      {
+        "name": "nvidia-cudnn-cu12",
+        "version": "9.10.2.21"
+      },
+      {
+        "name": "nvidia-cufft-cu12",
+        "version": "11.3.3.83"
+      },
+      {
+        "name": "nvidia-cufile-cu12",
+        "version": "1.13.1.3"
+      },
+      {
+        "name": "nvidia-curand-cu12",
+        "version": "10.3.9.90"
+      },
+      {
+        "name": "nvidia-cusolver-cu12",
+        "version": "11.7.3.90"
+      },
+      {
+        "name": "nvidia-cusparse-cu12",
+        "version": "12.5.8.93"
+      },
+      {
+        "name": "nvidia-cusparselt-cu12",
+        "version": "0.7.1"
+      },
+      {
+        "name": "nvidia-nccl-cu12",
+        "version": "2.27.5"
+      },
+      {
+        "name": "nvidia-nvjitlink-cu12",
+        "version": "12.8.93"
+      },
+      {
+        "name": "nvidia-nvshmem-cu12",
+        "version": "3.3.20"
+      },
+      {
+        "name": "nvidia-nvtx-cu12",
+        "version": "12.8.90"
+      },
+      {
+        "name": "onnx",
+        "version": "1.20.1"
+      },
+      {
+        "name": "onnxruntime-gpu",
+        "version": "1.25.1"
+      },
+      {
+        "name": "packaging",
+        "version": "26.2"
+      },
+      {
+        "name": "protobuf",
+        "version": "7.35.1"
+      },
+      {
+        "name": "psutil",
+        "version": "7.2.2"
+      },
+      {
+        "name": "pyyaml",
+        "version": "6.0.3"
+      },
+      {
+        "name": "regex",
+        "version": "2026.7.10"
+      },
+      {
+        "name": "requests",
+        "version": "2.34.2"
+      },
+      {
+        "name": "safetensors",
+        "version": "0.7.0"
+      },
+      {
+        "name": "setuptools",
+        "version": "83.0.0"
+      },
+      {
+        "name": "sympy",
+        "version": "1.14.0"
+      },
+      {
+        "name": "tokenizers",
+        "version": "0.22.2"
+      },
+      {
+        "name": "torch",
+        "version": "2.9.1+cu128"
+      },
+      {
+        "name": "tqdm",
+        "version": "4.68.4"
+      },
+      {
+        "name": "transformers",
+        "version": "4.57.6"
+      },
+      {
+        "name": "triton",
+        "version": "3.5.1"
+      },
+      {
+        "name": "typing-extensions",
+        "version": "4.16.0"
+      },
+      {
+        "name": "urllib3",
+        "version": "2.7.0"
+      }
+    ],
+    "resolver_evidence": {
+      "file": {
+        "bytes": 3741,
+        "path": "training/results/a17-environment/resolver-manifest.json",
+        "sha256": "8f88611639d1671ab4c1ebf0c4493ef7ca615970c837617567770e7544fc4032"
+      },
+      "manifest_sha256": "2b2415795417aa8609fe3529555642379fd25a8f0fa42744b76cca58a058e3cc"
+    },
+    "scope": "training-dependency-closure"
+  },
+  "environment_definition_sha256": "0fbb9551a33355b37d3683523936234c74e2b53b9b878bf5c572347c695eb90d",
+  "format": "pyaegean-training-environment-lock/1",
+  "lock_sha256": "df5e93dafa345bc53feeb4e0bd2abdbf3397b2cd88156ff29ad25fe174e10135",
+  "platform": {
+    "libc": {
+      "name": "glibc",
+      "version": "2.35"
+    },
+    "machine": "x86_64",
+    "release": "6.6.122+",
+    "system": "Linux"
+  },
+  "provenance": {
+    "backbone_revision_source": "ref-only lookup of bowphs/GreBerta refs/heads/main on 2026-07-14; no model files downloaded",
+    "package_pin_source": "candidate selections whose individual availability was checked in package indexes; the combination and transitive closure have not been rehearsed",
+    "reference_evidence": "training/results/gpu-verify-2026-07-10.json",
+    "reference_scope": "runtime/provider reference only (pyaegean 0.32.0); not a training-environment capture"
+  },
+  "python": {
+    "implementation": "CPython",
+    "version": "3.12.13"
+  },
+  "verification": {
+    "preflight_receipt_sha256": "17a53ee5d1d2bd15812ebeae97d43842d46a10b1fff903922406c66f6790f925",
+    "state": "validated"
+  }
+}

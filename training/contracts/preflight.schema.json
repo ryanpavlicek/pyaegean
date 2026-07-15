@@ -45,21 +45,36 @@
     "accelerator": {
       "additionalProperties": false,
       "properties": {
+        "compute_capabilities": {
+          "items": {"$ref": "#/$defs/exactVersion"},
+          "minItems": 1,
+          "type": "array"
+        },
         "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
         "cudnn_version": {"$ref": "#/$defs/exactVersion"},
         "driver_version": {"$ref": "#/$defs/exactVersion"},
+        "gpu_count": {"minimum": 1, "type": "integer"},
+        "gpu_memory_bytes": {
+          "items": {"minimum": 1, "type": "integer"},
+          "minItems": 1,
+          "type": "array"
+        },
         "gpu_names": {
           "items": {"minLength": 1, "type": "string"},
           "minItems": 1,
-          "type": "array",
-          "uniqueItems": true
+          "type": "array"
         },
         "kind": {"const": "cuda"},
+        "precision": {"enum": ["bf16", "fp16"]},
         "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
       },
       "required": [
         "kind",
         "gpu_names",
+        "gpu_count",
+        "gpu_memory_bytes",
+        "compute_capabilities",
+        "precision",
         "cuda_runtime_version",
         "torch_cuda_version",
         "cudnn_version",

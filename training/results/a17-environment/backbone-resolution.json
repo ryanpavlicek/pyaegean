@@ -1,0 +1,29 @@
+{
+  "available_files": [
+    ".gitattributes",
+    "README.md",
+    "config.json",
+    "merges.txt",
+    "model.safetensors",
+    "pytorch_model.bin",
+    "special_tokens_map.json",
+    "tf_model.h5",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "format": "pyaegean-backbone-resolution/1",
+  "repository": "bowphs/GreBerta",
+  "requested_revision": "3dce05464f1f429d68acd9b09e117632490c92d4",
+  "required_files": [
+    "config.json",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer_config.json",
+    "vocab.json"
+  ],
+  "resolution_sha256": "9f8933a9acbe81e68113ef37fc6cfc9d0aceb570fb7281cc5639d104cc2f1526",
+  "resolved_revision": "3dce05464f1f429d68acd9b09e117632490c92d4",
+  "tokenizer_revision": "3dce05464f1f429d68acd9b09e117632490c92d4"
+}

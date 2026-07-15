@@ -6,9 +6,14 @@
       "preferred_gpu_prefix": "NVIDIA RTX PRO 6000 Blackwell Server Edition"
     },
     "frozen": {
+      "compute_capabilities": null,
       "cuda_runtime_version": null,
       "cudnn_version": null,
       "driver_version": null,
+      "gpu_count": null,
+      "gpu_memory_bytes": null,
+      "gpu_names": null,
+      "precision": null,
       "torch_cuda_version": "12.8"
     },
     "kind": "cuda"
@@ -22,6 +27,17 @@
   },
   "dependencies": {
     "complete": false,
+    "direct_roots": [
+      "accelerate",
+      "huggingface-hub",
+      "numpy",
+      "onnx",
+      "onnxruntime-gpu",
+      "safetensors",
+      "tokenizers",
+      "torch",
+      "transformers"
+    ],
     "packages": [
       {
         "name": "accelerate",
@@ -63,9 +79,9 @@
     "resolver_evidence": null,
     "scope": "direct-requirements"
   },
-  "environment_definition_sha256": "83e694b765a03412fcf9c02472fa468dc6574caf510d811f0d2cb6785eb09068",
+  "environment_definition_sha256": "0317387f602eb2ab7c7acb155d29600c8efff98d9f1fbbedf418e2fd0f4ca54c",
   "format": "pyaegean-training-environment-lock/1",
-  "lock_sha256": "461323bbd1da5061b276dbcacba570967a5c3a78e315c714f76b8e73fd96e0bd",
+  "lock_sha256": "6af111f153f9ab535fa34bca3f3231b6b14d9214e77b430443e28a988192fa6b",
   "platform": {
     "libc": {
       "name": "glibc",

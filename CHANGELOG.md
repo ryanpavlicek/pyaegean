@@ -4,6 +4,28 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.52.0 (2026-07-14)
+
+### Added
+
+- The training-environment checkpoint is now complete. A guarded exact-source Colab workflow
+  resolved the nine-root dependency closure in one isolated operation, captured the approved
+  RTX PRO 6000 Blackwell hardware and CUDA stack, verified the immutable GreBerta revision without
+  model weights, and produced content-addressed dry-run evidence. The normalized reviewed records
+  are published under `training/results/a17-environment/`; raw resolver metadata remains private.
+
+### Changed
+
+- The Colab bootstrap no longer depends on the runtime image's optional `ensurepip` support.
+  It creates the isolated venv without pip and installs version-pinned pip into that target before
+  the single nine-root resolver operation.
+- Environment preflight and completed-run receipts now bind direct roots, exact source SHA,
+  GPU count/name/VRAM/compute capability/precision, fresh live promotion, resolver evidence,
+  and the selected preflight receipt. The prospective template remains explicitly non-authorizing;
+  the separately published validated lock records the reviewed live environment.
+- Returned evidence verification is portable across Linux and Windows checkouts: fixed Colab
+  command paths remain exact, while committed UTF-8 source inputs use Git's canonical LF bytes.
+
 ## 0.51.0 (2026-07-14)
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.51.0"
+version = "0.52.0"
 description = "A specialist Python toolkit for Ancient Greek NLP and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -105,7 +105,7 @@ src = ["src", "tests"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["src/aegean", "training/reproducibility.py", "training/validate_reproducibility.py"]
+files = ["src/aegean", "training/reproducibility.py", "training/validate_reproducibility.py", "training/a17_colab.py"]
 warn_unused_ignores = false   # pandas/numpy are lazy-imported; ignores vary by env
 
 [[tool.mypy.overrides]]

@@ -19,11 +19,35 @@
             "properties": {
               "frozen": {
                 "properties": {
+                  "compute_capabilities": {
+                    "items": {"$ref": "#/$defs/exactVersion"},
+                    "minItems": 1,
+                    "type": "array"
+                  },
                   "cuda_runtime_version": {"$ref": "#/$defs/exactVersion"},
                   "cudnn_version": {"$ref": "#/$defs/exactVersion"},
                   "driver_version": {"$ref": "#/$defs/exactVersion"},
+                  "gpu_count": {"minimum": 1, "type": "integer"},
+                  "gpu_memory_bytes": {
+                    "items": {"minimum": 1, "type": "integer"},
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "gpu_names": {
+                    "items": {"minLength": 1, "type": "string"},
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "precision": {"enum": ["bf16", "fp16"]},
                   "torch_cuda_version": {"$ref": "#/$defs/exactVersion"}
-                }
+                },
+                "required": [
+                  "gpu_names",
+                  "gpu_count",
+                  "gpu_memory_bytes",
+                  "compute_capabilities",
+                  "precision"
+                ]
               }
             }
           }
@@ -102,16 +126,53 @@
         "frozen": {
           "additionalProperties": false,
           "properties": {
+            "compute_capabilities": {
+              "anyOf": [
+                {
+                  "items": {"$ref": "#/$defs/exactVersion"},
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {"type": "null"}
+              ]
+            },
             "cuda_runtime_version": {"$ref": "#/$defs/nullableExactVersion"},
             "cudnn_version": {"$ref": "#/$defs/nullableExactVersion"},
             "driver_version": {"$ref": "#/$defs/nullableExactVersion"},
+            "gpu_count": {"anyOf": [{"minimum": 1, "type": "integer"}, {"type": "null"}]},
+            "gpu_memory_bytes": {
+              "anyOf": [
+                {
+                  "items": {"minimum": 1, "type": "integer"},
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {"type": "null"}
+              ]
+            },
+            "gpu_names": {
+              "anyOf": [
+                {
+                  "items": {"minLength": 1, "type": "string"},
+                  "minItems": 1,
+                  "type": "array"
+                },
+                {"type": "null"}
+              ]
+            },
+            "precision": {"anyOf": [{"enum": ["bf16", "fp16"]}, {"type": "null"}]},
             "torch_cuda_version": {"$ref": "#/$defs/nullableExactVersion"}
           },
           "required": [
             "cuda_runtime_version",
             "torch_cuda_version",
             "cudnn_version",
-            "driver_version"
+            "driver_version",
+            "gpu_names",
+            "gpu_count",
+            "gpu_memory_bytes",
+            "compute_capabilities",
+            "precision"
           ],
           "type": "object"
         },
@@ -149,6 +210,12 @@
       ],
       "properties": {
         "complete": {"type": "boolean"},
+        "direct_roots": {
+          "items": {"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
         "packages": {
           "items": {"$ref": "#/$defs/package"},
           "minItems": 9,
@@ -165,7 +232,7 @@
           ]
         }
       },
-      "required": ["scope", "complete", "resolver_evidence", "packages"],
+      "required": ["scope", "complete", "direct_roots", "resolver_evidence", "packages"],
       "type": "object"
     },
     "format": {"const": "pyaegean-training-environment-lock/1"},

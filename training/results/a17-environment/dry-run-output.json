@@ -1,0 +1,16 @@
+{
+  "backbone_resolution_sha256": "9f8933a9acbe81e68113ef37fc6cfc9d0aceb570fb7281cc5639d104cc2f1526",
+  "config_sha256": "ff44098f1ceba06001ce06de98546c3bdbf7f12fcd0665dd81cbfa804812932b",
+  "environment_definition_sha256": "0fbb9551a33355b37d3683523936234c74e2b53b9b878bf5c572347c695eb90d",
+  "evaluation_performed": false,
+  "fixture_payload_sha256": "b345ab56ec213014f1590a49c5d22c738e7ac43f2b220337cba580c9ff0ddcd3",
+  "fixture_records": 1,
+  "format": "pyaegean-a17-dry-run-output/1",
+  "inference_performed": false,
+  "output_sha256": "f93cfe6ce52896c1e0b8c4baafcb735189ba78365ab435a98b9d92b276205596",
+  "preflight_sha256": "17a53ee5d1d2bd15812ebeae97d43842d46a10b1fff903922406c66f6790f925",
+  "purpose": "environment-and-receipt-contract-smoke-test",
+  "repository_commit": "bc6f06fae0a2a41de5e65a25b80bef1dc1549f04",
+  "seed": 17,
+  "training_performed": false
+}

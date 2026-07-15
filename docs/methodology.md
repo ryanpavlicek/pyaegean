@@ -263,17 +263,18 @@ not a model or accuracy claim.
 ### Training reproducibility environment
 
 The training environment files define an inference-free reproducibility contract. The
-committed `training/environment-lock.json` and validator describe the required direct
-dependencies, immutable backbone resolution, repository/data/config hashes, and the
-completed run-receipt fields; they do not run inference or certify a model. The checked-in
-lock is intentionally labelled `unverified-template` and is not an authorization to train
-or a validated result. Live capture and preflight record the allocated GPU identity,
-driver/CUDA/Torch/cuDNN builds, resolver closure, and clean commit before promotion. The
-completed run receipt additionally records VRAM, compute capability, precision, config,
-inputs, and artifact digests. The preferred Colab target is G4 (RTX PRO 6000 Blackwell
-Server Edition); A100 is the documented fallback, and hardware changes must remain visible
-in receipts. Until that live capture and promotion exist, no reproducibility or performance
-claim is made for the template.
+prospective `training/environment-lock.json` template and validator describe the required
+direct dependencies, immutable backbone resolution, repository/data/config hashes, and
+completed run-receipt fields; the template remains explicitly non-authorizing. The reviewed
+live records are published separately under `training/results/a17-environment/`. They bind a
+single nine-root resolver closure, CPython 3.12.13, the exact clean source state, and one
+NVIDIA RTX PRO 6000 Blackwell Server Edition allocation with CUDA 12.8, Torch CUDA 12.8,
+cuDNN 9.10.2, 96 GB-class VRAM, compute capability 12.0, and bf16 precision. Preflight
+re-observed the environment before promotion. Immutable GreBerta resolution used repository
+metadata at the frozen commit and did not download weights. The completed deterministic
+fixture receipt additionally binds config, input, output, hardware, and artifact digests
+without model execution. These records validate the reproduction environment and receipt
+path; they make no model-quality, training, or performance claim.
 
 Candidate joint-model checkpoints record one executable preprocessing contract:
 the annotation profile, NFC normalization, pretokenized segmentation, tokenizer

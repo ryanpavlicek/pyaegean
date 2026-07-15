@@ -65,6 +65,10 @@ def _parser() -> argparse.ArgumentParser:
     preflight.add_argument("--repository-root", type=Path, default=_ROOT)
     preflight.add_argument("--output", type=Path)
     preflight.add_argument(
+        "--expected-commit",
+        help="require the clean checkout to match this exact 40-character candidate commit",
+    )
+    preflight.add_argument(
         "--skip-accelerator",
         action="store_true",
         help="skip CUDA/driver/cuDNN inspection (the report cannot pass an accelerator lock)",
@@ -77,6 +81,12 @@ def _parser() -> argparse.ArgumentParser:
     promote.add_argument("--lock", type=Path, required=True)
     promote.add_argument("--preflight", type=Path, required=True)
     promote.add_argument("--output", type=Path, required=True)
+    promote.add_argument("--repository-root", type=Path, default=_ROOT)
+    promote.add_argument(
+        "--expected-commit",
+        required=True,
+        help="re-run live preflight at this exact candidate commit before promotion",
+    )
 
     receipt = commands.add_parser("receipt", help="validate a completed run receipt and files")
     receipt.add_argument("receipt", type=Path)
@@ -121,6 +131,15 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "promote":
             candidate = load_environment_lock(args.lock)
             report = load_json_document(args.preflight)
+            live_report = preflight_environment(
+                candidate,
+                repository_root=args.repository_root,
+                expected_repository_commit=args.expected_commit,
+            )
+            if live_report != report:
+                raise ContractError(
+                    "saved preflight differs from a fresh live observation; refusing promotion"
+                )
             lock = promote_environment_lock(candidate, report)
             write_json_document(args.output, lock)
             result = {
@@ -155,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
                     lock,
                     repository_root=args.repository_root,
                     check_accelerator=not args.skip_accelerator,
+                    expected_repository_commit=args.expected_commit,
                 )
                 if args.output is not None:
                     write_json_document(args.output, result)

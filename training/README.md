@@ -75,12 +75,13 @@ The published v3 archive retains its exact legacy manifest and preprocessing beh
 
 ## Reproducible training contract
 
-`environment-lock.json` is an honestly labelled training-environment **template**, not a captured Colab
-environment. It records `verification.state = "unverified-template"`,
+`environment-lock.json` is an honestly labelled prospective training-environment **template**, not the
+captured Colab environment. It records `verification.state = "unverified-template"`,
 `dependencies.scope = "direct-requirements"`, and `dependencies.complete = false`; the
 validator therefore reports `ready_for_training = false` and refuses to bind a completed
-run receipt to it. The nine package versions are candidate direct requirements whose
-individual availability was checked, not a rehearsed combination or dependency closure.
+run receipt to it. The nine direct versions were subsequently resolved together in the
+reviewed live capture, but the reusable template remains separate from that environment-specific
+validated lock and complete transitive closure.
 
 The template's Python/Linux/libc values and CUDA 12.8 reference came from
 `results/gpu-verify-2026-07-10.json`, a prior runtime/provider check for pyaegean 0.32.0,
@@ -89,7 +90,8 @@ frozen from that result. The allocation policy is G4-class RTX PRO 6000 Blackwel
 with NVIDIA A100 fallback; the completed receipt must record the exact allocated GPU,
 memory, compute capability, driver, CUDA runtime and Torch build, cuDNN, and precision.
 Candidate capture inspects the live G4/A100 allocation and freezes its driver, CUDA runtime,
-Torch CUDA build, and cuDNN versions; captured and validated locks require every field.
+Torch CUDA build, cuDNN, exact device names/count, per-device VRAM and compute capability,
+and the selected bf16/fp16 precision; captured and validated locks require every field.
 
 Before training, the live allocation must resolve the complete training dependency closure
 and capture a normalized resolver manifest: resolver tool/version, direct roots, every
@@ -111,9 +113,21 @@ training code and notebooks must pass that value as the Hugging Face `revision`,
 resolve mutable `main`. This prospective contract does not rebuild or change the
 identity/evidence of `grc-joint-v3`.
 
-Promotion revalidates the receipt's full observation: exact Python, platform, package
-inventory, clean repository state, allowed non-null GPU allocation, and every frozen
-accelerator version. An `ok` flag with missing or hand-authored observations is insufficient.
+Promotion revalidates the receipt's full observation against a fresh live probe: exact
+Python, platform, all nine direct roots and their resolved closure, the required clean source
+commit, allowed non-null GPU allocation, and every frozen accelerator field. An `ok` flag with
+missing or hand-authored observations is insufficient.
+
+The live environment capture is complete. The reviewed normalized records in
+`results/a17-environment/` contain the resolver manifest, successful preflight, validated lock,
+immutable GreBerta metadata proof, deterministic fixture output and completed-run receipt, plus a
+content-addressed summary. The capture used CPython 3.12.13 on one NVIDIA RTX PRO 6000 Blackwell
+Server Edition, CUDA runtime and Torch CUDA 12.8, cuDNN 9.10.2, compute capability 12.0, bf16,
+and a 96 GB-class allocation. The source workflow used an external venv, bootstrapped pinned pip
+without relying on `ensurepip`, and resolved all nine direct roots in one operation. It downloaded
+no model weights and performed no training, inference, or linguistic evaluation. The raw pip
+report and full operator archive are retained privately because package metadata contains a large
+set of unrelated project URLs; no credentials or credential-like values were found in review.
 
 The standard-library-only validator performs no download, training, or model inference:
 
@@ -135,23 +149,31 @@ python training/validate_reproducibility.py capture \
 # Compare closure, resolver evidence, frozen accelerator fields, allocation, and clean Git.
 python training/validate_reproducibility.py preflight \
     --lock training/out/RUN/environment-candidate.json --repository-root . \
+    --expected-commit "$CANDIDATE_SHA" \
     --output training/out/RUN/preflight.json
 
 # Bind the successful receipt without changing the stable environment-definition digest.
 python training/validate_reproducibility.py promote \
     --lock training/out/RUN/environment-candidate.json \
     --preflight training/out/RUN/preflight.json \
-    --output training/out/RUN/environment-validated.json
+    --output training/out/RUN/environment-validated.json \
+    --repository-root . --expected-commit "$CANDIDATE_SHA"
 
 # After a run writes a completed receipt, verify its digest and re-hash every recorded
 # lock, config, generated dataset, and output artifact.
 python training/validate_reproducibility.py receipt training/out/RUN/run-receipt.json \
     --lock training/out/RUN/environment-validated.json --repository-root .
+
+# After inspecting the raw archive, summarize only normalized records for publication.
+python training/a17_colab.py reviewed-summary \
+    --evidence-dir training/out/RUN --repository-root . \
+    --output training/out/RUN/reviewed-evidence-summary.json
 ```
 
 The exact schemas are `contracts/environment-lock.schema.json`,
-`contracts/resolver-manifest.schema.json`, `contracts/preflight.schema.json`, and
-`contracts/run-receipt.schema.json`. `reproducibility.py` supplies canonical hashing,
+`contracts/resolver-manifest.schema.json`, `contracts/preflight.schema.json`,
+`contracts/run-receipt.schema.json`, `contracts/backbone-resolution.schema.json`, and
+`contracts/evidence-summary.schema.json`. `reproducibility.py` supplies canonical hashing,
 repository-relative file records, resolver normalization, capture/promotion, package/Git and
 CUDA metadata capture, completed-receipt construction, and offline verification. A validated
 lock requires a complete evidence-bound training closure or full environment. A completed
