@@ -178,16 +178,16 @@ def test_immutable_v3_fixture_is_not_rewritten() -> None:
     assert _V3_FIXTURE.read_bytes() == before
 
 
-def test_export_writes_manifest_before_package_path_evaluation() -> None:
+def test_export_stages_manifest_then_qualifies_before_promotion() -> None:
     source = (_REPO / "training" / "export_onnx.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
-    eval_lines = [
+    qualification_lines = [
         node.lineno
         for node in ast.walk(main)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Name)
-        and node.func.id == "_evaluate_dir"
+        and node.func.id == "run_qualification"
     ]
     write_lines = [
         node.lineno
@@ -196,13 +196,39 @@ def test_export_writes_manifest_before_package_path_evaluation() -> None:
         and isinstance(node.func, ast.Name)
         and node.func.id == "write_schema1_manifest"
     ]
-    assert eval_lines and write_lines
-    assert min(write_lines) < min(eval_lines)
+    promotion_lines = [
+        node.lineno
+        for node in ast.walk(main)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "promote_artifact"
+    ]
+    assert qualification_lines and write_lines and promotion_lines
+    assert min(write_lines) < min(qualification_lines) < min(promotion_lines)
     assert '"--model-id"' in source and "required=True" in source
-    assert 'f"{args.model_id}.tar.gz"' in source
-    assert "prepare_schema1_artifact_dir(out, args.model_id)" in source
+    assert "add_qualification_arguments(parser" in source
+    assert 'profile="export"' in source
+    assert 'variant="fp32"' in source
     assert "prep.validate_joint_checkpoint_spec(spec)" in source
     assert "validate_artifact_metadata(artifact_metadata)" in source
-    assert "validate_joint_checkpoint_sidecars(ckpt, export_metadata)" in source
-    assert "--gate-sentences must be a positive integer" in source
+    assert "validate_joint_checkpoint_sidecars(args.checkpoint, export_metadata)" in source
     assert '"candidate_heads"' in source
+    assert "quantize_dynamic" not in source
+
+
+def test_quantization_uses_the_optimization_gate_before_promotion() -> None:
+    source = (_REPO / "training" / "quantize_grc_joint.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "main")
+    calls = {
+        node.func.id: node.lineno
+        for node in ast.walk(main)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        and node.func.id in {"write_schema1_manifest", "run_qualification", "promote_artifact"}
+    }
+    assert calls["write_schema1_manifest"] < calls["run_qualification"] < calls["promote_artifact"]
+    assert 'profile="optimization"' in source
+    assert "require_reference_operational=True" in source
+    assert "tf.extractall" not in source and ".extractall(" not in source
+    assert 'variant="int8-weight+fp16"' in source
+    assert '"--model-id"' in source and "required=True" in source

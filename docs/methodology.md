@@ -208,6 +208,16 @@ scores from verified item counts, and rejects mismatched or unavailable evidence
 runs inference or reads a locked test fold; the final locked matrix remains a one-shot release
 measurement after the candidate is frozen.
 
+Exported and optimized successor artifacts use a second content-addressed gate bound to that
+same development manifest and selection policy. The conversion commands stage output and promote
+it only after independently rebuilding reference and candidate reports from their prediction
+artifacts. Framework export requires exact decoded parity; optimization checks every protected
+metric and every decoded field, and must reduce total artifact size. The gate also measures the
+complete development population on CPU in sequential/windowed mode, records latency, resident
+memory, artifact bytes, runtime versions, and provider activation, and probes CUDA when available.
+These are private development qualification records, not published benchmark rows. They neither
+read a locked test fold nor imply that a smaller artifact is faster.
+
 The pure-Python treebank baseline has a different epistemic status: its AGDT
 lookup data includes the source of the UD Perseus test material. Its Perseus
 lookup score is therefore an in-training upper bound, not a held-out
@@ -306,6 +316,12 @@ a content-addressed schema-1 manifest for each exported graph variant. The publi
 Completed successor-model training receipts also bind the exact declarative selection-gate
 file and its canonical digest. This keeps the policy that selected a checkpoint attached to
 the run instead of leaving it as an editable score hidden in a training script.
+
+Artifact qualification binds each operational record back to the report's model identity and
+complete bundle digest. An optimization source must exactly match its reference operational
+record. Passing candidates receive deterministic archives; rejected candidates remain private
+staging material. Runtime labels such as `fast` or `compact` are separate decisions that must be
+earned from the measured record rather than inferred from ONNX numeric format.
 
 ## Aegean-script analysis
 

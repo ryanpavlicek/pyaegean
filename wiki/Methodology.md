@@ -158,6 +158,19 @@ Pareto fronts and declared deterministic tie breakers. This is development-only 
 selector neither runs a model nor sees a locked test fold. The locked tests remain a one-shot
 measurement only after the complete candidate has been frozen.
 
+Export and optimization are part of that gate rather than separate packaging chores. The
+conversion commands first create a staged artifact, rebuild reference and candidate development
+reports from their prediction records, and compare every protected task/source metric plus decoded
+UPOS, XPOS, UFeats, lemma, head, and relation. A framework export must be exactly prediction-
+identical to its reference. An optimized artifact may use only the declared small tolerances and
+must actually reduce total artifact bytes.
+
+Qualification also runs the complete development population through ONNX Runtime on CPU in
+sequential/windowed mode and records latency, resident memory, artifact size, runtime versions, and
+the active execution provider. CUDA is probed when installed. These private development records
+decide whether a candidate may be promoted; they are not published benchmark numbers and do not
+read the locked test folds. A smaller graph is not automatically described as faster.
+
 ### What the metrics mean
 
 All are percentages against a human-annotated gold standard; higher is better.
@@ -329,6 +342,11 @@ its legacy manifest, behavior, and measurements unchanged.
 
 Each successor training receipt binds the exact selection-policy file and digest, so the
 checkpoint cannot be separated from the rule that selected it.
+
+Each candidate's operational record is also bound to the report's model identity and complete
+bundle digest. Optimization accepts only the exact fp32 source named by its reference evidence,
+and passing candidates receive reproducible archives. Labels such as `fast` or `compact` require a
+separate evidence-backed variant decision; an ONNX numeric format does not earn a label by itself.
 
 ### The quantization discipline
 

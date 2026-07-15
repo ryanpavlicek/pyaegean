@@ -1,23 +1,21 @@
-"""Stage E: export the trained joint checkpoint to the shipped ONNX artifact.
+"""Export a trained Greek joint checkpoint to a qualified fp32 ONNX artifact.
 
-Exports the JointParser (encoder + 10 tagging heads + biaffine arc/relation + lemma
-head) to a single ONNX graph with dynamic axes, quantizes it to int8, and applies the
-**quantization gate**: both variants are evaluated on dev THROUGH the package's own
-inference module (`aegean.greek.joint._JointModel`) — the exact code path users run —
-and int8 ships only if it costs ≤ --gate points (default 0.3) on every headline metric
-(UPOS / LAS / lemma) versus the fp32 export; otherwise the fp32 graph ships.
+The command writes into a private staging directory, exports the graph, validates
+its schema-1 bundle, then runs the complete A20 development, parity, provider,
+latency, memory, and size gate in an isolated process.  Only a passing artifact is
+promoted to ``<out>/<model-id>`` and archived.  Optimization is a separate command
+(``quantize_grc_joint.py``) with its own gate profile.
 
-Output under --out:
-    <model-id>/               the artifact directory (model.onnx + tokenizer.json +
-                              labels.json + lemma-scripts.json + lemma-lookup.json +
-                              manifest.json)
-    <model-id>.tar.gz         the release asset, registered by URL + SHA-256 under a
-                              new data key
-    gate-report.json          dev metrics: torch vs onnx-fp32 vs onnx-int8
+Example::
 
-Usage:  python training/export_onnx.py --checkpoint training/out/full/model \
-            --model-id grc-joint-v4-dev1
-        (needs the Stage D+ data dir for the dev fold: --data-dir training/data)
+    python training/export_onnx.py \
+      --checkpoint training/out/full/model \
+      --model-id grc-joint-v4-candidate \
+      --perseus-dev-source training/data/grc_perseus-ud-dev.conllu \
+      --papygreek-tagging-source training/data/papygreek-dev-tagging.conllu \
+      --papygreek-parse-source training/data/papygreek-dev-parse.conllu \
+      --reference-report training/out/RUN/development-report.json \
+      --reference-predictions training/out/RUN/predictions-<sha>.json
 """
 
 from __future__ import annotations
@@ -25,24 +23,24 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import shutil
 import sys
-import tarfile
-import time
 from pathlib import Path
 
-import torch
-
 sys.path.insert(0, str(Path(__file__).parent))
-from train_full import load_jsonl  # noqa: E402
-from train_parser import TAG_HEADS, JointParser  # noqa: E402
-
-from aegean.greek.joint import _JointModel  # noqa: E402
+from artifact_command import (  # noqa: E402
+    ArtifactCommandError,
+    add_qualification_arguments,
+    archive_artifact,
+    promote_artifact,
+    qualification_output,
+    run_qualification,
+    staging_artifact,
+    validate_qualification_paths,
+)
 from aegean.greek import neural_preprocessing as prep  # noqa: E402
 from aegean.greek.neural_contract import (  # noqa: E402
     ModelBundleError,
-    prepare_schema1_artifact_dir,
     validate_artifact_metadata,
     validate_joint_checkpoint_sidecars,
     write_schema1_manifest,
@@ -54,101 +52,67 @@ _DEFAULT_MODEL_LICENSE = (
 )
 
 
-class _ExportWrapper(torch.nn.Module):
-    """Flatten JointParser's outputs into named tensors for ONNX export."""
-
-    def __init__(self, model: JointParser) -> None:
-        super().__init__()
-        self.model = model
-
-    def forward(self, input_ids, attention_mask, word_pos):  # noqa: ANN001
-        tag_logits, arc, rel, lem = self.model(input_ids, attention_mask, word_pos)
-        return (tag_logits["upos"], *(tag_logits[f"x{i}"] for i in range(9)), arc, rel, lem)
-
-
-def _evaluate_dir(model_dir: Path, dev_rows: list[dict], limit: int) -> dict[str, float]:
-    """Dev UPOS/LAS/lemma through the package's own inference path."""
-    jm = _JointModel(model_dir)
-    n = upos_ok = arcs = las = n_lem = lem_ok = 0
-    for row in dev_rows[:limit]:
-        ana = jm.analyze(row["tokens"])
-        for i in range(len(row["tokens"])):
-            n += 1
-            upos_ok += int(ana.upos[i] == row["upos"][i])
-            n_lem += 1
-            lem_ok += int(ana.lemma[i] == row["lemma"][i])
-            arcs += 1
-            las += int(ana.head[i] == row["head"][i] and ana.deprel[i] == row["deprel"][i])
-    return {"upos": upos_ok / n, "las": las / arcs, "lemma": lem_ok / n_lem, "n_tokens": n}
-
-
-def main() -> None:
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--checkpoint", required=True, help="the trained model/ directory")
-    ap.add_argument("--data-dir", default=str(Path(__file__).parent / "data"))
-    ap.add_argument("--out", default=str(Path(__file__).parent / "out" / "export"))
-    ap.add_argument("--gate", type=float, default=0.3, help="max int8 drop, points")
-    ap.add_argument("--gate-sentences", type=int, default=300,
-                    help="dev sentences for the gate evaluation")
-    ap.add_argument("--opset", type=int, default=17)
-    ap.add_argument(
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--checkpoint", required=True, type=Path, help="trained model directory")
+    parser.add_argument("--out", type=Path, default=Path(__file__).parent / "out" / "export")
+    parser.add_argument("--opset", type=int, default=17)
+    parser.add_argument(
         "--model-id",
         required=True,
-        help="explicit non-v3 candidate identity (for example grc-joint-v4-dev1)",
+        help="explicit non-v3 candidate identity (for example grc-joint-v4-candidate)",
     )
-    args = ap.parse_args()
-    if args.model_id in {"grc-joint", "grc-joint-v3"}:
-        ap.error("--model-id must be a new identity, not grc-joint or grc-joint-v3")
-    if not math.isfinite(args.gate) or not 0 <= args.gate <= 100:
-        ap.error("--gate must be a finite number from 0 through 100")
-    if args.gate_sentences < 1:
-        ap.error("--gate-sentences must be a positive integer")
-    if args.opset < 1:
-        ap.error("--opset must be a positive integer")
+    add_qualification_arguments(parser, require_reference_operational=False)
+    return parser
 
-    ckpt = Path(args.checkpoint)
-    out = Path(args.out)
+
+def _export_graph(
+    *,
+    checkpoint: Path,
+    artifact: Path,
+    checkpoint_spec: object,
+    opset: int,
+) -> None:
     try:
-        required = (
-            "joint_full.pt",
-            "labels.json",
-            "lemma-lookup.json",
-            "lemma-scripts.json",
-            "tokenizer.json",
-        )
-        missing = [name for name in required if not (ckpt / name).is_file()]
-        if missing:
-            raise ValueError(f"checkpoint is missing required files: {missing}")
-        spec = json.loads((ckpt / "labels.json").read_text(encoding="utf-8"))
-        if not isinstance(spec, dict):
-            raise ValueError("checkpoint labels.json must be a JSON object")
-        checkpoint_spec = prep.validate_joint_checkpoint_spec(spec)
-        export_metadata = prep.load_checkpoint_metadata(ckpt, spec)
-        validate_joint_checkpoint_sidecars(ckpt, export_metadata)
-        artifact_metadata: dict[str, object] = {
-            "model_name": checkpoint_spec.model_name,
-            "license": spec.get("license", _DEFAULT_MODEL_LICENSE),
-        }
-        for field in ("model_revision", "epochs", "training_receipt_sha256"):
-            if field in spec:
-                artifact_metadata[field] = spec[field]
-        artifact_metadata = validate_artifact_metadata(artifact_metadata)
-        art = prepare_schema1_artifact_dir(out, args.model_id)
-    except (OSError, UnicodeError, json.JSONDecodeError, ValueError, ModelBundleError) as exc:
-        ap.error(str(exc))
-    maps = checkpoint_spec.maps
-    model = JointParser(checkpoint_spec.model_name, {h: len(maps[h]) for h in TAG_HEADS},
-                        n_rels=len(maps["deprel"]), n_scripts=checkpoint_spec.n_scripts)
-    model.load_state_dict(torch.load(ckpt / "joint_full.pt", map_location="cpu"))
+        import torch
+        from train_parser import TAG_HEADS, JointParser
+    except ImportError as exc:
+        raise ArtifactCommandError(
+            "export requires the A20 training environment with torch and transformers installed"
+        ) from exc
+
+    class ExportWrapper(torch.nn.Module):
+        """Flatten JointParser outputs into stable named ONNX tensors."""
+
+        def __init__(self, model: object) -> None:
+            super().__init__()
+            self.model = model
+
+        def forward(self, input_ids, attention_mask, word_pos):  # noqa: ANN001
+            tag_logits, arc, rel, lem = self.model(input_ids, attention_mask, word_pos)
+            return (
+                tag_logits["upos"],
+                *(tag_logits[f"x{i}"] for i in range(9)),
+                arc,
+                rel,
+                lem,
+            )
+
+    model = JointParser(
+        checkpoint_spec.model_name,
+        {head: len(checkpoint_spec.maps[head]) for head in TAG_HEADS},
+        n_rels=len(checkpoint_spec.maps["deprel"]),
+        n_scripts=checkpoint_spec.n_scripts,
+    )
+    model.load_state_dict(torch.load(checkpoint / "joint_full.pt", map_location="cpu"))
     model.eval()
 
-    # --- export (dynamic batch/sequence/word axes) -----------------------------------
-    wrapper = _ExportWrapper(model)
-    ex_ids = torch.ones(1, 12, dtype=torch.long)
-    ex_mask = torch.ones(1, 12, dtype=torch.long)
-    ex_pos = torch.tensor([[1, 3, 5, 7]], dtype=torch.long)
-    out_names = ["upos", *(f"x{i}" for i in range(9)), "arc", "rel", "lemma"]
-    dyn = {
+    wrapper = ExportWrapper(model)
+    example_ids = torch.ones(1, 12, dtype=torch.long)
+    example_mask = torch.ones(1, 12, dtype=torch.long)
+    example_positions = torch.tensor([[1, 3, 5, 7]], dtype=torch.long)
+    output_names = ["upos", *(f"x{i}" for i in range(9)), "arc", "rel", "lemma"]
+    dynamic_axes = {
         "input_ids": {0: "batch", 1: "subwords"},
         "attention_mask": {0: "batch", 1: "subwords"},
         "word_pos": {0: "batch", 1: "words"},
@@ -157,94 +121,111 @@ def main() -> None:
         "rel": {0: "batch", 2: "words", 3: "candidate_heads"},
         "lemma": {0: "batch", 1: "words"},
     }
-    fp32_path = art / "model.onnx"
     torch.onnx.export(
-        wrapper, (ex_ids, ex_mask, ex_pos), str(fp32_path),
+        wrapper,
+        (example_ids, example_mask, example_positions),
+        str(artifact / "model.onnx"),
         input_names=["input_ids", "attention_mask", "word_pos"],
-        output_names=out_names, dynamic_axes=dyn, opset_version=args.opset,
-        dynamo=False,  # the legacy exporter: dynamic_axes API, no onnxscript needed
+        output_names=output_names,
+        dynamic_axes=dynamic_axes,
+        opset_version=opset,
+        dynamo=False,
     )
-    print(f"exported fp32: {fp32_path.stat().st_size / 1e6:.0f} MB", flush=True)
-
-    # --- the artifact's sidecars (the package's _JointModel reads these) -------------
-    shutil.copy(ckpt / "labels.json", art / "labels.json")
-    shutil.copy(ckpt / "lemma-scripts.json", art / "lemma-scripts.json")
-    shutil.copy(ckpt / "lemma-lookup.json", art / "lemma-lookup.json")
-    shutil.copy(ckpt / "tokenizer.json", art / "tokenizer.json")
-
-    # --- gate: torch-free dev evaluation of fp32 vs int8 through the package ---------
-    dev_rows = load_jsonl(Path(args.data_dir) / "full-dev.jsonl")
-    report: dict[str, object] = {"gate_points": args.gate,
-                                 "gate_sentences": args.gate_sentences}
-    # The package-path evaluation constructs _JointModel, which validates this
-    # manifest before touching ONNX Runtime.  Write it before *any* evaluation.
-    write_schema1_manifest(
-        art,
-        model_id=args.model_id,
-        metadata=export_metadata,
-        artifact_metadata=artifact_metadata,
-        variant="fp32",
-    )
-    t0 = time.time()
-    report["fp32"] = _evaluate_dir(art, dev_rows, args.gate_sentences)
-    print(f"fp32 dev: {report['fp32']}  ({time.time()-t0:.0f}s)", flush=True)
-
-    from onnxruntime.quantization import QuantType, quantize_dynamic
-
-    int8_path = art / "model.int8.onnx"
-    quantize_dynamic(str(fp32_path), str(int8_path), weight_type=QuantType.QInt8)
-    fp32_bytes = fp32_path.stat().st_size
-    # evaluate int8 by swapping it into model.onnx position temporarily
-    fp32_keep = art / "model.fp32.onnx"
-    fp32_path.rename(fp32_keep)
-    int8_path.rename(fp32_path)
-    write_schema1_manifest(
-        art,
-        model_id=args.model_id,
-        metadata=export_metadata,
-        artifact_metadata=artifact_metadata,
-        variant="int8",
-    )
-    t0 = time.time()
-    report["int8"] = _evaluate_dir(art, dev_rows, args.gate_sentences)
-    print(f"int8 dev: {report['int8']}  ({time.time()-t0:.0f}s)", flush=True)
-
-    drops = {k: (report["fp32"][k] - report["int8"][k]) * 100  # type: ignore[index]
-             for k in ("upos", "las", "lemma")}
-    report["drops_points"] = drops
-    ship_int8 = all(d <= args.gate for d in drops.values())
-    shipped_variant = "int8" if ship_int8 else "fp32"
-    report["shipped"] = shipped_variant
-    if ship_int8:
-        fp32_keep.unlink()  # model.onnx is already the int8 graph
-    else:
-        fp32_path.unlink()
-        fp32_keep.rename(fp32_path)
-    # This final rewrite is also required after the fp32 restoration above: the
-    # model.onnx digest is part of the manifest consumed by runtime activation.
-    write_schema1_manifest(
-        art,
-        model_id=args.model_id,
-        metadata=export_metadata,
-        artifact_metadata=artifact_metadata,
-        variant=shipped_variant,
-    )
-    print(f"gate: drops {drops} → shipping {report['shipped']}", flush=True)
-
-    # --- manifest + tarball -----------------------------------------------------------
-    tar_path = out / f"{args.model_id}.tar.gz"
-    with tarfile.open(tar_path, "w:gz") as tar:
-        for f in sorted(art.iterdir()):  # pack flat: files at the archive root
-            tar.add(f, arcname=f.name)
-    sha = hashlib.sha256(tar_path.read_bytes()).hexdigest()
-    report["tar"] = {"path": str(tar_path), "bytes": tar_path.stat().st_size,
-                     "sha256": sha, "fp32_onnx_bytes": fp32_bytes}
-    (out / "gate-report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
-    print(json.dumps(report, indent=1))
-    print(f"\nrelease asset: {tar_path}  ({tar_path.stat().st_size/1e6:.0f} MB)\n"
-          f"sha256: {sha}\n"
-          "Register this SHA-256 and release URL under a new immutable data key.")
 
 
-if __name__ == "__main__":
-    main()
+def main(argv: list[str] | None = None) -> int:
+    parser = _parser()
+    args = parser.parse_args(argv)
+    if args.model_id in {"grc-joint", "grc-joint-v3"}:
+        parser.error("--model-id must be a new identity, not grc-joint or grc-joint-v3")
+    if not args.model_id or Path(args.model_id).name != args.model_id:
+        parser.error("--model-id must be one non-empty path-safe component")
+    if args.opset < 1:
+        parser.error("--opset must be a positive integer")
+    try:
+        validate_qualification_paths(args)
+        required = (
+            "joint_full.pt",
+            "labels.json",
+            "lemma-lookup.json",
+            "lemma-scripts.json",
+            "tokenizer.json",
+        )
+        missing = [name for name in required if not (args.checkpoint / name).is_file()]
+        if missing:
+            raise ArtifactCommandError(f"checkpoint is missing required files: {missing}")
+        spec = json.loads((args.checkpoint / "labels.json").read_text(encoding="utf-8"))
+        if not isinstance(spec, dict):
+            raise ArtifactCommandError("checkpoint labels.json must be a JSON object")
+        checkpoint_spec = prep.validate_joint_checkpoint_spec(spec)
+        export_metadata = prep.load_checkpoint_metadata(args.checkpoint, spec)
+        validate_joint_checkpoint_sidecars(args.checkpoint, export_metadata)
+        artifact_metadata: dict[str, object] = {
+            "model_name": checkpoint_spec.model_name,
+            "license": spec.get("license", _DEFAULT_MODEL_LICENSE),
+        }
+        for field in ("model_revision", "epochs", "training_receipt_sha256"):
+            if field in spec:
+                artifact_metadata[field] = spec[field]
+        artifact_metadata = validate_artifact_metadata(artifact_metadata)
+        staging_root, artifact = staging_artifact(args.out, args.model_id)
+        evidence = qualification_output(args.out, args.model_id, "export")
+    except (
+        ArtifactCommandError,
+        ModelBundleError,
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        ValueError,
+    ) as exc:
+        parser.error(str(exc))
+
+    try:
+        _export_graph(
+            checkpoint=args.checkpoint,
+            artifact=artifact,
+            checkpoint_spec=checkpoint_spec,
+            opset=args.opset,
+        )
+        for name in ("labels.json", "lemma-scripts.json", "lemma-lookup.json", "tokenizer.json"):
+            shutil.copy2(args.checkpoint / name, artifact / name)
+        write_schema1_manifest(
+            artifact,
+            model_id=args.model_id,
+            metadata=export_metadata,
+            artifact_metadata=artifact_metadata,
+            variant="fp32",
+        )
+        qualification_summary = run_qualification(
+            args=args,
+            artifact_dir=artifact,
+            profile="export",
+            output_dir=evidence,
+        )
+        final = args.out / args.model_id
+        promote_artifact(staging_root, artifact, final)
+        archive = args.out / f"{args.model_id}.tar.gz"
+        archive_artifact(final, archive)
+        result = {
+            "model_id": args.model_id,
+            "variant": "fp32",
+            "artifact": str(final),
+            "archive": {
+                "path": str(archive),
+                "bytes": archive.stat().st_size,
+                "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            },
+            "qualification": qualification_summary,
+        }
+        report_path = args.out / f"{args.model_id}-export-report.json"
+        report_path.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+    except Exception as exc:
+        if isinstance(exc, (ArtifactCommandError, ModelBundleError, OSError, ValueError)):
+            parser.error(str(exc))
+        raise
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())

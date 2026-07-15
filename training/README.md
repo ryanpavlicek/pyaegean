@@ -113,6 +113,64 @@ it remains development-only evidence. The old `(LAS + lemma) / 2` local field in
 `train_full.py` belongs to the historical v3 recipe and is not a valid successor-model
 selection or release gate.
 
+## Integrated artifact qualification
+
+`artifact-qualification-gate-v1.json` binds export and optimization to the A18 development
+manifest and A19 selection policy. `export_onnx.py` and `quantize_grc_joint.py` now build in a
+private staging directory and create the final directory and deterministic archive only after an
+isolated qualification process returns a reproducible `qualified=true` decision. Failed candidates
+remain staged working material and are never presented as release artifacts.
+
+Qualification rebuilds both development reports from gold plus their prediction artifacts. It
+checks every protected task/source/OOV metric and separately compares decoded UPOS, XPOS, UFeats,
+lemma, head, and dependency-relation values, so compensating errors cannot disappear inside an
+aggregate score. Framework export requires exact decoded parity. Artifact optimization retains the
+A19 regression ceilings, limits disagreement in every output field, and must actually reduce total
+artifact bytes.
+
+The operational record measures CPU-sequential, complete-window inference over the whole
+development manifest after warm-up. It records latency per 100 scored tokens, total and model bytes,
+resident memory, runtime versions, and the active provider. CPU is mandatory. CUDA is probed when
+installed; an absent optional provider is recorded without failing, while an installed provider
+must run and remain inside the same decoded-output limit. The absolute size, latency, and memory
+ceilings are safeguards, not performance claims. In particular, weight-only quantization is not
+called fast merely because it is smaller; later variant labels require separate evidence.
+
+Reference and candidate preprocessing/output contracts must match. Runtime evidence is bound to
+the report's model identity and complete artifact digest, and optimization additionally requires
+the supplied source artifact to match the reference operational record exactly. Candidate reports,
+predictions, timings, and rejected artifacts stay in the gitignored `training/out/` tree. The gate
+does not read a locked test fold and does not change the published `grc-joint-v3` artifact or its
+measurements.
+
+For a frozen candidate, the command sequence is:
+
+```bash
+# First produce a verified development report and predictions for the trained PyTorch candidate.
+python training/export_onnx.py \
+    --checkpoint training/out/full/model \
+    --model-id grc-joint-v4-candidate-fp32 \
+    --perseus-dev-source training/data/grc_perseus-ud-dev.conllu \
+    --papygreek-tagging-source training/data/papygreek-dev-tagging.conllu \
+    --papygreek-parse-source training/data/papygreek-dev-parse.conllu \
+    --reference-report training/out/reference/development-report.json \
+    --reference-predictions training/out/reference/predictions-SHA256.json
+
+# Optimize only the fp32 artifact that produced the supplied operational evidence.
+python training/quantize_grc_joint.py \
+    training/out/export/grc-joint-v4-candidate-fp32 \
+    --model-id grc-joint-v4-candidate-compact \
+    --perseus-dev-source training/data/grc_perseus-ud-dev.conllu \
+    --papygreek-tagging-source training/data/papygreek-dev-tagging.conllu \
+    --papygreek-parse-source training/data/papygreek-dev-parse.conllu \
+    --reference-report training/out/qualification/grc-joint-v4-candidate-fp32-export/development-report.json \
+    --reference-predictions training/out/qualification/grc-joint-v4-candidate-fp32-export/predictions-SHA256.json \
+    --reference-operational training/out/qualification/grc-joint-v4-candidate-fp32-export/operational-evidence.json
+```
+
+The source paths and content-addressed prediction filename are examples; use the exact private
+artifacts emitted by the frozen run.
+
 ## Shared preprocessing contract
 
 Candidate joint checkpoints use the dependency-free
@@ -257,9 +315,6 @@ reproduce the historical recipe; a new candidate must not use a locked test fold
 git clone https://github.com/ryanpavlicek/pyaegean.git
 python pyaegean/training/build_full_dataset.py
 python pyaegean/training/train_full.py --model bowphs/GreBerta
-python pyaegean/training/export_onnx.py \
-    --checkpoint pyaegean/training/out/full/model \
-    --model-id grc-joint-v4-dev1
 python pyaegean/training/eval_full_ud.py \
     --checkpoint pyaegean/training/out/full/model --treebank perseus --split test
 ```

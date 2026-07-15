@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.55.0 (2026-07-15)
+
+### Added
+
+- Export and optimization now share a content-addressed artifact-qualification gate bound to the
+  frozen development manifest and successor-model selection policy. It independently rebuilds
+  task/source reports, checks decoded-field parity, and records size, CPU latency, resident memory,
+  runtime environment, and provider compatibility before an artifact can be promoted.
+- Deliberately bad artifacts, compensating output drift, mismatched reference evidence, provider
+  failures, hostile archives, duplicate/oversized JSON, and qualification bypass attempts have
+  dedicated fail-closed tests. Qualified archives are byte-reproducible.
+
+### Changed
+
+- `export_onnx.py` produces only fp32 staged candidates; `quantize_grc_joint.py` performs the
+  separately qualified weight-only/fp16 optimization. Both require explicit candidate identities
+  and private reference evidence, and neither assumes that a smaller artifact is faster.
+- Development runs can bind a caller-supplied candidate artifact identity while the default v3
+  runner remains unchanged. The published `grc-joint-v3` asset, defaults, evidence, and benchmark
+  measurements are unchanged; A20 runs no locked test fold and publishes no development scores.
+- The local release gate passes 4,028 tests with 18 expected skips and 5 known warnings, strict
+  documentation, Ruff, strict mypy, public-API/import/footprint checks, all four notebooks, live
+  asset integrity, build/Twine, and the unchanged 4,849 KB/224-file wheel.
+
 ## 0.54.0 (2026-07-15)
 
 ### Added

@@ -161,6 +161,52 @@ def test_fake_pipeline_whole_journey_writes_and_reloads_artifacts(tmp_path: Path
     assert Path(result["paths"]["predictions"]).name.startswith("predictions-")
 
 
+def test_candidate_artifact_run_identity_is_bound_without_changing_default_cli(
+    tmp_path: Path,
+) -> None:
+    manifest, perseus, tagging, parsing, environment = _fixture(tmp_path)
+    identity = {
+        "model": {"identity": "grc-joint-v4-candidate", "asset_sha256": "1" * 64},
+        "preprocessing": {"identity": "fixture-prep", "config_sha256": "2" * 64},
+        "output_profile": {"identity": "fixture-output", "tasks": ["parsing", "tagging"]},
+        "decoder": {
+            "identity": "pyaegean-release-single-root-mst-v1",
+            "mode": "sequential",
+            "long_input": "windowed",
+        },
+    }
+    result = runner.run_development_evaluation(
+        manifest=manifest,
+        perseus_dev=perseus,
+        papygreek_tagging=tagging,
+        papygreek_parse=parsing,
+        environment_receipt=environment,
+        output_dir=tmp_path / "out-candidate",
+        git_revision="f" * 40,
+        pipeline=lambda sentences, **kwargs: list(sentences),
+        run_identity=identity,
+    )
+    assert result["run"]["model"] == identity["model"]
+    assert result["run"]["decoder"] == identity["decoder"]
+    assert result["run"]["prediction_sha256"] == result["prediction_sha256"]
+
+
+def test_candidate_run_identity_rejects_extra_top_level_fields(tmp_path: Path) -> None:
+    manifest, perseus, tagging, parsing, environment = _fixture(tmp_path)
+    with pytest.raises(runner.RunnerError, match="run_identity must contain exactly"):
+        runner.run_development_evaluation(
+            manifest=manifest,
+            perseus_dev=perseus,
+            papygreek_tagging=tagging,
+            papygreek_parse=parsing,
+            environment_receipt=environment,
+            output_dir=tmp_path / "out-invalid-identity",
+            git_revision="f" * 40,
+            pipeline=lambda sentences, **kwargs: list(sentences),
+            run_identity={"unexpected": True},
+        )
+
+
 @pytest.mark.parametrize("kind", ["missing", "extra", "form", "short", "long"])
 def test_pipeline_output_adversarial_shapes_are_rejected(tmp_path: Path, kind: str) -> None:
     manifest, perseus, tagging, parsing, environment = _fixture(tmp_path)

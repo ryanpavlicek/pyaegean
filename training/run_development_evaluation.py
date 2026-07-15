@@ -450,8 +450,14 @@ def _content_addressed_artifact(value: Any, *, prefix: str, output_dir: Path) ->
     return target, digest
 
 
-def _build_run(*, environment_sha256: str, prediction_sha256: str, git_revision: str) -> dict[str, Any]:
-    return {
+def _build_run(
+    *,
+    environment_sha256: str,
+    prediction_sha256: str,
+    git_revision: str,
+    run_identity: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    identity: Mapping[str, Any] = run_identity or {
         "model": {"identity": _MODEL_ID, "asset_sha256": _MODEL_ASSET_SHA256},
         "preprocessing": {
             "identity": "pyaegean-neural-preprocessing-v1",
@@ -466,6 +472,22 @@ def _build_run(*, environment_sha256: str, prediction_sha256: str, git_revision:
             "mode": "sequential",
             "long_input": "windowed",
         },
+    }
+    try:
+        copied = json.loads(manifest_mod.canonical_json(identity))
+    except Exception as exc:
+        raise RunnerError(f"run_identity is not canonical JSON: {exc}") from exc
+    if not isinstance(copied, dict) or set(copied) != {
+        "model",
+        "preprocessing",
+        "output_profile",
+        "decoder",
+    }:
+        raise RunnerError(
+            "run_identity must contain exactly model, preprocessing, output_profile, and decoder"
+        )
+    return {
+        **copied,
         "environment_receipt_sha256": environment_sha256,
         "git_revision": git_revision,
         "prediction_sha256": prediction_sha256,
@@ -482,6 +504,7 @@ def run_development_evaluation(
     output_dir: str | Path,
     git_revision: str | None = None,
     pipeline: Callable[..., Any] | None = None,
+    run_identity: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run and persist one development evaluation.
 
@@ -539,6 +562,7 @@ def run_development_evaluation(
         environment_sha256=environment_sha256,
         prediction_sha256=prediction_sha256,
         git_revision=_git_revision(git_revision),
+        run_identity=run_identity,
     )
     output_path = Path(output_dir)
     gold_path, gold_sha256 = _content_addressed_artifact(
