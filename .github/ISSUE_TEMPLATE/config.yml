@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: "Independent review kit"
+    url: https://github.com/ryanpavlicek/pyaegean/blob/main/review/README.md
+    about: "Reproduce the bounded public evidence receipt and report an exact discrepancy."
   - name: "For specialists — how to validate & contribute"
     url: https://github.com/ryanpavlicek/pyaegean/wiki/For-Specialists
     about: "What's exploratory vs. established, and how a domain expert can correct, validate, or contribute."

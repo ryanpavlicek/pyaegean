@@ -499,6 +499,16 @@ model-quality or performance claim. The published evidence summary indexes only 
 normalized reviewed records; raw package-manager metadata remains private because it
 contains a large amount of unrelated project-link metadata.
 
+### Bounded public review receipt
+
+From a clean source checkout, `python scripts/reproduce_review.py` verifies the
+canonical public evidence records by SHA-256 and reproduces one small,
+project-authored offline result. It does not use the network, execute a model, write
+bytecode, or create a pyaegean cache. The receipt is an integrity and regression
+check, not a substitute for the neural protocol or external scholarly review. See
+[Independent Review](Independent-Review) for the model card, data card, limitations,
+and discrepancy path.
+
 ---
 
 ## See also
@@ -510,5 +520,6 @@ contains a large amount of unrelated project-link metadata.
 - [Data & Provenance](Data-and-Provenance): every dataset, licence, and the cache
   layout
 - [For Specialists](For-Specialists): auditing, citing, and correcting a result
+- [Independent Review](Independent-Review): the bounded evidence receipt and reviewer map
 - [Limitations](Limitations): the candid register of what the toolkit can and
   cannot claim

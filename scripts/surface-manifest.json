@@ -19,7 +19,7 @@
     "not-applicable": "deliberately not surfaced here; the note says why (folded into another covered capability on the surface, or reachable only through the TUI command console with no dedicated screen)."
   },
   "site_nav": {
-    "description": "The published documentation-site navigation: the 'nav:' block of mkdocs.yml (READ-ONLY from this file's owner). Tracked so a top-level nav entry cannot appear or disappear without a recorded decision. It is modelled at the nav-entry level rather than as a fifth per-capability column because a navigation menu maps to surfaces and pages, not to individual capabilities. 'structural' lists the site's own scaffolding (Home and the API reference), which carry no capability and are skipped. Every other top-level nav entry is either 'covered' (it points at a tracked surface or a capability id, named in 'maps_to') or 'excluded' (documentation with no capability behind it, reason from the shared exclusion vocabulary). The browser-demo link is the one covered entry today; the Benchmarks and Design-notes entries are documentation pages, recorded as honest not-applicable.",
+    "description": "The published documentation-site navigation: the 'nav:' block of mkdocs.yml (READ-ONLY from this file's owner). Tracked so a top-level nav entry cannot appear or disappear without a recorded decision. It is modelled at the nav-entry level rather than as a fifth per-capability column because a navigation menu maps to surfaces and pages, not to individual capabilities. 'structural' lists the site's own scaffolding (Home and the API reference), which carry no capability and are skipped. Every other top-level nav entry is either 'covered' (it points at a tracked surface or a capability id, named in 'maps_to') or 'excluded' (documentation with no capability behind it, reason from the shared exclusion vocabulary). The browser-demo link is the one covered entry today; the Benchmarks, Independent-review, and Design-notes entries are documentation pages, recorded as honest not-applicable.",
     "structural": [
       "Home",
       "API reference"
@@ -36,6 +36,12 @@
         "status": "excluded",
         "reason": "not-applicable",
         "note": "the measured-claims and evaluation-protocol page (docs/benchmarks.md); a documentation page, not a capability surface."
+      },
+      {
+        "label": "Independent review",
+        "status": "excluded",
+        "reason": "not-applicable",
+        "note": "the evidence-reproduction entry point (docs/review.md); repository review documentation, not a runtime capability surface."
       },
       {
         "label": "Design notes",

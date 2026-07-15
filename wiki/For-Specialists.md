@@ -423,14 +423,14 @@ on [AI Layer](AI-Layer).
 
 ---
 
-## 6. How to help — corrections, validations, contributions
+## 6. How to help — corrections, validations, contributions, reproduction
 
 For correcting automated output in your own copy first (export, fix, re-import), see
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong); for citing computationally-assisted
 results, see [Citing Computational Assistance](Citing-Computational-Assistance). To push a
-fix back into the project, use one of the three paths below.
+finding or fix back into the project, use one of the four paths below.
 
-Three lightweight paths, each a GitHub issue form (New issue → pick a template).
+Four lightweight paths, each a GitHub issue form (New issue → pick a template).
 Attribution is **first-class**: contributed facts keep their source.
 
 | Path | When | What to include | Where it lands |
@@ -438,6 +438,7 @@ Attribution is **first-class**: contributed facts keep their source.
 | **Correction** | a reading, gloss, lemma, sign value, or translation is wrong | the exact value + a source | a verifiable fix in the codebase or a bundled JSON, with a test |
 | **Validation** | confirm or refute an exploratory result | the result and (ideally) its `trace()` | the limitations register or a benchmark item |
 | **Data contribution** | a single sourced fact | the fact + its citation | a bundled lexicon/JSON with the citation and an automatic test |
+| **Reproduction discrepancy** | the public receipt or a declared protocol does not match | exact identities, environment, expected and observed output, and local modifications | a reproducible investigation of the evidence or implementation |
 
 A pull request is welcome too: the [contribution menu](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md#good-first-contributions-a-menu)
 gives each kind of fact an obvious home and an automatic test.
@@ -489,6 +490,16 @@ The menu of one-fact contributions:
 
 For anything larger than a single fact, open an issue first so the design can be
 agreed before code is written.
+
+### 6.4 Report a reproduction discrepancy
+
+Start with the bounded command and evidence map on
+[Independent Review](Independent-Review). If the receipt, a digest, or a declared
+benchmark protocol does not match, use the reproduction-discrepancy issue form and
+include the exact version, commit or source-archive hash, manifest and result digests,
+environment, expected and observed output, and all local changes. The bounded command
+does not execute the neural model; a neural disagreement must also identify the full
+artifact, data, and scorer protocol used.
 
 ### A word on bringing your own corpus
 

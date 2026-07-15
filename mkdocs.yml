@@ -95,6 +95,7 @@ nav:
       - aegean.db: api/db.md
       - aegean.mcp_server: api/mcp.md
   - Benchmarks: benchmarks.md
+  - Independent review: review.md
   - Design notes:
       - Large corpora: large-corpora.md
       - Interoperability: interoperability.md

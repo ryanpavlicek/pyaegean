@@ -22,7 +22,16 @@ def test_every_wiki_page_is_linked_from_the_sidebar() -> None:
 
 
 def test_the_new_reference_pages_exist() -> None:
-    for name in ("Benchmarks", "Methodology", "TUI", "MCP", "New-Testament", "Evaluation", "Translation"):
+    for name in (
+        "Benchmarks",
+        "Evaluation",
+        "Independent-Review",
+        "MCP",
+        "Methodology",
+        "New-Testament",
+        "TUI",
+        "Translation",
+    ):
         assert (WIKI / f"{name}.md").exists(), f"wiki/{name}.md is missing"
 
 

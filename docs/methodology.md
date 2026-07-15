@@ -394,7 +394,21 @@ to that registry. Corpus counts have a parallel registry. The registries prevent
 a prose edit from silently changing a measurement; they do not replace rerunning
 the relevant protocol when its model, data, scorer, or code changes.
 
-Typical reproduction entry points are:
+The shortest bounded evidence check runs from a clean source checkout:
+
+```bash
+python scripts/reproduce_review.py
+```
+
+It verifies the canonical review records by SHA-256 and reproduces a small,
+project-authored offline fixture without network access, model execution, bytecode,
+or cache writes. Its receipt identifies the manifest, deterministic result, package,
+interpreter, and Git state. This establishes integrity and one deterministic
+regression result; it does not reproduce the neural rows or constitute outside review.
+The [Independent review](review.md) page maps that receipt to the model card, data
+card, limitations, and discrepancy form.
+
+The neural reproduction entry points are:
 
 ```bash
 pip install "pyaegean[neural]"

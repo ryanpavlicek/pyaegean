@@ -3,6 +3,8 @@
 Training code for the Greek NLP models. Nothing in this directory ships in the wheel;
 trained artifacts are published as GitHub release assets and fetched to the cache, never
 bundled. The evaluation protocol and all benchmark numbers are in `docs/benchmarks.md`.
+The public [independent review kit](../review/README.md) provides the one-command
+evidence receipt plus the shipped model and data cards.
 
 ## Shipped model
 

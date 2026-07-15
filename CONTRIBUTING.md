@@ -72,6 +72,26 @@ architecture: each has an obvious home and an obvious test:
 For anything larger, open an issue first so the design can be agreed before
 you write code.
 
+## Bounded maintainer tasks
+
+Larger work is easier to review when one person owns a small, explicit slice.
+Open a [bounded maintainer task](.github/ISSUE_TEMPLATE/maintainer_task.yml) before
+implementation and record the owned files, acceptance evidence, non-goals, risk
+profile, dependencies, and reviewer. Useful slices include:
+
+| Slice | Typical ownership | Acceptance evidence | Keep outside the slice |
+| --- | --- | --- | --- |
+| Documentation and evidence links | One guide plus its integrity or staleness test | Clean link/anchor check, docs profile, and strict site build | New behavior or unmeasured claims |
+| Offline correctness fixture | One small module or fixture plus focused tests | Exact regression, hostile-input case, and code profile | Unrelated refactors or neural claims |
+| Sourced data fact | One data record, citation, notice if needed, and focused test | Upstream authority, compatible license, regenerated fact check | Bulk unsourced cleanup |
+| Interoperability projection | One adapter path, report field, and round-trip test | Native/sidecar/loss report for a concrete object | Installing every optional framework in routine development |
+| Neural development evidence | One frozen development contract or candidate report | Content identities, leakage checks, declared gate, and independent review | Locked-test inspection or public promotion without its separate gate |
+| Release maintenance | One release surface or gate improvement | Focused release test and the applicable final checkpoint | Changing published evidence by convenience |
+
+The neural and release slices are not good-first tasks. They require an experienced
+maintainer and the evidence, user-permission, and release gates documented in the
+repository. A maintainer task defines work; it does not weaken those gates.
+
 ## Contributing sourced data
 
 Additions to the bundled lexica, sign tables, gazetteer, and benchmark gold are

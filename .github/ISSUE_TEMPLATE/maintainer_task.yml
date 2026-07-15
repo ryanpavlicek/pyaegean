@@ -1,0 +1,68 @@
+name: "Bounded maintainer task"
+description: "Define an owned, reviewable maintenance slice with explicit acceptance evidence."
+title: "[maintainer task] "
+labels: ["help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This form turns a larger maintenance need into a bounded ownership slice. It is
+        suitable for agreeing the files, evidence, and non-goals before implementation.
+        It does not grant permission to change benchmark claims, locked folds, model assets,
+        or release state outside the project's documented gates.
+  - type: dropdown
+    id: slice
+    attributes:
+      label: Ownership slice
+      options:
+        - "Documentation and evidence links"
+        - "Offline correctness and regression fixture"
+        - "One sourced data fact"
+        - "One interoperability projection"
+        - "Neural development evidence (experienced maintainers)"
+        - "Release or repository maintenance (experienced maintainers)"
+    validations:
+      required: true
+  - type: textarea
+    id: owned_files
+    attributes:
+      label: Owned files and behavior
+      description: Name the smallest file set and the exact behavior this task owns.
+      placeholder: |
+        Files: wiki/Example.md, tests/test_wiki_integrity.py
+        Behavior: correct one stale workflow and keep its links executable
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance evidence
+      description: State the focused test, source citation, generated diff, or reviewer receipt that proves completion.
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: State nearby behavior this slice must not redesign or claim.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_profile
+    attributes:
+      label: Validation profile
+      options:
+        - "docs"
+        - "code"
+        - "public-api"
+        - "persistence"
+        - "to be decided before implementation"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and reviewer
+      description: Name prerequisite issues, data access, domain expertise, or the maintainer expected to review the slice.
+    validations:
+      required: false

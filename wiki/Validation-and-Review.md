@@ -26,7 +26,7 @@ add your own review to the record.
 | Are the numbers guarded against silent drift? | Yes, every published number is pinned to a registry that a test enforces per commit. | [The claims registry](#the-claims-registry) |
 | Has the software had external scholarly peer review? | No. | [What has had outside review](#what-has-had-outside-review-and-what-has-not) |
 | Has it had a formal external software audit? | No. | [What has had outside review](#what-has-had-outside-review-and-what-has-not) |
-| How do I report an error or challenge a result? | A Correction, Validation, or Data-contribution issue. | [How to submit a finding](#how-to-submit-a-finding-or-a-correction) |
+| How do I report an error or challenge a result? | Use the Correction, Validation, Data-contribution, or Reproduction-discrepancy form that matches it. | [How to submit a finding](#how-to-submit-a-finding-or-a-correction) |
 
 ---
 
@@ -141,11 +141,28 @@ paths below.
 
 ---
 
+## One-command evidence check
+
+An independent reviewer can begin from a clean source checkout with:
+
+```bash
+python scripts/reproduce_review.py
+```
+
+The command verifies the canonical public evidence records by SHA-256 and reproduces
+one small, project-authored offline result without network access, model execution,
+bytecode, or cache writes. It reports exact manifest and result digests. A pass is a
+bounded integrity and regression receipt, not external certification and not a rerun
+of the neural benchmark. [Independent Review](Independent-Review) explains the output,
+model and data cards, limitations, and discrepancy path.
+
+---
+
 ## How to submit a finding or a correction
 
 External review is welcome and is treated as first-class: a contributed fact
 keeps its source, and a refutation is as valuable as a confirmation. There are
-three lightweight paths, each a GitHub issue form (New issue, then pick a
+four lightweight paths, each a GitHub issue form (New issue, then pick a
 template):
 
 | Path | Use it when | What to include |
@@ -153,6 +170,7 @@ template):
 | **Correction** | an established fact is wrong (a sign value, gloss, lemma, bridge reading, or a benchmark item) | the exact value and a source or authority |
 | **Validation** | you have confirmed or refuted an exploratory result | the result, your verdict, and your reasoning and sources |
 | **Data contribution** | you have a single, sourced, openly-licensed fact to add | the fact and its citation |
+| **Reproduction discrepancy** | the review command, a benchmark protocol, or a recorded digest does not match | exact identities, environment, expected and observed output, and every local modification |
 
 Before filing, [Limitations](Limitations) records what is already known not to
 work, and [For Specialists](For-Specialists) (section 6) walks through each path
@@ -174,9 +192,11 @@ in CONTRIBUTING gives each kind of fact an obvious home and the test it must pas
 ## See also
 
 - [For Specialists](For-Specialists): the established / measured / exploratory
-  register, how to audit a result, and the three contribution paths in full.
+  register and the community review and contribution paths in full.
 - [Benchmarks](Benchmarks) and [Methodology](Methodology): the measured numbers,
   the protocol, the leakage controls, and the claims registry.
+- [Independent Review](Independent-Review): the bounded reproduction command, model
+  and data cards, receipt map, and discrepancy form.
 - [When the Tool Is Wrong](When-the-Tool-Is-Wrong): the error-shape view and the
   human-in-the-loop review loop.
 - [Citing Computational Assistance](Citing-Computational-Assistance): naming the

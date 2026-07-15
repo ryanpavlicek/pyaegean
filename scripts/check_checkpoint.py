@@ -337,6 +337,7 @@ def build_commands(
                         "src",
                         "tests",
                         "scripts/check_checkpoint.py",
+                        "scripts/reproduce_review.py",
                         "training/reproducibility.py",
                         "training/validate_reproducibility.py",
                         "training/artifact_command.py",

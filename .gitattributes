@@ -9,3 +9,7 @@ training/results/papygreek-eval-v4-2026-07-15.json text eol=lf
 training/results/papygreek-orig-eval-v3-2026-07-15.json text eol=lf
 training/results/documentary-levers-v3-2026-07-15.json text eol=lf
 training/results/papygreek-convention-decomp-v2-2026-07-15.json text eol=lf
+# Generated public evidence remains byte-stable across Git platforms.  The broad
+# rule also covers future nested receipts; the explicit historical entries above
+# remain as documentation of when those evidence paths were first pinned.
+training/results/** text eol=lf

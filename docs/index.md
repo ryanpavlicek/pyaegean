@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.56.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.57.0 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
@@ -107,6 +107,11 @@ cross-tool comparison tables, and
 maps material to the right backend. [Methodology](methodology.md) explains the evidence
 registers, provenance, leakage controls, Aegean-script methods, and grounded-AI boundary.
 
+**I want to reproduce the public evidence or help maintain the project.**
+[Independent review](review.md) starts with one offline command, explains exactly what
+its receipt does and does not establish, and links the model card, data card,
+limitations, discrepancy form, and bounded maintainer tasks.
+
 ## Install
 
 The core is zero-dependency; everything heavier is an opt-in extra:
@@ -131,5 +136,7 @@ sha256-pinned, only when you opt in.
   classes and functions generated from the source.
 - **[Benchmarks](benchmarks.md)**: the measured accuracy numbers and the evaluation
   protocol behind them.
+- **[Independent review](review.md)**: the one-command evidence receipt, its limits,
+  and the path from reproduction to a precise discrepancy report.
 - The **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)** holds the guides,
   tutorials, and per-script handbooks linked above.

@@ -4,6 +4,29 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.57.0 (2026-07-15)
+
+### Added
+
+- A clean source checkout can run `python scripts/reproduce_review.py` to verify a
+  canonical SHA-256 manifest and reproduce a small, zero-dependency Greek result. The
+  read-only receipt records package, interpreter, Git, manifest, evidence, and result
+  identities without network access, model execution, bytecode, or cache writes.
+- The independent-review kit includes a current `grc-joint-v3` model card, Greek neural
+  data card, evidence and receipt map, architecture diagram, limitations matrix, exact
+  expectations, and a structured discrepancy-report form.
+- Prospective maintainers can define bounded ownership slices with explicit files,
+  acceptance evidence, non-goals, risk profile, dependencies, and reviewer through the
+  contributor guide and issue form.
+
+### Changed
+
+- The README, wiki, and Pages site now give independent review a visible entry point and
+  distinguish the bounded offline receipt from the full neural benchmark protocol and
+  from external scholarly review.
+- Package metadata links directly to the public review kit. No model, runtime default,
+  hosted asset, claims-registry value, or published benchmark number changed.
+
 ## 0.56.0 (2026-07-15)
 
 ### Added

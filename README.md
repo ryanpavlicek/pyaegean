@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.56.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.57.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -213,15 +213,23 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)**: end-to-end scholarly workflows, each ending in a citation
 - **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
 - **[Interoperability](https://github.com/ryanpavlicek/pyaegean/wiki/Interoperability)**: CoNLL-U, spaCy, Stanza, and CLTK projections, sidecars, reports, and serializer boundaries
+- **[Independent review](https://github.com/ryanpavlicek/pyaegean/wiki/Independent-Review)**: one-command evidence verification, model and data cards, limitations, and discrepancy reporting
 - **[API reference](https://pyaegean.xyz/api/)**: the supported facade modules, with public classes and functions generated from the source
+
+## Independent review
+
+From a clean source checkout, `python scripts/reproduce_review.py` verifies the
+canonical public evidence records by SHA-256 and reproduces one small,
+zero-dependency result without network access, model execution, bytecode, or cache
+writes. It is a bounded integrity receipt, not a replacement for the neural benchmark
+protocol or external scholarly review. The [review kit](review/README.md) includes the
+model card, data card, receipt map, limitations, and discrepancy form.
 
 ## Roadmap
 
 The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) is the record of
 what each release shipped. Current work is focused on:
 
-- building the independent-review and maintainer handoff kit on top of the frozen
-  export, selection, and runtime-label evidence contracts;
 - comparing deterministic and neural translation grounding on matched passages before changing
   any default;
 - training and independently evaluating a separately versioned successor to the current Greek
@@ -265,7 +273,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.56.0},
+  version = {0.57.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

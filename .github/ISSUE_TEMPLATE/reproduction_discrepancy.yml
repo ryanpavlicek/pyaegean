@@ -1,0 +1,74 @@
+name: "Independent-review discrepancy"
+description: "Report a mismatch in the one-command evidence or offline-result reproduction."
+title: "[reproduction] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A mismatch is useful evidence. Please run `python scripts/reproduce_review.py --json`
+        from an unmodified source checkout and include the identities below. The command does
+        not download or execute the neural model; neural benchmark disagreements should also
+        identify the complete protocol and artifact used.
+  - type: input
+    id: version
+    attributes:
+      label: pyaegean version
+      placeholder: "e.g. 0.57.0"
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Git commit or source-archive identity
+      description: Use the reported 40-character commit, or name and hash the source archive if Git is unavailable.
+    validations:
+      required: true
+  - type: input
+    id: manifest_sha256
+    attributes:
+      label: Manifest SHA-256
+      description: Copy `manifest.sha256` from the JSON report when available.
+    validations:
+      required: true
+  - type: input
+    id: result_sha256
+    attributes:
+      label: Deterministic-result SHA-256
+      description: Copy `deterministic_result.sha256` from the JSON report when available.
+    validations:
+      required: false
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command and environment
+      description: Include the command, Python implementation/version, operating system, architecture, and how the checkout was obtained.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Expected and observed result
+      description: Include the complete error or the smallest exact output difference. Remove credentials and unrelated personal paths.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: modifications
+    attributes:
+      label: Local modifications
+      description: List every edit, environment override, or skipped step. Write "none" for a clean checkout.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Reproduction checks
+      options:
+        - label: I used a source checkout or archive for the version named above.
+          required: true
+        - label: I did not use `--allow-dirty` as evidence of a clean reproduction.
+          required: true
+        - label: I have removed credentials and private data from the report.
+          required: true

@@ -37,9 +37,12 @@ HEAVY = [
 # (ssl/urllib are already pulled by the fetch layer at init but stay off this list: the demo
 # loads them via micropip before importing aegean, so they don't break it — see Limitations.)
 STDLIB_OPTIONAL = ["sqlite3"]
-# Generous: steady-state `import aegean` is ~300 ms; a real regression (one top-level
-# pandas/numpy import) costs several hundred more and still trips this.
-IMPORT_MS_BOUND = 500.0
+# Linux CI is stable around 160--220 ms.  Windows pays much more for the same broad,
+# pure-Python facade (roughly 400--700 ms on repeated CPython 3.14 measurements), even
+# with Defender disabled.  Keep the stricter authoritative CI bound while avoiding a
+# flaky local checkpoint on Windows.  The separate import-clean check still rejects a
+# top-level heavy dependency regardless of timing.
+IMPORT_MS_BOUND = 750.0 if sys.platform == "win32" else 500.0
 WHEEL_SOFT_BYTES = 5 * 1024 * 1024
 HEAVY_EXT = (".gz", ".so", ".pyd", ".dll", ".bin", ".onnx", ".npy", ".npz", ".pt", ".h5", ".parquet")
 

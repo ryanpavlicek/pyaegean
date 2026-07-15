@@ -39,6 +39,7 @@
 - [Evaluation](Evaluation)
 - [When the Tool Is Wrong](When-the-Tool-Is-Wrong)
 - [Validation & Review](Validation-and-Review)
+- [Independent Review](Independent-Review)
 
 **Reference**
 - [Architecture](Architecture)

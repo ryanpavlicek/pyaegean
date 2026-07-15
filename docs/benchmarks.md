@@ -82,6 +82,11 @@ narrow interval means the number is stable, not a lucky fold.
   greek.evaluate_on_ud("proiel", "test")
   ```
 
+  Reviewers who first want to verify the checked-in evidence bytes and a small
+  zero-dependency result can run `python scripts/reproduce_review.py` from a clean
+  source checkout. That bounded receipt does not download the model or reproduce
+  the neural values above; this protocol remains the authority for those rows.
+
 ## Leakage controls
 
 UD Perseus is converted from the AGDT: the treebank pyaegean's Greek backends are built
