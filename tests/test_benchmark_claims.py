@@ -86,13 +86,26 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
 
 def test_papygreek_row_matches_registry_and_evidence() -> None:
     claims = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/papygreek-eval-v3-2026-07-11.json"))
+    ev = json.loads(_read("training/results/papygreek-eval-v4-2026-07-15.json"))
     res = ev["results_full_precision"]
-    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         assert claims[metric] == round(res[metric] * 100, 2), metric
     assert claims["n_words"] == res["n_words"]
+    assert claims["n_sentences"] == res["n_sentences"]
+    correction = json.loads(
+        _read("training/results/papygreek-work-disjoint-correction.json")
+    )
+    assert correction["counts"]["new_regularized_tokens"] == res["n_words"]
+    assert correction["counts"]["new_regularized_sentences"] == res["n_sentences"]
+    assert correction["artifacts"]["new_regularized"]["sha256"] == ev["fold"][
+        "archive_sha256"
+    ]
+    assert correction["counts"]["removed_sentences"] == 145
+    assert correction["counts"]["removed_tokens"] == 1878
+    assert ev["protocol"]["coverage"] == "complete"
+    assert ev["fold"]["work_disjoint"] is True
     doc = _read("docs/benchmarks.md")
-    for metric in ("upos", "ufeats", "lemma", "uas", "las"):
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         assert f"{claims[metric]:.2f}" in doc, metric
     assert f"{claims['n_words']:,}" in doc
 
@@ -101,26 +114,43 @@ def test_papygreek_decomposition_matches_registry_and_evidence() -> None:
     """The PapyGreek convention decomposition (measurement only) stays pinned:
     registry block == evidence file == the doc echoes, mirroring the PROIEL one."""
     reg = _claims()["papygreek_convention_decomposition"]
-    ev = json.loads(_read("training/results/papygreek-convention-decomp-2026-07-11.json"))
+    ev = json.loads(
+        _read("training/results/papygreek-convention-decomp-v2-2026-07-15.json")
+    )
     x = ev["xpos_decomposition"]
-    assert reg["xpos_gap_points"] == x["gap_pct"]
-    assert reg["xpos_coordinator_points"] == x["buckets_pts"]["coordinator_poscode"]
-    assert reg["xpos_common_gender_points"] == x["buckets_pts"]["common_gender"]
-    assert reg["xpos_underscore_encoding_points"] == x["buckets_pts"]["underscore_encoding"]
-    assert reg["xpos_residual_real_points"] == x["buckets_pts"]["residual_real"]
-    assert reg["xpos_convention_encoding_subtotal_points"] == x["convention_encoding_subtotal_pts"]
-    assert reg["xpos_forgiving_convention_pct"] == x["xpos_forgiving_convention_pct"]
+    assert reg["xpos_gap_points"] == round(x["gap_pct"], 2)
+    assert reg["xpos_coordinator_points"] == round(
+        x["buckets_points"]["coordinator_poscode"], 2
+    )
+    assert reg["xpos_common_gender_points"] == round(
+        x["buckets_points"]["common_gender"], 2
+    )
+    assert reg["xpos_underscore_encoding_points"] == round(
+        x["buckets_points"]["underscore_encoding"], 2
+    )
+    assert reg["xpos_residual_real_points"] == round(
+        x["buckets_points"]["residual_real"], 2
+    )
+    assert reg["xpos_convention_encoding_subtotal_points"] == round(
+        x["convention_encoding_subtotal_points"], 2
+    )
+    assert reg["xpos_forgiving_convention_pct"] == round(
+        x["xpos_forgiving_convention_pct"], 2
+    )
     u = ev["upos_decomposition"]
     assert reg["upos_gap_points"] == round(u["gap_pct"], 2)
-    assert reg["upos_coordinator_points"] == u["coordinator_gap_pts"]
-    assert reg["coordinator_share_of_upos_errors"] == u["coordinator_share_of_upos_errors_pct"]
+    assert reg["upos_coordinator_points"] == round(u["coordinator_gap_points"], 2)
+    assert reg["coordinator_share_of_upos_errors"] == round(
+        u["coordinator_share_of_upos_errors_pct"], 2
+    )
     # the decomposition reproduced the pinned row before partitioning it
     row = _claims()["neural_papygreek_test"]
-    rc = ev["reproduce_check"]["official_evaluator"]
-    assert round(rc["upos"], 2) == row["upos"] and round(rc["xpos"], 2) == row["xpos"]
+    rc = ev["reproduce_check"]
+    assert round(rc["official_upos"], 2) == row["upos"]
+    assert round(rc["official_xpos"], 2) == row["xpos"]
     for doc in ("docs/benchmarks.md", "wiki/Benchmarks.md"):
         text = _read(doc)
-        for token in ("57.3", "13.62", "90.38"):
+        for token in ("58.79", "13.31", "90.50"):
             assert token in text, f"{token} missing from {doc}"
 
 
@@ -128,11 +158,11 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     """The opt-in documentary-lever variant rows stay pinned to their one-shot
     sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
     row = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/documentary-levers-v2-2026-07-11.json"))
+    ev = json.loads(_read("training/results/documentary-levers-v3-2026-07-15.json"))
     for variant in ("documentary_reconciliation", "documentary_full"):
         res = ev["results_full_precision"][variant]
         reg = row[variant]
-        for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+        for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
             assert reg[metric] == round(res[metric] * 100, 2), f"{variant}.{metric}"
     # the variants share every metric with the baseline except the ones each lever moves
     rec = row["documentary_reconciliation"]
@@ -140,7 +170,16 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     assert rec["uas"] == row["uas"] and rec["las"] == row["las"]
     full = row["documentary_full"]
     assert full["upos"] == rec["upos"] and full["xpos"] == rec["xpos"]
-    assert full["lemma"] > row["lemma"]
+    assert full == {**rec, "note": full["note"]}
+    assert ev["scope_validation"]["reconciliation_to_full_prediction_diffs"] == {
+        "form": 0,
+        "lemma": 0,
+        "upos": 0,
+        "xpos": 0,
+        "feats": 0,
+        "head": 0,
+        "deprel": 0,
+    }
 
 
 def test_verse_fold_row_matches_registry_and_evidence() -> None:
@@ -166,10 +205,12 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
     """The diplomatic-orthography and Byzantine-tagging rows stay pinned to their
     one-shot sequential evidence, and each carries its caveat note."""
     reg = _claims()
-    ev = json.loads(_read("training/results/papygreek-orig-eval-v2-2026-07-11.json"))
+    ev = json.loads(_read("training/results/papygreek-orig-eval-v3-2026-07-15.json"))
     row = reg["neural_papygreek_test"]["orig_layer"]
-    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las"):
+    for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         assert row[metric] == round(ev["results_full_precision"][metric] * 100, 2), metric
+    assert ev["fold"]["same_sentences_and_gold_as_regularized"] is True
+    assert ev["fold"]["form_differences"] == 1453
     ev2 = json.loads(_read("training/results/dbbe-eval-v2-2026-07-11.json"))
     drow = reg["neural_dbbe_test"]
     for metric in ("upos", "xpos", "ufeats", "lemma"):

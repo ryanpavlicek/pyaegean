@@ -1,0 +1,55 @@
+{
+  "what": "grc-joint-v3 scored on the corrected work-disjoint regularized PapyGreek fold",
+  "date": "2026-07-15",
+  "claim_status": "current",
+  "model": {
+    "identity": "grc-joint-v3",
+    "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+    "bundle_manifest_sha256": "db17b79df0a88d927870a708ecd666f3afdfd5cd890302854cab700b581ade5b"
+  },
+  "fold": {
+    "identity": "papygreek-fold-v4",
+    "release_tag": "papygreek-fold-v4",
+    "archive_sha256": "39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
+    "materialized_conllu_sha256": "81ce7dddd158bd4e3dbe41cd87746b80c0f2a85c86ce416ac44d602350e873aa",
+    "manifest_sha256": "89c4e4daf86e163e9fddfda24d8a4ff86a1e7da1ca10ad6e9f841a4ba4f762a2",
+    "correction_receipt": "training/results/papygreek-work-disjoint-correction.json",
+    "work_disjoint": true,
+    "sentence_form_disjoint": true
+  },
+  "protocol": {
+    "activation": "greek.use_neural_pipeline()",
+    "entry_point": "greek.evaluate_on_papygreek()",
+    "tokenization": "gold",
+    "evaluator": "official CoNLL-2018 evaluator",
+    "execution_provider": "CPUExecutionProvider",
+    "decoder": "sequential; batch_size=None; long_input=windowed",
+    "coverage": "complete"
+  },
+  "environment": {
+    "private_receipt_sha256": "d6e558ebd755078f9b72a22f5fd64eba904ef4b5b17866fc82dbec0abe1fedb1",
+    "source_closure_sha256": "e6c220c51a4c3570a86930d989604938e6c6f22da6609730c08c38c47adb758d",
+    "python": "3.14.3",
+    "numpy": "2.5.1",
+    "onnxruntime": "1.27.0",
+    "tokenizers": "0.23.1"
+  },
+  "prediction_sha256": "9d2f14edd49ac6ec6403ee5cbce017e485881f5bc673ab6cfcf3e187909c1645",
+  "results_full_precision": {
+    "treebank": "papygreek",
+    "split": "test",
+    "parsed": true,
+    "layer": "reg",
+    "upos": 0.9152832141089666,
+    "xpos": 0.7718540513789536,
+    "ufeats": 0.887299230665407,
+    "lemma": 0.861024879650875,
+    "uas": 0.8550411661492779,
+    "las": 0.7956089440770234,
+    "clas": 0.753954802259887,
+    "n_words": 22227,
+    "n_sentences": 1551
+  },
+  "supersedes_current_claim": "training/results/papygreek-eval-v3-2026-07-11.json",
+  "historical_note": "The prior 24,105-token row remains an immutable historical record, but it is not the current generalization claim: 145 sentences / 1,878 tokens came from 29 works overlapping Pedalion training identities, and the historical decoder silently emitted placeholder tail analyses for one retained over-limit regularized sentence (127 tokens). The current row removes the overlapping works and uses complete-word windows for every retained token. Because both the fold and long-input protocol changed, old-to-new deltas are not a model-weight comparison."
+}

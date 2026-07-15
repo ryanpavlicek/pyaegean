@@ -127,7 +127,7 @@ is the closest measured Koine parsing figure this document has.
 
 ## Documentary Koine: the PapyGreek fold
 
-The documentary-Greek parsing evaluation uses 1,696 sentences / 24,105
+The documentary-Greek parsing evaluation uses 1,551 sentences / 22,227
 tokens of papyrus letters and petitions from the PapyGreek Treebanks (CC BY-SA),
 converted through the same AGDT scheme the model trains under.
 
@@ -136,29 +136,34 @@ the editors normalized toward standard Koine. The number is a regularized-text
 figure; the raw diplomatic (`orig`) orthography, with its phonetic spellings and
 itacism, is meaningfully harder. That harder input now has its own fold, the
 diplomatic `orig` surface layer (`evaluate_on_papygreek(layer="orig")`, the same
-sentences and gold with the raw diplomatic form); its row appears below once measured.
+sentences and gold with the raw diplomatic form); its row appears below.
 
-The fold keeps 1,696 of the 4,557 annotated source sentences. Excluded: 1,793 that
+The fold keeps 1,551 of the 4,557 annotated source sentences. Excluded: 1,793 that
 carry an artificial (elliptic or inserted) node gold tokenization cannot score, 678
-not fully annotated, 354 leakage overlaps with the training set (Pedalion ships a
-documentary `papyri.xml` subset the model trained on), and 36 that do not reduce to a
-clean reading. Dropping the elliptic sentences biases the fold toward complete
-syntax. Full accounting: `training/results/papygreek-fold-manifest.json`.
+not fully annotated, 354 sentence-form leakage overlaps, 145 more belonging to a
+PapyGreek Trismegistos work identity found in Pedalion training, and 36 that do not
+reduce to a clean reading. The current fold excludes whole training-overlapping works
+before applying the full and punctuation-stripped NFC sentence-form guards. The prior
+24,105-token row missed 145 sentences from 29 overlapping works and is historical.
+Dropping elliptic sentences biases the fold toward complete syntax. Full accounting:
+`training/results/papygreek-fold-manifest.json`.
 
-| Test set | UPOS | UFeats | Lemma | UAS | LAS |
-| --- | --- | --- | --- | --- | --- |
-| PapyGreek (documentary Koine) | 91.05 | 88.57 | 86.13 | 85.71 | 79.85 |
+| Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.50 | 79.56 | 75.40 |
 
 Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL
-row by about +16 LAS points. Reproduce: `aegean greek eval papygreek`.
+row by about +16 LAS points. Reproduce: `aegean greek eval papygreek`. The current
+protocol is CPU-sequential (`batch_size=None`) with complete-word windows for inputs
+beyond the model's single-pass budget; partial placeholder tails are never scored.
 
 The row's two weakest cells are largely convention, not model quality, and
-`aegean greek eval papygreek --drift` measures it: 5.13 of the 8.95 UPOS gap
-points (57.3% of all UPOS errors) sit on the coordinator class alone (καί, δέ,
+`aegean greek eval papygreek --drift` measures it: 4.98 of the 8.47 UPOS gap
+points (58.79% of all UPOS errors) sit on the coordinator class alone (καί, δέ,
 τε — tagged under three incompatible conventions in the merged training
-treebanks), and 13.62 of the 23.24 XPOS gap points are convention or encoding
+treebanks), and 13.31 of the 22.81 XPOS gap points are convention or encoding
 (the coordinator pos-code, the model's common-gender `c`, and a gold `_`-slot
-artifact); forgiving those three, XPOS would read 90.38%. A measurement
+artifact); forgiving those three, XPOS would read 90.50%. A measurement
 decomposition only, mirroring the PROIEL one; the published row is unchanged.
 
 ### Opt-in documentary levers
@@ -168,27 +173,31 @@ output to the documentary register, byte-identical to the shipped model until sw
 on. Each is a composition layer (like `use_paradigms`) with its **own** registry variant
 row, so the published PapyGreek row is unchanged. **Lever A** —
 `greek.use_documentary_reconciliation()` — relabels only the closed coordinator set
-(καί, δέ, τε …) when the model emits the always-wrong `X`/`b` reading (dev-measured
-**+2.36 UPOS / +2.41 XPOS, zero regressions**; the aggressive `ADV`/`d` variant is
-recommended against — literary dev **−5.24 UPOS**). **Lever B** —
+(καί, δέ, τε …) when the model emits the always-wrong `X`/`b` reading. On the corrected
+fold it changes exactly 775 UPOS and 783 XPOS cells, improving UPOS by 3.13 points and
+XPOS by 3.18 while every other field remains byte-identical. Earlier dev-selection
+deltas predated the work-level correction and are historical, not current
+leakage-clean claims; the aggressive `ADV`/`d` variant remains recommended against.
+**Lever B** —
 `greek.use_documentary_lemma_rescue()` — rescues an unresolved neural lemma from the
 guarded **seed + paradigm** tiers only (ending rules excluded: break-even documentary,
-net-negative literary), under its own `SEED`/`PARADIGM` evidence class, never `NEURAL`
-(dev **+1.06 lemma** with `use_paradigms`). Each is measured once, sequentially, on the
-pinned fold:
+net-negative literary), under its own `SEED`/`PARADIGM` evidence class, never `NEURAL`.
+It makes no additional prediction on the corrected fold, so no current lemma lift is
+claimed. Each variant is measured once, full-coverage and sequentially, on the pinned fold:
 
-| Variant on the PapyGreek fold | UPOS / UFeats / Lemma / UAS / LAS |
+| Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.31 / 88.57 / 86.13 / 85.71 / 79.85 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.31 / 88.57 / 86.36 / 85.71 / 79.85 |
+| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
 
 ## Diplomatic orthography and Byzantine verse
 
-The orig-layer PapyGreek fold (same sentences and gold, the scribes' actual
-spellings) measures the cost of documentary orthography directly: UPOS 90.00 /
-UFeats 85.90 / lemma 81.80 / UAS 84.33 / LAS 77.61 vs the regularized row's
-91.05 / 88.57 / 86.13 / 85.71 / 79.85 — lemma composition takes the biggest
-hit. And the DBBE Byzantine book-epigram gold (tagging only, unedited medieval
+The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
+measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
+UFeats 86.15 / lemma 82.05 / UAS 84.32 / LAS 77.55 / CLAS 72.94 vs the
+regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 —
+lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
+(tagging only, unedited medieval
 verse) scores UPOS 86.74 / lemma 76.71 over 9,191 tokens. Reproduce:
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 

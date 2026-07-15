@@ -43,11 +43,15 @@ Selection criteria (each counted in the manifest), applied per ``<sentence>``:
      dropped if any word token does not reduce to clean Greek or a punctuation token empties
      (the safety net — anything the stripper cannot cleanly resolve, e.g. an ``_.N``
      illegibility marker or a fully-erased word, is excluded rather than corrupted).
-  4. **leakage-clean** — a sentence whose NFC form tuple (full or punctuation-stripped)
-     appears in the shipped model's training set (``training/data/full-{train,dev}.jsonl`` =
-     AGDT + Gorman + Pedalion) is excluded, the same form-tuple exclusion `agdt_ud_overlap`
-     and ``build_full_dataset`` use. Pedalion ships a ``papyri.xml`` documentary subset, so
-     this removes the real (not coincidental) overlaps.
+  4. **training-work-disjoint** — every PapyGreek document carries a Trismegistos work ID
+     (``document_meta.tm_id``). Pedalion's documentary ``papyri.xml`` carries the same IDs as
+     ``sentence.document_id``. A PapyGreek document represented anywhere in that training
+     source is excluded whole, even when its candidate sentence differs from the sentence
+     seen during training.
+  5. **sentence-form-disjoint** — a remaining sentence whose NFC form tuple (full or
+     punctuation-stripped) appears in ``training/data/full-{train,dev}.jsonl`` (AGDT +
+     Gorman + Pedalion) is excluded. This retains the established exact-sentence guard in
+     addition to the work-level check.
 
 Output (``--out``): ``papygreek-test.conllu`` + ``papygreek-fold.conllu.gz`` (the release
 asset) + ``papygreek-fold-manifest.json`` (source commit, counts, per-reason exclusions,
@@ -59,6 +63,7 @@ disposition, the reg-vs-orig diff count, and the orig leakage recheck).
 Usage:
     python scripts/build_papygreek_fold.py [--repo DIR] [--out DIR]
                                            [--training-data training/data]
+                                           [--pedalion-papyri FILE]
                                            [--layer {reg,orig}]
 """
 
@@ -88,7 +93,9 @@ from aegean.greek.treebank import _clean_lemma  # noqa: E402
 # PapyGreek Treebanks, pinned for reproducibility (CC BY-SA 4.0).
 REPO_URL = "https://github.com/ezhenrik/papygreek-treebanks.git"
 REPO_COMMIT = "0e5139b06e41d89275f3a1ace4ee0dc5513f2f7d"
-LICENSE = "CC BY-SA 4.0 (PapyGreek Treebanks — Vierros et al.)"
+LICENSE = "CC BY-SA 4.0 (PapyGreek Treebanks, Vierros et al.)"
+PEDALION_COMMIT = "112c106b86b865ddde4be7e5f3e409d9c42689f9"
+PEDALION_FILE = "papyri.xml"
 
 # --- Leiden / EpiDoc apparatus stripping ----------------------------------------
 # The reg forms preserve editorial notation. Recover the reading text:
@@ -306,6 +313,66 @@ def is_leaked(forms: tuple[str, ...], keys: set[tuple[str, ...]]) -> bool:
     return bool(stripped) and stripped in keys
 
 
+def papygreek_work_id(root: ET.Element) -> str:
+    """Return one document's source-native Trismegistos work identity."""
+    for element in root:
+        if element.tag.rsplit("}", 1)[-1] == "document_meta":
+            work_id = (element.get("tm_id") or "").strip()
+            if work_id:
+                return work_id
+            break
+    raise ValueError("PapyGreek document has no document_meta.tm_id work identity")
+
+
+def pedalion_training_work_reference(path: Path) -> tuple[set[str], dict[str, Any]]:
+    """Read Pedalion's documentary training work identities with a content binding."""
+    if not path.is_file():
+        raise FileNotFoundError(f"Pedalion papyri source not found: {path}")
+    work_ids: set[str] = set()
+    sentences = 0
+    try:
+        for _event, sentence in ET.iterparse(str(path), events=("end",)):
+            if sentence.tag.rsplit("}", 1)[-1] != "sentence":
+                continue
+            work_id = (sentence.get("document_id") or "").strip()
+            if not work_id:
+                raise ValueError("Pedalion papyri sentence has no document_id work identity")
+            work_ids.add(work_id)
+            sentences += 1
+            sentence.clear()
+    except ET.ParseError as exc:
+        raise ValueError(f"invalid Pedalion papyri XML: {exc}") from exc
+    if not work_ids or not sentences:
+        raise ValueError("Pedalion papyri source contains no identified sentences")
+    raw = path.read_bytes()
+    return work_ids, {
+        "source_repo": "github.com/perseids-publications/pedalion-trees",
+        "source_commit": PEDALION_COMMIT,
+        "source_path": f"public/xml/{PEDALION_FILE}",
+        "source_sha256": hashlib.sha256(raw).hexdigest(),
+        "source_bytes": len(raw),
+        "sentences": sentences,
+        "work_ids": len(work_ids),
+        "identity": "Pedalion sentence.document_id == PapyGreek document_meta.tm_id",
+    }
+
+
+def _default_pedalion_papyri(training_dir: Path) -> Path:
+    """Locate the exact Pedalion source used by the current full-dataset build."""
+    local = training_dir / "pedalion-papyri.xml"
+    if local.is_file():
+        return local
+    from aegean.data import cache_dir
+
+    cached = cache_dir() / "extra-treebanks" / "pedalion" / PEDALION_FILE
+    if cached.is_file():
+        return cached
+    raise FileNotFoundError(
+        "Pedalion papyri.xml is required for work-level leakage exclusion; pass "
+        "--pedalion-papyri or build the full training data with extras first"
+    )
+
+
 # --- driver ----------------------------------------------------------------------
 
 
@@ -319,7 +386,14 @@ def _clone(dest: Path) -> Path:
     return dest
 
 
-def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, dict[str, Any]]:
+def build(
+    repo: Path,
+    training_dir: Path,
+    *,
+    layer: str = "reg",
+    pedalion_papyri: Path | None = None,
+    training_work_ids: set[str] | None = None,
+) -> tuple[str, dict[str, Any]]:
     """Convert the treebank; return ``(conllu_text, manifest)``.
 
     ``layer`` is ``"reg"`` (the default, editorially regularized forms — byte-identical output
@@ -331,6 +405,21 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
     if not docdir.is_dir():
         raise SystemExit(f"no documentary/ dir under {repo}")
     keys = training_form_keys(training_dir)
+    if training_work_ids is None:
+        source = pedalion_papyri or _default_pedalion_papyri(training_dir)
+        training_work_ids, work_reference = pedalion_training_work_reference(source)
+    else:
+        training_work_ids = set(training_work_ids)
+        work_reference = {
+            "source_repo": "injected-test-reference",
+            "source_commit": "0" * 40,
+            "source_path": "<injected>",
+            "source_sha256": "0" * 64,
+            "source_bytes": 0,
+            "sentences": 0,
+            "work_ids": len(training_work_ids),
+            "identity": "Pedalion sentence.document_id == PapyGreek document_meta.tm_id",
+        }
 
     reasons: Counter[str] = Counter()
     blocks: list[str] = []
@@ -342,10 +431,16 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
     n_diff = 0
     orig_leaked = 0
     orig_leaked_ids: list[str] = []
+    overlapping_documents: list[dict[str, Any]] = []
     for fp in sorted(docdir.rglob("*.xml")):
         stem = fp.name[:-4] if fp.name.endswith(".xml") else fp.name
         root = ET.parse(str(fp)).getroot()
+        work_id = papygreek_work_id(root)
+        work_overlap = work_id in training_work_ids
         kept_here = 0
+        work_status_ok_here = 0
+        work_form_excluded_here = 0
+        work_newly_excluded_here = 0
         for sent in root.iter("sentence"):
             n_sent_total += 1
             words = reg_words(sent)
@@ -357,7 +452,17 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
             # The reg forms drive selection identically in both modes: the same reg leakage
             # exclusion keeps the same base set of sentences the reg fold keeps.
             reg_block, reg_forms = sentence_to_conllu(sent_id, words)
-            if is_leaked(reg_forms, keys):
+            reg_leaked = is_leaked(reg_forms, keys)
+            if work_overlap:
+                work_status_ok_here += 1
+                if reg_leaked:
+                    reasons["leaked"] += 1
+                    work_form_excluded_here += 1
+                else:
+                    reasons["training_work_overlap"] += 1
+                    work_newly_excluded_here += 1
+                continue
+            if reg_leaked:
                 reasons["leaked"] += 1
                 continue
             if layer == "orig":
@@ -388,6 +493,16 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
             kept_here += 1
         if kept_here:
             doc_ids.append(stem)
+        if work_status_ok_here:
+            overlapping_documents.append(
+                {
+                    "document_id": stem,
+                    "work_id": work_id,
+                    "status_ok_sentences": work_status_ok_here,
+                    "sentences_already_form_excluded": work_form_excluded_here,
+                    "sentences_newly_excluded": work_newly_excluded_here,
+                }
+            )
 
     # each block ends in "\n"; joining with "\n" gives a blank line between sentences and
     # the trailing "+\n" makes the file end with an empty line (the CoNLL-U evaluator requires it)
@@ -402,7 +517,20 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
             "converter": "training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,"
                          "upos_from_xpos,feats_from_xpos}",
             "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
-                                 "NFC form-tuple exclusion (full + punct-stripped)",
+                                 "Pedalion/PapyGreek TM work-ID exclusion, then NFC form-tuple "
+                                 "exclusion (full + punct-stripped)",
+            "work_disjointness": {
+                "result": "pass",
+                "training_reference": work_reference,
+                "excluded_documents": overlapping_documents,
+                "excluded_document_count": len(overlapping_documents),
+                "newly_excluded_document_count": sum(
+                    row["sentences_newly_excluded"] > 0 for row in overlapping_documents
+                ),
+                "newly_excluded_sentence_count": sum(
+                    row["sentences_newly_excluded"] for row in overlapping_documents
+                ),
+            },
             "sentences_in_source": n_sent_total,
             "sentences_kept": len(blocks),
             "tokens_kept": n_tokens,
@@ -412,7 +540,7 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
         }
     else:
         manifest = {
-            "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold — ORIG "
+            "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold, ORIG "
                        "(diplomatic) surface layer; eval only",
             "layer": "orig (diplomatic surface forms; reg gold labels)",
             "comparability": "the SAME sentences and the SAME gold columns "
@@ -434,7 +562,20 @@ def build(repo: Path, training_dir: Path, *, layer: str = "reg") -> tuple[str, d
                                     "marker, a private-use glyph, or an uncommon editorial sign "
                                     "falls back to the reg reading (counted in surface_disposition)",
             "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); "
-                                 "NFC form-tuple exclusion (full + punct-stripped)",
+                                 "Pedalion/PapyGreek TM work-ID exclusion, then NFC form-tuple "
+                                 "exclusion (full + punct-stripped)",
+            "work_disjointness": {
+                "result": "pass",
+                "training_reference": work_reference,
+                "excluded_documents": overlapping_documents,
+                "excluded_document_count": len(overlapping_documents),
+                "newly_excluded_document_count": sum(
+                    row["sentences_newly_excluded"] > 0 for row in overlapping_documents
+                ),
+                "newly_excluded_sentence_count": sum(
+                    row["sentences_newly_excluded"] for row in overlapping_documents
+                ),
+            },
             "leakage_recheck": "the reg selection already excluded reg-leaked sentences; the "
                                "orig FORM tuples were re-run through the same exclusion (a "
                                "diplomatic spelling could collide differently)",
@@ -461,6 +602,9 @@ def main() -> None:
     ap.add_argument("--training-data",
                     default=str(Path(__file__).resolve().parent.parent / "training" / "data"),
                     help="dir holding full-train.jsonl / full-dev.jsonl for the leakage check")
+    ap.add_argument("--pedalion-papyri", default=None,
+                    help="pinned Pedalion public/xml/papyri.xml used for work-level exclusion "
+                         "(default: training-data copy or pyaegean cache)")
     ap.add_argument("--layer", default="reg", choices=("reg", "orig"),
                     help="reg (default, regularized forms — byte-identical to the shipped fold) "
                          "or orig (the diplomatic-surface variant; same sentences/gold, FORM only)")
@@ -473,7 +617,12 @@ def main() -> None:
         tmp = tempfile.TemporaryDirectory()
         repo = _clone(Path(tmp.name) / "papygreek-treebanks")
     try:
-        conllu, manifest = build(repo, Path(args.training_data), layer=args.layer)
+        conllu, manifest = build(
+            repo,
+            Path(args.training_data),
+            layer=args.layer,
+            pedalion_papyri=Path(args.pedalion_papyri) if args.pedalion_papyri else None,
+        )
     finally:
         if tmp is not None:
             tmp.cleanup()
@@ -488,7 +637,7 @@ def main() -> None:
         conllu_path = out / "papygreek-test.conllu"
         gz_path = out / "papygreek-fold.conllu.gz"
         manifest_path = out / "papygreek-fold-manifest.json"
-    conllu_path.write_text(conllu, encoding="utf-8")
+    conllu_path.write_text(conllu, encoding="utf-8", newline="\n")
     raw = conllu.encode("utf-8")
     # mtime=0 + no embedded filename → the gz bytes (and sha256) are reproducible across runs.
     with open(gz_path, "wb") as fh, gzip.GzipFile(
@@ -498,7 +647,11 @@ def main() -> None:
     sha = hashlib.sha256(gz_path.read_bytes()).hexdigest()
     manifest["asset_sha256"] = sha
     manifest["asset_bytes"] = gz_path.stat().st_size
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
     summary = {k: v for k, v in manifest.items() if k != "doc_ids"}
     print(json.dumps(summary, ensure_ascii=False, indent=1))

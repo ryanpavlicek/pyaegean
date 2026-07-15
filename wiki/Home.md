@@ -5,7 +5,7 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, research tools, translation grounding,
 and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.52.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.53.0 (beta).** The API may still shift before 1.0.
 > This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
@@ -95,8 +95,9 @@ See [Installation](Installation) for the full extras matrix, and
 
 The changelog records what has shipped. Current work is focused on:
 
-- completing empirical source/task calibration and cross-domain development gates on the
-  model-independent Greek foundations, using the shipped explicit annotation and domain profiles;
+- declaring the model-selection and cross-domain gate configuration on the frozen,
+  leakage-checked development source manifest, then fitting source/task calibration only where
+  the available development evidence supports it;
 - comparing deterministic and neural translation grounding on matched passages
   before changing a default;
 - training and independently evaluating a separately versioned successor to the

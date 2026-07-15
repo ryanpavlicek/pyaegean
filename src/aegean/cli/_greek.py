@@ -2114,8 +2114,9 @@ def evaluate(
         if not greek.documentary_lemma_rescue_active():
             greek.use_documentary_lemma_rescue()
             restore_rescue_off = True
-        # Lever B consults the paradigm table; the registry documentary_full lemma (86.36)
-        # was measured with it active, so activate it here too (seed-only can't reproduce it).
+        # Lever B consults the paradigm table, so activate it here too.  The
+        # current work-disjoint fold shows no additional lemma lift from this
+        # lever, but the command still exposes the complete configured profile.
         restore_paradigms_off = paradigms.active() is None
         if restore_paradigms_off:
             greek.use_paradigms()

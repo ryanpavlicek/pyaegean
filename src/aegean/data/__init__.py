@@ -260,13 +260,13 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-fold",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-fold-v3/papygreek-fold.conllu.gz"
+            "papygreek-fold-v4/papygreek-fold.conllu.gz"
         ),
-        sha256="de6874740b4e985c94b2e1677a2970f85a821011b1e6b8a01915410b4c6aa030",
+        sha256="39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
-        note="documentary-Koine dependency eval fold (1,696 sentences / 24,105 tokens) converted "
-             "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, leakage-clean vs grc-joint training. "
-             "Evaluation only.",
+        note="documentary-Koine dependency eval fold (1,551 sentences / 22,227 tokens) converted "
+             "from the PapyGreek Treebanks; AGDT->UD CoNLL-U, work-disjoint from grc-joint "
+             "training. Evaluation only.",
         extract=False,
         # fetch() stores the raw .gz at cache_dir()/papygreek-fold; papygreek_path()
         # then materializes the decompressed CoNLL-U (+ a .sha256 stamp) into the
@@ -283,12 +283,12 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-fold-orig",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-fold-orig-v2/papygreek-fold-orig.conllu.gz"
+            "papygreek-fold-orig-v3/papygreek-fold-orig.conllu.gz"
         ),
-        sha256="d920a0cd65ee7cf278f87f5a419e60f43d7680ef8d1b0564f94987fbb93afad2",
+        sha256="db338c428b63e52c715431f878740111be135dc236e4e8fb51c1a3c5e42f9d90",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived UD fold, fetched, never bundled",
-        note="the ORIG diplomatic surface layer of papygreek-fold (same 1,696 sentences and gold; "
-             "FORM = raw diplomatic orthography; 1,637 forms differ). Evaluation only.",
+        note="the ORIG diplomatic surface layer of papygreek-fold (same 1,551 sentences and gold; "
+             "FORM = raw diplomatic orthography; 1,453 forms differ). Evaluation only.",
         extract=False,
         # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
         on_disk=(
@@ -320,13 +320,13 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-dev-tagging",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-dev-v2/papygreek-dev-tagging.conllu.gz"
+            "papygreek-dev-v3/papygreek-dev-tagging.conllu.gz"
         ),
-        sha256="81ece456f70e13a1ab3c2d95d94d3e7e466bc5f02971fb8c1715d2d65e2c96c4",
+        sha256="370c0445a4204d2b25be0019a1dedcf3e93be15a85c06db6f79f67d08ba017d0",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
-        note="documentary-Koine DEV tagging track (327 sentences / 6,389 tokens); "
-             "document-disjoint from the papygreek-fold test set; UPOS/XPOS/UFeats/lemma. "
-             "Experiment data only, never a published number.",
+        note="documentary-Koine DEV tagging track (323 sentences / 6,319 tokens); work-disjoint "
+             "from grc-joint training and document-disjoint from the papygreek-fold test set; "
+             "UPOS/XPOS/UFeats/lemma. Experiment data only, never a published number.",
         extract=False,
         # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
         on_disk=(
@@ -339,13 +339,13 @@ _REMOTE: dict[str, DataSpec] = {
         name="papygreek-dev-parse",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "papygreek-dev-v2/papygreek-dev-parse.conllu.gz"
+            "papygreek-dev-v3/papygreek-dev-parse.conllu.gz"
         ),
-        sha256="967d519526353eb0d709ab32102e057d6a6463b415025396847770f70faebec1",
+        sha256="1704903391c6404ffa21e553d08c13b46305746b43f31a7be1f19535cd1d8b79",
         license="CC BY-SA 4.0 (PapyGreek Treebanks); derived DEV fold, fetched, never bundled",
-        note="documentary-Koine DEV parse track (126 sentences / 1,285 tokens, directional "
-             "only); document-disjoint from the papygreek-fold test set; UAS/LAS. "
-             "Experiment data only, never a published number.",
+        note="documentary-Koine DEV parse track (125 sentences / 1,262 tokens, directional only); "
+             "work-disjoint from grc-joint training and document-disjoint from the papygreek-fold "
+             "test set; UAS/LAS. Experiment data only, never a published number.",
         extract=False,
         # raw .gz + the materialized CoNLL-U (+ stamp); see the papygreek-fold note above.
         on_disk=(
@@ -798,6 +798,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "papygreek-fold": [
         HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-fold-v3/papygreek-fold.conllu.gz"
+            ),
+            sha256="de6874740b4e985c94b2e1677a2970f85a821011b1e6b8a01915410b4c6aa030",
+            superseded="v4",
+        ),
+        HistoricalPin(
             version="v2",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -817,6 +826,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "papygreek-fold-orig": [
+        HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-fold-orig-v2/papygreek-fold-orig.conllu.gz"
+            ),
+            sha256="d920a0cd65ee7cf278f87f5a419e60f43d7680ef8d1b0564f94987fbb93afad2",
+            superseded="v3",
+        ),
         HistoricalPin(
             version="v1",
             url=(
@@ -840,6 +858,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "papygreek-dev-tagging": [
         HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-dev-v2/papygreek-dev-tagging.conllu.gz"
+            ),
+            sha256="81ece456f70e13a1ab3c2d95d94d3e7e466bc5f02971fb8c1715d2d65e2c96c4",
+            superseded="v3",
+        ),
+        HistoricalPin(
             version="v1",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -850,6 +877,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "papygreek-dev-parse": [
+        HistoricalPin(
+            version="v2",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "papygreek-dev-v2/papygreek-dev-parse.conllu.gz"
+            ),
+            sha256="967d519526353eb0d709ab32102e057d6a6463b415025396847770f70faebec1",
+            superseded="v3",
+        ),
         HistoricalPin(
             version="v1",
             url=(

@@ -342,6 +342,53 @@ def test_pipeline_conllu_batch_size_output_and_progress_identical(
         pipeline_conllu(sentences, batch_size=0)
 
 
+def test_pipeline_conllu_forwards_full_coverage_windowed_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from aegean.greek.ud import load_conllu, loads_conllu, pipeline_conllu
+
+    sentences = load_conllu(CONLLU)[:1]
+    calls: list[tuple[list[str], str]] = []
+
+    class _WindowSpy:
+        def analyze(
+            self,
+            forms: list[str],
+            *,
+            long_input: str,
+        ) -> joint.SentenceAnalysis:
+            calls.append((forms, long_input))
+            count = len(forms)
+            return joint.SentenceAnalysis(
+                tuple(forms),
+                ("NOUN",) * count,
+                ("n--------",) * count,
+                ("_",) * count,
+                (0,) + (1,) * (count - 1),
+                ("root",) + ("dep",) * (count - 1),
+                tuple(forms),
+                (True,) * count,
+            )
+
+    monkeypatch.setattr(joint, "_ACTIVE", _WindowSpy())
+    output = pipeline_conllu(sentences, parse=True, long_input="windowed")
+    assert calls == [([token.form for token in sentences[0].tokens], "windowed")]
+    predicted = loads_conllu(output, strict=True)[0]
+    assert [token.form for token in predicted.tokens] == [
+        token.form for token in sentences[0].tokens
+    ]
+    assert [token.upos for token in predicted.tokens] == ["NOUN"] * len(
+        sentences[0].tokens
+    )
+
+
+def test_pipeline_conllu_rejects_unknown_long_input_mode() -> None:
+    from aegean.greek.ud import pipeline_conllu
+
+    with pytest.raises(ValueError, match="long_input"):
+        pipeline_conllu([], long_input="truncate")  # type: ignore[arg-type]
+
+
 def test_pipeline_conllu_batch_size_is_inert_without_the_joint_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

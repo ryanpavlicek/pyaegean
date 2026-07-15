@@ -1,0 +1,59 @@
+{
+  "what": "The shipped documentary-Koine postprocessing variants measured on the corrected work-disjoint PapyGreek fold",
+  "date": "2026-07-15",
+  "claim_status": "current variants",
+  "model_identity": "grc-joint-v3",
+  "fold_identity": "papygreek-fold-v4",
+  "fold_archive_sha256": "39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
+  "fold_materialized_sha256": "81ce7dddd158bd4e3dbe41cd87746b80c0f2a85c86ce416ac44d602350e873aa",
+  "protocol": "one CPU-sequential full-coverage run per variant; batch_size=None; long_input=windowed; gold tokenization; official CoNLL-2018 evaluator",
+  "results_full_precision": {
+    "documentary_reconciliation": {
+      "upos": 0.9465964817564224,
+      "xpos": 0.8036172222972061,
+      "ufeats": 0.887299230665407,
+      "lemma": 0.861024879650875,
+      "uas": 0.8550411661492779,
+      "las": 0.7956089440770234,
+      "clas": 0.753954802259887,
+      "n_words": 22227,
+      "n_sentences": 1551,
+      "prediction_sha256": "d36c3ad3189d7b0fd6ccc2500e7ab869815834ada54118fef9e66df648fdb85c"
+    },
+    "documentary_full": {
+      "upos": 0.9465964817564224,
+      "xpos": 0.8036172222972061,
+      "ufeats": 0.887299230665407,
+      "lemma": 0.861024879650875,
+      "uas": 0.8550411661492779,
+      "las": 0.7956089440770234,
+      "clas": 0.753954802259887,
+      "n_words": 22227,
+      "n_sentences": 1551,
+      "prediction_sha256": "d36c3ad3189d7b0fd6ccc2500e7ab869815834ada54118fef9e66df648fdb85c"
+    }
+  },
+  "scope_validation": {
+    "baseline_to_reconciliation_prediction_diffs": {
+      "form": 0,
+      "lemma": 0,
+      "upos": 775,
+      "xpos": 783,
+      "feats": 0,
+      "head": 0,
+      "deprel": 0
+    },
+    "reconciliation_to_full_prediction_diffs": {
+      "form": 0,
+      "lemma": 0,
+      "upos": 0,
+      "xpos": 0,
+      "feats": 0,
+      "head": 0,
+      "deprel": 0
+    },
+    "valid": true
+  },
+  "finding": "Conservative reconciliation improves UPOS by 3.1313 points and XPOS by 3.1763 points while every other field remains unchanged. The enabled seed/paradigm lemma rescue makes no additional prediction on the corrected fold, so documentary_full is byte-identical to documentary_reconciliation and no current lemma-gain claim is made.",
+  "supersedes_current_variant_claim": "training/results/documentary-levers-v2-2026-07-11.json"
+}

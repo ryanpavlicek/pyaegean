@@ -4,6 +4,31 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.53.0 (2026-07-15)
+
+### Added
+
+- A deterministic, leakage-audited development manifest now gives future Greek-model
+  experiments one multi-domain selection contract across eligible Perseus and PapyGreek
+  material. The public artifact records source membership and coverage without publishing
+  private development predictions or performance.
+- Development reporting provides official CoNLL-2018 metrics, paired comparisons, bootstrap
+  intervals, coverage checks, and task/source/profile error anatomy from one canonical manifest.
+
+### Changed
+
+- The current PapyGreek regularized and diplomatic folds are work-disjoint from model training
+  and cover all 1,551 sentences and 22,227 scored tokens. Published evidence, benchmark prose,
+  annotation-profile provenance, and claim guards now point to the corrected immutable assets;
+  the earlier overlapping 24,105-token measurements remain clearly identified as historical.
+- Documentary reconciliation improves current regularized PapyGreek UPOS from 91.53 to 94.66
+  and XPOS from 77.19 to 80.36 without changing other scored fields. The complete documentary
+  profile is byte-identical on this fold, so no additional lemma lift is claimed.
+- PapyGreek evaluation uses explicit windowed long-input inference and refuses incomplete
+  prediction coverage instead of allowing truncated sentence tails to enter a score.
+- CLAS reporting now uses the official CoNLL-2018 F1 definition over gold and predicted content
+  words rather than treating it as gold-content accuracy.
+
 ## 0.52.0 (2026-07-14)
 
 ### Added

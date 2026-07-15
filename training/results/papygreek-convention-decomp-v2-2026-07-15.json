@@ -1,0 +1,50 @@
+{
+  "purpose": "Current PapyGreek UPOS/XPOS convention decomposition over the corrected work-disjoint regularized fold; measurement only",
+  "date": "2026-07-15",
+  "fold": "papygreek-fold-v4; archive sha256 39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3; 1,551 sentences / 22,227 tokens",
+  "model": "grc-joint-v3",
+  "protocol": "derived from the cached current baseline predictions; CPU sequential; batch_size=None; long_input=windowed; complete coverage; gold tokenization; reproduces official UPOS/XPOS exactly",
+  "source_prediction_sha256": "9d2f14edd49ac6ec6403ee5cbce017e485881f5bc673ab6cfcf3e187909c1645",
+  "reproduce_check": {
+    "official_upos": 91.52832141089666,
+    "official_xpos": 77.18540513789536,
+    "matches_current_evidence_exactly": true
+  },
+  "upos_decomposition": {
+    "upos_pct": 91.52832141089666,
+    "gap_pct": 8.471678589103337,
+    "total_upos_errors": 1883,
+    "coordinator_class_errors_gold_cconj": 1107,
+    "coordinator_share_of_upos_errors_pct": 58.78916622411047,
+    "coordinator_gap_points": 4.98042920772034,
+    "other_gap_points": 3.491249381383003,
+    "top_confusions": [
+      ["CCONJ", "X", 694],
+      ["CCONJ", "ADV", 402],
+      ["NOUN", "ADJ", 112],
+      ["PRON", "DET", 94],
+      ["ADV", "X", 75]
+    ]
+  },
+  "xpos_decomposition": {
+    "xpos_pct": 77.18540513789536,
+    "gap_pct": 22.814594862104642,
+    "total_xpos_errors": 5071,
+    "buckets_tokens": {
+      "coordinator_poscode": 1113,
+      "common_gender": 1265,
+      "underscore_encoding": 581,
+      "residual_real": 2112
+    },
+    "buckets_points": {
+      "coordinator_poscode": 5.007423403968147,
+      "common_gender": 5.69127637557925,
+      "underscore_encoding": 2.613938003329284,
+      "residual_real": 9.501957079227966
+    },
+    "convention_encoding_subtotal_points": 13.312637782876682,
+    "xpos_forgiving_convention_pct": 90.49804292077204,
+    "gold_tokens_with_underscore_slot": 1026
+  },
+  "summary": "The coordinator class accounts for 58.8% of UPOS errors (4.98 points). Of the 22.81-point XPOS gap, 13.31 points are assigned to coordinator/common-gender/underscore conventions and 9.50 points remain residual morphology error; forgiving those conventions yields 90.50% XPOS."
+}

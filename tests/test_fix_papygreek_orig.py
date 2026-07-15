@@ -125,7 +125,11 @@ def test_orig_overlay_swaps_only_the_form_column() -> None:
 
 def _write_treebank(path: Path, sentences: list[str]) -> None:
     body = "\n".join(sentences)
-    path.write_text(f"<treebank>\n{body}\n</treebank>\n", encoding="utf-8")
+    path.write_text(
+        f'<treebank>\n<document_meta name="{path.name}" tm_id="{path.stem}"/>\n'
+        f"{body}\n</treebank>\n",
+        encoding="utf-8",
+    )
 
 
 def _sentence_xml(sid: str, words: list[dict[str, str]]) -> str:
@@ -165,8 +169,12 @@ def test_build_orig_same_selection_form_only_diff(tmp_path: Path) -> None:
     training = tmp_path / "training"  # empty → no leakage keys
     training.mkdir()
 
-    reg_conllu, reg_manifest = bpf.build(repo, training, layer="reg")
-    orig_conllu, orig_manifest = bpf.build(repo, training, layer="orig")
+    reg_conllu, reg_manifest = bpf.build(
+        repo, training, layer="reg", training_work_ids=set()
+    )
+    orig_conllu, orig_manifest = bpf.build(
+        repo, training, layer="orig", training_work_ids=set()
+    )
 
     # same sentence selection: same sentence and token counts
     assert reg_manifest["sentences_kept"] == orig_manifest["sentences_kept"] == 2
@@ -216,8 +224,10 @@ def test_build_orig_leakage_recheck_drops_orig_only_leak(tmp_path: Path) -> None
         json.dumps({"tokens": ["γεινώσκειν", "θέλω", "."]}, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    _, reg_manifest = bpf.build(repo, training, layer="reg")
-    orig_conllu, orig_manifest = bpf.build(repo, training, layer="orig")
+    _, reg_manifest = bpf.build(repo, training, layer="reg", training_work_ids=set())
+    orig_conllu, orig_manifest = bpf.build(
+        repo, training, layer="orig", training_work_ids=set()
+    )
 
     # reg keeps both sentences (its tuple is not in the keys)
     assert reg_manifest["sentences_kept"] == 2
@@ -235,7 +245,7 @@ def test_build_rejects_bad_layer(tmp_path: Path) -> None:
     training = tmp_path / "training"
     training.mkdir()
     with pytest.raises(ValueError, match="layer must be"):
-        bpf.build(repo, training, layer="bogus")
+        bpf.build(repo, training, layer="bogus", training_work_ids=set())
 
 
 # --- the evaluate_on_papygreek(layer=...) entry point ------------------------------
@@ -244,7 +254,14 @@ def test_build_rejects_bad_layer(tmp_path: Path) -> None:
 class _StubModel:
     """A minimal joint model: tags every token NOUN, a single-root flat tree."""
 
-    def analyze(self, forms: list[str]) -> joint.SentenceAnalysis:
+    def analyze(
+        self,
+        forms: list[str],
+        *,
+        long_input: str = "strict",
+    ) -> joint.SentenceAnalysis:
+        # The public PapyGreek evaluator must never include partial placeholder tails.
+        assert long_input == "windowed"
         n = len(forms)
         return joint.SentenceAnalysis(
             tokens=tuple(forms),

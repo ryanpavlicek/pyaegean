@@ -2,7 +2,7 @@
 
 A complement to `aegean.greek.ud` (literary UD-Perseus/PROIEL) and `aegean.greek.nt_eval`
 (Koine NT lemma/UPOS): this scores the active pipeline on **Greek documentary papyri**
-(ca. 300 BCE-700 CE) — a register the other folds do not cover — with the *same* official
+(ca. 300 BCE-700 CE), a register the other folds do not cover, with the *same* official
 CoNLL 2018 evaluator, over gold tokens, reporting the full UD metric set (UPOS, XPOS,
 UFeats, lemma, UAS, LAS, CLAS).
 
@@ -11,15 +11,15 @@ Data: a UD CoNLL-U fold converted from the **PapyGreek Treebanks**
 10.5334/johd.55), which annotate documentary papyri in the Ancient Greek Dependency
 Treebank Guidelines 2.0 scheme. ``scripts/build_papygreek_fold.py`` selects the
 syntactically-annotated Greek trees (no artificial nodes, fully annotated, editorial
-apparatus stripped to the reading text) and runs pyaegean's own AGDT->UD converter — the
-code that built the training labels — so the fold is scored by exactly the machinery every
+apparatus stripped to the reading text) and runs pyaegean's own AGDT->UD converter, the
+code that built the training labels, so the fold is scored by exactly the machinery every
 other UD fold uses. The fold is fetched to the cache for **evaluation only**, never bundled.
 
-**Leakage.** Every fold sentence whose NFC form tuple appears in the shipped model's
-training data (AGDT + Gorman + Pedalion, including Pedalion's documentary ``papyri.xml``
-subset) is excluded at build time (the same form-tuple exclusion `agdt_ud_overlap` uses), so
-the fold is leakage-clean for the shipped ``grc-joint`` model — a genuine out-of-domain
-documentary-Koine generalization number.
+**Leakage.** A PapyGreek document whose source-native Trismegistos work identity occurs in
+Pedalion's documentary training source is excluded whole. Every remaining sentence whose
+NFC form tuple appears in the shipped model's AGDT, Gorman, or Pedalion training data is also
+excluded (the same full and punctuation-stripped form-tuple guard `agdt_ud_overlap` uses).
+The fold is therefore work- and sentence-form-disjoint from ``grc-joint`` training.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from ..data import cache_dir
 
@@ -48,21 +48,21 @@ _ASSET = "papygreek-fold"
 _CACHE_SUBDIR = "papygreek-grc"
 _FOLD_NAME = "papygreek-test.conllu"
 
-# The ORIG (diplomatic) surface variant of the test fold: the SAME 1,696 sentences and the
+# The ORIG (diplomatic) surface variant of the test fold: the SAME 1,551 sentences and the
 # SAME gold columns as the reg fold, with the emitted FORM swapped to the raw documentary
 # orthography. Built by ``scripts/build_papygreek_fold.py --layer orig``; a distinct pinned
 # asset, measured once by the integrator, never fitted against. See `papygreek_orig_path`.
 _ORIG_ASSET = "papygreek-fold-orig"
 _ORIG_FOLD_NAME = "papygreek-test-orig.conllu"
 
-# The document-disjoint DEV fold (experiment/lever-ranking only, never a published number and
-# never touching the pinned test fold): two tracks, one per fetchable asset. See
+# The training-work-disjoint and test-document-disjoint DEV fold (experiment/lever-ranking
+# only, never a published number and never touching the pinned test fold): two tracks. See
 # ``scripts/build_papygreek_dev.py``. ``track -> (asset name, cache file name)``.
 _DEV_ASSETS: dict[str, tuple[str, str]] = {
     "tagging": ("papygreek-dev-tagging", "papygreek-dev-tagging.conllu"),
     "parse": ("papygreek-dev-parse", "papygreek-dev-parse.conllu"),
 }
-# The fold decompresses to ~1.3 MB. This cap is comfortably above that (documentary
+# The fold decompresses to ~2.1 MB. This cap is comfortably above that (documentary
 # folds could grow) and far below what would OOM: it guards a decompression bomb served
 # through a ``PYAEGEAN_PAPYGREEK_FOLD_URL`` override that disables the sha256 pin.
 _MAX_FOLD_BYTES = 256 * 1024 * 1024
@@ -94,11 +94,12 @@ def papygreek_orig_path(*, download: bool = True) -> Path:
     """The cached CoNLL-U path of the PapyGreek ORIG (diplomatic) test fold, fetched +
     decompressed on first use.
 
-    The diplomatic-surface variant of `papygreek_path`: the **same** 1,696 sentences and the
+    The diplomatic-surface variant of `papygreek_path`: the **same** 1,551 sentences and the
     **same** gold columns (UPOS/XPOS/UFeats/lemma/head/deprel), with the emitted FORM swapped
     to the raw documentary orthography (itacism, phonetic spelling, non-standard breathing) that
     the ``orig`` layer preserves. The two folds are token-aligned line-for-line and differ only
-    in the surface form, so the orig row isolates the effect of the harder orthography. Built by
+    in the surface form (1,453 token forms differ), so the orig row isolates the effect of the
+    harder orthography. Built by
     ``scripts/build_papygreek_fold.py --layer orig``. See `_fetch_conllu` for the
     fetch/decompress/stamp mechanics. CC BY-SA 4.0 — cached for evaluation only, never
     bundled."""
@@ -109,9 +110,10 @@ def papygreek_dev_path(track: str = "tagging", *, download: bool = True) -> Path
     """The cached CoNLL-U path of a PapyGreek DEV track, fetched + decompressed on first use.
 
     ``track`` is ``"tagging"`` (UPOS/XPOS/UFeats/lemma over annotated surface tokens) or
-    ``"parse"`` (UAS/LAS over the reattached artificial-node sentences). The dev fold is
-    document-disjoint from the pinned test fold and is for experiment/lever ranking only — it
-    yields no published number and is never fitted against the test fold. CC BY-SA 4.0 — cached
+    ``"parse"`` (UPOS/XPOS/UFeats/lemma and UAS/LAS over the reattached artificial-node
+    sentences). The dev fold is work-disjoint from model training and document-disjoint from
+    the pinned test fold. It is for experiment/lever ranking only, yields no published number,
+    and is never fitted against the test fold. CC BY-SA 4.0, cached
     for evaluation only, never bundled."""
     if track not in _DEV_ASSETS:
         raise ValueError(f"track must be one of {sorted(_DEV_ASSETS)}; got {track!r}")
@@ -127,6 +129,7 @@ def _score_fold(
     parse: bool | None,
     progress: Callable[[int, int], None] | None,
     batch_size: int | None,
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
 ) -> dict[str, Any]:
     """Score the active pipeline on a CoNLL-U fold with the official evaluator.
 
@@ -134,7 +137,9 @@ def _score_fold(
     `aegean.greek.ud`'s machinery wholesale (`ud.load_conllu`, `ud.pipeline_conllu`, the
     fetched official ``conll18_ud_eval`` and its scorer) so every fold is measured byte-for-byte
     the same way as UD-Perseus/PROIEL; only the gold data and the ``treebank``/``split`` labels
-    differ."""
+    differ. Callers whose folds exceed the model's single-pass subword budget must request
+    complete-word overlapping windows; the default strict policy never permits a partial
+    placeholder tail to enter a score."""
     from .ud import _eval_module, _score_conllu_text, load_conllu, pipeline_conllu
 
     sentences = load_conllu(gold_path)
@@ -146,7 +151,13 @@ def _score_fold(
         from . import joint, syntax
 
         parse = joint.active() is not None or syntax.active() is not None
-    system_text = pipeline_conllu(sentences, parse=parse, progress=progress, batch_size=batch_size)
+    system_text = pipeline_conllu(
+        sentences,
+        parse=parse,
+        progress=progress,
+        batch_size=batch_size,
+        long_input=long_input,
+    )
     gold_text = gold_path.read_text(encoding="utf-8")
     metrics = (
         ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas")
@@ -190,17 +201,19 @@ def evaluate_on_papygreek(
     model is active; with ``parse=False`` UAS/LAS/CLAS are ``None``. ``progress`` is called as
     ``progress(done, total)`` per analyzed sentence; ``batch_size`` batches the neural
     encoder's passes (a throughput convenience — the recorded protocol is the sequential
-    default). ``source`` overrides the fold path (tests pass a local CoNLL-U).
+    default). Complete-word overlapping windows cover any sentence beyond the model's
+    single-pass subword budget; partial placeholder tails are never scored. ``source``
+    overrides the fold path (tests pass a local CoNLL-U).
 
     ``layer`` selects which fold is fetched when ``source`` is not given: ``"reg"`` (the
     default, the editorially regularized reading behind the published PapyGreek numbers) or
-    ``"orig"`` (the diplomatic-surface variant — the same sentences and gold, the raw
+    ``"orig"`` (the diplomatic-surface variant: the same sentences and gold, the raw
     documentary orthography as the FORM; see `papygreek_orig_path`). The orig fold measures the
     same model against a harder input and is directly comparable to the reg row.
 
     Returns ``{"treebank", "split", "layer", "parsed", "upos", "xpos", "ufeats", "lemma",
     "uas", "las", "clas", "n_words", "n_sentences"}`` — accuracies in [0, 1]. The fold is
-    leakage-clean for the shipped model (see the module docstring)."""
+    work- and sentence-form-disjoint from its training data (see the module docstring)."""
     if layer not in ("reg", "orig"):
         raise ValueError(f"layer must be 'reg' or 'orig'; got {layer!r}")
     if source is not None:
@@ -211,7 +224,7 @@ def evaluate_on_papygreek(
         gold_path = papygreek_path()
     result = _score_fold(
         gold_path, treebank="papygreek", split="test",
-        parse=parse, progress=progress, batch_size=batch_size,
+        parse=parse, progress=progress, batch_size=batch_size, long_input="windowed",
     )
     result["layer"] = layer
     return result
@@ -227,15 +240,16 @@ def evaluate_on_papygreek_dev(
 ) -> dict[str, Any]:
     """Score the active pipeline on a PapyGreek documentary-Koine DEV track (official evaluator).
 
-    The dev fold is **document-disjoint** from the pinned ``papygreek`` test fold and exists to
-    rank levers and catch regressions **without touching the test fold** — it yields no
+    The dev fold is **work-disjoint** from model training and **document-disjoint** from the
+    pinned ``papygreek`` test fold. It ranks levers and catches regressions **without touching
+    the test fold**; it yields no
     published number and nothing is fitted against the test fold. Reuses the exact `_score_fold`
     machinery `evaluate_on_papygreek` uses; only the gold data (a dev track) differs.
 
-    ``track`` is ``"tagging"`` — annotated surface tokens of the non-fold artificial/partial
+    ``track`` is ``"tagging"``: annotated surface tokens of the non-fold artificial/partial
     sentences, scored for UPOS/XPOS/UFeats/lemma (``parse`` forced ``False``; its trees are
-    placeholders, UAS/LAS meaningless) — or ``"parse"`` — the reattached single-artificial-node
-    sentences, scored for UAS/LAS (``parse`` defaults to whether a parser/joint model is active;
+    placeholders, UAS/LAS meaningless), or ``"parse"``: the reattached single-artificial-node
+    sentences, scored for tagging and UAS/LAS (``parse`` defaults to whether a parser/joint model is active;
     the track is thin, treat its parse numbers as directional). ``source`` overrides the track
     path (tests pass a local CoNLL-U for an offline run). ``progress`` and ``batch_size`` are as
     for `evaluate_on_papygreek`.
@@ -251,13 +265,13 @@ def evaluate_on_papygreek_dev(
         parse = False
     return _score_fold(
         gold_path, treebank="papygreek-dev", split=track,
-        parse=parse, progress=progress, batch_size=batch_size,
+        parse=parse, progress=progress, batch_size=batch_size, long_input="windowed",
     )
 
 
 # ── UPOS + XPOS convention decomposition ──────────────────────────────────────────
 #
-# The published PapyGreek UPOS (91.05) and XPOS (76.76) are capped by annotation /
+# The published PapyGreek UPOS and XPOS scores are capped by annotation /
 # encoding CONVENTION, not just model quality — the documentary register writes the same
 # Greek the AGDT-trained model learned under a *different* set of habits, and the merged
 # training labels themselves tag the coordinators/particles under three incompatible
@@ -267,8 +281,8 @@ def evaluate_on_papygreek_dev(
 # the residual real error. Measurement only: it changes no published number and fits nothing
 # to the fold.
 #
-# Findings this decomposition quantifies (matching the phase-1 error anatomy framing):
-#  - UPOS: the coordinator class (gold CCONJ — καί/δέ/τε…) carries ~57% of all UPOS errors,
+# Findings quantified by the published convention-decomposition evidence:
+#  - UPOS: the coordinator class (gold CCONJ — καί/δέ/τε…) carries most UPOS errors,
 #    because the merged training set tags those words under three conventions (c/CCONJ vs the
 #    non-AGDT b/X pos-code vs d/ADV) and the model drifts to the b/X and d readings.
 #  - XPOS (9-position postag, exact match): the same coordinator pos-code drift (gold c → b/d),
@@ -358,7 +372,7 @@ class PapyGreekConventionReport:
     @property
     def coordinator_share(self) -> float:
         """Fraction of ALL UPOS errors that fall on the coordinator class (gold CCONJ) — the
-        single-phenomenon concentration signal (phase-1: ~57%)."""
+        single-phenomenon concentration signal."""
         return self.upos_coordinator_errors / self.upos_errors if self.upos_errors else 0.0
 
     @property

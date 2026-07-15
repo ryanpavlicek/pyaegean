@@ -1191,6 +1191,7 @@ def pipeline_conllu(
     parse: bool = False,
     progress: Callable[[int, int], None] | None = None,
     batch_size: int | None = None,
+    long_input: Literal["strict", "partial", "windowed"] = "strict",
     on_unsupported: Literal["project", "error"] = "project",
 ) -> str:
     """Run the active pyaegean pipeline over gold-tokenized sentences, emitting CoNLL-U.
@@ -1205,8 +1206,12 @@ def pipeline_conllu(
     the **neural** pipeline's encoder over that many sentences at a time (one ONNX call
     per chunk) — a throughput convenience; the recorded benchmark protocol is the
     sequential default (``None``), and without an active joint model the value has no
-    effect. Structural rows and enhanced annotations are deliberately projected out of
-    predictions; pass ``on_unsupported="error"`` when a caller requires a complete
+    effect. ``long_input`` controls the neural model's handling of sentences beyond its
+    subword budget: the default ``"strict"`` refuses them, ``"windowed"`` preserves
+    complete token coverage through safe overlapping windows, and ``"partial"`` emits
+    explicit placeholders and is unsuitable for scoring unless the caller separately
+    checks coverage. Structural rows and enhanced annotations are deliberately projected
+    out of predictions; pass ``on_unsupported="error"`` when a caller requires a complete
     predictive output.
     """
     from . import joint
@@ -1214,6 +1219,8 @@ def pipeline_conllu(
 
     if on_unsupported not in ("project", "error"):
         raise ValueError("on_unsupported must be 'project' or 'error'")
+    if long_input not in ("strict", "partial", "windowed"):
+        raise ValueError("long_input must be 'strict', 'partial', or 'windowed'")
     if on_unsupported == "error":
         unsupported: list[str] = []
         for sent in sentences:
@@ -1244,7 +1251,11 @@ def pipeline_conllu(
         def _batched() -> Iterator[joint.SentenceAnalysis]:
             for start in range(0, total, bs):
                 chunk = sentences[start : start + bs]
-                yield from m.analyze_batch([[t.form for t in s.tokens] for s in chunk])
+                forms_batch = [[t.form for t in s.tokens] for s in chunk]
+                if long_input == "strict":
+                    yield from m.analyze_batch(forms_batch)
+                else:
+                    yield from m.analyze_batch(forms_batch, long_input=long_input)
 
         analyses = _batched()
     lines: list[str] = []
@@ -1254,7 +1265,13 @@ def pipeline_conllu(
         forms = [t.form for t in sent.tokens]
         model = joint.active()
         if model is not None:  # the neural pipeline: one encoder pass fills every column
-            ana = next(analyses) if analyses is not None else model.analyze(forms)
+            if analyses is not None:
+                ana = next(analyses)
+            elif long_input == "strict":
+                # Preserve the historical call shape for strict mode and simple model doubles.
+                ana = model.analyze(forms)
+            else:
+                ana = model.analyze(forms, long_input=long_input)
             if sent.sent_id:
                 lines.append(f"# sent_id = {sent.sent_id}")
             if sent.text:

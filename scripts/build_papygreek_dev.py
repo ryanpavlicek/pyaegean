@@ -6,7 +6,9 @@ nothing is ever fitted, tuned, or model-selected against it. This dev asset is t
 document-disjoint experiment material used to rank levers and catch regressions **without
 touching the pinned test fold**.
 
-**Document-level disjointness is the invariant.** The test fold keeps the "ok" (fully
+**Work- and document-level disjointness are invariants.** Documents represented anywhere
+in the Pedalion training source are excluded first by matching source-native Trismegistos
+work IDs. The test fold then keeps the "ok" (fully
 annotated, cleanly readable, leakage-clean) sentences of the PapyGreek ``documentary/``
 corpus; a document that contributed at least one such sentence is a *fold document*. Dev is
 built **only** from the documents that contributed ZERO sentences to the fold (re-derived
@@ -16,7 +18,7 @@ documents have, by construction, no clean parseable non-leaked sentence — thei
 the *artificial* (elliptic/ellipsis node) and *partial* (a token lacks head/relation)
 sentences the fold build discards.
 
-Two tracks, one logical asset (``papygreek-dev-v1``), two gzipped CoNLL-U files:
+Two tracks, one logical asset (``papygreek-dev-v3``), two gzipped CoNLL-U files:
 
   * **tagging track** (``papygreek-dev-tagging.conllu.gz``) — the annotated *surface* tokens
     of the non-fold artificial + partial sentences (artificial nodes dropped; a surface token
@@ -49,7 +51,7 @@ commit, the same ``sentence_to_conllu`` AGDT->UD converter, the same ``clean_lem
 the numeral fix, the same apparatus stripper and reading test), so the dev tokens are scored
 byte-for-byte the way the fold tokens are.
 
-Output (``--out``): ``papygreek-dev-v1/`` holding the two ``.conllu`` + ``.conllu.gz`` files
+Output (``--out``): ``papygreek-dev-v3/`` holding the two ``.conllu`` + ``.conllu.gz`` files
 and ``papygreek-dev-manifest.json`` (source commit, doc-set accounting, per-track counts,
 full exclusion accounting, reattachment rule, per-file sha256). Prints each gz sha256 for the
 ``_REMOTE`` DataSpec pins.
@@ -82,6 +84,9 @@ from build_papygreek_fold import (  # noqa: E402
     _clone,
     is_clean_reading,
     is_leaked,
+    _default_pedalion_papyri,
+    papygreek_work_id,
+    pedalion_training_work_reference,
     reg_words,
     sentence_status,
     sentence_to_conllu,
@@ -127,6 +132,7 @@ class SentRec:
     words: list[dict[str, Any]]
     status: str
     leaked: bool
+    work_id: str = ""
 
 
 def scan(docdir: Path, keys: set[tuple[str, ...]]) -> list[SentRec]:
@@ -139,6 +145,7 @@ def scan(docdir: Path, keys: set[tuple[str, ...]]) -> list[SentRec]:
     for fp in sorted(docdir.rglob("*.xml")):
         stem = fp.name[:-4] if fp.name.endswith(".xml") else fp.name
         root = ET.parse(str(fp)).getroot()
+        work_id = papygreek_work_id(root)
         for sent in root.iter("sentence"):
             words = reg_words(sent)
             status = sentence_status(words)
@@ -146,7 +153,7 @@ def scan(docdir: Path, keys: set[tuple[str, ...]]) -> list[SentRec]:
             if status == "ok":
                 _, forms = sentence_to_conllu(f"x:{stem}@{sent.get('id')}", words)
                 leaked = is_leaked(forms, keys)
-            recs.append(SentRec(stem, sent.get("id") or "", words, status, leaked))
+            recs.append(SentRec(stem, sent.get("id") or "", words, status, leaked, work_id))
     return recs
 
 
@@ -260,16 +267,43 @@ def _write_gz(text: str, gz_path: Path) -> str:
     return hashlib.sha256(gz_path.read_bytes()).hexdigest()
 
 
-def build(repo: Path, training_dir: Path, fold_conllu: Path | None) -> tuple[str, str, dict[str, Any]]:
+def build(
+    repo: Path,
+    training_dir: Path,
+    fold_conllu: Path | None,
+    *,
+    pedalion_papyri: Path | None = None,
+    training_work_ids: set[str] | None = None,
+) -> tuple[str, str, dict[str, Any]]:
     docdir = repo / "documentary"
     if not docdir.is_dir():
         raise SystemExit(f"no documentary/ dir under {repo}")
     keys = training_form_keys(training_dir)
+    if training_work_ids is None:
+        source = pedalion_papyri or _default_pedalion_papyri(training_dir)
+        training_work_ids, work_reference = pedalion_training_work_reference(source)
+    else:
+        training_work_ids = set(training_work_ids)
+        work_reference = {
+            "source_repo": "injected-test-reference",
+            "source_commit": "0" * 40,
+            "source_path": "<injected>",
+            "source_sha256": "0" * 64,
+            "source_bytes": 0,
+            "sentences": 0,
+            "work_ids": len(training_work_ids),
+            "identity": "Pedalion sentence.document_id == PapyGreek document_meta.tm_id",
+        }
     recs = scan(docdir, keys)
 
     all_docs = {r.stem for r in recs}
-    fold_docs = {r.stem for r in recs if r.status == "ok" and not r.leaked}
-    nonfold_docs = all_docs - fold_docs
+    training_docs = {r.stem for r in recs if r.work_id in training_work_ids}
+    fold_docs = {
+        r.stem
+        for r in recs
+        if r.status == "ok" and not r.leaked and r.stem not in training_docs
+    }
+    nonfold_docs = all_docs - fold_docs - training_docs
     nonfold = [r for r in recs if r.stem in nonfold_docs]
 
     # Cross-check the re-derived fold-document set against the pinned test fold's own doc ids:
@@ -318,8 +352,12 @@ def build(repo: Path, training_dir: Path, fold_conllu: Path | None) -> tuple[str
             "documents_in_source": len(all_docs),
             "fold_documents": len(fold_docs),
             "nonfold_documents": len(nonfold_docs),
+            "training_overlap_documents_excluded": len(training_docs),
+            "training_overlap_document_ids": sorted(training_docs),
+            "training_work_reference": work_reference,
             "derivation": "fold document = contributed >=1 ok & non-leaked sentence "
-                          "(re-run of build_papygreek_fold selection); dev = the rest",
+                          "and has no Pedalion training work identity (re-run of "
+                          "build_papygreek_fold selection); dev = nonfold, non-training docs",
             "crosscheck_vs_pinned_fold": crosscheck,
         },
         "whole_corpus_sentence_status": dict(sorted(whole_status.items())),
@@ -346,13 +384,16 @@ def main() -> None:
     ap.add_argument("--repo", default=None,
                     help="existing checkout of the PapyGreek repo (else clone the pinned commit)")
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "training" / "data"),
-                    help="output directory (a papygreek-dev-v1/ subdir is created under it)")
+                    help="output directory (a papygreek-dev-v3/ subdir is created under it)")
     ap.add_argument("--training-data",
                     default=str(Path(__file__).resolve().parent.parent / "training" / "data"),
                     help="dir holding full-train.jsonl / full-dev.jsonl for the leakage check")
     ap.add_argument("--fold-conllu", default=None,
                     help="the pinned test fold's papygreek-test.conllu, for the disjointness "
                          "cross-check (strongly recommended)")
+    ap.add_argument("--pedalion-papyri", default=None,
+                    help="pinned Pedalion public/xml/papyri.xml used for work-level exclusion "
+                         "(default: training-data copy or pyaegean cache)")
     args = ap.parse_args()
 
     tmp: tempfile.TemporaryDirectory[str] | None = None
@@ -363,19 +404,24 @@ def main() -> None:
         repo = _clone(Path(tmp.name) / "papygreek-treebanks")
     try:
         fold_conllu = Path(args.fold_conllu) if args.fold_conllu else None
-        tag_text, parse_text, manifest = build(repo, Path(args.training_data), fold_conllu)
+        tag_text, parse_text, manifest = build(
+            repo,
+            Path(args.training_data),
+            fold_conllu,
+            pedalion_papyri=Path(args.pedalion_papyri) if args.pedalion_papyri else None,
+        )
     finally:
         if tmp is not None:
             tmp.cleanup()
 
-    out = Path(args.out) / "papygreek-dev-v1"
+    out = Path(args.out) / "papygreek-dev-v3"
     out.mkdir(parents=True, exist_ok=True)
     tag_conllu = out / "papygreek-dev-tagging.conllu"
     parse_conllu = out / "papygreek-dev-parse.conllu"
     tag_gz = out / "papygreek-dev-tagging.conllu.gz"
     parse_gz = out / "papygreek-dev-parse.conllu.gz"
-    tag_conllu.write_text(tag_text, encoding="utf-8")
-    parse_conllu.write_text(parse_text, encoding="utf-8")
+    tag_conllu.write_text(tag_text, encoding="utf-8", newline="\n")
+    parse_conllu.write_text(parse_text, encoding="utf-8", newline="\n")
     tag_sha = _write_gz(tag_text, tag_gz)
     parse_sha = _write_gz(parse_text, parse_gz)
     manifest["tagging_track"]["asset_sha256"] = tag_sha
@@ -383,7 +429,11 @@ def main() -> None:
     manifest["parse_track"]["asset_sha256"] = parse_sha
     manifest["parse_track"]["asset_bytes"] = parse_gz.stat().st_size
     manifest_path = out / "papygreek-dev-manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=1) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
     summary = {k: v for k, v in manifest.items() if k != "nonfold_documents"}
     print(json.dumps(summary, ensure_ascii=False, indent=1))

@@ -1,10 +1,14 @@
 {
- "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold; eval only",
+ "purpose": "documentary-Koine (PapyGreek) dependency evaluation fold, ORIG (diplomatic) surface layer; eval only",
+ "layer": "orig (diplomatic surface forms; reg gold labels)",
+ "comparability": "the SAME sentences and the SAME gold columns (LEMMA/UPOS/XPOS/FEATS/HEAD/DEPREL) as the reg papygreek-fold; only the emitted FORM (column 2) and the '# text' header carry the diplomatic orig reading, so the two folds are token-aligned line-for-line and diff only in the surface form",
+ "reg_fold_reference": "papygreek-fold (reg layer); same sentence selection",
  "source_repo": "github.com/ezhenrik/papygreek-treebanks",
  "source_commit": "0e5139b06e41d89275f3a1ace4ee0dc5513f2f7d",
  "license": "CC BY-SA 4.0 (PapyGreek Treebanks, Vierros et al.)",
- "annotation_scheme": "AGDT Guidelines 2.0 (reg layer)",
+ "annotation_scheme": "AGDT Guidelines 2.0 (reg gold labels; orig/diplomatic surface forms)",
  "converter": "training/agdt_ud_deps.convert_tree + agdt_ud.{copular_flags,upos_from_xpos,feats_from_xpos}",
+ "surface_layer_policy": "diplomatic reading recovered with the reg apparatus stripper + clean-reading test (no orig-specific editorial modeling); a token whose diplomatic form is a lost '$' marker, a private-use glyph, or an uncommon editorial sign falls back to the reg reading (counted in surface_disposition)",
  "leakage_reference": "training/data/full-{train,dev}.jsonl (AGDT+Gorman+Pedalion); Pedalion/PapyGreek TM work-ID exclusion, then NFC form-tuple exclusion (full + punct-stripped)",
  "work_disjointness": {
   "result": "pass",
@@ -241,6 +245,7 @@
   "newly_excluded_document_count": 29,
   "newly_excluded_sentence_count": 145
  },
+ "leakage_recheck": "the reg selection already excluded reg-leaked sentences; the orig FORM tuples were re-run through the same exclusion (a diplomatic spelling could collide differently)",
  "sentences_in_source": 4557,
  "sentences_kept": 1551,
  "tokens_kept": 22227,
@@ -252,6 +257,15 @@
   "partial": 678,
   "training_work_overlap": 145
  },
+ "orig_leakage_rechecked_and_dropped": 0,
+ "orig_leaked_sent_ids": [],
+ "surface_disposition": {
+  "diplomatic_diff": 1453,
+  "diplomatic_same": 18390,
+  "fallback_unclean": 17,
+  "punct": 2367
+ },
+ "tokens_diplomatic_differ_from_reg": 1453,
  "doc_ids": [
   "aegyptus.90.43",
   "bgu.1.261",
@@ -704,6 +718,6 @@
   "upz.1.80",
   "upz.1.9"
  ],
- "asset_sha256": "39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
- "asset_bytes": 306093
+ "asset_sha256": "db338c428b63e52c715431f878740111be135dc236e4e8fb51c1a3c5e42f9d90",
+ "asset_bytes": 309351
 }

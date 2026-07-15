@@ -55,6 +55,30 @@ Training data is leakage-clean against the evaluation folds:
 `training/data/` and `training/out/` are gitignored; datasets rebuild deterministically
 from the cache.
 
+## Development evaluation contract
+
+`development_manifest.py`, `run_development_evaluation.py`, and
+`development_report.py` define the model-selection and regression-gate population without
+touching a locked test fold. The checked-in
+`results/development-source-manifest.json` is a **non-performance** source contract: 1,344
+unique items (1,030 Perseus and 314 PapyGreek), covering 26,610 tagging tokens and 21,622
+parsing tokens. Every item records its source, work/document/sentence identity, tasks,
+annotation profile, frequency/OOV context, content digest, and exposure status.
+
+The manifest builder rejects source, work, document, sentence-form, task, profile, and
+locked-fold leakage. It also records unavailable domains explicitly: no eligible
+document-disjoint development source currently exists for tragedy/poetry, New Testament,
+Byzantine Greek, or diplomatic PapyGreek. Absence is not filled with a locked or
+training-seen substitute.
+
+The live runner activates `grc-joint-v3`, uses CPU-sequential inference and complete-word
+overlap windows, and verifies that every selected gold token receives a prediction. Its
+report recomputes UPOS, XPOS, UFeats, lemma, UAS, LAS, and official CLAS F1, then requires
+exact parity with the CoNLL-2018 evaluator. Predictions, performance values, error samples,
+and development reports remain private and gitignored; only the source manifest is public.
+This freezes an auditable gate population without turning development performance into a
+published benchmark claim.
+
 ## Shared preprocessing contract
 
 Candidate joint checkpoints use the dependency-free

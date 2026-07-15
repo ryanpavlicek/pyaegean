@@ -186,8 +186,12 @@ Perseus evaluation material is excluded by normalized form-sequence identity,
 not merely by filename or corpus label. This matters because an aggregator can
 contain the same sentence under a different provenance path. PROIEL is not a
 training source. Additional folds are leakage-checked sentence by sentence;
-this catches and excludes overlaps such as PapyGreek material also present in
-Pedalion.
+PapyGreek adds a stronger source-native work-identity guard before the sentence
+check. Any PapyGreek document whose Trismegistos identity occurs in Pedalion's
+documentary training source is excluded whole, and the retained sentences are then
+checked by full and punctuation-stripped NFC form tuples against all three training
+sources. This catches both cross-repository work copies and sentence copies under
+different provenance paths.
 
 The development fold is used for early stopping, checkpoint selection, schedule
 decisions, calibration, and export or quantization gates. A locked test fold is
@@ -214,9 +218,13 @@ entries take precedence, and only explicitly marked broad entries may be used as
 fallback. `confidence_domain=` is a caller-supplied label, not a genre detector. An
 `AbstentionPolicy` is likewise caller-owned; its thresholds produce accept/review/unavailable
 decisions and carry a canonical policy hash. No bundled threshold and no OOD claim is
-implied. The source/task calibration and coverage-risk measurements needed for an empirical
-release gate remain pending a fresh, development-only inference pass; the existing legacy
-aggregate calibration is not generalized by label.
+implied. A fresh development-only baseline now covers the available literary and
+documentary sources under a deterministic source/task manifest and records error anatomy,
+frequency/OOV bands, long-input coverage, and official-score parity. That baseline freezes
+the population for later gates; it does **not** retroactively create source-specific
+calibrations or abstention thresholds. Dedicated fit/validation work is still required
+before such a calibration can be shipped, and the existing legacy aggregate calibration is
+not generalized by label.
 
 The evaluation suite deliberately exposes scope limits:
 

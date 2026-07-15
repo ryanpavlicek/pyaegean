@@ -1,0 +1,18 @@
+{
+  "expected_source_hashes": {
+    "papygreek_locked_manifest": "89c4e4daf86e163e9fddfda24d8a4ff86a1e7da1ca10ad6e9f841a4ba4f762a2",
+    "papygreek_parse": "d00d4698d4fa8780d9eee523e14c34807f329a15aa39d5e87be0fb8af7e6ffa5",
+    "papygreek_tagging": "fcba689efdb5f4decd148b7de9396d6d7ddbcc45d947309771365d7d0c645cc6",
+    "papygreek_training_work_audit": "147f49771a8718930e947ffa9f4f583cea88796697cf697a85041e337bff3d06",
+    "perseus_dev": "7899f809fc250404839694330b9db25f79a5b1f20cfa12e6dc3a368a4ec7cd22",
+    "perseus_locked": "e18d47c395c0ec8da678fb5e315ce6d90133e88c25ed2a55bc72a2a66e6254d5",
+    "training:full-dev.jsonl": "0a25ae85280b3af825ca2202b3290de27e8b197f9e154291c8118c5d26a0b681",
+    "training:full-train.jsonl": "18c096fada22cbb459475b867f2da942824f1c34eafc770cf8dbda8a55cbaf64"
+  },
+  "format": "pyaegean-development-source-pins/1",
+  "source_revisions": {
+    "papygreek": "0e5139b06e41d89275f3a1ace4ee0dc5513f2f7d",
+    "pedalion": "112c106b86b865ddde4be7e5f3e409d9c42689f9",
+    "ud_perseus": "331ddef91411d0e6549744ee889e05549e6da77d"
+  }
+}

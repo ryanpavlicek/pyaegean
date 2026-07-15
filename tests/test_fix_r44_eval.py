@@ -36,7 +36,8 @@ PAPY_FIXTURE = Path(__file__).parent / "fixtures" / "papygreek" / "sample.conllu
 class _StubModel:
     """A minimal joint model: tags every token NOUN, a single-root flat tree."""
 
-    def analyze(self, forms: list[str]) -> joint.SentenceAnalysis:
+    def analyze(self, forms: list[str], *, long_input: str = "strict") -> joint.SentenceAnalysis:
+        assert long_input in {"strict", "windowed"}
         n = len(forms)
         return joint.SentenceAnalysis(
             tokens=tuple(forms),

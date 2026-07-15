@@ -1,4 +1,4 @@
-"""Tests for the PapyGreek documentary-Koine DEV fold (Phase 2a):
+"""Tests for the PapyGreek documentary-Koine development fold:
 
   * the dev build (``scripts/build_papygreek_dev.py``) — the empty-node reattachment (the
     parse track's deterministic transform), the tagging-token selection, the two-track
@@ -204,7 +204,7 @@ def test_fold_doc_ids_from_conllu_extracts_stems(tmp_path: Path) -> None:
 
 def test_document_disjointness_is_the_partition() -> None:
     # the build's fold/nonfold split: a doc is a fold doc iff it has >=1 ok & non-leaked
-    # sentence; the dev pool is exactly the complement — the invariant Phase 2a enforces
+    # sentence; the development pool is exactly the complement required by the split contract
     recs = [
         _rec("foldA", "1", [_w(1, "θέλω", "ἐθέλω", "v1spia---", "PRED", 0)], "ok", leaked=False),
         _rec("foldA", "2", _elliptic_opening(), "artificial"),          # same doc, not dev
@@ -225,7 +225,8 @@ def test_document_disjointness_is_the_partition() -> None:
 class _StubModel:
     """A minimal joint model: tags every token NOUN with a single-root flat tree."""
 
-    def analyze(self, forms: list[str]) -> joint.SentenceAnalysis:
+    def analyze(self, forms: list[str], *, long_input: str = "strict") -> joint.SentenceAnalysis:
+        assert long_input == "windowed"
         n = len(forms)
         return joint.SentenceAnalysis(
             tokens=tuple(forms),

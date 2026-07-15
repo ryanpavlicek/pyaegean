@@ -1,1 +1,11 @@
 training/results/a17-environment/* text eol=lf
+training/results/papygreek-fold-manifest.json text eol=lf
+training/results/papygreek-fold-orig-manifest.json text eol=lf
+training/results/papygreek-dev-manifest.json text eol=lf
+training/results/papygreek-work-disjoint-correction.json text eol=lf
+training/results/development-source-manifest.json text eol=lf
+training/development-source-pins.json text eol=lf
+training/results/papygreek-eval-v4-2026-07-15.json text eol=lf
+training/results/papygreek-orig-eval-v3-2026-07-15.json text eol=lf
+training/results/documentary-levers-v3-2026-07-15.json text eol=lf
+training/results/papygreek-convention-decomp-v2-2026-07-15.json text eol=lf

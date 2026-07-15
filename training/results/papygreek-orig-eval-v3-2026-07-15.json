@@ -1,0 +1,42 @@
+{
+  "what": "grc-joint-v3 scored on the diplomatic FORM layer of the corrected work-disjoint PapyGreek fold",
+  "date": "2026-07-15",
+  "claim_status": "current variant",
+  "model_identity": "grc-joint-v3",
+  "fold": {
+    "identity": "papygreek-fold-orig-v3",
+    "release_tag": "papygreek-fold-orig-v3",
+    "archive_sha256": "db338c428b63e52c715431f878740111be135dc236e4e8fb51c1a3c5e42f9d90",
+    "materialized_conllu_sha256": "6ec11d90fb7e5c968ec47d1c82adb219aceb651db74b1c42aa94b5805125516f",
+    "manifest_sha256": "b5350e445ae228bd5d103b0b51fc39aee04048d6d38865149f92f26ccb56347b",
+    "same_sentences_and_gold_as_regularized": true,
+    "form_differences": 1453
+  },
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(layer='orig'); CPU sequential; batch_size=None; long_input=windowed; complete coverage; gold tokenization; official CoNLL-2018 evaluator",
+  "prediction_sha256": "d55e33aaa76cf0451cd393204795985bc76f9eeffb3dad05938fd44f0d3fd39e",
+  "results_full_precision": {
+    "treebank": "papygreek",
+    "split": "test",
+    "parsed": true,
+    "layer": "orig",
+    "upos": 0.9056552841139155,
+    "xpos": 0.7464345165789356,
+    "ufeats": 0.8615197732487515,
+    "lemma": 0.820533585279165,
+    "uas": 0.843163719800243,
+    "las": 0.7754982678724074,
+    "clas": 0.7294490406618553,
+    "n_words": 22227,
+    "n_sentences": 1551
+  },
+  "regularized_minus_diplomatic_points": {
+    "upos": 0.9627929995051132,
+    "xpos": 2.5419534800018018,
+    "ufeats": 2.577945741665544,
+    "lemma": 4.049129437171006,
+    "uas": 1.1877446349034981,
+    "las": 2.011067620461604,
+    "clas": 2.450576159803164
+  },
+  "historical_note": "The prior diplomatic row used the obsolete 24,105-token fold and silently emitted 131 placeholder tail analyses across two retained over-limit sentences. It remains historical; this full-coverage work-disjoint row is current."
+}

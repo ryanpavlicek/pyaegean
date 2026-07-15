@@ -157,7 +157,8 @@ def test_training_form_keys_reads_jsonl(tmp_path: Path) -> None:
 class _StubModel:
     """A minimal joint model: tags every token NOUN, a single-root flat tree."""
 
-    def analyze(self, forms: list[str]) -> joint.SentenceAnalysis:
+    def analyze(self, forms: list[str], *, long_input: str = "strict") -> joint.SentenceAnalysis:
+        assert long_input == "windowed"
         n = len(forms)
         return joint.SentenceAnalysis(
             tokens=tuple(forms),
