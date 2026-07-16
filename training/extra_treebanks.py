@@ -1,4 +1,4 @@
-"""Stage D+ extra treebanks — Gorman and Pedalion (fetch-to-cache, pinned).
+"""Extra joint-training treebanks — Gorman and Pedalion (fetch-to-cache, pinned).
 
 Two more AGDT-schema treebanks for the combined retrain (the data mix of the 2024
 baseline, arXiv:2410.12055):
@@ -23,6 +23,7 @@ import unicodedata
 import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
 from aegean.data import cache_dir, download_file
 from aegean.greek.treebank import _clean_lemma
@@ -287,12 +288,12 @@ def _clean_xpos(postag: str) -> str:
     return "".join(ch if ch in _XPOS_OK else "-" for ch in tag)
 
 
-def load_extra(source: str, paths: list[Path] | None = None) -> list[dict]:
+def load_extra(source: str, paths: list[Path] | None = None) -> list[dict[str, Any]]:
     """Parse one extra treebank into the build_full_dataset row-input shape.
 
     Artificial/ellipsis nodes are dropped; a real token whose head was artificial is
     re-attached to the nearest real ancestor (root if the chain dead-ends)."""
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for fp in paths if paths is not None else fetch_extra(source):
         for _ev, sent in ET.iterparse(str(fp), events=("end",)):
             if sent.tag.rsplit("}", 1)[-1] != "sentence":
@@ -317,7 +318,14 @@ def load_extra(source: str, paths: list[Path] | None = None) -> list[dict]:
                  "relation": w.get("relation") or "",
                  "form": unicodedata.normalize("NFC", w.get("form") or ""),
                  "lemma": _clean_lemma(w.get("lemma") or ""),
-                 "xpos": _clean_xpos(w.get("postag") or "")}
+                 "xpos": _clean_xpos(w.get("postag") or ""),
+                 # Keep the exact source labels available to the canonical-data audit.
+                 # Training consumes the normalized fields above; the pinned source file
+                 # remains the authority for the original annotation.
+                 "source_head": w.get("head") or "0",
+                 "source_relation": w.get("relation") or "",
+                 "source_xpos": w.get("postag") or "",
+                 "source_lemma": w.get("lemma") or ""}
                 for w in words if not _is_artificial(w)
             ]
             if attrs:

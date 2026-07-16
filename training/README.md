@@ -57,6 +57,18 @@ Training data is leakage-clean against the evaluation folds:
 `training/data/` and `training/out/` are gitignored; datasets rebuild deterministically
 from the cache.
 
+`build_full_dataset.py --with-extras` reads an exact, commit-pinned source inventory and
+applies `canonicalization-policy-v1.json`. The policy records each corpus's annotation
+profile and the deliberately narrow source-to-canonical corrections. Every output sentence
+keeps its source identity and token ids plus a SHA-256 binding to its original source labels;
+the pinned source remains the authority for recovering those labels.
+
+Each build also writes `training-data-manifest.json`, which binds the policy, every source
+file, every generated file, split counts, overlap exclusions, and aggregate label
+transformations by SHA-256. The builder verifies that manifest before it reports success.
+This makes a corrected training input reviewable and reproducible without publishing model
+selection results or reading the locked test labels.
+
 ## Development evaluation contract
 
 `development_manifest.py`, `run_development_evaluation.py`, and
@@ -341,7 +353,7 @@ reproduce the historical recipe; a new candidate must not use a locked test fold
 ```bash
 # The candidate direct versions in the template are not yet a runnable environment lock.
 git clone https://github.com/ryanpavlicek/pyaegean.git
-python pyaegean/training/build_full_dataset.py
+python pyaegean/training/build_full_dataset.py --with-extras
 python pyaegean/training/train_full.py --model bowphs/GreBerta
 python pyaegean/training/eval_full_ud.py \
     --checkpoint pyaegean/training/out/full/model --treebank perseus --split test

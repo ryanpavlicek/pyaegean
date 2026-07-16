@@ -1,4 +1,4 @@
-"""Tests for the Stage D+ extra-treebank loader (training/extra_treebanks.py).
+"""Tests for the extra-treebank loader (training/extra_treebanks.py).
 
 Offline: a toy AGDT-schema file exercises the artificial-node drop + head re-resolution,
 and the overlap-key helpers from the builder are pinned."""
@@ -40,6 +40,9 @@ def test_artificial_nodes_dropped_and_heads_reresolved(tmp_path: Path) -> None:
     # λόγον's head pointed at the artificial node (2) → re-resolved to its head (1)
     assert by_id["3"]["head"] == "1"
     assert by_id["4"]["head"] == "3"  # untouched
+    assert by_id["3"]["source_head"] == "2"  # exact pre-reattachment source label
+    assert by_id["3"]["source_relation"] == "OBJ"
+    assert by_id["3"]["source_xpos"] == "n-s---ma-"
     assert rows[0]["file"].startswith("gorman:")
 
 

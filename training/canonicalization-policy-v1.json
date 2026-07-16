@@ -1,0 +1,45 @@
+{
+  "canonical_profile": "pyaegean-ud-compatible-v1",
+  "format": "pyaegean-training-canonicalization-policy/1",
+  "policy_id": "greek-joint-canonical-v1",
+  "shared_rules": {
+    "closed_coordinator": "When the dependency conversion emits cc and the surface is in the closed coordinator lexicon, rewrite only source POS initials declared by that corpus to c/CCONJ.",
+    "dependency_conversion": "agdt-prague-to-ud-v2-leaf-apos-appos",
+    "lemma_normalization": "nfc-clean-source-lemma",
+    "original_labels": "Recoverable from the exact source file, sentence id, source token ids, and source-label SHA-256 stored with each canonical row."
+  },
+  "sources": {
+    "agdt": {
+      "annotation_profile": "agdt-v2.1-prague",
+      "artificial_nodes": "preserve",
+      "coordinator_source_pos": [
+        "d",
+        "g"
+      ],
+      "license": "CC-BY-SA-3.0",
+      "revision": "bf4334f0af5e13d16b04c1cccd6237e683ac6f5f",
+      "xpos_cleanup": "pad-to-nine"
+    },
+    "gorman": {
+      "annotation_profile": "gorman-agdt-prague",
+      "artificial_nodes": "drop-and-reattach-to-nearest-real-ancestor",
+      "coordinator_source_pos": [
+        "d"
+      ],
+      "license": "CC-BY-SA-4.0",
+      "revision": "d823e96d253277bc1872b83ff5ac8c393a0f830a",
+      "xpos_cleanup": "lower-pad-invalid-to-hyphen"
+    },
+    "pedalion": {
+      "annotation_profile": "pedalion-agdt-prague",
+      "artificial_nodes": "drop-and-reattach-to-nearest-real-ancestor",
+      "coordinator_source_pos": [
+        "b",
+        "d"
+      ],
+      "license": "CC-BY-SA-4.0",
+      "revision": "112c106b86b865ddde4be7e5f3e409d9c42689f9",
+      "xpos_cleanup": "lower-pad-invalid-to-hyphen"
+    }
+  }
+}
