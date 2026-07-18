@@ -468,7 +468,7 @@ def _build_run(
             "tasks": ["parsing", "tagging"],
         },
         "decoder": {
-            "identity": "pyaegean-release-single-root-mst-v1",
+            "identity": "pyaegean-release-single-root-mst-v2",
             "mode": "sequential",
             "long_input": "windowed",
         },

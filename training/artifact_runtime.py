@@ -1,7 +1,7 @@
 """Run artifact evaluation, operational measurement, and qualification.
 
 The command evaluates one already-created schema-1 model bundle in an isolated
-process.  It measures the complete A18 development manifest on CPU, probes the
+process.  It measures the complete development manifest on CPU, probes the
 declared provider matrix, then asks :mod:`artifact_qualification` to rebuild and
 judge every bound evidence record.  Conversion commands invoke this module before
 promoting a staged artifact to a final directory or archive.
@@ -353,7 +353,7 @@ def _run_identity(artifact_dir: Path, record: Mapping[str, Any]) -> dict[str, An
             "tasks": ["parsing", "tagging"],
         },
         "decoder": {
-            "identity": "pyaegean-release-single-root-mst-v1",
+            "identity": "pyaegean-release-single-root-mst-v2",
             "mode": "sequential",
             "long_input": "windowed",
         },
@@ -716,12 +716,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gate",
         type=Path,
-        default=Path(__file__).with_name("artifact-qualification-gate-v1.json"),
+        default=Path(__file__).with_name("artifact-qualification-gate-v2.json"),
     )
     parser.add_argument(
         "--selection-gate",
         type=Path,
-        default=Path(__file__).with_name("model-selection-gate-v1.json"),
+        default=Path(__file__).with_name("model-selection-gate-v2.json"),
     )
     parser.add_argument(
         "--manifest",

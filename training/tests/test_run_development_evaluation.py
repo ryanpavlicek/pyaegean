@@ -170,7 +170,7 @@ def test_candidate_artifact_run_identity_is_bound_without_changing_default_cli(
         "preprocessing": {"identity": "fixture-prep", "config_sha256": "2" * 64},
         "output_profile": {"identity": "fixture-output", "tasks": ["parsing", "tagging"]},
         "decoder": {
-            "identity": "pyaegean-release-single-root-mst-v1",
+            "identity": "pyaegean-release-single-root-mst-v2",
             "mode": "sequential",
             "long_input": "windowed",
         },

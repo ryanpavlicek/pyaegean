@@ -1,0 +1,56 @@
+{
+  "format": "pyaegean-artifact-qualification-gate/1",
+  "gate_id": "greek-joint-artifact-qualification-v2",
+  "claim_status": "development-only-not-published",
+  "development_manifest_sha256": "ae6f511c8d75cb7a7dca397006298518bafb59dfb06174c9a768aed4ba74c4c8",
+  "selection_gate_sha256": "7b370a064e593b33ff35fe9c2002f94ffab8cb5524f26257a1062cd1b4786963",
+  "measurement": {
+    "profile_id": "pyaegean-cpu-sequential-complete-dev-v1",
+    "execution_provider": "CPUExecutionProvider",
+    "mode": "sequential",
+    "long_input": "windowed",
+    "warmup_items": 3,
+    "timed_scope": "complete-development-manifest",
+    "memory_sample_interval_ms": 10,
+    "provider_probe_items": ["shortest", "median", "longest"]
+  },
+  "profiles": {
+    "export": {
+      "transform": "framework-export",
+      "metric_regression_scale": 0.0,
+      "max_prediction_disagreement_fraction": {
+        "upos": 0.0,
+        "xpos": 0.0,
+        "ufeats": 0.0,
+        "lemma": 0.0,
+        "head": 0.0,
+        "deprel": 0.0
+      },
+      "required_providers": ["CPUExecutionProvider"],
+      "optional_providers": ["CUDAExecutionProvider"],
+      "max_artifact_size_bytes": 1000000000,
+      "max_latency_ms_per_100_tokens": 10000.0,
+      "max_peak_resident_memory_bytes": 8589934592,
+      "require_smaller_than_reference": false
+    },
+    "optimization": {
+      "transform": "artifact-optimization",
+      "metric_regression_scale": 1.0,
+      "max_prediction_disagreement_fraction": {
+        "upos": 0.001,
+        "xpos": 0.001,
+        "ufeats": 0.001,
+        "lemma": 0.001,
+        "head": 0.001,
+        "deprel": 0.001
+      },
+      "required_providers": ["CPUExecutionProvider"],
+      "optional_providers": ["CUDAExecutionProvider"],
+      "max_artifact_size_bytes": 1000000000,
+      "max_latency_ms_per_100_tokens": 10000.0,
+      "max_peak_resident_memory_bytes": 8589934592,
+      "require_smaller_than_reference": true
+    }
+  },
+  "gate_sha256": "05b8a0fad9220aa078bbcf3138bb2345d06559c905bbba5fca9274a88bde044f"
+}

@@ -159,8 +159,17 @@ def _fixture() -> tuple[dict[str, object], dict[str, object], dict[str, object],
     return manifest, gate, baseline, candidates
 
 
-def test_frozen_reference_gate_is_hashed_and_balances_both_sources() -> None:
-    gate = selection.load_gate(TRAINING / "model-selection-gate-v1.json")
+@pytest.mark.parametrize(
+    ("filename", "decoder_identity"),
+    [
+        ("model-selection-gate-v1.json", "pyaegean-release-single-root-mst-v1"),
+        ("model-selection-gate-v2.json", "pyaegean-release-single-root-mst-v2"),
+    ],
+)
+def test_frozen_reference_gates_are_hashed_and_balance_both_sources(
+    filename: str, decoder_identity: str
+) -> None:
+    gate = selection.load_gate(TRAINING / filename)
     schema = json.loads(
         (TRAINING / "contracts" / "model-selection-gate.schema.json").read_text(
             encoding="utf-8"
@@ -178,7 +187,7 @@ def test_frozen_reference_gate_is_hashed_and_balances_both_sources() -> None:
         target_weight[entry["slice"]] += entry["weight"]
     assert target_weight["source:perseus"] == pytest.approx(0.5)
     assert target_weight["source:papygreek"] == pytest.approx(0.5)
-    assert gate["decoder"]["identity"] == "pyaegean-release-single-root-mst-v1"
+    assert gate["decoder"]["identity"] == decoder_identity
     assert all(
         entry["max_regression"] == pytest.approx(0.0001)
         for entry in gate["protected_metrics"]

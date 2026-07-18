@@ -224,9 +224,10 @@ def _fixture() -> dict[str, object]:
     }
 
 
-def test_frozen_gate_binds_a18_a19_and_schema() -> None:
-    gate = qualification.load_gate(TRAINING / "artifact-qualification-gate-v1.json")
-    selection = selection_mod.load_gate(TRAINING / "model-selection-gate-v1.json")
+@pytest.mark.parametrize("version", ["v1", "v2"])
+def test_frozen_gates_bind_development_manifest_selection_and_schema(version: str) -> None:
+    gate = qualification.load_gate(TRAINING / f"artifact-qualification-gate-{version}.json")
+    selection = selection_mod.load_gate(TRAINING / f"model-selection-gate-{version}.json")
     manifest = manifest_mod.load_document(
         TRAINING / "results" / "development-source-manifest.json",
         verify=True,

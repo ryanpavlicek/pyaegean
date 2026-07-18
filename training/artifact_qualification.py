@@ -2,9 +2,9 @@
 
 The module is deliberately independent of model conversion and inference.  It
 recomputes development reports from gold plus prediction artifacts, compares every
-protected A19 metric and decoded output field, validates operational measurements,
-and emits one content-addressed qualification decision.  Development evidence is
-not a published benchmark claim.
+protected selection-policy metric and decoded output field, validates operational
+measurements, and emits one content-addressed qualification decision.  Development
+evidence is not a published benchmark claim.
 """
 
 from __future__ import annotations
@@ -216,7 +216,9 @@ def validate_gate(gate: Mapping[str, Any], *, verify_digest: bool = True) -> Non
         if profile_id == "export" and scale != 0.0:
             raise QualificationError("export metric regression scale must be zero")
         if profile_id == "optimization" and scale != 1.0:
-            raise QualificationError("optimization must retain the full A19 regression ceilings")
+            raise QualificationError(
+                "optimization must retain the full selection-policy regression ceilings"
+            )
         _validate_fraction_map(
             profile.get("max_prediction_disagreement_fraction"),
             where=f"gate.profiles.{profile_id}.max_prediction_disagreement_fraction",
@@ -628,11 +630,11 @@ def _validate_bindings(
     except Exception as exc:
         raise QualificationError(f"invalid gate/manifest binding input: {exc}") from exc
     if gate["selection_gate_sha256"] != selection_gate["gate_sha256"]:
-        raise QualificationError("qualification gate is bound to a different A19 selection gate")
+        raise QualificationError("qualification gate is bound to a different selection gate")
     if gate["development_manifest_sha256"] != manifest["manifest_sha256"]:
         raise QualificationError("qualification gate is bound to a different development manifest")
     if selection_gate["development_manifest_sha256"] != manifest["manifest_sha256"]:
-        raise QualificationError("A19 selection gate is bound to a different development manifest")
+        raise QualificationError("selection gate is bound to a different development manifest")
 
 
 def build_qualification_report(
@@ -673,7 +675,9 @@ def build_qualification_report(
     decoder = selection_gate["decoder"]
     for where, report in (("reference", reference_report), ("candidate", candidate_report)):
         if report["run"]["decoder"] != decoder:
-            raise QualificationError(f"{where} report decoder differs from the A19 release decoder")
+            raise QualificationError(
+                f"{where} report decoder differs from the selection-gate decoder"
+            )
 
     validate_operational_evidence(candidate_operational)
     if candidate_operational["profile_id"] != gate["measurement"]["profile_id"]:

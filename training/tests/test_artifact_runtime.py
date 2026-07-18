@@ -76,7 +76,7 @@ def _selection_gate(manifest_sha256: str) -> dict[str, object]:
             "claim_status": selection_mod.CLAIM_STATUS,
             "development_manifest_sha256": manifest_sha256,
             "decoder": {
-                "identity": "pyaegean-release-single-root-mst-v1",
+                "identity": "pyaegean-release-single-root-mst-v2",
                 "mode": "sequential",
                 "long_input": "windowed",
             },
@@ -126,7 +126,7 @@ def _reference(
             "tasks": ["parsing", "tagging"],
         },
         "decoder": {
-            "identity": "pyaegean-release-single-root-mst-v1",
+            "identity": "pyaegean-release-single-root-mst-v2",
             "mode": "sequential",
             "long_input": "windowed",
         },

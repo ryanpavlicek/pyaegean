@@ -89,16 +89,62 @@ def decode_mst(arc_scores: Any) -> list[int]:
     single-root constraint. Returns CoNLL-U HEAD values (0 = root, else 1-based)."""
     import numpy as np  # lazy: ships with the [neural] extra
 
-    w = arc_scores.shape[0]
+    try:
+        scores = np.asarray(arc_scores, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError("arc scores must be numeric") from exc
+    if scores.ndim != 2 or scores.shape[1] != scores.shape[0] + 1:
+        raise ValueError("arc scores must have shape [words, words + 1]")
+    if np.isnan(scores).any() or np.isposinf(scores).any():
+        raise ValueError("arc scores may contain finite values or negative infinity only")
+    w = scores.shape[0]
+    if w == 0:
+        return []
     full = np.full((w + 1, w + 1), -np.inf)
-    full[1:, :] = arc_scores
-    heads = _cle(full, np)
-    root_children = [d for d in range(1, w + 1) if heads[d] == 0]
-    if len(root_children) > 1:
-        best = max(root_children, key=lambda d: full[d, 0])
-        constrained = full.copy()
-        for d in root_children:
-            if d != best:
-                constrained[d, 0] = -np.inf
+    full[1:, :] = scores
+    # A self-loop is never a dependency-tree edge, even if a caller supplied a
+    # finite diagonal value.
+    full[np.arange(1, w + 1), np.arange(1, w + 1)] = -np.inf
+    if not np.isfinite(full[1:]).any(axis=1).all():
+        raise ValueError("every dependent requires at least one finite candidate head")
+
+    def valid_tree(heads: Any) -> bool:
+        if len(heads) != w + 1:
+            return False
+        values = [int(heads[d]) for d in range(1, w + 1)]
+        if values.count(0) != 1:
+            return False
+        for dependent, head in enumerate(values, start=1):
+            if head < 0 or head > w or head == dependent:
+                return False
+            if not np.isfinite(full[dependent, head]):
+                return False
+            seen: set[int] = set()
+            node = dependent
+            while node:
+                if node in seen:
+                    return False
+                seen.add(node)
+                node = values[node - 1]
+        return True
+
+    # Penalize every ROOT edge by more than the largest possible score
+    # difference between two W-edge arborescences.  Every valid arborescence
+    # needs at least one ROOT edge, so its unconstrained optimum then has exactly
+    # one.  Among single-root trees the common penalty leaves the original score
+    # ordering unchanged.  Scaling first avoids overflow for extreme finite
+    # inputs while preserving every comparison.
+    finite = np.isfinite(full)
+    scale = max(1.0, float(np.abs(full[finite]).max()))
+    constrained = full.copy()
+    constrained[finite] /= scale
+    finite_values = constrained[finite]
+    span = float(finite_values.max() - finite_values.min())
+    constrained[1:, 0] -= 1.0 + w * span
+    try:
         heads = _cle(constrained, np)
+    except (KeyError, ValueError, IndexError) as exc:
+        raise ValueError("arc scores do not contain a valid single-root arborescence") from exc
+    if not valid_tree(heads):
+        raise ValueError("arc scores do not contain a valid single-root arborescence")
     return [int(h) for h in heads[1:]]

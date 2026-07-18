@@ -19,6 +19,17 @@ import artifact_command as command  # noqa: E402
 import quantize_grc_joint as quantize  # noqa: E402
 
 
+def test_qualification_arguments_default_to_current_decoder_gates() -> None:
+    parser = argparse.ArgumentParser()
+    command.add_qualification_arguments(parser, require_reference_operational=False)
+
+    qualification = parser.get_default("qualification_gate")
+    selection = parser.get_default("selection_gate")
+
+    assert qualification.name == "artifact-qualification-gate-v2.json"
+    assert selection.name == "model-selection-gate-v2.json"
+
+
 def _args(tmp_path: Path) -> argparse.Namespace:
     paths = {}
     for name in (

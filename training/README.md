@@ -95,7 +95,7 @@ published benchmark claim.
 
 ## Declarative candidate selection
 
-`model-selection-gate-v1.json` replaces an implicit checkpoint score with a frozen,
+`model-selection-gate-v2.json` replaces an implicit checkpoint score with a frozen,
 content-addressed policy for successor-model experiments. It is bound to the checked-in
 development manifest and requires the package's sequential, complete-window, single-root MST
 decoder. The reference policy protects UPOS, XPOS, UFeats, lemma, UAS, LAS, and CLAS globally
@@ -114,7 +114,7 @@ does not load a model, run inference, or inspect a locked test fold.
 
 ```bash
 python training/model_selection.py \
-    --gate training/model-selection-gate-v1.json \
+    --gate training/model-selection-gate-v2.json \
     --manifest training/results/development-source-manifest.json \
     --baseline training/out/selection/baseline.json \
     --candidate training/out/selection/candidate-seed-1.json \
@@ -129,18 +129,21 @@ selection or release gate.
 
 ## Integrated artifact qualification
 
-`artifact-qualification-gate-v1.json` binds export and optimization to the A18 development
-manifest and A19 selection policy. `export_onnx.py` and `quantize_grc_joint.py` now build in a
+`artifact-qualification-gate-v2.json` binds export and optimization to the development
+manifest and current selection policy. `export_onnx.py` and `quantize_grc_joint.py` build in a
 private staging directory and create the final directory and deterministic archive only after an
 isolated qualification process returns a reproducible `qualified=true` decision. Failed candidates
 remain staged working material and are never presented as release artifacts.
+
+The v1 gate files remain available only to verify evidence created under the earlier decoder.
+New evaluations and qualification commands use the v2 gates and corrected decoder identity.
 
 Qualification rebuilds both development reports from gold plus their prediction artifacts. It
 checks every protected task/source/OOV metric and separately compares decoded UPOS, XPOS, UFeats,
 lemma, head, and dependency-relation values, so compensating errors cannot disappear inside an
 aggregate score. Framework export requires exact decoded parity. Artifact optimization retains the
-A19 regression ceilings, limits disagreement in every output field, and must actually reduce total
-artifact bytes.
+selection-policy regression ceilings, limits disagreement in every output field, and must reduce
+total artifact bytes.
 
 The operational record measures CPU-sequential, complete-window inference over the whole
 development manifest after warm-up. It records latency per 100 scored tokens, total and model bytes,
