@@ -189,37 +189,37 @@ onnxruntime CPU):
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 |---|---|---|---|---|---|---|
-| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.04 | 93.48 |
-| UD PROIEL | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
+| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.03 | 93.47 |
+| UD PROIEL | 90.51 | 82.47 | 63.50 | 86.68 | 59.43 | n/a |
 
-The shipped checkpoint is one of five seed replicates of this recipe; across those seeds the
-UD Perseus test mean ± standard deviation is **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12,
-UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04, lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL
-LAS 63.50 ± 0.04). The table places the shipped checkpoint and its confidence intervals beside
-the cited published comparison rows; the margin column is the arithmetic difference:
+The historical decoder-v1 training replication covered five seeds of this recipe: UD Perseus
+test mean ± standard deviation was **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12, UPOS
+97.00 ± 0.06, UFeats 96.06 ± 0.04, lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05
+(PROIEL LAS 63.50 ± 0.04). It remains evidence about training-recipe stability, but it is
+not a decoder-v2 replication. The table below uses the current decoder-v2 checkpoint and
+bootstrap evidence; the margin column is the arithmetic difference:
 
 | Metric | pyaegean | 95% CI | cited comparison | margin |
 |---|---|---|---|---|
 | UPOS | 97.02 | [96.76, 97.29] | 95.83 (2023) | +1.19 |
-| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2023) | +2.39 |
-| UFeats | 96.04 | [95.75, 96.34] | 92.56 (odyCy 2023) | +3.48 |
+| XPOS | 93.47 | [93.09, 93.90] | 91.09 (2023) | +2.38 |
+| UFeats | 96.03 | [95.75, 96.33] | 92.56 (odyCy 2023) | +3.47 |
 | Lemma | 94.27 | [93.89, 94.62] | 91.14 (GreTa+Chars 2023) | +3.13 |
 | UAS | 90.24 | [89.62, 90.80] | 88.20 (2023) | +2.04 |
-| LAS | 85.65 | [84.93, 86.29] | 83.98 (2023) | +1.67 |
+| LAS | 85.65 | [84.94, 86.29] | 83.98 (2023) | +1.67 |
 
 (CIs are percentile bootstrap over the fold's sentences, 999 resamples: `greek.bootstrap_ud`'s
 default, so the reproduction command matches; the 2-decimal bounds are stable across resample counts.)
 
 Three things keep these honest:
 
-- **Confidence intervals and replication.** The +1.67 LAS and +2.04 UAS margins are
-  large next to the seed spread (±0.10 / ±0.12), and the within-fold lower bounds
-  (84.93 / 89.62) exceed the cited 83.98 / 88.20 rows. The converter comma fix and
-  predicted-arc relation training also tightened the seed spread fourfold relative to an
-  earlier single-run build.
+- **Confidence intervals and historical replication.** The current decoder-v2 within-fold
+  lower bounds (84.94 LAS / 89.62 UAS) exceed the cited 83.98 / 88.20 rows. The archived
+  decoder-v1 five-seed results show that the training recipe was stable, but their parsing
+  spread is not presented as decoder-v2 replication.
 - **PROIEL is out of domain.** The in-domain published systems train on the PROIEL fold
   itself; pyaegean never does. Against a *Perseus-trained* published system, the like-for-like
-  out-of-domain comparison is 82.48 versus the Perseus-trained Stanza baseline's 59.00 on
+  out-of-domain comparison is 82.47 versus the Perseus-trained Stanza baseline's 59.00 on
   this fold, an arithmetic difference of ~23 UAS. The remaining PROIEL
   LAS and UFeats gaps are largely deprel- and feature-convention divergence between the two
   treebanks' UD conversions (PROIEL annotates five feature types the Perseus scheme lacks,
@@ -237,9 +237,10 @@ Three things keep these honest:
   changes (a dependency-drift trigger), not automatically per release.
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
-about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed). The measured
-UD Perseus test scores are unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 /
-lemma 94.3 / UAS 90.2 / LAS 85.6). The trade-off is **CPU throughput**: the int8 MatMulNBits
+about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed). In the recorded
+decoder-v1 quantization comparison, UD Perseus test scores were unchanged within ±0.02
+(UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.6). The trade-off is
+**CPU throughput**: the int8 MatMulNBits
 kernels run several times slower than fp32 MatMul on this workload (roughly 20–70 words/s
 quantized vs roughly 300 words/s fp32 on the development machine), so the quantized default
 optimizes download size and disk, not speed; throughput-sensitive work can fetch the fp32
@@ -408,7 +409,7 @@ generalization claim.
 
 | Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS | scored tokens |
 |---|---|---|---|---|---|---|---|---|
-| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.50 | 79.56 | 75.40 | 22,227 |
+| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 | 22,227 |
 
 Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
 Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL row
@@ -464,14 +465,15 @@ usage, not spelling alone). Measured once, CPU sequential:
 
 | Fold | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
 |---|---|---|---|---|---|---|---|
-| PapyGreek, regularized (above) | 91.53 | 77.19 | 88.73 | 86.10 | 85.50 | 79.56 | 75.40 |
+| PapyGreek, regularized (above) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 |
 | PapyGreek, diplomatic (orig) | 90.57 | 74.64 | 86.15 | 82.05 | 84.32 | 77.55 | 72.94 |
 
 The pair isolates the cost of the scribes' non-standard documentary usage:
 lemma takes the largest hit (−4.05 points — phonetic spellings break lemma
 composition), morphology loses ~2.58, attachment the least. Only 6.5% of tokens
 differ in surface form, so the per-changed-token degradation is steep.
-(Evidence: `training/results/papygreek-orig-eval-v3-2026-07-15.json`.)
+(Current decoder-v2 evidence:
+`training/results/decoder-v2-papygreek-remeasure-2026-07-18.json`.)
 
 **Byzantine verse (tagging only).** `greek.evaluate_on_dbbe()` scores the
 pipeline against the DBBE gold standard (Swaelens, De Vos & Lefever, LRE 2025;
@@ -557,23 +559,25 @@ Each lever is measured **once, sequentially**, on the pinned PapyGreek fold (bat
 inference is not prediction-identical on this fold, so these rows share the fold's
 CPU-sequential protocol) and pinned as its own registry variant row; the published
 PapyGreek row above is untouched. (Neural pipeline, full-coverage CPU sequential;
-evidence: `training/results/documentary-levers-v3-2026-07-15.json`.)
+evidence: `training/results/decoder-v2-papygreek-remeasure-2026-07-18.json`.)
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
+| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
 
 ### PROIEL convention decomposition
 
-The out-of-domain UD-PROIEL row above (UFeats 59.43, UAS 82.48, LAS 63.50) is held
+The out-of-domain UD-PROIEL row above (UFeats 59.43, UAS 82.47, LAS 63.50) is held
 down less by model error than by annotation-convention divergence.
 `greek.proiel_convention_report()` (CLI: `aegean greek eval ud --fold proiel --drift`)
-measures that divergence directly, reproducing UFeats/UAS/LAS from the model's own
-outputs (equal to the official evaluator to four decimals) and partitioning each gap.
-This is a measurement decomposition only: it changes none of the published numbers,
-it accounts for them. (13,314 words, neural pipeline; evidence:
-`training/results/proiel-convention-decomp-2026-07-11.json`.)
+measures that divergence directly from a batch-size-32 diagnostic run and partitions
+each gap. Its detailed buckets are unchanged under decoder v2. The diagnostic UAS is
+82.4771, 0.0075 points above the current CPU-sequential headline (82.4696, one token),
+so it is not claimed as an exact reproduction of that row. This is a measurement
+decomposition only: it changes no output or published score. (13,314 words, neural
+pipeline; evidence: `training/results/proiel-convention-decomp-2026-07-11.json` and
+`training/results/decoder-v2-remeasure-2026-07-18.json`.)
 
 **UFeats.** Of the 40.6-point gap, 24.2 points are *scheme-absent* features — UD
 feature types the AGDT scheme cannot emit at all (PROIEL uses exactly five the

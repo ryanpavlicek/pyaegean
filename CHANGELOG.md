@@ -4,6 +4,26 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.57.1 (2026-07-18)
+
+### Fixed
+
+- Dependency decoding now finds the highest-scoring valid tree with exactly one root
+  instead of repairing a multi-root optimum by keeping its strongest root edge. It
+  rejects malformed, non-numeric, impossible, or non-finite score matrices with clear
+  errors and handles empty sentences explicitly.
+- Successor-model selection and artifact qualification now bind the corrected decoder
+  identity and require the current v2 policy gates. The prior gates remain available
+  only to verify evidence created with the earlier decoder.
+
+### Changed
+
+- Training evaluators, artifact commands, and runtime qualification consistently use
+  the corrected single-root decoder and current content-addressed policy identities.
+  Model weights, runtime defaults, and hosted assets are unchanged. Full-protocol
+  remeasurement moves Perseus XPOS/UFeats and PROIEL UPOS/UAS down 0.01 point each,
+  and PapyGreek UAS/LAS up 0.01 point each; the comparison conclusions are unchanged.
+
 ## 0.57.0 (2026-07-15)
 
 ### Added

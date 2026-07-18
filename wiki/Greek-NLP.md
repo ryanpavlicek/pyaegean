@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.57.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> **Available in v0.57.1.** Isolated pipeline instances, explicit long-input and runtime-variant
 > selection, analysis receipts, source alignment, typed editorial form states, and lossless
 > CoNLL-U representation are part of the current release.
 
@@ -507,10 +507,10 @@ shipped package, end-to-end from raw text** (tokens F1 99.97):
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
-| neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.6** |
+| neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.7** |
 
 Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.51,
-UAS 82.48, UPOS 86.69. Inference is torch-free, at roughly 20–70 words/second on a plain
+UAS 82.47, UPOS 86.68. Inference is torch-free, at roughly 20–70 words/second on a plain
 CPU for the shipped quantized **`grc-joint-v3`** bundle (sentence-length dependent). The
 full-precision `grc-joint-v2` reference asset is several times faster where throughput matters
 more than download size. The shipped v3 bundle is about 173 MB (down from the 518 MB fp32

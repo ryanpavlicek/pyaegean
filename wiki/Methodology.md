@@ -200,8 +200,8 @@ lemmas. Measured through the package's own inference code:
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 | --- | --- | --- | --- | --- | --- | --- |
-| UD Perseus (in family) | 94.27 | 90.24 | 85.65 | 97.02 | 96.04 | 93.48 |
-| UD PROIEL (out of domain) | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
+| UD Perseus (in family) | 94.27 | 90.24 | 85.65 | 97.02 | 96.03 | 93.47 |
+| UD PROIEL (out of domain) | 90.51 | 82.47 | 63.50 | 86.68 | 59.43 | n/a |
 
 The shipped checkpoint is one of **five seed replicates** of the recipe; across
 those seeds the UD Perseus test mean ± standard deviation is LAS 85.58 ± 0.10,
@@ -363,9 +363,10 @@ scores, predictions, rejected candidates, or raw timing series.
 
 The shipped model is **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), roughly 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
-uncompressed), while the measured UD Perseus test scores are
-unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 /
-LAS 85.6). The recipe is **weight-only int8 + fp16, activations kept fp32**:
+uncompressed). In the recorded decoder-v1 quantization comparison, the measured UD
+Perseus test scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma
+94.3 / UAS 90.2 / LAS 85.6). The recipe is **weight-only int8 + fp16, activations
+kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on
 everything else (crucially the ~160 MB word-embedding table), activations fp32 by
 design.

@@ -1,0 +1,183 @@
+{
+  "what": "Full-protocol remeasurement of the shipped grc-joint-v3 checkpoint after correcting the package dependency decoder from the advertised-but-inexact decoder-v1 repair to the exact single-root maximum-spanning-arborescence objective.",
+  "date": "2026-07-18",
+  "release_candidate": {
+    "package_version": "0.57.1",
+    "source_commit": "215c4cf1f70432e445751f0ff6cc8b2dababd5eb",
+    "source_tree": "3fcf6fa418d7af37f78458d5cf85c56462cefd11",
+    "decoder": "pyaegean-release-single-root-mst-v2",
+    "model_selection_gate_sha256": "7b370a064e593b33ff35fe9c2002f94ffab8cb5524f26257a1062cd1b4786963",
+    "artifact_qualification_gate_sha256": "05b8a0fad9220aa078bbcf3138bb2345d06559c905bbba5fca9274a88bde044f"
+  },
+  "model": {
+    "model_id": "grc-joint-v3",
+    "runtime_variant": "default",
+    "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+    "asset_sha256_enforced": true,
+    "bundle_manifest_sha256": "db17b79df0a88d927870a708ecd666f3afdfd5cd890302854cab700b581ade5b"
+  },
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows 11",
+    "onnxruntime": "1.27.0",
+    "tokenizers": "0.23.1",
+    "numpy": "2.5.1",
+    "providers": [
+      "CPUExecutionProvider"
+    ]
+  },
+  "scope": {
+    "authorized": "UD Ancient Greek Perseus and PROIEL test folds under the published sequential neural protocol",
+    "not_run": "The NT row has no dependency output and cannot be affected by an MST decoder change.",
+    "gold_tokenization": true,
+    "batch_size": null,
+    "bootstrap_resamples": 999,
+    "bootstrap_seed": 0
+  },
+  "protocols": {
+    "perseus": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); CPU sequential; gold tokenization; CoNLL-2018 evaluator",
+    "proiel_ud": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); CPU sequential; gold tokenization; out of domain",
+    "bootstrap": "greek.use_neural_pipeline(); greek.bootstrap_ud('perseus','test', n_resamples=999, seed=0); CPU sequential"
+  },
+  "results_full_precision": {
+    "perseus_test": {
+      "upos": 0.9702275871940456,
+      "xpos": 0.934729710386946,
+      "ufeats": 0.9603034495920607,
+      "lemma": 0.942745359988549,
+      "uas": 0.9024285509804857,
+      "las": 0.8565294145713059,
+      "clas": 0.8524177735025343,
+      "n_words": 20959,
+      "n_sentences": 1306
+    },
+    "proiel_ud_test": {
+      "upos": 0.8668319062640829,
+      "ufeats": 0.5943367883430974,
+      "lemma": 0.9050623403935707,
+      "uas": 0.8246958089229383,
+      "las": 0.6349707075259126,
+      "clas": 0.6083374526281101,
+      "n_words": 13314,
+      "n_sentences": 1047
+    }
+  },
+  "same_code_decoder_v1_control": {
+    "decoder_source": "decode_mst from public commit 9305e16cbd65f6b4ad417e5d4aea07b9a5b44e2f, injected in memory without changing the measured source tree",
+    "perseus_test": {
+      "upos": 0.9702275871940456,
+      "xpos": 0.934729710386946,
+      "ufeats": 0.9603034495920607,
+      "lemma": 0.942745359988549,
+      "uas": 0.9024762631804952,
+      "las": 0.8565771267713155,
+      "clas": 0.8524917681009286,
+      "n_words": 20959,
+      "n_sentences": 1306
+    },
+    "proiel_ud_test": {
+      "upos": 0.8668319062640829,
+      "ufeats": 0.5943367883430974,
+      "lemma": 0.9050623403935707,
+      "uas": 0.8246958089229383,
+      "las": 0.6349707075259126,
+      "clas": 0.6083374526281101,
+      "n_words": 13314,
+      "n_sentences": 1047
+    }
+  },
+  "attribution": {
+    "decoder_v2_minus_same_code_v1_correct_tokens": {
+      "perseus": {
+        "upos": 0,
+        "xpos": 0,
+        "ufeats": 0,
+        "lemma": 0,
+        "uas": -1,
+        "las": -1
+      },
+      "proiel_ud": {
+        "upos": 0,
+        "ufeats": 0,
+        "lemma": 0,
+        "uas": 0,
+        "las": 0
+      }
+    },
+    "current_v2_minus_2026_07_09_evidence_correct_tokens": {
+      "perseus": {
+        "upos": 0,
+        "xpos": -1,
+        "ufeats": -1,
+        "lemma": 1,
+        "uas": 0,
+        "las": 1
+      },
+      "proiel_ud": {
+        "upos": -1,
+        "ufeats": 1,
+        "lemma": 0,
+        "uas": -1,
+        "las": 0
+      }
+    },
+    "interpretation": "The exact decoder correction changes one Perseus dependency arc and no PROIEL scored output relative to a same-code decoder-v1 control. The other one-token differences from the July 9 evidence are decoder-invariant and therefore reflect intervening runtime/evaluation-path changes. Current claims use the complete current recorded protocol, not a favorable subset of the A/B results."
+  },
+  "perseus_bootstrap_95_percent": {
+    "upos": {
+      "point": 0.9702,
+      "low": 0.9676,
+      "high": 0.9729
+    },
+    "xpos": {
+      "point": 0.9347,
+      "low": 0.9309,
+      "high": 0.9390
+    },
+    "ufeats": {
+      "point": 0.9603,
+      "low": 0.9575,
+      "high": 0.9633
+    },
+    "lemma": {
+      "point": 0.9427,
+      "low": 0.9389,
+      "high": 0.9462
+    },
+    "uas": {
+      "point": 0.9024,
+      "low": 0.8962,
+      "high": 0.9080
+    },
+    "las": {
+      "point": 0.8565,
+      "low": 0.8494,
+      "high": 0.8629
+    }
+  },
+  "proiel_convention_diagnostic": {
+    "protocol": "greek.proiel_convention_report(); CPU batch_size=32; diagnostic decomposition, not the sequential headline protocol",
+    "ufeats": 0.5943367883430974,
+    "ufeats_gap": 0.40566321165690256,
+    "gap_scheme_absent": 0.24215111912272796,
+    "gap_shared_disagreement": 0.16351209253417456,
+    "shared_subset_ufeats": 0.7842418235877106,
+    "uas": 0.8247709178308548,
+    "las": 0.6350458164338291,
+    "label_only_errors": 2526,
+    "difference_from_sequential_headline": {
+      "uas_points": 0.007510890791649461,
+      "correct_tokens": 1,
+      "interpretation": "The detailed batch-size-32 convention buckets are unchanged from the July 11 record, but the diagnostic is not an exact reproduction of the current sequential UAS row."
+    }
+  },
+  "raw_outputs": {
+    "perseus_test_sha256": "38bcbefbeeb794083756298c7a2b9187104ad5de8e15aede61471bd7b70f756a",
+    "proiel_ud_test_sha256": "79a956a4155d0ea9d52165493f913157aa412304835054d7c7374484930f0889",
+    "perseus_bootstrap_sha256": "53ab48211fc2b6309411a149b3b5aee4da6613f0bef96f01d1233bc6c1d9e4bc",
+    "perseus_decoder_v1_control_sha256": "4eb72be7c6b79d1c3a402eb909c47142112042d3d91d5b9ee8c4e429e18b34ae",
+    "proiel_decoder_v1_control_sha256": "91eab06d616c20539551bc9d84103e6204c4fc9014355c7b3ba9adfeac496377",
+    "proiel_convention_diagnostic_sha256": "cc5d0c1a5a13b3e6e5c68824a7d7089ee245fe40e48d7f08c4f4712caf200e96"
+  },
+  "claims_decision": "Use the decoder-v2 measurements as the current shipped-model evidence. Preserve the five-seed decoder-v1 record as historical training evidence, but do not present its parsing mean and spread as decoder-v2 replication."
+}

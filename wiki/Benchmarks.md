@@ -46,8 +46,8 @@ Measured through the package's own inference code, gold-tokenized, official CoNL
 
 | Test fold | Lemma | UAS | LAS | UPOS | UFeats | XPOS |
 | --- | --- | --- | --- | --- | --- | --- |
-| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.04 | 93.48 |
-| UD PROIEL | 90.51 | 82.48 | 63.50 | 86.69 | 59.43 | n/a |
+| UD Perseus | **94.27** | **90.24** | **85.65** | 97.02 | 96.03 | 93.47 |
+| UD PROIEL | 90.51 | 82.47 | 63.50 | 86.68 | 59.43 | n/a |
 
 UD PROIEL is a genuine **out-of-domain** fold: no pyaegean model ever trains on it
 (see [Leakage controls](#leakage-controls)). Its lower LAS and UFeats are largely
@@ -55,11 +55,11 @@ deprel- and feature-convention divergence between the two treebanks' UD conversi
 (PROIEL annotates five feature types the Perseus scheme lacks, and PROIEL XPOS is a
 different tagset entirely), not raw error.
 
-**Seed replication.** The shipped checkpoint is one of five seed replicates of this
-recipe. Across those seeds the UD Perseus test mean plus or minus standard deviation
-is **LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12, UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04,
-lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL LAS 63.50 ± 0.04), so the headline
-figures are representative.
+**Historical seed replication.** Five decoder-v1 runs of this training recipe averaged
+**LAS 85.58 ± 0.10**, UAS 90.15 ± 0.12, UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04,
+lemma 94.30 ± 0.02, XPOS 93.52 ± 0.05 (PROIEL LAS 63.50 ± 0.04). This remains
+training-stability evidence, but it is not decoder-v2 replication; the current checkpoint
+numbers and confidence intervals below use decoder v2.
 
 The table places pyaegean's UD Perseus scores and confidence intervals beside the
 cited published comparison rows. The margin column is the arithmetic difference:
@@ -67,15 +67,15 @@ cited published comparison rows. The margin column is the arithmetic difference:
 | Metric | pyaegean | 95% CI | cited comparison | margin |
 | --- | --- | --- | --- | --- |
 | UPOS | 97.02 | [96.76, 97.29] | 95.83 (2023) | +1.19 |
-| XPOS | 93.48 | [93.09, 93.91] | 91.09 (2023) | +2.39 |
-| UFeats | 96.04 | [95.75, 96.34] | 92.56 (odyCy 2023) | +3.48 |
+| XPOS | 93.47 | [93.09, 93.90] | 91.09 (2023) | +2.38 |
+| UFeats | 96.03 | [95.75, 96.33] | 92.56 (odyCy 2023) | +3.47 |
 | Lemma | 94.27 | [93.89, 94.62] | 91.14 (GreTa+Chars 2023) | +3.13 |
 | UAS | 90.24 | [89.62, 90.80] | 88.20 (2023) | +2.04 |
-| LAS | 85.65 | [84.93, 86.29] | 83.98 (2023) | +1.67 |
+| LAS | 85.65 | [84.94, 86.29] | 83.98 (2023) | +1.67 |
 
 CIs are percentile bootstrap over the fold's sentences, 999 resamples
 (`greek.bootstrap_ud`'s default, so the reproduction command matches). The lower
-bounds (LAS 84.93, UAS 89.62) exceed the cited 83.98 / 88.20 rows. The cross-tool
+bounds (LAS 84.94, UAS 89.62) exceed the cited 83.98 / 88.20 rows. The cross-tool
 sources for the comparison column are cited in
 [Cross-tool comparison](#cross-tool-comparison-with-citations).
 
@@ -122,7 +122,7 @@ features and UAS/LAS are not reported here: the Robinson morph tagset does not a
 feature-for-feature with UD FEATS, and the Nestle 1904 word list carries no
 dependency trees, so those numbers would be convention artefacts rather than
 accuracy. For an NT *dependency* measurement, the UD PROIEL row above is exactly
-that: PROIEL's test fold is mostly New Testament, so its out-of-domain UAS 82.48
+that: PROIEL's test fold is mostly New Testament, so its out-of-domain UAS 82.47
 is the closest measured Koine parsing figure this document has.
 
 ## Documentary Koine: the PapyGreek fold
@@ -150,7 +150,7 @@ Dropping elliptic sentences biases the fold toward complete syntax. Full account
 
 | Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.50 | 79.56 | 75.40 |
+| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 |
 
 Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL
 row by about +16 LAS points. Reproduce: `aegean greek eval papygreek`. The current
@@ -187,15 +187,15 @@ claimed. Each variant is measured once, full-coverage and sequentially, on the p
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 |
+| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
 
 ## Diplomatic orthography and Byzantine verse
 
 The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
 measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
 UFeats 86.15 / lemma 82.05 / UAS 84.32 / LAS 77.55 / CLAS 72.94 vs the
-regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.50 / 79.56 / 75.40 —
+regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 —
 lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
 (tagging only, unedited medieval
 verse) scores UPOS 86.74 / lemma 76.71 over 9,191 tokens. Reproduce:
@@ -384,15 +384,16 @@ reference rather than rows in the single-protocol table above:
 
 **Like-for-like out-of-domain comparison.** The in-domain published systems train on
 the PROIEL fold itself; pyaegean never does. Against a *Perseus-trained* published
-system, the PROIEL rows are 82.48 for pyaegean and 59.00 for Stanza, an arithmetic
+system, the PROIEL rows are 82.47 for pyaegean and 59.00 for Stanza, an arithmetic
 difference of ~23 UAS.
 
 ## Model size and throughput
 
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
-uncompressed), while UD Perseus test scores are unchanged
-within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.6). The recipe
+uncompressed). In the recorded decoder-v1 quantization comparison, UD Perseus test
+scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS
+90.2 / LAS 85.6). The recipe
 is weight-only int8 (onnxruntime MatMulNBits, block 128, symmetric) plus fp16 on
 everything else, keeping activations at fp32 by design. Full int8 (quantized
 activations) collapses the GreBerta encoder (its activation outliers do not survive

@@ -1,0 +1,127 @@
+{
+  "what": "Full-protocol remeasurement of the shipped grc-joint-v3 checkpoint on the current work-disjoint PapyGreek folds after correcting the package dependency decoder to the exact single-root maximum-spanning-arborescence objective.",
+  "date": "2026-07-18",
+  "release_candidate": {
+    "package_version": "0.57.1",
+    "source_commit": "215c4cf1f70432e445751f0ff6cc8b2dababd5eb",
+    "source_tree": "3fcf6fa418d7af37f78458d5cf85c56462cefd11",
+    "decoder": "pyaegean-release-single-root-mst-v2"
+  },
+  "model": {
+    "model_id": "grc-joint-v3",
+    "runtime_variant": "default",
+    "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+    "asset_sha256_enforced": true,
+    "bundle_manifest_sha256": "db17b79df0a88d927870a708ecd666f3afdfd5cd890302854cab700b581ade5b"
+  },
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows 11",
+    "onnxruntime": "1.27.0",
+    "tokenizers": "0.23.1",
+    "numpy": "2.5.1",
+    "providers": [
+      "CPUExecutionProvider"
+    ]
+  },
+  "folds": {
+    "regularized": {
+      "identity": "papygreek-fold-v4",
+      "archive_sha256": "39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
+      "materialized_conllu_sha256": "81ce7dddd158bd4e3dbe41cd87746b80c0f2a85c86ce416ac44d602350e873aa",
+      "work_disjoint": true,
+      "sentence_form_disjoint": true
+    },
+    "diplomatic": {
+      "identity": "papygreek-fold-orig-v3",
+      "archive_sha256": "db338c428b63e52c715431f878740111be135dc236e4e8fb51c1a3c5e42f9d90",
+      "materialized_conllu_sha256": "6ec11d90fb7e5c968ec47d1c82adb219aceb651db74b1c42aa94b5805125516f",
+      "same_sentences_and_gold_as_regularized": true,
+      "form_differences": 1453
+    }
+  },
+  "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); CPU sequential; batch_size=None; long_input=windowed; complete coverage; gold tokenization; official CoNLL-2018 evaluator",
+  "results_full_precision": {
+    "regularized": {
+      "upos": 0.9152832141089666,
+      "xpos": 0.7718540513789536,
+      "ufeats": 0.887299230665407,
+      "lemma": 0.861024879650875,
+      "uas": 0.8550861564763576,
+      "las": 0.7956539344041031,
+      "clas": 0.753954802259887,
+      "n_words": 22227,
+      "n_sentences": 1551
+    },
+    "documentary_full": {
+      "upos": 0.9465964817564224,
+      "xpos": 0.8036172222972061,
+      "ufeats": 0.887299230665407,
+      "lemma": 0.861024879650875,
+      "uas": 0.8550861564763576,
+      "las": 0.7956539344041031,
+      "clas": 0.753954802259887,
+      "n_words": 22227,
+      "n_sentences": 1551
+    },
+    "diplomatic": {
+      "upos": 0.9056552841139155,
+      "xpos": 0.7464345165789356,
+      "ufeats": 0.8615197732487515,
+      "lemma": 0.820533585279165,
+      "uas": 0.8432087101273227,
+      "las": 0.7755432581994871,
+      "clas": 0.7294490406618553,
+      "n_words": 22227,
+      "n_sentences": 1551
+    }
+  },
+  "attribution": {
+    "decoder_v2_minus_2026_07_15_correct_tokens": {
+      "regularized": {
+        "upos": 0,
+        "xpos": 0,
+        "ufeats": 0,
+        "lemma": 0,
+        "uas": 1,
+        "las": 1,
+        "clas": 0
+      },
+      "documentary_full": {
+        "upos": 0,
+        "xpos": 0,
+        "ufeats": 0,
+        "lemma": 0,
+        "uas": 1,
+        "las": 1,
+        "clas": 0
+      },
+      "diplomatic": {
+        "upos": 0,
+        "xpos": 0,
+        "ufeats": 0,
+        "lemma": 0,
+        "uas": 1,
+        "las": 1,
+        "clas": 0
+      }
+    },
+    "interpretation": "The exact decoder correction changes one correctly attached and labeled dependency token on each PapyGreek surface evaluation. Tagging, morphology, lemmatization, CLAS, fold membership, model weights, and all non-decoder behavior are unchanged."
+  },
+  "variant_equivalence": {
+    "evidence": "training/results/documentary-levers-v3-2026-07-15.json",
+    "established_fact": "On this exact fold and model, documentary_reconciliation and documentary_full were byte-identical; the lemma rescue made no additional prediction, and the levers changed only UPOS/XPOS relative to baseline.",
+    "current_claim_treatment": "The newly measured documentary_full row is also the current documentary_reconciliation row. The decoder correction changes only dependency trees, while the established levers leave dependency trees unchanged."
+  },
+  "raw_outputs": {
+    "regularized_sha256": "7331d1ceb8cae4f45a7d484cfa66ac580d19a1cf629de55fb55179aab4953ff6",
+    "documentary_full_sha256": "626ed270ad744091fa40ca5cba5cae4a7fca536b68b907644d4f3c2996a642c8",
+    "diplomatic_sha256": "843d7504a1876dc398fc12389cffccdd588cfa20ac62879a88a8b4ab46a55e02"
+  },
+  "supersedes_current_claims": [
+    "training/results/papygreek-eval-v4-2026-07-15.json",
+    "training/results/papygreek-orig-eval-v3-2026-07-15.json",
+    "training/results/documentary-levers-v3-2026-07-15.json"
+  ],
+  "claims_decision": "Use these decoder-v2 measurements as the current PapyGreek score evidence. Preserve the July 15 files as immutable decoder-v1 historical records."
+}

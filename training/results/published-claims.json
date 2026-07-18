@@ -5,18 +5,18 @@
   "uas": 90.24,
   "las": 85.65,
   "upos": 97.02,
-  "ufeats": 96.04,
-  "xpos": 93.48,
-  "source_evidence": "training/results/lemma-remeasure-2026-07-09.json (full-protocol re-measure, 2026-07-09; the lemma cell reflects the 0.32.0 lemma-composition fix, the other cells are the same run). The 2026-06 quantize-era record (training/results/v3-quantize-report.json) differs by a few hundredths on UPOS/UAS/LAS because of evaluation-path corrections since; it remains the historical record for the quantization size claims.",
+  "ufeats": 96.03,
+  "xpos": 93.47,
+  "source_evidence": "training/results/decoder-v2-remeasure-2026-07-18.json (full-protocol current decoder-v2 remeasurement). Earlier decoder-v1 and quantize-era records remain immutable historical evidence for their own runtime and quantization claims.",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('perseus','test'); gold tokenization; CoNLL-2018 evaluator"
  },
  "neural_ud_proiel_test": {
   "lemma": 90.51,
-  "uas": 82.48,
+  "uas": 82.47,
   "las": 63.5,
-  "upos": 86.69,
+  "upos": 86.68,
   "ufeats": 59.43,
-  "source_evidence": "training/results/lemma-remeasure-2026-07-09.json",
+  "source_evidence": "training/results/decoder-v2-remeasure-2026-07-18.json",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_ud('proiel','test'); out of domain (never trained on PROIEL)"
  },
  "neural_seed_replicates": {
@@ -24,6 +24,8 @@
   "las_std": 0.1,
   "uas_mean": 90.15,
   "uas_std": 0.12,
+  "decoder": "pyaegean-release-single-root-mst-v1",
+  "claim_status": "historical training evidence; not decoder-v2 replication",
   "source_evidence": "training/results/seed-grc-joint-v2/summary.json"
  },
  "neural_nt": {
@@ -76,10 +78,10 @@
   "note": "greek.bootstrap_ud's default; docs/benchmarks.md states the same so the reproduction command matches"
  },
  "out_of_domain_lead": {
-  "pyaegean_proiel_uas": 82.48,
+  "pyaegean_proiel_uas": 82.47,
   "stanza_perseus_proiel_uas": 59.0,
   "stated_lead": 23,
-  "note": "~23 = round(82.48 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
+  "note": "~23 = round(82.47 - 59.00); the cited Perseus-trained baseline is Stanza-perseus (OdyCy paper)"
  },
  "calibration_ece": {
   "upos_temperature": 1.341,
@@ -108,20 +110,20 @@
   "las_label_only_points": 19.0,
   "label_only_tokens": 2526,
   "top5_label_confusion_share": 68.9,
-  "source_evidence": "training/results/proiel-convention-decomp-2026-07-11.json",
-  "protocol": "greek.proiel_convention_report(); UD-PROIEL test, neural pipeline, decomposition of the published UFeats/UAS/LAS rows (reproduces the official evaluator to 4 decimals); measurement only — the published rows are unchanged"
+  "source_evidence": "training/results/proiel-convention-decomp-2026-07-11.json; current decoder-v2 check: training/results/decoder-v2-remeasure-2026-07-18.json",
+  "protocol": "greek.proiel_convention_report(); UD-PROIEL test, neural pipeline, batch-size-32 diagnostic decomposition; measurement only. The detailed buckets are unchanged under decoder v2. Its 82.4771 batched UAS is 0.0075 points above the current 82.4696 sequential headline (one token), so it is not represented as an exact reproduction of that row."
  },
  "neural_papygreek_test": {
   "upos": 91.53,
   "xpos": 77.19,
   "ufeats": 88.73,
   "lemma": 86.1,
-  "uas": 85.5,
-  "las": 79.56,
+  "uas": 85.51,
+  "las": 79.57,
   "clas": 75.4,
   "n_words": 22227,
   "n_sentences": 1551,
-  "source_evidence": "training/results/papygreek-eval-v4-2026-07-15.json",
+  "source_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD); work- and sentence-form-disjoint papygreek-fold-v4; CPU sequential; batch_size=None; complete-word windowed coverage; official CoNLL-2018 evaluator",
   "historical_note": "The prior 24,105-token row remains historical: it included 145 sentences from 29 training-overlapping works and silently used placeholder tails for one over-limit retained sentence. The model weights are unchanged; the current row corrects the fold and coverage protocol.",
   "documentary_reconciliation": {
@@ -129,8 +131,8 @@
    "xpos": 80.36,
    "ufeats": 88.73,
    "lemma": 86.1,
-   "uas": 85.5,
-   "las": 79.56,
+   "uas": 85.51,
+   "las": 79.57,
    "clas": 75.4,
    "note": "opt-in Lever A, conservative coordinator reconciliation (use_documentary_reconciliation); only UPOS/XPOS move, every other metric byte-identical to the baseline run"
   },
@@ -139,12 +141,12 @@
    "xpos": 80.36,
    "ufeats": 88.73,
    "lemma": 86.1,
-   "uas": 85.5,
-   "las": 79.56,
+   "uas": 85.51,
+   "las": 79.57,
    "clas": 75.4,
    "note": "opt-in Levers A+B (reconciliation + guarded seed/paradigm lemma rescue); on the corrected fold the lemma rescue fires no additional successful prediction, so this row is byte-identical to documentary_reconciliation and no lemma lift is claimed"
   },
-  "variant_evidence": "training/results/documentary-levers-v3-2026-07-15.json",
+  "variant_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json",
   "orig_layer": {
    "upos": 90.57,
    "xpos": 74.64,
@@ -154,7 +156,7 @@
    "las": 77.55,
    "clas": 72.94,
    "note": "the diplomatic-orthography surface of the SAME sentences and gold (papygreek-fold-orig); the delta vs the reg row isolates the cost of the scribes' non-standard documentary usage (spelling and a minority of morphosyntactic regularizations)",
-   "source_evidence": "training/results/papygreek-orig-eval-v3-2026-07-15.json"
+   "source_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json"
   }
  },
  "papygreek_convention_decomposition": {

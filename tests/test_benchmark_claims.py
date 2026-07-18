@@ -27,11 +27,10 @@ def _read(rel: str) -> str:
 
 def test_registry_agrees_with_the_remeasure_evidence() -> None:
     """Every neural accuracy row must equal the newest full-protocol evidence file
-    (the 2026-07-09 re-measure, taken with the 0.32.0 lemma-composition fix). The v3
-    quantize report stays as the historical record backing the size claims; its
-    accuracy cells reflect the 2026-06 evaluation path and are superseded."""
+    (the 2026-07-18 decoder-v2 remeasurement). Older decoder-v1 files remain
+    historical evidence for their own fixes and quantization claims."""
     claims = _claims()
-    rem = json.loads(_read("training/results/lemma-remeasure-2026-07-09.json"))
+    rem = json.loads(_read("training/results/decoder-v2-remeasure-2026-07-18.json"))
     res = rem["results_full_precision"]
     row = claims["neural_ud_perseus_test"]
     for metric in ("lemma", "uas", "las", "upos", "ufeats", "xpos"):
@@ -39,10 +38,12 @@ def test_registry_agrees_with_the_remeasure_evidence() -> None:
     prow = claims["neural_ud_proiel_test"]
     for metric in ("lemma", "uas", "las", "upos", "ufeats"):
         assert prow[metric] == round(res["proiel_ud_test"][metric] * 100, 2), metric
+    nt_ev = json.loads(_read("training/results/lemma-remeasure-2026-07-09.json"))
+    nt_res = nt_ev["results_full_precision"]["nt_whole"]
     nt = claims["neural_nt"]
-    assert nt["lemma"] == round(res["nt_whole"]["lemma"] * 100, 2)
-    assert nt["upos_reconciled"] == round(res["nt_whole"]["upos_reconciled"] * 100, 2)
-    assert nt["n_tokens"] == res["nt_whole"]["n_tokens"]
+    assert nt["lemma"] == round(nt_res["lemma"] * 100, 2)
+    assert nt["upos_reconciled"] == round(nt_res["upos_reconciled"] * 100, 2)
+    assert nt["n_tokens"] == nt_res["n_tokens"]
 
 
 def test_doc_confidence_intervals_match_the_bootstrap_evidence() -> None:
@@ -51,11 +52,10 @@ def test_doc_confidence_intervals_match_the_bootstrap_evidence() -> None:
     claims = _claims()["neural_ud_perseus_test"]
     doc = _read("docs/benchmarks.md")
     page = _read("wiki/Benchmarks.md")
-    ev = _read("training/results/v3-bootstrap-ci-2026-07-10.txt")
-    for line in ev.strip().splitlines():
-        metric, point, _, _, low, high = line.split()
-        assert float(point) == claims[metric], metric
-        cell = f"[{low.strip('[,')}, {high.strip(']')}]"
+    ev = json.loads(_read("training/results/decoder-v2-remeasure-2026-07-18.json"))
+    for metric, interval in ev["perseus_bootstrap_95_percent"].items():
+        assert round(interval["point"] * 100, 2) == claims[metric], metric
+        cell = f"[{interval['low'] * 100:.2f}, {interval['high'] * 100:.2f}]"
         assert cell in doc, f"{metric} CI {cell} missing from docs/benchmarks.md"
         assert cell in page, f"{metric} CI {cell} missing from wiki/Benchmarks.md"
 
@@ -86,8 +86,10 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
 
 def test_papygreek_row_matches_registry_and_evidence() -> None:
     claims = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/papygreek-eval-v4-2026-07-15.json"))
-    res = ev["results_full_precision"]
+    ev = json.loads(
+        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+    )
+    res = ev["results_full_precision"]["regularized"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         assert claims[metric] == round(res[metric] * 100, 2), metric
     assert claims["n_words"] == res["n_words"]
@@ -97,13 +99,13 @@ def test_papygreek_row_matches_registry_and_evidence() -> None:
     )
     assert correction["counts"]["new_regularized_tokens"] == res["n_words"]
     assert correction["counts"]["new_regularized_sentences"] == res["n_sentences"]
-    assert correction["artifacts"]["new_regularized"]["sha256"] == ev["fold"][
+    assert correction["artifacts"]["new_regularized"]["sha256"] == ev["folds"]["regularized"][
         "archive_sha256"
     ]
     assert correction["counts"]["removed_sentences"] == 145
     assert correction["counts"]["removed_tokens"] == 1878
-    assert ev["protocol"]["coverage"] == "complete"
-    assert ev["fold"]["work_disjoint"] is True
+    assert "complete coverage" in ev["protocol"]
+    assert ev["folds"]["regularized"]["work_disjoint"] is True
     doc = _read("docs/benchmarks.md")
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         assert f"{claims[metric]:.2f}" in doc, metric
@@ -154,13 +156,33 @@ def test_papygreek_decomposition_matches_registry_and_evidence() -> None:
             assert token in text, f"{token} missing from {doc}"
 
 
+def test_proiel_decomposition_is_labeled_as_a_batched_diagnostic() -> None:
+    """The convention buckets remain pinned while the one-token difference from the
+    current sequential headline is explicit rather than described as exact agreement."""
+    reg = _claims()["proiel_convention_decomposition"]
+    old = json.loads(_read("training/results/proiel-convention-decomp-2026-07-11.json"))
+    current = json.loads(_read("training/results/decoder-v2-remeasure-2026-07-18.json"))
+    assert reg["ufeats_gap_points"] == round(old["ufeats_decomposition"]["gap_total_pts"], 1)
+    assert reg["label_only_tokens"] == old["las_decomposition"]["label_only_errors"]
+    diagnostic = current["proiel_convention_diagnostic"]
+    diagnostic_uas = diagnostic["uas"]
+    assert round(diagnostic_uas * 100, 4) == old["recomputed"]["uas"]
+    sequential_uas = current["results_full_precision"]["proiel_ud_test"]["uas"]
+    assert round(abs(diagnostic_uas - sequential_uas) * old["n_words"]) == 1
+    assert diagnostic["difference_from_sequential_headline"]["correct_tokens"] == 1
+    assert "batch-size-32 diagnostic" in reg["protocol"]
+    assert "not represented as an exact reproduction" in reg["protocol"]
+
+
 def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     """The opt-in documentary-lever variant rows stay pinned to their one-shot
     sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
     row = _claims()["neural_papygreek_test"]
-    ev = json.loads(_read("training/results/documentary-levers-v3-2026-07-15.json"))
+    ev = json.loads(
+        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+    )
     for variant in ("documentary_reconciliation", "documentary_full"):
-        res = ev["results_full_precision"][variant]
+        res = ev["results_full_precision"]["documentary_full"]
         reg = row[variant]
         for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
             assert reg[metric] == round(res[metric] * 100, 2), f"{variant}.{metric}"
@@ -171,7 +193,8 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     full = row["documentary_full"]
     assert full["upos"] == rec["upos"] and full["xpos"] == rec["xpos"]
     assert full == {**rec, "note": full["note"]}
-    assert ev["scope_validation"]["reconciliation_to_full_prediction_diffs"] == {
+    old = json.loads(_read("training/results/documentary-levers-v3-2026-07-15.json"))
+    assert old["scope_validation"]["reconciliation_to_full_prediction_diffs"] == {
         "form": 0,
         "lemma": 0,
         "upos": 0,
@@ -205,12 +228,15 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
     """The diplomatic-orthography and Byzantine-tagging rows stay pinned to their
     one-shot sequential evidence, and each carries its caveat note."""
     reg = _claims()
-    ev = json.loads(_read("training/results/papygreek-orig-eval-v3-2026-07-15.json"))
+    ev = json.loads(
+        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+    )
     row = reg["neural_papygreek_test"]["orig_layer"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
-        assert row[metric] == round(ev["results_full_precision"][metric] * 100, 2), metric
-    assert ev["fold"]["same_sentences_and_gold_as_regularized"] is True
-    assert ev["fold"]["form_differences"] == 1453
+        value = ev["results_full_precision"]["diplomatic"][metric]
+        assert row[metric] == round(value * 100, 2), metric
+    assert ev["folds"]["diplomatic"]["same_sentences_and_gold_as_regularized"] is True
+    assert ev["folds"]["diplomatic"]["form_differences"] == 1453
     ev2 = json.loads(_read("training/results/dbbe-eval-v2-2026-07-11.json"))
     drow = reg["neural_dbbe_test"]
     for metric in ("upos", "xpos", "ufeats", "lemma"):
@@ -256,6 +282,8 @@ def test_registry_agrees_with_the_seed_replicate_evidence() -> None:
     assert round(summary["las"]["std"], 2) == claims["las_std"]
     assert round(summary["uas"]["mean"], 2) == claims["uas_mean"]
     assert round(summary["uas"]["std"], 2) == claims["uas_std"]
+    assert claims["decoder"] == "pyaegean-release-single-root-mst-v1"
+    assert claims["claim_status"] == "historical training evidence; not decoder-v2 replication"
 
 
 def test_benchmarks_doc_carries_the_neural_rows() -> None:
@@ -269,6 +297,7 @@ def test_benchmarks_doc_carries_the_neural_rows() -> None:
         assert f"{v:.2f}" in doc, f"PROIEL {metric} {v} missing from docs/benchmarks.md"
     seeds = claims["neural_seed_replicates"]
     assert f"LAS {seeds['las_mean']:.2f} ± {seeds['las_std']:.2f}" in doc
+    assert "historical decoder-v1 training replication" in doc.lower()
 
 
 def test_benchmarks_doc_carries_the_offline_baseline_rows() -> None:
@@ -338,9 +367,8 @@ def test_readme_and_wiki_echoes_match_the_registry() -> None:
     README and Home state them as prose ("97.0 UPOS / ..."); Greek-NLP as a table row,
     so each page is checked for the rounded values it actually carries. The 1-decimal
     figures round from the FULL-PRECISION evidence, not from the registry's 2-decimal
-    cells: re-rounding an already-rounded pin double-rounds (85.648 -> 85.65 -> 85.7,
-    overstating a measured 85.6)."""
-    rem = json.loads(_read("training/results/lemma-remeasure-2026-07-09.json"))
+    cells, because re-rounding an already-rounded pin can change the displayed tenth."""
+    rem = json.loads(_read("training/results/decoder-v2-remeasure-2026-07-18.json"))
     per = rem["results_full_precision"]["perseus_test"]
     row = _claims()["neural_ud_perseus_test"]
     rounded = {m: f"{per[m] * 100:.1f}" for m in ("upos", "ufeats", "lemma", "uas", "las")}

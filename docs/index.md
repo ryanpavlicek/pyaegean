@@ -11,12 +11,12 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.57.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.57.1 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
 benchmark through the shipped package at
-**97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.6 LAS** on the test fold
+**97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS** on the test fold
 ([protocol and tables](benchmarks.md)). Analytical output on the *undeciphered* material
 (Linear A, Cypro-Minoan) is always labeled **exploratory**: leads for a human expert, never
 ground truth.

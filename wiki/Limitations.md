@@ -280,9 +280,9 @@ always reported together.
 | Metric | UD Perseus (in family) | UD PROIEL (out of domain) |
 | --- | --- | --- |
 | Lemma | 94.27 | 90.51 |
-| UPOS | 97.02 | 86.69 |
-| UFeats | 96.04 | 59.43 (convention-capped) |
-| UAS | 90.24 | 82.48 |
+| UPOS | 97.02 | 86.68 |
+| UFeats | 96.03 | 59.43 (convention-capped) |
+| UAS | 90.24 | 82.47 |
 | LAS | 85.65 | 63.50 (scheme-capped) |
 
 The PROIEL UFeats/LAS figures are *measurement* boundaries, not model failures:

@@ -14,9 +14,11 @@ including the word-embedding table; activations kept fp32), ~173 MB, produced fr
 `grc-joint-v2` checkpoint by `quantize_grc_joint.py`. The fp32 `grc-joint-v2` (~518 MB) is
 retained for reproducibility. One GreBerta encoder serves UPOS, XPOS, UD FEATS, dependency
 trees, and lemmas. On the UD Ancient Greek (Perseus) test fold it scores lemma 94.27 /
-UAS 90.24 / LAS 85.65 / UPOS 97.02 / UFeats 96.04 / XPOS 93.48, and lemma 90.51 on PROIEL
-(out of domain); quantization is lossless within ±0.02 on those metrics. Across five training
-seeds the recipe averages LAS 85.58 ± 0.10 / UAS 90.15 ± 0.12.
+UAS 90.24 / LAS 85.65 / UPOS 97.02 / UFeats 96.03 / XPOS 93.47, and lemma 90.51 on PROIEL
+(out of domain). The recorded decoder-v1 quantization comparison was lossless within ±0.02
+on its measured metrics. Five historical decoder-v1 training seeds averaged LAS
+85.58 ± 0.10 / UAS 90.15 ± 0.12; that is training-stability evidence, not decoder-v2
+replication.
 
 ## Pipeline
 

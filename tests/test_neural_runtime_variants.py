@@ -94,10 +94,10 @@ def test_default_registry_pin_is_the_unchanged_data_asset() -> None:
             __import__("pathlib").Path(__file__).parents[1]
             / "training"
             / "results"
-            / "papygreek-eval-v4-2026-07-15.json"
+            / "decoder-v2-papygreek-remeasure-2026-07-18.json"
         ).read_text(encoding="utf-8")
     )
-    assert default.model_id == evidence["model"]["identity"]
+    assert default.model_id == evidence["model"]["model_id"]
     assert default.asset_sha256 == evidence["model"]["asset_sha256"]
     assert default.bundle_manifest_sha256 == evidence["model"]["bundle_manifest_sha256"]
 

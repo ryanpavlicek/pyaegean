@@ -81,10 +81,10 @@ end-to-end from raw text, tokens F1 99.97):
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
-| neural pipeline | 97.0 | 96.0 | 94.3 | 90.2 | 85.6 |
+| neural pipeline | 97.0 | 96.0 | 94.3 | 90.2 | 85.7 |
 
 The full protocol, the comparison tables against other systems, and the
-out-of-domain PROIEL-test figures (lemma 90.51, UAS 82.48, UPOS 86.69) are in
+out-of-domain PROIEL-test figures (lemma 90.51, UAS 82.47, UPOS 86.68) are in
 [Benchmarks](Benchmarks).
 
 ### The protocol, in short
