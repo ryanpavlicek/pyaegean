@@ -62,34 +62,80 @@ class JointParser(nn.Module):
     With ``n_scripts > 0`` (Stage D), a word-level lemma head classifies edit scripts —
     the full pipeline (tags, morphology, trees, lemmas) in one checkpoint."""
 
-    def __init__(self, model_name: str, tag_sizes: dict[str, int], n_rels: int,
-                 arc_dim: int = 512, rel_dim: int = 128, n_scripts: int = 0) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        tag_sizes: dict[str, int],
+        n_rels: int,
+        arc_dim: int = 512,
+        rel_dim: int = 128,
+        n_scripts: int = 0,
+        parser_features: prep.ParserFeatureSpec | None = None,
+    ) -> None:
         super().__init__()
         self.encoder = AutoModel.from_pretrained(model_name)
         hidden = self.encoder.config.hidden_size
         self.dropout = nn.Dropout(0.1)
         self.tag_heads = nn.ModuleDict({h: nn.Linear(hidden, n) for h, n in tag_sizes.items()})
+
+        self.parser_features = parser_features or prep.make_parser_feature_spec()
+        parser_input = hidden
+        if self.parser_features.mode == prep.PARSER_FEATURE_SOFT_UPOS_MORPH:
+            missing = set(self.parser_features.source_heads) - set(tag_sizes)
+            if missing:
+                raise ValueError(f"soft parser features require tag heads: {sorted(missing)!r}")
+            distribution_dim = sum(tag_sizes[h] for h in self.parser_features.source_heads)
+            self.parser_feature_projection: nn.Module | None = nn.Sequential(
+                nn.Linear(distribution_dim, self.parser_features.projection_dim),
+                nn.Tanh(),
+            )
+            parser_input += self.parser_features.projection_dim
+        else:
+            self.parser_feature_projection = None
+
         def mlp(out: int) -> nn.Sequential:
-            return nn.Sequential(nn.Linear(hidden, out), nn.GELU(), nn.Dropout(0.33))
+            return nn.Sequential(nn.Linear(parser_input, out), nn.GELU(), nn.Dropout(0.33))
+
         self.arc_dep, self.arc_head = mlp(arc_dim), mlp(arc_dim)
         self.rel_dep, self.rel_head = mlp(rel_dim), mlp(rel_dim)
         self.arc_attn = Biaffine(arc_dim, 1)
         self.rel_attn = Biaffine(rel_dim, n_rels)
         self.lemma_head = nn.Linear(hidden, n_scripts) if n_scripts else None
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
-                word_pos: torch.Tensor):
+    def forward(
+        self, input_ids: torch.Tensor, attention_mask: torch.Tensor, word_pos: torch.Tensor
+    ):
         """word_pos: [B, W] subword index of each word's first subword (0-padded)."""
         hidden = self.encoder(input_ids=input_ids, attention_mask=attention_mask).last_hidden_state
         hidden = self.dropout(hidden)
         tag_logits = {h: head(hidden) for h, head in self.tag_heads.items()}  # subword-level
         idx = word_pos.unsqueeze(-1).expand(-1, -1, hidden.size(-1))
-        words = hidden.gather(1, idx)                       # [B, W, H]
-        root = hidden[:, :1]                                # <s> stands in for ROOT
-        cands = torch.cat((root, words), dim=1)             # [B, W+1, H]
-        arc = self.arc_attn(self.arc_dep(words), self.arc_head(cands)).squeeze(1)  # [B, W, W+1]
-        rel = self.rel_attn(self.rel_dep(words), self.rel_head(cands))             # [B, R, W, W+1]
-        lem = self.lemma_head(words) if self.lemma_head is not None else None      # [B, W, S]
+        words = hidden.gather(1, idx)  # [B, W, H]
+        root = hidden[:, :1]  # <s> stands in for ROOT
+        cands = torch.cat((root, words), dim=1)  # [B, W+1, H]
+        parser_words = words
+        parser_cands = cands
+        if self.parser_feature_projection is not None:
+            distributions = []
+            for head in self.parser_features.source_heads:
+                logits = tag_logits[head]
+                head_idx = word_pos.unsqueeze(-1).expand(-1, -1, logits.size(-1))
+                word_logits = logits.gather(1, head_idx)
+                distributions.append(torch.softmax(word_logits.float(), dim=-1).to(words.dtype))
+            projected = self.parser_feature_projection(torch.cat(distributions, dim=-1))
+            # Position zero is reserved for padding; ROOT has no predicted POS/morphology.
+            projected = projected * word_pos.ne(0).unsqueeze(-1).to(projected.dtype)
+            root_features = projected.new_zeros(projected.size(0), 1, projected.size(-1))
+            candidate_features = torch.cat((root_features, projected), dim=1)
+            parser_words = torch.cat((words, projected), dim=-1)
+            parser_cands = torch.cat((cands, candidate_features), dim=-1)
+        arc = self.arc_attn(self.arc_dep(parser_words), self.arc_head(parser_cands)).squeeze(
+            1
+        )  # [B, W, W+1]
+        rel = self.rel_attn(
+            self.rel_dep(parser_words), self.rel_head(parser_cands)
+        )  # [B, R, W, W+1]
+        lem = self.lemma_head(words) if self.lemma_head is not None else None  # [B, W, S]
         return tag_logits, arc, rel, lem
 
 
@@ -112,8 +158,10 @@ def encode(example: dict, tokenizer, maps: dict[str, dict[str, int]], max_len: i
 def collate(batch: list[dict], pad_id: int) -> dict[str, torch.Tensor]:
     sub_w = max(len(b["input_ids"]) for b in batch)
     word_w = max(len(b["word_pos"]) for b in batch)
+
     def pad(key: str, value: int, width: int) -> torch.Tensor:
         return torch.tensor([b[key] + [value] * (width - len(b[key])) for b in batch])
+
     out = {
         "input_ids": pad("input_ids", pad_id, sub_w),
         "attention_mask": pad("attention_mask", 0, sub_w),
@@ -143,10 +191,10 @@ def evaluate(model, dl, device, amp_dtype) -> dict[str, float]:
             mask_tag = gold_up != -100
             n_tag += int(mask_tag.sum())
             upos_ok += int((up[mask_tag] == gold_up[mask_tag]).sum())
-            pred_heads = arc.argmax(-1)                       # [B, W]
+            pred_heads = arc.argmax(-1)  # [B, W]
             gh, gr = batch["arc_heads"], batch["arc_rels"]
             B, W = gh.shape
-            ar = rel.permute(0, 2, 3, 1)                      # [B, W, W+1, R]
+            ar = rel.permute(0, 2, 3, 1)  # [B, W, W+1, R]
             for b in range(B):
                 for wi in range(int(batch["n_words"][b])):
                     if gh[b, wi].item() == -100:
@@ -174,6 +222,12 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--precision", choices=("auto", "bf16", "fp16", "fp32"), default="auto")
     ap.add_argument("--limit-train", type=int, default=0)
+    ap.add_argument(
+        "--parser-features",
+        choices=(prep.PARSER_FEATURE_ENCODER_ONLY, prep.PARSER_FEATURE_SOFT_UPOS_MORPH),
+        default=prep.PARSER_FEATURE_ENCODER_ONLY,
+    )
+    ap.add_argument("--parser-feature-dim", type=int, default=prep.DEFAULT_PARSER_FEATURE_DIM)
     args = ap.parse_args()
 
     random.seed(args.seed)
@@ -182,8 +236,13 @@ def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     precision = args.precision
     if precision == "auto":
-        precision = ("bf16" if device == "cuda" and torch.cuda.is_bf16_supported()
-                     else "fp16" if device == "cuda" else "fp32")
+        precision = (
+            "bf16"
+            if device == "cuda" and torch.cuda.is_bf16_supported()
+            else "fp16"
+            if device == "cuda"
+            else "fp32"
+        )
     amp_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16}.get(precision)
     use_scaler = precision == "fp16"
     if device == "cuda":
@@ -207,15 +266,25 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
     prep.configure_tokenizer(tokenizer, args.max_len)
     prep.validate_tokenizer_contract(tokenizer, args.max_len)
-    model = JointParser(args.model, {h: len(maps[h]) for h in TAG_HEADS},
-                        n_rels=len(maps["deprel"])).to(device)
+    parser_features = prep.make_parser_feature_spec(args.parser_features, args.parser_feature_dim)
+    model = JointParser(
+        args.model,
+        {h: len(maps[h]) for h in TAG_HEADS},
+        n_rels=len(maps["deprel"]),
+        parser_features=parser_features,
+    ).to(device)
     pad_id = tokenizer.pad_token_id or 0
 
     enc_train = [encode(r, tokenizer, maps, args.max_len) for r in train_rows]
     enc_dev = [encode(r, tokenizer, maps, args.max_len) for r in dev_rows]
     g = torch.Generator().manual_seed(args.seed)
-    dl_train = DataLoader(enc_train, batch_size=args.batch, shuffle=True, generator=g,
-                          collate_fn=lambda b: collate(b, pad_id))
+    dl_train = DataLoader(
+        enc_train,
+        batch_size=args.batch,
+        shuffle=True,
+        generator=g,
+        collate_fn=lambda b: collate(b, pad_id),
+    )
     dl_dev = DataLoader(enc_dev, batch_size=32, collate_fn=lambda b: collate(b, pad_id))
 
     steps = math.ceil(len(dl_train)) * args.epochs
@@ -244,9 +313,11 @@ def main() -> None:
                 loss = loss + ce(arc.flatten(0, 1), gh.flatten())
                 # relation loss at gold arcs
                 gh_safe = gh.clamp(min=0)
-                rel_at_gold = rel.permute(0, 2, 3, 1).gather(
-                    2, gh_safe.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1))
-                ).squeeze(2)                                   # [B, W, R]
+                rel_at_gold = (
+                    rel.permute(0, 2, 3, 1)
+                    .gather(2, gh_safe.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1)))
+                    .squeeze(2)
+                )  # [B, W, R]
                 loss = loss + ce(rel_at_gold.flatten(0, 1), gr.flatten())
             scaler.scale(loss).backward()
             scaler.step(optim)
@@ -258,26 +329,46 @@ def main() -> None:
         m = evaluate(model, dl_dev, device, amp_dtype)
         m["epoch"] = epoch
         history.append(m)
-        print(f"epoch {epoch}: dev UAS {m['uas']:.4f}  LAS {m['las']:.4f}  UPOS {m['upos_acc']:.4f}",
-              flush=True)
+        print(
+            f"epoch {epoch}: dev UAS {m['uas']:.4f}  LAS {m['las']:.4f}  UPOS {m['upos_acc']:.4f}",
+            flush=True,
+        )
         if m["las"] > best:
             best = m["las"]
             torch.save(model.state_dict(), out / "model" / "joint_parser.pt")
             prep.configure_tokenizer(tokenizer, args.max_len)
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
-                json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps,
-                            **prep.contract_metadata(args.max_len)},
-                           ensure_ascii=False), encoding="utf-8")
+                json.dumps(
+                    {
+                        "model_name": args.model,
+                        "tag_heads": TAG_HEADS,
+                        "maps": maps,
+                        **prep.parser_feature_metadata(parser_features),
+                        **prep.contract_metadata(args.max_len),
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
 
     metrics = {
-        "model": args.model, "history": history,
+        "model": args.model,
+        "history": history,
         "best": max(history, key=lambda m: m["las"]),
         "wall_s": round(time.time() - t0, 1),
-        "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2) if device == "cuda" else None,
+        "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2)
+        if device == "cuda"
+        else None,
         "gpu": torch.cuda.get_device_name(0) if device == "cuda" else None,
-        "precision": precision, "epochs": args.epochs, "lr": args.lr, "batch": args.batch,
-        "max_len": args.max_len, "seed": args.seed, "n_train_sentences": len(train_rows),
+        "precision": precision,
+        "epochs": args.epochs,
+        "lr": args.lr,
+        "batch": args.batch,
+        "max_len": args.max_len,
+        "seed": args.seed,
+        "n_train_sentences": len(train_rows),
+        **prep.parser_feature_metadata(parser_features),
     }
     (out / "metrics.json").write_text(json.dumps(metrics, indent=1), encoding="utf-8")
     print(json.dumps(metrics["best"], indent=1))

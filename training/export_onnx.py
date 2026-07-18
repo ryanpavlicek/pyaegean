@@ -103,6 +103,7 @@ def _export_graph(
         {head: len(checkpoint_spec.maps[head]) for head in TAG_HEADS},
         n_rels=len(checkpoint_spec.maps["deprel"]),
         n_scripts=checkpoint_spec.n_scripts,
+        parser_features=checkpoint_spec.parser_features,
     )
     model.load_state_dict(torch.load(checkpoint / "joint_full.pt", map_location="cpu"))
     model.eval()

@@ -34,6 +34,7 @@ from .neural_preprocessing import (
     SPECIAL_TOKEN_POLICY,
     TAG_HEADS,
     tokenizer_json_contract,
+    validate_parser_feature_spec,
 )
 
 __all__ = [
@@ -77,6 +78,7 @@ def _reject_duplicate_receipt_pairs(
             raise ValueError(f"duplicate JSON object key {key!r}")
         value[key] = item
     return value
+
 
 # The root archive SHA in aegean.data authenticates a normal fetch. This table also pins
 # the identity of a directly supplied or mirror-served legacy extraction: a different set
@@ -177,11 +179,13 @@ def _validate_files(model_dir: Path, files: Mapping[str, tuple[int, str]]) -> No
 
 def _validate_labels(model_dir: Path) -> tuple[tuple[str, ...], int]:
     labels = _json_object(model_dir / "labels.json")
+    try:
+        validate_parser_feature_spec(labels)
+    except ValueError as exc:
+        raise ModelBundleError(str(exc)) from exc
     heads = labels.get("tag_heads")
     if not isinstance(heads, list) or tuple(heads) != _TAG_HEADS:
-        raise ModelBundleError(
-            f"labels.json tag_heads must be {list(_TAG_HEADS)!r}; got {heads!r}"
-        )
+        raise ModelBundleError(f"labels.json tag_heads must be {list(_TAG_HEADS)!r}; got {heads!r}")
     maps = labels.get("maps")
     if not isinstance(maps, dict):
         raise ModelBundleError("labels.json maps must be an object")
@@ -209,8 +213,12 @@ def _validate_labels(model_dir: Path) -> tuple[tuple[str, ...], int]:
         )
     lookup = _json_object(model_dir / "lemma-lookup.json")
     lookup_keys = {"form", "form_upos", "form_lower"}
-    if not lookup_keys.issubset(lookup) or any(not isinstance(lookup[k], dict) for k in lookup_keys):
-        raise ModelBundleError("lemma-lookup.json must contain object maps form/form_upos/form_lower")
+    if not lookup_keys.issubset(lookup) or any(
+        not isinstance(lookup[k], dict) for k in lookup_keys
+    ):
+        raise ModelBundleError(
+            "lemma-lookup.json must contain object maps form/form_upos/form_lower"
+        )
     return tuple(heads), n_scripts
 
 
@@ -224,9 +232,7 @@ def _tokenizer_contract(model_dir: Path) -> tuple[int, str, str]:
     return max_subwords, revision, special_policy
 
 
-def validate_joint_checkpoint_sidecars(
-    model_dir: str | Path, metadata: Mapping[str, Any]
-) -> None:
+def validate_joint_checkpoint_sidecars(model_dir: str | Path, metadata: Mapping[str, Any]) -> None:
     """Validate joint labels, lemma data, and tokenizer before ONNX export."""
     root = Path(model_dir)
     _validate_labels(root)
@@ -237,9 +243,7 @@ def validate_joint_checkpoint_sidecars(
             f"tokenizer max_length {max_subwords}"
         )
     if metadata.get("special_token_policy") != special_policy:
-        raise ModelBundleError(
-            "checkpoint special_token_policy disagrees with tokenizer.json"
-        )
+        raise ModelBundleError("checkpoint special_token_policy disagrees with tokenizer.json")
 
 
 def prepare_schema1_artifact_dir(out: str | Path, artifact_name: str) -> Path:
@@ -361,9 +365,7 @@ def build_schema1_manifest(
         )
     dataset = _string(dataset, "dataset")
     profile = _manifest_metadata_value(metadata, annotation_profile, "annotation_profile")
-    norm = _manifest_metadata_value(
-        metadata, normalization, "normalization", "normalization_form"
-    )
+    norm = _manifest_metadata_value(metadata, normalization, "normalization", "normalization_form")
     segmentation_value = _manifest_metadata_value(
         metadata, segmentation, "segmentation", "input_segmentation"
     )
@@ -376,13 +378,10 @@ def build_schema1_manifest(
             f"got {profile!r}"
         )
     if norm != NORMALIZATION:
-        raise ModelBundleError(
-            f"schema-1 neural bundles require NFC normalization; got {norm!r}"
-        )
+        raise ModelBundleError(f"schema-1 neural bundles require NFC normalization; got {norm!r}")
     if segmentation_value != SEGMENTATION:
         raise ModelBundleError(
-            "schema-1 neural bundles require pretokenized segmentation; "
-            f"got {segmentation_value!r}"
+            f"schema-1 neural bundles require pretokenized segmentation; got {segmentation_value!r}"
         )
     if preprocessing != PREPROCESSING_VERSION:
         raise ModelBundleError(
@@ -397,9 +396,7 @@ def build_schema1_manifest(
     label_heads, _n_scripts = _validate_labels(root)
     max_subwords, tokenizer_revision, special_policy = _tokenizer_contract(root)
     if special_policy != SPECIAL_TOKEN_POLICY:
-        raise ModelBundleError(
-            f"tokenizer special-token policy must be {SPECIAL_TOKEN_POLICY!r}"
-        )
+        raise ModelBundleError(f"tokenizer special-token policy must be {SPECIAL_TOKEN_POLICY!r}")
     if metadata is not None:
         declared_max = metadata.get("max_subwords")
         if declared_max != max_subwords:
@@ -409,9 +406,7 @@ def build_schema1_manifest(
             )
         declared_policy = metadata.get("special_token_policy")
         if declared_policy != special_policy:
-            raise ModelBundleError(
-                "checkpoint special_token_policy disagrees with tokenizer.json"
-            )
+            raise ModelBundleError("checkpoint special_token_policy disagrees with tokenizer.json")
     files: dict[str, dict[str, Any]] = {}
     for name in sorted(_REQUIRED_FILES):
         path = root / name
@@ -607,7 +602,9 @@ class ModelBundleManifest:
             if raw.get("tokenizer_revision") != tokenizer_revision:
                 raise ModelBundleError("manifest tokenizer_revision disagrees with tokenizer.json")
             if raw.get("special_token_policy") != special_policy:
-                raise ModelBundleError("manifest special_token_policy disagrees with tokenizer.json")
+                raise ModelBundleError(
+                    "manifest special_token_policy disagrees with tokenizer.json"
+                )
 
             # ``label_heads`` was absent from the first schema-1 fixture, so it is
             # optional for migration compatibility.  New manifests emit it and any
@@ -619,15 +616,11 @@ class ModelBundleManifest:
                 ):
                     raise ModelBundleError("invalid model manifest field label_heads")
                 if tuple(declared_labels) != label_heads:
-                    raise ModelBundleError(
-                        "manifest label_heads disagrees with labels.json"
-                    )
+                    raise ModelBundleError("manifest label_heads disagrees with labels.json")
 
         if asset_sha256 is not None:
             asset_sha256 = asset_sha256.lower()
-            if len(asset_sha256) != 64 or any(
-                c not in "0123456789abcdef" for c in asset_sha256
-            ):
+            if len(asset_sha256) != 64 or any(c not in "0123456789abcdef" for c in asset_sha256):
                 raise ModelBundleError("asset_sha256 must be a 64-character hexadecimal digest")
         if source_schema == 0 and asset_sha256_enforced and asset_sha256 != _V3_ASSET_SHA256:
             raise ModelBundleError(
@@ -673,8 +666,7 @@ class ModelBundleManifest:
             "output_heads": list(self.output_heads),
             "label_heads": list(self.label_heads),
             "files": [
-                {"name": name, "bytes": size, "sha256": digest}
-                for name, size, digest in self.files
+                {"name": name, "bytes": size, "sha256": digest} for name, size, digest in self.files
             ],
         }
 
@@ -745,17 +737,11 @@ class AnalysisReceipt:
 
     def __post_init__(self) -> None:
         calibration = _receipt_sha256(self.calibration_sha256, "calibration_sha256")
-        policy = _receipt_sha256(
-            self.confidence_policy_sha256, "confidence_policy_sha256"
-        )
+        policy = _receipt_sha256(self.confidence_policy_sha256, "confidence_policy_sha256")
         profile_sha = _receipt_sha256(self.output_profile_sha256, "output_profile_sha256")
-        registry_sha = _receipt_sha256(
-            self.variant_registry_sha256, "variant_registry_sha256"
-        )
+        registry_sha = _receipt_sha256(self.variant_registry_sha256, "variant_registry_sha256")
         award_sha = _receipt_sha256(self.variant_award_sha256, "variant_award_sha256")
-        qualification_sha = _receipt_sha256(
-            self.qualification_sha256, "qualification_sha256"
-        )
+        qualification_sha = _receipt_sha256(self.qualification_sha256, "qualification_sha256")
         if self.output_profile_id is not None and (
             not isinstance(self.output_profile_id, str)
             or not self.output_profile_id
@@ -960,9 +946,7 @@ class AnalysisReceipt:
         schema = value.get("schema_version")
         if schema is None and "model" in value:
             providers = value.get("active_providers")
-            provider_tuple = (
-                tuple(str(v) for v in providers) if isinstance(providers, list) else ()
-            )
+            provider_tuple = tuple(str(v) for v in providers) if isinstance(providers, list) else ()
             return cls(
                 schema_version=_SCHEMA_VERSION,
                 source_schema_version=0,
@@ -1005,10 +989,10 @@ class AnalysisReceipt:
         if schema == _SCHEMA_VERSION and confidence_fields.intersection(value):
             raise ValueError("analysis receipt schema 1 cannot carry confidence hash fields")
         profile_fields = {"output_profile_id", "output_profile_sha256", "postprocessing"}
-        if schema in (_SCHEMA_VERSION, _RECEIPT_SCHEMA_VERSION) and profile_fields.intersection(value):
-            raise ValueError(
-                f"analysis receipt schema {schema} cannot carry output profile fields"
-            )
+        if schema in (_SCHEMA_VERSION, _RECEIPT_SCHEMA_VERSION) and profile_fields.intersection(
+            value
+        ):
+            raise ValueError(f"analysis receipt schema {schema} cannot carry output profile fields")
         if schema == _RECEIPT_SCHEMA_VERSION:
             missing = confidence_fields - set(value)
             if missing:
@@ -1040,8 +1024,7 @@ class AnalysisReceipt:
             missing = required - set(value)
             if missing:
                 raise ValueError(
-                    "analysis receipt schema 4 missing field(s): "
-                    + ", ".join(sorted(missing))
+                    "analysis receipt schema 4 missing field(s): " + ", ".join(sorted(missing))
                 )
             if not isinstance(value.get("postprocessing"), list):
                 raise ValueError("analysis receipt postprocessing must be a list")
@@ -1227,9 +1210,7 @@ class AnalysisReceipt:
         return replace(
             self,
             schema_version=max(self.schema_version, _PROFILE_RECEIPT_SCHEMA_VERSION),
-            source_schema_version=max(
-                self.source_schema_version, _PROFILE_RECEIPT_SCHEMA_VERSION
-            ),
+            source_schema_version=max(self.source_schema_version, _PROFILE_RECEIPT_SCHEMA_VERSION),
             output_profile_id=profile_id,
             output_profile_sha256=profile_sha,
             postprocessing=step_ids,

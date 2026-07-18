@@ -210,6 +210,7 @@ def test_export_stages_manifest_then_qualifies_before_promotion() -> None:
     assert 'profile="export"' in source
     assert 'variant="fp32"' in source
     assert "prep.validate_joint_checkpoint_spec(spec)" in source
+    assert "parser_features=checkpoint_spec.parser_features" in source
     assert "validate_artifact_metadata(artifact_metadata)" in source
     assert "validate_joint_checkpoint_sidecars(args.checkpoint, export_metadata)" in source
     assert '"candidate_heads"' in source

@@ -43,24 +43,40 @@ def main() -> None:
     inv = {h: {i: lab for lab, i in m.items()} for h, m in maps.items()}
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    amp_dtype = (torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported()
-                 else torch.float16 if device == "cuda" else None)
+    amp_dtype = (
+        torch.bfloat16
+        if device == "cuda" and torch.cuda.is_bf16_supported()
+        else torch.float16
+        if device == "cuda"
+        else None
+    )
     tokenizer = AutoTokenizer.from_pretrained(ckpt, add_prefix_space=True)
     max_len = int(spec.get("max_subwords", 256))
     prep.configure_tokenizer(tokenizer, max_len)
     if spec.get("preprocessing_version") == prep.PREPROCESSING_VERSION:
         prep.validate_tokenizer_contract(tokenizer, max_len)
-    model = JointParser(spec["model_name"], {h: len(maps[h]) for h in TAG_HEADS},
-                        n_rels=len(maps["deprel"]))
+    parser_features = prep.validate_parser_feature_spec(spec)
+    model = JointParser(
+        spec["model_name"],
+        {h: len(maps[h]) for h in TAG_HEADS},
+        n_rels=len(maps["deprel"]),
+        parser_features=parser_features,
+    )
     model.load_state_dict(torch.load(ckpt / "joint_parser.pt", map_location=device))
     model.to(device).eval()
 
     gold_path = ud_path(args.treebank, args.split)
     sentences = load_conllu(gold_path)
-    rows = [{"tokens": [t.form for t in s.tokens],
-             "upos": ["X"] * len(s.tokens), "xpos": ["---------"] * len(s.tokens),
-             "head": [0] * len(s.tokens), "deprel": ["dep"] * len(s.tokens)}
-            for s in sentences]
+    rows = [
+        {
+            "tokens": [t.form for t in s.tokens],
+            "upos": ["X"] * len(s.tokens),
+            "xpos": ["---------"] * len(s.tokens),
+            "head": [0] * len(s.tokens),
+            "deprel": ["dep"] * len(s.tokens),
+        }
+        for s in sentences
+    ]
     pad_id = tokenizer.pad_token_id or 0
     enc = [encode(r, tokenizer, maps, max_len) for r in rows]
     dl = DataLoader(enc, batch_size=32, collate_fn=lambda b: collate(b, pad_id))
@@ -73,7 +89,7 @@ def main() -> None:
             with torch.autocast(device_type=device, dtype=amp_dtype, enabled=amp_dtype is not None):
                 tag_logits, arc, rel, _lem = model(**inputs)
             arc = arc.float().cpu().numpy()
-            relp = rel.float().cpu().permute(0, 2, 3, 1)        # [B, W, W+1, R]
+            relp = rel.float().cpu().permute(0, 2, 3, 1)  # [B, W, W+1, R]
             up = tag_logits["upos"].argmax(-1).cpu()
             xp = {i: tag_logits[f"x{i}"].argmax(-1).cpu() for i in range(9)}
             word_pos = batch["word_pos"]
@@ -87,7 +103,7 @@ def main() -> None:
                 xpos_out = ["---------"] * n_total
                 head_out = [0 if i == 0 else 1 for i in range(n_total)]
                 rel_out = ["root" if i == 0 else "dep" for i in range(n_total)]
-                for wi in range(nw):                            # words kept by truncation
+                for wi in range(nw):  # words kept by truncation
                     sp = int(word_pos[b, wi])
                     upos_out[wi] = inv["upos"][int(up[b, sp])]
                     xpos_out[wi] = "".join(inv[f"x{i}"][int(xp[i][b, sp])] for i in range(9))
@@ -106,9 +122,22 @@ def main() -> None:
                 if sent.sent_id:
                     lines.append(f"# sent_id = {sent.sent_id}")
                 for i, t in enumerate(sent.tokens):
-                    lines.append("\t".join((
-                        str(i + 1), t.form, "_", upos_out[i], xpos_out[i],
-                        feats_from_xpos(xpos_out[i]), str(head_out[i]), rel_out[i], "_", "_")))
+                    lines.append(
+                        "\t".join(
+                            (
+                                str(i + 1),
+                                t.form,
+                                "_",
+                                upos_out[i],
+                                xpos_out[i],
+                                feats_from_xpos(xpos_out[i]),
+                                str(head_out[i]),
+                                rel_out[i],
+                                "_",
+                                "_",
+                            )
+                        )
+                    )
                 lines.append("")
 
     ev = _eval_module()
@@ -121,10 +150,17 @@ def main() -> None:
             system_ud = ev.load_conllu(sf)
     scores = ev.evaluate(gold_ud, system_ud)
     result = {
-        "checkpoint": str(ckpt), "treebank": args.treebank, "split": args.split,
-        "uas": scores["UAS"].f1, "las": scores["LAS"].f1, "clas": scores["CLAS"].f1,
-        "upos": scores["UPOS"].f1, "xpos": scores["XPOS"].f1, "ufeats": scores["UFeats"].f1,
-        "n_sentences": len(sentences), "n_words": sum(len(s.tokens) for s in sentences),
+        "checkpoint": str(ckpt),
+        "treebank": args.treebank,
+        "split": args.split,
+        "uas": scores["UAS"].f1,
+        "las": scores["LAS"].f1,
+        "clas": scores["CLAS"].f1,
+        "upos": scores["UPOS"].f1,
+        "xpos": scores["XPOS"].f1,
+        "ufeats": scores["UFeats"].f1,
+        "n_sentences": len(sentences),
+        "n_words": sum(len(s.tokens) for s in sentences),
     }
     text = json.dumps(result, indent=1)
     print(text)

@@ -21,6 +21,11 @@ SEGMENTATION = "pretokenized"
 SPECIAL_TOKEN_POLICY = "roberta:<s>:0:</s>:2"
 TAG_HEADS = ("upos", *(f"x{i}" for i in range(9)))
 SUPPORTED_PREPROCESSING_VERSIONS = ("grc-joint-v3", PREPROCESSING_VERSION)
+PARSER_FEATURE_ENCODER_ONLY = "encoder-only"
+PARSER_FEATURE_SOFT_UPOS_MORPH = "soft-upos-morph"
+DEFAULT_PARSER_FEATURE_DIM = 128
+_PARSER_FEATURE_ACTIVATION = "tanh"
+_PARSER_FEATURE_ROOT_POLICY = "zero"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,12 +45,113 @@ class Alignment:
 
 
 @dataclass(frozen=True, slots=True)
+class ParserFeatureSpec:
+    """Architecture contract for the representations consumed by parser scorers."""
+
+    mode: str
+    projection_dim: int
+    source_heads: tuple[str, ...]
+    projection_activation: str | None
+    root_policy: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class JointCheckpointSpec:
     """Validated fields required to reconstruct a full joint checkpoint."""
 
     model_name: str
     maps: dict[str, dict[str, int]]
     n_scripts: int
+    parser_features: ParserFeatureSpec
+
+
+def make_parser_feature_spec(
+    mode: str = PARSER_FEATURE_ENCODER_ONLY,
+    projection_dim: int = DEFAULT_PARSER_FEATURE_DIM,
+) -> ParserFeatureSpec:
+    """Construct one of the predeclared parser-input architectures."""
+    if mode == PARSER_FEATURE_ENCODER_ONLY:
+        return ParserFeatureSpec(mode, 0, (), None, None)
+    if mode != PARSER_FEATURE_SOFT_UPOS_MORPH:
+        raise ValueError(f"unsupported parser feature mode {mode!r}")
+    if (
+        isinstance(projection_dim, bool)
+        or not isinstance(projection_dim, int)
+        or not 1 <= projection_dim <= 512
+    ):
+        raise ValueError("soft parser feature projection_dim must be an integer from 1 to 512")
+    return ParserFeatureSpec(
+        mode,
+        projection_dim,
+        TAG_HEADS,
+        _PARSER_FEATURE_ACTIVATION,
+        _PARSER_FEATURE_ROOT_POLICY,
+    )
+
+
+def parser_feature_metadata(parser_features: ParserFeatureSpec) -> dict[str, Any]:
+    """Serialize the parser-input architecture into checkpoint labels metadata."""
+    if parser_features.mode == PARSER_FEATURE_ENCODER_ONLY:
+        expected = make_parser_feature_spec()
+        if parser_features != expected:
+            raise ValueError("invalid encoder-only parser feature specification")
+        return {"parser_features": {"mode": PARSER_FEATURE_ENCODER_ONLY}}
+    expected = make_parser_feature_spec(
+        parser_features.mode,
+        parser_features.projection_dim,
+    )
+    if parser_features != expected:
+        raise ValueError("invalid soft parser feature specification")
+    return {
+        "parser_features": {
+            "mode": parser_features.mode,
+            "projection_dim": parser_features.projection_dim,
+            "source_heads": list(parser_features.source_heads),
+            "projection_activation": parser_features.projection_activation,
+            "root_policy": parser_features.root_policy,
+        }
+    }
+
+
+def validate_parser_feature_spec(spec: Mapping[str, Any]) -> ParserFeatureSpec:
+    """Validate parser-input metadata, defaulting immutable v3 labels to encoder-only."""
+    if "parser_features" not in spec:
+        return make_parser_feature_spec()
+    raw = spec.get("parser_features")
+    if not isinstance(raw, Mapping):
+        raise ValueError("checkpoint labels.json parser_features must be an object")
+    mode = raw.get("mode")
+    if mode == PARSER_FEATURE_ENCODER_ONLY:
+        if set(raw) != {"mode"}:
+            raise ValueError("encoder-only parser_features may contain only mode")
+        return make_parser_feature_spec()
+    if mode != PARSER_FEATURE_SOFT_UPOS_MORPH:
+        raise ValueError(f"unsupported checkpoint parser feature mode {mode!r}")
+    required = {
+        "mode",
+        "projection_dim",
+        "source_heads",
+        "projection_activation",
+        "root_policy",
+    }
+    if set(raw) != required:
+        raise ValueError(
+            "soft parser_features must contain exactly mode, projection_dim, source_heads, "
+            "projection_activation, and root_policy"
+        )
+    projection_dim = raw.get("projection_dim")
+    if isinstance(projection_dim, bool) or not isinstance(projection_dim, int):
+        raise ValueError("soft parser feature projection_dim must be an integer from 1 to 512")
+    parsed = make_parser_feature_spec(mode, projection_dim)
+    if raw.get("source_heads") != list(parsed.source_heads):
+        raise ValueError(f"soft parser feature source_heads must be {list(TAG_HEADS)!r}")
+    if raw.get("projection_activation") != parsed.projection_activation:
+        raise ValueError(
+            f"soft parser feature projection_activation must be {parsed.projection_activation!r}"
+        )
+    if raw.get("root_policy") != parsed.root_policy:
+        raise ValueError(f"soft parser feature root_policy must be {parsed.root_policy!r}")
+    return parsed
 
 
 def normalize_tokens(words: Sequence[str]) -> list[str]:
@@ -84,19 +190,13 @@ def validate_joint_checkpoint_spec(spec: Mapping[str, Any]) -> JointCheckpointSp
     for head in (*TAG_HEADS, "deprel"):
         raw_mapping = raw_maps.get(head)
         if not isinstance(raw_mapping, Mapping) or not raw_mapping:
-            raise ValueError(
-                f"checkpoint labels.json map {head!r} must be a non-empty object"
-            )
+            raise ValueError(f"checkpoint labels.json map {head!r} must be a non-empty object")
         mapping: dict[str, int] = {}
         for label, index in raw_mapping.items():
             if not isinstance(label, str):
-                raise ValueError(
-                    f"checkpoint labels.json map {head!r} contains a non-string label"
-                )
+                raise ValueError(f"checkpoint labels.json map {head!r} contains a non-string label")
             if isinstance(index, bool) or not isinstance(index, int):
-                raise ValueError(
-                    f"checkpoint labels.json map {head!r} contains a non-integer id"
-                )
+                raise ValueError(f"checkpoint labels.json map {head!r} contains a non-integer id")
             mapping[label] = index
         if sorted(mapping.values()) != list(range(len(mapping))):
             raise ValueError(
@@ -106,7 +206,8 @@ def validate_joint_checkpoint_spec(spec: Mapping[str, Any]) -> JointCheckpointSp
     n_scripts = spec.get("n_scripts")
     if isinstance(n_scripts, bool) or not isinstance(n_scripts, int) or n_scripts < 1:
         raise ValueError("checkpoint labels.json n_scripts must be a positive integer")
-    return JointCheckpointSpec(model_name.strip(), maps, n_scripts)
+    parser_features = validate_parser_feature_spec(spec)
+    return JointCheckpointSpec(model_name.strip(), maps, n_scripts, parser_features)
 
 
 def configure_tokenizer(tokenizer: Any, max_subwords: int) -> None:
@@ -134,8 +235,7 @@ def validate_special_token_policy(policy: str) -> None:
     """Reject a tokenizer special-token policy outside the Roberta contract."""
     if policy != SPECIAL_TOKEN_POLICY:
         raise ValueError(
-            f"unsupported neural special-token policy {policy!r}; "
-            f"expected {SPECIAL_TOKEN_POLICY!r}"
+            f"unsupported neural special-token policy {policy!r}; expected {SPECIAL_TOKEN_POLICY!r}"
         )
 
 
@@ -145,20 +245,14 @@ def tokenizer_json_contract(tokenizer: Mapping[str, Any]) -> tuple[int, str]:
     if not isinstance(truncation, Mapping):
         raise ValueError("tokenizer must declare a truncation policy")
     max_subwords = truncation.get("max_length")
-    if (
-        isinstance(max_subwords, bool)
-        or not isinstance(max_subwords, int)
-        or max_subwords < 1
-    ):
+    if isinstance(max_subwords, bool) or not isinstance(max_subwords, int) or max_subwords < 1:
         raise ValueError("tokenizer max_length must be a positive integer")
     if (
         truncation.get("direction") != "Right"
         or truncation.get("strategy") != "LongestFirst"
         or truncation.get("stride") != 0
     ):
-        raise ValueError(
-            "tokenizer must use right/longest-first/stride-0 truncation"
-        )
+        raise ValueError("tokenizer must use right/longest-first/stride-0 truncation")
     post = tokenizer.get("post_processor")
     if not isinstance(post, Mapping) or post.get("type") != "RobertaProcessing":
         raise ValueError("tokenizer must use the Roberta special-token policy")
@@ -186,9 +280,7 @@ def validate_tokenizer_contract(tokenizer: Any, max_subwords: int) -> None:
         )
 
 
-def load_checkpoint_metadata(
-    checkpoint: str | Path, spec: Mapping[str, Any]
-) -> dict[str, Any]:
+def load_checkpoint_metadata(checkpoint: str | Path, spec: Mapping[str, Any]) -> dict[str, Any]:
     """Load and validate the preprocessing contract written by a training checkpoint."""
     root = Path(checkpoint)
     metadata: dict[str, Any] = {}
@@ -205,16 +297,16 @@ def load_checkpoint_metadata(
     def merge_contract(source: Mapping[str, Any], source_name: str) -> None:
         nested = source.get("metadata")
         if nested is not None and not isinstance(nested, Mapping):
-            raise ValueError(f"checkpoint metadata {source_name} field 'metadata' must be an object")
+            raise ValueError(
+                f"checkpoint metadata {source_name} field 'metadata' must be an object"
+            )
         candidates = [nested, source] if isinstance(nested, Mapping) else [source]
         for candidate in candidates:
             for key in contract_keys:
                 if key not in candidate:
                     continue
                 canonical = (
-                    "preprocessing_version"
-                    if key == "shared_preprocessing_version"
-                    else key
+                    "preprocessing_version" if key == "shared_preprocessing_version" else key
                 )
                 value = candidate[key]
                 if canonical in metadata and metadata[canonical] != value:
@@ -237,11 +329,7 @@ def load_checkpoint_metadata(
         merge_contract(value, filename)
     merge_contract(spec, "labels.json")
     max_subwords = metadata.get("max_subwords")
-    if (
-        isinstance(max_subwords, bool)
-        or not isinstance(max_subwords, int)
-        or max_subwords < 1
-    ):
+    if isinstance(max_subwords, bool) or not isinstance(max_subwords, int) or max_subwords < 1:
         raise ValueError("checkpoint metadata is missing a positive max_subwords")
     expected = contract_metadata(max_subwords)
     for key, expected_value in expected.items():
@@ -262,16 +350,12 @@ def validate_manifest_contract(manifest: Any) -> None:
             f"expected one of {SUPPORTED_PREPROCESSING_VERSIONS!r}"
         )
     if getattr(manifest, "annotation_profile", ANNOTATION_PROFILE) != ANNOTATION_PROFILE:
-        raise ValueError(
-            f"neural preprocessing requires annotation profile {ANNOTATION_PROFILE!r}"
-        )
+        raise ValueError(f"neural preprocessing requires annotation profile {ANNOTATION_PROFILE!r}")
     if getattr(manifest, "normalization", NORMALIZATION) != NORMALIZATION:
         raise ValueError("neural preprocessing requires NFC normalization")
     if getattr(manifest, "segmentation", SEGMENTATION) != SEGMENTATION:
         raise ValueError("neural preprocessing requires pretokenized segmentation")
-    validate_special_token_policy(
-        getattr(manifest, "special_token_policy", SPECIAL_TOKEN_POLICY)
-    )
+    validate_special_token_policy(getattr(manifest, "special_token_policy", SPECIAL_TOKEN_POLICY))
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:
@@ -355,7 +439,10 @@ def _alignment_from_encoding(
     if raw_ids is None:
         raw_ids = encoding["input_ids"]
     ids = list(raw_ids)[:max_subwords]
-    if any(isinstance(token_id, bool) or not isinstance(token_id, int) or token_id < 0 for token_id in ids):
+    if any(
+        isinstance(token_id, bool) or not isinstance(token_id, int) or token_id < 0
+        for token_id in ids
+    ):
         raise ValueError("tokenizer returned an invalid token ID")
     word_ids = _word_ids(encoding)[: len(ids)]
     if len(word_ids) != len(ids):
@@ -397,9 +484,7 @@ def align_pretokenized(tokenizer: Any, words: Sequence[str], max_subwords: int) 
         raise ValueError("max_subwords must be a positive integer")
     normalized = normalize_tokens(words)
     encoding = _as_encoding(tokenizer, normalized, max_subwords)
-    return _alignment_from_encoding(
-        encoding, max_subwords, input_word_count=len(normalized)
-    )
+    return _alignment_from_encoding(encoding, max_subwords, input_word_count=len(normalized))
 
 
 def align_encoding(encoding: Any, max_subwords: int) -> Alignment:
@@ -454,11 +539,7 @@ def build_supervision(
             if not isinstance(relation, str):
                 raise ValueError(f"example dependency relation at token {index} must be a string")
     if include_scripts:
-        if (
-            isinstance(script_count, bool)
-            or not isinstance(script_count, int)
-            or script_count < 1
-        ):
+        if isinstance(script_count, bool) or not isinstance(script_count, int) or script_count < 1:
             raise ValueError("script_count must be a positive integer when scripts are included")
         for index, script in enumerate(example["script"]):
             if (
@@ -594,9 +675,13 @@ canonical_lemma = compose_lemma
 __all__ = [
     "ANNOTATION_PROFILE",
     "Alignment",
+    "DEFAULT_PARSER_FEATURE_DIM",
     "JointCheckpointSpec",
     "NORMALIZATION",
+    "PARSER_FEATURE_ENCODER_ONLY",
+    "PARSER_FEATURE_SOFT_UPOS_MORPH",
     "PREPROCESSING_VERSION",
+    "ParserFeatureSpec",
     "SEGMENTATION",
     "SPECIAL_TOKEN_POLICY",
     "TAG_HEADS",
@@ -610,10 +695,13 @@ __all__ = [
     "contract_metadata",
     "configure_tokenizer",
     "load_checkpoint_metadata",
+    "make_parser_feature_spec",
     "normalize_tokens",
+    "parser_feature_metadata",
     "tokenizer_json_contract",
     "validate_manifest_contract",
     "validate_joint_checkpoint_spec",
+    "validate_parser_feature_spec",
     "validate_special_token_policy",
     "validate_tokenizer_contract",
 ]

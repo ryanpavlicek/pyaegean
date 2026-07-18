@@ -72,8 +72,10 @@ def encode(
 def collate(batch: list[dict], pad_id: int) -> dict[str, torch.Tensor]:
     sub_w = max(len(b["input_ids"]) for b in batch)
     word_w = max(len(b["word_pos"]) for b in batch)
+
     def pad(key: str, value: int, width: int) -> torch.Tensor:
         return torch.tensor([b[key] + [value] * (width - len(b[key])) for b in batch])
+
     out = {
         "input_ids": pad("input_ids", pad_id, sub_w),
         "attention_mask": pad("attention_mask", 0, sub_w),
@@ -119,8 +121,9 @@ class LemmaComposer:
 MODES = ("neural-only", "lookup-first", "neural-first", "unseen-neural")
 
 
-def evaluate(model, dl, dev_rows, device, amp_dtype, composer: LemmaComposer,
-             inv_upos: dict[int, str]) -> dict:
+def evaluate(
+    model, dl, dev_rows, device, amp_dtype, composer: LemmaComposer, inv_upos: dict[int, str]
+) -> dict:
     model.eval()
     n = uas = las = n_tag = upos_ok = 0
     n_lem = 0
@@ -164,8 +167,13 @@ def evaluate(model, dl, dev_rows, device, amp_dtype, composer: LemmaComposer,
                         if composer.resolve(mode, form, upos_pred, sid) == gold_lemma:
                             lem_ok[mode] += 1
     model.train()
-    out = {"uas": uas / n, "las": las / n, "upos_acc": upos_ok / n_tag, "n_arcs": n,
-           "n_lemmas": n_lem}
+    out = {
+        "uas": uas / n,
+        "las": las / n,
+        "upos_acc": upos_ok / n_tag,
+        "n_arcs": n,
+        "n_lemmas": n_lem,
+    }
     for mode in MODES:
         out[f"lemma_{mode.replace('-', '_')}"] = lem_ok[mode] / n_lem
     out["lemma_best"] = max(lem_ok.values()) / n_lem
@@ -185,6 +193,12 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--precision", choices=("auto", "bf16", "fp16", "fp32"), default="auto")
     ap.add_argument("--limit-train", type=int, default=0)
+    ap.add_argument(
+        "--parser-features",
+        choices=(prep.PARSER_FEATURE_ENCODER_ONLY, prep.PARSER_FEATURE_SOFT_UPOS_MORPH),
+        default=prep.PARSER_FEATURE_ENCODER_ONLY,
+    )
+    ap.add_argument("--parser-feature-dim", type=int, default=prep.DEFAULT_PARSER_FEATURE_DIM)
     args = ap.parse_args()
 
     random.seed(args.seed)
@@ -193,8 +207,13 @@ def main() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     precision = args.precision
     if precision == "auto":
-        precision = ("bf16" if device == "cuda" and torch.cuda.is_bf16_supported()
-                     else "fp16" if device == "cuda" else "fp32")
+        precision = (
+            "bf16"
+            if device == "cuda" and torch.cuda.is_bf16_supported()
+            else "fp16"
+            if device == "cuda"
+            else "fp32"
+        )
     amp_dtype = {"bf16": torch.bfloat16, "fp16": torch.float16}.get(precision)
     use_scaler = precision == "fp16"
     if device == "cuda":
@@ -222,21 +241,30 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(args.model, add_prefix_space=True)
     prep.configure_tokenizer(tokenizer, args.max_len)
     prep.validate_tokenizer_contract(tokenizer, args.max_len)
-    model = JointParser(args.model, {h: len(maps[h]) for h in TAG_HEADS},
-                        n_rels=len(maps["deprel"]), n_scripts=len(scripts)).to(device)
+    parser_features = prep.make_parser_feature_spec(args.parser_features, args.parser_feature_dim)
+    model = JointParser(
+        args.model,
+        {h: len(maps[h]) for h in TAG_HEADS},
+        n_rels=len(maps["deprel"]),
+        n_scripts=len(scripts),
+        parser_features=parser_features,
+    ).to(device)
     pad_id = tokenizer.pad_token_id or 0
 
     enc_train = [
-        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts))
-        for r in train_rows
+        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts)) for r in train_rows
     ]
     enc_dev = [
-        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts))
-        for r in dev_rows
+        encode(r, tokenizer, maps, args.max_len, script_count=len(scripts)) for r in dev_rows
     ]
     g = torch.Generator().manual_seed(args.seed)
-    dl_train = DataLoader(enc_train, batch_size=args.batch, shuffle=True, generator=g,
-                          collate_fn=lambda b: collate(b, pad_id))
+    dl_train = DataLoader(
+        enc_train,
+        batch_size=args.batch,
+        shuffle=True,
+        generator=g,
+        collate_fn=lambda b: collate(b, pad_id),
+    )
     dl_dev = DataLoader(enc_dev, batch_size=32, collate_fn=lambda b: collate(b, pad_id))
 
     steps = math.ceil(len(dl_train)) * args.epochs
@@ -265,17 +293,21 @@ def main() -> None:
                 )
                 loss = loss + ce(arc.flatten(0, 1), gh.flatten())
                 gh_safe = gh.clamp(min=0)
-                rel_at_gold = rel.permute(0, 2, 3, 1).gather(
-                    2, gh_safe.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1))
-                ).squeeze(2)
+                rel_at_gold = (
+                    rel.permute(0, 2, 3, 1)
+                    .gather(2, gh_safe.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1)))
+                    .squeeze(2)
+                )
                 loss = loss + ce(rel_at_gold.flatten(0, 1), gr.flatten())
                 # also supervise relations at the model's PREDICTED heads, not only gold
                 # arcs: at inference the relation is read at the predicted head, so this
                 # closes the train/test mismatch (gold heads -> argmax heads).
                 ph_pred = arc.argmax(dim=2)
-                rel_at_pred = rel.permute(0, 2, 3, 1).gather(
-                    2, ph_pred.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1))
-                ).squeeze(2)
+                rel_at_pred = (
+                    rel.permute(0, 2, 3, 1)
+                    .gather(2, ph_pred.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, rel.size(1)))
+                    .squeeze(2)
+                )
                 loss = loss + ce(rel_at_pred.flatten(0, 1), gr.flatten())
                 loss = loss + ce(lem.flatten(0, 1), gs.flatten())
             scaler.scale(loss).backward()
@@ -288,9 +320,12 @@ def main() -> None:
         m = evaluate(model, dl_dev, dev_rows, device, amp_dtype, composer, inv_upos)
         m["epoch"] = epoch
         history.append(m)
-        print(f"epoch {epoch}: dev UAS {m['uas']:.4f}  LAS {m['las']:.4f}  "
-              f"UPOS {m['upos_acc']:.4f}  lemma(best={m['lemma_best_mode']}) "
-              f"{m['lemma_best']:.4f}", flush=True)
+        print(
+            f"epoch {epoch}: dev UAS {m['uas']:.4f}  LAS {m['las']:.4f}  "
+            f"UPOS {m['upos_acc']:.4f}  lemma(best={m['lemma_best_mode']}) "
+            f"{m['lemma_best']:.4f}",
+            flush=True,
+        )
         score = (m["las"] + m["lemma_best"]) / 2
         if score > best:
             best = score
@@ -298,23 +333,43 @@ def main() -> None:
             prep.configure_tokenizer(tokenizer, args.max_len)
             tokenizer.save_pretrained(out / "model")
             (out / "model" / "labels.json").write_text(
-                json.dumps({"model_name": args.model, "tag_heads": TAG_HEADS, "maps": maps,
-                            "n_scripts": len(scripts), "epochs": args.epochs,
-                            "seed": args.seed, "best_epoch": epoch,
-                            **prep.contract_metadata(args.max_len)},
-                           ensure_ascii=False), encoding="utf-8")
+                json.dumps(
+                    {
+                        "model_name": args.model,
+                        "tag_heads": TAG_HEADS,
+                        "maps": maps,
+                        "n_scripts": len(scripts),
+                        "epochs": args.epochs,
+                        "seed": args.seed,
+                        "best_epoch": epoch,
+                        **prep.parser_feature_metadata(parser_features),
+                        **prep.contract_metadata(args.max_len),
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
             shutil.copy(data_dir / "lemma-scripts.json", out / "model" / "lemma-scripts.json")
             shutil.copy(data_dir / "lemma-lookup.json", out / "model" / "lemma-lookup.json")
 
     metrics = {
-        "model": args.model, "history": history,
+        "model": args.model,
+        "history": history,
         "best": max(history, key=lambda m: (m["las"] + m["lemma_best"]) / 2),
         "wall_s": round(time.time() - t0, 1),
-        "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2) if device == "cuda" else None,
+        "peak_vram_gb": round(torch.cuda.max_memory_allocated() / 1e9, 2)
+        if device == "cuda"
+        else None,
         "gpu": torch.cuda.get_device_name(0) if device == "cuda" else None,
-        "precision": precision, "epochs": args.epochs, "lr": args.lr, "batch": args.batch,
-        "max_len": args.max_len, "seed": args.seed, "n_train_sentences": len(train_rows),
+        "precision": precision,
+        "epochs": args.epochs,
+        "lr": args.lr,
+        "batch": args.batch,
+        "max_len": args.max_len,
+        "seed": args.seed,
+        "n_train_sentences": len(train_rows),
         "n_scripts": len(scripts),
+        **prep.parser_feature_metadata(parser_features),
     }
     (out / "metrics.json").write_text(json.dumps(metrics, indent=1), encoding="utf-8")
     print(json.dumps(metrics["best"], indent=1))

@@ -48,30 +48,45 @@ def main() -> None:
     composer = LemmaComposer(scripts, lookup)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    amp_dtype = (torch.bfloat16 if device == "cuda" and torch.cuda.is_bf16_supported()
-                 else torch.float16 if device == "cuda" else None)
+    amp_dtype = (
+        torch.bfloat16
+        if device == "cuda" and torch.cuda.is_bf16_supported()
+        else torch.float16
+        if device == "cuda"
+        else None
+    )
     tokenizer = AutoTokenizer.from_pretrained(ckpt, add_prefix_space=True)
     max_len = int(spec.get("max_subwords", 256))
     prep.configure_tokenizer(tokenizer, max_len)
     if spec.get("preprocessing_version") == prep.PREPROCESSING_VERSION:
         prep.validate_tokenizer_contract(tokenizer, max_len)
-    model = JointParser(spec["model_name"], {h: len(maps[h]) for h in TAG_HEADS},
-                        n_rels=len(maps["deprel"]), n_scripts=spec["n_scripts"])
+    parser_features = prep.validate_parser_feature_spec(spec)
+    model = JointParser(
+        spec["model_name"],
+        {h: len(maps[h]) for h in TAG_HEADS},
+        n_rels=len(maps["deprel"]),
+        n_scripts=spec["n_scripts"],
+        parser_features=parser_features,
+    )
     model.load_state_dict(torch.load(ckpt / "joint_full.pt", map_location=device))
     model.to(device).eval()
 
     gold_path = ud_path(args.treebank, args.split)
     sentences = load_conllu(gold_path)
-    rows = [{"tokens": [t.form for t in s.tokens],
-             "upos": ["X"] * len(s.tokens), "xpos": ["---------"] * len(s.tokens),
-             "head": [0] * len(s.tokens), "deprel": ["dep"] * len(s.tokens),
-             "script": [-100] * len(s.tokens), "lemma": ["_"] * len(s.tokens)}
-            for s in sentences]
-    pad_id = tokenizer.pad_token_id or 0
-    enc = [
-        encode(r, tokenizer, maps, max_len, script_count=spec["n_scripts"])
-        for r in rows
+    rows = [
+        {
+            "tokens": [t.form for t in s.tokens],
+            "upos": ["X"] * len(s.tokens),
+            "xpos": ["---------"] * len(s.tokens),
+            "head": [0] * len(s.tokens),
+            "deprel": ["dep"] * len(s.tokens),
+            "script": [-100] * len(s.tokens),
+            "lemma": ["_"] * len(s.tokens),
+        }
+        for s in sentences
     ]
+    pad_id = tokenizer.pad_token_id or 0
+    enc = [encode(r, tokenizer, maps, max_len, script_count=spec["n_scripts"]) for r in rows]
     dl = DataLoader(enc, batch_size=32, collate_fn=lambda b: collate(b, pad_id))
 
     lines: list[str] = []
@@ -103,8 +118,9 @@ def main() -> None:
                     form = sent.tokens[wi].form
                     upos_out[wi] = inv["upos"][int(up[b, sp])]
                     xpos_out[wi] = "".join(inv[f"x{i}"][int(xp[i][b, sp])] for i in range(9))
-                    lemma_out[wi] = composer.resolve(args.compose, form, upos_out[wi],
-                                                     int(sm[b, wi]))
+                    lemma_out[wi] = composer.resolve(
+                        args.compose, form, upos_out[wi], int(sm[b, wi])
+                    )
                     head_out[wi] = heads[wi]
                     rel_out[wi] = inv["deprel"][int(relp[b, wi, heads[wi]].argmax())]
                     if heads[wi] == 0:
@@ -119,9 +135,22 @@ def main() -> None:
                 if sent.sent_id:
                     lines.append(f"# sent_id = {sent.sent_id}")
                 for i, t in enumerate(sent.tokens):
-                    lines.append("\t".join((
-                        str(i + 1), t.form, lemma_out[i], upos_out[i], xpos_out[i],
-                        feats_from_xpos(xpos_out[i]), str(head_out[i]), rel_out[i], "_", "_")))
+                    lines.append(
+                        "\t".join(
+                            (
+                                str(i + 1),
+                                t.form,
+                                lemma_out[i],
+                                upos_out[i],
+                                xpos_out[i],
+                                feats_from_xpos(xpos_out[i]),
+                                str(head_out[i]),
+                                rel_out[i],
+                                "_",
+                                "_",
+                            )
+                        )
+                    )
                 lines.append("")
 
     ev = _eval_module()
@@ -134,13 +163,21 @@ def main() -> None:
             system_ud = ev.load_conllu(sf)
     scores = ev.evaluate(gold_ud, system_ud)
     result = {
-        "checkpoint": str(ckpt), "compose": args.compose,
-        "checkpoint_epochs": spec.get("epochs"), "checkpoint_best_epoch": spec.get("best_epoch"),
-        "treebank": args.treebank, "split": args.split,
+        "checkpoint": str(ckpt),
+        "compose": args.compose,
+        "checkpoint_epochs": spec.get("epochs"),
+        "checkpoint_best_epoch": spec.get("best_epoch"),
+        "treebank": args.treebank,
+        "split": args.split,
         "lemma": scores["Lemmas"].f1,
-        "uas": scores["UAS"].f1, "las": scores["LAS"].f1, "clas": scores["CLAS"].f1,
-        "upos": scores["UPOS"].f1, "xpos": scores["XPOS"].f1, "ufeats": scores["UFeats"].f1,
-        "n_sentences": len(sentences), "n_words": sum(len(s.tokens) for s in sentences),
+        "uas": scores["UAS"].f1,
+        "las": scores["LAS"].f1,
+        "clas": scores["CLAS"].f1,
+        "upos": scores["UPOS"].f1,
+        "xpos": scores["XPOS"].f1,
+        "ufeats": scores["UFeats"].f1,
+        "n_sentences": len(sentences),
+        "n_words": sum(len(s.tokens) for s in sentences),
     }
     text = json.dumps(result, indent=1)
     print(text)

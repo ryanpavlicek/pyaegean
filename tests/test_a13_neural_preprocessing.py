@@ -108,8 +108,10 @@ def test_shared_supervision_maps_tags_heads_relations_and_scripts() -> None:
         "deprel": ["root", "dep", "dep"],
         "script": [4, 5, 6],
     }
-    maps = {head: {value: index for index, value in enumerate(("-", *"abcdefghi"))}
-            for head in prep.TAG_HEADS}
+    maps = {
+        head: {value: index for index, value in enumerate(("-", *"abcdefghi"))}
+        for head in prep.TAG_HEADS
+    }
     maps["upos"] = {"NOUN": 0, "VERB": 1}
     maps["deprel"] = {"root": 0, "dep": 1}
     result = prep.build_supervision(
@@ -168,8 +170,7 @@ def test_cross_path_golden_alignment_matches_runtime_and_training_supervision() 
             if isinstance(node, ast.FunctionDef) and node.name == "encode"
         )
         assert any(
-            isinstance(node, ast.Attribute) and node.attr == delegate
-            for node in ast.walk(encode)
+            isinstance(node, ast.Attribute) and node.attr == delegate for node in ast.walk(encode)
         ), relative
 
 
@@ -188,11 +189,7 @@ def test_alignment_property_keeps_only_complete_monotonic_words(lengths: list[in
     alignment = prep.align_pretokenized(
         _Tokenizer(encoding), [f"w{index}" for index in range(len(lengths))], cut + 2
     )
-    expected = tuple(
-        index
-        for index in range(len(lengths))
-        if sum(lengths[: index + 1]) <= cut
-    )
+    expected = tuple(index for index in range(len(lengths)) if sum(lengths[: index + 1]) <= cut)
     assert alignment.kept_indices == expected
     assert tuple(sorted(set(alignment.kept_indices))) == alignment.kept_indices
     assert alignment.input_ids[0] == 0 and alignment.input_ids[-1] == 2
@@ -209,8 +206,10 @@ def test_canonical_lemma_rejects_placeholder_and_identity_edits_before_lowercase
         lookup_lower={"form": "lowered"},
         trees=["placeholder", "identity", "real"],
     )
+
     def apply(tree, form):
         return {"placeholder": "_", "identity": form, "real": "lemma"}[tree]
+
     assert prep.compose_lemma("FORM", "NOUN", 0, apply_edit_script=apply, **kwargs) == "lowered"
     assert prep.compose_lemma("FORM", "NOUN", 1, apply_edit_script=apply, **kwargs) == "lowered"
     assert prep.compose_lemma("FORM", "NOUN", 2, apply_edit_script=apply, **kwargs) == "lemma"
@@ -227,16 +226,19 @@ def test_canonical_lemma_rejects_placeholder_and_identity_edits_before_lowercase
     ],
 )
 def test_canonical_lemma_golden_paths(form_upos, form, lower, script_id, expected) -> None:
-    assert prep.compose_lemma_detail(
-        "ΛΌΓΟΣ",
-        "NOUN",
-        script_id,
-        lookup_form_upos=form_upos,
-        lookup_form=form,
-        lookup_lower=lower,
-        trees=["tree"],
-        apply_edit_script=lambda tree, value: "lemma",
-    ) == expected
+    assert (
+        prep.compose_lemma_detail(
+            "ΛΌΓΟΣ",
+            "NOUN",
+            script_id,
+            lookup_form_upos=form_upos,
+            lookup_form=form,
+            lookup_lower=lower,
+            trees=["tree"],
+            apply_edit_script=lambda tree, value: "lemma",
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize(
@@ -272,9 +274,7 @@ def test_supervision_rejects_malformed_labels_and_dependencies() -> None:
     with pytest.raises(ValueError, match="exactly 9"):
         prep.build_supervision({**base, "xpos": ["short"]}, tokenizer, maps, 3)
     with pytest.raises(ValueError, match="dependency head"):
-        prep.build_supervision(
-            {**base, "head": [2]}, tokenizer, maps, 3, include_parser=True
-        )
+        prep.build_supervision({**base, "head": [2]}, tokenizer, maps, 3, include_parser=True)
     bad_maps = {**maps, "upos": {"X": 2}}
     with pytest.raises(ValueError, match="contiguous"):
         prep.build_supervision(base, tokenizer, bad_maps, 3)
@@ -319,6 +319,7 @@ def test_joint_checkpoint_spec_rejects_missing_and_malformed_fields() -> None:
     parsed = prep.validate_joint_checkpoint_spec(valid)
     assert parsed.model_name == "bowphs/GreBerta"
     assert parsed.n_scripts == 1
+    assert parsed.parser_features == prep.make_parser_feature_spec()
 
     for changed, message in (
         ({**valid, "model_name": ""}, "model_name"),
@@ -388,9 +389,15 @@ def test_manifest_contract_rejects_drift_and_accepts_legacy_v3() -> None:
         special_token_policy=prep.SPECIAL_TOKEN_POLICY,
     )
     prep.validate_manifest_contract(SimpleNamespace(**base))
-    prep.validate_manifest_contract(SimpleNamespace(**{**base, "preprocessing_version": "grc-joint-v3"}))
-    for field, value in (("annotation_profile", "other"), ("normalization", "NFD"), ("segmentation", "raw"),
-                         ("special_token_policy", "bert:[CLS]:0:[SEP]:0"),
-                         ("preprocessing_version", "future-v2")):
+    prep.validate_manifest_contract(
+        SimpleNamespace(**{**base, "preprocessing_version": "grc-joint-v3"})
+    )
+    for field, value in (
+        ("annotation_profile", "other"),
+        ("normalization", "NFD"),
+        ("segmentation", "raw"),
+        ("special_token_policy", "bert:[CLS]:0:[SEP]:0"),
+        ("preprocessing_version", "future-v2"),
+    ):
         with pytest.raises(ValueError):
             prep.validate_manifest_contract(SimpleNamespace(**{**base, field: value}))
