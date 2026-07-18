@@ -24,6 +24,14 @@ def _project_version() -> str:
     return match.group(1)
 
 
+def _roadmap_items(path: str) -> list[str]:
+    text = _read(path)
+    section = re.search(r"(?ms)^## Roadmap\n(.*?)(?=^## |\Z)", text)
+    assert section is not None
+    items = re.findall(r"(?ms)^- (.*?)(?=^- |\Z)", section.group(1))
+    return [" ".join(item.split()) for item in items]
+
+
 def test_package_version_matches_project_version() -> None:
     assert aegean.__version__ == _project_version()
 
@@ -36,6 +44,13 @@ def test_home_is_an_evergreen_front_door() -> None:
     assert "## Choose where to start" in home
     assert f"Latest PyPI release: v{version}" in home
     assert "This wiki documents the current release" in home
+
+
+def test_public_roadmap_copies_do_not_drift() -> None:
+    readme_items = _roadmap_items("README.md")
+
+    assert readme_items
+    assert _roadmap_items("wiki/Home.md") == readme_items
 
 
 def test_geography_counts_follow_the_live_gazetteer() -> None:

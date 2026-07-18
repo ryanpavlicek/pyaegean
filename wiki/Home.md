@@ -99,9 +99,11 @@ See [Installation](Installation) for the full extras matrix, and
 The changelog records what has shipped. Current work is focused on:
 
 - comparing deterministic and neural translation grounding on matched passages
-  before changing a default;
+  before changing any default;
 - training and independently evaluating a separately versioned successor to the
-  current Greek model only after those foundations are frozen; and
+  current Greek model only after those foundations are frozen;
+- producing calibrated runtime variants only after a candidate model passes the
+  cross-domain and operational gates; and
 - adding license-clean dictionaries, conda-forge packaging, and verified
   gazetteer coverage.
 
