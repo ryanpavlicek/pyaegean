@@ -26,8 +26,15 @@ from .sentence_segmentation import SegmentationResult, SegmenterLike, segment_te
 _LETTER = r"Ͱ-ͽͿ-ΆΈ-Ͽἀ-῿"
 _MARK = r"̀-ͯ"
 _APOS = r"'’᾽ʼ"  # straight ', right single quote, koronis, modifier
-_WORD_RE = re.compile(rf"[{_APOS}]?[{_LETTER}{_MARK}]+(?:[{_APOS}][{_LETTER}{_MARK}]*)*")
-_TOKEN_RE = re.compile(rf"([{_LETTER}{_MARK}{_APOS}]+|[^\s{_LETTER}{_MARK}{_APOS}]+)")
+# Milesian numeral sign. The trailing keraia U+0374 (e.g. δʹ = 4) sits in the
+# Greek block above but NFC-folds to U+02B9 in the Spacing Modifier Letters
+# block, outside that range, so U+02B9 counts as a word character too and the
+# numeral stays one token whichever normalization the caller passed (the neural
+# contract mandates NFC). The leading lower keraia U+0375 (͵α = 1000) is
+# NFC-stable and already covered by the Greek range.
+_NUMERAL_SIGN = "ʹ"  # NFC image of the keraia U+0374
+_WORD_RE = re.compile(rf"[{_APOS}]?[{_LETTER}{_MARK}{_NUMERAL_SIGN}]+(?:[{_APOS}][{_LETTER}{_MARK}{_NUMERAL_SIGN}]*)*")
+_TOKEN_RE = re.compile(rf"([{_LETTER}{_MARK}{_NUMERAL_SIGN}{_APOS}]+|[^\s{_LETTER}{_MARK}{_NUMERAL_SIGN}{_APOS}]+)")
 _SENTENCE_SPLIT_RE = re.compile(r"[.;;··]+")
 
 
