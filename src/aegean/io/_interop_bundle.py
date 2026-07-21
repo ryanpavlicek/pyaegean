@@ -20,11 +20,11 @@ from typing import Any, Mapping, cast
 from .._atomic import atomic_path
 from .interop import (
     MAX_SIDECAR_BYTES,
-    SIDECAR_COMMENT_PREFIX,
     InteropDocument,
     InteropReport,
     InteropResult,
     InteropSchemaError,
+    _partition_sidecar_comments,
     decode_sidecar,
     encode_sidecar,
 )
@@ -236,10 +236,7 @@ class InteropBundle:
 
 
 def _conllu_native_state(value: str) -> dict[str, Any]:
-    lines = value.splitlines(keepends=True)
-    native = "".join(
-        line for line in lines if not line.startswith(SIDECAR_COMMENT_PREFIX)
-    )
+    _sidecars, native = _partition_sidecar_comments(value)
     return {"conllu": native}
 
 

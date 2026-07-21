@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -37,6 +38,39 @@ SIDECAR_COMMENT_PREFIX = "# aegean.interop = "
 # A decoded sidecar is kept comfortably below typical line/document limits.  The
 # same bound is enforced by the writer, so a strict reader never rejects our output.
 MAX_SIDECAR_BYTES = 8 * 1024 * 1024
+
+# CoNLL-U line boundaries are the ASCII newlines only.  The Unicode line
+# separators U+2028, U+2029 and U+0085 (plus U+000B, U+000C, U+001C-U+001E)
+# are ordinary characters here: they can appear literally inside the sidecar
+# JSON (encoded with ensure_ascii=False), so ``str.splitlines`` would split the
+# single sidecar comment mid-JSON and make the writer emit output its own
+# reader rejects.
+_CONLLU_NEWLINE_RE = re.compile(r"\r\n|\r|\n")
+
+
+def _partition_sidecar_comments(raw: str) -> tuple[list[str], str]:
+    """Split interop sidecar comment lines from the native CoNLL-U text.
+
+    Returns the decoded sidecar payloads (prefix stripped) and the native text
+    with those comment lines removed, reconstructed byte for byte.  Splitting is
+    on ASCII newlines only (see ``_CONLLU_NEWLINE_RE``).
+    """
+    sidecars: list[str] = []
+    native_parts: list[str] = []
+    position = 0
+    for match in _CONLLU_NEWLINE_RE.finditer(raw):
+        line = raw[position:match.start()]
+        if line.startswith(SIDECAR_COMMENT_PREFIX):
+            sidecars.append(line[len(SIDECAR_COMMENT_PREFIX):])
+        else:
+            native_parts.append(line + match.group(0))
+        position = match.end()
+    tail = raw[position:]
+    if tail.startswith(SIDECAR_COMMENT_PREFIX):
+        sidecars.append(tail[len(SIDECAR_COMMENT_PREFIX):])
+    elif tail:
+        native_parts.append(tail)
+    return sidecars, "".join(native_parts)
 
 
 def _native_signature(raw: str) -> str:
@@ -1126,16 +1160,12 @@ def from_conllu(
                 raw = handle.read()
         else:
             raw = source
-        sidecars = [line[len(SIDECAR_COMMENT_PREFIX):] for line in raw.splitlines() if line.startswith(SIDECAR_COMMENT_PREFIX)]
+        # The sidecar comment is transport metadata, not part of the native
+        # document.  It is removed before parsing so its hash binds the exact
+        # canonical CoNLL-U projection that was exported.
+        sidecars, native_raw = _partition_sidecar_comments(raw)
         if len(sidecars) > 1:
             raise InteropSchemaError("duplicate interop sidecar comments")
-        # The sidecar comment is transport metadata, not part of the native
-        # document.  Remove it before parsing so its hash binds the exact
-        # canonical CoNLL-U projection that was exported.
-        native_raw = "".join(
-            line for line in raw.splitlines(keepends=True)
-            if not line.startswith(SIDECAR_COMMENT_PREFIX)
-        )
         ud = load_conllu_document(native_raw, strict=False if sidecars else strict)
     except (OSError, TypeError, ValueError) as exc:
         raise InteropSchemaError(str(exc)) from exc
