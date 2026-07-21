@@ -137,3 +137,77 @@ def test_decoder_ignores_finite_self_loop_scores() -> None:
     scores = np.array([[2.0, 999.0, 0.0], [0.0, 3.0, 999.0]])
 
     assert decode_mst(scores) == [0, 1]
+
+
+def test_decoder_is_exact_when_scale_dwarfs_root_score_differences() -> None:
+    # One irrelevant huge-magnitude arc inflates the scaling denominator; the
+    # single-root penalty must not absorb the O(1) ROOT-column differences.
+    scores = np.array(
+        [
+            [0.0, -np.inf, 0.0, -np.inf],
+            [1.0, 0.0, -np.inf, -np.inf],
+            [-np.inf, 0.0, -1e16, -np.inf],
+        ]
+    )
+
+    heads = decode_mst(scores)
+
+    assert heads == [2, 0, 1]
+    assert _tree_score(scores, heads) == pytest.approx(_brute_force_score(scores))
+    # The same graph with an ordinary magnitude decodes identically.
+    benign = scores.copy()
+    benign[2, 2] = -10.0
+    assert decode_mst(benign) == heads
+
+
+def test_decoder_matches_brute_force_on_seeded_mixed_magnitude_graphs() -> None:
+    random = np.random.default_rng(20260719)
+    checked = 0
+    for _ in range(160):
+        words = int(random.integers(2, 5))
+        scores = random.normal(size=(words, words + 1))
+        # Repeated injections may overflow a cell; such matrices are filtered out.
+        with np.errstate(over="ignore"):
+            for _ in range(int(random.integers(1, words + 2))):
+                dependent = int(random.integers(0, words))
+                head = int(random.integers(0, words + 1))
+                scores[dependent, head] *= 10.0 ** float(random.integers(-180, 180))
+        if not np.isfinite(scores).all():
+            continue
+
+        heads = decode_mst(scores)
+
+        checked += 1
+        assert _is_single_root_tree(heads)
+        best = _brute_force_score(scores)
+        assert _tree_score(scores, heads) >= best - 1e-9 * max(1.0, abs(best))
+    assert checked > 100
+
+
+def test_decoder_absorption_fallback_is_deterministic() -> None:
+    scores = np.array(
+        [
+            [0.0, -np.inf, 0.0, -np.inf],
+            [1.0, 0.0, -np.inf, -np.inf],
+            [-np.inf, 0.0, -1e16, -np.inf],
+        ]
+    )
+    first = decode_mst(scores)
+    assert all(decode_mst(scores) == first for _ in range(5))
+
+
+def test_decoder_absorption_fallback_respects_forced_root_feasibility() -> None:
+    # Word 3 can attach only to ROOT, so it is the only legal root child; the
+    # huge-magnitude arc forces the exact fallback path to make that call.
+    scores = np.array(
+        [
+            [0.0, -np.inf, -np.inf, 5.0],
+            [-np.inf, 1.0, -np.inf, -np.inf],
+            [1.0, -1e16, -np.inf, -np.inf],
+        ]
+    )
+
+    heads = decode_mst(scores)
+
+    assert heads == [3, 1, 0]
+    assert _tree_score(scores, heads) == pytest.approx(_brute_force_score(scores))

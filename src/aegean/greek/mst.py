@@ -132,19 +132,64 @@ def decode_mst(arc_scores: Any) -> list[int]:
     # difference between two W-edge arborescences.  Every valid arborescence
     # needs at least one ROOT edge, so its unconstrained optimum then has exactly
     # one.  Among single-root trees the common penalty leaves the original score
-    # ordering unchanged.  Scaling first avoids overflow for extreme finite
-    # inputs while preserving every comparison.
+    # ordering unchanged.  Scaling first avoids overflow for extreme finite inputs.
     finite = np.isfinite(full)
     scale = max(1.0, float(np.abs(full[finite]).max()))
-    constrained = full.copy()
-    constrained[finite] /= scale
-    finite_values = constrained[finite]
+    scaled = full.copy()
+    scaled[finite] /= scale
+    finite_values = scaled[finite]
     span = float(finite_values.max() - finite_values.min())
-    constrained[1:, 0] -= 1.0 + w * span
-    try:
-        heads = _cle(constrained, np)
-    except (KeyError, ValueError, IndexError) as exc:
-        raise ValueError("arc scores do not contain a valid single-root arborescence") from exc
-    if not valid_tree(heads):
+    penalty = 1.0 + w * span
+    # The penalty subtraction is float64 arithmetic: a ROOT-score difference far
+    # below one ulp of the penalty would be absorbed, and the collapsed tie could
+    # resolve to a suboptimal root child.  Score matrices derived from float32
+    # model logits sit several orders of magnitude above this threshold, so the
+    # guard is a pure inspection there and the penalized path runs unchanged; it
+    # can fire only for extreme mixed-magnitude float64 inputs, which take the
+    # exact per-root fallback instead.
+    absorption_risk = False
+    root_column = scaled[1:, 0]
+    root_values = np.unique(root_column[np.isfinite(root_column)])
+    if len(root_values) > 1:
+        min_gap = float(np.diff(root_values).min())
+        largest = float(np.abs(root_values).max())
+        if min_gap <= 64.0 * float(np.spacing(penalty + largest)):
+            absorption_risk = True
+    if not absorption_risk:
+        constrained = scaled.copy()
+        constrained[1:, 0] -= penalty
+        try:
+            heads = _cle(constrained, np)
+        except (KeyError, ValueError, IndexError) as exc:
+            raise ValueError(
+                "arc scores do not contain a valid single-root arborescence"
+            ) from exc
+        if not valid_tree(heads):
+            raise ValueError("arc scores do not contain a valid single-root arborescence")
+        return [int(h) for h in heads[1:]]
+
+    # Exact fallback: force each candidate root child in turn on the unpenalized
+    # scaled matrix and keep the best legal tree.  No penalty arithmetic is
+    # involved, so the result is exact up to ordinary float64 summation.
+    best_total = -np.inf
+    best_heads: Any = None
+    for candidate in range(1, w + 1):
+        if not np.isfinite(scaled[candidate, 0]):
+            continue
+        forced = scaled.copy()
+        root_score = forced[candidate, 0]
+        forced[1:, 0] = -np.inf
+        forced[candidate, 0] = root_score
+        try:
+            heads = _cle(forced, np)
+        except (KeyError, ValueError, IndexError):
+            continue
+        if not valid_tree(heads):
+            continue
+        total = float(sum(scaled[d, int(heads[d])] for d in range(1, w + 1)))
+        if best_heads is None or total > best_total:
+            best_total = total
+            best_heads = heads
+    if best_heads is None:
         raise ValueError("arc scores do not contain a valid single-root arborescence")
-    return [int(h) for h in heads[1:]]
+    return [int(h) for h in best_heads[1:]]
