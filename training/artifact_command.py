@@ -26,12 +26,12 @@ def add_qualification_arguments(
     parser.add_argument(
         "--qualification-gate",
         type=Path,
-        default=training / "artifact-qualification-gate-v2.json",
+        default=training / "artifact-qualification-gate-v3.json",
     )
     parser.add_argument(
         "--selection-gate",
         type=Path,
-        default=training / "model-selection-gate-v2.json",
+        default=training / "model-selection-gate-v3.json",
     )
     parser.add_argument(
         "--development-manifest",

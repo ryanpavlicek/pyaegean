@@ -716,12 +716,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--gate",
         type=Path,
-        default=Path(__file__).with_name("artifact-qualification-gate-v2.json"),
+        default=Path(__file__).with_name("artifact-qualification-gate-v3.json"),
     )
     parser.add_argument(
         "--selection-gate",
         type=Path,
-        default=Path(__file__).with_name("model-selection-gate-v2.json"),
+        default=Path(__file__).with_name("model-selection-gate-v3.json"),
     )
     parser.add_argument(
         "--manifest",

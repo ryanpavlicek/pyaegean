@@ -224,7 +224,7 @@ def _fixture() -> dict[str, object]:
     }
 
 
-@pytest.mark.parametrize("version", ["v1", "v2"])
+@pytest.mark.parametrize("version", ["v1", "v2", "v3"])
 def test_frozen_gates_bind_development_manifest_selection_and_schema(version: str) -> None:
     gate = qualification.load_gate(TRAINING / f"artifact-qualification-gate-{version}.json")
     selection = selection_mod.load_gate(TRAINING / f"model-selection-gate-{version}.json")

@@ -26,8 +26,8 @@ def test_qualification_arguments_default_to_current_decoder_gates() -> None:
     qualification = parser.get_default("qualification_gate")
     selection = parser.get_default("selection_gate")
 
-    assert qualification.name == "artifact-qualification-gate-v2.json"
-    assert selection.name == "model-selection-gate-v2.json"
+    assert qualification.name == "artifact-qualification-gate-v3.json"
+    assert selection.name == "model-selection-gate-v3.json"
 
 
 def _args(tmp_path: Path) -> argparse.Namespace:

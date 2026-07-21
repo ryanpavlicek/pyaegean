@@ -97,11 +97,12 @@ published benchmark claim.
 
 ## Declarative candidate selection
 
-`model-selection-gate-v2.json` replaces an implicit checkpoint score with a frozen,
+`model-selection-gate-v3.json` replaces an implicit checkpoint score with a frozen,
 content-addressed policy for successor-model experiments. It is bound to the checked-in
 development manifest and requires the package's sequential, complete-window, single-root MST
 decoder. The reference policy protects UPOS, XPOS, UFeats, lemma, UAS, LAS, and CLAS globally
-and on both available sources, plus OOV lemma behavior. Each protected value may fall no more
+and on both available sources, plus per-token OOV-lemma accuracy (the `lemma@oov-token` band).
+Earlier gate versions stay checked in as historical evidence. Each protected value may fall no more
 than 0.01 percentage point below its baseline. Literary Perseus and documentary PapyGreek each
 receive half of the target weight, so a gain on the larger source cannot silently erase a loss
 on the smaller one.
@@ -116,7 +117,7 @@ does not load a model, run inference, or inspect a locked test fold.
 
 ```bash
 python training/model_selection.py \
-    --gate training/model-selection-gate-v2.json \
+    --gate training/model-selection-gate-v3.json \
     --manifest training/results/development-source-manifest.json \
     --baseline training/out/selection/baseline.json \
     --candidate training/out/selection/candidate-seed-1.json \
@@ -131,7 +132,7 @@ selection or release gate.
 
 ## Integrated artifact qualification
 
-`artifact-qualification-gate-v2.json` binds export and optimization to the development
+`artifact-qualification-gate-v3.json` binds export and optimization to the development
 manifest and current selection policy. `export_onnx.py` and `quantize_grc_joint.py` build in a
 private staging directory and create the final directory and deterministic archive only after an
 isolated qualification process returns a reproducible `qualified=true` decision. Failed candidates

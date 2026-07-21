@@ -562,10 +562,35 @@ def _rebuild_report(
         raise QualificationError(f"{where} does not reproduce from gold and predictions")
 
 
+def _oov_token_value(report: Mapping[str, Any], metric: str) -> float | None:
+    """Per-token accuracy over out-of-vocabulary tokens from the error anatomy.
+
+    The ``oov`` item slice is whole sentences that contain any OOV token, so a
+    slice-summed metric there dilutes OOV-token accuracy with the in-vocabulary
+    tokens of those sentences. The overall error anatomy counts the true
+    per-OOV-token hits, so this reads that band directly.
+    """
+    anatomy = report.get("error_anatomy")
+    overall = anatomy.get("overall") if isinstance(anatomy, Mapping) else None
+    bands = overall.get("frequency_bands") if isinstance(overall, Mapping) else None
+    band = bands.get("oov") if isinstance(bands, Mapping) else None
+    if not isinstance(band, Mapping):
+        return None
+    tokens = band.get("tokens")
+    correct = band.get(f"{metric}_correct")
+    if not isinstance(tokens, int) or isinstance(tokens, bool) or tokens <= 0:
+        return None
+    if not isinstance(correct, int) or isinstance(correct, bool) or not 0 <= correct <= tokens:
+        return None
+    return correct / tokens
+
+
 def _metric_value(report: Mapping[str, Any], metric: str, slice_id: str) -> float | None:
     if slice_id == "aggregate":
         value = report["metrics"][metric]["value"]
         return None if value is None else float(value)
+    if slice_id == "oov-token":
+        return _oov_token_value(report, metric)
     numerator = 0
     denominator = 0
     for raw_item in report["items"]:

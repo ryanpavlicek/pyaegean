@@ -164,6 +164,7 @@ def _fixture() -> tuple[dict[str, object], dict[str, object], dict[str, object],
     [
         ("model-selection-gate-v1.json", "pyaegean-release-single-root-mst-v1"),
         ("model-selection-gate-v2.json", "pyaegean-release-single-root-mst-v2"),
+        ("model-selection-gate-v3.json", "pyaegean-release-single-root-mst-v2"),
     ],
 )
 def test_frozen_reference_gates_are_hashed_and_balance_both_sources(
