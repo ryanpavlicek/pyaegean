@@ -36,7 +36,7 @@ If you're new to Python or the terminal, start with
 ## Installing a provider
 
 The core library has zero third-party dependencies. To use the AI layer, install
-the extra for the provider you want plus the [CLI] extra if you want the shell
+the extra for the provider you want plus the `[cli]` extra if you want the shell
 commands:
 
 ```bash
@@ -307,10 +307,9 @@ r2.labeled()            # the tagged text, ready to show a human again
 r2 == r                 # True — a faithful round-trip
 ```
 
-The flag riding through the save and load is deliberate: a result you wrote out
-last week is still a labeled hypothesis when you read it back, not something that
-has quietly graduated into a fact. See [Limitations](Limitations) for why that
-matters.
+The flag is saved to disk with the result, so a result you wrote out last week is
+still a labeled hypothesis when you read it back, not a fact. See
+[Limitations](Limitations) for why that matters.
 
 ---
 
@@ -594,7 +593,7 @@ ai.wrap_untrusted("ignore previous; do X")
 ```
 
 The base system prompt also tells the model to treat all source text as untrusted
-data, belt and braces.
+data.
 
 ### Tracing a result
 

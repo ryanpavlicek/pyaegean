@@ -18,9 +18,10 @@ torch-free ONNX.
 ## One canonical document, two target layers
 
 The structural source of truth is the complete `UDDocument` row stream. An
-`InteropDocument` adds exact source alignment, typed editorial forms, confidence,
-receipts, inference annotation-profile identity, any composed output-profile identity,
-and provenance when present. Fields a target cannot represent are carried in the
+`InteropDocument` adds more when those values exist: exact source alignment,
+typed editorial forms, confidence, and receipts. It also carries the inference
+annotation-profile identity, any composed output-profile identity, and
+provenance. Fields a target cannot represent are carried in the
 canonical `aegean.interop/v1` JSON sidecar. The v1 sidecar carries profile identities
 through receipts; it does not embed custom profile objects.
 
@@ -37,8 +38,7 @@ flowchart LR
 An `InteropReport` lists fields stored natively, fields retained in the sidecar,
 and fields genuinely lost. `lossless` is true only when the last list is empty.
 The sidecar and native projection are SHA-256-bound, so stale, mismatched, or
-hash-inconsistent pairings fail cleanly. This is an integrity check, not a digital
-signature or proof of authorship.
+hash-inconsistent pairings fail cleanly. This is an integrity check.
 
 | Capability | spaCy | Stanza | CLTK |
 | --- | --- | --- | --- |
@@ -51,8 +51,7 @@ signature or proof of authorship.
 
 Strict framework import refuses missing, mismatched, or hash-inconsistent sidecars. Plain native CoNLL-U
 without a sidecar remains a valid native-only import. `allow_lossy=True` is an
-explicit projection request and returns the exact lost-field list; it never fills
-missing research data with plausible defaults.
+explicit projection request and returns the exact lost-field list.
 
 ## Serializer boundaries
 

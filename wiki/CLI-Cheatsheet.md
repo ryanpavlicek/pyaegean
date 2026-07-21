@@ -632,7 +632,7 @@ aegean greek conllu export treebank.conllu -o checked-copy.conllu --strict
 ### Reproducing the published numbers (`eval`)
 
 `aegean greek eval TARGET` runs the official evaluators against fetched gold data
-(heavy). Targets: `ud`, `proiel`, `nt`, `tagger`, `lemmatizer`, `parser`. For `ud`,
+(heavy). Targets: `ud`, `proiel`, `nt`, `papygreek`, `verse`, `dbbe`, `tagger`, `lemmatizer`, `parser`. For `ud`,
 `--fold` is `perseus` / `proiel` and `--split` is `dev` / `test` (both validated
 before anything is fetched; the old `--treebank` spelling for the fold selector is
 a deprecated alias that warns, naming `--fold`). For `proiel`, `--drift` prints a
@@ -902,7 +902,7 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers fifteen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+It offers seventeen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
 (accounting reconciliation), `query_corpus` (the compound query engine),
 `cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site

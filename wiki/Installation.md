@@ -5,7 +5,7 @@ scripts (Linear A, Linear B, Cypriot, Cypro-Minoan). This page gets it onto your
 machine on any platform, explains the optional add-ons, and shows you how to
 confirm it works.
 
-The good news for newcomers: **the core install is one command and has zero
+**The core install is one command and has zero
 third-party dependencies.** The wheel ships code and JSON only, so `import aegean`
 is instant and works fully offline. Everything heavier (`pandas`, the Greek NLP
 backends, the AI provider SDKs, plotting, the command line) is an *optional
@@ -101,8 +101,6 @@ The complete matrix:
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
 | `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet` and the separate framework adapters |
-
-A few things worth knowing:
 
 - **`[all]` includes `[neural]` but omits `[parquet]` and `[interop]`.** It installs ONNX Runtime,
   Tokenizers, and NumPy, but neural model bundles still download lazily on first use and
@@ -327,9 +325,9 @@ can show boxes where the signs should be. Install the free **Noto Sans** fonts
 for the scripts you use, from [Google's Noto fonts](https://fonts.google.com/noto)
 (all are under the SIL Open Font License, so free for any use):
 
-- **Noto Sans Linear A** and **Noto Sans Linear B** — the Aegean syllabaries,
-- **Noto Sans Cypriot** — the Cypriot syllabary (the `cypriot` corpus),
-- **Noto Sans Cypro-Minoan** — the undeciphered Cypro-Minoan signs.
+- **Noto Sans Linear A** and **Noto Sans Linear B**: the Aegean syllabaries,
+- **Noto Sans Cypriot**: the Cypriot syllabary (the `cypriot` corpus),
+- **Noto Sans Cypro-Minoan**: the undeciphered Cypro-Minoan signs.
 
 Those four cover every script pyaegean renders. Windows Terminal then usually
 finds the glyphs by automatic font fallback, and if not you can select a font

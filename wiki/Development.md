@@ -106,8 +106,8 @@ python scripts/check_footprint.py --wheel "dist/*.whl"   # wheel = code + JSON o
 ```
 
 Pinned remote assets (release tarballs + commit-pinned upstream sources) are verified on a
-weekly schedule by `.github/workflows/assets.yml`, not per-PR — link rot is a function of
-time, not of any one change. Run it yourself anytime:
+weekly schedule by `.github/workflows/assets.yml` rather than per-PR. Link rot is a function
+of time, not of any one change. Run it yourself anytime:
 
 ```bash
 python scripts/check_assets.py                 # every pinned URL still resolves
@@ -137,7 +137,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 187 source files
+# Success: no issues found in 195 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:
@@ -166,7 +166,7 @@ installed the heavy libs are present in the environment but still must not be
 python scripts/check_footprint.py
 # loaded on import: none
 # OK  import-clean
-# cold import best 226 ms (bound 500); samples [229, 230, 234, 226, 231]
+# cold import best 350 ms (bound 750); samples [353, 359, 364, 350, 356]
 # OK  import-fast
 ```
 
@@ -196,7 +196,7 @@ actually matters.
 | Check | Run with | What it asserts |
 | --- | --- | --- |
 | **import-clean** | (no args) | `import aegean` loads **no** heavy third-party module and none of the stdlib modules Pyodide unvendors (so the in-browser demo keeps working) |
-| **import-fast** | (no args) | cold `import aegean` (fastest of 5 subprocess runs, after a warmup) stays under **500 ms** |
+| **import-fast** | (no args) | cold `import aegean` (fastest of 5 subprocess runs, after a warmup) stays under **750 ms** on Windows and **500 ms** in CI |
 | **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only: no `.so/.pyd/.dll/.onnx/.npy/.gz/...`: under a 5 MB accident tripwire |
 
 The "heavy" watch-list is `pandas, numpy, scipy, lxml, anthropic, openai,

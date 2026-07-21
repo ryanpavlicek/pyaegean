@@ -96,7 +96,7 @@ states, while CSV and Parquet expose them as `form_*` columns and a JSON `form_s
 corpus you load, filter, and re-save keeps the apparatus. Two caveats: the Workbench export format
 carries token text only, so a Workbench round-trip drops statuses, typed form state, and
 annotations and returns every token as
-`CERTAIN`), and merging corpora keeps `edition_fidelity` only when every input agrees on one value
+`CERTAIN`, and merging corpora keeps `edition_fidelity` only when every input agrees on one value
 (a mixed merge reports it unknown).
 
 ## The `edition_fidelity` flag

@@ -371,9 +371,9 @@ say two heuristics disagree, never that either is correct.
 
 ## Monte-Carlo null models
 
-The highest-integrity move for an undeciphered-script statistic: never report it
-as a bare number, pair it with an explicit *null* and a p-value, so a reader knows
-whether the value is more than randomness alone would produce. `monte_carlo_p`
+Do not report an undeciphered-script statistic as a bare number. Pair it with an
+explicit *null* and a p-value, so a reader knows whether the value is more than
+randomness alone would produce. `monte_carlo_p`
 scores any structure statistic (a `Callable[[Sequence[str]], float]` over a
 sign-hyphen-sign word list, larger = more "structured") against a seeded null:
 

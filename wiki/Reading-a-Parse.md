@@ -68,10 +68,10 @@ same signal drives the ["needs review" column](When-the-Tool-Is-Wrong) in a revi
 `lemma_known` is a deprecated alias of `lemma_resolved`; new code should use the
 explicit evidence fields.
 
-A subtle but important point: a lemma that equals the surface form is not automatically a
-guess. `λόγος` is the lemma of `λόγος`; the neural model reports that as `neural` (a genuine
-analysis, normally `neural_lookup`), not `identity`. The class reflects *how the answer was reached*, not whether the
-string changed.
+A subtle but important point: a lemma can equal the surface form and still be a real
+analysis. `λόγος` is the lemma of `λόγος`; the neural model reports that as `neural` (a genuine
+analysis, normally `neural_lookup`) rather than `identity`. The class reflects *how the answer was
+reached*. It does not depend on whether the string changed.
 
 ## Three registers of output
 

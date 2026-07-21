@@ -3,9 +3,9 @@
 Three complete, run-along walkthroughs that each answer a real question. The
 first two stand on their own: one in **Linear A**, one in **Greek**, and the
 third shows how to pull a real Greek work off the shelf and run the pipeline over
-it. Every snippet here is runnable, and every result shown is **real output** from
-the version you just installed; nothing is invented. If you haven't installed
-pyaegean yet, do [Getting Started](Getting-Started) first.
+it. Every snippet here is runnable, and the outputs shown come from the version
+you just installed. If you haven't installed pyaegean yet, do
+[Getting Started](Getting-Started) first.
 
 Paste the snippets into a [Jupyter notebook](Getting-Started#option-c--jupyter-recommended-for-research)
 cell by cell, or into the interactive `python` prompt; each tutorial builds up
@@ -464,7 +464,7 @@ metrically, from the *Odyssey*'s in Tutorial 2.
 ### Find a work
 
 `popular_works()` is a curated, verified catalog of well-known works: pure
-metadata, no download — so you can look up the id `load_work` needs:
+metadata, no download, so you can look up the id `load_work` needs:
 
 ```python
 from aegean import greek
@@ -549,7 +549,7 @@ anything beyond even the catalogue, browse the complete corpus at the
 ### Load just the lines you want
 
 `load_work` returns a standard `Corpus`. The `ref` argument selects a section
-instead of the whole work — a citation address matching the text's structure: a
+instead of the whole work, a citation address matching the text's structure: a
 book number (`"1"`), a nested chapter (`"1.2"`), or a verse **line-range**
 (`"1.1-1.7"` = book 1, lines 1–7). Here we take the famous first seven lines of the
 *Iliad*:

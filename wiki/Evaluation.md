@@ -3,10 +3,10 @@
 This page documents pyaegean's **evaluation infrastructure**: how the Greek
 pipeline is scored, on which gold data, under which protocol, and with which
 integrity guarantees. Every accuracy number the project publishes comes out of
-these functions, and every one is designed to be **reproducible** (fetched,
-pinned, hashable gold), **leakage-free** (nothing the model trained on is scored
-as if unseen), and **honest** (convention gaps are separated from real error, and
-the caveats travel with the number).
+these functions. Each result is reproducible: the gold data is fetched, pinned,
+and hashable. Nothing the model trained on is scored as if it were unseen.
+Convention gaps are separated from real error, and the caveats travel with the
+number.
 
 Three properties run through all of it:
 
@@ -77,7 +77,7 @@ pure-Python cascade does not emit those columns, so they score as empty against
 gold).
 
 **The measured headline** (UD Ancient Greek Perseus test, neural pipeline,
-end-to-end from raw text, tokens F1 99.97):
+gold tokenization):
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
@@ -354,13 +354,13 @@ only when you actually want to reproduce a number.
 
 ## See also
 
-- [Greek NLP](Greek-NLP) — the pipeline and backends these evaluators score, and the
+- [Greek NLP](Greek-NLP): the pipeline and backends these evaluators score, and the
   held-out AGDT generalization numbers.
-- [Data & Provenance](Data-and-Provenance) — the licence, provenance, and pinned
+- [Data & Provenance](Data-and-Provenance): the licence, provenance, and pinned
   version of every fetched evaluation set and model.
-- [Analysis](Analysis) — the statistics layer behind `bootstrap_ud` and the
+- [Analysis](Analysis): the statistics layer behind `bootstrap_ud` and the
   significance tests.
-- [Benchmarks](Benchmarks)
-  — the full methodology, the leakage controls, the comparison tables, and every
+- [Benchmarks](Benchmarks):
+  the full methodology, the leakage controls, the comparison tables, and every
   measured number with its citation.
-- [Limitations](Limitations) — the honest scope of each backend the numbers describe.
+- [Limitations](Limitations): the honest scope of each backend the numbers describe.

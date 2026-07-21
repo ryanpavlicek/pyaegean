@@ -141,14 +141,6 @@ row, since they share its SDK).
 
 `aegean.load("…")` opens a built-in corpus by id. The ids:
 
-```python
-import aegean
-from aegean.core.corpus import _LOADERS
-sorted(_LOADERS)
-# ['cypriot', 'cyprominoan', 'damos', 'ddbdp', 'edh', 'greek', 'igcyr', 'iip',
-#  'iospe', 'isicily', 'lineara', 'linearb', 'nt', 'sigla']
-```
-
 | id | What it is | Offline? |
 |---|---|---|
 | `lineara` | the full Linear A corpus (1,721 documents) | yes, bundled |
@@ -541,7 +533,7 @@ writable, and any leftover partial download from an interrupted fetch (with the
 
 ### Is the Linear A "translation" real? Can I trust the analysis?
 
-**No — and the library is built to keep you honest about this.** Linear A is
+**No, and the library is built to keep you honest about this.** Linear A is
 **undeciphered**. The phonetic values come from Linear B as a working convention,
 and every analytical or AI method is labeled **exploratory**: evidence to weigh,
 never a translation. Treat results as leads for a human expert, not answers. See
@@ -558,7 +550,7 @@ as fact. Always verify against primary scholarship. See [AI Layer](AI-Layer) and
 
 The default rule/seed engines are an offline **baseline**: high-precision on closed
 classes (article, prepositions, pronouns…) and regular paradigms, but they miss
-irregular, third-declension, contract, and most open-class forms — and they tell you
+irregular, third-declension, contract, and most open-class forms, and they tell you
 when a result is reconstructed (`lemma_certain=False`).
 
 Several opt-in backends raise accuracy past that baseline. The highest-scoring shipped option is the

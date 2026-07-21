@@ -63,11 +63,8 @@ The [getting-started notebook](https://colab.research.google.com/github/ryanpavl
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-The current release includes source-preserving named sentence policies, isolated
-`GreekPipeline` instances, explicit safe handling for overlength neural input, stable
-evidence-gated neural runtime labels, exact analysis receipts, source alignment, typed
-editorial form states, and lossless CoNLL-U
-structure. Optional [interoperability adapters](interoperability.md) carry complete
+The current release includes named sentence policies, isolated `GreekPipeline`
+instances, and lossless CoNLL-U structure. Optional [interoperability adapters](interoperability.md) carry complete
 analyses through spaCy, Stanza, and CLTK objects with explicit native/sidecar/loss reports. The
 [Greek API](api/greek.md) also exposes immutable annotation and domain profiles, with
 content-addressed output and post-processing identity in current analysis receipts. The

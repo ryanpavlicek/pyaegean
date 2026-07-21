@@ -1,12 +1,11 @@
 # For specialists
 
-This page is for the people pyaegean most wants to hear from: Aegean
-epigraphers, Mycenologists, classical philologists, historical linguists. It
-explains the one thing that matters most for trusting a result: **the line
-between settled scholarship and machine-generated hypothesis**, and then gives
-you the concrete tools to *audit* a result, *cite* it correctly, and *correct or
-extend* the toolkit where your judgement says it's wrong. Your corrections are
-part of how it stays honest.
+This page is for Aegean epigraphers, Mycenologists, classical philologists, and
+historical linguists. It explains the one thing that matters most for trusting a
+result: **the line between settled scholarship and machine-generated
+hypothesis**. It then gives you the concrete tools to *audit* a result, *cite* it
+correctly, and *correct or extend* the toolkit where your judgement says it's
+wrong. Your corrections are part of how it stays honest.
 
 If you're brand new to running Python, start with [Getting Started](Getting-Started)
 and come back here; nothing below requires you to be a developer, and every

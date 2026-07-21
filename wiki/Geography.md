@@ -107,7 +107,7 @@ number of distinct **located** sites in the Linear A corpus.
 | `id` | inscription | str | the inscription id (e.g. `HT1`) |
 | `site` | both | str | at inscription level, the raw `meta.site` label; at site and word_distribution level, the canonical gazetteer label (whitespace-variant find-place spellings collapse into one row) |
 | `label` | both | str | the gazetteer's display name (may be fuller, e.g. `Iouktas (Mt Juktas)`) |
-| `region` | both | str | one of the six [region codes](#regions) |
+| `region` | both | str | one of the nine [region codes](#regions) |
 | `period` | inscription | str | the inscription's `meta.period` (e.g. `LMIB`) |
 | `pleiades` | both | int / null | the [Pleiades](#pleiades-alignment) place id, if aligned |
 | `contested` | both | str / null | reason string if the find-spot's provenance is disputed (e.g. Margiana), else null; see [Contested find-spots](#contested-find-spots) |

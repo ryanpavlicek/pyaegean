@@ -9,23 +9,21 @@ at a time; nothing here can break your computer.
 > Already comfortable with Python and `pip`? Skip ahead to
 > [Installation](Installation) and the [Tutorial](Tutorial).
 
-> **Just want to try it first?** The core pipeline runs **in your browser**, nothing to
-> install: [the web demo](https://pyaegean.xyz/demo/) (Pyodide).
-
-> **Prefer to jump straight into code?** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
-> is a self-contained, runnable guided tour: work through it cell by cell on your own
-> machine or free in the cloud ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
-> It is a standalone way in; it does **not** follow this page's steps or the
-> [Tutorial](Tutorial), so treat it as an alternative, not a companion.
-
-> **Prefer the terminal to Python?** Once you're installed (Steps 1–4), add the
-> command line with `pip install "pyaegean[cli]"` and run **`aegean quickstart`**:
-> a guided first five minutes (eight short steps, seven of them running a real
-> command live on the bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
-> for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
-> **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
-> Greek workbench, and manage the data store, all offline and mouse-or-keyboard
-> driven ([the TUI page](TUI)).
+> **Other ways in, if you'd rather not install Python yet.**
+>
+> - **In your browser, nothing to install.** The core pipeline runs as
+>   [the web demo](https://pyaegean.xyz/demo/) (Pyodide).
+> - **Straight into code.** [The getting-started notebook](https://github.com/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)
+>   is a runnable guided tour. Work through it cell by cell on your own machine, or
+>   free in the cloud ([open in Colab](https://colab.research.google.com/github/ryanpavlicek/pyaegean/blob/main/notebooks/getting-started.ipynb)).
+> - **In the terminal.** Once you're installed (Steps 1–4),
+>   `pip install "pyaegean[cli]"` adds **`aegean quickstart`**, a guided first five
+>   minutes (eight short steps, seven of them running a real command live on the
+>   bundled data, all offline). See [the CLI page](CLI#the-guided-tour-aegean-quickstart)
+>   for what it covers. For an app-like way in, `pip install "pyaegean[tui]"` adds
+>   **`aegean tui`**, a full-screen terminal cockpit to browse a corpus, run the live
+>   Greek workbench, and manage the data store, all offline and mouse-or-keyboard
+>   driven ([the TUI page](TUI)).
 
 ## What pyaegean is (in one breath)
 

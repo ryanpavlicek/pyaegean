@@ -22,9 +22,8 @@ Each section names the primary source and links onward:
 - the established / measured / exploratory framework and how to audit a result:
   [For Specialists](For-Specialists) and [Limitations](Limitations)
 
-This is a documentation page, not an academic paper, and it does not claim to be
-one. It describes what the code and data actually do, with the commands to
-reproduce every number yourself.
+This is a documentation page, not an academic paper. It describes what the code
+and data actually do, with the commands to reproduce every number yourself.
 
 ---
 
@@ -145,31 +144,30 @@ convention, cross-tool comparisons stay in the benchmarks doc).
 
 ### How successor checkpoints are selected
 
-The historical v3 training script kept a local average of LAS and lemma accuracy. Future
-successor experiments instead use one frozen, machine-readable selection policy over the
-leakage-checked Perseus and PapyGreek development sources. The policy names the exact release
-decoder, protects all seven reported tasks globally and by source plus OOV lemma behavior,
-and gives the literary and documentary sources equal total weight. No protected development
-value may fall more than 0.01 percentage point below its baseline.
+The historical v3 training script kept a local average of LAS and lemma accuracy.
+Successor selection instead uses one frozen, machine-readable policy over the
+leakage-checked Perseus and PapyGreek development sources. The policy names the exact
+release decoder, protects all seven reported tasks globally and by source plus OOV
+lemma behavior, and gives the literary and documentary sources equal total weight. No
+protected development value may fall more than 0.01 percentage point below its baseline.
 
-The selector verifies the real source manifest and each candidate's report, recomputes scores
-from integer counts, rejects missing or mismatched evidence, and ranks surviving candidates by
-Pareto fronts and declared deterministic tie breakers. This is development-only work: the
-selector neither runs a model nor sees a locked test fold. The locked tests remain a one-shot
-measurement only after the complete candidate has been frozen.
+The selector verifies the source manifest and each candidate's report, recomputes scores
+from integer counts, rejects missing or mismatched evidence, and ranks surviving candidates
+by Pareto fronts and deterministic tie breakers. It is development-only: it neither runs a
+model nor reads a locked test fold. The locked tests stay a one-shot measurement after the
+candidate is frozen.
 
-Export and optimization are part of that gate rather than separate packaging chores. The
-conversion commands first create a staged artifact, rebuild reference and candidate development
-reports from their prediction records, and compare every protected task/source metric plus decoded
-UPOS, XPOS, UFeats, lemma, head, and relation. A framework export must be exactly prediction-
-identical to its reference. An optimized artifact may use only the declared small tolerances and
-must actually reduce total artifact bytes.
-
-Qualification also runs the complete development population through ONNX Runtime on CPU in
-sequential/windowed mode and records latency, resident memory, artifact size, runtime versions, and
-the active execution provider. CUDA is probed when installed. These private development records
-decide whether a candidate may be promoted; they are not published benchmark numbers and do not
-read the locked test folds. A smaller graph is not automatically described as faster.
+Export and optimization are part of that gate rather than separate packaging. The conversion
+commands stage an artifact, rebuild reference and candidate development reports from their
+prediction records, and compare every protected task and source metric plus decoded UPOS,
+XPOS, UFeats, lemma, head, and relation. A framework export must be exactly prediction-identical
+to its reference; an optimized artifact may use only the declared small tolerances and must
+reduce total artifact bytes. Qualification then runs the complete development population through
+ONNX Runtime on CPU in sequential/windowed mode and records latency, resident memory, artifact
+size, runtime versions, and the active execution provider, probing CUDA when installed. These
+private development records decide whether a candidate may be promoted. They are not published
+benchmark numbers and do not read the locked test folds. A smaller graph is not automatically
+faster.
 
 ### What the metrics mean
 
@@ -365,7 +363,7 @@ The shipped model is **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), roughly 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
 uncompressed). In the recorded decoder-v1 quantization comparison, the measured UD
 Perseus test scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma
-94.3 / UAS 90.2 / LAS 85.6). The recipe is **weight-only int8 + fp16, activations
+94.3 / UAS 90.2 / LAS 85.7). The recipe is **weight-only int8 + fp16, activations
 kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on
 everything else (crucially the ~160 MB word-embedding table), activations fp32 by

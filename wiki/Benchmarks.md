@@ -160,7 +160,7 @@ beyond the model's single-pass budget; partial placeholder tails are never score
 The row's two weakest cells are largely convention, not model quality, and
 `aegean greek eval papygreek --drift` measures it: 4.98 of the 8.47 UPOS gap
 points (58.79% of all UPOS errors) sit on the coordinator class alone (καί, δέ,
-τε — tagged under three incompatible conventions in the merged training
+τε: tagged under three incompatible conventions in the merged training
 treebanks), and 13.31 of the 22.81 XPOS gap points are convention or encoding
 (the coordinator pos-code, the model's common-gender `c`, and a gold `_`-slot
 artifact); forgiving those three, XPOS would read 90.50%. A measurement
@@ -171,15 +171,15 @@ decomposition only, mirroring the PROIEL one; the published row is unchanged.
 Two **opt-in, default-off** post-processing layers reconcile the neural pipeline's
 output to the documentary register, byte-identical to the shipped model until switched
 on. Each is a composition layer (like `use_paradigms`) with its **own** registry variant
-row, so the published PapyGreek row is unchanged. **Lever A** —
-`greek.use_documentary_reconciliation()` — relabels only the closed coordinator set
+row, so the published PapyGreek row is unchanged. **Lever A**
+(`greek.use_documentary_reconciliation()`) relabels only the closed coordinator set
 (καί, δέ, τε …) when the model emits the always-wrong `X`/`b` reading. On the corrected
 fold it changes exactly 775 UPOS and 783 XPOS cells, improving UPOS by 3.13 points and
 XPOS by 3.18 while every other field remains byte-identical. Earlier dev-selection
 deltas predated the work-level correction and are historical, not current
 leakage-clean claims; the aggressive `ADV`/`d` variant remains recommended against.
-**Lever B** —
-`greek.use_documentary_lemma_rescue()` — rescues an unresolved neural lemma from the
+**Lever B**
+(`greek.use_documentary_lemma_rescue()`) rescues an unresolved neural lemma from the
 guarded **seed + paradigm** tiers only (ending rules excluded: break-even documentary,
 net-negative literary), under its own `SEED`/`PARADIGM` evidence class, never `NEURAL`.
 It makes no additional prediction on the corrected fold, so no current lemma lift is
@@ -195,8 +195,8 @@ claimed. Each variant is measured once, full-coverage and sequentially, on the p
 The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
 measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
 UFeats 86.15 / lemma 82.05 / UAS 84.32 / LAS 77.55 / CLAS 72.94 vs the
-regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 —
-lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
+regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40.
+Lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
 (tagging only, unedited medieval
 verse) scores UPOS 86.74 / lemma 76.71 over 9,191 tokens. Reproduce:
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
@@ -207,7 +207,7 @@ The verse fold (gold manual annotation from the UNESP Trees project, CC BY-SA
 4.0; Euripides *Bacchae* 1-169, leakage-checked against training) is a
 leakage-clean tragedy evaluation; no prior one is known to us. A small-sample datapoint with
 wide CIs, never a headline: tragedy UPOS 90.88 / lemma 87.89 / UAS 79.73 /
-LAS 73.33 over 735 tokens (LAS 95% CI [69.75, 78.28]). Tragedy parses ~7 LAS
+LAS 73.33 over 735 tokens (LAS 95% CI [69.75, 78.28]). Tragedy parses ~6 LAS
 points below the documentary fold: poetic word order is materially harder.
 Reproduce: `aegean greek eval verse --track tragedy`.
 
@@ -393,7 +393,7 @@ The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed
 `model.onnx`), about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB
 uncompressed). In the recorded decoder-v1 quantization comparison, UD Perseus test
 scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS
-90.2 / LAS 85.6). The recipe
+90.2 / LAS 85.7). The recipe
 is weight-only int8 (onnxruntime MatMulNBits, block 128, symmetric) plus fp16 on
 everything else, keeping activations at fp32 by design. Full int8 (quantized
 activations) collapses the GreBerta encoder (its activation outliers do not survive

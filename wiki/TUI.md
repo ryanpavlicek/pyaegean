@@ -80,7 +80,7 @@ DAMOS is the full Linear B corpus (~5,900 tablets), fetch-on-demand rather than
 bundled. The data store is where it enters the local store.
 
 1. Press `d`. The **data store** opens: the environment report tables first (versions,
-   extras, store location, models, cache), then the dataset table listing all 19
+   extras, store location, models, cache), then the dataset table listing the
    fetchable datasets with their state, on-disk size, and license.
 2. Press `Tab` until the dataset table holds the focus (the report tables come first
    in the Tab order), then `↓` to the `damos-corpus` row.

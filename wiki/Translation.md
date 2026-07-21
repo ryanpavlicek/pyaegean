@@ -21,8 +21,7 @@ The idea is simple: a bare model translates Ancient Greek from its training
 memory alone. Here, the model is first told the lemma, part of speech, case
 role, voice, and clause structure that pyaegean computes reliably, plus the real
 meaning of any non-compositional idiom present, so its draft is anchored to
-local facts you can audit rather than to its own recall. The translation stays
-generative, but the grounding under it is deterministic and traceable.
+local facts you can audit rather than to its own recall.
 
 This page covers the translation layer specifically. For the full generative
 surface (gloss, decipherment hypotheses, ask, summarize, extract), the providers
@@ -66,10 +65,10 @@ translate` routes through `translate.translate`.
 
 `grounding_for` returns the deterministic, local evidence, each item tagged with
 its **source** so the result's `trace()` names where it came from. Grounding is
-**best-effort by default**: a required analysis failure yields the evidence still
+**best-effort by default**. A required analysis failure yields the evidence still
 available, and `translate(...).trace()` records the failed stage and exception type.
 Use `grounding_failure="strict"` when a missing or incomplete required analysis must
-stop the operation. Strict failure raises `GroundingError`; `translate` performs this
+stop the operation. Strict failure raises `GroundingError`. `translate` performs this
 check before any provider call. Optional dictionaries, the optional rarity corpus, and
 an unmatched idiom remain normal absences under either policy. Invalid arguments such
 as an unknown `mode` still raise `ValueError`.
@@ -375,8 +374,8 @@ last week is still a labeled hypothesis when you read it back. See the AI Layer'
 
 Linear A is **undeciphered**. Its grounding is a sign→sound transliteration, not a
 meaning, and the resulting "translation" is a model's guess built on that
-phonetic reading. It is the sharpest edge of the exploratory caveat and must never
-be presented as a reading. For the deterministic, evidence-based analysis that
+phonetic reading. The exploratory caveat is strongest here, and this output must
+never be presented as a reading. For the deterministic, evidence-based analysis that
 should anchor any such guess, and for cautious decipherment hypotheses tied to
 cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 [decipherment hypotheses](AI-Layer#decipherment-hypotheses).
@@ -422,9 +421,9 @@ Shared CLI conventions (a `-` argument reads stdin, `--json` prints one document
   the [grounded-generation eval](AI-Layer#grounded-generation-eval) all exist to
   keep that front of mind. On the undeciphered scripts, nothing this layer
   produces is a reading.
-- **The grounding is deterministic; the translation is generative.** The value is
-  that the model reasons over real, local, auditable evidence rather than its
-  training memory alone. Feed it a richer lemmatizer for fuller grounding.
+- **The value is in the grounding.** The model reasons over real, local, auditable
+  evidence rather than its training memory alone. Feed it a richer lemmatizer for
+  fuller grounding.
 - **Prefer the deterministic tools where they exist.** For tagging, lemmatizing,
   scansion, and syntax, use [Greek NLP](Greek-NLP); for Linear A/B tablet
   accounting, use [Analysis](Analysis) and [Linear A](Linear-A). This layer is

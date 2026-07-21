@@ -37,8 +37,9 @@ then match what you see against the table below and decide.
 `TextProfile` is about the characters in an input string. The annotation registry
 is a different, explicit piece of provenance: `AnnotationProfile` names the output
 label and relation convention, while `DomainProfile` records the declared source
-scope and layer. Neither is inferred from `TextProfile`, and neither is the
-caller-supplied confidence `domain` used to scope calibration evidence.
+scope and layer. The caller supplies each profile explicitly, so pyaegean does not
+infer it from `TextProfile`. The confidence `domain` is a separate label that scopes
+calibration evidence.
 
 Inspect the immutable registry from Python or the shell:
 
@@ -131,9 +132,9 @@ test suite that needs configurations to coexist should construct `GreekPipeline(
 isolated baseline or `GreekPipeline.neural()` for an isolated neural runtime. Its immutable
 `config` records the model, tokenizer, profile, normalization, and the backend's
 segmentation contract (for a neural instance, copied from the model manifest), plus
-live execution providers. It also records the runtime label and registry digest. The stable
-`fast`, `compact`, and `balanced` names are reservations, not available alternatives: asking
-for one fails without falling back until a qualified successor earns that label. The baseline's
+live execution providers. It also records the runtime label and registry digest. The
+`fast`, `compact`, and `balanced` names stay reserved until a qualified successor earns the
+label; requesting one fails rather than silently falling back. The baseline's
 contract is `pyaegean-punctuation-v1`; a
 neural instance copies its `pretokenized` value from the model manifest. Neither is
 the document's `sentence_policy`.

@@ -306,6 +306,10 @@ OCR, teaching, benchmarking), see [Choosing a Pipeline](Choosing-a-Pipeline).
 
 ## The neural pipeline (opt-in)
 
+If you just want a parse, call `greek.use_neural_pipeline()` and then
+`greek.pipeline(...)`; the rest of this section explains the model and its configuration
+options.
+
 One jointly-trained model: a GreBerta encoder with tagging heads, a biaffine dependency
 parser decoded by a single-root MST (non-projectivity handled natively), and an
 edit-script lemmatizer: serving **UPOS, full morphology (UD FEATS), UD dependency
@@ -476,13 +480,20 @@ schema, so it is accepted only through an exact published-file compatibility rec
 different unversioned bundle must use a new model ID and schema.
 
 Every production `SentenceAnalysis` also carries `receipt`, a canonical, serializable
-`AnalysisReceipt`. It records the exact model ID, asset and manifest SHA-256 values, bundle
-schema, tokenizer revision, package/Python/neural-library versions, live execution
-providers, inference annotation profile, normalization and model-input segmentation contract,
-limit, and truncation/window status. Schema 4 also binds the runtime label, complete variant
-registry, qualification/award identities when applicable, composed output profile, and ordered
-post-processing identity. Receipt schemas 1 through 3 remain readable for current hosted
-evidence, but they do not invent the missing runtime-label provenance. `receipt.to_json()` is
+`AnalysisReceipt`. It records:
+
+- the exact model ID, asset and manifest SHA-256 values, and bundle schema;
+- the tokenizer revision;
+- the package, Python, and neural-library versions;
+- the live execution providers;
+- the inference annotation profile;
+- the normalization and model-input segmentation contract;
+- the limit and truncation/window status.
+
+Schema 4 also binds the runtime label, complete variant registry, qualification/award
+identities when applicable, composed output profile, and ordered post-processing identity.
+Receipt schemas 1 through 3 remain readable for current hosted evidence, but they do not
+invent the missing runtime-label provenance. `receipt.to_json()` is
 stable and `receipt.sha256` content-addresses it. Passing a prior receipt as
 `use_neural_pipeline(expected_receipt=receipt)` refuses a runtime or artifact mismatch rather
 than silently approximating the old analysis.
@@ -603,8 +614,7 @@ The per-sentence receipt keeps the immutable neural inference identity. If the
 opt-in documentary reconciliation or lemma-rescue layer post-processes that result,
 receipt schema 4 additionally binds the runtime label, registry/evidence digests, composed
 output profile ID and SHA-256, and ordered post-processing identity (including the configured
-lever and resource hashes). Schemas 1 through 3 remain readable for current hosted evidence;
-a richer receipt does not turn post-processing into a new model or accuracy claim.
+lever and resource hashes). Schemas 1 through 3 remain readable for current hosted evidence.
 
 `greek.analyze_sentences(...)` still returns the historical complete list; it is a
 collector over that bounded engine. Raw-text `greek.pipeline`, corpus annotation,
@@ -617,7 +627,7 @@ prediction-identical to sequential CPU inference on a fixed verification set
 GPU and batched vs sequential on every token. Throughput on that set: CPU batching
 alone was about 4× over sequential CPU, and a data-center GPU with `batch_size=32`
 about 90×. **Every published benchmark number is measured on the CPU provider,
-sequentially** — the recorded protocol; GPU and batching are throughput conveniences.
+sequentially** (the recorded protocol); GPU and batching are throughput conveniences.
 
 ### Documentary-register post-processing (opt-in)
 
@@ -653,13 +663,13 @@ other field consistent. The **conservative default** fires only on the `X` / `b`
 which is *always* wrong for a coordinator, so it cannot mislabel a correct token. The
 **aggressive** form (`use_documentary_reconciliation(aggressive=True)`) additionally folds in
 the `ADV` / `d` reading, which is a *legitimate* adverbial tag for these forms in the literary
-convention — it clobbers those correct labels and is **documented against** (measured to
+convention, so it clobbers those correct labels and is **documented against** (measured to
 regress literary text heavily).
 
 **Lever B — lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When the model leaves
 a lemma unresolved (the honest identity fall-through), this consults the guarded **offline**
 cascade: the bundled **seed** table, then the opt-in UniMorph **paradigm** table when
-`use_paradigms()` is active — **seed and guarded-paradigm tiers only**. The generalizing
+`use_paradigms()` is active (**seed and guarded-paradigm tiers only**). The generalizing
 ending-stripping rules are **deliberately excluded** (on the residue the model already left
 unresolved they fabricate about as often as they fix). So Lever B is at its best paired with
 `use_paradigms()`. A rescue only *replaces* an unresolved lemma (never overrides a resolved
@@ -704,8 +714,7 @@ scoring does not use that cleanup. PapyGreek's `orig`
 profile changes only the diplomatic `FORM` surface while retaining regularized-layer
 gold analyses and documented fallbacks. When a post-processing chain is attached,
 receipt schema 4 binds its runtime variant, composed output profile, and ordered step
-identity. Schemas 1 through 3 remain readable for current hosted evidence, and
-`grc-joint-v3` remains unchanged.
+identity. Schemas 1 through 3 remain readable for current hosted evidence.
 
 ## Normalization & Beta Code
 

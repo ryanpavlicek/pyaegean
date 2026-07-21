@@ -112,7 +112,7 @@ The changelog records what has shipped. Current work is focused on:
 Aegean epigrapher, Mycenologist, philologist, or historical linguist? See
 **[For Specialists](For-Specialists)** for what's established vs. exploratory and
 how to file a correction, validate an exploratory result, or contribute a sourced
-fact: your judgement is part of how the toolkit stays trustworthy.
+fact. Corrections welcome.
 
 ## License
 

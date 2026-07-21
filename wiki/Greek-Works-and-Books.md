@@ -308,7 +308,7 @@ greek.load_work("tlg0016.tlg001", ref="1.2")   # Herodotus, book 1, chapter 2
 
 ### Citation schemes: how a work is addressed
 
-A `ref` is only meaningful against the work's **declared citation scheme** — the ordered
+A `ref` is only meaningful against the work's **declared citation scheme**: the ordered
 levels the edition names in its TEI `<refsDecl>`. pyaegean reads that scheme straight from
 each edition (no author-specific guessing), so the shape of a `ref` differs by genre. The
 patterns below are typical; the authority is always the edition's own structure, which is
@@ -335,12 +335,12 @@ Because the scheme is read from the edition, a `ref` that resolves nowhere repor
 work's **own** scheme rather than only that the ref missed (`… cited by book.line`), so the
 error tells you how to address the work. Two rules follow from the scheme: a hyphen
 **range** must stay inside one top-level part (`1.1-1.50` is fine; `1.1-2.50`, which crosses
-from book 1 into book 2, is rejected — load each book and `Corpus.merge`, or use a comma
+from book 1 into book 2, is rejected: load each book and `Corpus.merge`, or use a comma
 list), and a **comma list** (`1.1,1.5` or `1,3`) selects siblings, or ranges that would
 cross a textpart, as one `Document` each, in source order.
 
 Some editions print finer references in the margin, in TEI `<milestone>` markers that live
-**outside** the CTS `<div>` scheme — a Stephanus sub-page (`17a`) or a Bekker line (`1447a10`,
+**outside** the CTS `<div>` scheme: a Stephanus sub-page (`17a`) or a Bekker line (`1447a10`,
 column `a` of page `1447`, line `10`). `--ref` now addresses these too: it extracts the span
 between the named marker and the next marker of its kind, so `aegean greek work tlg0086.tlg034
 --ref 1447a10` (the *Poetics*) returns the run from line 10 up to the next marked line.
@@ -349,7 +349,7 @@ marked line numbers are addressable: `1447a11`-`1447a14` resolve to nothing. A w
 page-*column* resolves the same way (`1447a` = column `a` of page 1447); the whole physical
 page is its two columns as a **comma list** (`1447a,1447b`), and milestone refs may appear
 in any comma list (`17a,17b`), one `Document` each. A hyphen **range** of milestones is
-**not yet** supported — only a single milestone ref is addressable; a range falls through to
+**not yet** supported: only a single milestone ref is addressable; a range falls through to
 the scheme-naming error, so use a comma list of the individual markers instead.
 
 ### The same thing on the command line

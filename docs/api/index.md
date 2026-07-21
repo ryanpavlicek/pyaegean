@@ -13,7 +13,13 @@ and where to begin, see the [home page](../index.md).
 
 - [`aegean`](aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
 - [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `TokenFormState`, `FormSegment`, `SourceMarkupRef`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
-- [`aegean.greek`](greek.md): the Greek NLP pipeline (normalize, tokenize, named sentence policies, scan, tag, lemmatize, parse), `segment_text()` / `segment_sentences()` with validated plugin results and exact boundary spans, `pipeline_tokens()` for typed editorial forms, isolated `GreekPipeline` instances with serializable configuration, bounded `iter_analyze_sentences()` neural sentence streams, explicit long-input and runtime-variant selection, optional typed `TokenConfidence`/`SentenceConfidence` evidence through `confidence_domain` and `confidence_policy`, immutable annotation/domain registries through `list_annotation_profiles()` / `list_domain_profiles()`, exact schema-4 `AnalysisReceipt` provenance (runtime registry/evidence, composed output, post-processing, and optional calibration/policy hashes), manifest-validated neural bundles, lossless CoNLL-U document I/O, plus work discovery: `catalog()` (the full ~1,800-work index), `popular_works()`, and `nt_books()`.
+- [`aegean.greek`](greek.md): the Greek NLP pipeline. It covers:
+    - text processing: normalize, tokenize, named sentence policies, scan, tag, lemmatize, and parse;
+    - `segment_text()` / `segment_sentences()` with validated plugin results and exact boundary spans, and `pipeline_tokens()` for typed editorial forms;
+    - isolated `GreekPipeline` instances with serializable configuration, bounded `iter_analyze_sentences()` neural sentence streams, and explicit long-input and runtime-variant selection;
+    - optional typed `TokenConfidence` / `SentenceConfidence` evidence through `confidence_domain` and `confidence_policy`, and immutable annotation and domain registries through `list_annotation_profiles()` / `list_domain_profiles()`;
+    - exact schema-4 `AnalysisReceipt` provenance (runtime registry and evidence, composed output, post-processing, and optional calibration and policy hashes), manifest-validated neural bundles, and lossless CoNLL-U document I/O;
+    - work discovery: `catalog()` (the full 1,778-work index), `popular_works()`, and `nt_books()`.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
 - [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
@@ -27,10 +33,10 @@ The reviewed public entry points are the typed core envelope (`InteropDocument`,
 (`to_spacy`/`from_spacy`, `to_stanza`/`from_stanza`, `to_cltk`/`from_cltk`), and
 portable `InteropBundle` helpers (`bundle_from_document`, `dumps_interop_bundle`,
 `loads_interop_bundle`, `read_interop_bundle`, `write_interop_bundle`), and the
-explicit CLTK seam (`make_cltk_process`). `bundle_from_result`, sidecar codecs,
-schema constants, and typed interoperability errors support advanced integrations
-and are listed in the generated [`aegean.io` reference](io.md). The adapter dependencies
-are lazy and remain outside the core import path.
+explicit CLTK seam (`make_cltk_process`). `bundle_from_result`, the sidecar
+codecs, schema constants, and typed interoperability errors are also public and
+are listed in the generated [`aegean.io` reference](io.md). The adapter
+dependencies are lazy and stay outside the core import path.
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 

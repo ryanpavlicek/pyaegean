@@ -13,7 +13,7 @@ Every example below was run against the installed package; the output shown is
 the real output. Where a feature has both a Python API and a CLI command, you
 get both.
 
-> **Available since v0.49.0.** Typed source alignment, typed editorial form states,
+> **Available since v0.45.0.** Typed source alignment, typed editorial form states,
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
@@ -29,8 +29,8 @@ combining/slicing is [`merge`/`subset`/`combine`](#combining-and-slicing-corpora
 ### Interoperability is a projection boundary
 
 The complete `UDDocument` row stream remains the structural core. `aegean.io` wraps it
-in an `InteropDocument` carrying exact source alignment, typed form state, confidence,
-receipts, profile identity, and provenance when those values exist. Exports populate
+in an `InteropDocument`. That envelope carries exact source alignment, typed form state,
+confidence, receipts, profile identity, and provenance when those values exist. Exports populate
 the target's native fields and carry the rest in a canonical `aegean.interop/v1`
 sidecar. `InteropReport` distinguishes native, sidecar-held, and genuinely lost fields;
 strict reimport validates the native projection and sidecar together. spaCy, Stanza, and
@@ -101,7 +101,7 @@ unavailable label before model loading; different variant artifacts use differen
 `aegean.greek.confidence` is a standard-library-only contract shared by the neural
 pipeline, tabular views, and the CLI. A schema-2 `CalibrationRegistry` is keyed by model,
 task, lemma source path, and optional domain; exact entries win and explicitly marked
-fallback entries are reported as fallback rather than masquerading as exact evidence.
+fallback entries are reported as fallback rather than as exact evidence.
 `TokenConfidence` and `SentenceConfidence` hold either a scoped value (with calibration
 hash, sample count, and measured ECE/Brier support) or a stable unavailable reason. The
 legacy flat confidence fields remain for compatibility and are not retrofitted with scope.
@@ -520,7 +520,7 @@ print(list(d["documents"][0].keys()))
 ```
 
 The `_meta` block stamps the tool name, schema version, script id, document
-count, and the provenance source/license/citation onto the export — so even the
+count, and the provenance source/license/citation onto the export, so even the
 lossy form carries its attribution.
 
 ### `to_json` / `from_json` — lossless

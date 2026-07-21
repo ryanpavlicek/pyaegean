@@ -340,14 +340,15 @@ and `sentence_confidence` records its named components. A result is either an av
 value with model/source/domain scope, a calibration id, sample count, and measured ECE or
 Brier score, or an unavailable result with a stable reason such as `missing_calibration`,
 `unsupported_task`, `unsupported_source`, `unsupported_domain`, or
-`confidence_unavailable`. Do not treat an unavailable value as zero. The compatibility
+`confidence_unavailable`. An unavailable value records the absence of a calibrated
+estimate, so it must not be read as a zero score. The compatibility
 `upos_confidence`/`lemma_confidence` fields do not acquire this scope retroactively.
 
 `confidence_domain=` is an explicit query label, not an automatic genre or OOD detector.
 Schema-2 `CalibrationRegistry` resolution first tries an exact source/domain entry and only
-uses a broader entry when that entry is explicitly marked as a fallback. No bundled
-thresholds are implied. An `AbstentionPolicy` supplied through `confidence_policy=` applies
-caller-selected task thresholds and returns `accept`, `review`, or `unavailable`; its
+uses a broader entry when that entry is explicitly marked as a fallback. An
+`AbstentionPolicy` supplied through `confidence_policy=` applies caller-selected task
+thresholds, none of them bundled, and returns `accept`, `review`, or `unavailable`; its
 canonical `policy_sha256` travels with each decision. For the shipped canonical runtime,
 schema-4 `AnalysisReceipt` output records calibration/policy hashes, runtime-variant evidence,
 and the composed output/post-processing identity. Schemas 1 through 3 remain readable for
@@ -468,10 +469,10 @@ Three formats, three different promises:
   (SQL `NULL`, which would otherwise sort first) or out-of-order positions
   survive in place. Databases written before 0.19.4 lack the column; they are
   read via a `position` fallback and migrated in place on the first
-  `append=True` write. Schema-1 databases also lack A4 source/alignment columns;
-  they load with absent values and migrate to schema 2 on append. Schema-1 and
-  schema-2 databases have no A6 form-state column; an append migrates them to
-  schema 3 atomically, and old rows keep `form_state=None`.
+  `append=True` write. Schema-1 databases also lack the source and alignment
+  columns; they load with absent values and migrate to schema 2 on append.
+  Schema-1 and schema-2 databases have no form-state column; an append migrates
+  them to schema 3 atomically, and old rows keep `form_state=None`.
 - **Schema versions gate forward-compatibility only.** `SCHEMA_VERSION`
   (stored as `_meta.schemaVersion` in JSON, `schema_version` in the SQLite
   `meta` table and on `Provenance`) is bumped only for changes an older reader

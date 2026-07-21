@@ -11,27 +11,27 @@ The tables below score six things a pipeline does to each word (and to the sente
 whole). All are percentages: higher is better, and each is the fraction the system got right
 against the human-annotated gold standard.
 
-- **UPOS** — *Universal Part Of Speech.* The basic word class (noun, verb, adjective,
+- **UPOS**: *Universal Part Of Speech.* The basic word class (noun, verb, adjective,
   preposition, ...) from Universal Dependencies' 17-tag set. "Did it identify what kind of
   word this is?"
-- **XPOS** — the *language-specific* part-of-speech tag: the treebank's own finer-grained
+- **XPOS**: the *language-specific* part-of-speech tag: the treebank's own finer-grained
   tagset (more categories than UPOS). Not comparable across treebanks that use different
   tagsets, so it is sometimes marked n/a.
-- **UFeats** — *Universal Features:* the full morphology of the word — case, number, gender,
-  tense, mood, voice, person. A word counts only if *every* feature is right, so this is the
+- **UFeats**: *Universal Features:* the full morphology of the word (case, number, gender,
+  tense, mood, voice, person). A word counts only if *every* feature is right, so this is the
   strictest word-level tag. "Did it get the complete grammatical parse of the word?"
-- **Lemma** — the dictionary/citation form you would look up: `λέγει` → `λέγω`, `ἀνθρώπους`
+- **Lemma**: the dictionary/citation form you would look up: `λέγει` → `λέγω`, `ἀνθρώπους`
   → `ἄνθρωπος`. "Did it recover the headword?"
-- **UAS** — *Unlabeled Attachment Score:* the fraction of words hooked to the correct
+- **UAS**: *Unlabeled Attachment Score:* the fraction of words hooked to the correct
   syntactic parent (which other word each word grammatically depends on). It measures the
   shape of the sentence's dependency tree, ignoring the name of each link.
-- **LAS** — *Labeled Attachment Score:* UAS, but the link must *also* carry the right relation
+- **LAS**: *Labeled Attachment Score:* UAS, but the link must *also* carry the right relation
   label (subject, object, modifier, ...). Stricter than UAS (right parent **and** right
   relation), and the usual headline number for parsing quality.
 
 Two supporting terms: the scorer reports **F1** (the balance of precision and recall) per
 metric, and a **bootstrap confidence interval** (e.g. `[89.6, 90.9]`) is the range a score
-would plausibly fall in on similar data, estimated by re-sampling the fold's sentences — a
+would plausibly fall in on similar data, estimated by re-sampling the fold's sentences: a
 narrow interval means the number is stable, not a lucky fold.
 
 ## Protocol
@@ -90,7 +90,7 @@ narrow interval means the number is stable, not a lucky fold.
 ## Leakage controls
 
 UD Perseus is converted from the AGDT: the treebank pyaegean's Greek backends are built
-from — so a naïve evaluation would leak the test set into training. Two controls keep the
+from, so a naïve evaluation would leak the test set into training. Two controls keep the
 neural pipeline's numbers honest:
 
 - **The UD-Perseus exclusion manifest.** `greek.agdt_ud_overlap()` resolves every
@@ -229,7 +229,7 @@ Three things keep these honest:
   closely, so tokenization is not a bottleneck on this fold. Throughput of the shipped
   quantized model is roughly **20–70 words/s on plain CPU** (sentence-length dependent,
   measured on the development machine); the fp32 `grc-joint-v2` bundle reaches roughly
-  300 words/s on the same machine — see the quantization trade-off below. Unlike the
+  300 words/s on the same machine (see the quantization trade-off below). Unlike the
   accuracy figures above (deterministic given the model and gold data, and re-measured by
   `scripts/check_benchmarks.py`), throughput is **hardware-dependent and illustrative, not a
   pinned benchmark**: it scales with the CPU, core count, and workload, so read it as an
@@ -239,7 +239,7 @@ Three things keep these honest:
 The model ships **quantized at about 173 MB** (tar.gz; 182 MB uncompressed `model.onnx`),
 about 3× smaller than the fp32 build (518 MB tar.gz / 556 MB uncompressed). In the recorded
 decoder-v1 quantization comparison, UD Perseus test scores were unchanged within ±0.02
-(UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.6). The trade-off is
+(UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS 90.2 / LAS 85.7). The trade-off is
 **CPU throughput**: the int8 MatMulNBits
 kernels run several times slower than fp32 MatMul on this workload (roughly 20–70 words/s
 quantized vs roughly 300 words/s fp32 on the development machine), so the quantized default
@@ -380,7 +380,7 @@ Leiden/EpiDoc apparatus is stripped to the reading text). The scores are therefo
 regularized-text figure. They do not measure the model on the raw documentary
 orthography (phonetic spellings, itacism, non-standard case and agreement) that the
 `orig` layer preserves and that is meaningfully harder. That harder input now has its
-own fold: the diplomatic `orig` surface layer (`papygreek-fold-orig` — the same 1,551
+own fold: the diplomatic `orig` surface layer (`papygreek-fold-orig`: the same 1,551
 sentences and the same gold, with the raw diplomatic form as the token), scored by
 `greek.evaluate_on_papygreek(layer="orig")` (CLI `aegean greek eval papygreek --layer
 orig`). Its row appears below.
@@ -427,12 +427,12 @@ No manually-annotated Greek verse treebank outside the model's own training data
 was previously known to us: the canonical epic and tragedy treebanks are all in
 the AGDT+Gorman+Pedalion training set (the leakage-clean UD-Perseus test fold is
 100% prose). The verse fold fills that gap with gold from the UNESP Trees
-project (Perseids/Arethusa manual annotation, CC BY-SA 4.0): **tragedy only** —
+project (Perseids/Arethusa manual annotation, CC BY-SA 4.0): **tragedy only**,
 Euripides, *Bacchae* 1-169, 36 sentences / 735 tokens after the standard
 selection policy. The fold is leakage-checked sentence-by-sentence in its build
 (0 overlaps; the only Euripides in training is *Medea*). Gold diligence: an
 eight-sentence scholarly spot-check preceded the first pin, and a subsequent
-specialist review pass corrected the fold build (v2) — a 25-token sliver first
+specialist review pass corrected the fold build (v2): a 25-token sliver first
 labeled hexameter was identified as the Maximus *prose paraphrase* and removed,
 15 leaf-apposition relations were corrected from the converter's `cc` to
 `appos`, and 11 malformed gold lemmas (Latin homoglyph vowels, LSJ citation-form
@@ -447,7 +447,7 @@ headline number.**
 
 Tragedy 95% CIs (percentile bootstrap, 999): UPOS [88.40, 92.96], lemma
 [85.44, 90.10], UAS [75.84, 84.68], LAS [69.75, 78.28]. The substantive finding:
-tragedy LAS (~73) runs well below the documentary fold (~80) — poetic word order
+tragedy LAS (~73) runs well below the documentary fold (~80): poetic word order
 and hyperbaton are materially harder to parse than either prose register, which
 is precisely what this fold exists to measure. Reproduce:
 `aegean greek eval verse --track tragedy` (evidence:
@@ -457,7 +457,7 @@ is precisely what this fold exists to measure. Reproduce:
 
 The orig-layer fold (`evaluate_on_papygreek(layer="orig")`) scores the same
 1,551 sentences and gold as the row above, with the FORM column carrying the
-scribes' actual readings (1,453 tokens differ — mostly orthographic: itacism,
+scribes' actual readings (1,453 tokens differ, mostly orthographic: itacism,
 vowel-quantity confusion, nasal assimilation, voicing, gemination; a minority
 are the editors' morphosyntactic regularizations, e.g. non-standard case,
 number, or εἰς/ἐν substitution, so the pair measures the cost of raw documentary
@@ -469,7 +469,7 @@ usage, not spelling alone). Measured once, CPU sequential:
 | PapyGreek, diplomatic (orig) | 90.57 | 74.64 | 86.15 | 82.05 | 84.32 | 77.55 | 72.94 |
 
 The pair isolates the cost of the scribes' non-standard documentary usage:
-lemma takes the largest hit (−4.05 points — phonetic spellings break lemma
+lemma takes the largest hit (−4.05 points: phonetic spellings break lemma
 composition), morphology loses ~2.58, attachment the least. Only 6.5% of tokens
 differ in surface form, so the per-changed-token degradation is steep.
 (Current decoder-v2 evidence:
@@ -481,7 +481,7 @@ CC BY 4.0): 825 sentences / 9,191 tokens of unedited medieval book epigrams,
 7th–15th c., non-normalized scribal orthography. The gold carries POS and lemma
 but no trees, so this is a tagging row; the DBBE tagset is mapped to UPOS and
 gold lemmas are normalized Attic headwords, both stated caveats. Measured once,
-CPU sequential: **UPOS 86.74 / XPOS 76.40 / UFeats 85.86 / lemma 76.71** —
+CPU sequential: **UPOS 86.74 / XPOS 76.40 / UFeats 85.86 / lemma 76.71**,
 leakage-checked (0 overlaps). (Evidence:
 `training/results/dbbe-eval-v2-2026-07-11.json`.)
 
@@ -496,7 +496,7 @@ and partitions each gap. Measurement only; the published row is unchanged.
 `training/results/papygreek-convention-decomp-v2-2026-07-15.json`.)
 
 **UPOS.** Of the 8.47-point gap, 4.98 points (58.79% of all UPOS errors) sit on one
-closed class: the coordinators (gold `CCONJ` — καί, δέ, τε …). The merged training
+closed class: the coordinators (gold `CCONJ`: καί, δέ, τε …). The merged training
 treebanks tag these words under three incompatible conventions (the AGDT
 conjunction code, an adverb reading, and a non-AGDT code that maps to `X`), so the
 model's label for them is unstable and drifts in the documentary register.
@@ -511,7 +511,7 @@ broken.
 
 **A recorded conversion correction (0.44.0).** The AGDT→UD converter that builds
 both the training labels and the AGDT-derived evaluation folds mapped a *leaf*
-`APOS` relation (an appositive attached directly under its antecedent) to `cc` —
+`APOS` relation (an appositive attached directly under its antecedent) to `cc`,
 a label UD reserves for coordinating-conjunction words. The converter now emits
 `appos`, and the folds were rebuilt and re-measured (73 gold cells in the
 PapyGreek fold, 15 in the verse fold; DEPREL only, every other cell
@@ -536,7 +536,7 @@ active first (`greek.use_neural_pipeline()`).
 **Lever A — coordinator reconciliation** (`greek.use_documentary_reconciliation()`).
 The conservative default relabels only the closed coordinator set (καί, δέ, τε, ἀλλά,
 ἤ, οὐδέ, οὔτε, μηδέ, μήτε) and only when the model emits the always-wrong `X` / `b`
-reading — never a legitimate tag for a coordinator — so it cannot mislabel a correct
+reading (never a legitimate tag for a coordinator), so it cannot mislabel a correct
 token. The current corrected test-fold measurement changes exactly 775 UPOS and 783
 XPOS cells, improving UPOS by 3.13 points and XPOS by 3.18 while every other field is
 byte-identical. Earlier development-selection deltas predated the work-level leakage
@@ -545,7 +545,7 @@ aggressive `ADV` / `d` variant remains recommended against.
 
 **Lever B — lemma OOV rescue** (`greek.use_documentary_lemma_rescue()`). When the model
 leaves a lemma unresolved (the honest identity fall-through), the guarded offline cascade
-is consulted — the bundled seed table and, when `use_paradigms()` is active, the UniMorph
+is consulted, the bundled seed table and, when `use_paradigms()` is active, the UniMorph
 paradigm table: **seed and guarded-paradigm tiers only**. The generalizing
 ending-stripping rules are **deliberately excluded**: on the OOV residue the model already
 left unresolved they fabricate about as often as they fix (measured **break-even on the
@@ -579,10 +579,10 @@ decomposition only: it changes no output or published score. (13,314 words, neur
 pipeline; evidence: `training/results/proiel-convention-decomp-2026-07-11.json` and
 `training/results/decoder-v2-remeasure-2026-07-18.json`.)
 
-**UFeats.** Of the 40.6-point gap, 24.2 points are *scheme-absent* features — UD
+**UFeats.** Of the 40.6-point gap, 24.2 points are *scheme-absent* features, UD
 feature types the AGDT scheme cannot emit at all (PROIEL uses exactly five the
 Perseus scheme lacks: `PronType`, `Definite`, `Polarity`, `Reflex`, `Poss`; 3,224
-words carry at least one) — and 16.4 points are disagreement inside the shared
+words carry at least one), and 16.4 points are disagreement inside the shared
 scheme. On the 10,090 words whose gold features are all scheme-shared, the model
 scores UFeats **78.4**. Within the shared types, the well-shared morphology agrees
 closely (Number 99.6%, VerbForm 99.7%, Case 99.0%, Mood 99.0%, Tense 98.3%, Voice
@@ -595,7 +595,7 @@ morphological error.
 **LAS.** Of the 36.5-point LAS gap (100 − LAS), 17.5 points are attachment errors
 (100 − UAS) and 19.0 points (2,526 tokens, the UAS-to-LAS gap) are attachment-correct
 but label-wrong. That relabelling
-mass is systematic, not scattered — the top five gold-to-predicted confusions carry
+mass is systematic, not scattered: the top five gold-to-predicted confusions carry
 68.9% of it, and each is a known convention pair between the two UD conversions:
 `discourse → advmod` (24.1%: PROIEL tags the sentential particles μέν, δέ, γάρ, οὖν
 `discourse`, a relation the AGDT scheme lacks), `det → nmod` (17.6%), `obl → obj`

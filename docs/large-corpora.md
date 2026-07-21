@@ -93,11 +93,11 @@ Two independent streaming seams now ship:
       print(analysis.lemma, analysis.receipt.sha256 if analysis.receipt else None)
   ```
 
-The iterator is synchronous backpressure: creating it pulls nothing, pausing the
-consumer pulls nothing further, and closing it closes a source generator. It
+The iterator applies synchronous backpressure. Creating it pulls nothing. Pausing
+the consumer pulls nothing further. Closing it closes a source generator. It
 captures one backend/configuration, documentary state, and (when requested)
-confidence calibration at construction, copies each sentence before
-analysis, preserves order and per-sentence receipts, and never retries. A backend
+confidence calibration at construction. It copies each sentence before analysis.
+It preserves order and per-sentence receipts. It never retries. A backend
 failure yields nothing from that chunk; already yielded chunks remain valid. A
 source failure while a batch is being filled likewise leaves that partial chunk
 unyielded. Memory is bounded with respect to the number of corpus sentences by
@@ -115,7 +115,7 @@ JSONL (one JSON string array per line; `-` means stdin) and emits one flushed
 `SentenceAnalysis` JSON object per line. It activates the neural backend itself;
 `--batch-size`, long-input, and confidence controls mirror the Python iterator.
 
-What is **not** implied by this sentence boundary is a fully streaming raw-text or
+The sentence boundary does not extend to a fully streaming raw-text or
 `Corpus` pipeline. `greek.pipeline(text)`, `GreekPipeline.analyze(text)`,
 `greek.annotate_corpus(...)`, CoNLL-U parsing/serialization/evaluation, and analyses
 that require the whole vocabulary still collect. A general document-iterator

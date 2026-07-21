@@ -254,7 +254,7 @@ site (a canonical entry is `http://www.stoa.org/sol-entries/alpha/1`), not by a 
 word, so `greek.lexica()` records where it lives rather than minting an offline word→entry
 link. The ancient Suda text (Adler's 1928–1938 edition) is public domain; the Suda On
 Line's translations and annotations are **CC BY-NC-SA** (per the SOL rights statement).
-Nothing is hosted or bundled — the entry links, and hosts, nothing.
+The registry only records the deep link; it hosts nothing.
 
 #### The Greek neural lemmatizer model (`grc-lemma-neural`, `use_neural_lemmatizer`, `[neural]`)
 
@@ -289,9 +289,15 @@ reproducibility.
 The packaged runtime registry identifies the exact release asset and bundle manifest under the
 stable `default` label; it does not bundle model weights. `fast`, `compact`, and `balanced` are
 reserved records with no artifact identity until a qualified successor earns the corresponding
-operational award. Any future available non-default record must bind a distinct cache key when
-its bytes differ, the release-asset SHA-256, bundle-manifest SHA-256, artifact qualification, and
-runtime-variant award. The label registry and public award summaries contain no private development task scores
+operational award. Any future available non-default record must bind:
+
+- a distinct cache key, when its bytes differ;
+- the release-asset SHA-256;
+- the bundle-manifest SHA-256;
+- artifact qualification;
+- a runtime-variant award.
+
+The label registry and public award summaries contain no private development task scores
 or raw timing series.
 
 Model card: the base encoder is **bowphs/GreBerta** (Riemenschneider & Frank,
