@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.57.1 (beta).** This site documents the current release.
+**Latest PyPI release: v0.57.2 (beta).** This site documents the current release.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)

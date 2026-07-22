@@ -13,3 +13,8 @@ training/results/papygreek-convention-decomp-v2-2026-07-15.json text eol=lf
 # rule also covers future nested receipts; the explicit historical entries above
 # remain as documentation of when those evidence paths were first pinned.
 training/results/** text eol=lf
+# The independent-review kit's canonical JSON files require exactly-LF bytes
+# (the verifier's strict canonical check), so a Windows autocrlf checkout must
+# not convert them.
+review/review-manifest-v1.json text eol=lf
+review/expected-results-v1.json text eol=lf

@@ -4,6 +4,45 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.57.2 (2026-07-22)
+
+### Fixed
+
+- Milesian numerals stay one token under NFC. The keraia (U+0374) canonically
+  decomposes to U+02B9, which the tokenizer previously treated as punctuation, so
+  the mandated canonical form split a numeral such as `δʹ` into two tokens. Both
+  forms now count as word characters, and a numeral is never read as an elided
+  coordinator.
+- CoNLL-U interop sidecars survive Unicode line separators. A source text
+  containing U+2028, U+2029, or U+0085 made `to_conllu` emit a file that
+  `from_conllu` and the bundle builder refused, because the sidecar comment was
+  split mid-JSON. The readers now split on ASCII newlines only, so every exported
+  document re-imports.
+- Single-root dependency decoding guards against float64 penalty absorption. On
+  extreme mixed-magnitude arc scores the single-root penalty could round away a
+  real ROOT-score difference; such inputs now take an exact per-root fallback.
+  Scores from the shipped model never reach that range, so its predictions are
+  unchanged.
+- The independent-review manifest and expected-results files are pinned to LF
+  line endings, so `python scripts/reproduce_review.py` verifies from a fresh
+  Windows checkout with `core.autocrlf` enabled.
+- Documentation accuracy corrections across the site and wiki: the rounded LAS
+  echo (85.7), the MCP tool count (seventeen), the geography region count (nine),
+  the evaluation-target lists, the neural headline's protocol label
+  (gold tokenization), and stale version and count echoes, together with a
+  prose clarity pass.
+
+### Changed
+
+- Successor-model selection and artifact qualification use gate v3: the
+  out-of-vocabulary lemma protection now measures per-OOV-token lemma accuracy
+  from the report's frequency band instead of whole-sentence accuracy over
+  OOV-containing sentences. Training machinery only; no published number changed.
+- Candidate checkpoint metadata, export validation, and the shared preprocessing
+  contract accept one recorded soft POS/morphology parser-input architecture
+  (`soft-upos-morph`). Existing bundles reconstruct encoder-only and the shipped
+  `grc-joint-v3` artifact is unchanged.
+
 ## 0.57.1 (2026-07-18)
 
 ### Fixed
