@@ -514,11 +514,15 @@ restores the cascades above. From the shell, add `--neural` to `tag`, `lemmatize
 default and do not accept a variant override. The `[neural]` extra is required either way.
 
 **Measured: UD Ancient Greek test folds, official CoNLL 2018 evaluator, through the
-shipped package, end-to-end from raw text** (tokens F1 99.97):
+shipped package, gold tokenization:**
 
 | UD Perseus test | UPOS | UFeats | Lemma | UAS | LAS |
 | --- | --- | --- | --- | --- | --- |
 | neural pipeline | **97.0** | **96.0** | **94.3** | **90.2** | **85.7** |
+
+Measured again end-to-end from raw text, the package's own tokenizer reaches
+tokens F1 99.97 on this fold and the scores track these figures closely, so
+tokenization is not a bottleneck here.
 
 Out-of-domain (UD PROIEL test, a source no pyaegean model trains on): lemma 90.51,
 UAS 82.47, UPOS 86.68. Inference is torch-free, at roughly 20–70 words/second on a plain

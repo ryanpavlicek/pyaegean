@@ -3,7 +3,10 @@
 A word is a run of Greek letters (with their combining diacritics) plus edge and
 internal elision apostrophes: a trailing one for ordinary elision (``δ'``) and a
 leading one for prodelision / aphaeresis (``'στι`` for ``ἐστι`` after a long vowel).
-Everything else is punctuation or whitespace. Sentence boundaries come from the
+Milesian numeral signs also count as word characters (the keraia U+0374 and its
+NFC form U+02B9, plus the leading lower keraia U+0375), so a numeral such as
+``δʹ`` stays one token under either normalization. Everything else is punctuation
+or whitespace. Sentence boundaries come from the
 shared conservative segmenter: callers can select a documented domain policy or
 provide a validated external segmenter without changing tokenization.
 """
