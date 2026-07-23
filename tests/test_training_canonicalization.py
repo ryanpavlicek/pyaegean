@@ -56,11 +56,14 @@ def _word(
 
 def test_policy_is_bound_to_all_three_source_revisions() -> None:
     policy = builder.load_label_policy()
-    assert policy["policy_id"] == "greek-joint-canonical-v2"
+    assert policy["policy_id"] == "greek-joint-canonical-v3"
     assert set(policy["sources"]) == {"agdt", "gorman", "pedalion"}
     assert all(len(source["revision"]) == 40 for source in policy["sources"].values())
     assert "punctuation_lemma" in policy["shared_rules"]
     assert "lemma_grave_accent" in policy["shared_rules"]
+    # The interrogative-lemma and non-cc coordinator migrations are deliberately
+    # absent: they contradict the pinned evaluation folds' own conventions.
+    assert "interrogative_tis_lemma" not in policy["shared_rules"]
 
 
 def test_leaf_apos_is_appos_and_original_labels_remain_addressable() -> None:
@@ -94,9 +97,10 @@ def test_structurally_confirmed_coordinator_normalizes_pedalion_b_to_cconj() -> 
 
 
 def test_ambiguous_auxy_use_is_not_flattened_into_coordination() -> None:
-    # AuxY never becomes deprel cc; focus-capable καί keeps a non-coordinator
-    # reading (ADV via the particle mapping), while connective δέ canonicalizes
-    # to CCONJ under the v2 policy without its deprel changing.
+    # AuxY never becomes deprel cc, and non-cc coordinators are never migrated
+    # to CCONJ: the pinned evaluation folds disagree with each other on that
+    # convention (Perseus dev is ADV-majority, PapyGreek CCONJ-majority), so
+    # both καί and δέ take the Pedalion particle mapping to ADV.
     attrs = [
         _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
         _word(2, 1, "AuxY", form="καὶ", lemma="καί", xpos="b--------"),
@@ -105,7 +109,7 @@ def test_ambiguous_auxy_use_is_not_flattened_into_coordination() -> None:
     row = builder.row_from_attrs("pedalion:toy.xml", "1", attrs, source="pedalion")
     assert row["deprel"][1] == "advmod" and row["deprel"][2] == "advmod"
     assert row["upos"][1] == "ADV" and row["xpos"][1] == "d--------"
-    assert row["upos"][2] == "CCONJ" and row["xpos"][2] == "c--------"
+    assert row["upos"][2] == "ADV" and row["xpos"][2] == "d--------"
 
 
 def test_coordinator_pos_is_unchanged_when_surface_is_outside_closed_lexicon() -> None:
@@ -191,57 +195,20 @@ def test_pedalion_particle_coordinator_with_auxy_becomes_adv_not_x() -> None:
     assert row["upos"][1] == "ADV"
 
 
-def test_alla_is_cconj_except_before_disjunctive_e() -> None:
+def test_non_cc_coordinators_keep_their_source_labels() -> None:
+    # The pinned evaluation folds contradict each other on the non-cc
+    # coordinator convention, so ἀλλά, δέ, and τε keep their source POS
+    # whenever the conversion did not emit cc — even in clearly connective or
+    # coordination-adjacent contexts.
     attrs = [
         _word(1, 2, "AuxY", form="ἀλλὰ", lemma="ἀλλά", xpos="d--------"),
         _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(3, 2, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
     ]
     row = builder.row_from_attrs("toy.xml", "1", attrs)
-    assert row["upos"][0] == "CCONJ" and row["xpos"][0] == "c--------"
-    exceptive = [
-        _word(1, 3, "AuxY", form="ἀλλ̓", lemma="ἀλλά", xpos="d--------"),
-        _word(2, 3, "AuxY", form="ἢ", lemma="ἤ", xpos="d--------"),
-        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-    ]
-    row = builder.row_from_attrs("toy.xml", "2", exceptive)
     assert row["upos"][0] == "ADV" and row["xpos"][0] == "d--------"
-
-
-def test_free_standing_connective_de_is_cconj_with_every_guard_held() -> None:
-    connective = [
-        _word(1, 2, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
-        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-    ]
-    row = builder.row_from_attrs("toy.xml", "1", connective)
-    assert row["upos"][0] == "CCONJ" and row["xpos"][0] == "c--------"
-    # split half: untouched
-    split = [
-        _word(1, 2, "AuxY", form="-δε", lemma="δέ", xpos="d--------"),
-        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-    ]
-    assert builder.row_from_attrs("toy.xml", "2", split)["upos"][0] == "ADV"
-    # negation half: untouched
-    negated = [
-        _word(1, 3, "AuxZ", form="οὐ", lemma="οὐ", xpos="d--------"),
-        _word(2, 3, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
-        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-    ]
-    assert builder.row_from_attrs("toy.xml", "3", negated)["upos"][1] == "ADV"
-    # possible allative (advmod on the immediately preceding noun): untouched
-    allative = [
-        _word(1, 3, "OBJ", form="ἀγορὴν", lemma="ἀγορά", xpos="n-s---fa-"),
-        _word(2, 1, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
-        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-    ]
-    row = builder.row_from_attrs("toy.xml", "4", allative)
-    assert row["deprel"][1] == "advmod"
-    assert row["upos"][1] == "ADV"
-
-
-def test_te_needs_coordination_structure_evidence() -> None:
-    # X τε καὶ Y: the Prague coordinator καί heads both conjuncts; enclitic τε
-    # is AuxY on the first conjunct, which the conversion promotes to the
-    # coordination head with a conj dependent — the structure rule 5 needs.
+    assert row["upos"][2] == "ADV" and row["xpos"][2] == "d--------"
+    # τε beside real coordination structure still keeps its source POS.
     coordinated = [
         _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
         _word(2, 4, "OBJ_CO", form="λόγους", lemma="λόγος", xpos="n-p---ma-"),
@@ -249,15 +216,9 @@ def test_te_needs_coordination_structure_evidence() -> None:
         _word(4, 1, "COORD", form="καὶ", lemma="καί", xpos="c--------"),
         _word(5, 4, "OBJ_CO", form="μύθους", lemma="μῦθος", xpos="n-p---ma-"),
     ]
-    row = builder.row_from_attrs("toy.xml", "1", coordinated)
+    row = builder.row_from_attrs("toy.xml", "2", coordinated)
     assert row["deprel"][1] == "obj" and row["deprel"][4] == "conj"
-    assert row["head"][4] == 2  # μύθους is conj on the promoted first conjunct
-    assert row["upos"][2] == "CCONJ" and row["xpos"][2] == "c--------"
-    bare = [
-        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-        _word(2, 1, "AuxY", form="τε", lemma="τε", xpos="d--------"),
-    ]
-    assert builder.row_from_attrs("toy.xml", "2", bare)["upos"][1] == "ADV"
+    assert row["upos"][2] == "ADV" and row["xpos"][2] == "d--------"
 
 
 def test_cop_attached_eimi_is_aux_never_verb() -> None:
@@ -293,17 +254,17 @@ def test_suppletive_aorist_eip_forms_take_lemma_eipon() -> None:
     assert row["lemma"][1] == "λέγω"  # non-verb, non-eip form untouched
 
 
-def test_interrogative_and_indefinite_tis_lemmas_follow_the_accent() -> None:
+def test_tis_lemmas_pass_through_unchanged() -> None:
+    # PapyGreek's pinned gold lemmatizes the interrogative paradigm under
+    # unaccented τις, so the accent-normalization rule is deliberately absent.
     attrs = [
         _word(1, 2, "ATR", form="τίνος", lemma="τις", xpos="p-s---mg-"),
         _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
         _word(3, 2, "OBJ", form="τὶ", lemma="τίς", xpos="p-s---na-"),
-        _word(4, 2, "OBJ", form="τί", lemma="τις", xpos="p-s---na-"),
     ]
     row = builder.row_from_attrs("toy.xml", "1", attrs)
-    assert row["lemma"][0] == "τίς"  # first-syllable acute disyllabic: interrogative
-    assert row["lemma"][2] == "τις"  # grave monosyllable: never the interrogative
-    assert row["lemma"][3] == "τις"  # acute monosyllable: ambiguous, untouched
+    assert row["lemma"][0] == "τις"
+    assert row["lemma"][2] == "τίς"
 
 
 def test_impersonal_dei_needs_positive_structural_evidence() -> None:
@@ -384,7 +345,7 @@ def test_manifest_binds_policy_sources_outputs_and_detects_tampering(tmp_path: P
     path = tmp_path / "training-data-manifest.json"
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     checked = builder.verify_training_manifest(path)
-    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v2"
+    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v3"
     assert checked["policy"]["hash_mode"] == "canonical-json"
     assert checked["policy"]["sha256"] == builder.canonical_sha256(builder.LABEL_POLICY)
     assert checked["sources"]["agdt"]["files"][0]["sha256"] == builder._sha256_file(source)

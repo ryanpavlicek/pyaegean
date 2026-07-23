@@ -54,7 +54,7 @@ from reproducibility import (  # noqa: E402
 )
 
 
-_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v2.json")
+_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v3.json")
 _MANIFEST_FORMAT = "pyaegean-canonical-training-data/1"
 _OUTPUT_NAMES = (
     "full-train.jsonl",
@@ -158,7 +158,6 @@ _COORDINATOR_LEMMAS = frozenset({
     "ειτε", "αταρ", "αυταρ",
 })
 _COORDINATOR_RELATION_BASES = frozenset({"COORD", "AuxY", "AuxZ"})
-_DE_FIX_DEPRELS = frozenset({"advmod", "root", "parataxis", "discourse", "dep", "cc"})
 
 _DEI_IMPERSONAL_FORMS = frozenset(
     _nfc(form)
@@ -168,14 +167,6 @@ _DEI_IMPERSONAL_FORMS = frozenset(
     )
 )
 _DEI_QUANTITY_LEMMAS = frozenset({"πολυς", "ολιγος", "μικρος", "τοσουτος"})
-_TIS_INTERROGATIVE_FORMS = frozenset(
-    _nfc(form)
-    for form in (
-        "τίνος", "τίνι", "τίνα", "τίνε", "τίνοιν", "τίνες", "τίνων",
-        "τίσι", "τίσιν", "τίν",
-    )
-)
-_TIS_GRAVE_FORMS = frozenset(_nfc(form) for form in ("τὶ", "τὶς"))
 _EN_SURFACES = frozenset(_nfc(form) for form in ("ἐν", "Ἐν", "ἔν"))
 
 
@@ -192,59 +183,27 @@ def _coordinator_xpos_pass(
     """Coordinator POS completion: rewrite the closed set's XPOS initial by lemma.
 
     Extends the surface-keyed cc rule with lemma-keyed coverage (crasis, elision,
-    epic variants), the Pedalion particle class stuck at the unknown fallback, the
-    adversative and postpositive connectives, and structurally evidenced τε.
+    epic variants) and resolves the Pedalion particle class stuck at the unknown
+    fallback. Non-cc coordinator readings keep their source labels: the pinned
+    evaluation folds disagree with each other on that convention.
     """
     lemmas = [_norm(str(a.get("lemma", "") or a.get("form", ""))) for a in attrs]
-    conj_heads = {head for head, deprel in tree if deprel == "conj"}
     result = list(xpos_list)
-    for index, (attr, xpos, (head, deprel)) in enumerate(zip(attrs, xpos_list, tree)):
+    for index, (attr, xpos, (_head, deprel)) in enumerate(zip(attrs, xpos_list, tree)):
         if xpos[:1] == "c":
             continue
         lemma = lemmas[index]
         if lemma not in _COORDINATOR_LEMMAS:
             continue
-        form = str(attr.get("form", ""))
         # 1. Any closed-set lemma the conversion marked cc is a coordinator.
         if deprel == "cc":
             result[index] = "c" + xpos[1:]
             continue
-        # 2. ἀλλά has no adverbial reading; exceptive ἀλλ᾽ ἤ stays for review.
-        if lemma == "αλλα":
-            next_lemma = lemmas[index + 1] if index + 1 < len(lemmas) else ""
-            if next_lemma != "η":
-                result[index] = "c" + xpos[1:]
-            continue
-        # 3. Free-standing connective δέ, guarded: split halves, the negation
-        #    halves (οὐδέ/μηδέ), and every possible allative -δε token stay.
-        if lemma == "δε":
-            if form.startswith("-"):
-                continue
-            previous = lemmas[index - 1] if index >= 1 else ""
-            if previous in ("ου", "μη"):
-                continue
-            if (
-                deprel == "advmod"
-                and head == index
-                and index >= 1
-                and result[index - 1][:1] == "n"
-            ):
-                continue
-            if deprel in _DE_FIX_DEPRELS:
-                result[index] = "c" + xpos[1:]
-            continue
-        # 4. τε with coordination-structure evidence (it immediately follows the
-        #    coordination head or one of that head's conj dependents) is the
-        #    coordinator; otherwise it may still take the generic particle
-        #    mapping below.
-        if lemma == "τε" and index >= 1:
-            previous_id = index  # 1-based id of the preceding token
-            if previous_id in conj_heads or tree[previous_id - 1][1] == "conj":
-                result[index] = "c" + xpos[1:]
-                continue
-        # 5. Pedalion's particle POS falls through to the unknown fallback; for
-        #    the focus-capable remainder (καί, οὐδέ, τε without structure, ...)
-        #    the coordination-family source relations license the adverb POS.
+        # 2. Pedalion's particle POS falls through to the unknown fallback; for
+        #    non-cc uses the coordination-family source relations license the
+        #    adverb POS. Non-cc coordinator readings are deliberately NOT
+        #    canonicalized further: the pinned evaluation folds disagree with
+        #    each other on that convention, so the mixed source labels stand.
         if (
             source == "pedalion"
             and xpos[:1] == "b"
@@ -298,16 +257,6 @@ def _lemma_pass(
             and xpos[3:4] == "a"
         ):
             lemma = _nfc("εἶπον")
-        # First-syllable-acute disyllabics are unambiguously the interrogative.
-        elif nfc_lemma == _nfc("τις") and (
-            nfc_form in _TIS_INTERROGATIVE_FORMS
-            or nfc_form.rstrip(_APOSTROPHE_CHARS + "᾽’") in _TIS_INTERROGATIVE_FORMS
-            or (nfc_form[:1].lower() + nfc_form[1:]) in _TIS_INTERROGATIVE_FORMS
-        ):
-            lemma = _nfc("τίς")
-        # A grave-accented monosyllable cannot be the interrogative (Smyth §154).
-        elif nfc_lemma == _nfc("τίς") and nfc_form in _TIS_GRAVE_FORMS:
-            lemma = _nfc("τις")
         # Impersonal δεῖ with positive structural evidence of the frame.
         elif nfc_lemma == _nfc("δέω") and nfc_form in _DEI_IMPERSONAL_FORMS:
             if xpos[1:2] != "2" and xpos[5:6] not in ("m", "p", "e"):
