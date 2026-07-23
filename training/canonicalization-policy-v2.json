@@ -1,0 +1,54 @@
+{
+  "canonical_profile": "pyaegean-ud-compatible-v1",
+  "format": "pyaegean-training-canonicalization-policy/1",
+  "policy_id": "greek-joint-canonical-v2",
+  "shared_rules": {
+    "closed_coordinator": "When the dependency conversion emits cc and the surface is in the closed coordinator lexicon, rewrite only source POS initials declared by that corpus to c/CCONJ.",
+    "coordinator_upos_completion": "Closed-set coordinators (Smyth 2163 plus epic/elided/crasis/split variants) are keyed by normalized lemma, not only surface: any closed-set lemma converted to cc takes the c source POS; adversative alla (except exceptive alla e) and guarded free-standing connective de (never split halves, negation halves, or possible allative -de) take c; te takes c only with coordination-structure evidence (immediately after the coordination head or one of its conj dependents).",
+    "copula_upos": "A cop-attached form of eimi is AUX; the (VERB, cop) pair is contradictory under UD v2 and the corpus's own majority convention.",
+    "dependency_conversion": "agdt-prague-to-ud-v2-leaf-apos-appos",
+    "en_preposition_lemma": "The surface preposition en never carries lemma eis; the class is a verified annotation defect (governed heads are overwhelmingly dative).",
+    "impersonal_dei_lemma": "Finite/infinitive impersonal dei forms with lemma deo and positive structural evidence of the impersonal frame (clausal or genitive complement, no nominative subject, no genitive-of-quantity, active third person) take lemma dei, the two-of-three source majority and LSJ headword practice.",
+    "interrogative_tis_lemma": "First-syllable-acute disyllabic forms of the tis paradigm are unambiguously the interrogative and take lemma tis-acute; grave-accented monosyllables cannot be the interrogative (Smyth 154) and take the indefinite lemma.",
+    "lemma_grave_accent": "Citation forms never carry the grave accent; any grave accent in a source lemma is rewritten to the acute (NFD U+0300 to U+0301, then NFC).",
+    "lemma_normalization": "nfc-clean-source-lemma",
+    "original_labels": "Recoverable from the exact source file, sentence id, source token ids, and source-label SHA-256 stored with each canonical row.",
+    "pedalion_particle_pos": "Pedalion b-POS closed-set coordinators in coordination-family source relations (COORD, AuxY, AuxZ) are rewritten c when converted to cc and d otherwise, instead of falling through to the unknown POS.",
+    "punctuation_lemma": "When a source lemma is the placeholder string 'punc' and the surface form consists entirely of punctuation, symbol, or whitespace characters, the lemma is the surface form itself, matching the UD convention and the other sources.",
+    "suppletive_eipon_lemma": "Aorist eip- verb forms carry lemma eipon, not lego, matching AGDT practice and LSJ's separate-entry treatment of the suppletive aorist."
+  },
+  "sources": {
+    "agdt": {
+      "annotation_profile": "agdt-v2.1-prague",
+      "artificial_nodes": "preserve",
+      "coordinator_source_pos": [
+        "d",
+        "g"
+      ],
+      "license": "CC-BY-SA-3.0",
+      "revision": "bf4334f0af5e13d16b04c1cccd6237e683ac6f5f",
+      "xpos_cleanup": "pad-to-nine"
+    },
+    "gorman": {
+      "annotation_profile": "gorman-agdt-prague",
+      "artificial_nodes": "drop-and-reattach-to-nearest-real-ancestor",
+      "coordinator_source_pos": [
+        "d"
+      ],
+      "license": "CC-BY-SA-4.0",
+      "revision": "d823e96d253277bc1872b83ff5ac8c393a0f830a",
+      "xpos_cleanup": "lower-pad-invalid-to-hyphen"
+    },
+    "pedalion": {
+      "annotation_profile": "pedalion-agdt-prague",
+      "artificial_nodes": "drop-and-reattach-to-nearest-real-ancestor",
+      "coordinator_source_pos": [
+        "b",
+        "d"
+      ],
+      "license": "CC-BY-SA-4.0",
+      "revision": "112c106b86b865ddde4be7e5f3e409d9c42689f9",
+      "xpos_cleanup": "lower-pad-invalid-to-hyphen"
+    }
+  }
+}

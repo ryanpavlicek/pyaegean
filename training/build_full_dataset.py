@@ -54,7 +54,7 @@ from reproducibility import (  # noqa: E402
 )
 
 
-_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v1.json")
+_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v2.json")
 _MANIFEST_FORMAT = "pyaegean-canonical-training-data/1"
 _OUTPUT_NAMES = (
     "full-train.jsonl",
@@ -130,6 +130,227 @@ def _canonical_xpos(source: str, form: str, xpos: str, deprel: str) -> str:
     return xpos
 
 
+def _is_nonlexical_mark(form: str) -> bool:
+    """True for forms made entirely of punctuation/symbol/whitespace characters."""
+    return bool(form.strip()) and all(
+        char.isspace() or unicodedata.category(char)[0] in "PS" for char in form
+    )
+
+
+_APOSTROPHE_CHARS = "'’ʼ᾽̓̓"
+
+
+def _norm(value: str) -> str:
+    """Accent/breathing-stripped lowercase key with trailing apostrophes removed."""
+    decomposed = unicodedata.normalize("NFD", value)
+    stripped = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return stripped.lower().rstrip(_APOSTROPHE_CHARS)
+
+
+def _nfc(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
+
+
+# The Smyth §2163 closed coordinator set, keyed by normalized LEMMA (the surface-keyed
+# lexicon in aegean.greek.documentary covers the same set for the inference-side lever).
+_COORDINATOR_LEMMAS = frozenset({
+    "και", "δε", "τε", "αλλα", "η", "ουδε", "ουτε", "μηδε", "μητε", "ηδε",
+    "ειτε", "αταρ", "αυταρ",
+})
+_COORDINATOR_RELATION_BASES = frozenset({"COORD", "AuxY", "AuxZ"})
+_DE_FIX_DEPRELS = frozenset({"advmod", "root", "parataxis", "discourse", "dep", "cc"})
+
+_DEI_IMPERSONAL_FORMS = frozenset(
+    _nfc(form)
+    for form in (
+        "δεῖ", "ἔδει", "δέῃ", "δέοι", "δεήσει", "δεήσῃ", "δεήσοι",
+        "ἐδέησε", "ἐδέησεν", "δεῖν", "δεήσειν",
+    )
+)
+_DEI_QUANTITY_LEMMAS = frozenset({"πολυς", "ολιγος", "μικρος", "τοσουτος"})
+_TIS_INTERROGATIVE_FORMS = frozenset(
+    _nfc(form)
+    for form in (
+        "τίνος", "τίνι", "τίνα", "τίνε", "τίνοιν", "τίνες", "τίνων",
+        "τίσι", "τίσιν", "τίν",
+    )
+)
+_TIS_GRAVE_FORMS = frozenset(_nfc(form) for form in ("τὶ", "τὶς"))
+_EN_SURFACES = frozenset(_nfc(form) for form in ("ἐν", "Ἐν", "ἔν"))
+
+
+def _relation_base(relation: str) -> str:
+    return relation.split("_", 1)[0]
+
+
+def _coordinator_xpos_pass(
+    source: str,
+    attrs: list[dict[str, Any]],
+    xpos_list: list[str],
+    tree: list[tuple[int, str]],
+) -> list[str]:
+    """Coordinator POS completion: rewrite the closed set's XPOS initial by lemma.
+
+    Extends the surface-keyed cc rule with lemma-keyed coverage (crasis, elision,
+    epic variants), the Pedalion particle class stuck at the unknown fallback, the
+    adversative and postpositive connectives, and structurally evidenced τε.
+    """
+    lemmas = [_norm(str(a.get("lemma", "") or a.get("form", ""))) for a in attrs]
+    conj_heads = {head for head, deprel in tree if deprel == "conj"}
+    result = list(xpos_list)
+    for index, (attr, xpos, (head, deprel)) in enumerate(zip(attrs, xpos_list, tree)):
+        if xpos[:1] == "c":
+            continue
+        lemma = lemmas[index]
+        if lemma not in _COORDINATOR_LEMMAS:
+            continue
+        form = str(attr.get("form", ""))
+        # 1. Any closed-set lemma the conversion marked cc is a coordinator.
+        if deprel == "cc":
+            result[index] = "c" + xpos[1:]
+            continue
+        # 2. ἀλλά has no adverbial reading; exceptive ἀλλ᾽ ἤ stays for review.
+        if lemma == "αλλα":
+            next_lemma = lemmas[index + 1] if index + 1 < len(lemmas) else ""
+            if next_lemma != "η":
+                result[index] = "c" + xpos[1:]
+            continue
+        # 3. Free-standing connective δέ, guarded: split halves, the negation
+        #    halves (οὐδέ/μηδέ), and every possible allative -δε token stay.
+        if lemma == "δε":
+            if form.startswith("-"):
+                continue
+            previous = lemmas[index - 1] if index >= 1 else ""
+            if previous in ("ου", "μη"):
+                continue
+            if (
+                deprel == "advmod"
+                and head == index
+                and index >= 1
+                and result[index - 1][:1] == "n"
+            ):
+                continue
+            if deprel in _DE_FIX_DEPRELS:
+                result[index] = "c" + xpos[1:]
+            continue
+        # 4. τε with coordination-structure evidence (it immediately follows the
+        #    coordination head or one of that head's conj dependents) is the
+        #    coordinator; otherwise it may still take the generic particle
+        #    mapping below.
+        if lemma == "τε" and index >= 1:
+            previous_id = index  # 1-based id of the preceding token
+            if previous_id in conj_heads or tree[previous_id - 1][1] == "conj":
+                result[index] = "c" + xpos[1:]
+                continue
+        # 5. Pedalion's particle POS falls through to the unknown fallback; for
+        #    the focus-capable remainder (καί, οὐδέ, τε without structure, ...)
+        #    the coordination-family source relations license the adverb POS.
+        if (
+            source == "pedalion"
+            and xpos[:1] == "b"
+            and _relation_base(str(attr.get("source_relation", attr.get("relation", ""))))
+            in _COORDINATOR_RELATION_BASES
+        ):
+            result[index] = "d" + xpos[1:]
+    return result
+
+
+def _copula_upos_pass(
+    attrs: list[dict[str, Any]],
+    upos_list: list[str],
+    tree: list[tuple[int, str]],
+) -> list[str]:
+    """A cop-attached εἰμί is AUX; (VERB, cop) is contradictory under UD v2."""
+    result = list(upos_list)
+    for index, (attr, upos, (_head, deprel)) in enumerate(zip(attrs, upos_list, tree)):
+        if (
+            upos == "VERB"
+            and deprel == "cop"
+            and _norm(str(attr.get("lemma", ""))) == "ειμι"
+        ):
+            result[index] = "AUX"
+    return result
+
+
+def _lemma_pass(
+    attrs: list[dict[str, Any]],
+    xpos_list: list[str],
+    tree: list[tuple[int, str]],
+) -> list[str]:
+    """Sentence-level lemma canonicalization (policy shared rules)."""
+    children: dict[int, list[int]] = {}
+    for index, (head, _deprel) in enumerate(tree):
+        children.setdefault(head, []).append(index)
+    result: list[str] = []
+    for index, (attr, xpos) in enumerate(zip(attrs, xpos_list)):
+        form = str(attr.get("form", ""))
+        lemma = _canonical_lemma(form, str(attr.get("lemma", "") or form))
+        nfc_form = _nfc(form)
+        nfc_lemma = _nfc(lemma)
+        # ἐν is never lemma εἰς: the class is a verified annotation defect.
+        if nfc_lemma == _nfc("εἰς") and nfc_form in _EN_SURFACES:
+            lemma = _nfc("ἐν")
+        # Suppletive aorist: εἰπ- verb forms belong to εἶπον, not λέγω.
+        elif (
+            nfc_lemma == _nfc("λέγω")
+            and _norm(form).startswith("ειπ")
+            and xpos[:1] == "v"
+            and xpos[3:4] == "a"
+        ):
+            lemma = _nfc("εἶπον")
+        # First-syllable-acute disyllabics are unambiguously the interrogative.
+        elif nfc_lemma == _nfc("τις") and (
+            nfc_form in _TIS_INTERROGATIVE_FORMS
+            or nfc_form.rstrip(_APOSTROPHE_CHARS + "᾽’") in _TIS_INTERROGATIVE_FORMS
+            or (nfc_form[:1].lower() + nfc_form[1:]) in _TIS_INTERROGATIVE_FORMS
+        ):
+            lemma = _nfc("τίς")
+        # A grave-accented monosyllable cannot be the interrogative (Smyth §154).
+        elif nfc_lemma == _nfc("τίς") and nfc_form in _TIS_GRAVE_FORMS:
+            lemma = _nfc("τις")
+        # Impersonal δεῖ with positive structural evidence of the frame.
+        elif nfc_lemma == _nfc("δέω") and nfc_form in _DEI_IMPERSONAL_FORMS:
+            if xpos[1:2] != "2" and xpos[5:6] not in ("m", "p", "e"):
+                child_indexes = children.get(index + 1, [])
+                has_clausal = any(
+                    tree[j][1] in ("csubj", "ccomp", "xcomp") for j in child_indexes
+                )
+                genitive_children = [
+                    j for j in child_indexes if xpos_list[j][7:8] == "g"
+                ]
+                quantity = any(
+                    _norm(str(attrs[j].get("lemma", ""))) in _DEI_QUANTITY_LEMMAS
+                    for j in genitive_children
+                ) or (
+                    index >= 1
+                    and _norm(str(attrs[index - 1].get("form", "")))
+                    in ("πολλου", "ολιγου", "μικρου", "τοσουτου")
+                )
+                has_nominative_subject = any(
+                    tree[j][1].startswith("nsubj") and xpos_list[j][7:8] == "n"
+                    for j in child_indexes
+                )
+                if (
+                    (has_clausal or genitive_children)
+                    and not quantity
+                    and not has_nominative_subject
+                ):
+                    lemma = _nfc("δεῖ")
+        result.append(lemma)
+    return result
+
+
+def _canonical_lemma(form: str, lemma: str) -> str:
+    """Apply the policy's lemma canonicalizations (punctuation placeholder, grave accent)."""
+    if lemma == "punc" and _is_nonlexical_mark(form):
+        return form
+    decomposed = unicodedata.normalize("NFD", lemma)
+    # Combining grave (U+0300) becomes combining acute (U+0301).
+    if "̀" in decomposed:
+        return unicodedata.normalize("NFC", decomposed.replace("̀", "́"))
+    return lemma
+
+
 def _record_audit(
     audit: dict[str, Any],
     *,
@@ -138,6 +359,7 @@ def _record_audit(
     source_upos: list[str],
     canonical_upos: list[str],
     canonical_xpos: list[str],
+    canonical_lemma: list[str],
     tree: list[tuple[int, str]],
 ) -> None:
     entry = audit.setdefault(
@@ -149,16 +371,18 @@ def _record_audit(
             "deprel_mappings": Counter(),
             "upos_changes": Counter(),
             "xpos_changes": Counter(),
+            "lemma_changes": Counter(),
         },
     )
     entry["sentences"] += 1
     entry["tokens"] += len(attrs)
     id_to_pos = {str(a.get("id", "")): index + 1 for index, a in enumerate(attrs)}
-    for attr, old_upos, new_upos, new_xpos, (new_head, new_deprel) in zip(
-        attrs, source_upos, canonical_upos, canonical_xpos, tree
+    for attr, old_upos, new_upos, new_xpos, new_lemma, (new_head, new_deprel) in zip(
+        attrs, source_upos, canonical_upos, canonical_xpos, canonical_lemma, tree
     ):
         old_relation = str(attr.get("source_relation", attr.get("relation", "")))
         old_xpos = str(attr.get("source_xpos", attr.get("xpos", "")))
+        old_lemma = str(attr.get("lemma", "") or attr.get("form", ""))
         effective_head = id_to_pos.get(str(attr.get("head", "")), 0)
         if effective_head != new_head:
             entry["head_changes"] += 1
@@ -167,6 +391,8 @@ def _record_audit(
             entry["upos_changes"][(old_upos, new_upos)] += 1
         if old_xpos != new_xpos:
             entry["xpos_changes"][(old_xpos, new_xpos)] += 1
+        if old_lemma != new_lemma:
+            entry["lemma_changes"][(old_lemma, new_lemma)] += 1
 
 
 def _finalize_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
@@ -188,6 +414,10 @@ def _finalize_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
             "xpos_changes": {
                 f"{old or '<empty>'}->{new}": count
                 for (old, new), count in sorted(raw["xpos_changes"].items())
+            },
+            "lemma_changes": {
+                f"{old or '<empty>'}->{new}": count
+                for (old, new), count in sorted(raw["lemma_changes"].items())
             },
         }
     return result
@@ -222,6 +452,7 @@ def row_from_attrs(
         _canonical_xpos(source, str(a.get("form", "")), xpos, deprel)
         for a, xpos, (_head, deprel) in zip(attrs, normalized_xpos, tree)
     ]
+    canonical_xpos = _coordinator_xpos_pass(source, attrs, canonical_xpos, tree)
     canonical_upos = [
         upos_from_xpos(
             str(a.get("form", "")),
@@ -232,6 +463,8 @@ def row_from_attrs(
         )
         for a, xpos, flag in zip(attrs, canonical_xpos, flags)
     ]
+    canonical_upos = _copula_upos_pass(attrs, canonical_upos, tree)
+    canonical_lemma = _lemma_pass(attrs, canonical_xpos, tree)
     if audit is not None:
         _record_audit(
             audit,
@@ -240,6 +473,7 @@ def row_from_attrs(
             source_upos=source_upos,
             canonical_upos=canonical_upos,
             canonical_xpos=canonical_xpos,
+            canonical_lemma=canonical_lemma,
             tree=tree,
         )
     return {
@@ -254,7 +488,7 @@ def row_from_attrs(
         "xpos": canonical_xpos,
         "head": [h for h, _r in tree],
         "deprel": [r for _h, r in tree],
-        "lemma": [a["lemma"] or a["form"] for a in attrs],
+        "lemma": canonical_lemma,
     }
 
 

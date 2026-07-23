@@ -56,9 +56,11 @@ def _word(
 
 def test_policy_is_bound_to_all_three_source_revisions() -> None:
     policy = builder.load_label_policy()
-    assert policy["policy_id"] == "greek-joint-canonical-v1"
+    assert policy["policy_id"] == "greek-joint-canonical-v2"
     assert set(policy["sources"]) == {"agdt", "gorman", "pedalion"}
     assert all(len(source["revision"]) == 40 for source in policy["sources"].values())
+    assert "punctuation_lemma" in policy["shared_rules"]
+    assert "lemma_grave_accent" in policy["shared_rules"]
 
 
 def test_leaf_apos_is_appos_and_original_labels_remain_addressable() -> None:
@@ -92,14 +94,18 @@ def test_structurally_confirmed_coordinator_normalizes_pedalion_b_to_cconj() -> 
 
 
 def test_ambiguous_auxy_use_is_not_flattened_into_coordination() -> None:
+    # AuxY never becomes deprel cc; focus-capable καί keeps a non-coordinator
+    # reading (ADV via the particle mapping), while connective δέ canonicalizes
+    # to CCONJ under the v2 policy without its deprel changing.
     attrs = [
         _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-        _word(2, 1, "AuxY", form="δὲ", lemma="δέ", xpos="b--------"),
+        _word(2, 1, "AuxY", form="καὶ", lemma="καί", xpos="b--------"),
+        _word(3, 1, "AuxY", form="δὲ", lemma="δέ", xpos="b--------"),
     ]
     row = builder.row_from_attrs("pedalion:toy.xml", "1", attrs, source="pedalion")
-    assert row["deprel"][1] == "advmod"
-    assert row["xpos"][1] == "b--------"
-    assert row["upos"][1] == "X"
+    assert row["deprel"][1] == "advmod" and row["deprel"][2] == "advmod"
+    assert row["upos"][1] == "ADV" and row["xpos"][1] == "d--------"
+    assert row["upos"][2] == "CCONJ" and row["xpos"][2] == "c--------"
 
 
 def test_coordinator_pos_is_unchanged_when_surface_is_outside_closed_lexicon() -> None:
@@ -111,6 +117,214 @@ def test_coordinator_pos_is_unchanged_when_surface_is_outside_closed_lexicon() -
     assert row["deprel"][1] == "cc"
     assert row["xpos"][1] == "b--------"
     assert row["upos"][1] == "X"
+
+
+def test_punctuation_placeholder_lemma_becomes_the_mark_itself() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 1, "AuxX", form=",", lemma="punc", xpos="u--------"),
+        _word(3, 1, "AuxK", form="·", lemma="punc", xpos="u--------"),
+        _word(4, 1, "AuxG", form="<", lemma="punc", xpos="u--------"),
+    ]
+    audit: dict[str, object] = {}
+    row = builder.row_from_attrs("gorman:toy.xml", "1", attrs, source="gorman", audit=audit)
+    assert row["lemma"] == ["λέγω", ",", "·", "<"]
+    summary = builder._finalize_audit(audit)
+    assert summary["gorman"]["lemma_changes"] == {
+        "punc->,": 1,
+        "punc->·": 1,
+        "punc-><": 1,
+    }
+
+
+def test_punctuation_placeholder_lemma_is_kept_on_a_word_form() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="λέγει", lemma="punc", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("gorman:toy.xml", "1", attrs, source="gorman")
+    assert row["lemma"] == ["punc"]
+
+
+def test_grave_accent_lemmas_are_rewritten_to_the_acute_citation_form() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 1, "AuxC", form="ἢ", lemma="ἢ", xpos="c--------"),
+        _word(3, 1, "AuxZ", form="μὴ", lemma="μὴ", xpos="d--------"),
+        _word(4, 1, "ATR", form="ἀγαθὸς", lemma="ἀγαθός", xpos="a-s---mn-"),
+    ]
+    audit: dict[str, object] = {}
+    row = builder.row_from_attrs("toy.xml", "1", attrs, audit=audit)
+    assert row["lemma"] == ["λέγω", "ἤ", "μή", "ἀγαθός"]
+    summary = builder._finalize_audit(audit)
+    assert summary["agdt"]["lemma_changes"] == {"ἢ->ἤ": 1, "μὴ->μή": 1}
+
+
+def test_correct_lemmas_pass_through_canonicalization_unchanged() -> None:
+    for form, lemma in (
+        (",", ","),
+        ("λέγει", "λέγω"),
+        ("ἤ", "ἤ"),
+        ("Σωκράτης", "Σωκράτης"),
+    ):
+        assert builder._canonical_lemma(form, lemma) == lemma
+
+
+def test_closed_set_lemma_with_cc_becomes_cconj_beyond_the_surface_lexicon() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 1, "COORD", form="ἠδ̓", lemma="ἠδέ", xpos="g--------"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", attrs)
+    assert row["deprel"][1] == "cc"
+    assert row["xpos"][1] == "c--------"
+    assert row["upos"][1] == "CCONJ"
+
+
+def test_pedalion_particle_coordinator_with_auxy_becomes_adv_not_x() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 1, "AuxY", form="καὶ", lemma="καί", xpos="b--------"),
+    ]
+    row = builder.row_from_attrs("pedalion:toy.xml", "1", attrs, source="pedalion")
+    assert row["deprel"][1] == "advmod"
+    assert row["xpos"][1] == "d--------"
+    assert row["upos"][1] == "ADV"
+
+
+def test_alla_is_cconj_except_before_disjunctive_e() -> None:
+    attrs = [
+        _word(1, 2, "AuxY", form="ἀλλὰ", lemma="ἀλλά", xpos="d--------"),
+        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", attrs)
+    assert row["upos"][0] == "CCONJ" and row["xpos"][0] == "c--------"
+    exceptive = [
+        _word(1, 3, "AuxY", form="ἀλλ̓", lemma="ἀλλά", xpos="d--------"),
+        _word(2, 3, "AuxY", form="ἢ", lemma="ἤ", xpos="d--------"),
+        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "2", exceptive)
+    assert row["upos"][0] == "ADV" and row["xpos"][0] == "d--------"
+
+
+def test_free_standing_connective_de_is_cconj_with_every_guard_held() -> None:
+    connective = [
+        _word(1, 2, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
+        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", connective)
+    assert row["upos"][0] == "CCONJ" and row["xpos"][0] == "c--------"
+    # split half: untouched
+    split = [
+        _word(1, 2, "AuxY", form="-δε", lemma="δέ", xpos="d--------"),
+        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    assert builder.row_from_attrs("toy.xml", "2", split)["upos"][0] == "ADV"
+    # negation half: untouched
+    negated = [
+        _word(1, 3, "AuxZ", form="οὐ", lemma="οὐ", xpos="d--------"),
+        _word(2, 3, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
+        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    assert builder.row_from_attrs("toy.xml", "3", negated)["upos"][1] == "ADV"
+    # possible allative (advmod on the immediately preceding noun): untouched
+    allative = [
+        _word(1, 3, "OBJ", form="ἀγορὴν", lemma="ἀγορά", xpos="n-s---fa-"),
+        _word(2, 1, "AuxY", form="δὲ", lemma="δέ", xpos="d--------"),
+        _word(3, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "4", allative)
+    assert row["deprel"][1] == "advmod"
+    assert row["upos"][1] == "ADV"
+
+
+def test_te_needs_coordination_structure_evidence() -> None:
+    # X τε καὶ Y: the Prague coordinator καί heads both conjuncts; enclitic τε
+    # is AuxY on the first conjunct, which the conversion promotes to the
+    # coordination head with a conj dependent — the structure rule 5 needs.
+    coordinated = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 4, "OBJ_CO", form="λόγους", lemma="λόγος", xpos="n-p---ma-"),
+        _word(3, 2, "AuxY", form="τε", lemma="τε", xpos="d--------"),
+        _word(4, 1, "COORD", form="καὶ", lemma="καί", xpos="c--------"),
+        _word(5, 4, "OBJ_CO", form="μύθους", lemma="μῦθος", xpos="n-p---ma-"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", coordinated)
+    assert row["deprel"][1] == "obj" and row["deprel"][4] == "conj"
+    assert row["head"][4] == 2  # μύθους is conj on the promoted first conjunct
+    assert row["upos"][2] == "CCONJ" and row["xpos"][2] == "c--------"
+    bare = [
+        _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(2, 1, "AuxY", form="τε", lemma="τε", xpos="d--------"),
+    ]
+    assert builder.row_from_attrs("toy.xml", "2", bare)["upos"][1] == "ADV"
+
+
+def test_cop_attached_eimi_is_aux_never_verb() -> None:
+    upos = ["NOUN", "VERB", "ADJ"]
+    tree = [(3, "nsubj"), (3, "cop"), (0, "root")]
+    attrs = [
+        {"lemma": "ἄνθρωπος"},
+        {"lemma": "εἰμί"},
+        {"lemma": "ἀγαθός"},
+    ]
+    assert builder._copula_upos_pass(attrs, upos, tree) == ["NOUN", "AUX", "ADJ"]
+    # a VERB eimi that is not cop stays VERB (existential main verb)
+    tree_root = [(2, "nsubj"), (0, "root"), (2, "obl")]
+    assert builder._copula_upos_pass(attrs, upos, tree_root)[1] == "VERB"
+
+
+def test_en_surface_never_carries_lemma_eis() -> None:
+    attrs = [
+        _word(1, 2, "AuxP", form="ἐν", lemma="εἰς", xpos="r--------"),
+        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", attrs)
+    assert row["lemma"][0] == "ἐν"
+
+
+def test_suppletive_aorist_eip_forms_take_lemma_eipon() -> None:
+    attrs = [
+        _word(1, 0, "PRED", form="εἶπεν", lemma="λέγω", xpos="v3saia---"),
+        _word(2, 1, "OBJ", form="λόγον", lemma="λέγω", xpos="n-s---ma-"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", attrs)
+    assert row["lemma"][0] == "εἶπον"
+    assert row["lemma"][1] == "λέγω"  # non-verb, non-eip form untouched
+
+
+def test_interrogative_and_indefinite_tis_lemmas_follow_the_accent() -> None:
+    attrs = [
+        _word(1, 2, "ATR", form="τίνος", lemma="τις", xpos="p-s---mg-"),
+        _word(2, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
+        _word(3, 2, "OBJ", form="τὶ", lemma="τίς", xpos="p-s---na-"),
+        _word(4, 2, "OBJ", form="τί", lemma="τις", xpos="p-s---na-"),
+    ]
+    row = builder.row_from_attrs("toy.xml", "1", attrs)
+    assert row["lemma"][0] == "τίς"  # first-syllable acute disyllabic: interrogative
+    assert row["lemma"][2] == "τις"  # grave monosyllable: never the interrogative
+    assert row["lemma"][3] == "τις"  # acute monosyllable: ambiguous, untouched
+
+
+def test_impersonal_dei_needs_positive_structural_evidence() -> None:
+    xpos = ["v3spia---", "n-s---mg-", "v--pna---"]
+    tree = [(0, "root"), (1, "obl"), (1, "ccomp")]
+    attrs = [
+        {"form": "δεῖ", "lemma": "δέω"},
+        {"form": "ἀνδρός", "lemma": "ἀνήρ"},
+        {"form": "λέγειν", "lemma": "λέγω"},
+    ]
+    assert builder._lemma_pass(attrs, xpos, tree)[0] == "δεῖ"
+    # a nominative subject blocks the impersonal reading
+    xpos_subj = ["v3spia---", "n-s---mn-"]
+    tree_subj = [(0, "root"), (1, "nsubj")]
+    attrs_subj = [{"form": "δεῖ", "lemma": "δέω"}, {"form": "ἀνήρ", "lemma": "ἀνήρ"}]
+    assert builder._lemma_pass(attrs_subj, xpos_subj, tree_subj)[0] == "δέω"
+    # genitive of quantity (πολλοῦ δεῖ) stays δέω per LSJ δέω B.2
+    xpos_quant = ["a-s---mg-", "v3spia---"]
+    tree_quant = [(2, "advmod"), (0, "root")]
+    attrs_quant = [{"form": "πολλοῦ", "lemma": "πολύς"}, {"form": "δεῖ", "lemma": "δέω"}]
+    assert builder._lemma_pass(attrs_quant, xpos_quant, tree_quant)[1] == "δέω"
 
 
 def test_agdt_loader_skips_protected_identity_before_emission() -> None:
@@ -170,7 +384,7 @@ def test_manifest_binds_policy_sources_outputs_and_detects_tampering(tmp_path: P
     path = tmp_path / "training-data-manifest.json"
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     checked = builder.verify_training_manifest(path)
-    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v1"
+    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v2"
     assert checked["policy"]["hash_mode"] == "canonical-json"
     assert checked["policy"]["sha256"] == builder.canonical_sha256(builder.LABEL_POLICY)
     assert checked["sources"]["agdt"]["files"][0]["sha256"] == builder._sha256_file(source)
