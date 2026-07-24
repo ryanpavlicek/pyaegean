@@ -60,7 +60,7 @@ Training data is leakage-clean against the evaluation folds:
 from the cache.
 
 `build_full_dataset.py --with-extras` reads an exact, commit-pinned source inventory and
-applies `canonicalization-policy-v3.json`. The policy records each corpus's annotation
+applies `canonicalization-policy-v4.json`. The policy records each corpus's annotation
 profile and the deliberately narrow source-to-canonical corrections. Every output sentence
 keeps its source identity and token ids plus a SHA-256 binding to its original source labels;
 the pinned source remains the authority for recovering those labels.

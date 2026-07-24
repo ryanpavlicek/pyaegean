@@ -56,7 +56,7 @@ def _word(
 
 def test_policy_is_bound_to_all_three_source_revisions() -> None:
     policy = builder.load_label_policy()
-    assert policy["policy_id"] == "greek-joint-canonical-v3"
+    assert policy["policy_id"] == "greek-joint-canonical-v4"
     assert set(policy["sources"]) == {"agdt", "gorman", "pedalion"}
     assert all(len(source["revision"]) == 40 for source in policy["sources"].values())
     assert "punctuation_lemma" in policy["shared_rules"]
@@ -64,6 +64,7 @@ def test_policy_is_bound_to_all_three_source_revisions() -> None:
     # The interrogative-lemma and non-cc coordinator migrations are deliberately
     # absent: they contradict the pinned evaluation folds' own conventions.
     assert "interrogative_tis_lemma" not in policy["shared_rules"]
+    assert "pedalion_particle_pos" not in policy["shared_rules"]
 
 
 def test_leaf_apos_is_appos_and_original_labels_remain_addressable() -> None:
@@ -97,10 +98,11 @@ def test_structurally_confirmed_coordinator_normalizes_pedalion_b_to_cconj() -> 
 
 
 def test_ambiguous_auxy_use_is_not_flattened_into_coordination() -> None:
-    # AuxY never becomes deprel cc, and non-cc coordinators are never migrated
-    # to CCONJ: the pinned evaluation folds disagree with each other on that
-    # convention (Perseus dev is ADV-majority, PapyGreek CCONJ-majority), so
-    # both καί and δέ take the Pedalion particle mapping to ADV.
+    # AuxY never becomes deprel cc, and non-cc coordinators keep their source
+    # labels entirely — including Pedalion's particle POS at the unknown
+    # fallback: the pinned evaluation folds disagree with each other on the
+    # non-cc coordinator convention, and the untrainable fallback lets context
+    # decide per register.
     attrs = [
         _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
         _word(2, 1, "AuxY", form="καὶ", lemma="καί", xpos="b--------"),
@@ -108,8 +110,8 @@ def test_ambiguous_auxy_use_is_not_flattened_into_coordination() -> None:
     ]
     row = builder.row_from_attrs("pedalion:toy.xml", "1", attrs, source="pedalion")
     assert row["deprel"][1] == "advmod" and row["deprel"][2] == "advmod"
-    assert row["upos"][1] == "ADV" and row["xpos"][1] == "d--------"
-    assert row["upos"][2] == "ADV" and row["xpos"][2] == "d--------"
+    assert row["upos"][1] == "X" and row["xpos"][1] == "b--------"
+    assert row["upos"][2] == "X" and row["xpos"][2] == "b--------"
 
 
 def test_coordinator_pos_is_unchanged_when_surface_is_outside_closed_lexicon() -> None:
@@ -184,15 +186,15 @@ def test_closed_set_lemma_with_cc_becomes_cconj_beyond_the_surface_lexicon() -> 
     assert row["upos"][1] == "CCONJ"
 
 
-def test_pedalion_particle_coordinator_with_auxy_becomes_adv_not_x() -> None:
+def test_pedalion_particle_coordinator_with_cc_still_becomes_cconj() -> None:
     attrs = [
         _word(1, 0, "PRED", form="λέγει", lemma="λέγω", xpos="v3spia---"),
-        _word(2, 1, "AuxY", form="καὶ", lemma="καί", xpos="b--------"),
+        _word(2, 1, "COORD", form="κἀγαθοὶ", lemma="καί", xpos="b--------"),
     ]
     row = builder.row_from_attrs("pedalion:toy.xml", "1", attrs, source="pedalion")
-    assert row["deprel"][1] == "advmod"
-    assert row["xpos"][1] == "d--------"
-    assert row["upos"][1] == "ADV"
+    assert row["deprel"][1] == "cc"
+    assert row["xpos"][1] == "c--------"
+    assert row["upos"][1] == "CCONJ"
 
 
 def test_non_cc_coordinators_keep_their_source_labels() -> None:
@@ -345,7 +347,7 @@ def test_manifest_binds_policy_sources_outputs_and_detects_tampering(tmp_path: P
     path = tmp_path / "training-data-manifest.json"
     path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     checked = builder.verify_training_manifest(path)
-    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v3"
+    assert checked["policy"]["policy_id"] == "greek-joint-canonical-v4"
     assert checked["policy"]["hash_mode"] == "canonical-json"
     assert checked["policy"]["sha256"] == builder.canonical_sha256(builder.LABEL_POLICY)
     assert checked["sources"]["agdt"]["files"][0]["sha256"] == builder._sha256_file(source)

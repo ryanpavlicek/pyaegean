@@ -1,10 +1,10 @@
 {
   "canonical_profile": "pyaegean-ud-compatible-v1",
   "format": "pyaegean-training-canonicalization-policy/1",
-  "policy_id": "greek-joint-canonical-v3",
+  "policy_id": "greek-joint-canonical-v4",
   "shared_rules": {
     "closed_coordinator": "When the dependency conversion emits cc and the surface is in the closed coordinator lexicon, rewrite only source POS initials declared by that corpus to c/CCONJ.",
-    "coordinator_upos_completion": "Closed-set coordinators (Smyth 2163 plus epic/elided/crasis/split variants) are keyed by normalized lemma, not only surface: any closed-set lemma converted to cc takes the c source POS. Non-cc coordinator readings keep their source labels: the pinned evaluation folds disagree with each other on that convention, so uniform canonicalization is a measured benchmark regression.",
+    "coordinator_upos_completion": "Closed-set coordinators (Smyth 2163 plus epic/elided/crasis/split variants) are keyed by normalized lemma, not only surface: any closed-set lemma converted to cc takes the c source POS. Non-cc coordinator readings keep their source labels, including the Pedalion particle fallback: the pinned evaluation folds disagree with each other on that convention, and the untrainable fallback lets context decide per register.",
     "copula_upos": "A cop-attached form of eimi is AUX; the (VERB, cop) pair is contradictory under UD v2 and the corpus's own majority convention.",
     "dependency_conversion": "agdt-prague-to-ud-v2-leaf-apos-appos",
     "en_preposition_lemma": "The surface preposition en never carries lemma eis; the class is a verified annotation defect (governed heads are overwhelmingly dative).",
@@ -12,7 +12,6 @@
     "lemma_grave_accent": "Citation forms never carry the grave accent; any grave accent in a source lemma is rewritten to the acute (NFD U+0300 to U+0301, then NFC).",
     "lemma_normalization": "nfc-clean-source-lemma",
     "original_labels": "Recoverable from the exact source file, sentence id, source token ids, and source-label SHA-256 stored with each canonical row.",
-    "pedalion_particle_pos": "Pedalion b-POS closed-set coordinators in coordination-family source relations (COORD, AuxY, AuxZ) are rewritten c when converted to cc and d otherwise, instead of falling through to the unknown POS.",
     "punctuation_lemma": "When a source lemma is the placeholder string 'punc' and the surface form consists entirely of punctuation, symbol, or whitespace characters, the lemma is the surface form itself, matching the UD convention and the other sources.",
     "suppletive_eipon_lemma": "Aorist eip- verb forms carry lemma eipon, not lego, matching AGDT practice and LSJ's separate-entry treatment of the suppletive aorist."
   },

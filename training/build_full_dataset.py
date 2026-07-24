@@ -54,7 +54,7 @@ from reproducibility import (  # noqa: E402
 )
 
 
-_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v3.json")
+_POLICY_PATH = Path(__file__).with_name("canonicalization-policy-v4.json")
 _MANIFEST_FORMAT = "pyaegean-canonical-training-data/1"
 _OUTPUT_NAMES = (
     "full-train.jsonl",
@@ -157,7 +157,6 @@ _COORDINATOR_LEMMAS = frozenset({
     "και", "δε", "τε", "αλλα", "η", "ουδε", "ουτε", "μηδε", "μητε", "ηδε",
     "ειτε", "αταρ", "αυταρ",
 })
-_COORDINATOR_RELATION_BASES = frozenset({"COORD", "AuxY", "AuxZ"})
 
 _DEI_IMPERSONAL_FORMS = frozenset(
     _nfc(form)
@@ -170,47 +169,29 @@ _DEI_QUANTITY_LEMMAS = frozenset({"πολυς", "ολιγος", "μικρος", 
 _EN_SURFACES = frozenset(_nfc(form) for form in ("ἐν", "Ἐν", "ἔν"))
 
 
-def _relation_base(relation: str) -> str:
-    return relation.split("_", 1)[0]
-
-
 def _coordinator_xpos_pass(
     source: str,
     attrs: list[dict[str, Any]],
     xpos_list: list[str],
     tree: list[tuple[int, str]],
 ) -> list[str]:
-    """Coordinator POS completion: rewrite the closed set's XPOS initial by lemma.
+    """Coordinator POS completion: rewrite cc-converted closed-set lemmas to c.
 
     Extends the surface-keyed cc rule with lemma-keyed coverage (crasis, elision,
-    epic variants) and resolves the Pedalion particle class stuck at the unknown
-    fallback. Non-cc coordinator readings keep their source labels: the pinned
-    evaluation folds disagree with each other on that convention.
+    epic variants). Non-cc coordinator readings keep their source labels — even
+    the Pedalion particle POS that falls through to the unknown fallback: the
+    pinned evaluation folds disagree with each other on the non-cc coordinator
+    convention, and the untrainable fallback lets context decide per register.
     """
     lemmas = [_norm(str(a.get("lemma", "") or a.get("form", ""))) for a in attrs]
     result = list(xpos_list)
-    for index, (attr, xpos, (_head, deprel)) in enumerate(zip(attrs, xpos_list, tree)):
+    for index, (xpos, (_head, deprel)) in enumerate(zip(xpos_list, tree)):
         if xpos[:1] == "c":
             continue
-        lemma = lemmas[index]
-        if lemma not in _COORDINATOR_LEMMAS:
+        if lemmas[index] not in _COORDINATOR_LEMMAS:
             continue
-        # 1. Any closed-set lemma the conversion marked cc is a coordinator.
         if deprel == "cc":
             result[index] = "c" + xpos[1:]
-            continue
-        # 2. Pedalion's particle POS falls through to the unknown fallback; for
-        #    non-cc uses the coordination-family source relations license the
-        #    adverb POS. Non-cc coordinator readings are deliberately NOT
-        #    canonicalized further: the pinned evaluation folds disagree with
-        #    each other on that convention, so the mixed source labels stand.
-        if (
-            source == "pedalion"
-            and xpos[:1] == "b"
-            and _relation_base(str(attr.get("source_relation", attr.get("relation", ""))))
-            in _COORDINATOR_RELATION_BASES
-        ):
-            result[index] = "d" + xpos[1:]
     return result
 
 
