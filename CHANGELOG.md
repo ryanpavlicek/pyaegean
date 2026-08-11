@@ -82,6 +82,9 @@ All notable changes to pyaegean are documented here. The format follows
 
 ### Changed
 
+- The `mcp` extra requires `mcp>=1.2,<2`. Version 2.0 removes
+  `mcp.server.fastmcp`, which the `aegean-mcp` server is built on, so an
+  uncapped install produced a server that could not start.
 - PapyGreek lemma accuracy is remeasured at 89.63 on the regularized layer (was 86.10)
   and 85.62 on the diplomatic layer (was 82.05), because a form carrying the editorial
   dot below now reaches the lemma lookup tables. LAS and CLAS move by two and three
