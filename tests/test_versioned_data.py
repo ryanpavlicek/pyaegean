@@ -91,10 +91,12 @@ def test_ddbdp_history_is_an_extract_archive_the_others_json() -> None:
 
 def test_available_versions_lists_current_first_then_history_newest_first() -> None:
     versions = data.available_versions("isicily-corpus")
-    assert [v["version"] for v in versions] == ["v3", "v2", "v1"]
+    assert [v["version"] for v in versions] == ["v4", "v3", "v2", "v1"]
     assert versions[0]["current"] is True
     assert all(v["current"] is False for v in versions[1:])
-    assert versions[1]["superseded"] == "v3" and versions[2]["superseded"] == "v2"
+    assert versions[1]["superseded"] == "v4"
+    assert versions[2]["superseded"] == "v3"
+    assert versions[3]["superseded"] == "v2"
 
 
 # ── (B) version resolution + fetch mechanics (file:// mocks) ─────────────────────
@@ -352,7 +354,7 @@ def test_cli_data_versions_lists_the_historical_pin_json() -> None:
     assert res.exit_code == 0, res.output
     manifest = json.loads(res.output)
     hist = manifest["fetched"]["isicily-corpus"]["history"]
-    assert [h["version"] for h in hist] == ["v2", "v1"]
+    assert [h["version"] for h in hist] == ["v3", "v2", "v1"]
     assert hist[-1]["sha256"] == _RECOVERED_V1["isicily-corpus"]
 
 

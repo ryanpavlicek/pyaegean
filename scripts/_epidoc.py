@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 import sys
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Callable
@@ -306,6 +307,12 @@ def build_greek_corpus(
             for word, status in tl:
                 if not word:
                     continue
+                # NFC, the package's stated convention everywhere else (greek.normalize is
+                # "NFC precomposed by default"; the neural preprocessing contract is NFC-bound).
+                # Editions are transcribed in both composed and decomposed forms, and a corpus
+                # holding both spells one word two ways: byte comparison then splits the counts
+                # and a word search finds only one of them.
+                word = unicodedata.normalize("NFC", word)
                 tokens.append(
                     Token(text=word, kind=TokenKind.WORD, line_no=len(lines), position=pos, status=status)
                 )

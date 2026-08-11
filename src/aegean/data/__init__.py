@@ -491,9 +491,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="isicily-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "isicily-corpus-v3/isicily-corpus.json"
+            "isicily-corpus-v4/isicily-corpus.json"
         ),
-        sha256="1aa0abb3a7f06c415599932f6b1de844aaab6f0b78ff12f79ab4842f3636063c",
+        sha256="d716118b43bce3e3d3d194de029bbc39c13b7b10d60c6402b7d832c124c2735f",
         license="CC-BY-4.0 (I.Sicily — J. Prag et al., University of Oxford; attribution required)",
         note="I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with "
              "find-place, date, and coordinates, from the CC BY EpiDoc corpus. "
@@ -509,9 +509,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iip-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iip-corpus-v3/iip-corpus.json"
+            "iip-corpus-v4/iip-corpus.json"
         ),
-        sha256="d9b83daa0fb675c6cb45d9fe4ca66c10af96eef40976bb0b8816628bdc9692c7",
+        sha256="e426dd4c40c6e5e2baf578ad27c8d91ba9af7fea8fdc81aed798d41855259109",
         license="CC-BY-NC-4.0 (IIP — M. L. Satlow, Brown University; NonCommercial, attribution)",
         note="IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with "
              "find-place and coordinates, from the CC BY-NC EpiDoc corpus. "
@@ -527,9 +527,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="iospe-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "iospe-corpus-v3/iospe-corpus.json"
+            "iospe-corpus-v4/iospe-corpus.json"
         ),
-        sha256="e89ef85a946eb5b3eceae3ad805c2d1a7ab621f5be53463fd1398fb8037d6971",
+        sha256="387bd59391331656166cf64de82fe80ce4fb0f63383384138a113b59e3f0a358",
         license="CC-BY-4.0 (IOSPE III, King's College London; attribution; repo code is MIT)",
         note="IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea with "
              "find-place and date, from the CC BY EpiDoc corpus. Loadable via aegean.load('iospe').",
@@ -544,9 +544,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="igcyr-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "igcyr-corpus-v3/igcyr-corpus.json"
+            "igcyr-corpus-v4/igcyr-corpus.json"
         ),
-        sha256="de1950e2543102bfe8bfacd09cdd3c1803328dc7981795066107392fc4165f75",
+        sha256="a9f5acc27e101b6c326e64fe3eaf96989692347aa1c9446f17adb3cef1b45178",
         license="CC-BY-NC-SA-4.0 (IGCyr2/GVCyr2, C. Dobias-Lalou et al., Univ. di Bologna, 2024)",
         note="IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (Doric + verse) with title, "
              "find-place, date, from the CC BY-NC-SA EpiDoc corpus. Loadable via aegean.load('igcyr').",
@@ -556,9 +556,9 @@ _REMOTE: dict[str, DataSpec] = {
         name="edh-corpus",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "edh-corpus-v3/edh-corpus.json"
+            "edh-corpus-v4/edh-corpus.json"
         ),
-        sha256="bcb5e4b5123cec47c725a116c291556c220252fe9cbee42a1b3f2d3715000965",
+        sha256="e2c6923de42b58f68ccf8742e1eaefe48b3be7b69df1cfda42230351d893b393",
         license="CC-BY-SA-4.0 (Epigraphic Database Heidelberg / Heidelberg Academy of Sciences and Humanities)",
         note="EDH Ancient-Greek inscriptions: the 1,286 pure-Greek texts (Imperial Koine, largely "
              "onomastic) of the frozen CC BY-SA EDH dump, with ancient place, date, find-place, and "
@@ -678,6 +678,15 @@ class HistoricalPin:
 _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     "isicily-corpus": [
         HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "isicily-corpus-v3/isicily-corpus.json"
+            ),
+            sha256="1aa0abb3a7f06c415599932f6b1de844aaab6f0b78ff12f79ab4842f3636063c",
+            superseded="v4",
+        ),
+        HistoricalPin(
             version="v2",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -697,6 +706,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "iip-corpus": [
+        HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iip-corpus-v3/iip-corpus.json"
+            ),
+            sha256="d9b83daa0fb675c6cb45d9fe4ca66c10af96eef40976bb0b8816628bdc9692c7",
+            superseded="v4",
+        ),
         HistoricalPin(
             version="v2",
             url=(
@@ -718,6 +736,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "iospe-corpus": [
         HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "iospe-corpus-v3/iospe-corpus.json"
+            ),
+            sha256="e89ef85a946eb5b3eceae3ad805c2d1a7ab621f5be53463fd1398fb8037d6971",
+            superseded="v4",
+        ),
+        HistoricalPin(
             version="v2",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -738,6 +765,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
     ],
     "igcyr-corpus": [
         HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "igcyr-corpus-v3/igcyr-corpus.json"
+            ),
+            sha256="de1950e2543102bfe8bfacd09cdd3c1803328dc7981795066107392fc4165f75",
+            superseded="v4",
+        ),
+        HistoricalPin(
             version="v2",
             url=(
                 "https://github.com/ryanpavlicek/pyaegean/releases/download/"
@@ -757,6 +793,15 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
         ),
     ],
     "edh-corpus": [
+        HistoricalPin(
+            version="v3",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "edh-corpus-v3/edh-corpus.json"
+            ),
+            sha256="bcb5e4b5123cec47c725a116c291556c220252fe9cbee42a1b3f2d3715000965",
+            superseded="v4",
+        ),
         HistoricalPin(
             version="v2",
             url=(
