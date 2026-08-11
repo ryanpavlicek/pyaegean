@@ -1,10 +1,14 @@
 """The MCP server tools (aegean.mcp_server).
 
 The tool functions are plain callables, tested directly here (no MCP runtime needed); the
-FastMCP build and wire-level contract are gated behind the [mcp] dependency. The shared
-error convention across every tool: a domain miss (unknown corpus / document / work /
-dictionary / style / query field) returns a ``{"error": ...}`` payload with a did-you-mean
-hint (for a work, the greek_catalog pointer) and never raises."""
+MCPServer build and wire-level contract are gated behind the [mcp] dependency. That gate is
+deliberately presence-only: an SDK too old for the mcp>=2 server API fails loudly rather
+than skipping, because the floor is a declared dependency and an unsatisfied one is a
+resolver bug worth a red test.
+
+The shared error convention across every tool: a domain miss (unknown corpus / document /
+work / dictionary / style / query field) returns a ``{"error": ...}`` payload with a
+did-you-mean hint (for a work, the greek_catalog pointer) and never raises."""
 
 from __future__ import annotations
 
@@ -456,7 +460,7 @@ def test_koine_gloss() -> None:
     assert "greek_gloss" in miss["error"]  # the next-tool hint
 
 
-# ── the FastMCP layer ([mcp] extra) ──────────────────────────────────────────
+# ── the MCPServer layer ([mcp] extra) ────────────────────────────────────────
 
 
 def test_build_server_registers_tools() -> None:
@@ -466,8 +470,11 @@ def test_build_server_registers_tools() -> None:
     server = m.build_server()
     assert server is not None
     assert len(m.TOOLS) == 17  # the registered tool surface
-    registered = {t.name for t in asyncio.run(server.list_tools())}
-    assert registered == {fn.__name__ for fn in m.TOOLS}
+    tools = asyncio.run(server.list_tools())
+    assert {t.name for t in tools} == {fn.__name__ for fn in m.TOOLS}
+    # The SDK derives each description from the function docstring; an agent chooses a
+    # tool by that text, so an empty one is a regression even though the name is right.
+    assert all(t.description for t in tools)
 
 
 def test_wire_level_error_contract() -> None:
@@ -477,12 +484,15 @@ def test_wire_level_error_contract() -> None:
     import json
 
     server = m.build_server()
-    content, _structured = asyncio.run(
-        server.call_tool("corpus_info", {"corpus": "linera"})
-    )
-    payload = json.loads(content[0].text)
+    result = asyncio.run(server.call_tool("corpus_info", {"corpus": "linera"}))
+    # is_error False is the contract: the SDK reserves ToolError for a genuine fault, and
+    # a name that does not exist is not one.
+    assert result.is_error is False
+    payload = json.loads(result.content[0].text)
     assert "unknown corpus 'linera'" in payload["error"]
     assert "'lineara'" in payload["error"]
+    # the same payload rides the structured channel
+    assert result.structured_content == payload
 
 
 def test_wire_level_input_schema() -> None:
@@ -490,6 +500,6 @@ def test_wire_level_input_schema() -> None:
     import asyncio
 
     tools = {t.name: t for t in asyncio.run(m.build_server().list_tools())}
-    assert tools["show_document"].inputSchema["required"] == ["corpus", "doc_id"]
-    assert "where" in tools["query_corpus"].inputSchema["required"]
-    assert tools["greek_work"].inputSchema["required"] == ["work_id"]
+    assert tools["show_document"].input_schema["required"] == ["corpus", "doc_id"]
+    assert "where" in tools["query_corpus"].input_schema["required"]
+    assert tools["greek_work"].input_schema["required"] == ["work_id"]

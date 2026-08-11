@@ -141,11 +141,11 @@ def test_mcp_main_distinguishes_old_sdk_from_missing_extra(monkeypatch, capsys) 
     from aegean import mcp_server
 
     def boom() -> None:
-        raise ModuleNotFoundError("No module named 'mcp.server.fastmcp'")
+        raise ModuleNotFoundError("No module named 'mcp.server.mcpserver'")
 
     monkeypatch.setattr(mcp_server, "build_server", boom)
     # mcp IS importable in this env, so the message must say "upgrade", not "install the extra"
     with pytest.raises(SystemExit):
         mcp_server.main()
     err = capsys.readouterr().err
-    assert "mcp>=1.2" in err and "[mcp] extra" not in err
+    assert "mcp>=2" in err and "[mcp] extra" not in err

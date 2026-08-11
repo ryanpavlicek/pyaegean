@@ -27,8 +27,8 @@ remote data says so in its description: ``greek_work`` texts and the non-bundled
 offline after (``data_status`` shows the store).
 
 The tool functions are plain, JSON-returning callables (independently testable);
-``build_server`` registers them with FastMCP, imported lazily so ``import aegean`` never
-pulls the MCP SDK.
+``build_server`` registers them with the SDK's ``MCPServer`` (``mcp>=2``), imported lazily
+so ``import aegean`` never pulls the MCP SDK.
 """
 
 from __future__ import annotations
@@ -819,10 +819,15 @@ TOOLS = (
 
 
 def build_server() -> Any:
-    """Build a FastMCP server with every pyaegean tool registered (needs the ``[mcp]`` extra)."""
-    from mcp.server.fastmcp import FastMCP
+    """Build an ``MCPServer`` with every pyaegean tool registered (needs the ``[mcp]`` extra).
 
-    server = FastMCP("pyaegean")
+    Uses the ``mcp.server.mcpserver`` API (``mcp>=2``), which replaced the removed
+    ``mcp.server.fastmcp``. The decorator derives each tool's name, description, and input
+    schema from the function itself, so the registered surface is exactly ``TOOLS``.
+    """
+    from mcp.server.mcpserver import MCPServer
+
+    server = MCPServer("pyaegean")
     for fn in TOOLS:
         server.tool()(fn)
     return server
@@ -837,9 +842,10 @@ def main() -> None:
         import sys
 
         # distinguish "mcp not installed" from "mcp installed but too old for
-        # mcp.server.fastmcp (added in 1.2)": the printed fix must actually fix it.
+        # mcp.server.mcpserver (the mcp 2.0 server API)": the printed fix must actually
+        # fix it.
         if importlib.util.find_spec("mcp") is not None:
-            msg = "aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=1.2'"
+            msg = "aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=2'"
         else:
             msg = "aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'"
         print(f"{msg}  ({exc})", file=sys.stderr)

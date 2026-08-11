@@ -22,12 +22,19 @@ Both of those are invariants, covered below.
 ## Install and run
 
 The server lives behind the `[mcp]` extra, which pulls in the Model Context
-Protocol SDK:
+Protocol SDK (`mcp>=2`):
 
 ```bash
 pip install "pyaegean[mcp]"
 aegean-mcp                     # serve the tools over stdio
 ```
+
+The server is built on the SDK's `MCPServer` API, which version 2.0 introduced in
+place of the `FastMCP` it removed. Because no single SDK release ships both APIs,
+the extra declares a floor rather than supporting both generations; if your
+environment pins the SDK below 2.0, upgrade it (`pip install -U 'mcp>=2'`) rather
+than pinning pyaegean back. The floor costs no supported interpreter: MCP SDK 2.0
+runs on Python 3.10 and up, the same range as pyaegean.
 
 `aegean-mcp` is a stdio server: it speaks MCP on standard input and output and is
 meant to be launched by a client, not used interactively. Run bare in a terminal
@@ -38,14 +45,14 @@ command exits with a one-line fix instead of a traceback:
 
 ```
 aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'  (No module named 'mcp')
-aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=1.2'  (No module named 'mcp.server.fastmcp')
+aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=2'  (No module named 'mcp.server.mcpserver')
 ```
 
 The import error that triggered the message is kept in parentheses, so the two
 cases stay distinguishable: a missing extra, or an SDK too old to provide FastMCP.
 
 The core `import aegean` never pulls the MCP SDK: the server registers its tools
-with FastMCP only when `aegean-mcp` starts, so the zero-dependency core is
+with `MCPServer` only when `aegean-mcp` starts, so the zero-dependency core is
 unaffected by installing the extra.
 
 ## Connecting a client

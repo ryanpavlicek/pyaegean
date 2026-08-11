@@ -99,7 +99,7 @@ The complete matrix:
 | `pyaegean[parquet]` | `pyarrow>=16.1` | Parquet export (`io.to_parquet`) |
 | `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
-| `pyaegean[mcp]` | `mcp>=1.2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
+| `pyaegean[mcp]` | `mcp>=2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
 | `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet` and the separate framework adapters |
 
 - **`[all]` includes `[neural]` but omits `[parquet]` and `[interop]`.** It installs ONNX Runtime,

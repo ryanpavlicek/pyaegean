@@ -4,6 +4,20 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- The `aegean-mcp` server is ported to the MCP SDK 2.0 API, and the `mcp` extra now
+  requires `mcp>=2` (the `<2` cap 0.58.0 added is lifted). Version 2.0 removed
+  `mcp.server.fastmcp`; the server is built on its replacement,
+  `mcp.server.mcpserver.MCPServer`. No SDK release ships both APIs, so the extra declares
+  a floor rather than branching to support both generations. The tool surface is
+  unchanged: the same seventeen tools, the same names and input schemas, the same
+  names-only safety property, and the same structured-error convention (a domain miss is
+  a normal result carrying `{"error": ...}`, never a raised `ToolError`). MCP SDK 2.0
+  supports Python 3.10 and up, so the floor costs no supported interpreter.
+
 ## 0.58.0 (2026-08-11)
 
 ### Added
