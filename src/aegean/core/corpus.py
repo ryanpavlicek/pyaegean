@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import replace
@@ -42,6 +43,27 @@ def register_loader(script_id: str, fn: Callable[[], "Corpus"]) -> None:
     _LOADERS[script_id] = fn
 
 
+# A bare release number, in the forms a Python package version takes ("1", "0.58.0",
+# "1.2.0rc1", "2.0.dev3").
+_RELEASE_LABEL = re.compile(r"[0-9]+(\.[0-9]+)*([._-]?(a|b|c|rc|alpha|beta|post|dev)[0-9]*)*", re.I)
+
+
+def _data_identity(provenance: Provenance | None) -> str:
+    """The dataset identity a content hash may fold in, or ``""`` when there is none.
+
+    A real identity names the data and its revision, as the fetched corpora record it:
+    ``damos-corpus-v1@2024-…``, ``sigla-corpus-v4@9a5e4783…``, ``nt-corpus-v1@…``.
+    Bundled data ships inside the wheel and records the package version instead, which
+    labels the release rather than the data, so a bare release number is not an identity
+    here: folding one in would give an unchanged corpus a different content hash after
+    every upgrade, missing every cached analysis and invalidating any hash a reader wrote
+    down. Every other value is folded in unchanged."""
+    if provenance is None or not provenance.data_version:
+        return ""
+    value = provenance.data_version
+    return "" if _RELEASE_LABEL.fullmatch(value) else value
+
+
 def _merged_provenance(corpora: "list[Corpus]", n_docs: int) -> Provenance:
     """A fresh provenance for a merged corpus that names every input, so `cite` stays truthful."""
     sources = [
@@ -67,6 +89,151 @@ def _merged_provenance(corpora: "list[Corpus]", n_docs: int) -> Provenance:
         notes=(f"merged: {len(corpora)} corpora → {n_docs} documents",),
         edition_fidelity=fidelity,
     )
+
+
+# ── tabular rows ─────────────────────────────────────────────────────────────
+# `Corpus.to_dataframe` and the progress-reporting export path in `aegean.io.tabular`
+# both build their rows here, so the two cannot describe a token differently.
+def _document_row(d: Document) -> dict[str, Any]:
+    """One document-level row."""
+    return {
+        "id": d.id,
+        "script_id": d.script_id,
+        "site": d.meta.site,
+        "support": d.meta.support,
+        "scribe": d.meta.scribe,
+        "findspot": d.meta.findspot,
+        "period": d.meta.period,
+        "name": d.meta.name,
+        "n_tokens": len(d.tokens),
+        "n_words": len(d.words),
+        "source_text": d.source_text,
+    }
+
+
+# The typed column names, reserved whether or not their block is emitted. A block is
+# omitted when no exported token carries that state, and without this the reserved
+# name would be free for a token annotation to occupy on exactly those corpora.
+_RESERVED_TOKEN_COLUMNS = frozenset({
+    "alignment_document_id",
+    "alignment_end_char",
+    "alignment_normalization_ops",
+    "alignment_normalized_text",
+    "alignment_original_text",
+    "alignment_sentence_id",
+    "alignment_source_token_id",
+    "alignment_start_char",
+    "alignment_whitespace_before",
+    "form_diplomatic",
+    "form_editorial_status",
+    "form_has_damage",
+    "form_has_uncertainty",
+    "form_lost",
+    "form_lost_text",
+    "form_model_input",
+    "form_model_input_ops",
+    "form_model_input_source",
+    "form_normalized",
+    "form_regularized",
+    "form_segments",
+    "form_supplied",
+    "form_supplied_text",
+    "form_unclear",
+    "form_unclear_text",
+})
+
+
+def _token_blocks(documents: Sequence[Document], want_word: bool) -> tuple[bool, bool]:
+    """Whether the exported tokens carry typed form state / source alignment.
+
+    The two optional column blocks are 25 columns wide between them and are empty for
+    every corpus that records neither, which is most of them, so each is emitted only
+    when at least one exported token has that state. Scans the same tokens the export
+    will, and stops as soon as both are settled."""
+    form_state = False
+    alignment = False
+    for d in documents:
+        for tok in d.tokens:
+            if want_word and tok.kind is not TokenKind.WORD:
+                continue
+            form_state = form_state or tok.form_state is not None
+            alignment = alignment or tok.alignment is not None
+            if form_state and alignment:
+                return True, True
+    return form_state, alignment
+
+
+def _token_row(
+    d: Document, tok: Token, *, form_state: bool, alignment: bool
+) -> dict[str, Any]:
+    """One token-level row: the identity columns, then this token's annotations, then
+    the optional typed blocks the caller asked for.
+
+    Identity comes first so a spreadsheet opens on the columns that say which token
+    this is. A canonical column keeps its own value when an annotation shares its
+    name, so user metadata cannot spoof a token's text, status, or typed form state.
+    That holds whether or not the optional typed blocks are emitted: their column names
+    stay reserved even on a corpus that carries no such state."""
+    row: dict[str, Any] = {
+        "doc_id": d.id,
+        "line_no": tok.line_no,
+        "position": tok.position,
+        "text": tok.text,
+        "kind": tok.kind.value,
+        # the editorial reading status (CERTAIN/UNCLEAR/RESTORED/LOST): without it, a
+        # spreadsheet of an epigraphic corpus could not tell a restored reading from a
+        # securely-read one
+        "status": tok.status.value,
+        "site": d.meta.site,
+        "period": d.meta.period,
+    }
+    # token annotations (lemma/morph/strongs/gloss for the Greek NT, etc.)
+    for key, value in tok.annotations.items():
+        if key in _RESERVED_TOKEN_COLUMNS:
+            continue  # a reserved column never carries user metadata
+        row.setdefault(key, value)
+    if form_state:
+        state = tok.form_state
+        row["form_diplomatic"] = state.diplomatic if state is not None else None
+        row["form_regularized"] = state.regularized if state is not None else None
+        row["form_normalized"] = state.normalized if state is not None else None
+        row["form_model_input"] = state.model_input if state is not None else None
+        row["form_model_input_ops"] = state.model_input_ops if state is not None else None
+        row["form_model_input_source"] = (
+            state.model_input_source if state is not None else None
+        )
+        row["form_segments"] = (
+            json.dumps(
+                [segment.to_dict() for segment in state.segments],
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            if state is not None
+            else None
+        )
+        row["form_editorial_status"] = (
+            state.editorial_status.value if state is not None else None
+        )
+        row["form_supplied_text"] = state.supplied_text if state is not None else None
+        row["form_unclear_text"] = state.unclear_text if state is not None else None
+        row["form_lost_text"] = state.lost_text if state is not None else None
+        row["form_supplied"] = state.supplied if state is not None else None
+        row["form_unclear"] = state.unclear if state is not None else None
+        row["form_lost"] = state.lost if state is not None else None
+        row["form_has_damage"] = state.has_damage if state is not None else None
+        row["form_has_uncertainty"] = state.has_uncertainty if state is not None else None
+    if alignment:
+        a = tok.alignment
+        row["alignment_document_id"] = a.document_id if a is not None else None
+        row["alignment_sentence_id"] = a.sentence_id if a is not None else None
+        row["alignment_source_token_id"] = a.source_token_id if a is not None else None
+        row["alignment_original_text"] = a.original_text if a is not None else None
+        row["alignment_start_char"] = a.start_char if a is not None else None
+        row["alignment_end_char"] = a.end_char if a is not None else None
+        row["alignment_whitespace_before"] = a.whitespace_before if a is not None else None
+        row["alignment_normalized_text"] = a.normalized_text if a is not None else None
+        row["alignment_normalization_ops"] = a.normalization_ops if a is not None else None
+    return row
 
 
 class Corpus:
@@ -170,15 +337,17 @@ class Corpus:
 
     def fingerprint(self) -> str:
         """A stable content hash of this corpus, covering everything a token-level
-        analysis can see: the script id, the provenance ``data_version``, each
+        analysis can see: the script id, the dataset identity (the provenance
+        ``data_version``, when it names the data rather than a package release), each
         document's id, every token's text, `TokenKind`, `ReadingStatus`, decomposed
         ``signs``, Unicode ``glyphs``, alternate readings (``alt``), and annotations
         (hashed as sorted key/value pairs), and any ``subset:`` / ``merged:`` /
-        ``appended:`` provenance note. Document metadata (site, period, ...) is
-        deliberately excluded. Cheap relative to the analyses it keys: one pass over
-        the tokens, no model build. Two corpora with the same fingerprint have the
-        same analysable content, so it's the cache key for `aegean.cache`-memoised
-        analyses (including the sign-level dispersion/keyness that read ``signs``)."""
+        ``appended:`` provenance note. Document metadata (site, period, ...) and the
+        installed package version are deliberately excluded. Cheap relative to the
+        analyses it keys: one pass over the tokens, no model build. Two corpora with
+        the same fingerprint have the same analysable content, so it's the cache key
+        for `aegean.cache`-memoised analyses (including the sign-level
+        dispersion/keyness that read ``signs``)."""
         h = hashlib.sha256()
 
         def field(value: str) -> None:
@@ -193,11 +362,7 @@ class Corpus:
             h.update(n.to_bytes(8, "big"))
 
         field(self.script_id or "")
-        field(
-            self.provenance.data_version
-            if self.provenance is not None and self.provenance.data_version
-            else ""
-        )
+        field(_data_identity(self.provenance))
         count(len(self.documents))
         for d in self.documents:
             field(d.id)
@@ -492,6 +657,13 @@ class Corpus:
     def to_dataframe(self, level: str = "document"):  # type: ignore[no-untyped-def]
         """A pandas DataFrame at ``document``, ``token``, or ``word`` level.
 
+        Token and word rows lead with the identity columns (``doc_id``, ``line_no``,
+        ``position``, ``text``, ``kind``, ``status``, ``site``, ``period``), then the
+        token's own annotations. The typed ``form_*`` and ``alignment_*`` blocks follow,
+        and each is present only when at least one exported token carries that state, so
+        a corpus that records neither does not carry 25 empty columns. A canonical column
+        keeps its own value when an annotation shares its name.
+
         pandas is an optional dependency — install with ``pip install 'pyaegean[data]'``."""
         try:
             import pandas as pd  # lazy, optional [data] extra
@@ -501,133 +673,19 @@ class Corpus:
             ) from exc
 
         if level == "document":
-            token_rows: list[dict[str, Any]] = [
-                {
-                    "id": d.id,
-                    "script_id": d.script_id,
-                    "site": d.meta.site,
-                    "support": d.meta.support,
-                    "scribe": d.meta.scribe,
-                    "findspot": d.meta.findspot,
-                    "period": d.meta.period,
-                    "name": d.meta.name,
-                    "n_tokens": len(d.tokens),
-                    "n_words": len(d.words),
-                    "source_text": d.source_text,
-                }
-                for d in self.documents
-            ]
-            return pd.DataFrame(token_rows)
+            return pd.DataFrame([_document_row(d) for d in self.documents])
 
         if level in ("token", "word"):
             want_word = level == "word"
-            rows = [
-                {
-                    # token annotations (lemma/morph/strongs/gloss for the Greek NT, etc.)
-                    # spread first so the canonical columns below always win on a name clash.
-                    **tok.annotations,
-                    # A6 canonical form-state columns.  These are written after arbitrary
-                    # annotations deliberately: user metadata cannot spoof the typed values.
-                    "form_diplomatic": (
-                        tok.form_state.diplomatic if tok.form_state is not None else None
-                    ),
-                    "form_regularized": (
-                        tok.form_state.regularized if tok.form_state is not None else None
-                    ),
-                    "form_normalized": (
-                        tok.form_state.normalized if tok.form_state is not None else None
-                    ),
-                    "form_model_input": (
-                        tok.form_state.model_input if tok.form_state is not None else None
-                    ),
-                    "form_model_input_ops": (
-                        tok.form_state.model_input_ops if tok.form_state is not None else None
-                    ),
-                    "form_model_input_source": (
-                        tok.form_state.model_input_source if tok.form_state is not None else None
-                    ),
-                    "form_segments": (
-                        json.dumps(
-                            [segment.to_dict() for segment in tok.form_state.segments],
-                            ensure_ascii=False,
-                            separators=(",", ":"),
-                        )
-                        if tok.form_state is not None
-                        else None
-                    ),
-                    "form_editorial_status": (
-                        tok.form_state.editorial_status.value
-                        if tok.form_state is not None
-                        else None
-                    ),
-                    "form_supplied_text": (
-                        tok.form_state.supplied_text if tok.form_state is not None else None
-                    ),
-                    "form_unclear_text": (
-                        tok.form_state.unclear_text if tok.form_state is not None else None
-                    ),
-                    "form_lost_text": (
-                        tok.form_state.lost_text if tok.form_state is not None else None
-                    ),
-                    "form_supplied": (
-                        tok.form_state.supplied if tok.form_state is not None else None
-                    ),
-                    "form_unclear": (
-                        tok.form_state.unclear if tok.form_state is not None else None
-                    ),
-                    "form_lost": (
-                        tok.form_state.lost if tok.form_state is not None else None
-                    ),
-                    "form_has_damage": (
-                        tok.form_state.has_damage if tok.form_state is not None else None
-                    ),
-                    "form_has_uncertainty": (
-                        tok.form_state.has_uncertainty if tok.form_state is not None else None
-                    ),
-                    "doc_id": d.id,
-                    "line_no": tok.line_no,
-                    "position": tok.position,
-                    "text": tok.text,
-                    "kind": tok.kind.value,
-                    # the editorial reading status (CERTAIN/UNCLEAR/RESTORED/LOST): without
-                    # it, a spreadsheet of an epigraphic corpus could not tell a restored
-                    # reading from a securely-read one
-                    "status": tok.status.value,
-                    "site": d.meta.site,
-                    "period": d.meta.period,
-                    "alignment_document_id": (
-                        tok.alignment.document_id if tok.alignment is not None else None
-                    ),
-                    "alignment_sentence_id": (
-                        tok.alignment.sentence_id if tok.alignment is not None else None
-                    ),
-                    "alignment_source_token_id": (
-                        tok.alignment.source_token_id if tok.alignment is not None else None
-                    ),
-                    "alignment_original_text": (
-                        tok.alignment.original_text if tok.alignment is not None else None
-                    ),
-                    "alignment_start_char": (
-                        tok.alignment.start_char if tok.alignment is not None else None
-                    ),
-                    "alignment_end_char": (
-                        tok.alignment.end_char if tok.alignment is not None else None
-                    ),
-                    "alignment_whitespace_before": (
-                        tok.alignment.whitespace_before if tok.alignment is not None else None
-                    ),
-                    "alignment_normalized_text": (
-                        tok.alignment.normalized_text if tok.alignment is not None else None
-                    ),
-                    "alignment_normalization_ops": (
-                        tok.alignment.normalization_ops if tok.alignment is not None else None
-                    ),
-                }
-                for d in self.documents
-                for tok in d.tokens
-                if not want_word or tok.kind is TokenKind.WORD
-            ]
-            return pd.DataFrame(rows)
+            form_state, alignment = _token_blocks(self.documents, want_word)
+            return pd.DataFrame(
+                [
+                    _token_row(d, tok, form_state=form_state, alignment=alignment)
+                    for d in self.documents
+                    for tok in d.tokens
+                    if not want_word or tok.kind is TokenKind.WORD
+                ]
+            )
 
         raise ValueError(f"level must be 'document', 'token', or 'word'; got {level!r}")
 

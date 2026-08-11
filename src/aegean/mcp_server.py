@@ -70,6 +70,23 @@ def _did_you_mean(name: str, candidates: Iterable[str]) -> str:
     return f" (did you mean {' or '.join(repr(c) for c in close)}?)"
 
 
+def _dictionary_unavailable(dictionary: str) -> str:
+    """The structured-error text for a hosted dictionary that cannot be opened on this machine.
+
+    Every dictionary but the bundled dodson is served from a pinned index that downloads into
+    the local data store on first use, so a failure to open one means exactly this: the index
+    is not readable in the store and the download did not succeed (no network, a refused or
+    interrupted transfer, a checksum mismatch, a damaged file). The message says that, and
+    names the recoveries an agent has: retry once the machine is online, ``data_status`` for
+    what the store already holds, and ``koine_gloss`` for the always-offline Koine lexicon."""
+    return (
+        f"the {dictionary} dictionary is unavailable here: its index is not readable in the "
+        "local data store and could not be downloaded. Retry when the machine is online; "
+        "data_status lists what the store already holds, and koine_gloss reaches the bundled "
+        "Dodson (Koine NT) lexicon offline"
+    )
+
+
 def _load_corpus(corpus: str) -> tuple[Any, dict[str, Any] | None]:
     """Load a registry corpus, forgiving case; ``(None, {"error": ...})`` when unknown."""
     import aegean
@@ -703,6 +720,13 @@ def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[
     just the concise gloss."""
     from . import greek
 
+    # This surface answers with a structured result, so a wrong argument type is reported
+    # the same way a wrong dictionary name is, not raised out of a lookup helper.
+    if not isinstance(word, str):
+        return {"error": f"word must be a string, got {type(word).__name__}"}
+    if not isinstance(dictionary, str):
+        return {"error": f"dictionary must be a string, got {type(dictionary).__name__}"}
+
     infos = {i.id: i for i in greek.lexica()}
     hosted = sorted(i for i, info in infos.items() if info.hosted)
     if dictionary not in infos:
@@ -716,15 +740,17 @@ def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[
             f"hosted dictionaries: {', '.join(hosted)}"
         }
     # The first use of a hosted dictionary fetches and builds its index; a cold-cache
-    # offline call (or a network / HTTP / sha256 failure) raises out of use_lexicon.
-    # Return the surface's structured error instead of leaking a raw traceback.
+    # offline call (a network / HTTP / sha256 failure, or a damaged file in the store)
+    # raises out of use_lexicon. Report what happened here — the index could not be
+    # obtained — rather than a raw traceback or a loader remediation an agent has no
+    # repository to perform.
     from .data import DataNotAvailableError
 
     try:
         greek.use_lexicon(dictionary)
         e = greek.entry(word, dictionary=dictionary)
-    except (DataNotAvailableError, ValueError) as exc:
-        return {"error": f"could not load the {dictionary} dictionary: {exc}"}
+    except (DataNotAvailableError, ValueError, OSError):
+        return {"error": _dictionary_unavailable(dictionary)}
     if e is None:
         return {"error": f"no {dictionary} entry for {word!r}"}
     out: dict[str, Any] = {

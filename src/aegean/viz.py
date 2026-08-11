@@ -6,6 +6,10 @@ draws one publication-ready-enough figure and returns the matplotlib ``Axes``
 file). These are conveniences, not a plotting framework: for anything bespoke,
 take the numbers from ``aegean.analysis`` and plot them yourself.
 
+Every corpus argument accepts a ``Corpus``, the ``aegean.analysis.QueryResults`` a
+``Corpus.query`` returns, or a plain list of documents, so a query's result set
+plots exactly like the corpus it came from.
+
 Most functions take ``backend="matplotlib"`` (the default) or
 ``backend="plotly"``. With ``"plotly"`` they return a Plotly ``Figure`` instead
 of a matplotlib ``Axes`` (call ``.write_html(...)`` to save an interactive
@@ -47,6 +51,23 @@ __all__ = [
     "Timeline",
     "TimelineBin",
 ]
+
+
+def _corpus_arg(corpus: Any) -> Any:
+    """A query's results as their matched documents; every other corpus form unchanged.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are its
+    ``inscriptions`` — so a result set plots exactly like the corpus it came from. A `Corpus`
+    (or a plain document list) passes through untouched, keeping the identity the memoized
+    statistics are keyed on."""
+    docs = getattr(corpus, "inscriptions", None)
+    return corpus if docs is None else docs
+
+
+def _check_word(word: Any) -> None:
+    """Validate an optional word argument: matching is textual, so it is a string or ``None``."""
+    if word is not None and not isinstance(word, str):
+        raise TypeError(f"word must be a string or None, got {type(word).__name__}")
 
 
 def _percentile_abs(values: Sequence[float], q: float) -> float:
@@ -121,7 +142,7 @@ def plot_sign_frequencies(
     ``kind="signs"`` (default) counts individual signs; ``kind="words"`` whole
     words. Most frequent at the top."""
     counts: Counter[str] = Counter()
-    for d in _documents(corpus):
+    for d in _documents(_corpus_arg(corpus)):
         counts.update(_items_of(d, kind))
     pairs = counts.most_common(top)
     ax = _axes(ax, figsize=(7, max(2.5, 0.32 * len(pairs))))
@@ -148,7 +169,7 @@ def plot_dispersion(
     top-right = frequent but *concentrated* items (formulaic or site/genre-bound
     — on Aegean material usually the interesting quadrant). The ``annotate``
     most frequent items are labeled."""
-    rows = dispersions(corpus, kind=kind, min_frequency=min_frequency)
+    rows = dispersions(_corpus_arg(corpus), kind=kind, min_frequency=min_frequency)
     ax = _axes(ax, figsize=(7, 5))
     ax.scatter(
         [r.frequency for r in rows],
@@ -181,7 +202,9 @@ def plot_keyness(
 ) -> Any:
     """Diverging bars of the ``top``-G² key items: log-ratio effect size,
     right = overused in the target, left = underused. Bar labels carry G²."""
-    rows = keyness(target, reference, kind=kind, min_target=min_target)[:top]
+    rows = keyness(
+        _corpus_arg(target), _corpus_arg(reference), kind=kind, min_target=min_target
+    )[:top]
     rows = sorted(rows, key=lambda r: r.log_ratio)
     ax = _axes(ax, figsize=(7, max(2.5, 0.34 * len(rows))))
     colors = ["#4a6fa5" if r.log_ratio >= 0 else "#a54a4a" for r in rows]
@@ -212,8 +235,9 @@ def plot_collocation_network(
     opacity scale with the count. ``word`` restricts to that word's ego
     network. **Exploratory** on undeciphered material: an edge is shared
     *context*, not an asserted phrase or meaning."""
+    _check_word(word)
     pair_counts: Counter[tuple[str, str]] = Counter()
-    for d in _documents(corpus):
+    for d in _documents(_corpus_arg(corpus)):
         words = sorted({t.text for t in d.tokens if "-" in t.text})
         for i, a in enumerate(words):
             for b in words[i + 1 :]:
@@ -313,7 +337,7 @@ def plot_balance(corpus: Any, *, ax: Any = None) -> Any:
     bad_xs: list[float] = []
     bad_ys: list[float] = []
     labels: list[tuple[float, float, str]] = []
-    for d in _documents(corpus):
+    for d in _documents(_corpus_arg(corpus)):
         for chk in balance_check(d):
             if chk.stated_total is None or chk.computed_sum is None:
                 continue
@@ -405,7 +429,7 @@ def plot_findspots(corpus: Any, *, backend: str = "matplotlib", ax: Any = None) 
 
     index = _site_index(site_coordinates())
     counts: Counter[Any] = Counter()
-    for d in _documents(corpus):
+    for d in _documents(_corpus_arg(corpus)):
         sc = _resolve_site(index, d.meta.site)
         if sc is not None:
             counts[sc] += 1
@@ -650,7 +674,7 @@ def timeline_bins(corpus: Any, *, bin_width: int = 100) -> Timeline:
     ``bin_width=100`` gives one bar per century."""
     if bin_width <= 0:
         raise ValueError(f"bin_width must be positive, got {bin_width}")
-    docs = _documents(corpus)
+    docs = _documents(_corpus_arg(corpus))
     counts: Counter[int] = Counter()
     unparsed = 0
     for d in docs:
@@ -734,7 +758,9 @@ def plot_sign_network(
     _check_backend(backend)
     from .analysis.graph import cooccurrence_graph
 
-    graph = cooccurrence_graph(corpus, level=level, scope=scope, min_count=min_count)
+    graph = cooccurrence_graph(
+        _corpus_arg(corpus), level=level, scope=scope, min_count=min_count
+    )
     if not graph.nodes:
         raise ValueError(f"no co-occurring {level}s at this threshold")
     nodes = graph.nodes[:max_nodes]

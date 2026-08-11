@@ -140,9 +140,20 @@ def test_search_finds_nul_token_without_crashing() -> None:
 
 
 def test_line_value_survives_an_absurd_integer() -> None:
-    from aegean.core.numerals import line_value, parse_value
+    """A digit run too long to represent must not raise, and must not poison a total.
 
-    assert line_value(["5", "9" * 400, "3"]) == float("inf")  # no OverflowError
+    This originally pinned ``inf``, which met the no-OverflowError requirement but made
+    the value unformattable (``format_value(inf)`` raised) and let one token turn a whole
+    accounting line into infinity. A value that cannot be represented finitely is now
+    unparseable, so the line skips it exactly as it already skipped ``KU-RO``, ``abc`` and
+    ``1.5``. The original requirement still holds: nothing raises.
+    """
+    from aegean.core.numerals import format_value, line_value, parse_value
+
+    assert line_value(["5", "9" * 400, "3"]) == 8.0  # skipped, like any other non-numeral
+    assert line_value(["5", "KU-RO", "3"]) == 8.0  # the behaviour it now matches
+    assert parse_value("9" * 400) is None
+    assert format_value(parse_value("5")) == "5"  # the round trip never raises
     assert parse_value("5") == 5  # ordinary integers unaffected
 
 

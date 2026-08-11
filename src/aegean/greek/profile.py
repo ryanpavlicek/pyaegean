@@ -51,19 +51,31 @@ _EDITORIAL_ALL = _EDITORIAL_CORE | _EDITORIAL_AMBIGUOUS
 
 # ── Beta Code signal ────────────────────────────────────────────────────────
 # Markers of TLG/Perseus Beta Code, anchored the way Beta Code actually places
-# them so ordinary English ("and/or", "I/O"), file paths, and source code do
-# not trip it: an accent symbol directly after a VOWEL letter (Beta Code accents
+# them, so ordinary English ("and/or", "read/write") carries no marker at all and
+# the near misses are left to the density bar in `_looks_like_betacode`: an accent
+# symbol directly after a VOWEL letter (Beta Code accents
 # follow the vowel they modify), a diaeresis after i/u, an iota subscript after
 # a/h/w, the capital marker "*" at a word start, or a sigma variant s1/s2/s3
 # after a letter. The weak breathing symbols ") (" are excluded because ordinary
 # parentheses would match them; they are handled by the editorial-bracket path.
 _BETA_SIGNAL_RE = re.compile(
-    r"[aehiouwAEHIOUW][/\\=]"  # accent after a vowel (lo/gos, mh=nin, qea/)
+    # The accent sits after the vowel, and after that vowel's breathing when it has one.
+    # A vowel-initial Greek word writes the breathing between the two (e)/stin, ou(=tos,
+    # a)/nqrwpos), which is the commonest shape in the language, so requiring the accent to
+    # follow the vowel DIRECTLY sees no marker in most real Beta Code.
+    r"[aehiouwAEHIOUW][()]?[/\\=]"  # lo/gos, mh=nin, qea/, e)/stin, ou(=tos
     r"|[iuIU]\+"  # diaeresis (i+, u+)
     r"|[ahwAHW]\|"  # iota subscript (tw=| -> w|)
     r"|(?<![A-Za-z0-9])\*[A-Za-z]"  # capital marker at a word start (*a)qh/nh)
     r"|[A-Za-z][sS][123](?![0-9])"  # sigma variants (s1/s2/s3) inside a word
 )
+
+# A token that is plainly a filesystem path or URL rather than a word: a drive letter
+# ("C:/…"), a scheme ("https://…"), or a file extension after a slash ("data/x.txt"). Beta
+# Code has none of these, while a path's slashes readily follow a vowel ("data/" -> "a/"),
+# so such a token never counts as Beta Code evidence. The rule deliberately does not key on
+# ":" or "\" alone: Beta Code writes the raised point as ":" and the grave accent as "\".
+_PATHLIKE_RE = re.compile(r"://|^[A-Za-z]:[/\\]|/[^/\s]*\.[A-Za-z]{1,5}$")
 
 # ── Greek alphabetic-numeral signs (the letters themselves are counted as
 # letters; these signs mark numeral use). Everything else numeric is caught by
@@ -74,6 +86,7 @@ _NUMERAL_EXTRAS = frozenset((_KERAIA, _LOWER_KERAIA))
 
 _TOKEN_RE = re.compile(r"\S+")
 _MIXED_FLOOR = 0.15  # each script must reach this share of letters to read "mixed"
+_MIN_BETA_WORDS = 2  # a lone Beta-Code-shaped marker is never enough evidence
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,19 +156,25 @@ def _looks_like_betacode(
     """Heuristic: does the ASCII look like transliterated Beta Code Greek?
 
     Requires no real Unicode Greek, a Latin-letter-dominated body, and DENSE Beta
-    Code markers: real Beta Code carries an accent on most words, so at least one
-    word in three must show a signal. A stray "I/O" or "a/b" in ordinary English
-    prose, a file path, or source code stays below the density bar.
+    Code markers: real Beta Code accents most of its words, so **at least half** the
+    whitespace-separated words must carry a signal, and **at least two words** must,
+    since one marker on its own is a coincidence rather than a transliteration.
+    Path/URL tokens carry no evidence at all (see :data:`_PATHLIKE_RE`).
+
+    That bar is what keeps the obvious non-Greek out: "I/O" and "a/b" are one word
+    with one marker; "x = a/b" is one word of three; ``if a/b > 1: return a/b`` is
+    two words of six; ``C:/corpus/data.txt`` and ``src/greek/profile.py`` are paths.
+    Two accented words out of three ("mh=nin a)/eide qea/") clear it.
     """
     if greek_count or not latin_count or not nonspace:
         return False
     if latin_count / nonspace < 0.5:
         return False
-    signals = len(_BETA_SIGNAL_RE.findall(text))
-    if not signals:
-        return False
-    words = len(_TOKEN_RE.findall(text))
-    return signals >= max(1, words // 3)
+    words = _TOKEN_RE.findall(text)
+    marked = sum(
+        1 for w in words if not _PATHLIKE_RE.search(w) and _BETA_SIGNAL_RE.search(w)
+    )
+    return marked >= _MIN_BETA_WORDS and 2 * marked >= len(words)
 
 
 # Real polytonic Greek stacks at most a few combining marks on one base letter (breathing +

@@ -1,7 +1,9 @@
 """Geographic analysis of a corpus's find-sites — the ``[geo]`` extra (geopandas + shapely).
 
 Maps each inscription's find-site to coordinates from a bundled gazetteer and exposes the corpus as
-a GeoDataFrame for spatial analysis and plotting. The gazetteer covers the Aegean scripts' find-sites
+a GeoDataFrame for spatial analysis and plotting. A whole corpus, the `aegean.analysis.QueryResults`
+`Corpus.query` returns, or a plain list of documents are all accepted wherever a corpus is, so
+"query, then map the result" is one step. The gazetteer covers the Aegean scripts' find-sites
 and the openly-licensed Greek-epigraphy corpora's ancient find-places (I.Sicily, IIP, IOSPE, IGCyr,
 EDH). The coordinates are **approximate** (site-level, ~1 km); for the epigraphy find-places they are
 the site's Pleiades representative point, verified against the corpus's own coordinate where it
@@ -95,6 +97,46 @@ def _key_index(coords: dict[str, SiteCoord]) -> dict[str, str]:
     return {_normalize_site(key): key for key in coords}
 
 
+def _documents_of(corpus: Any) -> list[Any]:
+    """Coerce a corpus, a query's results, or a document iterable to a list of documents.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are its
+    ``inscriptions`` — subsetting a corpus that way and then mapping the result is the
+    documented path, so a result set is accepted wherever a `Corpus` is. Anything else that
+    yields documents (a `Corpus`, a plain list) is taken as it comes; anything that does not
+    raises a ``TypeError`` naming what arrived."""
+    from ..core.model import Document
+
+    expected = "expected a corpus, query results, or a list of documents"
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    from collections.abc import Mapping
+
+    if isinstance(corpus, (str, bytes, Mapping)):
+        # All iterable, so each would otherwise coerce to an empty or character-wise
+        # list and answer "no mapped sites" for what is really a wrong argument (a
+        # corpus id, or a mapping).
+        raise TypeError(f"{expected}, got {type(corpus).__name__}")
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(f"{expected}, got {type(corpus).__name__}") from None
+    # Every element, not just the first: a list whose second entry is not a document
+    # otherwise fails mid-loop with a raw AttributeError from deep inside the caller.
+    for element in out:
+        if not isinstance(element, Document):
+            raise TypeError(f"{expected}, got {type(element).__name__}")
+    return out
+
+
+def _word_arg(word: Any) -> str:
+    """Validate a word argument: matching is textual, so a non-string can never match."""
+    if not isinstance(word, str):
+        raise TypeError(f"word must be a string, got {type(word).__name__}")
+    return word
+
+
 def _import_geo() -> tuple[Any, Any]:
     try:
         import geopandas as gpd
@@ -123,16 +165,18 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
     ``level="inscription"`` gives one row per inscription whose site is in the gazetteer (id, site,
     label, region, period, geometry); ``level="site"`` gives one row per gazetteer site with its
     inscription count, keyed on the canonical gazetteer label so whitespace/line-split variants of a
-    find-place collapse to one row (its counts summed). Inscriptions whose site isn't mapped are
-    dropped; a corpus with no mapped sites yields an empty GeoDataFrame with the same columns and
-    crs. Needs the ``[geo]`` extra."""
+    find-place collapse to one row (its counts summed). ``corpus`` is a `Corpus`, the
+    `aegean.analysis.QueryResults` of a `Corpus.query`, or a list of documents. Inscriptions whose
+    site isn't mapped are dropped; a corpus with no mapped sites yields an empty GeoDataFrame with
+    the same columns and crs. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
+    documents = _documents_of(corpus)
     coords = site_coordinates()
     if level == "inscription":
         index = _site_index(coords)
         cols = ["id", "site", "label", "region", "period", "pleiades", "contested", "geometry"]
         rows = []
-        for d in corpus:
+        for d in documents:
             sc = _resolve_site(index, d.meta.site)
             if sc is None:
                 continue
@@ -146,7 +190,7 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
         keys = _key_index(coords)
         cols = ["site", "label", "region", "pleiades", "inscriptions", "contested", "geometry"]
         counts: Counter[str] = Counter()
-        for d in corpus:
+        for d in documents:
             key = keys.get(_normalize_site(d.meta.site))
             if key is not None:
                 counts[key] += 1
@@ -168,14 +212,16 @@ def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def
     *where* a given word shows up across the corpus, ready to map. Matching is case-insensitive
     (``ku-ro`` finds ``KU-RO``). Counts are keyed on the canonical gazetteer label, so a find-place
     written two ways (line-split or extra spaces) contributes to one row, not several. A word
-    attested at no mapped site yields an empty GeoDataFrame with the same columns and crs. Needs the
-    ``[geo]`` extra."""
+    attested at no mapped site yields an empty GeoDataFrame with the same columns and crs. ``corpus``
+    is a `Corpus`, the `aegean.analysis.QueryResults` of a `Corpus.query`, or a list of documents;
+    ``word`` must be a string. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
+    target = _word_arg(word).casefold()
+    documents = _documents_of(corpus)
     coords = site_coordinates()
     keys = _key_index(coords)
-    target = word.casefold()
     counts: Counter[str] = Counter()
-    for d in corpus:
+    for d in documents:
         key = keys.get(_normalize_site(d.meta.site))
         if key is not None and any(t.text.casefold() == target for t in d.words):
             counts[key] += 1

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import csv
 import json
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
@@ -42,9 +42,11 @@ if TYPE_CHECKING:
 __all__ = [
     "REVIEW_COLUMNS",
     "MergedReview",
+    "ReviewApplication",
     "ReviewConflict",
     "ReviewerValue",
     "apply_merged",
+    "apply_review_table",
     "from_review_table",
     "merge_review_tables",
     "needs_review_flag",
@@ -336,8 +338,48 @@ def _row_has_correction(row: Mapping[str, str | None]) -> bool:
     return any(_cell(row, column) for column, _p, _k in _CORRECTIONS)
 
 
-def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str | None]]:
+@dataclass(frozen=True)
+class _ParsedTable:
+    """One review table as read: how many data rows it held, and those rows keyed for
+    application (duplicates collapsed, unusable positions dropped)."""
+
+    rows: int
+    corrections: dict[tuple[str, int], dict[str, str | None]]
+
+
+# The columns a file must carry to be a review table at all: the join key plus somewhere
+# for the reviewer to write. A file without them cannot express a correction, so reading
+# it can only ever produce an empty result that looks like a clean apply.
+_JOIN_COLUMNS: tuple[str, ...] = ("doc_id", "position")
+_CORRECTION_COLUMNS: tuple[str, ...] = tuple(col for col, _pred, _key in _CORRECTIONS)
+
+
+def _check_review_header(path: str | Path, fieldnames: "Sequence[str] | None") -> None:
+    """Confirm a CSV's header is a review table's, raising `ValueError` when it is not."""
+    if fieldnames is None:
+        raise ValueError(
+            f"{path} is not a review table: the file is empty (no header row). "
+            "Export one with `aegean review export` (or `aegean.io.to_review_table`)."
+        )
+    present = {name.strip() for name in fieldnames if name}
+    missing = [col for col in _JOIN_COLUMNS if col not in present]
+    if not any(col in present for col in _CORRECTION_COLUMNS):
+        missing.append(" or ".join(_CORRECTION_COLUMNS))
+    if missing:
+        raise ValueError(
+            f"{path} is not a review table: no {', '.join(missing)} column. "
+            f"Its columns are {', '.join(sorted(present)) or '(none)'}. "
+            "Export one with `aegean review export` (or `aegean.io.to_review_table`), "
+            "fill the correct_* columns, and apply that file."
+        )
+
+
+def _parse_corrections(path: str | Path) -> _ParsedTable:
     """Read a review CSV into a ``(doc_id, position) -> row`` map, None-safely.
+
+    The header is checked first: a file that carries neither the join key nor a
+    correction column is not a review table and raises `ValueError` rather than reading
+    as an empty set of corrections, which lands nothing and looks like a clean apply.
 
     Duplicate rows for one token are collapsed; duplicates that carry *conflicting*
     corrections raise `ValueError` (the reviewer must resolve them). A malformed CSV (an
@@ -353,9 +395,13 @@ def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str 
     hypothetical."""
     corrections: dict[tuple[str, int], dict[str, str | None]] = {}
     source_keys: dict[str, tuple[str, int]] = {}
+    seen = 0
     try:
         with open(path, encoding="utf-8-sig", newline="") as f:
-            for row in csv.DictReader(f):
+            reader = csv.DictReader(f)
+            _check_review_header(path, reader.fieldnames)
+            for row in reader:
+                seen += 1
                 pos = (row.get("position") or "").strip()
                 index = _row_position(pos)
                 if index is None:
@@ -387,7 +433,7 @@ def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str 
                 corrections[key] = row
     except csv.Error as exc:
         raise ValueError(f"malformed review CSV {path}: {exc}") from exc
-    return corrections
+    return _ParsedTable(rows=seen, corrections=corrections)
 
 
 def _apply_corrections(
@@ -398,8 +444,9 @@ def _apply_corrections(
     default_reviewer: str = "",
     note_extra: str = "",
     reviewers: tuple[str, ...] | None = None,
-) -> "Corpus":
-    """Land ``corrections`` onto ``corpus``, returning a NEW corpus (the input is not mutated).
+) -> "tuple[Corpus, int]":
+    """Land ``corrections`` onto ``corpus``, returning a NEW corpus (the input is not
+    mutated) and the number of tokens it changed.
 
     Rows prefer stable source-token identity and fall back to ``doc_id`` + ``position`` for
     old tables. Each matched row's source identity/span and exported ``token`` text are
@@ -542,7 +589,42 @@ def _apply_corrections(
         prov = replace(prov, notes=prov.notes + (note,))
     from ..core.corpus import Corpus
 
-    return Corpus(new_docs, corpus.sign_inventory, prov, corpus.script_id)
+    return Corpus(new_docs, corpus.sign_inventory, prov, corpus.script_id), corrected
+
+
+@dataclass(frozen=True)
+class ReviewApplication:
+    """What landing one review table did: the corrected corpus and what it was asked to do.
+
+    ``rows`` is how many rows the table held, ``corrections`` how many of them carried a
+    reviewer's value, and ``corrected`` how many tokens actually changed (a correction
+    equal to the value the reviewer was shown changes nothing). Reading all three tells a
+    caller whether an apply that raised nothing actually did anything: ``rows`` of zero is
+    an empty table, and ``corrections`` of zero a table nobody filled in."""
+
+    corpus: "Corpus"
+    rows: int
+    corrections: int
+    corrected: int
+
+
+def apply_review_table(
+    path: str | Path, corpus: "Corpus", *, reviewer: str = ""
+) -> ReviewApplication:
+    """`from_review_table`, reporting what the table contained and how much of it landed.
+
+    Same reading, same guards, same corrected corpus (on `ReviewApplication.corpus`); use
+    this when a no-op needs to be distinguishable from a successful apply."""
+    parsed = _parse_corrections(path)
+    applied, corrected = _apply_corrections(
+        parsed.corrections, corpus, label=f"review table {path}", default_reviewer=reviewer
+    )
+    return ReviewApplication(
+        corpus=applied,
+        rows=parsed.rows,
+        corrections=sum(1 for row in parsed.corrections.values() if _has_corrections(row)),
+        corrected=corrected,
+    )
 
 
 def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "") -> "Corpus":
@@ -563,11 +645,11 @@ def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "")
     morphology correction lands on the same key that supplied the displayed prediction
     (``morph`` or UD ``feats``). Rows left blank change nothing. The stamped reviewer is
     ``reviewer`` when given, else each row's own ``reviewer`` column. A ``review:`` provenance
-    note records how many tokens were corrected. The input corpus is not mutated."""
-    corrections = _parse_corrections(path)
-    return _apply_corrections(
-        corrections, corpus, label=f"review table {path}", default_reviewer=reviewer
-    )
+    note records how many tokens were corrected. A file that is not a review table (no
+    ``doc_id`` / ``position`` / ``correct_*`` columns, or no header at all) raises rather than
+    reading as zero corrections. The input corpus is not mutated. Use `apply_review_table`
+    for the same result plus the counts."""
+    return apply_review_table(path, corpus, reviewer=reviewer).corpus
 
 
 # ── multi-reviewer merge ───────────────────────────────────────────────────
@@ -761,7 +843,7 @@ def merge_review_tables(
 
     files: list[tuple[str, Mapping[tuple[str, int], Mapping[str, str | None]], str]] = []
     for p in path_list:
-        corr = _parse_corrections(p)
+        corr = _parse_corrections(p).corrections
         files.append((_reviewer_of_file(corr, p), corr, str(p)))
 
     names = [name for name, _corr, _path in files]
@@ -857,7 +939,8 @@ def apply_merged(merged: MergedReview, corpus: "Corpus") -> "Corpus":
             continue
         corrections[(row.get("doc_id") or "", index)] = row
     note_extra = f" (merged from {len(merged.source_paths)} review tables)"
-    return _apply_corrections(
+    applied, _corrected = _apply_corrections(
         corrections, corpus, label="the merged review table", note_extra=note_extra,
         reviewers=merged.reviewers,
     )
+    return applied

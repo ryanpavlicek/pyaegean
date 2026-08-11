@@ -96,6 +96,8 @@ _UD_LICENSE: dict[str, str] = {
     "proiel": "CC BY-NC-SA 3.0",
 }
 _SPLITS = ("train", "dev", "test")
+# UTF-8 byte-order mark: not CoNLL-U content, and never part of a first-line comment.
+_BOM = "\ufeff"
 
 # AGDT (Perseus) TLG author-group id -> literary genre, for genre-sliced evaluation. The
 # UD-Perseus sentence ids begin with the AGDT source filename, which begins with the TLG author
@@ -528,19 +530,27 @@ def ud_path(treebank: str = "perseus", split: str = "test", *, download: bool = 
 
 
 def _read_conllu_source(source: Path | str) -> str:
-    """Read a path or raw CoNLL-U string without making string callers write temp files."""
+    """Read a path or raw CoNLL-U string without making string callers write temp files.
+
+    Files are decoded as ``utf-8-sig``, so a leading UTF-8 byte-order mark is removed
+    instead of being glued to the first line (which would hide a ``# sent_id`` comment
+    behind an unparsable first character); a BOM-less UTF-8 file reads identically.
+    An already-decoded string is treated the same way for the same reason."""
     if isinstance(source, Path):
-        with source.open("r", encoding="utf-8", newline="") as handle:
+        with source.open("r", encoding="utf-8-sig", newline="") as handle:
             return handle.read()
     if not isinstance(source, str):
         raise TypeError("CoNLL-U source must be a path or string")
-    if "\n" in source or "\r" in source:
-        return source
-    path = Path(source)
+    text = source.removeprefix(_BOM)
+    if not text or "\n" in text or "\r" in text:
+        # An empty string is an empty document.  ``Path("")`` is the working
+        # directory, which exists, so it must never reach the path branch.
+        return text
+    path = Path(text)
     if path.exists() or path.suffix.lower() in {".conllu", ".conll", ".conll-u"}:
-        with path.open("r", encoding="utf-8", newline="") as handle:
+        with path.open("r", encoding="utf-8-sig", newline="") as handle:
             return handle.read()
-    return source
+    return text
 
 
 def _effective_rows(sent: UDSentence) -> tuple[UDRow, ...]:
@@ -621,7 +631,13 @@ def _document_signature(document: UDDocument) -> tuple[Any, ...]:
     )
 
 
-def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | None = None) -> None:
+def _validate_rows(
+    rows: tuple[UDRow, ...],
+    *,
+    strict: bool,
+    line_number: int | None = None,
+    allow_partial_dependencies: bool = False,
+) -> None:
     if not strict:
         return
     word_ids: set[int] = set()
@@ -772,14 +788,17 @@ def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | 
                 raise ValueError(f"unknown enhanced DEPS head {dep.head.raw!r}{where(row)}")
     words = [row for row in rows if isinstance(row, UDToken)]
     parsed = [row for row in words if row.head is not None]
-    if parsed and len(parsed) != len(words):
+    partial = bool(parsed) and len(parsed) != len(words)
+    if partial and not allow_partial_dependencies:
         unparsed = next(row for row in words if row.head is None)
         raise ValueError(
             f"sentence mixes annotated and unannotated dependencies; word "
             f"{unparsed.id} has no HEAD{where(unparsed)}"
         )
     root_rows = [row for row in parsed if row.head == 0]
-    if rows and word_ids and parsed and len(root_rows) != 1:
+    # An incomplete dependency layer need not contain the sentence root: the arcs it
+    # does carry are still checked for validity and for cycles below.
+    if rows and word_ids and parsed and not partial and len(root_rows) != 1:
         first_word = next(row for row in rows if isinstance(row, UDToken))
         raise ValueError(
             f"basic tree must contain exactly one root, found {len(root_rows)}"
@@ -800,7 +819,9 @@ def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | 
             head = parent.head
 
 
-def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
+def _parse_conllu_text(
+    text: str, *, strict: bool = False, allow_partial_dependencies: bool = False
+) -> UDDocument:
     if strict and text and re.search(r"(?:\r\n|\n){2}\Z", text) is None:
         raise ValueError(f"line {len(text.splitlines())}: final blank line is required")
     sentences: list[UDSentence] = []
@@ -824,7 +845,11 @@ def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
         row_tuple = tuple(rows)
         tokens = tuple(row for row in row_tuple if isinstance(row, UDToken))
         comment_tuple = tuple(comments)
-        _validate_rows(row_tuple, strict=strict)
+        _validate_rows(
+            row_tuple,
+            strict=strict,
+            allow_partial_dependencies=allow_partial_dependencies,
+        )
         item_tuple = tuple(items)
         signature = _sentence_signature(
             sent_id, text_value, tokens, row_tuple, comment_tuple, item_tuple
@@ -987,9 +1012,25 @@ def loads_conllu(text: str, *, strict: bool = False) -> list[UDSentence]:
     return load_conllu(text, strict=strict)
 
 
-def load_conllu_document(source: Path | str, *, strict: bool = False) -> UDDocument:
-    """Load a complete CoNLL-U document wrapper, retaining raw source text."""
-    return _parse_conllu_text(_read_conllu_source(source), strict=strict)
+def load_conllu_document(
+    source: Path | str,
+    *,
+    strict: bool = False,
+    allow_partial_dependencies: bool = False,
+) -> UDDocument:
+    """Load a complete CoNLL-U document wrapper, retaining raw source text.
+
+    ``strict`` behaves as in :func:`load_conllu`. ``allow_partial_dependencies``
+    applies only under ``strict=True``, and accepts one documented shape a released
+    treebank never has: a sentence in which only some words carry a basic HEAD. That
+    is what an analysis covering part of a sentence projects into CoNLL-U, so a
+    caller holding the complete typed state alongside the text (the interoperability
+    envelope) validates everything else without rejecting its own projection."""
+    return _parse_conllu_text(
+        _read_conllu_source(source),
+        strict=strict,
+        allow_partial_dependencies=allow_partial_dependencies,
+    )
 
 
 def _word_columns(token: UDToken) -> tuple[str, ...]:

@@ -44,6 +44,13 @@ def _map_digits(s: str, table: dict[str, str]) -> str | None:
     return "".join(out) if out else None
 
 
+# Aegean numerals are written with the ASCII digits the editions use. ``\d`` is the wrong
+# test: it also matches every Unicode decimal digit (Arabic-Indic ٣, Devanagari ७, …), and
+# ``int``/``float`` accept those, so a token in another script's digits would be read as a
+# quantity it never states.
+_DIGITS = re.compile(r"[0-9]+")
+
+
 def parse_value(token: str) -> float | None:
     """Parse a single token into a number, or ``None`` if it isn't a numeral.
 
@@ -53,18 +60,24 @@ def parse_value(token: str) -> float | None:
     the editor's best reading and sums at face value. The ≈ qualifier is
     editorial apparatus (like the marks the account-line classifier skips) and
     is not propagated; a bare "≈" with nothing legible after it is not a value.
+
+    Digits are ASCII: a token written in another script's digits is not an Aegean
+    numeral and reads as ``None``, as do a decimal point, an exponent, a sign, and
+    a reading too large for a finite value (a corrupt 300-digit run). Every value
+    this returns is finite, so `format_value` renders whatever it parses.
     """
     t = re.sub(r"^≈\s*", "", token.strip())
     if not t:
         return None
-    if re.fullmatch(r"\d+", t):
+    if _DIGITS.fullmatch(t):
         iv = int(t)
         try:
-            float(iv)  # probe: an absurd (300+ digit) reading overflows the float domain
+            float(iv)
         except OverflowError:
-            # corrupt input: return inf so the accounting sum stays a float and reports
-            # non-balancing instead of crashing line_value with an OverflowError.
-            return math.inf
+            # A reading no float can hold is not a quantity this can report. Returning it
+            # as infinity would carry through line_value into a total that cannot be
+            # rendered or compared; the token is left unread instead.
+            return None
         return iv
     if t in _PRECOMPOSED:
         return _PRECOMPOSED[t]
@@ -72,10 +85,9 @@ def parse_value(token: str) -> float | None:
     if len(parts) == 2:
         num = _map_digits(parts[0], _SUPERSCRIPTS) or parts[0]
         den = _map_digits(parts[1], _SUBSCRIPTS) or parts[1]
-        try:
-            n, d = float(num), float(den)
-        except ValueError:
+        if not (_DIGITS.fullmatch(num) and _DIGITS.fullmatch(den)):
             return None
+        n, d = float(num), float(den)
         if math.isfinite(n) and math.isfinite(d) and d != 0:
             return n / d
     return None

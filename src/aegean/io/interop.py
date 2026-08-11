@@ -47,6 +47,17 @@ MAX_SIDECAR_BYTES = 8 * 1024 * 1024
 # reader rejects.
 _CONLLU_NEWLINE_RE = re.compile(r"\r\n|\r|\n")
 
+# A UTF-8 byte-order mark is an encoding marker, not CoNLL-U content.
+_BOM = "\ufeff"
+
+# ``json.dumps`` escapes every C0 control character (U+000B, U+000C, U+001C-U+001E
+# among them) but leaves U+0085 and the Unicode line separators U+2028/U+2029
+# literal.  pyaegean reads them back correctly, but the sidecar travels as one
+# CoNLL-U comment line and a consumer that splits the file with ``str.splitlines``
+# would tear that line apart, so the writer escapes them.  Both forms remain
+# readable: JSON decoding restores the identical characters.
+_SIDECAR_ESCAPES = {"\u2028": "\\u2028", "\u2029": "\\u2029", "\u0085": "\\u0085"}
+
 
 def _partition_sidecar_comments(raw: str) -> tuple[list[str], str]:
     """Split interop sidecar comment lines from the native CoNLL-U text.
@@ -76,6 +87,33 @@ def _partition_sidecar_comments(raw: str) -> tuple[list[str], str]:
 def _native_signature(raw: str) -> str:
     """Canonical JSON signature for the exact native projection."""
     return json.dumps({"conllu": raw}, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _with_sentence_ids(document: UDDocument) -> UDDocument:
+    """Give every sentence an ID, because ``# sent_id`` is optional in CoNLL-U.
+
+    An envelope keys its token and sentence metadata by sentence ID, so a sentence
+    without the comment is assigned the stable positional identifier
+    ``input:sentence:N`` that :func:`from_token_records` also uses.  A document whose
+    sentences all carry IDs is returned unchanged, and any ID present in the file is
+    kept exactly as written.
+    """
+    if all(sentence.sent_id for sentence in document.sentences):
+        return document
+    sentences = tuple(
+        sentence
+        if sentence.sent_id
+        else UDSentence(
+            f"input:sentence:{index}",
+            sentence.text,
+            sentence.tokens,
+            sentence.rows,
+            sentence.comments,
+            sentence.items,
+        )
+        for index, sentence in enumerate(document.sentences)
+    )
+    return UDDocument(sentences, document.leading_comments, document.trailing_comments)
 
 
 class InteropError(Exception):
@@ -879,6 +917,22 @@ def _reject_constant(value: str) -> Any:
     raise InteropSchemaError(f"non-finite JSON number {value}")
 
 
+def _escaped_sidecar(envelope: Mapping[str, Any]) -> str:
+    """Serialize a sidecar with no literal U+2028/U+2029/U+0085 left in it.
+
+    The escapes are JSON, so decoding restores the identical payload and every hash in
+    the envelope (computed over the unescaped canonical form) still verifies.  The size
+    bound is re-checked afterwards because escaping expands those characters, and the
+    writer must never emit a sidecar its own reader would refuse.
+    """
+    out = _canonical_json(envelope)
+    for literal, escape in _SIDECAR_ESCAPES.items():
+        out = out.replace(literal, escape)
+    if len(out.encode("utf-8")) > MAX_SIDECAR_BYTES:
+        raise InteropSchemaError("sidecar exceeds maximum size")
+    return out
+
+
 def encode_sidecar(document: InteropDocument, *, target: str, native_signature: str) -> str:
     if not isinstance(document, InteropDocument) or not isinstance(target, str) or not target or not isinstance(native_signature, str):
         raise TypeError("document, target, and native_signature have invalid types")
@@ -886,7 +940,7 @@ def encode_sidecar(document: InteropDocument, *, target: str, native_signature: 
     payload_json = _canonical_json(payload)
     canonical_document = document.ud_document.dumps(canonical=True)
     envelope = {"schema": SCHEMA, "target": target, "document_sha256": hashlib.sha256(canonical_document.encode("utf-8")).hexdigest(), "payload_sha256": hashlib.sha256(payload_json.encode("utf-8")).hexdigest(), "native_sha256": hashlib.sha256(native_signature.encode("utf-8")).hexdigest(), "payload": payload}
-    return _canonical_json(envelope)
+    return _escaped_sidecar(envelope)
 
 
 def decode_sidecar(sidecar: str, *, target: str | None = None, native_signature: str | None = None) -> dict[str, Any]:
@@ -1157,23 +1211,49 @@ def to_conllu(document: InteropDocument, *, include_sidecar: bool = True, allow_
 def from_conllu(
     source: str | Path, *, strict: bool = True
 ) -> InteropResult[InteropDocument]:
+    """Read CoNLL-U text or a CoNLL-U file into an :class:`InteropDocument`.
+
+    ``strict=True`` (the default) validates the CoNLL-U itself: malformed columns and
+    IDs, structural ranges, DEPS, MISC, and a missing final blank line are rejected with
+    the offending line number. An interop sidecar comment carries envelope metadata and
+    does not switch that validation off; it explains exactly one shape, a sentence whose
+    words do not all carry a HEAD, which is how a partly analyzed document projects into
+    CoNLL-U. ``strict=False`` keeps the lenient reading that preserves unparsable rows
+    for inspection and re-export.
+
+    ``# sent_id`` is optional in CoNLL-U; a sentence written without one is given the
+    stable positional identifier ``input:sentence:N``, since the envelope keys its token
+    and sentence metadata by sentence ID. A leading UTF-8 byte-order mark is an encoding
+    marker and is discarded rather than being read as document content.
+    """
     try:
         if isinstance(source, Path):
-            with source.open("r", encoding="utf-8", newline="") as handle:
+            # utf-8-sig: a leading BOM is an encoding marker, not the first
+            # character of the first comment line.  A BOM-less file reads identically.
+            with source.open("r", encoding="utf-8-sig", newline="") as handle:
                 raw = handle.read()
+        elif isinstance(source, str):
+            raw = source.removeprefix(_BOM)
         else:
-            raw = source
+            raise TypeError("CoNLL-U source must be a path or string")
         # The sidecar comment is transport metadata, not part of the native
         # document.  It is removed before parsing so its hash binds the exact
         # canonical CoNLL-U projection that was exported.
         sidecars, native_raw = _partition_sidecar_comments(raw)
         if len(sidecars) > 1:
             raise InteropSchemaError("duplicate interop sidecar comments")
-        ud = load_conllu_document(native_raw, strict=False if sidecars else strict)
+        # ``strict`` is the caller's validation contract for the CoNLL-U itself; a
+        # sidecar carries envelope metadata and does not switch that validation off.
+        # It does explain one shape: a document analyzed only in part projects a
+        # sentence whose words do not all carry a HEAD, and the envelope holds the
+        # typed original of every such value.
+        ud = load_conllu_document(
+            native_raw, strict=strict, allow_partial_dependencies=bool(sidecars)
+        )
     except (OSError, TypeError, ValueError) as exc:
         raise InteropSchemaError(str(exc)) from exc
     if not sidecars:
-        value = from_ud_document(ud)
+        value = from_ud_document(_with_sentence_ids(ud))
         return InteropResult(value, None, _report(value, target="conllu", direction="import", sidecar=False))
     canonical_native = ud.dumps(canonical=True)
     envelope = decode_sidecar(sidecars[0], target="conllu", native_signature=_native_signature(native_raw))

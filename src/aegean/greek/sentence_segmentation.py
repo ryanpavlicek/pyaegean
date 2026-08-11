@@ -259,48 +259,61 @@ class SegmentationResult:
     def sentence_spans(self) -> tuple[SentenceBoundary, ...]:
         return self.boundaries
 
+    def _project(self, boundary: SentenceBoundary) -> str:
+        """One boundary's sentence string, in the historical ``sentences()``
+        projection: terminal punctuation was a delimiter and is not included in the
+        returned string, while the boundary and the token alignments keep it in their
+        exact source spans.
+
+        Always non-empty, so it is one string per boundary: a boundary is validated to
+        contain non-whitespace source, and a span that is nothing but delimiters keeps
+        them rather than projecting away to nothing."""
+        sentence = boundary.text(self.source).strip()
+        # A delimiter is removed only when it genuinely ends the sentence: nothing
+        # may follow it but closing punctuation (a quote or bracket), which is
+        # re-attached. Searching for the last terminal anywhere in the span
+        # deleted interior characters instead, so a citation such as
+        # "Choer.489,12" lost its period and fused into "Choer489,12".
+        protected_periods = _protected_periods(sentence, _ABBREVIATIONS)
+        closing = len(sentence)
+        while (
+            closing > 0
+            and sentence[closing - 1] not in _TERMINAL
+            and _is_trailing_ornament(sentence[closing - 1])
+        ):
+            closing -= 1
+        suffix = sentence[closing:]
+        body = sentence[:closing]
+        while body and body[-1] in _TERMINAL:
+            if body[-1] == "." and (len(body) - 1) in protected_periods:
+                break  # an abbreviation dot belongs to the word
+            body = body[:-1].rstrip()
+        return body + suffix if body else sentence
+
     @property
     def sentences(self) -> tuple[str, ...]:
-        # Keep the historical ``sentences()`` projection: terminal punctuation
-        # was a delimiter and was not included in returned strings.  Rich
-        # boundaries and token alignments retain the punctuation in their exact
-        # source spans.
-        projected: list[str] = []
-        for boundary in self.boundaries:
-            sentence = boundary.text(self.source).strip()
-            # A delimiter is removed only when it genuinely ends the sentence: nothing
-            # may follow it but closing punctuation (a quote or bracket), which is
-            # re-attached. Searching for the last terminal anywhere in the span
-            # deleted interior characters instead, so a citation such as
-            # "Choer.489,12" lost its period and fused into "Choer489,12".
-            protected_periods = _protected_periods(sentence, _ABBREVIATIONS)
-            closing = len(sentence)
-            while (
-                closing > 0
-                and sentence[closing - 1] not in _TERMINAL
-                and _is_trailing_ornament(sentence[closing - 1])
-            ):
-                closing -= 1
-            suffix = sentence[closing:]
-            body = sentence[:closing]
-            while body and body[-1] in _TERMINAL:
-                if body[-1] == "." and (len(body) - 1) in protected_periods:
-                    break  # an abbreviation dot belongs to the word
-                body = body[:-1].rstrip()
-            sentence = body + suffix if body else sentence.strip()
-            if sentence:
-                projected.append(sentence)
-        return tuple(projected)
+        """The projected sentence strings, one per boundary and in boundary order:
+        ``sentences[i]`` is the text of ``boundaries[i]``."""
+        return tuple(self._project(boundary) for boundary in self.boundaries)
 
     def to_dict(self) -> dict[str, Any]:
+        """A JSON-ready result whose ``boundaries`` and ``sentences`` are index-aligned:
+        entry ``i`` of each describes the same sentence, the span and its projected
+        text. Both lists are built in one pass over the boundaries, so a reader can
+        zip them."""
+        boundaries: list[dict[str, Any]] = []
+        sentences: list[str] = []
+        for boundary in self.boundaries:
+            boundaries.append(boundary.to_dict(self.source))
+            sentences.append(self._project(boundary))
         return {
             "schema_version": SCHEMA_VERSION,
             "source": self.source,
             "policy": self.policy,
             "policy_id": self.policy_id,
             "provenance": self.provenance,
-            "boundaries": [boundary.to_dict(self.source) for boundary in self.boundaries],
-            "sentences": list(self.sentences),
+            "boundaries": boundaries,
+            "sentences": sentences,
         }
 
     def to_json(self) -> str:
@@ -367,6 +380,13 @@ class SegmentationResult:
                 raise ValueError("sentence boundary text does not match source span")
             boundaries_list.append(boundary)
         boundaries = tuple(boundaries_list)
+        # One sentence per boundary, same order: say so before the value comparison,
+        # which would otherwise report a truncated list as a span mismatch.
+        if len(sentences_value) != len(boundaries):
+            raise ValueError(
+                f"segmentation result lists {len(boundaries)} boundaries "
+                f"and {len(sentences_value)} sentences"
+            )
         result = cls(
             source,
             boundaries,

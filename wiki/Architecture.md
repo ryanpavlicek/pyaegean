@@ -347,7 +347,7 @@ model build, which makes it the cache key for the opt-in
 
 ```python
 c = aegean.load("lineara")
-c.fingerprint()[:16]                   # 'c36dcb48bb5addd6'
+c.fingerprint()[:16]                   # 'f2619ca5089e533a'
 c.cache_key() == c.fingerprint()       # True (cache_key is an alias)
 ```
 
