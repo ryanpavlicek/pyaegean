@@ -682,6 +682,11 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     if mode not in {"token", "substring"}:
         raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
     conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
+    # A reader waits for a writer rather than failing. sqlite's default busy timeout is
+    # 5 s, which a loaded machine can exhaust while an append commits, surfacing as
+    # "database is locked" to a caller that only wanted to read. Searching is read-only
+    # and idempotent, so waiting longer is always better than erroring.
+    conn.execute("PRAGMA busy_timeout = 30000")
     try:
         target = _fold(query)
         out: list[tuple[str, int | None, str]] = []
