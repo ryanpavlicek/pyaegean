@@ -150,7 +150,7 @@ Dropping elliptic sentences biases the fold toward complete syntax. Full account
 
 | Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 |
+| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 89.63 | 85.51 | 79.57 | 75.41 |
 
 Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL
 row by about +16 LAS points. Reproduce: `aegean greek eval papygreek`. The current
@@ -187,18 +187,18 @@ claimed. Each variant is measured once, full-coverage and sequentially, on the p
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
+| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41 |
 
 ## Diplomatic orthography and Byzantine verse
 
 The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
 measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
-UFeats 86.15 / lemma 82.05 / UAS 84.32 / LAS 77.55 / CLAS 72.94 vs the
-regularized row's 91.53 / 77.19 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40.
+UFeats 86.15 / lemma 85.62 / UAS 84.32 / LAS 77.57 / CLAS 72.97 vs the
+regularized row's 91.53 / 77.19 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41.
 Lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
 (tagging only, unedited medieval
-verse) scores UPOS 86.74 / lemma 76.71 over 9,191 tokens. Reproduce:
+verse) scores UPOS 86.75 / lemma 76.69 over 9,191 tokens. Reproduce:
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 
 ## Verse, out of domain: tragedy

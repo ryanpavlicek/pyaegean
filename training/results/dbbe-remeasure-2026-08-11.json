@@ -1,0 +1,36 @@
+{
+ "what": "Remeasurement of the shipped grc-joint-v3 checkpoint on dbbe-lingann-fold-v2 (DBBE Byzantine book-epigram gold standard).",
+ "date": "2026-08-11",
+ "protocol": "greek.use_neural_pipeline(); CPU sequential (canonical); gold tokenization; official CoNLL-2018 evaluator; greek.evaluate_on_dbbe() (tagging-only, parse=False); fold dbbe-lingann-fold-v2 (sha 14b5496d...), built from coswaele/ByzantineGreekDatasets @ 0b0133a9: 825 sentences / 9,191 tokens; leakage 0",
+ "model": {
+  "model_id": "grc-joint-v3",
+  "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+  "weights_unchanged": true
+ },
+ "environment": {
+  "python": "3.14.6",
+  "platform": "Windows 11",
+  "onnxruntime": "1.27.0",
+  "tokenizers": "0.22.2",
+  "numpy": "2.5.1",
+  "providers": [
+   "CPUExecutionProvider"
+  ]
+ },
+ "results_full_precision": {
+  "upos": 0.8674790555978675,
+  "xpos": 0.763899466869764,
+  "ufeats": 0.8585572842998586,
+  "lemma": 0.766945925361767,
+  "uas": null,
+  "las": null,
+  "clas": null,
+  "n_words": 9191,
+  "n_sentences": 825
+ },
+ "why_remeasured": "The DBBE row is superseded but NOT by these corrections. Measured with the corrections applied and again with them reverted to the base commit, the fold returns byte-identical values both times, so the two corrections are inert on this fold (it carries no apparatus marks and is scored tagging-only). The differences against training/results/dbbe-eval-v2-2026-07-11.json are one token each in UPOS (+1), XPOS (-1) and lemma (-1), with UFeats unchanged; they accumulated somewhere in the 0.45.0-0.57.2 window and were not detected because scripts/check_benchmarks.py re-measures only the offline-stack rows. The value recorded here is the current measurement.",
+ "vs_2026_07_11": "UPOS 86.74->86.75, XPOS 76.40->76.39, lemma 76.71->76.69, UFeats 85.86 unchanged: one token in each of the three moved cells, over the same fold and the same model weights.",
+ "supersedes": [
+  "training/results/dbbe-eval-v2-2026-07-11.json"
+ ]
+}

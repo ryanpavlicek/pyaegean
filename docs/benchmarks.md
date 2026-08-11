@@ -409,7 +409,7 @@ generalization claim.
 
 | Test set | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS | scored tokens |
 |---|---|---|---|---|---|---|---|---|
-| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 | 22,227 |
+| PapyGreek (documentary Koine) | 91.53 | 77.19 | 88.73 | 89.63 | 85.51 | 79.57 | 75.41 | 22,227 |
 
 Reproduce: `aegean greek eval papygreek` (or `greek.evaluate_on_papygreek()`).
 Scheme-matched out-of-domain parsing differs from the convention-capped PROIEL row
@@ -465,8 +465,8 @@ usage, not spelling alone). Measured once, CPU sequential:
 
 | Fold | UPOS | XPOS | UFeats | Lemma | UAS | LAS | CLAS |
 |---|---|---|---|---|---|---|---|
-| PapyGreek, regularized (above) | 91.53 | 77.19 | 88.73 | 86.10 | 85.51 | 79.57 | 75.40 |
-| PapyGreek, diplomatic (orig) | 90.57 | 74.64 | 86.15 | 82.05 | 84.32 | 77.55 | 72.94 |
+| PapyGreek, regularized (above) | 91.53 | 77.19 | 88.73 | 89.63 | 85.51 | 79.57 | 75.41 |
+| PapyGreek, diplomatic (orig) | 90.57 | 74.64 | 86.15 | 85.62 | 84.32 | 77.57 | 72.97 |
 
 The pair isolates the cost of the scribes' non-standard documentary usage:
 lemma takes the largest hit (−4.05 points: phonetic spellings break lemma
@@ -481,7 +481,7 @@ CC BY 4.0): 825 sentences / 9,191 tokens of unedited medieval book epigrams,
 7th–15th c., non-normalized scribal orthography. The gold carries POS and lemma
 but no trees, so this is a tagging row; the DBBE tagset is mapped to UPOS and
 gold lemmas are normalized Attic headwords, both stated caveats. Measured once,
-CPU sequential: **UPOS 86.74 / XPOS 76.40 / UFeats 85.86 / lemma 76.71**,
+CPU sequential: **UPOS 86.75 / XPOS 76.39 / UFeats 85.86 / lemma 76.69**,
 leakage-checked (0 overlaps). (Evidence:
 `training/results/dbbe-eval-v2-2026-07-11.json`.)
 
@@ -563,8 +563,8 @@ evidence: `training/results/decoder-v2-papygreek-remeasure-2026-07-18.json`.)
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |
-| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
-| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 86.10 / 85.51 / 79.57 / 75.40 |
+| + Lever A (coordinator reconciliation, conservative) | 94.66 / 80.36 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41 |
+| + Lever A + Lever B (lemma OOV rescue, with `use_paradigms`) | 94.66 / 80.36 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41 |
 
 ### PROIEL convention decomposition
 

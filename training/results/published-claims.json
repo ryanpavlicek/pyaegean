@@ -117,33 +117,33 @@
   "upos": 91.53,
   "xpos": 77.19,
   "ufeats": 88.73,
-  "lemma": 86.1,
+  "lemma": 89.63,
   "uas": 85.51,
   "las": 79.57,
-  "clas": 75.4,
+  "clas": 75.41,
   "n_words": 22227,
   "n_sentences": 1551,
-  "source_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json",
+  "source_evidence": "training/results/apparatus-lemma-remeasure-2026-08-11.json",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); documentary Koine, out of domain, scheme-matched (AGDT->UD); work- and sentence-form-disjoint papygreek-fold-v4; CPU sequential; batch_size=None; complete-word windowed coverage; official CoNLL-2018 evaluator",
   "historical_note": "The prior 24,105-token row remains historical: it included 145 sentences from 29 training-overlapping works and silently used placeholder tails for one over-limit retained sentence. The model weights are unchanged; the current row corrects the fold and coverage protocol.",
   "documentary_reconciliation": {
    "upos": 94.66,
    "xpos": 80.36,
    "ufeats": 88.73,
-   "lemma": 86.1,
+   "lemma": 89.63,
    "uas": 85.51,
    "las": 79.57,
-   "clas": 75.4,
+   "clas": 75.41,
    "note": "opt-in Lever A, conservative coordinator reconciliation (use_documentary_reconciliation); only UPOS/XPOS move, every other metric byte-identical to the baseline run"
   },
   "documentary_full": {
    "upos": 94.66,
    "xpos": 80.36,
    "ufeats": 88.73,
-   "lemma": 86.1,
+   "lemma": 89.63,
    "uas": 85.51,
    "las": 79.57,
-   "clas": 75.4,
+   "clas": 75.41,
    "note": "opt-in Levers A+B (reconciliation + guarded seed/paradigm lemma rescue); on the corrected fold the lemma rescue fires no additional successful prediction, so this row is byte-identical to documentary_reconciliation and no lemma lift is claimed"
   },
   "variant_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json",
@@ -151,10 +151,10 @@
    "upos": 90.57,
    "xpos": 74.64,
    "ufeats": 86.15,
-   "lemma": 82.05,
+   "lemma": 85.62,
    "uas": 84.32,
-   "las": 77.55,
-   "clas": 72.94,
+   "las": 77.57,
+   "clas": 72.97,
    "note": "the diplomatic-orthography surface of the SAME sentences and gold (papygreek-fold-orig); the delta vs the reg row isolates the cost of the scribes' non-standard documentary usage (spelling and a minority of morphosyntactic regularizations)",
    "source_evidence": "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json"
   }
@@ -211,14 +211,14 @@
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_verse(track='tragedy'); verse fold verse-fold-v2 (Euripides Bacchae 1-169, tragedy-only), out of domain, scheme-matched (AGDT->UD); CPU sequential"
  },
  "neural_dbbe_test": {
-  "upos": 86.74,
-  "xpos": 76.4,
+  "upos": 86.75,
+  "xpos": 76.39,
   "ufeats": 85.86,
-  "lemma": 76.71,
+  "lemma": 76.69,
   "n_words": 9191,
   "n_sentences": 825,
   "note": "tagging only (the gold has no trees); Byzantine book epigrams, unedited scribal orthography; DBBE tagset mapped to UPOS; lemma scored against normalized Attic headwords",
-  "source_evidence": "training/results/dbbe-eval-v2-2026-07-11.json",
+  "source_evidence": "training/results/dbbe-remeasure-2026-08-11.json",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; fold dbbe-lingann-fold-v2"
  }
 }

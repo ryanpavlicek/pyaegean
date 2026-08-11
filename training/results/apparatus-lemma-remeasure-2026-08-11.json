@@ -1,0 +1,98 @@
+{
+ "what": "Remeasurement of the shipped grc-joint-v3 checkpoint on the pinned PapyGreek folds after two inference corrections: the Leiden editorial apparatus mark (combining dot below, U+0323) is removed before the lemma lookup tables and the edit script are consulted, and the dependency relation of a token whose head is not the artificial ROOT is selected from the non-root labels.",
+ "date": "2026-08-11",
+ "release_candidate": {
+  "package_version": "0.58.0",
+  "base_commit": "064495b737d4ec1d6a485c441fa97b01a7eaea46",
+  "decoder": "pyaegean-release-single-root-mst-v2"
+ },
+ "model": {
+  "model_id": "grc-joint-v3",
+  "runtime_variant": "default",
+  "asset_sha256": "f646d34a08dbf612abbe076c27188f077c2289da0b7bbbc7116bfe807112b06e",
+  "asset_sha256_enforced": true,
+  "weights_unchanged": true
+ },
+ "environment": {
+  "python": "3.14.6",
+  "platform": "Windows 11",
+  "onnxruntime": "1.27.0",
+  "tokenizers": "0.22.2",
+  "numpy": "2.5.1",
+  "providers": [
+   "CPUExecutionProvider"
+  ]
+ },
+ "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_papygreek(); CPU sequential; batch_size=None; long_input=windowed; complete coverage; gold tokenization; official CoNLL-2018 evaluator. layer='orig' gives the diplomatic row; the two documentary rows add use_documentary_reconciliation() and then use_documentary_lemma_rescue(). DBBE uses greek.evaluate_on_dbbe() (tagging only, parse=False).",
+ "folds": {
+  "regularized": {
+   "identity": "papygreek-fold-v4",
+   "archive_sha256": "39c202e78ba4b439cb08a8e41b50ebd386561291f348c8d2f115efcd9e6559b3",
+   "materialized_conllu_sha256": "81ce7dddd158bd4e3dbe41cd87746b80c0f2a85c86ce416ac44d602350e873aa",
+   "work_disjoint": true,
+   "sentence_form_disjoint": true
+  },
+  "diplomatic": {
+   "identity": "papygreek-fold-orig-v3",
+   "archive_sha256": "db338c428b63e52c715431f878740111be135dc236e4e8fb51c1a3c5e42f9d90",
+   "materialized_conllu_sha256": "6ec11d90fb7e5c968ec47d1c82adb219aceb651db74b1c42aa94b5805125516f",
+   "same_sentences_and_gold_as_regularized": true,
+   "form_differences": 1453
+  }
+ },
+ "folds_unchanged": "Every fold identity and sha256 is the same as in the evidence being superseded, and both materialized CoNLL-U digests were recomputed from the cached files for this record. Only the inference path changed.",
+ "results_full_precision": {
+  "regularized": {
+   "upos": 0.9152832141089666,
+   "xpos": 0.7718540513789536,
+   "ufeats": 0.887299230665407,
+   "lemma": 0.8962523057542628,
+   "uas": 0.8550861564763576,
+   "las": 0.7957439150582625,
+   "clas": 0.7540960451977401,
+   "n_words": 22227,
+   "n_sentences": 1551
+  },
+  "diplomatic": {
+   "upos": 0.9056552841139155,
+   "xpos": 0.7464345165789356,
+   "ufeats": 0.8615197732487515,
+   "lemma": 0.8562109146533495,
+   "uas": 0.8432087101273227,
+   "las": 0.7757232195078059,
+   "clas": 0.7297306812180954,
+   "n_words": 22227,
+   "n_sentences": 1551
+  },
+  "documentary_reconciliation": {
+   "upos": 0.9465964817564224,
+   "xpos": 0.8036172222972061,
+   "ufeats": 0.887299230665407,
+   "lemma": 0.8962523057542628,
+   "uas": 0.8550861564763576,
+   "las": 0.7957439150582625,
+   "clas": 0.7540960451977401,
+   "n_words": 22227,
+   "n_sentences": 1551
+  },
+  "documentary_full": {
+   "upos": 0.9465964817564224,
+   "xpos": 0.8036172222972061,
+   "ufeats": 0.887299230665407,
+   "lemma": 0.8962523057542628,
+   "uas": 0.8550861564763576,
+   "las": 0.7957439150582625,
+   "clas": 0.7540960451977401,
+   "n_words": 22227,
+   "n_sentences": 1551
+  }
+ },
+ "diff_scope": {
+  "predicted": "The apparatus correction affects lemma composition only; the relation correction affects the dependency label only. UPOS, XPOS, UFeats and UAS must therefore return byte-identical values, and LAS/CLAS may move only by the tokens whose label changed.",
+  "observed": "Confirmed on every PapyGreek row: upos, xpos, ufeats and uas are byte-identical to training/results/decoder-v2-papygreek-remeasure-2026-07-18.json. Lemma gains 783 tokens on the regularized layer (+3.5227 points) and 793 on the diplomatic layer (+3.5677). LAS gains 2 tokens (regularized) and 4 (diplomatic); CLAS gains 3.1 and 6.3 content-word tokens respectively. UAS unchanged while LAS moved is the expected signature of a label-only correction.",
+  "relation_invariant": "Scored over the whole regularized fold before evaluation: 1,551 sentences / 22,227 tokens, 0 tokens carrying the relation 'root' with a head other than 0."
+ },
+ "supersedes": [
+  "training/results/decoder-v2-papygreek-remeasure-2026-07-18.json"
+ ]
+}

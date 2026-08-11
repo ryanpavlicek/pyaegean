@@ -87,7 +87,7 @@ def test_calibration_doc_cells_match_the_registry_and_evidence() -> None:
 def test_papygreek_row_matches_registry_and_evidence() -> None:
     claims = _claims()["neural_papygreek_test"]
     ev = json.loads(
-        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+        _read("training/results/apparatus-lemma-remeasure-2026-08-11.json")
     )
     res = ev["results_full_precision"]["regularized"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
@@ -179,7 +179,7 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
     row = _claims()["neural_papygreek_test"]
     ev = json.loads(
-        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+        _read("training/results/apparatus-lemma-remeasure-2026-08-11.json")
     )
     for variant in ("documentary_reconciliation", "documentary_full"):
         res = ev["results_full_precision"]["documentary_full"]
@@ -229,7 +229,7 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
     one-shot sequential evidence, and each carries its caveat note."""
     reg = _claims()
     ev = json.loads(
-        _read("training/results/decoder-v2-papygreek-remeasure-2026-07-18.json")
+        _read("training/results/apparatus-lemma-remeasure-2026-08-11.json")
     )
     row = reg["neural_papygreek_test"]["orig_layer"]
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
@@ -237,7 +237,7 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
         assert row[metric] == round(value * 100, 2), metric
     assert ev["folds"]["diplomatic"]["same_sentences_and_gold_as_regularized"] is True
     assert ev["folds"]["diplomatic"]["form_differences"] == 1453
-    ev2 = json.loads(_read("training/results/dbbe-eval-v2-2026-07-11.json"))
+    ev2 = json.loads(_read("training/results/dbbe-remeasure-2026-08-11.json"))
     drow = reg["neural_dbbe_test"]
     for metric in ("upos", "xpos", "ufeats", "lemma"):
         assert drow[metric] == round(ev2["results_full_precision"][metric] * 100, 2), metric
