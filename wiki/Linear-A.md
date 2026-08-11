@@ -548,11 +548,11 @@ aegean stats lineara --top 5
 #  A-TA-I-*301-WA-JA  11
 
 aegean stats lineara --signs --top 5
-#  𐝫     552   (the erased-sign marker)
-#  𐄁     468   (the word divider)
-#  1     310
-#  KU    307
-#  KA    284
+#  KU     307
+#  KA     284
+#  *301   274
+#  SI     240
+#  A      202
 ```
 
 The full analytical toolkit: phonetic distance and alignment, cross-script

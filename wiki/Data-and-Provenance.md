@@ -765,7 +765,7 @@ hyphenated tokens get their signs split) or dicts carrying `kind`, `status`
 (editorial certainty), and `alt` (variant readings). Make it loadable by name with
 `aegean.core.corpus.register_loader("myfind", lambda: corpus)`; for EpiDoc
 sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads pyaegean output
-and other EpiDoc TEI whose tokens are carried by `<w>`, `<num>`, `<g>`, or `<seg>`
+and other EpiDoc TEI whose tokens are carried by `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`
 into the same model: id, find-place, token/line stream, `<unclear>`/`<supplied>`
 status, and `<app>`/`<rdg>` variants, on the stdlib XML parser with no extra needed.
 Arbitrary free-text TEI needs a source-specific extractor.

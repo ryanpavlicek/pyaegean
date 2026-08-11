@@ -15,9 +15,13 @@ Three families, each the corpus-linguistics standard:
 - **Bootstrap** — percentile confidence intervals for *any* corpus statistic by
   resampling documents with replacement (Efron & Tibshirani 1993).
 
-Frequencies follow the same conventions as ``Corpus.word_frequencies()`` and
-``aegean stats``: ``kind="words"`` counts lexical WORD tokens; ``kind="signs"``
-counts the individual signs of every token (syllabograms, logograms, …).
+``kind="words"`` counts lexical WORD tokens, as ``Corpus.word_frequencies()``
+does. ``kind="signs"`` counts the individual signs a token is written with
+(syllabograms, logograms, metrological signs), and only those: word/entry
+dividers, transcribed numerals, and punctuation are marks of the edition rather
+than signs of the script, and a token whose reading is not preserved
+(``ReadingStatus.LOST``) carries a lacuna placeholder rather than a sign. All
+four are left out, so a sign total is a count of signs.
 
 **A scholarly caution.** These are descriptive instruments. On small or
 fragmentary corpora (most Aegean material) a significant G² flags an imbalance
@@ -36,7 +40,7 @@ from dataclasses import dataclass
 from typing import Any, TypeVar
 
 from ..cache import memoize as _memoize
-from ..core.model import Document, TokenKind
+from ..core.model import Document, ReadingStatus, Token, TokenKind
 from .collocation import chi_squared_p_value, log_likelihood_ratio_2x2
 
 __all__ = [
@@ -74,14 +78,46 @@ def _documents(corpus: Any) -> list[Document]:
     return out
 
 
+# Marks an edition writes between or around the signs, never signs of the script
+# itself: word/entry dividers and rulings, transcribed numeric values, and the
+# punctuation of alphabetic scripts. The same convention as
+# ``analysis.clustering._sign_sequences``.
+_NON_SIGN_KINDS = frozenset({TokenKind.SEPARATOR, TokenKind.NUMERAL, TokenKind.PUNCT})
+
+
+def _bears_signs(token: Token) -> bool:
+    """Whether a token contributes signs to the ``kind="signs"`` stream.
+
+    A ``LOST`` token is not an attested reading. In the Aegean corpora it carries
+    the edition's placeholder for an unpreserved stretch (the Linear A erased-sign
+    marker, the Cypriot ``..`` run); in the epigraphic corpora it carries text the
+    editor supplied for a lacuna. Neither is a sign the scribe wrote, so neither
+    belongs in a count of attested signs, and counting them (or the non-sign marks
+    above) puts editorial apparatus at the top of every frequency, dispersion and
+    keyness table. ``RESTORED`` is kept: it marks a reading the editor is confident
+    of rather than absent text."""
+    return token.kind not in _NON_SIGN_KINDS and token.status != ReadingStatus.LOST
+
+
 def _items_of(doc: Document, kind: str) -> list[str]:
-    """The countable items of one document — same conventions as the CLI."""
+    """The countable items of one document.
+
+    ``"words"`` counts lexical WORD tokens whatever their editorial status;
+    ``"signs"`` counts the signs of every sign-bearing token (see
+    ``_bears_signs``), skipping any empty label a decomposed reading leaves
+    behind."""
     if kind == "words":
         return [t.text for t in doc.tokens if t.kind is TokenKind.WORD]
     if kind == "signs":
         out: list[str] = []
         for t in doc.tokens:
-            out.extend(t.signs or (t.text.split("-") if "-" in t.text else [t.text]))
+            if not _bears_signs(t):
+                continue
+            out.extend(
+                s
+                for s in (t.signs or (t.text.split("-") if "-" in t.text else [t.text]))
+                if s
+            )
         return out
     raise ValueError(f"kind must be 'words' or 'signs', got {kind!r}")
 
@@ -155,7 +191,7 @@ def dispersion(corpus: Any, item: str, *, kind: str = "words") -> Dispersion:
     return _dp(item, shares, per_doc)
 
 
-@_memoize(version="1")
+@_memoize(version="2")
 def dispersions(
     corpus: Any,
     *,
@@ -228,7 +264,7 @@ class KeynessRow:
     p_value: float
 
 
-@_memoize(version="1")
+@_memoize(version="2")
 def keyness(
     target: Any,
     reference: Any,

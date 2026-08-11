@@ -2,19 +2,25 @@
 
 **Writing** (`to_epidoc` / `write_epidoc`): a `Document` becomes a TEI document — the header
 carries the id and find-place, the body carries the transliteration as
-``<w>``/``<num>``/``<g>``/``<seg>`` tokens with ``<lb/>`` line breaks and ``<unclear>``/``<supplied>``
-apparatus for non-certain readings.
+``<w>``/``<num>``/``<g>``/``<pc>``/``<seg>`` tokens with ``<lb/>`` line breaks and
+``<unclear>``/``<supplied>`` apparatus for non-certain readings.
 
 **Reading** (`from_epidoc` / `read_epidoc`): the inverse, and script-agnostic. It ingests pyaegean
 output and other token-carrier EpiDoc editions (a single file or a directory) into a `Corpus`,
 taking the id and find-place from the header and the token/line stream plus editorial certainty
-from the ``<div type="edition">``. Tokens must be carried by ``<w>``/``<num>``/``<g>``/``<seg>``;
-free-text editions need a source-specific extractor. Token kinds come from the carrier element
-(``<w>``→word, ``<num>``→numeral, ``<g>``→logogram); a logogram
-that had to be carried in ``<seg>`` to hold apparatus markup reloads as a word. Both directions use
-**only the stdlib XML parser**, so neither needs an extra dependency. (The Linear B-specific
-`aegean.scripts.linearb.parse_epidoc` keeps its own lxml reader for DAMOS-style files, where it
-re-derives Aegean token kinds from the transliteration text.)
+from the ``<div type="edition">``. Tokens must be carried by ``<w>``/``<num>``/``<g>``/``<pc>``/
+``<seg>``; free-text editions need a source-specific extractor.
+
+`aegean.TokenKind` travels with the carrier: ``<w>``→word, ``<num>``→numeral, ``<g>``→logogram,
+``<pc>``→punct. ``<seg>`` is the generic carrier (it holds a kind whose own element cannot carry
+apparatus markup, and the kinds TEI has no element for), so it names the kind in ``@type`` —
+``<seg type="separator">``, ``<seg type="unknown">``, ``<seg type="logogram">``. A ``<seg>`` with
+no ``@type`` — a foreign edition, or EpiDoc pyaegean itself wrote before the attribute existed —
+still reads as a numeral when its text is all digits and a word otherwise.
+
+Both directions use **only the stdlib XML parser**, so neither needs an extra dependency. (The
+Linear B-specific `aegean.scripts.linearb.parse_epidoc` keeps its own lxml reader for DAMOS-style
+files, where it re-derives Aegean token kinds from the transliteration text.)
 """
 
 from __future__ import annotations
@@ -64,9 +70,20 @@ if TYPE_CHECKING:
 _TEI = "http://www.tei-c.org/ns/1.0"
 _XML = "http://www.w3.org/XML/1998/namespace"  # for xml:lang on the edition div
 
-# pyaegean token kind → EpiDoc element. The reader re-classifies by text, so this is for semantic
-# fidelity and interop with other EpiDoc tools; w/num/g/seg all reload to the right kind.
-_TAG = {TokenKind.WORD: "w", TokenKind.NUMERAL: "num", TokenKind.LOGOGRAM: "g"}
+# pyaegean token kind → the EpiDoc element that names it. A kind with no element of its own
+# (and a kind whose element cannot hold apparatus markup) falls back to <seg>, which carries the
+# kind in @type instead; see the carrier logic in `to_epidoc`.
+_TAG = {
+    TokenKind.WORD: "w",
+    TokenKind.NUMERAL: "num",
+    TokenKind.LOGOGRAM: "g",
+    TokenKind.PUNCT: "pc",
+}
+
+# token kind → the ``<seg>/@type`` that names it, for a token the generic carrier has to hold.
+# ``_KIND_BY_SEG_TYPE`` on the reading side inverts this; a kind missing from here would be
+# written as an untyped <seg> and read back by the text heuristic.
+_SEG_TYPE = {kind: kind.value for kind in TokenKind}
 
 # script id → BCP 47 xml:lang for the edition div ("und" = undetermined, for the undeciphered scripts).
 _LANG = {"lineara": "und", "linearb": "gmy", "cypriot": "grc", "cyprominoan": "und", "greek": "grc"}
@@ -87,7 +104,10 @@ def to_epidoc(document: Document) -> str:
     """Serialize a single `Document` to an EpiDoc TEI XML string.
 
     The transliteration lives in a TEI ``<div type="edition">`` (EpiDoc's required edition
-    division), as ``<lb/>``-delimited lines of ``<w>``/``<num>``/``<g>`` tokens. A token whose
+    division), as ``<lb/>``-delimited lines of tokens. Each token's `aegean.TokenKind` picks
+    its carrier: ``<w>`` word, ``<num>`` numeral, ``<g>`` logogram, ``<pc>`` punct. A separator,
+    an unknown sign, and a logogram that must hold apparatus markup (TEI's ``<g>`` cannot) go in
+    ``<seg>`` with the kind in ``@type``, e.g. ``<seg type="separator">``. A token whose
     `aegean.ReadingStatus` is not ``CERTAIN`` is wrapped in the matching EpiDoc apparatus
     element (``<unclear>`` or ``<supplied>``), so editorial certainty survives the round trip
     through `aegean.scripts.linearb.parse_epidoc`. The output validates against the EpiDoc
@@ -266,18 +286,27 @@ def to_epidoc(document: Document) -> str:
             carrier = _TAG.get(tok.kind, "seg")
             # TEI's <g> (glyph) has a restricted content model and can't hold <unclear>/<supplied>
             # (and an <app> can't carry it inside <lem>/<rdg> meaningfully); carry the token in
-            # <seg> instead (the reader re-derives its kind by text).
+            # <seg> instead, which keeps the kind in @type.
             if (tok.status is not ReadingStatus.CERTAIN or tok.alt or tok.form_state) and carrier == "g":
                 carrier = "seg"
+            # <seg> names no kind of its own, so the kind travels in @type; <w>/<num>/<g>/<pc>
+            # already are the kind.
+            seg_type = _SEG_TYPE.get(tok.kind) if carrier == "seg" else None
             if tok.alt:
                 # alternate readings: <app><lem><w>text</w></lem><rdg><w>alt</w></rdg>…</app>
                 app = sub(ab, "app")
                 el = sub(sub(app, "lem"), carrier)
+                if seg_type is not None:
+                    el.set("type", seg_type)
                 emit_form(el, tok, carrier)
                 for a in tok.alt:
-                    sub(sub(app, "rdg"), carrier, _xml_clean(a))
+                    rdg = sub(sub(app, "rdg"), carrier, _xml_clean(a))
+                    if seg_type is not None:
+                        rdg.set("type", seg_type)
             else:
                 el = sub(ab, carrier)
+                if seg_type is not None:
+                    el.set("type", seg_type)
                 emit_form(el, tok, carrier)
 
     ET.indent(root)
@@ -336,8 +365,16 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
 
 # ── reading EpiDoc TEI back into the corpus model ────────────────────────────────
 
-_TOKEN_TAGS = frozenset({"w", "num", "g", "seg"})
-_KIND_BY_TAG = {"w": TokenKind.WORD, "num": TokenKind.NUMERAL, "g": TokenKind.LOGOGRAM}
+_TOKEN_TAGS = frozenset({"w", "num", "g", "pc", "seg"})
+_KIND_BY_TAG = {
+    "w": TokenKind.WORD,
+    "num": TokenKind.NUMERAL,
+    "g": TokenKind.LOGOGRAM,
+    "pc": TokenKind.PUNCT,
+}
+# the inverse of the writer's ``_SEG_TYPE``: the kind a generic ``<seg>`` claims in @type.
+# Matched case-insensitively so a hand-written edition is not held to pyaegean's lowercase spelling.
+_KIND_BY_SEG_TYPE = {value: kind for kind, value in _SEG_TYPE.items()}
 
 
 def _local(tag: object) -> str:
@@ -399,12 +436,19 @@ def _status_index(region: ET.Element) -> "Callable[[ET.Element], ReadingStatus]"
     return status_of
 
 
-def _kind_of(carrier: str, text: str) -> TokenKind:
+def _kind_of(carrier: str, text: str, seg_type: str | None = None) -> TokenKind:
+    """Token kind for one carrier element: its tag, else its ``@type``, else the text."""
     kind = _KIND_BY_TAG.get(carrier)
     if kind is not None:
         return kind
-    # <seg> is the writer's fallback carrier (e.g. a logogram that had to hold apparatus
-    # markup); re-derive the obvious numeral case, otherwise treat it as a word.
+    # <seg> is the generic carrier (a separator, an unknown sign, or a logogram that had to hold
+    # apparatus markup), so it names its kind in @type.
+    if seg_type is not None:
+        kind = _KIND_BY_SEG_TYPE.get(seg_type.strip().casefold())
+        if kind is not None:
+            return kind
+    # An untyped <seg> — a foreign edition, or EpiDoc written before @type carried the kind.
+    # Re-derive the obvious numeral case, otherwise treat it as a word.
     return TokenKind.NUMERAL if text and all(c.isdigit() for c in text) else TokenKind.WORD
 
 
@@ -747,7 +791,11 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             if lem is None:
                 continue
             carrier_el = next((c for c in lem.iter() if _local(c.tag) in _TOKEN_TAGS), lem)
-            carrier = _local(carrier_el.tag) if carrier_el is not lem else "seg"
+            # With no carrier inside the <lem>, the <lem> itself holds the reading: treat it as an
+            # untyped <seg> rather than reading a kind off @type that means something else there.
+            has_carrier = carrier_el is not lem
+            carrier = _local(carrier_el.tag) if has_carrier else "seg"
+            seg_type = carrier_el.get("type") if has_carrier else None
             initial_status, initial_ref = contexts.get(
                 carrier_el, (ReadingStatus.CERTAIN, None)
             )
@@ -761,7 +809,7 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             if not text and state is None:
                 continue
             tokens.append(Token(
-                text=text, kind=_kind_of(carrier, text),
+                text=text, kind=_kind_of(carrier, text, seg_type),
                 status=status, alt=alts, line_no=len(lines), position=pos,
                 form_state=state,
             ))
@@ -775,7 +823,7 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             if not text and state is None:
                 continue
             tokens.append(Token(
-                text=text, kind=_kind_of(tag, text), status=status,
+                text=text, kind=_kind_of(tag, text, el.get("type")), status=status,
                 line_no=len(lines), position=pos, form_state=state,
             ))
             cur.append(pos)
@@ -791,8 +839,12 @@ def read_epidoc(source: str | Path, *, script_id: str = "greek") -> list[Documen
     """Parse token-carrier EpiDoc TEI into Documents.
 
     A file, or every ``*.xml`` file in a directory, must represent tokens with
-    ``<w>``, ``<num>``, ``<g>``, or ``<seg>`` carriers. This is the inverse of
+    ``<w>``, ``<num>``, ``<g>``, ``<pc>``, or ``<seg>`` carriers. This is the inverse of
     :func:`write_epidoc`; arbitrary free-text TEI needs a source-specific extractor.
+
+    The carrier gives each token its `aegean.TokenKind`, and a ``<seg>`` takes its kind from
+    ``@type`` (``separator``, ``unknown``, ``logogram``, ...). An untyped ``<seg>`` reads as a
+    numeral when its text is all digits and a word otherwise.
 
     ``script_id`` labels the result: EpiDoc's ``xml:lang`` can't disambiguate (say) Linear A
     from Cypro-Minoan, so the caller names the script. Uses the stdlib XML parser only.
@@ -850,9 +902,9 @@ def from_epidoc(source: str | Path, *, script_id: str = "greek") -> Corpus:
     """Load token-carrier EpiDoc TEI into a `Corpus`.
 
     The inverse of `write_epidoc`: round-trips the id, find-place, token/line stream,
-    editorial certainty, alternate readings, and typed form state. Other input must
-    carry tokens in ``<w>``/``<num>``/``<g>``/``<seg>`` elements; free-text editions
-    need a source-specific extractor. ``script_id`` labels the corpus (default
+    token kinds, editorial certainty, alternate readings, and typed form state. Other input
+    must carry tokens in ``<w>``/``<num>``/``<g>``/``<pc>``/``<seg>`` elements; free-text
+    editions need a source-specific extractor. ``script_id`` labels the corpus (default
     ``"greek"``). pyaegean parses your files locally and never re-hosts them."""
     from ..core.corpus import Corpus
     from ..core.provenance import Provenance

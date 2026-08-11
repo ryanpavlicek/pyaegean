@@ -127,7 +127,7 @@ aegean search lineara "KU-*-RO"
 # 'KU-*-RO': 1 word(s)   →   KU-MA-RO  (count 1)
 
 aegean stats lineara --signs --top 5
-# 𐝫 552 · 𐄁 468 · 1 310 · KU 307 · KA 284
+# KU 307 · KA 284 · *301 274 · SI 240 · A 202
 
 aegean dispersion lineara --top 3
 # KU-RO  freq 37  range 34/559  DP 0.850 DPnorm 0.851

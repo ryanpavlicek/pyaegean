@@ -37,11 +37,17 @@ from .sentence_segmentation import (
     SegmenterLike,
     _balanced_editorial_positions,
     _protected_periods,
+    _TERMINAL,
+    _TRAILING_CLOSERS,
     segment_text,
 )
 from .tokenize import _tokenize_aligned_result
 
 __all__ = ["TokenRecord", "pipeline", "pipeline_tokens"]
+
+# One token never encodes to fewer than one subword, so a rule-segmented run longer
+# than the neural bundles' subword budget cannot be a single analyzable sentence.
+_UNSEGMENTED_RUN_TOKENS = 256
 
 if TYPE_CHECKING:
     from ..core.model import SourceAlignment, Token, TokenFormState
@@ -216,6 +222,15 @@ def pipeline_tokens(
     always produces one output record. Complete, contiguous alignment ``sentence_id``
     runs take precedence over ``sentence_policy`` and ``segmenter``. Without them, the
     named policy or external segmenter groups the atomic typed tokens.
+
+    Editions frequently attach the sentence mark to the word it follows rather than
+    tokenizing it separately, so the named policy reads a sentence-final mark carried
+    inside a word token as well as a standalone punctuation token. The policy still
+    decides which marks count: ``inscription`` and ``papyrus`` commit only to the
+    strong period/!/? marks, and abbreviation dots, dotted citations and numbers, and
+    editorially uncertain tokens never end a sentence. When a policy commits to no
+    mark across a very long run of tokens, that run stays one sentence and the call
+    warns rather than returning it silently.
     """
     from .runtime import default_pipeline
 
@@ -869,14 +884,101 @@ def _token_boundary_is_editorial(token: Token) -> bool:
     return getattr(token.status, "value", token.status) != "certain"
 
 
+def _policy_terminals(policy: str) -> frozenset[str]:
+    """Return the marks a named policy commits to as sentence-final.
+
+    ``inscription`` and ``papyrus`` keep only the strong period/!/? subset of the
+    shared terminal set: the ano teleia and the Greek question mark stay
+    uncommitted in those editions.
+    """
+    strong = _TERMINAL & frozenset(".!?")
+    return strong if policy in ("inscription", "papyrus") else _TERMINAL
+
+
+def _word_final_break(
+    value: str,
+    *,
+    terminal: frozenset[str],
+    policy: str,
+    abbreviations: frozenset[str],
+    editorial_positions: Sequence[bool],
+    value_start: int,
+    following: str,
+) -> bool:
+    """Whether a word token's own trailing punctuation ends the sentence.
+
+    Editions attach the sentence mark to the word it follows, so the committed
+    mark is frequently inside a ``WORD`` token rather than a separate punctuation
+    token. Only a mark that closes the token counts, optionally behind closing
+    quotes or brackets. Abbreviation dots, dotted citations and numbers, ellipses,
+    and papyrological marks inside balanced editorial brackets never do, and a
+    mark the selected policy leaves uncommitted is never seen here.
+    """
+    end = len(value)
+    while end and value[end - 1] in _TRAILING_CLOSERS:
+        end -= 1
+    start = end
+    while start and value[start - 1] in terminal:
+        start -= 1
+    if start == end:
+        return False
+    protected = _protected_periods(value, abbreviations)
+    committed = [
+        offset
+        for offset in range(start, end)
+        if not (value[offset] == "." and offset in protected)
+        and (policy != "papyrus" or not editorial_positions[value_start + offset])
+    ]
+    if not committed:
+        return False
+    if value[start:end] == "." and following:
+        # A Latin initial or a dotted citation number split across two tokens keeps
+        # its period, matching the separate-punctuation-token rules below.
+        word = value[:start]
+        if len(word) == 1 and word.isascii() and word.isupper() and following.islower():
+            return False
+        if word.isdigit() and following.isdigit():
+            return False
+    return True
+
+
+def _warn_unsegmented_runs(breaks: Sequence[bool], policy: str) -> None:
+    """Warn when a policy leaves a very long token run with no sentence break.
+
+    A run longer than the neural bundles' subword budget cannot be one sentence,
+    so returning it silently would hide an edition whose sentence evidence the
+    selected policy does not commit to.
+    """
+    runs: list[int] = []
+    length = 0
+    for is_break in breaks:
+        length += 1
+        if is_break:
+            runs.append(length)
+            length = 0
+    if length:
+        runs.append(length)
+    long_runs = [item for item in runs if item > _UNSEGMENTED_RUN_TOKENS]
+    if not long_runs:
+        return
+    warnings.warn(
+        f"sentence policy {policy!r} committed to no sentence-final mark across "
+        f"{len(long_runs)} token run(s), the longest {max(long_runs)} tokens; those "
+        "tokens stay one sentence. Supply explicit alignment sentence IDs or a "
+        "sentence segmenter if this edition marks sentences differently.",
+        stacklevel=2,
+    )
+
+
 def _typed_rule_breaks(
     tokens: Sequence[Token],
     selected: Sequence[str],
     policy: str,
     abbreviations: frozenset[str] | None,
 ) -> list[bool]:
-    """Apply sentence rules only to observed punctuation-token boundaries."""
-    terminal = frozenset(".!?") if policy in ("inscription", "papyrus") else frozenset(".!?;;··")
+    """Apply sentence rules to observed punctuation, whether the mark is its own
+    token or is carried inside the word token an edition attached it to."""
+    terminal = _policy_terminals(policy)
     known_abbreviations = abbreviations or frozenset(
         {"cf", "sc", "fr", "ed", "p", "pp", "l", "ll", "col", "ca", "κτλ", "δηλ", "κ", "δ"}
     )
@@ -917,7 +1019,21 @@ def _typed_rule_breaks(
         index = max(index + 1, cursor + 1)
     breaks = [False] * len(tokens)
     for index, (token, value) in enumerate(zip(tokens, selected)):
-        if token.kind is not TokenKind.PUNCT or _token_boundary_is_editorial(token):
+        if _token_boundary_is_editorial(token):
+            continue
+        if token.kind is TokenKind.WORD:
+            if _word_final_break(
+                value,
+                terminal=terminal,
+                policy=policy,
+                abbreviations=known_abbreviations,
+                editorial_positions=editorial_positions,
+                value_start=selected_starts[index],
+                following=selected[index + 1] if index + 1 < len(selected) else "",
+            ):
+                breaks[index] = True
+            continue
+        if token.kind is not TokenKind.PUNCT:
             continue
         protected_periods = _protected_periods(value, known_abbreviations)
         marks = [
@@ -974,6 +1090,7 @@ def _typed_rule_breaks(
             breaks[end] = False
             end += 1
         breaks[end] = True
+    _warn_unsegmented_runs(breaks, policy)
     return breaks
 
 

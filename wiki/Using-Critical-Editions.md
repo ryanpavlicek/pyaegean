@@ -67,7 +67,7 @@ selects an explicit model input first, then regularized, normalized, or diplomat
 text, and returns the selected value in the `TokenRecord` state.
 
 The generic reader recognizes these states when they occur on token carriers such
-as `<w>`, `<num>`, `<g>`, or `<seg>`, including `<choice>` and apparatus markup.
+as `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`, including `<choice>` and apparatus markup.
 It does not turn arbitrary free-text TEI into a structured token state. The six
 currently hosted epigraphy and papyri assets retain their legacy aggregate
 `ReadingStatus` values and do not yet carry `TokenFormState`.

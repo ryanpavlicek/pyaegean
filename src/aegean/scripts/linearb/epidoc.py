@@ -19,13 +19,14 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from ...core.model import Document, DocumentMeta, ReadingStatus, Token
+from ...core.model import TokenKind
 from .loader import classify
 
 if TYPE_CHECKING:
     from ...core.corpus import Corpus
 
 _TEI = "{http://www.tei-c.org/ns/1.0}"
-_TOKEN_TAGS = {"w", "num", "seg", "g"}
+_TOKEN_TAGS = {"w", "num", "seg", "g", "pc"}
 
 
 def _text(el: Any) -> str:
@@ -118,6 +119,9 @@ def _document(root: Any) -> Document | None:
                 # EpiDoc transliterations are lowercase; pyaegean's token convention (and the
                 # accounting markers / lexicon) is uppercase, so normalize on import.
                 tok = classify(text.upper(), len(lines), pos)
+                if tag == "pc":
+                    # <pc> states the kind outright, so it outranks the text heuristic.
+                    tok = replace(tok, text=text, kind=TokenKind.PUNCT)
                 status = _status_of(el)
                 if status is not ReadingStatus.CERTAIN:
                     tok = replace(tok, status=status)

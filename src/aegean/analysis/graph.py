@@ -111,13 +111,21 @@ def _documents(corpus: Any) -> list[Document]:
 def _items(tokens: Iterable[Any], level: str) -> list[str]:
     """The countable items of a token stream — the same conventions as
     ``aegean.analysis.stats._items_of`` (and ``aegean stats`` / ``plot_sign_frequencies``):
-    ``"word"`` counts WORD tokens; ``"sign"`` counts each token's decomposed signs."""
+    ``"word"`` counts WORD tokens; ``"sign"`` counts the signs of every sign-bearing
+    token. The sign rule lives in ``stats._bears_signs`` and is shared, so a graph's
+    nodes are the same items the frequency and dispersion tables count."""
+    from .stats import _bears_signs
+
     if level == "word":
         return [t.text for t in tokens if t.kind is TokenKind.WORD]
     if level == "sign":
         out: list[str] = []
         for t in tokens:
-            out.extend(t.signs or (t.text.split("-") if "-" in t.text else [t.text]))
+            if not _bears_signs(t):
+                continue
+            out.extend(
+                s for s in (t.signs or (t.text.split("-") if "-" in t.text else [t.text])) if s
+            )
         return out
     raise ValueError(f"level must be 'sign' or 'word', got {level!r}")
 

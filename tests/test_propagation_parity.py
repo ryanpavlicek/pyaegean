@@ -678,3 +678,67 @@ def test_every_prebuilt_index_backend_declares_matching_on_disk():
         assert index_filename != asset, (
             f"{asset}: the built-index filename equals the dataset name; no on_disk would be needed"
         )
+
+
+def test_every_sign_counting_surface_uses_the_same_rule():
+    """What counts as a sign is decided in ONE place.
+
+    The rule (skip the marks an edition writes between the signs, and skip a token whose
+    reading is not attested) lived in three independent copies: the library's item stream,
+    the co-occurrence graph, and the ``aegean stats --signs`` command. Only one of them was
+    corrected, so two commands in the same CLI answered the same question differently and
+    the graph's own docstring claimed a parity it no longer had.
+
+    This enumerates the surfaces LIVE and compares their output on a real corpus, so a
+    fourth copy, or a change to one of these three, fails here rather than in a user's
+    frequency table.
+    """
+    from collections import Counter
+
+    import aegean
+    from aegean.analysis.graph import _items
+    from aegean.analysis.stats import _bears_signs, _items_of
+
+    corpus = aegean.load("lineara")
+
+    library = Counter()
+    graph = Counter()
+    for document in corpus.documents:
+        library.update(_items_of(document, "signs"))
+        graph.update(_items(document.tokens, "sign"))
+
+    assert library == graph, (
+        "aegean.analysis.graph._items and aegean.analysis.stats._items_of disagree about "
+        "what a sign is; cooccurrence_graph nodes would not match the frequency table"
+    )
+
+    # The CLI is compared by BEHAVIOUR, not by reading its source: a source check passes
+    # as long as the helper is imported somewhere, even if nothing calls it.
+    typer_testing = pytest.importorskip("typer.testing")
+    from aegean.cli import _build_app
+
+    result = typer_testing.CliRunner().invoke(
+        _build_app(), ["stats", "lineara", "--signs", "--top", "5"]
+    )
+    assert result.exit_code == 0, result.output
+    printed = [
+        line.split("│")[1].strip()
+        for line in result.output.splitlines()
+        if line.startswith("│") and line.count("│") >= 3 and "item" not in line
+    ]
+    expected = [item for item, _count in library.most_common(5)]
+    assert printed == expected, (
+        f"`aegean stats --signs` shows {printed} but the library counts {expected}: the "
+        "command has its own sign rule again and contradicts `aegean dispersion --signs`"
+    )
+
+    # The rule itself excludes what it says it excludes.
+    from aegean.core.model import ReadingStatus, Token, TokenKind
+
+    assert not _bears_signs(Token(text="x", kind=TokenKind.SEPARATOR))
+    assert not _bears_signs(Token(text="5", kind=TokenKind.NUMERAL))
+    assert not _bears_signs(Token(text="x", kind=TokenKind.PUNCT))
+    assert not _bears_signs(Token(text="KU", kind=TokenKind.WORD, status=ReadingStatus.LOST))
+    assert _bears_signs(Token(text="KU", kind=TokenKind.WORD))
+    assert _bears_signs(Token(text="VIN", kind=TokenKind.LOGOGRAM))
+    assert _bears_signs(Token(text="KU", kind=TokenKind.WORD, status=ReadingStatus.RESTORED))

@@ -124,7 +124,7 @@ Text is kept as inscribed, so fragmentary tokens (τα, ευτέρα) rank along
 whole words: inspect before you interpret.
 
 **Bring your own EpiDoc.** The same path works for editions pyaegean does not
-ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`/`<seg>`
+ship. Any EpiDoc TEI file whose tokens are carried by `<w>`/`<num>`/`<g>`/`<pc>`/`<seg>`
 elements imports directly; this is the edition div of `myinscription.xml`
 (its TEI header carries the `<idno>` and `<origPlace>`):
 
@@ -438,11 +438,11 @@ aegean balance lineara HT13
 
 aegean stats lineara --signs --top 5
 #  item   count
-#  𐝫      552
-#  𐄁      468
-#  1      310
 #  KU     307
 #  KA     284
+#  *301   274
+#  SI     240
+#  A      202
 
 aegean analyze clusters lineara --top 3       # exploratory word families
 #  JA-SA → JA-SA-SA-RA-ME, JA-SA, JA-SA-JA, JA-SA-MU, JA-SA-SA, JA-SA-SA-RA

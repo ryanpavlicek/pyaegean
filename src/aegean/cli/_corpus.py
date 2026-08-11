@@ -494,11 +494,13 @@ def stats(
     if signs:
         from collections import Counter
 
+        # The sign rule lives in one place, so this table and `aegean dispersion
+        # --signs` count the same items.
+        from ..analysis.stats import _items_of
+
         counter: Counter[str] = Counter()
         for d in c:
-            for t in d.tokens:
-                for s in t.signs or (t.text.split("-") if "-" in t.text else [t.text]):
-                    counter[s] += 1
+            counter.update(_items_of(d, "signs"))
         pairs = counter.most_common(top if top > 0 else None)
         title = f"{corpus}: top {len(pairs)} signs"
     else:
