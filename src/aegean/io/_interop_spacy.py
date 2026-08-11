@@ -210,7 +210,9 @@ def to_spacy(
         for sentence in sentences:
             for index, token in enumerate(sentence.tokens):
                 heads.append(
-                    offset + index if token.head == 0 else offset + token.head - 1
+                    offset + index
+                    if token.head in (0, None)
+                    else offset + int(token.head) - 1
                 )
                 deps.append("" if token.deprel == "_" else token.deprel)
             offset += len(sentence.tokens)

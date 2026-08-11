@@ -127,6 +127,46 @@ _ETYM_LEAD = re.compile(
 )
 
 
+# A dictionary line whose first clause is grammatical or prosodic APPARATUS rather than
+# a definition. Middle Liddell opens many high-frequency entries this way (``εἰμί: The
+# whole of the pres. ind. ...``, ``χείρ: the penult. is regularly short ...``,
+# ``πολύς: the Ionic declension ...``, ``ἔχω: for the poet. form ...``), and the caller is
+# a cascade: returning "" lets it fall through to a dictionary that leads with the meaning
+# ("to be", "the hand", "much", "to have") instead of asserting a paradigm note as the
+# sense of the commonest words in Greek. Each alternative names a grammatical term, so an
+# ordinary gloss that happens to begin "the whole of the body" is not caught.
+_FUNCTION_ONLY = re.compile(
+    r"(?:for|of|from|and|the|an?|as|in|by|with|on|at|or|cf|v|q)", re.IGNORECASE
+)
+
+# A residue that is nothing but a grammatical label is not a meaning. Whole-string match
+# only, so a gloss that merely contains one of these words is untouched.
+_LABEL_ONLY = re.compile(
+    r"(?:\W*(?:sing|singular|plur|plural|dual|masc|fem|neut|neuter|"
+    r"gen|genit|genitive|dat|dative|acc|accus|accusative|nom|nominative|voc|vocative|"
+    r"act|mid|middle|pass|passive|impf|imperf|aor|fut|perf|plpf|pres|"
+    r"inf|part|imperat|opt|subj|indic|encl|enclitic|contr|contracted|"
+    r"ep|epic|ion|ionic|dor|doric|aeol|aeolic|att|attic|poet|poetic|adv|adverb)\W*)+",
+    re.IGNORECASE,
+)
+
+_APPARATUS_LEAD = re.compile(
+    r"^(?:"
+    r"the\s+whole\s+of\s+the\s+(?:pres|impf|fut|aor|perf|plpf|verb|tenses?|"
+    r"sg|pl|dual|decl\w*|conjug\w*)"
+    r"|for\s+the\s+(?:poet|ep|epic|ion|ionic|dor|doric|aeol|aeolic|att|attic|"
+    r"lengthd|shortened|contr|collat)\w*\.?\s+forms?(?![\w])"
+    r"|the\s+(?:penult|ult|antepenult|accent|quantity|syllab)"
+    r"|the\s+(?:ionic|attic|doric|aeolic|epic|poetic|later|earlier|old|common)\s+"
+    r"(?:declension|conjugation|inflexion|inflection|forms?|dialect)(?![\w])"
+    r"|the\s+(?:declension|conjugation|inflexion|inflection|paradigm)(?![\w])"
+    r"|(?:used|found|occurs?)\s+(?:by\s+poets?|only|chiefly|mostly|mainly)(?![\w])"
+    r"|\w+\s+(?:often\s+)?use\s+the\s+(?:penult|ult|antepenult)"
+    r")",
+    re.IGNORECASE,
+)
+
+
 def clean_gloss(text: str, *, limit: int = 60) -> str:
     """Reduce a raw dictionary line to its bare English meaning, or ``""``.
 
@@ -160,20 +200,43 @@ def clean_gloss(text: str, *, limit: int = 60) -> str:
     g = _GRAMMAR_LEAD.sub("", g)   # grammatical/morphological preamble: strip, keep the sense
     # Cut at the first inline Greek citation: what precedes it is the English definition.
     m = _GREEK_RUN.search(g)
+    was_cut = m is not None
     if m:
         g = g[: m.start()]
-    g = _trim_dangling_paren(g)
-    g = re.split(r"[;:]", g)[0]
-    g = _trim_dangling_paren(g).strip(" ,.·—-()[]")
+    trimmed = _trim_dangling_brackets(g)
+    was_cut = was_cut or trimmed != g
+    g = trimmed
+    head = re.split(r"[;:]", g)[0]
+    was_cut = was_cut or head != g
+    g = _trim_dangling_brackets(head).strip(" ,.·—-()[]")
     # A residue that is only a grammatical-derivation pointer whose base (the Greek
     # form it points at) was just cut ("adverb of", "comp. of", "a strengthd. form of",
     # "as if contr. from") is not a meaning; drop it rather than inject the fragment.
     if _DERIVATION_ONLY.match(g):
         return ""
+    if _APPARATUS_LEAD.match(g):
+        return ""
+    # Re-test the redirect and etymology leads on the FINAL residue. Stripping a
+    # bracket or a Greek run can expose one that was not at the head of the raw line:
+    # Cunliffe's πατήρ entry cleaned to "cf. L. pater, Eng. father, German vater.] Genit".
+    if _REDIRECT_LEAD.match(g) or _ETYM_LEAD.match(g):
+        return ""
+    # What survives must be a meaning, not a bare grammatical label. Cunliffe opens its
+    # entries with a paradigm preamble, so the residue could be the single word "sing",
+    # "mid" or "Genit" offered as the meaning of χείρ, ποιέω and πόλις.
+    if _LABEL_ONLY.fullmatch(g):
+        return ""
+    # A lone function word is a severed fragment ONLY when something was actually cut
+    # away. "and", "from" and "for" are the correct one-word glosses of καί, ἀπό and
+    # γάρ, so an uncut line that reduces to one of them is a meaning, not a remnant.
+    # The underscore is the lexicon's own vowel-quantity notation leaking out of a
+    # bracketed etymology, and is never part of a gloss.
+    if (was_cut and _FUNCTION_ONLY.fullmatch(g)) or "_" in g:
+        return ""
     return g[:limit] if len(g) >= 3 else ""
 
 
-def _trim_dangling_paren(g: str) -> str:
+def _trim_dangling_paren(g: str, opener: str = "(", closer: str = ")") -> str:
     """Drop an unbalanced trailing parenthetical from ``g``.
 
     Cutting a gloss at the first inline Greek run can sever the inside of a parenthetical
@@ -181,15 +244,19 @@ def _trim_dangling_paren(g: str) -> str:
     A note opened by ``(`` and never closed carries no meaning of its own, so everything from
     the last unmatched ``(`` is removed; balanced ``(...)`` content (a genuine gloss aside) is
     left intact. The mirror case, a stray closing ``)`` with no opener, is also trimmed.
+
+    Square brackets are the same case and get the same treatment: Middle Liddell closes an
+    etymology run with ``]``, so ``πατήρ`` cleaned to ``cf. L. pater, Eng. father, German
+    vater.] Genit`` -- an etymology, not the meaning "a father".
     """
     depth = 0
     cut: int | None = None
     for i, ch in enumerate(g):
-        if ch == "(":
+        if ch == opener:
             if depth == 0:
                 cut = i
             depth += 1
-        elif ch == ")":
+        elif ch == closer:
             if depth > 0:
                 depth -= 1
                 if depth == 0:
@@ -200,6 +267,11 @@ def _trim_dangling_paren(g: str) -> str:
     if depth > 0 and cut is not None:
         return g[:cut].rstrip(" ,.·—-")
     return g
+
+
+def _trim_dangling_brackets(g: str) -> str:
+    """Apply the dangling-delimiter trim to both brackets a dictionary line uses."""
+    return _trim_dangling_paren(_trim_dangling_paren(g), "[", "]")
 
 
 # Concise, common-sense-first dictionaries, in cascade order. LSJ is a *historical*

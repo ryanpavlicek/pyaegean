@@ -624,6 +624,12 @@ def _rule_lemma(word: str) -> str | None:
         # fabricate a non-word.
         return None
     stem = _surface_stem(word, length)
+    if stem == stem.upper() and stem != stem.lower():
+        # Majuscule text (the epigraphic and papyrological corpora are written this
+        # way). The citation ending is lowercase, so splicing it onto an uppercase
+        # stem produced a mixed-case non-word: ΛΟΓΟΥ became "ΛΟΓος". The attested and
+        # seed tiers already answer majuscule input with the lowercase citation form.
+        stem = stem.lower()
     if _last_n_have(word, length, _ACCENT_MARKS):  # oxytone: accent was on the ending
         citation = _acute_on_last_vowel(citation)
     return unicodedata.normalize("NFC", stem + citation)

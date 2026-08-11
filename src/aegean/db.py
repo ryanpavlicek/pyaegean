@@ -640,6 +640,17 @@ def from_sqlite(
     return Corpus(docs, inventory, provenance, meta.get("script_id", ""))
 
 
+def _fold(text: str) -> str:
+    """Case-fold for search WITHOUT expanding the iota subscript.
+
+    ``str.casefold`` decomposes the ypogegrammeni family (``ᾳ`` becomes ``αι``), which
+    merges two different grammatical forms: a dative singular ``ἐκκλησίᾳ`` compared equal
+    to the nominative plural ``ἐκκλησίαι``, and it was a *substring* of ``ἐκκλησίαις``.
+    The iota subscript is a diacritic and the documented contract is that diacritics have
+    to match, so lowercase and fold only the final sigma, as the docstring describes."""
+    return text.lower().replace("ς", "σ")
+
+
 def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
            ) -> list[tuple[str, int | None, str]]:
     """Search a SQLite corpus's tokens; returns ``(doc_id, position, text)`` hits.
@@ -672,7 +683,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
         raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
     conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
     try:
-        target = query.casefold()
+        target = _fold(query)
         out: list[tuple[str, int | None, str]] = []
         # position is an int, or None for a token stored without one (SQL NULL); keep it
         # as-is rather than int()-coercing, which would crash on the None case (0.19.9).
@@ -680,7 +691,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
             for doc_id, position, text in conn.execute(
                 "SELECT doc_id, position, text FROM tokens"
             ):
-                if target in str(text).casefold():
+                if target in _fold(str(text)):
                     out.append((str(doc_id), position, str(text)))
                     if 0 < limit <= len(out):
                         break
@@ -719,7 +730,7 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
         else:  # a Greek (non-ASCII) query: scan, the casefold confirmation below matches
             source = conn.execute("SELECT doc_id, position, text FROM tokens")
         for doc_id, position, text in source:
-            if str(text).casefold() == target:  # FTS only narrows; confirm an exact token match
+            if _fold(str(text)) == target:  # FTS only narrows; confirm an exact token match
                 out.append((str(doc_id), position, str(text)))
                 if 0 < limit <= len(out):
                     break

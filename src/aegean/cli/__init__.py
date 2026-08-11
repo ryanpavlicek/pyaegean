@@ -50,7 +50,10 @@ def main() -> None:
         )
         raise SystemExit(1) from None
     try:
-        _build_app()()
+        # windows_expand_args globs every argv token against the working directory,
+        # so a quoted sign pattern (KU-*) or --glob "*.txt" would mean whatever files
+        # happen to sit next to the user. Arguments reach the commands as typed.
+        _build_app()(windows_expand_args=False)
     except BrokenPipeError:
         _exit_on_broken_pipe()
     except OSError as exc:

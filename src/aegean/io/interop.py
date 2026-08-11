@@ -396,19 +396,22 @@ class InteropDocument:
             if word_ids != list(range(1, len(word_ids) + 1)):
                 raise InteropSchemaError("UD word IDs must be positive and contiguous")
             for token in sentence.tokens:
+                if token.head is None:
+                    continue
                 if token.head < 0 or token.head > len(word_ids):
                     raise InteropSchemaError("basic HEAD lies outside its sentence")
                 if token.head == token.id:
                     raise InteropSchemaError("a token cannot be its own HEAD")
-            heads = {token.id: token.head for token in sentence.tokens}
+            # An unannotated word has no arc, so it neither starts nor continues a walk.
+            heads = {token.id: token.head for token in sentence.tokens if token.head is not None}
             for token in sentence.tokens:
                 seen: set[int] = set()
-                current = token.id
-                while heads[current] != 0:
+                current: int | None = token.id
+                while current is not None and heads.get(current):
                     if current in seen:
                         raise InteropSchemaError("basic dependency tree contains a cycle")
                     seen.add(current)
-                    current = heads[current]
+                    current = heads.get(current)
         token_by_key = {(sent.sent_id, tok.id): tok for sent in self.ud_document.sentences for tok in sent.tokens}
         known_keys = set(token_by_key)
         if any(key not in known_keys for key in tokens):
@@ -833,7 +836,7 @@ def from_token_records(records: Iterable[TokenRecord], *, source_text: str, docu
             # UDToken requires concrete scalar columns.  Missing values are
             # projected to UD's conventional placeholders and the originals are
             # retained in InteropTokenMetadata for a lossless envelope round-trip.
-            toks.append(UDToken(rec.index, rec.text, rec.lemma, rec.upos, rec.xpos or "_", rec.feats or "_", rec.head if rec.head is not None else 0, relation))
+            toks.append(UDToken(rec.index, rec.text, rec.lemma, rec.upos, rec.xpos or "_", rec.feats or "_", rec.head, relation))
             token_meta[(sid, rec.index)] = InteropTokenMetadata(rec.alignment, rec.form_state, rec.lemma_source, rec.lemma_source_path, rec.token_confidence, rec.analysis_receipt, rec.head, rec.relation, rec.xpos, rec.feats, rec.upos_confidence, rec.lemma_confidence, rec.neural_analyzed, rec.analysis_complete, rec.analysis_warning)
         sentences.append(UDSentence(sid, source_text[start:end], tuple(toks)))
         sent_meta[sid] = boundary

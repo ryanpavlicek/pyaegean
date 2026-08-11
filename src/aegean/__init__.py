@@ -67,15 +67,12 @@ from .core.diagnose import DiagnoseReport, diagnose  # noqa: E402 — corpus hea
 
 
 def __getattr__(name: str) -> object:
-    """Load the mutually dependent analysis/visualization facades on first use."""
+    """Load the analysis/visualization facades on first use."""
 
     if name in {"analysis", "viz"}:
         from importlib import import_module
 
-        # Analysis owns the established cycle-breaking order: its seriation module
-        # imports viz only after the multivariate records viz needs are available.
-        import_module(".analysis", __name__)
-        return globals()[name]
+        return import_module(f".{name}", __name__)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

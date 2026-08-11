@@ -41,23 +41,28 @@ def compile_sign_pattern(raw: str) -> CompiledSignPattern | None:
 
 
 def match_sign_pattern(signs: list[str], pattern: CompiledSignPattern) -> bool:
-    """Match a word's sign sequence against a compiled pattern."""
+    """Match a word's sign sequence against a compiled pattern.
+
+    Walks the pattern once, carrying the set of sign positions still reachable, so
+    cost is O(len(pattern) * len(word)). A pattern with several ``**`` wildcards
+    would otherwise branch exponentially: ``**-**-**-...`` against the corpus's
+    longest word took over a minute at ten wildcards and had no practical bound.
+    """
     ws = [normalize_sign_label(s).upper() for s in signs]
     ps = pattern.tokens
+    end = len(ws)
 
-    def rec(pi: int, si: int) -> bool:
-        if pi == len(ps):
-            return si == len(ws)
-        tok = ps[pi]
-        if tok == "**":
-            return any(rec(pi + 1, si + k) for k in range(0, len(ws) - si + 1))
-        if si >= len(ws):
+    reachable = {0}
+    for tok in ps:
+        if tok == "**":  # zero or more signs: everything from here to the end
+            reachable = set(range(min(reachable), end + 1)) if reachable else set()
+        elif tok == "*":
+            reachable = {si + 1 for si in reachable if si < end}
+        else:
+            reachable = {si + 1 for si in reachable if si < end and ws[si] == tok}
+        if not reachable:
             return False
-        if tok == "*":
-            return rec(pi + 1, si + 1)
-        return tok == ws[si] and rec(pi + 1, si + 1)
-
-    return rec(0, 0)
+    return end in reachable
 
 
 def word_matches_sign_pattern(word: str, raw: str) -> bool:

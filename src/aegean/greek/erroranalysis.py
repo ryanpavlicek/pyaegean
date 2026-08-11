@@ -210,9 +210,16 @@ def analyze_errors(
     n = pos_ok = lemma_err = 0
     n_seen = n_unseen = pos_ok_seen = pos_ok_unseen = lemma_ok_seen = lemma_ok_unseen = 0
 
-    for sent in sentences:
-        preds = tag_sentence([t.form for t in sent])
-        for tok, pred in zip(sent, preds):
+    for index, sent in enumerate(sentences, start=1):
+        preds = list(tag_sentence([t.form for t in sent]))
+        if len(preds) != len(sent):
+            # See heldout.score: a short prediction list must abort, not quietly
+            # reduce the denominator the reported accuracy is computed over.
+            raise ValueError(
+                f"tagger returned {len(preds)} predictions for a sentence of "
+                f"{len(sent)} tokens (sentence {index})"
+            )
+        for tok, pred in zip(sent, preds, strict=True):
             if not tok.scored:
                 continue
             n += 1

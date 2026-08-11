@@ -140,7 +140,17 @@ def read_corpus(spec: str) -> "Corpus":
     if spec == "-":
         import sys
 
-        return Corpus.from_json(sys.stdin.read())
+        piped = sys.stdin.read()
+        # Parse the payload as JSON, never as a path. ``from_json`` treats a string
+        # that does not start with "{" as a filename, so piping the text "cyp.json"
+        # silently loaded that file from disk instead of reading stdin.
+        if not piped.lstrip().startswith("{"):
+            preview = piped.strip()[:40]
+            raise CorpusNotFound(
+                "stdin did not contain a JSON corpus (expected text starting with '{')"
+                + (f"; got {preview!r}" if preview else "; stdin was empty")
+            )
+        return Corpus.from_json(piped)
     if spec.lstrip().startswith("{"):
         return Corpus.from_json(spec)
 

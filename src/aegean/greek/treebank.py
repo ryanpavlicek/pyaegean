@@ -230,6 +230,35 @@ def build_lexicon(*, source_dir: Path | str | None = None, force: bool = False) 
 # --- lexicon object + activation ---------------------------------------------
 
 
+_ELISION_MARKS = frozenset("̓̔͂́̀̈ͅ'’ʼ")
+
+
+def _bare_length(text: str) -> int:
+    return len(_strip_accents(_norm(text)))
+
+
+def _is_fragment_analysis(form: str, lemma: str) -> bool:
+    """Whether an attested analysis of a very short form is a tokenization artifact.
+
+    AGDT records the clipped half of an elided or run-together token under the WHOLE
+    word's lemma, so the lookup index answered ``α`` with ``Λητογενής`` ("born of Leto")
+    and ``lemma_certain`` True; 22 of the 24 bare Greek letters resolved that way.
+
+    Two conditions have to hold together. The form carries no diacritic at all -- a
+    Greek word this short normally has a breathing, an accent, or the mark of elision
+    (``δ̓`` for ``δέ``) -- AND the lemma is implausibly longer than the form. Requiring
+    both keeps what an earlier, blunter version wrongly refused: the unaccented
+    enclitics and closed-class forms (``τε``, ``γε``, ``με``, ``σε``, ``τι``) whose
+    lemma is the same length or barely longer, and punctuation, whose lemma is itself.
+    """
+    letters = _strip_accents(_norm(form))
+    if not letters or len(letters) > 2:
+        return False
+    if _ELISION_MARKS & set(unicodedata.normalize("NFD", _norm(form))):
+        return False
+    return _bare_length(lemma) > max(2, len(letters) + 1)
+
+
 class TreebankLexicon:
     """An attested form→analyses lexicon built from the AGDT treebank."""
 
@@ -256,10 +285,13 @@ class TreebankLexicon:
 
     def _entries(self, form: str) -> list[dict[str, str]] | None:
         hit = self._data.get(_norm(form))
-        if hit is not None:
-            return hit
-        key = self._stripped.get(_strip_accents(form))
-        return self._data.get(key) if key is not None else None
+        if hit is None:
+            key = self._stripped.get(_strip_accents(form))
+            hit = self._data.get(key) if key is not None else None
+        if hit is None:
+            return None
+        kept = [e for e in hit if not _is_fragment_analysis(form, e.get("lemma", ""))]
+        return kept or None
 
     def analyze(self, form: str) -> tuple[Analysis, ...]:
         """Attested analyses for a form (frequency-ordered), or ``()`` if unknown."""

@@ -138,12 +138,107 @@ def _repair_latin(text: str) -> tuple[str, list[str]]:
     return fixed, notes
 
 
+def _repair_invisibles(text: str) -> tuple[str, list[str]]:
+    """Drop Unicode ``Cf`` (format) characters: invisible, and never Greek content.
+
+    Copying Greek out of a PDF, a browser, or a word processor routinely carries a
+    zero-width space, a soft hyphen, a word joiner, or a stray BOM into the middle of
+    a word. Nothing shows on screen, but the form no longer matches any lexicon key,
+    so an attested lookup silently degrades into an ending-rule guess that fabricates
+    a non-word AND keeps the invisible character inside it. ``Cf`` carries no
+    linguistic content in Greek (the joiners only matter for scripts with ligature
+    rules), so dropping it is safe; the shipped corpora and evaluation folds contain
+    none at all, so nothing measured is affected.
+    """
+    kept = [ch for ch in text if unicodedata.category(ch) != "Cf"]
+    dropped = len(text) - len(kept)
+    if not dropped:
+        return text, []
+    return "".join(kept), [
+        f"dropped {dropped} invisible format character(s) (zero-width space, soft "
+        "hyphen, BOM, or similar) that would have blocked lexicon lookup"
+    ]
+
+
+_BREATHINGS = frozenset(")(")
+_ACCENTS = frozenset("/\\=")
+
+
+def _already_marked(out: list[str], base_index: int, mark: str) -> bool:
+    """Whether the base letter already carries a diacritic of ``mark``'s own class.
+
+    A Beta-Code remnant means the diacritic is MISSING from its letter. A letter that
+    already has a breathing cannot be given a second one, so the character after it is
+    ordinary punctuation: ``ἀνήρ (ὁ)`` is a parenthetical, not ``o)``."""
+    if mark in _BREATHINGS:
+        wanted = {_BETA_TO_MARK[")"], _BETA_TO_MARK["("]}
+    elif mark in _ACCENTS:
+        wanted = {_BETA_TO_MARK["/"], _BETA_TO_MARK["\\"], _BETA_TO_MARK["="]}
+    else:
+        wanted = {_BETA_TO_MARK[mark]}
+    existing = set(unicodedata.normalize("NFD", out[base_index]))
+    existing.update(out[base_index + 1 :])
+    return bool(existing & wanted)
+
+
+_DIPHTHONGS = frozenset({"αι", "ει", "οι", "υι", "αυ", "ευ", "ου", "ηυ", "ωυ"})
+
+
+def _paired_parentheses(text: str) -> set[int]:
+    """Offsets of every ``(``/``)`` that is half of a balanced pair.
+
+    Balanced parentheses are editorial: the Leiden abbreviation expansion
+    (``Αὐρ(ήλιος)``), a supplement (``(ε)ἰς``), or an ordinary aside. A Beta-Code
+    remnant breathing is never balanced, so pairing separates the two cleanly."""
+    stack: list[int] = []
+    paired: set[int] = set()
+    for index, char in enumerate(text):
+        if char == "(":
+            stack.append(index)
+        elif char == ")" and stack:
+            paired.add(stack.pop())
+            paired.add(index)
+    return paired
+
+
+def _breathing_position_is_legal(out: list[str], base_index: int) -> bool:
+    """Whether a breathing could legally sit on this letter.
+
+    A breathing is written on the first vowel or rho of a word, or on the second
+    vowel of an initial diphthong (Smyth §9, §11). Anywhere deeper inside a word the
+    character is punctuation, not markup."""
+    letters: list[str] = []
+    index = base_index - 1
+    while index >= 0 and len(letters) < 2:
+        char = out[index]
+        if unicodedata.combining(char) or char in _MARK_BASES:
+            index -= 1  # markup and diacritics do not start a new word
+            continue
+        if not char.isalpha():
+            break
+        letters.append(char)
+        index -= 1
+    if not letters:
+        return True  # word-initial
+    if len(letters) == 1:
+        return _bare(letters[0]) + _bare(out[base_index]) in _DIPHTHONGS
+    return False
+
+
 def _repair_marks(text: str) -> tuple[str, list[str]]:
-    """Convert Beta-Code remnant diacritics after Greek letters; drop stray combining marks."""
+    """Convert Beta-Code remnant diacritics after Greek letters; drop stray combining marks.
+
+    A breathing is only ever written on the first vowel or rho of a word (Smyth §9), so a
+    ``(`` or ``)`` deeper inside a word is an editorial parenthesis, not Beta Code. That
+    distinction was missing, and the Leiden abbreviation-expansion convention -- the most
+    common editorial marker in the shipped epigraphic corpora -- was being eaten:
+    ``Αὐρ(ήλιος)`` became ``Αὐῥήλιος)``.
+    """
     out: list[str] = []
     beta_fixed = 0
     stray_dropped = 0
-    for ch in text:
+    editorial = _paired_parentheses(text)
+    for index, ch in enumerate(text):
         if unicodedata.combining(ch):
             prev = out[-1] if out else ""
             if not prev or not (prev.isalpha() or unicodedata.combining(prev)):
@@ -151,13 +246,19 @@ def _repair_marks(text: str) -> tuple[str, list[str]]:
                 continue
             out.append(ch)
             continue
-        if ch in _MARK_BASES and out:
+        if ch in _MARK_BASES and out and index not in editorial:
             # find the base letter this would attach to (skip prior marks)
             k = len(out) - 1
             while k >= 0 and unicodedata.combining(out[k]):
                 k -= 1
             base = out[k] if k >= 0 else ""
-            if base and _GREEK_LETTER_RE.match(base) and _bare(base) in _MARK_BASES[ch]:
+            if (
+                base
+                and _GREEK_LETTER_RE.match(base)
+                and _bare(base) in _MARK_BASES[ch]
+                and not _already_marked(out, k, ch)
+                and (ch not in _BREATHINGS or _breathing_position_is_legal(out, k))
+            ):
                 out.append(_BETA_TO_MARK[ch])
                 beta_fixed += 1
                 continue
@@ -176,16 +277,19 @@ def normalize(text: str, form: NormForm = "NFC", *, lenient: bool = False) -> st
     ``lenient=True`` first repairs common artifacts of OCR'd or half-converted
     text: Latin letters embedded in Greek words (``λόγoς`` with a Latin *o*),
     Beta-Code diacritics left attached to Greek letters (``μη=νιν``), and stray
-    combining marks with no base letter, emitting a `NormalizationWarning`
+    combining marks with no base letter, and invisible Unicode format characters
+    (a zero-width space, soft hyphen, word joiner, or BOM picked up when text is
+    copied out of a PDF or a browser), emitting a `NormalizationWarning`
     describing each repair class. The Latin repair only fires on Greek-dominated
     words (more Greek letters than Latin), so pure-Latin words and a normal Latin
     word carrying one stray Greek glyph (``modelα``) both pass through untouched.
     A stray ``v`` reads as a misread upsilon (``υ``), the dominant Greek-OCR
     confusion, not as ``ν``."""
     if lenient:
+        text, invisible_notes = _repair_invisibles(text)
         text, latin_notes = _repair_latin(text)
         text, mark_notes = _repair_marks(text)
-        for note in latin_notes + mark_notes:
+        for note in invisible_notes + latin_notes + mark_notes:
             warnings.warn(f"lenient normalize: {note}", NormalizationWarning, stacklevel=2)
     return unicodedata.normalize(form, text)
 

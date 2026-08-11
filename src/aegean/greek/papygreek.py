@@ -611,7 +611,13 @@ def _model_upos_xpos(
 ) -> list[list[_PapyToken]]:
     """Run the joint model over each sentence's gold forms → ``(upos, xpos)`` per token.
     Sequential by default (the published numbers' protocol); batched when ``batch_size`` is set
-    (a throughput convenience — not prediction-identical on this fold, see the caller)."""
+    (a throughput convenience — not prediction-identical on this fold, see the caller).
+
+    Uses the same ``long_input="windowed"`` policy as `evaluate_on_papygreek`, because the
+    pinned fold contains a 181-token sentence that exceeds the model's subword budget. The
+    strict default made the drift report crash on the fold it is documented as decomposing,
+    after several minutes of inference, and the recorded protocol for the published
+    decomposition is windowed."""
     forms_list = [list(f) for f in forms]
     total = len(forms_list)
     out: list[list[_PapyToken]] = []
@@ -619,14 +625,14 @@ def _model_upos_xpos(
     if batch_size is not None and batch_size >= 1:
         for start in range(0, total, batch_size):
             chunk = forms_list[start : start + batch_size]
-            for ana in model.analyze_batch(chunk):
+            for ana in model.analyze_batch(chunk, long_input="windowed"):
                 out.append(list(zip(ana.upos, ana.xpos)))
                 done += 1
                 if progress is not None:
                     progress(done, total)
     else:
         for sent in forms_list:
-            ana = model.analyze(sent)
+            ana = model.analyze(sent, long_input="windowed")
             out.append(list(zip(ana.upos, ana.xpos)))
             done += 1
             if progress is not None:

@@ -19,6 +19,7 @@ ANNOTATION_PROFILE = "pyaegean-canonical-v1"
 NORMALIZATION = "NFC"
 SEGMENTATION = "pretokenized"
 SPECIAL_TOKEN_POLICY = "roberta:<s>:0:</s>:2"
+_EDITORIAL_UNDERDOT = "̣"  # Leiden "damaged but legible" apparatus mark
 TAG_HEADS = ("upos", *(f"x{i}" for i in range(9)))
 SUPPORTED_PREPROCESSING_VERSIONS = ("grc-joint-v3", PREPROCESSING_VERSION)
 PARSER_FEATURE_ENCODER_ONLY = "encoder-only"
@@ -610,6 +611,25 @@ def build_supervision(
     return out
 
 
+def _strip_editorial_apparatus(form: str) -> str:
+    """Drop the Leiden underdot from a form, NFC in and NFC out.
+
+    The combining dot below (U+0323) is the Leiden apparatus mark for a *damaged but
+    legible* reading. It is an editor's annotation about the papyrus or stone, never
+    part of the word, and never part of a citation form. Every other lookup in the
+    package already drops it before probing a table (the Cypriot lexicon and phonetic
+    bridges, the Linear A phonetic bridge, the documentary reconciler, and the
+    treebank lexicon's stripped-key fallback); Greek neural lemma composition was the
+    one path that did not, which is why documentary and epigraphic text mislemmatized.
+    """
+    decomposed = unicodedata.normalize("NFD", form)
+    if _EDITORIAL_UNDERDOT not in decomposed:
+        return form
+    return unicodedata.normalize(
+        "NFC", "".join(ch for ch in decomposed if ch != _EDITORIAL_UNDERDOT)
+    )
+
+
 def compose_lemma_detail(
     form: str,
     upos: str,
@@ -627,13 +647,27 @@ def compose_lemma_detail(
     ``canonical`` is the shipped runtime policy.  The other modes mirror historical
     development experiments and are intentionally opt-in, so a caller cannot silently
     change the product composition.
+
+    A form carrying the Leiden underdot is probed a second time without it, and the
+    edit tree and identity fall-through both run on the apparatus-free form. This is
+    not a change to the model's input contract (``NORMALIZATION`` is still NFC and the
+    encoder still sees the surface form): the lemma tables and edit trees were built
+    from apparatus-free training data - zero of the 138,832 form keys in the shipped
+    v3 lookup carry an underdot - so without this an underdotted form can never match
+    a lookup and always falls through to an edit tree applied to a character sequence
+    the tree was never learned on, which fabricates non-word lemmas.
     """
     form = unicodedata.normalize("NFC", form)
     if mode not in {"canonical", "lookup-first", "neural-only", "neural-first", "unseen-neural"}:
         raise ValueError(f"unknown lemma composition mode: {mode!r}")
+    probe = _strip_editorial_apparatus(form)
     looked_upos = lookup_form_upos.get(f"{form}|{upos}")
     looked_form = lookup_form.get(form)
     lower = lookup_lower.get(form.lower())
+    if probe != form:  # exact key first, then the apparatus-free key
+        looked_upos = looked_upos or lookup_form_upos.get(f"{probe}|{upos}")
+        looked_form = looked_form or lookup_form.get(probe)
+        lower = lower or lookup_lower.get(probe.lower())
     if mode in {"canonical", "lookup-first", "unseen-neural"}:
         if looked_upos:
             return looked_upos, True, "lookup_form_upos"
@@ -643,11 +677,14 @@ def compose_lemma_detail(
         return lower, True, "lookup_lower_fallback"
     applied: str | None = None
     if apply_edit_script is not None and 0 <= script_id < len(trees):
-        applied = apply_edit_script(trees[script_id], form)
-        if not applied or applied == "_" or applied == form:
+        # Apply the tree to the apparatus-free form: the trees were learned from
+        # apparatus-free data, so an underdot in the middle of a form shifts the
+        # prefix/suffix offsets a tree encodes and grafts stray characters in.
+        applied = apply_edit_script(trees[script_id], probe)
+        if not applied or applied == "_" or applied == probe:
             applied = None
     if mode == "neural-only":
-        return (applied or form), bool(applied), "edit_script" if applied else "identity_fallback"
+        return (applied or probe), bool(applied), "edit_script" if applied else "identity_fallback"
     if mode == "neural-first" and applied:
         return applied, True, "edit_script"
     if mode == "neural-first":
@@ -661,7 +698,7 @@ def compose_lemma_detail(
         return lower, True, "lookup_lower_fallback"
     if mode == "unseen-neural" and applied:
         return applied, True, "edit_script"
-    return form, False, "identity_fallback"
+    return probe, False, "identity_fallback"
 
 
 def compose_lemma(*args: Any, **kwargs: Any) -> str:

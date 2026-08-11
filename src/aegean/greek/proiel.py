@@ -652,7 +652,8 @@ def proiel_convention_report(
     gold_path = Path(source) if source is not None else ud_path("proiel", split)
     sentences = load_conllu(gold_path)
     gold: list[list[_ConvToken]] = [
-        [(t.feats, t.head, t.deprel) for t in s.tokens] for s in sentences
+        [(t.feats, t.head if t.head is not None else 0, t.deprel) for t in s.tokens]
+        for s in sentences
     ]
 
     if predictions is not None:

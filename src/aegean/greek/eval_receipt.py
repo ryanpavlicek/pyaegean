@@ -50,6 +50,9 @@ _RECEIPT_FORMAT = "pyaegean-eval-receipt/1"
 # Length of the short hex id; full sha256 is recoverable via recompute_id(full=True).
 _ID_LEN = 16
 
+# Manifest fields that describe THIS machine's cache rather than the pinned data.
+_LOCAL_MANIFEST_FIELDS = frozenset({"cached", "history"})
+
 
 def _resolve_package_version() -> str:
     """``aegean.__version__`` (no network)."""
@@ -59,10 +62,34 @@ def _resolve_package_version() -> str:
 
 
 def _resolve_manifest() -> dict[str, Any]:
-    """The data reproducibility manifest (``aegean.data.versions()``)."""
+    """The data reproducibility manifest (``aegean.data.versions()``), without the
+    machine-local fields.
+
+    ``versions()`` reports whether each dataset happens to be downloaded on this
+    machine (``cached``, and the local ``history`` of previously fetched revisions).
+    Neither can affect a result, but both were hashed into the receipt id, so the same
+    evaluation produced a different id on a different machine and ``verify`` said two
+    honest receipts described different work. What identifies the data is the pinned
+    URL, its sha256, and whether that pin is enforced."""
     from .. import data
 
-    return data.versions()
+    manifest = data.versions()
+    fetched = manifest.get("fetched")
+    if isinstance(fetched, dict):
+        manifest = {
+            **manifest,
+            "fetched": {
+                name: {
+                    key: value
+                    for key, value in entry.items()
+                    if key not in _LOCAL_MANIFEST_FIELDS
+                }
+                if isinstance(entry, dict)
+                else entry
+                for name, entry in fetched.items()
+            },
+        }
+    return manifest
 
 
 def _resolve_model_id() -> str | None:

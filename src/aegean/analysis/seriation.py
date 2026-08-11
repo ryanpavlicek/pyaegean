@@ -29,7 +29,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..core.model import Document, TokenKind
-from ..viz import parse_period
 
 __all__ = [
     "DocumentSpan",
@@ -140,6 +139,10 @@ def chronology(corpus: Any) -> Chronology:
     strings, not a dating authority; a returned span is a coarse century-level bin, and
     the unparsed fraction is reported precisely because a corpus's dates are often
     imprecise or unreadable. This is input for a chronological hypothesis, not a date."""
+    # Imported here, not at module scope: aegean.viz imports this package, so a
+    # top-level import makes ``import aegean.viz`` fail in a fresh interpreter.
+    from ..viz import parse_period
+
     docs = _documents(corpus)
     spans: list[DocumentSpan] = []
     parsed = 0
@@ -442,6 +445,16 @@ def seriate(
     if max_iter <= 0:
         raise ValueError("max_iter must be positive")
     row_labels: tuple[str, ...] | None
+    # Classifying the input peeks at its first element, which consumes a one-shot
+    # iterator. ``seriate(d for d in corpus if ...)`` is the natural filtering idiom,
+    # so materialize once and classify the list.
+    if not isinstance(matrix_or_corpus, Document) and not hasattr(
+        matrix_or_corpus, "documents"
+    ):
+        try:
+            matrix_or_corpus = list(matrix_or_corpus)
+        except TypeError:
+            pass
     if _is_corpus_like(matrix_or_corpus):
         matrix, doc_labels, _types = _abundance_from_corpus(matrix_or_corpus)
         row_labels = tuple(doc_labels)

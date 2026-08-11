@@ -269,10 +269,20 @@ class LSJLexicon:
     """A lemma→entry view of the Perseus LSJ, with lemmatize-on-miss lookup."""
 
     def __init__(self, data: dict[str, dict[str, Any]]) -> None:
+        from .lexindex import level_grave
+
         self._data = data
-        self._stripped: dict[str, str] = {}
+        self._levelled: dict[str, str] = {}
+        # See IndexLexicon: an accent-stripped form shared by several headwords is
+        # ambiguous and must resolve to nothing rather than to the first one indexed.
+        stripped: dict[str, str | None] = {}
         for key in data:
-            self._stripped.setdefault(_strip_accents(key), key)
+            self._levelled.setdefault(level_grave(key), key)
+            folded = _strip_accents(key)
+            stripped[folded] = None if folded in stripped else key
+        self._stripped: dict[str, str] = {
+            folded: key for folded, key in stripped.items() if key is not None
+        }
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> "LSJLexicon":
@@ -287,24 +297,35 @@ class LSJLexicon:
     def __len__(self) -> int:
         return len(self._data)
 
-    def _entry_dict(self, word: str) -> dict[str, Any] | None:
+    def _probe(self, word: str) -> dict[str, Any] | None:
+        """Exact key, graves levelled, then -- only for input carrying no accents of
+        its own -- the unambiguous accent-stripped key. Folding an accented query onto
+        a differently accented headword answered εἰ "if" with εἷ "where"."""
+        from .lexindex import compatible_accents, level_grave
+
         hit = self._data.get(_norm(word))
         if hit is not None:
             return hit
-        sk = self._stripped.get(_strip_accents(word))
-        if sk is not None:
-            return self._data[sk]
+        key = self._levelled.get(level_grave(word))
+        if key is not None:
+            return self._data[key]
+        key = self._stripped.get(_strip_accents(word))
+        if key is not None and (
+            _strip_accents(word) == _norm(word) or compatible_accents(word, key)
+        ):
+            return self._data[key]
+        return None
+
+    def _entry_dict(self, word: str) -> dict[str, Any] | None:
+        hit = self._probe(word)
+        if hit is not None:
+            return hit
         # Miss: lemmatize (uses the treebank backend if active) and retry.
         from .lemmatize import lemmatize
 
         lemma = lemmatize(word)
         if _norm(lemma) != _norm(word):
-            hit = self._data.get(_norm(lemma))
-            if hit is not None:
-                return hit
-            sk = self._stripped.get(_strip_accents(lemma))
-            if sk is not None:
-                return self._data[sk]
+            return self._probe(lemma)
         return None
 
     def lookup(self, word: str) -> LSJEntry | None:

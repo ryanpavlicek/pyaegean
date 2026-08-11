@@ -316,6 +316,26 @@ def _alignment_matches_row(token: "Token", row: Mapping[str, str | None]) -> boo
     )
 
 
+def _row_position(cell: str) -> int | None:
+    """A review row's token index, or ``None`` when the cell cannot supply one.
+
+    ``str.isdigit`` is the wrong test on both sides: it rejects values ``int`` accepts
+    (a spreadsheet's ``-1`` or ``+1``) and accepts values ``int`` rejects (``²`` is a
+    digit by Unicode but raises on conversion). Parse it directly instead, and treat a
+    negative index as unusable rather than letting it address the sequence from the end.
+    """
+    try:
+        index = int(cell)
+    except (TypeError, ValueError):
+        return None
+    return index if index >= 0 else None
+
+
+def _row_has_correction(row: Mapping[str, str | None]) -> bool:
+    """Whether a review row actually carries reviewer content worth landing."""
+    return any(_cell(row, column) for column, _p, _k in _CORRECTIONS)
+
+
 def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str | None]]:
     """Read a review CSV into a ``(doc_id, position) -> row`` map, None-safely.
 
@@ -323,16 +343,30 @@ def _parse_corrections(path: str | Path) -> dict[tuple[str, int], dict[str, str 
     corrections raise `ValueError` (the reviewer must resolve them). A malformed CSV (an
     unclosed quote, an over-long field) surfaces as a clean `ValueError`, not a raw
     ``csv.Error``. This is the shared parse behind `from_review_table` and
-    `merge_review_tables`."""
+    `merge_review_tables`.
+
+    A row whose ``position`` cell is not a usable index is skipped when it carries no
+    correction, but RAISES when it does: silently dropping a reviewer's correction is
+    the one outcome this loop must never produce. Spreadsheets reformat an integer
+    column readily (``1`` becomes ``1.0``, a stray sign or space creeps in), so the
+    unusable-position case is a realistic way to lose scholarly work, not a
+    hypothetical."""
     corrections: dict[tuple[str, int], dict[str, str | None]] = {}
     source_keys: dict[str, tuple[str, int]] = {}
     try:
         with open(path, encoding="utf-8-sig", newline="") as f:
             for row in csv.DictReader(f):
                 pos = (row.get("position") or "").strip()
-                if not pos.isdigit():
+                index = _row_position(pos)
+                if index is None:
+                    if _row_has_correction(row):
+                        raise ValueError(
+                            f"review table {path}: a row carrying a correction has an "
+                            f"unusable position {pos!r} (token {_cell(row, 'token')!r}); "
+                            "fix the position column so the correction can be applied"
+                        )
                     continue
-                key = (row.get("doc_id") or "", int(pos))
+                key = (row.get("doc_id") or "", index)
                 source_key = _cell(row, "alignment_source_token_id")
                 if source_key:
                     prior_key = source_keys.get(source_key)
@@ -809,8 +843,19 @@ def apply_merged(merged: MergedReview, corpus: "Corpus") -> "Corpus":
     corrections: dict[tuple[str, int], Mapping[str, str | None]] = {}
     for row in merged.rows:
         pos = (row.get("position") or "").strip()
-        if pos.isdigit():
-            corrections[(row.get("doc_id") or "", int(pos))] = row
+        index = _row_position(pos)
+        if index is None:
+            # Same rule as `_parse_corrections`: a row with nothing to land is
+            # skipped, but one carrying a reviewer's correction must never be
+            # dropped in silence just because its position cell is unusable.
+            if _row_has_correction(row):
+                raise ValueError(
+                    f"merged review table: a row carrying a correction has an unusable "
+                    f"position {pos!r} (token {_cell(row, 'token')!r}); fix the position "
+                    "column in the source table so the correction can be applied"
+                )
+            continue
+        corrections[(row.get("doc_id") or "", index)] = row
     note_extra = f" (merged from {len(merged.source_paths)} review tables)"
     return _apply_corrections(
         corrections, corpus, label="the merged review table", note_extra=note_extra,

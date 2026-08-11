@@ -268,24 +268,26 @@ class SegmentationResult:
         projected: list[str] = []
         for boundary in self.boundaries:
             sentence = boundary.text(self.source).strip()
+            # A delimiter is removed only when it genuinely ends the sentence: nothing
+            # may follow it but closing punctuation (a quote or bracket), which is
+            # re-attached. Searching for the last terminal anywhere in the span
+            # deleted interior characters instead, so a citation such as
+            # "Choer.489,12" lost its period and fused into "Choer489,12".
             protected_periods = _protected_periods(sentence, _ABBREVIATIONS)
-            terminal_index = max(
-                (
-                    index
-                    for index, char in enumerate(sentence)
-                    if char in _TERMINAL
-                    and not (char == "." and index in protected_periods)
-                ),
-                default=-1,
-            )
-            suffix = sentence[terminal_index + 1 :]
-            if terminal_index >= 0 and not any(
-                char.isspace() or _is_greek_word_character(char) for char in suffix
+            closing = len(sentence)
+            while (
+                closing > 0
+                and sentence[closing - 1] not in _TERMINAL
+                and _is_trailing_ornament(sentence[closing - 1])
             ):
-                sentence = (
-                    sentence[: terminal_index + 1].rstrip(".!?;;··").rstrip()
-                    + suffix
-                )
+                closing -= 1
+            suffix = sentence[closing:]
+            body = sentence[:closing]
+            while body and body[-1] in _TERMINAL:
+                if body[-1] == "." and (len(body) - 1) in protected_periods:
+                    break  # an abbreviation dot belongs to the word
+                body = body[:-1].rstrip()
+            sentence = body + suffix if body else sentence.strip()
             if sentence:
                 projected.append(sentence)
         return tuple(projected)
@@ -400,6 +402,16 @@ def _nonspace_start(text: str, index: int) -> int:
     while index < len(text) and text[index].isspace():
         index += 1
     return index
+
+
+def _is_trailing_ornament(char: str) -> bool:
+    """True for punctuation that may follow a sentence-final mark and be re-attached
+    (a closing quote, bracket or dash: ``λόγος.”`` projects to ``λόγος”``).
+
+    A letter or digit never qualifies. Admitting them treated the period inside a
+    citation such as ``Choer.489,12`` as the sentence delimiter, deleting it and
+    fusing two source tokens into one word that is in no edition."""
+    return not char.isalnum() and not char.isspace()
 
 
 def _protected_periods(text: str, abbreviations: frozenset[str]) -> set[int]:

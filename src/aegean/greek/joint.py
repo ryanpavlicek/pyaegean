@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import math
 import sys
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
@@ -178,6 +178,22 @@ class SentenceAnalysis:
     def incomplete(self) -> bool:
         """Whether any input token lacks a neural analysis."""
         return not self.complete
+
+
+def _best_non_root_relation(scores: "Any", labels: "Mapping[int, str] | Sequence[str]") -> int:
+    """Index of the highest-scoring relation label that is not ``root``.
+
+    UD allows exactly one ``root`` per sentence and it is the word whose HEAD is 0. The
+    label head's argmax is unconstrained, so it could return ``root`` for a token
+    attached to another word, producing a tree that is invalid CoNLL-U and a
+    SentenceAnalysis contradicting itself (HEAD 3, DEPREL root). The head decision is
+    made by the single-root MST decoder and is authoritative; the label is remapped to
+    the best relation compatible with it."""
+    order = list(scores.argsort()[::-1])
+    for candidate in order:
+        if labels[int(candidate)] != "root":
+            return int(candidate)
+    return int(order[0])  # a label set with nothing but root: keep the argmax
 
 
 def _compose_lemma_detail(
@@ -955,7 +971,14 @@ class _JointModel:
                     arc[token, global_head] = score
                     rel_vector = np.asarray(local_rel[:, local_i, local_head])
                     if np.isfinite(rel_vector).any():
-                        rel_ids[token, global_head] = np.int16(rel_vector.argmax())
+                        # Only the word attached to the artificial ROOT (head 0) may be
+                        # labelled root, so the label for any other arc is chosen from
+                        # the non-root labels. See _best_non_root_relation.
+                        rel_ids[token, global_head] = np.int16(
+                            rel_vector.argmax()
+                            if global_head == 0
+                            else _best_non_root_relation(rel_vector, self.inv["deprel"])
+                        )
                         if context is not None and rel_raw_probs is not None:
                             safe_rel = np.where(np.isfinite(rel_vector), rel_vector, -1.0e30)
                             rel_raw_probs[token, global_head] = float(
@@ -1351,9 +1374,14 @@ class _JointModel:
                     self.inv[f"x{i}"][int(out[f"x{i}"][0, sp].argmax())] for i in range(9)
                 )
                 head[w] = heads_w[wi]
-                rel[w] = self.inv["deprel"][int(rel_scores[:, wi, heads_w[wi]].argmax())]
                 if head[w] == 0:
                     rel[w] = "root"
+                else:
+                    rel[w] = self.inv["deprel"][
+                        _best_non_root_relation(
+                            rel_scores[:, wi, heads_w[wi]], self.inv["deprel"]
+                        )
+                    ]
                 lemma[w], resolved[w], lemma_source[w], lemma_source_path[w] = _compose_lemma_detail(
                     forms[w], upos[w], int(lem_ids[wi]), self
                 )

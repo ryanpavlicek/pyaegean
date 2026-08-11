@@ -151,7 +151,17 @@ def score(
     n_all = n_seen = n_unseen = 0
     lemma_ok = lemma_ok_unseen = pos_ok = pos_ok_unseen = 0
     for done, (sent, preds) in enumerate(zip(sp.sentences, predictions(), strict=True), start=1):
-        for tok, pred in zip(sent, preds):
+        preds = list(preds)
+        if len(preds) != len(sent):
+            # Zipping non-strict silently dropped the unpredicted tail, shrinking the
+            # accuracy denominator instead of reporting a broken tagger: a tagger
+            # returning one prediction per sentence scored 100% on a twentieth of the
+            # tokens. The docstring already promised this aborts loudly.
+            raise ValueError(
+                f"tagger returned {len(preds)} predictions for a sentence of "
+                f"{len(sent)} tokens (sentence {done})"
+            )
+        for tok, pred in zip(sent, preds, strict=True):
             if not tok.scored:
                 continue
             n_all += 1

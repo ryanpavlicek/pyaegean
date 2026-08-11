@@ -44,9 +44,19 @@ class DodsonLexicon:
     """The Dodson lexicon indexed by Strong's number and (accent-folded) lemma."""
 
     def __init__(self, entries: dict[str, DodsonEntry]) -> None:
+        from .lexindex import level_grave
+
         self._by_strongs = entries
         self._by_lemma: dict[str, DodsonEntry] = {}
+        # Exact and grave-levelled headwords, so an accented query is answered by its
+        # OWN entry. Sixteen accent-folded keys in Dodson cover two different words
+        # (εἰς "into" / εἷς "one", οὐ "not" / οὗ "where", καρπός "fruit" / Κάρπος), and
+        # the folded index alone answered all of them with whichever was loaded first.
+        self._exact: dict[str, DodsonEntry] = {}
+        self._levelled: dict[str, DodsonEntry] = {}
         for e in entries.values():
+            self._exact.setdefault(unicodedata.normalize("NFC", e.lemma).casefold(), e)
+            self._levelled.setdefault(level_grave(e.lemma), e)
             self._by_lemma.setdefault(_key(e.lemma), e)
 
     def __len__(self) -> int:
@@ -69,16 +79,36 @@ class DodsonLexicon:
     def by_strongs(self, strongs: str | int) -> DodsonEntry | None:
         return self._by_strongs.get(str(strongs).lstrip("G").lstrip("g").lstrip("0") or "0")
 
+    def _probe(self, word: str) -> DodsonEntry | None:
+        """Exact headword, then graves levelled, then the accent-folded key only when it
+        is unambiguous or its accents are compatible with the query (see
+        `aegean.greek.lexindex.compatible_accents`). Folding an accented query onto a
+        differently accented headword is a homograph guess, not a hit."""
+        from .lexindex import compatible_accents, level_grave
+
+        hit = self._exact.get(unicodedata.normalize("NFC", word).casefold())
+        if hit is not None:
+            return hit
+        hit = self._levelled.get(level_grave(word))
+        if hit is not None:
+            return hit
+        hit = self._by_lemma.get(_key(word))
+        if hit is None:
+            return None
+        if _key(word) == unicodedata.normalize("NFC", word).casefold():
+            return hit  # the query carries no accents of its own to contradict
+        return hit if compatible_accents(word, hit.lemma) else None
+
     def lookup(self, word: str) -> DodsonEntry | None:
         """The Dodson entry for a word — by lemma, accent-folded, then lemmatized on a miss."""
-        hit = self._by_lemma.get(_key(word))
+        hit = self._probe(word)
         if hit is not None:
             return hit
         from .lemmatize import lemmatize
 
         lemma = lemmatize(word)
         if lemma and lemma != word:
-            return self._by_lemma.get(_key(lemma))
+            return self._probe(lemma)
         return None
 
     def gloss(self, word: str) -> str | None:

@@ -337,7 +337,7 @@ class UDToken:
     upos: str
     xpos: str
     feats: str
-    head: int
+    head: int | None
     deprel: str
     deps: tuple[UDDependency, ...] = field(default=(), compare=False)
     deps_raw: str = field(default="_", compare=False)
@@ -643,14 +643,18 @@ def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | 
             word_ids.add(row.id)
             row_ids.add(str(row.id))
             positions[str(row.id)] = len(positions)
-            if row.head < 0 or (row.head != 0 and row.head not in word_ids):
+            if row.head is not None and row.head < 0:
                 # Forward basic heads are legal in UD, so defer reference checks below.
-                if row.head < 0:
-                    raise ValueError(
-                        f"invalid basic HEAD {row.head!r} for word {row.id}{where(row)}"
-                    )
-            if row.deprel in ("", "_"):
-                raise ValueError(f"empty basic DEPREL for word {row.id}{where(row)}")
+                raise ValueError(
+                    f"invalid basic HEAD {row.head!r} for word {row.id}{where(row)}"
+                )
+            if (row.head is None) != (row.deprel in ("", "_")):
+                # HEAD and DEPREL are annotated together. Either both carry a
+                # dependency or the file has no dependency layer for this word.
+                raise ValueError(
+                    f"HEAD and DEPREL must both be annotated or both absent for word "
+                    f"{row.id}{where(row)}"
+                )
             continue
         if isinstance(row, UDMultiwordToken):
             if row.start <= 0 or row.start >= row.end:
@@ -755,7 +759,7 @@ def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | 
                 f"{where(major_rows[0])}"
             )
     for row in rows:
-        if isinstance(row, UDToken) and (row.head != 0 and row.head not in word_ids):
+        if isinstance(row, UDToken) and row.head is not None and (row.head != 0 and row.head not in word_ids):
             raise ValueError(
                 f"invalid basic HEAD {row.head!r} for word {row.id}{where(row)}"
             )
@@ -766,15 +770,23 @@ def _validate_rows(rows: tuple[UDRow, ...], *, strict: bool, line_number: int | 
                 raise ValueError(f"invalid enhanced DEPS head {dep.head.raw!r}{where(row)}")
             if dep.head.kind != "root" and dep.head.raw not in row_ids:
                 raise ValueError(f"unknown enhanced DEPS head {dep.head.raw!r}{where(row)}")
-    root_rows = [row for row in rows if isinstance(row, UDToken) and row.head == 0]
-    if rows and word_ids and len(root_rows) != 1:
+    words = [row for row in rows if isinstance(row, UDToken)]
+    parsed = [row for row in words if row.head is not None]
+    if parsed and len(parsed) != len(words):
+        unparsed = next(row for row in words if row.head is None)
+        raise ValueError(
+            f"sentence mixes annotated and unannotated dependencies; word "
+            f"{unparsed.id} has no HEAD{where(unparsed)}"
+        )
+    root_rows = [row for row in parsed if row.head == 0]
+    if rows and word_ids and parsed and len(root_rows) != 1:
         first_word = next(row for row in rows if isinstance(row, UDToken))
         raise ValueError(
             f"basic tree must contain exactly one root, found {len(root_rows)}"
             f"{where(root_rows[0] if root_rows else first_word)}"
         )
-    for row in rows:
-        if not isinstance(row, UDToken) or row.head == 0:
+    for row in parsed:
+        if row.head == 0:
             continue
         seen: set[int] = set()
         head = row.head
@@ -882,8 +894,13 @@ def _parse_conllu_text(text: str, *, strict: bool = False) -> UDDocument:
             continue
         if node_id.kind == "word":
             head_raw = cols[6]
+            head: int | None
             if _WORD_ID_RE.fullmatch(head_raw) or (not strict and head_raw.isdigit()):
                 head = int(head_raw)
+            elif head_raw == "_" and cols[7] == "_":
+                # A file with no dependency layer at all: both columns unannotated.
+                # Reading this as HEAD 0 would assert that every word is the root.
+                head = None
             elif strict:
                 raise ValueError(f"line {line_number}: invalid basic HEAD {head_raw!r}")
             else:
@@ -976,9 +993,12 @@ def load_conllu_document(source: Path | str, *, strict: bool = False) -> UDDocum
 
 
 def _word_columns(token: UDToken) -> tuple[str, ...]:
+    # An absent HEAD is UD's "no dependency layer" state and prints as "_"; printing
+    # 0 would claim the word is the sentence root.
+    head_column = "_" if token.head is None else str(token.head)
     expected = (
         str(token.id), token.form, token.lemma, token.upos, token.xpos, token.feats,
-        str(token.head), token.deprel, token.deps_raw, token.misc_raw,
+        head_column, token.deprel, token.deps_raw, token.misc_raw,
     )
     if (
         len(token.raw_columns) == 10
@@ -989,7 +1009,7 @@ def _word_columns(token: UDToken) -> tuple[str, ...]:
         return token.raw_columns
     columns = (
         str(token.id), token.form, token.lemma, token.upos, token.xpos, token.feats,
-        str(token.head), token.deprel, token.deps_raw, token.misc_raw,
+        head_column, token.deprel, token.deps_raw, token.misc_raw,
     )
     return _annotation_columns(
         columns, token.deps_raw, token.deps, token.misc_raw, token.misc, token.form_state
