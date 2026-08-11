@@ -4,6 +4,95 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.58.0 (2026-08-11)
+
+### Added
+
+- CoNLL-U files with no dependency layer are read and written. A word whose HEAD and
+  DEPREL are both `_` is now a supported unannotated state rather than a parse error, and
+  `to_conllu` writes that state for text that has been tagged but not parsed. `UDToken.head`
+  is `int | None` accordingly. A row that annotates one column and not the other is still
+  rejected, in both directions.
+
+### Fixed
+
+- Dictionary lookup no longer answers an accented query with a differently accented
+  headword. A miss used to fall back on an accent-stripped key and return whichever entry
+  was indexed first, so `εἰ` returned the entry for `εἷ` and `λαός` returned `λᾶος`. A fold
+  is now accepted only when the headword's accents are compatible with the query: identical,
+  a grave where the dictionary has an acute, or one additional acute (the enclitic
+  throwback). An unaccented query still folds, but only onto an unambiguous headword. The
+  same correction applies to the LSJ, index-backed, and Dodson lexica.
+- The concise gloss cascade reports a meaning rather than dictionary apparatus. A line
+  opening with a paradigm, prosody, dialect, or cross-reference note now yields nothing, so
+  the cascade falls through to a dictionary that leads with the definition; `εἰμί` glosses
+  as "to be" instead of "The whole of the pres. ind".
+- Lemmatization of majuscule text returns a Greek word. The rule tier spliced a lowercase
+  citation ending onto an uppercase stem, so `ΛΟΓΟΥ` produced `ΛΟΓος`; the stem is now
+  case-normalized first, and a capitalized proper noun keeps its capital.
+- The treebank lexicon no longer answers a one- or two-letter tokenization fragment with a
+  whole word's lemma. An analysis is refused only when the form carries no diacritic and the
+  lemma is implausibly longer, so elided forms, unaccented enclitics, and punctuation are
+  unaffected.
+- Editorial apparatus no longer corrupts neural lemma composition. A form carrying the
+  combining underdot (a damaged but legible reading) missed the lookup tables and fell
+  through to an edit script that had not been trained on the mark; the mark is now removed
+  before both steps.
+- Invisible Unicode format characters are repaired by `normalize(lenient=True)`. A
+  zero-width space, soft hyphen, word joiner, or byte-order mark picked up when copying text
+  blocked every lexicon lookup while leaving the word visually unchanged.
+- `normalize(lenient=True)` leaves editorial parentheses alone. A balanced parenthesis is
+  editorial, and a breathing can only sit on the first vowel or rho of a word, so
+  `Αὐρ(ήλιος)` is no longer read as Beta-Code markup and reduced to `Αὐῥήλιος)`.
+- Sentence projection removes only a trailing terminal mark. It previously removed the last
+  mark found anywhere in the span, so a citation such as `Choer.489,12` lost its period and
+  fused into one token. A closing quote, bracket, or dash after the mark is still
+  re-attached.
+- Corpus database search folds case without folding a diacritic. `str.casefold` decomposes
+  the iota subscript, so a dative singular matched a nominative plural and the result
+  depended on whether the database carried a full-text index. Both build modes now agree,
+  and a substring hit always contains the query.
+- The neural parser emits a valid dependency tree. A token could carry the relation `root`
+  while its head pointed at another word; the relation for an attached token is now chosen
+  from the non-root labels, leaving exactly one root per sentence.
+- `import aegean.viz` works in a fresh interpreter. A cycle between the visualization and
+  analysis modules made the documented import fail unless another module was imported first.
+- `seriate` keeps every document when given a generator. Classifying the input consumed the
+  first element of a one-shot iterator, so the natural filtering idiom seriated one
+  assemblage fewer than it was given.
+- Wildcard sign-pattern matching is linear in the pattern length. Each additional `**`
+  multiplied the work, so a pattern with several wildcards could take minutes on a bundled
+  corpus, and a very long pattern exhausted the stack.
+- Command-line arguments reach commands as typed on Windows. A quoted sign pattern or
+  `--glob` value was expanded against the working directory, so a search returned different
+  results depending on which files were present.
+- A corpus read from standard input is parsed as JSON. Non-JSON input was treated as a file
+  path, so piping a filename analysed that file; the failure is now one clear message.
+- A review table whose position column cannot be read now reports the row instead of
+  discarding it. Spreadsheets readily retype an integer column, and a correction in such a
+  row was previously dropped in silence. The same check applies when merging tables.
+- Held-out scoring aborts when a tagger returns the wrong number of predictions, instead of
+  scoring the tokens it did return and reporting accuracy over a reduced denominator.
+- The PapyGreek convention report scores the whole pinned fold. It used the strict
+  long-input policy while the evaluator it mirrors uses the windowed one, so it failed on a
+  sentence longer than the model's budget.
+- An evaluation receipt identifies the evaluation rather than the machine. Whether a dataset
+  happened to be cached locally was part of the receipt identity, so the same evaluation
+  produced a different identifier elsewhere.
+
+### Changed
+
+- PapyGreek lemma accuracy is remeasured at 89.63 on the regularized layer (was 86.10)
+  and 85.62 on the diplomatic layer (was 82.05), because a form carrying the editorial
+  dot below now reaches the lemma lookup tables. LAS and CLAS move by two and three
+  tokens from the dependency-label correction; UPOS, XPOS, UFeats and UAS are
+  byte-identical. The DBBE row is remeasured at UPOS 86.75 / XPOS 76.39 / lemma 76.69;
+  those values had drifted by one token each and are unrelated to the corrections
+  above, which score byte-identically on that fold. Model weights and fold identities
+  are unchanged. Evidence:
+  `training/results/apparatus-lemma-remeasure-2026-08-11.json` and
+  `training/results/dbbe-remeasure-2026-08-11.json`.
+
 ## 0.57.2 (2026-07-22)
 
 ### Fixed
