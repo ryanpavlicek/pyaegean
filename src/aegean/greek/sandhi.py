@@ -18,10 +18,11 @@ Three phenomena, each conservative by design:
   ``uncertain``, and left unexpanded.
 
 - **Elision** (ταῦτ' = ταῦτα): a word-final short vowel dropped before a vowel,
-  marked by a trailing apostrophe. The elided vowel is only restored where it is
-  unambiguous, either from a listed proclitic/particle (`_ELISION`) or from an
-  unambiguous inflectional ending; otherwise the clipped stem is kept and flagged
-  ``uncertain`` (mirroring the lenient-normalize warning style).
+  marked by a trailing apostrophe. Restoration is by curated lexicon, never by
+  rule: a listed proclitic/particle (`_ELISION`) or a listed full form
+  (`_ELIDED_WORDS`). An unlisted clipped stem is kept as it stands and flagged
+  ``uncertain`` (mirroring the lenient-normalize warning style), even where its
+  ending looks unambiguous.
 
 - **Movable nu and the οὐκ/οὐχ/οὐ alternation**: ``ἐστίν``/``ἐστί``,
   ``-ουσιν``/``-ουσι``, etc. carry an optional final ν before a vowel or at a
@@ -80,10 +81,11 @@ _CRASIS: dict[str, tuple[str, ...]] = {
 }
 
 # ELISION: proclitics and particles whose elided final vowel is fixed and
-# unambiguous, so ``δ'`` → ``δέ``, ``ἀλλ'`` → ``ἀλλά``, etc. (the apostrophe and
-# any accent are stripped before lookup). Restricted to forms with a single
-# possible restoration; ambiguous ones (e.g. ``τ'`` = τε? τοι?) are omitted and
-# flagged uncertain at point of use.
+# unambiguous, so ``δ'`` → ``δέ``, ``τ'`` → ``τε``, ``ἀλλ'`` → ``ἀλλά``, etc.
+# (the apostrophe and any accent are stripped before lookup). Restricted to forms
+# with a single possible restoration; anything whose vowel could be restored more
+# than one way (``μ'``, ``σ'``, ``ποτ'``) is omitted, and such a token comes back
+# unexpanded and flagged uncertain at point of use.
 # Keyed ACCENT-BLIND (bare, lowercased) to match the _bare_lower(stem) lookup below;
 # the aspirated variants (ἐφ' ὑφ' καθ' μεθ' ἀφ') keep their distinct consonant, which
 # is what disambiguates them from the unaspirated forms.
@@ -289,8 +291,8 @@ def resolve_sandhi(token: str) -> ResolvedForm:
     Returns a `ResolvedForm`. A token with no sandhi passes through unchanged
     (``kind=None``). Crasis is expanded only from the curated `_CRASIS` lexicon;
     an unlisted coronis form is flagged ``uncertain`` and left intact. Elision is
-    restored only where the elided vowel is unambiguous (listed proclitic/particle
-    or a clear inflectional ending); otherwise the clipped form is kept and
+    restored only from the curated lexica (a listed proclitic/particle, or a listed
+    full form such as ``ταῦτ'``); any other clipped form is kept as it stands and
     flagged ``uncertain``. The οὐκ/οὐχ/οὐ rule is purely contextual; movable-ν
     is asserted only for validated hosts (the -ουσι(ν) ending or the curated
     `_MOVABLE_NU_HOSTS` list), never for the look-alike i-stem accusatives

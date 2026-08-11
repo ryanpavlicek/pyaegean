@@ -384,12 +384,18 @@ See [Greek Works and Books](Greek-Works-and-Books#3-finding-any-other-work).
 
 ```bash
 aegean geo lineara
-# site            lat    lon    pleiades
+# lineara: 52 located site(s) of 52
+# site            lat    lon    pleiades   contested
 # Apodoulou       35.16  24.73  119143959
+# Arkhalkhori     35.15  25.27  220781958
 # Gournia         35.11  25.79  771100776
 # Haghia Triada   35.06  24.79  589672
-# ...  (52 located sites)
+# ...
 ```
+
+A site with no Pleiades id leaves that cell blank. The `contested` column reads
+`disputed` for a find-spot the project carries but does not accept as genuine (here
+Margiana), and is blank for every other site.
 
 You can export to EpiDoc TEI (and other formats) from the [CLI](CLI). EpiDoc export
 writes one TEI file per document, so point `--output` at a directory:
@@ -410,7 +416,8 @@ marked exploratory for exactly this reason:
 
 ```bash
 aegean ai --help
-# Generative (exploratory, key-gated): translate, gloss, summarize, hypotheses, ask, ...
+# Generative (exploratory; API key per hosted provider, none for local):
+# translate, gloss, summarize, hypotheses, ask, extract, eval, providers.
 ```
 
 ### Grounding

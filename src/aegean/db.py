@@ -667,8 +667,11 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
 
     ``mode="substring"`` matches the query as a **substring** of a token, so ``KU-RO`` also
     finds ``PO-TO-KU-RO`` — useful for tracing every token a sign-group occurs in. It folds
-    case in Python (SQLite's ``LIKE`` also folds ASCII only), scanning the token table: about
-    4 ms on the bundled 1,721-document Linear A corpus, linear in the token count.
+    case in Python (SQLite's ``LIKE`` also folds ASCII only) and therefore has to scan the
+    token table: on the bundled 1,721-document Linear A corpus (6,406 tokens) that is
+    around 9 ms warm, against around 2 ms for the same query in ``token`` mode. Both
+    figures are machine-dependent; the substring cost is linear in the token count, so it
+    scales with the corpus while the indexed whole-token match does not.
 
     Both modes fold case, Greek included (``ku-ro`` finds ``KU-RO``; ``λόγος`` finds
     ``ΛΌΓΟΣ``, final sigma folding with the rest). Diacritics still have to match:

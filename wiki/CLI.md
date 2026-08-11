@@ -11,9 +11,9 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.51.0.** The annotation-profile and interoperability commands join the
-> CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields
-> described below.
+> **Available in v0.58.0.** The annotation-profile and interoperability commands, the
+> CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields, and the
+> runtime-variant selectors described below are all part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
@@ -908,29 +908,14 @@ aegean export edh -f ttl -o edh.ttl                       # Linked Open Data (Tu
 `--level token` (csv/parquet) emits one row per token and spreads per-token
 annotations (the Greek NT's lemma / morph / Strong's / gloss) into columns.
 
-### `greek interop` — portable annotation bundles
-
-These commands move a strict CoNLL-U document through one optional target adapter and
-write an inspectable JSON bundle containing the target projection, SHA-256-bound sidecar, and
-loss report. They do not run a model. Install the CLI plus the target extra first
-(`pip install "pyaegean[cli,interop]"`, or combine `[cli]` with one of `[spacy]`,
-`[stanza]`, or `[cltk]`).
-
-```bash
-aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
-aegean greek interop report treebank.spacy.json
-aegean greek interop import treebank.spacy.json -o treebank-restored.conllu
-```
-
-`report` validates the bundle without loading a model; `import` recovers the complete
-CoNLL-U document. The bundle is pyaegean's portable JSON format, not a claim to write a
-spaCy, Stanza, or CLTK binary serializer.
-Typed form states add canonical `form_diplomatic`,
-`form_regularized`, `form_normalized`, `form_model_input`,
-`form_model_input_ops`, `form_model_input_source`, `form_segments`, editorial
-status, damage, and uncertainty columns. `form_segments` is JSON in the table;
-tokens without a state have empty or null values. Filters (`--site` etc.) apply
-before export.
+Two further blocks of columns are reserved for typed state, and each is written
+only when at least one exported token actually carries it: the sixteen `form_*`
+columns (`form_diplomatic`, `form_regularized`, `form_normalized`,
+`form_model_input`, `form_model_input_ops`, `form_model_input_source`,
+`form_segments`, and the editorial status, damage, and uncertainty fields) and
+the nine `alignment_*` source-span columns. `form_segments` is JSON in the
+table. A corpus that records neither keeps just its own columns rather than
+25 empty ones. Filters (`--site` etc.) apply before export.
 
 #### The whole matrix, run once
 
@@ -957,14 +942,34 @@ hint.
 At `--level document` (the default) the CSV has one row per document with its
 metadata. `--level token` explodes to one row per token; on an annotated corpus
 the annotations become columns, so the NT export is analysis-ready as a
-spreadsheet:
+spreadsheet. The NT records no typed form state or source alignment, so neither
+optional block appears and the table is fifteen columns wide:
 
 ```bash
 aegean export nt -f csv --level token -o nt-tokens.csv   # wrote 260 documents to nt-tokens.csv (csv)
 head -2 nt-tokens.csv
-# lemma,morph,strongs,normalized,upos,ref,gloss,form_diplomatic,form_regularized,form_normalized,form_model_input,doc_id,line_no,position,text,kind,site,period
-# βίβλος,N-NSF,976,Βίβλος,NOUN,Matt.1.1,"a written book, roll, or volume",Matt 1,1,0,Βίβλος,word,,Koine
+# doc_id,line_no,position,text,kind,status,site,period,lemma,morph,strongs,normalized,upos,ref,gloss
+# Matt 1,1,0,Βίβλος,word,certain,,Koine,βίβλος,N-NSF,976,Βίβλος,NOUN,Matt.1.1,"a written book, roll, or volume"
 ```
+
+### `greek interop` — portable annotation bundles
+
+These commands move a strict CoNLL-U document through one optional target adapter and
+write an inspectable JSON bundle containing the target projection, SHA-256-bound sidecar, and
+loss report. They do not run a model. Install the CLI plus the target extra first
+(`pip install "pyaegean[cli,interop]"`, or combine `[cli]` with one of `[spacy]`,
+`[stanza]`, or `[cltk]`).
+
+```bash
+aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
+aegean greek interop report treebank.spacy.json
+aegean greek interop import treebank.spacy.json -o treebank-restored.conllu
+```
+
+`report` validates the bundle without loading a model, printing the target and version,
+whether the round trip is lossless, and which fields travel natively, in the sidecar, or
+not at all; `import` recovers the complete CoNLL-U document. The bundle is pyaegean's
+portable JSON format, not a claim to write a spaCy, Stanza, or CLTK binary serializer.
 
 ### `combine` — merge several corpora into one file
 
@@ -1269,6 +1274,9 @@ the `[viz]` extra. The first argument is the figure kind:
 | `network` | co-occurrence network (`--word` for one word's ego network) |
 | `balance` | accounting reconciliation chart |
 | `scansion` | a metrical scansion grid for one Greek line |
+| `findspots` | a map of the corpus's find-sites |
+| `timeline` | a date histogram (`--bin-width` sets the bin size in years) |
+| `signnet` | a sign/word co-occurrence network (`--scope document\|line`) |
 
 ```bash
 pip install "pyaegean[viz]"
@@ -1516,8 +1524,9 @@ aegean greek inflect λόγος --case gen --number sg
 # λόγου
 
 aegean greek inflect λόγος --paradigm
-# λόγος	case=nom number=sg gender=masc pos=NOUN
-# λόγου	case=gen number=sg gender=masc pos=NOUN
+# λόγου	pos=NOUN case=gen number=sg gender=masc
+# λόγος	pos=NOUN case=nom number=sg gender=masc
+# λόγῳ	pos=NOUN case=dat number=sg gender=masc
 # …  (every attested cell, one per line)
 ```
 
@@ -2196,20 +2205,32 @@ record of it.
 | `review merge` | Combine two or more corrected copies of the same export; agreed or single-reviewer corrections are kept, while genuine disagreements are reported or rejected | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report` |
 | `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ backend flags — repeat whatever the export used, so accepted predictions persist too) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
 
+The run below uses the bundled `greek` sample, so you can follow it offline. It carries no
+annotations of its own, so `--annotate` fills lemma and POS from the pipeline first; a corpus
+that already has gold annotations (the Greek NT) needs no `--annotate`, and
+`aegean review export nt -o review.csv` writes all 137,779 of its rows.
+
 ```bash
-# 1. export a reviewable table (the NT already carries gold annotations; for your own
-#    imported text add --annotate to fill lemma/POS from the pipeline first)
-aegean review export nt -o review.csv
-#    wrote 137779 review rows to review.csv     (illustrative count)
+# 1. export a reviewable table
+aegean review export greek --annotate -o review.csv
+#    wrote 27 review rows to review.csv
+#    correct the columns, then:  aegean review apply greek review.csv -o corrected.json --annotate
 
-# 2. open review.csv in a spreadsheet, fill correct_lemma / correct_pos / correct_morph /
-#    reviewer_note on the rows you want to change (the needs_review column flags the shaky ones;
-#    --only-needs-review exports just those). If several people review copies of the same export,
-#    merge them first:
-aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report
+# 2. triage. The needs_review column flags the rows the analysis is least sure of, and
+#    --only-needs-review exports only those: here the 7 forms the offline lemmatizer left
+#    unresolved (Πηληϊάδεω, Ἀχιλῆος, Ἁλικαρνησσέος, …), each with evidence_class=unresolved.
+aegean review export greek --annotate --only-needs-review -o triage.csv
+#    wrote 7 review rows to triage.csv
 
-aegean review apply nt merged.csv -o nt-reviewed.json --reviewer "Review team"
-#    wrote nt-reviewed.json  (review: 12 tokens corrected by Review team (2026-…))
+# 3. open the CSV in a spreadsheet and fill correct_lemma / correct_pos / correct_morph /
+#    reviewer_note on the rows you want to change. If several people review copies of the
+#    same export, merge them first:
+aegean review merge alice.csv bob.csv -c greek -o merged.csv --on-conflict report
+#    wrote 3 merged review rows to merged.csv
+#    merged 2 tables by alice, bob: 3 agreed correction(s), 0 conflict(s)
+
+aegean review apply greek merged.csv -o greek-reviewed.json --reviewer "Review team" --annotate
+#    wrote greek-reviewed.json  (review: 3 tokens corrected by Review team (2026-…))
 ```
 
 The join is by document id and token position, and each row's exported token text is
@@ -2218,13 +2239,15 @@ since the export) is an error, never a silent wrong-word correction. When the ex
 `--annotate`, pass `--annotate` (and the same backend flags) to `apply` too, so the accepted
 machine predictions land in the corrected corpus alongside the reviewer's changes — the
 export's printed next-step command includes it. See
-[When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context and
-[Data & Provenance](Data-and-Provenance) for the table columns.
+[When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context; the
+table's columns are described just below.
 
-Review exports also include guarded `form_*` columns and `form_state_json` when
-typed editorial forms are present. Applying a correction refuses a row whose
-form state no longer matches the exported corpus. Review files written before
-these columns remain readable and use the existing identity and token-text checks.
+Unlike the tabular exports, a review table always carries the guarded `alignment_*` and
+`form_*` columns plus `form_state_json`; they stay empty for a token with no typed
+editorial form, so the column layout is the same whatever the corpus. Applying a
+correction refuses a row whose form state no longer matches the exported corpus. Review
+files written before these columns remain readable and use the existing identity and
+token-text checks.
 
 ---
 

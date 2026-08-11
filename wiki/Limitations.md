@@ -127,13 +127,15 @@ release.
   tragedy evaluation, reported with wide CIs as a small-sample datapoint on
   [Benchmarks](Benchmarks)). Everything else checked is blocked: the **AGDT** upstream
   is unchanged, **Daphne** re-converts works pyaegean already trains on, **PROIEL**'s
-  Greek is prose, **GLAUx** is silver, and Ezekiel's *Exagoge* (a real tragedy treebank)
-  is in the Pedalion training data. A *larger* verse fold needs **new expert annotation
-  of a work absent from training** (Euripides beyond *Medea* and *Bacchae* 1-169,
-  Sophocles' *Oedipus at Colonus*, Apollonius), ~45–100 expert-hours per genre: a
-  scoping / funding decision. Re-investigate triggers on the register: **AthDGC** (the
-  Athens/Oslo diachronic treebank) releases its full data partitions ~August 2026, and
-  the UNESP project may annotate further passages.
+  Greek is prose, **GLAUx** is silver, Ezekiel's *Exagoge* (a real tragedy treebank)
+  is in the Pedalion training data, and **AthDGC** (the Athens/Oslo diachronic
+  treebank) is silver too: its annotation is Stanza-produced rather than manually
+  verified, and its v0.5 data partitions are still provisional, so it does not close
+  the tragedy-gold gap. A *larger* verse fold needs **new expert annotation of a work
+  absent from training** (Euripides beyond *Medea* and *Bacchae* 1-169, Sophocles'
+  *Oedipus at Colonus*, Apollonius), ~45–100 expert-hours per genre: a scoping /
+  funding decision. One re-investigate trigger stays open on the register: the UNESP
+  project may annotate further passages.
 
 The four undeciphered/partly-read scripts at a glance:
 
@@ -172,7 +174,7 @@ license-clean.
 - **SigLA's sign-level data** (Salgarella & Castellan) is **CC BY-NC-SA 4.0** and
   is integrated on the same fetch-to-cache, research-use, never-bundled pattern.
   `aegean.load("sigla")` fetches the decoded **v4** dataset (**802 documents**)
-  with typology, dimensions, periods, **SigLA's own word division** (**1,401
+  with typology, dimensions, periods, **SigLA's own word division** (**1,895
   words** grouped into `WORD` tokens) and commodity ideograms (`LOGOGRAM`
   tokens). SigLA is a *palaeographic* database: it records sign occurrences and
   word division, **not** the cardinal-number quantities of the accounts, so it
@@ -267,7 +269,7 @@ are where the accuracy lives.
 | Rule POS tagger | High precision on **closed classes** only | Quick, offline first pass |
 | Rule-based lemmatizer | ~67% on the full NT (closed-class table with grave-accent folding + regular 2nd-decl/verb rules; the opt-in backends do far better) | Always-offline default |
 | Edit-tree lemmatizer | ~40% on unseen forms | Offline fallback |
-| Arc-eager parser | ~0.67 UAS (projective) | Offline structural sketch |
+| Arc-eager parser | ~0.63 UAS (projective) | Offline structural sketch |
 
 Turn on the neural pipeline (`greek.use_neural_pipeline()`, the `[neural]` extra)
 and the same functions consult it instead.

@@ -6,7 +6,7 @@ Opt-in. Call `use_parser` to train (on first use, from the AGDT we already fetch
 for the treebank) or load the cached model, then `parse` turns a Greek sentence
 into a `DepTree` with the gold **AGDT/Prague** labels (SBJ, OBJ, ATR, ADV, PRED,
 COORD, Aux*…). On a free-word-order, partly non-projective language it reaches about
-0.67 UAS / 0.57 LAS on projective AGDT; `evaluate` reports UAS/LAS on a held-out
+0.63 UAS / 0.53 LAS on projective AGDT (0.51 / 0.41 across all text); `evaluate` reports UAS/LAS on a held-out
 split. Default behaviour (without `use_parser`) does nothing and needs no network.
 
 Data: the same AGDT v2.1 Greek files used by `aegean.greek.treebank` (CC BY-SA

@@ -154,13 +154,15 @@ The DataFrame views need pandas, shipped as the optional `[data]` extra
 (`pip install 'pyaegean[data]'`); everything else on this page runs on the core.
 
 ```python
-corpus.to_dataframe()                      # (1721, 10) — one row per document
-corpus.to_dataframe(level="word")          # one row per WORD token
-corpus.to_dataframe(level="token")         # every token (words, numerals, …)
+corpus.to_dataframe()                      # (1721, 11) — one row per document
+corpus.to_dataframe(level="word")          # (1381, 8) — one row per WORD token
+corpus.to_dataframe(level="token")         # (6406, 8) — every token (words, numerals, …)
 ```
 
 The document-level frame's columns are: `id`, `script_id`, `site`, `support`,
-`scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`.
+`scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`, `source_text`.
+The token- and word-level frames carry `doc_id`, `line_no`, `position`, `text`,
+`kind`, `status`, `site`, `period`.
 
 ---
 
@@ -510,7 +512,7 @@ release asset and loads it on demand; the NonCommercial obligation passes to
 **you**, and nothing ships in the wheel.
 
 ```python
-sigla = aegean.load("sigla")        # ~1.2 MB fetch on first use, then cached
+sigla = aegean.load("sigla")        # ~1.3 MB fetch on first use, then cached
 len(sigla)                          # 802
 doc = sigla.get("HT 13")            # note the space — SigLA ids are spaced
 doc.meta.name                       # 'HT 13 (6.1×10.5×0.8 cm)'  — physical dimensions!

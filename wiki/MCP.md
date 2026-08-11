@@ -37,9 +37,12 @@ If the extra is missing, or the installed SDK is too old for the server, the
 command exits with a one-line fix instead of a traceback:
 
 ```
-aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'
-aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=1.2'
+aegean-mcp needs the [mcp] extra — pip install 'pyaegean[mcp]'  (No module named 'mcp')
+aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=1.2'  (No module named 'mcp.server.fastmcp')
 ```
+
+The import error that triggered the message is kept in parentheses, so the two
+cases stay distinguishable: a missing extra, or an SDK too old to provide FastMCP.
 
 The core `import aegean` never pulls the MCP SDK: the server registers its tools
 with FastMCP only when `aegean-mcp` starts, so the zero-dependency core is
@@ -116,11 +119,14 @@ same engine and fields are documented on [Analysis](Analysis).
 | `greek_work` | `work_id`, `ref=None`, `preview_lines=10` | Load a real Greek work by its catalogue id (e.g. `tlg0012.tlg001`, the Iliad), whole or one section, with a short preview. |
 | `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `autenrieth`, `abbott-smith`, `dodson`). |
 | `koine_gloss` | `word` | Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0). |
-| `greek_explain` | `text` | Each token's lemma evidence class rendered in plain language (a reading of `greek_pipeline`'s records; deliberately class-based, no confidence numbers). |
+| `greek_explain` | `text` | Each token's lemma evidence class rendered in plain language (the same pipeline records `greek_pipeline` maps, rendered instead of tabulated; deliberately class-based, no confidence numbers). |
 
 `greek_pipeline` and `balance_accounts` return the shared row mappings from
 `aegean._view`, the same rows the `aegean greek pipeline` and `aegean balance`
-commands emit, so the tools cannot drift from the CLI. `greek_scan` accepts the
+commands emit, so the tools cannot drift from the CLI. `greek_explain` reads the
+same pipeline records, but it runs the pipeline itself over the text it is given:
+`greek_pipeline` and `greek_explain` agree about a text without sharing any state,
+so calling both analyzes that text twice. `greek_scan` accepts the
 same meters as the CLI: `hexameter`, `pentameter`, `trimeter`, and the aeolic
 line types (see [Meters](Meters)). Work ids for `greek_work` come from
 `greek_catalog`; the citation-address forms (`1`, `1.2`, `1.1-1.50`) are
@@ -167,12 +173,16 @@ which fetch into the local data store on first use and are offline afterward:
 
 - **Corpora** `damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`,
   and `ddbdp` download the first time a tool loads them by name (`ddbdp` is a
-  57,000-document corpus: loading it whole is a heavy call).
+  57,331-document corpus: loading it whole is a heavy call).
 - **`greek_work`** downloads a work's TEI source the first time that work is
   requested (a one-time, commit-pinned fetch).
-- **`greek_gloss`** downloads and builds a dictionary index the first time that
-  dictionary is used (roughly 0.1 to 15 MB depending on the dictionary);
-  `koine_gloss` uses the bundled Dodson lexicon and never downloads.
+- **`greek_gloss`** downloads a dictionary index the first time that dictionary is
+  used, and the call blocks until it is ready: 0.13 MB for `abbott-smith`, 0.6 MB
+  for `autenrieth`, 1.3 MB for `cunliffe`, 2.3 MB for `middle-liddell`, and 15.4 MB
+  for `lsj`. Later calls are offline, but the first one of a session still loads the
+  index into memory, which for `lsj` means a 60 MB, 116,414-entry table and a few
+  seconds on a typical workstation; the smaller dictionaries are well under a second,
+  and `koine_gloss` uses the bundled Dodson lexicon, so it never downloads at all.
 
 Each fetch is sha256-verified. `data_status` shows what is already stored and
 where. To pre-fetch a dataset from the shell instead of on first call, use

@@ -1232,10 +1232,15 @@ class _JointModel:
     ) -> list[SentenceAnalysis]:
         """Analyses of several sentences, one padded encoder pass per call.
 
-        Produces the same fields as ``[self.analyze(s) for s in sentences]``; only the number of ONNX calls
-        differs. Sequential per-sentence analysis is the recorded benchmark protocol
-        (see `_run_batch` on float reduction order); batching is a throughput
-        convenience. ``with_probs`` behaves as in `analyze` (calibration required).
+        Produces the same fields as ``[self.analyze(s) for s in sentences]``, one
+        `SentenceAnalysis` per input sentence in the same order, but not necessarily
+        the same values: a batch is padded to its longest member, and that changes
+        float reduction order in the batched matmuls (see `_run_batch`), so a few
+        tokens in a large run can come back with a different tag, feature, lemma, or
+        arc. Sequential per-sentence analysis is the recorded benchmark protocol;
+        batching is a throughput convenience, and how much its results move depends on
+        the batch size and on how far the sentence lengths in a batch spread.
+        ``with_probs`` behaves as in `analyze` (calibration required).
         Windowed mode is always sequential and delegates to ``analyze`` so chunk size
         cannot change owner or tree reconciliation."""
         mode = _long_input_mode(long_input)
@@ -1867,8 +1872,12 @@ def iter_analyze_sentences(
     identical to calling `analyze_sentence` in a loop, and the code path the published
     benchmark numbers are measured on (plain CPU, ``CPUExecutionProvider``). A positive
     int runs padded chunks of that many sentences through the encoder (one ONNX call per
-    chunk), a throughput convenience producing the same analyses; batched matmuls can
-    reorder float reductions, so it is never used for the recorded protocol. ``with_probs``
+    chunk). That is a throughput convenience, not a free one: each chunk is padded to its
+    longest sentence, which reorders float reductions in the batched matmuls, so a few
+    tokens in a large run can be tagged, lemmatized, or attached differently than the
+    sequential path tags them. The result is therefore not prediction-identical and is
+    never used for the recorded protocol; a batched score should not be compared with a
+    sequential one. ``with_probs``
     behaves as in `analyze_sentence` (calibration required). Strict and partial modes
     apply independently per sentence; windowed mode is always sequential inside the
     captured backend, so batch chunking cannot change owner or global-tree reconciliation.
@@ -2044,6 +2053,10 @@ def analyze_sentences(
     Use `iter_analyze_sentences` when output memory must remain bounded or results should
     become visible incrementally. This collector still returns the historical list, but it
     no longer materializes a second complete copy of the input before analysis starts.
+
+    Every argument keeps its meaning there, ``batch_size`` included: the default of one
+    encoder pass per sentence is the sequential path the published numbers are measured
+    on, and a positive int trades prediction-identity for throughput.
     """
 
     return list(

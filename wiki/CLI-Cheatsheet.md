@@ -5,7 +5,7 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.51.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
+> **Available in v0.58.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
@@ -49,7 +49,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `conllu inspect` `conllu export` `work` `nt` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `nt` `works` `catalog` `nt-books` `eval` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -314,6 +314,9 @@ aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 | `network` | co-occurrence network | `--word` (ego network) `--min-count` |
 | `balance` | accounting reconciliation chart |— |
 | `scansion` | metrical scansion grid for one Greek line | `--meter` (second arg is the line; `-` = stdin) |
+| `findspots` | map of the corpus's find-sites | `--site/...` |
+| `timeline` | date histogram | `--bin-width` |
+| `signnet` | sign/word co-occurrence network | `--scope --min-count` |
 
 `--output -o` (required) takes `.png` / `.svg` / `.pdf`; `--dpi` sets raster
 resolution for PNG (default 150).
@@ -358,6 +361,7 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `pipeline` | The one-call pipeline: per-token records with selected sentence policy | `--parse --parser --treebank --tagger --lemmatizer --neural-lemmatizer --neural --neural-variant --confidence --confidence-domain --confidence-policy --partial --windowed --sentence-policy {default\|prose\|verse\|inscription\|papyrus} -o/--output --json` | `aegean greek pipeline "ἐν ἀρχῇ" --sentence-policy prose --json` |
 | `stream [INPUT]` | Neural JSONL token arrays → ordered JSONL `SentenceAnalysis` records; `-` reads stdin | `--batch-size N --long-input {strict\|partial\|windowed} --partial --windowed --confidence --confidence-domain --confidence-policy --json` | `printf '%s\n' '["μῆνιν","ἄειδε"]' \| aegean greek stream - --batch-size 2` |
 | `explain` | What each stage did to each token, in plain language (evidence classes) | `--treebank --tagger --lemmatizer --neural-lemmatizer --neural --neural-variant --confidence -o/--output --json` | `aegean greek explain "ἐν ἀρχῇ ἦν ὁ λόγος."` |
+| `interop export` / `import` / `report` | CoNLL-U to and from a portable JSON bundle carrying the target projection, its SHA-256-bound sidecar, and the loss report; no model inference | `--target {conllu\|spacy\|stanza\|cltk}` `-o/--output` (`export`); `-o/--output` (`import`); `--json` (all three) | `aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json` |
 | `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
 | `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |

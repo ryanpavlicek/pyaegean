@@ -4,10 +4,9 @@
 `TokenRecord` as a `TokenExplanation`: the surface form, the analysis fields
 (UPOS, lemma, morphological features), the lemma's evidence class
 (`LemmaSource`), whether the token needs human review, and a one-line
-plain-language note saying what that evidence class means. It is a rendering
-layer over the records the pipeline already produces: it never re-runs a
-tagger, lemmatizer, or model of its own, so the explanations cannot diverge
-from what `pipeline` actually did.
+plain-language note saying what that evidence class means. It has no tagger,
+lemmatizer, or model of its own: it renders the records that one `pipeline`
+call returns, so an explanation cannot diverge from what `pipeline` did.
 
 Backends follow whatever is active, exactly as `pipeline` does: the
 zero-dependency offline cascade by default, or the joint neural pipeline when
@@ -19,11 +18,14 @@ The source classes are the honesty surface: ``attested`` / ``neural_lookup`` /
 resolved analyses (``user`` alone means human-verified), while ``identity`` /
 ``unresolved`` are fall-throughs a human should verify. By default there are NO confidence numbers
 in this output: the evidence CLASS is the whole claim (source-class only). The
-one exception is opt-in: ``explain_pipeline(text, with_confidence=True)`` with
-the neural pipeline active and a calibration loaded appends the token's
-**calibrated** confidence (temperature-scaled on the UD Perseus dev fold; see
-`aegean.greek.calibrate`) to the note. A raw softmax is never shown — without a
-loaded calibration that call raises, and offline tokens carry no number.
+one exception is opt-in: ``explain_pipeline(text, with_confidence=True)``
+appends the token's **calibrated** confidence (temperature-scaled on the UD
+Perseus dev fold; see `aegean.greek.calibrate`) to the note. A raw softmax is
+never shown, so what that flag adds depends on the active backend: the offline
+cascade carries no model confidence and the notes are unchanged, the neural
+pipeline without a loaded calibration raises `UncalibratedConfidenceError`, and
+the neural pipeline with one appends a UPOS number to every token plus a lemma
+number wherever the joint model produced the lemma.
 """
 
 from __future__ import annotations
@@ -70,7 +72,8 @@ class TokenExplanation:
     """One token's analysis with its evidence class spelled out in plain language.
 
     ``lemma_source`` is the lemma's evidence class (see `LemmaSource`) and is
-    the entire trust claim: there are deliberately no confidence numbers.
+    the entire trust claim: there is deliberately no confidence field, and a
+    calibrated number reaches the ``note`` only under ``with_confidence=True``.
     ``needs_review`` is True for the two ungrounded classes (an ``identity``
     fall-through or an ``unresolved`` miss). ``morphology`` is the UD FEATS
     string when the neural pipeline produced one, else ``None``. ``note`` says
@@ -119,11 +122,15 @@ def explain_pipeline(text: str, *, with_confidence: bool = False) -> list[TokenE
     or whitespace-only input yields an empty list.
 
     The evidence class is the honesty surface. ``with_confidence=True`` (opt-in)
-    additionally appends each token's **calibrated** confidence to its note — it
-    requires the neural pipeline active and a loaded calibration
-    (`aegean.greek.use_calibration`), and raises `UncalibratedConfidenceError`
-    otherwise; a raw softmax is never shown. Only model predictions carry a
-    number (lookup-resolved / identity / punctuation lemmas do not)."""
+    additionally appends each token's **calibrated** confidence to its note, and a
+    raw softmax is never shown, so the flag adds a number only where a calibrated
+    one exists. Under the offline cascade there is none: the call succeeds and the
+    notes read exactly as they do by default. Under the neural pipeline it needs a
+    loaded calibration (`aegean.greek.use_calibration`) and raises
+    `UncalibratedConfidenceError` without one. With a calibration loaded, every
+    token's note carries a UPOS number, and a lemma number joins it wherever the
+    joint model produced the lemma (``neural_lookup`` / ``neural_edit``) but not
+    for an ``identity`` fall-through or punctuation."""
     from . import joint
     from .pipeline import pipeline
 

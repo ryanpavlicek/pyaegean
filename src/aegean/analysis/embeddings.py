@@ -40,11 +40,23 @@ _FINAL = "▸FINAL"  # word-final slot context (▸FINAL)
 
 
 def _documents(corpus: Any) -> list[Document]:
-    """Coerce a single Document / Corpus / QueryResults / iterable to a list."""
+    """Coerce a single Document, a corpus, a query's results, or an iterable to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are its
+    ``inscriptions``, so a queried subset can be embedded directly. Anything else that
+    yields documents (a `Corpus`, a plain list) is taken as it comes; anything that does
+    not raises a ``TypeError`` naming what arrived."""
     if isinstance(corpus, Document):
         return [corpus]
-    docs = getattr(corpus, "documents", corpus)
-    out = list(docs)
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
     if out and not isinstance(out[0], Document):
         raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
     return out

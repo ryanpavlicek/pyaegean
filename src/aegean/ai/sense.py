@@ -143,8 +143,10 @@ def select_sense(
     Greek it cites and the context's content lemmas, a markedness bonus
     (``markedness_weight``) when the sense carries the entry's dialect/register
     markers, and a mild sense-order/length prior (``prior_weight``) favouring the
-    earlier, more central senses. Ties keep LSJ order, so with no overlap signal at
-    all the dominant sense leads, exactly as `content_glosses` assumes.
+    earlier, more central senses. Ties keep LSJ order, but the score is a sum, so with
+    no overlap signal the leading sense is not necessarily the dominant one: a later
+    sense carrying the entry's markers, or a short one favoured by the length prior,
+    can outrank the entry's first sense. Read ``dominant`` rather than the position.
 
     Best-effort and offline: returns ``[]`` if the LSJ lexicon is not loaded
     (`greek.use_lsj()`) or the word has no entry. A ranked sense is a *hypothesis*

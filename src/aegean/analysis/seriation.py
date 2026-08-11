@@ -46,22 +46,47 @@ __all__ = [
 
 
 def _documents(corpus: Any) -> list[Document]:
-    """Coerce a single Document / Corpus / QueryResults / iterable to a list of Documents."""
+    """Coerce a single Document, a corpus, a query's results, or an iterable to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are its
+    ``inscriptions``, so a queried subset can be dated or seriated directly. Anything else
+    that yields documents (a `Corpus`, a plain list) is taken as it comes; anything that
+    does not raises a ``TypeError`` naming what arrived."""
     if isinstance(corpus, Document):
         return [corpus]
-    docs = getattr(corpus, "documents", corpus)
-    out = list(docs)
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
     if out and not isinstance(out[0], Document):
         raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
     return out
 
 
+def _matched_documents(obj: Any) -> list[Document] | None:
+    """A query's matched documents, or ``None`` for anything that is not a result set.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, which holds its matches in
+    ``inscriptions``. Standing the matches in for the result set at the entry point lets
+    every path below treat a query exactly as it treats the same list of documents."""
+    docs = getattr(obj, "inscriptions", None)
+    return None if docs is None else list(docs)
+
+
 def _is_corpus_like(obj: Any) -> bool:
-    """True if ``obj`` is a Document, a Corpus (has ``.documents``), or an iterable whose
-    first element is a Document. A bare 2-D number matrix is not corpus-like."""
+    """True if ``obj`` is a Document, a Corpus (has ``.documents``), a query's results
+    (which carry their matches in ``inscriptions``), or an iterable whose first element is
+    a Document. A bare 2-D number matrix is not corpus-like."""
     if isinstance(obj, Document):
         return True
-    docs = getattr(obj, "documents", None)
+    docs = _matched_documents(obj)
+    if docs is None:
+        docs = getattr(obj, "documents", None)
     if docs is not None:
         docs = list(docs)
         return bool(docs) and isinstance(docs[0], Document)
@@ -644,9 +669,10 @@ def seriate(
     ----------
     matrix_or_corpus:
         Either a 2-D abundance table (rows = assemblages, columns = type counts) or a
-        ``Corpus`` / ``Document`` iterable, in which case a document × sign-type count
-        matrix is built automatically (rows are the sign-bearing documents, columns the
-        signs that occur).
+        ``Corpus``, the ``QueryResults`` of a ``Corpus.query``, or a ``Document``
+        iterable, in which case a document × sign-type count matrix is built
+        automatically (rows are the sign-bearing documents, columns the signs that
+        occur).
     labels:
         Optional row labels for a matrix input (must match the row count). Ignored for a
         corpus input, where document ids are used.
@@ -664,6 +690,12 @@ def seriate(
     if max_iter <= 0:
         raise ValueError("max_iter must be positive")
     row_labels: tuple[str, ...] | None
+    # A query's results stand in for their matched documents from here on, so seriating
+    # a subset behaves exactly like seriating the same list of documents (including the
+    # empty case, which is a table with no rows).
+    matched = _matched_documents(matrix_or_corpus)
+    if matched is not None:
+        matrix_or_corpus = matched
     # Classifying the input peeks at its first element, which consumes a one-shot
     # iterator. ``seriate(d for d in corpus if ...)`` is the natural filtering idiom,
     # so materialize once and classify the list.

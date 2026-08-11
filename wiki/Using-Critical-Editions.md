@@ -82,11 +82,12 @@ from collections import Counter
 secure = [t.text for t in doc.tokens if t.status is ReadingStatus.CERTAIN]
 
 dist = Counter(t.status.name for d in corpus.documents for t in d.tokens)
-# {'CERTAIN': 22124, 'RESTORED': 5340, 'UNCLEAR': 1143, 'LOST': 312}
+# {'CERTAIN': 22139, 'RESTORED': 5328, 'UNCLEAR': 1134, 'LOST': 312}
 ```
 
-Roughly a fifth of the I.Sicily tokens are not securely read. That is normal for an epigraphic
-corpus, and it is exactly the information a study should account for rather than discover too late.
+Not quite a quarter of the I.Sicily tokens (6,774 of 28,913) are something other than securely
+read: restored, unclear, or lost. That is normal for an epigraphic corpus, and it is exactly the
+information a study should account for rather than discover too late.
 
 Status round-trips through every persistence format: `Corpus.to_json` / `from_json`, the SQLite store
 (`aegean.db`), and EpiDoc export all preserve it, and the token-level tabular exports (`to_csv`,

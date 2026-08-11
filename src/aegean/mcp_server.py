@@ -513,8 +513,10 @@ def greek_explain(text: str) -> list[dict[str, Any]]:
     and ``note`` (a one-line, plain-language account of what that evidence class means).
     The evidence CLASS is the whole trust claim: there are deliberately no confidence
     numbers (the neural pipeline's calibrated confidence needs the trained model, which
-    this server does not load). Rendered from the same records ``greek_pipeline`` returns,
-    never a re-run, so the two tools cannot disagree."""
+    this server does not load). This tool runs the pipeline over ``text`` and renders
+    the records it gets back, exactly as ``greek_pipeline`` maps its own, so the two
+    cannot disagree about the same text; they share no state, so calling both analyzes
+    that text twice."""
     from .greek import explain_pipeline
 
     return [
@@ -714,10 +716,20 @@ def greek_gloss(word: str, dictionary: str = "lsj", full: bool = False) -> dict[
     dodson (Koine NT).
 
     The word is looked up as given and lemmatized on a miss, so inflected forms resolve.
-    The first use of a dictionary other than dodson downloads and builds its index (a
-    one-time fetch into the local data store, roughly 0.1 to 15 MB depending on the
-    dictionary); later calls are offline. ``full`` adds the complete entry body, not
-    just the concise gloss."""
+    ``full`` adds the complete entry body, not just the concise gloss.
+
+    Dodson is bundled and answers immediately. Every other dictionary is fetched into
+    the local data store on first use, and the call blocks for the whole fetch: the
+    compressed index runs from 0.13 MB (abbott-smith) through 0.6 MB (autenrieth),
+    1.3 MB (cunliffe), and 2.3 MB (middle-liddell) to 15.4 MB (lsj), plus whatever the
+    network costs. Should the prebuilt lsj index be unreachable, the fallback is the
+    27-file Perseus LSJ TEI source, a far larger download built into an index locally.
+
+    Later calls are offline but not free: the index is loaded and parsed on the first
+    call of a session, and lsj expands to a 60 MB, 116,414-entry table. With the index
+    already in the store, that first call costs roughly 0.2 s for abbott-smith, 0.5 s
+    for autenrieth and cunliffe, 0.8 s for middle-liddell, and about 6 s for lsj;
+    lookups after it are immediate. Times are machine-dependent."""
     from . import greek
 
     # This surface answers with a structured result, so a wrong argument type is reported

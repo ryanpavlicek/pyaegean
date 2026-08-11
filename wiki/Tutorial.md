@@ -628,14 +628,18 @@ active and you'll already see `ἄειδε VERB` here):
 ```python
 for r in greek.pipeline(line0)[:3]:
     print(r.text, r.upos, r.lemma, r.review_recommended)
-# μῆνιν NOUN μῆνις True
-# ἄειδε NOUN ἀείδω True
-# θεὰ NOUN θεά True
+# μῆνιν NOUN μῆνις False
+# ἄειδε NOUN ἀείδω False
+# θεὰ NOUN θεά False
 ```
 
 (`ἄειδε` is a verb the baseline mis-tags NOUN; turn on the treebank or
 [neural pipeline](Greek-NLP#the-neural-pipeline-opt-in) for the correct tag, as in
-Tutorial 2.)
+Tutorial 2. `review_recommended` is `False` on all three because each lemma came
+from the seed table: the flag marks a lemma the engine could not ground (an
+identity fall-through or an outright miss), not a doubtful part of speech, so it
+will not catch this kind of mistake. Further along the same line, `Πηληϊάδεω` and
+`Ἀχιλῆος` do come back `True`.)
 
 ### What you learned
 

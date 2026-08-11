@@ -98,7 +98,7 @@ The same from the shell renders a table (and `--json` gives the records):
 
 ```bash
 aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος."
-#  s   i   token   upos    lemma   head   rel   feats
+#  s   i   token   upos    lemma   src   head   rel   feats
 #  0   1   ἐν      ADP     ἐν
 #  0   2   ἀρχῇ    NOUN    ἀρχή
 #  0   3   ἦν      VERB    εἰμί
@@ -106,6 +106,10 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος."
 #  0   5   λόγος   NOUN    λόγος
 #  0   6   .       PUNCT   .
 ```
+
+The `src` column names the lemma's evidence class only when it is worth a second look
+(an identity fall-through or an unresolved miss), so a grounded lemma leaves it blank;
+`head`, `rel`, and `feats` fill in once a parsing backend is active.
 
 Each `TokenRecord` is a dataclass with these fields:
 
@@ -205,9 +209,10 @@ terminal sentence marks removed. `segment_sentences()` is an alias for
 `segment_text()`; use either when spans or metadata matter. The result has a strict JSON
 schema (`to_json()` / `SegmentationResult.from_json()`).
 
-The built-in `RuleBasedSentenceSegmenter` has five named policies. Their stable IDs
-are available in `greek.POLICY_IDS` and their plain-language descriptions in
-`greek.POLICY_RULES`:
+The built-in `RuleBasedSentenceSegmenter` has five named policies, described in
+plain language by `greek.POLICY_RULES`. Their stable IDs are in `greek.POLICY_IDS`,
+alongside a sixth reserved `explicit` ID that identifies caller-supplied sentence
+boundaries rather than a segmenter rule set:
 
 | Policy | Rule |
 | --- | --- |
@@ -233,7 +238,17 @@ For pre-tokenized `pipeline_tokens()` input, complete contiguous runs of
 and the plugin seam. Partial, non-contiguous, or cross-document sentence IDs are
 rejected before analysis. When those IDs are absent, the selected policy is applied
 to the typed token stream and editorial punctuation (`UNCLEAR`, `RESTORED`, or
-`LOST`) is not treated as observed sentence evidence.
+`LOST`) is not treated as observed sentence evidence. A corpus token often carries
+its terminal mark inside the word rather than as a separate `PUNCT` token, so a
+word-final sentence mark ends the sentence there too:
+
+```python
+from aegean import Token, TokenKind
+
+tokens = [Token(text=t, kind=TokenKind.WORD) for t in ("λόγος.", "καὶ", "θεός.", "ἦν")]
+[(r.sentence, r.index, r.text) for r in greek.pipeline_tokens(tokens)]
+# [(0, 1, 'λόγος.'), (1, 1, 'καὶ'), (1, 2, 'θεός.'), (2, 1, 'ἦν')]
+```
 
 ### Lossless CoNLL-U structure and the model projection
 
@@ -276,9 +291,9 @@ This is a representation capability, not a new model claim. The current v3 pipel
 still analyzes and predicts only the syntactic-word projection. It does not predict
 multiword rows, empty nodes, or enhanced arcs, and those preserved gold annotations are
 not copied into system output or scores. Typed form state is an input annotation, not
-a predicted CoNLL-U structure. `pipeline_conllu()` does not emit it; use
-`dump_conllu()` or `write_conllu()` to serialize a `UDToken` that carries state.
-Callers that require complete predictive
+a predicted CoNLL-U structure, so the model's own CoNLL-U projection does not emit it;
+use `greek.dump_conllu()` or `greek.write_conllu()` to serialize a `UDToken` that
+carries state. Callers that require complete predictive
 support can request the explicit error policy rather than accepting that projection.
 
 For a field-by-field guide to interpreting a record, including what each `lemma_source`
@@ -1525,8 +1540,9 @@ treebank's **gold** trees directly: `from aegean.greek.syntax import load_gold_t
 of AGDT sentences are projective), and arc-eager can build only projective trees, so
 non-projective gold structures are out of reach and are skipped in training (a known
 limitation, not a bug). Measured on held-out AGDT with gold POS:
-**~0.67 UAS / 0.57 LAS on projective sentences, ~0.51 / 0.42 across all text**
-(`greek.evaluate_parser()` reproduces these). It produces clean, correct trees for
+**~0.63 UAS / 0.53 LAS on projective sentences, ~0.51 / 0.41 across all text**
+(`greek.evaluate_parser()` reproduces the across-all-text pair: it scores every
+held-out tree, projective or not). It produces clean, correct trees for
 main-clause syntax (as above), but it is not a research-grade parser. For research-grade
 dependency trees, use the [neural pipeline](#the-neural-pipeline-opt-in)'s `--neural`
 parse, which decodes a full (non-projective) UD tree. The baseline model is derived from
@@ -1699,8 +1715,14 @@ A token-level dataframe puts every annotation in its own column:
 ```python
 nt = greek.load_nt("John", ref="1.1-1.2")
 nt.to_dataframe(level="token").columns.tolist()
-# ['lemma','morph','strongs','normalized','upos','ref','gloss','doc_id','line_no','position','text','kind','site','period']
+# ['doc_id','line_no','position','text','kind','status','site','period',
+#  'lemma','morph','strongs','normalized','upos','ref','gloss']
 ```
+
+The structural columns come first, then one column per annotation the corpus actually
+carries. A tabular export omits the typed token columns that are unused in the corpus
+being exported, so a different corpus yields a different (shorter or longer) column
+list.
 
 **Koine glossing** comes from the bundled Dodson lexicon (CC0): the Koine
 counterpart to `use_lsj`, and **no download** (it is CC0 and bundled):
@@ -2086,9 +2108,12 @@ evaluators and the fetched gold data. The targets:
 
 | `eval` target | What it measures |
 | --- | --- |
-| `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--fold perseus|proiel`, `--split dev|test` |
+| `ud` | active pipeline on a UD fold (CoNLL 2018 evaluator); `--fold` takes `perseus` or `proiel`, `--split` takes `dev` or `test` |
 | `proiel` | the neutral out-of-AGDT check (lemma + POS); `--drift` for the convention-vs-error breakdown |
 | `nt` | the neural pipeline against the Nestle 1904 gold |
+| `papygreek` | the documentary PapyGreek fold; `--layer` takes `reg` (regularized) or `orig` (diplomatic), and `--drift` gives the convention decomposition |
+| `dbbe` | the DBBE Byzantine book-epigram fold (tagging only, no parse) |
+| `verse` | the verse fold; `--track` takes `tragedy` or `all`, small-sample with wide CIs |
 | `tagger` | the held-out AGDT POS evaluation |
 | `lemmatizer` | the held-out AGDT lemma evaluation |
 | `parser` | the held-out AGDT dependency evaluation |

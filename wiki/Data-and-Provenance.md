@@ -148,7 +148,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `ddbdp-uris` | DDbDP document-identifier map (file stem→ddb-hybrid) for papyri.info URIs in RDF export | ~337 KB | CC BY 3.0 (derived from papyri.info idp.data) | Project-hosted derivative; rebuild: `scripts/build_ddbdp_uri_map.py` |
 | `grc-lemma-neural` | GreTa seq2seq lemmatizer (int8 ONNX + tokenizer + gold lookup) | ~232 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Pedalion (4.0) + Gorman (4.0) | `[neural]` extra; fine-tuned from bowphs/GreTa (Apache-2.0 base) |
 | `grc-joint` | Joint tagger-parser-lemmatizer (quantized ONNX + tokenizer + label maps + lemma scripts/lookup) | ~173 MB tar.gz | CC BY-SA 4.0: derived from AGDT (3.0) + Gorman (4.0) + Pedalion (4.0) | `[neural]` extra; GreBerta-based (Apache-2.0 base), eval folds excluded |
-| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs, 1,401 word-division groups (SigLA's own division; these plus standalone single signs load as ~1,868 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
+| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs, 1,895 word-division groups (SigLA's own division; these plus standalone single signs load as 1,895 WORD tokens) + commodity ideograms | ~1.3 MB JSON | CC BY-NC-SA 4.0 (SigLA: Salgarella & Castellan) | Decoded from the SigLA web-app payload; drawings stay at sigla.phis.me |
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
@@ -332,8 +332,8 @@ https://sigla.phis.me) publishes its dataset and drawings under
 copies can be hosted. pyaegean hosts the decoded dataset (the JSON form the paper
 describes, reconstructed from the published web-app payload by
 `scripts/build_sigla_corpus.py`) as the sha256-pinned `sigla-corpus` release
-asset: **802 documents** with SigLA's own word division (1,401 words) and
-commodity ideograms (~1.2 MB), fetched on demand, **never bundled** (NonCommercial
+asset: **802 documents** with SigLA's own word division (1,895 words) and
+commodity ideograms (~1.3 MB), fetched on demand, **never bundled** (NonCommercial
 data stays out of the Apache-2.0 wheel; the NC + ShareAlike obligations pass
 through to you). Attribution, citation, source sha256, and generation date are
 inside the file's `_meta`; drawings are **not** included and remain at

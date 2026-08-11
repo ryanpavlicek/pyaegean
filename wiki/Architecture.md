@@ -538,7 +538,7 @@ c = aegean.load("lineara")
 
 # in-memory string (indent defaults to 2; pass indent=None for compact)
 js = c.to_json()
-len(js)                                # 2661624
+len(js)                                # 2708119
 
 # round-trip and verify it's lossless
 c2 = aegean.Corpus.from_json(js)
@@ -576,29 +576,37 @@ handy when you only want a metadata-filtered subset.)
 
 | `level` | One row per | Columns |
 |---|---|---|
-| `"document"` (default) | document | `id`, `script_id`, `site`, `support`, `scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words` |
-| `"token"` | token | `doc_id`, `line_no`, `position`, `text`, `kind`, `site`, `period` (+ any token `annotations` spread into columns) |
+| `"document"` (default) | document | `id`, `script_id`, `site`, `support`, `scribe`, `findspot`, `period`, `name`, `n_tokens`, `n_words`, `source_text` |
+| `"token"` | token | `doc_id`, `line_no`, `position`, `text`, `kind`, `status`, `site`, `period` (+ any token `annotations` spread into columns) |
 | `"word"` | `WORD` token | same as `token`, words only |
 
 ```python
 import aegean
 c = aegean.load("lineara")
 
-c.to_dataframe("document").shape       # (1721, 10)
+c.to_dataframe("document").shape       # (1721, 11)
 df = c.to_dataframe("token")
 list(df.columns)
-# ['doc_id', 'line_no', 'position', 'text', 'kind', 'site', 'period']
-df.shape                               # (6406, 7)
+# ['doc_id', 'line_no', 'position', 'text', 'kind', 'status', 'site', 'period']
+df.shape                               # (6406, 8)
 ```
 
 At `token`/`word` level, any per-token `annotations` are **spread first**, so the
 Greek NT's `lemma` / `morph` / `strongs` / `gloss` become their own columns
-(canonical columns always win on a name clash). Tokens with a typed
-form state also expose canonical `form_diplomatic`, `form_regularized`,
-`form_normalized`, `form_model_input`, `form_model_input_ops`,
-`form_model_input_source`, `form_segments`, editorial-status, damage, and
-uncertainty columns. `form_segments` is a JSON string for tabular files; tokens
-without a state have null values. pandas is the `[data]` extra:
+(canonical columns always win on a name clash).
+
+Two further groups of canonical columns appear **only when the corpus actually
+carries the values**, so an ordinary corpus is not padded with 25 empty columns.
+A corpus with source-aligned tokens gains nine `alignment_*` columns
+(`alignment_document_id`, `alignment_sentence_id`, `alignment_source_token_id`,
+`alignment_original_text`, `alignment_start_char`, `alignment_end_char`,
+`alignment_whitespace_before`, `alignment_normalized_text`,
+`alignment_normalization_ops`). A corpus with typed form state gains sixteen
+`form_*` columns: `form_diplomatic`, `form_regularized`, `form_normalized`,
+`form_model_input`, `form_model_input_ops`, `form_model_input_source`,
+`form_segments`, plus editorial-status, damage, and uncertainty columns.
+`form_segments` is a JSON string for tabular files; within a corpus that has the
+group, tokens with no value of their own are null. pandas is the `[data]` extra:
 
 ```bash
 pip install "pyaegean[data]"
@@ -609,7 +617,7 @@ The CSV and Parquet exporters are thin wrappers over that DataFrame:
 ```python
 from aegean.io import to_csv, to_parquet
 c = aegean.load("lineara").filter(site="Haghia Triada")
-to_csv(c, "ht.csv", level="document")        # ~93 KB
+to_csv(c, "ht.csv", level="document")        # ~94 kB
 to_parquet(c, "ht.parquet", level="token")   # needs the [parquet] extra (pyarrow)
 ```
 ```bash
@@ -905,8 +913,10 @@ export exactly the subset you want, and the provenance records the filter.
 `to_epidoc(document)` serializes one `Document` to an EpiDoc TEI XML string;
 `write_epidoc(obj, path)` writes a `Document` to a file or a whole `Corpus` to a
 directory of `{id}.xml` files. The transliteration lives in a TEI `<div
-type="edition">` as `<lb/>`-delimited lines of `<w>` (words), `<num>`
-(numerals), and `<g>` (logograms); a token whose `ReadingStatus` isn't `CERTAIN`
+type="edition">` as `<lb/>`-delimited lines whose element encodes each token's
+`TokenKind`: `<w>` (words), `<num>` (numerals), `<g>` (logograms), `<pc>`
+(punctuation), and `<seg type="separator">` / `<seg type="unknown">` for the
+remaining two kinds; a token whose `ReadingStatus` isn't `CERTAIN`
 is wrapped in the matching apparatus element (`<unclear>` / `<supplied>`; LOST
 uses `<supplied reason="undefined">`, and the reader also accepts `<gap>`), and
 alternates become `<app><lem>…</lem><rdg>…</rdg></app>`. The writer uses the
@@ -940,7 +950,9 @@ undetermined for the undeciphered scripts, `grc` Greek, `gmy` Mycenaean Greek):
 The output validates against the EpiDoc RelaxNG schema and round-trips through the
 generic EpiDoc *reader* (`io.from_epidoc` / `io.read_epidoc`, stdlib-only, no extra)
 for token-carrier content it understands: id, find-place, the token/line stream,
-editorial certainty, typed choices and apparatus segments, and `<app>` variants.
+each token's kind (taken from its carrier element, so a separator and an unknown
+token stay distinct), editorial certainty, typed choices and apparatus segments,
+and `<app>` variants.
 This is a semantic round-trip, not a byte-identical XML promise, and it is not a
 general free-text TEI structured-state importer. A separate Linear B-specific reader,
 `aegean.scripts.linearb.parse_epidoc`, handles DAMOS-style files with lxml (the
@@ -1215,11 +1227,13 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
 - `to_dict` is deliberately **lossy** (words + metadata only); for anything you
   need to reconstruct, use `to_json`/`from_json` or the SQLite round-trip.
 - EpiDoc export is semantic rather than byte-identical. For token-carrier content
-  it preserves the id, find-place, token/line stream, editorial certainty, typed
-  choices and apparatus segments. The *reader* re-derives token kinds from text;
-  the generic reader (`io.from_epidoc`) is stdlib-only but is not a general
+  it preserves the id, find-place, token/line stream, token kinds, editorial
+  certainty, typed choices and apparatus segments. The generic reader
+  (`io.from_epidoc`) reads each kind off its carrier element and falls back to
+  the text only for an untyped `<seg>`; it is stdlib-only but is not a general
   free-text TEI structured-state importer, while the DAMOS-style Linear B reader
-  (`scripts.linearb.parse_epidoc`) needs lxml (the `[epidoc]` extra).
+  (`scripts.linearb.parse_epidoc`) re-derives Aegean kinds from the
+  transliteration and needs lxml (the `[epidoc]` extra).
 - The query engine's word predicates operate on **multi-sign words** (tokens
   containing a `-`); single-sign tokens and logograms are matched by the
   inscription-scope predicates, not the word-scope ones.

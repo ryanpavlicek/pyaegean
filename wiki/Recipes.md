@@ -54,9 +54,13 @@ into eight walkthroughs, one per kind of reader:
 [the AI-assisted translator](#g--the-ai-assisted-translator-key-gated), and
 [the toolsmith](#h--the-toolsmith-one-database-and-tools-for-agents).
 
-Throughout, the `--json` flag is your friend: every CLI command emits clean JSON
-on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/) or load it
-straight into Python/pandas.
+Throughout, the `--json` flag is your friend: the reporting commands take it and
+emit clean JSON on stdout, so you can pipe into [`jq`](https://jqlang.github.io/jq/)
+or load it straight into Python/pandas. Two families do without it: the commands
+whose whole job is to write a file take `-o` instead (`export`, `db build`,
+`db add`, `review export`/`review apply`, and the `plot` family), and the
+interactive entry points (`repl`, `tui`, `workbench`, `quickstart`) have no
+machine-readable mode.
 
 One thing worth knowing before you start, because the last few recipes lean on
 it: **anywhere a command takes a corpus, it takes more than an id.** A registered
@@ -105,11 +109,11 @@ aegean show isicily ISic003022                # a verse epitaph for Hippo
 
 aegean keyness isicily --site Kamarina --top 5
 #  item      target    reference   G2       log-ratio   p
-#  τετάρτα   16/1107   0/27812     104.63   +9.70       1.5e-24
-#  φράτρα    14/1107   0/27812     91.53    +9.51       1.1e-21
-#  τα        17/1107   10/27812    76.36    +5.42       2.4e-18
-#  ευτέρα    10/1107   0/27812     65.34    +9.04       6.3e-16
-#  δεκάτα    9/1107    0/27812     58.80    +8.90       1.7e-14
+#  τετάρτα   16/1107   0/27806     104.63   +9.70       1.5e-24
+#  φράτρα    14/1107   0/27806     91.52    +9.51       1.1e-21
+#  τα        17/1107   10/27806    76.36    +5.42       2.4e-18
+#  ευτέρα    10/1107   0/27806     65.34    +9.04       6.3e-16
+#  δεκάτα    9/1107    0/27806     58.80    +8.90       1.7e-14
 
 aegean load isicily --site Kamarina -o kamarina.json
 # wrote 174 documents to kamarina.json
@@ -215,9 +219,9 @@ aegean show strategos.db bgu.1.125
 
 aegean stats strategos.db --top 5
 #  item    count
-#  καὶ     10082
-#  τοῦ     5214
-#  τῆς     2682
+#  καὶ     10087
+#  τοῦ     5216
+#  τῆς     2681
 #  τῶν     2544
 #  ἔτους   2196
 ```
@@ -268,8 +272,8 @@ for r in greek.pipeline("μῆνιν ἄειδε θεὰ"):
 # θεὰ → θεά · θεά: θεά -ᾶς, ἡ [fem. of θεός.] Dat. p
 
 print(iliad.cite())
-# Homer. Ἰλιάς. Digitized by the Perseus Digital Library / Open Greek and Latin.
-#   — https://github.com/PerseusDL/canonical-greekLit/blob/d4fab69a2c26…
+# Homer, Ἰλιάς 1.1-1.7. Digitized by the Perseus Digital Library / Open Greek and Latin.
+#   — https://github.com/PerseusDL/canonical-greekLit/blob/d4fab69a2c26…/data/tlg0012/tlg001/tlg0012.tlg001.perseus-grc2.xml
 ```
 
 ```bash
@@ -668,7 +672,7 @@ for r in aegean.greek.pipeline(text)[:3]:
 # μῆνιν → μῆνις · ἄειδε → ἀείδω · θεὰ → θεά
 
 print(iliad.cite())
-# Homer. Ἰλιάς. Digitized by the Perseus Digital Library / Open Greek and Latin. — …
+# Homer, Ἰλιάς. Digitized by the Perseus Digital Library / Open Greek and Latin. — …
 ```
 
 ```bash
@@ -777,13 +781,16 @@ print(nearest("qa-si-re-u", "linearb", candidates, "greek", top=2, fold_aspirati
 ```bash
 aegean analyze compare qa-si-re-u βασιλεύς
 aegean analyze nearest po-me greek --top 5
-aegean analyze distance qa-si-re-u βασιλεύς          # just the [0,1] distance
+aegean analyze distance qa-si-re-u pa-si-re-u        # 0.100 — just the [0,1] distance
 ```
 
 The **ranking** is the signal: defective syllabic spelling inflates absolute
 distances (see the caution in [Analysis → Cross-script comparison](Analysis)).
 The candidate list matters: rank against a lexicon or wordlist relevant to your
-question, not just whatever corpus is at hand.
+question, not just whatever corpus is at hand. Note the division of labour among
+the three commands: `compare` and `nearest` name a script per side and romanize
+for you, while `distance` scores two strings that are already romanized, so hand
+it transliterations rather than Greek script.
 
 ## 6 · Mine word-families from an undeciphered corpus (and cache it)
 
@@ -1142,15 +1149,24 @@ token-level columns are:
 
 | column | example | meaning |
 |--------|---------|---------|
+| `doc_id`, `line_no`, `position` | `Matt 1`, `1`, `0` | location |
 | `text` | `Βίβλος` | the surface token |
-| `normalized` | `Βίβλος` | NFC-normalized form |
+| `kind` | `word` | token kind (`word`, `logogram`, `numeral`, `separator`, `punct`, `unknown`) |
+| `status` | `certain` | reading status from the edition |
+| `site` | (empty) | find-site, blank for a literary text |
+| `period` | `Koine` | the document's period label |
 | `lemma` | `βίβλος` | gold dictionary headword |
-| `upos` | `NOUN` | reconciled UD part of speech |
 | `morph` | `N-NSF` | Robinson morphology tag |
 | `strongs` | `976` | Strong's number |
-| `gloss` | `a written book, roll, or volume` | short gloss |
+| `normalized` | `Βίβλος` | NFC-normalized form |
+| `upos` | `NOUN` | reconciled UD part of speech |
 | `ref` | `Matt.1.1` | canonical reference |
-| `doc_id`, `line_no`, `position` | `Matt 1`, `1`, `0` | location |
+| `gloss` | `a written book, roll, or volume` | short gloss |
+
+They come out in that order, and the table carries only the columns this corpus
+actually populates: `aegean export lineara -f csv --level token` writes just
+`doc_id,line_no,position,text,kind,status,site,period`, because Linear A has no
+lemma, morphology, or gloss to record.
 
 ```python
 import aegean
@@ -1205,8 +1221,14 @@ For dictionaries pyaegean cannot host (Slater, Montanari, …), build a
 **Logeion deep-link** instead, which runs offline:
 
 ```python
-greek.lexicon_link("μήνιδος")   # → a logeion.uchicago.edu link to the lemma μῆνις
+greek.lexicon_link("μήνιδος")
+# 'https://logeion.uchicago.edu/%CE%BC%CE%AE%CE%BD%CE%B9%CE%B4%CE%BF%CF%82'
 ```
+
+The link targets the lemma when the active lemmatizer resolves one, and the form
+as given when it does not: here the offline baseline leaves the third-declension
+μήνιδος standing, so the link is to μήνιδος itself. Pass `lemmatize=False` to
+link the form deliberately.
 
 From the shell: `aegean greek lexica` lists the dictionaries, `aegean greek gloss μῆνις
 --dict cunliffe` glosses from one, and `aegean greek lexicon-link μήνιδος` builds the link.
@@ -1247,6 +1269,7 @@ aegean sign linearb pa
 #  attrs.bennett      B003
 #  attrs.unicodeName  LINEAR B SYLLABLE B003 PA
 #  attrs.signClass    syllabogram
+#  attrs.commodity    None
 ```
 
 ```python

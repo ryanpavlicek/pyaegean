@@ -245,7 +245,7 @@ aegean data list
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT |
 | `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index | ~130 KB | public domain (1922) |
 | `damos-corpus` | DAMOS-derived Linear B corpus v2: ~5,900 tablets: `load("damos")` | ~3 MB | CC BY-NC-SA 4.0 (DAMOS, F. Aurora) |
-| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs / 1,401 words: `load("sigla")` | ~1.2 MB | CC BY-NC-SA 4.0 (SigLA) |
+| `sigla-corpus` | SigLA-derived Linear A dataset v4: 802 docs / 1,895 words: `load("sigla")` | ~1.3 MB | CC BY-NC-SA 4.0 (SigLA) |
 | `nt-corpus` | Greek New Testament (Nestle 1904): 260 chapters / ~137,800 tokens: `load("nt")` | ~16 MB | CC0-1.0 (text public domain) |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily: `load("isicily")` | ~7 MB | CC BY 4.0 (I.Sicily: Prag et al., Oxford) |
 | `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine: `load("iip")` | ~4 MB | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) |

@@ -754,7 +754,8 @@ greek.use_lsj()
 
 for s in ai.select_sense("λόγος", "ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος ἦν πρὸς τὸν θεόν"):
     print(s)
-# each line: "I. <gloss>  [score]" — best-fitting sense first
+# each line: "<marker>. <gloss>  [score]" — best-fitting sense first, e.g.
+# IX. expression, utterance, speech regarded formally, …  [1.26]
 ```
 
 `select_sense(word, context, *, max_candidates=3, …)` returns up to `max_candidates`
@@ -763,8 +764,10 @@ context-fit total), `overlap` (the context lemmas the sense's cited Greek shares
 `dominant` (whether it is LSJ's lead sense). The score blends lexical overlap between the
 sense's citations and the context's content lemmas, a markedness bonus for a
 dialectally/register-marked sense, and a mild prior favouring the earlier, more central
-senses; ties keep LSJ order, so with no overlap signal the dominant sense leads, exactly
-as `content_glosses` assumes.
+senses; ties keep LSJ order. Note that this is a different selection rule from the one
+`content_glosses` applies: with no overlap signal at all the markedness bonus and the
+order prior still decide the ranking, so a marked or more compact later sense can lead
+instead of LSJ's first sense. Check `dominant` when you need to know which is which.
 
 **EXPLORATORY.** A ranked sense is a hypothesis from a lexical-overlap heuristic, not a
 word-sense disambiguation. Treat it as a lead to weigh, and label it unverified at point

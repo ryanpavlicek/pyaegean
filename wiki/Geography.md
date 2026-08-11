@@ -175,10 +175,23 @@ aegean geo lineara --json
 | `--json` | off | machine-readable JSON rows on stdout (table mode) |
 | `--help`, `-h` |— | show usage and exit |
 
-Only provenanced inscription corpora yield rows: `lineara`, `linearb`, `cypriot`, `cyprominoan`,
-`sigla`, `damos`. Literary corpora (`greek`, `nt`, Greek work ids) carry no find-spot, and the
-epigraphy/papyrus corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `ddbdp`) record find-places
-the Aegean gazetteer does not map, so `geo` prints a one-line note rather than an empty table.
+Only provenanced inscription corpora yield rows. The Aegean-script corpora (`lineara`, `linearb`,
+`cypriot`, `cyprominoan`, `sigla`, `damos`) are mapped most fully, and the Greek epigraphy and
+papyri corpora resolve the share of their find-places the gazetteer covers:
+
+| Corpus | Located sites |
+|---|---|
+| `isicily` | 13 of 121 |
+| `iip` | 10 of 144 |
+| `edh` | 6 of 292 |
+| `iospe` | 5 of 81 |
+| `igcyr` | 5 of 19 |
+| `ddbdp` | 3 of 798 |
+
+Most of the shortfall is real coverage, not a bug: the gazetteer is Aegean-first, so it holds
+Cyrene and Caesarea but not the hundreds of Egyptian find-places the papyri record. Literary
+corpora (`greek`, `nt`, Greek work ids) carry no find-spot at all, so `geo` prints a one-line
+note rather than an empty table.
 
 ---
 
@@ -432,8 +445,13 @@ anything else is dropped. Per corpus:
 | `cyprominoan` | 2 | 2 of 2 (Enkomi, Ugarit) | small bundled sample |
 
 The gazetteer holds 94 entries total (more than any single corpus uses), including all 52 named
-Linear A sites and coverage for the other three Aegean scripts. The few Linear A inscriptions with
-no row simply carry no usable `meta.site` value.
+Linear A sites, coverage for the other three Aegean scripts, and the Greek epigraphic and
+papyrological sites listed under [`aegean geo` flags](#aegean-geo-flags). The few Linear A
+inscriptions with no row simply carry no usable `meta.site` value.
+
+The Greek epigraphy and papyri corpora name far more find-places than an Aegean-first gazetteer
+covers, so only a fraction of their site labels resolve; the per-corpus counts are in that same
+table.
 
 ---
 

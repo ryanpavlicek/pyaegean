@@ -149,7 +149,7 @@ row, since they share its SDK).
 | `cypriot` | the Cypriot Syllabary corpus | yes, bundled |
 | `cyprominoan` | the Cypro-Minoan corpus | yes, bundled |
 | `damos` | the full DAMOS Linear B corpus (~5,900 tablets, ~3 MB) | fetched on first use |
-| `sigla` | the SigLA Linear A dataset (~1.2 MB) | fetched on first use |
+| `sigla` | the SigLA Linear A dataset (802 documents, ~1.3 MB) | fetched on first use |
 | `isicily` | I.Sicily Greek inscriptions of ancient Sicily (2,855 texts, ~7 MB) | fetched on first use |
 | `iip` | IIP Greek inscriptions of Israel/Palestine (2,113 texts, ~4 MB) | fetched on first use |
 | `iospe` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts, ~4 MB) | fetched on first use |
@@ -475,7 +475,7 @@ see [Metrical scansion](Greek-NLP#metrical-scansion).
 No. The core library, the full Linear A corpus, and the Greek pipeline all work
 **offline**. A few **opt-in** things touch the network *on first use*, then cache:
 the fetched corpora: `aegean.load("damos")` (the full ~5,900-tablet Linear B corpus,
-~3 MB), `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.2 MB), and the fetched
+~3 MB), `aegean.load("sigla")` (the SigLA Linear A dataset, ~1.3 MB), and the fetched
 Greek epigraphy corpora (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, plus the ~219 MB
 `ddbdp` papyri database):
 `greek.load_work(...)` / `greek.load_nt(...)` (real Greek texts, pinned to a commit),
@@ -557,14 +557,14 @@ Several opt-in backends raise accuracy past that baseline. The highest-scoring s
 **neural pipeline**, `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
 model for POS, morphology, UD dependency parsing, and lemmatization, measured at
 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
-85.7 LAS on the Perseus test fold, measured end-to-end from raw text: see
+85.7 LAS on the Perseus test fold with gold tokenization: see
 [the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
 `greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,
 and gold POS for forms attested in the AGDT; `greek.use_tagger()` generalizes POS at
 ~84% on unseen forms; `greek.use_neural_lemmatizer()` (a GreTa seq2seq) reaches 76.3%
 on unseen forms, while the zero-dependency `greek.use_lemmatizer()` (edit-trees +
 perceptron) reaches ~40%; `greek.use_parser()` is a pure-Python dependency parser
-(~0.67 UAS / 0.57 LAS on projective AGDT). Quantify any combination on your own gold
+(~0.63 UAS / 0.53 LAS on projective AGDT). Quantify any combination on your own gold
 set with `greek.benchmark.compare_modes()`. For meaning, opt into `greek.use_lsj()` (LSJ
 glossing). See [Treebank-backed mode](Greek-NLP#treebank-backed-mode-opt-in)
 and [Morphological analysis](Greek-NLP#morphological-analysis).

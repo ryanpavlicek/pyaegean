@@ -69,7 +69,7 @@ The table flags the low-confidence tokens (the `needs_review` column) so you can
 `--only-needs-review` to export just those. Applying the corrections keeps each machine value
 under a `<field>__pred` key and stamps who reviewed it and a provenance note, so the corrected
 corpus records exactly what a human changed. See the workflow in [Recipes](Recipes) and the
-table format in [Data & Provenance](Data-and-Provenance).
+table format in the Review section of the [CLI reference](CLI).
 
 If the error is in pyaegean itself (a wrong bridge reading, a curated lemma, a benchmark
 number), it belongs in the project, not just your copy: open a **correction** or **validation**

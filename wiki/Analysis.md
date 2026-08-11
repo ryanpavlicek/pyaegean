@@ -222,8 +222,11 @@ aegean analyze assoc lineara KU-RO KI-RO
 # p_value                   7.055e-19
 # log_likelihood            23.94
 # fisher_p                  1.595e-06
-# pmi_interval              [3.172, 5.622]
+# pmi_interval              [3.1720137984039996, 5.621837690118523]
 ```
+
+(The bounded scores are rounded for the table; `pmi_interval` prints at full
+precision, so a reader can carry the exact interval into their own notes.)
 
 To see *what* a word keeps company with, ranked by shared documents:
 
@@ -997,13 +1000,23 @@ viz.plot_keyness(c.filter(site="Pylos"),          # diverging log-ratio bars, G�
 viz.plot_collocation_network(aegean.load("lineara"), "KU-RO")   # ego network (exploratory)
 viz.plot_balance(aegean.load("lineara"))          # stated totals vs computed sums
 viz.plot_scansion("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ")
+
+la = aegean.load("lineara")
+viz.plot_findspots(la)                            # find-sites, marker size by inscription count
+viz.plot_timeline(la, bin_width=100)              # documents per century from meta.period
+viz.plot_sign_network(la, scope="document")       # sign/word co-occurrence graph (exploratory)
 ```
 
 The scansion grid draws each syllable with its quantity (— ˘ ×), foot
 boundaries, and the caesura (‖); the balance view puts every checked KU-RO /
 TO-SO total on a stated-vs-computed diagonal so discrepancies stand out (with
-the same heuristic-sections caveat as `balance_check`). From the shell:
-`aegean plot freq|dispersion|keyness|network|balance|scansion … -o out.png`.
+the same heuristic-sections caveat as `balance_check`). `plot_findspots` reads
+the bundled gazetteer directly, so a map needs no `[geo]` extra, and drops sites
+the gazetteer doesn't hold; `plot_timeline` states on the figure what fraction of
+documents carried a date it could not read, rather than dropping them quietly.
+From the shell:
+`aegean plot freq|dispersion|keyness|network|balance|scansion|findspots|timeline|signnet … -o out.png`.
+(`viz.plot_correspondence_analysis` is Python-only, with no `aegean plot` kind.)
 
 ## Caching expensive analyses (opt-in)
 

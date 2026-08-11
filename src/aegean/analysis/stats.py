@@ -2,7 +2,8 @@
 
 The quantitative layer for comparing *whole corpora and subsets* — pure stdlib
 (``math``, ``random``, ``collections``), working over any loadable corpus
-(``lineara``, ``damos``, a ``filter()`` subset, or a plain document list).
+(``lineara``, ``damos``, a ``filter()`` subset, the results of a ``query()``, or a
+plain document list).
 
 Three families, each the corpus-linguistics standard:
 
@@ -70,9 +71,21 @@ __all__ = [
 
 
 def _documents(corpus: Any) -> list[Document]:
-    """Coerce a Corpus / QueryResults / iterable of Documents to a list."""
-    docs = getattr(corpus, "documents", corpus)
-    out = list(docs)
+    """Coerce a corpus, a query's results, or an iterable of Documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so measuring a subset is "query, then measure" in two calls.
+    Anything else that yields documents (a `Corpus`, a plain list) is taken as it comes;
+    anything that does not raises a ``TypeError`` naming what arrived."""
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
     if out and not isinstance(out[0], Document):
         raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
     return out

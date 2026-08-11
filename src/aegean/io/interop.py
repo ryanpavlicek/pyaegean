@@ -660,6 +660,12 @@ class InteropDocument:
         return self.source_text
 
     def has_richer_metadata(self) -> bool:
+        """Whether this envelope carries anything the CoNLL-U columns cannot hold.
+
+        True when the document has source text, a document id, token or sentence
+        metadata, an annotation profile, or provenance. `to_conllu` uses it to decide
+        whether a sidecar is needed at all.
+        """
         # Mapping presence is itself data: an explicitly present all-null token
         # metadata record is distinct from no record at all.
         return bool(_sidecar_fields(self))
@@ -768,6 +774,17 @@ def _document_from_payload(value: Mapping[str, Any], *, strict: bool = True) -> 
 
 
 def from_ud_document(document: UDDocument, *, source_text: str | None = None, document_id: str | None = None, annotation_profile: str | None = None, provenance: Provenance | None = None) -> InteropDocument:
+    """Wrap an already-parsed `UDDocument` as an :class:`InteropDocument`.
+
+    Nothing is inferred beyond what the rows already carry: a word that holds a typed
+    ``form_state`` gets an :class:`InteropTokenMetadata` record, and every other token
+    gets none. The keyword arguments add the document-level context CoNLL-U has no
+    column for. A document wrapped with none of them has no richer metadata, so
+    `to_conllu` writes plain CoNLL-U; supplying ``source_text`` or ``document_id``
+    (or a profile or provenance) is what makes a sidecar necessary.
+
+    Raises ``TypeError`` for anything that is not a `UDDocument`.
+    """
     if not isinstance(document, UDDocument):
         raise TypeError("document must be UDDocument")
     token_metadata: dict[tuple[str, int], InteropTokenMetadata] = {}
@@ -779,6 +796,27 @@ def from_ud_document(document: UDDocument, *, source_text: str | None = None, do
 
 
 def from_token_records(records: Iterable[TokenRecord], *, source_text: str, document_id: str, provenance: Provenance | None = None, annotation_profile: str | None = None) -> InteropDocument:
+    """Build an :class:`InteropDocument` from the `TokenRecord` stream `pipeline` returns.
+
+    ``source_text`` is the exact analyzed text and ``document_id`` its stable identity;
+    both are required, because every record must carry a `SourceAlignment` that
+    validates against them. Sentences are grouped by each record's sentence ordinal and
+    named by its alignment's sentence id, and the record's own analysis fields become
+    one UD word each.
+
+    The input is validated rather than repaired. Records must arrive in sentence and
+    token order, sentence ordinals must run contiguously from zero, word indices from
+    one within each sentence, source token ids must be unique, and a record's text must
+    equal its aligned ``normalized_text``; a violation raises `InteropSchemaError`. An
+    empty stream yields an empty document.
+
+    CoNLL-U has no way to write "no value", so a missing head, relation, XPOS, or FEATS
+    is projected to UD's placeholder in the row and the original ``None`` is kept in
+    :class:`InteropTokenMetadata`, which is what stops a round trip from fabricating a
+    root or a tag. Confidence, lemma provenance, form state, receipts, and sentence
+    boundaries travel the same way. ``annotation_profile`` is taken from the records'
+    analysis receipts when it is not given, and receipts that disagree raise.
+    """
     if not isinstance(source_text, str) or not isinstance(document_id, str) or not document_id:
         raise TypeError("source_text and non-empty document_id are required")
     values = tuple(records)
@@ -934,6 +972,22 @@ def _escaped_sidecar(envelope: Mapping[str, Any]) -> str:
 
 
 def encode_sidecar(document: InteropDocument, *, target: str, native_signature: str) -> str:
+    """Serialize an envelope as the one-line JSON sidecar payload.
+
+    Returns canonical JSON with six keys: ``schema``, ``target``, the document,
+    payload, and native SHA-256 digests, and ``payload``. The digests bind three
+    things at once: the canonical CoNLL-U projection, the canonical payload JSON, and
+    the caller's ``native_signature`` for the exact projection this sidecar travels
+    with, so `decode_sidecar` can refuse a payload that has drifted from its document.
+
+    ``target`` names the format the sidecar accompanies (``"conllu"`` for
+    `to_conllu`, otherwise an adapter's name). The result carries no literal U+2028,
+    U+2029, or U+0085, so it survives as a single line through a consumer that splits
+    on Unicode line boundaries; the escapes are JSON, so decoding restores the identical
+    payload and every digest still verifies. A sidecar larger than
+    ``MAX_SIDECAR_BYTES`` (8 MiB) raises `InteropSchemaError` rather than being emitted,
+    because the reader enforces the same bound.
+    """
     if not isinstance(document, InteropDocument) or not isinstance(target, str) or not target or not isinstance(native_signature, str):
         raise TypeError("document, target, and native_signature have invalid types")
     payload = _document_payload(document)
@@ -944,6 +998,19 @@ def encode_sidecar(document: InteropDocument, *, target: str, native_signature: 
 
 
 def decode_sidecar(sidecar: str, *, target: str | None = None, native_signature: str | None = None) -> dict[str, Any]:
+    """Validate a sidecar string and return its envelope mapping.
+
+    Everything is checked before the value comes back: the size bound, strict JSON
+    (a duplicate key or a non-finite number is rejected, not silently resolved), the
+    schema and a non-empty target, the document and payload digests, and a typed
+    decode of the payload so a malformed record fails here rather than downstream. The
+    returned mapping is the envelope, with the document under ``payload``.
+
+    ``target`` and ``native_signature``, when given, are additional bindings: the
+    sidecar must name that target and must have been written for that exact native
+    projection. Any mismatch raises `InteropSchemaError`, which is also what a
+    tampered payload produces.
+    """
     if not isinstance(sidecar, str):
         raise TypeError("sidecar must be a string")
     if len(sidecar.encode("utf-8")) > MAX_SIDECAR_BYTES:
@@ -1191,6 +1258,20 @@ def _report(document: InteropDocument, *, target: str, direction: str, sidecar: 
 
 
 def to_conllu(document: InteropDocument, *, include_sidecar: bool = True, allow_lossy: bool = False) -> InteropResult[str]:
+    """Write an envelope as CoNLL-U text, with its metadata in a leading sidecar comment.
+
+    The result's ``value`` is the text and its ``report`` says which fields the CoNLL-U
+    columns carried natively and which the sidecar had to. When the document holds
+    nothing beyond those columns the output is plain CoNLL-U and ``sidecar`` is
+    ``None``; otherwise the text opens with one ``# aegean.interop = `` line and the
+    native document follows, so an ordinary CoNLL-U reader sees a comment and
+    `from_conllu` sees the whole envelope.
+
+    ``include_sidecar=False`` on a document with richer metadata would silently drop it,
+    so it raises `InteropLossError` unless ``allow_lossy=True`` makes the loss explicit:
+    the text is then plain CoNLL-U and the report lists the dropped fields in
+    ``lost_fields`` with ``lossless`` False.
+    """
     if not isinstance(document, InteropDocument):
         raise TypeError("document must be InteropDocument")
     native = document.ud_document.dumps()
