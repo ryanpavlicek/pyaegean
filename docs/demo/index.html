@@ -469,15 +469,20 @@
 
   <div class="card">
     <h2>Linear A seriation (by find-site)</h2>
-    <label for="ser">Order one find-site's tablets by Brainerd-Robinson sign similarity — a
-      deterministic sequence that puts compositionally similar tablets next to each other (try
-      <code>Zakros</code>, <code>Haghia Triada</code>, <code>Khania</code>)</label>
+    <label for="ser">Order one find-site's tablets by Brainerd-Robinson sign similarity. Tablets
+      that share no sign with the rest are joined by no similarity evidence, so a site comes back
+      as one or more blocks, each its own sequence (<code>Zakros</code> is a single block;
+      <code>Phaistos</code> and <code>Khania</code> break into many). Haghia Triada's 1,110
+      tablets are more than the browser will work through; seriate that site from the installed
+      package instead</label>
     <input type="text" id="ser" value="Zakros">
     <div class="row"><button data-tool="ser" disabled>Seriate</button></div>
     <pre id="ser-out"></pre>
     <p class="sub" style="margin:8px 0 0">Exploratory: a relative-sequence hypothesis with no
-      direction and no calendar anchor — on undeciphered Linear A the axis may track scribal drift as
-      readily as time, not a date.</p>
+      direction and no calendar anchor, not a date; on undeciphered Linear A the axis may track
+      scribal drift as readily as time. A sequence holds only within a block: the order between
+      blocks is a stated convention, and where one block is bigger than the rest it sits at one
+      end of that layout.</p>
   </div>
 
   <div class="card">
@@ -785,8 +790,26 @@ const handlers = {
   ser: () => {
     const r = call("seriate_site", val("ser"));
     if (r.error) return show("ser-out", r.error + (r.sites ? "\nsites: " + r.sites.join(", ") : ""));
-    show("ser-out", `${r.site}: ${r.seriated} of ${r.documents} documents seriated\n\n` +
-      r.order.join("  →  ") + `\n\n${r.note}`);
+    const cap = 60;
+    const run = (labels) => "  " + labels.slice(0, cap).join("  →  ") +
+      (labels.length > cap ? `  … +${labels.length - cap} more` : "");
+    if (!r.groups) {
+      // this pyaegean reports no similarity blocks, so none is named here
+      return show("ser-out",
+        `${r.site}: ${r.seriated} of ${r.documents} documents seriated\n` +
+        "this pyaegean reports the ordering alone, so tablets sharing no sign can stand " +
+        "side by side\n\n" + run(r.sequence) + `\n\n${r.note}`);
+    }
+    const head = `${r.site}: ${r.seriated} of ${r.documents} documents seriated into ` +
+      `${r.blocks} similarity block${r.blocks === 1 ? "" : "s"}` +
+      (r.ambiguous ? ", axis partly undetermined" : "") + "\n" +
+      (r.blocks === 1 ? "one connected block, so the sequence runs end to end"
+                      : "a sequence holds only within a block, never across them");
+    const body = r.groups.map((g, i) =>
+      `block ${i + 1} · ${g.size} tablet${g.size === 1 ? "" : "s"}` +
+      (g.largest && r.blocks > 1 ? "  (largest)" : "") + "\n" + run(g.order)
+    ).join("\n\n");
+    show("ser-out", `${head}\n\n${body}\n\n${r.note}`);
   },
   allo: () => {
     const r = call("allographs", val("allo"));

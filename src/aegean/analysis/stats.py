@@ -22,7 +22,9 @@ does. ``kind="signs"`` counts the individual signs a token is written with
 dividers, transcribed numerals, and punctuation are marks of the edition rather
 than signs of the script, and a token whose reading is not preserved
 (``ReadingStatus.LOST``) carries a lacuna placeholder rather than a sign. All
-four are left out, so a sign total is a count of signs.
+four are left out, so a sign total is a count of signs. The rule itself
+(``_bears_signs``) lives here and is imported by the other sign-level readers, so
+one token stream is not two different corpora depending on who counts it.
 
 **A scholarly caution.** These are descriptive instruments. On small or
 fragmentary corpora (most Aegean material) a significant G² flags an imbalance
@@ -93,8 +95,7 @@ def _documents(corpus: Any) -> list[Document]:
 
 # Marks an edition writes between or around the signs, never signs of the script
 # itself: word/entry dividers and rulings, transcribed numeric values, and the
-# punctuation of alphabetic scripts. The same convention as
-# ``analysis.clustering._sign_sequences``.
+# punctuation of alphabetic scripts.
 _NON_SIGN_KINDS = frozenset({TokenKind.SEPARATOR, TokenKind.NUMERAL, TokenKind.PUNCT})
 
 
@@ -108,29 +109,40 @@ def _bears_signs(token: Token) -> bool:
     belongs in a count of attested signs, and counting them (or the non-sign marks
     above) puts editorial apparatus at the top of every frequency, dispersion and
     keyness table. ``RESTORED`` is kept: it marks a reading the editor is confident
-    of rather than absent text."""
+    of rather than absent text.
+
+    This is the one implementation of the rule. ``analysis.clustering`` and
+    ``analysis.graph`` read it from here rather than restating it, so a token that
+    is not a sign here is not a sign for any sign-level count in the package."""
     return token.kind not in _NON_SIGN_KINDS and token.status != ReadingStatus.LOST
+
+
+def _sign_labels(token: Token) -> list[str]:
+    """The sign labels one sign-bearing token contributes.
+
+    ``Token.signs`` is the decomposition the loader recorded; a token that carries
+    none is read from its transliteration, hyphen-separated when it is written that
+    way. Empty labels a decomposition leaves behind are dropped. The caller decides
+    whether the token bears signs at all (``_bears_signs``)."""
+    labels = token.signs or (
+        token.text.split("-") if "-" in token.text else [token.text]
+    )
+    return [s for s in labels if s]
 
 
 def _items_of(doc: Document, kind: str) -> list[str]:
     """The countable items of one document.
 
     ``"words"`` counts lexical WORD tokens whatever their editorial status;
-    ``"signs"`` counts the signs of every sign-bearing token (see
-    ``_bears_signs``), skipping any empty label a decomposed reading leaves
-    behind."""
+    ``"signs"`` counts the signs (``_sign_labels``) of every sign-bearing token
+    (``_bears_signs``)."""
     if kind == "words":
         return [t.text for t in doc.tokens if t.kind is TokenKind.WORD]
     if kind == "signs":
         out: list[str] = []
         for t in doc.tokens:
-            if not _bears_signs(t):
-                continue
-            out.extend(
-                s
-                for s in (t.signs or (t.text.split("-") if "-" in t.text else [t.text]))
-                if s
-            )
+            if _bears_signs(t):
+                out.extend(_sign_labels(t))
         return out
     raise ValueError(f"kind must be 'words' or 'signs', got {kind!r}")
 

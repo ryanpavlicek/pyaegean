@@ -414,18 +414,21 @@ def idioms(text: str) -> str:
 def lineara_stats(site: str = "Haghia Triada") -> str:
     """Corpus statistics on the bundled Linear A corpus: the most evenly dispersed words
     (Gries' DP) plus the words key to one find-site against the rest (G² / log-ratio).
-    Deterministic counts over transliterated sign-groups, not meanings."""
+    Deterministic counts over transliterated sign-groups, not meanings. Keyness needs a
+    named site: a few documents record no find-site at all, and they are not what an empty
+    box asks for, so blank input returns the list of sites to choose from."""
     import aegean
     from aegean.analysis import dispersions, keyness
     from aegean.core.corpus import Corpus
 
     la = aegean.load("lineara")
-    site = site.strip()
-    target = la.filter(site=site)
-    if not target.documents:
+    site = str(site).strip()
+    target = la.filter(site=site) if site else None
+    if target is None or not target.documents:
         sites = sorted({d.meta.site for d in la.documents if d.meta.site})
         return json.dumps(
-            {"error": f"no documents from site {site!r}", "sites": sites}, ensure_ascii=False
+            {"error": f"no Linear A documents from site {site!r}", "sites": sites},
+            ensure_ascii=False,
         )
     rest = Corpus(
         [d for d in la.documents if d.meta.site != site],
@@ -838,17 +841,24 @@ def linearb_dossiers(min_docs: str = "2") -> str:
 
 
 def seriate_site(site: str = "Zakros") -> str:
-    """Seriate one Linear A find-site's tablets by Brainerd-Robinson sign similarity: a
-    deterministic ordering that places compositionally similar tablets next to each other.
+    """Seriate one Linear A find-site's tablets by Brainerd-Robinson sign similarity.
+
+    Tablets sharing no sign with the rest are related by no similarity evidence. A pyaegean
+    that reports the similarity graph's blocks therefore returns the site split into them:
+    ``blocks`` counts them and ``groups`` carries each as a sequence in itself, a sequence
+    being meaningful only *within* a block, with the order between blocks a stated
+    convention. ``ambiguous`` marks an axis the similarity leaves partly undetermined even
+    inside a block. A pyaegean that reports only the ordering gets ``blocks: null`` and that
+    single ``sequence``, with no block asserted and the caveat carried in the note.
     EXPLORATORY: a relative-sequence hypothesis, not a date, with no inherent direction; on
     an undeciphered script the axis may track scribal drift as readily as time."""
     import aegean
     from aegean.analysis.seriation import seriate
 
     la = aegean.load("lineara")
-    site = site.strip()
-    sub = la.filter(site=site)
-    if not sub.documents:
+    site = str(site).strip()
+    sub = la.filter(site=site) if site else None
+    if sub is None or not sub.documents:
         sites = sorted({d.meta.site for d in la.documents if d.meta.site})
         return json.dumps(
             {"error": f"no Linear A documents from site {site!r}", "sites": sites},
@@ -858,17 +868,67 @@ def seriate_site(site: str = "Zakros") -> str:
         res = seriate(sub)
     except ValueError as exc:
         return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    ordered = list(res.ordered_labels() or ())
+    note = (
+        "EXPLORATORY: a compositional-sequence hypothesis with no direction and no "
+        "calendar anchor; on undeciphered Linear A the axis may track scribal or "
+        "graphotactic drift, not time."
+    )
+    components = getattr(res, "components", None)
+    if components is None:
+        # This pyaegean reports the ordering alone. Naming a block would be inventing one,
+        # so the sequence it does report is returned as exactly that.
+        note += (
+            " This pyaegean reports the ordering without the similarity graph's blocks, so "
+            "tablets sharing no sign with the rest can stand next to each other here: a run "
+            "of the sequence is not by itself evidence that its tablets are related."
+        )
+        return json.dumps(
+            {
+                "site": site,
+                "documents": len(sub.documents),
+                "seriated": len(res.order),
+                "blocks": None,
+                "sequence": ordered,
+                "note": note,
+            },
+            ensure_ascii=False,
+        )
+    # components partition order into the similarity graph's blocks, in the sequence they
+    # appear, so the flat ordering slices straight into per-block sequences.
+    sizes = [len(block) for block in components]
+    largest = max(sizes) if sizes else 0
+    # Blocks that tie for largest are not distinguished by size, so none of them is marked:
+    # a marker on the first of several equals asserts a distinction the sizes do not carry.
+    unique = sizes.count(largest) == 1
+    groups, at = [], 0
+    for size in sizes:
+        groups.append(
+            {"size": size, "largest": unique and size == largest, "order": ordered[at : at + size]}
+        )
+        at += size
+    if len(sizes) > 1:
+        note += (
+            f" These {len(sizes)} blocks share no sign with one another, so a sequence holds "
+            "only within a block; the order between blocks is a stated convention and carries "
+            "no similarity evidence."
+        )
+    if res.ambiguous:
+        note += (
+            " Flagged ambiguous: the similarity leaves part of the sequence undetermined even "
+            "inside a block."
+        )
     return json.dumps(
         {
             "site": site,
             "documents": len(sub.documents),
             "seriated": len(res.order),
-            "order": list(res.ordered_labels() or ()),
-            "note": (
-                "EXPLORATORY: a compositional-sequence hypothesis with no direction and no "
-                "calendar anchor; on undeciphered Linear A the axis may track scribal or "
-                "graphotactic drift, not time."
-            ),
+            "blocks": len(sizes),
+            "largest_block": largest,
+            "ambiguous": res.ambiguous,
+            "groups": groups,
+            "order": ordered,
+            "note": note,
         },
         ensure_ascii=False,
     )

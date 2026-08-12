@@ -20,6 +20,7 @@ result is reproducible. Exploratory on undeciphered material.
 from __future__ import annotations
 
 import math
+import warnings
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -326,12 +327,46 @@ def upgma_with_bootstrap(
 # ── label-propagation communities ────────────────────────────────────────────
 
 
+# The floor the derived round budget never falls below. A graph of a few dozen nodes settles in
+# under ten rounds, so the floor leaves the small end an order of magnitude of headroom without
+# the per-node allowance below having to reach down that far.
+_MIN_DERIVED_MAX_ITERS = 50
+
+# Rounds allowed per node. How many rounds a graph needs is set by how far a label must travel
+# along it, and a path graph, the structure that makes that distance largest, settles in about
+# 0.6 rounds per node (measured from 50 to 500 nodes: 31, 60, 112, 179, 298 rounds). One round
+# per node clears that worst case with margin, and no graph on the same nodes needs more, since
+# adding edges only shortens the distances a label crosses.
+_ITERATIONS_PER_NODE = 1
+
+# The node visits (rounds times nodes) the derived budget may spend. A round costs work
+# proportional to the graph's size, so the per-node budget alone would grow the total with the
+# square of the node count; this allowance is what holds that in check, capping the derived
+# budget at roughly a second of work. Past it the budget falls with size instead of rising, so
+# a graph too large to settle within the allowance is reported unsettled rather than run longer.
+_DERIVED_WORK_ALLOWANCE = 400_000
+
+
+def _default_max_iters(n: int) -> int:
+    """The round budget for a graph of ``n`` nodes when the caller names none.
+
+    The budget has three regimes. It rises with the graph to a peak at 632 nodes, because up to
+    there a larger graph needs more rounds to settle and a round is still cheap. Past the peak
+    :data:`_DERIVED_WORK_ALLOWANCE` decides instead and the budget falls with size. From 8,000
+    nodes the allowance has dropped below :data:`_MIN_DERIVED_MAX_ITERS`, so every graph from
+    there up gets exactly the floor. A caller who wants a graph past the peak run further names
+    its own ``max_iters``, which is then used as given."""
+    if n < 1:
+        return _MIN_DERIVED_MAX_ITERS
+    return max(_MIN_DERIVED_MAX_ITERS, min(_ITERATIONS_PER_NODE * n, _DERIVED_WORK_ALLOWANCE // n))
+
+
 def label_propagation(
     nodes: Sequence[str],
     edges: Iterable[tuple[str, str, float]],
     *,
     seed: int = 7,
-    max_iters: int = 50,
+    max_iters: int | None = None,
 ) -> dict[str, int]:
     """Weighted label-propagation community detection (Raghavan et al. 2007).
 
@@ -340,7 +375,16 @@ def label_propagation(
     seeded visit-order shuffle and ``label < current`` tie-break. Returns
     ``{node: community_id}`` with communities renumbered by descending size.
     Good for coloring a few hundred nodes — not a modularity method for large
-    graphs."""
+    graphs.
+
+    Rounds run until no node changes label, which is what makes the labelling the graph's
+    own: a run stopped before then returns labels still in mid-flight, splitting one
+    community into the several fragments a label had not yet crossed. Such a run warns,
+    since nothing in the returned mapping distinguishes it from a settled one.
+
+    ``max_iters`` caps the rounds; ``None`` derives the cap from the graph's own node count,
+    since how far a label has to travel to settle scales with the graph."""
+    budget = _default_max_iters(len(nodes)) if max_iters is None else max_iters
     rand = mulberry32(seed)
     label = {nd: i for i, nd in enumerate(nodes)}
     nbrs: dict[str, list[tuple[str, float]]] = defaultdict(list)
@@ -350,7 +394,11 @@ def label_propagation(
         nbrs[a].append((b, w))
         nbrs[b].append((a, w))
     order_arr = list(nodes)
-    for _ in range(max_iters):
+    settled = False
+    # The most recent round's count. A budget of zero rounds runs none, and leaves every node
+    # where it started, which is the count this stands at.
+    changed = len(nodes)
+    for _ in range(budget):
         for i in range(len(order_arr) - 1, 0, -1):
             j = int(rand() * (i + 1))
             order_arr[i], order_arr[j] = order_arr[j], order_arr[i]
@@ -373,7 +421,16 @@ def label_propagation(
                 label[nd] = best_label
                 changed += 1
         if changed == 0:
+            settled = True
             break
+    if not settled:
+        warnings.warn(
+            f"label propagation was still moving {changed} of {len(nodes)} nodes when it reached"
+            f" its budget of {budget} rounds: the communities returned are mid-propagation, so a"
+            " single community may appear split, and raising max_iters gives it the rounds it"
+            " needs",
+            stacklevel=2,
+        )
     sizes: dict[int, int] = {}
     for lab in label.values():
         sizes[lab] = sizes.get(lab, 0) + 1

@@ -127,8 +127,8 @@ def test_v4_corpus_wide_counts():
             docs_app += 1
     assert (len(c), ntok, nwords) == (802, 2616, 1895)
     assert counts[ReadingStatus.CERTAIN] == 2296
-    assert counts[ReadingStatus.UNCLEAR] == 320
-    assert counts[ReadingStatus.RESTORED] == 0 and counts[ReadingStatus.LOST] == 0
+    assert counts[ReadingStatus.UNCLEAR] == 201
+    assert counts[ReadingStatus.RESTORED] == 0 and counts[ReadingStatus.LOST] == 119
     assert docs_app == 215
 
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyaegean"
-version = "0.58.0"
+version = "0.59.0"
 description = "A specialist Python toolkit for Ancient Greek NLP and the Aegean syllabic scripts (Linear A, Linear B, Cypriot, Cypro-Minoan)."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -88,7 +88,7 @@ aegean = ["py.typed", "data/bundled/**/*.json", "tui/**/*.tcss"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "training/tests"]
-addopts = "-q -m 'not framework_interop'"
+addopts = "-q -m 'not framework_interop and not released_wheel'"
 markers = [
     # Applied to every TUI Pilot test by tests/conftest.py so xdist pins them to one worker
     # (they flake under cross-worker contention). Registered here so the marker is known even
@@ -97,6 +97,11 @@ markers = [
     # Real framework objects are intentionally isolated from the ordinary full suite.
     # The dedicated interop CI job and explicit adapter smoke use this marker.
     "framework_interop: opt-in real spaCy, Stanza, or CLTK object tests",
+    # The browser demo runs against the pyaegean wheel on PyPI, not the working tree, so a
+    # card can be written against an API the published page's library does not have. The
+    # guard that catches it installs that wheel into a throwaway venv, which needs the
+    # network; the dedicated CI job uses this marker.
+    "released_wheel: opt-in test that runs docs/demo against the pyaegean wheel on PyPI",
 ]
 
 [tool.ruff]

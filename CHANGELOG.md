@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.59.0 (2026-08-12)
 
 ### Changed
 
@@ -17,6 +17,123 @@ All notable changes to pyaegean are documented here. The format follows
   names-only safety property, and the same structured-error convention (a domain miss is
   a normal result carrying `{"error": ...}`, never a raised `ToolError`). MCP SDK 2.0
   supports Python 3.10 and up, so the floor costs no supported interpreter.
+
+- Editorial apparatus in the DAMOS Linear B corpus is no longer counted as signs the
+  scribe wrote. A Mycenaean edition prints its own notation in the transliteration line:
+  the Leiden brackets, and Latin abbreviations for the state of the object (`mut.`
+  mutila, `vest.` vestigia, `vac.` vacat, `v.` verso, and the rest). These were read as
+  unread signs, which put them at the top of every sign frequency, dispersion and keyness
+  table: the three most frequent "signs" in the corpus were `[`, `]` and `mut.`. A token
+  that is apparatus now carries no signs and keeps its expansion in
+  `annotations["apparatus"]`; a marker for text that is destroyed or unread reads
+  `UNKNOWN`/`LOST`, and a marker that records something else about the object (a stretch
+  left blank, a side, an erasure) reads `SEPARATOR`. 12,167 items leave the sign stream,
+  which falls from 73,637 to 61,470, and the ten most frequent are now all syllabograms.
+  The token set, and therefore the document, token and word counts, are unchanged.
+
+- Qualified ideograms in DAMOS are read as logograms. An ideogram may carry a qualifier
+  after its label: `:` and the sex of an animal (`OVIS:m`), or `;` and the numbered
+  variant of the sign (`TELA;1`), optionally followed by a ligature (`TELA;1+TE`). The
+  pattern allowed no qualifier, so 1,758 tokens across 57 distinct forms were invisible to
+  every logogram-aware operation. The qualified form stays one token with one sign label,
+  because it is a distinct written sign.
+
+- An unresolved sign position is not counted as an attested sign. SigLA records a sign it
+  could not identify as a `*?` blank, and the Cypriot edition marks the direction the next
+  stretch is written in with an arrow; both reached the sign stream through the token text,
+  where `*?` was the third most frequent "sign" in SigLA at 2.9 per cent. A blank position
+  now reads `LOST` and a direction marker `SEPARATOR`, matching how Linear B reads the same
+  two situations. Document, token and word counts are unchanged for both corpora.
+
+- One sign rule serves every consumer. `analysis.clustering` filtered by token kind alone
+  while `analysis.stats` also excluded unattested readings, so editorial apparatus entered
+  Brown class induction but not the frequency tables. Both now read the same predicate and
+  the same label decomposition.
+
+- `seriate` reports the similarity blocks it found rather than one flat sequence.
+  Documents that share no sign with the rest are joined by no similarity evidence, so an
+  assemblage resolves into one or more blocks; `SeriationResult` now carries `components`
+  and `ambiguous`, and a sequence holds only within a block.
+
+- `seriate` derives its solver budgets from the size of the block when the caller names
+  none, and `max_iter` defaults to `None` accordingly. The fixed budget it replaced settled
+  a small block and stopped short on a larger one, returning an axis that was wherever the
+  unsettled vector happened to be: on a 161-row block the ordering depended on the order the
+  rows were supplied in, which the function's own contract rules out. The dense solver's
+  sweep budget had the same shape and could return eigenvalues from an unfinished solve with
+  no way for a caller to tell; it now reports that it did not finish. A caller who names
+  `max_iter` still gets exactly that budget, and every block that settled under the old
+  budget keeps exactly the axis it had. A large block that never settles now works longer
+  before saying so, and says which budget ran out.
+
+- `label_propagation` derives its round budget from the size of the graph and warns when
+  the budget rather than the graph decided the answer. At 100 nodes, inside its documented
+  scale, the fixed budget returned four communities where the settled answer is one.
+
+- The analysis layer accepts a query's results wherever it accepts a corpus.
+  `Corpus.query` returns `QueryResults`, whose matched documents are its `inscriptions`;
+  ten entry points across accounting, profiling, scribal analysis, hands, segmentation,
+  apparatus, rarity, grounding, structure and the Cypriot analyses coerced only a corpus.
+  `variant_groups` still takes a script id, because it reports a script's sign inventory
+  rather than a body of text. Grounding's co-occurrence evidence had returned an empty
+  list rather than refusing, so a queried subset came back with no evidence instead of an
+  error.
+
+### Fixed
+
+- Epigraphic corpus text is normalized to NFC, so a search finds every spelling of a word.
+  The five epigraphic corpora were built from editions transcribed in a mix of composed and
+  decomposed Unicode, so one word was stored under two spellings: byte comparison split the
+  frequency counts, and searching EDH for the commonest funerary formula word returned one
+  inscription of ninety-eight. The shared EpiDoc extractor now normalizes where a token is
+  built, and the hosted assets are re-pinned to normalized builds. Documents, tokens and
+  words are unchanged; only the Unicode composition of word forms differs.
+
+- A corpus search waits for a concurrent write instead of failing. The read-only search
+  connection now sets a 30 second busy timeout; the default 5 seconds could expire on a
+  loaded machine while a write transaction held the database.
+
+- CoNLL-U input is validated strictly by default, and a malformed file is reported by what
+  is wrong with it rather than by where the parse happened to fail.
+
+- Malformed corpus JSON is reported by document and field. A hand-edited or third-party
+  file raised a bare `KeyError`, `AttributeError` or `TypeError` from inside the reader,
+  which the CLI surfaced as a lone key name; the reader now names the document, the field
+  and what arrived, and reports every malformed field as a `ValueError` so one `except`
+  clause covers the file. An unknown `schemaVersion` is refused rather than silently
+  dropping the state it describes.
+
+- An error naming malformed input is bounded. A single 500,000-character field produced a
+  message of the same length, written to the terminal in full; values are truncated and a
+  long list of rejected field names is counted rather than printed, while the field, the
+  document and the guidance stay whole.
+
+- A UTF-8 byte-order mark no longer refuses a file. `Corpus.from_json`, `read_corpus`,
+  `from_workbench_export`, the text and CSV importers, the REPL's corpus probe,
+  `aegean greek conllu inspect`, `aegean greek stream`, and the gold folds that
+  `evaluate_on_ud`, `bootstrap_ud`, `evaluate_by_genre`, `evaluate_on_verse` and
+  `evaluate_on_papygreek` accept all read a BOM as the encoding marker it is. On a BOM'd
+  gold fold the CoNLL-U parser had reported a column-count fault on a comment line, and
+  `conllu inspect --json` had returned a comment count that disagreed with its own
+  per-sentence block.
+
+- A corpus file whose name opens like JSON loads again. `Corpus.from_json` and
+  `from_workbench_export` read a string beginning with `{` or `[` as JSON, so a relative
+  path such as `[draft].json` was parsed as a malformed payload; a string that fails to
+  parse now falls back to the path when a file of that name exists.
+
+- `Corpus.filter` reports an unknown metadata field instead of returning an empty corpus,
+  so a mistyped field name is no longer indistinguishable from a filter that matched
+  nothing.
+
+- `aegean import` reports the rows it skipped when a CSV text column is empty, matching the
+  `.txt` path, which already errored on the same condition.
+
+- The browser demo's seriation card reports the blocks a site resolves into rather than
+  presenting unrelated fragments as one sequence, marks a largest block only when one is
+  larger than the rest, and states plainly that Haghia Triada is more than the page will
+  work through. Its Linear A statistics card no longer answers a blank site box with a
+  table over the documents that record no site.
 
 ## 0.58.0 (2026-08-11)
 

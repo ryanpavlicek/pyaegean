@@ -79,12 +79,13 @@ import importlib
 import aegean
 import aegean.scripts.lineara.loader as loader
 
+released = aegean.__version__
 before = aegean.load("lineara")
 aegean.__version__ = "99.9.9"
 importlib.reload(loader)
 after = aegean.load("lineara")
 
-assert before.provenance.data_version == "0.58.0", before.provenance.data_version
+assert before.provenance.data_version == released, before.provenance.data_version
 assert after.provenance.data_version == "99.9.9", after.provenance.data_version
 assert len(before) == len(after) and len(before) > 0
 assert before.fingerprint() == after.fingerprint(), "the package version reached the hash"

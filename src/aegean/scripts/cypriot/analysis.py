@@ -27,7 +27,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
-from ...core.model import TokenKind
+from ...core.model import Document, TokenKind
 from .lexicon import greek_reading
 
 __all__ = [
@@ -49,8 +49,24 @@ def _cypriot_corpus(corpus: Any) -> Any:
 
 
 def _word_tokens(corpus: Any) -> list[Any]:
-    docs = getattr(corpus, "documents", corpus)
-    return [t for d in docs for t in d.tokens if t.kind is TokenKind.WORD]
+    """Every lexical word token of a corpus, a query's results, or a list of documents.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so a queried subset is profiled as itself. Anything else that
+    yields documents (a `Corpus`, a plain list) is taken as it comes; anything that does
+    not raises a ``TypeError`` naming what arrived."""
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    if out and not isinstance(out[0], Document):
+        raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
+    return [t for d in out for t in d.tokens if t.kind is TokenKind.WORD]
 
 
 # ── syllabary structure ──────────────────────────────────────────────────────
@@ -94,9 +110,11 @@ def syllabary_profile(corpus: Any = None) -> SyllabaryProfile:
     Counts every syllabogram occurrence in the corpus's lexical words (a token's
     decomposed ``signs``, case-folded to the grid's uppercase labels) and measures
     it against the full sign inventory (the ICS/Unicode grid). Grid signs the
-    corpus never uses are reported as ``gaps``. ``corpus`` defaults to the bundled
-    Cypriot corpus; its own ``sign_inventory`` is the grid, falling back to the
-    packaged inventory when a passed corpus carries none.
+    corpus never uses are reported as ``gaps``. ``corpus`` is a `Corpus`, the results
+    of a `Corpus.query`, or a list of documents, and defaults to the bundled Cypriot
+    corpus; the grid is a passed corpus's own ``sign_inventory``, falling back to the
+    packaged inventory when the input carries none, so a queried subset is measured
+    against the full grid and its gaps are the subset's.
 
     Descriptive: a gap means "unattested in *this* corpus", nothing about whether
     the sign existed or was legible elsewhere."""
@@ -185,8 +203,9 @@ def bridge_coverage(corpus: Any = None) -> BridgeCoverage:
 
     For every lexical word, checks the Greek-reading bridge
     (:func:`aegean.scripts.cypriot.greek_reading`) and tallies how many tokens
-    resolve, split by the token's editorial reading status. ``corpus`` defaults to
-    the bundled Cypriot corpus.
+    resolve, split by the token's editorial reading status. ``corpus`` is a `Corpus`,
+    the results of a `Corpus.query`, or a list of documents, and defaults to the
+    bundled Cypriot corpus.
 
     Coverage is bounded by two things: the deliberately small, securely-attested
     lexicon (this reports its reach; it does not extend it), and the corpus's own

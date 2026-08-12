@@ -146,7 +146,7 @@ def test_manifest_covers_claim_sources_and_reviewer_entry_points() -> None:
             "duplicate JSON key",
         ),
         (
-            lambda raw: raw.replace(b'"package_version":"0.58.0"', b'"package_version":NaN', 1),
+            lambda raw: raw.replace(b'"package_version":"0.59.0"', b'"package_version":NaN', 1),
             "non-finite JSON value",
         ),
     ],

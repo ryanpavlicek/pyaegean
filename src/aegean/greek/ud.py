@@ -1432,7 +1432,14 @@ def evaluate_on_ud(
     with tempfile.TemporaryDirectory() as td:
         sys_path = Path(td) / "system.conllu"
         sys_path.write_text(system, encoding="utf-8")
-        with open(gold_path, encoding="utf-8") as gf:
+        # The two reads differ deliberately. ``gold_path`` may be a file the caller
+        # supplied (``source=``), so it is decoded as ``utf-8-sig`` like every other
+        # user-supplied CoNLL-U this package reads (`_read_conllu_source`): a leading
+        # byte-order mark is an encoding marker, and glueing it to the first line makes
+        # the evaluator reject a ``#`` comment as a row with the wrong column count.
+        # ``sys_path`` is the file written three lines above, so it cannot carry a BOM;
+        # plain ``utf-8`` keeps that read exact rather than silently tolerant.
+        with open(gold_path, encoding="utf-8-sig") as gf:
             gold_ud = ev.load_conllu(gf)
         with open(sys_path, encoding="utf-8") as sf:
             system_ud = ev.load_conllu(sf)
@@ -1551,7 +1558,9 @@ def bootstrap_ud(
 
         parse = joint.active() is not None or syntax.active() is not None
     system_text = pipeline_conllu(sentences, parse=parse)
-    gold_text = gold_path.read_text(encoding="utf-8")
+    # utf-8-sig: ``gold_path`` may be a caller-supplied fold, and a leading byte-order
+    # mark belongs to the encoding, not to the first ``#`` comment line.
+    gold_text = gold_path.read_text(encoding="utf-8-sig")
     wanted = [m for m in metrics if parse or m not in ("uas", "las")]
     ev = _eval_module()
     return _bootstrap_conllu(
@@ -1602,7 +1611,9 @@ def evaluate_by_genre(
         parse = joint.active() is not None or syntax.active() is not None
     wanted = [m for m in metrics if parse or m not in ("uas", "las")]
     system_text = pipeline_conllu(sentences, parse=parse, progress=progress, batch_size=batch_size)
-    gold_blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8"))
+    # utf-8-sig: ``gold_path`` may be a caller-supplied fold, and a leading byte-order
+    # mark belongs to the encoding, not to the first ``#`` comment line.
+    gold_blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8-sig"))
     sys_blocks = _split_conllu_sentences(system_text)
     if not (len(gold_blocks) == len(sys_blocks) == len(sentences)):
         raise ValueError(

@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..greek.pipeline import TokenRecord
@@ -598,17 +598,44 @@ def content_glosses(
     return out
 
 
+def _cooccurrence_documents(corpus: object) -> list[Any]:
+    """Coerce a corpus, a query's results, or an iterable of documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``; a `Corpus` exposes ``documents``; anything else that yields
+    documents is taken as it comes. A document here is anything carrying ``tokens``, so
+    a hand-built stand-in works as a corpus does. Anything else raises a ``TypeError``
+    naming what arrived, because co-occurrence counted over nothing is indistinguishable
+    from a word that co-occurs with nothing."""
+    docs: Any = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    for d in out:
+        if not hasattr(d, "tokens"):
+            raise TypeError(f"expected a corpus or documents, got {type(d).__name__}")
+    return out
+
+
 def cooccurrence_evidence(corpus: object, word: str, *, limit: int = 12) -> list[GroundingItem]:
     """Grounding for an undeciphered-script query: the words that most often
     share a document with ``word``. Source ``analysis:cooccurrence``,
-    ``ref=word``. Empty if ``word`` co-occurs with nothing."""
+    ``ref=word``. Empty if ``word`` co-occurs with nothing.
+
+    ``corpus`` is a `Corpus`, the results of a `Corpus.query` (whose matched documents
+    are its ``inscriptions``), or a list of documents, so grounding can be drawn from a
+    queried subset and reflects the co-occurrence in that subset. Anything that is not a
+    body of documents raises a ``TypeError`` naming what arrived: an empty grounding list
+    reads as "this word co-occurs with nothing", which a wrong argument must never say."""
     from collections import Counter
 
-    docs = getattr(corpus, "documents", None)
-    if docs is None:
-        return []
     counter: Counter[str] = Counter()
-    for d in docs:
+    for d in _cooccurrence_documents(corpus):
         words = {t.text for t in d.tokens if "-" in t.text}
         if word in words:
             counter.update(w for w in words if w != word)

@@ -79,6 +79,24 @@ jobs:
           tests/test_cli_interop.py
           tests/test_cli_doctor.py
 
+  # docs/demo/index.html installs pyaegean from PyPI with no version pin, so the published
+  # page runs docs/demo/demo.py against the released wheel while every other test runs it
+  # against the working tree. This cell installs that wheel into a throwaway virtual
+  # environment and calls each card's default input through it. It reaches the network, so
+  # it stays out of the ordinary suite behind the released_wheel marker; -s keeps the
+  # version it tested against in the log.
+  demo-released-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Browser demo against the released PyPI wheel (opt-in suite)
+        run: pytest -rs -s -m released_wheel tests/test_demo_drift.py
+
   notebooks:
     runs-on: ubuntu-latest
     steps:

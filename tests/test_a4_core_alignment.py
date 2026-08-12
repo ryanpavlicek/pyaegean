@@ -165,8 +165,12 @@ def test_alignment_json_rejects_wrong_source_and_malformed_operations() -> None:
 
     payload = json.loads(_corpus_with_alignment().to_json())
     payload["documents"][0]["tokens"][0]["alignment"]["normalization_ops"] = "unicode:nfc"
-    with pytest.raises(TypeError, match="JSON array"):
+    # Malformed content in a saved corpus is a ValueError naming the document and the
+    # token, like every other field this reader refuses, so one `except ValueError`
+    # covers reading a file.
+    with pytest.raises(ValueError, match="JSON array") as bad_ops:
         Corpus.from_dict(payload)
+    assert "document 'doc-1'" in str(bad_ops.value) and "token 0" in str(bad_ops.value)
 
 
 def test_document_alignment_validation_rejects_gaps_duplicates_overlap_and_partial() -> None:

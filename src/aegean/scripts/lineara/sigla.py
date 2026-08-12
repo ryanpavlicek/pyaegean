@@ -258,23 +258,27 @@ def parse_database_js(text: str) -> dict[str, Any]:
 #          (0 tokens): it is always a lost COMPONENT inside an otherwise-read
 #          complex sign (e.g. ``*16+[?]+*50``), so the surviving components are
 #          kept and only the lost slot is dropped from ``signs``
-#   *?     an in-word sign SigLA recorded but left unresolved (a ``blank``
-#          attestation): present but unread → UNCLEAR; it is kept in the word TEXT
-#          to mark the position, but is not a real syllabogram so it is dropped
-#          from ``signs``. This blank (``*?``), not ``[?]``, is the standalone
-#          no-reading case
+#   *?     a sign position SigLA recorded but left unresolved (a ``blank``
+#          attestation): present but unread. It is kept in the word TEXT to mark
+#          the position, but it is not a syllabogram, so it is dropped from
+#          ``signs``. A word that still yields at least one read sign around it
+#          (``KU-*?-NI``) reads UNCLEAR; a word whose every position is such a
+#          blank (``*?``, ``*?-*?``) yields no reading at all and reads LOST
 # The other symbols SigLA uses (``+`` ``|`` ``||`` ``(`` ``)`` ``{`` ``}``) are its
 # complex-sign DECOMPOSITION notation (Salgarella 2020, 54-59), not editorial
 # certainty: left untouched in both the token text and its sign labels.
 # SigLA has no lacuna/gap category of its own; it collapses lost and merely
-# uncertain signs into a single unreadable/blank bucket, which this loader
-# conservatively maps to UNCLEAR rather than guessing LOST. Its apparatus
-# therefore yields only CERTAIN and UNCLEAR (never RESTORED/LOST). This
-# deliberately diverges from the bundled GORILA loader (``lineara/loader.py``),
-# which maps the upstream wholly-illegible placeholder (U+1076B) to LOST: the two
-# editions use incompatible apparatus, so their status decodings are not aligned.
-# Anything not securely interpretable stays the conservative UNCLEAR, never a
-# silent CERTAIN.
+# uncertain signs into a single unreadable/blank bucket, so a token that still
+# preserves a reading maps to UNCLEAR rather than guessing LOST. Its apparatus
+# yields CERTAIN, UNCLEAR and LOST, never RESTORED (SigLA supplies nothing
+# editorially). LOST is reserved for a token that records no reading whatever:
+# it is the status the shared sign rule (``analysis.stats._bears_signs``) reads to
+# keep an unread position out of every sign-level count, so a word of blanks is
+# not an attested sign. This deliberately diverges from the bundled GORILA loader
+# (``lineara/loader.py``), which maps the upstream wholly-illegible placeholder
+# (U+1076B) to LOST: the two editions use incompatible apparatus, so their status
+# decodings are not otherwise aligned. Anything not securely interpretable stays
+# the conservative UNCLEAR, never a silent CERTAIN.
 _APPARATUS = "?[]"        # editorial-uncertainty markers → ReadingStatus.UNCLEAR
 _BLANK_SIGN = "*?"        # an unresolved in-word sign position (from a ``blank``)
 
@@ -305,7 +309,9 @@ def _clean_label(label: str) -> str:
 def _word_signs(pending: list[str]) -> tuple[str, ...]:
     """The real syllabogram labels of a word: the unresolved ``*?`` blank position is
     dropped (kept in the token text to mark the gap, never counted as a sign), and the
-    editorial apparatus is stripped off each surviving label (`_clean_label`)."""
+    editorial apparatus is stripped off each surviving label (`_clean_label`). Empty
+    when every position of the word is such a blank, which is the word carrying no
+    reading at all (`_sigla_tokens` gives it ``ReadingStatus.LOST``)."""
     out: list[str] = []
     for s in pending:
         if s == _BLANK_SIGN:
@@ -338,7 +344,9 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
     word/standalone item is its own line. The edition's apparatus is decoded into
     `ReadingStatus` (see the module notes above): a token whose transcription
     carries ``?``/``[``/``]`` (or an unresolved ``*?``) reads UNCLEAR, with the
-    markers kept in the token text but dropped from its sign labels. Falls back to
+    markers kept in the token text but dropped from its sign labels, while a word
+    left with no sign label at all (every one of its positions an unresolved
+    ``*?``) reads LOST, since nothing of its reading is preserved. Falls back to
     one `UNKNOWN` token per sign for a v1 asset (no ``word``/``kind`` keys)."""
     from ...core.model import ReadingStatus, Token, TokenKind
 
@@ -353,10 +361,13 @@ def _sigla_tokens(attestations: list[dict[str, Any]]) -> tuple[list[Any], list[l
             return
         text = "-".join(pending)
         idx = len(tokens)
-        status = ReadingStatus.UNCLEAR if _is_unclear(text) else ReadingStatus.CERTAIN
+        signs = _word_signs(pending)
+        if not signs:  # every position an unresolved blank: no reading is preserved
+            status = ReadingStatus.LOST
+        else:
+            status = ReadingStatus.UNCLEAR if _is_unclear(text) else ReadingStatus.CERTAIN
         tokens.append(
-            Token(text, TokenKind.WORD, _word_signs(pending), None, len(lines), idx,
-                  status=status)
+            Token(text, TokenKind.WORD, signs, None, len(lines), idx, status=status)
         )
         lines.append([idx])
         pending = []
@@ -468,8 +479,10 @@ def load_sigla() -> Any:
             "apparatus is decoded into ReadingStatus: a doubtful reading (?), an "
             "epigraphic break/lacuna bracket ([ ]), or an unresolved in-word sign "
             "(*?) reads UNCLEAR, with the marker kept in the token text but dropped "
-            "from its sign labels; the complex-sign composition notation (+ | ( ) "
-            "{ }) is preserved, not read as apparatus. Word division and "
+            "from its sign labels; a word whose every position is an unresolved *? "
+            "preserves no reading and reads LOST, so it counts as no sign; the "
+            "complex-sign composition notation (+ | ( ) { }) is preserved, not read "
+            "as apparatus. Word division and "
             "complex-sign notation differ editorially from GORILA."
             if version >= 2 else
             "sign-level paleographical corpus: one token per sign attestation, in "

@@ -9,11 +9,14 @@ shape, so a caller does not have to know which loader produced a corpus:
 
 * `alt_readings(doc_or_corpus)` — every token that carries alternate readings, as
   a flat list of `AltReading` records.
-* `apparatus_summary(corpus)` — the per-corpus apparatus profile (status counts,
+* `apparatus_summary(corpus)` — the apparatus profile (status counts,
   documents carrying non-CERTAIN text, alternate-reading counts, and a legend of
   the apparatus that occurs) as an `ApparatusSummary`. It is deliberately a
   superset of `diagnose`'s ``StatusProfile`` so ``corpus.diagnose()`` can consume
   it directly (see the module note at the bottom for the integration point).
+
+Both read exactly what is handed in: a corpus, the results of a `Corpus.query`, a
+single document, or a list of documents.
 
 Zero-dependency: only the stdlib and the core value objects. Import stays instant.
 """
@@ -128,11 +131,16 @@ class ApparatusSummary:
 
 
 def _iter_documents(obj: "Corpus | Document | Any") -> list["Document"]:
-    """The documents of a `Corpus`, a single `Document`, or an iterable of documents.
+    """The documents of a `Corpus`, a query's results, a single `Document`, or an iterable.
 
-    A clean `TypeError` on anything else (never a raw AttributeError deep inside)."""
-    docs = getattr(obj, "documents", None)
-    if docs is not None:                       # a Corpus (or Corpus-like)
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are its
+    ``inscriptions``, so the apparatus of a queried subset is read off exactly those
+    documents. A clean `TypeError` on anything else (never a raw AttributeError deep
+    inside)."""
+    docs = getattr(obj, "inscriptions", None)
+    if docs is None:
+        docs = getattr(obj, "documents", None)
+    if docs is not None:                       # a Corpus, or a query's results
         return list(docs)
     if hasattr(obj, "tokens") and hasattr(obj, "id"):  # a single Document
         return [obj]  # type: ignore[list-item]
@@ -140,8 +148,8 @@ def _iter_documents(obj: "Corpus | Document | Any") -> list["Document"]:
         items = list(obj)
     except TypeError:
         raise TypeError(
-            "alt_readings/apparatus_summary expect a Corpus, a Document, "
-            f"or an iterable of Documents; got {type(obj).__name__}"
+            "alt_readings/apparatus_summary expect a Corpus, a query's results, "
+            f"a Document, or an iterable of Documents; got {type(obj).__name__}"
         ) from None
     for d in items:
         if not (hasattr(d, "tokens") and hasattr(d, "id")):
@@ -152,12 +160,26 @@ def _iter_documents(obj: "Corpus | Document | Any") -> list["Document"]:
     return items
 
 
+def _script_of(obj: Any, docs: list["Document"]) -> str:
+    """The script the documents belong to, or ``""`` when it is not agreed.
+
+    A `Corpus` records it in ``script_id``. A query's results and a plain document list
+    do not, so it is read from the documents themselves, each of which carries its own:
+    the same documents answer the same way however they are handed in. Documents that
+    disagree, or none at all, leave it unknown."""
+    script = getattr(obj, "script_id", None)
+    if isinstance(script, str) and script:
+        return script
+    found = {getattr(d, "script_id", "") or "" for d in docs}
+    return found.pop() if len(found) == 1 else ""
+
+
 def alt_readings(doc_or_corpus: "Corpus | Document | Any") -> list[AltReading]:
     """Every token carrying alternate readings (`Token.alt`), in one uniform shape.
 
-    Accepts a `Corpus`, a single `Document`, or an iterable of documents. Tokens
-    without alternates are skipped, so the result is exactly the apparatus of
-    variant readings across the input, in document then token order. Works
+    Accepts a `Corpus`, a query's results, a single `Document`, or an iterable of
+    documents. Tokens without alternates are skipped, so the result is exactly the
+    apparatus of variant readings across the input, in document then token order. Works
     identically whatever loaded the corpus: Linear B EpiDoc ``<app>/<rdg>``
     variants, a bring-your-own EpiDoc import, or `Corpus.from_records` with an
     ``"alt"`` key all populate `Token.alt` the same way."""
@@ -187,9 +209,13 @@ def apparatus_summary(corpus: "Corpus | Any") -> ApparatusSummary:
     non-CERTAIN token, and the alternate-reading tally with a few inline examples.
     ``marker_notes`` legends only the apparatus that actually occurs (plus the
     provenance ``edition_fidelity`` when the corpus records one), so the summary
-    describes this corpus rather than asserting apparatus it does not carry."""
+    describes this corpus rather than asserting apparatus it does not carry.
+
+    Accepts a `Corpus`, the results of a `Corpus.query`, a single `Document`, or an
+    iterable of documents, and profiles exactly the documents handed in, so a queried
+    subset is summarised as itself rather than as the corpus it came from."""
     docs = _iter_documents(corpus)
-    script_id = getattr(corpus, "script_id", "") or ""
+    script_id = _script_of(corpus, docs)
     prov = getattr(corpus, "provenance", None)
 
     by_status: Counter[ReadingStatus] = Counter()

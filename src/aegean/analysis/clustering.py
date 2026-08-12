@@ -30,8 +30,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ..core.model import Document, TokenKind
-from .stats import mulberry32
+from ..core.model import Document
+from .stats import _bears_signs, _sign_labels, mulberry32
 
 __all__ = [
     "SignClasses",
@@ -68,26 +68,21 @@ def _documents(corpus: Any) -> list[Document]:
     return out
 
 
-def _signs_of(token: Any) -> list[str]:
-    """The sign labels of one token (same convention as ``stats`` ``kind='signs'``)."""
-    if token.signs:
-        return list(token.signs)
-    return token.text.split("-") if "-" in token.text else [token.text]
-
-
 def _sign_sequences(docs: Sequence[Document]) -> list[list[str]]:
-    """One bounded sign sequence per multi-sign token across the corpus.
+    """One bounded sign sequence per sign-bearing token across the corpus.
 
-    Only WORD/LOGOGRAM/UNKNOWN tokens contribute signs; numerals, separators,
-    and punctuation are skipped. Each token becomes its own ``^ … $`` sequence so
-    bigrams never cross a token boundary."""
-    keep = {TokenKind.WORD, TokenKind.LOGOGRAM, TokenKind.UNKNOWN}
+    The sign rule is ``stats._bears_signs``, shared with the frequency, dispersion,
+    keyness and graph readers: word/entry dividers, transcribed numerals and
+    punctuation are marks of the edition, and a token whose reading is not
+    preserved carries a lacuna placeholder rather than signs. The bigram model is
+    therefore built over the same stream those tables count. Each token becomes its
+    own ``^ … $`` sequence so bigrams never cross a token boundary."""
     seqs: list[list[str]] = []
     for d in docs:
         for t in d.tokens:
-            if t.kind not in keep:
+            if not _bears_signs(t):
                 continue
-            signs = _signs_of(t)
+            signs = _sign_labels(t)
             if signs:
                 seqs.append([_START, *signs, _END])
     return seqs
@@ -198,8 +193,9 @@ def induce_classes(corpus: Any, *, n_classes: int) -> SignClasses:
     """Induce ``n_classes`` distributional sign classes by Brown clustering.
 
     EXPLORATORY. Builds the adjacent sign-bigram model of ``corpus`` (a Corpus,
-    QueryResults, or document list; numerals/separators/punctuation skipped, with
-    each token bounded so bigrams never cross a token edge), seeds one class per
+    QueryResults, or document list; numerals, separators, punctuation and
+    unpreserved readings skipped by the shared sign rule, with each token bounded
+    so bigrams never cross a token edge), seeds one class per
     sign, then greedily merges the class pair whose merge gives up the least
     average mutual information of the class-bigram model, until ``n_classes``
     classes remain (Brown et al. 1992). Ties in MI loss are broken by the lower

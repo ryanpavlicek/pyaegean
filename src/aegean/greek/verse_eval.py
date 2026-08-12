@@ -102,7 +102,9 @@ def _read_track(gold_path: Path, track: str | None) -> tuple[list[UDSentence], s
     from .ud import _split_conllu_sentences, load_conllu
 
     sentences = load_conllu(gold_path)
-    blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8"))
+    # utf-8-sig: gold_path may be caller-supplied, and a leading BOM is an encoding
+    # marker rather than the first character of the first comment line.
+    blocks = _split_conllu_sentences(gold_path.read_text(encoding="utf-8-sig"))
     if len(blocks) != len(sentences):
         raise ValueError(
             f"fold sentence/block count mismatch: {len(sentences)} vs {len(blocks)}"

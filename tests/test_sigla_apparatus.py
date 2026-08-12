@@ -201,11 +201,12 @@ def test_real_corpus_status_counts():
             docs_app += 1
     assert (len(c), ntok) == (802, 2616)
     assert counts[ReadingStatus.CERTAIN] == 2296
-    assert counts[ReadingStatus.UNCLEAR] == 320
-    assert counts[ReadingStatus.RESTORED] == 0 and counts[ReadingStatus.LOST] == 0
+    assert counts[ReadingStatus.UNCLEAR] == 201
+    assert counts[ReadingStatus.RESTORED] == 0 and counts[ReadingStatus.LOST] == 119
     assert docs_app == 215
     # every unclear word/logogram is exactly one whose text carries ? [ or ]
     assert all(
-        (any(m in t.text for m in "?[]")) == (t.status is ReadingStatus.UNCLEAR)
+        (any(m in t.text for m in "?[]"))
+        == (t.status in (ReadingStatus.UNCLEAR, ReadingStatus.LOST))
         for d in c for t in d.tokens
     )

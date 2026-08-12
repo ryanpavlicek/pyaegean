@@ -338,7 +338,7 @@ def test_whole_corpus_kind_census_is_preserved(corpus_id: str, tmp_path: Path) -
             "logogram": 2211, "numeral": 1621, "separator": 524, "unknown": 669, "word": 1381,
         }
     else:
-        assert before == {"numeral": 1, "unknown": 179, "word": 448}
+        assert before == {"numeral": 1, "separator": 7, "unknown": 172, "word": 448}
 
 
 # ── EpiDoc written before @type carried the kind ─────────────────────────────────

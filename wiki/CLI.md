@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.58.0.** The annotation-profile and interoperability commands, the
+> **Available in v0.59.0.** The annotation-profile and interoperability commands, the
 > CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields, and the
 > runtime-variant selectors described below are all part of the current release.
 
@@ -109,7 +109,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.58.0
+aegean --version          # pyaegean 0.59.0
 ```
 
 | Group | What's in it |
@@ -1243,7 +1243,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.58.0                    │
+│ OK │ pyaegean │ 0.59.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…

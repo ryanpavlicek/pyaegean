@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from ..core.model import Document
 
@@ -90,11 +91,35 @@ def classify_structure(document: Document) -> str:
     return "other"
 
 
-def classify_corpus(corpus: object) -> dict[str, list[str]]:
+def _documents(corpus: Any) -> list[Document]:
+    """Coerce a corpus, a query's results, or an iterable of Documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so the structure of a queried subset can be classified
+    directly. Anything else that yields documents (a `Corpus`, a plain list) is taken as
+    it comes; anything that does not raises a ``TypeError`` naming what arrived."""
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    if out and not isinstance(out[0], Document):
+        raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
+    return out
+
+
+def classify_corpus(corpus: Any) -> dict[str, list[str]]:
     """Classify every document in a corpus, returning ``{category_key:
     [doc_id, ...]}`` with every category present (empty lists included) and
-    documents in corpus order."""
+    documents in corpus order.
+
+    Takes a `Corpus`, the results of a `Corpus.query`, or a plain list of documents;
+    the documents classified are those of whatever was handed in, in its order."""
     buckets: dict[str, list[str]] = {c.key: [] for c in CATEGORIES}
-    for doc in corpus:  # type: ignore[attr-defined]
+    for doc in _documents(corpus):
         buckets[classify_structure(doc)].append(doc.id)
     return buckets

@@ -11,6 +11,8 @@ The loader also *interprets the Leiden apparatus the edition carries*: a combini
 (editorially supplied text) become ``RESTORED``, tracking bracket spans that run across word
 dividers and line breaks. The markers are stripped from the emitted token text; the marked
 form is kept in ``annotations["leiden"]`` and the raw ``transcription`` stays untouched.
+A position the edition leaves unread carries no syllabogram: an illegible-sign run is
+``LOST``, and a writing-direction arrow is a ``SEPARATOR``, so neither reaches a sign count.
 """
 
 from __future__ import annotations
@@ -42,7 +44,9 @@ _BRACKETS = ("[", "]", *_ERASED, *_INSERTED, *_EXPANDED)
 # lacuna, and "?" for an unread/uncertain sign. Each occupies one sign position (a dot-run
 # ".." = two illegible signs) and is kept in the emitted text (to show where signs are
 # missing) but dropped from the sign list. The retrograde arrow "↓" is writing-direction
-# notation, not a sign at all.
+# notation, not a sign at all: it records which way the next stretch of the object runs,
+# so its token stands between stretches of text rather than inside a reading and is a
+# SEPARATOR, the same reading the Linear B loader gives the arrow (``linearb/loader.py``).
 _ILLEGIBLE = (".", "‒", "?")
 _DIRECTION = "↓"
 _NON_SIGN = frozenset(".‒?↓")
@@ -71,8 +75,13 @@ def classify(
     text) read as ``RESTORED``; parenthesized abbreviation expansions ``()`` read as a
     secure ``CERTAIN`` reading. A Leiden dot ``.``, a figure-dash ``‒``, or ``?`` marks a
     sign that is not legibly read (``UNCLEAR``; a whole token of such marks is ``LOST``): it
-    is kept in the token text but never counted as a syllabogram. A retrograde arrow ``↓`` is
-    writing-direction notation, not a sign. Every bracket is stripped from the emitted token
+    is kept in the token text but never counted as a syllabogram. A retrograde arrow ``↓``
+    is writing-direction notation rather than a reading, so a token of it alone is a
+    ``SEPARATOR`` carrying no signs: it stands between stretches of text, and the shared
+    sign rule (``analysis.stats._bears_signs``) leaves every ``SEPARATOR`` out of the
+    sign-level counts, so the arrow is never read as a syllabogram. Calling it ``LOST``
+    instead would claim the edition reports damage there, which it does not. Every bracket
+    is stripped from the emitted token
     and its signs; the marked form is kept in ``annotations["leiden"]``. ``restored=True``
     flags a token inside a bracket span opened by an earlier token (spans run across word
     dividers and line breaks; `_build_document` tracks them).
@@ -97,7 +106,7 @@ def classify(
                      status=ReadingStatus.LOST)
     if _DIRECTION in bare and not legible:
         # a bare writing-direction marker (↓, ↓?): editorial notation, not a reading
-        return Token(bare, TokenKind.UNKNOWN, (), None, line_no, position,
+        return Token(bare, TokenKind.SEPARATOR, (), None, line_no, position,
                      status=ReadingStatus.UNCLEAR,
                      annotations={**ann, "note": "writing-direction marker"})
     if not legible:

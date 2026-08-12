@@ -19,6 +19,9 @@ if TYPE_CHECKING:  # keep this module import-clean
     from ..core.corpus import Corpus
 
 _SPLITS = ("whole", "paragraph", "line")
+# A decoded UTF-8 BOM. str.strip() does not remove it (it is not whitespace), so a BOM
+# left in place becomes part of the first token of the text.
+_BOM = "\ufeff"
 
 
 def _whitespace_words(s: str) -> list[str]:
@@ -77,10 +80,10 @@ def _records_from_text(
     return records
 
 
-def _provenance(source: str, note: str) -> Any:
+def _provenance(source: str, *notes: str) -> Any:
     from ..core.provenance import Provenance
 
-    return Provenance(source=source, license="user-supplied", notes=(note,))
+    return Provenance(source=source, license="user-supplied", notes=tuple(notes))
 
 
 def from_text(
@@ -96,10 +99,14 @@ def from_text(
     ``split`` controls how the text becomes documents: ``"whole"`` (default, one document),
     ``"paragraph"`` (one per blank-line-separated block), or ``"line"`` (one per line).
     Line breaks are preserved as physical lines. ``script_id`` picks the tokenizer (``"greek"``
-    by default). Raises `ValueError` if the text has no content."""
+    by default). A leading UTF-8 BOM (text read from a file with ``encoding="utf-8"``) is
+    dropped rather than glued onto the first word. Raises `ValueError` if the text has no
+    content."""
     from ..core.corpus import Corpus
 
-    records = _records_from_text(text, doc_id, split, _word_tokenizer(script_id), meta)
+    records = _records_from_text(
+        text.lstrip(_BOM), doc_id, split, _word_tokenizer(script_id), meta
+    )
     if not records:
         raise ValueError("no text to import (the input was empty or all blank)")
     prov = _provenance(
@@ -115,11 +122,15 @@ def from_text_file(
     script_id: str = "greek",
     split: str = "whole",
     doc_id: str | None = None,
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
     meta: dict[str, str] | None = None,
 ) -> "Corpus":
     """Build a `Corpus` from a plain-text file. The document id defaults to the file's
-    stem. See :func:`from_text` for ``split``. Raises `FileNotFoundError` if missing."""
+    stem. See :func:`from_text` for ``split``. Raises `FileNotFoundError` if missing.
+
+    The default ``utf-8-sig`` encoding drops a leading UTF-8 BOM (an editor or a Windows
+    tool that writes one) instead of leaving it attached to the first word, and reads a
+    BOM-less UTF-8 file identically."""
     from ..core.corpus import Corpus
 
     p = Path(path)
@@ -143,11 +154,14 @@ def from_text_dir(
     script_id: str = "greek",
     glob: str = "*.txt",
     split: str = "whole",
-    encoding: str = "utf-8",
+    encoding: str = "utf-8-sig",
 ) -> "Corpus":
     """Build one `Corpus` from a folder of text files (one or more documents per file,
     per ``split``). Document ids come from each file's stem (de-duplicated with a ``#n``
-    suffix on collision). Raises `NotADirectoryError` / `FileNotFoundError` as appropriate."""
+    suffix on collision). Raises `NotADirectoryError` / `FileNotFoundError` as appropriate.
+
+    Files are read as ``utf-8-sig`` by default, so a BOM one of them carries does not
+    become part of its first word."""
     from ..core.corpus import Corpus
 
     d = Path(path)
@@ -192,6 +206,13 @@ def from_csv(
     names columns to carry into document metadata (recognized: site/period/scribe/support/
     findspot/name). Raises `ValueError` if ``text_col`` is absent.
 
+    A row whose ``text_col`` is empty or blank yields no document, the way a blank line
+    yields no document on the text-file path: a zero-token document would sit in the corpus
+    contributing nothing to any count, search, or export. The provenance records how many
+    rows were skipped, and a CSV in which *every* row is blank raises `ValueError` rather
+    than returning a corpus of empty documents. Text that is present but yields no tokens
+    under ``script_id`` is a different case and keeps its document, as the text path does.
+
     The default ``utf-8-sig`` encoding transparently strips a leading UTF-8 BOM (Excel
     writes one), so the first column name is not silently prefixed with it; it reads a
     BOM-less UTF-8 file identically."""
@@ -210,13 +231,30 @@ def from_csv(
             raise ValueError(
                 f"CSV {p.name} has no column {text_col!r}; columns: {reader.fieldnames}"
             )
+        rows = 0
+        skipped = 0
         for n, row in enumerate(reader, start=1):
+            rows += 1
+            text = row.get(text_col) or ""
+            if not text.strip():
+                # The text-file path drops a blank line rather than making a document out
+                # of it; a row with nothing in its text cell is the same case. (Text that
+                # is present but yields no tokens under this script is NOT this case: the
+                # row carries text, and the text path keeps such a line too.)
+                skipped += 1
+                continue
             rid = str(row[id_col]) if id_col and row.get(id_col) else f"{p.stem}:{n}"
             meta = {c: row[c] for c in meta_cols if c in row and row[c]}
-            records.append({"id": rid, "words": tok(row.get(text_col) or ""), "meta": meta})
+            records.append({"id": rid, "words": tok(text), "meta": meta})
     if not records:
+        if rows:
+            raise ValueError(
+                f"no text to import from {p}: all {rows} row(s) have an empty "
+                f"{text_col!r} column (is that the column holding the text?)"
+            )
         raise ValueError(f"no rows to import from {p}")
-    prov = _provenance(
-        f"Imported CSV: {p.name}", f"imported {len(records)} row(s) via aegean.io.from_csv"
-    )
+    notes = [f"imported {len(records)} row(s) via aegean.io.from_csv"]
+    if skipped:
+        notes.append(f"skipped {skipped} row(s) with an empty {text_col!r} column")
+    prov = _provenance(f"Imported CSV: {p.name}", *notes)
     return Corpus.from_records(records, script_id=script_id, provenance=prov)

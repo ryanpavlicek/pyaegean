@@ -410,8 +410,8 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.58.0
-print(damos.fingerprint()[:16])    # 3b0ae8aaa4a9e706
+print(aegean.__version__)          # 0.59.0
+print(damos.fingerprint()[:16])    # ca93e51fd26a8f6c
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
 #   attested language. Procedia - Social and Behavioral Sciences, 198, 21-31. — https://damos.hf.uio.no
@@ -1311,7 +1311,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.58.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.59.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into

@@ -233,6 +233,17 @@ def _registered_ids() -> list[str]:
     return sorted(_LOADERS)
 
 
+def _opens_json(text: str) -> bool:
+    """Whether ``text`` is inline JSON, the probe ``read_corpus`` itself routes on.
+
+    Imported rather than restated: the REPL decides whether a line names a corpus or
+    carries one, and an answer here that differs from the resolver's would send the
+    line to a different corpus than the one it names."""
+    from aegean.core.resolve import opens_json
+
+    return opens_json(text)
+
+
 def _session_corpus_error(spec: str) -> str | None:
     """``None`` when ``spec`` can serve as the session corpus, else a one-line error.
 
@@ -242,7 +253,7 @@ def _session_corpus_error(spec: str) -> str | None:
     did-you-mean comes from the same :func:`aegean.core.resolve.suggest` every layer
     uses. Stdin/inline JSON is rejected: a session default must be re-loadable on
     every subsequent line."""
-    if spec == "-" or spec.lstrip().startswith("{"):
+    if spec == "-" or _opens_json(spec):
         return (
             "the session corpus must be re-loadable: a registered id, a Greek work id, "
             "or a .json/.db file (not stdin JSON)"
@@ -272,7 +283,7 @@ def _looks_like_corpus(token: str) -> bool:
     (case forgiven), a Greek work id, stdin/inline JSON, or a .json/.db/.sqlite
     extension. Purely syntactic — nothing is loaded and existence is not checked,
     because a user who typed ``show missing.json HT13`` meant a corpus either way."""
-    if token == "-" or token.lstrip().startswith("{"):
+    if token == "-" or _opens_json(token):
         return True
     ids = _registered_ids()
     if token in ids or token.casefold() in {i.casefold() for i in ids}:

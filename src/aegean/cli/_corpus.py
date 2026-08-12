@@ -191,10 +191,24 @@ def import_(
         ) from None
     except (FileNotFoundError, NotADirectoryError, ValueError, LookupError) as exc:
         raise fail(str(exc)) from None
+    # Rows the importer could not take (a CSV row with an empty text column) are recorded
+    # in the corpus provenance; say so here rather than letting the document count be the
+    # only, silent, evidence.
+    prov = corpus.provenance
+    skipped = [n for n in (prov.notes if prov else ()) if n.startswith("skipped ")]
     write_corpus(corpus, output)
     print(f"wrote {len(corpus)} document(s) to {output}", file=sys.stderr)
+    for note in skipped:
+        print(note, file=sys.stderr)
     if json_out:
-        emit_json({"written": len(corpus), "path": str(output), "source": source})
+        payload: dict[str, Any] = {
+            "written": len(corpus),
+            "path": str(output),
+            "source": source,
+        }
+        if skipped:  # only when there is something to report, so the usual payload is unchanged
+            payload["skipped"] = skipped
+        emit_json(payload)
         return
     hint(f"explore it:  aegean stats {output}")
 

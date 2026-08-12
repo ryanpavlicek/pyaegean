@@ -19,6 +19,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from ..core.corpus import _is_readable_file, _shown
 from ..core.model import DocumentMeta
 from ..core.provenance import Provenance
 
@@ -26,6 +27,24 @@ if TYPE_CHECKING:
     from ..core.corpus import Corpus
 
 __all__ = ["from_workbench_export", "to_workbench"]
+
+# A decoded UTF-8 BOM: not whitespace, so str.strip() leaves it in place and a BOM'd
+# JSON string would neither parse as JSON nor name a readable file.
+_BOM = "\ufeff"
+
+
+def _read_export_text(path: Path) -> str:
+    """Read an export file as ``utf-8-sig``, reporting a path the OS cannot even name
+    (a JSON string that reached this branch) instead of raising a bare ``OSError``."""
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        raise ValueError(
+            f"cannot read a workbench export from {_shown(str(path))}: {exc.strerror or exc}. "
+            "Pass a path to an export file, a JSON string, or already-parsed JSON"
+        ) from None
 
 
 def to_workbench(corpus: Corpus, path: str | Path | None = None) -> list[dict[str, Any]]:
@@ -113,16 +132,37 @@ def from_workbench_export(
     ``images`` object (``facsimile``/``photograph``/``rights``/``rightsUrl``),
     while the plain-array shape (and `to_workbench`) uses ``context`` and the
     flat ``facsimileImages``/``images`` lists.
+
+    A string that opens with ``{`` or ``[`` is read as JSON, and otherwise as a
+    filename. Those two forms overlap — ``"[export].json"`` is a legal relative
+    path — so a string that opens like JSON but does not parse is read as a path
+    when a file of that name exists; a payload that is merely malformed keeps
+    reporting its own decode error, since no such file exists.
+
+    Files are read as ``utf-8-sig``: an export saved with a leading UTF-8 BOM loads
+    like any other UTF-8 file, and a BOM on a JSON *string* is stripped before the
+    string is recognized as JSON rather than mistaken for a file path.
     """
     from ..core.corpus import Corpus
 
-    if isinstance(source, (str, Path)):
-        text = (
-            str(source)
-            if isinstance(source, str) and source.lstrip().startswith(("{", "["))
-            else Path(source).read_text(encoding="utf-8")
-        )
-        data: Any = json.loads(text)
+    data: Any
+    if isinstance(source, Path):
+        data = json.loads(_read_export_text(source))
+    elif isinstance(source, str):
+        probe = source.lstrip(_BOM).lstrip()
+        if not probe.startswith(("{", "[")):
+            data = json.loads(_read_export_text(Path(source)))
+        else:
+            try:
+                data = json.loads(probe)
+            except ValueError:
+                # The two string forms overlap: "[export].json" is a legal relative path
+                # that also opens like JSON. A payload that merely fails to parse keeps
+                # reporting its own decode error, since no such file exists.
+                path = Path(source)
+                if not _is_readable_file(path):
+                    raise
+                data = json.loads(_read_export_text(path))
     else:
         data = source
 
@@ -146,7 +186,7 @@ def from_workbench_export(
     extras: dict[str, tuple[str, str, tuple[str, ...]]] = {}  # id -> glyphs, transcription, images
     for rec in raw:
         if not isinstance(rec, dict) or not rec.get("id"):
-            raise ValueError(f"inscription record without an id: {rec!r}")
+            raise ValueError(f"inscription record without an id: {_shown(rec)}")
         body: dict[str, Any] = {"id": rec["id"]}
         if rec.get("lines"):
             body["lines"] = rec["lines"]

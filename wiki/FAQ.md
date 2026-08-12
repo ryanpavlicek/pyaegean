@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.58.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.59.0`.
 - **Cached datasets survive an upgrade.** Updating the package never re-downloads the
   corpora or models you've already fetched: they live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
@@ -359,7 +359,7 @@ from aegean import io
 io.from_text("λόγος δὲ καὶ ἀριθμός", doc_id="note")  # from a string
 io.from_text_file("essay.txt")                        # from one file
 io.from_text_dir("poems/")                            # one corpus from a folder
-io.from_csv("rows.csv", text_col="line", id_col="id") # one document per row
+io.from_csv("rows.csv", text_col="line", id_col="id") # one document per non-blank row
 ```
 
 Greek (and `nt`) text is run through the Greek word tokenizer (punctuation stripped);

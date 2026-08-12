@@ -172,7 +172,7 @@ def test_direction_arrow_and_unread_marker() -> None:
 
     # ↓ is a writing-direction marker, not a sign: no signs, flagged as notation
     arrow = classify("↓", 0, 0)
-    assert arrow.kind is TokenKind.UNKNOWN and arrow.signs == ()
+    assert arrow.kind is TokenKind.SEPARATOR and arrow.signs == ()
     assert arrow.annotations.get("note") == "writing-direction marker"
     # a bare "?" is an unread sign: no legible reading -> LOST, no signs
     q = classify("?", 0, 0)

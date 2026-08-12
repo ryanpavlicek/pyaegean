@@ -39,8 +39,11 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any
+
+from ..core.model import Document
 
 __all__ = [
     "series_of",
@@ -58,18 +61,45 @@ __all__ = [
 _SERIES_RE = re.compile(r"^([A-Za-z]+)")
 
 
-def _documents(corpus: Any) -> list[Any]:
-    return list(getattr(corpus, "documents", corpus))
+def _documents(corpus: Any) -> list[Document]:
+    """Coerce a corpus, a query's results, or an iterable of Documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so a queried subset can be grouped by hand or dossier
+    directly. Anything else that yields documents (a `Corpus`, a plain list) is taken as
+    it comes; anything that does not raises a ``TypeError`` naming what arrived."""
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    if out and not isinstance(out[0], Document):
+        raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
+    return out
 
 
-def _is_linear_b(corpus: Any) -> bool:
-    return getattr(corpus, "script_id", "") == "linearb"
+def _script_id(corpus: Any, docs: Sequence[Document]) -> str:
+    """The script the series convention is judged against, or ``""`` when unknown.
+
+    A `Corpus` records the script in ``script_id``. A query's results and a plain
+    document list do not, so the script is read from the documents themselves, each of
+    which carries its own: the same tablets answer the same way however they are handed
+    in. Documents that disagree, or none at all, leave it unknown."""
+    script = getattr(corpus, "script_id", None)
+    if isinstance(script, str) and script:
+        return script
+    scripts = {d.script_id for d in docs}
+    return scripts.pop() if len(scripts) == 1 else ""
 
 
-def _require_linear_b(corpus: Any, func: str) -> None:
+def _require_linear_b(script: str, func: str) -> None:
     """Guard a series-grouping path: it is defined for Linear B designations only."""
-    if not _is_linear_b(corpus):
-        script = getattr(corpus, "script_id", "") or "unknown"
+    if script != "linearb":
+        script = script or "unknown"
         raise ValueError(
             f"{func}() is defined for Linear B only (the archival-series parse follows "
             f"the Bennett/Olivier tablet-designation convention), but this corpus is "
@@ -134,9 +164,10 @@ def by_hand(corpus: Any, *, min_docs: int = 1) -> list[HandGroup]:
     convention applies; on other scripts it is left empty. The attribution is the
     edition's, passed through unchanged; this just counts the tablets, sites, and
     series each recorded attribution carries."""
-    linear_b = _is_linear_b(corpus)
+    docs_in = _documents(corpus)
+    linear_b = _script_id(corpus, docs_in) == "linearb"
     groups: dict[str, list[Any]] = {}
-    for doc in _documents(corpus):
+    for doc in docs_in:
         hand = (doc.meta.scribe or "").strip()
         if hand:
             groups.setdefault(hand, []).append(doc)
@@ -209,12 +240,14 @@ def hand_profile(corpus: Any, hand: str, *, top_n: int = 15) -> HandReport:
     attribution versus the others use :func:`aegean.analysis.hand_keyness`."""
     from ..core.corpus import Corpus
 
-    docs = [d for d in _documents(corpus) if (d.meta.scribe or "").strip() == hand]
+    docs_in = _documents(corpus)
+    docs = [d for d in docs_in if (d.meta.scribe or "").strip() == hand]
     if not docs:
         raise ValueError(f"no documents attributed to scribal hand {hand!r}")
 
-    linear_b = _is_linear_b(corpus)
-    sub = Corpus(docs, script_id=getattr(corpus, "script_id", ""))
+    script = _script_id(corpus, docs_in)
+    linear_b = script == "linearb"
+    sub = Corpus(docs, script_id=script)
     freqs = sub.word_frequencies()
     sites: Counter[str] = Counter()
     series: Counter[str] = Counter()
@@ -276,17 +309,19 @@ def dossiers(corpus: Any, *, min_docs: int = 1) -> list[SeriesDossier]:
     physical-fit reconstructions the recorded fields cannot support.
 
     The series parse is a Linear B designation convention, so this raises
-    ``ValueError`` on a non-Linear-B corpus (``corpus.script_id != "linearb"``)
-    rather than read a spurious prefix out of an unrelated id scheme. The grouping
+    ``ValueError`` on a non-Linear-B corpus rather than read a spurious prefix out of
+    an unrelated id scheme. The script is the corpus's ``script_id``, or, for a query's
+    results or a plain document list, the one the documents themselves record. The grouping
     follows the designation convention: a residual or unconventional prefix is
     grouped as parsed, not asserted to be an attested archival set.
 
     Returns one `SeriesDossier` per grouping with at least ``min_docs`` documents,
     sorted by tablet count desc, then site, then series. Documents whose series
     does not parse are left out (they belong to no series)."""
-    _require_linear_b(corpus, "dossiers")
+    docs_in = _documents(corpus)
+    _require_linear_b(_script_id(corpus, docs_in), "dossiers")
     groups: dict[tuple[str, str], list[Any]] = {}
-    for doc in _documents(corpus):
+    for doc in docs_in:
         s = series_of(doc)
         if s is None:
             continue

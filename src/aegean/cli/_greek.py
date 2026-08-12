@@ -234,12 +234,18 @@ def _jsonl_sentences(source: str | Path) -> Iterator[list[str]]:
     owned = False
     if source_name != "-":
         try:
-            stream = Path(source_name).open("r", encoding="utf-8")
+            # utf-8-sig, like every other user-supplied file this package reads: a JSONL
+            # file written by an editor that marks UTF-8 with a BOM is still JSONL.
+            stream = Path(source_name).open("r", encoding="utf-8-sig")
             owned = True
         except (OSError, UnicodeError) as exc:
             raise ValueError(f"could not open JSONL input {source_name!r}: {exc}") from None
     try:
         for line_number, line in enumerate(stream, start=1):
+            if line_number == 1 and not owned:
+                # stdin is decoded by the interpreter, so a BOM piped in from such a
+                # file arrives as text; an opened file drops its own while decoding.
+                line = line.removeprefix("\ufeff")
             # Blank lines are harmless in JSONL pipelines and are not sentences.
             if not line.strip():
                 continue
@@ -303,9 +309,12 @@ def _conllu_summary(source: Path, document: UDDocument) -> dict[str, object]:
     sentences = document.sentences
     sentence_rows: list[dict[str, object]] = []
     try:
+        # utf-8-sig, matching the loader that produced ``document``: read as plain utf-8,
+        # a leading BOM would stay glued to the first '#' and drop that comment from this
+        # count alone, so one payload would report two different comment totals.
         total_comments = sum(
             line.startswith("#")
-            for line in source.read_text(encoding="utf-8").splitlines()
+            for line in source.read_text(encoding="utf-8-sig").splitlines()
         )
     except (OSError, UnicodeError) as exc:
         raise fail(f"could not read CoNLL-U {source}: {exc}") from None

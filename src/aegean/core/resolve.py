@@ -33,6 +33,21 @@ class CorpusNotFound(ValueError):
     """Raised when a corpus spec matches no registered id, work id, or readable file."""
 
 
+def opens_json(text: str) -> bool:
+    """Whether a corpus spec is inline JSON rather than an id or a path.
+
+    A leading UTF-8 BOM survives decoding as a character and is not whitespace, so
+    ``str.lstrip()`` leaves it in front of the brace. It is removed first, from the one
+    ``corpus._BOM`` the readers themselves use, because those readers accept a BOM'd
+    corpus: a spec they would load as JSON has to be recognized as JSON here too, and a
+    file redirected onto stdin must not be refused before it reaches them. Every surface
+    that has to tell a corpus spec from inline JSON routes on this one predicate, so the
+    resolver and the REPL cannot answer the question differently."""
+    from .corpus import _BOM
+
+    return text.lstrip(_BOM).lstrip().startswith("{")
+
+
 def suggest(name: str, candidates: Iterable[str], *, n: int = 3, cutoff: float = 0.5) -> list[str]:
     """Close matches for a mistyped ``name`` among ``candidates``, best first.
 
@@ -118,7 +133,8 @@ def read_corpus(spec: str) -> "Corpus":
     """Resolve a corpus from ``spec``, in this order of precedence:
 
     1. ``"-"`` reads a JSON corpus from **stdin**; a string starting with ``{`` is parsed
-       as inline JSON (the output of :meth:`Corpus.to_json`).
+       as inline JSON (the output of :meth:`Corpus.to_json`). A leading UTF-8 BOM is an
+       encoding marker on both paths, not part of the payload.
     2. an exact **registered id** (``"lineara"``, ``"damos"``, ``"nt"``, …) → the bundled or
        fetched corpus. A registered id always wins over a same-named file; case is forgiven
        as a last resort (``"LINEARA"`` loads lineara when nothing else matches).
@@ -144,14 +160,14 @@ def read_corpus(spec: str) -> "Corpus":
         # Parse the payload as JSON, never as a path. ``from_json`` treats a string
         # that does not start with "{" as a filename, so piping the text "cyp.json"
         # silently loaded that file from disk instead of reading stdin.
-        if not piped.lstrip().startswith("{"):
+        if not opens_json(piped):
             preview = piped.strip()[:40]
             raise CorpusNotFound(
                 "stdin did not contain a JSON corpus (expected text starting with '{')"
                 + (f"; got {preview!r}" if preview else "; stdin was empty")
             )
         return Corpus.from_json(piped)
-    if spec.lstrip().startswith("{"):
+    if opens_json(spec):
         return Corpus.from_json(spec)
 
     # 2. registered id — import aegean so every built-in loader is registered first

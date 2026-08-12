@@ -29,13 +29,36 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass
 
-from ..core.script import get_script
+from ..core.script import get_script, registered_scripts
 
 __all__ = [
     "VariantGroup",
     "AllographReport",
     "variant_groups",
 ]
+
+
+def _require_script_id(script_id: object) -> str:
+    """Accept a script id, and refuse anything else by name.
+
+    This report is read off a *script's* sign inventory, so its argument names a
+    script, never a body of text: a corpus, a query's results, or a list of documents
+    cannot narrow an inventory, and reporting the whole catalogue for a subset that was
+    handed in would answer a question nobody asked. Such an argument is refused with the
+    script id to pass instead (a corpus records its own as ``script_id``)."""
+    if isinstance(script_id, str):
+        return script_id
+    hint = ""
+    if getattr(script_id, "script_id", None) or hasattr(script_id, "inscriptions"):
+        hint = (
+            " — this report describes a script's sign inventory, not a body of text; "
+            "pass the script id (a corpus records it as ``corpus.script_id``)"
+        )
+    raise TypeError(
+        f"variant_groups expects a script id, one of {registered_scripts()}; "
+        f"got {type(script_id).__name__}{hint}"
+    )
+
 
 # A base romanization followed by a single homophone-disambiguation digit: PA3, RA2,
 # A2, TURO2. The base is 1-4 letters; the star-numbered GORILA labels (*301) and the
@@ -97,7 +120,10 @@ def variant_groups(script_id: str) -> AllographReport:
     Linear B) and Cypro-Minoan catalogue-letter suffixes. Only groups with 2+ members are
     returned; ligature/compound labels are listed under ``composite_signs``, not grouped.
 
-    Returns an :class:`AllographReport`. Raises ``KeyError`` for an unregistered script id.
+    Returns an :class:`AllographReport`. ``script_id`` names a script, not a body of
+    text: the groups and ``n_signs`` come from the script's inventory, so a corpus or a
+    query's results cannot narrow them and are refused by name (pass ``corpus.script_id``).
+    Raises ``KeyError`` for an unregistered script id.
 
     **Caveat (EXPLORATORY).** These groupings come entirely from the transliteration and
     catalogue *naming* (a shared base romanization or catalogue number), which is not the
@@ -105,6 +131,7 @@ def variant_groups(script_id: str) -> AllographReport:
     That letter-form variation is not present in the bundled inventories and is not
     claimed. Use the report as a catalogue-structure starting point for a specialist, not
     as a palaeographic result."""
+    script_id = _require_script_id(script_id)
     inventory = get_script(script_id).sign_inventory
     labels = [s.label for s in inventory]
     label_set = set(labels)

@@ -18,6 +18,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..core.model import Document
 from .stats import KeynessRow, keyness
 
 __all__ = ["HandProfile", "scribal_hands", "hand_keyness"]
@@ -36,8 +37,25 @@ class HandProfile:
     top_words: list[tuple[str, int]] = field(default_factory=list)
 
 
-def _documents(corpus: Any) -> list[Any]:
-    return list(getattr(corpus, "documents", corpus))
+def _documents(corpus: Any) -> list[Document]:
+    """Coerce a corpus, a query's results, or an iterable of Documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so the hands of a queried subset can be profiled directly.
+    Anything else that yields documents (a `Corpus`, a plain list) is taken as it comes;
+    anything that does not raises a ``TypeError`` naming what arrived."""
+    docs = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    if out and not isinstance(out[0], Document):
+        raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
+    return out
 
 
 def scribal_hands(

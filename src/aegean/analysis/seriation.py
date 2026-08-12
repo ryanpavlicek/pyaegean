@@ -260,6 +260,50 @@ def _argsort(values: Sequence[float]) -> tuple[int, ...]:
 # are far smaller than this, so the exact solver covers every ordinary seriation.
 _DENSE_SOLVER_MAX_N = 160
 
+# Power-iteration steps allowed per row of a block when the caller names no budget. The shift that
+# keeps the powered operator positive definite is set above the block's row sums, and those grow
+# with the block, so each step contracts the error less the larger the block is and the steps a
+# block needs to settle rise with its size. A budget fixed independently of the block therefore
+# settles a small block and stops short on a larger one, leaving an axis that is wherever the
+# unsettled vector happened to be. Measured on planted tables and on real sign-abundance blocks,
+# settling costs up to about a hundred steps per row.
+_ITERATIONS_PER_ROW = 120
+
+# A step costs work proportional to the block's row count squared, so a budget purely proportional
+# to the block would let one large block run for an unbounded time before reporting that it never
+# settled. The derived budget is therefore also held under a total-work allowance (steps times the
+# squared row count), which keeps the longest a block can spend roughly flat in its size. Above the
+# row count where this binds, an unsettled block is reported unsettled sooner rather than run
+# longer; a caller who wants the longer run asks for it with an explicit ``max_iter``.
+_DERIVED_WORK_ALLOWANCE = 2_000_000_000
+
+# The derived budget never falls below the fixed budget it replaced. A larger cap can only let an
+# iteration run further, and one that stopped because it had settled stops at the same step either
+# way, so every block that settled under the old fixed budget keeps exactly the axis it had.
+_MIN_DERIVED_MAX_ITER = 200
+
+# Cyclic Jacobi sweeps allowed per row of a block when the caller names no budget. One sweep rotates
+# away every off-diagonal once, and separating a block's eigenvalues takes more sweeps the larger
+# the block is: measured over planted, dense, chain and singleton tables it costs up to about a
+# third of a sweep per row, and on the slowest family found, blocks whose rows are identical or
+# differ in the fourth decimal, about one sweep per row. A budget fixed independently of the matrix
+# therefore finishes a small block and stops short on a larger one, leaving a half-rotated matrix
+# whose diagonal is not yet the spectrum: on a forty-row chain cut off at three sweeps, the entry
+# offered as the Fiedler eigenvalue is four times the block's real one and the vector beside it
+# points elsewhere. Three sweeps per row leaves the measured worst case a factor of three of
+# headroom.
+_SWEEPS_PER_ROW = 3
+
+# The derived sweep budget never falls below the fixed budget it replaced. A larger budget can only
+# let the rotations run further, and a block that stopped because its off-diagonal had already gone
+# to zero stops at the same sweep either way, so every block that finished under the old fixed
+# budget keeps exactly the eigenvectors, and so exactly the axis, that it had.
+_MIN_DERIVED_MAX_SWEEPS = 100
+
+# Off-diagonal norm at or below which the rotations have separated the eigenvalues: what is left on
+# the diagonal is the spectrum, and the accumulated rotations are its eigenvectors.
+_JACOBI_OFF_TOLERANCE = 1e-13
+
 # Two rows with no type in common score exactly 0 in exact arithmetic; rescaling the rows to
 # percentages leaves a few ulps of the 0..200 scale behind, so a similarity at or below this
 # is arithmetic residue, not a shared type. Genuine overlap is orders of magnitude larger:
@@ -314,23 +358,51 @@ def _components(sim: list[list[float]]) -> list[tuple[int, ...]]:
     return out
 
 
+def _default_max_sweeps(n: int) -> int:
+    """The Jacobi sweep budget for an ``n`` by ``n`` block when the caller names none.
+
+    The floor decides up to 33 rows and the per-row allowance above it, so the budget rises with
+    the block wherever the block is large enough for the rise to clear the fixed budget this
+    default replaced. Nothing holds it under a total-work allowance the way the power iteration's
+    budget is held, because this solver runs only on blocks of at most :data:`_DENSE_SOLVER_MAX_N`
+    rows: that row limit is already what bounds the work one block can cost."""
+    return max(_MIN_DERIVED_MAX_SWEEPS, _SWEEPS_PER_ROW * n)
+
+
+def _off_diagonal_norm(a: list[list[float]]) -> float:
+    """The norm of what the rotations have still to remove, over the strict upper triangle."""
+    n = len(a)
+    return math.sqrt(sum(a[i][j] * a[i][j] for i in range(n) for j in range(i + 1, n)))
+
+
 def _jacobi_eigh(
-    matrix: list[list[float]], *, max_sweeps: int = 100
-) -> tuple[list[float], list[list[float]], int]:
+    matrix: list[list[float]], *, max_sweeps: int | None = None
+) -> tuple[list[float], list[list[float]], int, bool]:
     """Eigenvalues and eigenvectors of a small symmetric matrix (cyclic Jacobi rotation).
 
-    Returns ``(eigenvalues, eigenvectors, sweeps)`` where ``eigenvectors[k]`` is the unit
-    eigenvector for ``eigenvalues[k]``. Deterministic and basis-independent: the result does
+    Returns ``(eigenvalues, eigenvectors, sweeps, separated)`` where ``eigenvectors[k]`` is the
+    unit eigenvector for ``eigenvalues[k]``. Deterministic and basis-independent: the result does
     not depend on the order the rows and columns were supplied in, which is what makes the
-    seriation ordering permutation-invariant."""
+    seriation ordering permutation-invariant.
+
+    ``separated`` reports whether the rotations drove the off-diagonal to zero inside the sweep
+    budget. They are what turns the matrix into its spectrum, so until they have, the diagonal is
+    not the eigenvalues and the accumulated rotations are not the eigenvectors: an exhausted run
+    returns the half-rotated matrix, which is an answer to nothing, and says so here.
+
+    ``max_sweeps`` caps the rotations; ``None`` derives the cap from the matrix's own row count,
+    since how many sweeps separating a block takes scales with its size."""
     n = len(matrix)
+    budget = _default_max_sweeps(n) if max_sweeps is None else max_sweeps
     a = [row[:] for row in matrix]
     v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
     sweeps = 0
-    for sweep in range(1, max_sweeps + 1):
+    separated = False
+    for sweep in range(1, budget + 1):
         sweeps = sweep
-        off = math.sqrt(sum(a[i][j] * a[i][j] for i in range(n) for j in range(i + 1, n)))
-        if off <= 1e-13:
+        off = _off_diagonal_norm(a)
+        if off <= _JACOBI_OFF_TOLERANCE:
+            separated = True
             break
         for p in range(n - 1):
             for q in range(p + 1, n):
@@ -353,9 +425,13 @@ def _jacobi_eigh(
                     vkp, vkq = v[k][p], v[k][q]
                     v[k][p] = cos * vkp - sin * vkq
                     v[k][q] = sin * vkp + cos * vkq
+    else:
+        # The budget ran out with the last sweep's rotations never checked, and those may have
+        # been the ones that finished the job.
+        separated = _off_diagonal_norm(a) <= _JACOBI_OFF_TOLERANCE
     eigvals = [a[i][i] for i in range(n)]
     eigvecs = [[v[i][j] for i in range(n)] for j in range(n)]
-    return eigvals, eigvecs, sweeps
+    return eigvals, eigvecs, sweeps, separated
 
 
 def _fiedler_power(
@@ -410,7 +486,39 @@ def _fiedler_power(
     return x, used, converged
 
 
-def _block_axis(sub: list[list[float]], max_iter: int) -> tuple[list[float], int, bool]:
+def _default_max_iter(n: int) -> int:
+    """The power-iteration budget for a block of ``n`` rows when the caller names none.
+
+    The budget does not simply grow with the block; it has three regimes. From two rows it rises
+    with the block to a peak of 30,600 steps at 255 rows, because up to there a larger block needs
+    more steps to settle and the work a step costs is still small. Past 255 rows the total-work
+    allowance decides instead and the budget falls, a step costing work proportional to the squared
+    row count: a block that large is reported unsettled sooner rather than run longer. From 3,155
+    rows the allowance has dropped below the floor, so every block from there up gets exactly the
+    fixed budget this default replaced, 200 steps, and no more. A caller who wants a block past the
+    peak run further names its own ``max_iter``, which is then used as given."""
+    return max(_MIN_DERIVED_MAX_ITER, min(_ITERATIONS_PER_ROW * n, _DERIVED_WORK_ALLOWANCE // n**2))
+
+
+@dataclass(frozen=True)
+class _BlockAxis:
+    """One block's seriation axis and what the solver could not settle about it.
+
+    ``undetermined`` means no single axis follows from the similarity, so the block's ordering is
+    one of several equally good ones. The two flags below narrow that to the cause, since each
+    solver runs out of a different budget and only one of them is a budget the caller sets:
+    ``unsettled`` is the power iteration still moving when its step budget ran out, which
+    ``max_iter`` raises, and ``unfinished`` is the direct solver's rotations not done when its
+    sweep budget ran out, a budget derived from the block that no caller argument reaches."""
+
+    values: list[float]
+    iterations: int
+    undetermined: bool
+    unsettled: bool
+    unfinished: bool
+
+
+def _block_axis(sub: list[list[float]], max_iter: int | None) -> _BlockAxis:
     """The seriation axis of one connected block, plus whether the axis is undetermined.
 
     The axis is the eigenvector of the second-smallest eigenvalue of the graph Laplacian
@@ -419,35 +527,51 @@ def _block_axis(sub: list[list[float]], max_iter: int) -> tuple[list[float], int
     blocks, so the axis does not depend on the order the rows were given in; a constant-
     deflated power iteration is the fallback when the block is too large for it.
 
-    The third return value is ``True`` when the similarity does not single out one axis, so no
-    ordering of that block follows from it. The dense path reads that off the eigenvalue gap: a
-    repeated Fiedler eigenvalue spans an eigenspace in which every vector is an equally good
-    axis. The large-matrix path cannot see the spectrum, so it asks the equivalent question
-    directly, does the answer depend on where the iteration started: an unsettled iteration
-    fails that on its own (and is not solved twice, which keeps the slowest case from paying
-    for the diagnostic), and a settled one is re-run from a different start and compared."""
+    ``undetermined`` is ``True`` when the similarity does not single out one axis, so no ordering
+    of that block follows from it. The dense path reads that off the eigenvalue gap: a repeated
+    Fiedler eigenvalue spans an eigenspace in which every vector is an equally good axis. That
+    reading presupposes the rotations finished, since an exhausted solve leaves a diagonal that is
+    not yet the spectrum and a gap between two of its entries says nothing about the block, so a
+    solve stopped by its sweep budget is undetermined outright and the gap is not consulted. The
+    large-matrix path cannot see the spectrum, so it asks the equivalent question directly, does
+    the answer depend on where the iteration started: an unsettled iteration fails that on its own
+    (and is not solved twice, which keeps the slowest case from paying for the diagnostic), and a
+    settled one is re-run from a different start and compared.
+
+    ``max_iter`` caps the large-block iteration; ``None`` derives the cap from the block's own row
+    count, since how many steps a block needs to settle scales with its size. The dense path takes
+    no cap from the caller: its own budget is derived from the block the same way."""
     n = len(sub)
     row_sum = [sum(row) for row in sub]
     if n <= _DENSE_SOLVER_MAX_N:
         laplacian = [
             [(row_sum[i] if i == j else 0.0) - sub[i][j] for j in range(n)] for i in range(n)
         ]
-        eigvals, eigvecs, used = _jacobi_eigh(laplacian)
+        eigvals, eigvecs, used, separated = _jacobi_eigh(laplacian)
         # L is a PSD graph Laplacian: on a connected block the smallest eigenvalue is 0 (the
         # constant vector) and the second-smallest is the Fiedler / seriation axis.
         by_value = sorted(range(n), key=lambda k: eigvals[k])
+        if not separated:
+            return _BlockAxis(eigvecs[by_value[1]], used, True, False, True)
         second, third = eigvals[by_value[1]], eigvals[by_value[2]]
         scale = max(abs(third), abs(second), 1.0)
-        return eigvecs[by_value[1]], used, (third - second) <= _DEGENERACY_TOLERANCE * scale
-    axis, used, converged = _fiedler_power(sub, row_sum, max_iter, phase=1.0)
+        return _BlockAxis(
+            eigvecs[by_value[1]],
+            used,
+            (third - second) <= _DEGENERACY_TOLERANCE * scale,
+            False,
+            False,
+        )
+    budget = _default_max_iter(n) if max_iter is None else max_iter
+    axis, used, converged = _fiedler_power(sub, row_sum, budget, phase=1.0)
     if not converged:
-        return axis, used, True
-    check, used_check, _ = _fiedler_power(sub, row_sum, max_iter, phase=0.5)
+        return _BlockAxis(axis, used, True, True, False)
+    check, used_check, _ = _fiedler_power(sub, row_sum, budget, phase=0.5)
     agreement = min(
         sum((a - b) ** 2 for a, b in zip(axis, check, strict=True)),
         sum((a + b) ** 2 for a, b in zip(axis, check, strict=True)),
     )
-    return axis, max(used, used_check), agreement > _AXIS_AGREEMENT
+    return _BlockAxis(axis, max(used, used_check), agreement > _AXIS_AGREEMENT, False, False)
 
 
 def _axis_places(axis: list[float], profiles: Sequence[Key]) -> tuple[list[list[int]], int]:
@@ -511,6 +635,8 @@ class _Solution:
     iterations: int
     undetermined: int
     unseparated: int
+    unsettled: int
+    unfinished: int
 
     @property
     def order(self) -> tuple[int, ...]:
@@ -518,7 +644,7 @@ class _Solution:
 
 
 def _seriation_order(
-    sim: list[list[float]], keys: Sequence[Key], profiles: Sequence[Key], max_iter: int
+    sim: list[list[float]], keys: Sequence[Key], profiles: Sequence[Key], max_iter: int | None
 ) -> _Solution:
     """Seriate each connected block of the similarity graph, then place the blocks.
 
@@ -530,11 +656,13 @@ def _seriation_order(
     whole ordering is faced by the smaller row index, the documented canonical direction.
 
     Every step is decided by the counts rather than by row positions, so permuting the input
-    returns the same ordering or its exact reverse. ``max_iter`` bounds the large-block
-    iteration."""
+    returns the same ordering or its exact reverse. ``max_iter`` bounds the large-block iteration;
+    ``None`` bounds each block by a budget derived from that block's own size."""
     iterations = 0
     undetermined = 0
     unseparated = 0
+    unsettled = 0
+    unfinished = 0
     blocks: list[tuple[int, ...]] = []
     for members in _components(sim):
         if len(members) <= 2:
@@ -543,11 +671,15 @@ def _seriation_order(
             places = [[i] for i in members]
         else:
             sub = [[sim[i][j] for j in members] for i in members]
-            axis, used, degenerate = _block_axis(sub, max_iter)
-            iterations = max(iterations, used)
-            if degenerate:
+            axis = _block_axis(sub, max_iter)
+            iterations = max(iterations, axis.iterations)
+            if axis.undetermined:
                 undetermined += len(members)
-            local, unpicked = _axis_places(axis, [profiles[i] for i in members])
+            if axis.unsettled:
+                unsettled += len(members)
+            if axis.unfinished:
+                unfinished += len(members)
+            local, unpicked = _axis_places(axis.values, [profiles[i] for i in members])
             unseparated += unpicked
             places = [[members[p] for p in place] for place in local]
         blocks.append(_flatten_places(_canonical_direction(places, keys), keys))
@@ -560,6 +692,8 @@ def _seriation_order(
         iterations=iterations,
         undetermined=undetermined,
         unseparated=unseparated,
+        unsettled=unsettled,
+        unfinished=unfinished,
     )
 
 
@@ -618,8 +752,10 @@ class SeriationResult:
     the sequence they appear. More than one block means some rows share no type with the
     rest: **the order between blocks is a convention** (largest block at one end, then by
     composition) and carries no similarity evidence, so read a sequence only within a block.
-    ``ambiguous`` is ``True`` when the similarity leaves part of the sequence undetermined
-    even inside a block, which :func:`seriate` also warns about.
+    ``ambiguous`` is ``True`` when part of the sequence is undetermined even inside a block,
+    either because the similarity singles out no axis there or because the solver ran out of
+    the budget it needed to find one. :func:`seriate` warns in each case, and the warning says
+    which of the two it was, since only one of them is something a caller can act on.
 
     The largest block is at one END, not necessarily at ``components[0]``: the global
     direction flip that makes the ordering reproducible reverses the block sequence
@@ -648,7 +784,7 @@ def seriate(
     matrix_or_corpus: Any,
     *,
     labels: Sequence[str] | None = None,
-    max_iter: int = 200,
+    max_iter: int | None = None,
 ) -> SeriationResult:
     """Seriate an abundance table (or a corpus) by Brainerd-Robinson similarity (EXPLORATORY).
 
@@ -678,17 +814,30 @@ def seriate(
         corpus input, where document ids are used.
     max_iter:
         Cap on iterations for the large-matrix power-iteration fallback (the dense
-        eigensolver used for ordinary tables ignores it). Must be positive.
+        eigensolver used for ordinary tables ignores it). ``None``, the default, derives
+        the cap from each block's own row count, because how many steps a block needs to
+        settle grows with its size and one fixed cap cannot serve both a small and a large
+        block. Pass a positive integer to set the cap yourself; that number is then used
+        as given, for every block. A block still unsettled at its cap is reported
+        ``ambiguous`` and warned about, naming the budget as the reason.
 
     Returns a :class:`SeriationResult`. Raises ``ValueError`` on an empty/ragged matrix,
-    a labels-length mismatch, or a corpus with no sign-bearing documents.
+    a labels-length mismatch, a non-positive ``max_iter``, or a corpus with no sign-bearing
+    documents, and ``TypeError`` on a ``max_iter`` that is not an integer.
 
     **Caveat (EXPLORATORY).** The ordering is a hypothesis about relative sequence from
     compositional similarity, with no direction and no calendar anchor; on undeciphered
     scripts a "type" is a sign, so the axis may track scribal or graphotactic drift, not
     time. Corroborate against external evidence before reading chronology into it."""
-    if max_iter <= 0:
-        raise ValueError("max_iter must be positive")
+    if max_iter is not None:
+        # bool is an int, and ``max_iter=True`` is a step budget of one, which is a typo rather
+        # than a budget; a float is not a step count however round it looks.
+        if isinstance(max_iter, bool) or not isinstance(max_iter, int):
+            raise TypeError(
+                f"max_iter must be a positive int or None, got {type(max_iter).__name__}"
+            )
+        if max_iter <= 0:
+            raise ValueError("max_iter must be positive")
     row_labels: tuple[str, ...] | None
     # A query's results stand in for their matched documents from here on, so seriating
     # a subset behaves exactly like seriating the same list of documents (including the
@@ -731,6 +880,21 @@ def seriate(
             f"seriation axis undetermined for {solved.undetermined} of {total} rows: the"
             " similarity does not single out one axis for their block, so the sequence returned"
             " is one of several equally good solutions and may change with the input row order",
+            stacklevel=2,
+        )
+    if solved.unsettled:
+        warnings.warn(
+            f"the seriation axis for {solved.unsettled} of {total} rows was still moving when the"
+            " power iteration reached its step budget, which is why their block is undetermined:"
+            " raising max_iter gives it the steps it needs",
+            stacklevel=2,
+        )
+    if solved.unfinished:
+        warnings.warn(
+            "the direct eigensolver had not finished separating the eigenvalues for"
+            f" {solved.unfinished} of {total} rows when it reached its sweep budget, which is why"
+            " their block is undetermined: that budget follows from the block's own size, so"
+            " max_iter, which reaches only blocks too large for this solver, is not the lever",
             stacklevel=2,
         )
     if solved.unseparated:

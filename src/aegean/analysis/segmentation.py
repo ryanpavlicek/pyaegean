@@ -38,12 +38,52 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from typing import Any
+
+from ..core.model import Document, TokenKind
 
 __all__ = [
     "Segmentation",
     "segment",
     "candidate_morphs",
 ]
+
+
+def _word_list(words: Any) -> list[str]:
+    """Coerce word strings, a corpus, or a query's results to a list of words.
+
+    Strings are taken as they come. A `Corpus`, the results of a `Corpus.query` (whose
+    matched documents are its ``inscriptions``), or a plain list of documents is read
+    down to its lexical word *types* in first-appearance order: Harris variety is
+    defined over the vocabulary, so a word written twice is one word here and the cuts
+    are the same however the words arrive. Anything else raises a ``TypeError`` naming
+    what arrived."""
+    docs = getattr(words, "inscriptions", None)
+    if docs is None:
+        docs = getattr(words, "documents", words)
+    try:
+        items = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected words, a corpus, or documents, got {type(words).__name__}"
+        ) from None
+    if not items or isinstance(items[0], str):
+        for w in items:
+            if not isinstance(w, str):
+                raise TypeError(
+                    f"expected words, a corpus, or documents, got {type(w).__name__}"
+                )
+        return list(items)
+    if not isinstance(items[0], Document):
+        raise TypeError(
+            f"expected words, a corpus, or documents, got {type(items[0]).__name__}"
+        )
+    seen: dict[str, None] = {}
+    for doc in items:
+        for tok in doc.tokens:
+            if tok.kind is TokenKind.WORD:
+                seen.setdefault(tok.text, None)
+    return list(seen)
 
 
 def _units(word: str) -> tuple[str, ...]:
@@ -159,7 +199,7 @@ def _pieces(units: tuple[str, ...], cuts: tuple[int, ...], hyphenated: bool) -> 
     )
 
 
-def segment(words: Iterable[str]) -> list[Segmentation]:
+def segment(words: Iterable[str] | Any) -> list[Segmentation]:
     """Harris bidirectional segmentation for every word, input order preserved.
 
     Forward and backward unit tries are built once over the de-duplicated word
@@ -168,9 +208,14 @@ def segment(words: Iterable[str]) -> list[Segmentation]:
     input words yield identical :class:`Segmentation` records. Single-unit and
     empty words return uncut, with one piece (or none).
 
+    ``words`` is an iterable of word strings, or a `Corpus`, the results of a
+    `Corpus.query`, or a list of documents, in which case the vocabulary is that
+    input's lexical word types: a queried subset is segmented against its own
+    vocabulary, not the whole corpus's.
+
     EXPLORATORY: the cuts are distributional hypotheses. See the module
     docstring; on hapax-heavy undeciphered corpora the variety signal is thin."""
-    word_list = list(words)
+    word_list = _word_list(words)
     seen: list[tuple[str, ...]] = []
     seen_set: set[tuple[str, ...]] = set()
     for w in word_list:
@@ -197,8 +242,13 @@ def segment(words: Iterable[str]) -> list[Segmentation]:
     return out
 
 
-def candidate_morphs(words: Iterable[str], *, min_count: int = 2) -> list[tuple[str, int]]:
+def candidate_morphs(
+    words: Iterable[str] | Any, *, min_count: int = 2
+) -> list[tuple[str, int]]:
     """Recurring word-final candidate morphs, by the count of distinct words bearing them.
+
+    Takes the same input as :func:`segment`: word strings, a `Corpus`, a query's
+    results, or documents.
 
     Each word is segmented (see :func:`segment`); a word's **final** piece, i.e.
     the unit-group after its last cut, is taken as its candidate suffix. The count

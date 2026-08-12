@@ -21,8 +21,9 @@ import math
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass
+from typing import Any
 
-from ..core.model import TokenKind
+from ..core.model import Document, TokenKind
 
 __all__ = ["RarityResult", "WordRarity", "terminology_rarity"]
 
@@ -68,16 +69,35 @@ def _label(count: int) -> str:
     return "common"
 
 
+def _reference_documents(corpus: object) -> list[Document]:
+    """Coerce a corpus, a query's results, or an iterable of Documents to a list.
+
+    `Corpus.query` returns `aegean.analysis.QueryResults`, whose matched documents are
+    its ``inscriptions``, so a queried subset is a reference corpus in its own right and
+    rarity is scored against that subset's register. Anything else that yields documents
+    (a `Corpus`, a plain list) is taken as it comes; anything that does not raises a
+    ``TypeError`` naming what arrived."""
+    docs: Any = getattr(corpus, "inscriptions", None)
+    if docs is None:
+        docs = getattr(corpus, "documents", corpus)
+    try:
+        out = list(docs)
+    except TypeError:
+        raise TypeError(
+            f"expected a corpus or documents, got {type(corpus).__name__}"
+        ) from None
+    if out and not isinstance(out[0], Document):
+        raise TypeError(f"expected a corpus or documents, got {type(out[0]).__name__}")
+    return out
+
+
 def _corpus_lemma_freqs(corpus: object) -> Counter[str]:
     """Lemma frequencies of a reference corpus: gold lemma from a token's annotation when
     present, else the active lemmatizer."""
     from .lemmatize import lemmatize
 
-    docs = getattr(corpus, "documents", None)
-    if docs is None:
-        raise TypeError("corpus must expose .documents (an aegean.Corpus or QueryResults)")
     freqs: Counter[str] = Counter()
-    for doc in docs:
+    for doc in _reference_documents(corpus):
         for tok in doc.tokens:
             if tok.kind is not TokenKind.WORD:
                 continue
@@ -91,9 +111,10 @@ def _corpus_lemma_freqs(corpus: object) -> Counter[str]:
 def terminology_rarity(text: str, corpus: object) -> RarityResult:
     """Score the terminology rarity of ``text`` against a reference ``corpus``.
 
-    ``corpus`` is any `aegean.Corpus` (or `QueryResults`); its word tokens define the
-    frequency basis, so the score is relative to that corpus's register. Returns the overall
-    score plus a per-word breakdown (use ``.hardest()`` to surface the rare terms).
+    ``corpus`` is any `aegean.Corpus`, the results of a `Corpus.query`, or a list of
+    documents; its word tokens define the frequency basis, so the score is relative to
+    that material's register and a queried subset scores against the subset. Returns the
+    overall score plus a per-word breakdown (use ``.hardest()`` to surface the rare terms).
     """
     from .lemmatize import lemmatize
     from .tokenize import tokenize_words

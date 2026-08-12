@@ -238,11 +238,16 @@ def test_cooccurrence_evidence_respects_limit_and_self_excluded():
     assert not any("KU-RO: KU-RO" in g.content for g in ev)
 
 
-def test_cooccurrence_evidence_empty_when_no_cooccurrence_or_no_docs():
+def test_cooccurrence_evidence_empty_only_when_the_corpus_really_has_no_cooccurrence():
     # A word alone in its only document co-occurs with nothing -> empty.
     assert cooccurrence_evidence(_corpus(("KU-RO",)), "KU-RO") == []
-    # A corpus object without a .documents attribute degrades to [] (best-effort).
-    assert cooccurrence_evidence(SimpleNamespace(), "KU-RO") == []
+    # So does a corpus with no documents at all: nothing to co-occur in.
+    assert cooccurrence_evidence(_corpus(), "KU-RO") == []
+    # An argument that is not a corpus is REFUSED, never answered with an empty list.
+    # Returning [] there made "this word co-occurs with nothing" indistinguishable from
+    # "you passed the wrong thing", and a query's results took that path silently.
+    with pytest.raises(TypeError, match="expected a corpus or documents"):
+        cooccurrence_evidence(SimpleNamespace(), "KU-RO")
 
 
 # ── capabilities.verify_translation: the repair PROMPT (never a model call) ──

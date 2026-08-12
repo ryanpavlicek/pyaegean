@@ -158,7 +158,9 @@ def _score_fold(
         batch_size=batch_size,
         long_input=long_input,
     )
-    gold_text = gold_path.read_text(encoding="utf-8")
+    # utf-8-sig: gold_path may be caller-supplied, and a leading BOM is an encoding
+    # marker rather than the first character of the first comment line.
+    gold_text = gold_path.read_text(encoding="utf-8-sig")
     metrics = (
         ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas")
         if parse

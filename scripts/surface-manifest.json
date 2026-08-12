@@ -1135,7 +1135,7 @@
       "id": "seriation",
       "since": "0.37.0",
       "python_api": "aegean.analysis.seriation.seriate",
-      "summary": "Exploratory Brainerd-Robinson seriation of an assemblage into a deterministic sequence.",
+      "summary": "Exploratory Brainerd-Robinson seriation of an assemblage into its similarity blocks, each a deterministic sequence.",
       "surfaces": {
         "demo": {
           "status": "covered",

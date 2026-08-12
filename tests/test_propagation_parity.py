@@ -742,3 +742,95 @@ def test_every_sign_counting_surface_uses_the_same_rule():
     assert _bears_signs(Token(text="KU", kind=TokenKind.WORD))
     assert _bears_signs(Token(text="VIN", kind=TokenKind.LOGOGRAM))
     assert _bears_signs(Token(text="KU", kind=TokenKind.WORD, status=ReadingStatus.RESTORED))
+
+
+# ── CLASS: the declared Python floor — no source may use an API newer than it ──
+def test_no_source_uses_an_api_newer_than_the_declared_python_floor():
+    """``requires-python`` is a promise the development interpreter cannot check.
+
+    A call that exists on the newest supported interpreter and not on the floor passes
+    every local run and fails the whole hosted matrix below it: the CoNLL-U fixture read
+    used ``Path.read_text``'s ``newline`` argument, which arrived in 3.13, and failed
+    3.10, 3.11 and 3.12 while passing on 3.14. Signatures widen silently, so the
+    development box cannot see the floor; this enumerates the additions that have bitten
+    or plausibly would, and fails on the file and line rather than in CI an hour later."""
+    import re
+    from pathlib import Path
+
+    # (pattern, the version that introduced it, what to use instead below the floor)
+    newer_than_floor = [
+        (r"read_text\s*\([^)]*newline", "3.13", "path.read_bytes().decode(...)"),
+        (r"\bitertools\.batched\b", "3.12", "a hand-rolled chunker"),
+        (r"\bhashlib\.file_digest\b", "3.11", "read and update a hash object"),
+        (r"\bdatetime\.UTC\b", "3.11", "datetime.timezone.utc"),
+        (r"\bcontextlib\.chdir\b", "3.11", "a try/finally around os.chdir"),
+        (r"\benum\.StrEnum\b|\(\s*StrEnum\s*\)", "3.11", "class X(str, Enum)"),
+        (r"^\s*import tomllib", "3.11", "pytest.importorskip('tomllib') in a test"),
+        (r"\btyping\.assert_type\b", "3.11", "a plain assertion"),
+    ]
+    roots = [Path("src"), Path("tests"), Path("scripts"), Path("training")]
+    offenders = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*.py")):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for pattern, since, instead in newer_than_floor:
+                for match in re.finditer(pattern, text, re.MULTILINE | re.DOTALL):
+                    line = text[: match.start()].count("\n") + 1
+                    # A use that really is gated, by a version check or an
+                    # importorskip, says so on its own line and is not an
+                    # unguarded call.
+                    if "floor-ok" in text.splitlines()[line - 1]:
+                        continue
+                    offenders.append(
+                        f"{path.as_posix()}:{line} uses an API added in Python {since}, "
+                        f"below-floor callers need {instead}"
+                    )
+    assert not offenders, (
+        "source uses an API newer than the `requires-python` floor, so the hosted matrix "
+        "will fail below the development interpreter:\n  " + "\n  ".join(offenders)
+    )
+
+
+# ── CLASS: caller-supplied gold folds are decoded with the BOM tolerated ──
+def test_every_caller_supplied_gold_reader_tolerates_a_byte_order_mark():
+    """A gold fold named by the caller may carry a UTF-8 BOM; the evaluators must not choke.
+
+    Read as plain ``utf-8`` the BOM survives decoding as a character on the first line, and
+    the CoNLL-U parser then reports it as a column-count fault on a *comment* line, which
+    tells the reader nothing true about their file. Four evaluators took a caller-supplied
+    ``source=`` and read it three different ways, so fixing one left the others. The system
+    files pyaegean writes itself are deliberately still read as strict ``utf-8``: they cannot
+    carry a BOM, and exactness there is worth more than tolerance."""
+    import ast
+    from pathlib import Path
+
+    offenders = []
+    for path in sorted(Path("src/aegean/greek").rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "attr", getattr(node.func, "id", ""))
+            if name not in {"read_text", "open"}:
+                continue
+            # The reader is a gold-fold reader when the thing being read is one.
+            target = ast.unparse(node.func).lower() + " " + " ".join(
+                ast.unparse(a).lower() for a in node.args
+            )
+            if "gold" not in target:
+                continue
+            encoding = next(
+                (kw.value for kw in node.keywords if kw.arg == "encoding"), None
+            )
+            literal = getattr(encoding, "value", None)
+            if literal != "utf-8-sig":
+                offenders.append(
+                    f"{path.as_posix()}:{node.lineno} reads a gold fold as "
+                    f"{literal!r}; a caller-supplied fold may carry a BOM"
+                )
+    assert not offenders, (
+        "a caller-supplied gold fold is decoded without BOM tolerance, so a BOM'd file is "
+        "reported as a malformed CoNLL-U row:\n  " + "\n  ".join(offenders)
+    )
