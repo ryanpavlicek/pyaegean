@@ -401,10 +401,19 @@ def test_writer_still_obeys_its_reader_after_escaping() -> None:
 # --- the shared evaluation model is unchanged ----------------------------------
 
 
+def _source_text(path: Path) -> str:
+    """The file's text with its line endings as written.
+
+    ``dumps()`` returns the source untouched, so comparing against it needs a read
+    that performs no newline translation. Decoding the bytes is that read on every
+    supported interpreter; ``Path.read_text``'s ``newline`` argument is 3.13 and up."""
+    return path.read_bytes().decode("utf-8")
+
+
 def test_gold_fold_reading_is_unchanged_by_the_interop_contracts() -> None:
     # The CoNLL-U model is shared with evaluation.  Pin the fixture fold exactly:
     # counts, every column of every row, and both dump modes.
-    raw = FIXTURE.read_text(encoding="utf-8", newline="")
+    raw = _source_text(FIXTURE)
     document = load_conllu_document(FIXTURE)
     sentences = document.sentences
 
@@ -429,9 +438,7 @@ def test_gold_fold_sentences_survive_the_interop_envelope() -> None:
         "sample.tb.xml@1",
         "sample.tb.xml@2",
     ]
-    assert document.ud_document.dumps() == FIXTURE.read_text(
-        encoding="utf-8", newline=""
-    )
+    assert document.ud_document.dumps() == _source_text(FIXTURE)
 
 
 # --- hostile input -------------------------------------------------------------
