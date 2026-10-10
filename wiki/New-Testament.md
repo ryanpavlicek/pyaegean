@@ -8,6 +8,12 @@ Universal Dependencies `upos`, the `normalized` form, and a short Koine `gloss`.
 never have to run a tagger to work with it: the analysis is already there, and it is
 gold (from the edition), not pyaegean's own prediction.
 
+Running `greek.pipeline()` on the verse text, including with the neural backend,
+produces fresh predictions rather than reading those source annotations.
+`greek.annotate_corpus()` returns a new corpus and replaces the annotation keys it
+writes, including existing lemma/POS values; other keys, such as source morphology,
+remain. Keep the source-annotated corpus separately when comparing predictions with it.
+
 This page is the reference for that corpus and the `aegean greek nt` command family.
 For the wider "load real Greek texts" story (the classical literary works, the
 `load_work` / CTS-id path) see [Greek Works and Books](Greek-Works-and-Books); for

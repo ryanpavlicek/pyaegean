@@ -2216,11 +2216,12 @@ aegean review export greek --annotate -o review.csv
 #    wrote 27 review rows to review.csv
 #    correct the columns, then:  aegean review apply greek review.csv -o corrected.json --annotate
 
-# 2. triage. The needs_review column flags the rows the analysis is least sure of, and
+# 2. triage. The needs_review column flags identity/unresolved lemmas by default, and
 #    --only-needs-review exports only those: here the 7 forms the offline lemmatizer left
 #    unresolved (Πηληϊάδεω, Ἀχιλῆος, Ἁλικαρνησσέος, …), each with evidence_class=unresolved.
 aegean review export greek --annotate --only-needs-review -o triage.csv
 #    wrote 7 review rows to triage.csv
+#    This filter is not a confidence threshold; omit it to review all rows.
 
 # 3. open the CSV in a spreadsheet and fill correct_lemma / correct_pos / correct_morph /
 #    reviewer_note on the rows you want to change. If several people review copies of the

@@ -41,6 +41,11 @@ ht13 = aegean.load("lineara").get("HT13")      # a tablet from the bundled 1,721
 # [('a-ke-se-to-ro','CERTAIN'), …, ('e-mi','RESTORED')]   editorial apparatus on every word
 ```
 
+The Greek example uses the default heuristic baseline. Its tags and lemmas can be
+wrong even in short, ordinary sentences. Use the opt-in neural pipeline when
+accuracy matters, then review its predictions; existing corpus annotations are
+source data, not output from this example.
+
 More runnable examples are in [Try it](#try-it) below. Then pick your path:
 
 - **Classicist analyzing texts**: [Getting Started](https://github.com/ryanpavlicek/pyaegean/wiki/Getting-Started)

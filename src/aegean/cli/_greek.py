@@ -1501,9 +1501,8 @@ def pipeline(
     columns = ["s", "i", "token", "upos", "lemma", "src", "head", "rel", "feats"]
     if has_conf:
         columns.append("conf")
-    # 'src' shows the lemma's evidence class only when it is worth a second look
-    # (an identity fall-through or an unresolved miss); grounded lemmas leave it blank
-    # so the table stays scannable. The full class is always in --json (lemma_source).
+    # 'src' marks identity/unresolved lemma fallbacks; a blank is not a correctness
+    # verdict. The full class is always in --json (lemma_source).
     table(
         f"{len(rows)} token(s)",
         columns,

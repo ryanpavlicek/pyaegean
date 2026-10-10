@@ -688,9 +688,10 @@ def export_epidoc(corpus_id: str, doc_id: str) -> str:
 
 def explain(text: str) -> str:
     """Explain what the offline pipeline did to each token: the lemma's evidence class
-    (attested / rule / seed / paradigm / identity / unresolved / punct), whether the token
-    needs review, and a one-line note saying what that class means. Rendered from the same
-    records the pipeline returns, never a re-run; there are no confidence numbers by design
+    (attested / rule / seed / paradigm / identity / unresolved / punct), whether the lemma
+    is an identity/unresolved fallback, and a one-line note saying what that class means.
+    An unflagged result may still be wrong; the flag does not assess POS or morphology.
+    The explanation renders records from its own pipeline call; there are no confidence numbers
     (the neural pipeline's calibrated confidence needs the model, which is out of the browser)."""
     from aegean import greek
 

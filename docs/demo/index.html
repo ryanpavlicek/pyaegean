@@ -66,7 +66,8 @@
 
   <div class="card">
     <h2>Greek NLP pipeline</h2>
-    <label for="nlp">A Greek sentence — get per-token part of speech and lemma (dictionary form)</label>
+    <label for="nlp">A Greek sentence: get per-token part of speech and lemma (dictionary form)
+      from the offline baseline. This is a first pass; rule and lookup results can still be wrong</label>
     <textarea id="nlp">ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.</textarea>
     <div class="row"><button data-tool="nlp" disabled>Analyze</button></div>
     <pre id="nlp-out"></pre>
@@ -75,8 +76,10 @@
   <div class="card">
     <h2>Pipeline explained — the lemma's evidence class</h2>
     <label for="exl">The same sentence, but showing <em>how</em> each lemma was reached: its evidence
-      class (attested · rule · seed · paradigm · identity · unresolved · punct) and whether it needs
-      review. The class is the whole claim — there are no confidence numbers by design</label>
+      class (attested · rule · seed · paradigm · identity · unresolved · punct) and whether the
+      lemma is an identity/unresolved fallback. An unflagged result can still be wrong, and the
+      flag does not assess POS or morphology. The class records provenance; no confidence numbers
+      are supplied here</label>
     <textarea id="exl">ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν.</textarea>
     <div class="row"><button data-tool="exl" disabled>Explain</button></div>
     <pre id="exl-out"></pre>
@@ -180,7 +183,7 @@
   <div class="card">
     <h2>Offline lemmatizer, honest misses included</h2>
     <label for="lem">One Greek word: the offline lemma and POS. When no rule or table applies the
-      word comes back unchanged and flagged, never as a fabricated dictionary form (compare
+      word comes back unchanged and flagged. A rule or lookup result can still be wrong (compare
       <code>ἀνθρώπων</code> with <code>προφήτου</code>)</label>
     <input type="text" id="lem" value="ἀνθρώπων">
     <div class="row"><button data-tool="lem" disabled>Lemmatize</button></div>

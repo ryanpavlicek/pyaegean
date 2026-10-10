@@ -171,7 +171,7 @@ class GreekWorkbenchScreen(Screen[None]):
         # Prefix each token with sentence:index so multi-sentence input is
         # unambiguous (the pipeline restarts the index at each new sentence).
         # An unresolved/identity lemma is marked with its evidence class (the CLI
-        # src-column convention), so a guess never displays like a grounded lemma.
+        # src-column convention); a blank marker does not certify correctness.
         # A calibrated confidence is appended only when the rows carry one (neural +
         # calibration active), the same condition as the CLI's 'conf' column.
         lines = [

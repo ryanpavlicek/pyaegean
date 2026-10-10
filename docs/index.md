@@ -48,6 +48,11 @@ from aegean import greek
 #  ('ὁ', 'DET', 'ὁ'), ('λόγος', 'NOUN', 'λόγος'), ('.', 'PUNCT', '.')]
 ```
 
+This default is a deterministic baseline for a first pass. Its tables and ending
+rules can return a wrong POS or lemma even when `review_recommended` is False.
+That flag selects identity/unresolved lemma fallbacks, not every error; compare
+the output with the passage, a dictionary, or existing annotations.
+
 Read an inscription's editorial apparatus: the bundled Cypriot-syllabary corpus
 (*Inscriptiones Graecae* XV 1) carries a reading status on every word:
 

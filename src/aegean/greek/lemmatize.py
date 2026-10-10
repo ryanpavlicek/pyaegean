@@ -79,8 +79,9 @@ class LemmaSource(str, Enum):
     - ``PUNCT``      — a non-word token (punctuation / numeral): trivially its own lemma.
     - ``USER``       — a human correction imported through the review workflow.
 
-    ``IDENTITY`` and ``UNRESOLVED`` are the classes a human should verify (see
-    `needs_review`); the rest are grounded analyses."""
+    ``IDENTITY`` and ``UNRESOLVED`` are flagged by `needs_review`. Other sources
+    record a resolved decision, not a guarantee of contextual correctness. Only
+    ``USER`` records human verification through the review workflow."""
 
     ATTESTED = "attested"
     NEURAL_LOOKUP = "neural_lookup"
@@ -96,9 +97,12 @@ class LemmaSource(str, Enum):
 
 
 def needs_review(source: LemmaSource) -> bool:
-    """Whether a lemma with this source should be verified by a human: an ``IDENTITY``
-    fall-through or an ``UNRESOLVED`` baseline miss. ``ATTESTED``/``NEURAL``/``RULE``/
-    ``SEED``/``PARADIGM``/``PUNCT`` are grounded and do not need review."""
+    """Flag ``IDENTITY`` fall-throughs and ``UNRESOLVED`` baseline misses.
+
+    This is an unresolved-lemma filter, not a confidence threshold or an error
+    detector. A false result does not establish correctness or human verification;
+    resolved lookups, rules, and model predictions can still be wrong.
+    """
     return source in (LemmaSource.IDENTITY, LemmaSource.UNRESOLVED)
 
 
@@ -108,7 +112,7 @@ def lemma_resolved(source: LemmaSource) -> bool:
 
 
 def lemma_verified(source: LemmaSource) -> bool:
-    """Whether a human reviewer explicitly verified or corrected the lemma."""
+    """Whether the source records an imported human lemma correction (USER)."""
     return source is LemmaSource.USER
 
 _ACUTE = "́"

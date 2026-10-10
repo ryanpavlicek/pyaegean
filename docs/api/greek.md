@@ -2,6 +2,14 @@
 
 ::: aegean.greek
 
+## Lemma review fields
+
+`needs_review(source)` and `TokenRecord.review_recommended` flag only `identity`
+and `unresolved` lemma sources. They do not apply a confidence threshold or detect
+all errors. `lemma_resolved` records a decision, while `lemma_verified` records
+an imported human lemma correction (`user`). A resolved lemma
+can still be wrong; these fields do not certify POS, morphology, or dependencies.
+
 ## Neural runtime variants
 
 `neural_variants()` returns the four stable runtime labels and their exact artifact/evidence

@@ -495,7 +495,10 @@ def greek_pipeline(text: str) -> list[dict[str, Any]]:
     the baseline), plus ``alignment_*`` source identity, exact text, Unicode span,
     whitespace, and normalization fields. The rows are the shared
     :func:`aegean._view.pipeline_rows` mapping, so this tool, the ``aegean greek pipeline``
-    command, and the terminal UI emit identical rows."""
+    command, and the terminal UI emit identical rows. ``review_recommended`` selects
+    identity/unresolved lemma fallbacks; False does not certify correctness or human
+    verification and does not assess POS, morphology, or dependencies. The baseline is
+    a deterministic first pass whose rule and lookup results may still be wrong."""
     from ._view import pipeline_rows
 
     return pipeline_rows(text)
@@ -507,11 +510,12 @@ def greek_explain(text: str) -> list[dict[str, Any]]:
     One row per token, in pipeline order, carrying ``token``, ``upos``, ``lemma``,
     ``lemma_source`` (the lemma's evidence class: attested / neural_lookup / neural_edit /
     neural / rule / seed / paradigm / identity / unresolved / punct / user),
-    ``needs_review`` (``True`` marks a lemma
-    a human should verify: an ``identity`` fall-through or an ``unresolved`` miss),
+    ``needs_review`` (``True`` selects identity/unresolved lemma fallbacks;
+    False does not certify correctness or human verification),
     ``morphology`` (the UD FEATS string when a neural backend filled one, else ``None``),
     and ``note`` (a one-line, plain-language account of what that evidence class means).
-    The evidence CLASS is the whole trust claim: there are deliberately no confidence
+    The evidence class records provenance, not a correctness verdict. The flag does not
+    assess POS, morphology, or dependencies. There are deliberately no confidence
     numbers (the neural pipeline's calibrated confidence needs the trained model, which
     this server does not load). This tool runs the pipeline over ``text`` and renders
     the records it gets back, exactly as ``greek_pipeline`` maps its own, so the two

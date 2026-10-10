@@ -72,7 +72,7 @@ when such a chain is attached; older receipt schemas remain compatible.
 | **Clean digital text** (a well-edited literary passage or `load_work` corpus) | the neural pipeline for measured generalization, or the treebank lexicon for attested-gold lemmas without heavy deps | `greek.use_neural_pipeline()` / `greek.use_treebank()` | the neural pipeline has published in-domain and out-of-domain measurements (see [Benchmarks](Benchmarks)) but needs the `[neural]` extra and a model fetch; the treebank stays light but only covers attested forms |
 | **A damaged inscription or papyrus** (restorations, lacunae, unclear readings) | any Greek tier on the *certain* text, plus the reading-status apparatus and a manual review of anything editorial | a Greek tier above, then `sentence_policy="inscription"` or `"papyrus"`, `greek.needs_review(...)`, and the `ReadingStatus` on each token | analysis of restored or lost text is editorial, not attested; treat it as a lead to check, not a result (see [Using Critical Editions](Using-Critical-Editions)) |
 | **OCR'd or noisy text** | lenient normalization to repair, then a tier, then a review pass | `greek.normalize(text, lenient=True)` first, then a backend | repair fixes common artifacts and warns about each, but garbage in is still garbage out: plan to review |
-| **Teaching** | the offline baseline plus a concise dictionary | default (no backend), with `greek.use_dodson()` or `greek.use_lexicon("middle-liddell")` for glosses | favours transparency, an instant import, and reproducibility over the last points of accuracy; the rules are inspectable and the same for every student |
+| **Teaching** | the offline baseline plus a concise dictionary | default (no backend), with `greek.use_dodson()` or `greek.use_lexicon("middle-liddell")` for glosses | useful for inspecting rules and demonstrating the API; ordinary words can be mistagged, so check outputs before using them as teaching answers |
 | **Verse or line-oriented material** | the same backend, with physical-line boundaries made explicit | `greek.pipeline(text, sentence_policy="verse")` or `greek.segment_text(text, policy="verse")` | every non-empty physical line becomes a sentence boundary; confirm that this matches the edition's sentence convention |
 | **Benchmarking** | the evaluation harness on leakage-clean folds | `greek.evaluate_on_ud(...)` / `greek.bootstrap_ud(...)` | scores what the code actually does against gold, with out-of-domain always reported next to in-family (see [Benchmarks](Benchmarks)) |
 
@@ -120,7 +120,7 @@ without silently mixing them with a heuristic splitter.
 
 | Backend | Enable it with | Accuracy | Dependencies | Speed | Coverage |
 | --- | --- | --- | --- | --- | --- |
-| Offline baseline | nothing (the default) | reliable on closed classes and regular paradigms; limited on open-class and irregular forms | none (standard library only) | instant import, fast | every token, fully offline |
+| Offline baseline | nothing (the default) | rules and curated tables; can misclassify ordinary words, including in short sentences | none (standard library only) | instant import, fast | every token, fully offline |
 | Treebank lexicon | `greek.use_treebank()` | gold lemmas and features for attested forms | none heavy (one prebuilt index fetch, then cached) | instant after the fetch | attested forms only |
 | Pure-Python trained | `greek.use_tagger()`, then `greek.use_lemmatizer()`, `greek.use_parser()` | generalizes to unseen forms (figures in [Greek NLP](Greek-NLP)) | none heavy (small models fetched, then cached) | fast | open-class and unseen forms |
 | Neural pipeline | `greek.use_neural_pipeline(variant="default")` | the highest measured on the UD Perseus benchmark (see [Benchmarks](Benchmarks)); only `default` is currently available | the `[neural]` extra (onnxruntime, no torch) | one model fetch, then CPU inference (throughput in [Greek NLP](Greek-NLP)) | UPOS, UD FEATS, dependency trees, and lemmas from one pass |
@@ -152,8 +152,9 @@ A few notes that decide most cases:
 
 - **The baseline costs nothing and hides nothing.** It has zero third-party
   dependencies, imports instantly, and is transparent about its rules, which is
-  why it is the default and the recommendation for teaching. Its limit is
-  open-class precision on unseen and irregular forms.
+  why it is useful for teaching how the toolkit works. Its output is not an answer
+  key for Greek grammar; check even short examples against the edition or a
+  reviewed analysis. Prefer the neural pipeline when prediction accuracy matters.
 - **The treebank is the light accuracy win.** `use_treebank()` fetches one
   prebuilt lexicon once, then serves attested, correctly accented lemmas and
   full features with no heavy dependency. It cannot help with a form the corpus
@@ -166,11 +167,12 @@ A few notes that decide most cases:
   the `[neural]` extra and a one-time model fetch, and CPU inference is slower
   than the lookups. When accuracy matters most and you can install the extra,
   this is the choice.
-- **Every record tells you how far to trust it.** Each pipeline record carries a
+- **Every record carries provenance.** Each pipeline record carries a
   `lemma_source` (`attested`, `neural_lookup`, `neural_edit`, generic `neural`,
   `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or `user`) and
-  an explicit `review_recommended`, so you can route the
-  uncertain tokens to a human rather than trusting the whole output uniformly.
+  `review_recommended` flag for identity/unresolved lemmas. Resolved lemmas and
+  other predicted fields can still be wrong; this flag is not a confidence threshold.
+  `lemma_verified` separately records human verification through the review workflow.
   `lemma_source_path` records the exact neural composition path when available. Opt-in
   typed `token_confidence` and `sentence_confidence` add task/source/domain scope and
   explicit unavailable reasons; they do not provide bundled thresholds or an automatic

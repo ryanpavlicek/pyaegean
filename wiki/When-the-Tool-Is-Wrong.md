@@ -65,8 +65,11 @@ aegean review export nt -o review.csv          # one row per word; --annotate fo
 aegean review apply nt review.csv -o nt-reviewed.json --reviewer "Your Name"
 ```
 
-The table flags the low-confidence tokens (the `needs_review` column) so you can triage; pass
-`--only-needs-review` to export just those. Applying the corrections keeps each machine value
+The `needs_review` column reads an explicit review flag when present, otherwise
+falls back to identity/unresolved lemma provenance or the legacy unresolved signal.
+`--only-needs-review` exports just those flagged rows; it applies no confidence
+threshold and can omit wrong resolved lemmas, POS tags, or dependencies. Export
+all rows for a complete review. Applying the corrections keeps each prior value
 under a `<field>__pred` key and stamps who reviewed it and a provenance note, so the corrected
 corpus records exactly what a human changed. See the workflow in [Recipes](Recipes) and the
 table format in the Review section of the [CLI reference](CLI).

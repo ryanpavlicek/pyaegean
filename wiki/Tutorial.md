@@ -638,7 +638,8 @@ for r in greek.pipeline(line0)[:3]:
 Tutorial 2. `review_recommended` is `False` on all three because each lemma came
 from the seed table: the flag marks a lemma the engine could not ground (an
 identity fall-through or an outright miss), not a doubtful part of speech, so it
-will not catch this kind of mistake. Further along the same line, `Πηληϊάδεω` and
+will not catch this kind of mistake. A resolved lemma can also be wrong in context;
+`False` does not mean human-verified. Further along the same line, `Πηληϊάδεω` and
 `Ἀχιλῆος` do come back `True`.)
 
 ### What you learned

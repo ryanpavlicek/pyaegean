@@ -107,8 +107,8 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος."
 #  0   6   .       PUNCT   .
 ```
 
-The `src` column names the lemma's evidence class only when it is worth a second look
-(an identity fall-through or an unresolved miss), so a grounded lemma leaves it blank;
+The `src` column names the lemma's evidence class for identity fall-throughs and
+unresolved misses. A blank cell means a resolved lemma, not a verified analysis;
 `head`, `rel`, and `feats` fill in once a parsing backend is active.
 
 Each `TokenRecord` is a dataclass with these fields:
@@ -123,8 +123,8 @@ Each `TokenRecord` is a dataclass with these fields:
 | `lemma_source` | exact lemma provenance: `attested`, `neural_lookup`, `neural_edit`, generic `neural`, `rule`, `seed`, `paradigm`, `identity`, `unresolved`, `punct`, or human-corrected `user` |
 | `lemma_source_path` | exact neural composition path: `lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or `identity_fallback` (when typed neural confidence is requested) |
 | `lemma_resolved` | whether a real lemma decision exists, rather than a surface fallback |
-| `lemma_verified` | whether a human reviewer explicitly verified or corrected it |
-| `review_recommended` | whether the lemma should be routed to review |
+| `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
+| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `head` | head token index (only when parsed) |
 | `relation` | dependency relation (only when parsed) |
@@ -517,7 +517,9 @@ Lemma provenance is similarly explicit. Joint-model lookups use
 `LemmaSource.NEURAL_LOOKUP`, non-identity edit scripts use `NEURAL_EDIT`, and a surface
 fallback uses `IDENTITY`. `TokenRecord.lemma_resolved` says whether a real lemma decision
 exists, `lemma_verified` is true only for an imported human correction, and
-`review_recommended` drives triage. The older deprecated `lemma_known` property is
+`review_recommended` flags only identity/unresolved lemmas. It is not a confidence
+threshold and does not detect wrong resolved lemmas or errors in other fields.
+The older deprecated `lemma_known` property is
 an alias of `lemma_resolved`; new code should use the explicit fields.
 
 Once active, the standard functions use it: `pos_tags`/`pos_tag`, `lemmatize`, and

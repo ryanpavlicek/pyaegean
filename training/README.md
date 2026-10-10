@@ -71,6 +71,10 @@ transformations by SHA-256. The builder verifies that manifest before it reports
 This makes a corrected training input reviewable and reproducible without publishing model
 selection results or reading the locked test labels.
 
+Correcting a converter or rebuilding training inputs does not update hosted model
+weights. Existing predictions retain the selected model's limitations until a
+separately trained and validated artifact replaces it.
+
 ## Development evaluation contract
 
 `development_manifest.py`, `run_development_evaluation.py`, and

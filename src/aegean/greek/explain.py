@@ -3,7 +3,7 @@
 `explain_pipeline` runs :func:`aegean.greek.pipeline` and re-expresses each
 `TokenRecord` as a `TokenExplanation`: the surface form, the analysis fields
 (UPOS, lemma, morphological features), the lemma's evidence class
-(`LemmaSource`), whether the token needs human review, and a one-line
+(`LemmaSource`), whether the lemma is an identity/unresolved fallback, and a one-line
 plain-language note saying what that evidence class means. It has no tagger,
 lemmatizer, or model of its own: it renders the records that one `pipeline`
 call returns, so an explanation cannot diverge from what `pipeline` did.
@@ -15,9 +15,11 @@ filled from its FEATS output).
 
 The source classes are the honesty surface: ``attested`` / ``neural_lookup`` /
 ``neural_edit`` / ``neural`` / ``rule`` / ``seed`` / ``paradigm`` / ``user`` are
-resolved analyses (``user`` alone means human-verified), while ``identity`` /
-``unresolved`` are fall-throughs a human should verify. By default there are NO confidence numbers
-in this output: the evidence CLASS is the whole claim (source-class only). The
+resolved analyses (``user`` records a human lemma correction), while ``identity`` /
+``unresolved`` are fall-throughs selected by ``needs_review``. This narrow lemma flag
+does not assess POS, morphology, or dependencies; False does not certify correctness
+or human verification. By default there are no confidence numbers in this output:
+the evidence class records provenance. The
 one exception is opt-in: ``explain_pipeline(text, with_confidence=True)``
 appends the token's **calibrated** confidence (temperature-scaled on the UD
 Perseus dev fold; see `aegean.greek.calibrate`) to the note. A raw softmax is
@@ -71,11 +73,12 @@ _IDENTITY_BACKEND = (
 class TokenExplanation:
     """One token's analysis with its evidence class spelled out in plain language.
 
-    ``lemma_source`` is the lemma's evidence class (see `LemmaSource`) and is
-    the entire trust claim: there is deliberately no confidence field, and a
+    ``lemma_source`` is the lemma's evidence class (see `LemmaSource`), recording
+    provenance rather than a correctness verdict. There is no confidence field, and a
     calibrated number reaches the ``note`` only under ``with_confidence=True``.
-    ``needs_review`` is True for the two ungrounded classes (an ``identity``
-    fall-through or an ``unresolved`` miss). ``morphology`` is the UD FEATS
+    ``needs_review`` is True for an ``identity`` fall-through or an ``unresolved``
+    lemma miss. False does not certify the lemma or any other analysis field.
+    ``morphology`` is the UD FEATS
     string when the neural pipeline produced one, else ``None``. ``note`` says
     in one line what the evidence class means for this token."""
 
@@ -115,7 +118,7 @@ def explain_pipeline(text: str, *, with_confidence: bool = False) -> list[TokenE
 
     Returns one `TokenExplanation` per token, in pipeline order: the surface
     form, UPOS, lemma, the lemma's evidence class with a plain-language note,
-    whether it needs review, and the morphology (FEATS) when the neural
+    whether its lemma is an identity/unresolved fallback, and the morphology (FEATS) when the neural
     pipeline filled it. Derived entirely from the `TokenRecord` fields
     `pipeline` returns, so it reflects exactly the backends that were active
     for that call (activate them first with the ``use_*`` functions). Empty
@@ -165,8 +168,9 @@ def render_explanations(explanations: Sequence[TokenExplanation]) -> str:
     """Render explanations as an aligned plain-text table for terminal display.
 
     Columns: token, upos, lemma, source, review, morphology, note. The
-    ``review`` cell reads ``review`` for a token to verify and stays blank for
-    a grounded one; ``morphology`` is blank when the record carried none.
+    ``review`` cell reads ``review`` for an identity/unresolved lemma fallback and
+    stays blank for other source classes. A blank cell does not certify correctness.
+    ``morphology`` is blank when the record carried none.
     Returns ``"(no tokens)"`` for an empty list."""
     if not explanations:
         return "(no tokens)"

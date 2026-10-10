@@ -43,7 +43,10 @@ def annotate_corpus(
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
-    baseline. Existing annotations on a token are preserved except for the keys written here.
+    baseline. Keys written by this call replace existing source annotations in the
+    returned copy, including lemma/POS and, when enabled, built-in evidence fields.
+    Other keys, such as source morphology, remain. Keep the original corpus
+    separately when comparing source annotations with these predictions.
     Neural input is strict by default. Pass ``long_input="partial"`` only when explicitly
     marked placeholder annotations are useful, or ``long_input="windowed"`` to reconcile
     supported long lines from overlapping whole-word windows; inspect

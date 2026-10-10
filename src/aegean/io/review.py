@@ -84,7 +84,7 @@ FORM_STATE_COLUMNS: tuple[str, ...] = (
 
 
 def _low_confidence() -> frozenset[str]:
-    """Evidence classes meaning "not a grounded analysis", derived from the ONE canonical
+    """Lemma fallback classes selected by the canonical
     predicate (`aegean.greek.needs_review`) so the two can never drift apart. Imported
     lazily to keep ``import aegean.io`` free of the greek package."""
     from ..greek.lemmatize import LemmaSource, needs_review
@@ -93,12 +93,14 @@ def _low_confidence() -> frozenset[str]:
 
 
 def needs_review_flag(annotations: dict[str, str], *, source_key: str = "lemma_source") -> bool:
-    """Whether a token's annotation should be verified by a human.
+    """Read the review flag, with fallbacks for older annotation records.
 
-    Prefer the explicit ``review_recommended`` annotation. For older corpora, infer it
-    from a low-confidence evidence class (``identity`` / ``unresolved``), then from the
-    legacy ``lemma_known=false`` signal. A token that carries none of these (for example
-    a gold-annotated corpus) is **not** flagged."""
+    Prefer the explicit ``review_recommended`` annotation. Otherwise infer it from
+    the lemma source (``identity`` / ``unresolved``), then the legacy
+    ``lemma_known=false`` signal when no source is present. A token carrying none
+    of these signals is not flagged. False does not certify correctness, and no
+    confidence threshold or POS/dependency error check is applied.
+    """
     explicit = annotations.get("review_recommended")
     if explicit is not None and explicit.lower() in ("true", "false"):
         return explicit.lower() == "true"
@@ -140,10 +142,12 @@ def to_review_table(
 
     Each row carries the token's identity (stable source-token ID plus
     ``doc_id``/``position``/``line_no``/``ref``), exact source span and normalization,
-    machine ``pred_lemma``/``pred_pos``/``pred_morph`` from its annotations, the
+    existing ``pred_lemma``/``pred_pos``/``pred_morph`` values from its annotations, the
     ``evidence_class`` and a ``needs_review`` flag, the corpus citation, and blank
     ``correct_*`` / ``reviewer_note`` columns for the reviewer. With ``only_needs_review`` only
-    the flagged rows are written. Pass ``reviewer`` to pre-stamp every row's ``reviewer``
+    the flagged rows are written; excluded rows can still contain errors. Existing
+    source annotations can be exported without generating predictions.
+    Pass ``reviewer`` to pre-stamp every row's ``reviewer``
     column (hand a named copy to each reviewer when the corrected copies will be merged with
     `merge_review_tables`); it is left blank by default. Returns the number of rows written.
 

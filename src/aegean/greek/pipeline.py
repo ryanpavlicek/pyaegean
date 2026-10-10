@@ -131,12 +131,16 @@ class TokenRecord:
 
     @property
     def lemma_verified(self) -> bool:
-        """Whether a human reviewer explicitly verified or corrected the lemma."""
+        """Whether the source records an imported human lemma correction (USER)."""
         return lemma_verified(self.lemma_source)
 
     @property
     def review_recommended(self) -> bool:
-        """Whether this lemma should be routed to human review."""
+        """Whether the lemma source is identity or unresolved.
+
+        False does not certify the lemma, POS, morphology, or dependency analysis.
+        ``lemma_verified`` separately records human verification.
+        """
         return needs_review(self.lemma_source)
 
     @property

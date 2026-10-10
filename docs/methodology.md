@@ -112,10 +112,17 @@ Optional pure-Python backends add treebank lookup and trained tagger,
 lemmatizer, and parser components. The neural backend supplies contextual UPOS,
 XPOS, UD features, lemmas, and dependency trees from one shared encoder.
 
-An annotated token record can name the source of a lemma and whether review is
-advised. This matters because an attested lookup, a neural edit script, a rule, a
-user correction, and an unresolved identity fallback do not carry the same
-evidence.
+An annotated token record names the source of a lemma. `lemma_resolved` means
+a decision was returned; `lemma_verified` records an imported human lemma correction (`user`). `review_recommended` flags identity/unresolved
+lemmas only. It applies no confidence threshold and cannot certify the lemma or
+other predicted fields when false.
+
+The default baseline is useful for transparent demonstrations but can mistag
+ordinary words. Prefer the neural backend when prediction accuracy matters and
+review its output. Existing annotations loaded from a corpus describe its source;
+they are not fresh predictions. `annotate_corpus()` returns a copy and overwrites
+the annotation keys it writes, so keep the source corpus separately when comparing
+gold annotations with model output.
 
 The `grc-joint` data entry currently resolves to the published `grc-joint-v3`
 neural artifact. It uses a GreBerta encoder with task heads for part of speech

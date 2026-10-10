@@ -29,12 +29,12 @@ def export(
     output: Path = typer.Option(..., "--output", "-o", help="Destination .csv review table."),
     only_needs_review: bool = typer.Option(
         False, "--only-needs-review",
-        help="Write only the tokens flagged for review (low-confidence lemmas).",
+        help="Write only flagged rows (normally identity/unresolved lemmas); not all possible errors.",
     ),
     annotate: bool = typer.Option(
         False, "--annotate",
-        help="Fill lemma/POS annotations from the pipeline first — needed for a corpus that "
-             "has none (any imported text; the NT already carries gold annotations).",
+        help="Generate lemma/POS predictions, replacing those keys in the loaded copy. "
+             "Omit this to review existing source annotations, such as the NT's.",
     ),
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,

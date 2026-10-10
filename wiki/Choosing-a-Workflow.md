@@ -106,8 +106,8 @@ examples a class can read.*
   `use_treebank()` or `use_neural_pipeline()`. Running more than one tier is the
   lesson.
 - **Verbosity.** Use `greek.pipeline` and show `lemma_source` alongside each
-  lemma; `needs_review` turns "trust this one, check that one" into something a
-  student can see. [Reading a Parse](Reading-a-Parse) is written for exactly
+  lemma; `needs_review` distinguishes identity/unresolved fallbacks from returned
+  decisions. Resolved decisions can still be wrong, so check the other rows too. [Reading a Parse](Reading-a-Parse) is written for exactly
   this reader.
 - **Cite.** Even a classroom example should name its edition, so end with
   `corpus.cite()`; it models the habit.
@@ -133,7 +133,8 @@ examples a class can read.*
   [Choosing a Pipeline](Choosing-a-Pipeline) weighs them for your text, and
   [Benchmarks](Benchmarks) reports how far each generalizes off Classical
   literary Greek.
-- **Verbosity.** Keep full `TokenRecord`s. Triage with `review_recommended`,
+- **Verbosity.** Keep full `TokenRecord`s. `review_recommended` finds only
+  identity/unresolved lemmas; a false flag does not establish correctness. Triage with it,
   and for anything you will publish, run the human-in-the-loop
   step: `aegean review export` (add `--only-needs-review` to see just the flagged
   tokens), correct the table, and `aegean review apply`. The corrected corpus

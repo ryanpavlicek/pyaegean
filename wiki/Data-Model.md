@@ -282,7 +282,11 @@ A common confusion. `Token` is **corpus data**: what an edition says, stored
 in documents, persisted and cited. `greek.TokenRecord` is **pipeline output**:
 one token's analysis from `greek.pipeline()`, ephemeral, never stored in a
 corpus. Both may carry the same immutable `SourceAlignment`, but their linguistic
-fields and persistence roles are otherwise separate.
+fields and persistence roles are otherwise separate. Loaded annotations are source
+data, not fresh model predictions. `annotate_corpus()` returns a copy but replaces
+the annotation keys it writes; keep the original separately for comparison.
+`review_recommended=False` does not certify any predicted field. Only
+`lemma_verified` records an imported human lemma correction (`user`).
 
 | `TokenRecord` field | Meaning |
 |---|---|
@@ -293,8 +297,8 @@ fields and persistence roles are otherwise separate.
 | `lemma` | the lemma |
 | `lemma_source` | the lemma's evidence class (`LemmaSource`) |
 | `lemma_resolved` | whether a real lemma decision exists rather than a surface fallback |
-| `lemma_verified` | whether a human reviewer explicitly verified or corrected the lemma |
-| `review_recommended` | whether the lemma should be routed to human review |
+| `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
+| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
 | `head` | `index` of the head record in the same sentence; `0` = root, `None` = no parse |
 | `relation` | dependency relation. Note the name: it is `relation`, **not** `deprel` |
 | `xpos`, `feats` | 9-char positional tag / UD FEATS; filled by the neural pipeline only |
@@ -375,11 +379,11 @@ whose status is `UNCLEAR`, `RESTORED`, or `LOST` does not create an observed bou
 Only the terminal record receives `boundary_*` metadata. A missing source span means
 the alignments did not prove one, not that an approximate offset was invented.
 
-This is the zero-dependency baseline being honest: the forms it cannot ground
-come back `unresolved` with the surface form as the lemma, never a fabricated
-citation form. With the neural pipeline active (`greek.use_neural_pipeline()`)
-every field fills and grounded lemmas read `neural`. The evidence classes are
-visible one form at a time too:
+When no rule or table applies, the baseline returns the surface form as the
+lemma with source `unresolved`. A rule or lookup that does apply can still be
+wrong in context. Joint neural predictions record `neural_lookup`, `neural_edit`,
+or `identity` as appropriate; those sources do not certify correctness. The
+evidence classes are visible one form at a time too:
 
 ```python
 from aegean import greek

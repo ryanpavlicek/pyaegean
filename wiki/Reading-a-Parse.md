@@ -31,8 +31,8 @@ for r in greek.pipeline("ἐν ἀρχῇ ἦν ὁ λόγος"):
 | `lemma` | the dictionary (citation) form |
 | `lemma_source` | **where the lemma came from** (see the next section) |
 | `lemma_resolved` | whether the output is a real lemma decision rather than a surface fallback |
-| `lemma_verified` | whether a human reviewer explicitly verified or corrected the lemma |
-| `review_recommended` | whether the lemma should be checked |
+| `lemma_verified` | whether an imported human lemma correction is recorded (`user`) |
+| `review_recommended` | whether the lemma source is `identity` or `unresolved`; not a general error flag |
 | `lemma_known` | deprecated compatibility alias for `lemma_resolved` |
 | `head`, `relation` | the syntactic head (by `index`; `0` = sentence root) and its relation, filled only when a parser or the neural pipeline is active |
 | `xpos`, `feats` | the fine-grained morphological tag and its feature string, filled only by the neural pipeline |
@@ -45,10 +45,10 @@ once you turn on a parser (`greek.use_parser()`) or the joint neural pipeline
 
 ## The evidence class: `lemma_source`
 
-Every lemma carries the class of evidence behind it, so you know how much to trust it before
-you build on it:
+Every lemma records how it was obtained. Provenance is not a confidence ranking:
+a resolved lookup or prediction can still be wrong in context.
 
-| `lemma_source` | How the lemma was found | How much to trust it |
+| `lemma_source` | How the lemma was found | Evidence and limits |
 | --- | --- | --- |
 | `attested` | a direct hit in the Perseus treebank lexicon | high: an attested, correctly accented form |
 | `neural_lookup` | the joint model selected a lemma from its training-form lookup | model-resolved; not the same as human verification |
@@ -63,8 +63,13 @@ you build on it:
 | `user` | a human correction imported through the review workflow | human-verified; the machine prediction and source remain preserved beside it |
 
 `review_recommended` is `True` for `identity` and `unresolved`, so a quick filter for
-"what should I check?" is `[r for r in records if r.review_recommended]`. The
-same signal drives the ["needs review" column](When-the-Tool-Is-Wrong) in a review table.
+"which lemmas are unresolved?" is `[r for r in records if r.review_recommended]`.
+A false flag does not certify the lemma, POS, morphology, or dependency tree.
+`lemma_verified` separately records an imported human lemma correction (`user`).
+Leaving a prediction unchanged does not set it, and it does not certify other fields. The
+["needs review" column](When-the-Tool-Is-Wrong) in a CSV honors an explicit valid
+review flag first, then the lemma source, then legacy metadata when no source is
+present. Missing review metadata does not certify correctness.
 `lemma_known` is a deprecated alias of `lemma_resolved`; new code should use the
 explicit evidence fields.
 
