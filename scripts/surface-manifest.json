@@ -1719,7 +1719,7 @@
       "id": "review-loop",
       "since": "0.28.0",
       "python_api": "aegean.io.to_review_table",
-      "summary": "The human review loop: export annotations to a reviewable CSV, correct, and apply back (with multi-reviewer merge).",
+      "summary": "The human review loop: select all, flagged, or unverified annotations for a reviewable CSV, correct, and apply back (with multi-reviewer merge).",
       "surfaces": {
         "demo": {
           "status": "excluded",

@@ -89,15 +89,15 @@ input, whether the documented example outputs still match the live code, and
 scholarly correctness against standard authorities (Smyth, LSJ, the editions).
 Each candidate finding is independently reproduced before it is accepted, so a
 mistaken finding is refuted rather than acted on (a false report of a Greek error
-is treated as worse than a miss). Confirmed findings land as fixes, each with a
-regression test that pins the corrected behaviour.
+is treated as worse than a miss). Confirmed findings are tracked as defects;
+completed fixes carry regression tests that pin the corrected behaviour.
 
 ---
 
 ## What these internal checks are, and are not
 
-These checks are automated and adversarial, and they are assisted by large
-language models. They are not external scholarly peer review, and they are not a
+These checks are automated and adversarial. They are not external scholarly
+peer review, and they are not a
 substitute for it. An adversarial internal audit can find a fabricated lemma, a
 stale documented number, or an unhandled input; it cannot confer the authority
 that comes from an independent expert in the field examining the work. Where this

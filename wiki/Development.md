@@ -49,7 +49,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.59.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.60.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -174,7 +174,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.59.0-py3-none-any.whl: 5036 KB uncompressed, 226 files
+# wheel dist/pyaegean-0.60.0-py3-none-any.whl: 4964 KB uncompressed, 226 files
 # OK  nothing-heavy-bundled
 ```
 
@@ -183,15 +183,14 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.59.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.60.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
 
-`scripts/check_footprint.py` enforces three invariants. It replaced an old
-"wheel must be under N MB" byte cap that was theater: the wheel is tiny no
-matter what, so the cap could never fail while saying nothing about what
-actually matters.
+`scripts/check_footprint.py` checks core import behavior and the built wheel.
+It rejects heavy payloads and enforces a 5 MiB limit on uncompressed contents,
+alongside the import checks below.
 
 | Check | Run with | What it asserts |
 | --- | --- | --- |
@@ -208,12 +207,15 @@ that import **lazy** (see the next section).
 
 ### What CI runs
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) has five jobs:
+CI (GitHub Actions, `.github/workflows/ci.yml`) has eight job definitions:
 
 | Job | What it does |
 | --- | --- |
 | **test** | `ruff` → `mypy` (enforcing) → `pytest` with coverage, across **Python 3.10–3.14** |
 | **geo** | installs the `[dev,geo,parquet]` extras on one Python and runs the suite with `-rs`, so the geopandas/pyarrow tests execute instead of skipping |
+| **interop** | exercises the real spaCy, Stanza, and CLTK adapters |
+| **neural-integration** | requires the pinned model's CPU inference tests to pass without skips |
+| **demo-released-wheel** | tests the browser demo against the published wheel |
 | **notebooks** | executes the example notebooks under `notebooks/` with `nbmake` |
 | **build** | `python -m build`, `twine check`, and the **wheel** footprint check |
 | **footprint** | installs the **core only** (no extras), then the import-clean + import-fast guard |
@@ -286,7 +288,7 @@ fetchable assets.
   keep `NOTICE` accurate as data sources are added.
 - **Measured claims only.** Accuracy numbers in docs must come from a
   reproducible evaluation (`docs/benchmarks.md` has the protocol); tool-to-tool
-  comparisons live there, not in the README or wiki.
+  comparisons live there and on the wiki's Benchmarks page, with citations.
 
 ### Good first contributions
 
@@ -445,16 +447,11 @@ Add a `DataSpec` to `_REMOTE` in `src/aegean/data/__init__.py` with a pinned
 to download-and-verify into the cache the first time it's used. This is how
 `aegean.load("damos")`, `"sigla"`, and `"nt"` work. Every fetchable asset's URL
 can be overridden with a `PYAEGEAN_<NAME>_URL` env var so a user can point at
-their own licensed copy. The full list of currently registered assets:
+their own licensed copy. To list all currently registered assets:
 
 ```python
 import aegean
 sorted(aegean.data.versions()["fetched"])
-# ['abbott-smith-index', 'agdt-derived', 'cunliffe-index', 'damos-corpus',
-#  'ddbdp-corpus', 'edh-corpus', 'grc-joint', 'grc-lemma-neural',
-#  'igcyr-corpus', 'iip-corpus', 'iospe-corpus', 'isicily-corpus',
-#  'lineara-images', 'linearb-corpus', 'lsj-index', 'middle-liddell-index',
-#  'nt-corpus', 'sigla-corpus', 'workbench-app']
 ```
 
 See [Data and Provenance](Data-and-Provenance) for the licensing rules that

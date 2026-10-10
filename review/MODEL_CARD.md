@@ -37,8 +37,9 @@ confidence outside the scope carried by the returned confidence record.
 | Edit-script lemma head plus train-only lookup | Composed dictionary headword |
 
 Inference is ONNX-based and does not require PyTorch. Gold-token evaluation uses
-pretokenized input, sequential CPU inference, complete-word overlap windows, and the
-pinned CoNLL 2018 evaluator. See [Methodology](../docs/methodology.md) for the full
+pretokenized input, sequential CPU inference, and the pinned CoNLL 2018 evaluator.
+PapyGreek uses complete-word overlap windows for long sentences; other folds follow
+their recorded long-input policy. See [Methodology](../docs/methodology.md) for the full
 runtime and evaluation account.
 
 ## Training and evaluation

@@ -7,7 +7,10 @@ does not become supported merely because Python can import it. The release guard
 validates the reviewed current facade. For guides, tutorials, and
 the per-script handbooks, see the
 **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**; for what pyaegean is
-and where to begin, see the [home page](../index.md).
+and where to begin, see the [home page](../index.md). Before editing corpora or
+combining review files, check the
+[known workflow defects](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations#known-workflow-defects),
+including the limits on WAL database replacement and CoNLL-U extension comments.
 
 ## Where to start
 

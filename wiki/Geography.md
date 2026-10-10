@@ -225,7 +225,7 @@ corpus's own transliteration (here, dash-joined sign sequences like `KU-RO`). Se
 > normal column schema (shape `(0, 7)`), not an error. You can check `wd.empty` to distinguish a
 > word that turns up nowhere from one you simply haven't mapped yet.
 
-There's no dedicated CLI subcommand for `word_distribution`: it's a Python-only helper.
+The CLI exposes the same word mapping through `aegean geo CORPUS --word WORD`.
 
 ---
 

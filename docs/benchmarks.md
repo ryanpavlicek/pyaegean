@@ -2,8 +2,8 @@
 
 How pyaegean is scored on the standard Ancient Greek benchmarks: the protocol, the
 leakage controls that keep the comparison honest, the field's published numbers, and
-pyaegean's own measured results. The README and wiki carry only pyaegean's own numbers;
-the cross-tool tables live here, with citations.
+pyaegean's own measured results. The README carries pyaegean's own numbers;
+cited cross-tool tables appear here and on the wiki's Benchmarks page.
 
 ## What the metrics mean
 
@@ -230,8 +230,8 @@ Three things keep these honest:
   quantized model is roughly **20–70 words/s on plain CPU** (sentence-length dependent,
   measured on the development machine); the fp32 `grc-joint-v2` bundle reaches roughly
   300 words/s on the same machine (see the quantization trade-off below). Unlike the
-  accuracy figures above (deterministic given the model and gold data, and re-measured by
-  `scripts/check_benchmarks.py`), throughput is **hardware-dependent and illustrative, not a
+  accuracy figures above (measured under the recorded model-and-data protocol),
+  throughput is **hardware-dependent and illustrative, not a
   pinned benchmark**: it scales with the CPU, core count, and workload, so read it as an
   order-of-magnitude guide. It is re-measured only when the model or the `onnxruntime` floor
   changes (a dependency-drift trigger), not automatically per release.
@@ -351,12 +351,10 @@ Running the discovery step on the leakage-clean folds gives an important, and li
 The epic and tragic material lives in the *training* fold; the held-out test and dev folds are
 entirely prose (the test fold is a single imperial-prose author, Athenaeus). So the shipped
 Perseus test numbers, and every published Perseus number in this document, describe accuracy on
-literary prose. A genre-conditioned test accuracy for epic or tragedy is **not** something the
-current leakage-clean data can report: measuring it honestly would require a held-out
-epic/tragedy slice that the model has not trained on, which is future annotation work, not a
-number we can pin today. `evaluate_by_genre` is shipped so that this can be checked and, once
-such a slice exists, reported; run against the Perseus test fold today it returns a single
-`prose` bucket equal to the overall Perseus score.
+literary prose. The Perseus folds cannot provide held-out epic or tragedy scores.
+A separate, small leakage-clean tragedy fold is reported below; no leakage-clean
+epic gold fold is currently available. On the Perseus test fold, `evaluate_by_genre`
+returns a single `prose` bucket equal to the overall Perseus score.
 
 On register (Classical literary vs Koine), the closest available signal is the contrast between
 the Perseus rows (literary, and as shown here prose) and the Nestle 1904 NT row (Koine): lemma

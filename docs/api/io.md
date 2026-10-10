@@ -13,4 +13,11 @@ confidence threshold. Lemma verification says nothing about POS, morphology, or
 dependencies; use `"all"` to review all fields. Applying a changed lemma records
 verification, while blank corrections or unchanged values do not.
 
+For aligned review tables, keep the original CSV: merging can strip significant
+alignment whitespace and make application fail. Printed CLI replay hints also
+need the original annotation/backend options and quoted paths. CoNLL-U extension
+comments have separate metadata limitations. See the
+[known workflow defects](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations#known-workflow-defects)
+before editing or merging these files.
+
 ::: aegean.io

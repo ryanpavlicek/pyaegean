@@ -12,7 +12,7 @@ Two doors lead in:
   canonical-greekLit / First1KGreek collections, addressed by a **CTS id** (the
   `tlgAAAA.tlgBBB` scheme explained below).
 - **`greek.load_nt("John")`**: the Greek New Testament (Nestle 1904), with a gold
-  lemma, morphology, Strong's number, and a gloss already attached to every word.
+  lemma, morphology, and Strong's number attached to each word, plus a gloss where available.
 
 Both fetch their text once to a local cache and then work offline, and both return
 the same standard `Corpus` object you get everywhere else in pyaegean. Once a work
@@ -792,8 +792,10 @@ large-scale discovery:
 | `PYAEGEAN_NT_CORPUS_URL` | point `load_nt` at an alternate NT corpus asset |
 | `PYAEGEAN_GITHUB_TOKEN` / `GITHUB_TOKEN` | authenticate first-time work discovery (the GitHub contents API is rate-limited to 60 req/hour unauthenticated) |
 
-Files are fetched to your cache, **never bundled or re-hosted** (except the offline
-NT sample: John 1 and Philemon). Full details are on [Data & Provenance](Data-and-Provenance).
+Classical literary TEI files are fetched from the upstream repositories into your
+cache, rather than bundled or re-hosted. The full NT is a separately hosted corpus
+asset; John 1 and Philemon are also bundled for offline use. Full details are on
+[Data & Provenance](Data-and-Provenance).
 
 ---
 

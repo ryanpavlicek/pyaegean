@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.60.0 (2026-10-10)
 
 ### Changed
 
@@ -14,7 +14,9 @@ All notable changes to pyaegean are documented here. The format follows
   `--only-needs-review`; `unverified` includes words without an explicit
   `lemma_verified=true`, even when their lemmas are resolved. Selection does not
   change the CSV's review flags or certify POS, morphology, or dependencies.
-- Documentation checkpoints also verify the review manifest's document hashes.
+- The notebooks and reference documentation distinguish lemma provenance from
+  human verification and describe the current cache, optional-backend, and
+  serialization limitations.
 
 ### Fixed
 

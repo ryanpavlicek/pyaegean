@@ -201,11 +201,11 @@ lemmas. Measured through the package's own inference code:
 | UD Perseus (in family) | 94.27 | 90.24 | 85.65 | 97.02 | 96.03 | 93.47 |
 | UD PROIEL (out of domain) | 90.51 | 82.47 | 63.50 | 86.68 | 59.43 | n/a |
 
-The shipped checkpoint is one of **five seed replicates** of the recipe; across
-those seeds the UD Perseus test mean ± standard deviation is LAS 85.58 ± 0.10,
+The historical decoder-v1 recipe has **five seed replicates**; across
+those seeds the UD Perseus test mean ± standard deviation was LAS 85.58 ± 0.10,
 UAS 90.15 ± 0.12, UPOS 97.00 ± 0.06, UFeats 96.06 ± 0.04, lemma 94.30 ± 0.02,
-XPOS 93.52 ± 0.05 (PROIEL LAS 63.50 ± 0.04), so the headline figures are
-representative, not a lucky seed. Within-fold 95% bootstrap confidence intervals
+XPOS 93.52 ± 0.05 (PROIEL LAS 63.50 ± 0.04). These are not seed-replication
+measurements for the current decoder-v2 headline. Within-fold 95% bootstrap confidence intervals
 (percentile bootstrap over the fold's sentences, `greek.bootstrap_ud`'s default of
 999 resamples) accompany every headline number in `docs/benchmarks.md`.
 

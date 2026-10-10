@@ -5,17 +5,17 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.59.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
+> **Available in v0.60.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.59.0
+aegean --version                # pyaegean 0.60.0
 ```
 
-If you only ran `pip install pyaegean`, the library works but the `aegean` command
-isn't installed until you add the `[cli]` extra.
+The core install includes the `aegean` entry point, but running it requires the
+dependencies supplied by the `[cli]` extra.
 
 ## Conventions that hold everywhere
 
@@ -289,7 +289,7 @@ aegean stats john.json --top 3                    # ἦν 4 · λόγος 3 · �
 
 `--split` controls how a text becomes documents: `whole` (default, one doc),
 `paragraph` (blank-line blocks), or `line` (one per line); multi-block ids are
-numbered `<base>:1`, `<base>:2`, …. `--encoding` (default `utf-8`) reads non-UTF-8
+numbered `<base>:1`, `<base>:2`, …. `--encoding` (default `utf-8-sig`) reads non-UTF-8
 files. `import` is the **only** door for plain text: `read_corpus` and every corpus
 argument still load only `.json`/`.db` (and work ids), so a bare `.txt` fed to a
 command exits `1` and tells you to import it first.
@@ -320,6 +320,30 @@ aegean plot scansion "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 
 `--output -o` (required) takes `.png` / `.svg` / `.pdf`; `--dpi` sets raster
 resolution for PNG (default 150).
+
+---
+
+## Review annotations: `aegean review …`
+
+```bash
+aegean review export corpus.json --selection all -o review.csv
+aegean review export corpus.json --selection flagged -o flagged.csv
+aegean review export corpus.json --selection unverified -o unverified.csv
+# Edit the correct_* columns, then apply to the same source:
+aegean review apply corpus.json review.csv -o corrected.json --reviewer "Reviewer"
+```
+
+`all` exports all eligible word rows, `flagged` follows the narrow review flag,
+and `unverified` includes lemmas without an explicit `lemma_verified=true`.
+Selection changes neither the row's flag nor its confidence. Use `all` to review
+POS, morphology, and dependencies as well as lemmas.
+
+For new predictions, add `--annotate` and the desired backend flags to export,
+then repeat those options when applying. Quote paths containing spaces. Printed
+replay hints can omit these details, and merging aligned review tables can strip
+significant whitespace; see [known workflow defects](Limitations#known-workflow-defects)
+before using `review merge`. The API equivalent is
+`io.to_review_table(corpus, path, selection="all")`.
 
 ---
 
@@ -478,8 +502,8 @@ aegean greek gloss-nt 3056 --strongs      # look up by Strong's number → same 
 ```
 
 `gloss-nt` uses the **bundled** CC0 Dodson lexicon (no download). The classical
-`gloss` command uses the larger LSJ index, activated on first use (~270 MB, or
-~15 MB if the `lsj-index` dataset is fetched).
+`gloss` command first tries the prebuilt LSJ index (~15 MB). If that asset is
+unavailable, it can fall back to building the index from the larger upstream TEI.
 
 ### Backend flags (download/build on first use)
 
@@ -489,10 +513,10 @@ stderr); after that it's offline.
 
 | flag | activates | first-use cost |
 |---|---|---|
-| `--treebank` | the Perseus AGDT lexicon | ~75 MB fetch |
-| `--tagger` | the generalizing POS tagger | trains from the AGDT |
-| `--lemmatizer` | the edit-tree lemmatizer | trains from the AGDT |
-| `--parser` | the pure-Python arc-eager dependency parser | trains from the AGDT |
+| `--treebank` | the Perseus AGDT lexicon | shared prebuilt AGDT bundle; source build fallback |
+| `--tagger` | the generalizing POS tagger | shared prebuilt AGDT bundle; source training fallback |
+| `--lemmatizer` | the edit-tree lemmatizer | shared prebuilt AGDT bundle; source training fallback |
+| `--parser` | the pure-Python arc-eager dependency parser | shared prebuilt AGDT bundle; source training fallback |
 | `--neural-lemmatizer` | the GreTa seq2seq lemmatizer (`[neural]`) | ~232 MB model |
 | `--neural` | the **joint neural pipeline**: best tagger/parser/lemmatizer (`[neural]`) | ~173 MB model |
 | `--neural-variant LABEL` | Runtime artifact for `--neural`; `default` is currently the only available label | no extra download unless a different artifact is selected |
@@ -730,8 +754,8 @@ aegean analyze hands damos --hand 103            # one hand's characteristic wor
 ## Data — `aegean data …`
 
 The fetch-to-store layer. Nothing here is bundled; everything downloads on demand,
-sha256-verified, into a permanent local store: a fetched dataset is never
-re-fetched, evicted, or expired, and stays until `remove` deletes it.
+sha256-verified, into a persistent local store. Valid assets are reused without
+expiry. A changed pin or `--force` causes a new fetch; `remove` deletes the chosen entry.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
@@ -962,7 +986,7 @@ More worked pipelines are on [Recipes](Recipes).
   note on stderr; afterwards they're offline. Pre-fetch with `aegean data fetch`.
 - **The AI layer is exploratory.** Translations, glosses, and "hypotheses" for
   undeciphered material are labeled model output with grounding, not findings. The
-  Aegean scripts remain undeciphered.
+  Linear A and Cypro-Minoan remain undeciphered.
 - **Metre and accuracy are bounded.** Lyric metres beyond the fixed aeolic
   templates are out of scope, and the trainable backends have measured ceilings:
   both documented on [Limitations](Limitations).

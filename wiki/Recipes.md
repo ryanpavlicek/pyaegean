@@ -410,7 +410,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.59.0
+print(aegean.__version__)          # 0.60.0
 print(damos.fingerprint()[:16])    # ca93e51fd26a8f6c
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -501,10 +501,10 @@ aegean geo lineara --word KU-RO
 
 ### G · The AI-assisted translator (key-gated)
 
-*(Generation needs a provider key; the grounding below is offline and
-deterministic.)* The discipline: derive the grammar locally, hand the model
-facts, keep the label. The grounding is fully inspectable before any key is
-involved:
+*(Grounding runs locally once its selected model and dictionary assets are
+cached; generation needs a hosted provider key or a no-key local server.)* Derive
+the grammar locally, hand the model the analysis, and keep the exploratory label.
+The grounding is fully inspectable before generation:
 
 ```python
 from aegean import greek, translate
@@ -1254,7 +1254,9 @@ aegean db search la.sqlite "KU-RO"
 
 The database has `documents` and `tokens` tables plus an FTS5 index, so you can
 also open it in any SQLite client and run ordinary SQL. The same file is what
-`aegean export CORPUS -f sqlite -o …` produces. See [CLI → db](CLI).
+`aegean export CORPUS -f sqlite -o …` produces. Close external SQLite connections
+before overwriting an existing database; see
+[Limitations](Limitations#known-workflow-defects) and [CLI → db](CLI).
 
 ## 20 · Look up one sign in the inventory
 
@@ -1311,7 +1313,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.59.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.60.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into
@@ -1578,8 +1580,9 @@ full catalogue.
 
 ## 26 · Choose a Greek AI translation workflow
 
-*(The grounding is offline and deterministic; only the final generation needs a
-provider key.)* A specialist toolkit should make a general model translate
+*(Grounding runs locally once its selected model and dictionary assets are
+cached; only the final generation needs a hosted provider key or a no-key local
+server.)* A specialist toolkit should make a general model translate
 Ancient Greek **better**, not worse. The lever is `translate(..., mode=...)`: how
 much locally-derived analysis you hand the model. Pick the mode by how hard the
 passage is.
@@ -1594,17 +1597,23 @@ result = translate.translate(text, mode="morphology", greek_pipeline=neural)
 print(result.labeled())        # [EXPLORATORY · translate · <provider>] <translation>
 ```
 
+Grounding is best-effort by default: required-stage failures are recorded in
+`result.grounding_runtime` and `result.trace()`. Set `grounding_failure="strict"`
+(CLI: `--grounding-failure strict`) to stop before generation when required
+analysis fails. Optional dictionaries and rarity data remain optional. See
+[AI Layer](AI-Layer#hybrid-translation).
+
 Four modes, by difficulty:
 
 | mode | what the model is told | reach for it when |
 |------|------------------------|-------------------|
-| `"morphology"` *(default)* | lemma, part of speech, **voice**, case-role, clause skeleton, rare-word flags | always: the safe floor; it fixes wrong voice, swapped subject/object, and case errors |
+| `"morphology"` *(default)* | lemma, part of speech, **voice**, case-role, clause skeleton, rare-word flags | a default starting point for supplying predicted grammar; it can reduce voice, subject/object, and case errors |
 | `"full"` | morphology **plus concise dictionary glosses** on the rare words | rare, technical, poetic, or documentary vocabulary the model will not know |
 | `"lemma"` | lemmas + gated glosses (legacy) | reproducing older behaviour |
 | `"none"` | the bare text | a top-tier model on a famous, easy passage |
 
-The grounding is fully inspectable offline, with no key and no network beyond the
-one-time dictionary fetch:
+The grounding is fully inspectable locally without a provider key; first use of
+the selected model or dictionary can fetch its assets:
 
 ```python
 greek.use_lsj(); greek.use_lexicon("abbott-smith")   # a concise, common-sense-first dictionary
@@ -1627,10 +1636,10 @@ are deliberately *not* the first sense of LSJ, a historical lexicon whose openin
 sense is frequently the archaic one (καιρός "a row of thrums in the loom" comes
 before "the right time").
 
-**What grounding does, and what it does not.** The morphology reliably removes
-grammatical errors (voice, subject/object, case); the `"full"` glosses remove
-rare-word errors. Both help **weaker models and rarer text the most**: a frontier
-model on a canonical line has little to gain. Grounding will not make a weak model
+**What grounding does, and what it does not.** Morphology grounding can reduce
+grammatical errors (voice, subject/object, case), and `"full"` glosses can reduce
+rare-word errors. Their usefulness depends on the accuracy of the local analysis
+and on the model and passage. Grounding will not make a weak model
 an expert, and Ancient Greek translation has genuine interpretive range (no two
 published Homers agree), so every result is a **labeled, provenanced hypothesis**,
 never a verdict. `ai.grounding_regime(text, corpus=...)` gives an exploratory

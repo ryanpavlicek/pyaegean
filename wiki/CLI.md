@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.59.0.** The annotation-profile and interoperability commands, the
+> **Available in v0.60.0.** The annotation-profile and interoperability commands, the
 > CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields, and the
 > runtime-variant selectors described below are all part of the current release.
 
@@ -20,9 +20,8 @@ pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero
 aegean --help
 ```
 
-If you only ran `pip install pyaegean`, the library works but the `aegean`
-command isn't installed yet. The `[cli]` extra adds it. (If you run `aegean`
-without it, you get one line telling you exactly that.)
+The `aegean` entry point is installed with the core package; install the `[cli]`
+extra to run the commands. Without it, the entry point prints an installation hint.
 
 ## Conventions that hold everywhere
 
@@ -109,7 +108,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.59.0
+aegean --version          # pyaegean 0.60.0
 ```
 
 | Group | What's in it |
@@ -464,9 +463,10 @@ aegean tui
 
 If the extra isn't installed, `aegean tui` exits with one line telling you exactly
 that (`the TUI needs the [tui] extra — install it with: pip install
-'pyaegean[tui]'`), the same way `aegean plot` guards `[viz]`. Everything the TUI
-does is **offline and needs no API key**: it is a research reader over the bundled
-and cached data, never the (key-gated, exploratory) AI layer.
+'pyaegean[tui]'`), the same way `aegean plot` guards `[viz]`. The default corpus
+views and baseline Greek workbench run offline without API keys. Fetch actions,
+optional neural analysis, and key-gated translation can access the network;
+the command console can run the regular CLI commands.
 
 ### What's on screen
 
@@ -1243,7 +1243,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.59.0                    │
+│ OK │ pyaegean │ 0.60.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -2007,13 +2007,14 @@ fetches on first use; the bundled `lineara` records HT scribes too.
 
 The fetch-to-store layer: list what can be downloaded (and what already is),
 fetch it (sha256-verified), delete it, pin versions for a paper, and inspect the
-store. A fetched dataset is a complete one-time local download: nothing is
-re-fetched, evicted, or expires; it stays on disk until `aegean data remove`
-deletes it (or `fetch --force` replaces it).
+store. Fetched datasets have no time-based expiry or automatic eviction. A cache
+matching the current pin is reused; a changed pin or stale integrity stamp can
+trigger a replacement download. `aegean data remove` deletes the selected entry,
+and `fetch --force` replaces it.
 
 ```bash
 aegean data list                                   # the fetchable datasets + downloaded status/size
-aegean data fetch grc-joint                         # one-time download (a no-op when already present)
+aegean data fetch grc-joint                         # download or reuse a cache matching the current pin
 aegean data fetch damos                             # the DAMOS Linear B corpus (a stem: = damos-corpus)
 aegean data remove grc-joint                        # delete a downloaded dataset (--all clears everything)
 aegean data versions --json > data-versions.json    # pin every dataset's sha256 for reproducibility
@@ -2034,7 +2035,7 @@ Delete and re-download a dataset, watching the store at each step (run here on
 the NT corpus; the fetch is the one networked step). `remove` frees the space
 and says how much; `list` flips its **downloaded** column; `fetch` prints the
 destination path (plus a "load it" hint on stderr), and re-running a fetch of
-something already present is a no-op:
+something already present and matching the current pin is a no-op:
 
 ```bash
 aegean data remove nt-corpus
@@ -2201,7 +2202,7 @@ record of it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `review export` | Write selected word rows: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--selection all\|flagged\|unverified` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv --selection unverified` |
+| `review export` | Write selected word rows: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--selection all\|flagged\|unverified` `--annotate` (+ `--neural`/`--tagger`/… to generate fresh predictions) | `aegean review export nt -o review.csv --selection unverified` |
 | `review merge` | Combine two or more corrected copies of the same export; agreed or single-reviewer corrections are kept, while genuine disagreements are reported or rejected | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report` |
 | `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ backend flags — repeat whatever the export used, so accepted predictions persist too) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
 
@@ -2209,6 +2210,10 @@ The run below uses the bundled `greek` sample, so you can follow it offline. It 
 annotations of its own, so `--annotate` fills lemma and POS from the pipeline first; a corpus
 that already has gold annotations (the Greek NT) needs no `--annotate`, and
 `aegean review export nt -o review.csv` writes all 137,779 of its rows.
+
+`--annotate` generates fresh lemma/POS predictions in the loaded copy, replacing existing
+values and clearing prior lemma evidence and neural coverage. Keep the original corpus
+separately when reviewing source annotations.
 
 Choose which rows to export with `--selection`:
 
@@ -2253,8 +2258,9 @@ The join is by document id and token position, and each row's exported token tex
 verified against the corpus on apply: a mismatch (a different corpus, or one that changed
 since the export) is an error, never a silent wrong-word correction. When the export used
 `--annotate`, pass `--annotate` (and the same backend flags) to `apply` too, so the accepted
-machine predictions land in the corrected corpus alongside the reviewer's changes — the
-export's printed next-step command includes it. See
+machine predictions land in the corrected corpus alongside the reviewer's changes.
+Repeat those options explicitly and quote paths containing spaces: printed next-step
+commands may omit required context. See [known workflow defects](Limitations#known-workflow-defects) and
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context; the
 table's columns are described just below.
 

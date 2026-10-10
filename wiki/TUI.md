@@ -8,9 +8,9 @@ catalogue of ~1,800 Greek works you can fetch and open, the local data store, an
 a command console with full CLI parity, all switched with a single keystroke.
 
 It is a **focused cockpit over the same library the CLI uses**, not a second
-product and not a mirror of every command. Everything it does is offline and needs
-no API key: it is a research reader over the bundled and cached data, never the
-key-gated, exploratory AI layer.
+product and not a mirror of every command. Its default reader and workbench views
+work offline over bundled and cached data without an API key. Optional actions can
+fetch works or neural models, and the analysis popup offers key-gated translation.
 
 ```bash
 pip install "pyaegean[tui]"
@@ -472,8 +472,9 @@ The TUI deliberately covers the highest-value offline reads, browsing and analyz
 a document, the Greek workbench, fetching and reading works, and the data store,
 with the command console as a full-parity escape hatch for everything else. It is a
 research cockpit, not a replacement for the command line: [the CLI](CLI) (and
-`aegean repl`) remain the complete surface, and the exploratory, key-gated AI layer
-stays there, off the TUI entirely.
+`aegean repl`) remain the complete surface. Optional neural analysis and key-gated
+translation are also available in the reader popup; the console exposes the CLI's
+remaining operations.
 
 ## See also
 

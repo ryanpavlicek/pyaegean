@@ -1064,7 +1064,9 @@ aegean.load("lineara").fingerprint()[:16]          # 'f2619ca5089e533a'
 ## SQLite persistence & full-text search (`aegean.db`)
 
 A corpus can be persisted to a queryable SQLite database (stdlib `sqlite3`
-only, no new dependency) and reloaded losslessly:
+only, no new dependency) and reloaded losslessly. Close external SQLite
+connections before overwriting an existing database; see
+[Limitations](Limitations#known-workflow-defects).
 
 ```python
 from aegean import db, Corpus

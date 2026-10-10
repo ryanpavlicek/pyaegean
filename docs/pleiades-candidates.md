@@ -62,6 +62,6 @@ id API, so they are out of scope here.
 
 For each linked site, fetch its Pleiades `/places/<id>/json`, read the `reprPoint`,
 and accept the link only when the point is within a few km of ours **and** the
-title/description matches the site; `scripts/check_gazetteer.py` automates exactly
-this check (fail > 6 km) on a weekly schedule. For an unaligned site, search Pleiades
+title/description matches the site; `scripts/check_gazetteer.py` automates the
+coordinate-distance check (fail > 6 km) on a weekly schedule. For an unaligned site, search Pleiades
 (`/search_rss?portal_type=Place`) and apply the same verification before adding an id.

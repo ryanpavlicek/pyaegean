@@ -89,11 +89,12 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.59.0`.
-- **Cached datasets survive an upgrade.** Updating the package never re-downloads the
-  corpora or models you've already fetched: they live in a separate cache (see
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.60.0`.
+- **Cached datasets survive installation.** They live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
-  keyed by an immutable version, so they're reused as-is.
+  and are reused while their hashes match the selected pins. If a release changes
+  a pin, the next use fetches the new asset. Kept historical versions have separate
+  versioned cache entries.
 
 ### How do I install the optional features (the "extras")?
 
@@ -118,6 +119,7 @@ Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
 | `gemini` | the AI Layer via Google Gemini |
 | `grok` | the AI Layer via xAI Grok (OpenAI-API-compatible) |
 | `openrouter` | the AI Layer via OpenRouter (OpenAI-API-compatible gateway) |
+| `local` | the AI Layer via a running OpenAI-compatible local server; uses the OpenAI SDK, no provider key |
 | `ai` | the AI Layer with all three provider SDKs (anthropic, openai, google-genai) |
 | `dev` | the test/lint/type toolchain (contributors) |
 | `docs` | the documentation toolchain (contributors) |
@@ -519,8 +521,8 @@ aegean data remove NAME # delete one downloaded dataset (--all clears everything
 aegean data versions    # the reproducibility manifest: each dataset's version + sha256
 ```
 
-Upgrading the package never wipes this cache, so you don't re-download after a
-`pip install --upgrade`. To reclaim space, clear the analysis cache with
+Upgrading the package does not wipe this cache. Unchanged valid assets are reused;
+a changed pin or `--force` causes a new fetch on use. To reclaim space, clear the analysis cache with
 `aegean cache --clear` (that's the computed-results cache, separate from the
 fetched datasets). `aegean doctor` health-checks the store itself: it reports
 the location, the live total size, per-dataset state, whether the directory is

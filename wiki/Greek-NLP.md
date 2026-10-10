@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.59.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> **Available in v0.60.0.** Isolated pipeline instances, explicit long-input and runtime-variant
 > selection, analysis receipts, source alignment, typed editorial form states, and lossless
 > CoNLL-U representation are part of the current release.
 
@@ -282,8 +282,10 @@ greek.write_conllu(document, "treebank-copy.conllu")
 ```
 
 An unchanged document writes back exactly; `canonical=True` produces deterministic
-ten-column output after an immutable value has been changed or constructed. The default
-loader remains lenient for older research folds, while `strict=True` rejects malformed
+ten-column output after an immutable value has been changed or constructed. Edited or
+canonical serialization can lose extension comments whose keys begin with `text` or
+`sent_id`; unchanged raw passthrough is unaffected. Keep the original file when editing it.
+The default loader remains lenient for older research folds, while `strict=True` rejects malformed
 columns, identifiers, row placement, references, and basic trees with line-aware errors.
 The CLI mirrors this as `aegean greek conllu inspect` and `conllu export`.
 
@@ -740,8 +742,11 @@ identity. Schemas 1 through 3 remain readable for current hosted evidence.
 ## Normalization & Beta Code
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and
-Perseus: it lets you type Greek without a Greek keyboard. Conversion is
-round-trip-safe and emits precomposed NFC.
+Perseus: it lets you type Greek without a Greek keyboard. Conversion emits
+precomposed NFC. Ordinary spellings round-trip, but an explicit word-final medial
+sigma (`s1`) is not preserved by Unicode-to-Beta-Code conversion; keep the source
+spelling when that distinction matters. See
+[Known workflow defects](Limitations#known-workflow-defects).
 
 ```python
 greek.betacode_to_unicode("mh=nin")      # 'μῆνιν'

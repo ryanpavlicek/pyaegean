@@ -142,8 +142,8 @@ private staging directory and create the final directory and deterministic archi
 isolated qualification process returns a reproducible `qualified=true` decision. Failed candidates
 remain staged working material and are never presented as release artifacts.
 
-The v1 gate files remain available only to verify evidence created under the earlier decoder.
-New evaluations and qualification commands use the v2 gates and corrected decoder identity.
+The v1 and v2 gate files remain available to verify earlier evidence.
+New evaluations and qualification commands use the v3 gates and corrected decoder identity.
 
 Qualification rebuilds both development reports from gold plus their prediction artifacts. It
 checks every protected task/source/OOV metric and separately compares decoded UPOS, XPOS, UFeats,

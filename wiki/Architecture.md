@@ -790,6 +790,10 @@ readings, annotations, source alignment, typed form state, line groupings, image
 refs, notes) is kept in JSON columns; provenance and the sign inventory live in a
 small key/value `meta` table. It's a lossless round-trip.
 
+Before overwriting an existing database, close external SQLite connections and
+WAL readers/writers. Replacing a database while another connection holds its WAL
+open can mix database generations; see [Limitations](Limitations#known-workflow-defects).
+
 ```python
 import aegean, aegean.db as db
 c = aegean.load("lineara")
@@ -1213,8 +1217,8 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   [download-to-cache](Data-and-Provenance) layer is for. CI's
   `scripts/check_footprint.py` enforces import-clean, import-fast, and a
   code+JSON-only wheel.
-- **One schema version.** Exports stamp `schemaVersion` (currently `3`) so
-  consumers can tell what they're reading; `to_json` omits default fields (e.g.
+- **Corpus schema version.** Lossless corpus JSON and SQLite persistence use
+  schema version `3` so consumers can tell what they're reading; `to_json` omits default fields (e.g.
   a `CERTAIN` status) to stay compact and back-compatible. Schema 3 adds typed
   form state; schema-1 and schema-2 artifacts load without it.
 - **Every exploratory method carries its caveat.** Cross-linguistic distance,

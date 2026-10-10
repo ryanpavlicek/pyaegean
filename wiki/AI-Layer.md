@@ -23,8 +23,8 @@ A few things hold across the whole layer:
 - **Keys come from the environment** and are never logged; the `local` provider needs none.
 - **Grounded by design.** You pass deterministic, local evidence (corpus
   frequencies, co-occurrences, dictionary glosses) and the model is told to reason
-  over it. Untrusted source text is wrapped so instructions hidden inside a
-  tablet can't steer the model.
+  over it. Untrusted source text is wrapped as data, with instructions to ignore
+  embedded directives.
 - **Everything returns an `ExploratoryResult`** carrying provenance, the grounding
   it rested on, and an unmistakable label.
 
@@ -870,9 +870,10 @@ You can score a single answer directly with `ai.score_text(text, case)`.
 
 ## Response caching
 
-A sha256-keyed cache over `(provider, model, system, prompt, max_tokens)` makes
-repeats free and deterministic: in memory by default, or persisted to JSON. Keys
-are digests, so prompts of any size hash to a fixed-length key and raw text never
+A sha256-keyed cache over `(provider identity, model, system, prompt, max_tokens)`
+makes repeated requests reuse a response: in memory by default, or persisted to
+JSON. The `local` provider includes its server URL in that identity. Keys are
+digests, so prompts of any size hash to a fixed-length key and raw text never
 lands in the index.
 
 ```python
@@ -885,6 +886,10 @@ ai.ask("test?", client=client)   # one real completion
 ai.ask("test?", client=client)   # served from cache — no second API call
 len(cache)                        # 1
 ```
+
+Hosted SDK endpoint overrides such as `OPENAI_BASE_URL` are not part of the cache
+identity. Use separate cache files for different hosted endpoints; see
+[Limitations](Limitations#known-workflow-defects).
 
 A second identical call hits the cache and makes **no** network request, which
 keeps cost down and makes notebooks reproducible.
@@ -908,7 +913,8 @@ Shared conventions (see [CLI](CLI)): a `TEXT` argument of `-` reads stdin; `--js
 prints one machine-readable document and nothing else; `--output/-o` saves the
 result to a file (`.json` or `.txt`: see [Saving AI results](#saving-ai-results));
 `--provider` defaults to `anthropic`. The `--json` form of a generative command
-emits the full result:
+emits the full result, except `extract`, which emits the parsed payload or a
+`raw` response object:
 
 ```bash
 aegean ai ask "What does KU-RO mark?" --corpus lineara --json
@@ -975,8 +981,9 @@ python -c "from aegean import ai; ai.get_client('llama')"
   co-occurrence use [Analysis](Analysis) and [Linear A](Linear-A). The AI layer is
   for the questions those can't answer, and its answers should be checked against
   them.
-- **Costs and keys are yours.** Nothing runs until you build a client with a key;
-  use the [cache](#response-caching) to avoid paying twice for the same prompt.
+- **Costs and keys are yours.** Generation runs when you call a capability;
+  hosted providers require a key, while `local` can use a no-key server. Use the
+  [cache](#response-caching) to avoid paying twice for the same prompt.
 
 For the full picture of what pyaegean can and cannot claim, see
 **[Limitations](Limitations)**.

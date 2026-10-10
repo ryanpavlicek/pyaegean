@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.59.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.60.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -114,6 +114,10 @@ prior programming.
 | **Measured accuracy** | Deciphered Greek uses real scholarship (attested lemmas, gold POS, measured accuracy). The *undeciphered* material (Linear A, Cypro-Minoan) is labeled **EXPLORATORY** everywhere: the tools surface *leads*, never answers. |
 
 ## Install
+
+Before editing persistent corpora or combining review files, check the
+[known workflow defects](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations#known-workflow-defects)
+and their workarounds.
 
 ```bash
 pip install pyaegean              # core + Linear A + Greek (zero heavy dependencies)
@@ -278,7 +282,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.59.0},
+  version = {0.60.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

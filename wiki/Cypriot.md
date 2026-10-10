@@ -382,7 +382,7 @@ Because it is a real corpus object, the rest of the toolkit works on it: `aegean
 
 The sign data comes from the Unicode Character Database (**Unicode-3.0** license). The sample
 transliterations are scholarly facts, bundled as illustrative excerpts, not a corpus. The bundled
-corpus cites Masson, O. (1983), *Les inscriptions chypriotes syllabiques* (2nd ed.). See
+corpus comes from the BBAW's online edition of *Inscriptiones Graecae* XV 1. See
 [Data & Provenance](Data-and-Provenance) and the repository `NOTICE` file.
 
 ---

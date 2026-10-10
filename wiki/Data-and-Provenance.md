@@ -85,8 +85,9 @@ and `fetch()` returns that directory.
 
 > **A fetched dataset is permanent until you delete it.** The "cache" is a
 > permanent local store, not an evicting one: `fetch()` performs a complete
-> one-time download, and nothing ever re-fetches, evicts, or expires the
-> result. An entry stays on disk until you remove it (`aegean data remove
+> one-time download for a valid entry, with no automatic eviction or expiry.
+> A cached entry that fails the current integrity checks is fetched again.
+> An entry stays on disk until you remove it (`aegean data remove
 > NAME`, or `aegean data remove --all` to clear every downloaded dataset) or
 > replace it with `fetch(name, force=True)`.
 
@@ -260,7 +261,7 @@ The registry only records the deep link; it hosts nothing.
 
 `aegean.greek.use_neural_lemmatizer()` activates a seq2seq lemmatizer that
 generates the lemma for a form, reaching 76.3% on unseen forms. It pairs a
-bundled gold lemma lookup (which answers attested forms) with the neural model
+model-bundle gold lemma lookup (which answers attested forms) with the neural model
 (which handles the rest); the model is fetched to the cache (~232 MB), never
 bundled, and runs torch-free on numpy + onnxruntime, loaded only on activation.
 
@@ -386,7 +387,7 @@ gaps and editorial symbols dropped) with the ancient find-place (`meta.site`), t
 (`meta.period`), and the coordinates (`meta.findspot`), decoded into a compact JSON `Corpus` by
 `scripts/build_isicily_corpus.py` (from the pinned source commit) as the sha256-pinned
 `isicily-corpus` release asset: fetched on demand, **never bundled**. CC BY permits the
-redistribution, so (unlike DAMOS/SigLA) this is project-hosted; attribution to I.Sicily travels in
+redistribution, and this corpus is project-hosted; attribution to I.Sicily travels in
 the corpus provenance (and `NOTICE`). This adds **epigraphic** Greek (real inscriptions on stone)
 alongside pyaegean's literary (Perseus) and New Testament Greek. Cite I.Sicily (Prag et al.) in
 academic work.
@@ -521,7 +522,7 @@ subcommands:
 | Command | What it does | Flags |
 |---|---|---|
 | `aegean data list` | List the fetchable datasets (name, size note, license) with a **downloaded** column: whether each is in the local store, and its actual on-disk size (which folds in any kept `--version` entries) | `--json` (machine-readable on stdout; additive keys `versioned_bytes` / `versioned` break out the kept-version footprint), `-h/--help` |
-| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when already present; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
+| `aegean data fetch NAME` | One-time download into the local store (sha256-verified); a no-op when the current integrity checks pass; an interrupted transfer resumes | `--force` (replace the stored copy), `--json` (machine-readable JSON on stdout), `-h/--help` |
 | `aegean data remove NAME` | Delete a downloaded dataset from the store, printing what was removed and the space reclaimed | `--all` (delete every downloaded dataset), `--version v1` (delete only that one kept release, leaving the current copy in place), `--json`, `-h/--help` |
 | `aegean data versions` | The reproducibility manifest: every dataset's version + sha256 | `--json` (machine-readable on stdout), `-h/--help` |
 | `aegean data store` | Show the store location and its current contents (entries are permanent until removed). The older `aegean data cache` alias warns and names the replacement | `--json` (machine-readable on stdout), `-h/--help` |
@@ -573,8 +574,7 @@ Three environment variables control where data lives and where it comes from.
 | `PYAEGEAN_<NAME>_URL` | Override one dataset's download URL with your own mirror/licensed copy. Uppercase the name and turn `-` into `_`. When set, the pinned sha256 is **not** enforced (it described the pinned URL only). |
 | `PYAEGEAN_GREEKLIT_REF` / `PYAEGEAN_FIRST1K_REF` | Override the upstream commit `load_work` pins to. |
 
-The `PYAEGEAN_<NAME>_URL` pattern is mechanical: here is the exact name for each
-dataset (verified):
+The `PYAEGEAN_<NAME>_URL` pattern is mechanical; examples are listed below:
 
 | Dataset | Override variable |
 |---|---|
@@ -625,7 +625,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.59.0'  (your installed version)
+v["package"]                                  # '0.60.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -696,7 +696,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.59.0'
+# '0.60.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -790,11 +790,11 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   Character Database, Unicode License v3 (retain the notice).
 - **Greek sample corpus**: public-domain ancient texts (seed only).
 - **Greek treebank lexicon + models (opt-in, `agdt-derived`)**: Perseus AGDT
-  v2.1, CC BY-SA 3.0; fetched and built/used in the user cache, never bundled or
-  redistributed.
+  v2.1, CC BY-SA 3.0; the derived bundle is project-hosted under the same
+  ShareAlike terms, fetched to the user cache, and never bundled in the wheel.
 - **Greek lexicon / LSJ (opt-in, `lsj-index`)**: Perseus Liddell-Scott-Jones,
-  CC BY-SA 4.0; fetched and indexed in the user cache, never bundled or
-  redistributed.
+  CC BY-SA 4.0; the derived index is project-hosted under the same ShareAlike
+  terms, fetched to the user cache, and never bundled in the wheel.
 - **Greek neural lemmatizer (opt-in `[neural]`, `grc-lemma-neural`)**: a GreTa
   seq2seq (Apache-2.0 base) fine-tuned on the AGDT (CC BY-SA 3.0), Pedalion
   (CC BY-SA 4.0), and Gorman (CC BY-SA 4.0) treebanks. The model: int8 ONNX
@@ -825,9 +825,9 @@ official EpiDoc schema), and `from_epidoc` folds them back to one token with its
   corpus may be redistributed.
 - **Linear A Workbench app (`workbench-app`)**: Apache-2.0 build; embedded data
   is GORILA-derived.
-- **Linear B bring-your-own (`linearb-corpus`)**: no default source; DAMOS is
-  CC BY-NC-SA 4.0 and LiBER is all-rights-reserved (© CNR Edizioni); neither
-  redistributed.
+- **Linear B bring-your-own (`linearb-corpus`)**: no default source; DAMOS
+  is project-hosted under CC BY-NC-SA 4.0, while LiBER is all-rights-reserved
+  (© CNR Edizioni) and is not redistributed.
 
 See the repository `NOTICE` and `CITATION.cff` for full attribution.
 

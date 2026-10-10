@@ -1,7 +1,7 @@
 # Limitations
 
-pyaegean's rule is that it tells you where it's confident and where it's
-guessing. This page is the complete picture in one place: what the toolkit
+pyaegean records prediction sources and review flags, but an unflagged prediction
+can still be wrong. This page collects what the toolkit
 **cannot** do and why, what it **does not yet** do and plans to, and what it
 deliberately **won't** do. Use it the way you'd use a methods section: to know
 exactly how far a result can be pushed before you reach for a human expert.
@@ -41,6 +41,42 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
 | AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
+| Persistence and review workflows | Some input and connection states need care | [Known workflow defects](#known-workflow-defects) |
+
+## Known workflow defects
+
+These defects remain in the current release:
+
+- **Replacing a SQLite database with a live WAL connection.** If another client
+  enables WAL mode and leaves a connection open with committed, uncheckpointed
+  pages, replacing the database through `to_sqlite` can mix the old rows with the
+  new database. Close every connection before replacing an existing WAL database.
+  The default rollback-journal path does not have this reproduced failure.
+- **CoNLL-U extension comments.** Comments named `text_en` or `sent_id_orig` can
+  overwrite the parsed `text` or `sent_id` metadata. Unchanged raw passthrough
+  preserves the input bytes, but edited or canonical serialization can lose these
+  extension comments. Preserve the original file when editing such documents.
+- **Merging aligned review tables.** `merge_reviews` strips immutable leading or
+  trailing whitespace, including an alignment's ordinary space before a word.
+  Applying the merged table can then reject the unchanged source as a mismatch.
+  Direct application of the original reviewed CSV preserves this whitespace;
+  keep that original table and source available.
+- **Printed review commands.** Export/apply hints can omit backend options;
+  merge/apply hints can omit `--annotate`, and paths containing spaces are not
+  quoted. Repeat the original annotation and backend options explicitly, quote
+  paths, and check the saved annotations. A copied hint alone may regenerate
+  different predictions or omit annotation context.
+- **Provider endpoint changes with a shared AI cache.** OpenAI's
+  `OPENAI_BASE_URL` can select another endpoint without changing the cache
+  identity. With the same model and prompt, a cached response from the previous
+  endpoint can be returned. Use separate caches for different endpoints or clear
+  the cache when changing the endpoint.
+- **Unusual Greek text forms.** Aligned segmentation can reject a leading keraia
+  immediately after a sentence boundary once U+0374 has normalized to U+02B9;
+  ordinary trailing numeral marks are unaffected by the reproduced case.
+  Beta Code conversion also does not preserve an explicit medial sigma at word
+  end (`s1`): converting to Greek and back can yield the ordinary final-sigma
+  spelling. Keep the source spelling when these distinctions matter.
 
 ---
 

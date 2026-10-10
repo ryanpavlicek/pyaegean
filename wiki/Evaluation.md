@@ -314,8 +314,8 @@ blanket-stating one:
 
 All three treebanks are **NonCommercial + ShareAlike**, and those obligations **pass
 through to you**: you may not use them commercially, and you must ShareAlike. Because
-the Nestle 1904 gold is CC0, it carries no such obligation, which is why one NT book can
-be bundled and the full NT corpus redistributed. The full per-dataset accounting,
+the Nestle 1904 gold is CC0, it carries no such obligation. Two annotated chapters,
+John 1 and Philemon 1, are bundled, and the full NT corpus is redistributed. The full per-dataset accounting,
 including provenance and pinned commits, is on
 [Data & Provenance](Data-and-Provenance#the-proiel-evaluation-set-evaluate_on_proiel),
 and the attribution statements are in the repository `NOTICE`.

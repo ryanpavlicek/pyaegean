@@ -272,8 +272,9 @@ print(results.cite("bibtex"))  # the same, as a @misc{aegean-query, …}
 
 The package's own structured-data layer is **Apache-2.0**; the scholarly
 editions and imagery remain under their own rights. Facsimile imagery (e.g. the
-GORILA plates, © École Française d'Athènes) is **referenced, never
-redistributed**. See [Data & Provenance](Data-and-Provenance) and `NOTICE` for
+GORILA plates, © École Française d'Athènes) is **not bundled in the wheel**;
+the optional image asset is for academic reference under its stated rights.
+See [Data & Provenance](Data-and-Provenance) and `NOTICE` for
 the full per-source rights table.
 
 ---
@@ -376,9 +377,9 @@ non-generative:
 | `ai.lexicon_evidence(words)` | `lexicon:LSJ` | a short LSJ gloss per word (needs `greek.use_lsj()`) |
 | `ai.cooccurrence_evidence(corpus, word)` | `analysis:cooccurrence` | words that share a document with `word` |
 
-`wrap_untrusted()` is applied to all source text automatically, so directives
-hidden inside an inscription you're analysing can't steer the model
-(prompt-injection awareness).
+`wrap_untrusted()` labels source text as data and asks the provider to ignore
+instructions inside it. These prompt delimiters do not guarantee that a model
+will resist prompt injection; examine its output against the supplied evidence.
 
 ### Audit #3 — measure grounding fidelity like an accuracy number
 
@@ -525,10 +526,10 @@ step, without the `from_records` boilerplate. See [Tutorial](Tutorial) and
 - **Measured ≠ established.** The neural Greek pipeline's accuracy is a number on
   held-out data, reproducible but not a guarantee on your text: check
   [Greek NLP](Greek-NLP).
-- **AI output is exploratory by construction** and depends on a third-party
-  provider and your key; the eval harness measures fidelity, not correctness.
-- **Imagery and several corpora are referenced, not redistributed**, under their
-  rightsholders' licences.
+- **AI output is exploratory by construction.** Hosted providers require a key;
+  a local server can run without one. The eval harness measures fidelity, not correctness.
+- **Imagery and several corpora are fetched separately**, under their
+  rightsholders' licences, rather than bundled in the wheel.
 
 The complete, candid version of all of this is the [Limitations](Limitations)
 page. If you find a gap there, that itself is a welcome correction.

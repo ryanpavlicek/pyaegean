@@ -1,15 +1,11 @@
-"""Footprint guard for pyaegean — replaces the old "<3 MB wheel" check.
-
-That byte cap was theater: the wheel is ~170 KB (the package ships only code + tiny JSON),
-so it could never fail, while it said nothing about the invariants that actually define the
-niche. This guards those instead:
+"""Check core import behavior and the built wheel's contents and unpacked size.
 
   1. import-clean  `import aegean` pulls in NO heavy third-party module.
   2. import-fast   cold `import aegean` (fastest of several subprocess runs, after one
      unmeasured warmup that absorbs .pyc compilation and OS file-cache effects) stays
      under a generous bound.
-  3. nothing-heavy-bundled (with --wheel)  the wheel is code + JSON only — no binaries — with
-     a soft accident tripwire that only catches a mistaken large-file commit, not a policy ceiling.
+  3. nothing-heavy-bundled (with --wheel)  reject binary/model payloads and fail if
+     total uncompressed contents exceed the 5 MiB accident tripwire.
 
 Usage:
   python scripts/check_footprint.py                 # checks 1+2 (run after a CORE-only install)
