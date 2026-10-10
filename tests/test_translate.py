@@ -408,8 +408,8 @@ def _rarity_reference(monkeypatch):
     not a frequency corpus. These classification tests must never depend on network/cache
     state, so they pin the exact counts that exercise terminology_rarity's public bands.
     """
-    from aegean import greek
     from aegean.core import Corpus, Document, Token, TokenKind
+    from aegean.scripts.greek import nt
 
     tokens = []
     for lemma, count in (("λόγος", 25), ("καί", 25), ("θεός", 25), ("φαρμακεία", 3)):
@@ -421,7 +421,7 @@ def _rarity_reference(monkeypatch):
         [Document(id="full-reference", script_id="greek", tokens=tokens, lines=[list(range(len(tokens)))])],
         script_id="greek",
     )
-    monkeypatch.setattr(greek, "load_nt", lambda: reference)
+    monkeypatch.setattr(nt, "_load_cached_full_nt", lambda: reference)
     return reference
 
 
@@ -525,7 +525,7 @@ def test_cascade_omits_lsj_archaic_sense_but_uses_concise_when_present(_reset_le
     assert all("thrums" not in c and c != "βίος: a bow" for c in by_ref.values())
 
 
-def test_full_mode_includes_concise_glosses_morphology_has_none(_reset_lexica):
+def test_full_mode_includes_concise_glosses_morphology_has_none(_reset_lexica, _rarity_reference):
     _lexicons._ACTIVE["middle-liddell"] = _concise_lex(
         "middle-liddell", {"φαρμακεία": "use of drugs, sorcery"}
     )

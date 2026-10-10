@@ -73,10 +73,22 @@ def test_minuscule_and_capitalised_forms_are_untouched() -> None:
     assert greek.lemmatize_sourced("λέγει")[0] == "λέγω"
 
 
-def test_no_shipped_corpus_word_gets_a_mixed_case_lemma() -> None:
+def test_no_cached_corpus_word_gets_a_mixed_case_lemma(monkeypatch) -> None:
     import aegean
+    from aegean import data
 
-    for corpus_id in ("iip", "isicily"):
+    cached = [
+        name for name in ("iip", "isicily")
+        if data.is_downloaded(data._REMOTE[f"{name}-corpus"], data.cache_dir())
+    ]
+    if not cached:
+        pytest.skip("inscription corpora are not cached")
+
+    def no_download(*args, **kwargs):
+        pytest.fail("cached inscription check attempted a download")
+
+    monkeypatch.setattr(data, "_download", no_download)
+    for corpus_id in cached:
         corpus = aegean.load(corpus_id)
         seen: set[str] = set()
         for document in corpus.documents:
@@ -100,13 +112,12 @@ WRONG_HOMOGRAPHS = ["εἰ", "καλῶς", "λαός", "ἄλλος", "πρῶ�
 
 @pytest.fixture(scope="module")
 def lsj():
-    pytest.importorskip("aegean.greek.lexicon")
+    from aegean import data
     from aegean.greek import lexicon
 
-    try:
-        return lexicon.use_lsj(build=False)
-    except Exception:  # pragma: no cover - the 270 MB index is not built here
+    if not (data.cache_dir() / lexicon._INDEX_NAME).exists():
         pytest.skip("LSJ index not available")
+    return lexicon.use_lsj(build=False)
 
 
 @pytest.mark.parametrize("word", WRONG_HOMOGRAPHS)
@@ -167,15 +178,48 @@ APPARATUS_WORDS = {
 }
 
 
+@pytest.fixture(scope="module")
+def concise_lexica():
+    from aegean import data
+
+    dictionaries = ("middle-liddell", "cunliffe", "abbott-smith")
+    cached = [
+        dictionary for dictionary in dictionaries
+        if (data.cache_dir() / f"{dictionary}-index.json.gz").exists()
+    ]
+    loaded = [greek.use_lexicon(dictionary, build=False) for dictionary in cached]
+    missing = [dictionary for dictionary in dictionaries if dictionary not in cached]
+    if missing:
+        pytest.skip(f"dictionary indices not available: {', '.join(missing)}")
+    return loaded
+
+
+@pytest.mark.parametrize("dictionary", ["middle-liddell", "cunliffe", "abbott-smith"])
+def test_corrupt_concise_index_fails_even_when_another_is_absent(tmp_path, monkeypatch, dictionary):
+    import gzip
+    import json
+
+    from aegean import data
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    path = data.cache_dir() / f"{dictionary}-index.json.gz"
+    path.write_bytes(gzip.compress(b"{"))
+
+    def no_download(*args, **kwargs):
+        pytest.fail("cached dictionary check attempted a download")
+
+    monkeypatch.setattr(data, "_download", no_download)
+    with pytest.raises(json.JSONDecodeError):
+        try:
+            concise_lexica.__wrapped__()
+        except pytest.skip.Exception:
+            pytest.fail("corrupt cached dictionary was hidden by another absent index")
+
+
 @pytest.mark.parametrize("word,expected", sorted(APPARATUS_WORDS.items()))
-def test_concise_gloss_falls_through_apparatus(word: str, expected: str) -> None:
+def test_concise_gloss_falls_through_apparatus(concise_lexica, word: str, expected: str) -> None:
     from aegean import ai
 
-    for dictionary in ("middle-liddell", "cunliffe", "abbott-smith"):
-        try:
-            greek.use_lexicon(dictionary)
-        except Exception:  # pragma: no cover - index not built in this environment
-            pytest.skip(f"{dictionary} index not available")
     assert ai.concise_gloss(word) == expected
 
 

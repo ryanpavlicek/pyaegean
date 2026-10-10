@@ -143,22 +143,11 @@ def test_lookup_composed_lemma_carries_float_confidence_even_when_identical_surf
     assert isinstance(ident.upos_confidence, float)
 
 
-def test_real_grc_joint_lookup_lemma_has_float_confidence():
-    pytest.importorskip("numpy")
-    pytest.importorskip("onnxruntime")
-    pytest.importorskip("tokenizers")
+def test_real_grc_joint_lookup_lemma_has_float_confidence(cached_neural_model):
+    from aegean.greek import calibrate
 
-    from aegean import data
-
-    spec = data._REMOTE.get("grc-joint")
-    if spec is None or not data.is_downloaded(spec, data.cache_dir()):
-        pytest.skip("grc-joint model is not cached (would trigger a ~173 MB download)")
-
-    from aegean.greek import calibrate, joint, use_neural_pipeline
-
-    use_neural_pipeline()
-    m = joint.active()
-    assert m is not None and m.lookup_form, "the shipped model ships a form lookup"
+    m = cached_neural_model
+    assert m.lookup_form, "the shipped model ships a form lookup"
     calibrate.use_calibration()  # the shipped bundled default calibration
 
     # Find a lookup key that decodes to a single kept token, then confirm the composed

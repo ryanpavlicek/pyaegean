@@ -160,20 +160,13 @@ def test_apparatus_fallback_applies_in_every_lookup_bearing_mode(mode: str) -> N
     assert value == "μήτηρ", mode
 
 
-def test_shipped_v3_lookup_tables_contain_no_apparatus_keys() -> None:
+def test_shipped_v3_lookup_tables_contain_no_apparatus_keys(cached_neural_model) -> None:
     """The premise of the fix, asserted against the REAL shipped artifact.
 
     If a future model were trained on apparatus-bearing forms this test fails and the
     fallback ordering above must be revisited.
     """
-    pytest.importorskip("onnxruntime")
-    from aegean import greek
-    from aegean.greek import joint
-
-    greek.use_neural_pipeline()
-    model = joint.active()
-    if model is None:  # pragma: no cover - neural extra present but model unavailable
-        pytest.skip("joint model unavailable")
+    model = cached_neural_model
     for table in ("lookup_form", "lookup_form_upos", "lookup_lower"):
         keys = getattr(model, table)
         offenders = [k for k in keys if UNDERDOT in unicodedata.normalize("NFD", k)]

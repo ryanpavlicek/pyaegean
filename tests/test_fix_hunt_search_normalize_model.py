@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import unicodedata
 import warnings
+from types import SimpleNamespace
 
 import pytest
 
@@ -69,12 +70,21 @@ def test_fold_keeps_the_iota_subscript() -> None:
 
 
 @pytest.fixture(scope="module")
-def nt_databases(tmp_path_factory):
-    import aegean
+def search_databases(tmp_path_factory):
     import aegean.db as db
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, Token, TokenKind
 
     directory = tmp_path_factory.mktemp("dbfold")
-    corpus = aegean.load("nt")
+    forms = ["ἐκκλησίᾳ", "ἐκκλησίαι", "καρδίᾳ", "καρδίαις", "λόγος", "ΛΌΓΟΣ"]
+    corpus = Corpus(
+        [Document(
+            id="search-fixture", script_id="greek",
+            tokens=[Token(form, TokenKind.WORD, position=i) for i, form in enumerate(forms)],
+            lines=[list(range(len(forms)))],
+        )],
+        script_id="greek",
+    )
     with_fts = directory / "fts.db"
     without_fts = directory / "nofts.db"
     db.to_sqlite(corpus, with_fts)
@@ -83,38 +93,38 @@ def nt_databases(tmp_path_factory):
 
 
 @pytest.mark.parametrize("query", ["ἐκκλησίᾳ", "καρδίᾳ", "λόγος"])
-def test_the_two_build_modes_return_the_same_hits(nt_databases, query: str) -> None:
+def test_the_two_build_modes_return_the_same_hits(search_databases, query: str) -> None:
     import aegean.db as db
 
-    with_fts, without_fts = nt_databases
+    with_fts, without_fts = search_databases
     assert sorted(db.search(with_fts, query, limit=0)) == sorted(
         db.search(without_fts, query, limit=0)
     )
 
 
-def test_token_search_returns_only_the_queried_form(nt_databases) -> None:
+def test_token_search_returns_only_the_queried_form(search_databases) -> None:
     import aegean.db as db
 
-    with_fts, _ = nt_databases
+    with_fts, _ = search_databases
     texts = {text for _doc, _pos, text in db.search(with_fts, "ἐκκλησίᾳ", limit=0)}
     assert texts == {"ἐκκλησίᾳ"}
 
 
-def test_substring_hits_actually_contain_the_query(nt_databases) -> None:
+def test_substring_hits_actually_contain_the_query(search_databases) -> None:
     import aegean.db as db
     from aegean.db import _fold
 
-    with_fts, _ = nt_databases
+    with_fts, _ = search_databases
     hits = db.search(with_fts, "καρδίᾳ", mode="substring", limit=0)
     assert hits
     for _doc, _pos, text in hits:
         assert _fold("καρδίᾳ") in _fold(text), text
 
 
-def test_case_folding_still_works(nt_databases) -> None:
+def test_case_folding_still_works(search_databases) -> None:
     import aegean.db as db
 
-    with_fts, _ = nt_databases
+    with_fts, _ = search_databases
     lower = db.search(with_fts, "λόγος", limit=0)
     upper = db.search(with_fts, "ΛΌΓΟΣ", limit=0)
     assert lower and sorted(lower) == sorted(upper)
@@ -156,13 +166,25 @@ def test_genuine_betacode_remnants_still_repair(text: str, expected: str) -> Non
         assert greek.normalize(text, lenient=True) == expected
 
 
-def test_no_shipped_inscription_loses_a_parenthesis() -> None:
+def test_no_cached_inscription_loses_a_parenthesis(monkeypatch) -> None:
     import aegean
-    from aegean import greek
+    from aegean import data, greek
+
+    cached = [
+        name for name in ("edh", "iip")
+        if data.is_downloaded(data._REMOTE[f"{name}-corpus"], data.cache_dir())
+    ]
+    if not cached:
+        pytest.skip("inscription corpora are not cached")
+
+    def no_download(*args, **kwargs):
+        pytest.fail("cached inscription check attempted a download")
+
+    monkeypatch.setattr(data, "_download", no_download)
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        for corpus_id in ("edh", "iip"):
+        for corpus_id in cached:
             corpus = aegean.load(corpus_id)
             seen: set[str] = set()
             for document in list(corpus.documents)[:400]:
@@ -177,24 +199,7 @@ def test_no_shipped_inscription_loses_a_parenthesis() -> None:
 # --- the parser emits a valid UD tree ---------------------------------------- #
 
 
-@pytest.fixture(scope="module")
-def neural():
-    pytest.importorskip("onnxruntime")
-    from aegean import greek
-
-    try:
-        greek.use_neural_pipeline()
-    except Exception:  # pragma: no cover - model not cached in this environment
-        pytest.skip("neural model unavailable")
-    from aegean.greek import joint
-
-    model = joint.active()
-    if model is None:  # pragma: no cover
-        pytest.skip("neural model unavailable")
-    return model
-
-
-def test_only_the_head_zero_token_is_labelled_root(neural) -> None:
+def test_only_the_head_zero_token_is_labelled_root(cached_neural_model) -> None:
     from aegean import greek
 
     records = greek.pipeline("πλῆθός σο̣ι τῶν ἱππαρίων καὶ", parse=True)
@@ -204,25 +209,40 @@ def test_only_the_head_zero_token_is_labelled_root(neural) -> None:
     assert len(roots) == 1
 
 
-def test_the_invariant_holds_across_a_development_fold(neural) -> None:
-    from aegean.greek.papygreek import papygreek_dev_path
-    from aegean.greek.ud import load_conllu
+@pytest.mark.parametrize("root_index", [0, 1, 2])
+def test_decoder_remaps_root_labels_on_non_root_arcs(root_index: int) -> None:
+    """Synthetic logits test tree structure, not linguistic annotations."""
+    np = pytest.importorskip("numpy")
+    from aegean.greek import joint
 
-    try:
-        path = papygreek_dev_path("parse", download=False)
-    except Exception:  # pragma: no cover - fold not cached
-        pytest.skip("papygreek dev fold not cached")
-    offenders = 0
-    for sentence in load_conllu(path)[:40]:
-        analysis = neural.analyze([t.form for t in sentence.tokens], long_input="windowed")
-        offenders += sum(
-            1 for head, rel in zip(analysis.head, analysis.deprel) if rel == "root" and head != 0
-        )
-    assert offenders == 0
+    model = object.__new__(joint._JointModel)
+    model._np = np
+    model.inv = {"upos": {0: "X"}, "deprel": {0: "root", 1: "dep", 2: "obj"}}
+    for i in range(9):
+        model.inv[f"x{i}"] = {0: "-"}
+    model.trees = [["keep"]]
+    model.lookup_form = model.lookup_form_upos = model.lookup_lower = {}
+    n = 3
+    out = {"upos": np.zeros((1, n, 1)), "lemma": np.zeros((1, n, 1))}
+    for i in range(9):
+        out[f"x{i}"] = np.zeros((1, n, 1))
+    out["arc"] = np.full((1, n, n + 1), -20.0)
+    out["rel"] = np.zeros((1, 3, n, n + 1))
+    expected_heads = tuple(0 if i == root_index else root_index + 1 for i in range(n))
+    for i, head in enumerate(expected_heads):
+        out["arc"][0, i, head] = 20.0
+        out["rel"][0, :, i, head] = [30.0, 10.0, 20.0]
+    out["_word_pos"] = list(range(n))
+    out["_kept"] = list(range(n))
+
+    analysis = model._decode(["α", "β", "γ"], out)
+    assert analysis.head == expected_heads
+    assert analysis.deprel == tuple("root" if i == root_index else "obj" for i in range(n))
+    assert analysis.complete and analysis.analyzed == (True, True, True)
 
 
 def test_the_helper_prefers_the_best_non_root_label() -> None:
-    import numpy as np
+    np = pytest.importorskip("numpy")
 
     from aegean.greek.joint import _best_non_root_relation
 
@@ -236,21 +256,43 @@ def test_the_helper_prefers_the_best_non_root_label() -> None:
 # --- the drift report survives its own fold ---------------------------------- #
 
 
-def test_convention_report_uses_the_windowed_policy(neural, tmp_path) -> None:
+@pytest.mark.parametrize("batch_size", [None, 1, 2])
+def test_convention_report_uses_the_windowed_policy(tmp_path, monkeypatch, batch_size) -> None:
+    """Mechanical rows and predictions verify dispatch and accounting only."""
     from aegean import greek
-    from aegean.greek.papygreek import papygreek_path
+    from aegean.greek import joint
 
-    try:
-        source = papygreek_path(download=False)
-    except Exception:  # pragma: no cover - fold not cached
-        pytest.skip("papygreek fold not cached")
-    blocks = [b for b in source.read_text(encoding="utf-8").split("\n\n") if b.strip()]
-    selected = [b for b in blocks if "sent_id = papygreek:p.babatha.18@2" in b]
-    if not selected:  # pragma: no cover - fold revision without that sentence
-        pytest.skip("the long sentence is not in this fold revision")
+    lengths = (181, 1)
     path = tmp_path / "one_long.conllu"
-    path.write_text(selected[0].rstrip("\n") + "\n\n", encoding="utf-8")
-    greek.papygreek_convention_report(source=path)  # must not raise
+    path.write_text("".join(
+        f"# sent_id = mechanical-{s}\n" + "".join(
+            f"{i}\tα\t_\tX\t---------\t_\t{0 if i == 1 else 1}"
+            f"\t{'root' if i == 1 else 'dep'}\t_\t_\n"
+            for i in range(1, length + 1)
+        ) + "\n"
+        for s, length in enumerate(lengths)
+    ), encoding="utf-8")
+    seen = []
+
+    class PolicyCheckingModel:
+        def analyze(self, forms, *, long_input):
+            assert long_input == "windowed"
+            seen.append(tuple(forms))
+            return SimpleNamespace(upos=("X",) * len(forms), xpos=("---------",) * len(forms))
+
+        def analyze_batch(self, sentences, *, long_input):
+            assert batch_size is not None and len(sentences) <= batch_size
+            return [self.analyze(forms, long_input=long_input) for forms in sentences]
+
+    monkeypatch.setattr(joint, "active", lambda: PolicyCheckingModel())
+    progress = []
+    report = greek.papygreek_convention_report(
+        source=path, batch_size=batch_size, progress=lambda done, total: progress.append((done, total)),
+    )
+    assert [len(forms) for forms in seen] == list(lengths)
+    assert report.n_words == report.upos_correct == report.xpos_correct == sum(lengths)
+    assert report.upos_other_errors == report.upos_coordinator_errors == 0
+    assert progress == [(1, 2), (2, 2)]
 
 
 # --- a receipt identifies the evaluation, not the machine -------------------- #
@@ -308,22 +350,21 @@ def treebank_lexicon():
     """The treebank tier alone: an earlier test may have left the neural pipeline
     active, which would answer these lookups from the model instead."""
     from aegean import greek
-    from aegean.greek import joint
+    from aegean import data
+    from aegean.greek import joint, runtime, treebank
 
-    was_neural = joint.active() is not None
-    if was_neural:
-        greek.disable_neural_pipeline()
-    try:
-        greek.use_treebank()
-    except Exception:  # pragma: no cover - lexicon not cached
+    if not (data.cache_dir() / treebank._LEXICON_NAME).exists():
         pytest.skip("treebank lexicon not cached")
-    from aegean.greek import treebank
-
+    previous_pipeline = runtime.default_pipeline()
+    previous_joint = joint._ACTIVE
+    previous_treebank = treebank._ACTIVE
     try:
-        yield treebank.active()
+        greek.disable_neural_pipeline()
+        yield greek.use_treebank(build=False)
     finally:
-        if was_neural:
-            greek.use_neural_pipeline()
+        runtime._set_default_pipeline(previous_pipeline)
+        joint._ACTIVE = previous_joint
+        treebank._ACTIVE = previous_treebank
 
 
 @pytest.mark.parametrize("fragment", FRAGMENTS)

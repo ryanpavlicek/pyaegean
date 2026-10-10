@@ -252,25 +252,59 @@ def test_projection_still_drops_a_genuine_trailing_mark() -> None:
     assert greek.sentences("λόγος.— καί") == ["λόγος—", "καί"]
 
 
-def test_no_projected_sentence_invents_a_word_on_a_shipped_corpus() -> None:
-    """The property that makes the class impossible, checked on real text."""
+def _assert_projection_preserves_source_words(text: str) -> None:
     import re
 
-    import aegean
     from aegean.greek import sentence_segmentation as seg
 
     word = re.compile(r"[^\W_]+", re.UNICODE)
-    for corpus_id in ("nt", "isicily"):
-        corpus = aegean.load(corpus_id)
-        for document in list(corpus.documents)[:60]:
-            text = " ".join(token.text for token in document.tokens)
-            if not text.strip():
-                continue
-            for policy in ("default", "prose", "verse", "inscription", "papyrus"):
-                result = seg.segment_text(text, policy=policy)
-                for boundary, sentence in zip(result.boundaries, result.sentences):
-                    source_words = {m.group(0) for m in word.finditer(boundary.text(result.source))}
-                    invented = [
-                        m.group(0) for m in word.finditer(sentence) if m.group(0) not in source_words
-                    ]
-                    assert not invented, (policy, invented[:3])
+    for policy in ("default", "prose", "verse", "inscription", "papyrus"):
+        result = seg.segment_text(text, policy=policy)
+        for boundary, sentence in zip(result.boundaries, result.sentences):
+            source_words = {m.group(0) for m in word.finditer(boundary.text(result.source))}
+            invented = [
+                m.group(0) for m in word.finditer(sentence) if m.group(0) not in source_words
+            ]
+            assert not invented, (policy, invented[:3])
+
+
+@pytest.mark.parametrize("source,_expected", FUSION_CASES)
+def test_no_projected_sentence_invents_a_word(source: str, _expected) -> None:
+    _assert_projection_preserves_source_words(source)
+
+
+@pytest.mark.parametrize("corpus_id", ["nt", "isicily"])
+def test_no_projected_sentence_invents_a_word_on_a_cached_corpus(corpus_id, monkeypatch) -> None:
+    """Check the same property on available complete shipped corpora without fetching."""
+    import aegean
+    from aegean import data
+
+    if not data.is_downloaded(data._REMOTE[f"{corpus_id}-corpus"], data.cache_dir()):
+        pytest.skip(f"{corpus_id} corpus is not cached")
+
+    def no_download(*args, **kwargs):
+        pytest.fail("cached corpus projection check attempted a download")
+
+    monkeypatch.setattr(data, "_download", no_download)
+    corpus = aegean.load(corpus_id)
+    if corpus_id == "nt":
+        from aegean.scripts.greek import nt
+
+        assert not nt._is_bundled_nt_sample(corpus), "complete cached NT fell back to bundled sample"
+    for document in list(corpus.documents)[:60]:
+        text = " ".join(token.text for token in document.tokens)
+        if text.strip():
+            _assert_projection_preserves_source_words(text)
+
+
+def test_cached_nt_projection_rejects_bundled_fallback(monkeypatch) -> None:
+    from aegean import data
+
+    monkeypatch.setattr(data, "is_downloaded", lambda *args: True)
+
+    def failed_fetch(*args, **kwargs):
+        raise data.DataNotAvailableError("cached corpus validation failed")
+
+    monkeypatch.setattr(data, "fetch", failed_fetch)
+    with pytest.raises(AssertionError, match="complete cached NT fell back"):
+        test_no_projected_sentence_invents_a_word_on_a_cached_corpus("nt", monkeypatch)

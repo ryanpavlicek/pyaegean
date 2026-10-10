@@ -22,7 +22,7 @@ on:
         options: [testpypi, pypi]
         default: testpypi
 
-# Least-privilege default for the build job (checkout + build + upload-artifact only).
+# Least-privilege default for validation and build jobs.
 # The testpypi/pypi jobs declare their own job-level `id-token: write` for OIDC Trusted
 # Publishing; a job-level permissions block REPLACES this default, so those jobs get
 # exactly id-token:write (no contents) — which is all the publish step needs.
@@ -30,16 +30,47 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    # Build/publish only for version-tagged releases (vX.Y.Z) or a manual dispatch. Asset-hosting
-    # releases (e.g. grc-lemma-neural-v1) must not trigger a publish — they carry no package version,
-    # so a build would re-attempt the current pyproject version and PyPI would reject the duplicate.
+  source:
+    # Asset-hosting releases carry no package version and must not publish to either index.
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v'))
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          # github.sha is the release commit, or the commit of the manually selected ref.
+          ref: ${{ github.sha }}
+      - name: Resolve source commit
+        id: source
+        shell: python
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          import os
+          import subprocess
+
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          if sha != os.environ["EXPECTED_SHA"]:
+              raise SystemExit("Checked-out commit differs from the selected event commit")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"sha={sha}\n")
+
+  validate:
+    needs: source
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.source.outputs.sha }}
+
+  build:
+    needs: [source, validate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.source.outputs.sha }}
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"

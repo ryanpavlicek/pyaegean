@@ -88,23 +88,55 @@ def test_clean_text_is_untouched_and_warns_nothing() -> None:
     assert not [w for w in caught if issubclass(w.category, NormalizationWarning)]
 
 
-def test_every_shipped_corpus_is_free_of_format_characters() -> None:
-    """The premise that makes this change inert for published numbers.
+def _assert_no_format_characters(corpus, name: str) -> None:
+    offenders = [
+        token.text
+        for document in corpus.documents
+        for token in document.tokens
+        if any(unicodedata.category(ch) == "Cf" for ch in token.text)
+    ]
+    assert not offenders, f"{name} carries format characters: {offenders[:5]}"
 
-    If a corpus ever ships Cf characters, stripping them in lenient mode could move
-    a measured value, and this test says so before that can happen quietly.
-    """
+
+def test_bundled_corpora_are_free_of_format_characters() -> None:
     import aegean
+    from aegean.core import Corpus
+    from aegean.scripts.greek import nt
 
-    for corpus_id in ("greek", "nt"):
-        corpus = aegean.load(corpus_id)
-        offenders = [
-            token.text
-            for document in corpus.documents
-            for token in document.tokens
-            if any(unicodedata.category(ch) == "Cf" for ch in token.text)
-        ]
-        assert not offenders, f"{corpus_id} carries format characters: {offenders[:5]}"
+    _assert_no_format_characters(aegean.load("greek"), "greek")
+    sample = Corpus(nt._select(nt._bundled_payload()["documents"], None, None), script_id="greek")
+    _assert_no_format_characters(sample, "bundled NT sample")
+
+
+def test_cached_full_nt_is_free_of_format_characters(monkeypatch) -> None:
+    """A cached complete NT retains the shipped-data check without a download."""
+    import aegean
+    from aegean import data
+    from aegean.scripts.greek import nt
+
+    if not data.is_downloaded(data._REMOTE["nt-corpus"], data.cache_dir()):
+        pytest.skip("full NT corpus is not cached")
+
+    def no_download(*args, **kwargs):
+        pytest.fail("cached NT format-character check attempted a download")
+
+    monkeypatch.setattr(data, "_download", no_download)
+    corpus = aegean.load("nt")
+    assert not nt._is_bundled_nt_sample(corpus), "complete cached NT fell back to bundled sample"
+    _assert_no_format_characters(corpus, "full NT")
+
+
+def test_cached_nt_format_check_rejects_bundled_fallback(monkeypatch) -> None:
+    from aegean import data
+
+    monkeypatch.setattr(data, "is_downloaded", lambda *args: True)
+
+    def failed_fetch(*args, **kwargs):
+        raise data.DataNotAvailableError("cached corpus validation failed")
+
+    monkeypatch.setattr(data, "fetch", failed_fetch)
+    with pytest.raises(AssertionError, match="complete cached NT fell back"):
+        test_cached_full_nt_is_free_of_format_characters(monkeypatch)
 
 
 def test_lenient_repairs_compose_with_the_existing_ones() -> None:
@@ -117,11 +149,16 @@ def test_lenient_repairs_compose_with_the_existing_ones() -> None:
     assert len([w for w in caught if issubclass(w.category, NormalizationWarning)]) >= 2
 
 
-def test_lemma_lookup_recovers_after_the_repair() -> None:
-    greek.use_treebank()
+def test_lemma_lookup_recovers_after_the_repair(monkeypatch) -> None:
+    """A mechanical lookup entry verifies normalization and dispatch, not linguistic gold."""
+    from aegean.greek import joint, treebank
+
+    lexicon = treebank.TreebankLexicon({"ἀνθρώπου": [{"lemma": "fixture-lemma", "pos": "NOUN"}]})
+    monkeypatch.setattr(joint, "_ACTIVE", None)
+    monkeypatch.setattr(treebank, "_ACTIVE", lexicon)
     dirty = "ἀνθ​ρώπου"
     before = greek.lemmatize_sourced(dirty)
     after = greek.lemmatize_sourced(greek.normalize(dirty, lenient=True))
     assert "​" in before[0], "the defect: the invented lemma carried the invisible char"
-    assert after[0] == "ἄνθρωπος"
+    assert after[0] == "fixture-lemma"
     assert after[1].name == "ATTESTED"
