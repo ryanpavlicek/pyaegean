@@ -121,8 +121,9 @@ The default baseline is useful for transparent demonstrations but can mistag
 ordinary words. Prefer the neural backend when prediction accuracy matters and
 review its output. Existing annotations loaded from a corpus describe its source;
 they are not fresh predictions. `annotate_corpus()` returns a copy and overwrites
-the annotation keys it writes, so keep the source corpus separately when comparing
-gold annotations with model output.
+lemma/POS and clears prior lemma evidence and neural coverage metadata before
+writing fresh evidence when enabled. Keep the source corpus separately when
+comparing gold annotations with model output.
 
 The `grc-joint` data entry currently resolves to the published `grc-joint-v3`
 neural artifact. It uses a GreBerta encoder with task heads for part of speech

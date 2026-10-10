@@ -10,6 +10,12 @@ all errors. `lemma_resolved` records a decision, while `lemma_verified` records
 an imported human lemma correction (`user`). A resolved lemma
 can still be wrong; these fields do not certify POS, morphology, or dependencies.
 
+`annotate_corpus()` clears prior lemma evidence and neural coverage/warnings on
+each word it re-annotates, then writes fresh evidence when enabled. Custom
+`tag_sentence` callbacks carry no evidence class, and `with_evidence=False`
+leaves these fields absent rather than retaining old verification. Historical
+review records and unrelated source annotations remain intact.
+
 ## Neural runtime variants
 
 `neural_variants()` returns the four stable runtime labels and their exact artifact/evidence

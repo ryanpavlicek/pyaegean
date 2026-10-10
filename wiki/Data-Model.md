@@ -284,7 +284,10 @@ one token's analysis from `greek.pipeline()`, ephemeral, never stored in a
 corpus. Both may carry the same immutable `SourceAlignment`, but their linguistic
 fields and persistence roles are otherwise separate. Loaded annotations are source
 data, not fresh model predictions. `annotate_corpus()` returns a copy but replaces
-the annotation keys it writes; keep the original separately for comparison.
+lemma/POS and clears prior lemma evidence and neural coverage/warnings. It writes
+fresh evidence when enabled; custom taggers and `with_evidence=False` leave those
+fields absent. Unrelated source annotations and historical review records remain;
+keep the original separately for comparison.
 `review_recommended=False` does not certify any predicted field. Only
 `lemma_verified` records an imported human lemma correction (`user`).
 

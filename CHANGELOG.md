@@ -16,6 +16,14 @@ All notable changes to pyaegean are documented here. The format follows
   change the CSV's review flags or certify POS, morphology, or dependencies.
 - Documentation checkpoints also verify the review manifest's document hashes.
 
+### Fixed
+
+- Re-annotating a corpus clears the previous lemma's evidence and neural coverage
+  metadata before writing new predictions. Custom taggers and
+  `with_evidence=False` no longer retain old human-verification flags, and complete
+  or baseline annotations no longer inherit obsolete neural warnings. Source
+  morphology and historical review records remain intact.
+
 ## 0.59.0 (2026-08-12)
 
 ### Changed

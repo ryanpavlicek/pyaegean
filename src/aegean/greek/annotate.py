@@ -10,7 +10,7 @@ the input is not mutated.
 Word tokens are grouped by their line for context (the unit each corpus already provides);
 punctuation and numerals are left untouched. With the neural joint pipeline active, each
 line is analyzed in one pass; otherwise the zero-dependency lemmatize + POS baseline is used.
-``with_evidence`` also records exact ``lemma_source``, ``lemma_resolved``,
+With built-in annotation, ``with_evidence`` also records exact ``lemma_source``, ``lemma_resolved``,
 ``lemma_verified``, and ``review_recommended`` fields so review triage does not overload
 one boolean. The deprecated ``lemma_known`` compatibility annotation remains during its
 deprecation cycle (see `aegean.greek.LemmaSource`)."""
@@ -26,6 +26,23 @@ if TYPE_CHECKING:
     from ..core.corpus import Corpus
 
 __all__ = ["annotate_corpus"]
+
+_PREDICTION_EVIDENCE_KEYS = frozenset({
+    "lemma_source", "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
+    "neural_analyzed", "analysis_complete", "analysis_warning",
+})
+
+
+def _prediction_annotations(
+    annotations: dict[str, str], *, lemma: str, upos: str,
+) -> dict[str, str]:
+    """Start a fresh prediction while retaining unrelated source and review-history fields."""
+    ann = {
+        key: value for key, value in annotations.items()
+        if key not in _PREDICTION_EVIDENCE_KEYS
+    }
+    ann.update(lemma=lemma, upos=upos)
+    return ann
 
 
 def annotate_corpus(
@@ -43,10 +60,12 @@ def annotate_corpus(
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
-    baseline. Keys written by this call replace existing source annotations in the
-    returned copy, including lemma/POS and, when enabled, built-in evidence fields.
-    Other keys, such as source morphology, remain. Keep the original corpus
-    separately when comparing source annotations with these predictions.
+    baseline. Each word's new lemma/POS replaces the prior prediction and clears its
+    lemma evidence and neural coverage fields, even when the predicted strings agree.
+    Built-in paths record fresh evidence only when ``with_evidence=True``; custom
+    ``tag_sentence`` or ``with_evidence=False`` leaves those fields absent. Unrelated
+    keys, such as source morphology, and review history remain. Keep the original
+    corpus separately when comparing source annotations with these predictions.
     Neural input is strict by default. Pass ``long_input="partial"`` only when explicitly
     marked placeholder annotations are useful, or ``long_input="windowed"`` to reconcile
     supported long lines from overlapping whole-word windows; inspect
@@ -99,7 +118,9 @@ def annotate_corpus(
                         "tag_sentence returned a different token count than the input"
                     )
                 for i, (lemma, upos), (_, form_state) in zip(idxs, tagged, selected):
-                    ann = {**doc.tokens[i].annotations, "lemma": lemma, "upos": upos}
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations, lemma=lemma, upos=upos,
+                    )
                     new_tokens[i] = replace(
                         doc.tokens[i], annotations=ann, form_state=form_state
                     )
@@ -114,11 +135,9 @@ def annotate_corpus(
                         "typed-token analysis returned a different token count than the input"
                     )
                 for rec, i in zip(analyzed, idxs):
-                    ann = {
-                        **doc.tokens[i].annotations,
-                        "lemma": rec.lemma,
-                        "upos": rec.upos,
-                    }
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations, lemma=rec.lemma, upos=rec.upos,
+                    )
                     _evidence(ann, rec.lemma_source)
                     if with_evidence and use_joint:
                         ann["neural_analyzed"] = (
@@ -139,11 +158,9 @@ def annotate_corpus(
                 # annotator to the contextual ``pos_tags`` path.
                 for i, (form, form_state) in zip(idxs, selected, strict=True):
                     lemma, source = lemmatize_sourced(form)
-                    ann = {
-                        **doc.tokens[i].annotations,
-                        "lemma": lemma,
-                        "upos": pos_tag(form),
-                    }
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations, lemma=lemma, upos=pos_tag(form),
+                    )
                     _evidence(ann, source)
                     new_tokens[i] = replace(
                         doc.tokens[i], annotations=ann, form_state=form_state
