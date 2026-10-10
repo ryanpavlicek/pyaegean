@@ -190,10 +190,12 @@ def test_common_gates_precede_profile_specific_gates() -> None:
     assert public_names[-1] == "profile-public-api"
     persistence_names = [command.name for command in build_commands("persistence")]
     assert persistence_names[-1] == "profile-persistence"
-    assert [command.name for command in build_commands("docs", python_executable="python-test")][-2:] == [
+    docs_commands = build_commands("docs", python_executable="python-test")
+    assert [command.name for command in docs_commands][-2:] == [
         "profile-docs",
         "docs-build",
     ]
+    assert "tests/test_independent_review.py" in docs_commands[-2].argv[5:]
 
 
 def test_checkpoint_console_reconfigures_legacy_text_stream_to_utf8() -> None:

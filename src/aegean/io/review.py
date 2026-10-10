@@ -31,7 +31,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from .._atomic import atomic_path
 
@@ -135,7 +135,7 @@ def to_review_table(
     path: str | Path,
     *,
     source_key: str = "lemma_source",
-    only_needs_review: bool = False,
+    selection: Literal["all", "flagged", "unverified"] = "all",
     reviewer: str = "",
 ) -> int:
     """Write one reviewable row per WORD token of ``corpus`` to ``path`` (CSV, UTF-8 BOM).
@@ -144,9 +144,14 @@ def to_review_table(
     ``doc_id``/``position``/``line_no``/``ref``), exact source span and normalization,
     existing ``pred_lemma``/``pred_pos``/``pred_morph`` values from its annotations, the
     ``evidence_class`` and a ``needs_review`` flag, the corpus citation, and blank
-    ``correct_*`` / ``reviewer_note`` columns for the reviewer. With ``only_needs_review`` only
-    the flagged rows are written; excluded rows can still contain errors. Existing
-    source annotations can be exported without generating predictions.
+    ``correct_*`` / ``reviewer_note`` columns for the reviewer. ``selection="all"``
+    exports every eligible word; ``"flagged"`` exports only rows selected by
+    `needs_review_flag`; ``"unverified"`` exports words without an explicit
+    ``lemma_verified`` string equal to ``true`` (case-insensitive); all other values
+    remain included. Verification is not inferred from the lemma source or review
+    metadata. These scopes use no confidence threshold;
+    excluded rows can still contain errors. Existing source annotations can be exported
+    without generating predictions.
     Pass ``reviewer`` to pre-stamp every row's ``reviewer``
     column (hand a named copy to each reviewer when the corrected copies will be merged with
     `merge_review_tables`); it is left blank by default. Returns the number of rows written.
@@ -155,6 +160,9 @@ def to_review_table(
     ``doc_id`` + ``position``, so a correction on such a row could never be applied. Cells
     that would open as a live formula in a spreadsheet are neutralized with a leading
     apostrophe (stripped again by `from_review_table`)."""
+    if selection not in ("all", "flagged", "unverified"):
+        raise ValueError("selection must be 'all', 'flagged', or 'unverified'")
+
     from ..core.model import TokenKind
     from .._view import _form_state_fields
 
@@ -170,8 +178,12 @@ def to_review_table(
                 continue  # no join key: a correction here could never round-trip
             a = tok.annotations
             flag = needs_review_flag(a, source_key=source_key)
-            if only_needs_review and not flag:
+            if selection == "flagged" and not flag:
                 continue
+            if selection == "unverified":
+                verified = a.get("lemma_verified")
+                if isinstance(verified, str) and verified.lower() == "true":
+                    continue
             form_fields = _form_state_fields(tok.form_state)
             form_fields["form_state_json"] = (
                 json.dumps(

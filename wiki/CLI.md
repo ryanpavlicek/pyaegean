@@ -2201,7 +2201,7 @@ record of it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `review export` | Write one reviewable CSV row per word: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--only-needs-review` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv` |
+| `review export` | Write selected word rows: the machine lemma / POS / morphology, its evidence class, a `needs_review` flag, and blank correction columns | `-o/--output` (a `.csv`) `--selection all\|flagged\|unverified` `--annotate` (+ `--neural`/`--tagger`/… to fill a corpus that has no annotations yet) | `aegean review export nt -o review.csv --selection unverified` |
 | `review merge` | Combine two or more corrected copies of the same export; agreed or single-reviewer corrections are kept, while genuine disagreements are reported or rejected | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report` |
 | `review apply` | Read a reviewed CSV back onto the corpus and save the corrected result, keeping each machine value under `<field>__pred` and stamping the reviewer | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ backend flags — repeat whatever the export used, so accepted predictions persist too) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
 
@@ -2210,6 +2210,21 @@ annotations of its own, so `--annotate` fills lemma and POS from the pipeline fi
 that already has gold annotations (the Greek NT) needs no `--annotate`, and
 `aegean review export nt -o review.csv` writes all 137,779 of its rows.
 
+Choose which rows to export with `--selection`:
+
+| Mode | Rows exported |
+|---|---|
+| `all` (default) | Every word with a token position, including verified lemmas. |
+| `flagged` | Rows whose existing review flag is true, normally identity/unresolved lemmas. |
+| `unverified` | Words without an explicit `lemma_verified=true`, including resolved predictions and source annotations with missing verification metadata. |
+
+For `unverified`, only the string `true` (case-insensitive) excludes a word; empty
+or unrecognized values remain included. None of these modes changes the CSV's
+`needs_review` flag or applies a confidence threshold. Verification concerns the
+lemma only, so use `all` when reviewing all annotation fields. A changed lemma
+imported with `review apply` gains verification; blank corrections, unchanged
+values, and POS-only corrections do not verify a lemma.
+
 ```bash
 # 1. export a reviewable table
 aegean review export greek --annotate -o review.csv
@@ -2217,9 +2232,9 @@ aegean review export greek --annotate -o review.csv
 #    correct the columns, then:  aegean review apply greek review.csv -o corrected.json --annotate
 
 # 2. triage. The needs_review column flags identity/unresolved lemmas by default, and
-#    --only-needs-review exports only those: here the 7 forms the offline lemmatizer left
+#    --selection flagged exports only those: here the 7 forms the offline lemmatizer left
 #    unresolved (Πηληϊάδεω, Ἀχιλῆος, Ἁλικαρνησσέος, …), each with evidence_class=unresolved.
-aegean review export greek --annotate --only-needs-review -o triage.csv
+aegean review export greek --annotate --selection flagged -o triage.csv
 #    wrote 7 review rows to triage.csv
 #    This filter is not a confidence threshold; omit it to review all rows.
 

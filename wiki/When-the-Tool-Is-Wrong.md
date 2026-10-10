@@ -67,9 +67,19 @@ aegean review apply nt review.csv -o nt-reviewed.json --reviewer "Your Name"
 
 The `needs_review` column reads an explicit review flag when present, otherwise
 falls back to identity/unresolved lemma provenance or the legacy unresolved signal.
-`--only-needs-review` exports just those flagged rows; it applies no confidence
+`--selection flagged` exports just those flagged rows; it applies no confidence
 threshold and can omit wrong resolved lemmas, POS tags, or dependencies. Export
-all rows for a complete review. Applying the corrections keeps each prior value
+all rows (the default `--selection all`) for a complete review.
+
+For a broader lemma review, `--selection unverified` includes words without an
+explicit `lemma_verified=true`, including resolved predictions and source
+annotations with no verification metadata. Only the string `true`
+(case-insensitive) excludes a word. This does not change its `needs_review` flag.
+Applying a changed lemma records verification; leaving the correction blank,
+entering the same lemma, or correcting only POS does not verify a lemma. A
+verified lemma does not certify the other annotation fields.
+
+Applying the corrections keeps each prior value
 under a `<field>__pred` key and stamps who reviewed it and a provenance note, so the corrected
 corpus records exactly what a human changed. See the workflow in [Recipes](Recipes) and the
 table format in the Review section of the [CLI reference](CLI).

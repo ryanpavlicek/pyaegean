@@ -610,6 +610,11 @@ The review CSV also carries guarded `form_*` columns and a `form_state_json`
 column when a token has typed editorial forms. Applying corrections refuses a
 row whose typed state no longer matches the exported corpus, while an older
 review file without those columns remains compatible.
+`to_review_table` accepts `selection="all"` (the default), `"flagged"` (the
+existing review flag), or `"unverified"` (words without an explicit
+`lemma_verified=true`). Unverified rows include resolved predictions and source
+annotations lacking verification metadata. The selection changes which rows
+are exported, not their flags or annotations.
 The full annotate → export → correct → apply loop, showing the `<field>__pred`
 audit trail land on the token:
 
@@ -626,7 +631,7 @@ tok = annotated.get("frag1").tokens[3]             # ἐγένετο — the bas
 print("after annotate:", dict(sorted(tok.annotations.items())))
 
 work = pathlib.Path(tempfile.mkdtemp())
-n = to_review_table(annotated, work / "review.csv", only_needs_review=True)
+n = to_review_table(annotated, work / "review.csv", selection="flagged")
 print("rows exported:", n)
 
 # simulate the reviewer: fill correct_lemma on the ἐγένετο row

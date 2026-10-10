@@ -57,9 +57,9 @@ def test_to_review_table_shape_and_greek(tmp_path) -> None:
     assert body["νόμου"][cols["source_citation"]] == "Test 2026"
 
 
-def test_only_needs_review_filters_rows(tmp_path) -> None:
+def test_flagged_selection_filters_rows(tmp_path) -> None:
     path = tmp_path / "flagged.csv"
-    n = to_review_table(_corpus(), path, only_needs_review=True)
+    n = to_review_table(_corpus(), path, selection="flagged")
     assert n == 1
     with open(path, encoding="utf-8-sig", newline="") as f:
         rows = list(csv.DictReader(f))

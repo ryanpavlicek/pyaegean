@@ -136,8 +136,10 @@ examples a class can read.*
 - **Verbosity.** Keep full `TokenRecord`s. `review_recommended` finds only
   identity/unresolved lemmas; a false flag does not establish correctness. Triage with it,
   and for anything you will publish, run the human-in-the-loop
-  step: `aegean review export` (add `--only-needs-review` to see just the flagged
-  tokens), correct the table, and `aegean review apply`. The corrected corpus
+  step: `aegean review export` (add `--selection flagged` for flagged tokens or
+  `--selection unverified` for words without recorded lemma verification),
+  correct the table, and `aegean review apply`. Use the default `all` selection
+  when reviewing all annotation fields. The corrected corpus
   records what a human changed. See
   [When the Tool Is Wrong](When-the-Tool-Is-Wrong).
 - **Cite.** `cite()` on the exact subset, `aegean.__version__`, and an

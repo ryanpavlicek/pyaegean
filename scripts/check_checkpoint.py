@@ -305,6 +305,7 @@ def build_commands(
             "tests/test_surface_parity.py",
             "tests/test_benchmark_claims.py",
             "tests/test_corpus_facts.py",
+            "tests/test_independent_review.py",
         ),
         "code": (),
         "public-api": ("tests/test_check_api.py", "tests/test_surface_parity.py"),

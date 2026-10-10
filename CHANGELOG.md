@@ -4,6 +4,18 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- Review export accepts `selection="all"`, `"flagged"`, or `"unverified"` in
+  `to_review_table`, and `--selection` in the CLI. The default still exports all
+  eligible word rows. `flagged` replaces `only_needs_review=True` and
+  `--only-needs-review`; `unverified` includes words without an explicit
+  `lemma_verified=true`, even when their lemmas are resolved. Selection does not
+  change the CSV's review flags or certify POS, morphology, or dependencies.
+- Documentation checkpoints also verify the review manifest's document hashes.
+
 ## 0.59.0 (2026-08-12)
 
 ### Changed

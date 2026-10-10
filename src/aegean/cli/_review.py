@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Literal, cast
 
 import typer
 
@@ -27,9 +28,11 @@ review_app = typer.Typer(
 def export(
     corpus: str = CORPUS_ARG,
     output: Path = typer.Option(..., "--output", "-o", help="Destination .csv review table."),
-    only_needs_review: bool = typer.Option(
-        False, "--only-needs-review",
-        help="Write only flagged rows (normally identity/unresolved lemmas); not all possible errors.",
+    selection: str = typer.Option(
+        "all", "--selection",
+        help="Rows to export: 'all', 'flagged' (review flag), or 'unverified' "
+             "(lemma_verified is not the string 'true', case-insensitive). "
+             "No confidence threshold.",
     ),
     annotate: bool = typer.Option(
         False, "--annotate",
@@ -46,6 +49,9 @@ def export(
 
     Open it in a spreadsheet, fill the ``correct_*`` columns, then feed it to
     ``aegean review apply``. Example: aegean review apply nt reviewed.csv -o nt-fixed.json"""
+    if selection not in ("all", "flagged", "unverified"):
+        raise fail("--selection must be 'all', 'flagged', or 'unverified'")
+
     from aegean import greek
     from aegean.io import to_review_table
 
@@ -57,7 +63,9 @@ def export(
                   neural_lemmatizer=neural_lemmatizer, neural=neural)
         c = greek.annotate_corpus(c)
     with writing(output):
-        n = to_review_table(c, output, only_needs_review=only_needs_review)
+        n = to_review_table(
+            c, output, selection=cast(Literal["all", "flagged", "unverified"], selection)
+        )
     print(f"wrote {n} review rows to {output}", file=sys.stderr)
     # When the corpus was annotated for this export, apply must annotate too, or the
     # accepted machine values would be missing from the corrected corpus.
