@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Reading-text excerpt from Plato, Euthyphro 2a-b; speaker identities/labels unchanged.
+     Source: PerseusDL/canonical-greekLit at d4fab69a2c26091454e999c994112b053defc512,
+     data/tlg0059/tlg001/tlg0059.tlg001.perseus-grc1.xml.
+     Digitization: Perseus Digital Library, CC BY-SA 4.0.
+     The wrapper/header are reduced for regression use; this is source evidence,
+     not a newly expert-annotated linguistic benchmark. -->
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader><fileDesc><titleStmt><title xml:lang="grc">Εὐθύφρων</title><author>Plato</author></titleStmt></fileDesc></teiHeader>
+  <text xml:lang="grc"><body><div type="edition"><div n="2" subtype="section" type="textpart">
+<p><said who="#Εὐθύφρων"><milestone n="2" unit="page" resp="Stephanus"/><milestone n="2a" unit="section" resp="Stephanus"/><label>ΕΥΘ.</label>
+τί νεώτερον, ὦ Σώκρατες, γέγονεν, ὅτι σὺ τὰς ἐν Λυκείῳ καταλιπὼν διατριβὰς ἐνθάδε νῦν διατρίβεις περὶ τὴν τοῦ βασιλέως στοάν; οὐ γάρ που καὶ σοί γε δίκη τις οὖσα τυγχάνει πρὸς τὸν βασιλέα ὥσπερ ἐμοί.</said></p>
+<p><said who="#Σωκράτης"><label>ΣΩ.</label>
+οὔτοι δὴ Ἀθηναῖοί γε, ὦ Εὐθύφρων, δίκην αὐτὴν καλοῦσιν ἀλλὰ γραφήν.</said></p>
+<p><said who="#Εὐθύφρων"><milestone n="2b" unit="section" resp="Stephanus"/><label>ΕΥΘ.</label>
+τί φῄς; γραφὴν σέ τις, ὡς ἔοικε, γέγραπται· οὐ γὰρ ἐκεῖνό γε καταγνώσομαι, ὡς σὺ ἕτερον.</said></p>
+  </div></div></body></text>
+</TEI>

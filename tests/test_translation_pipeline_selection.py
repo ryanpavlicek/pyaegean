@@ -122,7 +122,7 @@ def test_explicit_pipeline_isolation_survives_concurrent_translation() -> None:
     def run(pipeline: _StubPipeline) -> tuple[str, str]:
         client = _CapturingClient()
         result = translate.translate("λόγος", greek_pipeline=pipeline, client=client)
-        return client.prompts[0], result.grounding[0].content
+        return client.prompts[0], next(g.content for g in result.grounding if g.source == "analysis:morphology")
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         left, right = pool.map(run, (first, second))
@@ -232,7 +232,7 @@ def test_explicit_pipeline_validation_and_lemma_mode() -> None:
     items = translate.grounding_for(
         "λόγος", "greek", mode="lemma", greek_pipeline=pipeline
     )
-    assert [item.content for item in items] == ["λόγος → lemma chosen-lemma"]
+    assert [item.content for item in items if item.source == "lemmatizer"] == ["λόγος → lemma chosen-lemma"]
     assert pipeline.calls == [False]
 
     with pytest.raises(ValueError, match="only valid when script='greek'"):

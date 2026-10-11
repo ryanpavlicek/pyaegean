@@ -213,7 +213,7 @@ def test_mcp_balance_accounts_equals_view_balance_rows(corpus) -> None:  # type:
     assert mcp_rows == balance_rows(doc)
     # and the fixed grand-total row is present with the corrected computed sum
     grand = next(r for r in mcp_rows if r["marker"] == "PO-TO-KU-RO")
-    assert grand == {
+    expected = {
         "doc": "HT122b",
         "marker": "PO-TO-KU-RO",
         "stated": 97.0,
@@ -222,6 +222,9 @@ def test_mcp_balance_accounts_equals_view_balance_rows(corpus) -> None:  # type:
         "items": 1,
         "balances": False,
     }
+    assert {key: grand[key] for key in expected} == expected
+    assert grand["exact_difference"] == "-32"
+    assert not grand["exact_balances"]
 
 
 def test_mcp_balance_accounts_whole_corpus_flattens_view_rows(corpus) -> None:  # type: ignore[no-untyped-def]

@@ -20,6 +20,7 @@ import json
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +52,8 @@ def to_plain(obj: Any) -> Any:
         return {f.name: to_plain(getattr(obj, f.name)) for f in dataclasses.fields(obj)}
     if isinstance(obj, enum.Enum):
         return obj.value
+    if isinstance(obj, Fraction):
+        return str(obj)
     if isinstance(obj, dict):
         return {str(k): to_plain(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set, frozenset)):

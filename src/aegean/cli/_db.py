@@ -140,6 +140,12 @@ def search(
     ),
     query: str = typer.Argument(..., help="Text to find — a whole token by default (e.g. KU-RO)."),
     limit: int = typer.Option(50, "--limit", "--top", help="Max hits; 0 = all."),
+    view: str | None = typer.Option(
+        None, "--view", help="Lexical view: surface, normalized, or lemma; omitted preserves legacy search."
+    ),
+    statuses: str | None = typer.Option(
+        None, "--statuses", help="Comma-separated reading statuses; default includes all."
+    ),
     substring: bool = typer.Option(
         False, "--substring",
         help="Match the query within tokens (KU-RO also finds PO-TO-KU-RO) instead of the "
@@ -156,12 +162,19 @@ def search(
     import sqlite3
 
     from aegean.db import search as db_search
+    from aegean.core.word_views import validate_view
 
     path = _resolve_db(path)
     if not path.exists():
         raise fail(f"no database at {path} (build one with `aegean db build`)")
     try:
-        hits = db_search(path, query, limit=limit, mode="substring" if substring else "token")
+        hits = db_search(
+            path, query, limit=limit, mode="substring" if substring else "token",
+            view=validate_view(view) if view is not None else None,
+            statuses=statuses.split(",") if statuses is not None else None,
+        )
+    except ValueError as exc:
+        raise fail(str(exc)) from None
     except sqlite3.Error:
         raise fail(
             f"{path} is not a corpus database (build one with `aegean db build`)"

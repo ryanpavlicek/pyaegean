@@ -410,7 +410,7 @@ Fq-series vocabulary. The receipt that makes the table citable:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.60.0
+print(aegean.__version__)          # 0.61.0
 print(damos.fingerprint()[:16])    # ca93e51fd26a8f6c
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -437,8 +437,8 @@ then test a hunch against a null model:
 
 ```bash
 aegean balance lineara HT13
-#  doc    marker   stated   computed   diff   balances
-#  HT13   KU-RO    130.5    131.0      0.5    NO
+#  doc    marker   stated   computed   diff   balances   eligible (tolerance)
+#  HT13   KU-RO    130.5    131.0      0.5    NO         yes
 
 aegean stats lineara --signs --top 5
 #  item   count
@@ -502,8 +502,8 @@ aegean geo lineara --word KU-RO
 ### G · The AI-assisted translator (key-gated)
 
 *(Grounding runs locally once its selected model and dictionary assets are
-cached; generation needs a hosted provider key or a no-key local server.)* Derive
-the grammar locally, hand the model the analysis, and keep the exploratory label.
+cached; generation needs a hosted provider key or a no-key local server.)* Supply
+provisional local analysis to the model and keep the exploratory label.
 The grounding is fully inspectable before generation:
 
 ```python
@@ -514,15 +514,13 @@ for item in translate.grounding_for(
     "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς.", "greek",
     mode="morphology", greek_pipeline=neural,
 ):
-    print(item)
-# Clause skeleton: main predicate 'ἐγείρει' (ἐγείρω, active pres sg 3rd); subject θεὸς; object νεκρούς
-# ὁ = ὁ (det, nom sg m)
-# δὲ = δέ (adv)
-# θεὸς = θεός (noun, nom sg m)
-# ἐγείρει = ἐγείρω (verb, sg active pres ind 3rd)
-# τοὺς = ὁ (det, acc pl m)
-# νεκρούς = νεκρός (noun, acc pl m)
+    print(item.render())  # content, evidence status, source, and provenance
 ```
+
+The first item reports backend availability and coverage. Token evidence retains
+raw UD features; clause evidence preserves the supplied dependency links,
+including subordinate predicates and explicit coordination. These are
+predictions, and an omitted or wrong attachment is not silently repaired.
 
 With a key configured (recipe 7 lists the providers), translate with that
 grounding, then again with the post-hoc check that drafts first and repairs
@@ -532,12 +530,12 @@ against the analysis:
 aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural
 aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρούς." --greek-backend neural --verify --trace
 # output is provider- and model-dependent, so none is shown here; every result
-# arrives labeled [EXPLORATORY · translate · <provider>], and -o keeps the
-# label and the grounding trace alongside the text
+# arrives labeled [EXPLORATORY · translate · <provider>/<model>]. Translation
+# text exports include the audit trace; JSON retains the data and checking draft.
 ```
 
 Every answer is a labeled hypothesis, never a reading; `result.trace()` separates
-the locally derived facts the model received from the backend configuration it did
+the provisional evidence the model received from the backend configuration it did
 not receive. Mode, backend, failure-policy choice, and what grounding can and cannot
 fix are covered in recipe 26.
 
@@ -628,6 +626,16 @@ aegean plot balance lineara -o balance.png      # the same picture: stated vs co
 The reconciliation is heuristic (section boundaries are inferred); a
 discrepancy is a lead to inspect, not a verdict. See
 [Linear A → Accounting](Linear-A).
+
+For rational equality, use `balance_check(doc, exact=True)` or
+`aegean balance lineara --exact --json`. The default `balances` retains its
+`1e-6` float cutoff. `account_eligible` is a separate teaching selection: intact
+text and at least one qualifying total. Its default allowance is
+`max(1, 0.10 * abs(stated_total))`; `--tolerance 0` still retains the absolute-one
+floor, while `--exact` removes the allowance. JSON retains the rational
+`exact_difference`, `exact_balances`, and eligibility policy. A total can fail
+arithmetic equality while the document qualifies under the teaching tolerance;
+neither result verifies readings or metrology.
 
 ## 2 · Map a word's distribution
 
@@ -817,9 +825,10 @@ aegean cache                              # see what's cached; --clear to wipe
 
 ## 7 · Ask a grounded question — and audit the answer
 
-*(Key-gated: needs a provider extra, e.g. `pip install "pyaegean[anthropic]"`,
-and its API key.)* Ground the model in corpus facts, then **audit** what it was
-given with the provenance trace:
+*(Hosted generation needs a provider extra, e.g.
+`pip install "pyaegean[anthropic]"`, and its API key. The `local` provider instead
+needs a running OpenAI-compatible server and no key.)* Ground the model in corpus
+facts, then **audit** what it was given with the provenance trace:
 
 ```python
 import aegean
@@ -1017,6 +1026,16 @@ Linear A they include `site-is`, `scribe-is`, `period-is`, `support-is`,
 `has-image`, `word-prefix`, `word-suffix`, `word-contains-sign`,
 `word-cooccurs-with`, `word-sign-pattern`, and more. The same engine is
 available in Python via `aegean.analysis.run_query`. See [Analysis](Analysis).
+
+The word table above uses **document frequency**, the default for queries;
+`KU-RO` occurs in 34 inscriptions. `--count-unit token` instead counts its 37
+tokens. `--view surface|normalized|lemma` selects explicit comparison keys;
+normalized keys preserve diacritics and iota subscript, and missing lemmas are
+excluded without generating analysis. `--statuses` filters both each word's
+reading status and every typed editorial segment. Query JSON records the
+denominator, exclusions, normalization, and count unit in `metadata`; use that
+receipt alongside the rows. Frequency tables default to token counts; obtain
+the corresponding receipt with `aegean stats ... --details --json`.
 
 ## 13 · Where does a word concentrate? (dispersion)
 
@@ -1254,9 +1273,10 @@ aegean db search la.sqlite "KU-RO"
 
 The database has `documents` and `tokens` tables plus an FTS5 index, so you can
 also open it in any SQLite client and run ordinary SQL. The same file is what
-`aegean export CORPUS -f sqlite -o …` produces. Close external SQLite connections
-before overwriting an existing database; see
-[Limitations](Limitations#known-workflow-defects) and [CLI → db](CLI).
+`aegean export CORPUS -f sqlite -o …` produces. Replacement of an existing
+database uses a SQLite transaction; WAL readers keep their previous snapshot.
+A busy writer or blocking reader can cause a lock error without replacing the
+existing data: finish the blocking transaction and retry. See [CLI → db](CLI).
 
 ## 20 · Look up one sign in the inventory
 
@@ -1313,7 +1333,7 @@ aegean data remove damos-corpus   # delete a downloaded dataset (--all clears ev
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.60.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.61.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Paste `aegean --version` and the relevant lines of `aegean data versions` into
@@ -1422,7 +1442,10 @@ A-TA-I-*301-WA-JA,0,704,11,677,15.775475780295547,-4.579981551119314,7.132101995
 Swap the extension for `.json` to get the same data as records, or `.txt` for the
 human-readable table you'd see on screen. The same `-o` is on the `ai` commands
 too (`aegean ai translate … -o out.json`), where the file keeps the exploratory
-label and grounding trace alongside the text: see [AI Layer](AI-Layer). See
+flag, provenance, structured data, and any checking draft. Translation `.txt`
+exports include the labeled text and full audit trace automatically, even in
+concise style. Other AI `.txt` exports contain the labeled response; see
+[AI Layer](AI-Layer). See
 [Analysis](Analysis) and [CLI](CLI).
 
 ## 24 · Save a query as a reusable corpus, then reload it
@@ -1529,8 +1552,9 @@ data lacks is honestly absent: `greek.catalog("Sappho")` returns `[]`.
 **Or bring your own text.** Have a passage on disk already? `import` turns a
 `.txt`/folder/`.csv` into a real corpus that then works anywhere a corpus is
 accepted (recall the rule at the top of the page): `stats`, `query`, `export`,
-the Greek pipeline, all of it. Greek text goes through the Greek tokenizer
-(punctuation stripped, elision handled):
+the Greek pipeline, all of it. By default, imports retain decoded source text,
+punctuation, numerals, foreign text, and exact character alignment. Greek words
+remain accessible separately through `Document.words` and `Corpus.iter_words()`:
 
 ```bash
 # john1.txt holds: ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος.
@@ -1556,6 +1580,8 @@ from aegean import io, greek
 text = "ἐν ἀρχῇ ἦν ὁ λόγος, καὶ ὁ λόγος ἦν πρὸς τὸν θεόν, καὶ θεὸς ἦν ὁ λόγος."
 corpus = io.from_text(text, script_id="greek", doc_id="john1.1")
 print(len(corpus.documents[0].words))     # 17
+print(len(corpus.documents[0].tokens))    # 20, including two commas and a period
+print(corpus.documents[0].source_text == text)  # True
 print(corpus.word_frequencies()[:3])      # [('λόγος', 3), ('ἦν', 3), ('ὁ', 3)]
 
 for r in greek.pipeline(text)[:3]:
@@ -1576,16 +1602,41 @@ for the import paths and
 [Finding any other work](Greek-Works-and-Books#3-finding-any-other-work) for the
 full catalogue.
 
+Use `token_view="words"` in the import functions or CLI `--token-view words`
+only when you want the former word-only import; it discards raw text and spans.
+The default preserves punctuation as `PUNCT`, numbers as `NUMERAL`, and foreign
+text as `UNKNOWN`, excluding them from Greek lexical counts without deleting
+them from the imported source.
+
+**Review one field at a time.** Export existing source annotations directly, or
+add `--annotate` to generate predictions before exporting. For the imported
+corpus above, a baseline review round-trip is:
+
+```bash
+aegean review export john1.json --annotate --selection unverified -o review.csv
+# Edit review.csv, then replay the same annotation options:
+aegean review apply john1.json review.csv --annotate -o reviewed.json
+```
+
+Set `decision_lemma`, `decision_pos`, or `decision_morph` to `accept`, `correct`,
+`defer`, or `reject`. Acceptance explicitly reviews an unchanged prediction;
+correction also requires a different `correct_*` value. Add reviewer identity,
+`reviewer_note`, and `reviewer_evidence`. Accept/correct verifies only that field;
+defer/reject preserves its prediction as unverified. Blank decisions keep the
+correction-only behavior and never imply approval. Stable token identities and
+source alignment bind the table to the same corpus; repeat any backend flags
+used at export. Predictions and decision history survive application, and
+reanalysis marks affected decisions stale. See [Greek NLP](Greek-NLP).
+
 ---
 
 ## 26 · Choose a Greek AI translation workflow
 
 *(Grounding runs locally once its selected model and dictionary assets are
 cached; only the final generation needs a hosted provider key or a no-key local
-server.)* A specialist toolkit should make a general model translate
-Ancient Greek **better**, not worse. The lever is `translate(..., mode=...)`: how
-much locally-derived analysis you hand the model. Pick the mode by how hard the
-passage is.
+server.)* `translate(..., mode=...)` selects how much provisional local evidence
+to hand the model. Choose using the passage and the available analysis; a wrong
+parse or dictionary candidate can mislead the model.
 
 ```python
 from aegean import greek, translate
@@ -1594,8 +1645,25 @@ neural = greek.GreekPipeline.neural()  # model-predicted morphology + UD parse
 
 text = "καὶ ἡγοῦμαι σκύβαλα εἶναι, ἵνα Χριστὸν κερδήσω."   # Philippians 3:8
 result = translate.translate(text, mode="morphology", greek_pipeline=neural)
-print(result.labeled())        # [EXPLORATORY · translate · <provider>] <translation>
+print(result.labeled())        # [EXPLORATORY · translate · <provider>/<model>] plus notes
 ```
+
+The default `style="annotated"` displays model-reported uncertainty and change
+notes. `style="concise"` keeps the reading short and signals the retained notes.
+For structured responses, `result.text` is the translation alone, while
+`result.data` retains `uncertainties`, `changes` (before/after, reason, evidence),
+and the exact `raw_response`. Check `format_status` before processing these
+fields: malformed responses remain verbatim, with unavailable fields set to
+`None`, and no automatic paid repair call is made. A single complete outer JSON
+fence is decoded locally while its raw response is retained.
+
+`verify=True` adds a second model call: an ungrounded draft, followed by a check
+against the selected full grounding. It remains exploratory, and the complete
+draft and its provenance survive in `result.draft`. An exact wording comparison
+flags differences omitted from the model's change report; it does not assess
+translation quality. Save `result.to_json("translation.json")` or inspect
+`result.trace()` to retain both stages. CLI `--style concise --verify -o out.json`
+keeps the same audit data; translation `.txt` exports include the full trace.
 
 Grounding is best-effort by default: required-stage failures are recorded in
 `result.grounding_runtime` and `result.trace()`. Set `grounding_failure="strict"`
@@ -1603,14 +1671,14 @@ Grounding is best-effort by default: required-stage failures are recorded in
 analysis fails. Optional dictionaries and rarity data remain optional. See
 [AI Layer](AI-Layer#hybrid-translation).
 
-Four modes, by difficulty:
+Four grounding modes:
 
 | mode | what the model is told | reach for it when |
 |------|------------------------|-------------------|
-| `"morphology"` *(default)* | lemma, part of speech, **voice**, case-role, clause skeleton, rare-word flags | a default starting point for supplying predicted grammar; it can reduce voice, subject/object, and case errors |
-| `"full"` | morphology **plus concise dictionary glosses** on the rare words | rare, technical, poetic, or documentary vocabulary the model will not know |
+| `"morphology"` *(default)* | available token analyses, raw features, clause links, and optional rare-word flags | a starting point for supplying provisional grammar |
+| `"full"` | morphology plus optional concise dictionary candidates | vocabulary that needs contextual lexical review |
 | `"lemma"` | lemmas + gated glosses (legacy) | reproducing older behaviour |
-| `"none"` | the bare text | a top-tier model on a famous, easy passage |
+| `"none"` | no automatic grounding; explicitly supplied evidence is retained | when automatic analysis is unavailable or unsuitable |
 
 The grounding is fully inspectable locally without a provider key; first use of
 the selected model or dictionary can fetch its assets:
@@ -1621,20 +1689,25 @@ greek.use_lsj(); greek.use_lexicon("abbott-smith")   # a concise, common-sense-f
 for item in translate.grounding_for(
     text, "greek", mode="full", greek_pipeline=neural
 ):
-    print(item)
-# Clause skeleton: main predicate 'ἡγοῦμαι' (ἡγέομαι, middle pres sg 1st); object σκύβαλα
-# σκύβαλα = σκύβαλον (noun, acc pl n)
-# Rare / easily-mistranslated words: κερδήσω, σκύβαλα
-# σκύβαλα (σκύβαλον): refuse                       ← the meaning a weak model misses
+    print(item.render())  # provisional analysis and dictionary candidates with provenance
 ```
 
-That last line is the point: without it a small model renders σκύβαλα as
-"scourges"; with it, "refuse." The glosses in `"full"` come from **concise,
+The glosses in `"full"` come from **concise,
 common-sense-first** dictionaries (Middle Liddell, Cunliffe for Homer,
 Abbott-Smith for the New Testament), rarity-gated to the words that matter. They
 are deliberately *not* the first sense of LSJ, a historical lexicon whose opening
 sense is frequently the archaic one (καιρός "a row of thrums in the loom" comes
 before "the right time").
+
+Dictionary matches are candidates, not verified contextual senses. Raw tense
+and aspect features retain their supplying convention; a morphological
+`Tense=Past` does not establish past event time in a subjunctive, infinitive, or
+participle, and missing aspect is not filled in as an aorist.
+
+Explicit source annotations and current field-level review decisions can
+supplement predictions through `grounding=...`; `ai.annotation_evidence(corpus)`
+builds such items from existing annotations. Their status and provenance reach
+the model without certifying or silently replacing automatic predictions.
 
 **What grounding does, and what it does not.** Morphology grounding can reduce
 grammatical errors (voice, subject/object, case), and `"full"` glosses can reduce
@@ -1643,8 +1716,8 @@ and on the model and passage. Grounding will not make a weak model
 an expert, and Ancient Greek translation has genuine interpretive range (no two
 published Homers agree), so every result is a **labeled, provenanced hypothesis**,
 never a verdict. `ai.grounding_regime(text, corpus=...)` gives an exploratory
-help/neutral/hurt signal, but the simple rule holds: morphology always, glosses
-when the vocabulary is rare. See [AI Layer](AI-Layer).
+help/neutral/hurt signal; inspect the analysis and relevant source context before
+using it. No mode guarantees a better translation. See [AI Layer](AI-Layer).
 
 ## 27 · Search 57,000 papyri without loading them (DDbDP)
 
@@ -1681,7 +1754,8 @@ search and stream paths above.
   Inspect the documents they point you at.
 - **Cross-script sound-matching reads as a ranking,** not an absolute score
   (recipe 5); defective syllabic spelling inflates distances.
-- **The AI layer is exploratory and key-gated** (recipe 7). Every answer is a
+- **The AI layer is exploratory** (recipe 7). Hosted generation needs provider
+  credentials; the local backend needs a running server. Every answer is a
   labeled hypothesis with a provenance trace; never quote it as a reading.
 
 See [Limitations](Limitations) for the full, honest list, and

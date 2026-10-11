@@ -129,7 +129,7 @@ def _parse_ref(ref: str) -> tuple[int, int | None, int, int | None]:
 
     def num(s: str) -> int:
         s = s.strip()
-        if not s.isdigit():
+        if not s.isascii() or not s.isdigit() or int(s) < 1:
             raise ValueError(
                 f"malformed NT ref {ref!r}: use '1' (chapter) or '1.1-1.18' (verses)"
             )
@@ -153,6 +153,8 @@ def _parse_ref(ref: str) -> tuple[int, int | None, int, int | None]:
             ec, ev = sc, num(hi)
         else:                          # bare hi after a chapter lo -> chapter
             ec, ev = num(hi), None
+        if ec < sc or (ec == sc and sv is not None and ev is not None and ev < sv):
+            raise ValueError(f"descending NT ref {ref!r}: range end precedes its start")
         return sc, sv, ec, ev
     sc, sv = part(ref)
     return sc, sv, sc, sv
@@ -215,6 +217,25 @@ def _select(records: list[dict[str, Any]], book: str | None, ref: str | None) ->
     sc = sv = ec = ev = None
     if ref is not None:
         sc, sv, ec, ev = _parse_ref(ref)
+        matching = [rec for rec in records if rec["book"] == osis]
+        available_chapters = {int(rec["chapter"]) for rec in matching if rec["tokens"]}
+        missing_chapters = [chapter for chapter in range(sc, ec + 1) if chapter not in available_chapters]
+        if missing_chapters:
+            raise ValueError(
+                f"no New Testament text matched {osis} ref {ref!r}: "
+                f"chapter(s) {', '.join(str(chapter) for chapter in missing_chapters)} "
+                "are unavailable in this source"
+            )
+        for chapter, verse in ((sc, sv), (ec, ev)):
+            at_chapter = [rec for rec in matching if int(rec["chapter"]) == chapter]
+            if not at_chapter or (verse is not None and not any(
+                int(token["v"]) == verse for rec in at_chapter for token in rec["tokens"]
+            )):
+                endpoint = str(chapter) + (f".{verse}" if verse is not None else "")
+                raise ValueError(
+                    f"no New Testament text matched {osis} ref {ref!r}: "
+                    f"endpoint {endpoint} is unavailable in this source"
+                )
 
     docs: list[Any] = []
     for rec in records:
@@ -243,7 +264,32 @@ def _select(records: list[dict[str, Any]], book: str | None, ref: str | None) ->
     return docs
 
 
-def _provenance(meta: dict[str, Any], *, offline: bool) -> Any:
+def _selection_scope(docs: list[Any], book: str | None, ref: str | None, *, offline: bool) -> str:
+    """Name the selected passages, including the actual extent of an offline sample."""
+    if book is not None and ref is not None:
+        sc, sv, ec, ev = _parse_ref(ref)
+        start = str(sc) + (f".{sv}" if sv is not None else "")
+        end = str(ec) + (f".{ev}" if ev is not None else "")
+        return f"{_resolve_book(book)} {start}" + (f"-{end}" if end != start else "")
+    if book is None and not offline:
+        return ""
+    chapters: dict[str, list[int]] = {}
+    for doc in docs:
+        source_ref = doc.tokens[0].annotations["ref"].split(".")
+        chapters.setdefault(source_ref[0], []).append(int(source_ref[1]))
+    selected = []
+    for name, numbers in chapters.items():
+        numbers = sorted(set(numbers))
+        if len(numbers) > 1 and numbers == list(range(numbers[0], numbers[-1] + 1)):
+            extent = f"{numbers[0]}-{numbers[-1]}"
+        else:
+            extent = ",".join(str(number) for number in numbers)
+        selected.append(f"{name} {extent}")
+    scope = "; ".join(selected)
+    return f"Bundled sample: {scope}" if offline else scope
+
+
+def _provenance(meta: dict[str, Any], *, offline: bool, scope: str = "") -> Any:
     from ...core.provenance import Provenance
 
     notes = [
@@ -256,10 +302,13 @@ def _provenance(meta: dict[str, Any], *, offline: bool) -> Any:
             "Loaded from the bundled offline sample (John 1 + Philemon); call greek.load_nt(book) "
             "with network access (or set PYAEGEAN_NT_CORPUS_URL) for the full 27 books."
         )
+    bibliography = str(meta.get("cite", "Nestle, E. (1904). Novum Testamentum Graece."))
+    if scope:
+        notes.append(f"selected passages: {scope}")
     return Provenance(
         source="Nestle 1904 Greek NT — morphology/lemmas (biblicalhumanities/Nestle1904)",
         license=str(meta.get("license", "CC0-1.0 (morphology); base text public domain")),
-        citation=str(meta.get("cite", "Nestle, E. (1904). Novum Testamentum Graece.")),
+        citation=f"{scope}. {bibliography}" if scope else bibliography,
         url=str(meta.get("source_url", "https://github.com/biblicalhumanities/Nestle1904")),
         data_version=f"nt-corpus-v{meta.get('version', 1)}@{meta.get('source_commit', meta.get('generated', ''))}",
         notes=tuple(notes),
@@ -287,7 +336,10 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
 
     The full 27-book corpus is fetched to cache on first use (sha256-pinned CC0 asset, or
     ``PYAEGEAN_NT_CORPUS_URL``). When that asset is unavailable the bundled sample
-    (John 1 + Philemon) is used as an offline fallback (its provenance says so)."""
+    (John 1 + Philemon) is used as an offline fallback (its provenance says so).
+    ``cite()`` names the canonical book and selected chapter/verse range before the
+    unchanged edition bibliography. Missing range endpoints raise `ValueError` instead
+    of silently truncating a passage while citing the requested, unavailable endpoint."""
     import json as _json
 
     from ...core.corpus import Corpus
@@ -317,7 +369,8 @@ def load_nt(book: str | None = None, *, ref: str | None = None, force: bool = Fa
             "is available offline); the full 27-book corpus could not be fetched. Retry "
             "with network access, or set PYAEGEAN_NT_CORPUS_URL to a local copy."
         ) from None
-    provenance = _provenance(meta, offline=offline)
+    scope = _selection_scope(docs, book, ref, offline=offline)
+    provenance = _provenance(meta, offline=offline, scope=scope)
     return Corpus(docs, sign_inventory=greek_inventory(), provenance=provenance, script_id="greek")
 
 

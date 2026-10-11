@@ -218,6 +218,8 @@ class DetailPane(Static):
                     escape(
                         f"    {b.marker}: stated {b.stated:g} vs computed {b.computed:g} "
                         f"(diff {b.difference:+g}) — {verdict}"
+                        f"; account eligible (tolerance): {'yes' if b.account_eligible else 'no'}"
+                        f"; exact: {'yes' if b.account_eligible_exact else 'no'}"
                     )
                 )
         self.update("\n".join(out))

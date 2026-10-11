@@ -7,10 +7,9 @@ does not become supported merely because Python can import it. The release guard
 validates the reviewed current facade. For guides, tutorials, and
 the per-script handbooks, see the
 **[project wiki](https://github.com/ryanpavlicek/pyaegean/wiki)**; for what pyaegean is
-and where to begin, see the [home page](../index.md). Before editing corpora or
-combining review files, check the
-[known workflow defects](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations#known-workflow-defects),
-including the limits on WAL database replacement and CoNLL-U extension comments.
+and where to begin, see the [home page](../index.md). The
+[scholarly workflow](../scholarly-workflow.md) explains source preservation,
+optional review, counting choices, and translation evidence.
 
 ## Where to start
 
@@ -57,8 +56,10 @@ the CHANGELOG, manifest, docs, and tests must describe the resulting current API
 
 `aegean.io` also reads: turn a string, a `.txt` file, a folder of texts, or a CSV into a
 real `Corpus` with the full filter/query/analyse/export API. Greek text is run through the
-Greek tokenizer; other scripts split on whitespace. Everything here is offline and
-stdlib-only.
+Greek tokenizer with punctuation, foreign text, numerals, decoded source text, and
+aligned offsets retained; other scripts split on whitespace. Lexical accessors
+exclude nonword tokens. `token_view="words"` opts into the former lossy behavior.
+Everything here is offline and stdlib-only.
 
 ```python
 from aegean import io

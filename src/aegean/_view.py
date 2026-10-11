@@ -59,7 +59,9 @@ def _form_state_fields(state: Any) -> dict[str, Any]:
     }
 
 
-def balance_rows(document: "Document") -> list[dict[str, Any]]:
+def balance_rows(
+    document: "Document", *, exact: bool = False, tolerance: float = 0.10,
+) -> list[dict[str, Any]]:
     """Every reconciled total line of one document as row dicts.
 
     Wraps :func:`aegean.analysis.balance_check`, mapping each `BalanceCheck` to
@@ -67,12 +69,21 @@ def balance_rows(document: "Document") -> list[dict[str, Any]]:
     (KU-RO / TO-SO), ``stated`` (the written total), ``computed`` (the summed
     items), ``difference`` (computed minus stated), ``items`` (item count), and
     ``balances`` (whether the two agree). Empty when the document states no
-    total.
+    total. ``exact_difference`` is a rational string and ``exact_balances`` uses
+    no arithmetic allowance. ``account_eligible`` is the intact-account selection
+    under the requested mode; ``account_eligible_exact`` reports exact selection
+    alongside it. Eligibility needs at least one qualifying total and does not
+    certify the other totals. ``exact=True`` changes the reported ``balances`` to
+    rational equality; otherwise its legacy 1e-6 float cutoff remains. The
+    teaching tolerance keeps ``max(1, tolerance * abs(stated))`` even at zero.
 
     Exploratory: on the undeciphered scripts, section boundaries are heuristic
     and the metrology is contested, so a "balance" is evidence to weigh, not a
     reading."""
-    from .analysis import balance_check
+    from .analysis import balance_check, is_checkable_account
+
+    eligible = is_checkable_account(document, tolerance=tolerance, exact=exact)
+    eligible_exact = is_checkable_account(document, tolerance=tolerance, exact=True)
 
     return [
         {
@@ -83,8 +94,15 @@ def balance_rows(document: "Document") -> list[dict[str, Any]]:
             "difference": chk.difference,
             "items": chk.item_count,
             "balances": chk.balances,
+            "exact_balances": chk.exact_balances,
+            "exact_difference": str(chk.exact_difference),
+            "within_tolerance": abs(chk.difference) <= max(1.0, tolerance * abs(chk.stated_total)),
+            "account_eligible": eligible,
+            "account_eligible_exact": eligible_exact,
+            "eligibility_mode": "exact" if exact else "tolerance",
+            "tolerance": tolerance,
         }
-        for chk in balance_check(document)
+        for chk in balance_check(document, exact=exact)
     ]
 
 

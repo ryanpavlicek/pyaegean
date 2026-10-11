@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.60.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.61.0`.
 - **Cached datasets survive installation.** They live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
   and are reused while their hashes match the selected pins. If a release changes
@@ -364,8 +364,11 @@ io.from_text_dir("poems/")                            # one corpus from a folder
 io.from_csv("rows.csv", text_col="line", id_col="id") # one document per non-blank row
 ```
 
-Greek (and `nt`) text is run through the Greek word tokenizer (punctuation stripped);
-other scripts split on whitespace: pass `script_id="lineara"` etc. for those. `split`
+Greek (and `nt`) imports preserve decoded source text, punctuation, numerals,
+foreign text, and aligned token spans by default (`token_view="all"`). Use
+`doc.words` for the lexical view, or explicitly select the former lossy import
+with `token_view="words"` / CLI `--token-view words`. Other scripts use their
+own source-preserving token classification: pass `script_id="lineara"` etc. `split`
 controls how a file becomes documents: `"whole"` (default, one doc), `"paragraph"`
 (blank-line blocks), or `"line"`.
 
@@ -465,7 +468,8 @@ greek.scan_hexameter("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτ�
 # '—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—⏑⏑|—×'
 ```
 
-The scanner covers dactylic hexameter, elegiac pentameter, and iambic trimeter:
+The scanner covers dactylic hexameter, elegiac pentameter, iambic trimeter, and
+the seven fixed-template Aeolic line families in `greek.AEOLIC_LINES`:
 see [Metrical scansion](Greek-NLP#metrical-scansion).
 
 ---

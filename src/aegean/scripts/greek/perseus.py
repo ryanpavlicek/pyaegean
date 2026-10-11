@@ -21,12 +21,13 @@ import os
 import re
 import urllib.error
 import urllib.request
+from bisect import bisect_right
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
-from ...core.model import Document, DocumentMeta, Token
+from ...core.model import Document, DocumentMeta, Token, TokenKind
 from ...core.provenance import Provenance
 from ...data import DataNotAvailableError, FetchAborted, cache_dir
 
@@ -264,7 +265,7 @@ def _line_num(el: Any) -> int | None:
     return int(digits) if digits else None
 
 
-def _blocks(part: Any, line_lo: int | None = None, line_hi: int | None = None) -> list[str]:
+def _block_elements(part: Any, line_lo: int | None = None, line_hi: int | None = None) -> list[Any]:
     """The physical lines of a textpart: verse ``<l>`` lines, else ``<p>`` blocks,
     else the part's own flattened text. ``line_lo``/``line_hi`` (inclusive) filter
     verse ``<l>`` by their numeric ``n`` — the line-range selector."""
@@ -276,16 +277,141 @@ def _blocks(part: Any, line_lo: int | None = None, line_hi: int | None = None) -
                 return False
             return (line_lo is None or num >= line_lo) and (line_hi is None or num <= line_hi)
         lines_el = [el for el in lines_el if in_range(el)]
-    lines = [t for t in (_line_text(el) for el in lines_el) if t]
-    if lines:
-        return lines
+    lines_el = [el for el in lines_el if _line_text(el)]
+    if lines_el:
+        return lines_el
     if line_lo is None and line_hi is None:
-        paras = [t for t in (_line_text(p) for p in part.iter(f"{_TEI}p")) if t]
+        paras = [p for p in part.iter(f"{_TEI}p") if _line_text(p)]
         if paras:
             return paras
         whole = _line_text(part)
-        return [whole] if whole else []
+        return [part] if whole else []
     return []
+
+
+def _blocks(part: Any, line_lo: int | None = None, line_hi: int | None = None) -> list[str]:
+    return [_line_text(el) for el in _block_elements(part, line_lo, line_hi)]
+
+
+def _speaker_contexts(root: Any) -> dict[Any, dict[str, str]]:
+    """Preserve source speaker identity and a document-order speech locator.
+
+    Read identities from TEI ``said/@who`` or ``sp/@who``; a printed abbreviation is
+    retained separately and is never expanded into an invented person's name.
+    """
+    contexts: dict[Any, dict[str, str]] = {}
+    ordinal = 0
+
+    def walk(node: Any, inherited: dict[str, str]) -> None:
+        nonlocal ordinal
+        context = inherited
+        tag = node.tag.removeprefix(_TEI)
+        if tag in ("said", "sp"):
+            ordinal += 1
+            who = node.get("who") or ""
+            context = {"speech_id": f"{tag}[{ordinal}]"}
+            if who:
+                context.update(who=who, speaker=who.removeprefix("#"))
+            labels = [child for child in node if child.tag in (f"{_TEI}label", f"{_TEI}speaker")]
+            label = " ".join(_line_text(child) for child in labels).strip()
+            if label:
+                context["speaker_label"] = label
+        if tag in ("label", "speaker") and "speech_id" in context:
+            context = {**context, "role": "speaker"}
+        contexts[node] = context
+        for child in node:
+            walk(child, context)
+
+    walk(root, {})
+    return contexts
+
+
+def _render_events(events: list[tuple[str, Any]]) -> tuple[str, list[dict[str, str]]]:
+    """Render the existing whitespace-normalized reading view with source context."""
+    chunks = [event[1] for event in events if event[0] == "text"]
+    raw = "".join(text for text, _context in chunks)
+    contexts = [context for text, context in chunks for _ in text]
+    parts: list[str] = []
+    rendered_contexts: list[dict[str, str]] = []
+    for match in re.finditer(r"\S+", raw):
+        if parts:
+            parts.append(" ")
+            rendered_contexts.append({})
+        parts.append(match.group())
+        rendered_contexts.extend(contexts[match.start():match.end()])
+    return "".join(parts), rendered_contexts
+
+
+def _tokens_for_events(
+    blocks: list[list[tuple[str, Any]]], document_id: str,
+) -> tuple[list[Token], list[list[int]], str]:
+    from ...greek.tokenize import tokenize_aligned
+    import unicodedata
+
+    rendered = [_render_events(events) for events in blocks]
+    source = "\n".join(text for text, _context in rendered)
+    contexts: list[dict[str, str]] = []
+    starts: list[int] = []
+    for index, (text, char_contexts) in enumerate(rendered):
+        if index:
+            contexts.append({})
+        starts.append(len(contexts))
+        contexts.extend(char_contexts)
+    raw_tokens: list[Token] = []
+    for token in tokenize_aligned(source, document_id=document_id):
+        alignment = token.alignment
+        assert alignment is not None
+        # A label's markup boundary is significant even when an edition omits the
+        # separating space. Inline formatting within the same speech remains one word.
+        start = alignment.start_char
+        while start < alignment.end_char:
+            end = start + 1
+            while end < alignment.end_char and contexts[end] == contexts[start]:
+                end += 1
+            piece = source[start:end]
+            normalized = unicodedata.normalize("NFC", piece)
+            refined = replace(
+                alignment, source_token_id=f"{alignment.source_token_id}:context:{start}-{end}",
+                original_text=piece, start_char=start, end_char=end,
+                whitespace_before=alignment.whitespace_before if start == alignment.start_char else "",
+                normalized_text=normalized,
+                normalization_ops=("unicode:nfc",) if normalized != piece else (),
+            )
+            raw_tokens.append(replace(token, text=piece, alignment=refined))
+            start = end
+    tokens: list[Token] = []
+    lines: list[list[int]] = [[] for _ in rendered]
+    index = 0
+    while index < len(raw_tokens):
+        token = raw_tokens[index]
+        alignment = token.alignment
+        assert alignment is not None
+        context = contexts[alignment.start_char]
+        last = index
+        if context.get("role") == "speaker":
+            while last + 1 < len(raw_tokens):
+                following = raw_tokens[last + 1].alignment
+                assert following is not None
+                if contexts[following.start_char] != context:
+                    break
+                last += 1
+            final_alignment = raw_tokens[last].alignment
+            assert final_alignment is not None
+            label = source[alignment.start_char:final_alignment.end_char]
+            normalized = unicodedata.normalize("NFC", label)
+            alignment = replace(
+                alignment, source_token_id=f"{alignment.source_token_id}:speaker",
+                original_text=label, end_char=final_alignment.end_char,
+                normalized_text=normalized,
+                normalization_ops=("unicode:nfc",) if normalized != label else (),
+            )
+            token = replace(token, text=label, kind=TokenKind.UNKNOWN, alignment=alignment)
+        line_no = bisect_right(starts, alignment.start_char) - 1
+        position = len(tokens)
+        tokens.append(replace(token, line_no=line_no, position=position, annotations=dict(context)))
+        lines[line_no].append(position)
+        index = last + 1
+    return tokens, lines, source
 
 
 def _collect_notes(part: Any) -> tuple[str, ...]:
@@ -421,20 +547,22 @@ def _tokens_for(blocks: list[str]) -> tuple[list[Token], list[list[int]]]:
 
 def _make_doc(
     work: str, title: str, part: Any, id_suffix: str, name_suffix: str,
-    lo: int | None, hi: int | None,
+    lo: int | None, hi: int | None, contexts: dict[Any, dict[str, str]],
 ) -> Document | None:
     """One `Document` from a textpart (optionally a verse line-range ``lo``–``hi``);
     ``None`` when the selection contains no text."""
-    tokens, lines = _tokens_for(_blocks(part, lo, hi))
+    document_id = f"{work}:{id_suffix}"
+    blocks = [_milestone_events(el, contexts) for el in _block_elements(part, lo, hi)]
+    tokens, lines, source = _tokens_for_events(blocks, document_id)
     if not tokens:
         return None
     return Document(
-        id=f"{work}:{id_suffix}", script_id="greek", tokens=tokens, lines=lines,
+        id=document_id, script_id="greek", tokens=tokens, lines=lines, source_text=source,
         meta=DocumentMeta(name=f"{title} — {name_suffix}".strip(), notes=_collect_notes(part)),
     )
 
 
-def _milestone_events(el: Any) -> list[tuple[str, Any]]:
+def _milestone_events(el: Any, contexts: dict[Any, dict[str, str]]) -> list[tuple[str, Any]]:
     """Document-order stream of ``("ms", <milestone>)`` / ``("text", str)`` events over
     ``el``, skipping the editorial subtrees `_line_text` skips.
 
@@ -451,18 +579,19 @@ def _milestone_events(el: Any) -> list[tuple[str, Any]]:
         if node.tag == f"{_TEI}milestone":
             events.append(("ms", node))
         if node.text:
-            events.append(("text", node.text))
+            events.append(("text", (node.text, contexts.get(node, {}))))
         for child in node:
             walk(child)
             if child.tail:
-                events.append(("text", child.tail))
+                events.append(("text", (child.tail, contexts.get(node, {}))))
 
     walk(el)
     return events
 
 
 def _select_milestone(
-    part: Any, work: str, title: str, ref: str, marker: str
+    part: Any, work: str, title: str, ref: str, marker: str,
+    contexts: dict[Any, dict[str, str]],
 ) -> Document | None:
     """Resolve a ref that names a ``<milestone>`` marker rather than a ``<div>`` — a
     Stephanus sub-page (Plato ``"17a"``) or a Bekker line (Aristotle ``"1447a10"``) the
@@ -481,12 +610,12 @@ def _select_milestone(
 
     Returns ``None`` when no marker matches (the caller then raises the scheme-naming
     error), so a work with no such markers behaves exactly as before."""
-    events = _milestone_events(part)
+    events = _milestone_events(part, contexts)
     markers = [(i, ev[1]) for i, ev in enumerate(events) if ev[0] == "ms"]
     if not markers:
         return None
 
-    def span_to(start_i: int, boundary_unit: str | None, hi: int) -> str:
+    def span_to(start_i: int, boundary_unit: str | None, hi: int) -> list[tuple[str, Any]]:
         """Text from just after ``start_i`` to the next same-``boundary_unit`` marker
         before ``hi`` (else ``hi``)."""
         end = hi
@@ -494,14 +623,13 @@ def _select_milestone(
             if events[j][0] == "ms" and events[j][1].get("unit") == boundary_unit:
                 end = j
                 break
-        text = "".join(e[1] for e in events[start_i + 1 : end] if e[0] == "text")
-        return " ".join(text.split())
+        return events[start_i + 1:end]
 
-    text: str | None = None
+    selected: list[tuple[str, Any]] | None = None
     exact = [(i, m) for i, m in markers if (m.get("n") or "") == marker]
     if len(exact) == 1:
         i0, m0 = exact[0]
-        text = span_to(i0, m0.get("unit"), len(events))
+        selected = span_to(i0, m0.get("unit"), len(events))
     elif not exact:
         # page+line composite: the longest marker n that is a *proper* prefix of the ref
         prefixes = [
@@ -526,10 +654,10 @@ def _select_milestone(
             ]
             if len(fine) == 1:
                 j0, f0 = fine[0]
-                text = span_to(j0, f0.get("unit"), coarse_end)
-    if not text:
+                selected = span_to(j0, f0.get("unit"), coarse_end)
+    if not selected:
         return None
-    tokens, lines = _tokens_for([text])
+    tokens, lines, source = _tokens_for_events([selected], f"{work}:{ref}")
     if not tokens:
         return None
     return Document(
@@ -537,12 +665,14 @@ def _select_milestone(
         script_id="greek",
         tokens=tokens,
         lines=lines,
+        source_text=source,
         meta=DocumentMeta(name=f"{title} — {ref}".strip()),
     )
 
 
 def _select_ref(
-    edition_div: Any, work: str, title: str, ref: str, scheme: list[str]
+    edition_div: Any, work: str, title: str, ref: str, scheme: list[str],
+    contexts: dict[Any, dict[str, str]],
 ) -> Document:
     """Resolve ONE citation ref — a textpart (``"1"``), a nested div (``"1.2"``), or a
     verse line-range within one book (``"1.1-1.50"``); no comma — to a `Document`.
@@ -606,7 +736,7 @@ def _select_ref(
     # between the marker and the next. Only a single ref (no hyphen range) is milestone-
     # addressable; a range or multi-part path falls through to the scheme-naming error.
     if start == end and len(rest) == 1 and not rest[-1].isdigit():
-        milestone_doc = _select_milestone(part, work, title, ref, rest[-1])
+        milestone_doc = _select_milestone(part, work, title, ref, rest[-1], contexts)
         if milestone_doc is not None:
             return milestone_doc
 
@@ -619,7 +749,13 @@ def _select_ref(
             raise selected_no_text(None)
     lo = int(rest[-1]) if rest and rest[-1].isdigit() else None
     hi = int(end_rest[-1]) if end_rest and end_rest[-1].isdigit() else lo
-    doc = _make_doc(work, title, part, ref, ref, lo, hi)
+    if lo is not None:
+        present = {_line_num(el) for el in part.iter(f"{_TEI}l")}
+        for endpoint in (lo, hi):
+            if endpoint not in present:
+                error = selected_no_text(lo)
+                raise ValueError(f"{error}; range endpoint {endpoint} is unavailable in this edition")
+    doc = _make_doc(work, title, part, ref, ref, lo, hi, contexts)
     if doc is None:
         raise selected_no_text(lo)
     return doc
@@ -643,7 +779,8 @@ def _dedup_refs(ref: str) -> list[str]:
 
 
 def _select_refs(
-    edition_div: Any, work: str, title: str, ref: str, scheme: list[str]
+    edition_div: Any, work: str, title: str, ref: str, scheme: list[str],
+    contexts: dict[Any, dict[str, str]],
 ) -> list[Document]:
     """Resolve ``ref`` — one citation ref, or several comma-separated (``"1.1,1.5"``,
     ``"1,3"``) — to one `Document` per selection (source order preserved, exact
@@ -651,13 +788,13 @@ def _select_refs(
     span textparts (``"1.1,2.1"``) even though a single hyphen-range may not. ``scheme``
     is the work's declared citation levels, threaded to each entry for its errors."""
     if "," not in ref:
-        return [_select_ref(edition_div, work, title, ref, scheme)]
+        return [_select_ref(edition_div, work, title, ref, scheme, contexts)]
     if any(raw.strip() == "" for raw in ref.split(",")):
         raise ValueError(
             f"malformed work ref {ref!r}: an empty entry in the comma list "
             "(use e.g. '1.1,1.5' or '1,3')"
         )
-    return [_select_ref(edition_div, work, title, seg, scheme) for seg in _dedup_refs(ref)]
+    return [_select_ref(edition_div, work, title, seg, scheme, contexts) for seg in _dedup_refs(ref)]
 
 
 def parse_tei_work(
@@ -713,17 +850,18 @@ def parse_tei_work(
     )
     if edition_div is None:
         raise ValueError(f"{work}: no edition <div>")
+    contexts = _speaker_contexts(edition_div)
 
     if ref is not None:
         scheme = _citation_scheme(root)  # the declared citation levels, for the messages
-        return title, author, _select_refs(edition_div, work, title, ref, scheme)
+        return title, author, _select_refs(edition_div, work, title, ref, scheme, contexts)
 
     parts = [d for d in edition_div.iterfind(f"{_TEI}div")] or [edition_div]
     docs: list[Document] = []
     for i, part in enumerate(parts, start=1):
         n = part.get("n") or str(i)
         subtype = part.get("subtype") or "part"
-        doc = _make_doc(work, title, part, n, f"{subtype} {n}".strip(), None, None)
+        doc = _make_doc(work, title, part, n, f"{subtype} {n}".strip(), None, None, contexts)
         if doc is not None:
             docs.append(doc)
     return title, author, docs
@@ -779,7 +917,13 @@ def load_work(
         citation=f"{canon}. Digitized by the Perseus Digital Library / Open Greek and Latin.".lstrip(". "),
         url=f"https://github.com/{repo}/blob/{commit}/{_work_dir(work)}/{filename}",
         data_version=f"{repo}@{commit[:12]}",
-        notes=(f"fetched to cache; {scope}",),
+        notes=(
+            f"fetched to cache; {scope}",
+            "source_text preserves the whitespace-normalized TEI reading selection, not source XML bytes",
+            "speaker labels are UNKNOWN tokens excluded from linguistic word counts; "
+            "annotations preserve TEI who, speaker_label, and source speech_id",
+        ),
+        edition_fidelity="normalized,apparatus-stripped",
     )
     return Corpus(docs, None, provenance, "greek")
 

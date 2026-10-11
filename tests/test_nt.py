@@ -85,6 +85,48 @@ def test_load_nt_ref_selection(fetched: Path) -> None:
     assert {t.line_no for t in greek.load_nt("John", ref="1.1-2").documents[0].tokens} == {1, 2}
 
 
+@pytest.mark.parametrize("reference, scope", [("1.1", "John 1.1"), ("1.1-2", "John 1.1-1.2"), ("1", "John 1")])
+def test_nt_citation_names_the_selected_passage_and_retains_the_edition(fetched, reference, scope):
+    corpus = greek.load_nt("Jn", ref=reference)
+    assert corpus.cite().startswith(scope + ". Nestle, E. (1904). Novum Testamentum Graece.")
+    assert "https://github.com/biblicalhumanities/Nestle1904" in corpus.cite()
+    assert corpus.provenance.data_version == "nt-corpus-v1@abc123def456"
+    assert corpus.provenance.license == _ASSET["_meta"]["license"]
+
+
+@pytest.mark.parametrize("reference", ["0", "1.0", "1.2-1.1", "2-1", "1.1-1.99", "1-2"])
+def test_nt_rejects_invalid_or_unavailable_citation_endpoints(fetched, reference):
+    with pytest.raises(ValueError):
+        greek.load_nt("John", ref=reference)
+
+
+@pytest.mark.parametrize("reference", ["1-3", "1.1-3.1"])
+def test_a_partially_available_source_cannot_cite_an_unloaded_internal_chapter(fetched, reference):
+    payload = json.loads(fetched.read_text())
+    payload["documents"].append({
+        "id": "John 3", "book": "John", "chapter": 3,
+        "tokens": [{"t": "λόγος", "v": 1}],
+    })
+    fetched.write_text(json.dumps(payload))
+    with pytest.raises(ValueError, match=r"chapter\(s\) 2 .* unavailable"):
+        greek.load_nt("John", ref=reference)
+
+
+def test_nt_offline_subset_citation_and_book_extent_are_explicit(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise DataNotAvailableError("offline test")
+
+    monkeypatch.setattr(data, "fetch", unavailable)
+    selected = greek.load_nt("Jn", ref="1.1-5")
+    assert selected.cite().startswith("John 1.1-1.5.")
+    assert {token.annotations["ref"] for token in selected.iter_tokens()} == {
+        f"John.1.{verse}" for verse in range(1, 6)
+    }
+    book_sample = greek.load_nt("John")
+    assert book_sample.cite().startswith("Bundled sample: John 1.")
+    assert any("bundled offline sample" in note for note in book_sample.provenance.notes)
+
+
 def test_token_annotations(fetched: Path) -> None:
     doc = greek.load_nt("John", ref="1.1").documents[0]
     en = doc.tokens[0]

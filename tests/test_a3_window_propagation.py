@@ -220,7 +220,7 @@ def test_translation_grounding_forwards_and_records_windowed_without_provider_io
         greek_pipeline=pipeline,
         greek_long_input="windowed",
     )
-    assert items[0].content == "λόγος → lemma λόγος"
+    assert next(item.content for item in items if item.source == "lemmatizer") == "λόγος → lemma λόγος"
     assert pipeline.calls == [(False, "windowed")]
 
     result = translate.translate(

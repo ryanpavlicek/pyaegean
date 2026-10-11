@@ -418,6 +418,13 @@ Editorial `<note>` and `<bibl>` material is **not dropped and not mixed into the
 running text**: it rides along in `doc.meta.notes` so the text you analyse is clean
 while the apparatus stays available.
 
+`Document.source_text` holds the whitespace-normalized selected TEI reading
+(not the original XML bytes), and
+tokens retain aligned source spans, punctuation, foreign text, and numerals.
+Use `doc.words` for lexical analysis. Structured dramatic speaker labels are
+retained as `UNKNOWN` tokens, excluded from word counts;
+`who`, `speaker_label`, and `speech_id` annotations preserve their source context.
+
 ---
 
 ## 5. Put works into a database
@@ -646,6 +653,9 @@ greek.load_nt()                       # the whole 27-book NT
 `load_nt(book=None, *, ref=None, force=False)`: `force=True` re-fetches even if
 cached; passing a `ref` without a `book` raises (you can't address a verse across
 all 27 books).
+The corpus citation names the canonical book and selected chapter/verse range,
+including the actual extent of an offline sample. A requested unavailable chapter
+or range endpoint raises rather than silently returning a truncated passage.
 
 ### Per-token annotation fields
 

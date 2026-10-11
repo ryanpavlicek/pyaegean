@@ -126,7 +126,9 @@ def test_plot_correspondence_analysis_label_top_takes_heaviest() -> None:
 _TRUST_PASS = {
     "Zominthos": (35.249, 24.887),
     "Kythera": (36.23, 23.029),
-    "Pylos": (36.952, 21.66),
+    # Nestor's Palace at Epano Englianos, not Classical Pylos/Koryphasion.
+    # https://pleiades.stoa.org/places/156116232 (reprPoint, inspected 2026-10-11).
+    "Pylos": (37.027137690546745, 21.69496241897444),
     "Cyprus": (34.995, 33.222),
     "Margiana": (37.663, 62.191),
 }
@@ -136,6 +138,7 @@ def test_gazetteer_trust_pass_coordinates_pinned() -> None:
     from aegean.geo import site_coordinates
 
     coords = site_coordinates()
+    assert coords["Pylos"].pleiades == 156116232
     # 56 Aegean find-sites + 38 Greek-epigraphy find-places (I.Sicily/IGCyr/IOSPE/IIP/EDH)
     assert len(coords) == 94
     assert sum(1 for s in coords.values() if s.pleiades) == 78  # 40 Aegean + 38 epigraphy, all linked

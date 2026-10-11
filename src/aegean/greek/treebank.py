@@ -5,9 +5,10 @@ Treebank (Greek, v2.1) into the user cache, build a *form → analyses* lexicon
 (also cached), and have `aegean.greek.lemmatize` / `aegean.greek.analyze`
 prefer attested, **correctly-accented** lemmas and full morphological features for
 known forms — covering the irregular/contract/athematic/3rd-declension forms the
-rule-based engine can't (e.g. ``εἶπον → λέγω``). On a miss they fall back to the
-rule/seed engines. Default behaviour (without `use_treebank`) is unchanged
-and fully offline.
+rule-based engine can't. Lemmas retain the AGDT's headword conventions: its
+``εἶπον`` analyses use the lemma ``εἶπον``, rather than folding it into ``λέγω``.
+On a miss they fall back to the rule/seed engines. Default behaviour (without
+`use_treebank`) is unchanged and fully offline.
 
 Data: ``github.com/PerseusDL/treebank_data`` ``v2.1/Greek/texts/*.tb.xml``,
 pinned to a commit, licensed **CC BY-SA 3.0**. It is fetched to the cache and the

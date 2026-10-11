@@ -11,7 +11,7 @@ brainstorming readings of an undeciphered sign group.
 > **Exploratory material: read this first.** Every generative output here is a
 > labeled, provenanced **hypothesis**: never ground truth, and on the
 > undeciphered scripts never a reading. The layer marks each result `EXPLORATORY`,
-> records which local facts grounded it, and can print a full provenance trace.
+> records the supplied evidence and its status, and can print a full provenance trace.
 > What pyaegean can and cannot claim is on the **[Limitations](Limitations)** page.
 
 A few things hold across the whole layer:
@@ -21,8 +21,8 @@ A few things hold across the whole layer:
   runs (or costs anything) until you build a client (with a hosted provider's key,
   or a no-key local server via the `local` provider).
 - **Keys come from the environment** and are never logged; the `local` provider needs none.
-- **Grounded by design.** You pass deterministic, local evidence (corpus
-  frequencies, co-occurrences, dictionary glosses) and the model is told to reason
+- **Grounded by design.** You can pass local evidence (corpus frequencies,
+  co-occurrences, dictionary glosses, or annotations) and the model is told to reason
   over it. Untrusted source text is wrapped as data, with instructions to ignore
   embedded directives.
 - **Everything returns an `ExploratoryResult`** carrying provenance, the grounding
@@ -182,16 +182,17 @@ Every capability returns the same object, so once you know it you know the whole
 layer.
 
 ```python
-r.text               # the model's raw output
+r.text               # translation text for a structured translation; otherwise raw output
 r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask' | 'summarize' | 'extract'
 r.provider, r.model  # which provider/model produced it
-r.prompt_version     # the prompt template version (e.g. '2026.06-v1')
+r.prompt_version     # the prompt template version (currently '2026.10-v4')
 r.exploratory        # always True
-r.grounding          # tuple of GroundingItem(content, source, ref) fed to the model
-r.data               # parsed JSON payload, set only by extract() (else None)
+r.grounding          # tuple of GroundingItem evidence fed to the model
+r.data               # parsed extract payload, or translation audit data
+r.draft              # original ExploratoryResult retained after translation checking; else None
 
 r.labeled()          # text prefixed with an unmistakable EXPLORATORY tag
-r.trace()            # human-readable provenance: the local facts that grounded it
+r.trace()            # evidence/status provenance and any translation audit data
 r.provenance()       # a dict for logging/export
 ```
 
@@ -210,14 +211,15 @@ verified fact.
 
 | `ExploratoryResult` field | Type | Notes |
 | --- | --- | --- |
-| `text` | `str` | The model's output. |
+| `text` | `str` | Translation text for a structured translation; raw output for other responses. |
 | `kind` | `str` | The capability that produced it. |
 | `provider`, `model` | `str` | Provenance. |
 | `prompt_version` | `str` | Bumped when prompt wording changes (`ai.PROMPT_VERSION`). |
 | `exploratory` | `bool` | Always `True`. |
 | `grounding` | `tuple[GroundingItem, …]` | The evidence fed in. |
-| `data` | `Any` | Parsed JSON (only `extract` sets it). |
-| `grounding_runtime` | `dict` or `None` | Local backend/configuration and degradation provenance for hybrid translation; never prompt evidence. |
+| `data` | `Any` | Parsed extraction payload, or translation audit data with uncertainty, changes, format status, and raw response. |
+| `draft` | `ExploratoryResult` or `None` | Complete original draft and its provenance after translation checking. |
+| `grounding_runtime` | `dict` or `None` | Complete local backend/configuration and degradation provenance for hybrid translation. This mapping is not prompted; compact backend/coverage evidence may be prompted separately. |
 
 ---
 
@@ -237,7 +239,8 @@ Every generative command (`translate`, `gloss`, `summarize`, `hypotheses`, `ask`
   provenance, every grounding item, any parsed `data`, **and the `exploratory`
   flag**: the same shape as `ExploratoryResult.to_dict()`.
 - **`.txt`** writes the `labeled()` text: the human-readable answer with its
-  `[EXPLORATORY · …]` tag baked in at the top of the file.
+  `[EXPLORATORY · …]` tag baked in at the top of the file. Translation exports also
+  append the audit trace, retaining notes and any checking draft in either output style.
 
 ```bash
 # the full machine-readable result, exploratory flag and grounding included
@@ -264,10 +267,10 @@ KU-RO most likely marks a running total of the preceding entries.
   "text": "KU-RO most likely marks a running total of the preceding entries.",
   "provider": "anthropic",
   "model": "claude-sonnet-4-6",
-  "prompt_version": "2026.06-v1",
+  "prompt_version": "2026.10-v4",
   "exploratory": true,
   "grounding": [
-    { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO" }
+    { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO", "status": "unclassified" }
   ],
   "data": null
 }
@@ -336,10 +339,10 @@ strings). They all return an `ExploratoryResult`.
 `ai.translate` translates source text and adds a short note on any ambiguous
 choices. The CLI command is the **hybrid** translator (`aegean.translate`): it
 first builds local grounding and *then* calls the model, so the translation is
-anchored to real local facts. By default the Greek grounding is **morphology-first**
+anchored to inspectable provisional evidence. By default the Greek grounding is **morphology-first**
 (`mode="morphology"`: lemma, part of speech, voice, case-role, clause structure, and
 rare-word flags); `mode="full"` adds concise dictionary glosses on the rare words,
-`mode="none"` sends the bare text. See [Hybrid translation](#hybrid-translation)
+`mode="none"` omits automatic evidence while retaining any supplied grounding. See [Hybrid translation](#hybrid-translation)
 below, and [Recipe 26](Recipes#26--choose-a-greek-ai-translation-workflow) for
 choosing a mode.
 
@@ -371,7 +374,9 @@ echo "μῆνιν ἄειδε θεά" | aegean ai translate -             # '-' 
 | `--script` (CLI) | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `target=` / `--target` | `"English"` | Target language. |
 | `mode=` / `--mode` | `"morphology"` | How much analysis to ground with: `morphology` (lemma/POS/voice/case-role/clause skeleton + rare flags + idiom meanings, the default), `full` (+ concise rare-word glosses), `lemma` (legacy), `none`. |
-| `verify=` / `--verify` | off | Draft the translation first, then check it against the analysis and repair definite errors (a second model call). The analysis only checks the draft, so it cannot bias the initial translation, though a wrong analysis can still mislead the repair; recommended for hard or high-stakes passages. |
+| `verify=` / `--verify` | off | Draft first, then ask the same model to check and repair definite contradictions (a second call). The original result is retained; wrong analysis can still mislead the repair, and quality improvement is not guaranteed. |
+| `style=` / `--style` | `"annotated"` | Include model-reported uncertainty/change notes, or use `"concise"` while retaining audit details in JSON and the trace. |
+| `grounding=` (API) | empty | Supplemental evidence, including source annotations and current human field decisions. |
 | `glosses=` / `--glosses` / `--no-glosses` | on | Legacy flag, superseded by `mode`; still toggles glosses in `lemma`/`full` modes (see [Gated LSJ gloss grounding](#gated-lsj-gloss-grounding)). |
 | `greek_pipeline=` / `--greek-backend` | module default / `default` | Select the module-level facade, an isolated baseline, or an isolated neural pipeline. |
 | neural `variant=` / `--greek-variant` | `default` | Select `default`, `fast`, `compact`, or `balanced`; only qualified runtime artifacts are available. |
@@ -534,9 +539,11 @@ GroundingItem(content="KU-RO (×37)", source="corpus:lineara", ref="KU-RO")
 
 | Field | Meaning |
 | --- | --- |
-| `content` | What the model sees (drops into the prompt like a plain line). |
+| `content` | Evidence text, rendered in the prompt with its status and provenance. |
 | `source` | Provenance category: `corpus:<id>`, `lexicon:LSJ`, `analysis:cooccurrence`, `lemmatizer`, `transliteration`, `custom`. |
 | `ref` | The specific locator: a word, lemma, or document id. |
+| `status` | Evidence status, default `unclassified`; builders distinguish `source-annotated`, `predicted`, and `human-reviewed` evidence. |
+| `provenance` | Optional structured details such as prediction source, reading status, token identity, and field review evidence. |
 
 Plain strings are accepted anywhere grounding is: they become
 `GroundingItem(content=string, source="custom")`:
@@ -547,15 +554,16 @@ ai.as_item("plain string").source   # 'custom'
 
 ### Evidence builders
 
-These turn the deterministic, local parts of pyaegean into grounding. They're
-**best-effort**: each returns an empty list rather than failing if its inputs
-aren't available.
+These turn local corpus data, dictionary entries, and existing annotations into
+grounding. Missing optional corpus or dictionary inputs yield no evidence;
+evidence status describes its origin, not a guarantee of correctness.
 
 | Builder | Source tag | What it produces |
 | --- | --- | --- |
 | `corpus_context(corpus, limit=20)` | `corpus:<script_id>` | The corpus's most frequent words (seed grounding). |
 | `cooccurrence_evidence(corpus, word, limit=12)` | `analysis:cooccurrence` | Words that most often share a document with `word`. |
 | `lexicon_evidence(words, limit=20)` | `lexicon:LSJ` | A short LSJ gloss per word that has an entry (needs `greek.use_lsj()`). |
+| `annotation_evidence(tokens, source="annotation", source_annotated=False)` | supplied `source` | Existing per-field annotations with prediction/review provenance; no analysis is rerun. Set `source_annotated=True` only for annotations retained from the named edition. |
 | `evidence_block(items)` |— | Renders a list of items as the prompt's bullet block. |
 | `wrap_untrusted(text, label="SOURCE")` |— | Delimits untrusted source text with a do-not-follow note. |
 
@@ -608,11 +616,11 @@ r = ai.decipher_hypotheses(
     client=client,
 )
 print(r.trace())
-# EXPLORATORY decipher via anthropic/claude-… (prompt 2026.06-v1)
+# EXPLORATORY decipher via anthropic/claude-… (prompt 2026.10-v4)
 #   grounded in 2 item(s) from 1 source(s):
 #   • analysis:cooccurrence (2):
-#       - co-occurs with KU-RO: KI-RO (×5)
-#       - co-occurs with KU-RO: *306-TU (×4)
+#       - co-occurs with KU-RO: KI-RO (×5) [evidence: {"ref": "KU-RO", "source": "analysis:cooccurrence", "status": "unclassified"}]
+#       - co-occurs with KU-RO: *306-TU (×4) [evidence: {"ref": "KU-RO", "source": "analysis:cooccurrence", "status": "unclassified"}]
 ```
 
 When nothing was fed in, the trace says so explicitly: an ungrounded generation
@@ -620,7 +628,7 @@ is the weakest kind and the trace flags it:
 
 ```python
 print(ai.gloss("ἦν", client=client).trace())
-# EXPLORATORY gloss via anthropic/claude-… (prompt 2026.06-v1)
+# EXPLORATORY gloss via anthropic/claude-… (prompt 2026.10-v4)
 #   grounding: none (ungrounded generation — weigh accordingly)
 ```
 
@@ -634,10 +642,26 @@ the provenance trace under the answer. Without it, you get a one-line footer:
 
 > See the dedicated [Translation](Translation) page for the full translation reference.
 
-`aegean.translate` is the translator the CLI uses. It builds **deterministic,
-local** grounding first (Greek morphology: lemma, part of speech, case roles,
+`aegean.translate` is the translator the CLI uses. It builds **local, provisional**
+grounding first (Greek morphology: lemma, part of speech, case roles,
 clause skeleton; or Linear A sign→sound transliteration) and then delegates the translation to the AI layer, so the
-trace names exactly which local facts anchored it.
+trace names the evidence and its status. Predicted morphology and syntax remain
+predictions even when a dictionary entry or another field has been reviewed.
+
+Translation accepts `style="annotated"` (the default) or `"concise"`, mirrored by
+`--style`. Structured responses put only the translation in `text`; `data` retains
+the model-reported `uncertainties` and `changes` (with reasons and evidence),
+`raw_response`, and `format_status`. Malformed responses remain verbatim with an
+explicit unstructured status; parsing makes no extra provider call. A checking
+pass retains the complete original result as `draft`. Exact draft/final wording
+comparisons can flag unreported changes, but do not assess translation quality.
+Both styles keep all notes and the draft in JSON and `trace()`.
+
+For supplied source annotations or scholarly field decisions, pass
+`grounding=ai.annotation_evidence(tokens, source="My edition", source_annotated=True)`
+to the hybrid translator. Only a current per-field accept/correct decision with
+its verification flag grants `human-reviewed` status; deferred, rejected, and
+stale decisions remain visible. This evidence supplements automatic predictions.
 
 ```python
 from aegean import greek, translate
@@ -717,8 +741,8 @@ now also strips the regular second-declension and thematic-verb endings (a gener
 so νόμου resolves to νόμος without a lookup, but it still misses irregular and unrecognized forms,
 leaving a glossed translation on it partly ungrounded. The opt-in backends remain more accurate. A
 warning fires when only the baseline lemmatizer is loaded, naming the fix (call
-`greek.use_treebank()`, or `greek.use_neural_lemmatizer()` for the fullest coverage on
-oblique and documentary forms, first). The richer the lemmatizer, the more content words
+`greek.use_treebank()`, or `greek.use_neural_pipeline()` for contextual predicted
+morphology and dependency parsing, first). The richer the lemmatizer, the more content words
 resolve to an entry, so both the help on obscure vocabulary and the gloss noise on familiar
 text grow with it.
 
@@ -872,7 +896,7 @@ You can score a single answer directly with `ai.score_text(text, case)`.
 
 A sha256-keyed cache over `(provider identity, model, system, prompt, max_tokens)`
 makes repeated requests reuse a response: in memory by default, or persisted to
-JSON. The `local` provider includes its server URL in that identity. Keys are
+JSON. Every built-in provider includes a digest of its frozen endpoint in that identity. Keys are
 digests, so prompts of any size hash to a fixed-length key and raw text never
 lands in the index.
 
@@ -887,9 +911,11 @@ ai.ask("test?", client=client)   # served from cache — no second API call
 len(cache)                        # 1
 ```
 
-Hosted SDK endpoint overrides such as `OPENAI_BASE_URL` are not part of the cache
-identity. Use separate cache files for different hosted endpoints; see
-[Limitations](Limitations#known-workflow-defects).
+Hosted endpoint overrides (`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, and
+`GOOGLE_GEMINI_BASE_URL`) and the local server URL are captured when a client is
+constructed and distinguish cache entries. Construct a new client after changing
+an endpoint environment variable. Fixed Grok/OpenRouter routes retain their own
+identities; Gemini uses the developer API with an API key, without implicit Vertex routing.
 
 A second identical call hits the cache and makes **no** network request, which
 keeps cost down and makes notebooks reproducible.
@@ -901,7 +927,7 @@ keeps cost down and makes notebooks reproducible.
 | Command | Purpose | Key options |
 | --- | --- | --- |
 | `aegean ai providers` | List registered providers | `--json` |
-| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--mode`, `--verify`, `--greek-backend`, `--grounding-failure`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
+| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--mode`, `--style`, `--verify`, `--greek-backend`, `--grounding-failure`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai gloss TEXT` | Word-by-word gloss | `--source`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai summarize TEXT` | Grounded summary | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai hypotheses TEXT` | Decipherment hypotheses | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
@@ -922,13 +948,14 @@ aegean ai ask "What does KU-RO mark?" --corpus lineara --json
 
 ```json
 {
+  "_meta": { "tool": "pyaegean", "type": "ExploratoryResult", "schemaVersion": 1 },
   "text": "…",
   "kind": "ask",
   "provider": "anthropic",
   "model": "claude-…",
-  "prompt_version": "2026.06-v1",
+  "prompt_version": "2026.10-v4",
   "grounding": [
-    { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO" }
+    { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO", "status": "unclassified" }
   ],
   "exploratory": true,
   "data": null

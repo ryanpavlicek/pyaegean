@@ -115,7 +115,10 @@ def test_structured_grounding_item_and_trace():
     assert "ku-ro (×40)" in trace
     # provenance serializes the structure
     prov = r.provenance()["grounding"]
-    assert prov[0] == {"content": "ku-ro (×40)", "source": "corpus:lineara", "ref": "ku-ro"}
+    assert prov[0] == {
+        "content": "ku-ro (×40)", "source": "corpus:lineara", "ref": "ku-ro",
+        "status": "unclassified",
+    }
 
 
 def test_trace_names_ungrounded_generation():
@@ -158,8 +161,9 @@ def test_cooccurrence_evidence_builder():
 def test_evidence_block_mixes_strings_and_items():
     assert ai.evidence_block([]) == ""
     block = ai.evidence_block(["a", "", ai.GroundingItem("b", source="corpus:x")])
-    assert "- a" in block and "- b" in block  # only content reaches the prompt
-    assert "corpus:x" not in block  # source stays out of the prompt
+    assert "- a" in block and "- b" in block
+    assert '"source": "corpus:x"' in block
+    assert '"status": "unclassified"' in block  # legacy evidence is not implicitly verified
 
 
 # ── structured (JSON) output ─────────────────────────────────────────────────

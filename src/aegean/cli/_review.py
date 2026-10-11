@@ -8,6 +8,7 @@ corrected result, preserving each machine value and stamping the reviewer. See t
 
 from __future__ import annotations
 
+import shlex
 import sys
 from pathlib import Path
 from typing import Literal, cast
@@ -18,10 +19,24 @@ from ._common import CORPUS_ARG, console, fail, load_corpus, table, write_corpus
 from ._greek import LEMMATIZER_OPT, NEURAL_LEMM_OPT, NEURAL_OPT, TAGGER_OPT, _activate
 
 review_app = typer.Typer(
-    help="Export machine annotations for human review, and apply the corrections back.",
+    help="Export annotations for optional field-level review, and apply decisions or corrections.",
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
+
+
+def _apply_hint(
+    corpus: str, output: Path, *, annotate: bool, tagger: bool, lemmatizer: bool,
+    neural_lemmatizer: bool, neural: bool,
+) -> str:
+    args = ["aegean", "review", "apply", corpus, str(output), "-o", "corrected.json"]
+    if annotate:
+        args.append("--annotate")
+        args.extend(flag for flag, enabled in (
+            ("--tagger", tagger), ("--lemmatizer", lemmatizer),
+            ("--neural-lemmatizer", neural_lemmatizer), ("--neural", neural),
+        ) if enabled)
+    return shlex.join(args)
 
 
 @review_app.command()
@@ -43,11 +58,13 @@ def export(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    reviewer: str = typer.Option("", "--reviewer", help="Pre-fill reviewer identity in the CSV."),
 ) -> None:
-    """Write a reviewable CSV table: one row per word token with the machine lemma, POS,
-    morphology, evidence class, and a needs-review flag, plus blank correction columns.
+    """Write a CSV with lemma, POS, morphology, evidence, and optional field decisions.
 
-    Open it in a spreadsheet, fill the ``correct_*`` columns, then feed it to
+    Fill ``decision_*`` with accept/correct/defer/reject; correct also requires a
+    different ``correct_*`` value. Blank decisions preserve correction-only behavior.
+    Add reviewer identity, notes, and evidence, then feed the table to
     ``aegean review apply``. Example: aegean review apply nt reviewed.csv -o nt-fixed.json"""
     if selection not in ("all", "flagged", "unverified"):
         raise fail("--selection must be 'all', 'flagged', or 'unverified'")
@@ -64,16 +81,15 @@ def export(
         c = greek.annotate_corpus(c)
     with writing(output):
         n = to_review_table(
-            c, output, selection=cast(Literal["all", "flagged", "unverified"], selection)
+            c, output, selection=cast(Literal["all", "flagged", "unverified"], selection),
+            reviewer=reviewer,
         )
     print(f"wrote {n} review rows to {output}", file=sys.stderr)
     # When the corpus was annotated for this export, apply must annotate too, or the
-    # accepted machine values would be missing from the corrected corpus.
-    extra = " --annotate" if annotate else ""
-    print(
-        f"correct the columns, then:  aegean review apply {corpus} {output} "
-        f"-o corrected.json{extra}"
-    )
+    # generated predictions in fields left unreviewed would otherwise be missing.
+    hint = _apply_hint(corpus, output, annotate=annotate, tagger=tagger, lemmatizer=lemmatizer,
+                       neural_lemmatizer=neural_lemmatizer, neural=neural)
+    print(f"record field decisions or corrections, then:  {hint}")
 
 
 @review_app.command()
@@ -83,23 +99,23 @@ def apply(
     output: Path = typer.Option(
         ..., "--output", "-o", help="Destination .json / .db for the corrected corpus."
     ),
-    reviewer: str = typer.Option("", "--reviewer", help="Name stamped on each correction."),
+    reviewer: str = typer.Option("", "--reviewer", help="Reviewer identity when the CSV leaves it blank."),
     annotate: bool = typer.Option(
         False, "--annotate",
-        help="Fill machine annotations from the pipeline before applying — pass it whenever "
-             "the export used it, so accepted (uncorrected) predictions land in the corrected "
-             "corpus too, not only the reviewer's changes.",
+        help="Generate the same predictions before applying; repeat this and backend flags "
+             "whenever export used them, including for fields left unreviewed.",
     ),
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
 ) -> None:
-    """Apply a reviewed table's corrections back onto ``corpus`` and save the result.
+    """Apply optional field decisions and corrections, retaining predictions and history.
 
-    Matches rows to tokens by document id + position, verifying each row's exported token
-    text against the corpus (a mismatch is an error, never a silent wrong-word edit); each
-    corrected field keeps the machine value under ``<field>__pred`` and records the reviewer.
+    Matches stable source-token IDs (legacy: document id + position) and verifies source
+    alignment/text. Accept/correct verifies only the named field; defer/reject retains its
+    prediction unverified. Blank rows never imply approval. Each field records its
+    reviewer, note, and evidence; the original prediction and decision history survive.
     Pass the SAME corpus the table was exported from, and repeat ``--annotate`` (plus any
     backend flags) if the export used it."""
     from aegean import greek
@@ -138,10 +154,17 @@ def merge(
              "agreed subset).",
     ),
     json_out: bool = typer.Option(False, "--json", help="Emit the merge result as JSON."),
+    annotate: bool = typer.Option(
+        False, "--annotate", help="Repeat the export's annotation and backend flags before merging.",
+    ),
+    tagger: bool = TAGGER_OPT,
+    lemmatizer: bool = LEMMATIZER_OPT,
+    neural_lemmatizer: bool = NEURAL_LEMM_OPT,
+    neural: bool = NEURAL_OPT,
 ) -> None:
-    """Combine several reviewers' corrected copies of one export into one review table.
+    """Combine several reviewers' decisions and corrections on copies of one export.
 
-    Corrections the reviewers agree on (or that only one made) are merged; a genuine
+    Field actions/values the reviewers agree on (or that only one proposed) are merged; a
     disagreement on the same token is listed, never silently resolved. Reviewer identity comes
     from each table's ``reviewer`` column (or the file name when blank). Write the agreed subset
     with ``-o merged.csv`` and apply it with ``aegean review apply``. Example:
@@ -156,6 +179,12 @@ def merge(
         if not t.exists():
             raise fail(f"no review table at {t}")
     c = load_corpus(corpus)
+    if annotate:
+        from aegean import greek
+
+        _activate(tagger=tagger, lemmatizer=lemmatizer,
+                  neural_lemmatizer=neural_lemmatizer, neural=neural)
+        c = greek.annotate_corpus(c)
     # Always merge in report mode so the conflicts are structured and can be shown; the
     # --on-conflict flag then decides whether an unresolved conflict is a failure.
     try:
@@ -169,13 +198,18 @@ def merge(
         emit_json({
             "tables": [str(t) for t in tables],
             "reviewers": list(merged.reviewers),
-            "agreed_corrections": len(merged.rows),
+            "agreed_corrections": sum(
+                any(row.get(column) for column in ("correct_lemma", "correct_pos", "correct_morph"))
+                for row in merged.rows
+            ),
+            "agreed_review_rows": len(merged.rows),
             "conflicts": [
                 {
                     "doc_id": k.doc_id, "position": k.position, "token": k.token,
                     "field": k.field,
                     "options": [
-                        {"reviewer": o.reviewer, "value": o.value, "note": o.note}
+                        {"reviewer": o.reviewer, "value": o.value, "note": o.note,
+                         "action": o.action, "evidence": o.evidence}
                         for o in k.options
                     ],
                 }
@@ -198,11 +232,11 @@ def merge(
                     str(k.position) if i == 0 else "",
                     k.token if i == 0 else "",
                     k.field if i == 0 else "",
-                    opt.reviewer, opt.value, opt.note,
+                    opt.reviewer, opt.action, opt.value, opt.note,
                 ])
         table(
             "review conflicts (reviewers disagree — not applied)",
-            ["doc", "pos", "token", "field", "reviewer", "value", "note"],
+            ["doc", "pos", "token", "field", "reviewer", "action", "value", "note"],
             rows,
         )
 
@@ -212,12 +246,14 @@ def merge(
         with writing(output):
             merged.to_csv(output)
         print(f"wrote {len(merged.rows)} merged review rows to {output}", file=sys.stderr)
-        print(f"then:  aegean review apply {corpus} {output} -o corrected.json")
+        hint = _apply_hint(corpus, output, annotate=annotate, tagger=tagger, lemmatizer=lemmatizer,
+                           neural_lemmatizer=neural_lemmatizer, neural=neural)
+        print(f"then:  {hint}")
 
     who = ", ".join(merged.reviewers) or "—"
     n_conf = len(merged.conflicts)
     console().print(
-        f"merged {len(tables)} tables by {who}: {len(merged.rows)} agreed correction(s), "
+        f"merged {len(tables)} tables by {who}: {len(merged.rows)} agreed review row(s), "
         f"{n_conf} conflict(s)",
         style="dim", markup=False,
     )

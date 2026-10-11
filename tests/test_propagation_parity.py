@@ -173,7 +173,7 @@ def _fake_sdk_that_raises(exc: Exception) -> dict[str, types.ModuleType]:
         def create(self, **k):
             raise exc
 
-    anthropic.Anthropic = lambda api_key=None: types.SimpleNamespace(messages=_AntMessages())
+    anthropic.Anthropic = lambda api_key=None, base_url=None: types.SimpleNamespace(messages=_AntMessages())
 
     openai = types.ModuleType("openai")
     openai.APIError = type("APIError", (Exception,), {})
@@ -191,12 +191,13 @@ def _fake_sdk_that_raises(exc: Exception) -> dict[str, types.ModuleType]:
     errtypes = types.ModuleType("google.genai.types")
     errors.APIError = type("APIError", (Exception,), {})
     errtypes.GenerateContentConfig = lambda **k: None
+    errtypes.HttpOptions = lambda **k: None
 
     class _Models:
         def generate_content(self, **k):
             raise exc
 
-    genai.Client = lambda api_key=None: types.SimpleNamespace(models=_Models())
+    genai.Client = lambda **k: types.SimpleNamespace(models=_Models())
     google = types.ModuleType("google")
     google.genai = genai
     return {

@@ -36,8 +36,9 @@ sidecar. `InteropReport` distinguishes native, sidecar-held, and genuinely lost 
 strict reimport validates the native projection and sidecar together. spaCy, Stanza, and
 CLTK stay optional, and `[all]` intentionally does not install them.
 
-pyaegean is built in **strict, downward-only layers**. Higher layers import
-lower ones; the core never imports a script.
+pyaegean groups its modules into the following conceptual layers. Translation
+combines the Greek analysis and AI layers; this diagram is not a strict import
+ordering. The script-agnostic core never imports a script.
 
 ```
 L7  interfaces            cli (the aegean CLI and REPL) · tui (aegean tui)
@@ -173,7 +174,7 @@ it sits in the document (`line_no`, `position`). Its `kind` is a `TokenKind`:
 
 | `TokenKind` | Value | Meaning |
 |---|---|---|
-| `WORD` | `"word"` | a (multi-sign) lexical word |
+| `WORD` | `"word"` | a lexical word, including single-sign Aegean and alphabetic Greek words |
 | `LOGOGRAM` | `"logogram"` | ideogram / commodity sign |
 | `NUMERAL` | `"numeral"` | a number or metrological fraction |
 | `SEPARATOR` | `"separator"` | word/entry divider (e.g. 𐄁) |
@@ -199,6 +200,16 @@ Two more fields handle the cases real epigraphy throws at you:
   `strongs`, `gloss`, `normalized`, `upos`, and `ref` here, and they flow
   straight into the token-level DataFrame and the CSV/Parquet exporters.
 - **`status`** and **`alt`**: see editorial certainty below.
+
+Linguistic review decisions also live in `annotations`, separately from editorial
+`ReadingStatus`. Review tables support per-field `accept`, `correct`, `defer`,
+and `reject` decisions for lemma, POS, and morphology. Accepting a prediction
+retains its source and records verification of that field; correcting a lemma
+records `lemma_source=user`. Blank cells never approve a prediction. Reviewer,
+note, evidence, and `review_history` survive corpus persistence, and a fresh
+`annotate_corpus()` prediction makes its replaced lemma/POS decisions stale.
+Reviewing one field does not certify the others. See
+[Validation and Review](Validation-and-Review).
 
 ### Editorial certainty (`ReadingStatus`) and alternates
 
@@ -638,10 +649,11 @@ columns.
 
 `filter()` does exact metadata matching; the **query engine** does everything
 else: text/prefix/suffix/sign-pattern/co-occurrence predicates with AND / OR /
-NOT, returning either inscriptions or `(word, count)` pairs (the count is
-document frequency: distinct inscriptions, not tokens). It's a faithful port
-of the Linear A Research Workbench's query engine, so results match the browser
-tool.
+NOT, returning either inscriptions or `(word, count)` pairs. The default count
+is document frequency: distinct inscriptions; `count_unit="token"` selects
+occurrences instead. The field registry and legacy predicates come from the
+Linear A Research Workbench, with explicit word views and editorial-status
+selection available for other scripts too.
 
 A query is a list of `FilterRow`s. Each row names a `field`, a `value`, an
 optional `connector` (`"and"` default, or `"or"`), and an optional `negate`.
@@ -688,11 +700,23 @@ print(len(res.inscriptions))           # 55
 print(res.description)                 # Site is: Haghia Triada · Word starts with: KU
 ```
 
-Switch `output="words"` to get ranked `(word, count)` pairs instead. Here
+Switch `output="words"` to get ranked `(word, count)` pairs instead. The default
 `count` is the word's **document frequency** (how many distinct inscriptions it
-occurs in), not how many times it is written, so `('KU-RO', 34)` means KU-RO
-appears in 34 separate documents. For token counts (every occurrence) use
-`corpus.word_frequencies()` instead.
+occurs in), so `('KU-RO', 34)` means KU-RO appears in 34 separate documents.
+For token counts (every occurrence), pass `count_unit="token"` or use
+`corpus.word_frequencies()`.
+
+Word predicates operate on every `TokenKind.WORD` token, including single-sign
+Aegean words and alphabetic Greek words. Numerals, logograms, punctuation, and
+unknown tokens remain outside that lexical population.
+`view="surface"` selects exact token text; `"normalized"` applies NFC, lowercase,
+and final-sigma folding; `"lemma"` applies that normalization to existing lemma
+annotations, excluding missing lemmas without running an analyzer. Omitting
+`view` retains the legacy uppercase text predicates and separate surface keys.
+`statuses=` selects both a token's editorial status and all its typed segments.
+`QueryResults.metadata` records the view, normalization, count unit, exclusions,
+lemma sources, and denominator before word filters; citations and saved query
+subsets retain the selection details.
 
 ```python
 res = c.query([FilterRow("word-prefix", "KU")], output="words")
@@ -790,9 +814,11 @@ readings, annotations, source alignment, typed form state, line groupings, image
 refs, notes) is kept in JSON columns; provenance and the sign inventory live in a
 small key/value `meta` table. It's a lossless round-trip.
 
-Before overwriting an existing database, close external SQLite connections and
-WAL readers/writers. Replacing a database while another connection holds its WAL
-open can mix database generations; see [Limitations](Limitations#known-workflow-defects).
+Replacing an existing SQLite database uses an online backup transaction. Existing
+WAL readers retain their snapshot until their transaction ends; subsequent reads
+see the replacement. A competing writer can cause a bounded timeout, leaving the
+previous database intact. External renames or unlinks while connections are open
+are outside this contract. New files use an atomic, no-clobber hard link.
 
 ```python
 import aegean, aegean.db as db
@@ -887,6 +913,13 @@ aegean db add    tlg0012.tlg002 -o homer.db   # add the Odyssey, in place
 `from_text` / `from_text_file` / `from_text_dir` / `from_csv` (a string, a
 `.txt` file, a folder of text files, or a CSV), so you get the full
 filter/query/analyse/export API without writing `Corpus.from_records` by hand.
+These text/CSV importers default to `token_view="all"`: decoded source text,
+punctuation and other non-word tokens, whitespace, and document-local character
+spans survive. Use `Document.words` for the word view, or explicitly request
+`token_view="words"` (CLI `--token-view words`) for the former lossy import;
+the corpus provenance records exclusions. See
+[Importing your own text](Greek-NLP#importing-your-own-text).
+
 The **export** side turns a `Corpus` back into interchange formats other tools
 speak. See [Your own corpus](Data-and-Provenance#your-own-corpus) for the import
 walkthrough (and the `aegean import` CLI); the export set, and how to reach each
@@ -1028,8 +1061,12 @@ KI-RO,16
 
 For the AI commands, `.json` keeps the **whole** result: the generated text,
 its provenance, and the local grounding that fed the model, while `.txt` writes
-the labeled text. The exploratory label travels onto disk either way, so a saved
-reading can never be mistaken for ground truth:
+the labeled text. Translation JSON also retains the original draft when a
+checking pass ran, model-reported uncertainty and changes, the exact provider
+response, and grounding runtime/coverage details. `--style annotated` includes
+the notes in labeled output; `--style concise` shortens that presentation while
+retaining the details in JSON and trace output. The exploratory label travels
+onto disk either way:
 
 ```bash
 aegean ai translate "ἐν ἀρχῇ" -o reading.json   # text + provenance + grounding
@@ -1041,8 +1078,14 @@ aegean ai gloss     "ἐν ἀρχῇ" -o gloss.txt       # labeled text
 Under the hood every AI capability returns an `ExploratoryResult` (in
 `aegean.ai`): the generated `text`, the `provider` / `model` / `prompt_version`
 that produced it, the structured `grounding` it was given (each a `GroundingItem`
-with a `source` and `ref`), an always-explicit `exploratory` flag, and an
-optional parsed `data` payload for the structured capabilities. Three methods
+with a `source`, `ref`, evidence `status`, and optional supporting `provenance`),
+an always-explicit `exploratory` flag, and an optional parsed `data` payload.
+Hybrid translation adds `grounding_runtime`; a checking pass adds the complete
+original `draft`. These optional values survive serialization and reimport.
+Translation `data` separates the translation, uncertainty notes, reported
+changes/reasons/evidence, and exact raw response. `format_status="structured"`
+validates response shape, not linguistic correctness; malformed responses
+remain verbatim and are labeled `unstructured`. Three methods
 move it to and from disk:
 
 | Method | Does |
@@ -1071,11 +1114,16 @@ r2.text == r.text                      # True
 r2.grounding[0].source                 # 'lexicon'
 ```
 
-`labeled()` returns the text with its exploratory caveat prefixed (use it when
-surfacing to a user), and `trace()` renders the grounding provenance: both are
-methods, not fields. The point of the round-trip is that the `exploratory` flag
-and the grounding **persist**: read a saved AI output back and it still knows it
-was generative and still names the local facts that grounded it.
+`labeled()` returns the text with its exploratory caveat, runtime coverage when
+available, and style-selected translation notes; `trace()` retains the audit
+data, draft, and grounding provenance. Both are methods, not fields.
+`GroundingItem.status` distinguishes predictions, source annotations, field-level
+human review, reference candidates, and unclassified supplied text; `render()`
+includes that status and provenance in the prompt and trace. Plain strings never
+become verified evidence automatically. `ai.annotation_evidence()` can render
+existing token annotations and current per-field review decisions without
+rerunning an analyzer. The round-trip preserves this evidence alongside the
+exploratory flag; a retained model prediction is still a prediction.
 
 ---
 
@@ -1238,9 +1286,10 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   free-text TEI structured-state importer, while the DAMOS-style Linear B reader
   (`scripts.linearb.parse_epidoc`) re-derives Aegean kinds from the
   transliteration and needs lxml (the `[epidoc]` extra).
-- The query engine's word predicates operate on **multi-sign words** (tokens
-  containing a `-`); single-sign tokens and logograms are matched by the
-  inscription-scope predicates, not the word-scope ones.
+- The query engine's word predicates select `TokenKind.WORD` tokens, including
+  single-sign Aegean words and Greek words. Logograms, numerals, punctuation,
+  and unknown tokens are outside its lexical word population; script-specific
+  sign-pattern predicates retain their own matching rules.
 - Parquet needs a parquet engine; CSV/Parquet need pandas (`[data]`).
 - See [Limitations](Limitations) for the honest, project-wide list of what
   pyaegean does and doesn't claim, and [Greek NLP](Greek-NLP) /

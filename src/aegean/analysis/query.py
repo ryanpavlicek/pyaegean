@@ -16,8 +16,12 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field as _field, replace
 from typing import TYPE_CHECKING, Any, Literal
 
-from ..core.model import Document, TokenKind
+from ..core.model import Document, ReadingStatus
 from ..core.provenance import Provenance
+from ..core.word_views import (
+    CountUnit, WordView, count_words, normalize_word, reading_statuses,
+    token_selected, validate_view, word_key,
+)
 from .patterns import word_matches_sign_pattern
 
 if TYPE_CHECKING:
@@ -76,13 +80,15 @@ class FilterRow:
 class QueryResults:
     """A query's result set: the matching inscriptions and/or ``(word, count)`` pairs.
 
-    In ``words``, ``count`` is the word's **document frequency**: the number of
+    By default, in ``words``, ``count`` is the word's **document frequency**: the number of
     distinct inscriptions the word occurs in (e.g. ``("KU-RO", 34)`` means KU-RO
     appears in 34 separate documents), not how many times it is written. A word
     repeated within one inscription still counts that inscription once. This
     differs from `Corpus.word_frequencies`, whose ``count`` is the token
-    frequency (every occurrence). The list is sorted by descending count, then
-    by word.
+    frequency (every occurrence). Select ``count_unit='token'`` to count occurrences
+    here as well. The list is sorted by descending count, then by word. ``metadata``
+    describes the selected view, normalization, denominator, exclusions, and lemma
+    sources; the denominator is taken before word-scope predicates narrow the result.
 
     `Corpus.query` attaches the corpus's ``provenance`` and a ``description``
     of the filters, so `cite` can cite the exact result set used in a paper."""
@@ -91,6 +97,7 @@ class QueryResults:
     words: list[tuple[str, int]]
     provenance: Provenance | None = None
     description: str = ""
+    metadata: dict[str, Any] = _field(default_factory=dict)
 
     def cite(self, style: str = "plain") -> str:
         """Cite this exact result set: the source plus the query that produced it.
@@ -106,6 +113,13 @@ class QueryResults:
             else (len(self.words), "words")
         )
         note = f"query: {self.description or 'all'} → {n} {unit}"
+        if self.metadata:
+            m = self.metadata
+            note += (f"; view={m['view']}; {m['normalization']}; "
+                     f"{m['count_unit']} denominator={m['denominator']}; "
+                     f"statuses={','.join(m['reading_statuses'])}; "
+                     f"missing lemmas={m['missing_lemma_tokens']}; "
+                     f"predicates={m['predicate_normalization']}")
         if style == "plain":
             return f"{self.provenance.cite()} [{note}]"
         stamped = replace(self.provenance, notes=self.provenance.notes + (note,))
@@ -129,6 +143,11 @@ class QueryResults:
                 f"subset: query({self.description or 'all'}) → "
                 f"{len(self.inscriptions)} documents"
             )
+            if self.metadata:
+                m = self.metadata
+                note += (f"; view={m['view']}; {m['normalization']}; "
+                         f"statuses={','.join(m['reading_statuses'])}; "
+                         f"predicates={m['predicate_normalization']}")
             prov = replace(prov, notes=prov.notes + (note,))
         return Corpus(self.inscriptions, source.sign_inventory, prov, source.script_id)
 
@@ -173,7 +192,10 @@ def _doc_token_texts(doc: Document) -> list[str]:
     return [t.text for t in doc.tokens]
 
 
-def _inscription_row_match(doc: Document, f: FilterRow, annotated_ids: set[str]) -> bool:
+def _inscription_row_match(
+    doc: Document, f: FilterRow, annotated_ids: set[str],
+    view: WordView | None = None, statuses: frozenset[ReadingStatus] | None = None,
+) -> bool:
     v = f.value
     fld = f.field
     if fld == "id-contains":
@@ -193,29 +215,40 @@ def _inscription_row_match(doc: Document, f: FilterRow, annotated_ids: set[str])
         has = doc.id in annotated_ids
         return has if v else not has
     if fld == "ins-contains-word":
+        if view is not None or statuses is not None:
+            selected = statuses if statuses is not None else reading_statuses(None)
+            target = str(v) if view in (None, "surface") else normalize_word(str(v))
+            return not v or any(
+                token_selected(t, selected) and word_key(t, view or "surface") == target
+                for t in doc.tokens
+            )
         return not v or str(v) in _doc_token_texts(doc)
     return True
 
 
 def inscription_matches(
-    doc: Document, filters: Iterable[FilterRow], annotated_ids: set[str]
+    doc: Document, filters: Iterable[FilterRow], annotated_ids: set[str], *,
+    view: WordView | None = None, statuses: frozenset[ReadingStatus] | None = None,
 ) -> bool:
     """True if a document satisfies the inscription-scope filter rows (AND/OR/NOT-combined)."""
     rows = [f for f in filters if FIELDS[f.field].scope == "inscription"]
-    return _combine_rows(rows, lambda f: _inscription_row_match(doc, f, annotated_ids))
+    return _combine_rows(rows, lambda f: _inscription_row_match(doc, f, annotated_ids, view, statuses))
 
 
-def _word_row_match(word: str, f: FilterRow, cooccur_map: dict[str, set[str]]) -> bool:
+def _word_row_match(
+    word: str, f: FilterRow, cooccur_map: dict[str, set[str]], view: WordView | None = None,
+) -> bool:
     v = f.value
     fld = f.field
-    upper = word.upper()
+    comparison = word.upper() if view is None else (word if view == "surface" else normalize_word(word))
+    target_text = str(v).upper() if view is None else (str(v) if view == "surface" else normalize_word(str(v)))
     parts = word.split("-")
     if fld == "word-contains":
-        return not v or str(v).upper() in upper
+        return not v or target_text in comparison
     if fld == "word-prefix":
-        return not v or upper.startswith(str(v).upper())
+        return not v or comparison.startswith(target_text)
     if fld == "word-suffix":
-        return not v or upper.endswith(str(v).upper())
+        return not v or comparison.endswith(target_text)
     if fld == "word-min-syllables":
         # A blank value is neutral (matches everything), like the workbench.
         return not str(v or "").strip() or len(parts) >= int(v)
@@ -231,7 +264,8 @@ def _word_row_match(word: str, f: FilterRow, cooccur_map: dict[str, set[str]]) -
         target = _sign_key(str(v)).upper()
         return any(_sign_key(p).upper() == target for p in parts)
     if fld == "word-cooccurs-with":
-        return not v or str(v) in cooccur_map.get(word, set())
+        target = str(v) if view in (None, "surface") else normalize_word(str(v))
+        return not v or target in cooccur_map.get(word, set())
     if fld == "word-sign-pattern":
         return not v or word_matches_sign_pattern(word, str(v))
     return True
@@ -247,11 +281,12 @@ def _sign_key(sign: str) -> str:
 
 
 def word_matches(
-    word: str, filters: Iterable[FilterRow], cooccur_map: dict[str, set[str]]
+    word: str, filters: Iterable[FilterRow], cooccur_map: dict[str, set[str]], *,
+    view: WordView | None = None,
 ) -> bool:
     """True if a word satisfies the word-scope filter rows (AND/OR/NOT-combined)."""
     rows = [f for f in filters if FIELDS[f.field].scope == "word"]
-    return _combine_rows(rows, lambda f: _word_row_match(word, f, cooccur_map))
+    return _combine_rows(rows, lambda f: _word_row_match(word, f, cooccur_map, view))
 
 
 def eval_query(
@@ -261,40 +296,72 @@ def eval_query(
     word_index: dict[str, WordEntry],
     annotated_ids: set[str],
     cooccur_map: dict[str, set[str]],
+    *,
+    view: WordView | None = None,
+    count_unit: CountUnit = "document",
+    statuses: Iterable[ReadingStatus | str] | None = None,
 ) -> QueryResults:
     """Run a query (filters + output mode) over pre-built indices and return the
     result set in canonical shape.
 
     For ``output="words"`` each ``(word, count)`` pair's ``count`` is the word's
-    document frequency (the number of matching inscriptions it occurs in), not
-    its token frequency; a word repeated within one inscription counts that
-    inscription once."""
-    matching = [d for d in documents if inscription_matches(d, filters, annotated_ids)]
+    document frequency by default (the number of matching inscriptions it occurs
+    in); a word repeated within one inscription counts that inscription once.
+    ``count_unit="token"`` counts matching occurrences instead. The selected word
+    view and reading-status population are recorded in the result metadata."""
+    if output not in ("inscriptions", "words"):
+        raise ValueError(f"output must be 'inscriptions' or 'words'; got {output!r}")
+    if view is not None:
+        view = validate_view(view)
+    selected = reading_statuses(statuses)
+    explicit_selection = view is not None or statuses is not None
+    if explicit_selection and any(f.field == "word-cooccurs-with" for f in filters):
+        cooccur_map = build_cooccurrence_map(documents, view=view or "surface", statuses=selected)
+    matching = [d for d in documents if inscription_matches(
+        d, filters, annotated_ids, view=view, statuses=selected if statuses is not None else None,
+    )]
+    frequencies, metadata = count_words(
+        matching, view=view or "surface", count_unit=count_unit, statuses=selected,
+    )
+    metadata["denominator_scope"] = "documents matching inscription filters, before word filters"
+    metadata["predicate_normalization"] = (
+        "legacy: uppercase text predicates, literal exact-word/cooccurrence predicates"
+        if view is None else metadata["normalization"]
+    )
+    if any(f.field == "word-cooccurs-with" for f in filters):
+        metadata["cooccurrence_scope"] = "source corpus before inscription filters"
     has_word_filters = any(FIELDS[f.field].scope == "word" for f in filters)
 
     if output == "inscriptions":
         if not has_word_filters:
-            return QueryResults(matching, [])
+            return QueryResults(matching, [], metadata=metadata)
         kept = [
             d
             for d in matching
             if any(
-                t.kind == TokenKind.WORD and word_matches(t.text, filters, cooccur_map)
+                token_selected(t, selected)
+                and (key := word_key(t, view or "surface")) is not None
+                and word_matches(key, filters, cooccur_map, view=view)
                 for t in d.tokens
             )
         ]
-        return QueryResults(kept, [])
+        return QueryResults(kept, [], metadata=metadata)
 
     matched_ids = {d.id for d in matching}
     word_counts: dict[str, int] = {}
-    for w, entry in word_index.items():
-        if not word_matches(w, filters, cooccur_map):
+    # Explicit choices must work even when callers supplied a legacy surface index.
+    # Retain the prebuilt-index contract for legacy document-frequency queries.
+    candidates = frequencies if explicit_selection or count_unit == "token" else [
+        (word, sum(1 for doc_id in entry.inscription_ids if doc_id in matched_ids))
+        for word, entry in word_index.items()
+    ]
+    for w, cnt in candidates:
+        if not word_matches(w, filters, cooccur_map, view=view):
             continue
-        cnt = sum(1 for doc_id in entry.inscription_ids if doc_id in matched_ids)
         if cnt > 0:
             word_counts[w] = cnt
     words = sorted(word_counts.items(), key=lambda kv: (-kv[1], kv[0]))
-    return QueryResults([], words)
+    return QueryResults([], words, metadata=metadata)
 
 
 def summarize_filters(filters: list[FilterRow]) -> str:
@@ -312,7 +379,10 @@ def summarize_filters(filters: list[FilterRow]) -> str:
 
 
 # ── Index builders + corpus-level convenience ────────────────────────────────
-def build_word_index(documents: Iterable[Document]) -> dict[str, WordEntry]:
+def build_word_index(
+    documents: Iterable[Document], *, view: WordView = "surface",
+    statuses: Iterable[ReadingStatus | str] | None = None,
+) -> dict[str, WordEntry]:
     """Index every word token to the documents it appears in.
 
     A word is any ``TokenKind.WORD`` token: a hyphen-joined multi-sign Aegean word
@@ -321,11 +391,13 @@ def build_word_index(documents: Iterable[Document]) -> dict[str, WordEntry]:
     ids: dict[str, list[str]] = {}
     counts: dict[str, int] = {}
     sites: dict[str, set[str]] = {}
+    view = validate_view(view)
+    selected = reading_statuses(statuses)
     for doc in documents:
         seen: set[str] = set()
         for t in doc.tokens:
-            w = t.text
-            if t.kind != TokenKind.WORD:
+            w = word_key(t, view)
+            if w is None or not token_selected(t, selected):
                 continue
             counts[w] = counts.get(w, 0) + 1
             if w not in seen:
@@ -337,12 +409,18 @@ def build_word_index(documents: Iterable[Document]) -> dict[str, WordEntry]:
     }
 
 
-def build_cooccurrence_map(documents: Iterable[Document]) -> dict[str, set[str]]:
+def build_cooccurrence_map(
+    documents: Iterable[Document], *, view: WordView = "surface",
+    statuses: Iterable[ReadingStatus | str] | None = None,
+) -> dict[str, set[str]]:
     """Map each multi-sign word to the set of multi-sign words it shares a
     document with."""
     cooccur: dict[str, set[str]] = {}
+    view = validate_view(view)
+    selected = reading_statuses(statuses)
     for doc in documents:
-        words = sorted({t.text for t in doc.tokens if t.kind == TokenKind.WORD})
+        words = sorted({key for t in doc.tokens if token_selected(t, selected)
+                        and (key := word_key(t, view)) is not None})
         for w in words:
             bucket = cooccur.setdefault(w, set())
             for other in words:
@@ -356,8 +434,19 @@ def run_query(
     filters: list[FilterRow],
     output: Output = "inscriptions",
     annotated_ids: set[str] | None = None,
+    *,
+    view: WordView | None = None,
+    count_unit: CountUnit = "document",
+    statuses: Iterable[ReadingStatus | str] | None = None,
 ) -> QueryResults:
     """Build the indices from a `Corpus` and evaluate ``filters``.
+
+    ``view=None`` preserves legacy uppercase text predicates and surface output.
+    Explicit ``surface`` uses exact Token.text; ``normalized`` uses NFC/lowercase/
+    final-sigma folding; ``lemma`` uses the same normalization on existing lemmas,
+    excluding missing ones. Sign-pattern/sign-label predicates retain their
+    script-specific matching rules. ``statuses`` selects whole tokens and every
+    typed editorial segment. ``count_unit`` is ``document`` (default) or ``token``.
 
     Convenience over `eval_query` for the common whole-corpus case. The result
     carries the corpus's provenance and a filter summary, so it is citable
@@ -379,18 +468,23 @@ def run_query(
             raise ValueError(
                 f"unknown query field {f.field!r}; fields: {', '.join(FIELDS)}"
             )
+    if view is not None:
+        view = validate_view(view)
+    selected = reading_statuses(statuses)
     documents = list(corpus)
     # The co-occurrence map is quadratic-ish in per-document vocabulary and is only read
     # by the word-cooccurs-with predicate, so build it only when a filter needs it
     # (eval_query treats a missing word as no co-occurrences).
     needs_cooccur = any(f.field == "word-cooccurs-with" for f in filters)
+    explicit_selection = view is not None or statuses is not None
     results = eval_query(
         filters,
         output,
         documents,
-        build_word_index(documents),
+        {} if explicit_selection or count_unit == "token" else build_word_index(documents),
         annotated_ids or set(),
-        build_cooccurrence_map(documents) if needs_cooccur else {},
+        build_cooccurrence_map(documents) if needs_cooccur and not explicit_selection else {},
+        view=view, count_unit=count_unit, statuses=selected if statuses is not None else None,
     )
     return replace(
         results,

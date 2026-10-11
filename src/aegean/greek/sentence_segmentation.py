@@ -506,7 +506,8 @@ def _balanced_editorial_positions(text: str) -> list[bool]:
 def _is_greek_word_character(char: str) -> bool:
     codepoint = ord(char)
     return (
-        0x0370 <= codepoint <= 0x037D
+        codepoint == 0x02B9  # NFC form of the Greek keraia; also a tokenizer word character
+        or 0x0370 <= codepoint <= 0x037D
         or 0x037F <= codepoint <= 0x0386
         or 0x0388 <= codepoint <= 0x03FF
         or 0x1F00 <= codepoint <= 0x1FFF

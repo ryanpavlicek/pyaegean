@@ -1,5 +1,64 @@
 # Independent review
 
+## Reviewing annotations while researching
+
+Annotation review is optional. Search, first-pass analysis, vocabulary exploration,
+and provisional exports do not require approval. Review the fields that support
+your research claim; also sample unflagged material, since a low-risk flag does
+not establish correctness.
+
+```bash
+aegean review export corpus.json -o review.csv --selection unverified --reviewer Alice
+# Fill field decisions in the CSV, then apply them to the same corpus.
+aegean review apply corpus.json review.csv -o reviewed.json
+```
+
+Use `--selection all` for every word or `--selection flagged` for the existing
+review flag. `unverified` specifically checks lemma verification, not every
+annotation field. To generate predictions first, add `--annotate` and any backend
+flags, such as `--neural`, to export, merge, and apply. The generated apply command
+preserves those flags and quotes paths for a POSIX shell.
+
+Set `decision_lemma`, `decision_pos`, or `decision_morph` independently:
+
+| Decision | What to enter | Result |
+| --- | --- | --- |
+| `accept` | Leave the corresponding `correct_*` cell blank. | Verify the unchanged, existing prediction for this field. |
+| `correct` | Enter a different, nonempty value in `correct_*`. | Save and verify the correction while preserving the original prediction. |
+| `defer` | Leave `correct_*` blank. | Retain the prediction and mark this field unverified for later work. |
+| `reject` | Leave `correct_*` blank. | Retain the rejected prediction as evidence and mark this field unverified; no replacement is inferred. |
+| Blank | Optionally enter a correction. | Preserve the older correction-only behavior; an unchanged value or blank row conveys no approval. |
+
+`reviewer` identifies the scholar; `reviewer_note` records the reason; and
+`reviewer_evidence` accepts a citation, URL, or other evidence reference. A blank
+identity falls back to `review apply --reviewer`, then to `anonymous`. Notes and
+evidence apply only to fields with a decision or an actual legacy correction.
+Accepting a lemma does not verify POS, morphology, dependencies, or lexical sense.
+
+The saved corpus keeps per-field decisions and verification, the first prediction
+under `<field>__pred`, and a structured `review_history` with every action,
+prediction, value, reviewer, note, evidence, source class, and date. Reannotation
+invalidates the current decisions for fields it replaces while retaining history;
+export a new table to reconsider them. Applying explicit decisions from a table
+whose prediction or source alignment changed raises an error.
+
+CSV snapshot checks compare displayed values, lemma source classes, and exact
+source/form alignment. They do not independently identify a model version or
+certify that two runs used the same model artifact. Reannotation marks current
+decisions stale even when the new values agree; use a fresh export when reviewing
+the replacement analysis. A separate model revision yielding identical values
+and source classes cannot be distinguished from the CSV alone.
+
+Several scholars can review copies of the same export, then run
+`aegean review merge alice.csv bob.csv --corpus corpus.json -o merged.csv`.
+Conflicting actions or corrections remain unresolved; `--on-conflict report`
+writes only the agreed subset. A merged CSV's read-only `reviewer_records` column
+preserves each person's field attribution, note, and evidence, including when
+different people checked different fields. Keep source, alignment, prediction,
+and merge-attribution columns intact.
+
+## Reproducing the public evidence
+
 pyaegean includes a one-command review path for people who want to check the
 public evidence before reading the rest of the repository:
 

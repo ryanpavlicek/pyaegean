@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unicodedata
+
 import pytest
 
 from aegean.greek import (
@@ -207,6 +209,104 @@ def test_three_vowel_synizesis() -> None:
     from aegean.greek.meter import _analyze
 
     assert len(_analyze("θεούς")) == 1
+
+
+@pytest.mark.parametrize("normalization", ["NFC", "NFD"])
+def test_optional_synizesis_supports_iliad_1_18_without_forcing_theoi(normalization: str) -> None:
+    # This known passage checks candidate support, not new independent accuracy.
+    from aegean.greek import meter
+
+    line = unicodedata.normalize(normalization, "ὑμῖν μὲν θεοὶ δοῖεν Ὀλύμπια δώματ’ ἔχοντες")
+    assert [text for text, _ in syllable_options("θεοὶ")] == ["θε", "οὶ"]
+    candidates = list(meter._hexameter_candidates(line))
+    assert len(candidates) == 2
+    assert len(candidates[1]) == len(candidates[0]) - 1
+    assert meter._scan_dactylic(candidates[0], n_feet=5) is None
+
+    sc = scan_hexameter(line)
+    assert sc.pattern == "——|——|—⏑⏑|—⏑⏑|—⏑⏑|—×"
+    assert "θεοὶ" in sc.syllables
+    assert not sc.ambiguous
+    # Coalescence preserves all written Greek letters and accents, in NFC as
+    # elsewhere in this analyzer; punctuation/apostrophes are not syllables.
+    assert "".join(sc.syllables) == "".join(meter._word_texts(line))
+
+
+def test_optional_synizesis_entry_is_required_for_iliad_1_18(monkeypatch) -> None:
+    from aegean.greek import meter
+
+    monkeypatch.setattr(meter, "_OPTIONAL_HEXAMETER_SYNIZESIS", {})
+    with pytest.raises(ScansionError):
+        scan_hexameter("ὑμῖν μὲν θεοὶ δοῖεν Ὀλύμπια δώματ’ ἔχοντες")
+
+
+def test_theoi_disyllabic_reading_is_retained_when_only_it_fits() -> None:
+    # Constructed quantity diagnostic: only the natural θε-οὶ division fits.
+    line = "μῆν τε θεοὶ " + "μῆν " * 9
+    sc = scan_hexameter(line)
+    assert sc.pattern == "—⏑⏑|——|——|——|——|—×"
+    assert sc.syllables[2:4] == ("θε", "οὶ")
+    assert not sc.ambiguous
+
+
+def test_optional_synizesis_alternative_sets_ambiguity_without_replacing_natural_fit() -> None:
+    # Constructed diagnostic: correptio permits the natural dactyl, while a
+    # coalesced θεοὶ supplies a spondee. Each candidate alone has one fit.
+    from aegean.greek import meter
+
+    line = "μῆν θεοὶ ἦν " + "μῆν " * 9
+    candidates = list(meter._hexameter_candidates(line))
+    assert [meter._count_dactylic(candidate, n_feet=5) for candidate in candidates] == [1, 1]
+    sc = scan_hexameter(line)
+    assert sc.pattern == "—⏑⏑|——|——|——|——|—×"
+    assert sc.syllables[1:3] == ("θε", "οὶ")
+    assert sc.ambiguous
+
+
+def test_repeated_optional_words_are_independent_position_choices() -> None:
+    from aegean.greek import meter
+
+    candidates = list(meter._hexameter_candidates("θεοὶ θεοὶ"))
+    assert [[syllable.text for syllable in candidate] for candidate in candidates] == [
+        ["θε", "οὶ", "θε", "οὶ"],
+        ["θεοὶ", "θε", "οὶ"],
+        ["θε", "οὶ", "θεοὶ"],
+        ["θεοὶ", "θεοὶ"],
+    ]
+
+
+def test_optional_synizesis_search_is_bounded_without_a_truncated_uniqueness_claim(monkeypatch) -> None:
+    from aegean.greek import meter
+
+    assert len(list(meter._hexameter_candidates(" ".join(["θεοὶ"] * 8)))) == 256
+    with pytest.raises(ScansionError, match="at most 8.*found 9"):
+        scan_hexameter(" ".join(["θεοὶ"] * 9))
+    # Even an already fitting natural candidate must not bypass the guard.
+    monkeypatch.setattr(meter, "_MAX_OPTIONAL_SYNIZESIS_OCCURRENCES", 1)
+    with pytest.raises(ScansionError, match="at most 1.*found 2"):
+        scan_hexameter("μῆν θεοὶ ἦν θεοὶ ἦν " + "μῆν " * 7)
+
+
+def test_three_vowel_coalescence_preserves_first_sequence_and_natural_diphthong_after_it(
+    monkeypatch,
+) -> None:
+    from aegean.greek import meter
+
+    # Constructed word with repeated written sequences: coalesce only the first
+    # εοι, before natural οι grouping, preserving the original accented glyphs.
+    monkeypatch.setitem(meter._SYNIZESIS, "εοιεοι", "εοι")
+    items = meter._items("εοὶεοὶ")
+    assert [item.text for item in items if item.is_vowel] == ["εοὶ", "ε", "οὶ"]
+    assert "".join(item.text for item in items) == "εοὶεοὶ"
+
+
+def test_optional_synizesis_does_not_accept_a_prose_word_or_infer_unknown_words() -> None:
+    from aegean.greek import meter
+
+    with pytest.raises(ScansionError):
+        scan_hexameter("θεοὶ")
+    assert len(list(meter._hexameter_candidates("νεοὶ"))) == 1
+    assert [text for text, _ in syllable_options("νεοὶ")] == ["νε", "οὶ"]
 
 
 def test_pattern_str_round_trips_glyphs() -> None:

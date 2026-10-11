@@ -87,7 +87,8 @@ from aegean.analysis import balance_check
 for chk in balance_check(doc):
     print(chk)
 # BalanceCheck(stated_total=130.5, computed_sum=131.0, item_count=6,
-#              difference=0.5, balances=False, marker='KU-RO', total_line_index=7)
+#              difference=0.5, balances=False, marker='KU-RO', total_line_index=7,
+#              exact_difference=Fraction(1, 2))
 ```
 
 (Each result is a `BalanceCheck`: a small Python object whose fields you can read
@@ -601,6 +602,11 @@ The arguments that shape what you get back:
 | `source=` → `--source` | `"perseus"`, `"first1k"`, or `"auto"` | `auto` (try both) |
 | `edition=` → `--edition` | pick a specific edition file | highest `-grc*` edition |
 | `force=` (API only) | re-download even if cached | `False` |
+
+`doc.tokens` includes punctuation, foreign text and numerals,
+and `doc.source_text` retains the selected whitespace-normalized TEI reading.
+Use `doc.words` when you want lexical tokens. Speaker labels in drama retain
+their TEI context but are excluded from word counts.
 
 ### Run the pipeline over the real line
 

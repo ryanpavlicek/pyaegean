@@ -1,10 +1,10 @@
-"""Human-in-the-loop review tables: machine annotations out, corrected annotations back.
+"""Optional field-level scholarly review: predictions out, decisions and corrections back.
 
 Automated analysis does not end the workflow. This module exports a corpus's per-token
 annotations to a plain CSV a scholar can open in a spreadsheet, correct, and hand back:
 `to_review_table` writes one reviewable row per word (the machine's lemma / POS / morphology,
-its evidence class and a "needs review" flag, and blank columns for the reviewer's
-corrections and notes); `from_review_table` reads the corrections back onto the corpus,
+its evidence class and a "needs review" flag, and blank columns for field decisions,
+corrections, notes, and evidence); `from_review_table` reads them back onto the corpus,
 keeping the machine's value under a ``<field>__pred`` key and stamping who reviewed it and a
 provenance note. A lemma correction also becomes ``lemma_source=user`` and
 ``lemma_verified=true`` while preserving the predicted source. The join key is
@@ -31,7 +31,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 
 from .._atomic import atomic_path
 
@@ -54,8 +54,9 @@ __all__ = [
 ]
 
 # The columns of a review table. The first block is read-only context + prediction + triage;
-# the reviewer fills the ``correct_*`` and ``reviewer_note`` columns (blank = accept as-is) and
-# records who they are in ``reviewer`` (used when several copies are merged; blank = anonymous,
+# the reviewer fills ``decision_*`` (accept/correct/defer/reject), ``correct_*``, and notes.
+# Blank decisions retain the historical correction-only contract: blanks never verify.
+# Identity is recorded in ``reviewer`` (used when several copies are merged; blank = anonymous,
 # in which case the merge falls back to the file name).
 REVIEW_COLUMNS: tuple[str, ...] = (
     "doc_id", "position", "line_no", "ref", "token",       # identity / join key (read-only)
@@ -72,6 +73,9 @@ REVIEW_COLUMNS: tuple[str, ...] = (
     "evidence_class", "source_citation", "needs_review",   # provenance + triage (read-only)
     "correct_lemma", "correct_pos", "correct_morph",       # reviewer fills
     "reviewer_note", "reviewer",                            # reviewer fills
+    "decision_lemma", "decision_pos", "decision_morph",    # reviewer fills; blank = no decision
+    "reviewer_evidence",                                   # reviewer fills; citation / link
+    "reviewer_records",                                    # merge attribution (JSON; read-only)
 )
 
 FORM_STATE_COLUMNS: tuple[str, ...] = (
@@ -144,7 +148,9 @@ def to_review_table(
     ``doc_id``/``position``/``line_no``/``ref``), exact source span and normalization,
     existing ``pred_lemma``/``pred_pos``/``pred_morph`` values from its annotations, the
     ``evidence_class`` and a ``needs_review`` flag, the corpus citation, and blank
-    ``correct_*`` / ``reviewer_note`` columns for the reviewer. ``selection="all"``
+    ``decision_*`` / ``correct_*`` / ``reviewer_note`` / ``reviewer_evidence`` columns.
+    Decisions are per field: accept, correct, defer, or reject; blank is no decision.
+    ``selection="all"``
     exports every eligible word; ``"flagged"`` exports only rows selected by
     `needs_review_flag`; ``"unverified"`` exports words without an explicit
     ``lemma_verified`` string equal to ``true`` (case-insensitive); all other values
@@ -227,6 +233,7 @@ def to_review_table(
                 "yes" if flag else "",
                 "", "", "", "",  # correct_lemma, correct_pos, correct_morph, reviewer_note
                 _guard_cell(reviewer),
+                "", "", "", "", "",  # field decisions, evidence, merge attribution
             ])
     _write_review_rows(path, [dict(zip(REVIEW_COLUMNS, r)) for r in rows], _preguarded=True)
     return len(rows)
@@ -238,6 +245,48 @@ _CORRECTIONS: tuple[tuple[str, str, str], ...] = (
     ("correct_pos", "pred_pos", "upos"),
     ("correct_morph", "pred_morph", "morph"),
 )
+
+_ACTIONS = frozenset({"accept", "correct", "defer", "reject"})
+_DECISION_COLUMNS = tuple("decision_" + col.removeprefix("correct_") for col, _, _ in _CORRECTIONS)
+
+
+def _field_decision(row: Mapping[str, str | None], column: str) -> tuple[str, str, bool]:
+    """Validate one editable field; infer corrections only for legacy blank decisions."""
+    decision_col = "decision_" + column.removeprefix("correct_")
+    action = _cell(row, decision_col).lower()
+    value = _cell(row, column)
+    if action and action not in _ACTIONS:
+        raise ValueError(f"{decision_col} must be accept, correct, defer, reject, or blank")
+    if action == "correct" and not value:
+        raise ValueError(f"{decision_col}=correct requires {column}")
+    if action in {"accept", "defer", "reject"} and value:
+        raise ValueError(f"{decision_col}={action} requires a blank {column}")
+    return action or ("correct" if value else ""), value, bool(action)
+
+
+def _field_reviewers(
+    row: Mapping[str, str | None], name: str, *, reviewer: str,
+) -> list[dict[str, str]]:
+    """Keep individual attribution when a merged CSV crosses the apply boundary."""
+    encoded = _cell(row, "reviewer_records")
+    if not encoded:
+        return [{"reviewer": reviewer or "anonymous", "note": _cell(row, "reviewer_note"),
+                 "evidence": _cell(row, "reviewer_evidence")}]
+    try:
+        records = json.loads(encoded)
+    except (json.JSONDecodeError, RecursionError) as exc:
+        raise ValueError("invalid reviewer_records JSON") from exc
+    if not isinstance(records, dict) or not isinstance(records.get(name), list) or not records[name]:
+        raise ValueError(f"reviewer_records must attribute the reviewed {name} field")
+    result = records[name]
+    if any(
+        not isinstance(record, dict)
+        or not isinstance(record.get("reviewer"), str) or not record["reviewer"].strip()
+        or any(not isinstance(record.get(key, ""), str) for key in ("note", "evidence"))
+        for record in result
+    ):
+        raise ValueError("invalid reviewer_records attribution")
+    return cast(list[dict[str, str]], result)
 
 
 def _cell(row: Mapping[str, str | None], col: str) -> str:
@@ -291,7 +340,8 @@ def _form_state_matches_row(token: "Token", row: Mapping[str, str | None]) -> bo
 
 
 def _has_corrections(row: Mapping[str, str | None]) -> bool:
-    return any(_cell(row, col) for col, _pred, _key in _CORRECTIONS)
+    """Whether a row carries a correction or an explicit scholarly decision."""
+    return any(_cell(row, col) for col in (*_CORRECTION_COLUMNS, *_DECISION_COLUMNS))
 
 
 def _morph_key(annotations: dict[str, str]) -> str:
@@ -304,9 +354,26 @@ def _morph_key(annotations: dict[str, str]) -> str:
     return "morph"
 
 
+def _validate_explicit_prediction(
+    row: Mapping[str, str | None], annotations: dict[str, str], *,
+    action: str, value: str, machine: str, key: str, label: str,
+) -> None:
+    """A decision must refer to the displayed prediction and its current source."""
+    if action == "accept" and not machine.strip():
+        raise ValueError(f"{label}: cannot accept an absent {key} prediction")
+    if action == "correct" and value == machine:
+        raise ValueError(f"{label}: unchanged {key} requires accept, not correct")
+    source_changed = (
+        key == "lemma" and "evidence_class" in row
+        and _exact_cell(row, "evidence_class") != annotations.get("lemma_source", "")
+    )
+    if (key in annotations and annotations[key] != machine) or source_changed:
+        raise ValueError(f"{label}: {key} prediction changed since export; export a fresh review table")
+
+
 def _alignment_matches_row(token: "Token", row: Mapping[str, str | None]) -> bool:
     """Whether a source-aware review row still names this exact source token."""
-    source_id = _cell(row, "alignment_source_token_id")
+    source_id = _exact_cell(row, "alignment_source_token_id")
     if not source_id:
         return True  # schema-1 review table: legacy doc/position/text checks apply
     alignment = token.alignment
@@ -317,19 +384,19 @@ def _alignment_matches_row(token: "Token", row: Mapping[str, str | None]) -> boo
         list(alignment.normalization_ops), ensure_ascii=False, separators=(",", ":")
     )
     return (
-        (not _cell(row, "alignment_document_id")
-         or _cell(row, "alignment_document_id") == alignment.document_id)
-        and (not _cell(row, "alignment_sentence_id")
-             or _cell(row, "alignment_sentence_id") == (alignment.sentence_id or ""))
+        (not _exact_cell(row, "alignment_document_id")
+         or _exact_cell(row, "alignment_document_id") == alignment.document_id)
+        and (not _exact_cell(row, "alignment_sentence_id")
+             or _exact_cell(row, "alignment_sentence_id") == (alignment.sentence_id or ""))
         and (not _cell(row, "alignment_start_char")
              or _cell(row, "alignment_start_char") == str(alignment.start_char))
         and (not _cell(row, "alignment_end_char")
              or _cell(row, "alignment_end_char") == str(alignment.end_char))
-        and (not _cell(row, "alignment_original_text")
-             or _cell(row, "alignment_original_text") == alignment.original_text)
+        and (not _exact_cell(row, "alignment_original_text")
+             or _exact_cell(row, "alignment_original_text") == alignment.original_text)
         and _exact_cell(row, "alignment_whitespace_before") == alignment.whitespace_before
-        and (not _cell(row, "alignment_normalized_text")
-             or _cell(row, "alignment_normalized_text") == alignment.normalized_text)
+        and (not _exact_cell(row, "alignment_normalized_text")
+             or _exact_cell(row, "alignment_normalized_text") == alignment.normalized_text)
         and (not row_ops or row_ops == expected_ops)
     )
 
@@ -351,7 +418,7 @@ def _row_position(cell: str) -> int | None:
 
 def _row_has_correction(row: Mapping[str, str | None]) -> bool:
     """Whether a review row actually carries reviewer content worth landing."""
-    return any(_cell(row, column) for column, _p, _k in _CORRECTIONS)
+    return _has_corrections(row)
 
 
 @dataclass(frozen=True)
@@ -379,8 +446,8 @@ def _check_review_header(path: str | Path, fieldnames: "Sequence[str] | None") -
         )
     present = {name.strip() for name in fieldnames if name}
     missing = [col for col in _JOIN_COLUMNS if col not in present]
-    if not any(col in present for col in _CORRECTION_COLUMNS):
-        missing.append(" or ".join(_CORRECTION_COLUMNS))
+    if not any(col in present for col in (*_CORRECTION_COLUMNS, *_DECISION_COLUMNS)):
+        missing.append(" or ".join((*_CORRECTION_COLUMNS, *_DECISION_COLUMNS)))
     if missing:
         raise ValueError(
             f"{path} is not a review table: no {', '.join(missing)} column. "
@@ -418,6 +485,8 @@ def _parse_corrections(path: str | Path) -> _ParsedTable:
             _check_review_header(path, reader.fieldnames)
             for row in reader:
                 seen += 1
+                for column, _, _ in _CORRECTIONS:
+                    _field_decision(row, column)
                 pos = (row.get("position") or "").strip()
                 index = _row_position(pos)
                 if index is None:
@@ -429,7 +498,7 @@ def _parse_corrections(path: str | Path) -> _ParsedTable:
                         )
                     continue
                 key = (row.get("doc_id") or "", index)
-                source_key = _cell(row, "alignment_source_token_id")
+                source_key = _exact_cell(row, "alignment_source_token_id")
                 if source_key:
                     prior_key = source_keys.get(source_key)
                     if prior_key is not None and prior_key != key:
@@ -440,7 +509,11 @@ def _parse_corrections(path: str | Path) -> _ParsedTable:
                     source_keys[source_key] = key
                 prev = corrections.get(key)
                 if prev is not None:
-                    same = all(_cell(prev, c) == _cell(row, c) for c, _p, _k in _CORRECTIONS)
+                    same = all(
+                        _cell(prev, c) == _cell(row, c)
+                        for c in (*_CORRECTION_COLUMNS, *_DECISION_COLUMNS,
+                                  "reviewer", "reviewer_note", "reviewer_evidence", "reviewer_records")
+                    )
                     if not same:
                         raise ValueError(
                             f"review table {path}: duplicate rows for {key[0]} position "
@@ -460,7 +533,7 @@ def _apply_corrections(
     default_reviewer: str = "",
     note_extra: str = "",
     reviewers: tuple[str, ...] | None = None,
-) -> "tuple[Corpus, int]":
+) -> "tuple[Corpus, int, int]":
     """Land ``corrections`` onto ``corpus``, returning a NEW corpus (the input is not
     mutated) and the number of tokens it changed.
 
@@ -479,14 +552,15 @@ def _apply_corrections(
     comma (``"Smith, John"``) is credited as one person, not split. When ``None`` (the
     single-reviewer path), each row's ``reviewer`` cell is one identity and is credited whole."""
     corrected = 0
+    reviewed = 0
     mismatched: list[str] = []
     applied_keys: set[tuple[str, int]] = set()
     applied_reviewers: set[str] = set()
     new_docs = []
     by_source_id = {
-        _cell(row, "alignment_source_token_id"): (key, row)
+        _exact_cell(row, "alignment_source_token_id"): (key, row)
         for key, row in corrections.items()
-        if _cell(row, "alignment_source_token_id")
+        if _exact_cell(row, "alignment_source_token_id")
     }
     for doc in corpus.documents:
         new_tokens = list(doc.tokens)
@@ -505,7 +579,7 @@ def _apply_corrections(
             if crow is None:
                 continue
             applied_keys.add(matched_key)
-            source_id = _cell(crow, "alignment_source_token_id")
+            source_id = _exact_cell(crow, "alignment_source_token_id")
             if source_id and not _alignment_matches_row(tok, crow):
                     if _has_corrections(crow):
                         mismatched.append(
@@ -519,7 +593,7 @@ def _apply_corrections(
                         f"{doc.id} position {tok.position}: form state does not match the exported row"
                     )
                 continue
-            row_token = _cell(crow, "token")
+            row_token = _exact_cell(crow, "token")
             if row_token and row_token != tok.text:
                 if _has_corrections(crow):
                     mismatched.append(
@@ -528,47 +602,116 @@ def _apply_corrections(
                     )
                 continue  # never apply a correction to a different word
             edits: dict[str, str] = {}
+            events: list[dict[str, str]] = []
+            who = _cell(crow, "reviewer") or default_reviewer
+            note = _cell(crow, "reviewer_note")
+            evidence = _cell(crow, "reviewer_evidence")
+            value_changed = False
             for col, pred_col, default_key in _CORRECTIONS:
-                val = _cell(crow, col)
-                if not val:
+                action, val, explicit = _field_decision(crow, col)
+                if not action:
                     continue
                 akey = _morph_key(tok.annotations) if col == "correct_morph" else default_key
                 # the machine value the reviewer actually saw: the row's own pred_* cell
                 # (present even when the applied-to corpus carries no annotations, e.g. the
                 # `review export --annotate` flow), falling back to the current annotation
-                machine = _cell(crow, pred_col) or tok.annotations.get(akey, "")
-                if val != machine:
+                machine = (
+                    _exact_cell(crow, pred_col) if pred_col in crow
+                    else tok.annotations.get(akey, "")
+                )
+                if explicit:
+                    _validate_explicit_prediction(
+                        crow, tok.annotations, action=action, value=val, machine=machine,
+                        key=akey, label=f"{label} at {doc.id} position {tok.position}",
+                    )
+                if not explicit and val == machine:
+                    continue  # unchanged legacy correction cells do not imply acceptance
+                if action in {"accept", "correct"}:
+                    if action == "accept":
+                        val = machine
                     edits[akey] = val
-                    edits[f"{akey}__pred"] = machine
+                    edits[f"{akey}__pred"] = tok.annotations.get(f"{akey}__pred", machine)
+                    value_changed |= val != tok.annotations.get(akey, "")
+                records = _field_reviewers(crow, col.removeprefix("correct_"), reviewer=who)
+                edits[f"{akey}_verified"] = "true" if action in {"accept", "correct"} else "false"
+                edits[f"{akey}_review_decision"] = action
+                edits[f"{akey}_reviewed_by"] = ", ".join(record["reviewer"] for record in records)
+                edits[f"{akey}_review_note"] = _join_notes([
+                    (record["reviewer"], record.get("note", "")) for record in records if record.get("note")
+                ])
+                edits[f"{akey}_review_evidence"] = _join_notes([
+                    (record["reviewer"], record.get("evidence", ""))
+                    for record in records if record.get("evidence")
+                ])
+                for record in records:
+                    events.append({
+                        "field": akey, "action": action, "prediction": machine,
+                        "value": val if action in {"accept", "correct"} else machine,
+                        "reviewer": record["reviewer"], "note": record.get("note", ""),
+                        "evidence": record.get("evidence", ""),
+                        "prediction_source": (
+                            _exact_cell(crow, "evidence_class") if akey == "lemma" else ""
+                        ),
+                        "date": date.today().isoformat(),
+                    })
             if not edits:
                 continue
-            if "lemma" in edits:
+            lemma_action = edits.get("lemma_review_decision")
+            if lemma_action == "correct":
                 # A corrected lemma is human-verified evidence, not the machine source
                 # that produced the exported prediction. Preserve the old source beside
                 # the old value so provenance remains complete.
                 prior_source = tok.annotations.get("lemma_source") or _cell(crow, "evidence_class")
                 if prior_source:
-                    edits["lemma_source__pred"] = prior_source
+                    edits["lemma_source__pred"] = tok.annotations.get("lemma_source__pred", prior_source)
                 edits["lemma_source"] = "user"
                 edits["lemma_resolved"] = "true"
                 edits["lemma_verified"] = "true"
                 edits["review_recommended"] = "false"
                 edits["lemma_known"] = "true"  # compatibility field during deprecation
-            edits["review_status"] = "corrected"
-            who = _cell(crow, "reviewer") or default_reviewer
-            if who:
+            elif lemma_action == "accept":
+                edits["lemma_resolved"] = "true"
+                edits["review_recommended"] = "false"
+                edits["lemma_known"] = "true"
+            elif lemma_action in {"defer", "reject"}:
+                edits["review_recommended"] = "true"
+            actions = {event["action"] for event in events}
+            edits["review_status"] = (
+                {"accept": "accepted", "correct": "corrected", "defer": "deferred", "reject": "rejected"}
+                [next(iter(actions))] if len(actions) == 1 else "reviewed"
+            )
+            if who or any(_cell(crow, c) for c in _DECISION_COLUMNS):
                 # `who` is the display attribution kept verbatim (a merged cell may join
                 # several reviewers, and one name may itself contain a comma). When the
                 # structured `reviewers` set is not supplied, this is the single-reviewer
                 # path where the whole cell is one identity — credit it whole, never split.
-                edits["reviewed_by"] = who
+                edits["reviewed_by"] = who or "anonymous"
                 if reviewers is None:
-                    applied_reviewers.add(who)
-            note = _cell(crow, "reviewer_note")
+                    applied_reviewers.update(event["reviewer"] for event in events)
             if note:
                 edits["review_note"] = note
-            new_tokens[i] = replace(tok, annotations={**tok.annotations, **edits})
-            corrected += 1
+            if evidence:
+                edits["review_evidence"] = evidence
+            history_text = tok.annotations.get("review_history", "[]")
+            try:
+                history = json.loads(history_text)
+            except (TypeError, json.JSONDecodeError) as exc:
+                raise ValueError(f"{label}: invalid existing review_history") from exc
+            if not isinstance(history, list) or any(not isinstance(item, dict) for item in history):
+                raise ValueError(f"{label}: invalid existing review_history")
+            for event in events:
+                previous = next((
+                    item for item in reversed(history)
+                    if item.get("field") == event["field"] and item.get("reviewer") == event["reviewer"]
+                ), None)
+                if previous != event or tok.annotations.get(f"{event['field']}_review_decision") == "stale":
+                    history.append(event)
+            edits["review_history"] = json.dumps(history, ensure_ascii=False, separators=(",", ":"))
+            annotations = {**tok.annotations, **edits}
+            if annotations != tok.annotations:
+                new_tokens[i] = replace(tok, annotations=annotations)
+                reviewed += 1
+                corrected += int(value_changed)
         new_docs.append(replace(doc, tokens=new_tokens))
 
     if mismatched:
@@ -590,7 +733,7 @@ def _apply_corrections(
         )
 
     prov = corpus.provenance
-    if prov is not None and corrected:  # a no-op apply leaves provenance untouched
+    if prov is not None and reviewed:  # a no-op apply leaves provenance untouched
         if default_reviewer:
             who_text = f" by {default_reviewer}"
         elif reviewers:
@@ -601,11 +744,15 @@ def _apply_corrections(
             who_text = f" by {', '.join(sorted(applied_reviewers))}"
         else:
             who_text = ""
-        note = f"review: {corrected} tokens corrected{who_text}{note_extra} ({date.today().isoformat()})"
+        outcome = (
+            f"{corrected} tokens corrected" if corrected == reviewed
+            else f"{reviewed} tokens reviewed ({corrected} corrected)"
+        )
+        note = f"review: {outcome}{who_text}{note_extra} ({date.today().isoformat()})"
         prov = replace(prov, notes=prov.notes + (note,))
     from ..core.corpus import Corpus
 
-    return Corpus(new_docs, corpus.sign_inventory, prov, corpus.script_id), corrected
+    return Corpus(new_docs, corpus.sign_inventory, prov, corpus.script_id), corrected, reviewed
 
 
 @dataclass(frozen=True)
@@ -615,13 +762,17 @@ class ReviewApplication:
     ``rows`` is how many rows the table held, ``corrections`` how many of them carried a
     reviewer's value, and ``corrected`` how many tokens actually changed (a correction
     equal to the value the reviewer was shown changes nothing). Reading all three tells a
-    caller whether an apply that raised nothing actually did anything: ``rows`` of zero is
-    an empty table, and ``corrections`` of zero a table nobody filled in."""
+    caller whether an apply that raised nothing actually did anything. ``decisions`` counts
+    explicit field actions and ``reviewed`` counts tokens whose annotations or audit trail
+    changed. An acceptance can therefore have zero ``corrected`` and positive ``reviewed``.
+    Legacy correction-only counts retain their meaning."""
 
     corpus: "Corpus"
     rows: int
     corrections: int
     corrected: int
+    decisions: int = 0
+    reviewed: int = 0
 
 
 def apply_review_table(
@@ -632,19 +783,40 @@ def apply_review_table(
     Same reading, same guards, same corrected corpus (on `ReviewApplication.corpus`); use
     this when a no-op needs to be distinguishable from a successful apply."""
     parsed = _parse_corrections(path)
-    applied, corrected = _apply_corrections(
+    applied, corrected, reviewed = _apply_corrections(
         parsed.corrections, corpus, label=f"review table {path}", default_reviewer=reviewer
     )
     return ReviewApplication(
         corpus=applied,
         rows=parsed.rows,
-        corrections=sum(1 for row in parsed.corrections.values() if _has_corrections(row)),
+        corrections=sum(
+            1 for row in parsed.corrections.values()
+            if any(_cell(row, col) for col in _CORRECTION_COLUMNS)
+        ),
         corrected=corrected,
+        decisions=sum(
+            bool(_cell(row, col)) for row in parsed.corrections.values() for col in _DECISION_COLUMNS
+        ),
+        reviewed=reviewed,
     )
 
 
 def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "") -> "Corpus":
-    """Read reviewer corrections from ``path`` back onto ``corpus``, returning a NEW corpus.
+    """Read field decisions/corrections from ``path`` onto a NEW immutable corpus.
+
+    ``decision_lemma``, ``decision_pos``, and ``decision_morph`` take ``accept``, ``correct``,
+    ``defer``, or ``reject``. Accept requires an existing prediction; correct requires a
+    different nonempty ``correct_*`` value. Defer/reject retain the prediction but mark
+    the field unverified. Explicit decisions refuse predictions that changed since export.
+    Each field records its decision, verification, reviewer, note, and evidence under its
+    actual annotation key (``lemma``, ``upos``, ``morph`` or ``feats``). ``review_history``
+    is a JSON audit trail preserving the prediction and each reviewer decision. No action
+    certifies another field, a dependency tree, or a lexical sense.
+
+    Blank decisions keep the legacy correction-only behavior: blank cells and a correction
+    equal to the displayed prediction change nothing and never imply approval. A reviewer
+    comes from the CSV, then the ``reviewer`` argument, then ``anonymous``. Merged CSVs carry
+    individual field attribution in the read-only ``reviewer_records`` JSON column.
 
     Rows prefer stable source-token identity and fall back to ``doc_id`` + ``position`` for
     old tables. Source alignment and exported ``token`` text are verified: a mismatch (the corpus changed
@@ -656,13 +828,13 @@ def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "")
     For each row whose ``correct_*`` differs from the machine value the reviewer saw (the
     row's own ``pred_*`` cell, falling back to the token's current annotation), the token's
     annotation for that field is set to the corrected value, the machine value is preserved
-    under ``<field>__pred``, and the token is stamped ``reviewed_by`` /
+    under ``<field>__pred`` (retaining the first prediction across repeated reviews), and the token is stamped ``reviewed_by`` /
     ``review_status="corrected"`` (plus ``review_note`` when the reviewer left one). A
     morphology correction lands on the same key that supplied the displayed prediction
     (``morph`` or UD ``feats``). Rows left blank change nothing. The stamped reviewer is
-    ``reviewer`` when given, else each row's own ``reviewer`` column. A ``review:`` provenance
-    note records how many tokens were corrected. A file that is not a review table (no
-    ``doc_id`` / ``position`` / ``correct_*`` columns, or no header at all) raises rather than
+    the row's identity, falling back to ``reviewer`` when given. A ``review:`` provenance
+    note records reviewed/corrected tokens. A file that is not a review table (no
+    ``doc_id`` / ``position``, neither ``correct_*`` nor ``decision_*`` columns, or no header) raises rather than
     reading as zero corrections. The input corpus is not mutated. Use `apply_review_table`
     for the same result plus the counts."""
     return apply_review_table(path, corpus, reviewer=reviewer).corpus
@@ -673,16 +845,18 @@ def from_review_table(path: str | Path, corpus: "Corpus", *, reviewer: str = "")
 
 @dataclass(frozen=True)
 class ReviewerValue:
-    """One reviewer's proposed value for a field (with their note, if any)."""
+    """One reviewer's field action/value, with optional note and evidence."""
 
     reviewer: str
     value: str
     note: str = ""
+    action: str = "correct"
+    evidence: str = ""
 
 
 @dataclass(frozen=True)
 class ReviewConflict:
-    """One field of one token where reviewers proposed different corrections.
+    """One field of one token where reviewers proposed different actions or values.
 
     ``field`` is the human field name (``lemma`` / ``pos`` / ``morph``); ``options`` lists each
     reviewer's proposed value (and note). A conflict is never resolved silently — it is surfaced
@@ -701,7 +875,7 @@ class MergedReview:
 
     ``rows`` is the clean, agreed subset as review-table rows (ready to write or to apply with
     `apply_merged`); ``conflicts`` are the disagreements held back for a human; ``reviewers`` is
-    every reviewer whose corrections are in ``rows``; ``source_paths`` records the merged
+    every reviewer whose decisions/corrections are in ``rows``; ``source_paths`` records the merged
     tables. Use ``to_csv`` to write the agreed subset back out as a review table."""
 
     rows: tuple[dict[str, str], ...]
@@ -774,13 +948,13 @@ def _verify_against_corpus(
         for (doc_id, pos), row in corr.items():
             if not _has_corrections(row):
                 continue  # only corrected rows are load-bearing (mirrors from_review_table)
-            source_id = _cell(row, "alignment_source_token_id")
+            source_id = _exact_cell(row, "alignment_source_token_id")
             source_match = corpus_source_tokens.get(source_id) if source_id else None
             token = source_match[2] if source_match is not None else corpus_tokens.get((doc_id, pos))
             if token is None:
                 orphaned.append(f"{doc_id} position {pos} ({name})")
                 continue
-            row_token = _cell(row, "token")
+            row_token = _exact_cell(row, "token")
             if not _alignment_matches_row(token, row):
                 mismatched.append(
                     f"{doc_id} position {pos}: {name} has changed source alignment"
@@ -792,6 +966,19 @@ def _verify_against_corpus(
                     f"{doc_id} position {pos}: {name} has {row_token!r}, "
                     f"corpus has {token.text!r}"
                 )
+            else:
+                for col, pred_col, default_key in _CORRECTIONS:
+                    action, value, explicit = _field_decision(row, col)
+                    if explicit:
+                        annotation_key = _morph_key(token.annotations) if col == "correct_morph" else default_key
+                        machine = (
+                            _exact_cell(row, pred_col) if pred_col in row
+                            else token.annotations.get(annotation_key, "")
+                        )
+                        _validate_explicit_prediction(
+                            row, token.annotations, action=action, value=value, machine=machine,
+                            key=annotation_key, label=f"review table by {name} at {doc_id} position {pos}",
+                        )
     if mismatched:
         shown = "; ".join(sorted(mismatched)[:5]) + ("; …" if len(mismatched) > 5 else "")
         raise ValueError(
@@ -819,7 +1006,7 @@ def _join_notes(notes: list[tuple[str, str]]) -> str:
 def _conflict_message(conflicts: list[ReviewConflict]) -> str:
     lines = [
         f"  {c.doc_id} position {c.position} {c.token!r} {c.field}: "
-        + ", ".join(f"{o.reviewer}={o.value!r}" for o in c.options)
+        + ", ".join(f"{o.reviewer}={o.action}:{o.value!r}" for o in c.options)
         for c in conflicts
     ]
     return (
@@ -881,31 +1068,47 @@ def merge_review_tables(
     for doc_id, pos in all_keys:
         key = (doc_id, pos)
         ctx = next(corr[key] for _name, corr, _path in files if key in corr)
-        token = _cell(ctx, "token")
-        merged: dict[str, str] = {col: _cell(ctx, col) for col in REVIEW_COLUMNS}
-        for col in ("correct_lemma", "correct_pos", "correct_morph", "reviewer_note", "reviewer"):
+        token = _exact_cell(ctx, "token")
+        # Source spans, whitespace, forms, and predictions are immutable context.
+        # Trimming them here would make a verified aligned export impossible to apply.
+        merged: dict[str, str] = {col: _exact_cell(ctx, col) for col in REVIEW_COLUMNS}
+        for col in (*_CORRECTION_COLUMNS, *_DECISION_COLUMNS, "reviewer_note", "reviewer",
+                    "reviewer_evidence", "reviewer_records"):
             merged[col] = ""
         row_reviewers: set[str] = set()
+        records: dict[str, list[dict[str, str]]] = {}
         has_clean = False
         for col, _pred, _default in _CORRECTIONS:
             proposals = [
-                (name, _cell(corr[key], col), _cell(corr[key], "reviewer_note"))
+                (name, *_field_decision(corr[key], col), corr[key])
                 for name, corr, _path in files
-                if key in corr and _cell(corr[key], col)
+                if key in corr and _field_decision(corr[key], col)[0]
             ]
-            values = {value for _n, value, _note in proposals}
+            values = {(action, value) for _n, action, value, _explicit, _row in proposals}
             if not values:
                 continue
             if len(values) == 1:
-                merged[col] = next(iter(values))
+                action, value = next(iter(values))
+                merged[col] = value
+                if any(explicit for _n, _a, _v, explicit, _row in proposals):
+                    merged["decision_" + col.removeprefix("correct_")] = action
                 has_clean = True
-                row_reviewers.update(name for name, _v, _note in proposals)
+                row_reviewers.update(name for name, _a, _v, _explicit, _row in proposals)
+                records[col.removeprefix("correct_")] = [
+                    {"reviewer": name, "note": _cell(row, "reviewer_note"),
+                     "evidence": _cell(row, "reviewer_evidence")}
+                    for name, _a, _v, _explicit, row in proposals
+                ]
             else:
                 conflicts.append(
                     ReviewConflict(
                         doc_id=doc_id, position=pos, token=token,
                         field=col[len("correct_"):],
-                        options=tuple(ReviewerValue(n, v, note) for n, v, note in proposals),
+                        options=tuple(
+                            ReviewerValue(n, v, _cell(row, "reviewer_note"), a,
+                                          _cell(row, "reviewer_evidence"))
+                            for n, a, v, _explicit, row in proposals
+                        ),
                     )
                 )
         if has_clean:
@@ -916,6 +1119,12 @@ def merge_review_tables(
             ]
             merged["reviewer"] = ", ".join(sorted(row_reviewers))
             merged["reviewer_note"] = _join_notes(notes)
+            merged["reviewer_evidence"] = _join_notes([
+                (name, _cell(corr[key], "reviewer_evidence"))
+                for name, corr, _path in files
+                if name in row_reviewers and key in corr and _cell(corr[key], "reviewer_evidence")
+            ])
+            merged["reviewer_records"] = json.dumps(records, ensure_ascii=False, separators=(",", ":"))
             merged_rows.append(merged)
             contributors |= row_reviewers
 
@@ -955,7 +1164,7 @@ def apply_merged(merged: MergedReview, corpus: "Corpus") -> "Corpus":
             continue
         corrections[(row.get("doc_id") or "", index)] = row
     note_extra = f" (merged from {len(merged.source_paths)} review tables)"
-    applied, _corrected = _apply_corrections(
+    applied, _corrected, _reviewed = _apply_corrections(
         corrections, corpus, label="the merged review table", note_extra=note_extra,
         reviewers=merged.reviewers,
     )

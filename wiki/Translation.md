@@ -1,7 +1,7 @@
 # Translation
 
-`aegean.translate` is pyaegean's **hybrid translator**: it builds deterministic,
-local grounding from the toolkit's own tooling (Greek morphology and dependency
+`aegean.translate` is pyaegean's **hybrid translator**: it builds local, provisional
+grounding from the toolkit's own tooling (Greek morphology and dependency
 syntax, or Linear A sign→sound transliteration), then hands the text plus that
 evidence to the key-gated [AI Layer](AI-Layer) to produce a translation. The
 grounding step is real and local; the translation itself is a **model
@@ -9,19 +9,19 @@ hypothesis**, returned as an exploratory, provenanced result like everything
 else in the AI layer.
 
 > **Read this first: this is a translation *aid*, not a finished translation
-> model.** It pairs the package's deterministic analysis with a general-purpose
+> model.** It pairs the package's local analysis with a general-purpose
 > language model you supply a key for. Every output is an `ExploratoryResult`,
-> labeled `EXPLORATORY`, carrying the exact local facts it rested on. It is
+> labeled `EXPLORATORY`, carrying the local evidence and its status. It is
 > never a citable, verified translation, and on the **undeciphered** scripts
-> (Linear A, and by extension the other Aegean syllabaries) the "translation" is
+> (Linear A) the "translation" is
 > a guess built on a phonetic reading of the signs, never a decipherment. What
 > pyaegean can and cannot claim is on the **[Limitations](Limitations)** page.
 
 The idea is simple: a bare model translates Ancient Greek from its training
-memory alone. Here, the model is first told the lemma, part of speech, case
-role, voice, and clause structure that pyaegean computes reliably, plus the real
-meaning of any non-compositional idiom present, so its draft is anchored to
-local facts you can audit rather than to its own recall.
+memory alone. Here, the model receives locally predicted lemmas, parts of speech,
+case, voice, and clause structure, plus matched idiom glosses. Their provenance
+and coverage are visible. A wrong local prediction can still mislead a model;
+source annotations and current human field decisions can be supplied separately.
 
 This page covers the translation layer specifically. For the full generative
 surface (gloss, decipherment hypotheses, ask, summarize, extract), the providers
@@ -38,7 +38,7 @@ from aegean import translate
 # hybrid: build local grounding, then call the model
 r = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
 print(r.labeled())     # the translation with its EXPLORATORY tag
-print(r.trace())       # the local facts that grounded it
+print(r.trace())       # local evidence, its status, and translation audit data
 ```
 
 ```bash
@@ -53,7 +53,7 @@ Two functions make up the Python surface:
 
 | Function | Returns | What it does |
 | --- | --- | --- |
-| `translate.translate(text, *, script=, target=, mode=, verify=, greek_pipeline=, greek_long_input=, grounding_failure=, client=)` | `ExploratoryResult` | Build local grounding, then translate. |
+| `translate.translate(text, *, script=, target=, mode=, verify=, style=, greek_pipeline=, greek_long_input=, grounding_failure=, grounding=, client=)` | `ExploratoryResult` | Build local grounding, add supplied evidence, then translate. |
 | `translate.grounding_for(text, script, *, mode=, greek_pipeline=, greek_long_input=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
 
 Both are re-exported from `aegean.translate`. The CLI command `aegean ai
@@ -63,8 +63,9 @@ translate` routes through `translate.translate`.
 
 ## The grounding: what the model is told
 
-`grounding_for` returns the deterministic, local evidence, each item tagged with
-its **source** so the result's `trace()` names where it came from. Grounding is
+`grounding_for` returns local evidence, each item tagged with its **source**, status,
+and provenance so the result's `trace()` names where it came from. Greek morphology
+and clause skeletons are marked `predicted`. Grounding is
 **best-effort by default**. A required analysis failure yields the evidence still
 available, and `translate(...).trace()` records the failed stage and exception type.
 Use `grounding_failure="strict"` when a missing or incomplete required analysis must
@@ -158,28 +159,39 @@ flowchart TD
     E --> C
     O --> R["Exploratory result, evidence trace, and runtime config"]
     C --> R
-    Q -. "selection/config recorded, not prompted" .-> R
+    Q -. "complete config recorded; compact coverage evidence may be prompted" .-> R
 ```
 
 `trace()`, `provenance()`, and JSON output record the selected pipeline, its immutable
 configuration, the grounding mode, long-input policy and failure policy, and any
 best-effort degradation.
-That runtime block is attached only after model completion. It is not a `GroundingItem`
-and never enters either the draft or repair prompt.
+That complete runtime block is attached only after model completion and never
+enters either prompt. Compact backend identity, unavailable-stage, and coverage
+evidence can separately appear as a `GroundingItem` in a grounded prompt.
+
+Pass additional evidence with `grounding=`, for example
+`ai.annotation_evidence(doc.words, source="My edition", source_annotated=True)`.
+The builder distinguishes source annotations, predictions, current per-field
+human decisions, and unclassified origins. Only an accept/correct decision with
+the field's verification flag grants `human-reviewed` status; reviewing a lemma
+does not certify POS, morphology, or dependencies. Deferred, rejected, and stale
+decisions stay visible. Supplied evidence supplements automatic predictions,
+and `mode="none"` retains it while disabling automatic grounding.
 
 ### Grounding modes (Greek)
 
 For Greek, `mode` selects how much analysis to ground with. The default is
 **morphology-first**, deliberately: an auto-selected dictionary gloss can surface
-the wrong or an archaic sense and mislead the model, whereas morphology, voice,
-case role, and clause structure are facts the toolkit computes reliably.
+the wrong or an archaic sense and mislead the model. Morphology, voice, case, and
+clause structure provide inspectable provisional evidence, with accuracy and
+coverage dependent on the selected backend.
 
 | `mode` | Grounds with | When to use |
 | --- | --- | --- |
-| `"morphology"` (default) | Per-token lemma, part of speech, case/voice/tense; a clause skeleton (predicate, subject, object) from the dependency parse; a rare-word flag; and a gloss of any idiom present. **No dictionary glosses on ordinary words.** | The recommended default: reliable facts a model can use directly. |
+| `"morphology"` (default) | Predicted per-token lemma, part of speech, case/voice/tense; a predicted clause skeleton (predicate, subject, object) from the dependency parse; a rare-word flag; and a gloss of any idiom present. **No dictionary glosses on ordinary words.** | The default local evidence, whose predictions still require interpretation. |
 | `"full"` | The `"morphology"` lines (idiom glosses included) **plus** concise dictionary glosses, gated to the text's rare content words. | Rare, technical, or documentary vocabulary a model is likely to misread. |
 | `"lemma"` (legacy) | Lemma lines plus gated content-word LSJ glosses. | Back-compatibility with the pre-morphology grounding. |
-| `"none"` | Nothing (the bare text is sent). | A baseline, or when you want the model unaided. |
+| `"none"` | No automatic grounding; explicitly supplied `grounding=` evidence is retained. | A bare-text baseline when no supplemental evidence is supplied. |
 
 An unrecognized `mode` raises `ValueError` naming the valid modes, so a typo
 never silently falls through to a different grounding style.
@@ -267,16 +279,22 @@ syntactic claim.
 ## Post-hoc verify: translate, then check and repair
 
 `verify=True` (Greek only) runs a **translate-then-check-and-repair** pass instead
-of a single grounded call, at the cost of a second model call. It is the safest
-ordering for hard or high-stakes passages:
+of a single grounded call, at the cost of a second model call. It separates the
+initial draft from the local analysis:
 
 1. The text is translated **raw**, with no grounding in the prompt, so the local
    analysis cannot bias the draft.
 2. The full grounding (morphology, idiom glosses, and concise glosses, as for
    `mode="full"`) is then supplied to a second call that checks the draft against
-   it and corrects **only** definite contradictions (a wrong voice, subject or
+   it and is instructed to correct **only** definite contradictions (a wrong voice, subject or
    object, case relation, a rare word's or idiom's sense, an omission or
-   addition), keeping the draft where it is already right.
+   addition), keeping the draft where it is already right. A wrong grounding
+   prediction can still mislead this pass; no quality improvement is guaranteed.
+
+The complete original result, including its uncertainty notes and provenance,
+remains in `r.draft`. The final translation reports changes with their reasons
+and evidence separately from the text. These are model reports, not human review
+decisions or independent scholarly verification.
 
 ```python
 r = translate.translate("ἦν ὁ λόγος", script="greek", verify=True, client=client)
@@ -295,6 +313,23 @@ verify, see [Recipe 26](Recipes#26--choose-a-greek-ai-translation-workflow).
 The full grounding is built before the raw draft call, so
 `grounding_failure="strict"` cannot spend the first provider call and fail only
 afterward.
+
+### Translation text and audit data
+
+`style="annotated"` (default; CLI `--style annotated`) shows model-reported
+uncertainty and change notes in labeled output. `style="concise"` keeps that
+reading short while retaining the details in `data`, JSON, and `trace()`.
+For a structured response, `r.text` contains only the translation; `r.data` holds
+`translation`, `uncertainties`, `changes` with reasons/evidence, `raw_response`,
+and `format_status`. Shape validation does not validate meaning. A complete JSON
+Markdown fence is accepted; malformed responses remain verbatim with an explicit
+unstructured status, without another provider call to repair their format.
+
+When draft and final responses are structured, exact wording comparison records
+`text_changed` and can flag changed text with no model-reported changes. That
+comparison describes wording only, not correctness. Both styles preserve the
+checking draft in JSON and the trace; saved translation `.txt` files append the
+trace automatically.
 
 ---
 
@@ -346,7 +381,7 @@ layer, so the caveat and the grounding travel with the text:
 r = translate.translate("ἦν ὁ λόγος", script="greek", client=client)
 
 r.labeled()      # the translation prefixed with an unmistakable EXPLORATORY tag
-r.trace()        # grounding facts plus the selected local runtime/configuration
+r.trace()        # evidence status, audit data/draft, and local runtime/configuration
 r.provenance()   # provider/model/prompt, grounding, and grounding_runtime
 r.exploratory    # always True — preserved through save and reload
 ```
@@ -359,12 +394,13 @@ verified fact:
 "was the word" (the copula ἦν + predicate nominal λόγος; …).
 ```
 
-`trace()` names exactly which local facts anchored the translation, so a reader
+`trace()` names the local evidence and its status, so a reader
 can check the output against its grounding rather than taking it on trust. When
 nothing was fed in, the trace flags the generation as ungrounded, the weakest
 case. Its separate `grounding_runtime` records the chosen backend/configuration,
-failure policy, and any degraded stage; those facts are provenance, not prompt
-evidence. The result also serializes to JSON with the `exploratory` flag intact
+failure policy, and any degraded stage. The full mapping is provenance, while a
+compact backend/coverage summary may separately be prompt evidence. The result
+also serializes to JSON with the `exploratory` flag intact
 (`.to_json()` / `ExploratoryResult.from_dict`), so a translation you wrote out
 last week is still a labeled hypothesis when you read it back. See the AI Layer's
 [result object](AI-Layer#what-every-result-looks-like-exploratoryresult) and
@@ -391,6 +427,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `TEXT` |— | Source text. `-` reads stdin. |
 | `--script` | `greek` | `greek` or `lineara` (drives the local grounding). |
 | `--target` | `English` | Target language. |
+| `--style` | `annotated` | Show uncertainty/change notes, or `concise` for a shorter reading with audit details retained. |
 | `--mode` | `morphology` | Grounding style: `morphology`, `full`, `lemma` (legacy), `none`. |
 | `--glosses` / `--no-glosses` | on | Legacy; superseded by `--mode`. Toggles glosses in the `lemma`/`full` modes. |
 | `--verify` | off | Greek only: translate raw, then check and repair against the full grounding (a second call). |
@@ -400,7 +437,7 @@ cited corpus evidence, see [Linear A](Linear-A) and the AI Layer's
 | `--grounding-failure` | `best-effort` | `best-effort` keeps available evidence and records degradation; `strict` stops before a provider call if required grounding fails. |
 | `--provider` | `anthropic` | `anthropic`, `openai`, `grok`, `gemini`, `openrouter`, or `local`. |
 | `--model` | provider default | Model override. |
-| `--output` / `-o` | — | Save the result (`.json` full result, `.txt` labeled text). |
+| `--output` / `-o` | — | Save the result (`.json` full result, `.txt` labeled text plus audit trace). |
 | `--trace` | off | Print the grounding provenance under the answer. |
 | `--json` | off | Emit one machine-readable document and nothing else. |
 

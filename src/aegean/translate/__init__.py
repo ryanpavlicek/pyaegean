@@ -1,41 +1,22 @@
-"""Hybrid translation: lexicon/morphology grounding → LLM.
+"""Hybrid translation with local, provisional Greek analysis and lexicon evidence.
 
-Builds grounding evidence from the package's own tooling (deterministic Greek
-morphology and dependency syntax, optionally gated content-word LSJ glosses;
-Linear A sign→sound transliteration), then hands the text plus that evidence to
-`aegean.ai.translate`. The grounding step is deterministic and local; the
-translation itself is generative and returned as an exploratory, provenanced
-`ExploratoryResult`.
+The zero-dependency baseline provides limited rule/lookup analyses; an explicitly
+activated neural pipeline supplies model predictions, including morphology and
+syntax. Backend identity, field provenance and degraded coverage accompany the
+evidence shown to the model. Repeatable computation does not establish linguistic
+correctness. Source annotations and scholarly decisions can be supplied explicitly.
 
-Greek grounding has several **modes** (see `grounding_for`). The default,
-``"morphology"``, grounds the model in deterministic morphology and syntax (lemma,
-part of speech, case/voice/tense, and a clause skeleton from the dependency parse)
-and adds **no** dictionary glosses: morphology, voice, case-role, and syntactic structure
-are facts the toolkit computes reliably and that a model can use directly. It also adds a
-gloss of any **idiom** present (``ai.idiom_glosses``): a non-compositional multiword
-expression is the one error class per-token morphology cannot reach, since the words'
-lemmas and case only reinforce the wrong literal reading, and the curated idiom lexicon
-matches deterministically with a low false-positive rate, so it rides with the safe
-default. ``"full"`` keeps those morphology and idiom lines and adds a gloss layer in the
-configuration that helps rather than hurts: glosses sourced from a **concise,
-common-sense-first** dictionary cascade (Middle Liddell, Cunliffe for Homer, Abbott-Smith /
-Dodson for the NT), cleaned, and gated to the text's rare content words (see
-`ai.grounding.content_glosses` with ``source="cascade"``).
-That source matters: a first-sense gloss from the historical LSJ lexicon is often the
-archaic meaning (καιρός, βίος), so asserting it injects errors, whereas a concise dictionary
-leads with the common sense and helps most exactly on the rare vocabulary a model is likely
-to miss. ``"none"`` adds no grounding.
-
-The older ``"lemma"`` mode (lemma lines plus gated content-word LSJ glosses) is retained
-unchanged for back-compatibility; its glosses are the deliberately selective LSJ ones (see
-`ai.grounding.content_glosses` with the default ``source="lsj"``): only low-polysemy content
-words, where the dominant-sense gloss is reliable, leaving highly polysemous words to the
-model.
+``morphology`` supplies token analyses, a clause skeleton when available, and idiom
+matches. ``full`` adds optional concise dictionary candidates; ``lemma`` retains the
+legacy lemma lines and optional LSJ glosses; ``none`` disables automatic grounding.
+No mode guarantees correct contextual readings or translation quality. Strict and
+best-effort failure policies remain explicit, and no backend is loaded implicitly.
 """
 
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any, Literal, get_args
 
@@ -47,7 +28,7 @@ from ..ai import translate as _ai_translate
 from ..ai import verify_translation as _ai_verify_translation
 from ..ai.client import ExploratoryResult, LLMClient
 from ..ai.client import get_client as _get_client
-from ..ai.grounding import GroundingItem, content_glosses
+from ..ai.grounding import GroundingItem, as_item, content_glosses
 from ..ai.idioms import idiom_glosses
 
 _SOURCE_NAMES = {"greek": "Ancient Greek", "lineara": "Linear A"}
@@ -90,22 +71,31 @@ _CONTENT_POS = frozenset({"NOUN", "VERB", "ADJ", "ADV", "PROPN"})
 
 # UD FEATS values → short, readable forms for the per-token morphology line. Keyed by
 # (feature, value) so identical values under different features (Mood=Imp imperative vs
-# Aspect=Imp imperfect) never collide; an unmapped value falls back to lower-case.
+# Aspect=Imp) never collide; aspect tags retain the supplying dataset's convention.
 _FEAT_SHORT = {
     ("Case", "Nom"): "nom", ("Case", "Gen"): "gen", ("Case", "Dat"): "dat",
     ("Case", "Acc"): "acc", ("Case", "Voc"): "voc",
     ("Number", "Sing"): "sg", ("Number", "Plur"): "pl", ("Number", "Dual"): "du",
     ("Gender", "Masc"): "m", ("Gender", "Fem"): "f", ("Gender", "Neut"): "n",
     ("Voice", "Act"): "active", ("Voice", "Mid"): "middle", ("Voice", "Pass"): "passive",
-    ("Tense", "Pres"): "pres", ("Tense", "Past"): "past", ("Tense", "Fut"): "fut",
-    ("Tense", "Aor"): "aor", ("Tense", "Pqp"): "pluperf",
+    ("Tense", "Pres"): "pres", ("Tense", "Past"): "past-tag", ("Tense", "Fut"): "fut",
+    ("Tense", "Aor"): "aorist-form", ("Tense", "Pqp"): "pluperf",
+    ("VerbForm", "Fin"): "finite", ("VerbForm", "Inf"): "infinitive",
+    ("VerbForm", "Part"): "participle",
     ("Mood", "Ind"): "ind", ("Mood", "Sub"): "subj", ("Mood", "Opt"): "opt",
     ("Mood", "Imp"): "imper",
     ("Person", "1"): "1st", ("Person", "2"): "2nd", ("Person", "3"): "3rd",
 }
 
 # Order in which morphological features are rendered on a token line.
-_FEAT_KEYS = ("Case", "Number", "Gender", "Voice", "Tense", "Mood", "Person")
+_FEAT_KEYS = (
+    "Case", "Number", "Gender", "Voice", "Tense", "Aspect", "Mood", "VerbForm", "Person"
+)
+
+_CLAUSE_RELATIONS = frozenset({"ccomp", "xcomp", "advcl", "acl", "csubj", "parataxis"})
+_MAX_CLAUSE_PREDICATES = 12
+_MAX_ROLE_TOKENS = 8
+_MAX_CLAUSE_MARKERS = 4
 
 
 def _rich_lemmatizer_active(greek_pipeline: GreekPipeline | None = None) -> bool:
@@ -167,7 +157,9 @@ def _readable_feats(feats: str | None, *keys: str) -> str:
     """Render selected UD FEATS values as a compact, readable string.
 
     ``_readable_feats("Case=Acc|Number=Sing", "Case", "Number")`` → ``"acc sg"``.
-    Unknown values fall back to lower-case; absent features are skipped."""
+    Unknown values fall back to lower-case; absent features are skipped. ``Past``
+    remains a morphological tag: without an aspect or a more specific tense tag,
+    it does not establish an aorist form, let alone temporal past."""
     if not feats or feats == "_":
         return ""
     parsed = dict(kv.split("=", 1) for kv in feats.split("|") if "=" in kv)
@@ -176,62 +168,155 @@ def _readable_feats(feats: str | None, *keys: str) -> str:
         v = parsed.get(k)
         if v is None:
             continue
-        out.append(_FEAT_SHORT.get((k, v), v.lower()))
+        out.append(f"Aspect={v}" if k == "Aspect" else _FEAT_SHORT.get((k, v), v.lower()))
     return " ".join(out)
 
 
+def _tense_interpretation_note(feats: str | None) -> str:
+    """Explain the limit of a Greek tense tag without inferring a tense or time."""
+    if not feats or feats == "_":
+        return ""
+    parsed = dict(kv.split("=", 1) for kv in feats.split("|") if "=" in kv)
+    tense = parsed.get("Tense")
+    notes: list[str] = []
+    if tense == "Past":
+        notes.append("UD Past is a morphological tag; it alone does not identify Greek tense/aspect or event time")
+    if "Aspect" in parsed:
+        # The bundled Perseus conversion maps Greek perfect 'r' to Past+Perf,
+        # and imperfect 'i' to Past+Imp. Reading Perf universally as perfective
+        # would conflate the perfect with the aorist in those records.
+        notes.append("Aspect tags retain the supplying dataset's convention")
+    if tense is not None and (
+        parsed.get("VerbForm") in {"Inf", "Part", "Ger", "Gdv"} or parsed.get("Mood") != "Ind"
+    ):
+        # Missing Mood is not evidence that the form is indicative. In particular,
+        # an infinitive/participle may omit Mood while still carrying Tense=Past.
+        notes.append("no tense-time inference outside the indicative or with unspecified mood")
+    return "; ".join(notes)
+
+
+def _dependency_children(rt: TokenRecord, recs: list[TokenRecord]) -> list[TokenRecord]:
+    """Direct supplied dependents, scoped to the predicate's own sentence."""
+    return sorted(
+        (r for r in recs if r.sentence == rt.sentence and r.head == rt.index and r.relation),
+        key=lambda r: r.index,
+    )
+
+
+def _relation_base(record: TokenRecord) -> str:
+    return (record.relation or "").split(":", 1)[0]
+
+
+def _coordinated_role(role: TokenRecord, recs: list[TokenRecord]) -> str:
+    """Display explicit conjuncts without inventing shared or controlled subjects."""
+    members: list[TokenRecord] = []
+    pending = [role]
+    seen: set[int] = set()
+    while pending:
+        member = pending.pop()
+        if member.index in seen:
+            continue
+        seen.add(member.index)
+        members.append(member)
+        pending.extend(
+            r for r in _dependency_children(member, recs) if _relation_base(r) == "conj"
+        )
+    members.sort(key=lambda r: r.index)
+    shown = members[:_MAX_ROLE_TOKENS]
+    result = " + ".join(r.text for r in shown)
+    if len(members) > len(shown):
+        result += f" + … ({len(members) - len(shown)} coordinated tokens omitted)"
+    markers = sorted(
+        (
+            r for member in shown for r in _dependency_children(member, recs)
+            if _relation_base(r) == "cc"
+        ),
+        key=lambda r: r.index,
+    )
+    if markers:
+        result += " (coordination: " + ", ".join(r.text for r in markers[:_MAX_CLAUSE_MARKERS])
+        if len(markers) > _MAX_CLAUSE_MARKERS:
+            result += ", …"
+        result += ")"
+    return result
+
+
 def _root_skeleton(rt: TokenRecord, recs: list[TokenRecord]) -> str:
-    """The clause skeleton for one sentence root ``rt`` and its dependents.
+    """Summarize one supplied predicate and its explicit dependency links.
 
-    Two predicate shapes are distinguished from the dependency parse:
-
-    - **Copular clause.** In UD a non-verbal predicate is the root and the copula
-      (``εἰμί``) hangs off it as a ``cop`` dependent (``ὁ θεὸς ἀγαθός ἐστιν`` →
-      root ``ἀγαθός``, ``cop`` ``ἐστιν``). A naive "root is the predicate" reading
-      drops the copula and, when the root sits inside a prepositional phrase
-      (``ἐν ἀρχῇ ἦν ὁ λόγος`` → root ``ἀρχῇ``, ``case`` ``ἐν``), mislabels a
-      PP-internal noun the main predicate. Here the copula and the predicate
-      nominal/adjective are presented together, e.g.
-      ``predicate ἦν + ἀρχή (predicate nominal)``.
-    - **Verbal clause.** The root is the lexical predicate verb; subject and object
-      are reported as before (``γράφει`` → ``main predicate γράφει; subject …``)."""
-    kids = [r for r in recs if r.head == rt.index and r.relation]
-    by_rel = {r.relation: r for r in kids}
-    cop = by_rel.get("cop")
+    Copular predication retains the copula plus predicate nominal/adjective,
+    including for nested clauses. No subject is moved, inherited, or inferred.
+    """
+    kids = _dependency_children(rt, recs)
+    copulas = [r for r in kids if _relation_base(r) == "cop"]
+    cop = copulas[0] if copulas else None
     parts: list[str] = []
     if cop is not None:
-        # Non-verbal (copular) predication: lead with the copula + the predicate
-        # nominal/adjective so the copula is never dropped and a PP-internal noun is
-        # never called the predicate.
         kind = "predicate adjective" if rt.upos == "ADJ" else "predicate nominal"
         parts.append(f"predicate {cop.text} + {rt.lemma} ({kind})")
+        if len(copulas) > 1:
+            parts.append("additional copula links in supplied parse")
     else:
-        pred = _readable_feats(rt.feats, "Voice", "Tense", "Number", "Person")
-        parts.append(f"main predicate '{rt.text}' ({rt.lemma}{', ' + pred if pred else ''})")
-    subj = by_rel.get("nsubj")
-    if subj is not None:
-        parts.append(f"subject {subj.text}")
-    obj = by_rel.get("obj")
-    if obj is not None:
-        parts.append(f"object {obj.text}")
+        pred = _readable_feats(rt.feats, "Voice", "Tense", "Aspect", "Mood", "VerbForm", "Number", "Person")
+        label = "main predicate" if rt.head == 0 else "subordinate predicate"
+        if _relation_base(rt) in {"conj", "parataxis"}:
+            label = "coordinated predicate" if _relation_base(rt) == "conj" else "paratactic predicate"
+        parts.append(f"{label} '{rt.text}' ({rt.lemma}{', ' + pred if pred else ''})")
+    if rt.head != 0:
+        governor = next(
+            (r for r in recs if r.sentence == rt.sentence and r.index == rt.head), None
+        )
+        attachment = f"'{governor.text}'" if governor is not None else f"unavailable token {rt.head}"
+        parts.append(f"dependency {rt.relation} → {attachment}")
+    markers = [r for r in kids if _relation_base(r) == "mark"]
+    if markers:
+        marker_text = ", ".join(r.text for r in markers[:_MAX_CLAUSE_MARKERS])
+        if len(markers) > _MAX_CLAUSE_MARKERS:
+            marker_text += ", … (markers omitted)"
+        parts.append(f"marked by {marker_text}")
+    subjects = [r for r in kids if _relation_base(r) in {"nsubj", "csubj"}]
+    if subjects:
+        for subj in subjects[:_MAX_ROLE_TOKENS]:
+            label = "clausal subject" if _relation_base(subj) == "csubj" else "subject"
+            parts.append(f"{label} {_coordinated_role(subj, recs)}")
+        if len(subjects) > _MAX_ROLE_TOKENS:
+            parts.append(f"… ({len(subjects) - _MAX_ROLE_TOKENS} subject links omitted)")
+    else:
+        parts.append("no explicit subject in supplied parse")
+    for relation, label in (("obj", "object"), ("iobj", "indirect object")):
+        objects = [r for r in kids if _relation_base(r) == relation]
+        parts.extend(f"{label} {_coordinated_role(obj, recs)}" for obj in objects[:_MAX_ROLE_TOKENS])
+        if len(objects) > _MAX_ROLE_TOKENS:
+            parts.append(f"… ({len(objects) - _MAX_ROLE_TOKENS} {label} links omitted)")
+    note = _tense_interpretation_note((cop or rt).feats)
+    if note:
+        parts.append(note)
     return "; ".join(parts)
 
 
 def _clause_skeleton(recs: list[TokenRecord]) -> str:
-    """A readable clause skeleton across every sentence root in ``recs``, or ``""``.
+    """Bounded summary of roots and explicit subordinate/coordinated predicates.
 
-    Each root (``head == 0``) that heads a clause becomes one ``;``-joined clause,
-    and clauses are joined with `` | ``. Roots that are neither a content predicate
-    (VERB / ADJ / NOUN) nor a copular predicate are skipped. Pure (no I/O); the parse
-    is supplied by the caller, which keeps the copular-vs-verbal logic unit-testable."""
-    clauses: list[str] = []
-    for rt in recs:
-        if rt.head != 0:
-            continue
-        has_cop = any(r.head == rt.index and r.relation == "cop" for r in recs)
-        if rt.upos not in {"VERB", "ADJ", "NOUN"} and not has_cop:
-            continue
-        clauses.append(_root_skeleton(rt, recs))
+    A dependency relation licenses inclusion; lexical knowledge never repairs
+    the parse. All token/head comparisons stay within the token's sentence.
+    """
+    predicates: list[TokenRecord] = []
+    for rt in sorted(recs, key=lambda r: (r.sentence, r.head != 0, r.index)):
+        kids = _dependency_children(rt, recs)
+        has_cop = any(_relation_base(r) == "cop" for r in kids)
+        has_subject = any(_relation_base(r) in {"nsubj", "csubj"} for r in kids)
+        is_predicate = rt.upos in {"VERB", "AUX", "ADJ", "NOUN", "PROPN"} or has_cop
+        if rt.head == 0 and is_predicate:
+            predicates.append(rt)
+        elif rt.head is not None and rt.relation and is_predicate:
+            relation = _relation_base(rt)
+            if relation in _CLAUSE_RELATIONS or (
+                relation == "conj" and (rt.upos in {"VERB", "AUX"} or has_cop or has_subject)
+            ):
+                predicates.append(rt)
+    clauses = [_root_skeleton(rt, recs) for rt in predicates[:_MAX_CLAUSE_PREDICATES]]
+    if len(predicates) > len(clauses):
+        clauses.append(f"… ({len(predicates) - len(clauses)} further predicates omitted)")
     return " | ".join(clauses)
 
 
@@ -243,6 +328,7 @@ def _analysis_records(
     long_input: GreekLongInput,
     failure_policy: GroundingFailure,
     failures: list[dict[str, str]],
+    coverage: dict[str, Any] | None = None,
 ) -> list[TokenRecord]:
     """Run the required Greek analysis with explicit degradation semantics."""
 
@@ -269,6 +355,20 @@ def _analysis_records(
             failed("morphology fallback analysis", fallback_exc)
             return []
 
+    words = [record for record in records if record.upos != "PUNCT"]
+    usable = [record for record in words if record.neural_analyzed is not False]
+    parsed = [record for record in usable if record.head is not None and record.relation]
+    if coverage is not None:
+        coverage.update({
+            "tokens": len(words),
+            "analyzed_tokens": len(usable),
+            "complete_tokens": sum(record.analysis_complete for record in usable),
+            "lemma_tokens": sum(record.lemma_resolved for record in usable),
+            "feature_tokens": sum(record.feats is not None for record in usable),
+            "dependency_tokens": len(parsed),
+        })
+    if parse and len(parsed) != len(usable) and not failures:
+        failed("dependency analysis", RuntimeError("required dependency fields unavailable"))
     if any(
         not record.analysis_complete or record.neural_analyzed is False
         for record in records
@@ -289,13 +389,13 @@ def _analysis_records(
 def _morphology_items(
     text: str, *, analysis: list[TokenRecord] | None = None
 ) -> list[GroundingItem]:
-    """Deterministic morphology + syntax grounding for Greek, no dictionary glosses.
+    """Local morphology + syntax predictions for Greek, no dictionary glosses.
 
-    Produces, in order: an optional clause-skeleton line from the dependency parse
-    (predicate plus subject/object, with copular clauses presented as copula +
-    predicate nominal/adjective rather than dropping the copula; see `_clause_skeleton`),
-    one compact line per non-punct token (``word = lemma (pos, readable-morph)``), and an
-    optional rare-word flag line. ``analysis`` is normally produced once by the selected
+    Produces, in order: an optional bounded dependency summary including subordinate
+    predicates and explicitly coordinated subjects, one readable line per non-punct
+    token retaining raw UD features, and an optional rare-word flag line. Tense labels
+    describe morphology; they do not establish temporal past in nonindicatives.
+    ``analysis`` is normally produced once by the selected
     `GreekPipeline` and reused by morphology, idiom, rarity, and gloss grounding."""
     if analysis is None:
         pipeline, _selection = _selected_pipeline(None)
@@ -310,31 +410,68 @@ def _morphology_items(
 
     out: list[GroundingItem] = []
 
-    skeleton = _clause_skeleton(analysis)
+    usable = [record for record in analysis if record.neural_analyzed is not False]
+    skeleton = _clause_skeleton(usable)
     if skeleton:
         out.append(
             GroundingItem(
-                "Clause skeleton: " + skeleton,
+                "Clause skeleton: predicted dependency links; " + skeleton
+                + ". Attachments may be wrong; implicit, controlled, or shared subjects are not inferred.",
                 source="analysis:syntax",
                 ref="clause",
+                status="predicted",
+                provenance={
+                    "fields": ["sentence", "index", "head", "relation", "upos", "lemma", "feats"],
+                    "scope": "supplied sentence-local dependency links and explicit conjuncts",
+                    "inferred_subjects": False,
+                    "limits": {
+                        "predicates": _MAX_CLAUSE_PREDICATES,
+                        "role_tokens": _MAX_ROLE_TOKENS,
+                        "markers": _MAX_CLAUSE_MARKERS,
+                    },
+                },
             )
         )
 
     # One compact morphology line per non-punctuation token.
-    for r in analysis:
+    for r in usable:
         if r.upos == "PUNCT":
             continue
         morph = _readable_feats(r.feats, *_FEAT_KEYS)
         body = f"{r.text} = {r.lemma} ({r.upos.lower()}{', ' + morph if morph else ''})"
-        out.append(GroundingItem(body, source="analysis:morphology", ref=r.text))
+        if r.feats and r.feats != "_":
+            body += f"; UD FEATS: {r.feats}"
+        note = _tense_interpretation_note(r.feats)
+        if note:
+            body += "; " + note
+        out.append(GroundingItem(
+            body, source="analysis:morphology", ref=r.text, status="predicted",
+            provenance={
+                "lemma_source": r.lemma_source.value,
+                "sentence": r.sentence,
+                "index": r.index,
+                "raw_feats": r.feats,
+                "head": r.head,
+                "relation": r.relation,
+                "field_status": {"lemma": "human-reviewed" if r.lemma_verified else "predicted",
+                                 "upos": "predicted", "feats": "predicted" if r.feats is not None else "unavailable",
+                                 "head": "predicted" if r.head is not None else "unavailable",
+                                 "relation": "predicted" if r.relation else "unavailable"},
+                "lemma_resolved": r.lemma_resolved,
+                "review_recommended": r.review_recommended,
+                "analysis_complete": r.analysis_complete,
+            },
+        ))
 
-    rare_line = _rare_word_line(text, analysis=analysis)
+    rare_line = _rare_word_line(text, analysis=usable)
     if rare_line:
         out.append(
             GroundingItem(
                 "Rare / easily-mistranslated words: " + rare_line,
                 source="analysis:rarity",
                 ref="rare",
+                status="derived",
+                provenance={"reference": "cached full Greek NT", "depends_on": "predicted lemmas"},
             )
         )
     return out
@@ -389,6 +526,7 @@ def _greek_grounding(
     long_input: GreekLongInput,
     failure_policy: GroundingFailure,
     failures: list[dict[str, str]],
+    coverage: dict[str, Any],
 ) -> list[GroundingItem]:
     # Reject an unknown mode loudly: a typo ("morfology") must never silently fall
     # through to the legacy lemma branch and change the grounding behavior.
@@ -406,21 +544,17 @@ def _greek_grounding(
         long_input=long_input,
         failure_policy=failure_policy,
         failures=failures,
+        coverage=coverage,
     )
+    records = [record for record in records if record.neural_analyzed is not False]
 
     if mode in ("morphology", "full"):
         out = _morphology_items(text, analysis=records)
-        # Idiom glosses ride with the morphology grounding in both modes. A
-        # non-compositional multiword expression is the one error class per-token
-        # morphology cannot reach (its lemmas/case only reinforce the literal reading), and
-        # the curated lexicon matches deterministically with a low false-positive rate on
-        # exact surface match, so it belongs in the safe default, not gated like sense
-        # glosses. Best-effort: empty when no idiom is present. Source tag lexicon:idiom.
+        # Idiom matches are dictionary candidates, not verified contextual readings.
         out.extend(idiom_glosses(text, analysis=records))
         if mode == "full" and glosses:
-            # The validated-best gloss layer: a concise, common-sense-first dictionary
-            # cascade (never LSJ-first-sense), cleaned, and gated to the rare content words
-            # (where a gloss helps). Best-effort: empty if no concise dictionary is loaded.
+            # Optional concise dictionary candidates; their contextual suitability
+            # still requires interpretation. Empty if no dictionary is loaded.
             out.extend(
                 content_glosses(
                     text, source="cascade", rarity_gate=True, analysis=records
@@ -434,9 +568,12 @@ def _greek_grounding(
             f"{record.text} → lemma {record.lemma}",
             source="lemmatizer",
             ref=record.text,
+            status="human-reviewed" if record.lemma_verified else "predicted",
+            provenance={"field": "lemma", "lemma_source": record.lemma_source.value,
+                        "analysis_complete": record.analysis_complete},
         )
         for record in records
-        if record.upos != "PUNCT" and record.lemma_resolved
+        if record.upos != "PUNCT" and record.lemma_resolved and record.neural_analyzed is not False
     ]
     if glosses:
         # Gated LSJ glosses for content words — best-effort, empty without greek.use_lsj().
@@ -448,7 +585,8 @@ def _lineara_grounding(text: str) -> list[GroundingItem]:
     from ..scripts.lineara.phonetic import word_to_phonetic
 
     return [
-        GroundingItem(f"{w} → /{word_to_phonetic(w)}/", source="transliteration", ref=w)
+        GroundingItem(f"{w} → /{word_to_phonetic(w)}/", source="transliteration", ref=w,
+                      status="derived", provenance={"scope": "sign transliteration, not decipherment"})
         for w in text.split()
         if "-" in w
     ]
@@ -464,7 +602,7 @@ def _build_grounding(
     greek_long_input: GreekLongInput,
     grounding_failure: GroundingFailure,
 ) -> _GroundingOutcome:
-    """Build prompt evidence plus separate, non-prompt runtime provenance."""
+    """Build evidence with a compact availability summary and full runtime provenance."""
     failure_policy = _validate_failure_policy(grounding_failure)
     if greek_long_input not in get_args(GreekLongInput):
         valid = ", ".join(repr(mode) for mode in get_args(GreekLongInput))
@@ -475,6 +613,8 @@ def _build_grounding(
 
     if script == "greek":
         pipeline, selection = _selected_pipeline(greek_pipeline)
+        coverage: dict[str, Any] = {"tokens": None, "analyzed_tokens": 0, "complete_tokens": 0,
+                    "lemma_tokens": 0, "feature_tokens": 0, "dependency_tokens": 0}
         if greek_long_input != "strict" and not pipeline.neural_active:
             raise ValueError(
                 f"greek_long_input={greek_long_input!r} requires a neural Greek pipeline"
@@ -487,7 +627,34 @@ def _build_grounding(
             long_input=greek_long_input,
             failure_policy=failure_policy,
             failures=failures,
+            coverage=coverage,
         )
+        required = [] if mode == "none" else ["morphology"]
+        if mode in {"morphology", "full"}:
+            required.append("dependencies")
+        missing = []
+        if mode != "none":
+            total = coverage["tokens"]
+            if not coverage["analyzed_tokens"] and failures:
+                missing.append("morphology")
+            if mode in {"morphology", "full"}:
+                if total is None or coverage["feature_tokens"] < total:
+                    missing.append("morphological features")
+                if total is None or coverage["dependency_tokens"] < total:
+                    missing.append("dependencies")
+            if total is not None and coverage["complete_tokens"] < total:
+                missing.append("complete analysis coverage")
+            summary = (
+                f"Greek analysis backend: {pipeline.config.backend} ({selection}); "
+                f"required stages: {', '.join(required)}; "
+                f"coverage: {coverage['analyzed_tokens']}/{total if total is not None else 'unknown'} tokens analyzed, "
+                f"{coverage['feature_tokens']} with morphological features, "
+                f"{coverage['dependency_tokens']} with dependencies; "
+                f"missing stages: {', '.join(missing) or 'none'}; "
+                f"operation: {'degraded' if failures or missing else 'complete'}. "
+                "Analyses are provisional; resolved lemmas and absent review flags do not certify correctness."
+            )
+            items.insert(0, GroundingItem(summary, source="analysis:availability", status="runtime"))
         return _GroundingOutcome(
             items,
             {
@@ -497,6 +664,10 @@ def _build_grounding(
                 "failure_policy": failure_policy,
                 "pipeline": _pipeline_runtime(pipeline, selection),
                 "failures": failures,
+                "required_stages": required,
+                "missing_stages": missing,
+                "coverage": coverage,
+                "degraded": bool(failures or missing),
             },
         )
 
@@ -544,63 +715,28 @@ def grounding_for(
     greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
 ) -> list[GroundingItem]:
-    """Local, deterministic grounding evidence for ``text`` in ``script`` — each item
-    tagged with its source (``analysis:morphology`` / ``analysis:syntax`` /
-    ``analysis:rarity`` / ``lexicon:idiom`` / ``lemmatizer`` / ``lexicon:LSJ`` /
-    ``transliteration``) so the result's `trace()` shows where the grounding came from.
+    """Build local evidence with status and provenance visible in prompts and traces.
 
-    For ``greek``, ``mode`` selects the grounding style:
+    Greek modes are ``morphology`` (token analyses, optional clause skeleton and
+    idiom matches), ``full`` (adds concise dictionary candidates), ``lemma``
+    (lemma lines and optional gated LSJ glosses), and ``none`` (no automatic
+    evidence). ``glosses=False`` omits dictionary candidates in full/lemma modes.
+    Dictionary matches and grammatical predictions can be wrong in context.
 
-    - ``"morphology"`` (default, recommended): deterministic morphology and syntax —
-      a per-token line (lemma, part of speech, case/voice/tense) plus a clause skeleton
-      (main predicate, subject, object) from the dependency parse, and a rare-word flag.
-      **No dictionary glosses**, but it does include a gloss of any **idiom** present (a
-      curated, non-compositional multiword expression matched on surface/lemma; source
-      ``lexicon:idiom``). Morphology, voice, case-role, and structure are facts the toolkit
-      computes reliably and a model can use directly; an auto-selected dictionary gloss can
-      surface the wrong or an archaic sense and mislead the model, so this mode omits those.
-      An idiom gloss is different: the phrase is non-compositional, so the literal token
-      reading is *itself* the error, and the lexicon match is deterministic and
-      low-false-positive, which is why it rides with the default.
-    - ``"full"``: the ``"morphology"`` lines (including idiom glosses) **and** a gloss layer
-      in the configuration
-      that helps. Glosses come from a concise, common-sense-first dictionary cascade
-      (Middle Liddell, Cunliffe for Homer, Abbott-Smith / Dodson for the NT), cleaned, and
-      gated to the rare content words. **Not** LSJ-first-sense: that historical lexicon
-      orders senses etymologically, so its lead sense is often the archaic meaning and
-      asserting it injects errors; a concise dictionary leads with the common sense and
-      helps most on the rare vocabulary a model is likely to miss. Source tag
-      ``lexicon:concise``. Best-effort: the glosses are simply absent if no concise
-      dictionary is loaded (``greek.use_lexicon("middle-liddell")`` etc.).
-    - ``"lemma"``: the lemma-line grounding plus gated content-word LSJ glosses (the prior
-      default; retained unchanged for back-compatibility). Source tag ``lexicon:LSJ``.
-    - ``"none"``: no grounding.
+    A leading availability item reports the selected backend, required stages,
+    missing stages and token coverage. Per-token evidence distinguishes lemma
+    source, resolution and review triage from human verification. The baseline
+    is a limited rule/lookup backend; it is never silently upgraded to neural.
+    A neural backend must be activated explicitly on ``greek_pipeline`` or the
+    module-default facade. No model or dictionary is downloaded by this function.
 
-    Any other ``mode`` raises ``ValueError`` naming the valid modes (a typo must not
-    silently change the grounding style).
-
-    ``glosses`` is retained for back-compatibility and is **superseded by** ``mode``:
-    it only affects the gloss-bearing modes (``"lemma"``, ``"full"``), where
-    ``glosses=False`` drops the glosses (lemma-only / morphology-only). It has no effect
-    on ``"morphology"`` (already gloss-free) or ``"none"``.
-
-    ``greek_pipeline`` may be an isolated `GreekPipeline`; when omitted, the historical
-    module-default facade remains in use. Passing it for a non-Greek script raises
-    ``ValueError`` rather than silently ignoring it. ``greek_long_input`` selects the
-    neural sentence contract: strict refusal (the default), explicitly incomplete
-    ``"partial"`` output, or reconciled ``"windowed"`` analysis. It is also rejected for
-    a non-Greek script rather than ignored. ``grounding_failure`` is
-    ``"best-effort"`` by default: required analysis failures yield the evidence still
-    available. ``"strict"`` instead raises `GroundingError` on a required analysis or
-    transliteration failure. Missing optional dictionaries, the optional rarity corpus,
-    and an unmatched idiom are normal absences under either policy.
-
-    The ``"morphology"`` grounding uses the active backends (``greek.pipeline(text,
-    parse=True)``): with `use_neural_pipeline` active it carries the neural model's
-    predicted morphology and a UD parse; without it, rule-based POS and lemmas still
-    populate the token lines and the clause skeleton is simply omitted. Backend-analysis
-    failures degrade to fewer or no grounding items under the default policy; strict mode
-    raises before a translation provider can be called. Invalid arguments always raise.
+    ``greek_pipeline=None`` retains the module-default compatibility facade; an
+    explicit instance owns analysis in isolation. ``greek_long_input`` selects
+    strict, partial or windowed neural analysis. ``grounding_failure='strict'``
+    raises `GroundingError` on required analysis failure before a provider call;
+    best-effort retains available evidence and reports degradation. Missing
+    optional dictionaries/rarity corpora and unmatched idioms are normal absences.
+    Invalid modes, failure policies and script/backend combinations raise.
     """
     return _build_grounding(
         text,
@@ -621,61 +757,45 @@ def translate(
     mode: GroundingMode = "morphology",
     glosses: bool = True,
     verify: bool = False,
+    style: Literal["annotated", "concise"] = "annotated",
     greek_pipeline: GreekPipeline | None = None,
     greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
+    grounding: Iterable[str | GroundingItem] = (),
     client: LLMClient | None = None,
 ) -> ExploratoryResult:
-    """Translate ``text`` (a ``greek`` or ``lineara`` string) into ``target``,
-    grounded in locally-derived morphology/lexicon/transliteration evidence.
+    """Translate with local provisional evidence, returning an exploratory result.
 
-    Exploratory: the grounding is real, the translation is a model hypothesis —
-    especially for undeciphered Linear A.
+    See `grounding_for` for modes, backend selection and failure policies.
+    ``grounding`` accepts additional `GroundingItem` evidence, including explicit
+    source annotations and field-level review decisions from
+    ``ai.annotation_evidence``. Its status/provenance reaches the provider along
+    with automatic predictions; it does not implicitly replace or certify them.
+    ``mode='none'`` disables automatic grounding but retains supplied evidence.
 
-    For ``greek``, ``mode`` (default ``"morphology"``) selects the grounding style; see
-    `grounding_for`. The default grounds the model in deterministic morphology and
-    syntax (lemma, part of speech, case/voice/tense, clause skeleton) plus a gloss of any
-    non-compositional idiom present (``ai.idiom_glosses``), with **no** dictionary glosses
-    on ordinary words. Use ``mode="full"`` to add, on top of those morphology lines, a
-    gloss layer sourced from a concise, common-sense-first dictionary cascade (Middle
-    Liddell, Cunliffe, Abbott-Smith / Dodson), cleaned and gated to the rare content words:
-    a concise dictionary leads with the common sense and helps most on rare vocabulary,
-    whereas an LSJ-first-sense gloss is often the archaic meaning and misleads. Use
-    ``mode="lemma"`` for the older lemma-line plus gated LSJ-gloss grounding, or
-    ``mode="none"`` for no grounding. An unrecognized ``mode`` raises ``ValueError``
-    naming the valid modes.
+    ``style='annotated'`` includes model-reported uncertainty and correction
+    details in labeled output; ``'concise'`` keeps the reading short while
+    retaining those details in ``data``, JSON and ``trace()``. For structured
+    responses, ``text`` contains only the translation. Unstructured provider
+    responses remain available verbatim and are explicitly marked as such.
 
-    ``glosses`` is retained for back-compatibility and is superseded by ``mode``: it only
-    affects the gloss-bearing modes (``"lemma"``, ``"full"``), where ``glosses=False``
-    drops the glosses.
+    ``verify=True`` (Greek only) generates an ungrounded draft then asks the same
+    provider to check it against full grounding and supplied evidence. A wrong
+    analysis can still mislead the repair. Grounding cannot bias the initial draft
+    because the first model call receives no grounding. It remains exploratory,
+    is not independent scholarly verification, and has no guarantee of improving
+    semantic quality. The original draft, including its notes and provenance,
+    remains available as ``result.draft``. Corrections and their reasons are
+    model reports, not accepted human review decisions. Qualified raters are
+    needed to evaluate translation quality.
 
-    ``greek_pipeline`` selects an isolated `GreekPipeline` for every Greek analysis
-    decision used by the grounding. ``None`` preserves the module-default compatibility
-    facade. ``greek_long_input`` explicitly selects strict, partial, or overlapping-window
-    neural analysis and remains strict by default. ``grounding_failure="best-effort"``
-    keeps available evidence when required analysis fails; ``"strict"`` raises
-    `GroundingError` before any provider call.
-
-    ``verify`` (Greek only) runs a **translate-then-check-and-repair** pass instead of a
-    single grounded call. The text is first translated **raw**, with no grounding in the
-    prompt, so the local analysis cannot bias the draft. The full grounding (morphology,
-    idiom glosses, and concise glosses, as for ``mode="full"``) is then supplied to a
-    second call that checks the draft against it and corrects only definite contradictions
-    (wrong voice, subject or object, case relation, a rare word's or idiom's sense, an
-    omission or addition), keeping the draft where it is already right. Because the
-    grounding only ever reaches the checker, it cannot bias the initial draft; a wrong
-    analysis can still mislead the repair step, so the pass is only as sound as the
-    grounding it checks against. This reduces definite errors, most on hard text, at the
-    cost of a second model call, so it is worth reaching for on hard or high-stakes
-    passages and skipping on routine ones. It supersedes ``mode`` for Greek (the checker
-    always sees the full grounding); for non-Greek scripts it has no effect and the
-    normal single call is used.
-
-    Coverage of rare or inflected forms (and the clause skeleton) depends on the active
-    backends, so a warning is raised when only the baseline seed table is loaded (call
-    ``aegean.greek.use_treebank()``, or ``use_neural_pipeline()`` for contextual,
-    model-predicted morphology and a UD parse, first).
+    Strict grounding failures stop before either provider call. Best-effort
+    degradation and limited baseline coverage are reported through warnings,
+    prompt evidence, ``grounding_runtime``, and labeled/trace output. Model and
+    dictionary activation remains opt-in; no downloads occur here.
     """
+    if style not in ("annotated", "concise"):
+        raise ValueError("style must be annotated or concise")
     effective_mode: GroundingMode = "full" if verify and script == "greek" else mode
     outcome = _build_grounding(
         text,
@@ -686,17 +806,28 @@ def translate(
         greek_long_input=greek_long_input,
         grounding_failure=grounding_failure,
     )
+    # Explicit source annotations and field-level scholarly decisions supplement
+    # predictions; the provider sees their distinct status and supporting details.
+    supplied = [as_item(item) for item in grounding if str(item)]
+    outcome.items.extend(supplied)
     if (
         script == "greek"
         and effective_mode != "none"
         and not _rich_lemmatizer_active(greek_pipeline)
     ):
         warnings.warn(
-            "Grounded Greek translation is using the baseline lemmatizer; morphology and "
-            "lexical grounding will miss many rare or inflected forms and the clause "
-            "skeleton will be omitted. Call aegean.greek.use_treebank() (or "
+            "Grounded Greek translation is using the baseline lemmatizer; rule/lookup "
+            "lemmas and POS are limited and provisional. Call aegean.greek.use_treebank() (or "
             "aegean.greek.use_neural_pipeline() for contextual, model-predicted morphology "
             "and a dependency parse) first for fuller grounding.",
+            stacklevel=2,
+        )
+    if outcome.runtime.get("degraded"):
+        stages = ", ".join(outcome.runtime.get("missing_stages", ())) or "local analysis"
+        warnings.warn(
+            f"Greek grounding is degraded with the selected {outcome.runtime['pipeline']['backend']} "
+            f"backend; unavailable or incomplete: {stages}. See grounding_runtime for coverage "
+            "and failed stages; predictions remain provisional.",
             stacklevel=2,
         )
     source = _SOURCE_NAMES.get(script, script)
@@ -705,13 +836,16 @@ def translate(
         # provider/model, then translate raw (empty grounding, so the analysis cannot
         # bias the draft) and check that draft against the full grounding.
         c = client if client is not None else _get_client()
-        draft = _ai_translate(text, source=source, target=target, grounding=(), client=c)
+        draft = _ai_translate(
+            text, source=source, target=target, grounding=(), style=style, client=c,
+        )
         result = _ai_verify_translation(
             text,
-            draft.text,
+            draft,
             source=source,
             target=target,
             grounding=outcome.items,
+            style=style,
             client=c,
         )
     else:
@@ -720,6 +854,7 @@ def translate(
             source=source,
             target=target,
             grounding=outcome.items,
+            style=style,
             client=client,
         )
     return replace(result, grounding_runtime=outcome.runtime)

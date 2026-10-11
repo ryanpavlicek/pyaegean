@@ -112,10 +112,14 @@ Optional pure-Python backends add treebank lookup and trained tagger,
 lemmatizer, and parser components. The neural backend supplies contextual UPOS,
 XPOS, UD features, lemmas, and dependency trees from one shared encoder.
 
-An annotated token record names the source of a lemma. `lemma_resolved` means
-a decision was returned; `lemma_verified` records an imported human lemma correction (`user`). `review_recommended` flags identity/unresolved
-lemmas only. It applies no confidence threshold and cannot certify the lemma or
-other predicted fields when false.
+A pipeline `TokenRecord` names the source of a lemma. `lemma_resolved` means a
+decision was returned; its `lemma_verified` property is true for the `user`
+source. Corpus annotations can additionally record an explicit human acceptance
+of an unchanged prediction: `lemma_verified=true` then retains the original
+prediction source and accompanies a field-level review record. A correction
+uses the `user` source. `review_recommended` flags identity/unresolved lemmas
+only. It applies no confidence threshold and cannot certify the lemma or other
+predicted fields when false.
 
 The default baseline is useful for transparent demonstrations but can mistag
 ordinary words. Prefer the neural backend when prediction accuracy matters and

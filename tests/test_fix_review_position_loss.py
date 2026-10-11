@@ -134,6 +134,10 @@ def test_documented_guards_still_fire(prepared, tmp_path):
 
     def edit(mutate):
         rows = list(csv.DictReader(io.StringIO(base)))
+        # Exercise the legacy doc/position join. New imports carry stable source
+        # IDs, which deliberately keep matching when spreadsheet positions move.
+        for row in rows:
+            row["alignment_source_token_id"] = ""
         rows[1]["correct_lemma"] = "ΤΕΣΤ"
         mutate(rows)
         path = tmp_path / "case.csv"

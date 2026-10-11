@@ -1,7 +1,17 @@
 {
   "_about": "Pinned Pleiades representative points [lat, lon] for the Greek-epigraphy find-places added to the gazetteer (I.Sicily, IGCyr, IOSPE, IIP, EDH). Each was verified against the live Pleiades JSON endpoint on the date below (name correspondence + region sanity, and distance < 6 km from the corpus's own coordinate where one is carried). 'scripts/check_gazetteer.py --offline' checks the stored gazetteer coordinate against these pins with the same >6 km drift rule, so a later edit that moves a coordinate away from its verified point fails offline in CI; the default (network) run re-fetches these points from Pleiades weekly. Chersonesos and Cherson are the same physical site (Pleiades 226564), so they share one pin.",
   "verified": "2026-07-11",
+  "additional_verifications": {
+    "156116232": {
+      "verified": "2026-10-11",
+      "title": "Nestor's Palace",
+      "url": "https://pleiades.stoa.org/places/156116232/json",
+      "source_sha256": "c712c6a61f74280d915968499fb97dac752b226c0a085e1e85cbf018fa7fd16e",
+      "identity": "Mycenaean palace at Epano Englianos; distinct from Classical Pylos/Koryphasion (570640)."
+    }
+  },
   "points": {
+    "156116232": [37.027137690546745, 21.69496241897444],
     "462283": [38.4674, 14.953957],
     "462503": [37.070079, 15.283336],
     "462270": [37.502959, 15.088142],

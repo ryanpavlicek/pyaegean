@@ -139,7 +139,7 @@ def test_valid_modes_still_accepted():
     morph = translate.grounding_for("ἦν ὁ λόγος", "greek", mode="morphology")
     assert morph and all(hasattr(g, "source") for g in morph)
     lemma = translate.grounding_for("ἦν ὁ λόγος", "greek", mode="lemma")
-    assert all(g.source in {"lemmatizer", "lexicon:LSJ"} for g in lemma)
+    assert all(g.source in {"lemmatizer", "lexicon:LSJ", "analysis:availability"} for g in lemma)
 
 
 # ── verify-mode safety claim: conditional, not structural ────────────────────

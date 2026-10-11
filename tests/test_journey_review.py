@@ -160,7 +160,8 @@ def test_orphaned_correction_raises_and_blank_orphan_does_not(tmp_path) -> None:
     table = tmp_path / "t.csv"
     to_review_table(c, table)
     rows = _read_rows(table)
-    orphan = dict(rows[0], doc_id="nope", position="99", correct_lemma="τι")
+    orphan = dict(rows[0], doc_id="nope", position="99", correct_lemma="τι",
+                  alignment_source_token_id="")  # no stable identity: exercise the legacy join
     _write_rows(table, rows + [orphan])
     with pytest.raises(ValueError, match="match no token"):
         from_review_table(table, c)

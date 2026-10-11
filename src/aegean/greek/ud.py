@@ -505,12 +505,8 @@ class UDDocument:
     def dumps(self, *, canonical: bool = False) -> str:
         if not canonical and self._raw_text is not None and _document_signature(self) == self._raw_signature:
             return self._raw_text
-        body = dump_conllu(self.sentences, canonical=True)
-        if self.leading_comments:
-            body = "\n".join(self.leading_comments) + "\n" + body
-        if self.trailing_comments:
-            body += "\n".join(self.trailing_comments) + "\n"
-        return body
+        body = "".join(_canonical_sentence(sent) for sent in self.sentences)
+        return _with_document_comments(body, self.leading_comments, self.trailing_comments)
 
 
 def ud_path(treebank: str = "perseus", split: str = "test", *, download: bool = True) -> Path:
@@ -819,6 +815,14 @@ def _validate_rows(
             head = parent.head
 
 
+def _comment_metadata(comment: str) -> tuple[str, str]:
+    """Read an exact comment key, leaving extension names distinct from UD keys."""
+    if not comment.startswith("#"):
+        return "", ""
+    key, separator, value = comment.removeprefix("#").partition("=")
+    return (key.strip(), value.strip()) if separator else ("", "")
+
+
 def _parse_conllu_text(
     text: str, *, strict: bool = False, allow_partial_dependencies: bool = False
 ) -> UDDocument:
@@ -841,6 +845,7 @@ def _parse_conllu_text(
                 comments = []
                 items = []
                 raw_lines = []
+            sent_id = text_value = ""
             return
         row_tuple = tuple(rows)
         tokens = tuple(row for row in row_tuple if isinstance(row, UDToken))
@@ -885,10 +890,11 @@ def _parse_conllu_text(
                 )
             comments.append(line)
             items.append(UDComment(line))
-            if line.startswith("# sent_id") and "=" in line:
-                sent_id = line.split("=", 1)[1].strip()
-            elif line.startswith("# text") and "=" in line:
-                text_value = line.split("=", 1)[1].strip()
+            key, value = _comment_metadata(line)
+            if key == "sent_id":
+                sent_id = value
+            elif key == "text":
+                text_value = value
             continue
         cols = line.split("\t")
         if len(cols) != 10:
@@ -1123,11 +1129,12 @@ def _canonical_comments(sent: UDSentence) -> list[str]:
     saw_sent_id = False
     saw_text = False
     for comment in sent.comments:
-        if comment.startswith("# sent_id") and "=" in comment:
+        key, _value = _comment_metadata(comment)
+        if key == "sent_id":
             saw_sent_id = True
             if sent.sent_id:
                 comments.append(f"# sent_id = {sent.sent_id}")
-        elif comment.startswith("# text") and "=" in comment:
+        elif key == "text":
             saw_text = True
             if sent.text:
                 comments.append(f"# text = {sent.text}")
@@ -1162,6 +1169,17 @@ def _canonical_sentence(sent: UDSentence) -> str:
     return "\n".join(lines) + "\n\n"
 
 
+def _with_document_comments(
+    body: str, leading: tuple[str, ...], trailing: tuple[str, ...]
+) -> str:
+    """Keep document comment blocks separate from sentence metadata and rows."""
+    if leading:
+        body = "\n".join(leading) + "\n\n" + body
+    if trailing:
+        body += "\n".join(trailing) + "\n\n"
+    return body
+
+
 def dump_conllu(
     sentences: Iterable[UDSentence] | UDDocument, *, canonical: bool = False
 ) -> str:
@@ -1188,7 +1206,14 @@ def dump_conllu(
             blocks.append(sent._raw_block)
         else:
             blocks.append(_canonical_sentence(sent))
-    return "".join(blocks)
+    body = "".join(blocks)
+    if sequence and sequence[0]._document_raw_text is not None:
+        body = _with_document_comments(
+            body,
+            sequence[0]._document_leading_comments,
+            sequence[0]._document_trailing_comments,
+        )
+    return body
 
 
 def dumps_conllu(

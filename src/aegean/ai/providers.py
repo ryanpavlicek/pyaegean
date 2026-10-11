@@ -16,6 +16,7 @@ model ids are ``vendor/model`` (e.g. ``anthropic/claude-3.5-sonnet``); set
 from __future__ import annotations
 
 import os
+import hashlib
 
 from .client import (
     LLMClient,
@@ -24,6 +25,14 @@ from .client import (
     ProviderNotInstalled,
     register_provider,
 )
+from .cache import ResponseCache
+
+
+def _endpoint_identity(provider: str, endpoint: str) -> str:
+    # Endpoint URLs can contain credentials or routing tokens. Keep identity
+    # distinct without exposing a URL in cache metadata or diagnostics.
+    digest = hashlib.sha256(endpoint.encode("utf-8")).hexdigest()
+    return f"{provider}@{digest}"
 
 
 @register_provider
@@ -33,6 +42,14 @@ class AnthropicClient(LLMClient):
     env_model = "ANTHROPIC_MODEL"
     default_model = "claude-sonnet-4-6"  # current GA; set ANTHROPIC_MODEL for the flagship
 
+    def __init__(self, model: str | None = None, *, api_key: str | None = None,
+                 cache: ResponseCache | None = None) -> None:
+        super().__init__(model, api_key=api_key, cache=cache)
+        self.base_url = os.environ.get("ANTHROPIC_BASE_URL") or "https://api.anthropic.com"
+
+    def _cache_id(self) -> str:
+        return _endpoint_identity(self.provider, self.base_url)
+
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         try:
             import anthropic
@@ -40,7 +57,7 @@ class AnthropicClient(LLMClient):
             raise ProviderNotInstalled(
                 "Anthropic SDK not installed — pip install 'pyaegean[anthropic]'"
             ) from e
-        client = anthropic.Anthropic(api_key=self._require_key())
+        client = anthropic.Anthropic(api_key=self._require_key(), base_url=self.base_url)
         kwargs: dict[str, object] = {
             "model": self.model,
             "max_tokens": max_tokens,
@@ -66,6 +83,18 @@ class _OpenAICompatibleClient(LLMClient):
     """Shared implementation for OpenAI and OpenAI-API-compatible providers."""
 
     base_url: str | None = None
+
+    def __init__(self, model: str | None = None, *, api_key: str | None = None,
+                 cache: ResponseCache | None = None) -> None:
+        super().__init__(model, api_key=api_key, cache=cache)
+        # Freeze the actual route with the model/key at construction. Passing
+        # None lets the SDK reread OPENAI_BASE_URL later, while the cache still
+        # thinks it called the same provider. Fixed gateways keep their route.
+        self.base_url = self.base_url or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+
+    def _cache_id(self) -> str:
+        assert self.base_url is not None
+        return _endpoint_identity(self.provider, self.base_url)
 
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         try:
@@ -168,11 +197,6 @@ class LocalClient(_OpenAICompatibleClient):
         # Local servers usually accept any key; send the configured one or a harmless placeholder.
         return self._api_key or "local"
 
-    def _cache_id(self) -> str:
-        # Two local servers can host DIFFERENT models under one name (llama3.1 on Ollama vs a
-        # custom build on llama.cpp), so the response cache must key on the endpoint too.
-        return f"{self.provider}@{self.base_url}"
-
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         if not self.model:
             raise ProviderCallError(
@@ -189,6 +213,14 @@ class GeminiClient(LLMClient):
     env_model = "GEMINI_MODEL"
     default_model = "gemini-1.5-pro"
 
+    def __init__(self, model: str | None = None, *, api_key: str | None = None,
+                 cache: ResponseCache | None = None) -> None:
+        super().__init__(model, api_key=api_key, cache=cache)
+        self.base_url = os.environ.get("GOOGLE_GEMINI_BASE_URL") or "https://generativelanguage.googleapis.com"
+
+    def _cache_id(self) -> str:
+        return _endpoint_identity(self.provider, self.base_url)
+
     def _complete(self, *, prompt: str, system: str | None, max_tokens: int) -> LLMResponse:
         try:
             from google import genai
@@ -198,7 +230,12 @@ class GeminiClient(LLMClient):
             raise ProviderNotInstalled(
                 "Google GenAI SDK not installed — pip install 'pyaegean[gemini]'"
             ) from e
-        client = genai.Client(api_key=self._require_key())
+        # This adapter supports the Gemini developer API with an API key, not
+        # implicit Vertex routing from ambient GOOGLE_GENAI_USE_VERTEXAI state.
+        client = genai.Client(
+            api_key=self._require_key(), vertexai=False,
+            http_options=types.HttpOptions(base_url=self.base_url),
+        )
         config = types.GenerateContentConfig(
             system_instruction=system or None, max_output_tokens=max_tokens
         )

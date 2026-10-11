@@ -350,12 +350,12 @@ print(r.trace())
 ```
 
 ```
-EXPLORATORY decipher via stub/stub-1 (prompt 2026.06-v1)
+EXPLORATORY decipher via stub/stub-1 (prompt 2026.10-v4)
   grounded in 2 item(s) from 2 source(s):
   • analysis:balance (1):
-      - the preceding entries sum to that numeral
+      - the preceding entries sum to that numeral [evidence: {"ref": "KU-RO", "source": "analysis:balance", "status": "unclassified"}]
   • analysis:position (1):
-      - KU-RO appears before a numeral at line end
+      - KU-RO appears before a numeral at line end [evidence: {"ref": "KU-RO", "source": "analysis:position", "status": "unclassified"}]
 ```
 
 On the CLI, add `--trace`:

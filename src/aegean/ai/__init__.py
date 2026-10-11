@@ -51,6 +51,7 @@ from .eval import (
 from .client import providers as list_providers
 from .grounding import (
     GroundingItem,
+    annotation_evidence,
     as_item,
     clean_gloss,
     concise_gloss,
@@ -93,6 +94,7 @@ __all__ = [
     "DEFAULT_CASES",
     # grounding
     "GroundingItem",
+    "annotation_evidence",
     "as_item",
     "corpus_context",
     "lexicon_evidence",

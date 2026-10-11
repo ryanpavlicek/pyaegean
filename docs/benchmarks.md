@@ -467,11 +467,11 @@ usage, not spelling alone). Measured once, CPU sequential:
 | PapyGreek, diplomatic (orig) | 90.57 | 74.64 | 86.15 | 85.62 | 84.32 | 77.57 | 72.97 |
 
 The pair isolates the cost of the scribes' non-standard documentary usage:
-lemma takes the largest hit (−4.05 points: phonetic spellings break lemma
+lemma takes the largest hit (−4.00 points: phonetic spellings break lemma
 composition), morphology loses ~2.58, attachment the least. Only 6.5% of tokens
 differ in surface form, so the per-changed-token degradation is steep.
 (Current decoder-v2 evidence:
-`training/results/decoder-v2-papygreek-remeasure-2026-07-18.json`.)
+`training/results/apparatus-lemma-remeasure-2026-08-11.json`.)
 
 **Byzantine verse (tagging only).** `greek.evaluate_on_dbbe()` scores the
 pipeline against the DBBE gold standard (Swaelens, De Vos & Lefever, LRE 2025;
@@ -481,7 +481,7 @@ but no trees, so this is a tagging row; the DBBE tagset is mapped to UPOS and
 gold lemmas are normalized Attic headwords, both stated caveats. Measured once,
 CPU sequential: **UPOS 86.75 / XPOS 76.39 / UFeats 85.86 / lemma 76.69**,
 leakage-checked (0 overlaps). (Evidence:
-`training/results/dbbe-eval-v2-2026-07-11.json`.)
+`training/results/dbbe-remeasure-2026-08-11.json`.)
 
 ### PapyGreek convention decomposition
 
@@ -557,7 +557,7 @@ Each lever is measured **once, sequentially**, on the pinned PapyGreek fold (bat
 inference is not prediction-identical on this fold, so these rows share the fold's
 CPU-sequential protocol) and pinned as its own registry variant row; the published
 PapyGreek row above is untouched. (Neural pipeline, full-coverage CPU sequential;
-evidence: `training/results/decoder-v2-papygreek-remeasure-2026-07-18.json`.)
+evidence: `training/results/apparatus-lemma-remeasure-2026-08-11.json`.)
 
 | Variant on the PapyGreek fold | UPOS / XPOS / UFeats / Lemma / UAS / LAS / CLAS |
 | --- | --- |

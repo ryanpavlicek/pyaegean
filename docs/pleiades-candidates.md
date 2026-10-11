@@ -2,10 +2,11 @@
 
 The find-site gazetteer (`src/aegean/data/bundled/geo/site_coordinates.json`)
 aligns each site to a [Pleiades](https://pleiades.stoa.org/) place id for
-linked-open-data work. **78 of 94** entries are aligned; every id is **verified by
-coordinate** (the Pleiades representative point is within a few km of ours and the
-place description matches the site), never guessed, and re-checked weekly by
-`scripts/check_gazetteer.py` so a stray coordinate cannot quietly slip in.
+linked-open-data work. **78 of 94** entries are aligned. The weekly
+`scripts/check_gazetteer.py` check measures coordinate agreement; it cannot establish
+archaeological identity. A point and its identifier can agree while referring to
+the wrong site. Title, period, description, and archaeological references require
+separate examination.
 
 ## Current coverage
 
@@ -19,9 +20,9 @@ remain unaligned and are listed below.
 At that stage the gazetteer contained 56 sites. All were checked against their
 Pleiades representative points:
 
-- **Corrected five drifted coordinates** — Zominthos (~7.5 km), Kythera (~8.4 km),
-  Pylos (~9.4 km), and the Cyprus and Margiana island centroids — each realigned to
-  the Pleiades point.
+- **Realigned five coordinates** — Zominthos (~7.5 km), Kythera (~8.4 km),
+  Pylos (~9.4 km), and the Cyprus and Margiana island centroids. The Pylos change
+  was subsequently found to match the wrong archaeological site; see below.
 - **Aligned seven more sites** (33 → 40), each coordinate-verified:
 
 | Site | Pleiades | Identification |
@@ -36,6 +37,17 @@ Pleiades representative points:
 
 An earlier pass (2026-06-11) aligned Iouktas, Arkhalokhori, Syme, Psychro,
 Apodoulou, Kardamoutsa, and Tel Haror.
+
+## Palace of Nestor correction (0.61.0)
+
+The Linear B find-site `Pylos` denotes the Palace of Nestor at Epano Englianos.
+Release 0.60.0 linked it to [570640](https://pleiades.stoa.org/places/570640),
+Classical Pylos/Koryphasion, about 8.9 km away. Release 0.61.0 uses
+[156116232](https://pleiades.stoa.org/places/156116232), **Nestor's Palace**,
+at 37.027138° N, 21.694962° E. That record describes the Mycenaean palace and
+cites Blegen's excavation publications and the Pylos Regional Archaeological
+Project. The offline regression pins both the place identity and its coordinates.
+This correction does not independently revalidate the other 93 entries.
 
 ## Candidates to contribute upstream
 

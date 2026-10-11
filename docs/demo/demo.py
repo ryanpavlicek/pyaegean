@@ -169,17 +169,28 @@ def lineara_search(pattern: str, limit: int = 40) -> str:
 def lineara_balance(doc_id: str) -> str:
     """Reconcile a Linear A tablet's stated KU-RO total against the sum of its line items."""
     import aegean
-    from aegean.analysis import balance_check
+    from aegean.analysis import balance_check, is_checkable_account
 
     doc = aegean.load("lineara").get(doc_id.strip())
     if doc is None:
         return json.dumps({"error": f"no document {doc_id!r} in the Linear A corpus"})
+    # The browser uses a released wheel; report unavailable exact evidence explicitly.
+    try:
+        exact_eligible = is_checkable_account(doc, exact=True)
+    except TypeError:
+        exact_eligible = None
     checks = [
         {"marker": c.marker, "stated": c.stated_total, "computed": c.computed_sum,
-         "difference": c.difference, "items": c.item_count, "balances": c.balances}
+         "difference": c.difference, "items": c.item_count, "balances": c.balances,
+         "exact_difference": (
+             str(c.exact_difference) if getattr(c, "exact_difference", None) is not None else None
+         ), "exact_balances": getattr(c, "exact_balances", None)}
         for c in balance_check(doc)
     ]
-    return json.dumps({"doc": doc_id, "checks": checks}, ensure_ascii=False)
+    return json.dumps({
+        "doc": doc_id, "checks": checks,
+        "tolerance_eligible": is_checkable_account(doc), "exact_eligible": exact_eligible,
+    }, ensure_ascii=False)
 
 
 def import_text(text: str) -> str:
@@ -192,10 +203,51 @@ def import_text(text: str) -> str:
         {
             "documents": len(corpus),
             "tokens": len(doc.tokens),
+            "words": len(doc.words),
+            "source_text": doc.source_text,
+            "aligned_tokens": [
+                {"text": t.text, "kind": t.kind.value,
+                 "start": t.alignment.start_char, "end": t.alignment.end_char}
+                for t in doc.tokens if t.alignment is not None
+            ],
             "top": [{"word": w, "count": n} for w, n in corpus.word_frequencies()[:10]],
         },
         ensure_ascii=False,
     )
+
+
+def word_counts(
+    corpus_id: str = "cypriot", view: str = "surface", count_unit: str = "token",
+    statuses: str = "all",
+) -> str:
+    """Count an explicit lexical population in a bundled corpus, without running analysis."""
+    import aegean
+
+    corpus_id = corpus_id.strip().lower()
+    if corpus_id not in _BUNDLED_CORPORA:
+        return json.dumps({"error": f"bundled corpora only: {', '.join(_BUNDLED_CORPORA)}"})
+    corpus = aegean.load(corpus_id)
+    kwargs: dict[str, Any] = {}
+    if view != "surface":
+        kwargs["view"] = view
+    if count_unit != "token":
+        kwargs["count_unit"] = count_unit
+    if statuses != "all":
+        kwargs["statuses"] = [s.strip() for s in statuses.split(",") if s.strip()]
+    try:
+        frequencies = corpus.word_frequencies(**kwargs)
+    except TypeError:
+        return json.dumps({"error": "These counting selections are unavailable in the installed package."})
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    return json.dumps({
+        "corpus": corpus_id,
+        "total": len(frequencies),
+        "rows": [{"word": word, "count": count} for word, count in frequencies[:20]],
+        "metadata": getattr(frequencies, "metadata", None),
+        "source_citation": corpus.cite(),
+        "counting_citation": frequencies.cite() if hasattr(frequencies, "cite") else None,
+    }, ensure_ascii=False)
 
 
 def epidoc_import(xml: str) -> str:
@@ -235,6 +287,10 @@ def epidoc_import(xml: str) -> str:
                 }
                 for token in doc.tokens[:12]
                 if token.form_state is not None
+            ],
+            "numeric_values": [
+                {"text": token.text, "value": token.annotations["epidoc:num_value"]}
+                for token in doc.tokens[:12] if "epidoc:num_value" in token.annotations
             ],
         },
         ensure_ascii=False,

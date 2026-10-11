@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import dataclass
+from fractions import Fraction
 
 _SUPERSCRIPTS = {
     "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
@@ -27,11 +28,15 @@ _SUBSCRIPTS = {
     "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
     "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
 }
-_PRECOMPOSED = {
-    "½": 1 / 2, "⅓": 1 / 3, "⅔": 2 / 3, "¼": 1 / 4, "¾": 3 / 4,
-    "⅕": 1 / 5, "⅖": 2 / 5, "⅗": 3 / 5, "⅘": 4 / 5,
-    "⅙": 1 / 6, "⅚": 5 / 6, "⅛": 1 / 8, "⅜": 3 / 8, "⅝": 5 / 8, "⅞": 7 / 8,
+_PRECOMPOSED_PARTS = {
+    "½": (1, 2), "⅓": (1, 3), "⅔": (2, 3), "¼": (1, 4), "¾": (3, 4),
+    "⅕": (1, 5), "⅖": (2, 5), "⅗": (3, 5), "⅘": (4, 5),
+    "⅙": (1, 6), "⅚": (5, 6), "⅛": (1, 8), "⅜": (3, 8), "⅝": (5, 8), "⅞": (7, 8),
 }
+_EXACT_PRECOMPOSED = {
+    glyph: Fraction(num, den) for glyph, (num, den) in _PRECOMPOSED_PARTS.items()
+}
+_PRECOMPOSED = {glyph: float(value) for glyph, value in _EXACT_PRECOMPOSED.items()}
 
 
 def _map_digits(s: str, table: dict[str, str]) -> str | None:
@@ -95,6 +100,20 @@ def parse_value(token: str) -> float | None:
 
 def is_value_token(token: str) -> bool:
     return parse_value(token) is not None
+
+
+def _exact_value(token: str) -> Fraction | None:
+    """The rational value of an accepted written numeral, without float rounding."""
+    if parse_value(token) is None:
+        return None
+    text = re.sub(r"^≈\s*", "", token.strip())
+    if _DIGITS.fullmatch(text):
+        return Fraction(int(text))
+    if text in _EXACT_PRECOMPOSED:
+        return _EXACT_PRECOMPOSED[text]
+    num, den = re.split(r"[⁄/]", text)
+    return Fraction(int(_map_digits(num, _SUPERSCRIPTS) or num),
+                    int(_map_digits(den, _SUBSCRIPTS) or den))
 
 
 def line_value(tokens: list[str]) -> float:
@@ -207,6 +226,7 @@ class AccountLine:
     value: float
     has_number: bool
     role: LineRole
+    exact_value: Fraction | None = None
 
 
 def _classify_tokens(tokens: list[str]) -> tuple[list[str], list[str]]:
@@ -244,7 +264,8 @@ def parse_account_lines(
             role = "deficit"
         elif not has_number:
             role = "header"
-        out.append(AccountLine(index, tokens, terms, ideograms, value, has_number, role))
+        exact = sum((_exact_value(t) or Fraction(0) for t in tokens), Fraction(0))
+        out.append(AccountLine(index, tokens, terms, ideograms, value, has_number, role, exact))
     return out
 
 
@@ -261,10 +282,16 @@ class BalanceCheck:
     balances: bool
     marker: str
     total_line_index: int
+    exact_difference: Fraction | None = None
+
+    @property
+    def exact_balances(self) -> bool:
+        """Whether the rational written quantities agree, without an arithmetic tolerance."""
+        return self.exact_difference == 0 if self.exact_difference is not None else self.difference == 0
 
 
 def check_balances(
-    lines: list[AccountLine], markers: Markers = LINEAR_A_MARKERS
+    lines: list[AccountLine], markers: Markers = LINEAR_A_MARKERS, *, exact: bool = False,
 ) -> list[BalanceCheck]:
     """Verify each total line against the lines feeding it.
 
@@ -274,30 +301,44 @@ def check_balances(
     Linear A account, where the grand total sums the subtotals rather than re-summing the
     raw items. Deficit and header lines are excluded from the sums. Section boundaries are
     heuristic, mirroring the standard reading.
+
+    ``exact=True`` sets ``balances`` from rational equality, instead of the
+    legacy float cutoff of 1e-6. Parsed lines retain rational written quantities;
+    hand-created lines without ``exact_value`` use ``Fraction(str(value))``.
     """
     checks: list[BalanceCheck] = []
     running: list[AccountLine] = []
     subtotals: list[float] = []
+    exact_subtotals: list[Fraction] = []
+    def rational_value(line: AccountLine) -> Fraction:
+        # Hand-created AccountLine objects may predate the rational field.
+        return line.exact_value if line.exact_value is not None else Fraction(str(line.value))
+
     for line in lines:
         if line.role == "item" and line.has_number:
             running.append(line)
             continue
         if line.role == "total":
             computed = sum(item.value for item in running)
+            exact_computed = sum((rational_value(item) for item in running), Fraction(0))
             count = len(running)
             # The stated subtotal feeds any later grand total, whether or not it
             # balanced itself; the raw items it covered do not (they are already
             # accounted for in the subtotal).
             subtotals.append(line.value)
+            exact_subtotals.append(rational_value(line))
             running = []
         elif line.role == "grand-total":
             computed = sum(subtotals) + sum(item.value for item in running)
+            exact_computed = sum(exact_subtotals, Fraction(0)) + sum((rational_value(item) for item in running), Fraction(0))
             count = len(subtotals) + len(running)
             subtotals = []
+            exact_subtotals = []
             running = []
         else:
             continue
         diff = computed - line.value
+        exact_diff = exact_computed - rational_value(line)
         # A line's role may have been assigned by a different marker set than the
         # one passed here; fall back to no marker rather than raising StopIteration.
         marker = next(
@@ -311,9 +352,10 @@ def check_balances(
                 computed_sum=computed,
                 item_count=count,
                 difference=diff,
-                balances=abs(diff) < 1e-6,
+                balances=exact_diff == 0 if exact else abs(diff) < 1e-6,
                 marker=marker,
                 total_line_index=line.index,
+                exact_difference=exact_diff,
             )
         )
     return checks

@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.60.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> **Available in v0.61.0.** Isolated pipeline instances, explicit long-input and runtime-variant
 > selection, analysis receipts, source alignment, typed editorial form states, and lossless
 > CoNLL-U representation are part of the current release.
 
@@ -141,6 +141,22 @@ Each `TokenRecord` is a dataclass with these fields:
 | `boundary_policy`, `boundary_policy_id` | the named policy and stable identity that ended this sentence (on its terminal token) |
 | `boundary_provenance`, `boundary_confidence` | `rule`, `explicit`, or `plugin`; built-in rules have no confidence, while a plugin may provide a finite `[0, 1]` estimate |
 | `boundary_start_char`, `boundary_end_char` | the half-open source span for the sentence boundary, when alignment proves it |
+
+UD feature labels describe the supplying annotation convention. `Tense=Past`
+does not by itself identify a Greek tense/aspect or the event's time;
+`Aspect=Perf` also needs its convention (the Perseus conversion uses it for
+Greek perfect forms). Subjunctives, infinitives, and participles do not establish
+past event time from a past-tagged form. The hybrid translator retains the raw
+FEATS alongside readable morphology and labels its clause summary as predicted:
+it includes supplied subordinate predicates and coordinated subjects, marks
+omissions, and does not infer or repair subject attachments. See
+[Translation](Translation#the-grounding-what-the-model-is-told).
+
+`TokenRecord.lemma_verified` derives from the human-correction `user` source.
+A separate corpus review can accept a predicted lemma while retaining its
+prediction source; its per-field decision and verification annotations record
+that acceptance. Neither form of lemma review certifies POS, morphology, a
+dependency tree, or a lexical sense. See [Validation and Review](Validation-and-Review).
 
 ### Exact source alignment
 
@@ -592,9 +608,10 @@ chosen; each decision is `accept`, `review`, or `unavailable` and carries the ca
 `--confidence-domain` and `--confidence-policy PATH`. No default thresholds or
 out-of-domain warning are bundled:
 empirical source/task calibration and coverage-risk gates still require a fresh,
-development-only inference pass. For the shipped canonical runtime, schema-3
-`AnalysisReceipt` output records calibration/policy hashes alongside the composed output
-profile. Schema 2 remains readable for legacy or custom output without a composed profile,
+development-only inference pass. For the shipped canonical runtime, schema-4
+`AnalysisReceipt` output records runtime-variant evidence, calibration/policy hashes,
+and the composed output profile. Schema 3 covers composed output without runtime-variant
+evidence. Schema 2 remains readable for legacy or custom output without a composed profile,
 and schema 1 remains readable for older confidence-free analyses.
 
 ### GPU execution and batching
@@ -698,8 +715,11 @@ unresolved they fabricate about as often as they fix). So Lever B is at its best
 `use_paradigms()`. A rescue only *replaces* an unresolved lemma (never overrides a resolved
 neural lemma) and carries its **own** evidence class — `LemmaSource.SEED` or
 `LemmaSource.PARADIGM`, the curated offline source that produced it, **never** `NEURAL` — and
-the token keeps `lemma_resolved=False`, so nothing downstream ever credits the model for an
-offline rescue. `greek.rescue_lemma(form)` returns the `(lemma, source)` a rescue would use,
+the `SentenceAnalysis.lemma_resolved` flag retains the model's original `False`,
+while the offline source override records who supplied the replacement. A returned
+`TokenRecord` has `lemma_resolved=True` for a seed/paradigm hit and
+`lemma_verified=False`; resolution does not mean verification or credit to the neural
+model. `greek.rescue_lemma(form)` returns the `(lemma, source)` a rescue would use,
 or `None`.
 
 From the shell, `aegean greek eval {ud,nt,papygreek} --documentary` scores a run with both
@@ -743,10 +763,8 @@ identity. Schemas 1 through 3 remain readable for current hosted evidence.
 
 Beta Code is the ASCII transliteration of polytonic Greek used by the TLG and
 Perseus: it lets you type Greek without a Greek keyboard. Conversion emits
-precomposed NFC. Ordinary spellings round-trip, but an explicit word-final medial
-sigma (`s1`) is not preserved by Unicode-to-Beta-Code conversion; keep the source
-spelling when that distinction matters. See
-[Known workflow defects](Limitations#known-workflow-defects).
+precomposed NFC. Ordinary spellings round-trip; explicit noncontextual medial
+and final sigma forms are retained with `s1` and `s2` when needed.
 
 ```python
 greek.betacode_to_unicode("mh=nin")      # 'μῆνιν'
@@ -1912,9 +1930,12 @@ script.nlp.syllabify("ἄνθρωπος")        # ['ἄν', 'θρω', 'πος']
 
 `load_work` and `load_nt` pull *published* corpora; to run the pipeline over your
 **own** Greek (a passage you typed, a folder of `.txt` files, a CSV of lines)
-turn it into a `Corpus` first with `aegean.io`. A Greek/NT `script_id` routes the
-text through the Greek tokenizer (so punctuation is stripped); any other script
-falls back to whitespace splitting.
+turn it into a `Corpus` first with `aegean.io`. The default `token_view="all"`
+retains decoded source content in `Document.source_text` and maps every token
+to an exact character span. For Greek/NT text, Greek words are `WORD`, foreign
+text is `UNKNOWN`, numbers are `NUMERAL`, and punctuation is `PUNCT`.
+`Document.words` and `Corpus.iter_words()` select the lexical word view while
+the other source tokens remain available.
 
 ```python
 from aegean.io import from_text
@@ -1922,12 +1943,24 @@ from aegean.io import from_text
 corpus = from_text("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος", doc_id="iliad-1.1")
 [t.text for t in corpus.documents[0].words]
 # ['μῆνιν', 'ἄειδε', 'θεὰ', 'Πηληϊάδεω', 'Ἀχιλῆος']  ← ready for the whole pipeline
+
+doc = from_text("  λόγος,\tθεός.\n", doc_id="example").documents[0]
+doc.source_text                         # '  λόγος,\tθεός.\n'
+[(t.text, t.kind.value) for t in doc.tokens]
+# [('λόγος', 'word'), (',', 'punct'), ('θεός', 'word'), ('.', 'punct')]
+[t.text for t in doc.words]             # ['λόγος', 'θεός']
 ```
 
 `split` (`"whole"` / `"paragraph"` / `"line"`) controls how a longer text is cut
 into documents. The siblings read from disk: `from_text_file(path, …)`,
 `from_text_dir(path, glob="*.txt", …)`, and `from_csv(path, text_col="text",
 id_col=None, …)`. All are **offline**.
+
+Paragraph/line splitting preserves blank lines and separators in the document
+snapshots; concatenating their `source_text` reconstructs the decoded content.
+Spans are local to each document. `token_view="words"` explicitly opts into the
+former lossy word-only import, without source text or spans; provenance reports
+the exclusions. Leading BOM signatures are removed and reported.
 
 From the shell, `aegean import` does the same and writes a reusable corpus, which
 every other command then accepts:
@@ -1936,6 +1969,7 @@ every other command then accepts:
 aegean import myplato.txt -o myplato.json   # then: aegean stats myplato.json
 aegean import poems/ -o corpus.db --split line
 aegean import rows.csv -o corpus.json --text-col line --id-col id
+aegean import myplato.txt -o words.json --token-view words  # explicit lossy import
 ```
 
 A `.txt` or `.csv` can't be handed straight to a corpus command: import it first.

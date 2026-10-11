@@ -381,8 +381,9 @@ def betacode_to_unicode(text: str) -> str:
 
 
 def unicode_to_betacode(text: str) -> str:
-    """Convert polytonic Greek to Beta Code (capitals as ``*``; final sigma as
-    ``s``). Round-trips with `betacode_to_unicode`: any literal ASCII that Beta
+    """Convert polytonic Greek to Beta Code (capitals as ``*``; ordinary final sigma as
+    ``s``). Explicit ``s1``/``s2`` preserve a medial glyph at word end or a final
+    glyph inside a word. Round-trips with `betacode_to_unicode`: any literal ASCII that Beta
     Code reserves as markup (``( ) / \\ = + | *`` and the ``s1``/``s2``/``s3``
     sigma digits, plus the backtick escape itself) is backtick-escaped, so Greek
     text with embedded parentheses, arithmetic, or other punctuation survives
@@ -398,12 +399,23 @@ def unicode_to_betacode(text: str) -> str:
     (the analysis functions, syllabify/scansion, handle them directly)."""
     out: list[str] = []
     last_was_sigma = False
-    for ch in unicodedata.normalize("NFD", text):
+    decomposed = unicodedata.normalize("NFD", text)
+    for index, ch in enumerate(decomposed):
         if ch in _MARK_TO_BETA:
             out.append(_MARK_TO_BETA[ch])
             last_was_sigma = False
             continue
-        if ch in ("ς", "ϲ"):  # final sigma and lowercase lunate sigma (U+03F2)
+        if ch in ("σ", "ς"):
+            after = index + 1
+            while after < len(decomposed) and unicodedata.combining(decomposed[after]):
+                after += 1
+            medial = after < len(decomposed) and _is_greek_letter(decomposed[after])
+            # Bare s is contextual on decoding. Preserve a deliberately unusual
+            # sigma glyph rather than silently regularizing an edition's spelling.
+            out.append("s1" if ch == "σ" and not medial else "s2" if ch == "ς" and medial else "s")
+            last_was_sigma = True
+            continue
+        if ch == "ϲ":  # lowercase lunate sigma keeps its documented normalization
             out.append("s")
             last_was_sigma = True
             continue

@@ -112,6 +112,10 @@ def import_(
         "whole", "--split",
         help="For text: 'whole' (one doc), 'paragraph' (blank-line blocks), or 'line'.",
     ),
+    token_view: str = typer.Option(
+        "all", "--token-view",
+        help="For text/CSV: 'all' preserves source and all tokens; 'words' opts into the legacy lossy import.",
+    ),
     doc_id: str | None = typer.Option(None, "--id", help="Base document id (default: the file name)."),
     glob: str = typer.Option("*.txt", "--glob", help="For a folder: which files to import."),
     text_col: str = typer.Option("text", "--text-col", help="For CSV: the column holding the text."),
@@ -152,6 +156,10 @@ def import_(
         close = suggest(script, known_scripts, n=1)
         did = f" — did you mean {close[0]!r}?" if close else ""
         raise fail(f"unknown script {script!r}{did} (one of: {', '.join(known_scripts)})")
+    if token_view not in ("all", "words"):
+        raise fail("--token-view must be 'all' or 'words'")
+    if token_view == "words" and (workbench or epidoc):
+        raise fail("--token-view words applies to plain text and CSV imports")
     p = Path(source)
     try:
         if workbench:
@@ -160,7 +168,7 @@ def import_(
             corpus = aegean_io.from_epidoc(p, script_id=script)
         elif p.is_dir():
             corpus = aegean_io.from_text_dir(
-                p, script_id=script, glob=glob, split=split, encoding=encoding
+                p, script_id=script, glob=glob, split=split, encoding=encoding, token_view=token_view
             )
         elif p.suffix.lower() == ".csv":
             if id_col is not None:
@@ -174,11 +182,11 @@ def import_(
                         f"columns: {', '.join(header)}"
                     )
             corpus = aegean_io.from_csv(
-                p, text_col=text_col, id_col=id_col, script_id=script, encoding=encoding
+                p, text_col=text_col, id_col=id_col, script_id=script, encoding=encoding, token_view=token_view
             )
         else:
             corpus = aegean_io.from_text_file(
-                p, script_id=script, split=split, doc_id=doc_id, encoding=encoding
+                p, script_id=script, split=split, doc_id=doc_id, encoding=encoding, token_view=token_view
             )
     except json.JSONDecodeError as exc:
         raise fail(f"{source}: invalid JSON — {exc}") from None
@@ -393,6 +401,13 @@ def query(
     output_kind: str = typer.Option(
         "inscriptions", "--output-kind", help="Result type: inscriptions or words."
     ),
+    view: str = typer.Option(
+        "legacy", "--view", help="Word view: surface, normalized, lemma, or legacy predicates."
+    ),
+    count_unit: str = typer.Option("document", "--count-unit", help="Word count: token or document."),
+    statuses: str | None = typer.Option(
+        None, "--statuses", help="Comma-separated reading statuses; default includes all."
+    ),
     fields: bool = typer.Option(False, "--fields", help="List the queryable fields and exit."),
     output: Path | None = typer.Option(
         None, "--output", "-o",
@@ -450,7 +465,18 @@ def query(
             parsed = value.lower() in ("1", "true", "yes")
         rows.append(FilterRow(field, parsed, connector="or" if connector == "or" else "and", negate=negate))
     c = load_corpus(corpus)
-    res = c.query(rows, output_kind)
+    from typing import cast
+
+    from aegean.core.word_views import CountUnit, reading_statuses, validate_view
+
+    try:
+        res = c.query(
+            rows, output_kind, view=None if view == "legacy" else validate_view(view),
+            count_unit=cast(CountUnit, count_unit),
+            statuses=reading_statuses(statuses.split(",")) if statuses is not None else None,
+        )
+    except ValueError as exc:
+        raise fail(str(exc)) from None
     if output is not None:
         if output_kind != "inscriptions":
             raise fail("--output saves inscriptions; drop --output-kind words")
@@ -466,6 +492,7 @@ def query(
                 "inscriptions": [d.id for d in res.inscriptions[:cap]],
                 "words": [{"word": w, "count": n} for w, n in res.words[:cap]],
                 "citation": res.cite() if res.provenance else "",
+                "metadata": res.metadata,
             }
         )
         return
@@ -496,6 +523,14 @@ def stats(
     corpus: str = CORPUS_ARG,
     signs: bool = typer.Option(False, "--signs", help="Sign frequencies instead of words."),
     top: int = typer.Option(20, "--top", "--limit", help="How many rows (0 = all)."),
+    view: str = typer.Option("surface", "--view", help="Word view: surface, normalized, or lemma."),
+    count_unit: str = typer.Option("token", "--count-unit", help="Word count: token or document."),
+    statuses: str | None = typer.Option(
+        None, "--statuses", help="Comma-separated reading statuses; default includes all."
+    ),
+    details: bool = typer.Option(
+        False, "--details", help="Include word-count population, normalization, and citation in JSON."
+    ),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
@@ -505,6 +540,8 @@ def stats(
 ) -> None:
     """Frequency tables: words (default) or individual signs, optionally metadata-filtered."""
     c = apply_meta_filters(load_corpus(corpus), site, period, scribe, support)
+    if signs and (view != "surface" or count_unit != "token" or statuses is not None or details):
+        raise fail("--view, --count-unit, --statuses, and --details apply to word counts; drop --signs")
     if signs:
         from collections import Counter
 
@@ -518,12 +555,33 @@ def stats(
         pairs = counter.most_common(top if top > 0 else None)
         title = f"{corpus}: top {len(pairs)} signs"
     else:
-        pairs = c.word_frequencies()[: top if top > 0 else None]
+        from typing import cast
+
+        from aegean.core.word_views import CountUnit, reading_statuses, validate_view
+
+        try:
+            frequencies = c.word_frequencies(
+                view=validate_view(view), count_unit=cast(CountUnit, count_unit),
+                statuses=reading_statuses(statuses.split(",")) if statuses is not None else None,
+            )
+        except ValueError as exc:
+            raise fail(str(exc)) from None
+        pairs = frequencies[: top if top > 0 else None]
         title = f"{corpus}: top {len(pairs)} words"
-    payload = [{"item": w, "count": n} for w, n in pairs]
+    payload: Any = [{"item": w, "count": n} for w, n in pairs]
+    if not signs and (details or view != "surface" or count_unit != "token" or statuses is not None):
+        payload = {
+            "frequencies": payload, "metadata": frequencies.metadata,
+            "citation": frequencies.cite() if frequencies.provenance else "",
+        }
     if emit_result(payload, json_output=json_out, output=output):
         return
     table(title, ["item", "count"], [[w, str(n)] for w, n in pairs])
+    if not signs and (details or view != "surface" or count_unit != "token" or statuses is not None):
+        console().print(
+            f"{view}; {count_unit} denominator={frequencies.metadata['denominator']}; "
+            f"{frequencies.metadata['normalization']}", style="dim", markup=False,
+        )
 
 
 def dispersion(
@@ -666,6 +724,10 @@ def balance(
     strict: bool = typer.Option(
         False, "--strict", help="Exit 1 if any checked total fails to balance."
     ),
+    exact: bool = typer.Option(False, "--exact", help="Compare rational quantities without allowance."),
+    tolerance: float = typer.Option(
+        0.10, "--tolerance", min=0, help="Relative eligibility allowance; legacy absolute-one floor remains."
+    ),
     site: str | None = SITE_OPT,
     period: str | None = PERIOD_OPT,
     scribe: str | None = SCRIBE_OPT,
@@ -681,7 +743,10 @@ def balance(
     results = []
     for d in docs:
         assert d is not None
-        results.extend(balance_rows(d))
+        try:
+            results.extend(balance_rows(d, exact=exact, tolerance=tolerance))
+        except ValueError as exc:
+            raise fail(str(exc)) from None
     if not emit_result(results, json_output=json_out, output=output):
         if not results:
             hint(
@@ -691,10 +756,12 @@ def balance(
         else:
             table(
                 f"{corpus}: {len(results)} total line(s) checked",
-                ["doc", "marker", "stated", "computed", "diff", "balances"],
+                ["doc", "marker", "stated", "computed", "diff", "balances",
+                 "eligible (exact)" if exact else "eligible (tolerance)"],
                 [
                     [str(r["doc"]), str(r["marker"]), str(r["stated"]), str(r["computed"]),
-                     str(r["difference"]), "yes" if r["balances"] else "NO"]
+                     str(r["exact_difference"] if exact else r["difference"]),
+                     "yes" if r["balances"] else "NO", "yes" if r["account_eligible"] else "NO"]
                     for r in results
                 ],
             )

@@ -29,6 +29,7 @@ __all__ = ["annotate_corpus"]
 
 _PREDICTION_EVIDENCE_KEYS = frozenset({
     "lemma_source", "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
+    "upos_verified",
     "neural_analyzed", "analysis_complete", "analysis_warning",
 })
 
@@ -41,6 +42,14 @@ def _prediction_annotations(
         key: value for key, value in annotations.items()
         if key not in _PREDICTION_EVIDENCE_KEYS
     }
+    # A review approves a particular analysis, including its context/source. A
+    # fresh prediction must not inherit that approval even if the strings agree.
+    # Keep the decision details and audit history available for comparison, while
+    # marking only the fields this annotator replaces as no longer current.
+    for field in ("lemma", "upos"):
+        decision_key = f"{field}_review_decision"
+        if decision_key in ann:
+            ann[decision_key] = "stale"
     ann.update(lemma=lemma, upos=upos)
     return ann
 
@@ -64,7 +73,9 @@ def annotate_corpus(
     lemma evidence and neural coverage fields, even when the predicted strings agree.
     Built-in paths record fresh evidence only when ``with_evidence=True``; custom
     ``tag_sentence`` or ``with_evidence=False`` leaves those fields absent. Unrelated
-    keys, such as source morphology, and review history remain. Keep the original
+    keys, such as source morphology, and review history remain. Field-level lemma
+    and POS review decisions become ``stale``; their reviewer details are retained
+    as history. Reviews of unchanged source morphology remain current. Keep the original
     corpus separately when comparing source annotations with these predictions.
     Neural input is strict by default. Pass ``long_input="partial"`` only when explicitly
     marked placeholder annotations are useful, or ``long_input="windowed"`` to reconcile

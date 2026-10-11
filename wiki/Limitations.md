@@ -41,11 +41,16 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
 | AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
-| Persistence and review workflows | Some input and connection states need care | [Known workflow defects](#known-workflow-defects) |
+| Persistence and review workflows | Earlier defects fixed in 0.61.0; old-version workarounds below | [Earlier workflow defects](#earlier-workflow-defects) |
 
-## Known workflow defects
+## Earlier workflow defects
 
-These defects remain in the current release:
+The following defects affect **0.60.0** and are **fixed in 0.61.0**; the
+workarounds below apply to 0.60.0. Release 0.61.0 also adds optional per-field
+review decisions, explicit counting populations, and source-preserving imports.
+Operational fixes do not establish scholarly accuracy.
+
+Release 0.60.0 limitations:
 
 - **Replacing a SQLite database with a live WAL connection.** If another client
   enables WAL mode and leaves a connection open with committed, uncheckpointed
@@ -378,8 +383,10 @@ These are deliberate. They're listed here so you can judge them, not so they get
   (`SiteCoord.contested`) and never silently mapped as genuine.
 
 - **The AI layer is exploratory by construction.** Every generative result is a
-  labeled, provenanced hypothesis built on local deterministic grounding: by
-  policy it is never presented as a reading, whatever the model's confidence. It
+  labeled, provenanced hypothesis. Grounding can contain source annotations,
+  provisional predictions, or current human field decisions; lower-level calls
+  can also receive no grounding. By policy the result is never presented as a
+  verified reading, whatever the model's confidence. It
   needs either a hosted provider's API key or a no-key local server (the `local`
   provider: Ollama, LM Studio, llama.cpp), plus the matching extra; nothing is sent
   anywhere unless you turn it on (and with `local`, nothing leaves your machine).

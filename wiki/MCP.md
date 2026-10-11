@@ -49,7 +49,7 @@ aegean-mcp needs a newer MCP SDK — pip install -U 'mcp>=2'  (No module named '
 ```
 
 The import error that triggered the message is kept in parentheses, so the two
-cases stay distinguishable: a missing extra, or an SDK too old to provide FastMCP.
+cases stay distinguishable: a missing extra, or an SDK too old to provide `MCPServer`.
 
 The core `import aegean` never pulls the MCP SDK: the server registers its tools
 with `MCPServer` only when `aegean-mcp` starts, so the zero-dependency core is
@@ -97,8 +97,8 @@ dictionaries.
 | `corpus_info` | `corpus` | Overview of a corpus: script, document count, source, license, and a ready-to-use citation. |
 | `show_document` | `corpus`, `doc_id` | One document's metadata and text, line by line (`doc_id` is forgiving: `ht13`, `py ta 641` resolve). |
 | `search_signs` | `corpus`, `pattern`, `limit=50` | Words matching a wildcard sign pattern such as `KU-*-RO`, with frequencies. |
-| `balance_accounts` | `corpus`, `doc_id=None` | Accounting reconciliation: each stated total (KU-RO / TO-SO) against the summed items, with the difference. |
-| `query_corpus` | `corpus`, `where`, `output_kind="inscriptions"`, `limit=50` | Run the compound query engine over a corpus and cite the exact result set. |
+| `balance_accounts` | `corpus`, `doc_id=None`, `exact=False`, `tolerance=0.10` | Accounting reconciliation with optional rational equality and the declared intact-account eligibility tolerance. |
+| `query_corpus` | `corpus`, `where`, `output_kind="inscriptions"`, `limit=50`, `view=None`, `count_unit="document"`, `statuses=None` | Run the compound query engine with an explicit word view/counting population, metadata, and citation. |
 | `cite_corpus` | `corpus`, `style="plain"`, `site`, `period`, `scribe`, `support` | Cite a corpus, or with metadata filters the exact subset, as plain text, BibTeX, or APA. |
 | `geo_sites` | `corpus`, `word=None` | Find-site coordinates (WGS84), Pleiades ids, and the contested-provenance flag; with `word`, per-site attestation counts. |
 | `data_status` | (none) | The local data store: every fetchable dataset with its downloaded state, on-disk size, and license (read-only). |
@@ -112,8 +112,13 @@ empty list matches the whole corpus. The inscription-scope fields are
 `has-annotation`, and `ins-contains-word`; the word-scope fields are
 `word-contains`, `word-prefix`, `word-suffix`, `word-min-syllables`,
 `word-max-syllables`, `word-contains-sign`, `word-cooccurs-with`, and
-`word-sign-pattern`. `output_kind` is `inscriptions` or `words`, and a word's
-count is its document frequency (how many distinct inscriptions carry it). The
+`word-sign-pattern`. `output_kind` is `inscriptions` or `words`; `count_unit`
+defaults to `document` (distinct documents carrying a word), or `token` for
+occurrences. Omit `view` for legacy predicates, or select `surface`, `normalized`, or
+`lemma`, and `statuses` restricts editorial reading status. Normalization derives
+comparison keys from token text while preserving diacritics; missing lemmas are
+excluded, never replaced by surface values. Results carry
+population, exclusion, denominator, view, and count-unit metadata. The
 same engine and fields are documented on [Analysis](Analysis).
 
 ### Greek

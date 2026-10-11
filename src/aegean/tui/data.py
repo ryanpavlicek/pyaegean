@@ -237,6 +237,13 @@ class BalanceRow:
     difference: float
     items: int
     balances: bool
+    exact_balances: bool = False
+    exact_difference: str = ""
+    within_tolerance: bool = False
+    account_eligible: bool = False
+    account_eligible_exact: bool = False
+    eligibility_mode: str = "tolerance"
+    tolerance: float = 0.10
 
 
 @dataclass(frozen=True, slots=True)
@@ -444,6 +451,13 @@ def balance_rows(document: "Document") -> list[BalanceRow]:
             difference=r["difference"],
             items=r["items"],
             balances=r["balances"],
+            exact_balances=r["exact_balances"],
+            exact_difference=r["exact_difference"],
+            within_tolerance=r["within_tolerance"],
+            account_eligible=r["account_eligible"],
+            account_eligible_exact=r["account_eligible_exact"],
+            eligibility_mode=r["eligibility_mode"],
+            tolerance=r["tolerance"],
         )
         for r in _rows(document)
     ]

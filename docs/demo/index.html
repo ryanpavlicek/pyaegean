@@ -256,7 +256,9 @@
     <div class="row"><button data-tool="bal" disabled>Reconcile</button></div>
     <pre id="bal-out"></pre>
     <p class="sub" style="margin:8px 0 0">Exploratory: it flags where a scribe's total doesn't match
-      the items — sometimes a real discrepancy, sometimes a damaged reading.</p>
+      the items, sometimes a real discrepancy, sometimes a damaged reading. Exact arithmetic
+      does not verify readings or metrology. Teaching eligibility requires intact text and at
+      least one total within the tolerance; it does not mean every total balances.</p>
   </div>
 
   <div class="card">
@@ -361,10 +363,50 @@
   <div class="card">
     <h2>Bring your own text</h2>
     <label for="imp">Paste any Greek and turn it into a corpus — token count and the most frequent
-      words (the same importer behind <code>aegean import</code>)</label>
+      words (the same importer behind <code>aegean import</code>). The source text and offsets
+      preserve punctuation, foreign text, and numerals; only lexical words enter word counts</label>
     <textarea id="imp">μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος οὐλομένην, ἣ μυρί Ἀχαιοῖς ἄλγε ἔθηκε</textarea>
     <div class="row"><button data-tool="imp" disabled>Import &amp; count</button></div>
     <pre id="imp-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Word counts with an explicit population</h2>
+    <label>Count words in a bundled corpus by exact surface spelling, a normalized key, or existing
+      lemma annotation. Normalization preserves diacritics. Missing lemmas are excluded; this
+      card runs no analyzer. Token frequency counts occurrences; document frequency counts
+      each document once per word, including empty documents in its denominator</label>
+    <div class="row">
+      <select id="wc_corpus" aria-label="Corpus">
+        <option value="cypriot">Cypriot</option>
+        <option value="greek">Greek sample</option>
+        <option value="lineara">Linear A</option>
+        <option value="linearb">Linear B</option>
+        <option value="cyprominoan">Cypro-Minoan</option>
+      </select>
+      <select id="wc_view" aria-label="Word view">
+        <option value="surface">surface</option>
+        <option value="normalized">normalized</option>
+        <option value="lemma">existing lemma</option>
+      </select>
+      <select id="wc_unit" aria-label="Counting unit">
+        <option value="token">token frequency</option>
+        <option value="document">document frequency</option>
+      </select>
+    </div>
+    <div class="row">
+      <select id="wc_statuses" aria-label="Reading statuses">
+        <option value="all">all reading statuses</option>
+        <option value="certain">certain only</option>
+        <option value="certain,restored">certain and restored</option>
+        <option value="unclear">unclear only</option>
+        <option value="restored">restored only</option>
+      </select>
+      <button data-tool="wc" disabled>Count words</button>
+    </div>
+    <pre id="wc-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Status selection applies to the whole token and every
+      typed editorial segment. Lemma provenance and an arithmetic count do not certify a reading.</p>
   </div>
 
   <div class="card">
@@ -379,7 +421,7 @@
  <history><origin><origPlace>Athens</origPlace></origin></history></msDesc></sourceDesc></fileDesc></teiHeader>
  <text><body><div type="edition"><ab><lb n="1"/>
  <w>ἐν</w> <w><choice><orig>αρχη</orig><reg>ἀρχῇ</reg></choice></w>
- <w>ἦν</w> <w>ὁ</w> <w>λόγος</w></ab></div></body></text>
+ <w>ἦν</w> <w>ὁ</w> <w>λόγος</w> <num value="12">ιβʹ</num></ab></div></body></text>
 </TEI></textarea>
     <div class="row"><button data-tool="epi" disabled>Read EpiDoc</button></div>
     <pre id="epi-out"></pre>
@@ -536,7 +578,7 @@ async function init() {
     pyodide.runPython(code);
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
                         "catalog", "bridge", "cypriot_inscription", "lineara_search",
-                        "lineara_balance", "import_text", "phonetic_compare", "lexicon_link",
+                        "lineara_balance", "import_text", "word_counts", "phonetic_compare", "lexicon_link",
                         "epidoc_import", "accent_word", "sandhi", "prosody_word", "nt_verse",
                         "idioms", "lemmatize_word", "text_profile", "lineara_stats", "lineara_query",
                         "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
@@ -610,9 +652,13 @@ const handlers = {
   bal: () => {
     const r = call("lineara_balance", val("bal"));
     if (r.error) return show("bal-out", r.error);
+    const flag = (v) => v === null || v === undefined ? "unavailable" : v ? "yes" : "no";
     show("bal-out", r.checks.length
       ? r.checks.map(c => `${c.marker}: stated ${c.stated} vs ${c.computed} summed ` +
-          `(${c.items} items) → ${c.balances ? "balances" : "off by " + Math.abs(c.difference)}`).join("\n")
+          `(${c.items} items) → ${c.balances ? "balances" : "off by " + Math.abs(c.difference)}` +
+          `\nexact discrepancy: ${c.exact_difference ?? "unavailable"}; exact equality: ${flag(c.exact_balances)}`
+        ).join("\n") + `\nteaching eligibility (tolerance): ${flag(r.tolerance_eligible)}` +
+        `; exact eligibility: ${flag(r.exact_eligible)}`
       : `no checkable ${"KU-RO"}/total on ${r.doc}`);
   },
   phon: () => { const r = call("phonetic_compare", val("phsyl"), val("phgrk"));
@@ -620,14 +666,32 @@ const handlers = {
   imp: () => {
     const r = call("import_text", val("imp"));
     show("imp-out", r.error ? r
-      : `${r.documents} document, ${r.tokens} tokens\nmost frequent:\n` +
-        r.top.map(w => `  ${w.word}  (${w.count})`).join("\n"));
+      : `${r.documents} document, ${r.tokens} tokens, ${r.words} lexical words\nmost frequent:\n` +
+        r.top.map(w => `  ${w.word}  (${w.count})`).join("\n") +
+        (r.source_text === null ? "\n\ndecoded source snapshot: unavailable in the installed package"
+          : `\n\ndecoded source snapshot: ${JSON.stringify(r.source_text)}\nsource offsets:\n` +
+            r.aligned_tokens.map(t => `  ${t.text}\t${t.kind}\t[${t.start}, ${t.end})`).join("\n")));
+  },
+  wc: () => {
+    const r = call("word_counts", val("wc_corpus"), val("wc_view"), val("wc_unit"), val("wc_statuses"));
+    if (r.error) return show("wc-out", r.error);
+    const population = r.metadata === null ? "population metadata: unavailable in the installed package"
+      : "population metadata:\n" + JSON.stringify(r.metadata, null, 2);
+    show("wc-out", `${r.total} distinct words (up to 20 shown):\n` +
+      (r.rows.map(row => `  ${row.word}\t${row.count}`).join("\n") || "  (no represented words)") +
+      `\n\n${population}\n\nsource: ${r.source_citation}\ncounting citation: ` +
+      (r.counting_citation ?? "unavailable in the installed package"));
   },
   epi: () => {
     const r = call("epidoc_import", val("epi"));
     show("epi-out", r.error ? r
       : `${r.id}${r.site ? "  ·  " + r.site : ""}\n${r.documents} document, ${r.tokens} tokens\n` +
-        `tokens: ${r.preview.join(" ")}`);
+        `tokens: ${r.preview.join(" ")}` +
+        (r.form_states.length ? "\neditorial forms:\n" + r.form_states.map(t =>
+          `  ${t.text}: diplomatic ${JSON.stringify(t.diplomatic)}, regularized ${JSON.stringify(t.regularized)}, ` +
+          `normalized ${JSON.stringify(t.normalized)} (${t.editorial_status})`).join("\n") : "") +
+        "\nnumeric source @value:\n" +
+        (r.numeric_values.map(t => `  ${t.text}: ${JSON.stringify(t.value)}`).join("\n") || "  (none preserved)"));
   },
   acc: () => {
     const r = call("accent_word", val("acc"), val("acclem"));

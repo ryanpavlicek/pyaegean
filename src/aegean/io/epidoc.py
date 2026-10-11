@@ -11,6 +11,10 @@ taking the id and find-place from the header and the token/line stream plus edit
 from the ``<div type="edition">``. Tokens must be carried by ``<w>``/``<num>``/``<g>``/``<pc>``/
 ``<seg>``; free-text editions need a source-specific extractor.
 
+The selected ``<num>`` carrier's unqualified ``@value`` is preserved verbatim as the
+source annotation ``epidoc:num_value`` and emitted back on ``<num>``. This is a source
+attribute, not a computed or validated numeric interpretation of the token's glyphs.
+
 `aegean.TokenKind` travels with the carrier: ``<w>``→word, ``<num>``→numeral, ``<g>``→logogram,
 ``<pc>``→punct. ``<seg>`` is the generic carrier (it holds a kind whose own element cannot carry
 apparatus markup, and the kinds TEI has no element for), so it names the kind in ``@type`` —
@@ -119,9 +123,10 @@ def to_epidoc(document: Document) -> str:
     Real transliteration tokens are never whitespace-only, so this affects only synthetic
     input; the transliteration content itself is preserved.
 
-    ``Token.annotations`` (lemma, morphology, evidence class, review stamps) are NOT
-    serialized to EpiDoc: the format carries edition text and apparatus, not an
-    analysis layer. A typed state projects its diplomatic form, one selected editorial
+    Analysis annotations (lemma, morphology, evidence class, review stamps) are not
+    serialized to EpiDoc. The source annotation ``epidoc:num_value`` is the bounded
+    exception: it restores the selected ``<num>`` carrier's literal unqualified ``@value``
+    without validating a numeric interpretation. A typed state projects its diplomatic form, one selected editorial
     form (regularized before normalized), and apparatus segments. ``model_input``, its
     operations, and a second normalized form are not edition markup and are not serialized.
     Use `Corpus.to_json`, `aegean.db.to_sqlite`, or CoNLL-U for the full typed record."""
@@ -181,6 +186,10 @@ def to_epidoc(document: Document) -> str:
             inner.set(key, value)
 
     def emit_form(parent: ET.Element, tok: Token, carrier: str) -> None:
+        if carrier == "num" and "epidoc:num_value" in tok.annotations:
+            # Retain the parsed XML string, including empty/whitespace/non-numeric values.
+            # Never derive @value from transliteration, token kind, or an accounting parse.
+            parent.set("value", _xml_clean(tok.annotations["epidoc:num_value"]))
         state = tok.form_state
         if state is None:
             wrap = _STATUS_EL.get(tok.status)
@@ -328,7 +337,8 @@ def write_epidoc(obj: Corpus | Document, path: str | Path) -> None:
     can conflate distinct ids: when two ids sanitize to the same filename, the
     later ones (in id order) get a ``-2``, ``-3``, ... suffix and a warning
     names the colliding ids, so no document silently overwrites another.
-    ``Token.annotations`` are not serialized (see `to_epidoc`)."""
+    ``Token.annotations`` are not generally serialized; the source ``epidoc:num_value``
+    annotation is emitted as ``<num value="…">`` (see `to_epidoc`)."""
     if isinstance(obj, Document):
         with atomic_path(path) as tmp:  # temp+replace: a failed write keeps the prior file
             tmp.write_text(to_epidoc(obj), encoding="utf-8")
@@ -686,6 +696,13 @@ def _token_form(
     return text, status, state
 
 
+def _source_annotations(carrier: ET.Element) -> dict[str, str]:
+    """Bounded source attributes; the key names TEI num's unqualified @value."""
+    if _local(carrier.tag) == "num" and "value" in carrier.attrib:
+        return {"epidoc:num_value": carrier.attrib["value"]}
+    return {}
+
+
 def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Document | None:
     edition = next(
         (d for d in root.iter(f"{{{_TEI}}}div") if d.get("type") == "edition"), None
@@ -811,7 +828,7 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             tokens.append(Token(
                 text=text, kind=_kind_of(carrier, text, seg_type),
                 status=status, alt=alts, line_no=len(lines), position=pos,
-                form_state=state,
+                form_state=state, annotations=_source_annotations(carrier_el),
             ))
             cur.append(pos)
             pos += 1
@@ -825,6 +842,7 @@ def _read_document(root: ET.Element, script_id: str, fallback_id: str) -> Docume
             tokens.append(Token(
                 text=text, kind=_kind_of(tag, text, el.get("type")), status=status,
                 line_no=len(lines), position=pos, form_state=state,
+                annotations=_source_annotations(el),
             ))
             cur.append(pos)
             pos += 1
@@ -902,7 +920,8 @@ def from_epidoc(source: str | Path, *, script_id: str = "greek") -> Corpus:
     """Load token-carrier EpiDoc TEI into a `Corpus`.
 
     The inverse of `write_epidoc`: round-trips the id, find-place, token/line stream,
-    token kinds, editorial certainty, alternate readings, and typed form state. Other input
+    token kinds, editorial certainty, alternate readings, typed form state, and selected
+    ``num/@value`` source strings (``Token.annotations['epidoc:num_value']``). Other input
     must carry tokens in ``<w>``/``<num>``/``<g>``/``<pc>``/``<seg>`` elements; free-text
     editions need a source-specific extractor. ``script_id`` labels the corpus (default
     ``"greek"``). pyaegean parses your files locally and never re-hosts them."""

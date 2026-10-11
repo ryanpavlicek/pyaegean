@@ -47,7 +47,7 @@
 "Samothrace": {"name": "Samothrace", "lat": 40.48, "lon": 25.53, "region": "aegean", "pleiades": 501596},
 "Mycenae": {"name": "Mycenae", "lat": 37.73, "lon": 22.75, "region": "mainland", "pleiades": 570491},
 "Tiryns": {"name": "Tiryns", "lat": 37.6, "lon": 22.8, "region": "mainland", "pleiades": 570740},
-"Pylos": {"name": "Pylos (Palace of Nestor)", "lat": 36.952, "lon": 21.66, "region": "mainland", "pleiades": 570640},
+"Pylos": {"name": "Pylos (Palace of Nestor)", "lat": 37.027138, "lon": 21.694962, "region": "mainland", "pleiades": 156116232},
 "Miletos": {"name": "Miletus", "lat": 37.53, "lon": 27.28, "region": "anatolia", "pleiades": 599799},
 "Troy": {"name": "Troy", "lat": 39.96, "lon": 26.24, "region": "anatolia", "pleiades": 550595},
 "Cyprus": {"name": "Cyprus (unspecified)", "lat": 34.995, "lon": 33.222, "region": "levant", "pleiades": 707498},

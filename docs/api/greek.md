@@ -6,9 +6,15 @@
 
 `needs_review(source)` and `TokenRecord.review_recommended` flag only `identity`
 and `unresolved` lemma sources. They do not apply a confidence threshold or detect
-all errors. `lemma_resolved` records a decision, while `lemma_verified` records
-an imported human lemma correction (`user`). A resolved lemma
-can still be wrong; these fields do not certify POS, morphology, or dependencies.
+all errors. On a pipeline `TokenRecord`, `lemma_resolved` records a decision and
+`lemma_verified` is derived from the `user` lemma source. A resolved lemma can
+still be wrong; these fields do not certify POS, morphology, or dependencies.
+
+Corpus review records are separate: applying an explicit lemma `accept` decision
+sets the token annotation `lemma_verified=true` while retaining the prediction's
+original source. A lemma correction uses the `user` source. These decisions are
+retained in the corpus annotations and audit history, rather than inferred from
+the pipeline record's source-only property.
 
 `annotate_corpus()` clears prior lemma evidence and neural coverage/warnings on
 each word it re-annotates, then writes fresh evidence when enabled. Custom

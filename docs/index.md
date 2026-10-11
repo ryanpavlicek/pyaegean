@@ -11,7 +11,9 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.60.0 (beta).** This site documents the current release.
+**Latest PyPI release: v0.61.0 (beta).** See the
+[scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
+counting choices, and translation evidence.
 
 The core installs with zero heavy dependencies and runs offline. Claims are measured, not
 asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
@@ -116,9 +118,8 @@ limitations, discrepancy form, and bounded maintainer tasks.
 
 ## Install
 
-Before editing persistent corpora or combining review files, check the
-[known workflow defects](https://github.com/ryanpavlicek/pyaegean/wiki/Limitations#known-workflow-defects)
-and their workarounds.
+For persistent corpora and reviewed annotations, see the
+[SQLite reference](api/db.md) and [review workflow](scholarly-workflow.md).
 
 The core is zero-dependency; everything heavier is an opt-in extra:
 

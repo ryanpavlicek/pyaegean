@@ -320,6 +320,8 @@ def idiom_glosses(
                 f"{idiom.surface}: {idiom.gloss}",
                 source="lexicon:idiom",
                 ref=idiom.surface,
+                status="reference",
+                provenance={"scope": "lexicon match, not a verified contextual reading"},
             )
         )
     return out

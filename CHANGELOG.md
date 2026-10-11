@@ -4,6 +4,68 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.61.0 (2026-10-11)
+
+### Changed
+
+- Translation results separate the reading, uncertainty notes, and model-reported
+  changes with reasons/evidence. Optional checking retains the original draft and
+  its provenance in `result.draft`, JSON and traces. `style="annotated"` (default)
+  and `style="concise"` are available through the API and CLI `--style`; concise
+  output keeps notes accessible. Structured `result.text` contains the translation
+  only. Malformed provider output is kept verbatim and marked unstructured, with
+  unavailable notes distinguished from empty notes; no automatic paid repair
+  request is added. A single complete Markdown JSON fence is accepted locally
+  while its original response is retained. Exact differences between structured draft and final text
+  are flagged when the model reports no changes. Earlier saved results continue
+  to load.
+- Translation prompts ask for evidence before assigning editorial history,
+  identities or bibliographic attributions. Greek clause evidence includes
+  subordinate predicates and coordinated subjects, preserving supplied predictions.
+  Morphological past tags are distinguished from temporal past, with raw UD
+  features retained and no inferred aorist when aspect evidence is missing.
+
+- Text imports default to `token_view="all"`, preserving decoded source text,
+  punctuation, foreign text, numerals, and character alignment. Lexical accessors
+  still return words; `token_view="words"` / `--token-view words` retain the former
+  lossy import behavior. Perseus imports retain speaker context and exclude
+  structured speaker labels from word counts. NT selection citations name the
+  selected passage and reject unavailable chapter ranges.
+- Review CSVs support explicit per-field `accept`, `correct`, `defer`, and `reject`
+  decisions, including acceptance of unchanged predictions, reviewer evidence,
+  merged attribution, and audit history. Reanalysis marks affected decisions stale.
+  Blank decisions keep the legacy correction-only behavior. Old CSVs do not
+  independently bind identical predictions to a model revision.
+- Word frequencies, queries, and SQLite search expose surface/normalized/lemma
+  views and reading-status filters. Frequency/query metadata records denominators,
+  exclusions, and token versus document counting. Exact rational account checks
+  are opt-in; the existing tolerance rule remains available and explicit.
+- Translation prompts and traces distinguish source annotations, predictions,
+  current field-level review decisions, and unclassified evidence. Backend identity,
+  unavailable stages, and coverage travel with grounding. `ai.annotation_evidence`
+  builds evidence from corpus annotations; translation accepts supplemental evidence.
+  Provider endpoints are frozen per client and participate in cache identity;
+  the prompt-version change deliberately invalidates older ambiguous cache entries.
+
+### Fixed
+
+- Translation `.txt` exports automatically include the audit trace, preserving
+  draft and notes even when the selected display style is concise.
+- SQLite replacement uses a transaction for existing databases, preserving live
+  WAL-reader snapshots and preventing old pages from contaminating replacements.
+  New files publish atomically without clobbering concurrent creations.
+- CoNLL-U metadata keys match exactly; extension comments and document boundary
+  comments survive canonical editing. Review merges preserve alignment whitespace,
+  and replay hints preserve backend arguments and quote paths.
+- EpiDoc numeric carrier `@value` survives import and semantic export as the
+  literal `epidoc:num_value` source annotation, without assuming numeric validity.
+- Sentence segmentation handles NFC keraia at sentence boundaries; Beta Code
+  roundtrips explicit noncontextual sigma forms. Hexameter considers optional
+  `θεοί` synizesis with a bounded candidate search and ambiguity reporting.
+- Clause grounding keeps dependencies within each sentence. Pylos' Linear B
+  find-site now points to the Palace of Nestor at Epano Englianos (Pleiades
+  156116232), correcting a link to Classical Pylos/Koryphasion about 8.9 km away.
+
 ## 0.60.0 (2026-10-10)
 
 ### Changed

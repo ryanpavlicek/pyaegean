@@ -61,7 +61,8 @@ spreadsheet, correct them, and read the corrections back:
 
 ```bash
 aegean review export nt -o review.csv          # one row per word; --annotate for an un-annotated corpus
-# open review.csv, fill the correct_lemma / correct_pos / correct_morph / reviewer_note columns
+# fill decision_lemma / decision_pos / decision_morph; corrections go in correct_*
+# reviewer_note and reviewer_evidence retain your explanation and sources
 aegean review apply nt review.csv -o nt-reviewed.json --reviewer "Your Name"
 ```
 
@@ -75,13 +76,18 @@ For a broader lemma review, `--selection unverified` includes words without an
 explicit `lemma_verified=true`, including resolved predictions and source
 annotations with no verification metadata. Only the string `true`
 (case-insensitive) excludes a word. This does not change its `needs_review` flag.
-Applying a changed lemma records verification; leaving the correction blank,
-entering the same lemma, or correcting only POS does not verify a lemma. A
-verified lemma does not certify the other annotation fields.
+Use `decision_lemma=accept` to verify an unchanged prediction, or `correct` with
+`correct_lemma` to replace it. Each field also accepts `defer` and `reject`, which
+remain unverified. With blank decision columns, the legacy behavior remains:
+only a changed correction records verification, and an unchanged value or a POS-only
+correction does not verify a lemma. A verified lemma does not certify other fields.
 
-Applying the corrections keeps each prior value
-under a `<field>__pred` key and stamps who reviewed it and a provenance note, so the corrected
-corpus records exactly what a human changed. See the workflow in [Recipes](Recipes) and the
+Applying review keeps prior values under `<field>__pred`, records per-field
+decisions, verification flags, reviewers, notes and evidence, and appends dated
+events to `review_history`. An acceptance retains the prediction's source;
+a corrected lemma becomes `user` evidence while preserving its prior source.
+Reanalysis marks affected current decisions stale while retaining their history.
+See the workflow in [Recipes](Recipes) and the
 table format in the Review section of the [CLI reference](CLI).
 
 If the error is in pyaegean itself (a wrong bridge reading, a curated lemma, a benchmark

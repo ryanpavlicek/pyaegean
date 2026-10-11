@@ -65,8 +65,11 @@ a resolved lookup or prediction can still be wrong in context.
 `review_recommended` is `True` for `identity` and `unresolved`, so a quick filter for
 "which lemmas are unresolved?" is `[r for r in records if r.review_recommended]`.
 A false flag does not certify the lemma, POS, morphology, or dependency tree.
-`lemma_verified` separately records an imported human lemma correction (`user`).
-Leaving a prediction unchanged does not set it, and it does not certify other fields. The
+On a pipeline `TokenRecord`, `lemma_verified` separately records an imported
+human lemma correction (`user`). A corpus review can also explicitly accept an
+unchanged prediction, setting its annotation's verification flag while retaining
+the prediction source. Blank legacy correction cells do not imply acceptance;
+neither kind of lemma verification certifies other fields. The
 ["needs review" column](When-the-Tool-Is-Wrong) in a CSV honors an explicit valid
 review flag first, then the lemma source, then legacy metadata when no source is
 present. Missing review metadata does not certify correctness.

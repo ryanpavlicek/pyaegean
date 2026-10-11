@@ -50,7 +50,9 @@ Material that isn't in the bundled scripts or the Greek loaders comes in through
 `aegean.io`'s import side: `from_text` / `from_text_file` / `from_text_dir` / `from_csv`
 (CLI: `aegean import`) turn a string, a `.txt` file, a folder of texts, or a CSV into a
 `Corpus` with the full analyse/query/export API. Greek text is tokenized with the Greek
-tokenizer, other scripts by whitespace; `--split whole|paragraph|line` chooses how a text
+tokenizer, preserving decoded source text and nonword tokens by default; other scripts
+split on whitespace. `--token-view words` restores the former lossy import behavior.
+`--split whole|paragraph|line` chooses how a text
 becomes documents. A folder of per-work text files plus `aegean combine` is the simplest
 way to stand up a custom multi-work corpus: each file still loads one work at a time, so
 the per-document memory profile is unchanged.

@@ -241,7 +241,7 @@ def search_signs(
 
 
 def balance_accounts(
-    corpus: str, doc_id: str | None = None
+    corpus: str, doc_id: str | None = None, exact: bool = False, tolerance: float = 0.10,
 ) -> list[dict[str, Any]] | dict[str, Any]:
     """Accounting reconciliation: each stated total (KU-RO / TO-SO) vs the summed items.
 
@@ -250,7 +250,11 @@ def balance_accounts(
     items or subtotals), ``difference`` (computed minus stated), ``items`` (the count fed
     into the sum), and ``balances``. An empty list means the document(s) carry no total
     markers. The rows are the shared :func:`aegean._view.balance_rows` mapping, so this
-    tool, the ``aegean balance`` command, and the terminal UI cannot disagree."""
+    tool, the ``aegean balance`` command, and the terminal UI cannot disagree.
+    ``exact=True`` uses rational equality without an allowance. The rows also
+    expose exact discrepancy and account eligibility (at least one qualifying
+    total on intact text); ``tolerance`` retains the legacy absolute-one floor.
+    Arithmetic agreement does not verify disputed readings or metrology."""
     from ._view import balance_rows
 
     c, err = _load_corpus(corpus)
@@ -265,7 +269,10 @@ def balance_accounts(
         docs = list(c.documents)
     rows: list[dict[str, Any]] = []
     for doc in docs:
-        rows.extend(balance_rows(doc))
+        try:
+            rows.extend(balance_rows(doc, exact=exact, tolerance=tolerance))
+        except ValueError as exc:
+            return {"error": str(exc)}
     return rows
 
 
@@ -274,6 +281,9 @@ def query_corpus(
     where: list[dict[str, Any]],
     output_kind: str = "inscriptions",
     limit: int = 50,
+    view: str | None = None,
+    count_unit: str = "document",
+    statuses: list[str] | None = None,
 ) -> dict[str, Any]:
     """Run the compound query engine over a corpus and cite the exact result set.
 
@@ -286,7 +296,12 @@ def query_corpus(
     scope). ``output_kind`` is 'inscriptions' or 'words'; a word's count is its document
     frequency (how many distinct inscriptions carry it), not its token frequency.
     ``limit`` caps the returned id/word lists (limit <= 0 returns all); the totals are
-    always the full counts. ``citation`` cites exactly this result set."""
+    always the full counts. ``citation`` cites exactly this result set.
+    ``view`` selects surface/normalized/lemma keys; omitted keeps legacy predicates.
+    Normalized/lemma preserve diacritics and iota subscript (NFC, lowercase,
+    final-sigma fold). Missing lemmas are excluded. ``count_unit`` selects document
+    or token frequency; ``statuses`` selects whole tokens and editorial segments.
+    ``metadata`` records normalization, population denominators, and exclusions."""
     from .analysis import FIELDS, FilterRow
 
     c, err = _load_corpus(corpus)
@@ -337,7 +352,17 @@ def query_corpus(
                 negate=negate,
             )
         )
-    res = c.query(rows, output_kind)
+    from typing import cast
+
+    from .core.word_views import CountUnit, validate_view
+
+    try:
+        res = c.query(
+            rows, output_kind, view=validate_view(view) if view is not None else None,
+            count_unit=cast(CountUnit, count_unit), statuses=statuses,
+        )
+    except ValueError as exc:
+        return {"error": str(exc)}
     cap = None if limit <= 0 else limit
     return {
         "description": res.description or "all",
@@ -346,6 +371,7 @@ def query_corpus(
         "inscriptions": [d.id for d in res.inscriptions[:cap]],
         "words": [{"word": w, "count": n} for w, n in res.words[:cap]],
         "citation": res.cite() if res.provenance else "",
+        "metadata": res.metadata,
     }
 
 

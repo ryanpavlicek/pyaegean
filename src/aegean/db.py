@@ -19,12 +19,14 @@ wrappers over these functions.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
-from collections.abc import Callable, Iterator
+import tempfile
+import time
+from collections.abc import Callable, Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
-from ._atomic import atomic_path
 from ._log import get_logger
 from .core.corpus import (
     Corpus,
@@ -35,12 +37,15 @@ from .core.corpus import (
     _provenance_from_dict,
     _provenance_to_dict,
 )
-from .core.model import Document, SourceAlignment, TokenFormState
+from .core.model import Document, ReadingStatus, SourceAlignment, TokenFormState
 from .core.provenance import SCHEMA_VERSION, Provenance
+from .core.word_views import WordView
 
 __all__ = ["to_sqlite", "from_sqlite", "search", "stream"]
 
 _LOG = get_logger("db")
+
+_REPLACEMENT_BUSY_TIMEOUT = 5.0
 
 _SCHEMA = """
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
@@ -273,7 +278,12 @@ def to_sqlite(
 ) -> None:
     """Write ``corpus`` to a SQLite database at ``path``.
 
-    By default this **overwrites** any existing file. With ``append=True`` it instead
+    By default this **overwrites** any existing SQLite database. Replacement uses a
+    SQLite transaction, including when committed pages live in an active WAL: readers
+    retain their old snapshot until their transaction ends. A busy writer is given five
+    seconds to finish before replacement raises ``sqlite3.OperationalError`` and keeps
+    the existing database intact. Non-SQLite files are refused without overwriting them.
+    With ``append=True`` it instead
     upserts ``corpus``'s documents into an existing database (by document id — a document
     with a matching id is replaced, others are added), keeping the rest intact; the FTS5
     index is updated transactionally, and the appended corpus's provenance is recorded
@@ -321,12 +331,76 @@ def to_sqlite(
     if p == ":memory:":
         _build(p)
         return
-    # Build into a temp database then atomically replace, so a failed or interrupted
-    # rebuild (full disk, Ctrl+C) never destroys the user's existing .db — the prior
-    # unlink-then-rebuild-in-place left no recoverable file. Same temp+replace the
-    # caches and the .part download use.
-    with atomic_path(Path(p)) as tmp:
+    # Build off to the side before touching the destination. Renaming just the main
+    # file over an existing SQLite database is unsafe: another connection may still
+    # own its WAL/journal and combine those old pages with the replacement file.
+    destination = Path(p)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(
+        prefix=f".{destination.name}.", suffix=".tmp", dir=destination.parent
+    ) as folder:
+        tmp = Path(folder) / "corpus.sqlite"
         _build(str(tmp))
+        _publish_sqlite(tmp, destination)
+
+
+def _publish_sqlite(source: Path, destination: Path) -> None:
+    """Publish a complete new database, or replace an existing one transactionally.
+
+    A no-clobber hard link makes creation atomic without a check-then-rename race
+    against another creator. Existing databases keep their inode: SQLite's online
+    backup owns the destination write transaction and rolls it back on failure.
+    Never unlink or rename a destination or its SQLite-managed sidecars.
+    """
+    if not destination.exists() and any(
+        Path(str(destination) + suffix).exists() for suffix in ("-wal", "-shm", "-journal")
+    ):
+        raise sqlite3.OperationalError(
+            f"cannot create {destination}: SQLite sidecars exist without their database; "
+            "recover the original database first"
+        )
+    try:
+        os.link(source, destination)
+        return
+    except FileExistsError:
+        pass  # another creator may also have published while this corpus was built
+
+    # mode=rw prohibits accidentally creating a new empty database if the target was
+    # removed in the meantime. SQLite serializes other supported readers/writers;
+    # external unlink/rename of an open database is not a supported SQLite operation.
+    uri = destination.absolute().as_uri() + "?mode=rw"
+    target = sqlite3.connect(uri, uri=True, timeout=0)
+    origin: sqlite3.Connection | None = None
+    try:
+        origin = sqlite3.connect(source)
+        # Backup cannot change a WAL database's page size. Match it on the private
+        # source first; VACUUM failure still leaves the destination untouched.
+        page_size = target.execute("PRAGMA page_size").fetchone()[0]
+        if origin.execute("PRAGMA page_size").fetchone()[0] != page_size:
+            origin.execute(f"PRAGMA page_size={int(page_size)}")
+            origin.execute("VACUUM")
+        busy_since: float | None = None
+
+        def progress(status: int, remaining: int, total: int) -> None:
+            nonlocal busy_since
+            # SQLITE_BUSY / SQLITE_LOCKED; named constants require Python 3.11.
+            if status in (5, 6):
+                now = time.monotonic()
+                if busy_since is None:
+                    busy_since = now
+                if now - busy_since >= _REPLACEMENT_BUSY_TIMEOUT:
+                    raise sqlite3.OperationalError(
+                        f"database is locked: cannot replace {destination}; retry when "
+                        "other writers or blocking readers have finished"
+                    )
+            else:
+                busy_since = None
+
+        origin.backup(target, pages=128, progress=progress, sleep=0.05)
+    finally:
+        if origin is not None:
+            origin.close()
+        target.close()
 
 
 def _append_sqlite(
@@ -651,7 +725,8 @@ def _fold(text: str) -> str:
     return text.lower().replace("ς", "σ")
 
 
-def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
+def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token",
+           view: WordView | None = None, statuses: Iterable[ReadingStatus | str] | None = None,
            ) -> list[tuple[str, int | None, str]]:
     """Search a SQLite corpus's tokens; returns ``(doc_id, position, text)`` hits.
 
@@ -677,6 +752,16 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     ``ΛΌΓΟΣ``, final sigma folding with the rest). Diacritics still have to match:
     ``λογος`` does not find ``λόγος``.
 
+    Explicit ``view='surface'``, ``'normalized'``, or ``'lemma'`` searches lexical
+    WORD tokens using the same keys as ``Corpus.word_frequencies`` and
+    ``Corpus.query``. Surface is case-sensitive; normalized/lemma use NFC,
+    lowercase, and final-sigma folding, preserving diacritics/iota subscript.
+    Lemma reads existing annotations only; missing lemmas do not match. Returned
+    hits still contain the original token text. ``statuses`` selects whole tokens
+    and every typed editorial segment. These explicit views scan the token table;
+    omitting both options preserves the legacy indexed, case-insensitive search
+    across all token kinds.
+
     ``limit`` caps the number of hits (default 50); zero or a negative value returns
     every match. The database is opened **read-only** (a sqlite ``mode=ro`` URI), so a
     search can never create or modify a file: a missing path or a non-SQLite file raises
@@ -684,6 +769,11 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     database behind."""
     if mode not in {"token", "substring"}:
         raise ValueError(f"mode must be 'token' or 'substring', got {mode!r}")
+    from .core.word_views import normalize_word, reading_statuses, token_selected, validate_view, word_key
+
+    if view is not None:
+        view = validate_view(view)
+    selected = reading_statuses(statuses)
     conn = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
     # A reader waits for a writer rather than failing. sqlite's default busy timeout is
     # 5 s, which a loaded machine can exhaust while an append commits, surfacing as
@@ -691,6 +781,31 @@ def search(path: str | Path, query: str, *, limit: int = 50, mode: str = "token"
     # and idempotent, so waiting longer is always better than erroring.
     conn.execute("PRAGMA busy_timeout = 30000")
     try:
+        if view is not None or statuses is not None:
+            from .core.model import Token, TokenKind
+
+            _check_schema_version(dict(conn.execute("SELECT key, value FROM meta")))
+            form_column = "form_state_json" if _has_column(conn, "tokens", "form_state_json") else "NULL"
+            target = query if view == "surface" else (normalize_word(query) if view is not None else _fold(query))
+            hits: list[tuple[str, int | None, str]] = []
+            for doc_id, position, text, kind, status, annotations, raw_form in conn.execute(
+                "SELECT doc_id, position, text, kind, status, annotations, " + form_column + " FROM tokens"
+            ):
+                token = Token(
+                    text=str(text), kind=TokenKind(kind), status=ReadingStatus(status or "certain"),
+                    annotations=json.loads(annotations or "{}"),
+                    form_state=_form_state_from_json(raw_form, context=f"{doc_id}, position {position}"),
+                )
+                if not token_selected(token, selected):
+                    continue
+                key = word_key(token, view) if view is not None else _fold(token.text)
+                if key is None:
+                    continue
+                if (key == target if mode == "token" else target in key):
+                    hits.append((str(doc_id), position, token.text))
+                    if 0 < limit <= len(hits):
+                        break
+            return hits
         target = _fold(query)
         out: list[tuple[str, int | None, str]] = []
         # position is an int, or None for a token stored without one (SQL NULL); keep it

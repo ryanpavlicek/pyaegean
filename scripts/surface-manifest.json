@@ -13,10 +13,10 @@
     "needs-fetch": "requires a one-time fetch-to-cache of a dataset or index before it works (paradigm table, registry lexicon indexes, fetch-on-demand corpora).",
     "needs-neural-model": "requires the [neural] extra and the downloaded ONNX model; the browser cannot run onnxruntime and the MCP server deliberately loads no model.",
     "needs-api-key": "requires a bring-your-own-AI provider key (a generative LLM call).",
-    "needs-sqlite3": "requires the sqlite3 stdlib module, which Pyodide unvendors, so it cannot run in the browser demo.",
     "heavy-dep": "requires a heavy optional dependency (matplotlib/plotly, geopandas, or an external NLP framework) that the surface does not carry.",
     "file-path-ux": "reads or writes filesystem paths, which the surface cannot offer (the MCP server accepts no paths by design; the browser has no filesystem).",
-    "not-applicable": "deliberately not surfaced here; the note says why (folded into another covered capability on the surface, or reachable only through the TUI command console with no dedicated screen)."
+    "not-applicable": "deliberately not surfaced here; the note says why (folded into another covered capability on the surface, or reachable only through the TUI command console with no dedicated screen).",
+    "needs-sqlite3": "requires the sqlite3 stdlib module to be loaded explicitly in the browser runtime."
   },
   "site_nav": {
     "description": "The published documentation-site navigation: the 'nav:' block of mkdocs.yml (READ-ONLY from this file's owner). Tracked so a top-level nav entry cannot appear or disappear without a recorded decision. It is modelled at the nav-entry level rather than as a fifth per-capability column because a navigation menu maps to surfaces and pages, not to individual capabilities. 'structural' lists the site's own scaffolding (Home and the API reference), which carry no capability and are skipped. Every other top-level nav entry is either 'covered' (it points at a tracked surface or a capability id, named in 'maps_to') or 'excluded' (documentation with no capability behind it, reason from the shared exclusion vocabulary). The browser-demo link is the one covered entry today; the Benchmarks, Independent-review, and Design-notes entries are documentation pages, recorded as honest not-applicable.",
@@ -42,6 +42,18 @@
         "status": "excluded",
         "reason": "not-applicable",
         "note": "the evidence-reproduction entry point (docs/review.md); repository review documentation, not a runtime capability surface."
+      },
+      {
+        "label": "Scholarly workflow",
+        "status": "excluded",
+        "reason": "not-applicable",
+        "note": "source preservation, optional review, counting, and translation methodology (docs/scholarly-workflow.md); documentation rather than a capability surface."
+      },
+      {
+        "label": "Research semantics",
+        "status": "excluded",
+        "reason": "not-applicable",
+        "note": "lexical populations, denominators, uncertainty, and rational accounting contracts (docs/research-semantics.md); documentation rather than a capability surface."
       },
       {
         "label": "Design notes",
@@ -117,23 +129,23 @@
       "python_api": "aegean.TokenFormState",
       "summary": "Typed diplomatic, regularized, normalized, model-input, supplied, unclear, and lost token states with semantic source-markup provenance.",
       "surfaces": {
-          "demo": {
-            "status": "excluded",
-            "reason": "not-applicable",
-            "note": "typed form state is shown inside the existing epidoc_import card tracked by the epidoc-read capability, not exposed as a duplicate demo function."
-          },
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "typed form state is shown inside the existing epidoc_import card tracked by the epidoc-read capability, not exposed as a duplicate demo function."
+        },
         "mcp": {
           "status": "excluded",
           "reason": "not-applicable",
           "note": "form state is nested and flattened inside the existing show_document tool tracked by the document-reader capability, not exposed as a second tool."
         },
-          "notebooks": {
-            "status": "covered",
-            "where": {
-              "notebook": "walkthrough-epigraphist.ipynb",
-              "marker": "editorial-form-states"
-            }
-          },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": "editorial-form-states"
+          }
+        },
         "tui": {
           "status": "covered",
           "where": "Corpus reader token details (typed form_state)"
@@ -279,7 +291,7 @@
       "id": "accounting-balance",
       "since": "0.1.0",
       "python_api": "aegean.analysis.balance_check",
-      "summary": "Accounting reconciliation: each stated total against the summed items.",
+      "summary": "Accounting reconciliation with rational discrepancies and separate tolerance/exact intact-account eligibility.",
       "surfaces": {
         "demo": {
           "status": "covered",
@@ -306,7 +318,7 @@
       "id": "compound-query",
       "since": "0.6.0",
       "python_api": "aegean.Corpus.query",
-      "summary": "The compound query engine over a corpus, inscription- or word-scope.",
+      "summary": "Surface, normalized, and lemma queries with token/document counts, reading-status selections, population metadata, and citable provenance.",
       "surfaces": {
         "demo": {
           "status": "covered",
@@ -762,7 +774,7 @@
       "id": "import-text",
       "since": "0.8.2",
       "python_api": "aegean.io.from_text",
-      "summary": "Turn a user's own text into a Corpus.",
+      "summary": "Source-preserving text/CSV import with aligned token kinds and an explicit word-only mode.",
       "surfaces": {
         "demo": {
           "status": "covered",
@@ -1362,7 +1374,7 @@
       "id": "neural-pipeline",
       "since": "0.8.0",
       "python_api": "aegean.greek.use_neural_pipeline",
-        "summary": "The joint neural tagger/parser/lemmatizer, with isolated configured instances, explicit long-input coverage, exact lemma provenance, validated model bundles, reproducible analysis receipts, and measured UD Ancient Greek Perseus results.",
+      "summary": "The joint neural tagger/parser/lemmatizer, with isolated configured instances, explicit long-input coverage, exact lemma provenance, validated model bundles, reproducible analysis receipts, and measured UD Ancient Greek Perseus results.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1689,7 +1701,7 @@
       "id": "translation",
       "since": "0.1.0",
       "python_api": "aegean.translate",
-      "summary": "Grounded, exploratory, provenanced hybrid lexicon+LLM translation.",
+      "summary": "Exploratory translation retaining source/prediction/review evidence, structured uncertainty and changes, and the complete optional checking draft.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1719,7 +1731,7 @@
       "id": "review-loop",
       "since": "0.28.0",
       "python_api": "aegean.io.to_review_table",
-      "summary": "The human review loop: select all, flagged, or unverified annotations for a reviewable CSV, correct, and apply back (with multi-reviewer merge).",
+      "summary": "Optional field-level accept/correct/defer/reject decisions with persistent predictions, history, evidence, and multi-reviewer merge.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1893,8 +1905,8 @@
       "surfaces": {
         "demo": {
           "status": "excluded",
-          "reason": "needs-sqlite3",
-          "note": "Pyodide unvendors sqlite3 from its stdlib."
+          "reason": "file-path-ux",
+          "note": "The browser runtime loads sqlite3, but the demo has no database-file import/export interface."
         },
         "mcp": {
           "status": "excluded",
@@ -2000,6 +2012,65 @@
           "status": "excluded",
           "reason": "not-applicable",
           "note": "Profiles are reachable through the CLI, with no dedicated TUI screen."
+        }
+      }
+    },
+    {
+      "id": "annotation-evidence",
+      "since": "0.61.0",
+      "python_api": "aegean.ai.annotation_evidence",
+      "summary": "Field-scoped annotation evidence distinguishing source annotations, predictions, and current human-review decisions.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "The browser has no annotated-corpus or scholarly field-review input workflow."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "The read/analysis server has no review-to-translation workflow."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "annotation_evidence("
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "No field-review evidence selector; use the Python API."
+        }
+      }
+    },
+    {
+      "id": "word-views",
+      "since": "0.61.0",
+      "python_api": "aegean.core.Corpus.word_frequencies",
+      "summary": "Surface, normalized, and lemma word counts with token/document units, reading-status selections, and explicit population metadata.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "word_counts"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Word-view queries are part of query_corpus, tracked by the compound-query capability rather than a duplicate tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": ".word_frequencies(view=\"normalized\""
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Explicit counting controls are available in the stats/query/db command console; no dedicated selector in the corpus table."
         }
       }
     }

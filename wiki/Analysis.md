@@ -65,8 +65,9 @@ A few of the newer/lower-level ones are Python-only. This table is the map.
 | SQLite persistence + FTS | `db.to_sqlite`, `db.search`, `Corpus.from_sql` | `aegean db build` / `aegean db search` |
 | Figures | `aegean.viz.*` | `aegean plot` |
 
-Every CLI command also takes `--json` for machine-readable output. The full CLI
-reference is on the **[CLI](CLI)** page.
+Reporting commands take `--json` for machine-readable output. File-writing
+commands such as `db build` and `plot` use `-o` instead. The full CLI reference
+is on the **[CLI](CLI)** page.
 
 ---
 
@@ -333,6 +334,35 @@ A scholarly caution: on small or fragmentary corpora a significant G² flags an
 imbalance worth *inspecting*, not a proven fact about the language; read
 significance (G², p) together with effect size (log-ratio) and dispersion.
 See [Limitations](Limitations).
+
+### Explicit word-count populations
+
+`Corpus.word_frequencies()` defaults to exact surface spelling and token counts.
+Select `view="normalized"` for NFC, lowercase, and final-sigma folding while
+preserving diacritics and iota subscript, or `view="lemma"` for existing lemma
+annotations. No analysis is run; missing lemmas are excluded and reported.
+`count_unit="document"` counts each document once per word. A `statuses` filter
+requires both the whole token and every typed editorial segment to qualify.
+
+```python
+sample = aegean.io.from_text("Λόγος λόγος λόγος.")
+counts = sample.word_frequencies(
+    view="normalized", count_unit="document", statuses=["certain"],
+)
+list(counts)                                      # [('λόγοσ', 1)]
+tuple(counts.metadata[k] for k in ("view", "count_unit", "denominator"))
+# ('normalized', 'document', 1)
+sample.word_frequencies(view="lemma").metadata["missing_lemma_tokens"]  # 3
+print(counts.cite())                              # source and counting choices
+```
+
+The list-compatible result retains its denominator, exclusions, normalization,
+reading-status selection, and lemma-source labels in `metadata`. Those labels
+describe the supplied annotations, not verified accuracy. The same choices are
+available through `aegean stats --view ... --count-unit ... --statuses ...`;
+add `--details --json` to retain the counting metadata alongside the rows.
+Dispersion and keyness above continue to use their documented surface-word or
+sign populations.
 
 ## Paired significance: does system A differ from system B?
 
@@ -876,27 +906,40 @@ ex = ideogram_group_exclusivity(lines)
 Does a tablet's stated total (KU-RO / TO-SO) match the sum of its listed items?
 `balance_check` returns one `BalanceCheck` per total marker
 (`stated_total, computed_sum, item_count, difference, balances, marker,
-total_line_index`); `checkable_accounts` lists the documents worth checking.
+total_line_index, exact_difference`), with an `exact_balances` property.
+`checkable_accounts` selects intact accounts with at least one qualifying total.
 
 ```python
 from aegean.analysis import balance_check, checkable_accounts
 balance_check(c.get("HT13"))
 # [BalanceCheck(stated_total=130.5, computed_sum=131.0, item_count=6,
-#               difference=0.5, balances=False, marker='KU-RO', total_line_index=7)]
+#               difference=0.5, balances=False, marker='KU-RO', total_line_index=7,
+#               exact_difference=Fraction(1, 2))]
 [d.id for d in checkable_accounts(c)[:5]]
 # ['HT9a', 'HT9b', 'HT11b', 'HT13', 'HT89']
 ```
 
 ```bash
 aegean balance lineara
-# doc    marker  stated  computed  diff    balances
-# HT9a   KU-RO   31.75   31.0      -0.75   NO
-# HT9b   KU-RO   24.0    24.0      0.0     yes
-# HT11a  KU-RO   10.0    6.0       -4.0    NO
-# HT11b  KU-RO   180.0   180.0     0.0     yes
-# HT13   KU-RO   130.5   131.0     0.5     NO
+# doc    marker  stated  computed  diff    balances  eligible (tolerance)
+# HT9a   KU-RO   31.75   31.0      -0.75   NO        yes
+# HT9b   KU-RO   24.0    24.0      0.0     yes       yes
+# HT11a  KU-RO   10.0    6.0       -4.0    NO        NO
+# HT11b  KU-RO   180.0   180.0     0.0     yes       yes
+# HT13   KU-RO   130.5   131.0     0.5     NO        yes
 # ...
 ```
+
+`balance_check(..., exact=True)` and `aegean balance --exact` compare rational
+written quantities without an allowance. The default `balances` retains its
+legacy floating-point cutoff of `1e-6`. Account eligibility is a separate
+selection: intact text and at least one total within
+`max(1, tolerance * abs(stated_total))`, with `tolerance=0.10` by default.
+Even `tolerance=0` retains the absolute-one allowance; use `exact=True` for exact
+eligibility. CLI JSON also records `exact_difference`, `exact_balances`,
+`within_tolerance`, and the selected eligibility policy. For HT13 the rational
+difference is `"1/2"`: it fails exact arithmetic but qualifies under the default
+teaching tolerance. Neither outcome verifies its readings or metrology.
 
 > Section-splitting on undeciphered tablets is heuristic, so a non-zero `diff`
 > can be a damaged line or a mis-segmented item, not an ancient scribal error.
@@ -926,10 +969,12 @@ aegean search lineara "KU-*-RO"
 A compound predicate engine over the corpus: an inscription/word field registry,
 AND/OR/NOT combination, and inscription- or word-output modes. Call it as the
 `corpus.query(filters, output=...)` method or the standalone
-`run_query(corpus, filters)`. With `output="words"` each `(word, count)` pair's
-count is the word's **document frequency** (the number of distinct inscriptions
-it occurs in), not its token frequency; for token counts use
-`corpus.word_frequencies()`.
+`run_query(corpus, filters)`. With `output="words"`, the default
+`count_unit="document"` counts distinct inscriptions containing each word.
+Pass `count_unit="token"` for token frequency. Explicit `view` and `statuses`
+select the same lexical population as `corpus.word_frequencies()`; omitted
+`view` retains legacy case-insensitive predicates and separate surface keys.
+`result.metadata` records the comparison policy, denominator, and exclusions.
 
 ```python
 from aegean.analysis import FilterRow, run_query, summarize_filters
@@ -944,6 +989,9 @@ len(res.inscriptions)             # 49
 
 run_query(c, [FilterRow("word-sign-pattern", "KU-*-RO")], output="words").words
 # [('KU-MA-RO', 1)]
+run_query(c, [FilterRow("word-sign-pattern", "KU-RO")],
+          output="words", count_unit="token").words
+# [('KU-RO', 37)]
 ```
 
 ```bash
@@ -954,6 +1002,8 @@ aegean query lineara --where id-contains=HT --where word-suffix=RO --limit 5
 # ...
 # (prefix a field with ! to negate, or or: to OR it; --output-kind words for word output)
 aegean query lineara --fields          # list the queryable fields and exit
+# Explicit word views and counts: --view surface|normalized|lemma,
+# --count-unit document|token, and --statuses certain,uncertain,...
 ```
 
 The full field registry (`FIELDS`):
@@ -1064,9 +1114,11 @@ aegean.load("lineara").fingerprint()[:16]          # 'f2619ca5089e533a'
 ## SQLite persistence & full-text search (`aegean.db`)
 
 A corpus can be persisted to a queryable SQLite database (stdlib `sqlite3`
-only, no new dependency) and reloaded losslessly. Close external SQLite
-connections before overwriting an existing database; see
-[Limitations](Limitations#known-workflow-defects).
+only, no new dependency) and reloaded losslessly. Existing databases are replaced
+in a SQLite transaction; WAL readers retain their previous snapshot until their
+transaction ends. A busy writer or blocking reader can cause a lock error:
+finish the blocking transaction and retry. Failed replacement leaves the
+existing database intact.
 
 ```python
 from aegean import db, Corpus

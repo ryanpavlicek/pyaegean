@@ -5,9 +5,9 @@ awareness).
 
 Each piece of evidence is a `GroundingItem` carrying not just the text shown to
 the model but *where it came from* — a corpus and word, a lexicon entry, a
-deterministic analysis step. That provenance is what `ExploratoryResult.trace()`
-renders, so a generative result can always be audited back to the local,
-non-generative facts it was grounded in. Plain strings are still accepted
+local analysis step. Status and provenance reach both the provider prompt and
+`ExploratoryResult.trace()`, distinguishing provisional predictions, source
+annotations and field-level human decisions. Plain strings are still accepted
 everywhere (treated as ``source="custom"``).
 """
 
@@ -15,10 +15,11 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from ..core.model import Token
     from ..greek.pipeline import TokenRecord
 
 _UNTRUSTED_NOTE = (
@@ -341,18 +342,53 @@ def _concise_gloss(text: str, *, limit: int = 80) -> str:
 class GroundingItem:
     """One piece of grounding evidence and its provenance.
 
-    ``content`` is what the model sees; ``source`` is the provenance category
+    ``content`` is the evidence text; ``source`` is the provenance category
     (e.g. ``"corpus:lineara"``, ``"lexicon:LSJ"``, ``"lemmatizer"``,
     ``"transliteration"``, ``"analysis:cooccurrence"``); ``ref`` is the specific
-    locator it concerns (a word, lemma, or document id). Stringifies to
-    ``content`` so it drops into the prompt like a plain evidence line."""
+    locator it concerns (a word, lemma, or document id). ``status`` distinguishes
+    predictions, source annotations, and field-level human review; ``provenance``
+    carries supporting details. Both reach the model through `evidence_block`.
+    Plain strings remain unclassified evidence, never implicitly verified.
+    Stringification retains the historical content-only behavior."""
 
     content: str
     source: str = "custom"
     ref: str = ""
+    status: str = "unclassified"
+    provenance: dict[str, Any] | None = field(default=None, hash=False)
 
     def __str__(self) -> str:
         return self.content
+
+    def render(self) -> str:
+        """Evidence plus provenance, for both the prompt and the audit trace."""
+        import json
+
+        details: dict[str, Any] = {"status": self.status, "source": self.source}
+        if self.ref:
+            details["ref"] = self.ref
+        if self.provenance:
+            details["provenance"] = self.provenance
+        return f"{self.content} [evidence: {json.dumps(details, ensure_ascii=False, sort_keys=True)}]"
+
+    def to_dict(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "content": self.content, "source": self.source, "ref": self.ref,
+            "status": self.status,
+        }
+        if self.provenance is not None:
+            result["provenance"] = self.provenance
+        return result
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GroundingItem:
+        provenance = data.get("provenance")
+        if provenance is not None and not isinstance(provenance, dict):
+            raise ValueError("grounding item provenance must be an object or null")
+        return cls(
+            data["content"], source=data.get("source", "custom"), ref=data.get("ref", ""),
+            status=data.get("status", "unclassified"), provenance=provenance,
+        )
 
 
 def as_item(x: str | GroundingItem) -> GroundingItem:
@@ -369,14 +405,72 @@ def wrap_untrusted(text: str, label: str = "SOURCE") -> str:
 def evidence_block(evidence: Iterable[str | GroundingItem]) -> str:
     """Render grounding evidence as a compact, labeled bullet list (or empty).
 
-    Only the ``content`` reaches the prompt — provenance is for the trace, not
-    the model — so the wording stays stable across `GroundingItem` and plain
-    strings."""
-    items = [str(e) for e in evidence if str(e)]
+    Status, source, locator and supplied provenance travel with each evidence line.
+    They describe evidence, not instructions; capabilities wrap this block as
+    untrusted data before sending it to a provider."""
+    items = [as_item(e).render() for e in evidence if str(e)]
     if not items:
         return ""
     body = "\n".join(f"- {e}" for e in items)
     return f"Corpus/lexicon evidence (grounding):\n{body}"
+
+
+def annotation_evidence(
+    tokens: Iterable[Token], *, source: str = "annotation", source_annotated: bool = False,
+    fields: Sequence[str] = (
+        "lemma", "upos", "morph", "feats", "head", "deprel",
+    ),
+) -> list[GroundingItem]:
+    """Render existing token annotations without rerunning or approving analysis.
+
+    Set ``source_annotated=True`` when the tokens retain annotations from the
+    named source edition. Missing provenance otherwise remains unclassified:
+    absence of model metadata does not establish annotation origin.
+    Only a current per-field accept/correct decision with its
+    verification flag grants human-reviewed status. Deferred, rejected and stale
+    decisions remain visible. Reviewing a lemma never certifies adjacent fields.
+    Pass the returned items as ``grounding=`` to an AI or hybrid translation call.
+    """
+    from ..greek.lemmatize import LemmaSource
+
+    prediction_sources = {value.value for value in LemmaSource}
+    out: list[GroundingItem] = []
+    for token in tokens:
+        annotations = token.annotations
+        for key in fields:
+            value = annotations.get(key)
+            if value is None or value == "":
+                continue
+            decision = annotations.get(f"{key}_review_decision", "")
+            reviewed = decision in {"accept", "correct"} and annotations.get(f"{key}_verified") == "true"
+            prediction = annotations.get(f"{key}_source", "")
+            # Built-in annotation writes lemma_source even when the other fields
+            # originate in the same model pass. Preserve that scope boundary.
+            predicted = prediction in prediction_sources or (
+                key in {"lemma", "upos"} and "lemma_source" in annotations
+            )
+            status = "human-reviewed" if reviewed else (
+                "predicted" if predicted else ("source-annotated" if source_annotated else "unclassified")
+            )
+            provenance: dict[str, Any] = {"field": key, "reading_status": token.status.value}
+            if token.position is not None:
+                provenance["position"] = token.position
+            if token.alt:
+                provenance["alternative_readings"] = list(token.alt)
+            if token.alignment is not None:
+                provenance["document_id"] = token.alignment.document_id
+                provenance["source_token_id"] = token.alignment.source_token_id
+            for suffix in ("source", "review_decision", "reviewed_by", "review_note", "review_evidence"):
+                if (detail := annotations.get(f"{key}_{suffix}")):
+                    provenance[suffix] = detail
+            if f"{key}__pred" in annotations:
+                provenance["original_prediction"] = annotations[f"{key}__pred"]
+            ref = annotations.get("ref", token.text)
+            out.append(GroundingItem(
+                f"{token.text}: {key} = {value}", source=source, ref=ref,
+                status=status, provenance=provenance,
+            ))
+    return out
 
 
 def corpus_context(corpus: object, *, limit: int = 20) -> list[GroundingItem]:
@@ -478,10 +572,9 @@ def content_glosses(
       without it. Source tag ``lexicon:LSJ``.
     - ``source="cascade"`` (recommended): gloss each content lemma from a **concise,
       common-sense-first** dictionary cascade (Middle Liddell, Cunliffe for Homer,
-      Abbott-Smith / Dodson for the NT), cleaned (see `concise_gloss`). This is the validated
-      source: LSJ orders senses etymologically, so its first sense is often the archaic one
-      and asserting it injects errors, whereas a concise dictionary leads with the common
-      sense. It therefore requires a *concise* dictionary and **never** falls back to the
+      Abbott-Smith / Dodson for the NT), cleaned (see `concise_gloss`). These are
+      dictionary candidates, not verified contextual senses. A historical LSJ
+      lead sense can differ from the sense appropriate to this passage. It therefore requires a *concise* dictionary and **never** falls back to the
       LSJ first sense: with only ``greek.use_lsj()`` loaded and no concise dictionary, the
       cascade emits nothing for that lemma rather than the archaic LSJ-lead trap. Uses
       whichever concise dictionaries are loaded and never requires a specific one. Source tag
@@ -554,7 +647,10 @@ def content_glosses(
             return
         seen.add(lemma)
         label = f"{surface} ({lemma})" if surface != lemma else lemma
-        out.append(GroundingItem(f"{label}: {definition}", source=src, ref=surface))
+        out.append(GroundingItem(
+            f"{label}: {definition}", source=src, ref=surface, status="reference",
+            provenance={"lemma": lemma, "scope": "dictionary candidate, not a verified contextual sense"},
+        ))
 
     # An explicitly supplied analysis owns the lemma/POS decisions and must win over any
     # module-level backend. This path also avoids a second neural inference.

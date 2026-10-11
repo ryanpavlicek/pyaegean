@@ -359,7 +359,10 @@ directly, using Linear B's own markers in place of Linear A's `KU-RO`:
 
 `balance_check(doc)` sums the item lines above each total line and compares. Each result is a
 `BalanceCheck` with `stated_total`, `computed_sum`, `item_count`, `difference`, `balances`,
-`marker`, and `total_line_index`.
+`marker`, `total_line_index`, and rational `exact_difference`; `exact_balances`
+reports equality of the written quantities. `balance_check(doc, exact=True)`
+(CLI `--exact`) uses rational equality for `balances`; the default retains the
+legacy float cutoff. Neither mode establishes metrological interpretation.
 
 ```python
 from aegean.analysis import balance_check
@@ -391,9 +394,11 @@ aegean balance linearb --json --strict          # machine-readable; exit 1 if an
 ```
 
 `is_checkable_account(doc)` and `checkable_accounts(corpus)` pick out the *intact, balancing*
-accounts: every token securely read, at least one total within tolerance (10% by default, because
-Aegean metrology is imperfectly understood). They're a good "trust the arithmetic" filter for a
-drill set.
+accounts: every token securely read, at least one total within
+`max(1, tolerance * abs(stated_total))`, with `tolerance=0.10` by default because
+Aegean metrology is imperfectly understood. `tolerance=0` still allows an absolute
+difference of one; use `exact=True` for equality of the written rational quantities.
+These are arithmetic drill candidates, subject to the reading and section boundaries.
 
 The reconciliation is heuristic (section boundaries are inferred), so a balance is **evidence, not
 proof**, exactly as for Linear A. See [Limitations](Limitations).

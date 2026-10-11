@@ -41,7 +41,7 @@ def _fake_anthropic() -> tuple[types.ModuleType, dict]:
             return _Msg()
 
     class Anthropic:
-        def __init__(self, api_key=None):
+        def __init__(self, api_key=None, base_url=None):
             rec["api_key"] = api_key
             self.messages = _Messages()
 
@@ -116,7 +116,7 @@ def test_openai_adapter(monkeypatch):
 
     resp = ai.get_client("openai", model="gpt-x").complete("q", system="sys", max_tokens=50)
     assert resp.text == "oai answer" and resp.provider == "openai"
-    assert rec["base_url"] is None  # plain OpenAI
+    assert rec["base_url"] == "https://api.openai.com/v1"
     assert rec["kwargs"]["model"] == "gpt-x"
     assert rec["kwargs"]["max_tokens"] == 50
     assert rec["kwargs"]["messages"] == [
@@ -187,6 +187,10 @@ def _fake_google() -> tuple[dict[str, types.ModuleType], dict]:
             rec["system_instruction"] = system_instruction
             rec["max_output_tokens"] = max_output_tokens
 
+    class HttpOptions:
+        def __init__(self, base_url=None):
+            rec["base_url"] = base_url
+
     class _Resp:
         text = "gemini answer"
 
@@ -197,7 +201,7 @@ def _fake_google() -> tuple[dict[str, types.ModuleType], dict]:
             return _Resp()
 
     class Client:
-        def __init__(self, api_key=None):
+        def __init__(self, api_key=None, vertexai=None, http_options=None):
             rec["api_key"] = api_key
             self.models = _Models()
 
@@ -208,6 +212,7 @@ def _fake_google() -> tuple[dict[str, types.ModuleType], dict]:
 
     errors_mod.APIError = APIError  # type: ignore[attr-defined]
     types_mod.GenerateContentConfig = GenerateContentConfig  # type: ignore[attr-defined]
+    types_mod.HttpOptions = HttpOptions  # type: ignore[attr-defined]
     genai.Client = Client  # type: ignore[attr-defined]
     genai.types = types_mod  # type: ignore[attr-defined]
     genai.errors = errors_mod  # type: ignore[attr-defined]
@@ -291,7 +296,7 @@ def test_anthropic_call_error_becomes_provider_call_error(monkeypatch):
             raise APIError("overloaded")
 
     class Anthropic:
-        def __init__(self, api_key=None):
+        def __init__(self, api_key=None, base_url=None):
             self.messages = _Messages()
 
     mod.Anthropic = Anthropic  # type: ignore[attr-defined]
@@ -313,7 +318,7 @@ def test_gemini_call_error_becomes_provider_call_error(monkeypatch):
         def generate_content(self, **kwargs):
             raise api_error("quota exceeded")
 
-    mods["google.genai"].Client = lambda api_key=None: types.SimpleNamespace(models=_Models())
+    mods["google.genai"].Client = lambda **kwargs: types.SimpleNamespace(models=_Models())
     for name, mod in mods.items():
         _install(monkeypatch, name, mod)
 

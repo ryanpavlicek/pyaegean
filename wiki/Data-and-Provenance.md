@@ -44,29 +44,29 @@ hashed straight out of the installed wheel. Sizes are bytes.
 
 | File | Bytes | Source |
 |---|---|---|
-| `cypriot/ig_inscriptions.json` | 75,677 | *Inscriptiones Graecae* XV 1 (BBAW, CC BY 4.0) |
-| `cypriot/lexicon.json` | 1,377 | Unicode UCD + scholarly excerpts |
-| `cypriot/phonetic_map.json` | 712 | Unicode UCD |
-| `cypriot/sample_inscriptions.json` | 465 | scholarly excerpts (Masson; Chadwick) |
-| `cypriot/signs.json` | 7,032 | Unicode UCD (Cypriot Syllabary) |
-| `cyprominoan/sample_inscriptions.json` | 389 | scholarly excerpts (Ferrara) |
-| `cyprominoan/signs.json` | 12,681 | Unicode UCD (Cypro-Minoan block) |
-| `geo/site_coordinates.json` | 6,218 | GORILA / Younger / public gazetteers |
-| `greek/benchmark_gold.json` | 6,550 | gold benchmark fixtures |
+| `cypriot/ig_inscriptions.json` | 71,928 | *Inscriptiones Graecae* XV 1 (BBAW, CC BY 4.0) |
+| `cypriot/lexicon.json` | 1,307 | Unicode UCD + scholarly excerpts |
+| `cypriot/phonetic_map.json` | 655 | Unicode UCD |
+| `cypriot/sample_inscriptions.json` | 461 | scholarly excerpts (Masson; Chadwick) |
+| `cypriot/signs.json` | 6,975 | Unicode UCD (Cypriot Syllabary) |
+| `cyprominoan/sample_inscriptions.json` | 385 | scholarly excerpts (Ferrara) |
+| `cyprominoan/signs.json` | 12,580 | Unicode UCD (Cypro-Minoan block) |
+| `geo/site_coordinates.json` | 10,746 | GORILA / Younger / public gazetteers |
+| `greek/benchmark_gold.json` | 6,451 | gold benchmark fixtures |
 | `greek/dodson.json` | 712,301 | Dodson Greek Lexicon (CC0) |
-| `greek/idioms.json` | 6,675 | bundled idiom / MWE gloss lexicon |
-| `greek/lemmata.json` | 1,545 | bundled gold lemma seed |
+| `greek/idioms.json` | 6,445 | bundled idiom / MWE gloss lexicon |
+| `greek/lemmata.json` | 1,494 | bundled gold lemma seed |
 | `greek/nt_sample.json` | 132,814 | Nestle 1904: two sample chapters, John 1 + Philemon 1 (CC0) |
-| `greek/sample_texts.json` | 1,054 | public-domain Greek snippets |
-| `greek/works_catalogue.json` | 293,563 | Perseus + First1KGreek work index (metadata only; built by `scripts/build_greek_catalogue.py`) |
+| `greek/sample_texts.json` | 1,017 | public-domain Greek snippets |
+| `greek/works_catalogue.json` | 281,097 | Perseus + First1KGreek work index (metadata only; built by `scripts/build_greek_catalogue.py`) |
 | `lineara/inscriptions.json` | 720,766 | GORILA via mwenge/lineara.xyz |
-| `lineara/manifest.json` | 454 | corpus manifest |
-| `lineara/phonetic_map.json` | 648 | Linear A sound values |
+| `lineara/manifest.json` | 434 | corpus manifest |
+| `lineara/phonetic_map.json` | 597 | Linear A sound values |
 | `lineara/signs.json` | 63,272 | Linear A sign inventory |
-| `linearb/lexicon.json` | 12,071 | Unicode UCD + Wiktionary/kaikki excerpts |
-| `linearb/phonetic_map.json` | 986 | Unicode UCD |
-| `linearb/sample_inscriptions.json` | 7,198 | scholarly excerpts (Ventris & Chadwick) |
-| `linearb/signs.json` | 36,030 | Unicode UCD (Linear B Syllabary + Ideograms) |
+| `linearb/lexicon.json` | 11,473 | Unicode UCD + Wiktionary/kaikki excerpts |
+| `linearb/phonetic_map.json` | 910 | Unicode UCD |
+| `linearb/sample_inscriptions.json` | 6,870 | scholarly excerpts (Ventris & Chadwick) |
+| `linearb/signs.json` | 35,817 | Unicode UCD (Linear B Syllabary + Ideograms) |
 
 ---
 
@@ -231,10 +231,12 @@ the first call. See [Greek NLP → Lexicon (LSJ)](Greek-NLP#lexicon-lsj-glossing
 
 #### More dictionaries (the lexicon registry)
 
-Beyond LSJ and the bundled Dodson, `greek.use_lexicon(id)` activates three more
+Beyond LSJ and the bundled Dodson, `greek.use_lexicon(id)` activates four more
 dictionaries. Each fetches a small prebuilt lemma→entry index (the `middle-liddell-index` /
-`cunliffe-index` / `abbott-smith-index` assets above) to the cache on first use; if that is
-unreachable it builds the index from the upstream source instead. Never bundled:
+`cunliffe-index` / `autenrieth-index` / `abbott-smith-index` assets above) to the cache
+on first use. Middle Liddell, Cunliffe, and Abbott-Smith can also build from the
+upstream source if the prebuilt asset is unreachable; Autenrieth uses its prebuilt
+index. None is bundled:
 
 - **Middle Liddell** (*An Intermediate Greek-English Lexicon*) and **Cunliffe** (*A Lexicon
   of the Homeric Dialect*) are built from the structured JSONL in
@@ -244,6 +246,8 @@ unreachable it builds the index from the upstream source instead. Never bundled:
 - **Abbott-Smith** (*A Manual Greek Lexicon of the New Testament*, 1922) is built from the TEI
   in `translatable-exegetical-tools/Abbott-Smith` (pinned to a commit); text and markup are
   public domain.
+- **Autenrieth** (*A Homeric Dictionary*, 1891) is public domain, with Perseus
+  digitization under CC BY-SA. Its hosted index supplies Homeric entries.
 
 Dictionaries that are not openly redistributable (Slater, Montanari, DGE, Bailly)
 are not hosted; `greek.lexicon_link(word)` builds a Logeion deep-link to them instead. None of
@@ -625,7 +629,7 @@ returns a reproducibility manifest with three keys: `package`, `bundled`,
 from aegean import data
 v = data.versions()
 
-v["package"]                                  # '0.60.0'  (your installed version)
+v["package"]                                  # '0.61.0'  (your installed version)
 v["bundled"]["lineara/inscriptions.json"]     # {'sha256': '4705b2b2…', 'bytes': 720766}
 v["fetched"]["nt-corpus"]
 # {'url': 'https://github.com/ryanpavlicek/pyaegean/releases/download/nt-corpus-v1/nt-corpus.json',
@@ -696,7 +700,7 @@ corpus.provenance.license
 corpus.provenance.cite()
 # 'Godart, L. & Olivier, J.-P. (1976–1985). Recueil des inscriptions en linéaire A. — https://github.com/mwenge/lineara.xyz'
 corpus.provenance.data_version
-# '0.60.0'
+# '0.61.0'
 
 corpus.to_dict()["_meta"]
 # tool, schemaVersion, scriptId, documentCount, source, license, citation
@@ -731,8 +735,12 @@ aegean import rows.csv -o corpus.json --text-col line --id-col id
 
 `--split` controls how a text file becomes documents: `whole` (default, one document,
 line breaks preserved), `paragraph` (one per blank-line block), or `line` (one per line).
-Greek/Koine text (`--script greek`, the default) is run through the Greek word tokenizer;
-other scripts split on whitespace. The same paths exist in Python:
+Imports preserve decoded source text, punctuation, foreign text, numerals, and
+aligned source spans by default (`token_view="all"`, CLI `--token-view all`).
+Greek/Koine text (`--script greek`, the default) uses the Greek tokenizer; other
+scripts classify their whitespace-delimited tokens. `doc.words` supplies the
+lexical view. Explicit `token_view="words"` / `--token-view words` selects the
+former lossy word-only import without source text or spans. The same paths exist in Python:
 
 ```python
 from aegean import io
@@ -768,6 +776,10 @@ sources, `aegean.io.from_epidoc` (and `aegean import --epidoc`) reads pyaegean o
 and other EpiDoc TEI whose tokens are carried by `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`
 into the same model: id, find-place, token/line stream, `<unclear>`/`<supplied>`
 status, and `<app>`/`<rdg>` variants, on the stdlib XML parser with no extra needed.
+The source string in `<num value="…">` is retained as
+`Token.annotations["epidoc:num_value"]` and emitted back on `<num>`; it is source
+evidence, not a computed arithmetic value. Other arbitrary token annotations do
+not generally survive EpiDoc export; JSON and SQLite retain them.
 Arbitrary free-text TEI needs a source-specific extractor.
 
 ### Variant readings

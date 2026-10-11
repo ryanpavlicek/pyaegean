@@ -151,7 +151,7 @@ aegean geo linearb
 # ├─────────┼───────┼───────┼───────────┼───────────┤
 # │ Knossos │ 35.3  │ 25.16 │ 781961476 │           │
 # │ Mycenae │ 37.73 │ 22.75 │ 570491    │           │
-# │ Pylos   │ 36.952 │ 21.66 │ 570640    │           │
+# │ Pylos   │ 36.952 │ 21.66 │ 156116232 │           │
 # └─────────┴───────┴───────┴───────────┴───────────┘
 ```
 
@@ -341,7 +341,7 @@ A few of the major aligned sites:
 | Zakros | crete | 650881089 |
 | Malia | crete | 589922 |
 | Thera (Akrotiri) | aegean | 599478 |
-| Pylos (Palace of Nestor) | mainland | 570640 |
+| Pylos (Palace of Nestor) | mainland | 156116232 |
 | Mycenae | mainland | 570491 |
 | Miletus | anatolia | 599799 |
 | Enkomi | levant | 13818291 |

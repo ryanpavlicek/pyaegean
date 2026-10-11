@@ -93,11 +93,92 @@ def test_demo_lineara_balance() -> None:
     assert "error" in json.loads(demo.lineara_balance("NOPE"))
 
 
+def test_demo_exact_account_evidence_is_available_or_explicitly_absent() -> None:
+    from aegean import load
+    from aegean.analysis import balance_check
+
+    result = json.loads(_load_demo().lineara_balance("HT13"))
+    check = result["checks"][0]
+    assert result["tolerance_eligible"] is True
+    if hasattr(balance_check(load("lineara").get("HT13"))[0], "exact_difference"):
+        assert check["exact_difference"] == "1/2"
+        assert check["exact_balances"] is False
+        assert result["exact_eligible"] is False
+    else:
+        assert check["exact_difference"] is None and check["exact_balances"] is None
+        assert result["exact_eligible"] is None
+
+
 def test_demo_import_text() -> None:
     demo = _load_demo()
     r = json.loads(demo.import_text("ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος"))
     assert r["documents"] == 1 and r["tokens"] == 8
     assert any(t["word"] == "λόγος" and t["count"] == 2 for t in r["top"])
+
+
+def test_demo_import_preservation_is_shown_when_the_installed_importer_retains_it() -> None:
+    source = "\tΛόγος λόγος. Latin 123\n"
+    result = json.loads(_load_demo().import_text(source))
+    assert result["words"] == 2
+    if result["source_text"] is not None:
+        assert result["source_text"] == source and result["tokens"] == 5
+        assert result["aligned_tokens"] == [
+            {"text": "Λόγος", "kind": "word", "start": 1, "end": 6},
+            {"text": "λόγος", "kind": "word", "start": 7, "end": 12},
+            {"text": ".", "kind": "punct", "start": 12, "end": 13},
+            {"text": "Latin", "kind": "unknown", "start": 14, "end": 19},
+            {"text": "123", "kind": "numeral", "start": 20, "end": 23},
+        ]
+    else:
+        assert result["aligned_tokens"] == []
+
+
+def test_demo_word_counts_preserve_population_choices(monkeypatch) -> None:
+    import inspect
+
+    import aegean
+    from aegean.core.model import Document, ReadingStatus, Token, TokenKind
+
+    provenance = aegean.load("greek").provenance
+    corpus = aegean.Corpus([
+        Document("a", "greek", [
+            Token("Λόγος", TokenKind.WORD, annotations={"lemma": "λόγος"}),
+            Token("λόγος", TokenKind.WORD, annotations={"lemma": "λόγος"}),
+            Token("λόγου", TokenKind.WORD, status=ReadingStatus.RESTORED, annotations={"lemma": "λόγος"}),
+        ], lines=[[0, 1, 2]]),
+        Document("b", "greek", [Token("λόγος", TokenKind.WORD, annotations={"lemma": "λόγος"})],
+                 lines=[[0]]),
+        Document("empty", "greek", [], lines=[]),
+    ], provenance=provenance, script_id="greek")
+    monkeypatch.setattr(aegean, "load", lambda _: corpus)
+    demo = _load_demo()
+    ordinary = json.loads(demo.word_counts("greek"))
+    assert ordinary["rows"] == [
+        {"word": "λόγος", "count": 2}, {"word": "Λόγος", "count": 1}, {"word": "λόγου", "count": 1},
+    ]
+    selected = json.loads(demo.word_counts("greek", "lemma", "document", "certain"))
+    # The released-wheel job also checks the feature's explicit unavailability path.
+    if "view" not in inspect.signature(aegean.Corpus.word_frequencies).parameters:
+        assert ordinary["metadata"] is None and ordinary["counting_citation"] is None
+        assert selected == {"error": "These counting selections are unavailable in the installed package."}
+        return
+    assert selected["rows"] == [{"word": "λόγοσ", "count": 2}]
+    assert selected["metadata"]["denominator"] == 3
+    assert selected["metadata"]["represented_word_tokens"] == 3
+    assert selected["metadata"]["excluded_word_tokens"] == 1
+    assert selected["metadata"]["reading_statuses"] == ["certain"]
+    assert "document denominator=3" in selected["counting_citation"]
+    assert "error" in json.loads(demo.word_counts("nt"))
+    assert "error" in json.loads(demo.word_counts("greek", view="unknown"))
+
+
+def test_demo_word_counts_do_not_fabricate_absent_metadata(monkeypatch) -> None:
+    import aegean
+
+    monkeypatch.setattr(aegean.Corpus, "word_frequencies", lambda self: [("λόγος", 2)])
+    result = json.loads(_load_demo().word_counts("greek"))
+    assert result["rows"] == [{"word": "λόγος", "count": 2}]
+    assert result["metadata"] is None and result["counting_citation"] is None
 
 
 def test_demo_phonetic_compare() -> None:
@@ -128,6 +209,18 @@ def test_demo_epidoc_import() -> None:
         "normalized": None, "editorial_status": "certain",
     }]
     assert "error" in json.loads(demo.epidoc_import("not xml"))
+
+
+def test_demo_epidoc_numeric_attribute_is_shown_when_preserved(tmp_path: Path) -> None:
+    from aegean import io
+
+    xml = '<TEI xmlns="http://www.tei-c.org/ns/1.0"><text><body><div type="edition"><ab><num value="12">ιβʹ</num></ab></div></body></text></TEI>'
+    path = tmp_path / "number.xml"
+    path.write_text(xml, encoding="utf-8")
+    token = io.from_epidoc(path, script_id="greek").documents[0].tokens[0]
+    result = json.loads(_load_demo().epidoc_import(xml))
+    assert result["numeric_values"] == ([{"text": "ιβʹ", "value": "12"}]
+                                         if "epidoc:num_value" in token.annotations else [])
 
 
 def test_demo_accent_word() -> None:
@@ -469,6 +562,7 @@ def test_demo_html_wiring() -> None:
     demo = _load_demo()
     for name in ("betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt", "catalog",
                  "bridge", "cypriot_inscription", "lineara_search", "lineara_balance", "import_text",
+                 "word_counts",
                  "phonetic_compare", "lexicon_link", "epidoc_import", "accent_word", "sandhi",
                  "prosody_word", "nt_verse", "idioms", "lemmatize_word", "text_profile",
                  "lineara_stats", "lineara_query", "numerals", "sign_info", "linearb_tablet",

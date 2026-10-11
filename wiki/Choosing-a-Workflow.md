@@ -34,7 +34,7 @@ follow are really just four ways of setting these three dials.
 
 ### 1. Which pipeline tier
 
-The Greek stack has a baseline and two opt-in tiers you activate with a single
+The Greek stack has a baseline and three opt-in tiers you activate with a single
 call (or the matching CLI flag):
 
 - **Offline baseline** (zero dependencies, the default): `greek.pipeline(text)`

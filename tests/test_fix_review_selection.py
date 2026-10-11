@@ -377,17 +377,23 @@ def test_correct_persist_reload_and_reexport_unverified(
         corrected.to_json(fixed_path)
     reloaded = Corpus.from_json(fixed_path)
     annotations = {t.text: t.annotations for t in reloaded.documents[0].tokens}
-    assert annotations["legacy-unresolved"] == {
+    lemma_expected = {
         "lemma": "changed-lemma", "lemma__pred": "legacy-pred",
         "lemma_source": "user", "lemma_source__pred": "unresolved",
         "lemma_resolved": "true", "lemma_verified": "true", "review_recommended": "false",
         "lemma_known": "true", "review_status": "corrected", "reviewed_by": "fixture-reviewer",
     }
+    assert {key: annotations["legacy-unresolved"][key] for key in lemma_expected} == lemma_expected
+    assert annotations["legacy-unresolved"]["lemma_review_decision"] == "correct"
+    assert json.loads(annotations["legacy-unresolved"]["review_history"])[0]["prediction"] == "legacy-pred"
     resolved_before = corpus.documents[0].tokens[0].annotations
-    assert annotations["resolved"] == {
+    pos_expected = {
         **resolved_before, "upos": "VERB", "upos__pred": "NOUN",
         "reviewed_by": "fixture-reviewer", "review_status": "corrected",
     }
+    assert {key: annotations["resolved"][key] for key in pos_expected} == pos_expected
+    assert annotations["resolved"]["upos_review_decision"] == "correct"
+    assert annotations["resolved"]["upos_verified"] == "true"
     assert annotations["resolved"]["lemma_verified"] == "false"
     assert annotations["user-no-marker"] == corpus.documents[0].tokens[2].annotations
     assert "lemma_verified" not in annotations["user-no-marker"]

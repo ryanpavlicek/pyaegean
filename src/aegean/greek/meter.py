@@ -28,11 +28,14 @@ Method
 
 Limitations
 -----------
-- **Synizesis** (two written vowels read as one syllable, e.g. ``Πηληϊάδεω``)
+- **Synizesis** (two or three written vowels read as one syllable, e.g. ``Πηληϊάδεω``)
   is **lexical**, not spelling-predictable, so it is never *inferred*. A curated
   ``_SYNIZESIS`` lexicon (contribution-friendly, test-enforced) lists the words
-  where it is standard; a line needing synizesis on a word **not** in the lexicon
-  still raises `ScansionError` rather than guessing.
+  where it is standard. Hexameter also tries a separate curated optional lexicon,
+  retaining the natural reading first and counting accepted alternatives as ambiguity.
+  At most eight optional word occurrences (256 combinations) are supported; more
+  raise `ScansionError`, never an incomplete claim of unambiguous scansion. A line
+  needing synizesis outside these lexicons still raises rather than guessing.
 - **Vowel length by nature** of a *dichronon* (α, ι, υ) is not recoverable from
   the spelling, so it too is **lexical**: a curated ``_LONG_BY_NATURE`` lexicon
   (contribution-friendly, test-enforced) records the words where a written α/ι/υ
@@ -50,7 +53,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 
 from .syllabify import DOUBLE_CONSONANTS
@@ -77,14 +80,12 @@ _DIAERESIS = "̈"
 _APOSTROPHES = "'’ʼ᾽"
 _GREEK_WORD = re.compile(r"[Ͱ-Ͽ̀-ͯἀ-῿]+")  # includes combining marks (U+0300–036F)
 
-# Synizesis lexicon: words where two written vowels are standardly read as ONE
+# Synizesis lexicon: words where two or three written vowels are read as ONE
 # metrical syllable. Keyed on the accent/diacritic-stripped lowercase word; the
-# value is the adjacent vowel bigram that coalesces (its first occurrence). This
+# value is the adjacent vowel sequence that coalesces (its first occurrence). This
 # is lexical knowledge, not a rule — each entry must be required by a real verse
 # line that otherwise fails to scan, and is enforced by the test suite. Add a
 # word here the way you would add a syllabification exception.
-# Each value is the *two* written vowels that coalesce; entries needing a
-# three-vowel coalescence (e.g. θεούς /θjuːs/) are out of this bigram model.
 _SYNIZESIS: dict[str, str] = {
     "πηληιαδεω": "εω",   # Πηληϊάδεω (Il. 1.1) — the genitive ending -εω is one syllable
     "πολεως": "εω",      # πόλεως — Attic genitive, frequent in tragic trimeter
@@ -92,9 +93,14 @@ _SYNIZESIS: dict[str, str] = {
     "θεους": "εου",      # θεούς — the three written vowels εου coalesce to one syllable
 }
 
+# These readings are optional in hexameter, never a global syllabification rule.
+# θεοὶ coalesces in Il. 1.18 but can retain two syllables in other contexts.
+_OPTIONAL_HEXAMETER_SYNIZESIS: dict[str, str] = {"θεοι": "εοι"}
+_MAX_OPTIONAL_SYNIZESIS_OCCURRENCES = 8
+
 
 def _synizesis_bigram(word_match: str) -> str:
-    """The vowel bigram that coalesces in ``word_match`` by synizesis, or ``""``."""
+    """The two- or three-vowel sequence coalescing in ``word_match``, or ``""``."""
     return _SYNIZESIS.get(_strip_combining(word_match).lower(), "")
 
 
@@ -239,7 +245,7 @@ class _Item:
     word_start: bool                   # first letter of its word
 
 
-def _items(line: str) -> list[_Item]:
+def _items(line: str, *, synizesis: dict[int, str] | None = None) -> list[_Item]:
     """The line as an ordered phoneme stream, merging diphthongs. Apostrophes are
     dropped (elision), so the bare consonants flow into the following word."""
     nfc = unicodedata.normalize("NFC", line)
@@ -248,7 +254,7 @@ def _items(line: str) -> list[_Item]:
     items: list[_Item] = []
     for word_idx, match in enumerate(_GREEK_WORD.findall(nfc)):
         chars = list(match)
-        syn = _synizesis_bigram(match)   # the vowel pair to coalesce, or ""
+        syn = (synizesis or {}).get(word_idx, _synizesis_bigram(match))
         syn_used = False
         i = 0
         first = True
@@ -308,14 +314,14 @@ def _is_muta_cum_liquida(cons: list[_Item]) -> bool:
     )
 
 
-def _analyze(line: str) -> list[_Syllable]:
+def _analyze(line: str, *, synizesis: dict[int, str] | None = None) -> list[_Syllable]:
     """Split the line into syllables, each with its set of possible quantities.
 
     Quantities use cross-word position; the written text of each syllable keeps
     its consonants within their own word (a word-final consonant codas the
     earlier syllable, a word-initial consonant onsets the later one), and an
     internal cluster splits by the largest valid Greek onset."""
-    items = _items(line)
+    items = _items(line, synizesis=synizesis)
     nuclei = [k for k, it in enumerate(items) if it.is_vowel]
     if not nuclei:
         return []
@@ -537,21 +543,59 @@ def _caesura(
 # --- public API --------------------------------------------------------------
 
 
+def _hexameter_candidates(line: str) -> Iterator[list[_Syllable]]:
+    """Try independent curated word-position choices, natural reading first."""
+    optional = [
+        (idx, _OPTIONAL_HEXAMETER_SYNIZESIS[key])
+        for idx, word in enumerate(_word_texts(line))
+        if (key := _strip_combining(word).lower()) in _OPTIONAL_HEXAMETER_SYNIZESIS
+    ]
+    if len(optional) > _MAX_OPTIONAL_SYNIZESIS_OCCURRENCES:
+        raise ScansionError(
+            f"hexameter supports at most {_MAX_OPTIONAL_SYNIZESIS_OCCURRENCES} optional "
+            f"synizesis occurrences; found {len(optional)}: {line!r}"
+        )
+    seen: set[tuple[_Syllable, ...]] = set()
+    for mask in range(1 << len(optional)):
+        overrides = {
+            idx: vowels for bit, (idx, vowels) in enumerate(optional) if mask & (1 << bit)
+        }
+        syllables = _analyze(line, synizesis=overrides)
+        signature = tuple(syllables)
+        if signature not in seen:
+            seen.add(signature)
+            yield syllables
+
+
 def scan_hexameter(line: str) -> LineScansion:
     """Scan a line of **dactylic hexameter** (six feet; feet 1–5 dactyl or
     spondee, foot 6 ``— ×``), resolving quantities and the main caesura.
 
-    Raises `ScansionError` if the line does not fit (e.g. it needs
-    synizesis, which is not inferred)."""
-    syllables = _analyze(line)
-    plan = _scan_dactylic(syllables, n_feet=5)
-    if plan is None:
+    The natural reading is tried before curated optional synizesis. ``ambiguous``
+    includes accepted alternatives with different syllable divisions. Raises
+    `ScansionError` on a mismatch or more than eight optional word occurrences;
+    synizesis outside the curated lexicons is not inferred."""
+    chosen: tuple[list[_Syllable], list[tuple[str, list[str]]]] | None = None
+    count = 0
+    natural_length = 0
+    for candidate in _hexameter_candidates(line):
+        if natural_length == 0:
+            natural_length = len(candidate)
+        plan = _scan_dactylic(candidate, n_feet=5)
+        if plan is None:
+            continue
+        if chosen is None:
+            chosen = candidate, plan
+        count += _count_dactylic(candidate, n_feet=5)
+        if count > 1:
+            break  # ambiguity is established; no incomplete uniqueness claim
+    if chosen is None:
         raise ScansionError(
             f"line does not scan as dactylic hexameter "
-            f"({len(syllables)} syllables): {line!r}"
+            f"({natural_length} syllables in natural reading): {line!r}"
         )
-    ambiguous = _count_dactylic(syllables, n_feet=5) > 1
-    return _assemble(line, "hexameter", syllables, plan, ambiguous, detect_caesura=True)
+    syllables, plan = chosen
+    return _assemble(line, "hexameter", syllables, plan, count > 1, detect_caesura=True)
 
 
 def scan_pentameter(line: str) -> LineScansion:
@@ -872,7 +916,8 @@ def scan_line(line: str, meter: str = "hexameter") -> LineScansion:
 
 def syllable_options(line: str) -> list[tuple[str, list[str]]]:
     """``(syllable, [possible quantities])`` across the whole line — the raw,
-    pre-metrical analysis, with cross-word position and correptio applied."""
+    pre-metrical analysis, with cross-word position and correptio applied. This
+    retains the natural reading of optional hexameter synizesis words."""
     return [
         (s.text, sorted(s.options))
         for s in _analyze(line)

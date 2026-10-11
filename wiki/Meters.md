@@ -363,6 +363,15 @@ word **outside** that lexicon still declines rather than guessing.
 | πόλεως | `εω` | Attic genitive, frequent in tragic trimeter |
 | χρυσέῳ etc. | `εω` | adjectival `-εω` / `-εῳ` |
 | θεούς | `εου` | three written vowels collapse to one syllable |
+| θεοί | `εοι` | optional hexameter reading, required in *Iliad* 1.18; other contexts retain two syllables |
+
+The `θεοί` entry belongs to a separate optional hexameter lexicon. The scanner
+tries the natural reading first, then curated coalescence choices independently
+for each occurrence. `ambiguous` reports multiple supported fits. The search is
+bounded to eight optional occurrences (256 combinations); a line beyond that
+bound raises `ScansionError` rather than claiming a unique fit from a truncated
+search. General syllabification and other metres keep the natural reading of
+this optional entry.
 
 With the entry present, the line scans:
 
@@ -388,8 +397,9 @@ greek.syllable_options("Πηληϊάδεω")
 ```
 
 The lexicon is contribution-friendly and test-enforced: each entry must be
-required by a real verse line that otherwise fails to scan. Three-vowel
-coalescences beyond the listed `θεούς`-type case are out of the current model.
+required by a real verse line that otherwise fails to scan. Optional entries
+also need evidence that their natural reading remains available in other contexts.
+Only the listed two- and three-vowel coalescences are supported.
 
 ## Notes and limitations
 

@@ -171,6 +171,9 @@ aegean export john1.json -f csv --level token -o john1.csv   # lemma, morph, str
 
 A malformed reference is rejected with a message that names the accepted shapes,
 never a raw `int()` traceback.
+Unavailable chapters or range endpoints also raise rather than silently truncating
+the requested passage. `corpus.cite()` records the canonical book and selected
+chapter/verse range, including the actual extent of an offline sample.
 
 ---
 

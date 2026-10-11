@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import importlib
+import json
 from dataclasses import replace
 from pathlib import Path
 from typing import Literal
@@ -219,6 +220,55 @@ def test_new_annotation_replaces_current_evidence_preserves_history_and_source(
     assert out.documents[0].tokens[1:] == corpus.documents[0].tokens[1:]
 
 
+@pytest.mark.parametrize("backend", ["baseline", "neural", "custom"])
+@pytest.mark.parametrize("with_evidence", [False, True])
+@pytest.mark.parametrize("same_lemma", [False, True])
+def test_reannotation_invalidates_only_replaced_field_reviews(
+    monkeypatch: pytest.MonkeyPatch,
+    backend: Backend,
+    with_evidence: bool,
+    same_lemma: bool,
+) -> None:
+    corpus = _corpus()
+    token = corpus.documents[0].tokens[0]
+    history = json.dumps([
+        {"field": "lemma", "decision": "accept", "value": "HUMAN-LEMMA"},
+        {"field": "upos", "decision": "correct", "value": "NOUN"},
+        {"field": "morph", "decision": "accept", "value": "source morphology"},
+    ])
+    token.annotations.update({
+        "lemma_review_decision": "accept",
+        "lemma_reviewed_by": "lemma-reviewer",
+        "lemma_review_note": "checked this contextual analysis",
+        "upos_review_decision": "correct",
+        "upos_verified": "true",
+        "upos_reviewed_by": "syntax-reviewer",
+        "morph_review_decision": "accept",
+        "morph_verified": "true",
+        "morph_reviewed_by": "edition-reviewer",
+        "review_history": history,
+    })
+    original = corpus.to_json()
+
+    result = _annotate(
+        corpus, monkeypatch=monkeypatch, backend=backend,
+        lemma="HUMAN-LEMMA" if same_lemma else "NEW-PREDICTION",
+        with_evidence=with_evidence,
+    )
+    annotations = result.documents[0].tokens[0].annotations
+    assert annotations["lemma_review_decision"] == "stale"
+    assert annotations["upos_review_decision"] == "stale"
+    assert annotations.get("lemma_verified") != "true"
+    assert "upos_verified" not in annotations
+    assert annotations["morph_review_decision"] == "accept"
+    assert annotations["morph_verified"] == "true"
+    assert annotations["morph"] == "source morphology"
+    assert annotations["lemma_reviewed_by"] == "lemma-reviewer"
+    assert annotations["lemma_review_note"] == "checked this contextual analysis"
+    assert annotations["review_history"] == history
+    assert corpus.to_json() == original
+
+
 @pytest.mark.parametrize("with_evidence", [False, True])
 def test_complete_neural_annotation_drops_prior_partial_warning(
     monkeypatch: pytest.MonkeyPatch, with_evidence: bool,
@@ -326,6 +376,7 @@ def test_reviewed_lemma_reannotation_roundtrips_as_unverified(
     history = {key: value for key, value in old.items() if key not in _OLD_EVIDENCE}
     assert ann == {
         **history, "lemma": lemma, "upos": "X",
+        "lemma_review_decision": "stale",
         **_expected_evidence(backend, with_evidence),
     }
     assert corrected.to_json() == before

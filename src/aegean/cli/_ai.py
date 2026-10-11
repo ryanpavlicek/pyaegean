@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import typer
 
@@ -86,9 +86,11 @@ def _emit_result(result: object, json_out: bool, trace: bool = False) -> None:
     )
 
 
-def _write_ai_result(result: object, output: Path) -> None:
+def _write_ai_result(result: object, output: Path, *, trace: bool = False) -> None:
     """Save an exploratory AI result: ``.json`` (text + provenance + grounding + parsed data,
-    keeping the exploratory flag) or ``.txt`` (the labeled text). Never drops the label."""
+    keeping the exploratory flag) or ``.txt`` (the labeled text). Translation text
+    exports append the audit trace so concise output cannot discard saved notes
+    or drafts. Never drops the label."""
     from aegean._atomic import atomic_path
 
     suffix = output.suffix.lower()
@@ -103,6 +105,14 @@ def _write_ai_result(result: object, output: Path) -> None:
     elif suffix in (".txt", ""):
         labeled = getattr(result, "labeled", None)
         text = labeled() if callable(labeled) else getattr(result, "text", str(result))
+        trace_fn = getattr(result, "trace", None)
+        data = getattr(result, "data", None)
+        translation_audit = (
+            getattr(result, "kind", "") == "translate"
+            and isinstance(data, dict) and "format_status" in data
+        )
+        if (trace or translation_audit) and callable(trace_fn):
+            text += "\n\n" + trace_fn()
         with writing(output):
             with atomic_path(output) as tmp:
                 tmp.write_text(text + "\n", encoding="utf-8")
@@ -119,7 +129,8 @@ def _warn(message: str) -> None:
 
 AI_OUTPUT_OPT = typer.Option(
     None, "--output", "-o",
-    help="Save the result to a file (.json: text + provenance + grounding; .txt: labeled text).",
+    help="Save the result (.json: complete structured result; .txt: labeled text, "
+    "including the audit trace for translations).",
 )
 
 TRACE_OPT = typer.Option(False, "--trace", help="Print the grounding provenance trace.")
@@ -130,9 +141,14 @@ def translate(
     text: str = typer.Argument(..., help="Text to translate ('-' reads stdin)."),
     script: str = typer.Option("greek", "--script", help="greek or lineara."),
     target: str = typer.Option("English", "--target", help="Target language."),
+    style: str = typer.Option(
+        "annotated", "--style",
+        help="annotated shows uncertainty and correction notes; concise keeps the reading "
+        "short. JSON and --trace retain notes and the checking draft in either style.",
+    ),
     mode: str = typer.Option(
         "morphology", "--mode",
-        help="Greek grounding style: morphology (default; deterministic morphology + "
+        help="Greek grounding style: morphology (default; provisional morphology + "
         "clause skeleton, no glosses), full (morphology + concise common-sense-first "
         "glosses, gated to rare words), lemma (legacy lemma lines + gated LSJ glosses), "
         "none.",
@@ -145,8 +161,8 @@ def translate(
     verify: bool = typer.Option(
         False, "--verify",
         help="Greek only: translate raw first, then check the draft against the full "
-        "grounding and repair only definite errors. Catches more errors on hard text "
-        "without letting the grounding bias the draft, at the cost of a second model call.",
+        "grounding and repair only definite source contradictions. This second model "
+        "call remains exploratory and is not scholarly verification.",
     ),
     greek_backend: str = typer.Option(
         "default", "--greek-backend",
@@ -176,15 +192,16 @@ def translate(
     json_out: bool = JSON_OPT,
 ) -> None:
     """Hybrid translation: local morphology/lexicon/transliteration grounding → LLM
-    (exploratory). The default morphology-first grounding gives the model deterministic
-    morphology, case-role, and clause structure rather than auto-selected dictionary
-    senses. With --verify (Greek), translate raw then check and repair against the
-    grounding: the analysis cannot bias the draft, though a wrong analysis can still
-    mislead the repair."""
+    (exploratory). Morphology-first grounding supplies provisional token and clause
+    analyses. Optional --verify (Greek) generates an ungrounded draft and checks
+    it against that evidence. The draft, uncertainty and model-reported changes
+    remain available through JSON or --trace; checking is not human review."""
     import warnings
 
     from aegean import translate as tr
 
+    if style not in ("annotated", "concise"):
+        raise fail("--style must be annotated or concise")
     if greek_backend not in ("default", "baseline", "neural"):
         raise fail("--greek-backend must be default, baseline, or neural")
     if grounding_failure not in ("best-effort", "strict"):
@@ -222,6 +239,7 @@ def translate(
                 lambda: tr.translate(
                     read_text(text), script=script, target=target,
                     mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
+                    style=cast(Literal["annotated", "concise"], style),
                     greek_pipeline=greek_pipeline,
                     greek_long_input=cast(tr.GreekLongInput, greek_long_input),
                     grounding_failure=cast(tr.GroundingFailure, grounding_failure),
@@ -234,7 +252,7 @@ def translate(
         if issubclass(w.category, UserWarning):
             _warn(str(w.message))
     if output is not None:
-        _write_ai_result(result, output)
+        _write_ai_result(result, output, trace=trace)
         return
     _emit_result(result, json_out, trace)
 

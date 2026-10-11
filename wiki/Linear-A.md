@@ -345,11 +345,16 @@ from aegean.analysis import balance_check
 for chk in balance_check(corpus.get("HT13")):
     print(chk)
 # BalanceCheck(stated_total=130.5, computed_sum=131.0, item_count=6,
-#              difference=0.5, balances=False, marker='KU-RO', total_line_index=7)
+#              difference=0.5, balances=False, marker='KU-RO', total_line_index=7,
+#              exact_difference=Fraction(1, 2))
 ```
 
 `BalanceCheck` fields: `stated_total`, `computed_sum`, `item_count`,
-`difference`, `balances`, `marker`, `total_line_index`.
+`difference`, `balances`, `marker`, `total_line_index`, and the rational
+`exact_difference`; `exact_balances` reports exact written-quantity equality.
+Pass `balance_check(doc, exact=True)` or CLI `--exact` to use that equality for
+`balances`. The default retains the float cutoff. Exact arithmetic does not
+establish the reading, section boundary, or metrology.
 
 ### Sweep the whole corpus
 
@@ -382,8 +387,11 @@ clean = checkable_accounts(corpus)            # default tolerance 10%
 is_checkable_account(corpus.get("HT11b"))      # True
 ```
 
-The default `tolerance=0.10` is lenient on purpose, because Aegean metrology is
-imperfectly understood; raise or lower it to taste.
+The default admits a difference within `max(1, tolerance * abs(stated_total))`,
+with `tolerance=0.10`, because Aegean metrology is imperfectly understood.
+Even `tolerance=0` retains the absolute-one allowance; use `exact=True` for
+rational equality of the written quantities. The eligibility filter still
+requires securely read tokens and at least one stated total.
 
 ---
 
@@ -583,9 +591,9 @@ It is an honest negative result, not a decipherment aid.
 | `aegean show lineara HT13` | One document, line by line | `--json` |
 | `aegean search lineara "KU-*-RO"` | Wildcard sign-pattern search | `--json` |
 | `aegean query lineara` | Compound query engine | `--where --output-kind --fields --limit --json` |
-| `aegean stats lineara` | Word / sign frequency table | `--signs --top --json` |
+| `aegean stats lineara` | Word / sign frequency table | `--signs --top --view --count-unit --statuses --details --json` |
 | `aegean sign lineara KU` | Look up one sign | `--json` |
-| `aegean balance lineara [HT13]` | KU-RO reconciliation | `--strict --json` |
+| `aegean balance lineara [HT13]` | KU-RO reconciliation | `--strict --exact --tolerance --json` |
 | `aegean analyze structure lineara [HT13]` | Heuristic categories | `--json` |
 | `aegean cite lineara` | Cite the corpus (or a subset) | `--style --site --period --scribe --support` |
 | `aegean export lineara` | Export JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF Turtle / JSON-LD | (see [CLI](CLI)) |

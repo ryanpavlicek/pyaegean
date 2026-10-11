@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import unicodedata
 
+import pytest
+
 from aegean.core.model import TokenKind
 from aegean.greek import tokenize
 from aegean.greek.documentary import COORDINATORS, coordinator_norm
@@ -57,3 +59,23 @@ def test_keraia_numeral_is_never_read_as_an_elided_coordinator() -> None:
     assert coordinator_norm(DELTA + "'") in COORDINATORS
     for numeral in (DELTA + KERAIA, DELTA + KERAIA_NFC):
         assert coordinator_norm(numeral) not in COORDINATORS
+
+
+@pytest.mark.parametrize("mark", [KERAIA, KERAIA_NFC, LOWER_KERAIA])
+@pytest.mark.parametrize("boundary", [".", ";", "·", ".”"])
+def test_leading_numeral_mark_after_boundary_preserves_alignment(
+    mark: str, boundary: str,
+) -> None:
+    from aegean.greek.tokenize import tokenize_aligned
+
+    raw = "λόγος" + boundary + mark + ALPHA
+    for source in (raw, unicodedata.normalize("NFC", raw), unicodedata.normalize("NFD", raw)):
+        tokens = tokenize_aligned(source)
+        last = tokens[-1]
+        assert last.text == unicodedata.normalize("NFC", mark) + ALPHA or last.text == mark + ALPHA
+        assert last.alignment is not None
+        assert last.alignment.original_text == last.text
+        assert source[last.alignment.start_char:last.alignment.end_char] == last.text
+        assert tokens[0].alignment is not None
+        assert last.alignment.sentence_id != tokens[0].alignment.sentence_id
+        assert "".join(t.alignment.whitespace_before + t.alignment.original_text for t in tokens if t.alignment) == source

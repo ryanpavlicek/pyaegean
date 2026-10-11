@@ -107,12 +107,13 @@ def test_wrap_untrusted_exact_structure_default_and_custom_label():
 
 
 # ── evidence_block: exact bullet-list format; empty on no content ────────────
-def test_evidence_block_exact_format_and_source_excluded():
-    # Strings and GroundingItems render identically (only .content reaches the prompt), as a
-    # "- "-prefixed bullet list under a fixed header. The item's source must NOT appear.
+def test_evidence_block_includes_source_and_unclassified_status():
+    # Provenance reaches the model; absent status never implies verification.
     block = evidence_block(["alpha", GroundingItem("beta", source="corpus:secret")])
-    assert block == "Corpus/lexicon evidence (grounding):\n- alpha\n- beta"
-    assert "corpus:secret" not in block
+    assert block.startswith("Corpus/lexicon evidence (grounding):\n- alpha")
+    assert '\n- beta' in block
+    assert '"source": "corpus:secret"' in block
+    assert block.count('"status": "unclassified"') == 2
 
 
 def test_evidence_block_empty_when_no_truthy_items():

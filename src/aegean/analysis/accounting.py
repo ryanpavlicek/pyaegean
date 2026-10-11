@@ -6,6 +6,7 @@ a "balance" is evidence to weigh, not ground truth.
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 from ..core.model import Document, ReadingStatus
@@ -38,16 +39,23 @@ def account_lines(document: Document) -> list[list[str]]:
     return [[document.tokens[i].text for i in line] for line in document.lines]
 
 
-def balance_check(document: Document) -> list[BalanceCheck]:
+def balance_check(document: Document, *, exact: bool = False) -> list[BalanceCheck]:
     """Verify every total line on a document against its summed item lines.
 
     Uses the script's total markers (Linear A's KU-RO/KU-RA and PO-TO-KU-RO, Linear B's
-    TO-SO/TO-SA/TO-SO-DE)."""
+    TO-SO/TO-SA/TO-SO-DE). ``exact=True`` sets ``balances`` from rational written
+    quantities instead of the legacy 1e-6 float cutoff. ``exact_difference`` and
+    ``exact_balances`` are available in either mode. This checks arithmetic, not
+    the validity of readings or metrology."""
     markers = markers_for(document.script_id)
-    return check_balances(parse_account_lines(account_lines(document), markers), markers)
+    return check_balances(
+        parse_account_lines(account_lines(document), markers), markers, exact=exact,
+    )
 
 
-def is_checkable_account(document: Document, *, tolerance: float = 0.10) -> bool:
+def is_checkable_account(
+    document: Document, *, tolerance: float = 0.10, exact: bool = False,
+) -> bool:
     """Whether a document is an *intact, balancing* account — a clean drill /
     teaching candidate, and a useful "trust the arithmetic" corpus filter.
 
@@ -55,19 +63,33 @@ def is_checkable_account(document: Document, *, tolerance: float = 0.10) -> bool
     restoration in the text), so no lacuna or damage muddies the sum. Balancing =
     at least one stated total (e.g. KU-RO) sits within ``max(1, tolerance ×
     stated)`` of its summed items — the workbench's Scribe-School cutoff, lenient
-    by default (10%) because Aegean metrology is imperfectly understood."""
+    by default (10%) because Aegean metrology is imperfectly understood.
+
+    ``tolerance=0`` retains the legacy absolute-one allowance; use ``exact=True``
+    for genuinely equal rational sums with no allowance. Eligibility requires at
+    least one qualifying total, not every total. It is a teaching/exploration
+    selection, never verification of a tablet's reading."""
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("tolerance must be a finite, nonnegative number")
     for t in document.tokens:
-        if t.status is not ReadingStatus.CERTAIN or "[" in t.text or "]" in t.text:
+        if (t.status is not ReadingStatus.CERTAIN or "[" in t.text or "]" in t.text
+                or (t.form_state is not None and any(
+                    s.status is not ReadingStatus.CERTAIN for s in t.form_state.segments
+                ))):
             return False
     return any(
-        abs(ch.difference) <= max(1.0, tolerance * abs(ch.stated_total))
+        ch.exact_balances if exact else abs(ch.difference) <= max(1.0, tolerance * abs(ch.stated_total))
         for ch in balance_check(document)
     )
 
 
-def checkable_accounts(corpus: Any, *, tolerance: float = 0.10) -> list[Document]:
+def checkable_accounts(
+    corpus: Any, *, tolerance: float = 0.10, exact: bool = False,
+) -> list[Document]:
     """The intact, balancing accounts of a corpus (see :func:`is_checkable_account`).
 
     Takes a `Corpus`, the results of a `Corpus.query`, or a plain list of documents;
     the accounts returned are those of whatever was handed in, in its order."""
-    return [d for d in _documents(corpus) if is_checkable_account(d, tolerance=tolerance)]
+    if not math.isfinite(tolerance) or tolerance < 0:
+        raise ValueError("tolerance must be a finite, nonnegative number")
+    return [d for d in _documents(corpus) if is_checkable_account(d, tolerance=tolerance, exact=exact)]

@@ -32,7 +32,7 @@ def test_greek_grounding_lemma_mode_uses_lemma_table():
     contents = [item.content for item in g]
     assert "ἦν → lemma εἰμί" in contents
     assert "λόγος → lemma λόγος" in contents
-    assert all(item.source == "lemmatizer" for item in g)  # tagged for the trace
+    assert all(item.source in {"lemmatizer", "analysis:availability"} for item in g)
 
 
 def test_lineara_grounding_uses_transliteration():
@@ -182,7 +182,7 @@ def test_clause_skeleton_transitive_verb_unchanged():
     ]
     skel = _clause_skeleton(recs)
     assert skel == (
-        "main predicate 'γράφει' (γράφω, active pres sg 3rd); "
+        "main predicate 'γράφει' (γράφω, active pres ind sg 3rd); "
         "subject ἄνθρωπος; object βιβλίον"
     )
 

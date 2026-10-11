@@ -15,11 +15,13 @@ def _texts(corpus, doc_index=0):
     return [t.text for t in corpus.documents[doc_index].tokens]
 
 
-def test_from_text_whole_tokenizes_greek_and_drops_punctuation() -> None:
+def test_from_text_whole_preserves_punctuation_and_has_an_explicit_word_view() -> None:
     c = aegean_io.from_text(JOHN, doc_id="john")
     assert len(c) == 1
     texts = _texts(c)
-    assert texts == ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"]  # period dropped by the Greek tokenizer
+    assert texts == ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος", "."]
+    assert [t.text for t in c.documents[0].words] == ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος"]
+    assert c.documents[0].source_text == JOHN
     assert c.documents[0].id == "john"
 
 

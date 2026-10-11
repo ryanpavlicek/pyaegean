@@ -142,7 +142,7 @@ writes them:
 |---|---|---|
 | the NT corpus (gold) | `lemma`, `morph`, `strongs`, `gloss`, `normalized`, `upos`, `ref` | edition-supplied annotation |
 | `greek.annotate_corpus` | `lemma`, `upos`, `lemma_source`, `lemma_resolved`, `lemma_verified`, `review_recommended` | machine analysis, exact provenance, and separate resolution/review state (§4) |
-| `aegean.io.from_review_table` | `<field>__pred`, `review_status`, `reviewed_by`, `review_note` | the human-correction audit trail (§7.3) |
+| `aegean.io.from_review_table` | `<field>__pred`, `<field>_review_decision`, `<field>_verified`, `<field>_reviewed_by`, `<field>_review_note`, `<field>_review_evidence`, `review_status`, `reviewed_by`, `review_note`, `review_evidence`, `review_history` | current field decisions and their dated audit trail (§7.3) |
 | you | anything else | your own per-token facts |
 
 The `<field>__pred` convention is the audit trail: when a reviewer's
@@ -618,6 +618,23 @@ existing review flag), or `"unverified"` (words without an explicit
 `lemma_verified=true`). Unverified rows include resolved predictions and source
 annotations lacking verification metadata. The selection changes which rows
 are exported, not their flags or annotations.
+`decision_lemma`, `decision_pos`, and `decision_morph` accept `accept`, `correct`,
+`defer`, or `reject`. Acceptance verifies the unchanged displayed prediction;
+correction requires a different nonempty `correct_*` value. Defer/reject retain
+the prediction and leave the field unverified. Explicit decisions reject a
+prediction that changed since export. Blank decisions retain the legacy behavior:
+blank or unchanged correction cells do nothing and never imply acceptance.
+Review state is per field: the POS columns write `upos_*`, and morphology writes
+`morph_*` or `feats_*` as applicable. `reviewer_evidence` preserves sources;
+`review_history` retains dated decisions and original prediction provenance,
+including individual field attribution after merged review.
+
+Accepting a lemma retains its prediction source while setting `lemma_verified`;
+a correction becomes `lemma_source="user"` and preserves its prior source.
+Reannotation replaces lemma/POS predictions, marks their current decisions
+`stale`, and retains reviewer details and history. It does not invalidate an
+unchanged source-morphology review or transfer old approval to new predictions.
+
 The full annotate → export → correct → apply loop, showing the `<field>__pred`
 audit trail land on the token:
 
@@ -631,7 +648,8 @@ corpus = Corpus.from_records(
 )
 annotated = greek.annotate_corpus(corpus)          # fills lemma/upos + evidence class
 tok = annotated.get("frag1").tokens[3]             # ἐγένετο — the baseline can't resolve it
-print("after annotate:", dict(sorted(tok.annotations.items())))
+fields = ("lemma", "lemma_source", "lemma_verified", "upos")
+print("after annotate:", {key: tok.annotations[key] for key in fields})
 
 work = pathlib.Path(tempfile.mkdtemp())
 n = to_review_table(annotated, work / "review.csv", selection="flagged")
@@ -652,15 +670,17 @@ with open(work / "review.csv", "w", encoding="utf-8-sig", newline="") as f:
 
 fixed = from_review_table(work / "review.csv", annotated, reviewer="RP")
 tok = fixed.get("frag1").tokens[3]
-print("after apply:", dict(sorted(tok.annotations.items())))
-print("provenance note:", fixed.provenance.notes[-1])
+print("after apply:", {key: tok.annotations[key] for key in fields})
+print("original prediction:", tok.annotations["lemma__pred"])
+print("provenance note:", fixed.provenance.notes[-1].split(" (")[0])
 ```
 
 ```
-after annotate: {'lemma': 'ἐγένετο', 'lemma_known': 'false', 'lemma_resolved': 'false', 'lemma_source': 'unresolved', 'lemma_verified': 'false', 'review_recommended': 'true', 'upos': 'NOUN'}
+after annotate: {'lemma': 'ἐγένετο', 'lemma_source': 'unresolved', 'lemma_verified': 'false', 'upos': 'NOUN'}
 rows exported: 2
-after apply: {'lemma': 'γίγνομαι', 'lemma__pred': 'ἐγένετο', 'lemma_known': 'true', 'lemma_resolved': 'true', 'lemma_source': 'user', 'lemma_source__pred': 'unresolved', 'lemma_verified': 'true', 'review_note': 'aor. mid. of γίγνομαι', 'review_recommended': 'false', 'review_status': 'corrected', 'reviewed_by': 'RP', 'upos': 'VERB', 'upos__pred': 'NOUN'}
-provenance note: review: 1 tokens corrected by RP (2026-07-10)
+after apply: {'lemma': 'γίγνομαι', 'lemma_source': 'user', 'lemma_verified': 'true', 'upos': 'VERB'}
+original prediction: ἐγένετο
+provenance note: review: 1 tokens corrected by RP
 ```
 
 Note what the loop relies on: an aligned token has a stable source-token ID and
@@ -693,7 +713,8 @@ toolkit assumes:
 - **Keep `annotations` values strings**, and stay off the reserved
   conventions (`<field>__pred`, `lemma_source`, `lemma_resolved`,
   `lemma_verified`, `review_recommended`, `lemma_known`,
-  `review_status`, `reviewed_by`, `review_note`) unless you mean them.
+  `review_status`, `reviewed_by`, `review_note`, `review_evidence`, `review_history`,
+  and the per-field review/verification keys) unless you mean them.
 - **Document ids must be unique** within a corpus (duplicates collapse with a
   warning, keeping the last).
 

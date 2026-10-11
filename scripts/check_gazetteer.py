@@ -20,6 +20,9 @@ same >6 km rule and no network — this is what CI/tests run per-commit, while t
 the weekly job. A linked site with no pin is reported (network-only), not failed.
 
 Network + repo-only (never shipped in the wheel); run on demand or weekly by ``.github/workflows/assets.yml``.
+Distance agreement cannot establish archaeological identity: inspect the place's
+description, period, and references separately. Pylos' old point and identifier
+agreed while referring to Classical Koryphasion instead of the Mycenaean palace.
 
     python scripts/check_gazetteer.py                  # validate every Pleiades-linked site (network)
     python scripts/check_gazetteer.py --fail-km 6 --warn-km 3

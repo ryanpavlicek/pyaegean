@@ -95,7 +95,11 @@ def test_balance_accounts() -> None:
     # The MCP tool shares aegean._view's row shape with the CLI and TUI, so the
     # three surfaces cannot drift (parity guardrail).
     assert rows and rows[0]["doc"] == "HT13"
-    assert {"doc", "marker", "stated", "computed", "difference", "items", "balances"} == set(rows[0])
+    assert {
+        "doc", "marker", "stated", "computed", "difference", "items", "balances",
+        "exact_balances", "exact_difference", "within_tolerance", "account_eligible",
+        "account_eligible_exact", "eligibility_mode", "tolerance",
+    } == set(rows[0])
     import aegean
     from aegean._view import balance_rows
 

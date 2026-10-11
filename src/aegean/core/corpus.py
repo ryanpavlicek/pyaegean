@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import fields as dataclass_fields
 from dataclasses import replace
@@ -31,6 +30,10 @@ from .model import (
     TokenKind,
 )
 from .provenance import SCHEMA_VERSION, Provenance
+from .word_views import (
+    CountUnit, WordFrequencies, WordView, count_words, reading_statuses,
+    token_selected, validate_view, word_key,
+)
 
 if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependency on L3 analysis
     from ..analysis.query import FilterRow, Output, QueryResults
@@ -649,20 +652,46 @@ class Corpus:
         for doc in self.documents:
             yield from doc.tokens
 
-    def iter_words(self) -> Iterator[str]:
+    def iter_words(
+        self, *, view: WordView = "surface",
+        statuses: Iterable[ReadingStatus | str] | None = None,
+    ) -> Iterator[str]:
         """Every lexical (`WORD`) token's text, in order, lazily. The unit
         `word_frequencies` counts — stream it to feed your own ``Counter`` or a
         running statistic without materialising a list."""
+        view = validate_view(view)
+        selected = reading_statuses(statuses)
         for doc in self.documents:
             for tok in doc.tokens:
-                if tok.kind is TokenKind.WORD:
-                    yield tok.text
+                if token_selected(tok, selected):
+                    key = word_key(tok, view)
+                    if key is not None:
+                        yield key
 
     # ── analysis-friendly views ─────────────────────────────────────────
-    def word_frequencies(self) -> list[tuple[str, int]]:
-        """(word, count) for every lexical word, sorted by descending count."""
-        counter: Counter[str] = Counter(self.iter_words())
-        return sorted(counter.items(), key=lambda kv: (-kv[1], kv[0]))
+    def word_frequencies(
+        self, *, view: WordView = "surface", count_unit: CountUnit = "token",
+        statuses: Iterable[ReadingStatus | str] | None = None,
+    ) -> WordFrequencies:
+        """List-compatible ``(word, count)`` pairs, sorted by count then word.
+
+        ``surface`` preserves exact spelling; ``normalized`` uses NFC, lowercase,
+        and final-sigma folding, preserving diacritics and iota subscript; ``lemma``
+        applies that normalization to the existing lemma annotation. Missing/empty
+        lemmas are excluded and counted in ``result.metadata``. No analysis is run.
+        ``count_unit='document'`` counts each document once per word; the default
+        counts every token. ``statuses`` selects whole lexical tokens whose reading
+        and every typed editorial segment qualify (all statuses by default).
+
+        ``result.metadata`` gives the exact normalization, denominator, exclusions,
+        and lemma-source labels; ``result.provenance`` and ``result.cite()`` retain
+        the source. Speaker labels, punctuation, and other non-WORD tokens are excluded.
+        """
+        pairs, metadata = count_words(
+            self.documents, view=validate_view(view), count_unit=count_unit,
+            statuses=reading_statuses(statuses),
+        )
+        return WordFrequencies(pairs, metadata=metadata, provenance=self.provenance)
 
     # ── health report ────────────────────────────────────────────────────
     def diagnose(self, level: str = "quick") -> "DiagnoseReport":
@@ -949,6 +978,9 @@ class Corpus:
         output: Output = "inscriptions",
         *,
         annotated_ids: set[str] | None = None,
+        view: WordView | None = None,
+        count_unit: CountUnit = "document",
+        statuses: Iterable[ReadingStatus | str] | None = None,
     ) -> QueryResults:
         """Run the compound-query predicate engine over this corpus.
 
@@ -961,10 +993,20 @@ class Corpus:
         in), not its token frequency; for token counts use `word_frequencies`. The
         available fields are
         in `aegean.analysis.FIELDS`. Unlike `filter` (exact metadata match), this
-        supports text/prefix/sign-pattern/co-occurrence predicates with AND/OR/NOT."""
+        supports text/prefix/sign-pattern/co-occurrence predicates with AND/OR/NOT.
+
+        Explicit ``view`` and ``statuses`` use the same lexical population and
+        normalization as `word_frequencies`; ``count_unit='token'`` selects token
+        frequency. Omitted ``view`` preserves the legacy case-insensitive text
+        predicates and separate surface keys. ``results.metadata`` records this
+        distinction and the population denominator before word filters.
+        """
         from ..analysis.query import run_query  # lazy: no import-time core→analysis edge
 
-        return run_query(self, list(filters), output, annotated_ids)
+        return run_query(
+            self, list(filters), output, annotated_ids,
+            view=view, count_unit=count_unit, statuses=statuses,
+        )
 
 
 # ── (de)serialization helpers for the lossless round-trip ──────────────────

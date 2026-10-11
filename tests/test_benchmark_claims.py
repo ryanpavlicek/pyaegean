@@ -178,11 +178,10 @@ def test_documentary_lever_variants_match_registry_and_evidence() -> None:
     """The opt-in documentary-lever variant rows stay pinned to their one-shot
     sequential test-fold evidence; the baseline PapyGreek row is untouched by them."""
     row = _claims()["neural_papygreek_test"]
-    ev = json.loads(
-        _read("training/results/apparatus-lemma-remeasure-2026-08-11.json")
-    )
+    ev = json.loads(_read(row["variant_evidence"]))
+    assert row["variant_evidence"] in _read("docs/benchmarks.md")
     for variant in ("documentary_reconciliation", "documentary_full"):
-        res = ev["results_full_precision"]["documentary_full"]
+        res = ev["results_full_precision"][variant]
         reg = row[variant]
         for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
             assert reg[metric] == round(res[metric] * 100, 2), f"{variant}.{metric}"
@@ -228,22 +227,24 @@ def test_orig_layer_and_dbbe_rows_match_registry_and_evidence() -> None:
     """The diplomatic-orthography and Byzantine-tagging rows stay pinned to their
     one-shot sequential evidence, and each carries its caveat note."""
     reg = _claims()
-    ev = json.loads(
-        _read("training/results/apparatus-lemma-remeasure-2026-08-11.json")
-    )
     row = reg["neural_papygreek_test"]["orig_layer"]
+    ev = json.loads(_read(row["source_evidence"]))
     for metric in ("upos", "xpos", "ufeats", "lemma", "uas", "las", "clas"):
         value = ev["results_full_precision"]["diplomatic"][metric]
         assert row[metric] == round(value * 100, 2), metric
     assert ev["folds"]["diplomatic"]["same_sentences_and_gold_as_regularized"] is True
     assert ev["folds"]["diplomatic"]["form_differences"] == 1453
-    ev2 = json.loads(_read("training/results/dbbe-remeasure-2026-08-11.json"))
     drow = reg["neural_dbbe_test"]
+    ev2 = json.loads(_read(drow["source_evidence"]))
     for metric in ("upos", "xpos", "ufeats", "lemma"):
         assert drow[metric] == round(ev2["results_full_precision"][metric] * 100, 2), metric
-    assert "uas" not in {k for k in drow} - {"note", "protocol"} or True
+    assert all(drow.get(metric) is None for metric in ("uas", "las", "clas"))
     assert "tagging only" in drow["note"]
     doc = _read("docs/benchmarks.md")
+    assert row["source_evidence"] in doc and drow["source_evidence"] in doc
+    precision = ev["results_full_precision"]
+    lemma_delta = (precision["regularized"]["lemma"] - precision["diplomatic"]["lemma"]) * 100
+    assert f"−{lemma_delta:.2f} points" in doc
     for token in (f"{row['lemma']:.2f}", f"{drow['upos']:.2f}"):
         assert token in doc, f"{token} missing from docs/benchmarks.md"
 

@@ -41,6 +41,18 @@ def test_sigma_variants():
     assert betacode_to_unicode("s3") == "ϲ"  # lunate sigma
 
 
+@pytest.mark.parametrize("text", ["σ", "λόγοσ", "λόγοσ.", "λόγοσ)", "ςα", "ςϜ", "σ1", "ςα σ"])
+def test_explicit_sigma_glyphs_survive_unicode_betacode_roundtrip(text):
+    encoded = unicode_to_betacode(text)
+    assert betacode_to_unicode(encoded) == text
+
+
+def test_explicit_medial_beta_sigma_stays_medial_at_word_end():
+    original = betacode_to_unicode("lo/gos1")
+    assert original == "λόγοσ"
+    assert unicode_to_betacode(original) == "lo/gos1"
+
+
 @pytest.mark.parametrize("_,greek", FORWARD)
 def test_unicode_betacode_roundtrip(_, greek):
     # unicode → beta → unicode is stable for supported text

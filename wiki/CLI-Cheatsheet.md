@@ -5,13 +5,13 @@ each with a copy-pasteable example. It's the lookup card you keep open while you
 work; the [CLI](CLI) page is the guided tour that explains each group with prose.
 If you've never used a terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.60.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
+> **Available in v0.61.0.** The interoperability, CoNLL-U, and newer Greek pipeline controls are
 > part of the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; the core library stays zero-dependency
 aegean --help                   # the command map
-aegean --version                # pyaegean 0.60.0
+aegean --version                # pyaegean 0.61.0
 ```
 
 The core install includes the `aegean` entry point, but running it requires the
@@ -79,15 +79,15 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
 | `show` | One document: metadata + line-by-line tokens | `--json` | `aegean show lineara HT13` |
 | `search` | Words matching a wildcard sign pattern (`*` = one sign) | `-o/--output --json` | `aegean search lineara "KU-*-RO"` |
-| `query` | Compound-query engine (AND/OR/NOT predicates) | `--where --output-kind --fields -o/--output --limit` | `aegean query lineara --where "site-is=Zakros"` |
-| `stats` | Frequency table of words (or `--signs`) | `--signs --top -o/--output` | `aegean stats lineara --signs --top 5` |
+| `query` | Compound-query engine (AND/OR/NOT predicates) with explicit word views and count units | `--where --output-kind --view --count-unit --statuses --fields -o/--output --limit` | `aegean query lineara --where "site-is=Zakros"` |
+| `stats` | Frequency table of words (or `--signs`) | `--view --count-unit --statuses --details --signs --top -o/--output` | `aegean stats lineara --signs --top 5` |
 | `dispersion` | How evenly an item spreads (Gries' DP) | `--signs --top --min-frequency -o/--output` | `aegean dispersion lineara KU-RO` |
 | `keyness` | Characteristic items vs a reference (G² + log-ratio) | `--reference --site/... --signs --top --min-target -o/--output` | `aegean keyness lineara --site Zakros` |
 | `balance` | Accounting reconciliation (KU-RO / TO-SO vs items) | `--strict -o/--output --json` | `aegean balance lineara HT13` |
 | `cite` | Cite the corpus, or the exact filtered subset | `--style --site/... --json` | `aegean cite lineara --site Zakros --style bibtex` |
 | `export` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / Workbench / RDF (Turtle, JSON-LD) | `-f/--format -o/--output --level --base-uri --site/...` | `aegean export lineara -f csv -o lineara.csv` |
 | `combine` | Merge several corpora into one and save it | `-o/--output --on-conflict --json` | `aegean combine tlg0012.tlg001 tlg0012.tlg002 -o homer.db` |
-| `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or token-carrier EpiDoc TEI | `-o/--output --script --split --id --glob --text-col --id-col --encoding --workbench --epidoc --json` | `aegean import john.txt -o john.json --script nt` |
+| `import` | Import your **own** text (`.txt` / folder / `.csv`), a Workbench export, or token-carrier EpiDoc TEI | `-o/--output --script --split --token-view all\|words --id --glob --text-col --id-col --encoding --workbench --epidoc --json` | `aegean import john.txt -o john.json --script nt` |
 | `geo` | Find-site coordinates, or `--word`'s per-site map (case-insensitive); GeoJSON with `-o` (`.json`/`.geojson` only) | `--word --level --site --period --scribe --support -o/--output --json` | `aegean geo lineara --word KU-RO` |
 | `sign` | Look up one sign: glyph, codepoint, sound value | `--json` | `aegean sign lineara KU --json` |
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
@@ -161,6 +161,23 @@ aegean keyness lineara --site Zakros -o key.json  # full result set, as JSON
 aegean dispersion lineara --top 5 -o dp.txt       # tab-separated rows
 ```
 
+Word counts default to `--view surface` (exact text) and `--count-unit token`.
+`--view normalized` applies NFC, lowercase, and final-sigma folding, preserving
+diacritics; `lemma` applies that normalization to existing lemma annotations and
+reports missing lemmas without running an analyzer. `--count-unit document`
+counts documents containing each key. `--statuses certain,unclear,restored,lost`
+selects editorial readings, including typed segments; omit it to include all.
+These controls and `--details` apply to word counts and cannot combine with `--signs`.
+
+Default `stats --json` remains a list. `--details` or a nondefault view, count unit,
+or status selection returns `{frequencies, metadata, citation}`, including the
+normalization, exclusions, and denominator. Lemma-source metadata records
+provenance, not verified accuracy.
+
+```bash
+aegean stats nt --view lemma --count-unit document --details --json
+```
+
 ### `query` — queryable fields
 
 Build a query from repeated `--where field=value` rows. Rows **AND** by default;
@@ -185,6 +202,18 @@ aegean stats zakros.json --top 3            # …then analyse just that subset
 ```
 
 In Python: `QueryResults.to_corpus(source)`.
+
+Word output defaults to document frequency. `--count-unit token` requests token
+frequency; `--view surface|normalized|lemma` uses the same lexical keys as
+`stats`, while the default `--view legacy` preserves historical case-insensitive
+predicates and separate surface keys. `--statuses` selects editorial readings.
+JSON `metadata` records these choices and the denominator before word filters.
+Word filters also work on inscription output, retaining documents that contain
+a matching word.
+
+```bash
+aegean query nt --view lemma --count-unit token --where "word-prefix=ἀγαπ" --output-kind words --json
+```
 
 | field | scope | kind |
 |---|---|---|
@@ -272,9 +301,13 @@ dedupe="first")`, and `Corpus.subset(ids)` for the inverse (pull a named slice o
 ### `import` — your own text → a corpus
 
 `import SRC -o out.json|.db` turns a plain-text file, a folder of text files, or a CSV
-into a real corpus you can then `stats`/`search`/`query`/`export`. Greek/Koine text
-goes through the Greek tokenizer (punctuation stripped); other `--script`s split on
-whitespace. End to end:
+into a real corpus you can then `stats`/`search`/`query`/`export`. The default
+`--token-view all` preserves decoded source content, whitespace, and aligned
+tokens, including punctuation, numerals, and foreign text. The linguistic word
+view keeps those other token kinds out of word counts without deleting them.
+`--token-view words` explicitly selects the former lossy import, without raw
+source or spans; its exclusions are reported in provenance. This option applies
+to plain text and CSV, not Workbench or EpiDoc imports. End to end:
 
 ```bash
 aegean import john.txt -o john.json --script nt   # → wrote 1 document(s) to john.json
@@ -297,6 +330,11 @@ command exits `1` and tells you to import it first.
 In Python: `aegean.io.from_text(s)`, `from_text_file(path)`, `from_text_dir(path)`,
 `from_csv(path, text_col=…, id_col=…, meta_cols=…)`: each takes `script_id=` and
 (for text) `split=`.
+
+The import functions also accept `token_view="all"` (default) or `"words"`.
+With the default, `Document.source_text` preserves decoded content and
+`Document.words` / `Corpus.iter_words()` give the linguistic word view. JSON and
+SQLite retain the source and alignment.
 
 ### `plot` — figure kinds (`[viz]` extra)
 
@@ -329,21 +367,43 @@ resolution for PNG (default 150).
 aegean review export corpus.json --selection all -o review.csv
 aegean review export corpus.json --selection flagged -o flagged.csv
 aegean review export corpus.json --selection unverified -o unverified.csv
-# Edit the correct_* columns, then apply to the same source:
+# Fill decision_* and, for corrections, correct_*; add reviewer identity, notes, and evidence:
 aegean review apply corpus.json review.csv -o corrected.json --reviewer "Reviewer"
 ```
 
 `all` exports all eligible word rows, `flagged` follows the narrow review flag,
 and `unverified` includes lemmas without an explicit `lemma_verified=true`.
 Selection changes neither the row's flag nor its confidence. Use `all` to review
-POS, morphology, and dependencies as well as lemmas.
+POS and morphology as well as lemmas.
+
+`decision_lemma`, `decision_pos`, and `decision_morph` take `accept`, `correct`,
+`defer`, or `reject`. Accept verifies the displayed nonempty prediction;
+correct verifies a different, nonempty `correct_*` value. Defer/reject retain
+the prediction unverified. Leave correction cells blank for accept/defer/reject.
+Blank decisions preserve correction-only behavior: blank or unchanged corrections
+imply no approval. `reviewer_note` and `reviewer_evidence` retain reasons and
+citations; `review export --reviewer NAME` can pre-fill identity.
+
+Verification is field-specific and does not certify a dependency tree or lexical
+sense. It is stored in `Token.annotations`, together with decisions, original
+predictions, and `review_history`; it is distinct from the pipeline's
+`TokenRecord.lemma_verified` property, which derives from lemma-source evidence.
+Explicit decisions refuse a prediction or lemma source that changed since export.
 
 For new predictions, add `--annotate` and the desired backend flags to export,
-then repeat those options when applying. Quote paths containing spaces. Printed
-replay hints can omit these details, and merging aligned review tables can strip
-significant whitespace; see [known workflow defects](Limitations#known-workflow-defects)
-before using `review merge`. The API equivalent is
+then repeat those options for both `review merge` and `review apply`. Printed
+replay hints retain them and quote paths containing spaces. Merge preserves
+source whitespace, typed-form cells, and individual field attribution in
+`reviewer_records`. Source-aware rows match stable source-token IDs and verify
+alignment/text; older tables use document id and position. Fresh annotation marks
+prior lemma/POS decisions stale while retaining their history. The API equivalent is
 `io.to_review_table(corpus, path, selection="all")`.
+
+```bash
+# When these copies were exported with --annotate:
+aegean review merge alice.csv bob.csv -c corpus.json -o merged.csv --on-conflict report --annotate
+aegean review apply corpus.json merged.csv -o reviewed.json --annotate
+```
 
 ---
 
@@ -870,7 +930,7 @@ Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation (local grounding → LLM) | `--script --target --mode --greek-backend --greek-variant --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος"` |
+| `translate` | Hybrid translation with retained model uncertainty, checking draft, and reported changes | `--script --target --style annotated\|concise --mode --greek-backend --greek-variant --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --style concise` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -893,9 +953,12 @@ aegean ai extract "OLE S 1" --fields commodity,amount     # → {"commodity":"OL
 overrides the model. `--corpus NAME` grounds the answer on that corpus's frequent
 words. `--trace` prints the grounding provenance under the answer, so you can audit
 exactly what the model was (and wasn't) told. `extract` always prints JSON. For Greek,
-`translate` grounds with deterministic morphology by default; `--mode full` adds
+`translate` grounds with local, provisional morphology by default; `--mode full` adds
 rarity-gated concise glosses, `--mode lemma` / `--mode none` select the legacy or bare
-paths, and `--verify` drafts then checks + repairs against the analysis (a second call).
+paths. Predictions and dictionary matches can be wrong in context. Optional
+`--verify` generates an ungrounded draft, then asks the same provider to check it
+against full grounding in a second call; it remains exploratory, with no guarantee
+of improvement or independent scholarly verification.
 Choose `--greek-backend default|baseline|neural`. The isolated neural choice gives
 model-predicted contextual morphology and a UD parse without changing the module facade;
 `--greek-variant default|fast|compact|balanced` selects its runtime artifact. Only
@@ -904,17 +967,35 @@ model-predicted contextual morphology and a UD parse without changing the module
 the default remains strict and the choice is recorded in runtime provenance.
 `--grounding-failure best-effort|strict` either keeps and traces available evidence or
 stops before a provider call when required local analysis fails. Runtime configuration is
-saved in the trace/JSON but never added to the provider prompt.
+saved in the trace/JSON; the prompt receives a compact backend, availability,
+and coverage summary rather than the complete runtime mapping.
+
+`--style annotated` (default) displays model-reported uncertainties and changes;
+`concise` shows a short reading and note/change counts. Both retain full details
+in JSON and `--trace`. Structured `text` contains only the translation; `data`
+keeps `translation`, `uncertainties`, `changes` (before/after/reason/evidence),
+`raw_response`, and `format_status`. Shape validation does not verify the model's
+claims. Malformed responses remain verbatim with an explicit missing-audit warning
+and no extra format-repair calls.
+
+Checking retains the original result and its notes/provenance in `draft`.
+Omitted draft notes do not establish that uncertainty was resolved. For consistent
+structured pairs, `text_changed` compares exact wording and `change_report_status`
+flags differences absent from the model's report; neither assesses semantic
+quality. Raw or inconsistent drafts are `not_comparable`.
 
 `-o FILE` saves the run for later: `.json` keeps the text **plus its provenance and
-grounding** (and the exploratory label is preserved on disk), while `.txt` writes the
-labeled text. In Python the same record round-trips via
+grounding**, translation audit fields, and any checking draft. Translation `.txt`
+exports append the full audit trace to labeled text, even with concise style;
+other text exports include a trace when `--trace` is requested. The exploratory
+label stays attached. In Python the same record round-trips via
 `ExploratoryResult.to_dict()` / `to_json()` / `from_dict()`.
 
 ```bash
 # heavy (needs a provider + key); save the audit trail next to the answer:
 aegean ai ask "What is KU-RO?" --corpus lineara -o answer.json   # text + grounding
 aegean ai translate "KU-RO 130" --script lineara -o draft.txt    # labeled text
+aegean ai translate "μῆνιν ἄειδε θεά" --verify --style concise --trace -o checked.json
 ```
 
 ---

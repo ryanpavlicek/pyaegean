@@ -1,7 +1,10 @@
 """Inflection synthesis (inverse lemmatizer) — built offline from the AGDT fixture.
 
 Same policy as the treebank tests: a local ``*.tb.xml`` fixture is parsed into the lexicon
-and inverted; no network. Every test restores the default (inflector-off) state afterward.
+and inverted; no network. Its constructed ``εἶπον → λέγω`` annotation exercises
+inversion; the actual AGDT instead uses ``εἶπον`` as that form's headword, so this
+fixture does not establish suppletive-paradigm coverage. Every test restores the
+default (inflector-off) state afterward.
 """
 
 from __future__ import annotations
@@ -45,7 +48,7 @@ def test_inflect_partial_spec_dedupes_form(
     tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _activate(tmp_path, monkeypatch)
-    # εἶπον is attested as both 1sg and 3pl aorist; an aorist-only query returns it once
+    # This fixture annotates εἶπον as both 1sg and 3pl of λέγω; deduplicate its form.
     assert greek.inflect("λέγω", tense="aor") == ("εἶπον",)
 
 

@@ -89,13 +89,14 @@ def _fake_genai_raising(exc: Exception):
     types_mod = types.ModuleType("google.genai.types")
     errors_mod.APIError = type("APIError", (Exception,), {})
     types_mod.GenerateContentConfig = lambda **k: None
+    types_mod.HttpOptions = lambda **k: None
 
     class _Models:
         def generate_content(self, **k):
             raise exc
 
     class Client:
-        def __init__(self, api_key=None):
+        def __init__(self, api_key=None, vertexai=None, http_options=None):
             self.models = _Models()
 
     genai.Client = Client

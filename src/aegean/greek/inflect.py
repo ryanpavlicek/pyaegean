@@ -11,6 +11,11 @@ attests: every (lemma, features) cell seen in the AGDT is generated exactly. Uns
 or cells are not synthesised by this lookup layer (a generalising edit-tree layer, mirroring
 the lemmatizer, can be added later).
 
+Query the source's headword: the AGDT records ``εἶπον`` under ``εἶπον``, so
+``inflect("εἶπον", tense="aor", person="1", number="sg")`` can return that form;
+the equivalent ``λέγω`` query does not collect it as a suppletive paradigm member.
+The lookup neither normalizes dictionary conventions nor supplies a complete paradigm.
+
 Feature values use the same short codes as the analyzer: ``pos`` NOUN/VERB/ADJ/...,
 ``case`` nom/gen/dat/acc/voc/loc, ``number`` sg/pl/du, ``gender`` masc/fem/neut, ``tense``
 pres/impf/aor/perf/plup/fut/futperf, ``voice`` act/mid/pass/mp, ``mood`` ind/subj/opt/inf/
