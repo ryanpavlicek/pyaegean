@@ -248,16 +248,25 @@ def test_invalid_or_stale_decisions_never_land(tmp_path: Path, edits: dict[str, 
     assert corpus.to_json() == before
 
 
-@pytest.mark.parametrize("encoded", ["{", "[" * 10000 + "0" + "]" * 10000])
+@pytest.mark.parametrize("encoded, messages", [
+    pytest.param("{", ("invalid reviewer_records JSON",), id="invalid-json"),
+    pytest.param(
+        "[" * 10000 + "0" + "]" * 10000,
+        ("invalid reviewer_records JSON", "reviewer_records must attribute the reviewed lemma field"),
+        id="deep-json",
+    ),
+])
 def test_malformed_reviewer_attribution_fails_cleanly_without_changing_source(
-    tmp_path: Path, encoded: str,
+    tmp_path: Path, encoded: str, messages: tuple[str, ...],
 ) -> None:
     corpus = _corpus()
     before = corpus.to_json()
     table = _table(tmp_path / "invalid.csv", corpus, decision_lemma="accept",
                    reviewer_records=encoded)
-    with pytest.raises(ValueError, match="invalid reviewer_records JSON"):
+    # A decoder may reject deep JSON, or parse it for the attribution schema to reject.
+    with pytest.raises(ValueError) as error:
         from_review_table(table, corpus)
+    assert str(error.value) in messages
     assert corpus.to_json() == before
 
     source = tmp_path / "source.json"
@@ -267,7 +276,7 @@ def test_malformed_reviewer_attribution_fails_cleanly_without_changing_source(
         "review", "apply", str(source), str(table), "-o", str(output),
     ])
     assert result.exit_code == 1
-    assert "invalid reviewer_records JSON" in result.output
+    assert any(message in result.output for message in messages)
     assert not output.exists()
     assert Corpus.from_json(source).to_json() == before
 
