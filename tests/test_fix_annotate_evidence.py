@@ -8,6 +8,7 @@ import json
 from dataclasses import replace
 from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 import pytest
 
@@ -21,6 +22,31 @@ from aegean.io.review import REVIEW_COLUMNS, from_review_table, to_review_table
 
 
 Backend = Literal["baseline", "neural", "custom"]
+
+_ANALYSIS_IDENTITY_KEYS = {
+    "analysis_generation", "analysis_kind", "analysis_configuration", "analysis_receipt",
+}
+
+
+def _legacy_annotations(
+    annotations: dict[str, str], *, backend: Backend, with_evidence: bool,
+    long_input: str = "strict", prior_generation: str | None = None,
+) -> dict[str, str]:
+    generation = annotations["analysis_generation"]
+    assert isinstance(generation, str)
+    identity = UUID(generation)
+    assert identity.hex == generation and identity.version == 4
+    if prior_generation is not None:
+        assert generation != prior_generation
+    assert annotations["analysis_kind"] == backend
+    assert annotations["analysis_receipt"] == "unknown"
+    assert json.loads(annotations["analysis_configuration"]) == {
+        "annotator": "aegean.greek.annotate_corpus", "with_evidence": with_evidence,
+        "long_input": long_input, "with_dependencies": False,
+        "replaced_fields": ["lemma", "upos"],
+        "custom_callable_identity": "unknown" if backend == "custom" else None,
+    }
+    return {key: value for key, value in annotations.items() if key not in _ANALYSIS_IDENTITY_KEYS}
 
 _OLD_EVIDENCE = {
     "lemma_source": "user",
@@ -205,7 +231,9 @@ def test_new_annotation_replaces_current_evidence_preserves_history_and_source(
         lemma=lemma, with_evidence=with_evidence,
     )
 
-    assert out.documents[0].tokens[0].annotations == {
+    assert _legacy_annotations(
+        out.documents[0].tokens[0].annotations, backend=backend, with_evidence=with_evidence,
+    ) == {
         "lemma": lemma, "upos": "X", **_HISTORY, **_UNRELATED,
         **_expected_evidence(backend, with_evidence),
     }
@@ -256,6 +284,7 @@ def test_reannotation_invalidates_only_replaced_field_reviews(
         with_evidence=with_evidence,
     )
     annotations = result.documents[0].tokens[0].annotations
+    _legacy_annotations(annotations, backend=backend, with_evidence=with_evidence)
     assert annotations["lemma_review_decision"] == "stale"
     assert annotations["upos_review_decision"] == "stale"
     assert annotations.get("lemma_verified") != "true"
@@ -278,6 +307,7 @@ def test_complete_neural_annotation_drops_prior_partial_warning(
     partial = annotate_corpus(_corpus(old_evidence=False), long_input="partial")
     assert model.calls == [(["λόγος"], "partial")]
     old = partial.documents[0].tokens[0].annotations
+    _legacy_annotations(old, backend="neural", with_evidence=True, long_input="partial")
     assert old["neural_analyzed"] == "false"
     assert old["analysis_complete"] == "false"
     assert old["analysis_warning"] == "current partial analysis"
@@ -289,7 +319,10 @@ def test_complete_neural_annotation_drops_prior_partial_warning(
     )
 
     ann = complete.documents[0].tokens[0].annotations
-    assert ann == {
+    assert _legacy_annotations(
+        ann, backend="neural", with_evidence=with_evidence,
+        prior_generation=old["analysis_generation"],
+    ) == {
         "lemma": "COMPLETE-PREDICTION", "upos": "X", **_HISTORY, **_UNRELATED,
         **_expected_evidence("neural", with_evidence),
     }
@@ -312,7 +345,10 @@ def test_baseline_annotation_drops_prior_neural_coverage(
         lemma="BASELINE-PREDICTION", with_evidence=with_evidence,
     )
 
-    assert baseline.documents[0].tokens[0].annotations == {
+    assert _legacy_annotations(
+        baseline.documents[0].tokens[0].annotations, backend="baseline", with_evidence=with_evidence,
+        prior_generation=neural.documents[0].tokens[0].annotations["analysis_generation"],
+    ) == {
         "lemma": "BASELINE-PREDICTION", "upos": "X", **_HISTORY, **_UNRELATED,
         **_expected_evidence("baseline", with_evidence),
     }
@@ -374,7 +410,9 @@ def test_reviewed_lemma_reannotation_roundtrips_as_unverified(
 
     ann = persisted.documents[0].tokens[0].annotations
     history = {key: value for key, value in old.items() if key not in _OLD_EVIDENCE}
-    assert ann == {
+    assert _legacy_annotations(
+        ann, backend=backend, with_evidence=with_evidence,
+    ) == {
         **history, "lemma": lemma, "upos": "X",
         "lemma_review_decision": "stale",
         **_expected_evidence(backend, with_evidence),

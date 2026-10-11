@@ -4,6 +4,24 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- Review queues can select unverified annotation fields or a seeded sample of
+  unflagged rows, with inclusion reasons. New snapshots bind source, predictions,
+  analysis generation, and available model/configuration identity. Annotation
+  exports save their exact source analysis for later merge and application.
+- Dependency head and relation review includes complete sentence context and
+  validates head ranges, sentence ownership, root structure, and cycles before
+  applying changes. Dependency annotation is explicitly selected; ordinary
+  annotation preserves its lemma/POS behavior.
+- Optional SQLite lexical indexes accelerate exact surface, normalized, and
+  lemma searches with the existing reading-status semantics and hit order.
+  `db.build_lexical_index` and `aegean db index` build or refresh them explicitly;
+  status inspection and searches remain read-only. Token edits invalidate the
+  index, and searches fall back to scanning until it is refreshed.
+
 ## 0.61.0 (2026-10-11)
 
 ### Changed

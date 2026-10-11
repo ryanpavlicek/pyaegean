@@ -1,7 +1,7 @@
 """End-to-end journeys for the human-in-the-loop review loop.
 
 Covers the documented CLI round-trip (`aegean import` -> `review export --annotate` ->
-correct in the CSV -> `review apply --annotate`) plus the `aegean.io.review` safety
+correct in the CSV -> `review apply` against the saved analysis) plus the `aegean.io.review` safety
 contracts: token-mismatch refusal, duplicate-row conflicts, orphaned corrections,
 malformed-CSV errors, the CSV formula-injection guard, feats-keyed morphology
 corrections, and the export row filter (blank predictions, position-None exclusion)."""
@@ -67,11 +67,15 @@ def test_cli_review_loop_from_imported_file(tmp_path) -> None:
     assert r.exit_code == 0, r.output + _stderr(r)
 
     tcsv = tmp_path / "t.csv"
-    r = runner.invoke(app, ["review", "export", str(cjson), "-o", str(tcsv), "--annotate"])
+    analysis = tmp_path / "analysis.json"
+    r = runner.invoke(app, ["review", "export", str(cjson), "-o", str(tcsv), "--annotate",
+                            "--annotated-output", str(analysis)])
     assert r.exit_code == 0, r.output + _stderr(r)
-    # the printed next-step hint tells the user to repeat --annotate on apply
+    # Apply the exact persisted generation whose predictions the reviewer saw.
     assert "review apply" in r.output
-    assert "--annotate" in r.output
+    assert str(analysis) in r.output
+    assert "--annotate" not in r.output
+    assert Corpus.from_json(analysis).documents[0].tokens[0].annotations["analysis_generation"]
 
     rows = _read_rows(tcsv)
     assert [row["token"] for row in rows] == ["ἐν", "ἀρχῇ", "ἦν", "ὁ", "λόγος", "καὶ", "πατρός"]
@@ -86,8 +90,8 @@ def test_cli_review_loop_from_imported_file(tmp_path) -> None:
     fixed = tmp_path / "fixed.json"
     r = runner.invoke(
         app,
-        ["review", "apply", str(cjson), str(tcsv), "-o", str(fixed),
-         "--reviewer", "R", "--annotate"],
+        ["review", "apply", str(analysis), str(tcsv), "-o", str(fixed),
+         "--reviewer", "R"],
     )
     assert r.exit_code == 0, r.output + _stderr(r)
 

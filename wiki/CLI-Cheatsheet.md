@@ -367,14 +367,17 @@ resolution for PNG (default 150).
 aegean review export corpus.json --selection all -o review.csv
 aegean review export corpus.json --selection flagged -o flagged.csv
 aegean review export corpus.json --selection unverified -o unverified.csv
+aegean review export corpus.json --selection unverified --field pos --field morph -o grammar.csv
+aegean review export corpus.json --selection sample --sample-size 40 --seed 17 -o sample.csv
 # Fill decision_* and, for corrections, correct_*; add reviewer identity, notes, and evidence:
 aegean review apply corpus.json review.csv -o corrected.json --reviewer "Reviewer"
 ```
 
 `all` exports all eligible word rows, `flagged` follows the narrow review flag,
-and `unverified` includes lemmas without an explicit `lemma_verified=true`.
-Selection changes neither the row's flag nor its confidence. Use `all` to review
-POS and morphology as well as lemmas.
+and `unverified` includes unverified requested fields (lemma by default).
+Selection changes neither the row's flag nor its confidence. Repeat `--field`
+to select lemma, POS, morphology, head, or dependency relation. Dependency
+review includes complete sentence context and validates the resulting tree.
 
 `decision_lemma`, `decision_pos`, and `decision_morph` take `accept`, `correct`,
 `defer`, or `reject`. Accept verifies the displayed nonempty prediction;
@@ -391,8 +394,10 @@ predictions, and `review_history`; it is distinct from the pipeline's
 Explicit decisions refuse a prediction or lemma source that changed since export.
 
 For new predictions, add `--annotate` and the desired backend flags to export,
-then repeat those options for both `review merge` and `review apply`. Printed
-replay hints retain them and quote paths containing spaces. Merge preserves
+and choose `--annotated-output analysis.json` or use the generated adjacent path.
+Merge and apply against that saved analysis. New snapshots bind available analysis
+identity and generation, so reannotation requires a fresh review export. Printed
+replay hints name the saved artifact and quote paths containing spaces. Merge preserves
 source whitespace, typed-form cells, and individual field attribution in
 `reviewer_records`. Source-aware rows match stable source-token IDs and verify
 alignment/text; older tables use document id and position. Fresh annotation marks
@@ -400,9 +405,9 @@ prior lemma/POS decisions stale while retaining their history. The API equivalen
 `io.to_review_table(corpus, path, selection="all")`.
 
 ```bash
-# When these copies were exported with --annotate:
-aegean review merge alice.csv bob.csv -c corpus.json -o merged.csv --on-conflict report --annotate
-aegean review apply corpus.json merged.csv -o reviewed.json --annotate
+# When these copies were exported with --annotate --annotated-output analysis.json:
+aegean review merge alice.csv bob.csv -c analysis.json -o merged.csv --on-conflict report
+aegean review apply analysis.json merged.csv -o reviewed.json
 ```
 
 ---

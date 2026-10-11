@@ -2183,6 +2183,23 @@ tlg0012.tlg001 -o iliad.db` builds a database straight from a Greek work id.
 writes the same database. Load it back in Python with `Corpus.from_sql(path)`, or
 stream it with `aegean.db.stream(path)`.
 
+### `db index` — accelerate exact lexical searches
+
+An optional lexical index accelerates exact surface, normalized, and lemma
+searches while preserving the existing reading-status filters and hit order:
+
+```bash
+aegean db index corpus.db
+aegean db index corpus.db --status --json
+aegean db search corpus.db λόγος --view lemma --statuses certain --json
+```
+
+Index building takes an existing writable local path. Copy a fetched database to
+a working file before indexing it. Token edits invalidate the index; search falls
+back to the original scan until `db index` refreshes it. Search and status checks
+remain read-only, and substring searches retain their scan behavior. Indexing
+does not generate lemmas or change which tokens qualify for a query.
+
 ### `db add` — grow an existing database
 
 `db add` upserts documents into a database you already built: a document whose id
@@ -2243,9 +2260,9 @@ record of it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `review export` | Write selected word rows with predictions, evidence, triage, and blank field-decision and correction columns | `-o/--output` (a `.csv`) `--selection all\|flagged\|unverified` `--reviewer NAME` `--annotate` (+ `--neural`/`--tagger`/… to generate fresh predictions) | `aegean review export nt -o review.csv --selection unverified` |
-| `review merge` | Combine copies of one export; merge agreed field actions and values, retain individual reviewer attribution, and report disagreements | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--annotate` (+ the export's backend flags) `--json` | `aegean review merge alice.csv bob.csv -c nt -o merged.csv --on-conflict report` |
-| `review apply` | Apply field decisions or corrections, preserving original predictions and review history | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` `--annotate` (+ the export's backend flags) | `aegean review apply nt review.csv -o nt-fixed.json --reviewer "A. Scholar"` |
+| `review export` | Write selected rows with predictions, analysis identity, inclusion reasons, and field-decision columns | `-o/--output` `--selection all\|flagged\|unverified\|sample` repeatable `--field` `--sample-size` `--seed` `--reviewer` `--annotate` `--annotated-output` | `aegean review export nt -o review.csv --selection unverified --field pos` |
+| `review merge` | Combine copies of one export; retain field attribution and report disagreements | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c analysis.json -o merged.csv --on-conflict report` |
+| `review apply` | Apply field decisions or corrections, preserving original predictions and review history | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` | `aegean review apply analysis.json review.csv -o reviewed.json --reviewer "A. Scholar"` |
 
 The run below uses the bundled `greek` sample, so you can follow it offline. It carries no
 annotations of its own, so `--annotate` fills lemma and POS from the pipeline first; a corpus
@@ -2256,7 +2273,10 @@ that already has gold annotations (the Greek NT) needs no `--annotate`, and
 values and clearing prior lemma evidence and neural coverage. Previous lemma/POS
 decisions become `stale`; their attribution and history survive, while reviews of
 unchanged source morphology remain current. Keep the original corpus separately
-when reviewing source annotations.
+when reviewing source annotations. Export saves the annotated copy beside the CSV;
+use `--annotated-output analysis.json` to choose its path. Existing destinations
+are refused. Merge and apply against this saved copy: running annotation again
+creates a new analysis generation even if the displayed predictions agree.
 
 Choose which rows to export with `--selection`:
 
@@ -2264,12 +2284,14 @@ Choose which rows to export with `--selection`:
 |---|---|
 | `all` (default) | Every word with a token position, including verified lemmas. |
 | `flagged` | Rows whose existing review flag is true, normally identity/unresolved lemmas. |
-| `unverified` | Words without an explicit `lemma_verified=true`, including resolved predictions and source annotations with missing verification metadata. |
+| `unverified` | Words with an unverified requested field; `--field lemma` is the default. |
+| `sample` | A seeded sample of unflagged rows, using `--sample-size N --seed N`. |
 
 For `unverified`, only the string `true` (case-insensitive) excludes a word; empty
 or unrecognized values remain included. None of these modes changes the CSV's
-`needs_review` flag or applies a confidence threshold. The `unverified` selection
-concerns the lemma only; use `all` when reviewing POS or morphology too.
+`needs_review` flag or applies a confidence threshold. Repeat `--field` to request
+`lemma`, `pos`, `morph`, `head`, or `deprel`. Inclusion reasons are recorded in the
+table. A sample of unflagged rows helps test what the existing flag misses.
 
 Fill `decision_lemma`, `decision_pos`, or `decision_morph` with a field action:
 
@@ -2286,37 +2308,42 @@ POS, morphology, a dependency tree, or a lexical sense. The saved corpus records
 verification and decisions in `Token.annotations`, alongside original
 `<field>__pred` values and `review_history`. This is distinct from the pipeline's
 `TokenRecord.lemma_verified` property, which derives from lemma-source evidence.
-Explicit decisions refuse a prediction or lemma source that changed since export.
+New snapshots also check available model/configuration identity, analysis generation,
+source alignment, and predictions. Unavailable external/custom model identity is
+explicitly unknown. Keep the read-only snapshot columns intact.
+
+Dependency review uses `decision_head` / `decision_deprel` and the corresponding
+correction columns. Selecting either field includes complete sentence context,
+including parsed punctuation. Heads are 1-based indexes within that sentence;
+0 means root. Corpus positions and source-token IDs are not head indexes. Missing
+sentence ownership is refused. Edits must leave one root, valid head indexes,
+matching root labels, and no cycles; invalid edits produce no partial changes.
 
 ```bash
 # 1. export a reviewable table
-aegean review export greek --annotate -o review.csv
+aegean review export greek --annotate --annotated-output analysis.json -o review.csv
 #    wrote 27 review rows to review.csv
-#    record field decisions or corrections, then:  aegean review apply greek review.csv -o corrected.json --annotate
+#    record field decisions or corrections, then apply them to analysis.json
 
 # 2. triage. The needs_review column flags identity/unresolved lemmas by default, and
 #    --selection flagged exports only those: here the 7 forms the offline lemmatizer left
 #    unresolved (Πηληϊάδεω, Ἀχιλῆος, Ἁλικαρνησσέος, …), each with evidence_class=unresolved.
-aegean review export greek --annotate --selection flagged -o triage.csv
+aegean review export analysis.json --selection flagged -o triage.csv
 #    wrote 7 review rows to triage.csv
 #    This filter is not a confidence threshold; omit it to review all rows.
 
 # 3. Fill decision_* and, for corrections, correct_*; add reviewer identity, note, and evidence.
-#    If several people review copies of the same export, merge them first and repeat
-#    the export's --annotate/backend options:
-aegean review merge alice.csv bob.csv -c greek -o merged.csv --on-conflict report --annotate
-#    wrote 3 merged review rows to merged.csv
-#    merged 2 tables by alice, bob: 3 agreed review row(s), 0 conflict(s)
+#    If several people review copies of the same export, merge them against its saved source:
+aegean review merge alice.csv bob.csv -c analysis.json -o merged.csv --on-conflict report
 
-aegean review apply greek merged.csv -o greek-reviewed.json --reviewer "Review team" --annotate
-#    wrote greek-reviewed.json  (review: 3 tokens corrected by Review team (2026-…))
+aegean review apply analysis.json merged.csv -o greek-reviewed.json --reviewer "Review team"
 ```
 
 Source-aware rows join by stable source-token ID and verify alignment and token
 text; legacy rows use document id and position. A changed source or token is an
-error, never a silent wrong-word correction. When export used `--annotate`, repeat
-it and the same backend flags for both `merge` and `apply`. Printed next-step
-commands preserve those options and quote paths containing spaces. Merge also
+error, never a silent wrong-word correction. When export used `--annotate`, use
+the saved annotated artifact for both `merge` and `apply`. Printed next-step
+commands name that artifact and quote paths containing spaces. Merge also
 preserves source whitespace and typed-form cells and retains individual reviewer
 attribution in `reviewer_records`. See
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context.

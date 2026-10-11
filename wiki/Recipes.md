@@ -1613,9 +1613,9 @@ add `--annotate` to generate predictions before exporting. For the imported
 corpus above, a baseline review round-trip is:
 
 ```bash
-aegean review export john1.json --annotate --selection unverified -o review.csv
-# Edit review.csv, then replay the same annotation options:
-aegean review apply john1.json review.csv --annotate -o reviewed.json
+aegean review export john1.json --annotate --annotated-output john1-analysis.json --selection unverified -o review.csv
+# Edit review.csv, then apply it to the saved analysis:
+aegean review apply john1-analysis.json review.csv -o reviewed.json
 ```
 
 Set `decision_lemma`, `decision_pos`, or `decision_morph` to `accept`, `correct`,

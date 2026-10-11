@@ -1731,7 +1731,7 @@
       "id": "review-loop",
       "since": "0.28.0",
       "python_api": "aegean.io.to_review_table",
-      "summary": "Optional field-level accept/correct/defer/reject decisions with persistent predictions, history, evidence, and multi-reviewer merge.",
+      "summary": "Optional field-specific queues and seeded samples, analysis-bound snapshots, sentence-validated dependency decisions, and multi-reviewer merge with persistent attribution.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1901,7 +1901,7 @@
       "id": "sqlite-persistence",
       "since": "0.8.1",
       "python_api": "aegean.db",
-      "summary": "SQLite persistence with full-text search and flat-memory streaming (the DDbDP access path).",
+      "summary": "SQLite persistence with full-text search, explicit lexical indexes for exact surface/normalized/lemma searches, and flat-memory streaming.",
       "surfaces": {
         "demo": {
           "status": "excluded",

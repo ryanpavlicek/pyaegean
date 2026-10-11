@@ -58,8 +58,11 @@ and measure precision/recall against independently annotated material.
 The [review workflow](review.md) supports per-field acceptance, correction,
 deferral, and rejection. Accepting an unchanged lemma is a real recorded decision;
 it does not certify syntax or lexical sense. Reanalysis marks replaced decisions
-stale. CSV snapshot checks do not independently bind identical values to a model
-revision, so regenerate review tables after replacing an analysis.
+stale. New CSV snapshots bind the available analysis identity and generation as
+well as the source and predictions; regenerate them after replacing an analysis.
+Field-specific queues and seeded samples of unflagged results let a review focus
+on the claim being investigated. Dependency decisions require complete sentence
+context and validate the edited tree before applying it.
 
 ## State the population being counted
 

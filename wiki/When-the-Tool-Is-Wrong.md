@@ -82,6 +82,17 @@ remain unverified. With blank decision columns, the legacy behavior remains:
 only a changed correction records verification, and an unchanged value or a POS-only
 correction does not verify a lemma. A verified lemma does not certify other fields.
 
+Repeat `--field pos --field morph` with `--selection unverified` to target grammar,
+or use `--selection sample --sample-size 40 --seed 17` to sample unflagged rows.
+Dependency fields `head` and `deprel` bring complete sentence context and require
+a valid edited tree. These selections do not turn the existing flag into a
+calibrated error detector.
+
+If export generates predictions with `--annotate`, it also saves the annotated
+corpus. Use that exact file for merge/apply. New snapshots bind available analysis
+identity as well as source and predictions; reannotation invalidates old snapshots
+even when their words happen to agree.
+
 Applying review keeps prior values under `<field>__pred`, records per-field
 decisions, verification flags, reviewers, notes and evidence, and appends dated
 events to `review_history`. An acceptance retains the prediction's source;

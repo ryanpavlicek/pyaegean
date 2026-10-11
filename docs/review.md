@@ -13,13 +13,27 @@ aegean review export corpus.json -o review.csv --selection unverified --reviewer
 aegean review apply corpus.json review.csv -o reviewed.json
 ```
 
-Use `--selection all` for every word or `--selection flagged` for the existing
-review flag. `unverified` specifically checks lemma verification, not every
-annotation field. To generate predictions first, add `--annotate` and any backend
-flags, such as `--neural`, to export, merge, and apply. The generated apply command
-preserves those flags and quotes paths for a POSIX shell.
+Use `--selection all` for every eligible word or `--selection flagged` for the
+existing review flag. `unverified` checks the requested fields, with lemma as the
+default. Repeat `--field` to select lemma, POS, morphology, dependency head, or
+dependency relation. Rows record why they were included. A reproducible sample of
+unflagged material helps check what the flag misses:
 
-Set `decision_lemma`, `decision_pos`, or `decision_morph` independently:
+```bash
+aegean review export corpus.json -o grammar.csv --selection unverified --field pos --field morph
+aegean review export corpus.json -o sample.csv --selection sample --sample-size 40 --seed 17
+```
+
+To generate predictions first, add `--annotate` and backend flags such as
+`--neural` to **export**. Export saves the actual annotated corpus beside the CSV
+and prints its path. `--annotated-output analysis.json` chooses that path; an
+existing file is refused. Apply and merge against this saved analysis. Running
+annotation again creates a new analysis even if its predicted words agree, so a
+fresh run cannot stand in for the saved review source. Printed commands quote
+paths for a POSIX shell.
+
+Set `decision_lemma`, `decision_pos`, or `decision_morph` independently. Dependency
+review also provides `decision_head` and `decision_deprel`:
 
 | Decision | What to enter | Result |
 | --- | --- | --- |
@@ -42,12 +56,26 @@ invalidates the current decisions for fields it replaces while retaining history
 export a new table to reconsider them. Applying explicit decisions from a table
 whose prediction or source alignment changed raises an error.
 
-CSV snapshot checks compare displayed values, lemma source classes, and exact
-source/form alignment. They do not independently identify a model version or
-certify that two runs used the same model artifact. Reannotation marks current
-decisions stale even when the new values agree; use a fresh export when reviewing
-the replacement analysis. A separate model revision yielding identical values
-and source classes cannot be distinguished from the CSV alone.
+New CSV snapshots bind source/form alignment, predictions, and the available
+analysis identity, including model/configuration evidence when present.
+Renumbering tokens or changing document context requires a fresh export.
+Reannotation gives the replaced analysis a new generation and invalidates old
+snapshots even when the displayed values agree. Source/custom annotations without
+model identity remain explicitly unknown. Preserve the snapshot columns; they
+record identity, not an accuracy guarantee. Older CSVs without these bindings
+retain their existing source/value checks and cannot prove model identity.
+
+For dependency review, select `--field head --field deprel`. With `--annotate --neural`,
+these fields explicitly request syntax annotation, including generated morphology
+and parsed punctuation. The Python equivalent is
+`greek.annotate_corpus(corpus, with_dependencies=True)` with the neural backend active;
+ordinary annotation keeps its lemma/POS behavior. Each selected sentence
+includes its complete indexed context, including parsed punctuation. Heads use
+the sentence's **1-based token index**, with **0 for the root**, rather than corpus
+positions or source-token IDs. Explicit sentence ownership must be available;
+the reviewer does not guess it from line breaks. Applying dependency edits checks
+complete membership, valid heads, a single root, root labels, and absence of
+cycles before saving the result. A malformed tree produces no partial changes.
 
 Several scholars can review copies of the same export, then run
 `aegean review merge alice.csv bob.csv --corpus corpus.json -o merged.csv`.

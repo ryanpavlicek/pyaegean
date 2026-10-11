@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
@@ -120,6 +122,83 @@ def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+_BINDING_COLUMNS = {
+    "review_fields", "inclusion_reasons", "review_snapshot", "review_snapshot_sha256",
+}
+
+
+def _assert_binding(row: dict[str, str], corpus: Corpus, *, selection: str) -> None:
+    document = next(doc for doc in corpus.documents if doc.id == row["doc_id"])
+    token = next(token for token in document.tokens if str(token.position) == row["position"])
+    annotations = token.annotations
+    assert json.loads(row["review_fields"]) == ["lemma"]
+    reasons = {
+        "all": ["selection:all"], "flagged": ["flag:lemma_review_recommended"],
+        "unverified": ["unverified:lemma"],
+    }
+    assert json.loads(row["inclusion_reasons"]) == reasons[selection]
+    source = {
+        "document": document.id, "script": document.script_id, "source_text": document.source_text,
+        "lines": document.lines, "transcription": document.transcription, "glyphs": document.glyphs,
+        "metadata": asdict(document.meta),
+        "provenance": {key: value for key, value in asdict(corpus.provenance).items() if key != "notes"}
+        if corpus.provenance is not None else None,
+        "tokens": [{
+            "text": item.text, "kind": item.kind.value, "status": item.status.value,
+            "position": item.position, "line_no": item.line_no, "glyphs": item.glyphs,
+            "signs": item.signs, "alt": item.alt, "reference": item.annotations.get("ref"),
+            "alignment": asdict(item.alignment) if item.alignment is not None else None,
+            "form_state": item.form_state.to_dict() if item.form_state is not None else None,
+        } for item in document.tokens],
+    }
+    encoded_source = json.dumps(source, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    expected_snapshot = {
+        "schema": "pyaegean-review/1",
+        "source_sha256": hashlib.sha256(encoded_source.encode("utf-8")).hexdigest(),
+        "token_identity": {
+            "position": token.position, "text": token.text, "kind": token.kind.value,
+            "alignment": json.loads(json.dumps(asdict(token.alignment)))
+            if token.alignment is not None else None,
+        },
+        "analysis": {
+            "kind": "external", "generation": "unknown", "receipt": "unknown",
+            "model_artifact": "unknown", "configuration": "unknown", "available_identity": {},
+        },
+        "output": {
+            "fields": {
+                name: {"key": key, "present": key in annotations, "value": annotations.get(key, "")}
+                for name, key in (
+                    ("lemma", "lemma"), ("pos", "upos"), ("morph", "morph"),
+                    ("head", "head"), ("deprel", "deprel"),
+                )
+            },
+            "lemma_source": {"present": "lemma_source" in annotations,
+                             "value": annotations.get("lemma_source", "")},
+            "other": {},
+        },
+    }
+    assert json.loads(row["review_snapshot"]) == expected_snapshot
+    encoded_snapshot = json.dumps(expected_snapshot, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    assert row["review_snapshot"] == encoded_snapshot
+    assert row["review_snapshot_sha256"] == hashlib.sha256(encoded_snapshot.encode("utf-8")).hexdigest()
+
+
+def _assert_rows(
+    rows: list[dict[str, str]], expected: list[dict[str, str]], corpus: Corpus,
+    *, selection: str = "all",
+) -> None:
+    # Preserve exact checks for every historical cell; validate the added binding
+    # separately so identity metadata cannot conceal a changed prediction or flag.
+    assert [{key: value for key, value in row.items() if key not in _BINDING_COLUMNS}
+            for row in rows] == [
+                {key: value for key, value in row.items() if key not in _BINDING_COLUMNS}
+                for row in expected
+            ]
+    for row in rows:
+        assert set(row) == set(REVIEW_COLUMNS)
+        _assert_binding(row, corpus, selection=selection)
+
+
 @pytest.mark.parametrize(("selection", "expected"), [
     ("all", EXPECTED_ALL),
     ("flagged", EXPECTED_FLAGGED),
@@ -135,7 +214,7 @@ def test_selection_exports_complete_rows_without_mutating_annotations(
     path = tmp_path / "review.csv"
 
     assert to_review_table(corpus, path, selection=selection) == len(expected)
-    assert _read_rows(path) == expected
+    _assert_rows(_read_rows(path), expected, corpus, selection=selection)
     assert path.read_bytes().startswith(b"\xef\xbb\xbf")
     assert corpus.to_json() == before
 
@@ -146,7 +225,7 @@ def test_default_selection_is_all(tmp_path: Path) -> None:
     explicit = tmp_path / "all.csv"
     assert to_review_table(corpus, default) == len(EXPECTED_ALL)
     assert to_review_table(corpus, explicit, selection="all") == len(EXPECTED_ALL)
-    assert _read_rows(default) == EXPECTED_ALL
+    _assert_rows(_read_rows(default), EXPECTED_ALL, corpus)
     assert default.read_bytes() == explicit.read_bytes()
 
 
@@ -183,6 +262,8 @@ def test_selection_preserves_custom_source_key_and_flag_precedence(tmp_path: Pat
         assert [row["evidence_class"] for row in rows] == [
             records[int(position)].get("other_source", "") for position in positions
         ]
+        for row in rows:
+            _assert_binding(row, corpus, selection=selection)
     assert corpus.to_json() == before
 
 
@@ -203,7 +284,7 @@ def test_api_invalid_selection_leaves_destination_untouched(
 
     monkeypatch.setattr(review, "needs_review_flag", forbidden)
     monkeypatch.setattr(review, "_write_review_rows", forbidden)
-    with pytest.raises(ValueError, match="selection must be 'all', 'flagged', or 'unverified'"):
+    with pytest.raises(ValueError, match="selection must be 'all', 'flagged', 'unverified', or 'sample'"):
         to_review_table(_corpus(), path, selection=invalid)  # type: ignore[arg-type]
     assert path.exists() is exists
     if exists:
@@ -233,7 +314,7 @@ def test_cli_rejects_invalid_selection_before_load_annotate_or_write(
         "--annotate", "--neural",
     ])
     assert result.exit_code == 1, result.output
-    assert "--selection must be 'all', 'flagged', or 'unverified'" in result.output
+    assert "--selection must be 'all', 'flagged', 'unverified', or 'sample'" in result.output
     assert "Traceback" not in result.output
     assert isinstance(result.exception, SystemExit)
     assert path.exists() is exists
@@ -266,7 +347,7 @@ def test_cli_api_selection_parity(
     result = CliRunner().invoke(_build_app(), args)
     assert result.exit_code == 0, result.output
     assert to_review_table(corpus, api_path, selection=selection or "all") == len(expected)
-    assert _read_rows(cli_path) == expected
+    _assert_rows(_read_rows(cli_path), expected, corpus, selection=selection or "all")
     assert cli_path.read_bytes() == api_path.read_bytes()
     assert source.read_bytes() == source_bytes
 
@@ -313,12 +394,12 @@ def test_json_loaded_verification_metadata_api_cli_parity(
     all_path = tmp_path / "all.csv"
     expected_row = _expected_row(0, "loaded-word", "loaded-pred", evidence="attested")
     assert to_review_table(loaded, all_path, selection="all") == 1
-    assert _read_rows(all_path) == [expected_row]
+    _assert_rows(_read_rows(all_path), [expected_row], loaded)
 
     api_path = tmp_path / "api.csv"
     expected = [expected_row] if included else []
     assert to_review_table(loaded, api_path, selection="unverified") == len(expected)
-    assert _read_rows(api_path) == expected
+    _assert_rows(_read_rows(api_path), expected, loaded, selection="unverified")
     cli_path = tmp_path / "cli.csv"
     result = CliRunner().invoke(_build_app(), [
         "review", "export", str(source), "-o", str(cli_path), "--selection", "unverified",
@@ -326,7 +407,7 @@ def test_json_loaded_verification_metadata_api_cli_parity(
     assert result.exit_code == 0, result.output
     assert result.exception is None
     assert "Traceback" not in result.output
-    assert _read_rows(cli_path) == expected
+    _assert_rows(_read_rows(cli_path), expected, loaded, selection="unverified")
     assert cli_path.read_bytes() == api_path.read_bytes()
     assert loaded.to_json() == before
     assert source.read_bytes() == source_bytes
@@ -356,7 +437,7 @@ def test_correct_persist_reload_and_reexport_unverified(
     else:
         assert to_review_table(corpus, review_path, selection="unverified") == 10
     rows = _read_rows(review_path)
-    assert rows == EXPECTED_UNVERIFIED
+    _assert_rows(rows, EXPECTED_UNVERIFIED, corpus, selection="unverified")
     for row in rows:
         if row["token"] == "legacy-unresolved":
             row["correct_lemma"] = "changed-lemma"
@@ -412,7 +493,7 @@ def test_correct_persist_reload_and_reexport_unverified(
         dict(row, pred_pos="VERB") if row["token"] == "resolved" else row
         for row in EXPECTED_UNVERIFIED if row["token"] != "legacy-unresolved"
     ]
-    assert _read_rows(reexport_path) == expected_remaining
+    _assert_rows(_read_rows(reexport_path), expected_remaining, reloaded, selection="unverified")
     all_path = tmp_path / "all-corrected.csv"
     assert to_review_table(reloaded, all_path) == len(EXPECTED_ALL)
     corrected_row = next(r for r in _read_rows(all_path) if r["token"] == "legacy-unresolved")

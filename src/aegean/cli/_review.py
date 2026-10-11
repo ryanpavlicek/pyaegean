@@ -8,15 +8,23 @@ corrected result, preserving each machine value and stamping the reviewer. See t
 
 from __future__ import annotations
 
+import contextlib
+import os
 import shlex
+import tempfile
 import sys
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
+from uuid import uuid4
 
 import typer
 
 from ._common import CORPUS_ARG, console, fail, load_corpus, table, write_corpus, writing
 from ._greek import LEMMATIZER_OPT, NEURAL_LEMM_OPT, NEURAL_OPT, TAGGER_OPT, _activate
+
+if TYPE_CHECKING:
+    from ..core.corpus import Corpus
+
 
 review_app = typer.Typer(
     help="Export annotations for optional field-level review, and apply decisions or corrections.",
@@ -39,20 +47,44 @@ def _apply_hint(
     return shlex.join(args)
 
 
+def _save_annotation_snapshot(corpus: "Corpus", destination: Path) -> None:
+    """Publish fully written JSON without replacing an existing user artifact."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".review-analysis-",
+                                     suffix=".json", delete=False) as stream:
+        staging = Path(stream.name)
+    try:
+        corpus.to_json(staging)
+        # A hard link atomically fails if destination exists. Both paths have the
+        # same parent/filesystem; unlinking staging leaves the published bytes.
+        os.link(staging, destination)
+    finally:
+        staging.unlink(missing_ok=True)
+
+
 @review_app.command()
 def export(
     corpus: str = CORPUS_ARG,
     output: Path = typer.Option(..., "--output", "-o", help="Destination .csv review table."),
     selection: str = typer.Option(
         "all", "--selection",
-        help="Rows to export: 'all', 'flagged' (review flag), or 'unverified' "
-             "(lemma_verified is not the string 'true', case-insensitive). "
-             "No confidence threshold.",
+        help="Rows to export: all, flagged (existing lemma review flag), unverified "
+             "(any requested field lacks its own verified=true), or sample (seeded "
+             "unflagged words). No confidence threshold.",
     ),
+    fields: list[str] = typer.Option(["lemma"], "--field",
+        help="Requested review field; repeat for lemma, pos, morph, head, deprel. Default lemma."),
+    sample_size: int | None = typer.Option(None, "--sample-size",
+        help="Number of unflagged words for --selection sample; requires a nonnegative integer."),
+    seed: int = typer.Option(0, "--seed", help="Deterministic unflagged sample seed."),
+    annotated_output: Path | None = typer.Option(None, "--annotated-output",
+        help="Save generated analysis to a new .json file; default is a unique file beside the CSV. "
+             "Requires --annotate; existing files are never replaced."),
     annotate: bool = typer.Option(
         False, "--annotate",
-        help="Generate lemma/POS predictions, replacing those keys in the loaded copy. "
-             "Omit this to review existing source annotations, such as the NT's.",
+        help="Generate and save lemma/POS predictions; requested head/deprel also generates "
+             "complete neural morphology/syntax. Apply the saved analysis shown in the hint. "
+             "Omit to review existing source annotations.",
     ),
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -66,8 +98,20 @@ def export(
     different ``correct_*`` value. Blank decisions preserve correction-only behavior.
     Add reviewer identity, notes, and evidence, then feed the table to
     ``aegean review apply``. Example: aegean review apply nt reviewed.csv -o nt-fixed.json"""
-    if selection not in ("all", "flagged", "unverified"):
-        raise fail("--selection must be 'all', 'flagged', or 'unverified'")
+    if selection not in ("all", "flagged", "unverified", "sample"):
+        raise fail("--selection must be 'all', 'flagged', 'unverified', or 'sample'")
+    if not fields or len(set(fields)) != len(fields) or any(
+        name not in ("lemma", "pos", "morph", "head", "deprel") for name in fields
+    ):
+        raise fail("--field must name distinct lemma, pos, morph, head, deprel fields")
+    if selection == "sample" and (sample_size is None or sample_size < 0):
+        raise fail("--selection sample requires a nonnegative --sample-size")
+    if selection != "sample" and sample_size is not None:
+        raise fail("--sample-size requires --selection sample")
+    if annotated_output is not None and not annotate:
+        raise fail("--annotated-output requires --annotate")
+    if annotated_output is not None and annotated_output.suffix.lower() != ".json":
+        raise fail("--annotated-output must be a new .json file")
 
     from aegean import greek
     from aegean.io import to_review_table
@@ -75,20 +119,44 @@ def export(
     if output.suffix.lower() != ".csv":
         raise fail("review export writes a .csv table (pass -o table.csv)")
     c = load_corpus(corpus)
+    analysis_path: Path | None = None
     if annotate:
         _activate(tagger=tagger, lemmatizer=lemmatizer,
                   neural_lemmatizer=neural_lemmatizer, neural=neural)
-        c = greek.annotate_corpus(c)
-    with writing(output):
-        n = to_review_table(
-            c, output, selection=cast(Literal["all", "flagged", "unverified"], selection),
-            reviewer=reviewer,
-        )
+        try:
+            c = (greek.annotate_corpus(c, with_dependencies=True)
+                 if set(fields) & {"head", "deprel"} else greek.annotate_corpus(c))
+        except ValueError as exc:
+            raise fail(f"could not annotate review source: {exc}") from None
+        generation = next((token.annotations["analysis_generation"] for doc in c.documents
+                           for token in doc.tokens if "analysis_generation" in token.annotations), uuid4().hex)
+        analysis_path = annotated_output or output.with_name(f"{output.stem}.analysis-{generation}.json")
+        try:
+            _save_annotation_snapshot(c, analysis_path)
+        except OSError as exc:
+            raise fail(f"could not save annotated review source {analysis_path}: {exc}") from None
+    try:
+        with writing(output):
+            n = to_review_table(
+                c, output, selection=cast(Literal["all", "flagged", "unverified", "sample"], selection),
+                reviewer=reviewer, fields=fields, sample_size=sample_size, seed=seed,
+            )
+    except (OSError, ValueError) as exc:
+        if analysis_path is not None:
+            with contextlib.suppress(OSError):
+                analysis_path.unlink(missing_ok=True)
+        raise fail(f"could not export review table: {exc}") from None
+    except BaseException:
+        if analysis_path is not None:
+            with contextlib.suppress(OSError):
+                analysis_path.unlink(missing_ok=True)
+        raise
     print(f"wrote {n} review rows to {output}", file=sys.stderr)
-    # When the corpus was annotated for this export, apply must annotate too, or the
-    # generated predictions in fields left unreviewed would otherwise be missing.
-    hint = _apply_hint(corpus, output, annotate=annotate, tagger=tagger, lemmatizer=lemmatizer,
-                       neural_lemmatizer=neural_lemmatizer, neural=neural)
+    if analysis_path is not None:
+        print(f"saved generated analysis to {analysis_path}", file=sys.stderr)
+    hint = _apply_hint(str(analysis_path) if analysis_path is not None else corpus,
+                       output, annotate=False, tagger=False, lemmatizer=False,
+                       neural_lemmatizer=False, neural=False)
     print(f"record field decisions or corrections, then:  {hint}")
 
 
@@ -102,8 +170,8 @@ def apply(
     reviewer: str = typer.Option("", "--reviewer", help="Reviewer identity when the CSV leaves it blank."),
     annotate: bool = typer.Option(
         False, "--annotate",
-        help="Generate the same predictions before applying; repeat this and backend flags "
-             "whenever export used them, including for fields left unreviewed.",
+        help="Generate a new analysis before applying old correction-only tables. "
+             "Bound snapshots require the saved export analysis; a fresh run is stale even if values repeat.",
     ),
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -117,7 +185,8 @@ def apply(
     prediction unverified. Blank rows never imply approval. Each field records its
     reviewer, note, and evidence; the original prediction and decision history survive.
     Pass the SAME corpus the table was exported from, and repeat ``--annotate`` (plus any
-    backend flags) if the export used it."""
+    backend flags) only for older correction-only tables. New exports bind the saved
+    analysis; reannotation requires a fresh table even when predictions repeat."""
     from aegean import greek
     from aegean.io import from_review_table
 
@@ -155,7 +224,7 @@ def merge(
     ),
     json_out: bool = typer.Option(False, "--json", help="Emit the merge result as JSON."),
     annotate: bool = typer.Option(
-        False, "--annotate", help="Repeat the export's annotation and backend flags before merging.",
+        False, "--annotate", help="Generate an analysis for old correction-only tables; bound snapshots require the saved export analysis.",
     ),
     tagger: bool = TAGGER_OPT,
     lemmatizer: bool = LEMMATIZER_OPT,
@@ -199,7 +268,7 @@ def merge(
             "tables": [str(t) for t in tables],
             "reviewers": list(merged.reviewers),
             "agreed_corrections": sum(
-                any(row.get(column) for column in ("correct_lemma", "correct_pos", "correct_morph"))
+                any(row.get(column) for column in ("correct_lemma", "correct_pos", "correct_morph", "correct_head", "correct_deprel"))
                 for row in merged.rows
             ),
             "agreed_review_rows": len(merged.rows),

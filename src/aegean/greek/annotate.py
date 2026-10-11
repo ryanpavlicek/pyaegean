@@ -7,9 +7,9 @@ lemma, POS, and the lemma's evidence class back onto each token, aligned 1:1 (it
 document's existing word tokens directly, never re-tokenizing). The result is a new corpus;
 the input is not mutated.
 
-Word tokens are grouped by their line for context (the unit each corpus already provides);
-punctuation and numerals are left untouched. With the neural joint pipeline active, each
-line is analyzed in one pass; otherwise the zero-dependency lemmatize + POS baseline is used.
+Word tokens are grouped by their physical line; punctuation and numerals remain untouched.
+Opt-in ``with_dependencies`` analyzes complete neural document token groups, preserves
+punctuation in the dependency index domain, and persists morphology, syntax, and receipts.
 With built-in annotation, ``with_evidence`` also records exact ``lemma_source``, ``lemma_resolved``,
 ``lemma_verified``, and ``review_recommended`` fields so review triage does not overload
 one boolean. The deprecated ``lemma_known`` compatibility annotation remains during its
@@ -17,7 +17,9 @@ deprecation cycle (see `aegean.greek.LemmaSource`)."""
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
+from uuid import uuid4
 from typing import TYPE_CHECKING, Callable, Literal
 
 from .heldout import TagSentence
@@ -31,11 +33,13 @@ _PREDICTION_EVIDENCE_KEYS = frozenset({
     "lemma_source", "lemma_resolved", "lemma_verified", "review_recommended", "lemma_known",
     "upos_verified",
     "neural_analyzed", "analysis_complete", "analysis_warning",
+    "analysis_receipt", "analysis_generation", "analysis_kind", "analysis_configuration",
 })
 
 
 def _prediction_annotations(
     annotations: dict[str, str], *, lemma: str, upos: str,
+    replaced: tuple[str, ...] = ("lemma", "upos"),
 ) -> dict[str, str]:
     """Start a fresh prediction while retaining unrelated source and review-history fields."""
     ann = {
@@ -46,7 +50,8 @@ def _prediction_annotations(
     # fresh prediction must not inherit that approval even if the strings agree.
     # Keep the decision details and audit history available for comparison, while
     # marking only the fields this annotator replaces as no longer current.
-    for field in ("lemma", "upos"):
+    for field in replaced:
+        ann.pop(f"{field}_verified", None)
         decision_key = f"{field}_review_decision"
         if decision_key in ann:
             ann[decision_key] = "stale"
@@ -59,11 +64,13 @@ def annotate_corpus(
     *,
     tag_sentence: TagSentence | None = None,
     with_evidence: bool = True,
+    with_dependencies: bool = False,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     progress: Callable[[int, int], None] | None = None,
 ) -> "Corpus":
     """Return a copy of ``corpus`` with each word token's ``lemma`` / ``upos`` annotations
-    filled by the pipeline (plus explicit lemma provenance/review fields when
+    filled by the pipeline (plus opt-in neural morphology/syntax and receipt identity,
+    and explicit lemma provenance/review fields when
     ``with_evidence``).
 
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
@@ -75,7 +82,12 @@ def annotate_corpus(
     ``tag_sentence`` or ``with_evidence=False`` leaves those fields absent. Unrelated
     keys, such as source morphology, and review history remain. Field-level lemma
     and POS review decisions become ``stale``; their reviewer details are retained
-    as history. Reviews of unchanged source morphology remain current. Keep the original
+    as history. Baseline/custom reviews of unchanged source morphology remain current;
+    ``with_dependencies=True`` requires the active neural pipeline and replaces
+    morphology/syntax for complete token groups, invalidating their decisions too.
+    Every actual invocation records a fresh analysis generation, even for identical outputs;
+    no-op review export or review replay does not generate an analysis. Unknown model
+    identity is explicit for baseline/custom paths. Keep the original
     corpus separately when comparing source annotations with these predictions.
     Neural input is strict by default. Pass ``long_input="partial"`` only when explicitly
     marked placeholder annotations are useful, or ``long_input="windowed"`` to reconcile
@@ -97,6 +109,22 @@ def annotate_corpus(
     from .pos import pos_tag
 
     use_joint = tag_sentence is None and joint.active() is not None
+    # Generation describes an actual invocation, not just a content hash. Re-running
+    # the same model with identical outputs still requires a fresh review snapshot.
+    generation = uuid4().hex
+    kind = "neural" if use_joint else "custom" if tag_sentence is not None else "baseline"
+    configuration = json.dumps({
+        "annotator": "aegean.greek.annotate_corpus", "with_evidence": with_evidence,
+        "long_input": long_input, "with_dependencies": with_dependencies,
+        "replaced_fields": ["lemma", "upos", "morph", "feats", "head", "deprel", "xpos"]
+        if with_dependencies else ["lemma", "upos"], "custom_callable_identity": "unknown" if tag_sentence is not None else None,
+    }, sort_keys=True, separators=(",", ":"))
+
+    def _identity(ann: dict[str, str], receipt: str = "unknown") -> None:
+        ann.update(analysis_generation=generation, analysis_kind=kind,
+                   analysis_configuration=configuration, analysis_receipt=receipt)
+    if with_dependencies and not use_joint:
+        raise ValueError("with_dependencies=True requires the active neural Greek pipeline")
     if long_input != "strict" and not use_joint:
         raise ValueError(
             f"long_input={long_input!r} requires the active neural Greek pipeline"
@@ -116,9 +144,14 @@ def annotate_corpus(
     for done, doc in enumerate(corpus.documents, start=1):
         new_tokens = list(doc.tokens)
         groups: dict[int, list[int]] = {}
-        for i, tok in enumerate(doc.tokens):
-            if tok.kind is TokenKind.WORD:
-                groups.setdefault(tok.line_no if tok.line_no is not None else 0, []).append(i)
+        if use_joint and with_dependencies and any(tok.kind is TokenKind.WORD for tok in doc.tokens):
+            # Keep the complete parse domain, including punctuation and source
+            # sentences spanning physical lines. The pipeline owns segmentation.
+            groups[0] = list(range(len(doc.tokens)))
+        else:
+            for i, tok in enumerate(doc.tokens):
+                if tok.kind is TokenKind.WORD:
+                    groups.setdefault(tok.line_no if tok.line_no is not None else 0, []).append(i)
         for idxs in groups.values():
             selected = [_select_token_form(doc.tokens[i]) for i in idxs]
             forms = [form for form, _ in selected]
@@ -132,6 +165,7 @@ def annotate_corpus(
                     ann = _prediction_annotations(
                         doc.tokens[i].annotations, lemma=lemma, upos=upos,
                     )
+                    _identity(ann)
                     new_tokens[i] = replace(
                         doc.tokens[i], annotations=ann, form_state=form_state
                     )
@@ -148,7 +182,21 @@ def annotate_corpus(
                 for rec, i in zip(analyzed, idxs):
                     ann = _prediction_annotations(
                         doc.tokens[i].annotations, lemma=rec.lemma, upos=rec.upos,
+                        replaced=("lemma", "upos", "morph", "feats", "head", "deprel", "xpos")
+                        if with_dependencies else ("lemma", "upos"),
                     )
+                    if with_dependencies:
+                        # Complete-token syntax owns these outputs; ordinary lemma/POS
+                        # annotation continues to preserve source morphology and parses.
+                        for key in ("morph", "feats", "head", "deprel", "xpos"):
+                            ann.pop(key, None)
+                        for key, value in (("feats", rec.feats), ("head", rec.head),
+                                           ("deprel", rec.relation), ("xpos", rec.xpos)):
+                            if value is not None:
+                                ann[key] = str(value)
+                        ann["dependency_sentence_id"] = f"{doc.id}:analysis-sentence:{rec.sentence}"
+                        ann["dependency_index"] = str(rec.index)
+                    _identity(ann, rec.analysis_receipt.to_json() if rec.analysis_receipt is not None else "unknown")
                     _evidence(ann, rec.lemma_source)
                     if with_evidence and use_joint:
                         ann["neural_analyzed"] = (
@@ -173,6 +221,7 @@ def annotate_corpus(
                         doc.tokens[i].annotations, lemma=lemma, upos=pos_tag(form),
                     )
                     _evidence(ann, source)
+                    _identity(ann)
                     new_tokens[i] = replace(
                         doc.tokens[i], annotations=ann, form_state=form_state
                     )

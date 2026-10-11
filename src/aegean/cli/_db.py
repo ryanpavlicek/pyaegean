@@ -1,9 +1,10 @@
 """``aegean db`` — the SQLite persistence layer (aegean.db) from the shell.
 
-Build a queryable SQLite database from any corpus, append to it, and full-text search it.
+Build a queryable SQLite database from any corpus, append to it, and search it.
 The database is a faithful round-trip (documents + tokens + provenance) with an FTS5 text
 index; load it back in Python with ``Corpus.from_sql(path)`` or stream it with
-``aegean.db.stream(path)``.
+``aegean.db.stream(path)``. Build optional exact lexical indexes explicitly with
+``aegean db index PATH``; ``--status`` inspects them without writing.
 """
 
 from __future__ import annotations
@@ -49,7 +50,7 @@ def _resolve_db(path: Path) -> Path:
     return path
 
 
-def live_progress(verb: str) -> Callable[[int, int], None]:
+def live_progress(verb: str, *, unit: str = "documents") -> Callable[[int, int], None]:
     """A document-count progress painter for the db read/write hooks (`aegean.db`'s
     ``progress=``), e.g. ``live_progress("writing")``. Same behavior as the eval live
     line in ``_greek.py``: one repainted stderr line, TTY-only."""
@@ -64,7 +65,7 @@ def live_progress(verb: str) -> Callable[[int, int], None]:
         if done % step and done != total:
             return
         end = "\n" if done == total else ""
-        print(f"\r  {verb} {done:,}/{total:,} documents ({100 * done // total}%)",
+        print(f"\r  {verb} {done:,}/{total:,} {unit} ({100 * done // total}%)",
               file=sys.stderr, end=end, flush=True)
 
     return paint
@@ -131,6 +132,37 @@ def add(
     with writing(output):
         to_sqlite(c, output, append=True, progress=live_progress("writing"))
     print(f"added/updated {len(c)} documents in {output}")
+
+
+@db_app.command()
+def index(
+    path: Path = typer.Argument(..., help="Existing local writable SQLite corpus database."),
+    status: bool = typer.Option(False, "--status", help="Inspect index status read-only, without building."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Build or refresh exact surface/normalized/lemma and reading-status indexes.
+
+    Rebuild explicitly after appending or changing annotations. Search uses the
+    current scan path until an index is ready. For hosted databases, first copy
+    the downloaded database to a writable local path.
+    """
+    import sqlite3
+
+    from aegean.db import build_lexical_index, lexical_index_status
+
+    if not path.exists():
+        raise fail(f"no database at {path} (use a local file from `aegean db build`)")
+    try:
+        report = (lexical_index_status(path) if status else build_lexical_index(
+            path, progress=live_progress("indexing", unit="tokens"),
+        ))
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        raise fail(str(exc)) from None
+    if emit_result(report, json_output=json_out, output=None):
+        return
+    print(f"lexical index: {report['state']} ({report['reason']})")
+    if report["indexed_tokens"] is not None:
+        print(f"tokens indexed: {report['indexed_tokens']:,}")
 
 
 @db_app.command()

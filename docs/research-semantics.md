@@ -62,7 +62,11 @@ before inscription filters; query metadata records this scope when applicable.
 SQLite `aegean.db.search(path, text, view="normalized")` shares the explicit
 lexical views and status selection. It returns the original surface text in its
 hit tuples, including when matching a lemma. Missing lemmas cannot match. Explicit
-views scan the token table and need no new database schema. Omitting both view and
+exact searches can use an explicitly built lexical index:
+`aegean.db.build_lexical_index(path)`. An absent or stale index falls back to the
+token-table scan; building again refreshes it. Token edits invalidate the index,
+and neither search nor status inspection writes to the database. Substring queries
+retain their scan behavior. Omitting both view and
 status selection retains the existing indexed, case-insensitive search across all
 token kinds. This legacy path preserves diacritics but does not equate NFC/NFD
 variants. Token search is literal equality; `mode="substring"` is explicit.
@@ -73,6 +77,7 @@ CLI examples:
 aegean stats corpus.json --view lemma --statuses certain --details --json
 aegean stats corpus.json --count-unit document --details --json
 aegean query corpus.json --view normalized --output-kind words --count-unit token --json
+aegean db index corpus.db
 aegean db search corpus.db λόγος --view lemma --statuses certain --json
 aegean balance lineara HT13 --exact --strict --json
 ```

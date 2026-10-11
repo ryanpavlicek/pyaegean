@@ -92,14 +92,14 @@ def _edit_review(path: Path, **changes: str) -> None:
         writer.writerows(rows)
 
 
-def test_review_prefers_stable_source_identity_and_rejects_changed_span(tmp_path) -> None:
+def test_review_binds_source_identity_and_requires_export_after_renumbering(tmp_path) -> None:
     corpus = _corpus()
     table = tmp_path / "review.csv"
     assert to_review_table(corpus, table) == 2
     _edit_review(table, correct_lemma="λέξις")
 
-    # Positions are a compatibility/display field. The stable source-token ID is
-    # the primary A4 join, so an annotation-only journey survives renumbering.
+    # The stable source-token ID remains the join, while a bound snapshot also
+    # records document context and positions. Renumbering requires a new export.
     original_document = corpus.documents[0]
     moved_tokens = [
         replace(token, position=(token.position or 0) + 20)
@@ -110,6 +110,10 @@ def test_review_prefers_stable_source_identity_and_rejects_changed_span(tmp_path
         provenance=corpus.provenance,
         script_id=corpus.script_id,
     )
+    with pytest.raises(ValueError, match="source snapshot changed"):
+        from_review_table(table, moved)
+    assert to_review_table(moved, table) == 2
+    _edit_review(table, correct_lemma="λέξις")
     corrected = from_review_table(table, moved)
     word = next(token for token in corrected.documents[0].tokens if token.text == "λόγος")
     assert word.annotations["lemma"] == "λέξις"

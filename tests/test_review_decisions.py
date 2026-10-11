@@ -233,7 +233,7 @@ def test_accept_vs_correction_conflicts_hold_field_and_keep_agreed_morphology(tm
     ({"decision_lemma": "correct"}, "requires correct_lemma"),
     ({"decision_lemma": "correct", "correct_lemma": "λόγος"}, "requires accept"),
     ({"decision_lemma": "accept", "correct_lemma": "λέξις"}, "requires a blank"),
-    ({"decision_morph": "accept", "pred_morph": ""}, "absent"),
+    ({"decision_morph": "accept", "pred_morph": ""}, "changed since export"),
     ({"decision_lemma": "accept", "pred_lemma": "obsolete"}, "changed since export"),
     ({"decision_lemma": "accept", "position": "1.0"}, "unusable position"),
     ({"decision_lemma": "accept", "token": "different"}, "different token"),
@@ -282,7 +282,7 @@ def test_malformed_reviewer_attribution_fails_cleanly_without_changing_source(
 
 
 @pytest.mark.parametrize("command", ["export", "merge"])
-def test_cli_hints_quote_paths_and_preserve_annotation_backend_flags(
+def test_cli_hints_quote_paths_and_use_persisted_export_analysis(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, command: str,
 ) -> None:
     source = tmp_path / "corpus name;literal.json"
@@ -302,7 +302,15 @@ def test_cli_hints_quote_paths_and_preserve_annotation_backend_flags(
     result = CliRunner().invoke(_build_app(), args)
     assert result.exit_code == 0, result.output
     hint = next(line for line in result.output.splitlines() if "then:" in line).split("then:", 1)[1].strip()
-    assert shlex.split(hint) == [
-        "aegean", "review", "apply", str(source), str(output), "-o", "corrected.json",
-        "--annotate", "--tagger", "--lemmatizer", "--neural-lemmatizer", "--neural",
-    ]
+    if command == "export":
+        saved = list(tmp_path.glob("review name.analysis-*.json"))
+        assert len(saved) == 1
+        assert Corpus.from_json(saved[0]).to_json() == corpus.to_json()
+        assert shlex.split(hint) == [
+            "aegean", "review", "apply", str(saved[0]), str(output), "-o", "corrected.json",
+        ]
+    else:
+        assert shlex.split(hint) == [
+            "aegean", "review", "apply", str(source), str(output), "-o", "corrected.json",
+            "--annotate", "--tagger", "--lemmatizer", "--neural-lemmatizer", "--neural",
+        ]
