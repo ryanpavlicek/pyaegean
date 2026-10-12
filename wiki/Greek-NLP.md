@@ -1622,6 +1622,14 @@ and `greek.gloss(word, dictionary=id)` / `greek.entry(word, dictionary=id)` reso
 against a chosen dictionary (with no `dictionary=`, the first active one). Inflected forms
 lemmatize on a miss, exactly as with LSJ.
 
+Ordinary headwords can resolve source keys with editorial entry numbers or a
+leading dagger when the match is unambiguous: for example, LSJ `ἅμα` and Cunliffe
+`εἰμί`. Lookup preserves accents and breathings, so `εἰμί` and `εἶμι` remain
+distinct. A genuinely ambiguous spelling such as `ειμι` returns no entry; an
+exact source key can select a numbered homonym. Returned headwords, definitions,
+and editorial marks retain the dictionary's original wording. Inflected forms
+still use lemmatization when no compatible headword matches directly.
+
 ```python
 greek.lexica()                       # every dictionary: id, scope, license, hosted vs link
 

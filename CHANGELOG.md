@@ -6,6 +6,13 @@ All notable changes to pyaegean are documented here. The format follows
 
 ## Unreleased
 
+### Fixed
+
+- Greek dictionary lookup resolves unambiguous headwords whose source keys carry
+  editorial numbers or a leading dagger. Accent and breathing distinctions,
+  exact source keys, and original entries are preserved. Genuine homonym
+  ambiguity stays unresolved, while marked inflected forms still lemmatize.
+
 ### Added
 
 - Translation and optional checking accept separately supplied source context.

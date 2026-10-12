@@ -269,20 +269,10 @@ class LSJLexicon:
     """A lemma→entry view of the Perseus LSJ, with lemmatize-on-miss lookup."""
 
     def __init__(self, data: dict[str, dict[str, Any]]) -> None:
-        from .lexindex import level_grave
+        from .lexindex import _lookup_maps
 
         self._data = data
-        self._levelled: dict[str, str] = {}
-        # See IndexLexicon: an accent-stripped form shared by several headwords is
-        # ambiguous and must resolve to nothing rather than to the first one indexed.
-        stripped: dict[str, str | None] = {}
-        for key in data:
-            self._levelled.setdefault(level_grave(key), key)
-            folded = _strip_accents(key)
-            stripped[folded] = None if folded in stripped else key
-        self._stripped: dict[str, str] = {
-            folded: key for folded, key in stripped.items() if key is not None
-        }
+        self._levelled, self._stripped, self._ambiguous = _lookup_maps(data)
 
     @classmethod
     def load(cls, path: Path | str | None = None) -> "LSJLexicon":
@@ -298,10 +288,10 @@ class LSJLexicon:
         return len(self._data)
 
     def _probe(self, word: str) -> dict[str, Any] | None:
-        """Exact key, graves levelled, then -- only for input carrying no accents of
-        its own -- the unambiguous accent-stripped key. Folding an accented query onto
+        """Exact key, unambiguous grave-levelled key or editorial alias, then the
+        unambiguous accent-stripped key with compatible accents. Folding a query onto
         a differently accented headword answered εἰ "if" with εἷ "where"."""
-        from .lexindex import compatible_accents, level_grave
+        from .lexindex import _headword_key, compatible_accents, level_grave
 
         hit = self._data.get(_norm(word))
         if hit is not None:
@@ -311,15 +301,20 @@ class LSJLexicon:
             return self._data[key]
         key = self._stripped.get(_strip_accents(word))
         if key is not None and (
-            _strip_accents(word) == _norm(word) or compatible_accents(word, key)
+            _strip_accents(word) == _norm(word)
+            or compatible_accents(_headword_key(word), _headword_key(key))
         ):
             return self._data[key]
         return None
 
     def _entry_dict(self, word: str) -> dict[str, Any] | None:
+        from .lexindex import _ambiguous_key
+
         hit = self._probe(word)
         if hit is not None:
             return hit
+        if _ambiguous_key(word, self._ambiguous):
+            return None
         # Miss: lemmatize (uses the treebank backend if active) and retry.
         from .lemmatize import lemmatize
 

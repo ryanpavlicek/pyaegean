@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 import unicodedata
+from collections.abc import Iterable
 from pathlib import Path
 
 from ..data import load_gzip_json
@@ -66,6 +68,59 @@ def level_grave(text: str) -> str:
     return unicodedata.normalize("NFC", nfd.replace(_GRAVE, _ACUTE))
 
 
+def _headword_key(key: str) -> str:
+    """A lookup alias without editorial counters or Cunliffe's leading dagger.
+
+    Perseus/Middle Liddell append digits, Abbott-Smith appends ``_N``, and
+    Cunliffe prefixes ``†``. Keep every Greek accent, breathing and other character.
+    The original index keys and displayed entries remain unchanged.
+    """
+    alias = re.sub(r"(?<=[^\W\d_])_?[0-9]+$", "", norm(key)).removeprefix("†")
+    return alias or norm(key)
+
+
+def _lookup_maps(
+    keys: Iterable[str],
+) -> tuple[dict[str, str | None], dict[str, str | None], dict[str, tuple[str, ...]]]:
+    """Grave-levelled and accent-stripped keys, including unambiguous aliases."""
+    levelled: dict[str, str | None] = {}
+    stripped: dict[str, tuple[str, ...]] = {}
+    for key in keys:
+        for spelling in {norm(key), _headword_key(key)}:
+            folded = level_grave(spelling)
+            if folded not in levelled:
+                levelled[folded] = key
+            elif levelled[folded] != key:
+                levelled[folded] = None
+            folded = strip_accents(spelling)
+            candidates = stripped.get(folded, ())
+            if key not in candidates:
+                # A record's own alias is not a second candidate.
+                stripped[folded] = (*candidates, key)
+    return (
+        levelled,
+        {folded: keys[0] if len(keys) == 1 else None for folded, keys in stripped.items()},
+        {folded: keys for folded, keys in stripped.items() if len(keys) > 1},
+    )
+
+
+def _ambiguous_key(word: str, ambiguous: dict[str, tuple[str, ...]]) -> bool:
+    """Whether a failed probe has several headwords compatible with its marks.
+
+    Differently marked candidates cannot forbid inflection fallback: ``ᾧ`` is not
+    ``ω`` or ``ὦ``, and must still lemmatize to ``ὅς``.
+    """
+    query = _headword_key(word)
+    unaccented = strip_accents(query) == query
+    return any(
+        sum(
+            unaccented or compatible_accents(query, _headword_key(key))
+            for key in ambiguous.get(strip_accents(spelling), ())
+        ) > 1
+        for spelling in {norm(word), query}
+    )
+
+
 def concise(text: str, limit: int = 160) -> str:
     """A concise one-line gloss from a (possibly long) definition."""
     text = " ".join(text.split())
@@ -99,25 +154,14 @@ class IndexLexicon:
     def __init__(self, info: LexiconInfo, data: dict[str, dict[str, str]]) -> None:
         self.info = info
         self._data = data
-        self._levelled: dict[str, str] = {}
-        # An accent-stripped form that several headwords share is ambiguous, so it
-        # resolves to nothing rather than to whichever entry happened to be indexed
-        # first: λαός "people" and λᾶος "stone" both strip to λαος.
-        stripped: dict[str, str | None] = {}
-        for key in data:
-            self._levelled.setdefault(level_grave(key), key)
-            folded = strip_accents(key)
-            stripped[folded] = None if folded in stripped else key
-        self._stripped: dict[str, str] = {
-            folded: key for folded, key in stripped.items() if key is not None
-        }
+        self._levelled, self._stripped, self._ambiguous = _lookup_maps(data)
 
     def __len__(self) -> int:
         return len(self._data)
 
     def _probe(self, word: str) -> dict[str, str] | None:
-        """Exact key, then the same word with graves levelled, then -- only for input
-        that carries no accents of its own -- the unambiguous accent-stripped key.
+        """Exact key, then an unambiguous grave-levelled key or editorial alias,
+        then an unambiguous accent-stripped key with compatible query accents.
 
         Folding an ACCENTED query onto a differently accented headword is a homograph
         guess, not a hit, and it was answering the commonest words in Greek with the
@@ -133,7 +177,7 @@ class IndexLexicon:
         key = self._stripped.get(strip_accents(word))
         if key is not None and (
             strip_accents(word) == norm(word)  # unaccented query: nothing to contradict
-            or compatible_accents(word, key)
+            or compatible_accents(_headword_key(word), _headword_key(key))
         ):
             return self._data[key]
         return None
@@ -142,6 +186,8 @@ class IndexLexicon:
         hit = self._probe(word)
         if hit is not None:
             return hit
+        if _ambiguous_key(word, self._ambiguous):
+            return None
         from .lemmatize import lemmatize
 
         lemma = lemmatize(word)
