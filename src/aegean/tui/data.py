@@ -34,7 +34,7 @@ if TYPE_CHECKING:  # type-only imports keep the module import-light
     from pathlib import Path
 
     from ..core.corpus import Corpus
-    from ..core.model import Document
+    from ..core.model import Document, Token
 
 __all__ = [
     "TuiError",
@@ -641,12 +641,14 @@ def line_analyses(script_id: str) -> list[AnalysisOption]:
 
 
 def run_line_analysis(
-    key: str, *, script_id: str, text: str, token_texts: tuple[str, ...]
+    key: str, *, script_id: str, text: str, token_texts: tuple[str, ...],
+    source_context: str | None = None,
 ) -> AnalysisResult:
     """Run analysis ``key`` on one line and return a renderable result. Never raises.
 
     ``text`` is the line as one string (Greek analyses use it); ``token_texts`` are the
-    line's token surface forms (the syllabic analyses split each on ``-`` into signs)."""
+    line's token surface forms (the syllabic analyses split each on ``-`` into signs).
+    ``source_context`` is retained source material for translation only."""
     try:
         if key == "offline":
             return _greek_offline(text)
@@ -655,7 +657,7 @@ def run_line_analysis(
         if key == "ipa":
             return _greek_ipa_result(text)
         if key == "translate":
-            return translate_line(text)
+            return translate_line(text, source_context=source_context)
         if key == "bridge":
             return _aegean_bridge(script_id, token_texts)
         if key == "exploratory":
@@ -793,13 +795,115 @@ def _usable_providers() -> list[str]:
     return sorted(out)
 
 
-def translate_line(text: str, *, script: str = "greek") -> AnalysisResult:
+def _aligned_line_text(document: "Document", tokens: list["Token"]) -> str | None:
+    """An exact retained source slice, only when every local mapping is reliable."""
+    source = document.source_text
+    if source is None or not tokens:
+        return None
+    start: int | None = None
+    end = 0
+    for token in tokens:
+        alignment = token.alignment
+        if alignment is None:
+            return None
+        try:
+            alignment.validate_source(source, document_id=document.id)
+        except (TypeError, ValueError):
+            return None
+        if start is None:
+            start = alignment.start_char
+        elif alignment.start_char < end:
+            return None
+        end = alignment.end_char
+    return source[start:end]
+
+
+def _line_source_context(
+    corpus: "Corpus", doc_id: str | None, line_number: int, *,
+    token_texts: tuple[str, ...] | None = None,
+) -> str | None:
+    """Serialize the selected reader line and at most one actual neighbor each side.
+
+    Reader line numbers select within one document, never by matching repeated
+    text or token positions. Source-aligned slices preserve their exact characters;
+    legacy token joins are explicitly labeled reconstructions. Editorial state and
+    known source/speaker annotations accompany the text, without model annotations.
+    Nothing is fetched or inferred, and an unavailable selection supplies no context.
+    """
+    import json
+
+    if doc_id is None:
+        return None
+    try:
+        document = _resolve_document(corpus, doc_id)
+    except TuiError:
+        return None
+    selected = line_number - 1
+    if not 0 <= selected < len(document.lines):
+        return None
+    selected_tokens = [document.tokens[i] for i in document.lines[selected]]
+    if token_texts is not None and tuple(t.text for t in selected_tokens) != token_texts:
+        return None
+    source_keys = frozenset({
+        "who", "speaker", "speaker_label", "speech_id", "role", "ref",
+    })
+    lines: list[dict[str, Any]] = []
+    for index in range(max(0, selected - 1), min(len(document.lines), selected + 2)):
+        indices = document.lines[index]
+        tokens = [document.tokens[i] for i in indices]
+        # A noncontiguous grouping must not claim intervening, unselected tokens
+        # belong to this reader line merely because its endpoints are aligned.
+        contiguous = bool(indices) and indices == list(range(indices[0], indices[-1] + 1))
+        raw = _aligned_line_text(document, tokens) if contiguous else None
+        cells: list[dict[str, Any]] = []
+        for token in tokens:
+            cell: dict[str, Any] = {
+                "text": token.text, "kind": token.kind.value,
+                "status": token.status.value, "alternates": list(token.alt),
+            }
+            metadata = {k: v for k, v in token.annotations.items() if k in source_keys}
+            if metadata:
+                cell["source_metadata"] = metadata
+            state = token.form_state
+            if state is not None:
+                editorial: dict[str, Any] = {
+                    "diplomatic": state.diplomatic,
+                    "segments": [segment.to_dict() for segment in state.segments],
+                }
+                if state.regularized is not None:
+                    editorial["regularized"] = state.regularized
+                cell["editorial_state"] = editorial
+            cells.append(cell)
+        lines.append({
+            "reader_line": index + 1,
+            "selected": index == selected,
+            "text": raw if raw is not None else " ".join(t.text for t in tokens),
+            "text_origin": "aligned_source_slice" if raw is not None else "reconstructed_token_text",
+            "tokens": cells,
+        })
+    context: dict[str, Any] = {
+        "document_id": document.id, "selected_reader_line": line_number, "lines": lines,
+    }
+    if document.meta.name:
+        context["document_name"] = document.meta.name
+    provenance = corpus.provenance
+    if provenance is not None:
+        context["source"] = {
+            key: value for key in ("source", "citation", "url", "edition_fidelity")
+            if (value := getattr(provenance, key))
+        }
+    return json.dumps(context, ensure_ascii=False, sort_keys=True)
+
+
+def translate_line(
+    text: str, *, script: str = "greek", source_context: str | None = None,
+) -> AnalysisResult:
     """Translate one line via the configured BYOAI provider (exploratory, provenanced).
 
     Returns a text result with the provider/model in ``note``; a missing key or any
-    provider error becomes a clean ``error`` (translation never crashes the reader)."""
-    text = text.strip()
-    if not text:
+    provider error becomes a clean ``error`` (translation never crashes the reader).
+    The selected text is passed exactly, with source context supplied separately."""
+    if not text.strip():
         return AnalysisResult(ok=True, title="translation")
     providers = _usable_providers()
     if not providers:
@@ -816,7 +920,9 @@ def translate_line(text: str, *, script: str = "greek") -> AnalysisResult:
         # keyed) rather than translate()'s anthropic default, which would fail for a user
         # whose only configured provider is another hosted one or the keyless local server.
         client = get_client(providers[0])
-        result = _translate(text, script=script, client=client)  # type: ignore[arg-type]
+        result = _translate(
+            text, script=script, client=client, source_context=source_context,
+        )  # type: ignore[arg-type]
     except AIError as exc:
         return AnalysisResult(ok=False, error=str(exc))
     except Exception as exc:  # pragma: no cover - AIError covers the known cases

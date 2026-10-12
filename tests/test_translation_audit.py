@@ -46,9 +46,9 @@ def test_initial_translation_separates_wording_notes_and_exact_response():
         "text_changed": None, "change_report_status": "not_comparable",
     }
     assert result.draft is None
-    assert result.prompt_version == ai.PROMPT_VERSION == "2026.10-v4"
+    assert result.prompt_version == ai.PROMPT_VERSION == "2026.10-v5"
     assert len(client.calls) == 1
-    assert client.calls[0][2] == 1024
+    assert client.calls[0][2] == 2048
     assert "ONLY valid JSON" in client.calls[0][1]
     assert "Model-reported uncertainties" in result.labeled()
     assert "context is missing" in result.labeled()

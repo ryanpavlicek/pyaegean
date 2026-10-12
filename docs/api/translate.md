@@ -28,6 +28,35 @@ the `[neural]` extra and model activation; OpenRouter requires `[openrouter]`.
 The same styles are supported by the lower-level `ai.translate` and
 `ai.verify_translation` functions. Checking remains off by default.
 
+Supply surrounding Greek, speaker labels, and cited editorial notes with
+`source_context`, separately from the passage being translated:
+
+```python
+from pathlib import Path
+
+context = Path("source-context.txt").read_text(encoding="utf-8")
+result = translate.translate(
+    "τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.", source_context=context,
+    greek_pipeline=pipeline, verify=True, client=client,
+)
+assert result.data["source_context"] == context
+assert result.draft.data["source_context"] == context
+```
+
+Both calls receive the same context; only the target passage is analyzed and
+translated. Context is fenced as source material, with instructions to use it
+for interpretation rather than follow directions embedded in it. Supply source
+citations and distinguish editorial notes from quoted Greek. Surrounding text
+is not fetched automatically by these string-based APIs.
+
+`ai.translate` and `ai.verify_translation` accept the same keyword. Checking a
+saved `ExploratoryResult` inherits its recorded context when the keyword is
+omitted or `None`. A different explicit context raises `ValueError` before any
+provider call; start a new translation to change the context of an existing
+context-bound draft. A string draft or older result without recorded context
+can receive explicit context. Supplied strings, including whitespace, survive
+JSON round trips and traces exactly.
+
 Structured responses separate the final reading from uncertainty and change
 reports. `result.data["raw_response"]` preserves the exact provider text.
 `result.draft` preserves the initial result, including provider/model, prompt
@@ -62,7 +91,8 @@ responses; use `labeled()` when displaying a result to retain its status.
 ```bash
 aegean ai translate 'τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.' \
   --provider openrouter --model openai/gpt-5.4 \
-  --greek-backend neural --verify --style concise --output translation.json
+  --greek-backend neural --verify --source-context-file source-context.txt \
+  --style concise --output translation.json
 
 aegean ai translate 'τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.' \
   --provider openrouter --model openai/gpt-5.4 \
@@ -73,6 +103,20 @@ Translation `.txt` files automatically include the audit trace, even without
 `--trace`, so a saved concise reading does not discard its notes or draft.
 `--trace` also displays these details on the terminal. These commands
 make separate paid requests; JSON is the preferred reusable archive.
+Use `--source-context` for inline context or `--source-context-file` for a UTF-8
+file; the two options are mutually exclusive.
+
+Translation and checking use a 2,048-token output allowance per call. Set
+`max_tokens` in Python or `--max-tokens` on the CLI for longer passages or more
+detailed notes. The value must be a positive integer. It is a maximum, not a
+request to fill that space; provider truncation can still occur. The package
+preserves malformed or incomplete structured output and makes no repair call.
+
+The Greek corpus reader supplies the selected line's source metadata and up to
+one neighboring reader line on each side, within the same document. It retains
+available speaker labels, citations, and editorial reading states. Source-aligned
+slices preserve their characters; older token-only records are labeled as
+reconstructed text. The selected line remains the translation target.
 
 ## Greek evidence
 

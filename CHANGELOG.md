@@ -8,6 +8,15 @@ All notable changes to pyaegean are documented here. The format follows
 
 ### Added
 
+- Translation and optional checking accept separately supplied source context.
+  Saved results retain it, later checking inherits it, and conflicting context
+  is rejected before a provider call. CLI translation accepts inline context or
+  a UTF-8 context file, keeping surrounding material separate from the target.
+  The Greek corpus reader supplies document-local neighboring lines and available
+  source, speaker, and editorial metadata automatically.
+- Translation and checking expose a positive `max_tokens` allowance per call
+  (CLI `--max-tokens`), defaulting to 2,048 tokens to leave more room for
+  uncertainty and change notes. No automatic repair or retry calls are added.
 - Review queues can select unverified annotation fields or a seeded sample of
   unflagged rows, with inclusion reasons. New snapshots bind source, predictions,
   analysis generation, and available model/configuration identity. Annotation

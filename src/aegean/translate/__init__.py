@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 from ..ai import translate as _ai_translate
 from ..ai import verify_translation as _ai_verify_translation
+from ..ai.capabilities import _validate_source_context, _validate_translation_max_tokens
 from ..ai.client import ExploratoryResult, LLMClient
 from ..ai.client import get_client as _get_client
 from ..ai.grounding import GroundingItem, as_item, content_glosses
@@ -758,6 +759,8 @@ def translate(
     glosses: bool = True,
     verify: bool = False,
     style: Literal["annotated", "concise"] = "annotated",
+    source_context: str | None = None,
+    max_tokens: int = 2048,
     greek_pipeline: GreekPipeline | None = None,
     greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
@@ -779,6 +782,14 @@ def translate(
     responses, ``text`` contains only the translation. Unstructured provider
     responses remain available verbatim and are explicitly marked as such.
 
+    ``source_context`` supplies surrounding text, speaker labels, or cited source
+    notes separately from the passage to translate. Both drafting and checking
+    receive the same context and retain it exactly in ``data['source_context']``.
+    Only ``text`` is analyzed and translated; context is untrusted source material,
+    not instructions. No surrounding text is fetched or inferred automatically.
+    ``max_tokens`` sets a positive output-token allowance for each provider call
+    (default 2,048); it does not trigger retries or format-repair requests.
+
     ``verify=True`` (Greek only) generates an ungrounded draft then asks the same
     provider to check it against full grounding and supplied evidence. A wrong
     analysis can still mislead the repair. Grounding cannot bias the initial draft
@@ -796,6 +807,8 @@ def translate(
     """
     if style not in ("annotated", "concise"):
         raise ValueError("style must be annotated or concise")
+    _validate_source_context(source_context)
+    _validate_translation_max_tokens(max_tokens)
     effective_mode: GroundingMode = "full" if verify and script == "greek" else mode
     outcome = _build_grounding(
         text,
@@ -838,6 +851,8 @@ def translate(
         c = client if client is not None else _get_client()
         draft = _ai_translate(
             text, source=source, target=target, grounding=(), style=style, client=c,
+            source_context=source_context,
+            max_tokens=max_tokens,
         )
         result = _ai_verify_translation(
             text,
@@ -846,6 +861,8 @@ def translate(
             target=target,
             grounding=outcome.items,
             style=style,
+            source_context=source_context,
+            max_tokens=max_tokens,
             client=c,
         )
     else:
@@ -855,6 +872,8 @@ def translate(
             target=target,
             grounding=outcome.items,
             style=style,
+            source_context=source_context,
+            max_tokens=max_tokens,
             client=client,
         )
     return replace(result, grounding_runtime=outcome.runtime)

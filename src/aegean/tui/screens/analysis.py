@@ -89,13 +89,15 @@ class LineAnalysisScreen(ModalScreen[None]):
     ]
 
     def __init__(
-        self, *, script_id: str, line_number: int, line_text: str, token_texts: tuple[str, ...]
+        self, *, script_id: str, line_number: int, line_text: str, token_texts: tuple[str, ...],
+        source_context: str | None = None,
     ) -> None:
         super().__init__()
         self._script_id = script_id
         self._line_number = line_number
         self._line_text = line_text
         self._token_texts = token_texts
+        self._source_context = source_context
         self._options = {o.key: o for o in adapter.line_analyses(script_id)}
 
     def compose(self) -> ComposeResult:
@@ -152,7 +154,8 @@ class LineAnalysisScreen(ModalScreen[None]):
         worker = get_current_worker()
         try:
             result = adapter.run_line_analysis(
-                key, script_id=self._script_id, text=self._line_text, token_texts=self._token_texts
+                key, script_id=self._script_id, text=self._line_text, token_texts=self._token_texts,
+                **({"source_context": self._source_context} if key == "translate" else {}),
             )
         except Exception as exc:  # the adapter is total, but never let a worker crash the app
             result = adapter.AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")

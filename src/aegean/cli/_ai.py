@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import typer
 
@@ -136,11 +136,40 @@ AI_OUTPUT_OPT = typer.Option(
 TRACE_OPT = typer.Option(False, "--trace", help="Print the grounding provenance trace.")
 
 
+def _read_source_context(inline: str | None, path: Path | None) -> str | None:
+    """Read optional source context before activating analysis or a provider."""
+    if inline is not None and path is not None:
+        raise fail("--source-context and --source-context-file are mutually exclusive")
+    context = inline
+    if path is not None:
+        try:
+            # Preserve source line endings; the BOM is a file encoding signature.
+            with path.open(encoding="utf-8-sig", newline="") as stream:
+                context = stream.read()
+        except UnicodeError:
+            raise fail(f"source context file {path} must be UTF-8") from None
+        except OSError as exc:
+            raise fail(f"could not read source context file {path}: {exc}") from None
+    return context
+
+
 @ai_app.command()
 def translate(
     text: str = typer.Argument(..., help="Text to translate ('-' reads stdin)."),
     script: str = typer.Option("greek", "--script", help="greek or lineara."),
     target: str = typer.Option("English", "--target", help="Target language."),
+    source_context: str | None = typer.Option(
+        None, "--source-context",
+        help="Source context supplied as text (edition, genre, speaker or surrounding passage).",
+    ),
+    source_context_file: Path | None = typer.Option(
+        None, "--source-context-file",
+        help="Read source context from a UTF-8 file; mutually exclusive with --source-context.",
+    ),
+    max_tokens: int = typer.Option(
+        2048, "--max-tokens", min=1,
+        help="Output-token limit for each translation or checking call (default: 2048).",
+    ),
     style: str = typer.Option(
         "annotated", "--style",
         help="annotated shows uncertainty and correction notes; concise keeps the reading "
@@ -200,6 +229,8 @@ def translate(
 
     from aegean import translate as tr
 
+    context = _read_source_context(source_context, source_context_file)
+    context_options: dict[str, Any] = {"source_context": context} if context is not None else {}
     if style not in ("annotated", "concise"):
         raise fail("--style must be annotated or concise")
     if greek_backend not in ("default", "baseline", "neural"):
@@ -238,12 +269,14 @@ def translate(
             result = _run(
                 lambda: tr.translate(
                     read_text(text), script=script, target=target,
+                    max_tokens=max_tokens,
                     mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
                     style=cast(Literal["annotated", "concise"], style),
                     greek_pipeline=greek_pipeline,
                     greek_long_input=cast(tr.GreekLongInput, greek_long_input),
                     grounding_failure=cast(tr.GroundingFailure, grounding_failure),
                     client=client,  # type: ignore[arg-type]
+                    **context_options,
                 )
             )
     except (ValueError, tr.GroundingError) as exc:

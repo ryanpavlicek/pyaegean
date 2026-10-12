@@ -283,7 +283,7 @@ def test_cli_translation_backend_and_failure_options(monkeypatch: pytest.MonkeyP
     runner = CliRunner()
     app = _build_app()
 
-    help_result = runner.invoke(app, ["ai", "translate", "--help"])
+    help_result = runner.invoke(app, ["ai", "translate", "--help"], env={"COLUMNS": "200"})
     assert help_result.exit_code == 0
     # Rich may inject ANSI spans inside an option or wrap at a hyphen depending on
     # terminal/Python version. Assert the rendered help after removing those layout

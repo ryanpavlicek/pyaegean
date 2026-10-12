@@ -97,6 +97,7 @@ class CorpusBrowserScreen(Screen[None]):
         # The id currently loaded into the table, so re-showing this screen only
         # reloads when the shared selection has actually changed.
         self._loaded_id: str | None = None
+        self._shown_doc_id: str | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -160,6 +161,7 @@ class CorpusBrowserScreen(Screen[None]):
         or a ``.json``/``.db`` file, the same superset the CLI accepts."""
         status = self.query_one("#corpus-status", Static)
         detail = self.query_one("#corpus-detail", DetailPane)
+        self._shown_doc_id = None
         status.update(f"loading {corpus_id}…")
         try:
             self._corpus = adapter.read_corpus_spec(corpus_id)
@@ -282,6 +284,7 @@ class CorpusBrowserScreen(Screen[None]):
         self._show_document(doc_id)
 
     def _show_document(self, doc_id: str) -> None:
+        self._shown_doc_id = None
         detail = self.query_one("#corpus-detail", DetailPane)
         corpus = self._corpus
         if corpus is None:
@@ -294,6 +297,7 @@ class CorpusBrowserScreen(Screen[None]):
             return
         balances = adapter.balance_rows(document)
         detail.show_document(info, balances)
+        self._shown_doc_id = info.id
         # start a freshly-opened document at the top; hint the reader's line cursor + analysis
         self.query_one("#corpus-right", VerticalScroll).scroll_home(animate=False)
         self.query_one("#corpus-status", Static).update(
@@ -313,5 +317,11 @@ class CorpusBrowserScreen(Screen[None]):
                 line_number=event.line_number,
                 line_text=event.line_text,
                 token_texts=event.token_texts,
+                source_context=(
+                    adapter._line_source_context(
+                        corpus, self._shown_doc_id, event.line_number, token_texts=event.token_texts,
+                    )
+                    if corpus.script_id == "greek" else None
+                ),
             )
         )
