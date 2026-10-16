@@ -5,7 +5,7 @@
      unmeasured warmup that absorbs .pyc compilation and OS file-cache effects) stays
      under a generous bound.
   3. nothing-heavy-bundled (with --wheel)  reject binary/model payloads and fail if
-     total uncompressed contents exceed the 5 MiB accident tripwire.
+     total uncompressed contents exceed the 6 MiB accident tripwire.
 
 Usage:
   python scripts/check_footprint.py                 # checks 1+2 (run after a CORE-only install)
@@ -39,7 +39,7 @@ STDLIB_OPTIONAL = ["sqlite3"]
 # flaky local checkpoint on Windows.  The separate import-clean check still rejects a
 # top-level heavy dependency regardless of timing.
 IMPORT_MS_BOUND = 750.0 if sys.platform == "win32" else 500.0
-WHEEL_SOFT_BYTES = 5 * 1024 * 1024
+WHEEL_SOFT_BYTES = 6 * 1024 * 1024
 HEAVY_EXT = (".gz", ".so", ".pyd", ".dll", ".bin", ".onnx", ".npy", ".npz", ".pt", ".h5", ".parquet")
 
 

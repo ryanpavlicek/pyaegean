@@ -2409,6 +2409,17 @@ cannot bias the initial draft, but a wrong analysis can mislead the check. This
 remains model output, with no guarantee of improvement or independent scholarly
 verification.
 
+`--check-policy clauses` with Greek `--verify` requests explicit checks of roles,
+negation, qualifications and speech acts. JSON and traces retain exact quotations,
+model findings and local literal alignment/coverage issues; alignment does not
+verify meaning. `--lexical-evidence contextual` selects bounded excerpts and
+alternative senses from already active dictionaries, with provenance and omissions.
+It requires Greek full/lemma mode or `--verify`, with glosses enabled. The defaults
+remain `--check-policy standard --lexical-evidence concise`.
+Use repeatable `--dictionary ID` options to activate hosted dictionaries for this
+command, for example `--dictionary middle-liddell --dictionary cunliffe`. Explicit
+activation may fetch the cache on first use; grounding itself does not activate it.
+
 `--greek-backend default|baseline|neural` makes the Greek analysis owner explicit.
 With `neural`, add `--greek-variant default|fast|compact|balanced` to select its runtime
 artifact. Only `default` is currently available; a reserved label fails without fallback and

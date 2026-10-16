@@ -99,12 +99,13 @@ class ExploratoryResult:
                 "information unavailable; raw response retained.]"
             )
             retained = self._retained_draft_notes(concise=data.get("style") == "concise")
-            return warning + (f"\n{retained}" if retained else "")
+            return "\n".join(part for part in (warning, self._clause_notes(), retained) if part)
         uncertainties = data.get("uncertainties")
         changes = data.get("changes")
         if not isinstance(uncertainties, list) or not isinstance(changes, list):
             return "[Translation audit information unavailable; inspect the saved response.]"
-        lines: list[str] = []
+        clause_notes = self._clause_notes()
+        lines: list[str] = [clause_notes] if clause_notes else []
         if data.get("change_report_status") == "unreported_text_difference":
             lines.append(
                 "[Exact text comparison: final text differs from the draft, but the "
@@ -148,6 +149,36 @@ class ExploratoryResult:
         retained = self._retained_draft_notes(concise=data.get("style") == "concise")
         if retained:
             lines.append(retained)
+        return "\n".join(lines)
+
+    def _clause_notes(self) -> str:
+        """Show literal validation separately from the model's semantic findings."""
+        if not isinstance(self.data, dict) or self.data.get("check_policy") != "clauses":
+            return ""
+        data = self.data
+        lines = [
+            f"[Clause check: {data.get('clause_check_status', 'unavailable')}; "
+            "literal alignment only. Semantic completeness and correctness are not verified.]"
+        ]
+        validation = data.get("clause_check_validation")
+        if isinstance(validation, dict):
+            issues = validation.get("issues")
+            if isinstance(issues, list) and issues:
+                lines.append(f"Literal audit issues: {len(issues)}; details retained in trace and JSON.")
+                if data.get("style") != "concise":
+                    lines.extend(f"- {issue}" for issue in issues)
+        rows = data.get("clause_checks")
+        if data.get("style") != "concise" and isinstance(rows, list):
+            lines.append("Model-reported clause findings (not independently verified):")
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                source = row.get("source")
+                wording = source.get("text", "[source span unavailable]") if isinstance(source, dict) else "[source span unavailable]"
+                lines.append(f"- {wording}: {row.get('finding', '[finding unavailable]')}")
+                checks = row.get("checks")
+                if isinstance(checks, dict):
+                    lines.append("  " + "; ".join(f"{key}: {value}" for key, value in checks.items()))
         return "\n".join(lines)
 
     def _retained_draft_notes(self, *, concise: bool) -> str:

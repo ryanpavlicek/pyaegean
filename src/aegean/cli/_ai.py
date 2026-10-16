@@ -9,6 +9,8 @@ the environment (the ``local`` provider needs a running local server, no key).
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -153,6 +155,29 @@ def _read_source_context(inline: str | None, path: Path | None) -> str | None:
     return context
 
 
+@contextmanager
+def _translation_dictionaries(names: list[str]) -> Iterator[None]:
+    """Scope explicit activation to one command, including an interactive REPL."""
+    if not names:
+        yield
+        return
+    from aegean.greek import koine, lexicon, lexicons
+
+    previous = dict(lexicons._ACTIVE)
+    previous_lsj, previous_dodson = lexicon.active(), koine.active()
+    try:
+        for name in dict.fromkeys(names):
+            try:
+                lexicons.use_lexicon(name)
+            except Exception as exc:
+                raise fail(f"could not activate dictionary {name!r}: {exc}") from None
+        yield
+    finally:
+        lexicons._ACTIVE.clear()
+        lexicons._ACTIVE.update(previous)
+        lexicon._ACTIVE, koine._ACTIVE = previous_lsj, previous_dodson
+
+
 @ai_app.command()
 def translate(
     text: str = typer.Argument(..., help="Text to translate ('-' reads stdin)."),
@@ -192,6 +217,21 @@ def translate(
         help="Greek only: translate raw first, then check the draft against the full "
         "grounding and repair only definite source contradictions. This second model "
         "call remains exploratory and is not scholarly verification.",
+    ),
+    check_policy: str = typer.Option(
+        "standard", "--check-policy",
+        help="standard or clauses; clauses requires --verify and retains explicit "
+        "role, negation, qualification and speech-act checks with literal span validation.",
+    ),
+    lexical_evidence: str = typer.Option(
+        "concise", "--lexical-evidence",
+        help="concise or contextual; contextual selects bounded excerpts from active "
+        "dictionaries. Requires Greek full/lemma mode (or --verify) and glosses.",
+    ),
+    dictionary: list[str] = typer.Option(
+        [], "--dictionary",
+        help="Activate a hosted dictionary for this command; repeat for several. "
+        "May fetch its cache on first use. Requires Greek full/lemma mode or --verify, with glosses.",
     ),
     greek_backend: str = typer.Option(
         "default", "--greek-backend",
@@ -233,6 +273,17 @@ def translate(
     context_options: dict[str, Any] = {"source_context": context} if context is not None else {}
     if style not in ("annotated", "concise"):
         raise fail("--style must be annotated or concise")
+    if check_policy not in ("standard", "clauses"):
+        raise fail("--check-policy must be standard or clauses")
+    if check_policy == "clauses" and (not verify or script != "greek"):
+        raise fail("--check-policy clauses requires --verify and --script greek")
+    try:
+        tr._validate_lexical_evidence(
+            lexical_evidence, script=script,
+            mode="full" if verify and script == "greek" else mode, glosses=glosses,
+        )
+    except ValueError as exc:
+        raise fail(str(exc)) from None
     if greek_backend not in ("default", "baseline", "neural"):
         raise fail("--greek-backend must be default, baseline, or neural")
     if grounding_failure not in ("best-effort", "strict"):
@@ -250,44 +301,56 @@ def translate(
     if script != "greek" and greek_long_input != "strict":
         raise fail("--greek-long-input applies only to --script greek")
 
-    greek_pipeline = None
-    if greek_backend != "default":
-        from aegean.greek import GreekPipeline
+    if dictionary:
+        from aegean.greek import lexicons
 
-        if greek_backend == "baseline":
-            greek_pipeline = GreekPipeline()
-        else:
-            try:
-                greek_pipeline = GreekPipeline.neural(variant=greek_variant)
-            except Exception as exc:
-                raise fail(f"could not activate the neural Greek pipeline: {exc}") from None
+        if script != "greek" or not glosses or (not verify and mode not in ("full", "lemma")):
+            raise fail("--dictionary requires Greek full/lemma mode or --verify, with glosses")
+        hosted = {info.id for info in lexicons.lexica() if info.hosted}
+        if any(name not in hosted for name in dictionary):
+            raise fail("--dictionary must name a hosted dictionary: " + ", ".join(sorted(hosted)))
 
-    client = _client(provider, model)
-    try:
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            result = _run(
-                lambda: tr.translate(
-                    read_text(text), script=script, target=target,
-                    max_tokens=max_tokens,
-                    mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
-                    style=cast(Literal["annotated", "concise"], style),
-                    greek_pipeline=greek_pipeline,
-                    greek_long_input=cast(tr.GreekLongInput, greek_long_input),
-                    grounding_failure=cast(tr.GroundingFailure, grounding_failure),
-                    client=client,  # type: ignore[arg-type]
-                    **context_options,
+    with _translation_dictionaries(dictionary):
+        greek_pipeline = None
+        if greek_backend != "default":
+            from aegean.greek import GreekPipeline
+
+            if greek_backend == "baseline":
+                greek_pipeline = GreekPipeline()
+            else:
+                try:
+                    greek_pipeline = GreekPipeline.neural(variant=greek_variant)
+                except Exception as exc:
+                    raise fail(f"could not activate the neural Greek pipeline: {exc}") from None
+
+        client = _client(provider, model)
+        try:
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                result = _run(
+                    lambda: tr.translate(
+                        read_text(text), script=script, target=target,
+                        max_tokens=max_tokens,
+                        mode=cast(tr.GroundingMode, mode), glosses=glosses, verify=verify,
+                        check_policy=check_policy,
+                        lexical_evidence=cast(Literal["concise", "contextual"], lexical_evidence),
+                        style=cast(Literal["annotated", "concise"], style),
+                        greek_pipeline=greek_pipeline,
+                        greek_long_input=cast(tr.GreekLongInput, greek_long_input),
+                        grounding_failure=cast(tr.GroundingFailure, grounding_failure),
+                        client=client,  # type: ignore[arg-type]
+                        **context_options,
+                    )
                 )
-            )
-    except (ValueError, tr.GroundingError) as exc:
-        raise fail(str(exc)) from None
-    for w in caught:  # e.g. the lemmatizer-quality note — surface it, not a raw UserWarning
-        if issubclass(w.category, UserWarning):
-            _warn(str(w.message))
-    if output is not None:
-        _write_ai_result(result, output, trace=trace)
-        return
-    _emit_result(result, json_out, trace)
+        except (ValueError, tr.GroundingError) as exc:
+            raise fail(str(exc)) from None
+        for w in caught:  # e.g. the lemmatizer-quality note — surface it, not a raw UserWarning
+            if issubclass(w.category, UserWarning):
+                _warn(str(w.message))
+        if output is not None:
+            _write_ai_result(result, output, trace=trace)
+            return
+        _emit_result(result, json_out, trace)
 
 
 @ai_app.command()

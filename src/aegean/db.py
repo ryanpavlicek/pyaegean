@@ -974,9 +974,12 @@ def _lexical_search_sql(view: WordView | None) -> str:
     column = _LEXICAL_COLUMNS[view]
     # Stored source rowids record scan order. Returning the materialized payload
     # avoids joining to hidden rowids that VACUUM can renumber without row triggers.
+    # Keep the partial-index predicate explicit: SQLite 3.45 cannot infer it for
+    # the NOT NULL legacy column and otherwise scans the entire key table.
     return (
         "SELECT k.doc_id, k.position, k.original_text FROM token_lexical_keys AS k "
-        f"WHERE k.{column} = ? AND (k.status_mask & ?) = k.status_mask "
+        f"WHERE k.{column} IS NOT NULL AND k.{column} = ? "
+        "AND (k.status_mask & ?) = k.status_mask "
         "ORDER BY k.source_order LIMIT ?"
     )
 

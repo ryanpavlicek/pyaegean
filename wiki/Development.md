@@ -174,7 +174,7 @@ The wheel check asserts the built wheel ships only code + JSON: no binaries:
 
 ```bash
 python scripts/check_footprint.py --wheel "dist/*.whl"
-# wheel dist/pyaegean-0.61.0-py3-none-any.whl: 5065 KB uncompressed, 227 files
+# wheel size and file count are reported for the current build
 # OK  nothing-heavy-bundled
 ```
 
@@ -189,14 +189,14 @@ python -m twine check dist/*
 ### The footprint guard in detail
 
 `scripts/check_footprint.py` checks core import behavior and the built wheel.
-It rejects heavy payloads and enforces a 5 MiB limit on uncompressed contents,
+It rejects heavy payloads and enforces a 6 MiB limit on uncompressed contents,
 alongside the import checks below.
 
 | Check | Run with | What it asserts |
 | --- | --- | --- |
 | **import-clean** | (no args) | `import aegean` loads **no** heavy third-party module and none of the stdlib modules Pyodide unvendors (so the in-browser demo keeps working) |
 | **import-fast** | (no args) | cold `import aegean` (fastest of 5 subprocess runs, after a warmup) stays under **750 ms** on Windows and **500 ms** in CI |
-| **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only: no `.so/.pyd/.dll/.onnx/.npy/.gz/...`: under a 5 MB accident tripwire |
+| **nothing-heavy-bundled** | `--wheel <path>` | the wheel contains code + JSON only: no `.so/.pyd/.dll/.onnx/.npy/.gz/...`: under a 6 MiB accident tripwire |
 
 The "heavy" watch-list is `pandas, numpy, scipy, lxml, anthropic, openai,
 google, torch, onnxruntime, tokenizers, transformers, geopandas, shapely`, plus

@@ -83,6 +83,38 @@ draft, or unstructured final is marked `"not_comparable"` for this local check.
 The same applies if a retained draft's text has been edited independently of its
 structured translation field; `comparison_note` explains that mismatch.
 
+For an explicit check of roles, negation, qualifications and speech acts, select
+`check_policy="clauses"` with Greek `verify=True`. The lower-level
+`ai.verify_translation` accepts the same policy for checking a saved draft in one
+call. The default policy remains `"standard"`; checking itself remains optional.
+
+```python
+greek.use_lexicon("middle-liddell")  # explicit activation; may fetch its cache
+evidence = translate.grounding_for(
+    "τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.", "greek", mode="full",
+    greek_pipeline=pipeline, lexical_evidence="contextual",
+)
+checked = ai.verify_translation(
+    "τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.", result, grounding=evidence,
+    check_policy="clauses", max_tokens=4096, client=client,
+)
+print(checked.data["clause_checks"])
+print(checked.data["clause_check_status"])
+print(checked.data["clause_check_validation"])
+```
+
+Each model-reported clause has exact source and revised-translation quotations,
+one-based occurrence numbers, four check statuses, a short finding and supplied
+evidence references. Local validation resolves quotations into zero-based Unicode
+codepoint offsets and records uncovered non-whitespace spans. `"aligned"` means
+the report's shape, quotations, reference membership and literal coverage pass;
+it does not verify the clause boundaries, meaning, claims or completeness of the
+model's interpretation. A report can be literally aligned while reporting
+`"concern"` or `"uncertain"`. Missing mappings produce `"incomplete"`; malformed
+populated fields, invented quotations or unknown references produce `"invalid"`.
+The received report remains available in every case. Invalid clause reports do
+not discard an otherwise usable structured translation or trigger another call.
+
 Concise output retains notes in JSON and the trace, and signals that notes are
 available. Use annotated output when reading the explanation alongside the
 translation. Plain `result.text` is intentionally just the reading for structured
@@ -106,6 +138,20 @@ make separate paid requests; JSON is the preferred reusable archive.
 Use `--source-context` for inline context or `--source-context-file` for a UTF-8
 file; the two options are mutually exclusive.
 
+Add `--check-policy clauses` to a Greek `--verify` command for the clause audit,
+and `--lexical-evidence contextual` for bounded dictionary excerpts. The Python
+and CLI policy controls are explicit; the corpus reader retains standard checking.
+Use repeatable `--dictionary` options to activate dictionaries for that command;
+activation may fetch their caches on first use. For example:
+
+```bash
+aegean ai translate 'τὸν παῖδα ὁ ἀνὴρ ὁρᾷ.' \
+  --provider openrouter --model openai/gpt-5.4 --greek-backend neural \
+  --verify --check-policy clauses --lexical-evidence contextual \
+  --dictionary middle-liddell --dictionary cunliffe --max-tokens 4096 \
+  --source-context-file source-context.txt --output checked.json
+```
+
 Translation and checking use a 2,048-token output allowance per call. Set
 `max_tokens` in Python or `--max-tokens` on the CLI for longer passages or more
 detailed notes. The value must be a positive integer. It is a maximum, not a
@@ -119,6 +165,19 @@ slices preserve their characters; older token-only records are labeled as
 reconstructed text. The selected line remains the translation target.
 
 ## Greek evidence
+
+Full and lemma modes accept `lexical_evidence="contextual"` with glosses enabled.
+This selects exact excerpts from already active built-in dictionaries, including
+alternative senses and construction cues when available. It uses the selected
+pipeline's resolved lemmas and sentence-local textual cues without invoking a
+second lemmatizer or activating dictionaries. Common words are eligible too.
+Activate the dictionaries you need before building evidence.
+
+Each item identifies its source entry and exact excerpt offsets, selection
+reasons, omitted characters and unresolved cross-references. A coverage item
+records unavailable or unsupported sources and budget omissions. The excerpts
+are reference material; their selection does not establish the intended sense.
+The default `"concise"` evidence retains the existing short gloss behavior.
 
 Dependency evidence describes the supplied parse, including subordinate clauses
 and coordinated subjects. It does not silently correct a wrong parse. Review

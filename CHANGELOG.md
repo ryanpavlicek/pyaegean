@@ -8,6 +8,8 @@ All notable changes to pyaegean are documented here. The format follows
 
 ### Fixed
 
+- SQLite lexical searches retain their partial-index query path on SQLite 3.45,
+  including status-filtered legacy searches, without a storage schema change.
 - Greek dictionary lookup resolves unambiguous headwords whose source keys carry
   editorial numbers or a leading dagger. Accent and breathing distinctions,
   exact source keys, and original entries are preserved. Genuine homonym
@@ -15,6 +17,17 @@ All notable changes to pyaegean are documented here. The format follows
 
 ### Added
 
+- Optional clause checking records source and translation quotations, role,
+  negation, qualification and speech-act findings. Local validation reports
+  exact span alignment, missing mappings and literal coverage gaps while
+  retaining invalid reports; it does not certify semantic correctness. Select
+  `check_policy="clauses"` (CLI `--check-policy clauses`) with Greek checking.
+- Translation grounding can select bounded contextual dictionary excerpts with
+  alternative senses, construction cues and exact source provenance. Coverage
+  reports expose unavailable evidence and budget omissions. The option uses
+  already active dictionaries and the selected analysis; defaults are unchanged.
+  Repeatable CLI `--dictionary` options explicitly activate dictionaries for a
+  translation command, fetching their caches on first use if needed.
 - Translation and optional checking accept separately supplied source context.
   Saved results retain it, later checking inherits it, and conflicting context
   is rejected before a provider call. CLI translation accepts inline context or

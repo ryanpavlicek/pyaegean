@@ -935,7 +935,7 @@ Design notes: [AI Layer](AI-Layer); hard limits: [Limitations](Limitations).
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `providers` | List the registered AI providers | `--json` | `aegean ai providers` |
-| `translate` | Hybrid translation with retained model uncertainty, checking draft, and reported changes | `--script --target --style annotated\|concise --mode --greek-backend --greek-variant --greek-long-input --grounding-failure --glosses/--no-glosses --verify --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --style concise` |
+| `translate` | Hybrid translation with retained model uncertainty, checking draft, and reported changes | `--script --target --style annotated\|concise --mode --greek-backend --greek-variant --greek-long-input --grounding-failure --glosses/--no-glosses --verify --check-policy --lexical-evidence --dictionary --source-context --source-context-file --max-tokens --provider --model --trace -o/--output --json` | `aegean ai translate "ἐν ἀρχῇ ἦν ὁ λόγος" --style concise` |
 | `gloss` | Interlinear word-by-word gloss | `--source --provider --model --trace -o/--output --json` | `aegean ai gloss "μῆνιν ἄειδε θεά"` |
 | `summarize` | Short, grounded summary of a passage | `--corpus --provider --model --trace -o/--output --json` | `aegean ai summarize "ἐν ἀρχῇ ἦν ὁ λόγος" --corpus nt` |
 | `hypotheses` | Cautious decipherment hypotheses (strictly exploratory) | `--corpus --provider --model --trace -o/--output --json` | `aegean ai hypotheses "A-TA-I-*301-WA-JA" --corpus lineara` |
@@ -964,6 +964,14 @@ paths. Predictions and dictionary matches can be wrong in context. Optional
 `--verify` generates an ungrounded draft, then asks the same provider to check it
 against full grounding in a second call; it remains exploratory, with no guarantee
 of improvement or independent scholarly verification.
+For explicit clause findings, add `--check-policy clauses` to Greek `--verify`.
+Exact quotation alignment and coverage gaps are recorded without certifying meaning.
+`--lexical-evidence contextual` supplies bounded excerpts from active dictionaries
+with source provenance and omissions; use Greek full/lemma mode or `--verify`,
+with glosses enabled. Both controls are optional; standard checking and concise
+lexical evidence remain the defaults.
+Repeat `--dictionary ID` to activate hosted dictionaries for this command;
+activation may fetch their caches on first use.
 Choose `--greek-backend default|baseline|neural`. The isolated neural choice gives
 model-predicted contextual morphology and a UD parse without changing the module facade;
 `--greek-variant default|fast|compact|balanced` selects its runtime artifact. Only

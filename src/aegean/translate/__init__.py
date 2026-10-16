@@ -26,7 +26,11 @@ if TYPE_CHECKING:
 
 from ..ai import translate as _ai_translate
 from ..ai import verify_translation as _ai_verify_translation
-from ..ai.capabilities import _validate_source_context, _validate_translation_max_tokens
+from ..ai.capabilities import (
+    _validate_check_policy,
+    _validate_source_context,
+    _validate_translation_max_tokens,
+)
 from ..ai.client import ExploratoryResult, LLMClient
 from ..ai.client import get_client as _get_client
 from ..ai.grounding import GroundingItem, as_item, content_glosses
@@ -528,6 +532,7 @@ def _greek_grounding(
     failure_policy: GroundingFailure,
     failures: list[dict[str, str]],
     coverage: dict[str, Any],
+    lexical_evidence: Literal["concise", "contextual"] = "concise",
 ) -> list[GroundingItem]:
     # Reject an unknown mode loudly: a typo ("morfology") must never silently fall
     # through to the legacy lemma branch and change the grounding behavior.
@@ -556,11 +561,14 @@ def _greek_grounding(
         if mode == "full" and glosses:
             # Optional concise dictionary candidates; their contextual suitability
             # still requires interpretation. Empty if no dictionary is loaded.
-            out.extend(
-                content_glosses(
+            if lexical_evidence == "contextual":
+                from ._lexical_context import contextual_lexical_evidence
+
+                out.extend(contextual_lexical_evidence(records))
+            else:
+                out.extend(content_glosses(
                     text, source="cascade", rarity_gate=True, analysis=records
-                )
-            )
+                ))
         return out
 
     # mode == "lemma": the original lemma-line format, driven by the selected pipeline.
@@ -578,7 +586,12 @@ def _greek_grounding(
     ]
     if glosses:
         # Gated LSJ glosses for content words — best-effort, empty without greek.use_lsj().
-        out.extend(content_glosses(text, analysis=records))
+        if lexical_evidence == "contextual":
+            from ._lexical_context import contextual_lexical_evidence
+
+            out.extend(contextual_lexical_evidence(records))
+        else:
+            out.extend(content_glosses(text, analysis=records))
     return out
 
 
@@ -593,6 +606,15 @@ def _lineara_grounding(text: str) -> list[GroundingItem]:
     ]
 
 
+def _validate_lexical_evidence(
+    value: str, *, script: str, mode: str, glosses: bool,
+) -> None:
+    if value not in ("concise", "contextual"):
+        raise ValueError("lexical_evidence must be concise or contextual")
+    if value == "contextual" and (script != "greek" or mode not in ("full", "lemma") or not glosses):
+        raise ValueError("contextual lexical evidence requires Greek full or lemma mode with glosses=True")
+
+
 def _build_grounding(
     text: str,
     script: str,
@@ -602,8 +624,10 @@ def _build_grounding(
     greek_pipeline: GreekPipeline | None,
     greek_long_input: GreekLongInput,
     grounding_failure: GroundingFailure,
+    lexical_evidence: Literal["concise", "contextual"] = "concise",
 ) -> _GroundingOutcome:
     """Build evidence with a compact availability summary and full runtime provenance."""
+    _validate_lexical_evidence(lexical_evidence, script=script, mode=mode, glosses=glosses)
     failure_policy = _validate_failure_policy(grounding_failure)
     if greek_long_input not in get_args(GreekLongInput):
         valid = ", ".join(repr(mode) for mode in get_args(GreekLongInput))
@@ -629,6 +653,7 @@ def _build_grounding(
             failure_policy=failure_policy,
             failures=failures,
             coverage=coverage,
+            lexical_evidence=lexical_evidence,
         )
         required = [] if mode == "none" else ["morphology"]
         if mode in {"morphology", "full"}:
@@ -661,6 +686,7 @@ def _build_grounding(
             {
                 "script": script,
                 "mode": mode,
+                "lexical_evidence": lexical_evidence,
                 "long_input": greek_long_input,
                 "failure_policy": failure_policy,
                 "pipeline": _pipeline_runtime(pipeline, selection),
@@ -712,6 +738,7 @@ def grounding_for(
     *,
     mode: GroundingMode = "morphology",
     glosses: bool = True,
+    lexical_evidence: Literal["concise", "contextual"] = "concise",
     greek_pipeline: GreekPipeline | None = None,
     greek_long_input: GreekLongInput = "strict",
     grounding_failure: GroundingFailure = "best-effort",
@@ -723,6 +750,12 @@ def grounding_for(
     (lemma lines and optional gated LSJ glosses), and ``none`` (no automatic
     evidence). ``glosses=False`` omits dictionary candidates in full/lemma modes.
     Dictionary matches and grammatical predictions can be wrong in context.
+
+    ``lexical_evidence='contextual'`` selects bounded exact dictionary excerpts,
+    including alternative senses and construction cues, from already active built-in
+    dictionaries. It requires Greek full/lemma mode with glosses enabled. Selection
+    uses the supplied analysis and textual cues, not verified contextual senses;
+    provenance records excerpts, omissions and unavailable sources.
 
     A leading availability item reports the selected backend, required stages,
     missing stages and token coverage. Per-token evidence distinguishes lemma
@@ -744,6 +777,7 @@ def grounding_for(
         script,
         mode=mode,
         glosses=glosses,
+        lexical_evidence=lexical_evidence,
         greek_pipeline=greek_pipeline,
         greek_long_input=greek_long_input,
         grounding_failure=grounding_failure,
@@ -757,7 +791,9 @@ def translate(
     target: str = "English",
     mode: GroundingMode = "morphology",
     glosses: bool = True,
+    lexical_evidence: Literal["concise", "contextual"] = "concise",
     verify: bool = False,
+    check_policy: str = "standard",
     style: Literal["annotated", "concise"] = "annotated",
     source_context: str | None = None,
     max_tokens: int = 2048,
@@ -800,6 +836,13 @@ def translate(
     model reports, not accepted human review decisions. Qualified raters are
     needed to evaluate translation quality.
 
+    ``check_policy='clauses'`` requires Greek ``verify=True`` and requests an
+    explicit check of roles, negation, qualifications and speech acts. Exact
+    source/translation spans, findings and literal coverage gaps are retained;
+    literal alignment does not establish semantic completeness or correctness.
+    ``lexical_evidence='contextual'`` adds bounded dictionary excerpts as described
+    in `grounding_for`; checking uses full mode regardless of ``mode``.
+
     Strict grounding failures stop before either provider call. Best-effort
     degradation and limited baseline coverage are reported through warnings,
     prompt evidence, ``grounding_runtime``, and labeled/trace output. Model and
@@ -809,6 +852,9 @@ def translate(
         raise ValueError("style must be annotated or concise")
     _validate_source_context(source_context)
     _validate_translation_max_tokens(max_tokens)
+    _validate_check_policy(check_policy)
+    if check_policy == "clauses" and (not verify or script != "greek"):
+        raise ValueError("check_policy='clauses' requires verify=True and script='greek'")
     effective_mode: GroundingMode = "full" if verify and script == "greek" else mode
     outcome = _build_grounding(
         text,
@@ -818,6 +864,7 @@ def translate(
         greek_pipeline=greek_pipeline,
         greek_long_input=greek_long_input,
         grounding_failure=grounding_failure,
+        lexical_evidence=lexical_evidence,
     )
     # Explicit source annotations and field-level scholarly decisions supplement
     # predictions; the provider sees their distinct status and supporting details.
@@ -864,6 +911,7 @@ def translate(
             source_context=source_context,
             max_tokens=max_tokens,
             client=c,
+            check_policy=check_policy,
         )
     else:
         result = _ai_translate(

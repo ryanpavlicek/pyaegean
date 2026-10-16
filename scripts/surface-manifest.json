@@ -1701,7 +1701,7 @@
       "id": "translation",
       "since": "0.1.0",
       "python_api": "aegean.translate",
-      "summary": "Exploratory translation retaining source/prediction/review evidence, structured uncertainty and changes, and the complete optional checking draft.",
+      "summary": "Exploratory translation retaining source/prediction/review evidence, structured uncertainty and changes, optional clause audits and contextual dictionary excerpts, and the complete checking draft.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1723,7 +1723,8 @@
         },
         "tui": {
           "status": "covered",
-          "where": "Corpus reader in-reader translate (BYOAI, optional)"
+          "where": "Corpus reader in-reader translate (BYOAI, optional)",
+          "note": "The reader retains standard checking; explicit clause and lexical-evidence policy selection is available through Python and the CLI."
         }
       }
     },
