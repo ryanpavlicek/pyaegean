@@ -51,6 +51,8 @@ Grounding = Iterable[str | GroundingItem]
 # Bump when a prompt's wording changes so cached/sourced results stay traceable.
 PROMPT_VERSION = "2026.10-v5"
 _CLAUSE_PROMPT_VERSION = "2026.10-clauses-v1"
+_HISTORY_PROMPT_VERSION = "2026.10-history-v1"
+_CLAUSE_HISTORY_PROMPT_VERSION = "2026.10-clauses-history-v1"
 
 _BASE_SYSTEM = (
     "You are a meticulous philologist of Ancient Greek and the Aegean syllabic "
@@ -164,6 +166,28 @@ def _draft_source_context(
     if supplied is not None and supplied != retained:
         raise ValueError("source_context differs from the saved draft; check with its recorded context")
     return retained
+
+
+def _draft_audit_notes(draft: ExploratoryResult) -> dict[str, Any]:
+    """Project historical audit notes without changing or inferring their values."""
+    data = draft.data if isinstance(draft.data, dict) else {}
+    audit = {
+        "uncertainties": data.get("uncertainties"),
+        "changes": data.get("changes"),
+        "format_status": data.get("format_status"),
+        "raw_response": data.get("raw_response", draft.text),
+    }
+    if draft.draft is None and "draft_text" in data:
+        audit["draft_text"] = data["draft_text"]
+    return audit
+
+
+def _has_draft_history(draft: ExploratoryResult | None) -> bool:
+    """Recognize retained result and string drafts, including an empty string."""
+    return draft is not None and (
+        draft.draft is not None
+        or isinstance(draft.data, dict) and "draft_text" in draft.data
+    )
 
 
 
@@ -320,12 +344,17 @@ def _run_translation(
             translation=data["translation"] if data["format_status"] == "structured" else "",
             evidence_refs=(as_item(item).ref for item in grounding if str(item)),
         ))
+    prompt_version = _CLAUSE_PROMPT_VERSION if check_policy == "clauses" else PROMPT_VERSION
+    if _has_draft_history(draft):
+        prompt_version = (
+            _CLAUSE_HISTORY_PROMPT_VERSION if check_policy == "clauses" else _HISTORY_PROMPT_VERSION
+        )
     return ExploratoryResult(
         text=text,
         kind="translate",
         provider=response.provider,
         model=response.model,
-        prompt_version=_CLAUSE_PROMPT_VERSION if check_policy == "clauses" else PROMPT_VERSION,
+        prompt_version=prompt_version,
         grounding=tuple(as_item(item) for item in grounding if str(item)),
         data=data,
         draft=draft,
@@ -433,6 +462,12 @@ def verify_translation(
     are retained exactly; context guides interpretation but is never translated or
     followed as instructions.
 
+    When a saved result has earlier retained drafts, their audit notes and raw
+    responses also reach the checker, nearest ancestor first. Historical wording
+    does not override the current draft, and omitted notes do not establish that
+    their uncertainties were resolved. Retained string drafts are supplied exactly,
+    without extracting uncertainty notes or inventing their original provenance.
+
     ``check_policy='clauses'`` additionally requests a model-reported audit of
     source propositions, roles, negation, qualifications and speech acts. It uses
     the same single completion, preserving exact source wording and occurrence
@@ -494,14 +529,18 @@ def verify_translation(
     if draft_result is not None:
         # The exact original response also retains notes from malformed draft
         # responses, which cannot safely be extracted from a translation field.
-        draft_data = draft_result.data if isinstance(draft_result.data, dict) else {}
-        audit = {
-            "uncertainties": draft_data.get("uncertainties"),
-            "changes": draft_data.get("changes"),
-            "format_status": draft_data.get("format_status"),
-            "raw_response": draft_data.get("raw_response", draft_result.text),
-        }
-        fence = _translation_input_block if check_policy == "clauses" else wrap_untrusted
+        audit = _draft_audit_notes(draft_result)
+        retained_drafts = []
+        ancestor = draft_result.draft
+        while ancestor is not None:
+            retained_drafts.append(_draft_audit_notes(ancestor))
+            ancestor = ancestor.draft
+        if retained_drafts:
+            audit["retained_drafts"] = retained_drafts
+        fence = (
+            _translation_input_block
+            if check_policy == "clauses" or _has_draft_history(draft_result) else wrap_untrusted
+        )
         prompt += "\n\n" + fence(
             json.dumps(audit, ensure_ascii=False), "DRAFT_NOTES"
         )

@@ -8,6 +8,13 @@ All notable changes to pyaegean are documented here. The format follows
 
 ### Fixed
 
+- Edited translation results no longer display clause alignment or exact-comparison
+  claims calculated for previous wording as current. Original reports remain available
+  in saved results and traces.
+- Rechecking a saved translation carries earlier draft notes into the next check
+  and retains their uncertainty in the displayed history.
+- Corpus-reader translations display model-reported uncertainty and malformed-response
+  notices. Source text and analysis output preserve literal square brackets.
 - SQLite lexical searches retain their partial-index query path on SQLite 3.45,
   including status-filtered legacy searches, without a storage schema change.
 - Greek dictionary lookup resolves unambiguous headwords whose source keys carry

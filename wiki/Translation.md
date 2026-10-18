@@ -331,6 +331,20 @@ comparison describes wording only, not correctness. Both styles preserve the
 checking draft in JSON and the trace; saved translation `.txt` files append the
 trace automatically.
 
+Repeated checking carries earlier draft notes and raw responses forward. Annotated
+output keeps earlier uncertainty notes visible; concise output shows their counts.
+A later check omitting a note does not establish that the uncertainty was resolved.
+If the history began with a plain string, its exact wording is retained without
+inventing separate notes or provenance. The reader also displays uncertainty and
+unstructured-response notices alongside its translation.
+
+Editing a result's `text` leaves the stored response and audit intact. Labeled,
+notebook and trace views mark those reports as historical when their wording no
+longer matches. Editing only the retained `draft.text` invalidates the old exact
+comparison, while clause checks can still apply to the unchanged final wording.
+JSON preserves these values unchanged; check `text` against `data["translation"]`
+and retained `draft.text` against `data["draft_text"]` before applying stored reports.
+
 ---
 
 ## Providers: the key-gated `[ai]` layer

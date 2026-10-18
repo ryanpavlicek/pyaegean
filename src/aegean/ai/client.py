@@ -86,6 +86,40 @@ class ExploratoryResult:
     # can supply compact runtime evidence separately through GroundingItem.
     draft: ExploratoryResult | None = None
 
+    def _translation_audit_is_stale(self) -> bool:
+        """Whether structured response notes concern different displayed wording."""
+        return (
+            self.kind == "translate"
+            and isinstance(self.data, dict)
+            and self.data.get("format_status") == "structured"
+            and self.text != self.data.get("translation")
+        )
+
+    def _translation_audit_warning(self) -> str:
+        if not self._translation_audit_is_stale():
+            return ""
+        return (
+            "[Displayed text differs from the stored structured translation. Retained "
+            "notes, change reports and clause checks concern the stored response; "
+            "validation of the displayed wording is unavailable.]"
+        )
+
+    def _translation_comparison_warning(self) -> str:
+        if (
+            self.kind == "translate"
+            and isinstance(self.data, dict)
+            and self.data.get("format_status") == "structured"
+            and self.draft is not None
+            and "draft_text" in self.data
+            and self.draft.text != self.data["draft_text"]
+        ):
+            return (
+                "[Retained draft text differs from the recorded checking input. The "
+                "stored exact comparison concerns that recorded input; comparison "
+                "against the retained draft's current wording is unavailable.]"
+            )
+        return ""
+
     def _translation_notes(self) -> str:
         """Render reported audit information without implying scholarly review."""
         if self.kind != "translate" or not isinstance(self.data, dict):
@@ -102,40 +136,64 @@ class ExploratoryResult:
             return "\n".join(part for part in (warning, self._clause_notes(), retained) if part)
         uncertainties = data.get("uncertainties")
         changes = data.get("changes")
+        stale = self._translation_audit_is_stale()
+        warning = self._translation_audit_warning()
+        comparison_warning = self._translation_comparison_warning()
         if not isinstance(uncertainties, list) or not isinstance(changes, list):
-            return "[Translation audit information unavailable; inspect the saved response.]"
+            unavailable = "[Translation audit information unavailable; inspect the saved response.]"
+            retained = self._retained_draft_notes(concise=data.get("style") == "concise")
+            return "\n".join(
+                part for part in (warning, comparison_warning, unavailable, retained) if part
+            )
         clause_notes = self._clause_notes()
-        lines: list[str] = [clause_notes] if clause_notes else []
-        if data.get("change_report_status") == "unreported_text_difference":
+        lines: list[str] = [part for part in (warning, comparison_warning, clause_notes) if part]
+        comparison_current = not stale and not comparison_warning
+        if comparison_current and data.get("change_report_status") == "unreported_text_difference":
             lines.append(
                 "[Exact text comparison: final text differs from the draft, but the "
                 "model reported no changes. This is a wording difference, not a quality assessment.]"
             )
-        elif data.get("change_report_status") == "reported_changes" and data.get("text_changed") is False:
+        elif (
+            comparison_current and data.get("change_report_status") == "reported_changes"
+            and data.get("text_changed") is False
+        ):
             lines.append(
                 "[Exact text comparison: final text is identical to the draft; the "
                 "model's reported changes are not independently verified.]"
             )
-        elif data.get("change_report_status") == "no_text_difference":
+        elif comparison_current and data.get("change_report_status") == "no_text_difference":
             lines.append("[Exact text comparison: final translation text is identical to the draft.]")
-        elif "draft_text" in data and data.get("change_report_status") == "not_comparable":
+        elif (
+            comparison_current and "draft_text" in data
+            and data.get("change_report_status") == "not_comparable"
+        ):
             note = data.get("comparison_note")
             lines.append(
                 f"[{note}]" if isinstance(note, str)
                 else "[Exact translation comparison unavailable for this draft.]"
             )
         if data.get("style") == "concise":
+            label = (
+                "Historical model-reported notes for the stored response"
+                if stale else "Model-reported notes"
+            )
             lines.append(
-                f"[Model-reported notes: {len(uncertainties)} uncertainty note(s), "
+                f"[{label}: {len(uncertainties)} uncertainty note(s), "
                 f"{len(changes)} change(s); details retained in trace and JSON.]"
             )
         else:
-            lines.append("Model-reported uncertainties:")
+            lines.append(
+                "Historical model-reported uncertainties (stored response):"
+                if stale else "Model-reported uncertainties:"
+            )
             lines.extend(f"- {note}" for note in uncertainties)
             if not uncertainties:
                 lines.append("- None listed by the model; this is not a correctness assessment.")
             if changes or "draft_text" in data:
-                lines.append("Model-reported changes (not independently verified):")
+                lines.append(
+                    "Historical model-reported changes (stored response; not independently verified):"
+                    if stale else "Model-reported changes (not independently verified):"
+                )
                 for change in changes:
                     if not isinstance(change, dict):
                         continue
@@ -156,8 +214,11 @@ class ExploratoryResult:
         if not isinstance(self.data, dict) or self.data.get("check_policy") != "clauses":
             return ""
         data = self.data
+        stale = self._translation_audit_is_stale()
+        label = "Historical clause check" if stale else "Clause check"
+        wording = " for the stored response" if stale else ""
         lines = [
-            f"[Clause check: {data.get('clause_check_status', 'unavailable')}; "
+            f"[{label}: {data.get('clause_check_status', 'unavailable')}{wording}; "
             "literal alignment only. Semantic completeness and correctness are not verified.]"
         ]
         validation = data.get("clause_check_validation")
@@ -169,7 +230,10 @@ class ExploratoryResult:
                     lines.extend(f"- {issue}" for issue in issues)
         rows = data.get("clause_checks")
         if data.get("style") != "concise" and isinstance(rows, list):
-            lines.append("Model-reported clause findings (not independently verified):")
+            lines.append(
+                "Historical model-reported clause findings (stored response; not independently verified):"
+                if stale else "Model-reported clause findings (not independently verified):"
+            )
             for row in rows:
                 if not isinstance(row, dict):
                     continue
@@ -184,15 +248,35 @@ class ExploratoryResult:
     def _retained_draft_notes(self, *, concise: bool) -> str:
         lines: list[str] = []
         if self.draft is not None:
-            draft_data = self.draft.data if isinstance(self.draft.data, dict) else {}
-            draft_uncertainties = draft_data.get("uncertainties")
-            if isinstance(draft_uncertainties, list) and draft_uncertainties:
-                lines.append(
-                    f"Retained draft: {len(draft_uncertainties)} original uncertainty note(s); "
-                    "their omission from the final notes does not establish resolution."
+            ancestor: ExploratoryResult | None = self.draft
+            depth = 1
+            while ancestor is not None:
+                draft_data = ancestor.data if isinstance(ancestor.data, dict) else {}
+                draft_uncertainties = draft_data.get("uncertainties")
+                label = (
+                    "Retained draft" if depth == 1
+                    else f"Retained earlier draft ({depth} steps back)"
                 )
-                if not concise:
-                    lines.extend(f"- {note}" for note in draft_uncertainties)
+                if isinstance(draft_uncertainties, list) and draft_uncertainties:
+                    lines.append(
+                        f"{label}: {len(draft_uncertainties)} original uncertainty note(s); "
+                        "their omission from the final notes does not establish resolution."
+                    )
+                    if not concise:
+                        lines.extend(f"- {note}" for note in draft_uncertainties)
+                elif not isinstance(draft_uncertainties, list) and "format_status" in draft_data:
+                    lines.append(
+                        f"{label}: separate uncertainty notes unavailable; "
+                        "the original response is retained in trace and JSON."
+                    )
+                if ancestor.draft is None and "draft_text" in draft_data:
+                    lines.append(
+                        f"Retained original string draft ({depth + 1} steps back): separate "
+                        "uncertainty notes unavailable; exact wording is retained in "
+                        "trace and JSON; provenance was not supplied."
+                    )
+                ancestor = ancestor.draft
+                depth += 1
             lines.append("The complete draft and its provenance are retained in trace and JSON.")
         elif isinstance(self.data, dict) and "draft_text" in self.data:
             lines.append("The original string draft is retained in trace and JSON; provenance was not supplied.")
@@ -236,7 +320,19 @@ class ExploratoryResult:
         if self.kind == "translate" and isinstance(self.data, dict) and "format_status" in self.data:
             import json
 
-            lines.append("  translation audit (model-reported; format status describes shape only):")
+            warning = self._translation_audit_warning()
+            if warning:
+                lines.append(f"  {warning}")
+                lines.append("  current displayed translation:")
+                lines.extend(f"      {line}" for line in self.text.splitlines())
+            comparison_warning = self._translation_comparison_warning()
+            if comparison_warning:
+                lines.append(f"  {comparison_warning}")
+            label = (
+                "historical translation audit for the stored response"
+                if warning else "translation audit"
+            )
+            lines.append(f"  {label} (model-reported; format status describes shape only):")
             lines.extend(
                 f"      {line}" for line in json.dumps(
                     self.data, ensure_ascii=False, indent=2

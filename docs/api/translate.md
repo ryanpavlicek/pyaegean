@@ -64,6 +64,15 @@ version and notes. JSON export/reload keeps both stages; `result.trace()` shows
 the draft, notes, changes and supplied evidence. A change reason is a model's
 explanation, not a recorded human review decision or verified citation.
 
+Checking an already checked result also supplies the earlier drafts' notes and
+raw responses as historical material. The current draft remains the wording to
+check. Earlier uncertainty notes remain visible in annotated output, with counts
+in concise output; their omission by a later check does not establish resolution.
+If the history began with a plain string, its exact wording is also supplied,
+without inferring separate uncertainty notes or provenance.
+The corpus reader displays translation uncertainty notes and any malformed-response
+notice alongside the reading.
+
 Plain JSON and a single complete Markdown JSON fence are accepted locally;
 surrounding prose or multiple response blocks are not silently discarded.
 If a provider returns malformed JSON or the wrong field types, no extra paid
@@ -82,6 +91,17 @@ meaning or certify the reported reasons. A string draft, legacy/unstructured
 draft, or unstructured final is marked `"not_comparable"` for this local check.
 The same applies if a retained draft's text has been edited independently of its
 structured translation field; `comparison_note` explains that mismatch.
+
+If you edit a result's `text` independently of its stored structured translation,
+the labeled, notebook and trace views identify the stored audit as belonging to
+previous wording. They do not present its clause alignment or exact-comparison
+claims as applying to the edited reading. JSON preserves both strings and the
+original audit unchanged: check their equality before applying stored audit
+fields to the current `text`. A new checking call produces a new report.
+Editing only the retained `draft.text` also makes the old exact comparison
+inapplicable: it was calculated against `data["draft_text"]`. The display warns
+about that mismatch while preserving clause checks that still apply to the
+unchanged current translation.
 
 For an explicit check of roles, negation, qualifications and speech acts, select
 `check_policy="clauses"` with Greek `verify=True`. The lower-level

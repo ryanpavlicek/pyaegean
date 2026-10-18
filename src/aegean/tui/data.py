@@ -900,8 +900,9 @@ def translate_line(
 ) -> AnalysisResult:
     """Translate one line via the configured BYOAI provider (exploratory, provenanced).
 
-    Returns a text result with the provider/model in ``note``; a missing key or any
-    provider error becomes a clean ``error`` (translation never crashes the reader).
+    Returns exact translation text with provider/model and the shared translation
+    audit labels in ``note``; a missing key or any provider error becomes a clean
+    ``error`` (translation never crashes the reader).
     The selected text is passed exactly, with source context supplied separately."""
     if not text.strip():
         return AnalysisResult(ok=True, title="translation")
@@ -928,6 +929,9 @@ def translate_line(
     except Exception as exc:  # pragma: no cover - AIError covers the known cases
         return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
     note = f"exploratory · {result.provider}/{result.model}"
+    audit_notes = result._translation_notes()
+    if audit_notes:
+        note += "\n\n" + audit_notes
     return AnalysisResult(ok=True, title="translation", text=result.text, note=note)
 
 

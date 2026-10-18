@@ -103,13 +103,13 @@ class LineAnalysisScreen(ModalScreen[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="analysis-box"):
             shown = self._line_text if len(self._line_text) <= 80 else self._line_text[:77] + "…"
-            yield Static(f"line {self._line_number}:  {shown}", id="analysis-line")
+            yield Static(f"line {self._line_number}:  {shown}", id="analysis-line", markup=False)
             options = [
                 Option(self._option_label(o), id=o.key) for o in self._options.values()
             ]
             yield OptionList(*options, id="analysis-options")
             with VerticalScroll(id="analysis-output-scroll"):
-                yield Static("", id="analysis-output")
+                yield Static("", id="analysis-output", markup=False)
             yield Static("↑/↓ choose · Enter run · Esc close", id="analysis-hint")
 
     @staticmethod

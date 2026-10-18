@@ -319,7 +319,9 @@ popup** for that line. What it offers depends on the script:
   **IPA**, and **translation**. Translation is **optional** and requires a configured
   BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says
   so rather than pretending to translate. The neural and translation runs happen on a
-  background worker, so the UI never blocks.
+  background worker, so the UI never blocks. The translation includes model-reported
+  uncertainty notes, or a notice when malformed output leaves those notes unavailable.
+  Source text, translated wording and notes retain literal square brackets.
 - **Linear B / Cypriot** (deciphered): the **Greek reading + gloss** of each word and
   the **sign values** (glyph + phonetic value).
 - **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
