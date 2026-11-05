@@ -96,16 +96,48 @@ See [Installation](Installation) for the full extras matrix, and
 
 ## Roadmap
 
-The changelog records what has shipped. Current work is focused on:
+The [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md) records released
+changes and completed work awaiting release. The priorities below distinguish outstanding work
+from proposed follow-ons; their order reflects dependencies rather than release dates.
 
-- comparing deterministic and neural translation grounding on matched passages
-  before changing any default;
-- training and independently evaluating a separately versioned successor to the
-  current Greek model only after those foundations are frozen;
-- producing calibrated runtime variants only after a candidate model passes the
-  cross-domain and operational gates; and
-- adding license-clean dictionaries, conda-forge packaging, and verified
-  gazetteer coverage.
+### Current priorities
+
+- [ ] **Release the completed improvements:** targeted annotation review, indexed lexical
+  searches, translation source context, clause audits, contextual dictionary evidence, and
+  checking-history fixes are on `main` and await the next package release.
+- [ ] **Evaluate translation fidelity:** compare grounding and checking on new passages,
+  measuring both corrections and regressions in meaning, roles, negation, qualifications,
+  speaker context, and lexical sense before changing defaults.
+- [ ] **Validate confidence and review selection:** calibrate supported tasks and domains on
+  separate development and validation material; compare errors found by targeted, existing,
+  and random review queues, including errors left unflagged.
+- [ ] **Complete durable corpus analysis:** connect SQLite snapshots to bounded-memory
+  analysis with progress, cancellation, and resumable checkpoints. Verify complete output
+  after interruption and native Windows/macOS installation, Unicode, locking, and SQLite
+  behavior alongside Linux.
+- [ ] **Broaden scholarly evidence:** publish reproducible corpus studies with explicit
+  editions, sampling, and restored-reading sensitivity. Extend source-verified coverage of
+  OCR/damaged text, long context, epic/tragedy, metrical scans, and Aegean/Cypriot readings;
+  keep undeciphered-script interpretations exploratory.
+- [ ] **Expand resources and installation options:** add license-clean dictionaries,
+  source-cited Cypriot lexical entries, verified gazetteer/Pleiades coverage, and conda-forge
+  packaging.
+
+### Following those foundations
+
+- [ ] **Interactive annotation review:** bring field-level decisions, sentence context,
+  supporting evidence, and reviewer disagreements into the corpus reader, reusing the
+  existing review history and validated selection policies.
+- [ ] **Resumable import and export:** extend durable corpus jobs to incremental CoNLL-U
+  and JSONL workflows, with explicit format-loss reports and checks that resumed output
+  matches an uninterrupted run.
+- [ ] **Portable research bundles:** package redistributable source snapshots or retrieval
+  references with citations, analysis settings, model identities, review decisions, and
+  checksums so another researcher can verify and rerun the same study.
+- [ ] **Independently evaluated models and runtime variants:** evaluate a separately
+  versioned Greek-model successor only after the foundations are frozen; offer calibrated
+  `fast`, `compact`, and `balanced` variants only when candidate artifacts pass cross-domain
+  accuracy and measured size, latency, and memory requirements.
 
 ## For specialists
 
