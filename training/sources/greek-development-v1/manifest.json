@@ -1,6 +1,7 @@
 {
   "format": "pyaegean-greek-development-sources/1",
   "papygreek": {
+    "archived_documentary_xml": 558,
     "counts": {
       "basic_tree_words": 241,
       "basic_trees": 44,
@@ -1674,7 +1675,8 @@
     "files": {
       "papygreek-basic-ud.conllu.gz": "d75f8aff767304fe16a7aa2cd32d6bee2471ec3db69ae2f6fd66b06691d6e6a5",
       "papygreek-lemmas.tsv.gz": "9dd5acdee7895bade404bc19813af136de4efc23e4686fdb4a8d59ca748a029a",
-      "papygreek-native.jsonl.gz": "8b151bf34c9feba56a7d4d24cc8da1f61ed019ec4fc27e243bd88697510500be"
+      "papygreek-native.jsonl.gz": "8b151bf34c9feba56a7d4d24cc8da1f61ed019ec4fc27e243bd88697510500be",
+      "upstream/papygreek-documentary.tar.gz": "03323468d081b82ab800b2abd9bf9c8cae9c7bd0ab74c4529866884681874d44"
     },
     "locked_documents": 450,
     "pedalion_training_tm_ids": 112,
@@ -1930,34 +1932,134 @@
   },
   "tragedy": {
     "agdt": {
+      "tlg0011.tlg001.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-3",
+        "gzip_sha256": "b516376210789b205cf1f6fed3c8b9e2d00807d272ee23109ad3780230574a1d",
+        "last_source_reference": "1275-1278",
+        "raw_sha256": "2c0be589521885d0c817f72466214fe7f81a697b3ef63a21e67728b81f7dab47",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg001.perseus-grc2.tb.xml",
+        "source_sentences": 669,
+        "title": "Trachiniae",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 669
+      },
       "tlg0011.tlg002.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-3",
         "gzip_sha256": "fadcd10b63ca306ed64a7887b21333d3272777c15e67f413a1ebd02d14f833fe",
+        "last_source_reference": "1350-1353",
         "raw_sha256": "6bcddb0fa4b712608642693f4ae6226c370444dfc203c33a248c85639371cda0",
         "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg002.perseus-grc2.tb.xml",
+        "source_sentences": 687,
         "title": "Antigone",
         "use": "v3 supervised training; reserve only for a new work-excluded lineage",
         "v3_training_sentences": 687
       },
+      "tlg0011.tlg003.perseus-grc1.tb.xml": {
+        "first_source_reference": "1-2",
+        "gzip_sha256": "ed26895c3a55d51d53a812b139abb10d4b90fe0343095741dce89615428fc67b",
+        "last_source_reference": "1420-1421",
+        "raw_sha256": "96169244409da4e6a9cc7f3e934b8832bef8da8686dba8ceb21d51a73e935272",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg003.perseus-grc1.tb.xml",
+        "source_sentences": 785,
+        "title": "Ajax",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 785
+      },
+      "tlg0011.tlg004.perseus-grc1.tb.xml": {
+        "first_source_reference": "1-3",
+        "gzip_sha256": "ef3dab414cfb20e61462667005828e060078dc17a1cee0eda1b2534bd8c4d525",
+        "last_source_reference": "1528-1530",
+        "raw_sha256": "d733de9edb5daea8e44bb3b892d09461f9de4cc217eaf06db9a1da15d8309d57",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg004.perseus-grc1.tb.xml",
+        "source_sentences": 931,
+        "title": "Oedipus Tyrannus",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 931
+      },
       "tlg0011.tlg005.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-3",
         "gzip_sha256": "640f218b4c66e81d8d8d5fb0df622bf0a388edf4b84dc42628093202c2035121",
+        "last_source_reference": "1508-1510",
         "raw_sha256": "705a06c8e20858f44801b797acb23ef22feef6641336daa9b52ad60617b9dea8",
         "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg005.perseus-grc2.tb.xml",
+        "source_sentences": 929,
         "title": "Electra",
         "use": "v3 supervised training; reserve only for a new work-excluded lineage",
         "v3_training_sentences": 929
       },
+      "tlg0085.tlg001.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-4",
+        "gzip_sha256": "6efd7aaa62b6dc6360d2ad3fef778a5d4c3d47c695594a163d8ea7a5c7e90886",
+        "last_source_reference": "1069-1073",
+        "raw_sha256": "cc0172386ce2b43f6867b6158339b931f56207fbd954e0ea5ddc4cbc9cdd10a3",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg001.perseus-grc2.tb.xml",
+        "source_sentences": 529,
+        "title": "Suppliant Women",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 529
+      },
+      "tlg0085.tlg002.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-7",
+        "gzip_sha256": "33393c3e068af94f08c2f50506fbeb4ea4d51972602ad8bd28cc049525320675",
+        "last_source_reference": "1076",
+        "raw_sha256": "9d62c2459210b901ccad4486afe3a24133e59772f3a8e17c1f8bc6dfb333ce36",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg002.perseus-grc2.tb.xml",
+        "source_sentences": 480,
+        "title": "Persians",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 480
+      },
+      "tlg0085.tlg003.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-2",
+        "gzip_sha256": "46c6e645d4f97be4316aaf37dab32b714ce8aae746f5336590479455156c9fc5",
+        "last_source_reference": "1091-1093",
+        "raw_sha256": "46c0f6350c4d2418675fbcfc7c102754d9bed7b1c0ed8eddd10ad42a0de5e236",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg003.perseus-grc2.tb.xml",
+        "source_sentences": 590,
+        "title": "Prometheus Bound",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 590
+      },
+      "tlg0085.tlg004.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-3",
+        "gzip_sha256": "6606adbaf875399a64a6f0249e2878d5710ed693fa34dc220a5a3a659f8c76f2",
+        "last_source_reference": "1080-1084",
+        "raw_sha256": "00a953a465b092b4a24b0a46fd075beca56e28c80754ed05457ec64daa921e73",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg004.perseus-grc2.tb.xml",
+        "source_sentences": 515,
+        "title": "Seven Against Thebes",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 515
+      },
       "tlg0085.tlg005.perseus-grc1.tb.xml": {
+        "first_source_reference": "1-7",
         "gzip_sha256": "1d15e2144961dbf252bc8479a9e436fed5e3fb21e336cc457ae33f7f01725a63",
+        "last_source_reference": "1672-1673",
         "raw_sha256": "2b86c8e533a1519f6814013aef45e7b54728825db3009911a4484dfc5a30239f",
         "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg005.perseus-grc1.tb.xml",
+        "source_sentences": 814,
         "title": "Agamemnon",
         "use": "v3 supervised training; reserve only for a new work-excluded lineage",
         "v3_training_sentences": 814
       },
+      "tlg0085.tlg006.perseus-grc2.tb.xml": {
+        "first_source_reference": "1-2",
+        "gzip_sha256": "e2005a724fb66967ff801d58475657c3e39016bbbbf750e465733f599afc7138",
+        "last_source_reference": "942-945",
+        "raw_sha256": "10c93ae742e761045ddb35e255e23564c4b4ccc6326f4d68cb7e4a3b910237f2",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg006.perseus-grc2.tb.xml",
+        "source_sentences": 504,
+        "title": "Libation Bearers",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 504
+      },
       "tlg0085.tlg007.perseus-grc1.tb.xml": {
+        "first_source_reference": "1",
         "gzip_sha256": "59cced23f32304ef16a2130fad296e7f98e64158798e1b3e0ea4ae431e21efeb",
+        "last_source_reference": "1044",
         "raw_sha256": "86444df205dc025c44f71d48363dc2c821b4d4f2fd395e7af2933739da2f7620",
         "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg007.perseus-grc1.tb.xml",
+        "source_sentences": 526,
         "title": "Eumenides",
         "use": "v3 supervised training; reserve only for a new work-excluded lineage",
         "v3_training_sentences": 526
@@ -2094,6 +2196,30 @@
       "source": "https://github.com/DigitalHill/treebank-data/blob/0bf1de02722c22afc5c069a61d2c1a586d85be0d/euripides/eurip_suppl_447_449.xml",
       "use": "single-annotator diagnostic only",
       "words_with_punctuation": 20
+    },
+    "pedalion": {
+      "euripides_medea.xml": {
+        "first_source_reference": null,
+        "gzip_sha256": "cdff3055a21b742e16d319ddd7834eb9431e248501ea71738d00608f5206f7ad",
+        "last_source_reference": null,
+        "raw_sha256": "5c2a70327fa829497a6920f4f066f8b359a5835a37bfa520a26bb9748392ba38",
+        "source": "https://github.com/perseids-publications/pedalion-trees/blob/112c106b86b865ddde4be7e5f3e409d9c42689f9/public/xml/euripides_medea.xml",
+        "source_sentences": 824,
+        "title": "Medea",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 821
+      },
+      "ez.xml": {
+        "first_source_reference": "1",
+        "gzip_sha256": "65cf6607e1bd38c8e19f3aca8bf23f0e49906e9124140112e54108bcfa217eec",
+        "last_source_reference": "266",
+        "raw_sha256": "b090826ad6f184d7b0d4624784781477da41a3016e218921730977ea0e09cf68",
+        "source": "https://github.com/perseids-publications/pedalion-trees/blob/112c106b86b865ddde4be7e5f3e409d9c42689f9/public/xml/ez.xml",
+        "source_sentences": 148,
+        "title": "Exagoge (surviving fragments)",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 148
+      }
     },
     "reference_edition_revision": "dacb04909e43dc47738828d33cc3d2b0635bc54c"
   },

@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import io
 import json
 import re
 import sys
+import tarfile
 import unicodedata
 from collections import Counter, defaultdict
 from functools import lru_cache
@@ -216,6 +218,30 @@ def basic_tree(words, sentence_id):
     return block
 
 
+def archive_papygreek(root, files, out):
+    # Preserve upstream XML and attribution byte-for-byte in a reproducible archive.
+    check_bytes(
+        root / "LICENSE", "73c55d92eee00d4b03241b6f57a607ce5dc9ab1127bd0ce21a99e4b134b11397"
+    )
+    check_bytes(
+        root / "README.md", "3e3242b59e6c9cd43da57b07d81f91ac389bf70de58e3dbd4f45b883804a910b"
+    )
+    relative = [root / "LICENSE", root / "README.md", *files]
+    out.parent.mkdir(exist_ok=True)
+    with (
+        out.open("wb") as handle,
+        gzip.GzipFile(filename="", fileobj=handle, mode="wb", mtime=0) as compressed,
+        tarfile.open(fileobj=compressed, mode="w|", format=tarfile.USTAR_FORMAT) as archive,
+    ):
+        for file in relative:
+            data = file.read_bytes()
+            member = tarfile.TarInfo(file.relative_to(root).as_posix())
+            member.size = len(data)
+            member.mode = 0o644
+            archive.addfile(member, io.BytesIO(data))
+    return sha(out.read_bytes())
+
+
 def papyri(args, idx):
     files = sorted((args.papygreek / "documentary").rglob("*.xml"))
     binding = hashlib.sha256()
@@ -355,7 +381,9 @@ def papyri(args, idx):
                 tm_groups[tm] = joined
     split_groups = sorted({tuple(sorted(g)) for g in tm_groups.values()})
     out = args.out
+    archive_name = "upstream/papygreek-documentary.tar.gz"
     files_out = {
+        archive_name: archive_papygreek(args.papygreek, files, out / archive_name),
         "papygreek-native.jsonl.gz": gz(
             out / "papygreek-native.jsonl.gz", "\n".join(native) + "\n"
         ),
@@ -372,6 +400,7 @@ def papyri(args, idx):
     return {
         "upstream": "https://github.com/ezhenrik/papygreek-treebanks/tree/0e5139b06e41d89275f3a1ace4ee0dc5513f2f7d",
         "snapshot_digest": PAP_TREE,
+        "archived_documentary_xml": len(files),
         "pool_documents": len(candidates),
         "locked_documents": len(locked_docs),
         "pedalion_training_tm_ids": len(train_tm),
@@ -407,7 +436,39 @@ DRAFTS = {
         "14bf2e7d0feb3c097149aea3f04fc65aef22e8ee5e8e8c03c43e3982b6087134",
     ),
 }
-RESERVE = {
+AGDT_GOLD = {
+    "tlg0085.tlg006.perseus-grc2.tb.xml": (
+        "Libation Bearers",
+        "10c93ae742e761045ddb35e255e23564c4b4ccc6326f4d68cb7e4a3b910237f2",
+    ),
+    "tlg0085.tlg004.perseus-grc2.tb.xml": (
+        "Seven Against Thebes",
+        "00a953a465b092b4a24b0a46fd075beca56e28c80754ed05457ec64daa921e73",
+    ),
+    "tlg0085.tlg003.perseus-grc2.tb.xml": (
+        "Prometheus Bound",
+        "46c0f6350c4d2418675fbcfc7c102754d9bed7b1c0ed8eddd10ad42a0de5e236",
+    ),
+    "tlg0085.tlg002.perseus-grc2.tb.xml": (
+        "Persians",
+        "9d62c2459210b901ccad4486afe3a24133e59772f3a8e17c1f8bc6dfb333ce36",
+    ),
+    "tlg0085.tlg001.perseus-grc2.tb.xml": (
+        "Suppliant Women",
+        "cc0172386ce2b43f6867b6158339b931f56207fbd954e0ea5ddc4cbc9cdd10a3",
+    ),
+    "tlg0011.tlg004.perseus-grc1.tb.xml": (
+        "Oedipus Tyrannus",
+        "d733de9edb5daea8e44bb3b892d09461f9de4cc217eaf06db9a1da15d8309d57",
+    ),
+    "tlg0011.tlg003.perseus-grc1.tb.xml": (
+        "Ajax",
+        "96169244409da4e6a9cc7f3e934b8832bef8da8686dba8ceb21d51a73e935272",
+    ),
+    "tlg0011.tlg001.perseus-grc2.tb.xml": (
+        "Trachiniae",
+        "2c0be589521885d0c817f72466214fe7f81a697b3ef63a21e67728b81f7dab47",
+    ),
     "tlg0011.tlg002.perseus-grc2.tb.xml": (
         "Antigone",
         "6bcddb0fa4b712608642693f4ae6226c370444dfc203c33a248c85639371cda0",
@@ -423,6 +484,19 @@ RESERVE = {
     "tlg0085.tlg007.perseus-grc1.tb.xml": (
         "Eumenides",
         "86444df205dc025c44f71d48363dc2c821b4d4f2fd395e7af2933739da2f7620",
+    ),
+}
+
+
+PEDALION = "112c106b86b865ddde4be7e5f3e409d9c42689f9"
+PEDALION_GOLD = {
+    "euripides_medea.xml": (
+        "Medea",
+        "5c2a70327fa829497a6920f4f066f8b359a5835a37bfa520a26bb9748392ba38",
+    ),
+    "ez.xml": (
+        "Exagoge (surviving fragments)",
+        "b090826ad6f184d7b0d4624784781477da41a3016e218921730977ea0e09cf68",
     ),
 }
 
@@ -552,26 +626,43 @@ def tragedy(args, idx):
             "use": "expert adjudication queue only",
         }
 
-    training_gold = {}
-    for name, (title, digest) in RESERVE.items():
-        raw = check_bytes(args.agdt / "v2.1/Greek/texts" / name, digest)
-        used = idx.train_files[name]
-        if not used:
-            raise ValueError("v3 exposure accounting mismatch: " + name)
-        training_gold[name] = {
-            "title": title,
-            "use": "v3 supervised training; reserve only for a new work-excluded lineage",
-            "source": f"https://github.com/PerseusDL/treebank_data/blob/{AGDT}/v2.1/Greek/texts/{name}",
-            "raw_sha256": digest,
-            "v3_training_sentences": used,
-            "gzip_sha256": gz(reserve / (name + ".gz"), raw),
-        }
+    def exposed_sources(entries, directory, url, training_prefix=""):
+        result = {}
+        for name, (title, digest) in entries.items():
+            raw = check_bytes(directory / name, digest)
+            used = idx.train_files[training_prefix + name]
+            if not used:
+                raise ValueError("v3 exposure accounting mismatch: " + name)
+            sentences = list(ET.fromstring(raw).iter("sentence"))
+            result[name] = {
+                "title": title,
+                "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+                "source": url + "/" + name,
+                "raw_sha256": digest,
+                "source_sentences": len(sentences),
+                "v3_training_sentences": used,
+                "first_source_reference": sentences[0].get("subdoc") or None,
+                "last_source_reference": sentences[-1].get("subdoc") or None,
+                "gzip_sha256": gz(reserve / (name + ".gz"), raw),
+            }
+        return result
+
     return {
         "reference_edition_revision": GREEKLIT,
         "daphne_catalog_sha256": catalog_hash,
         "digital_hill": hill,
         "daphne": drafts,
-        "agdt": training_gold,
+        "agdt": exposed_sources(
+            AGDT_GOLD,
+            args.agdt / "v2.1/Greek/texts",
+            f"https://github.com/PerseusDL/treebank_data/blob/{AGDT}/v2.1/Greek/texts",
+        ),
+        "pedalion": exposed_sources(
+            PEDALION_GOLD,
+            args.pedalion.parent,
+            f"https://github.com/perseids-publications/pedalion-trees/blob/{PEDALION}/public/xml",
+            "pedalion:",
+        ),
     }
 
 

@@ -164,7 +164,7 @@ release.
   passage. The UD-Perseus dev and test folds contain prose. A subsequent source audit
   recovered a separate 20-token passage from Euripides’ *Suppliants* and two full
   works with editorial review under way, Sophocles’ *Philoctetes* and Euripides’
-  *Iphigenia in Tauris*. Four further scholarly treebanks cover plays used in v3
+  *Iphigenia in Tauris*. Fourteen further native treebanks cover works used in v3
   training. A broader independent verse benchmark needs adjudicated material from
   additional works or a new training lineage that withholds whole plays. Held-out
   epic gold remains an open item. [Benchmarks](Benchmarks) ·
