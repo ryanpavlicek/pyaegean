@@ -1,0 +1,2101 @@
+{
+  "format": "pyaegean-greek-development-sources/1",
+  "papygreek": {
+    "counts": {
+      "basic_tree_words": 241,
+      "basic_trees": 44,
+      "different_lemma_among_comparable_targets": 16,
+      "different_surface_among_lemma_targets": 267,
+      "documents": 75,
+      "lemma_targets": 5317,
+      "paired_with_frozen_reg_dev": 298,
+      "sentences": 317,
+      "surface_tokens": 6732,
+      "tm_ids": 75
+    },
+    "documents": {
+      "bgu.12.2147": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-08-17",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2023-06-27",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.12.2147.xml",
+        "sha256": "dd943d1464325b4e67b06d88478114830f7343b27924abf41f0c6c47684043d7",
+        "tm_id": "16103"
+      },
+      "bgu.16.2614": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-09-07",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2020-09-02",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2614.xml",
+        "sha256": "0997f5cc3326ec7a1f97c61942fc37c6ac9474b0ec609ba1b146d194065b0f8f",
+        "tm_id": "23338"
+      },
+      "bgu.16.2619": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-06-22",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-06-22",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2619.xml",
+        "sha256": "5bb73a398b21a3cdd9b8283a38bf3ff1f97d0daff99c81c671a59057513dd34e",
+        "tm_id": "23343"
+      },
+      "bgu.16.2632": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-09-07",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2020-08-27",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2632.xml",
+        "sha256": "7e7464dc6bd7b0bd8e724e295989196ef91b91cb9b7200ff3b42a540e89e2040",
+        "tm_id": "23356"
+      },
+      "bgu.16.2633": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-09-07",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2020-03-05",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2633.xml",
+        "sha256": "71afb5f3c0095b1f42c6efb685d3434eef594ef5f02a1b9dd79914190d1abaa2",
+        "tm_id": "23357"
+      },
+      "bgu.16.2640": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-18",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-18",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2640.xml",
+        "sha256": "7e3ab2e0283cddbc4f99ae968ea42f11c70ffa5d61886b21ce64838112766816",
+        "tm_id": "23364"
+      },
+      "bgu.16.2641": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-19",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-08-31",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2641.xml",
+        "sha256": "efead47481031af684946ede482e292e27efc0a077192ec3ec1d838693624df0",
+        "tm_id": "23365"
+      },
+      "bgu.16.2648": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-09-07",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-04-09",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2648.xml",
+        "sha256": "704262dc3dd40bcca9e6a3ed54662fc8d8149951b6467b9db8ccc98e1021d607",
+        "tm_id": "23372"
+      },
+      "bgu.16.2652": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-08-30",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-04-12",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.16.2652.xml",
+        "sha256": "ecb648d36c569dfe0afd0144aeebeb4299254a46a972ece9777e8d340dc025e3",
+        "tm_id": "23376"
+      },
+      "bgu.3.701": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-06-18",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-04-14",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/bgu/bgu.3.701.xml",
+        "sha256": "223bfc33a88fa54863e8ee3b5e6313cd613d2f065b7cae374dbb87d29c24a874",
+        "tm_id": "28077"
+      },
+      "bgu.6.1211": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-16",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-02-15",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-04-07",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-06-11",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/bgu/bgu.6.1211.xml",
+        "sha256": "6a46e0e65596f7e3889fac79791997923c7593bf37aaeabd1e421c75c933c93a",
+        "tm_id": "4527"
+      },
+      "bgu.6.1249": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-08-14",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-07-15",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-04-14",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-05-16",
+            "name": "Arttu Alaranta",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/bgu/bgu.6.1249.xml",
+        "sha256": "83f1f37e2ef6439b9289036d1442a0868282012e99cbc2bb85d576199420341b",
+        "tm_id": "4540"
+      },
+      "o.claud.1.142": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-09-16",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-09-16",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-11-03",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2016-11-03",
+            "name": "Lauri Marjamäki",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.142.xml",
+        "sha256": "d21e0a813a09027c2effcd6b4e96e614f2255e47a7b4cf46099126f254680221",
+        "tm_id": "24154"
+      },
+      "o.claud.1.148": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-06",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-04-06",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-10-11",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.148.xml",
+        "sha256": "bf34e6c468876f124031c963ea08ade2b6ae023177ada91e3cb0cfb00798ae32",
+        "tm_id": "24159"
+      },
+      "o.claud.1.150": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-11",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-11",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-10-01",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.150.xml",
+        "sha256": "7dd712e0af0b4cd64bd2fd6edfcc7bcb05b86ce3dd1d4218c9fee09824645350",
+        "tm_id": "24161"
+      },
+      "o.claud.1.159": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-21",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-17",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-10-17",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.159.xml",
+        "sha256": "1c763f5b8feb350cbfaea95d126224a8884405de378e51e7574987cacee99577",
+        "tm_id": "24167"
+      },
+      "o.claud.1.163": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-09-07",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2016-12-26",
+            "name": "Jamie Vesterinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.163.xml",
+        "sha256": "bf511371cd0677e0d4d95d856d90ffecba48f4cdf88cbbb948b97713ef64984e",
+        "tm_id": "24171"
+      },
+      "o.claud.1.169": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-06-08",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-31",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-10-09",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.169.xml",
+        "sha256": "f7eba1624a8437094fcb5fc882eb70b182c1683f6213c71cd1c1a48f1eea65e2",
+        "tm_id": "24177"
+      },
+      "o.claud.1.172": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-12",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-04-12",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-12-20",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.172.xml",
+        "sha256": "323682c664db4fc6c085c4fd407511d8a6153dd53e73e2816234c04cc9cff6f5",
+        "tm_id": "24180"
+      },
+      "o.claud.1.173": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-03-20",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-03-16",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.1.173.xml",
+        "sha256": "5e5640eddda9d110f55b63a3d8775d5bb09a8e1f4319b1bb4a93e579363c44be",
+        "tm_id": "24181"
+      },
+      "o.claud.2.233": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-09-29",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-09-29",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-01-11",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2016-11-16",
+            "name": "Lauri Marjamäki",
+            "role": "annotated (previously)"
+          },
+          {
+            "date": "2016-11-16",
+            "name": "Lauri Marjamäki",
+            "role": "annotated (previously)"
+          },
+          {
+            "date": "2016-11-16",
+            "name": "Lauri Marjamäki",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.2.233.xml",
+        "sha256": "95444cd75eab051f7886e47f27a46133a58a4cb276d6fa24e86fe9db2edfc448",
+        "tm_id": "29656"
+      },
+      "o.claud.2.237": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-08-29",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2019-11-06",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          },
+          {
+            "date": "2016-11-16",
+            "name": "Lauri Marjamäki",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.2.237.xml",
+        "sha256": "7011b573a10aff71b677fe2b3c8d8f2aa9c4289fb4744528a280642fc56683a3",
+        "tm_id": "29660"
+      },
+      "o.claud.2.247": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-05-22",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-05-08",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.claud/o.claud.2.247.xml",
+        "sha256": "f7e1bdc67d863d26552dbae0f04d121f90b2ae8f39fd2f255987eeccf1a85b0a",
+        "tm_id": "29667"
+      },
+      "o.krok.1.78": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-11-09",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-11-06",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.krok/o.krok.1.78.xml",
+        "sha256": "c5b3760db57ff8d99a535769716a7703835d13e4418f24cfa4060989847ca21c",
+        "tm_id": "88669"
+      },
+      "o.krok.2.164": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-20",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-18",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.krok/o.krok.2.164.xml",
+        "sha256": "4792a1541432588e0b8dfe7b4ecabe7361828b7e1397eb4353b7aa2aa126f1d7",
+        "tm_id": "704449"
+      },
+      "o.krok.2.191": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-12-10",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-09-26",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.krok/o.krok.2.191.xml",
+        "sha256": "467a998e24df5e9b3f57ab0902242007fb5024d9a95711b4497e4d6d252d1afa",
+        "tm_id": "704476"
+      },
+      "o.narm.1": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-04-27",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-04-27",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.narm/o.narm.1.xml",
+        "sha256": "fbb8ba5ae0d841f8a5e26e59cac105b2f3c555d1e69a200a30052f121ce16a66",
+        "tm_id": "29537"
+      },
+      "o.narm.3": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-04-27",
+            "name": "Marja Vierros",
+            "role": "approved"
+          }
+        ],
+        "path": "documentary/o.narm/o.narm.3.xml",
+        "sha256": "b7ce6b58f5582d8ce74f5c8a72af09b2fb9356e9d62e16bf7d0f7d5ab552c582",
+        "tm_id": "29539"
+      },
+      "o.narm.5": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-04-27",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-04-27",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/o.narm/o.narm.5.xml",
+        "sha256": "bffa58426ce1ccbc31f937fc52150bc79fae71cf8ea38bde4674562e18c15981",
+        "tm_id": "29541"
+      },
+      "p.babatha.11": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-11-14",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-11-08",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.babatha/p.babatha.11.xml",
+        "sha256": "9b04935d1a772bee1ede5f754bc462cfa264e1c9055a94112f190e19485d48ec",
+        "tm_id": "23489"
+      },
+      "p.babatha.21": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-19",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-04",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.babatha/p.babatha.21.xml",
+        "sha256": "1d57f89ed974979262893c903508ed67a067f0738ea4254bfcb8916af9035351",
+        "tm_id": "23501"
+      },
+      "p.babatha.29tpl": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-19",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-04",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.babatha/p.babatha.29tpl.xml",
+        "sha256": "7f3df6ed6ab35103eb3eed070d19351b499dff55c4d4a23b0d04f864ea37a963",
+        "tm_id": "23509"
+      },
+      "p.babatha.5": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-06-13",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-06-10",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.babatha/p.babatha.5.xml",
+        "sha256": "fc3297fc11c72ad86f1031196d6812b48277492e1622bce5a41e35ad14236801",
+        "tm_id": "23488"
+      },
+      "p.cair.masp.1.67067": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-08-03",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-11-04",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.masp/p.cair.masp.1.67067.xml",
+        "sha256": "5f34186b7e0b692e0243ab7b8496d4e8a0fb961d189113ad05eaedcade8e8cfc",
+        "tm_id": "36809"
+      },
+      "p.cair.zen.1.59030": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-09-16",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-02-21",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2018-05-31",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59030.xml",
+        "sha256": "90d99d35a90cbb7d14ec2791038170fb22b5da42863c74ed45aa07dcbb79db4c",
+        "tm_id": "690"
+      },
+      "p.cair.zen.1.59033": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-17",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-17",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59033.xml",
+        "sha256": "158c34009636ae273dc7324badb85c6d803e2f9d2be2e665107014e80169b3a0",
+        "tm_id": "693"
+      },
+      "p.cair.zen.1.59059": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-18",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-18",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59059.xml",
+        "sha256": "5ae3c681d5c45b8d2b83e9ab882a6ad0d30d9b48cb259ba66e2ba02a5cc80414",
+        "tm_id": "717"
+      },
+      "p.cair.zen.1.59066": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-23",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-23",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59066.xml",
+        "sha256": "61e5d3cefd88e400c0f2b756b1910abf726eb76d3d020e0a045df0230ca5551f",
+        "tm_id": "723"
+      },
+      "p.cair.zen.1.59068": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-11",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-11",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59068.xml",
+        "sha256": "9c13dfa81feaeedced609d3dfcbe90bce135a861d193b85e9fd96b15641e1f44",
+        "tm_id": "724"
+      },
+      "p.cair.zen.1.59099": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2019-10-22",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2019-10-22",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.1.59099.xml",
+        "sha256": "fc19189bd1f89603e0e20c533c47c0d2b81ab30f098722861620dcf59ff420d0",
+        "tm_id": "751"
+      },
+      "p.cair.zen.2.59223": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-20",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2022-07-20",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          },
+          {
+            "date": "2021-04-21",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2018-12-10",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.2.59223.xml",
+        "sha256": "23dc25b20a464bd40c2dea73f1e43cdfead4ab5dd326e0542592206eaeaa96d2",
+        "tm_id": "868"
+      },
+      "p.cair.zen.2.59240": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-03-28",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-05-24",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2018-12-20",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.cair.zen/p.cair.zen.2.59240.xml",
+        "sha256": "6e8ed1ba4ccf3bc0699e08ce1ea9f7d88201ffae8199ec45634f03781d987b38",
+        "tm_id": "885"
+      },
+      "p.giss.apoll.8": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-06-27",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2023-06-27",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          },
+          {
+            "date": "2022-08-12",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-03-05",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.giss.apoll/p.giss.apoll.8.xml",
+        "sha256": "770d3689c08150935bb5130cf23f27cc6a256e696e2a15acb62da7dff0c417ea",
+        "tm_id": "19421"
+      },
+      "p.grenf.1.61": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-08-03",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-09-05",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-01-25",
+            "name": "Petri Lahtinen",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.grenf/p.grenf.1.61.xml",
+        "sha256": "d5bc46c45dddca283c9e474fe364ad491ae701ee72231da4b0f875d2b72fd128",
+        "tm_id": "38215"
+      },
+      "p.hib.1.50": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-11-15",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-11-11",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.hib/p.hib.1.50.xml",
+        "sha256": "23b084612e8497ec960851d6f7b5042f3089e74a77a9886c8b6ee6b275333ab4",
+        "tm_id": "8201"
+      },
+      "p.mich.10.598": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-11-24",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-10-21",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.mich/p.mich.10.598.xml",
+        "sha256": "aea25883bd981229b5bab55f22e8016df59eb148109142c92fecdd827271f560",
+        "tm_id": "21359"
+      },
+      "p.mich.3.194": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-09-16",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-11-28",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.mich/p.mich.3.194.xml",
+        "sha256": "99c4052d29f68b6025e74340ae988b6ba7683350d9f367a342e3988f99a51038",
+        "tm_id": "21339"
+      },
+      "p.nag.hamm.72": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-22",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-02-21",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2018-10-09",
+            "name": "Arttu Alaranta",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.nag.hamm/p.nag.hamm.72.xml",
+        "sha256": "815b0ab814f4dc245cae512b8f5cca8b4b886c9227bae20c92220dfd90f029a5",
+        "tm_id": "32414"
+      },
+      "p.oxy.14.1680": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-03-14",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-12-29",
+            "name": "Sari Kock",
+            "role": "annotated"
+          },
+          {
+            "date": "2018-08-27",
+            "name": "Arttu Alaranta",
+            "role": "annotated (previously)"
+          }
+        ],
+        "path": "documentary/p.oxy/p.oxy.14.1680.xml",
+        "sha256": "fbbe618643d269fa5b4767fa0980338f7548754dcaa2f9f3d84251d4c8db8673",
+        "tm_id": "31788"
+      },
+      "p.oxy.8.1105": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2023-08-24",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2022-11-30",
+            "name": "Sari Kock",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.oxy/p.oxy.8.1105.xml",
+        "sha256": "615e39eb35e1f5420e57918c12ff1c2444303874b9bd55970a153f5373978e96",
+        "tm_id": "21730"
+      },
+      "p.polit.iud.12": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-06-22",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-06-22",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2021-02-12",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.12.xml",
+        "sha256": "ae28e0f540bb17b6979b99e67d4d8905ba5aa2dd559ce3cc6716dc4472d29b54",
+        "tm_id": "44628"
+      },
+      "p.polit.iud.17": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-12-07",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-11-26",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.17.xml",
+        "sha256": "3022001b2ecbdcd688b5df055235853289e9fb9b3c2d967bb53510f2d2a29eec",
+        "tm_id": "44633"
+      },
+      "p.polit.iud.18": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-01",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-01-12",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.18.xml",
+        "sha256": "7ec25f2e2268934c1ba5ee61f543e49ed515aa7a30038a0d8fde2a182cbc2f91",
+        "tm_id": "44634"
+      },
+      "p.polit.iud.19": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-01-07",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-12-22",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.19.xml",
+        "sha256": "d4107afdabe9c2edcff7e590300263e954f24f19ae0ebbe838d21ac8c2eaafc8",
+        "tm_id": "44635"
+      },
+      "p.polit.iud.2": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-11-25",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-11-18",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.2.xml",
+        "sha256": "36039467c9309f396171e487f43fc7b161ba7e2c68d54f93e63f7c5c7c32b3e5",
+        "tm_id": "44618"
+      },
+      "p.polit.iud.20": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-01-07",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-12-22",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.20.xml",
+        "sha256": "7cfe5f862e9596c99ef4b1227ddac0ed91d70dda91706436dd4b467d923493aa",
+        "tm_id": "44636"
+      },
+      "p.polit.iud.6": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-11",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-02-10",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.6.xml",
+        "sha256": "c0022722018371cd9435aa3e98e1d5c2b09a0f7248e5b312d9efd79bc0671251",
+        "tm_id": "44622"
+      },
+      "p.polit.iud.8": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-09-16",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-06-18",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-12-09",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.8.xml",
+        "sha256": "9bc929fdbeeb8a4980d7ffa4b108c89dd5f045d189795c2eaa7f4f546cf8118d",
+        "tm_id": "44624"
+      },
+      "p.polit.iud.9": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-09-16",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-06-21",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-12-10",
+            "name": "Iida Emilia Huitula",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.polit.iud/p.polit.iud.9.xml",
+        "sha256": "a71f2dd4146b2984175c90b29146cf9f3302754b2db0288c6aec61b01ff948a8",
+        "tm_id": "44625"
+      },
+      "p.tebt.1.10": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-06-08",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-04-26",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/p.tebt/p.tebt.1.10.xml",
+        "sha256": "f94ddcea70b0c4ba05bf6a9b2e4cf863274645e4300f246aef4bbb0b5eff1738",
+        "tm_id": "3646"
+      },
+      "upz.1.111": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-05-04",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-05-04",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-09-06",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.111.xml",
+        "sha256": "d9fc215183478f533ad0dfa03dc5e8d6bb299da178388cdf5b771fa467120731",
+        "tm_id": "3503"
+      },
+      "upz.1.12": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-02-21",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-02-21",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.12.xml",
+        "sha256": "dfce8358f6a544d10f76f94f0cc1542bd9a60e95059943be5d63570711c30649",
+        "tm_id": "3403"
+      },
+      "upz.1.148": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2022-07-30",
+            "name": "Marja Vierros",
+            "role": "approved"
+          }
+        ],
+        "path": "documentary/upz/upz.1.148.xml",
+        "sha256": "0771b1b3dd8fde8f06aade8fcee451e8a04a38c2883e6599aed2276ff021e1fd",
+        "tm_id": "3540"
+      },
+      "upz.1.21": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-08",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-03-17",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.21.xml",
+        "sha256": "cdc6315ad6f3f56bfd3278e04d52fe98253de81739874754544cabfb3e99e162",
+        "tm_id": "3412"
+      },
+      "upz.1.28": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-02-21",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-11-18",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.28.xml",
+        "sha256": "a98f7145c8976d95284359eceabed85f230d123501d6651ad1ca52e2923ad7c1",
+        "tm_id": "3419"
+      },
+      "upz.1.29": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-01-30",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-01-11",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.29.xml",
+        "sha256": "cb199418126f7381a661217c7b85cb94357a3bce0acc6c6ea05b314838472b91",
+        "tm_id": "3420 3420"
+      },
+      "upz.1.3": {
+        "orig_approved_by": [
+          "Polina Yordanova"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-02-08",
+            "name": "Polina Yordanova",
+            "role": "approved"
+          },
+          {
+            "date": "2021-02-08",
+            "name": "Polina Yordanova",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-04-02",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.3.xml",
+        "sha256": "6a7e5944e2cb07dabac1c2b06e29e17c0c333727b7fc33d4ea667ee271b776c1",
+        "tm_id": "3394"
+      },
+      "upz.1.30": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-01-08",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-11-18",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.30.xml",
+        "sha256": "3ed2209ff794cc6e64bf1254f7f459d0885c58d65a23ba0e18a5ba9857cb19b7",
+        "tm_id": "3421"
+      },
+      "upz.1.32": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2021-05-04",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2021-05-04",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2020-01-11",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.32.xml",
+        "sha256": "5e150b2ba43ad4e312fd3f270c8545e19423384676070c9fbb899258b596de63",
+        "tm_id": "3423"
+      },
+      "upz.1.39": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-05-06",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-05-06",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.39.xml",
+        "sha256": "263be71aa975dbf7018f5ad7c45ab751263c1d8921afb126a24008b0c34806f4",
+        "tm_id": "3430"
+      },
+      "upz.1.40": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-05-07",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-05-06",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.40.xml",
+        "sha256": "0e67b053947468ac41095c4c02695c249a2a7aa4c1877677e2d9895fde4df600",
+        "tm_id": "3431"
+      },
+      "upz.1.43": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-30",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-04-29",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.43.xml",
+        "sha256": "dd0f0864be23d38d1dcced2059477e38b3319f4acf37b711eab8cc0e28bd756d",
+        "tm_id": "3434"
+      },
+      "upz.1.44": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-27",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-03-24",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.44.xml",
+        "sha256": "50cf5036e42204f6b7fd5e12ae9a63299dae567253849524dbcd3cee4c50bf46",
+        "tm_id": "3435"
+      },
+      "upz.1.49": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-04-28",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2019-12-11",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.49.xml",
+        "sha256": "c5725af2680080a578f7388c100be5dee7503100ff707afed08b82ec9fb3b5d6",
+        "tm_id": "3440"
+      },
+      "upz.1.76": {
+        "orig_approved_by": [
+          "Marja Vierros"
+        ],
+        "orig_credits": [
+          {
+            "date": "2020-01-15",
+            "name": "Marja Vierros",
+            "role": "approved"
+          },
+          {
+            "date": "2020-01-15",
+            "name": "Marja Vierros",
+            "role": "annotated"
+          },
+          {
+            "date": "2019-12-20",
+            "name": "Jamie Vesterinen",
+            "role": "annotated"
+          }
+        ],
+        "path": "documentary/upz/upz.1.76.xml",
+        "sha256": "e91519ad5243fc0850064962c85c3c6d19301264018acf25e7380818eeb7c7c3",
+        "tm_id": "3467"
+      }
+    },
+    "excluded": {
+      "document_work_overlap": 1,
+      "eight_words": 6,
+      "no_eligible_lemma": 21,
+      "sentence": 27
+    },
+    "files": {
+      "papygreek-basic-ud.conllu.gz": "d75f8aff767304fe16a7aa2cd32d6bee2471ec3db69ae2f6fd66b06691d6e6a5",
+      "papygreek-lemmas.tsv.gz": "9dd5acdee7895bade404bc19813af136de4efc23e4686fdb4a8d59ca748a029a",
+      "papygreek-native.jsonl.gz": "8b151bf34c9feba56a7d4d24cc8da1f61ed019ec4fc27e243bd88697510500be"
+    },
+    "locked_documents": 450,
+    "pedalion_training_tm_ids": 112,
+    "pool_documents": 77,
+    "required_tm_split_groups": [
+      [
+        "16103"
+      ],
+      [
+        "19421"
+      ],
+      [
+        "21339"
+      ],
+      [
+        "21359"
+      ],
+      [
+        "21730"
+      ],
+      [
+        "23338"
+      ],
+      [
+        "23343"
+      ],
+      [
+        "23356"
+      ],
+      [
+        "23357"
+      ],
+      [
+        "23364"
+      ],
+      [
+        "23365"
+      ],
+      [
+        "23372"
+      ],
+      [
+        "23376"
+      ],
+      [
+        "23488"
+      ],
+      [
+        "23489"
+      ],
+      [
+        "23501"
+      ],
+      [
+        "23509"
+      ],
+      [
+        "24154"
+      ],
+      [
+        "24159"
+      ],
+      [
+        "24161"
+      ],
+      [
+        "24167"
+      ],
+      [
+        "24171"
+      ],
+      [
+        "24177"
+      ],
+      [
+        "24180",
+        "24181"
+      ],
+      [
+        "28077"
+      ],
+      [
+        "29537"
+      ],
+      [
+        "29539"
+      ],
+      [
+        "29541"
+      ],
+      [
+        "29656"
+      ],
+      [
+        "29660"
+      ],
+      [
+        "29667"
+      ],
+      [
+        "31788"
+      ],
+      [
+        "32414"
+      ],
+      [
+        "3394"
+      ],
+      [
+        "3403"
+      ],
+      [
+        "3412"
+      ],
+      [
+        "3419"
+      ],
+      [
+        "3420 3420"
+      ],
+      [
+        "3421"
+      ],
+      [
+        "3423"
+      ],
+      [
+        "3430",
+        "3431"
+      ],
+      [
+        "3434"
+      ],
+      [
+        "3435"
+      ],
+      [
+        "3440"
+      ],
+      [
+        "3467"
+      ],
+      [
+        "3503"
+      ],
+      [
+        "3540"
+      ],
+      [
+        "3646"
+      ],
+      [
+        "36809"
+      ],
+      [
+        "38215"
+      ],
+      [
+        "44618"
+      ],
+      [
+        "44622"
+      ],
+      [
+        "44624"
+      ],
+      [
+        "44625"
+      ],
+      [
+        "44628"
+      ],
+      [
+        "44633"
+      ],
+      [
+        "44634"
+      ],
+      [
+        "44635"
+      ],
+      [
+        "44636"
+      ],
+      [
+        "4527"
+      ],
+      [
+        "4540"
+      ],
+      [
+        "690"
+      ],
+      [
+        "693"
+      ],
+      [
+        "704449"
+      ],
+      [
+        "704476"
+      ],
+      [
+        "717",
+        "868",
+        "885"
+      ],
+      [
+        "723"
+      ],
+      [
+        "724"
+      ],
+      [
+        "751"
+      ],
+      [
+        "8201"
+      ],
+      [
+        "88669"
+      ]
+    ],
+    "snapshot_digest": "f2dcadbc70b92298f71b7855e43cea1c89d7f5994b8855aaf7b1f88523b2c57c",
+    "upstream": "https://github.com/ezhenrik/papygreek-treebanks/tree/0e5139b06e41d89275f3a1ace4ee0dc5513f2f7d"
+  },
+  "protected_file_sha256": {
+    "Bacchae test": "adc40a33349aa10a7d38df34a4dd4f7e0049e5eec542b3390efcde46b8883935",
+    "DBBE test": "f4c0b0ac07ab42c913d868748c975c3ffaf07636861a3d3a1e5a3193f50b1c5d",
+    "Nestle 1904": "e7aa5dcad729eb91f77018abbef71304d13e200f29dabe1260b79fa37b153949",
+    "PapyGreek diplomatic test": "6ec11d90fb7e5c968ec47d1c82adb219aceb651db74b1c42aa94b5805125516f",
+    "PapyGreek regularized test": "81ce7dddd158bd4e3dbe41cd87746b80c0f2a85c86ce416ac44d602350e873aa",
+    "UD PROIEL test": "ac5576c048c57e01a5a6d2e1b9067fb80b4da65cf8b66913e9a273d8b83ba3b8",
+    "UD Perseus dev": "7899f809fc250404839694330b9db25f79a5b1f20cfa12e6dc3a368a4ec7cd22",
+    "UD Perseus test": "e18d47c395c0ec8da678fb5e315ce6d90133e88c25ed2a55bc72a2a66e6254d5",
+    "full-dev.jsonl": "0a25ae85280b3af825ca2202b3290de27e8b197f9e154291c8118c5d26a0b681",
+    "full-train.jsonl": "18c096fada22cbb459475b867f2da942824f1c34eafc770cf8dbda8a55cbaf64",
+    "native PROIEL / greek-nt.xml": "93f868f54109acf305c0bd5f465e65509c90798ac176ddd20b09ebcfae9f422f",
+    "native PROIEL / hdt.xml": "1d853bc5d34fbb2d05c56198b55fb08a667126e3be8bc5a6199083bb0104b92c"
+  },
+  "protected_form_sources": {
+    "Bacchae test": 36,
+    "DBBE test": 825,
+    "Nestle 1904": 7943,
+    "PapyGreek diplomatic test": 1551,
+    "PapyGreek regularized test": 1551,
+    "UD PROIEL test": 1047,
+    "UD Perseus dev": 1137,
+    "UD Perseus test": 1306,
+    "full-dev.jsonl": 1137,
+    "full-train.jsonl": 76142,
+    "native PROIEL": 17165
+  },
+  "tragedy": {
+    "agdt": {
+      "tlg0011.tlg002.perseus-grc2.tb.xml": {
+        "gzip_sha256": "fadcd10b63ca306ed64a7887b21333d3272777c15e67f413a1ebd02d14f833fe",
+        "raw_sha256": "6bcddb0fa4b712608642693f4ae6226c370444dfc203c33a248c85639371cda0",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg002.perseus-grc2.tb.xml",
+        "title": "Antigone",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 687
+      },
+      "tlg0011.tlg005.perseus-grc2.tb.xml": {
+        "gzip_sha256": "640f218b4c66e81d8d8d5fb0df622bf0a388edf4b84dc42628093202c2035121",
+        "raw_sha256": "705a06c8e20858f44801b797acb23ef22feef6641336daa9b52ad60617b9dea8",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0011.tlg005.perseus-grc2.tb.xml",
+        "title": "Electra",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 929
+      },
+      "tlg0085.tlg005.perseus-grc1.tb.xml": {
+        "gzip_sha256": "1d15e2144961dbf252bc8479a9e436fed5e3fb21e336cc457ae33f7f01725a63",
+        "raw_sha256": "2b86c8e533a1519f6814013aef45e7b54728825db3009911a4484dfc5a30239f",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg005.perseus-grc1.tb.xml",
+        "title": "Agamemnon",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 814
+      },
+      "tlg0085.tlg007.perseus-grc1.tb.xml": {
+        "gzip_sha256": "59cced23f32304ef16a2130fad296e7f98e64158798e1b3e0ea4ae431e21efeb",
+        "raw_sha256": "86444df205dc025c44f71d48363dc2c821b4d4f2fd395e7af2933739da2f7620",
+        "source": "https://github.com/PerseusDL/treebank_data/blob/bf4334f0af5e13d16b04c1cccd6237e683ac6f5f/v2.1/Greek/texts/tlg0085.tlg007.perseus-grc1.tb.xml",
+        "title": "Eumenides",
+        "use": "v3 supervised training; reserve only for a new work-excluded lineage",
+        "v3_training_sentences": 526
+      }
+    },
+    "daphne": {
+      "tlg0006.tlg013": {
+        "annotation_status": "in_review",
+        "canonical_xml_sha256": "dae8c3abd8083b0f185c0213485faf42378828d03056032e956b7b138044f08c",
+        "catalog_title_as_published": "Ion",
+        "counts": {
+          "empty_nodes": 0,
+          "integer_words": 10217,
+          "reference_four_word_matches": 5440,
+          "reference_four_word_windows": 5917,
+          "sentences": 903,
+          "structurally_complete_basic_trees": 903
+        },
+        "gzip_sha256": "7a2f58f25a796c2336db30043d37669c7b66e103ed950e5c0810d6a70c14668c",
+        "protected_overlap_sentence_ids": {
+          "150": "sentence",
+          "181": "sentence",
+          "185": "sentence",
+          "232": "sentence",
+          "253": "sentence",
+          "262": "sentence",
+          "265": "sentence",
+          "271": "sentence",
+          "279": "sentence",
+          "284": "sentence",
+          "289": "sentence",
+          "301": "sentence",
+          "329": "sentence",
+          "340": "sentence",
+          "359": "sentence",
+          "375": "sentence",
+          "395": "sentence",
+          "407": "sentence",
+          "408": "sentence",
+          "413": "sentence",
+          "451": "sentence",
+          "459": "sentence",
+          "470": "sentence",
+          "484": "sentence",
+          "486": "sentence",
+          "504": "sentence",
+          "529": "sentence",
+          "551": "sentence",
+          "587": "sentence",
+          "609": "sentence",
+          "613": "sentence",
+          "618": "sentence",
+          "621": "sentence",
+          "635": "sentence",
+          "686": "sentence",
+          "70": "sentence",
+          "792": "sentence",
+          "798": "sentence",
+          "804": "sentence",
+          "812": "sentence"
+        },
+        "raw_sha256": "14bf2e7d0feb3c097149aea3f04fc65aef22e8ee5e8e8c03c43e3982b6087134",
+        "source": "https://github.com/francescomambrini/Daphne/blob/06aa1f27a34af98bba1407dc95fe2085a72f8b7f/data/annotation/tlg0006/tlg013/tlg0006.tlg013.daphne_tb-grc1.conllu",
+        "title": "Iphigenia in Tauris",
+        "use": "expert adjudication queue only"
+      },
+      "tlg0011.tlg006": {
+        "annotation_status": "in_review",
+        "canonical_xml_sha256": "a1233e43b1723c01fe8b11349ebb78143a13477cc32c41a043323c075061d11a",
+        "catalog_title_as_published": "Philoctetes",
+        "counts": {
+          "empty_nodes": 176,
+          "integer_words": 10954,
+          "reference_four_word_matches": 5603,
+          "reference_four_word_windows": 6384,
+          "sentences": 929,
+          "structurally_complete_basic_trees": 929
+        },
+        "gzip_sha256": "a56adde5ce8fede8b1ca7f3396a9c77a1d6e77ccfe95ff54bdd7e1a8926b4381",
+        "protected_overlap_sentence_ids": {
+          "11": "sentence",
+          "142": "sentence",
+          "144": "sentence",
+          "219": "sentence",
+          "222": "sentence",
+          "228": "sentence",
+          "301": "sentence",
+          "326": "sentence",
+          "342": "sentence",
+          "348": "sentence",
+          "357": "sentence",
+          "395": "sentence",
+          "419": "sentence",
+          "422": "sentence",
+          "463": "sentence",
+          "464": "sentence",
+          "465": "sentence",
+          "486": "sentence",
+          "529": "sentence",
+          "531": "sentence",
+          "535": "sentence",
+          "573": "sentence",
+          "585": "sentence",
+          "597": "sentence",
+          "598": "sentence",
+          "606": "sentence",
+          "628": "sentence",
+          "732": "sentence",
+          "771": "sentence",
+          "79": "sentence",
+          "798": "sentence",
+          "817": "sentence",
+          "825": "sentence",
+          "837": "sentence",
+          "856": "sentence",
+          "898": "sentence"
+        },
+        "raw_sha256": "2d359f6f9347e62fdd2402cbd589a06bcc37ecf2a981e9d0a7b1e14171310d74",
+        "source": "https://github.com/francescomambrini/Daphne/blob/06aa1f27a34af98bba1407dc95fe2085a72f8b7f/data/annotation/tlg0011/tlg006/tlg0011.tlg006.daphne_tb-grc1.conllu",
+        "title": "Philoctetes",
+        "use": "expert adjudication queue only"
+      }
+    },
+    "daphne_catalog_sha256": "317bbe36c11b212ef1a3a4055d9b2c8ba7f72cad6d7e2baa14bf24c27041fc40",
+    "digital_hill": {
+      "annotator": "Marcel Mernitz",
+      "canonical_xml_sha256": "c4608b2612a5728672b97efe1e373d3253430f4b00328bf08182d15a558d1fce",
+      "citation": "447–449",
+      "conllu_sha256": "50f9df3410daecaf4c7cea2379540bb28edc8f0c3a5ffb8c58ab3fccf923126f",
+      "cts": "tlg0006.tlg008",
+      "matches_all_three_lines": true,
+      "raw_sha256": "e9af3064c1ce661c4e600b45616fde58fc230b824685e6df84bf94bd821cf7b1",
+      "sentences": 1,
+      "source": "https://github.com/DigitalHill/treebank-data/blob/0bf1de02722c22afc5c069a61d2c1a586d85be0d/euripides/eurip_suppl_447_449.xml",
+      "use": "single-annotator diagnostic only",
+      "words_with_punctuation": 20
+    },
+    "reference_edition_revision": "dacb04909e43dc47738828d33cc3d2b0635bc54c"
+  },
+  "use": "Consult the individual source eligibility records before use."
+}

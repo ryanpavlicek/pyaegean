@@ -1,0 +1,43 @@
+<treebank xml:lang='grc' format='smyth3' version='1.5'>
+  <date>Wed Mar 25 14:34:45 +0000 2015</date>
+  <annotator>
+    <short/>
+    <name/>
+    <address/>
+    <uri>http:&#x2F;&#x2F;services2.perseids.org&#x2F;llt&#x2F;segtok</uri>
+  </annotator>
+  <annotator>
+    <short/>
+    <name/>
+    <address/>
+    <uri>http:&#x2F;&#x2F;github.com&#x2F;latin-language-toolkit&#x2F;arethusa</uri>
+  </annotator>
+  <annotator>
+    <short>Marcel Mernitz</short>
+    <name>Marcel Mernitz</name>
+    <address>marcelmernitz@googlemail.com</address>
+    <uri>http:&#x2F;&#x2F;data.perseus.org&#x2F;sosol&#x2F;users&#x2F;Marcel%20Mernitz</uri>
+  </annotator>
+  <sentence id='1' document_id='' subdoc='' span=''>
+    <word id='1' form='πῶς' lemma='πως' postag='d--------' relation='ADV' sg='mnn' gloss='how' head='5'/>
+    <word id='2' form='οὖν' lemma='οὖν' postag='d--------' relation='COORD' sg='tmp squ_lct' gloss='then' head='0'/>
+    <word id='3' form='ἔτ᾽' lemma='ἔτι' postag='d--------' relation='ADV' sg='tmp sml_lct' gloss='yet' head='5'/>
+    <word id='4' form='ἂν' lemma='ἄν1' postag='d--------' relation='ADV' sg='prt' head='5'/>
+    <word id='5' form='γένοιτ᾽' lemma='γίγνομαι' postag='v3saom---' relation='PRED_CO' sg='ind qst' gloss='become' head='2'/>
+    <word id='6' form='ἂν' lemma='ἄν1' postag='d--------' relation='ADV' sg='prt' head='5'/>
+    <word id='7' form='ἰσχυρὰ' lemma='ἰσχυρός' postag='a-s---fn-' relation='PNOM' sg='prp' gloss='strong' head='5'/>
+    <word id='8' form='πόλις' lemma='πόλις' postag='n-s---fn-' relation='SBJ' sg='nmn dpd' gloss='city' head='5'/>
+    <word id='9' form=',' lemma='punc1' postag='u--------' relation='AuxX' sg='' head='8'/>
+    <word id='10' form='ὅταν' lemma='ὅταν' postag='c--------' relation='AuxC' sg='' gloss='since' head='5'/>
+    <word id='11' form='τις' lemma='τις' postag='p-s---mn-' relation='SBJ' sg='sbs nmn dpd' gloss='someone' head='17'/>
+    <word id='12' form='ὡς' lemma='ὡς' postag='c--------' relation='AuxC' sg='' gloss='as' head='17'/>
+    <word id='13' form='λειμῶνος' lemma='λειμών' postag='n-s---mg-' relation='ATR' sg='gnt dpd prp dvd' gloss='meadow' head='15'/>
+    <word id='14' form='ἠρινοῦ' lemma='ἠρινός' postag='a-s---mg-' relation='ADV' sg='sbs gnt dpd tmp_plc tmp sml_lct' gloss='in.spring' head='15'/>
+    <word id='15' form='στάχυν' lemma='στάχυς' postag='n-s---ma-' relation='OCOMP' sg='acc dpd aff' gloss='scion' head='18'/>
+    <word id='16' form='τόλμας' lemma='τόλμα' postag='n-p---fa-' relation='OBJ' sg='acc dpd aff' gloss='courage' head='17'/>
+    <word id='17' form='ἀφαιρῇ' lemma='ἀφαιρέω' postag='v3spsa---' relation='ADV' sg='dpn adv_cls cnd not_ind' gloss='cancel' head='10'/>
+    <word id='18' form='κἀπολωτίζῃ' lemma='ἀπολωτίζω' postag='v3spsa---' relation='ADV' sg='dpn adv_cls cnd not_ind' gloss='cut.off' head='12'/>
+    <word id='19' form='νέους' lemma='νέος' postag='a-p---ma-' relation='OBJ' sg='sbs acc dpd aff' gloss='young.man' head='18'/>
+    <word id='20' form=';' lemma='punc1' postag='u--------' relation='AuxK' sg='' head='0'/>
+  </sentence>
+</treebank>

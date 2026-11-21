@@ -159,24 +159,16 @@ release.
   model defect. Protocol notes:
   [Benchmarks](Benchmarks).
 
-- **Tragedy gold exists only as a small slice; epic gold not at all.** The
-  leakage-clean UD-Perseus test/dev folds are **100% prose**; epic and tragedy appear
-  only in the *training* split, so scoring the model on them would leak training data.
-  A deep multi-avenue search (the register-as-work-queue rule in action) found exactly
-  one leakage-clean gold source: the UNESP Trees project's Euripides *Bacchae* 1-169,
-  now the shipped **verse fold** (36 tragedy sentences / 735 tokens: a leakage-clean
-  tragedy evaluation, reported with wide CIs as a small-sample datapoint on
-  [Benchmarks](Benchmarks)). Everything else checked is blocked: the **AGDT** upstream
-  is unchanged, **Daphne** re-converts works pyaegean already trains on, **PROIEL**'s
-  Greek is prose, **GLAUx** is silver, Ezekiel's *Exagoge* (a real tragedy treebank)
-  is in the Pedalion training data, and **AthDGC** (the Athens/Oslo diachronic
-  treebank) is silver too: its annotation is Stanza-produced rather than manually
-  verified, and its v0.5 data partitions are still provisional, so it does not close
-  the tragedy-gold gap. A *larger* verse fold needs **new expert annotation of a work
-  absent from training** (Euripides beyond *Medea* and *Bacchae* 1-169, Sophocles'
-  *Oedipus at Colonus*, Apollonius), ~45–100 expert-hours per genre: a scoping /
-  funding decision. One re-investigate trigger stays open on the register: the UNESP
-  project may annotate further passages.
+- **Held-out tragedy evidence is small.** The shipped verse test covers 36 sentences
+  and 735 tokens from Euripides’ *Bacchae* 1–169. Its wide intervals describe that
+  passage. The UD-Perseus dev and test folds contain prose. A subsequent source audit
+  recovered a separate 20-token passage from Euripides’ *Suppliants* and two full
+  works with editorial review under way, Sophocles’ *Philoctetes* and Euripides’
+  *Iphigenia in Tauris*. Four further scholarly treebanks cover plays used in v3
+  training. A broader independent verse benchmark needs adjudicated material from
+  additional works or a new training lineage that withholds whole plays. Held-out
+  epic gold remains an open item. [Benchmarks](Benchmarks) ·
+  [Source files, editorial status and exposure audit](https://github.com/ryanpavlicek/pyaegean/tree/main/training/sources/greek-development-v1)
 
 The four undeciphered/partly-read scripts at a glance:
 

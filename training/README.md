@@ -85,11 +85,12 @@ unique items (1,030 Perseus and 314 PapyGreek), covering 26,610 tagging tokens a
 parsing tokens. Every item records its source, work/document/sentence identity, tasks,
 annotation profile, frequency/OOV context, content digest, and exposure status.
 
-The manifest builder rejects source, work, document, sentence-form, task, profile, and
-locked-fold leakage. It also records unavailable domains explicitly: no eligible
-document-disjoint development source currently exists for tragedy/poetry, New Testament,
-Byzantine Greek, or diplomatic PapyGreek. Absence is not filled with a locked or
-training-seen substitute.
+At the time this manifest was frozen, it had no eligible development items for
+tragedy/poetry, New Testament, Byzantine Greek, or diplomatic PapyGreek. The
+[Greek development source collection](sources/greek-development-v1/README.md)
+now supplies approved native diplomatic labels and a human-annotated tragedy passage,
+along with two plays undergoing editorial review. Its source and exposure records
+are available for designing a successor development manifest.
 
 The live runner activates `grc-joint-v3`, uses CPU-sequential inference and complete-word
 overlap windows, and verifies that every selected gold token receives a prediction. Its
