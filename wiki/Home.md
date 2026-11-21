@@ -118,7 +118,9 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Broaden scholarly evidence:** publish reproducible corpus studies with explicit
   editions, sampling, and restored-reading sensitivity. Extend source-verified coverage of
   OCR/damaged text, long context, epic/tragedy, metrical scans, and Aegean/Cypriot readings;
-  keep undeciphered-script interpretations exploratory.
+  keep undeciphered-script interpretations exploratory. For the next Greek evaluation, group
+  the newly recovered diplomatic labels by document and adjudicate passages from two full
+  tragedy treebanks. [Greek development sources](https://github.com/ryanpavlicek/pyaegean/tree/main/training/sources/greek-development-v1)
 - [ ] **Expand resources and installation options:** add license-clean dictionaries,
   source-cited Cypriot lexical entries, verified gazetteer/Pleiades coverage, and conda-forge
   packaging.
