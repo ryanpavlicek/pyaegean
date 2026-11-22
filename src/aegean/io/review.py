@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from ..core.model import Token
 
 __all__ = [
+    "EDITABLE_REVIEW_COLUMNS",
     "REVIEW_COLUMNS",
     "MergedReview",
     "ReviewApplication",
@@ -54,8 +55,40 @@ __all__ = [
     "from_review_table",
     "merge_review_tables",
     "needs_review_flag",
+    "review_companion_path",
     "to_review_table",
 ]
+
+# Compact, spreadsheet-first review layout paired with a SHA-256-bound immutable companion
+# JSON snapshot (written beside the CSV via `review_companion_path`). Keeps long JSON blobs,
+# alignment whitespace, and repeated dependency sentence context out of spreadsheet cells.
+EDITABLE_REVIEW_COLUMNS: tuple[str, ...] = (
+    "row_id",
+    "doc_id", "position", "line_no", "ref",
+    "dependency_sentence_id", "dependency_index",
+    "token", "needs_review", "evidence_class",
+    "pred_lemma", "decision_lemma", "correct_lemma",
+    "pred_pos", "decision_pos", "correct_pos",
+    "pred_morph", "decision_morph", "correct_morph",
+    "pred_head", "decision_head", "correct_head",
+    "pred_deprel", "decision_deprel", "correct_deprel",
+    "reviewer", "reviewer_note", "reviewer_evidence",
+)
+
+_COMPANION_SCHEMA = "pyaegean-review-companion/1"
+_EDITABLE_DISPLAY_IMMUTABLE: tuple[str, ...] = (
+    "doc_id", "position", "line_no", "ref",
+    "dependency_sentence_id", "dependency_index",
+    "token", "needs_review", "evidence_class",
+    "pred_lemma", "pred_pos", "pred_morph", "pred_head", "pred_deprel",
+)
+
+
+def review_companion_path(path: str | Path) -> Path:
+    """Return the companion snapshot path paired with an editable-layout review CSV."""
+    p = Path(path)
+    return p.with_name(f"{p.name}.companion.json")
+
 
 # The columns of a review table. The first block is read-only context + prediction + triage;
 # the reviewer fills ``decision_*`` (accept/correct/defer/reject), ``correct_*``, and notes.
@@ -160,6 +193,7 @@ def to_review_table(
     fields: Sequence[str] = ("lemma",),
     sample_size: int | None = None,
     seed: int = 0,
+    layout: Literal["full", "editable"] = "full",
 ) -> int:
     """Export optional review with explicit field selection and content-bound snapshots.
 
@@ -178,6 +212,14 @@ def to_review_table(
     inclusion separately. Heads are 1-based sentence indices, with 0 for root.
     No sentence boundaries or dependency index convention are guessed from lines.
 
+    ``layout="full"`` (default) writes the legacy 60-column self-contained CSV.
+    ``layout="editable"`` writes a compact spreadsheet-first CSV with stable
+    ``row_id`` keys alongside a SHA-256-bound immutable companion JSON snapshot
+    (``<path>.companion.json``) that keeps alignment whitespace, form-state JSON,
+    and per-row review snapshots out of spreadsheet cells. Both layouts round-trip
+    transparently through `from_review_table`, `apply_review_table`, and
+    `merge_review_tables`.
+
     Each row binds the full source document/alignment, available persisted analysis
     generation/receipt/configuration, and exact output presence and values. Missing
     external/custom identities are recorded as unknown. A fresh annotation run
@@ -188,6 +230,8 @@ def to_review_table(
     """
     if selection not in ("all", "flagged", "unverified", "sample"):
         raise ValueError("selection must be 'all', 'flagged', 'unverified', or 'sample'")
+    if layout not in ("full", "editable"):
+        raise ValueError("layout must be 'full' or 'editable'")
     if (isinstance(fields, str) or not fields or any(name not in FIELDS for name in fields)
             or len(set(fields)) != len(fields)):
         raise ValueError("fields must be a nonempty sequence of distinct lemma, pos, morph, head, deprel")
@@ -292,7 +336,10 @@ def to_review_table(
                            dependency_index=str(sentence.indices.index(index) + 1),
                            dependency_sentence_context=sentence.context)
             rows.append(row)
-    _write_review_rows(path, rows)
+    if layout == "editable":
+        _write_editable_review_rows(path, rows)
+    else:
+        _write_review_rows(path, rows)
     return len(rows)
 
 
@@ -533,8 +580,100 @@ def _check_review_header(path: str | Path, fieldnames: "Sequence[str] | None") -
         )
 
 
+_EDITABLE_MUTABLE_COLUMNS: tuple[str, ...] = (
+    *_CORRECTION_COLUMNS,
+    *_DECISION_COLUMNS,
+    "reviewer",
+    "reviewer_note",
+    "reviewer_evidence",
+)
+
+
+def _unique_json_pairs(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    out: dict[str, object] = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError("review companion contains duplicate JSON keys")
+        out[key] = value
+    return out
+
+
+def _stable_row_id(row: Mapping[str, str]) -> str:
+    source_id = str(row.get("alignment_source_token_id", "")).strip()
+    if source_id:
+        return source_id
+    return f"{row.get('doc_id', '')}#{row.get('position', '')}"
+
+
+def _load_companion_rows(csv_path: str | Path) -> dict[str, dict[str, str]]:
+    companion_path = review_companion_path(csv_path)
+    if not companion_path.is_file():
+        raise ValueError(
+            f"editable review table {csv_path} requires its companion snapshot "
+            f"{companion_path.name}; keep the .csv and .companion.json files together"
+        )
+    try:
+        raw = json.loads(
+            companion_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_json_pairs,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
+        raise ValueError(f"invalid review companion {companion_path}: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise ValueError(f"invalid review companion {companion_path}: expected a JSON object")
+    claimed = raw.get("companion_sha256")
+    if not isinstance(claimed, str) or not claimed:
+        raise ValueError(f"invalid review companion {companion_path}: missing companion_sha256")
+    body = {k: v for k, v in raw.items() if k != "companion_sha256"}
+    if digest(body) != claimed:
+        raise ValueError(
+            f"review companion {companion_path.name} digest mismatch; companion was modified or corrupted"
+        )
+    if body.get("schema") != _COMPANION_SCHEMA or body.get("layout") != "editable":
+        raise ValueError(f"unsupported review companion schema in {companion_path.name}")
+    rows_obj = body.get("rows")
+    if not isinstance(rows_obj, dict) or body.get("row_count") != len(rows_obj):
+        raise ValueError(f"invalid review companion rows in {companion_path.name}")
+    out: dict[str, dict[str, str]] = {}
+    for rid, rdata in rows_obj.items():
+        if not isinstance(rid, str) or not rid or not isinstance(rdata, dict):
+            raise ValueError(f"invalid review companion row entry in {companion_path.name}")
+        if not all(isinstance(k, str) and isinstance(v, str) for k, v in rdata.items()):
+            raise ValueError(f"invalid review companion row values in {companion_path.name}")
+        out[rid] = dict(rdata)
+    return out
+
+
+def _rehydrate_editable_row(
+    path: str | Path,
+    csv_row: Mapping[str, str | None],
+    companion_rows: Mapping[str, dict[str, str]],
+) -> dict[str, str | None]:
+    row_id = _cell(csv_row, "row_id")
+    if not row_id:
+        raise ValueError(f"editable review table {path}: row is missing row_id")
+    base = companion_rows.get(row_id)
+    if base is None:
+        raise ValueError(
+            f"editable review table {path}: unknown row_id {row_id!r} not present in companion snapshot"
+        )
+    for col in _EDITABLE_DISPLAY_IMMUTABLE:
+        if col in csv_row and _exact_cell(csv_row, col) != base.get(col, ""):
+            raise ValueError(
+                f"editable review table {path}: read-only column {col!r} for row_id {row_id!r} "
+                "was modified after export"
+            )
+    full_row: dict[str, str | None] = {col: base.get(col, "") for col in REVIEW_COLUMNS}
+    for col in _EDITABLE_MUTABLE_COLUMNS:
+        full_row[col] = csv_row.get(col, "") if col in csv_row else ""
+    return full_row
+
+
 def _parse_corrections(path: str | Path) -> _ParsedTable:
     """Read a review CSV into a ``(doc_id, position) -> row`` map, None-safely.
+
+    Supports both the legacy 60-column self-contained layout and the compact
+    ``layout="editable"`` spreadsheet view paired with ``<path>.companion.json``.
 
     The header is checked first: a file that carries neither the join key nor a
     correction column is not a review table and raises `ValueError` rather than reading
@@ -559,10 +698,18 @@ def _parse_corrections(path: str | Path) -> _ParsedTable:
         with open(path, encoding="utf-8-sig", newline="") as f:
             reader = csv.DictReader(f, strict=True)
             _check_review_header(path, reader.fieldnames)
-            for row in reader:
+            fieldnames = set(reader.fieldnames or ())
+            is_editable = "row_id" in fieldnames and "review_snapshot" not in fieldnames
+            companion_rows = _load_companion_rows(path) if is_editable else None
+            for raw_row in reader:
                 seen += 1
-                if None in row or any(value is None for value in row.values()):
+                if None in raw_row or any(value is None for value in raw_row.values()):
                     raise ValueError(f"malformed review CSV {path}: row does not match its header")
+                row = (
+                    _rehydrate_editable_row(path, raw_row, companion_rows)
+                    if companion_rows is not None
+                    else raw_row
+                )
                 for column, _, _ in _CORRECTIONS:
                     _field_decision(row, column)
                 pos = (row.get("position") or "").strip()
@@ -1060,9 +1207,64 @@ class MergedReview:
     reviewers: tuple[str, ...]
     source_paths: tuple[str, ...] = field(default_factory=tuple)
 
-    def to_csv(self, path: str | Path) -> None:
+    def to_csv(
+        self, path: str | Path, *, layout: Literal["full", "editable"] = "full"
+    ) -> None:
         """Write the agreed (clean) subset as a review CSV (UTF-8 BOM, formula-guarded)."""
-        _write_review_rows(path, self.rows)
+        if layout not in ("full", "editable"):
+            raise ValueError("layout must be 'full' or 'editable'")
+        if layout == "editable":
+            _write_editable_review_rows(path, self.rows)
+        else:
+            _write_review_rows(path, self.rows)
+
+
+def _write_editable_review_rows(
+    path: str | Path,
+    rows: Iterable[Mapping[str, str]],
+) -> None:
+    """Write a compact spreadsheet-first CSV alongside a SHA-256-bound companion JSON."""
+    row_list = [dict(r) for r in rows]
+    companion_rows: dict[str, dict[str, str]] = {}
+    csv_rows: list[list[str]] = []
+    immutable_cols = tuple(
+        col for col in REVIEW_COLUMNS if col not in _EDITABLE_MUTABLE_COLUMNS
+    )
+    for r in row_list:
+        rid = _stable_row_id(r)
+        if not rid or rid in companion_rows:
+            raise ValueError(f"editable review export requires unique row_id values (duplicate {rid!r})")
+        companion_rows[rid] = {col: str(r.get(col, "")) for col in immutable_cols}
+        cells: list[str] = []
+        for col in EDITABLE_REVIEW_COLUMNS:
+            val = rid if col == "row_id" else str(r.get(col, ""))
+            guarded = _guard_cell(val)
+            if len(guarded) > csv.field_size_limit():
+                raise ValueError("review CSV cell exceeds the reader field size limit")
+            cells.append(guarded)
+        csv_rows.append(cells)
+
+    body = {
+        "schema": _COMPANION_SCHEMA,
+        "layout": "editable",
+        "csv_columns": list(EDITABLE_REVIEW_COLUMNS),
+        "row_count": len(companion_rows),
+        "rows": companion_rows,
+    }
+    companion_payload = {**body, "companion_sha256": digest(body)}
+    companion_path = review_companion_path(path)
+    with atomic_path(companion_path) as tmp_companion:
+        tmp_companion.write_text(
+            json.dumps(companion_payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+    with atomic_path(path) as tmp_csv:
+        with open(tmp_csv, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(EDITABLE_REVIEW_COLUMNS)
+            for cells in csv_rows:
+                w.writerow(cells)
 
 
 def _write_review_rows(
