@@ -64,7 +64,7 @@ CREATE TABLE tokens (
     glyphs TEXT, status TEXT, signs TEXT, alt TEXT, annotations TEXT, alignment TEXT,
     form_state_json TEXT
 );
-CREATE INDEX idx_tokens_doc ON tokens(doc_id);
+CREATE INDEX idx_tokens_doc ON tokens(doc_id, token_order);
 CREATE INDEX idx_tokens_text ON tokens(text);
 """
 
@@ -369,6 +369,16 @@ def _publish_sqlite(source: Path, destination: Path) -> None:
         return
     except FileExistsError:
         pass  # another creator may also have published while this corpus was built
+    except OSError:
+        # Filesystems without hardlink support (e.g. FAT/exFAT/FUSE): create the file
+        # exclusively if it does not yet exist, then populate it transactionally via
+        # SQLite's online backup below so readers never observe a partial copy.
+        try:
+            fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError:
+            pass
+        else:
+            os.close(fd)
 
     # mode=rw prohibits accidentally creating a new empty database if the target was
     # removed in the meantime. SQLite serializes other supported readers/writers;
@@ -581,40 +591,38 @@ def _ensure_token_order(conn: sqlite3.Connection) -> None:
         )
 
 
-def _document_from_row(
-    conn: sqlite3.Connection,
-    row: sqlite3.Row,
+def _token_dict_from_row(
+    doc_id: str,
+    t: sqlite3.Row,
     *,
-    order_col: str = "token_order",
     allow_form_state: bool = True,
-) -> Document:
-    tokens: list[dict[str, Any]] = []
-    # order_col is one of two module literals ("token_order" / "position"), never user input.
-    for t in conn.execute(
-        f"SELECT * FROM tokens WHERE doc_id = ? ORDER BY {order_col}", (row["id"],)
-    ):
-        td: dict[str, Any] = {
-            "text": t["text"], "kind": t["kind"], "position": t["position"],
-            "line_no": t["line_no"], "glyphs": t["glyphs"],
-            "signs": json.loads(t["signs"] or "[]"), "alt": json.loads(t["alt"] or "[]"),
-            "annotations": json.loads(t["annotations"] or "{}"),
-        }
-        if "alignment" in t.keys():
-            alignment = _alignment_from_json(
-                t["alignment"], context=f"document {row['id']!r}, token {t['position']!r}"
-            )
-            if alignment is not None:
-                td["alignment"] = alignment
-        if allow_form_state and "form_state_json" in t.keys():
-            form_state = _form_state_from_json(
-                t["form_state_json"],
-                context=f"document {row['id']!r}, token {t['position']!r}",
-            )
-            if form_state is not None:
-                td["form_state"] = form_state
-        if t["status"] and t["status"] != "certain":
-            td["status"] = t["status"]
-        tokens.append(td)
+) -> dict[str, Any]:
+    td: dict[str, Any] = {
+        "text": t["text"], "kind": t["kind"], "position": t["position"],
+        "line_no": t["line_no"], "glyphs": t["glyphs"],
+        "signs": json.loads(t["signs"] or "[]"), "alt": json.loads(t["alt"] or "[]"),
+        "annotations": json.loads(t["annotations"] or "{}"),
+    }
+    keys = t.keys()
+    if "alignment" in keys:
+        alignment = _alignment_from_json(
+            t["alignment"], context=f"document {doc_id!r}, token {t['position']!r}"
+        )
+        if alignment is not None:
+            td["alignment"] = alignment
+    if allow_form_state and "form_state_json" in keys:
+        form_state = _form_state_from_json(
+            t["form_state_json"],
+            context=f"document {doc_id!r}, token {t['position']!r}",
+        )
+        if form_state is not None:
+            td["form_state"] = form_state
+    if t["status"] and t["status"] != "certain":
+        td["status"] = t["status"]
+    return td
+
+
+def _build_doc_from_row(row: sqlite3.Row, tokens: list[dict[str, Any]]) -> Document:
     dd: dict[str, Any] = {
         "id": row["id"], "script_id": row["script_id"], "glyphs": row["glyphs"],
         "transcription": row["transcription"],
@@ -630,6 +638,24 @@ def _document_from_row(
     if "source_text" in row.keys():
         dd["source_text"] = row["source_text"]
     return _document_from_dict(dd)
+
+
+def _document_from_row(
+    conn: sqlite3.Connection,
+    row: sqlite3.Row,
+    *,
+    order_col: str = "token_order",
+    allow_form_state: bool = True,
+) -> Document:
+    doc_id = row["id"]
+    # order_col is one of two module literals ("token_order" / "position"), never user input.
+    tokens = [
+        _token_dict_from_row(doc_id, t, allow_form_state=allow_form_state)
+        for t in conn.execute(
+            f"SELECT * FROM tokens WHERE doc_id = ? ORDER BY {order_col}", (doc_id,)
+        )
+    ]
+    return _build_doc_from_row(row, tokens)
 
 
 def _combined_provenance(provs: list[Provenance], n_docs: int) -> Provenance:
@@ -649,6 +675,27 @@ def _combined_provenance(provs: list[Provenance], n_docs: int) -> Provenance:
     )
 
 
+def _open_existing_db(path: str | Path) -> sqlite3.Connection:
+    """Open an existing SQLite corpus database without ever creating a missing file.
+
+    Opens read-only (``?mode=ro``) first so normal reads work on read-only files and
+    filesystems. If SQLite reports a hot rollback journal left by a crashed DELETE-mode
+    writer (``attempt to write a readonly database``), retries with ``?mode=rw`` — which
+    still refuses missing paths — so SQLite can complete journal recovery.
+    """
+    uri_base = Path(path).resolve().as_uri()
+    conn = sqlite3.connect(uri_base + "?mode=ro", uri=True)
+    try:
+        conn.execute("SELECT 1 FROM sqlite_master LIMIT 1").fetchone()
+        return conn
+    except sqlite3.OperationalError as exc:
+        if "readonly" not in str(exc).lower():
+            conn.close()
+            raise
+        conn.close()
+    return sqlite3.connect(uri_base + "?mode=rw", uri=True)
+
+
 def from_sqlite(
     path: str | Path, *, progress: Callable[[int, int], None] | None = None
 ) -> Corpus:
@@ -661,9 +708,10 @@ def from_sqlite(
     materialized, counting documents — the hook the ~100 s DDbDP whole-corpus load
     (``aegean.load("ddbdp")``) reports through. The returned corpus is identical with or
     without it; an empty database makes no calls, and the final call is ``(total, total)``."""
-    conn = sqlite3.connect(str(path))
-    conn.row_factory = sqlite3.Row
+    conn: sqlite3.Connection | None = None
     try:
+        conn = _open_existing_db(path)
+        conn.row_factory = sqlite3.Row
         # One read transaction for the whole load: a concurrent append committing between
         # this reader's statements could otherwise yield a torn corpus (a document's row
         # from before the append, its tokens from after).
@@ -683,20 +731,29 @@ def from_sqlite(
             allow_form_state = int(raw_schema) >= 3 if raw_schema is not None else False
         except (TypeError, ValueError):
             allow_form_state = False
-        total = (
-            int(conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0])
-            if progress is not None
-            else 0
-        )
-        docs: list[Document] = []
-        for done, r in enumerate(
-            conn.execute("SELECT * FROM documents ORDER BY doc_order"), start=1
-        ):
-            docs.append(
-                _document_from_row(
-                    conn, r, order_col=order_col, allow_form_state=allow_form_state
-                )
+        doc_rows = conn.execute(
+            "SELECT * FROM documents ORDER BY doc_order, id"
+        ).fetchall()
+        total = len(doc_rows)
+        # Single ordered token scan joined with documents so we stream-merge tokens into
+        # each document without N+1 per-document SQLite queries or per-document sorts.
+        token_iter = iter(
+            conn.execute(
+                f"SELECT t.* FROM tokens t JOIN documents d ON t.doc_id = d.id "
+                f"ORDER BY d.doc_order, d.id, t.{order_col}"
             )
+        )
+        next_tok = next(token_iter, None)
+        docs: list[Document] = []
+        for done, r in enumerate(doc_rows, start=1):
+            doc_id = r["id"]
+            tokens: list[dict[str, Any]] = []
+            while next_tok is not None and next_tok["doc_id"] == doc_id:
+                tokens.append(
+                    _token_dict_from_row(doc_id, next_tok, allow_form_state=allow_form_state)
+                )
+                next_tok = next(token_iter, None)
+            docs.append(_build_doc_from_row(r, tokens))
             if progress is not None:
                 progress(done, total)
     except sqlite3.Error as exc:
@@ -705,11 +762,12 @@ def from_sqlite(
         # raises ValueError, not sqlite3.Error, so its "upgrade pyaegean" message survives.)
         raise _corpus_db_error(path, exc) from None
     finally:
-        try:
-            conn.rollback()  # end the read transaction (read-only: nothing to write)
-        except sqlite3.Error:
-            pass
-        conn.close()
+        if conn is not None:
+            try:
+                conn.rollback()  # end the read transaction (read-only: nothing to write)
+            except sqlite3.Error:
+                pass
+            conn.close()
     _LOG.info("loaded %d documents from SQLite database %s", len(docs), path)
     provenance: Provenance | None
     if len(provs) > 1:
@@ -1130,9 +1188,10 @@ def stream(path: str | Path) -> Iterator[Document]:
     A separate read cursor fetches each document's tokens on demand, so memory stays flat for
     arbitrarily large databases — the DB-backed counterpart to a streamed load (item: large
     corpora). Pairs with `from_sqlite` when random access is wanted instead."""
-    conn = sqlite3.connect(str(path))
-    conn.row_factory = sqlite3.Row
+    conn: sqlite3.Connection | None = None
     try:
+        conn = _open_existing_db(path)
+        conn.row_factory = sqlite3.Row
         _check_schema_version(
             {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM meta")}
         )
@@ -1173,5 +1232,8 @@ def stream(path: str | Path) -> Iterator[Document]:
                 conn.rollback()
             if doc is not None:  # dropped by a concurrent append between listing and read
                 yield doc
+    except sqlite3.Error as exc:
+        raise _corpus_db_error(path, exc) from None
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()

@@ -509,10 +509,13 @@ class InteropDocument:
         for (sid, _uid), metadata in tokens.items():
             if metadata.alignment is not None and metadata.alignment.sentence_id != sid:
                 raise InteropSchemaError("alignment sentence ID disagrees with metadata key")
+        sentence_len_by_id = {
+            sentence.sent_id: len(sentence.tokens) for sentence in self.ud_document.sentences
+        }
         for key, metadata in tokens.items():
             if metadata.head is not None:
                 token = token_by_key[key]
-                sentence_len = len(next(sentence.tokens for sentence in self.ud_document.sentences if sentence.sent_id == key[0]))
+                sentence_len = sentence_len_by_id[key[0]]
                 if metadata.head < 0 or metadata.head > sentence_len:
                     raise InteropSchemaError("metadata HEAD is invalid")
                 if metadata.head == key[1]:
