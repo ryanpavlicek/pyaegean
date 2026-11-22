@@ -301,6 +301,21 @@ Dodson Greek Lexicon (bundled: src/aegean/data/bundled/greek/dodson.json)
   by aegean.greek.use_dodson() / gloss_nt() / gloss_strongs() (built by
   scripts/build_dodson_lexicon.py).
 
+Greek development source archives (repository-only under training/sources/greek-development-v1/; NOT bundled in wheels or sdists)
+  Digital Hill treebank sample (tragedy-diagnostic/):
+    Euripides, Suppliants 447-449, annotated by Marcel Mernitz, from DigitalHill/treebank-data
+    (https://github.com/DigitalHill/treebank-data, commit 0bf1de02722c22afc5c069a61d2c1a586d85be0d).
+    Kept as a repository-only diagnostic reference; excluded from published wheels and sdists.
+  Daphne Ancient Greek treebank files (tragedy-in-review/):
+    Sophocles, Philoctetes (tlg0011.tlg006) and Euripides, Iphigenia in Tauris (tlg0006.tlg013),
+    from francescomambrini/Daphne (https://github.com/francescomambrini/Daphne, commit
+    06aa1f27a34af98bba1407dc95fe2085a72f8b7f), licensed CC BY-SA 4.0. Kept as repository-only
+    editorial-review sources; excluded from published wheels and sdists. Attribute Francesco
+    Mambrini and the Daphne contributors in work that relies on them.
+  PapyGreek, AGDT v2.1, and Pedalion snapshots under training/sources/greek-development-v1/
+    carry the upstream licenses and attributions stated in their respective sections above and
+    are excluded from published wheels and sdists.
+
 The structured-data layer of this package is licensed Apache-2.0; underlying
 scholarly editions and imagery remain under their respective rights. Cite the
 original editions in academic work (see Corpus.provenance.cite()).

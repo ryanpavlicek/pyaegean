@@ -28,7 +28,11 @@ from aegean.tui.screens.console import (  # noqa: E402
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def test_capture_dispatch_captures_all_streams_and_restores_the_console() -> None:
@@ -45,6 +49,44 @@ def test_capture_dispatch_captures_all_streams_and_restores_the_console() -> Non
     assert "RICH-OUT" in out and "STDOUT-OUT" in out and "STDERR-OUT" in out
     # the global console is restored to exactly what it was before
     assert _common._console is prior
+
+
+def test_capture_dispatch_serializes_concurrent_calls() -> None:
+    import threading
+    import time
+
+    from aegean.cli import _common
+
+    prior = _common._console
+    results: dict[str, str] = {}
+    errors: list[BaseException] = []
+
+    def worker(tag: str) -> None:
+        try:
+            def dispatch() -> None:
+                print(f"START-{tag}")
+                time.sleep(0.02)
+                print(f"END-{tag}")
+
+            results[tag] = capture_dispatch(dispatch)
+        except BaseException as exc:  # pragma: no cover - defensive
+            errors.append(exc)
+
+    threads = [threading.Thread(target=worker, args=(f"T{i}",)) for i in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert not errors
+    assert _common._console is prior
+    for i in range(4):
+        tag = f"T{i}"
+        assert f"START-{tag}" in results[tag]
+        assert f"END-{tag}" in results[tag]
+        for j in range(4):
+            if j != i:
+                assert f"START-T{j}" not in results[tag]
 
 
 def test_run_console_command_runs_a_real_offline_command() -> None:

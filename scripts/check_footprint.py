@@ -18,6 +18,7 @@ import argparse
 import glob
 import subprocess
 import sys
+import tarfile
 import zipfile
 
 HEAVY = [
@@ -107,12 +108,39 @@ def check_wheel(pattern: str) -> None:
     print("OK  nothing-heavy-bundled")
 
 
+def check_sdist(pattern: str) -> None:
+    matches = sorted(glob.glob(pattern))
+    if not matches:
+        raise SystemExit(f"FAIL: no sdist matching {pattern}")
+    sdist = matches[0]
+    with tarfile.open(sdist, "r:gz") as tf:
+        members = tf.getmembers()
+    leaked = [
+        m.name
+        for m in members
+        if "/training/sources/" in f"/{m.name.lstrip('./')}/"
+        or m.name.lower().endswith(HEAVY_EXT)
+    ]
+    total = sum(m.size for m in members if m.isfile())
+    print(f"sdist {sdist}: {total // 1024} KB uncompressed, {len(members)} entries")
+    if leaked:
+        raise SystemExit(
+            "FAIL sdist-clean — sdist contains excluded archives or training/sources:\n  "
+            + "\n  ".join(leaked[:20])
+        )
+    print("OK  sdist-clean")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--wheel", help="path or glob to a built wheel (runs check 3 only)")
+    ap.add_argument("--sdist", help="path or glob to a built sdist (checks excluded archives)")
     args = ap.parse_args()
-    if args.wheel:
-        check_wheel(args.wheel)
+    if args.wheel or args.sdist:
+        if args.wheel:
+            check_wheel(args.wheel)
+        if args.sdist:
+            check_sdist(args.sdist)
     else:
         check_import_clean()
         check_import_fast()

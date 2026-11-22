@@ -6,6 +6,10 @@
 prune tests
 recursive-exclude tests *
 
+# Development-only source archives stay in the repository tree, not the PyPI sdist.
+prune training/sources
+recursive-exclude training/sources *
+
 # Never ship local tooling / build cruft in the sdist.
 prune node_modules
 global-exclude *.pyc

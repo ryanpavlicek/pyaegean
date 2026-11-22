@@ -74,11 +74,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - run: pip install build twine
+          cache: pip
+      - run: pip install build twine pytest
       - run: python -m build
       - run: python -m twine check dist/*
-      - name: Footprint guard (wheel is code + JSON only, no heavy binaries)
-        run: python scripts/check_footprint.py --wheel "dist/*.whl"
+      - name: Footprint guard (wheel + sdist exclude heavy binaries and training/sources)
+        run: python scripts/check_footprint.py --wheel "dist/*.whl" --sdist "dist/*.tar.gz"
+      - name: Pre-publish candidate wheel browser-demo check
+        env:
+          PYAEGEAN_DEMO_WHEEL: "dist/*.whl"
+        run: pytest -rs -s -m released_wheel tests/test_demo_drift.py
       - uses: actions/upload-artifact@v6
         with:
           name: dist

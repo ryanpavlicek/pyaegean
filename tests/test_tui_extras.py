@@ -21,7 +21,11 @@ from aegean.tui.screens.theme import ThemeScreen  # noqa: E402
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def test_theme_previews_on_highlight_without_dismissing_and_persists_on_select(

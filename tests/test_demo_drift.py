@@ -21,6 +21,7 @@ here.
 
 from __future__ import annotations
 
+import glob
 import importlib.util
 import json
 import os
@@ -435,7 +436,8 @@ def _venv_python(root: Path) -> Path:
 
 @pytest.mark.released_wheel
 def test_released_wheel_runs_every_card_default(tmp_path: Path) -> None:
-    """The demo's own defaults work against the pyaegean wheel published on PyPI.
+    """The demo's own defaults work against the pyaegean wheel published on PyPI
+    (or a locally built candidate wheel when ``PYAEGEAN_DEMO_WHEEL`` is set).
 
     The published page pins no version, so that wheel is the library a visitor's browser
     runs. A card written against an API only this working tree has would print a raw
@@ -448,18 +450,33 @@ def test_released_wheel_runs_every_card_default(tmp_path: Path) -> None:
     python = _venv_python(venv)
     assert python.exists(), f"no interpreter in the throwaway environment at {venv}"
 
+    wheel_spec = os.environ.get("PYAEGEAN_DEMO_WHEEL", "").strip()
+    if wheel_spec:
+        matches = sorted(glob.glob(wheel_spec))
+        assert matches, f"PYAEGEAN_DEMO_WHEEL matched no wheel: {wheel_spec!r}"
+        target_label = f"candidate wheel {matches[0]}"
+        install_cmd = [
+            str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
+            "--no-deps", str(Path(matches[0]).resolve()),
+        ]
+    else:
+        target_label = "released PyPI wheel"
+        install_cmd = [
+            str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
+            "pyaegean",
+        ]
+
     install = subprocess.run(
-        [str(python), "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
-         "pyaegean"],
+        install_cmd,
         capture_output=True, text=True, env=env, cwd=tmp_path, timeout=900,
     )
     if install.returncode != 0:
         blob = (install.stdout + install.stderr).lower()
-        if any(marker in blob for marker in _INDEX_UNREACHABLE):
+        if not wheel_spec and any(marker in blob for marker in _INDEX_UNREACHABLE):
             pytest.skip("PyPI is unreachable, so the released wheel cannot be tested: "
                         + blob[-400:])
         raise AssertionError(
-            f"installing pyaegean from PyPI failed:\n{install.stdout}\n{install.stderr}"
+            f"installing pyaegean ({target_label}) failed:\n{install.stdout}\n{install.stderr}"
         )
 
     calls = [[c.function, list(c.defaults)] for c in _cards()]
@@ -472,12 +489,12 @@ def test_released_wheel_runs_every_card_default(tmp_path: Path) -> None:
         [str(python), str(driver), str(_DEMO_DIR / "demo.py"), str(calls_path), str(out_path)],
         capture_output=True, text=True, env=env, cwd=tmp_path, timeout=1800,
     )
-    assert run.returncode == 0, f"the demo could not run under the released wheel:\n{run.stderr}"
+    assert run.returncode == 0, f"the demo could not run under {target_label}:\n{run.stderr}"
 
     results = json.loads(out_path.read_text(encoding="utf-8"))
-    print(f"docs/demo/demo.py checked against released pyaegean {results['version']}")
+    print(f"docs/demo/demo.py checked against {target_label} (pyaegean {results['version']})")
     assert Path(results["aegean_file"]).is_relative_to(venv), (
-        f"the released wheel was shadowed by {results['aegean_file']}"
+        f"the installed wheel was shadowed by {results['aegean_file']}"
     )
     assert len(results["calls"]) == len(calls)
     failures = [
@@ -486,6 +503,6 @@ def test_released_wheel_runs_every_card_default(tmp_path: Path) -> None:
         if "failure" in c
     ]
     assert not failures, (
-        f"cards that break on released pyaegean {results['version']}, "
-        "the version the published page installs:\n" + "\n".join(failures)
+        f"cards that break on {target_label} (pyaegean {results['version']}):\n"
+        + "\n".join(failures)
     )

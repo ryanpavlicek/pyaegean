@@ -26,7 +26,11 @@ from aegean.tui.screens.works import WorksScreen  # noqa: E402
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def _row(w_id: str, *, fetched: bool = False) -> adapter.WorkRow:

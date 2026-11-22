@@ -29,7 +29,11 @@ from aegean.tui.widgets import CorpusList, DetailPane, DocTable  # noqa: E402
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def _open_lineara(app: AegeanApp) -> CorpusBrowserScreen:

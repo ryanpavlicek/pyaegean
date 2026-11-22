@@ -25,6 +25,8 @@ optional review, counting choices, and translation evidence.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
 - [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
+- [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
+- [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
 ### `aegean.io` interoperability facade
 
@@ -39,8 +41,6 @@ explicit CLTK seam (`make_cltk_process`). `bundle_from_result`, the sidecar
 codecs, schema constants, and typed interoperability errors are also public and
 are listed in the generated [`aegean.io` reference](io.md). The adapter
 dependencies are lazy and stay outside the core import path.
-- [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
-- [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
 ### API policy
 

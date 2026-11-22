@@ -103,7 +103,11 @@ def test_tui_open_corpus_reconciles_when_already_on_the_corpus_screen():
             assert screen._loaded_id == "cypriot"  # reconciled, not stuck on lineara
             assert screen.query_one("#corpus-docs", DocTable).row_count == 180
 
-    asyncio.new_event_loop().run_until_complete(body())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(body())
+    finally:
+        loop.close()
 
 
 # ── F1 (fresh defect): persistent accent on imparisyllabic 3rd-decl nouns ─────

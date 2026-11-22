@@ -20,7 +20,11 @@ from aegean.tui.screens.analysis import LineAnalysisScreen, format_result  # noq
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def test_format_result_renders_a_table_and_a_text_block() -> None:

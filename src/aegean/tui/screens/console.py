@@ -17,6 +17,7 @@ commands, and so a long or networked command keeps the UI responsive.
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any, Callable
 
 from textual import work
@@ -36,6 +37,8 @@ __all__ = [
     "run_console_command",
 ]
 
+_CAPTURE_LOCK = threading.Lock()
+
 
 def capture_dispatch(dispatch: Callable[[], None]) -> str:
     """Run ``dispatch()`` capturing stdout, stderr, and the CLI's rich console into one
@@ -51,13 +54,14 @@ def capture_dispatch(dispatch: Callable[[], None]) -> str:
     capture = rich.console.Console(
         file=buf, force_terminal=True, color_system="truecolor", width=100, soft_wrap=False
     )
-    prior = _common._console
-    _common._console = capture
-    try:
-        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
-            dispatch()
-    finally:
-        _common._console = prior
+    with _CAPTURE_LOCK:
+        prior = _common._console
+        _common._console = capture
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                dispatch()
+        finally:
+            _common._console = prior
     return buf.getvalue()
 
 

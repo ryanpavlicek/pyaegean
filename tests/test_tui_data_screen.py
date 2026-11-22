@@ -32,7 +32,11 @@ from aegean.tui.screens.data import DataStoreScreen  # noqa: E402
 
 
 def _run(coro) -> None:  # type: ignore[no-untyped-def]
-    asyncio.new_event_loop().run_until_complete(coro)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 def _kv_pairs(table: DataTable) -> dict[str, str]:  # type: ignore[type-arg]
