@@ -1761,10 +1761,18 @@ def _safe_extract_tar(
                 f"archive expands to {expanded:,} bytes; refusing more than {max_bytes:,}"
             )
         for member in members:
-            if member.size < 0 or member.isdev() or member.isfifo():
+            if member.size < 0 or not (
+                member.isreg() or member.isdir() or member.issym() or member.islnk()
+            ):
                 raise DataNotAvailableError(
                     f"unsafe special file in archive: {member.name!r}"
                 )
+            if (
+                member.name.startswith(("/", "\\"))
+                or pathlib.PurePosixPath(member.name).is_absolute()
+                or pathlib.PureWindowsPath(member.name).is_absolute()
+            ):
+                raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
             target = (root / member.name).resolve()
             if target != root and root not in target.parents:
                 raise DataNotAvailableError(f"unsafe path in archive: {member.name!r}")
@@ -1777,10 +1785,11 @@ def _safe_extract_tar(
                     raise DataNotAvailableError(
                         f"unsafe link target in archive: {member.name!r} -> {member.linkname!r}"
                     )
+        has_data_filter = hasattr(tarfile, "data_filter")
         if progress is None:
-            try:
+            if has_data_filter:
                 tf.extractall(root, filter="data")  # py3.12+ hardening
-            except TypeError:  # pragma: no cover - older Python
+            else:  # pragma: no cover - older Python
                 tf.extractall(root)
             return
         # Per-member extraction (same files as extractall) so a member-count progress
@@ -1788,9 +1797,9 @@ def _safe_extract_tar(
         # gzip re-read penalty vs extractall).
         total = len(members)
         for i, member in enumerate(members, 1):
-            try:
+            if has_data_filter:
                 tf.extract(member, root, filter="data")  # py3.12+ hardening
-            except TypeError:  # pragma: no cover - older Python
+            else:  # pragma: no cover - older Python
                 tf.extract(member, root)
             progress(i, total)
 

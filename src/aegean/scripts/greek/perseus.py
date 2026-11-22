@@ -20,6 +20,7 @@ import json
 import os
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from bisect import bisect_right
 from collections.abc import Callable, Iterator
@@ -136,15 +137,20 @@ def _ref(source: str) -> str:
     return os.environ.get(_ENV_REF[source]) or _SOURCES[source][1]
 
 
+_WORK_ID_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$")
+
+
 def _work_dir(work: str) -> str:
+    """Path inside canonical-greekLit / First1KGreek for ``work``."""
     group, _, piece = work.partition(".")
     if not (group and piece):
         raise ValueError(f"work must look like 'tlg0012.tlg001', got {work!r}")
     # The id is spliced into a GitHub URL pinned to PerseusDL/canonical-greekLit@<commit>;
-    # a path separator or ".." would let a crafted id escape that repo/commit and fetch a
-    # forged edition from an arbitrary repository. Reject them (the guard the MCP tool has).
+    # reject path separators, '..', and URL-injection characters (?, #, &, whitespace).
     if any(bad in work for bad in ("/", "\\", "..")):
         raise ValueError(f"work id must not contain a path separator or '..', got {work!r}")
+    if not _WORK_ID_RE.match(work):
+        raise ValueError(f"work id must match 'group.work' alphanumeric grammar, got {work!r}")
     return f"data/{group}/{piece}"
 
 
@@ -156,12 +162,16 @@ def _github_listing(repo: str, path: str, ref: str) -> list[str]:
     `load_work` calls off the API entirely (the unauthenticated limit is
     60 requests/hour). Set ``PYAEGEAN_GITHUB_TOKEN`` or ``GITHUB_TOKEN`` to
     authenticate first-time discovery at scale."""
+    from ..._atomic import atomic_path
+
     safe = f"{repo.replace('/', '--')}@{ref[:12]}--{path.replace('/', '--')}.json"
     cache_file = cache_dir() / "greek-works" / "listings" / safe
     if cache_file.exists():
         names = json.loads(cache_file.read_text(encoding="utf-8"))
         return [str(n) for n in names]
-    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+    quoted_path = urllib.parse.quote(path, safe="/")
+    quoted_ref = urllib.parse.quote(ref, safe="")
+    url = f"https://api.github.com/repos/{repo}/contents/{quoted_path}?ref={quoted_ref}"
     headers = {"User-Agent": "pyaegean"}
     token = _github_token()
     if token:
@@ -180,9 +190,10 @@ def _github_listing(repo: str, path: str, ref: str) -> list[str]:
                 _rate_limit_message(exc.headers.get("X-RateLimit-Reset"))
             ) from exc
         raise
-    names = [e["name"] for e in entries]
+    names = [str(e["name"]) for e in entries]
     cache_file.parent.mkdir(parents=True, exist_ok=True)
-    cache_file.write_text(json.dumps(names), encoding="utf-8")
+    with atomic_path(cache_file) as tmp:
+        tmp.write_text(json.dumps(names), encoding="utf-8")
     return names
 
 
@@ -223,10 +234,16 @@ def _fetch_xml(work: str, source: str, edition: str | None, force: bool) -> tupl
         if chosen is None:
             tried.append(f"{src}: no Greek edition among {names}")
             continue
+        if any(bad in chosen for bad in ("/", "\\", "..")):
+            tried.append(f"{src}: unsafe edition filename {chosen!r}")
+            continue
         dest = cache_dir() / "greek-works" / src / ref[:12] / chosen
         if force or not dest.exists():
             dest.parent.mkdir(parents=True, exist_ok=True)
-            url = f"https://raw.githubusercontent.com/{repo}/{ref}/{_work_dir(work)}/{chosen}"
+            work_path = urllib.parse.quote(_work_dir(work), safe="/")
+            quoted_ref = urllib.parse.quote(ref, safe="")
+            quoted_chosen = urllib.parse.quote(chosen, safe="")
+            url = f"https://raw.githubusercontent.com/{repo}/{quoted_ref}/{work_path}/{quoted_chosen}"
             download_file(url, dest)
         return dest.read_bytes(), src, chosen
     raise DataNotAvailableError(

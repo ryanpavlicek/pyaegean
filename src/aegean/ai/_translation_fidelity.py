@@ -218,6 +218,8 @@ def audit_clause_checks(
     refs = frozenset(evidence_refs)
     resolved: list[dict[str, Any]] | None = None
     source_gaps: list[dict[str, Any]] | None = None
+    source_unaccounted_gaps: list[dict[str, Any]] | None = None
+    omitted_source_spans: list[dict[str, Any]] | None = None
     translation_gaps: list[dict[str, Any]] | None = None
     if value is None or (isinstance(value, dict) and not value):
         validation.add("clause_checks is missing, null or an empty mapping")
@@ -225,7 +227,9 @@ def audit_clause_checks(
         validation.add("clause_checks must be an array", invalid=True)
     else:
         resolved = []
+        omitted_source_spans = []
         source_intervals: list[tuple[int, int]] = []
+        accounted_source_intervals: list[tuple[int, int]] = []
         translation_intervals: list[tuple[int, int]] = []
         source_cache: dict[tuple[str, int], dict[str, Any] | None] = {}
         translation_cache: dict[tuple[str, int], dict[str, Any] | None] = {}
@@ -236,23 +240,36 @@ def audit_clause_checks(
             issue_count = len(validation.issues)
             row = _object(item, _ROW_FIELDS, path, validation)
             source_span = translation_span = None
+            explicit_omission = False
             if row is not None:
                 source_span = _span(
                     row.get("source"), source, f"{path}.source", validation, source_cache,
                 )
-                translation_span = _span(
-                    row.get("translation"), translation, f"{path}.translation", validation,
-                    translation_cache,
-                )
+                if "translation" in row and row["translation"] is None:
+                    explicit_omission = True
+                else:
+                    translation_span = _span(
+                        row.get("translation"), translation, f"{path}.translation", validation,
+                        translation_cache,
+                    )
                 _findings(row, path, refs, validation)
+            row_clean = len(validation.issues) == issue_count
+            if explicit_omission:
+                validation.add(f"{path}.translation is null (explicit omission)")
             resolved.append({"index": index, "source": source_span, "translation": translation_span})
-            if len(validation.issues) == issue_count:
+            if row_clean and not explicit_omission:
                 assert source_span is not None and translation_span is not None
-                source_intervals.append((source_span["start"], source_span["end"]))
+                span_pair = (source_span["start"], source_span["end"])
+                source_intervals.append(span_pair)
+                accounted_source_intervals.append(span_pair)
                 translation_intervals.append((translation_span["start"], translation_span["end"]))
+            elif row_clean and explicit_omission and source_span is not None:
+                accounted_source_intervals.append((source_span["start"], source_span["end"]))
+                omitted_source_spans.append({"index": index, **source_span})
         source_gaps = _uncovered(source, source_intervals)
+        source_unaccounted_gaps = _uncovered(source, accounted_source_intervals)
         translation_gaps = _uncovered(translation, translation_intervals)
-        if source_gaps:
+        if source_unaccounted_gaps:
             validation.add("source has non-whitespace material outside complete valid clause spans")
         if translation_gaps:
             validation.add(
@@ -266,6 +283,8 @@ def audit_clause_checks(
             "scope": _SCOPE,
             "issues": validation.issues,
             "resolved_spans": resolved,
+            "omitted_source_spans": omitted_source_spans,
+            "source_unaccounted_spans": source_unaccounted_gaps,
             "source_uncovered_spans": source_gaps,
             "translation_uncovered_spans": translation_gaps,
         },

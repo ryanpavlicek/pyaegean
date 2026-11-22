@@ -49,6 +49,8 @@ def test_aligned_spans_remain_exploratory_findings_not_semantic_verification():
             "source": {"start": 0, "end": 4, "text": "λέγω"},
             "translation": {"start": 0, "end": 7, "text": "I speak"},
         }],
+        "omitted_source_spans": [],
+        "source_unaccounted_spans": [],
         "source_uncovered_spans": [],
         "translation_uncovered_spans": [],
     }
