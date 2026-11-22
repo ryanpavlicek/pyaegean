@@ -67,7 +67,7 @@ from aegean.greek.joint import _JointModel, _compose_lemma  # noqa: E402
 from aegean.greek.ud import load_conllu, ud_path  # noqa: E402
 
 _DATASET = "grc-joint"
-_BATCH = 32
+_DEFAULT_BATCH: int | None = None
 # A geometric grid for the streaming lemma-head fit; 1.0 is added so ECE-before is an exact
 # column. Range covers the usual over-confidence regime (optimal T typically ~1.2-2.5).
 _LEMMA_GRID = np.unique(np.concatenate([np.geomspace(0.5, 8.0, 40), [1.0]])).astype(np.float64)
@@ -97,29 +97,66 @@ def _reliability_bins(probs: np.ndarray, correct: np.ndarray, n_bins: int = 15) 
     return out
 
 
-def _collect(model: _JointModel, sentences, *, need_lemma_grid: bool, lemma_temp: float | None,
-             tag: str) -> dict:
-    """One pass over ``sentences`` (batched), gathering per-token calibration data.
+def _lemma_route_summary(
+    sources: list[str], correct: np.ndarray, probs: np.ndarray
+) -> dict[str, dict[str, float | int]]:
+    """Summarize composed-lemma counts, accuracy, and ECE per decision route."""
+    summary: dict[str, dict[str, float | int]] = {}
+    if not sources:
+        return summary
+    src_arr = np.asarray(sources, dtype=object)
+    for route in sorted(set(sources)):
+        mask = src_arr == route
+        cnt = int(mask.sum())
+        summary[route] = {
+            "count": cnt,
+            "accuracy": float(np.mean(correct[mask])),
+            "ece": float(calibrate.ece(probs[mask], correct[mask])),
+        }
+    return summary
 
-    Returns arrays for the UPOS head (materialized 15-wide logits + correctness) and, for the
-    lemma head, either the streaming grid confidences (fitting, ``need_lemma_grid=True``) or
-    the top-1 confidence at a fixed ``lemma_temp`` (report-only test pass)."""
+
+def _collect(
+    model: _JointModel,
+    sentences,
+    *,
+    need_lemma_grid: bool,
+    lemma_temp: float | None,
+    tag: str,
+    batch_size: int | None = _DEFAULT_BATCH,
+) -> dict:
+    """One pass over ``sentences``, gathering per-token calibration data.
+
+    Defaults to canonical sequential execution (``batch_size=None``, calling
+    ``model._run(forms)`` per sentence) so collection matches the shipped sequential
+    CPU protocol. Returns arrays for the UPOS head (materialized 15-wide logits +
+    correctness), the composed-lemma correctness and decision route per token, and
+    either the streaming grid confidences (fitting, ``need_lemma_grid=True``) or the
+    top-1 confidence at a fixed ``lemma_temp`` (report-only pass)."""
+    if batch_size is not None and batch_size < 1:
+        raise ValueError(f"batch_size must be None or >= 1, got {batch_size!r}")
+
     upos_logits: list[np.ndarray] = []
     upos_correct: list[int] = []
     lemma_correct: list[int] = []
+    lemma_sources: list[str] = []
     lemma_conf_grid: list[np.ndarray] = []      # [n_tokens, n_grid] when need_lemma_grid
     lemma_conf_at_t: list[float] = []           # top-1 conf at lemma_temp (report pass)
 
     total = len(sentences)
     t0 = time.perf_counter()
     done = 0
-    for start in range(0, total, _BATCH):
-        chunk = sentences[start : start + _BATCH]
+    step = 1 if batch_size is None else batch_size
+    log_every = 100 if batch_size is None else 10
+    for chunk_idx, start in enumerate(range(0, total, step)):
+        chunk = sentences[start : start + step]
         batch_forms = [[_nfc(t.form) for t in s.tokens] for s in chunk]
-        # skip empty sentences the way analyze_batch does; run the rest in one pass
         live = [(i, f) for i, f in enumerate(batch_forms) if f]
         if live:
-            outs = model._run_batch([f for _i, f in live])
+            if batch_size is None:
+                outs = [model._run(f) for _i, f in live]
+            else:
+                outs = model._run_batch([f for _i, f in live])
             for (li, forms), out in zip(live, outs):
                 sent = chunk[li]
                 word_pos = out["_word_pos"]
@@ -134,8 +171,11 @@ def _collect(model: _JointModel, sentences, *, need_lemma_grid: bool, lemma_temp
 
                     sz = np.asarray(out["lemma"][0, wi], dtype=np.float64)  # (n_scripts,)
                     script_id = int(sz.argmax())
-                    composed, _resolved = _compose_lemma(forms[w], pred_upos, script_id, model)
+                    composed, _resolved, source = _compose_lemma(
+                        forms[w], pred_upos, script_id, model
+                    )
                     lemma_correct.append(int(_nfc(composed) == _nfc(gold.lemma)))
+                    lemma_sources.append(source.value)
                     d = (sz - sz.max()).astype(np.float64)
                     if need_lemma_grid:
                         # top-1 confidence at every grid temperature, streaming (no 15k-wide
@@ -146,7 +186,7 @@ def _collect(model: _JointModel, sentences, *, need_lemma_grid: bool, lemma_temp
                         assert lemma_temp is not None
                         lemma_conf_at_t.append(1.0 / float(np.exp(d / lemma_temp).sum()))
         done += len(chunk)
-        if start // _BATCH % 10 == 0 or done >= total:
+        if chunk_idx % log_every == 0 or done >= total:
             rate = done / max(time.perf_counter() - t0, 1e-9)
             print(f"[{tag}] {done}/{total} sentences ({rate:.0f} sent/s)", flush=True)
 
@@ -154,6 +194,7 @@ def _collect(model: _JointModel, sentences, *, need_lemma_grid: bool, lemma_temp
         "upos_logits": np.array(upos_logits) if upos_logits else np.empty((0, 15)),
         "upos_correct": np.array(upos_correct),
         "lemma_correct": np.array(lemma_correct),
+        "lemma_sources": lemma_sources,
         "lemma_conf_grid": (np.array(lemma_conf_grid) if lemma_conf_grid else None),
         "lemma_conf_at_t": (np.array(lemma_conf_at_t) if lemma_conf_at_t else None),
         "n_tokens": len(upos_correct),
@@ -172,12 +213,35 @@ def _fit_lemma_grid(conf_grid: np.ndarray, correct: np.ndarray) -> tuple[float, 
     return float(_LEMMA_GRID[best]), best
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--limit", type=int, default=None, help="fit/report on the first N sentences of each fold")
-    ap.add_argument("--dev-only", action="store_true", help="skip the test-fold report pass")
+    ap.add_argument(
+        "--dev-only",
+        action="store_true",
+        help="fit and report on dev only (default behavior; kept for CLI compatibility)",
+    )
+    ap.add_argument(
+        "--include-locked-test",
+        action="store_true",
+        help="explicitly opt into the one-shot report-only pass on the locked Perseus test fold",
+    )
+    ap.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="optional batch size; omit for canonical sequential execution (batch_size=None)",
+    )
     ap.add_argument("--out", default=None, help="evidence JSON path (default training/results/calibration-<date>.json)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
+    if args.dev_only and args.include_locked_test:
+        ap.error("--dev-only cannot be combined with --include-locked-test")
+
+    run_locked_test = bool(args.include_locked_test)
+    batch_size = args.batch_size
+    exec_label = "CPU, sequential (batch_size=None)" if batch_size is None else (
+        f"CPU, batched (_run_batch, batch_size={batch_size})"
+    )
 
     today = date.today().isoformat()
     out_path = Path(args.out) if args.out else (
@@ -188,8 +252,8 @@ def main() -> None:
     print("=" * 70, flush=True)
     print("joint-model confidence calibration — UD Ancient Greek (Perseus)", flush=True)
     print(f"  fit fold : dev  (fit temperature; {n_dev} sentences)", flush=True)
-    print(f"  test fold: test (report-only ECE){' [skipped]' if args.dev_only else ''}", flush=True)
-    print(f"  execution: CPU, batched (_run_batch, batch_size={_BATCH})", flush=True)
+    print(f"  test fold: test (report-only ECE){'' if run_locked_test else ' [skipped; pass --include-locked-test]'}", flush=True)
+    print(f"  execution: {exec_label}", flush=True)
     print("  estimated runtime: ~4-8 minutes on CPU (dominated by the lemma-head grid pass)", flush=True)
     print("=" * 70, flush=True)
 
@@ -203,7 +267,14 @@ def main() -> None:
     print(f"dev fold: {len(dev)} sentences, {sum(len(s.tokens) for s in dev)} tokens", flush=True)
 
     # --- FIT on dev ---------------------------------------------------------------
-    dev_data = _collect(model, dev, need_lemma_grid=True, lemma_temp=None, tag="dev/fit")
+    dev_data = _collect(
+        model,
+        dev,
+        need_lemma_grid=True,
+        lemma_temp=None,
+        tag="dev/fit",
+        batch_size=batch_size,
+    )
 
     # UPOS: the library fitter on materialized 15-wide logits
     t_upos = calibrate.fit_temperature(dev_data["upos_logits"], dev_data["upos_correct"])
@@ -226,7 +297,7 @@ def main() -> None:
 
     cal = calibrate.Calibration(
         temperature={"upos": t_upos, "lemma": t_lemma},
-        fitted_on=f"UD Ancient Greek-Perseus dev fold ({_DATASET} v3, CPU, batch_size={_BATCH})",
+        fitted_on=f"UD Ancient Greek-Perseus dev fold ({_DATASET} v3, {exec_label})",
         date=today,
         ece_before={"upos": upos_ece_before, "lemma": lemma_ece_before},
         ece_after={"upos": upos_ece_after, "lemma": lemma_ece_after},
@@ -243,8 +314,8 @@ def main() -> None:
         "model": f"{_DATASET} v3 (int8+fp16 quantized), CPU (CPUExecutionProvider)",
         "protocol": {
             "fit_fold": "UD Ancient Greek-Perseus dev (FIT; never test)",
-            "test_fold": "UD Ancient Greek-Perseus test (report-only ECE, no fitting)",
-            "execution": f"CPU, _run_batch batch_size={_BATCH} (prediction-identical to sequential)",
+            "test_fold": "UD Ancient Greek-Perseus test (opt-in report-only ECE, no fitting)",
+            "execution": exec_label,
             "objective": "minimize binary NLL of top-1 softmax confidence vs correctness",
             "upos_target": "argmax UPOS == gold UPOS",
             "lemma_target": "composed lemma (script + train-only lookup) == gold lemma "
@@ -255,6 +326,8 @@ def main() -> None:
                         "grid + golden-section refine)",
             "n_bins_ece": 15,
             "limit": args.limit,
+            "batch_size": batch_size,
+            "include_locked_test": run_locked_test,
         },
         "temperature": {"upos": t_upos, "lemma": t_lemma},
         "dev": {
@@ -269,6 +342,12 @@ def main() -> None:
             "lemma": {
                 "ece_before": lemma_ece_before, "ece_after": lemma_ece_after,
                 "accuracy": float(np.mean(dev_data["lemma_correct"])),
+                "by_source_before": _lemma_route_summary(
+                    dev_data["lemma_sources"], dev_data["lemma_correct"], conf_grid[:, i_one]
+                ),
+                "by_source_after": _lemma_route_summary(
+                    dev_data["lemma_sources"], dev_data["lemma_correct"], conf_grid[:, best_g]
+                ),
                 "reliability_before": _reliability_bins(conf_grid[:, i_one], dev_data["lemma_correct"]),
                 "reliability_after": _reliability_bins(conf_grid[:, best_g], dev_data["lemma_correct"]),
             },
@@ -276,14 +355,21 @@ def main() -> None:
         "calibration": cal.to_dict(),
     }
 
-    # --- report-only TEST pass ----------------------------------------------------
-    if not args.dev_only:
+    # --- opt-in report-only TEST pass ---------------------------------------------
+    if run_locked_test:
         test = load_conllu(ud_path("perseus", "test"))
         if args.limit is not None:
             test = test[: args.limit]
         print(f"\ntest fold: {len(test)} sentences, {sum(len(s.tokens) for s in test)} tokens "
               "(report-only, no fitting)", flush=True)
-        test_data = _collect(model, test, need_lemma_grid=False, lemma_temp=t_lemma, tag="test/report")
+        test_data = _collect(
+            model,
+            test,
+            need_lemma_grid=False,
+            lemma_temp=t_lemma,
+            tag="test/report",
+            batch_size=batch_size,
+        )
         upos_conf_test = calibrate.top1_confidence(test_data["upos_logits"], t_upos)
         upos_ece_test = calibrate.ece(upos_conf_test, test_data["upos_correct"])
         lemma_conf_test = test_data["lemma_conf_at_t"]
@@ -305,6 +391,9 @@ def main() -> None:
             "lemma": {
                 "ece_after": lemma_ece_test,
                 "accuracy": float(np.mean(test_data["lemma_correct"])),
+                "by_source_after": _lemma_route_summary(
+                    test_data["lemma_sources"], test_data["lemma_correct"], lemma_conf_test
+                ),
                 "reliability_after": _reliability_bins(lemma_conf_test, test_data["lemma_correct"]),
             },
         }

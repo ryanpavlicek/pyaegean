@@ -974,21 +974,22 @@ class _JointModel:
                         # Only the word attached to the artificial ROOT (head 0) may be
                         # labelled root, so the label for any other arc is chosen from
                         # the non-root labels. See _best_non_root_relation.
-                        rel_ids[token, global_head] = np.int16(
-                            rel_vector.argmax()
+                        chosen_rel = (
+                            int(rel_vector.argmax())
                             if global_head == 0
                             else _best_non_root_relation(rel_vector, self.inv["deprel"])
                         )
+                        rel_ids[token, global_head] = np.int16(chosen_rel)
                         if context is not None and rel_raw_probs is not None:
                             safe_rel = np.where(np.isfinite(rel_vector), rel_vector, -1.0e30)
                             rel_raw_probs[token, global_head] = float(
-                                calibrate.top1_confidence(safe_rel, 1.0, np=np)
+                                calibrate.temperature_softmax(safe_rel, 1.0, np=np)[chosen_rel]
                             )
                             if rel_cal_probs is not None and window_relation_temperature is not None:
                                 rel_cal_probs[token, global_head] = float(
-                                    calibrate.top1_confidence(
+                                    calibrate.temperature_softmax(
                                         safe_rel, window_relation_temperature, np=np
-                                    )
+                                    )[chosen_rel]
                                 )
             # Explicitly release the large per-window arrays before the next encoder pass.
             del raw, local, local_arc, local_rel
@@ -1379,14 +1380,14 @@ class _JointModel:
                     self.inv[f"x{i}"][int(out[f"x{i}"][0, sp].argmax())] for i in range(9)
                 )
                 head[w] = heads_w[wi]
+                selected_rel: int | None = None
                 if head[w] == 0:
                     rel[w] = "root"
                 else:
-                    rel[w] = self.inv["deprel"][
-                        _best_non_root_relation(
-                            rel_scores[:, wi, heads_w[wi]], self.inv["deprel"]
-                        )
-                    ]
+                    selected_rel = _best_non_root_relation(
+                        rel_scores[:, wi, heads_w[wi]], self.inv["deprel"]
+                    )
+                    rel[w] = self.inv["deprel"][selected_rel]
                 lemma[w], resolved[w], lemma_source[w], lemma_source_path[w] = _compose_lemma_detail(
                     forms[w], upos[w], int(lem_ids[wi]), self
                 )
@@ -1472,15 +1473,22 @@ class _JointModel:
                             self, context, "relation", None, reason="forced_root"
                         )
                     else:
+                        assert selected_rel is not None
                         rel_logits = rel_scores[:, wi, selected_head]
-                        raw_relation = float(
-                            calibrate.top1_confidence(rel_logits, 1.0, np=self._np)
+                        safe_rel_logits = np.where(np.isfinite(rel_logits), rel_logits, -1.0e30)
+                        raw_relation_vector = calibrate.temperature_softmax(
+                            safe_rel_logits, 1.0, np=self._np
                         )
+                        raw_relation = float(raw_relation_vector[selected_rel])
                         relation_entry, relation_reason, relation_resolution = _resolve_confidence_entry(
                             self, context, "relation"
                         )
                         relation_value = _entry_probability(
-                            relation_entry, rel_logits, raw_relation, np=self._np
+                            relation_entry,
+                            safe_rel_logits,
+                            raw_relation,
+                            np=self._np,
+                            selected_index=selected_rel,
                         )
                         relation_result = _confidence_result(
                             self, context, "relation", relation_value,
