@@ -55,6 +55,22 @@ _NON_SIGN = frozenset(".‒?↓")
 _NON_SIGN_STR = "".join(_NON_SIGN)
 
 
+_APPARATUS: dict[str, str] = {
+    "linea": "linea — ruled line / divider",
+    "tit.": "titulus — inscription / heading",
+    "vacat": "vacat — space left blank",
+    "phoenicius": "Phoenicius — Phoenician text (non-Cypriot)",
+    "evanidus": "evanidus — faded / vanished",
+    "illegibilis": "illegibilis — illegible",
+}
+_APPARATUS_LOST: frozenset[str] = frozenset(("evanidus", "illegibilis"))
+
+
+@lru_cache(maxsize=1)
+def _syllabogram_labels() -> frozenset[str]:
+    return frozenset(s.label.lower() for s in cypriot_inventory().signs)
+
+
 def _real_signs(bare: str) -> tuple[str, ...]:
     """The syllabogram labels of a hyphenated word: the preserved reading only. A
     hyphen-segment that is entirely apparatus (illegible dots ``..``, a figure-dash
@@ -123,6 +139,14 @@ def classify(
     if bare in _SEP:
         return Token(bare, TokenKind.SEPARATOR, (bare,), None, line_no, position,
                      status=status, annotations=ann)
+    apparatus_key = bare.lower()
+    if apparatus_key in _APPARATUS:
+        app_ann = {**ann, "apparatus": _APPARATUS[apparatus_key]}
+        if apparatus_key in _APPARATUS_LOST:
+            return Token(bare, TokenKind.UNKNOWN, (), None, line_no, position,
+                         status=ReadingStatus.LOST, annotations=app_ann)
+        return Token(bare, TokenKind.SEPARATOR, (), None, line_no, position,
+                     status=status, annotations=app_ann)
     if parse_value(bare) is not None:
         return Token(bare, TokenKind.NUMERAL, (bare,), None, line_no, position,
                      status=status, annotations=ann)
@@ -131,6 +155,9 @@ def classify(
                      line_no, position, status=status, annotations=ann)
     # a single-sign token: strip a trailing/leading marker (a period, an ?) off the label
     label = bare.strip(_NON_SIGN_STR) or bare
+    if label.lower() in _syllabogram_labels():
+        return Token(bare, TokenKind.WORD, (label,), None, line_no, position,
+                     status=status, annotations=ann)
     if _IDEOGRAM_RE.match(bare):
         return Token(bare, TokenKind.LOGOGRAM, (label,), None, line_no, position,
                      status=status, annotations=ann)

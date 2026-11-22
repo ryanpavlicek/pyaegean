@@ -298,11 +298,11 @@ def test_syllabary_profile_over_query_results_counts_the_subsets_signs() -> None
     assert len(results.inscriptions) == 61
     subset = syllabary_profile(results)
     assert subset == syllabary_profile(results.inscriptions)
-    # Known answer: the Amathus subset writes 571 syllabogram occurrences over 50 of
+    # Known answer: the Amathus subset writes 607 syllabogram occurrences over 50 of
     # the 55 grid cells, leaving five gaps; the whole corpus leaves one.
-    assert (subset.sign_tokens, subset.attested_count, subset.gap_count) == (571, 50, 5)
+    assert (subset.sign_tokens, subset.attested_count, subset.gap_count) == (607, 50, 5)
     whole = syllabary_profile(corpus)
-    assert (whole.sign_tokens, whole.attested_count, whole.gap_count) == (1621, 54, 1)
+    assert (whole.sign_tokens, whole.attested_count, whole.gap_count) == (1745, 54, 1)
     assert set(whole.gaps) < set(subset.gaps)
 
 
@@ -313,13 +313,13 @@ def test_bridge_coverage_over_query_results_reads_only_the_subset() -> None:
     subset = bridge_coverage(amathus)
     assert subset == bridge_coverage(amathus.inscriptions)
     # Known answer: the Amathus texts are the Eteocypriot core of IG XV 1, so the
-    # Greek bridge reads none of their 157 words; Marion's Greek reads 21 of 192.
-    assert (subset.word_tokens, subset.read_tokens, subset.coverage_pct) == (157, 0, 0.0)
+    # Greek bridge reads none of their 193 words; Marion's Greek reads 21 of 239.
+    assert (subset.word_tokens, subset.read_tokens, subset.coverage_pct) == (193, 0, 0.0)
     at_marion = bridge_coverage(marion)
-    assert (at_marion.word_tokens, at_marion.read_tokens) == (192, 21)
+    assert (at_marion.word_tokens, at_marion.read_tokens) == (239, 21)
     assert [(r.form, r.count) for r in at_marion.readings[:2]] == [("e-mi", 15), ("pa-i-se", 3)]
     whole = bridge_coverage(corpus)
-    assert (whole.word_tokens, whole.read_tokens) == (448, 33)
+    assert (whole.word_tokens, whole.read_tokens) == (572, 33)
 
 
 # ── variant_groups reports a script, and says so ─────────────────────────────

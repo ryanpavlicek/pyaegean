@@ -906,16 +906,16 @@ def geo(
             return
         from collections import Counter
 
-        from aegean.geo import _normalize_site
+        from aegean.geo import _fold_word, _normalize_site
 
         # resolve labels through the same whitespace-normalized view the geo module uses,
         # so a line-split find-place label counts toward its gazetteer row
         name_by_norm = {_normalize_site(k): k for k in coords}
         counts: Counter[str] = Counter()
-        target = word.casefold()
+        target = _fold_word(word)
         for d in c:
             resolved = name_by_norm.get(_normalize_site(d.meta.site)) if d.meta.site else None
-            if resolved is not None and any(t.text.casefold() == target for t in d.words):
+            if resolved is not None and any(_fold_word(t.text) == target for t in d.words):
                 counts[resolved] += 1
         wrows = [
             {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}

@@ -33,11 +33,20 @@ class DodsonEntry:
     definition: str     # the fuller definition (falls back to the brief gloss)
 
 
+def _exact_key(s: str) -> str:
+    """Case- and final-sigma-folded key that preserves Greek iota subscript.
+
+    Python's ``str.casefold()`` expands ``ᾳ`` (U+1FB3) to ``αι``, collapsing
+    dative singular ``ἐκκλησίᾳ`` with nominative plural ``ἐκκλησίαι``.
+    """
+    return unicodedata.normalize("NFC", s).lower().replace("ς", "σ")
+
+
 def _key(s: str) -> str:
-    """Accent- and case-insensitive lookup key (NFD, drop combining marks, casefold)."""
+    """Accent- and case-insensitive lookup key (NFD, drop combining marks, lower)."""
     return "".join(
         c for c in unicodedata.normalize("NFD", s) if not unicodedata.combining(c)
-    ).casefold()
+    ).lower().replace("ς", "σ")
 
 
 class DodsonLexicon:
@@ -55,7 +64,7 @@ class DodsonLexicon:
         self._exact: dict[str, DodsonEntry] = {}
         self._levelled: dict[str, DodsonEntry] = {}
         for e in entries.values():
-            self._exact.setdefault(unicodedata.normalize("NFC", e.lemma).casefold(), e)
+            self._exact.setdefault(_exact_key(e.lemma), e)
             self._levelled.setdefault(level_grave(e.lemma), e)
             self._by_lemma.setdefault(_key(e.lemma), e)
 
@@ -86,7 +95,8 @@ class DodsonLexicon:
         differently accented headword is a homograph guess, not a hit."""
         from .lexindex import compatible_accents, level_grave
 
-        hit = self._exact.get(unicodedata.normalize("NFC", word).casefold())
+        exact_k = _exact_key(word)
+        hit = self._exact.get(exact_k)
         if hit is not None:
             return hit
         hit = self._levelled.get(level_grave(word))
@@ -95,7 +105,7 @@ class DodsonLexicon:
         hit = self._by_lemma.get(_key(word))
         if hit is None:
             return None
-        if _key(word) == unicodedata.normalize("NFC", word).casefold():
+        if _key(word) == exact_k:
             return hit  # the query carries no accents of its own to contradict
         return hit if compatible_accents(word, hit.lemma) else None
 

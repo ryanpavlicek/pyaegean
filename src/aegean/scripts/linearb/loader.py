@@ -168,7 +168,13 @@ def classify(text: str, line_no: int | None, position: int) -> Token:
         return Token(text, TokenKind.NUMERAL, (bare,), None, line_no, position, status=status)
     if "-" in bare:
         return Token(
-            text, TokenKind.WORD, tuple(bare.split("-")), None, line_no, position, status=status
+            text,
+            TokenKind.WORD,
+            tuple(s for s in bare.split("-") if s),
+            None,
+            line_no,
+            position,
+            status=status,
         )
     if _IDEOGRAM_RE.match(bare) or _QUALIFIED_IDEOGRAM_RE.match(bare):
         return Token(text, TokenKind.LOGOGRAM, (bare,), None, line_no, position, status=status)

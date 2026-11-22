@@ -35,13 +35,13 @@ def test_syllabary_profile_grid_and_gaps() -> None:
     assert prof.attested_count == 54            # every grid cell but one is used
     assert prof.gap_count == 1
     assert prof.gaps == ["XA"]                  # the one unattested grid sign
-    assert prof.sign_tokens == 1621             # total syllabogram occurrences
+    assert prof.sign_tokens == 1745             # total syllabogram occurrences
 
 
 def test_syllabary_profile_sorted_by_frequency() -> None:
     signs = syllabary_profile(_cypriot()).signs
     assert len(signs) == 55
-    assert signs[0].label == "SE" and signs[0].count == 108   # most frequent sign
+    assert signs[0].label == "SE" and signs[0].count == 109   # most frequent sign
     counts = [s.count for s in signs]
     assert counts == sorted(counts, reverse=True)             # descending
     # the gap sign is present, attested False, count 0
@@ -67,17 +67,17 @@ def test_syllabary_profile_empty_corpus_all_gaps() -> None:
 def test_bridge_coverage_totals() -> None:
     cov = bridge_coverage(_cypriot())
     assert isinstance(cov, BridgeCoverage)
-    assert cov.word_tokens == 448
+    assert cov.word_tokens == 572
     assert cov.read_tokens == 33
-    assert cov.coverage_pct == pytest.approx(100 * 33 / 448)
-    assert cov.distinct_forms == 355
-    assert cov.distinct_read_forms == 10        # 10 of 355 forms are in the lexicon
+    assert cov.coverage_pct == pytest.approx(100 * 33 / 572)
+    assert cov.distinct_forms == 384
+    assert cov.distinct_read_forms == 10        # 10 of 384 forms are in the lexicon
 
 
 def test_bridge_coverage_by_status() -> None:
     cov = bridge_coverage(_cypriot())
     assert cov.read_by_status == {"certain": 26, "unclear": 4, "restored": 3}
-    assert cov.words_by_status == {"certain": 255, "unclear": 149, "restored": 44}
+    assert cov.words_by_status == {"certain": 345, "unclear": 178, "restored": 49}
     # read tokens never exceed the word tokens of the same status
     for status, n in cov.read_by_status.items():
         assert n <= cov.words_by_status[status]
@@ -138,6 +138,6 @@ def test_cli_syllabary_json() -> None:
 
 def test_cli_bridge_json() -> None:
     data = json.loads(_run(["analyze", "bridge", "cypriot", "--json"]))
-    assert data["word_tokens"] == 448
+    assert data["word_tokens"] == 572
     assert data["read_tokens"] == 33
     assert data["read_by_status"] == {"certain": 26, "unclear": 4, "restored": 3}

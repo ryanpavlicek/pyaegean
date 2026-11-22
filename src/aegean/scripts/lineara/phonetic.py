@@ -38,5 +38,9 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     exact sign, never the plain series' value. ``overrides`` lets a researcher
     test alternative sign values (hypothesis testing).
     """
-    m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
+    m = (
+        phonetic_map()
+        if not overrides
+        else {**phonetic_map(), **{_lookup_key(k): v for k, v in overrides.items()}}
+    )
     return "".join(m.get(_lookup_key(s), s.lower()) for s in word.split("-"))

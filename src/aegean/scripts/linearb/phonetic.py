@@ -41,7 +41,11 @@ def word_to_phonetic(word: str, overrides: dict[str, str] | None = None) -> str:
     Unknown signs fall through lowercased. ``overrides`` lets a researcher test alternative
     sign values.
     """
-    m = phonetic_map() if not overrides else {**phonetic_map(), **overrides}
+    m = (
+        phonetic_map()
+        if not overrides
+        else {**phonetic_map(), **{_lookup_key(k): v for k, v in overrides.items()}}
+    )
     # The sign table is keyed uppercase; lowercase input is the DAMOS (and general
     # scholarly) convention, so fold to upper before lookup or the Q-/Z-series and
     # other signs silently fall through to their raw transliteration.

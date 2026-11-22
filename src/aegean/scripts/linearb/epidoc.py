@@ -15,6 +15,7 @@ returns it instead of the bundled sample; or call `load_epidoc_corpus` directly.
 from __future__ import annotations
 
 import pathlib
+import re
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +28,17 @@ if TYPE_CHECKING:
 
 _TEI = "{http://www.tei-c.org/ns/1.0}"
 _TOKEN_TAGS = {"w", "num", "seg", "g", "pc"}
+_QUALIFIER_RE = re.compile(r"^([^:;]+)([:;])([mfx])([^:;]*)$", re.IGNORECASE)
+
+
+def _normalize_token(text: str) -> str:
+    """Uppercase Linear B EpiDoc text while preserving lowercase ideogram
+    qualifiers such as ``OVIS:m``, ``CAP:f``, and ``BOS:x``."""
+    m = _QUALIFIER_RE.match(text)
+    if m is not None:
+        head, sep, qual, tail = m.groups()
+        return f"{head.upper()}{sep}{qual.lower()}{tail.upper()}"
+    return text.upper()
 
 
 def _text(el: Any) -> str:
@@ -75,12 +87,15 @@ def _document(root: Any) -> Document | None:
     cur: list[int] = []
     pos = 0
 
-    def inside_app(el: Any) -> bool:
-        # token elements under <app> belong to the apparatus, consumed at the <app> itself
-        # (ancestry walk, not an id()-based skip set — lxml proxies are not identity-stable)
+    def inside_consumed_parent(el: Any) -> bool:
+        # Token elements under <app> belong to the apparatus, and nested token
+        # elements (e.g. <w>wa-<g>na</g>-ka</w>) are already included in their
+        # enclosing carrier's itertext(). Walk ancestors rather than using id()
+        # because lxml element proxies are not identity-stable.
         parent = el.getparent() if hasattr(el, "getparent") else None
-        while parent is not None:
-            if parent.tag == f"{_TEI}app":
+        while parent is not None and parent is not body:
+            ptag = parent.tag.replace(_TEI, "") if isinstance(parent.tag, str) else ""
+            if ptag == "app" or ptag in _TOKEN_TAGS:
                 return True
             parent = parent.getparent()
         return False
@@ -94,10 +109,12 @@ def _document(root: Any) -> Document | None:
         elif tag == "app":
             # one token with alternate readings: <app><lem>…</lem><rdg>…</rdg>…</app>
             lem = el.find(f"{_TEI}lem")
-            rdgs = tuple(_text(r).upper() for r in el.findall(f"{_TEI}rdg") if _text(r))
+            rdgs = tuple(
+                _normalize_token(_text(r)) for r in el.findall(f"{_TEI}rdg") if _text(r)
+            )
             text = _text(lem) if lem is not None else ""
             if text:
-                tok = classify(text.upper(), len(lines), pos)
+                tok = classify(_normalize_token(text), len(lines), pos)
                 tok = replace(tok, status=_status_of(lem), alt=rdgs)
                 tokens.append(tok)
                 cur.append(pos)
@@ -112,13 +129,14 @@ def _document(root: Any) -> Document | None:
                 cur.append(pos)
                 pos += 1
         elif tag in _TOKEN_TAGS:
-            if inside_app(el):
+            if inside_consumed_parent(el):
                 continue
             text = _text(el)
             if text:
                 # EpiDoc transliterations are lowercase; pyaegean's token convention (and the
-                # accounting markers / lexicon) is uppercase, so normalize on import.
-                tok = classify(text.upper(), len(lines), pos)
+                # accounting markers / lexicon) is uppercase, preserving lowercase qualifiers
+                # like OVIS:m / CAP:f.
+                tok = classify(_normalize_token(text), len(lines), pos)
                 if tag == "pc":
                     # <pc> states the kind outright, so it outranks the text heuristic.
                     tok = replace(tok, text=text, kind=TokenKind.PUNCT)
@@ -147,9 +165,15 @@ def parse_epidoc(source: str | pathlib.Path) -> list[Document]:
         ) from e
     path = pathlib.Path(source)
     files = sorted(path.glob("*.xml")) if path.is_dir() else [path]
+    parser = etree.XMLParser(
+        resolve_entities=False,
+        no_network=True,
+        load_dtd=False,
+        huge_tree=False,
+    )
     docs: list[Document] = []
     for f in files:
-        doc = _document(etree.parse(str(f)).getroot())
+        doc = _document(etree.parse(str(f), parser=parser).getroot())
         if doc is not None:
             docs.append(doc)
     return docs

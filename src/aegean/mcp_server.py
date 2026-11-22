@@ -422,20 +422,22 @@ def geo_sites(corpus: str, word: str | None = None) -> dict[str, Any]:
     (greek, nt) carry no find-spot, and the Greek epigraphy corpora record find-places
     outside the Aegean gazetteer, so they yield no rows. A non-empty ``contested`` value
     is the reason a find-spot is disputed; treat such sites as unverified provenance."""
-    from .geo import site_coordinates
+    from .geo import _fold_word, _normalize_site, site_coordinates
 
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
     coords = site_coordinates()
+    name_by_norm = {_normalize_site(k): k for k in coords}
     if word is not None:
         from collections import Counter
 
         counts: Counter[str] = Counter()
-        target = word.casefold()
+        target = _fold_word(word)
         for d in c:
-            if d.meta.site in coords and any(t.text.casefold() == target for t in d.words):
-                counts[d.meta.site] += 1
+            resolved = name_by_norm.get(_normalize_site(d.meta.site)) if d.meta.site else None
+            if resolved is not None and any(_fold_word(t.text) == target for t in d.words):
+                counts[resolved] += 1
         wrows = [
             {"site": s, "lat": coords[s].lat, "lon": coords[s].lon, "count": n}
             for s, n in counts.most_common()

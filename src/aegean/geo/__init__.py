@@ -23,6 +23,7 @@ geo functions raise a clear error if the extra isn't installed.
 
 from __future__ import annotations
 
+import unicodedata
 from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -207,6 +208,15 @@ def to_geodataframe(corpus: Corpus, *, level: str = "inscription"):  # type: ign
     return _as_geodataframe(gpd, rows, cols)
 
 
+def _fold_word(word: str) -> str:
+    """Case- and final-sigma-folded word key that preserves Greek iota subscript.
+
+    Python's ``str.casefold()`` expands ``ᾳ`` to ``αι``, which collapses dative
+    singular forms such as ``ἐκκλησίᾳ`` with nominative plural ``ἐκκλησίαι``.
+    """
+    return unicodedata.normalize("NFC", word).lower().replace("ς", "σ")
+
+
 def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def]
     """A ``GeoDataFrame`` of the find-sites where ``word`` is attested, with per-site counts — i.e.
     *where* a given word shows up across the corpus, ready to map. Matching is case-insensitive
@@ -216,14 +226,14 @@ def word_distribution(corpus: Corpus, word: str):  # type: ignore[no-untyped-def
     is a `Corpus`, the `aegean.analysis.QueryResults` of a `Corpus.query`, or a list of documents;
     ``word`` must be a string. Needs the ``[geo]`` extra."""
     gpd, point = _import_geo()
-    target = _word_arg(word).casefold()
+    target = _fold_word(_word_arg(word))
     documents = _documents_of(corpus)
     coords = site_coordinates()
     keys = _key_index(coords)
     counts: Counter[str] = Counter()
     for d in documents:
         key = keys.get(_normalize_site(d.meta.site))
-        if key is not None and any(t.text.casefold() == target for t in d.words):
+        if key is not None and any(_fold_word(t.text) == target for t in d.words):
             counts[key] += 1
     rows = []
     for key, n in counts.most_common():

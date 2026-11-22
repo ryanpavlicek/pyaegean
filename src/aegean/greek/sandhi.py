@@ -76,7 +76,7 @@ _CRASIS: dict[str, tuple[str, ...]] = {
     "τοὐναντίον": ("τὸ", "ἐναντίον"),
     "τοὐμόν": ("τὸ", "ἐμόν"),
     "ἁνήρ": ("ὁ", "ἀνήρ"),
-    "ἁνθρωπος": ("ὁ", "ἄνθρωπος"),
+    "ἅνθρωπος": ("ὁ", "ἄνθρωπος"),
     "τἀνδρός": ("τοῦ", "ἀνδρός"),
 }
 
@@ -306,16 +306,26 @@ def resolve_sandhi(token: str) -> ResolvedForm:
     if not nfc:
         return ResolvedForm(surface=nfc, words=(nfc,))
 
-    # 1. Crasis — detected by the coronis, expanded from the curated lexicon.
+    # 1. Crasis — check the curated lexicon first (which includes initial-rough-
+    # breathing crases like ἁνήρ / ἅνθρωπος that replace the coronis per Smyth §68),
+    # folding running-text grave accents (κἀγὼ -> κἀγώ) so oxytone crases match.
+    levelled = unicodedata.normalize(
+        "NFC", unicodedata.normalize("NFD", nfc).replace("\u0300", "\u0301")
+    )
+    entry = (
+        _CRASIS.get(nfc)
+        or _CRASIS.get(nfc.lower())
+        or _CRASIS.get(levelled)
+        or _CRASIS.get(levelled.lower())
+    )
+    if entry is not None:
+        return ResolvedForm(
+            surface=nfc,
+            words=entry,
+            kind="crasis",
+            note=f"crasis {nfc} = {' + '.join(entry)}",
+        )
     if _has_coronis(nfc):
-        entry = _CRASIS.get(nfc) or _CRASIS.get(nfc.lower())
-        if entry is not None:
-            return ResolvedForm(
-                surface=nfc,
-                words=entry,
-                kind="crasis",
-                note=f"crasis {nfc} = {' + '.join(entry)}",
-            )
         return ResolvedForm(
             surface=nfc,
             words=(nfc,),

@@ -109,42 +109,57 @@ def syllabify(word: str) -> list[str]:
     return _rule_syllabify(nfc)
 
 
+_HIATUS_FIRST_MARKS = frozenset(("\u0300", "\u0301", "\u0342", "\u0313", "\u0314", "\u0345"))
+
+
+def _marks_hiatus_first(cluster: str) -> bool:
+    """Whether ``cluster`` carries a breathing, accent, or iota subscript.
+
+    In a Greek diphthong any breathing or accent sits on the second vowel
+    (Smyth §5, §8, §152); a mark on the first vowel (ὄις, ἀυτή, πάις) signals
+    hiatus between separate syllable nuclei.
+    """
+    return any(c in _HIATUS_FIRST_MARKS for c in unicodedata.normalize("NFD", cluster))
+
+
 def _rule_syllabify(word: str) -> list[str]:
     """The phonotactic rule engine (no exception lexicon)."""
-    chars = list(unicodedata.normalize("NFC", word))
-    if not chars:
+    nfc = unicodedata.normalize("NFC", word)
+    if not nfc:
         return []
 
-    # Group into vowel-nucleus and consonant units, tracking original chars.
-    units: list[tuple[str, list[str]]] = []  # (kind "V"|"C", chars)
+    # Attach any non-precomposed combining marks (macron+acute ᾱ́, blocked diaeresis,
+    # Leiden underdots) to their base character before nucleus/diphthong detection.
+    clusters: list[str] = []
+    for ch in nfc:
+        if unicodedata.combining(ch) and clusters:
+            clusters[-1] += ch
+        else:
+            clusters.append(ch)
+
+    # Group into vowel-nucleus and consonant units, tracking original clusters.
+    units: list[tuple[str, list[str]]] = []  # (kind "V"|"C", clusters)
     i = 0
-    while i < len(chars):
-        if _is_vowel(chars[i]):
-            nucleus = [chars[i]]
-            # absorb a following vowel if the pair is a diphthong; a diaeresis on
-            # the second vowel (προΐστημι, πραΰς) marks hiatus and blocks the merge
-            if i + 1 < len(chars) and _is_vowel(chars[i + 1]):
-                pair = _base(chars[i]) + _base(chars[i + 1])
-                hiatus = _marks_hiatus(chars[i + 1]) or (
-                    # a combining diaeresis NFC could not fuse into the vowel
-                    i + 2 < len(chars) and chars[i + 2] == _DIAERESIS
-                )
+    while i < len(clusters):
+        if _is_vowel(clusters[i]):
+            nucleus = [clusters[i]]
+            # absorb a following vowel if the pair is a diphthong; diaeresis on the
+            # second vowel (προΐστημι) or an accent/breathing/iota-subscript on the
+            # first vowel (ὄις, ἀυτή, πάις) marks hiatus and blocks the merge
+            if i + 1 < len(clusters) and _is_vowel(clusters[i + 1]):
+                pair = _base(clusters[i]) + _base(clusters[i + 1])
+                hiatus = _marks_hiatus(clusters[i + 1]) or _marks_hiatus_first(clusters[i])
                 if pair in _DIPHTHONGS and not hiatus:
-                    nucleus.append(chars[i + 1])
+                    nucleus.append(clusters[i + 1])
                     i += 1
             units.append(("V", nucleus))
-        elif unicodedata.combining(chars[i]) and units:
-            # A combining mark that could not NFC-precompose onto its vowel (an acute
-            # after a macron/breve: ῡ́, ᾱ́) stays with the preceding unit rather than
-            # becoming its own consonant, so the accent's syllable is read correctly.
-            units[-1][1].append(chars[i])
         else:
-            units.append(("C", [chars[i]]))
+            units.append(("C", [clusters[i]]))
         i += 1
 
     vowel_positions = [k for k, (kind, _) in enumerate(units) if kind == "V"]
     if not vowel_positions:
-        return ["".join(chars)]  # no nucleus → single chunk
+        return ["".join(clusters)]  # no nucleus → single chunk
 
     # Build syllables nucleus by nucleus.
     syllables: list[str] = []

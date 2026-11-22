@@ -101,7 +101,8 @@ def test_ipa_diaeresis_hiatus(word, attic, koine):
     "word,attic,koine",
     [
         ("οὐρανός", "uːranos", "uranos"),
-        ("αὐτός", "au̯tos", "avtos"),
+        ("αὐτός", "au̯tos", "aftos"),
+        ("αὐλή", "au̯lɛː", "avli"),
     ],
 )
 def test_ipa_true_diphthongs_unchanged(word, attic, koine):

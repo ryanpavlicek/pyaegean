@@ -93,8 +93,8 @@ def test_corpus_status_distribution() -> None:
     # (only illegible marks, nothing legibly read).
     assert counts[ReadingStatus.RESTORED] == 51
     assert counts[ReadingStatus.UNCLEAR] == 188
-    assert counts[ReadingStatus.LOST] == 19
-    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 258
+    assert counts[ReadingStatus.LOST] == 21
+    assert counts[ReadingStatus.CERTAIN] == len(tokens) - 260
     # brackets/underdot never survive in the emitted text; NO apparatus marker (bracket,
     # illegible dot/dash, unread ?, direction ↓) survives in a sign label (illegible dots stay
     # in the token text to show a lost-sign position, but are never syllabograms)

@@ -23,7 +23,7 @@ from typing import Any
 from ..data import cache_dir, load_gzip_json
 from . import syntax
 from .accent import accentuation
-from .morphology import _bare, best_pos
+from .morphology import _bare, _rule_best_pos
 from .pos import _LEXICON
 from .pos import _norm as _pos_norm
 
@@ -71,7 +71,7 @@ def _form_features(form: str, bare: str) -> tuple[str, ...]:
     closed = _LEXICON.get(_pos_norm(form))
     if closed is not None:
         feats.append(f"closed={closed}")
-    rule = best_pos(form)
+    rule = _rule_best_pos(form)
     if rule is not None:
         feats.append(f"rule={rule}")
     return tuple(feats)

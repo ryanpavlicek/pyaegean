@@ -45,6 +45,9 @@ _KOINE_DIPH = {
     "αι": "e", "ει": "i", "οι": "y", "υι": "y",
     "αυ": "av", "ευ": "ev", "ου": "u", "ηυ": "iv", "ωυ": "ov",
 }
+_KOINE_DIPH_VOICELESS = {"αυ": "af", "ευ": "ef", "ηυ": "if", "ωυ": "of"}
+_VOICELESS_KOINE = frozenset("πτκφθχσςξψ")
+_HIATUS_FIRST_MARKS = frozenset(("\u0300", "\u0301", "\u0342", "\u0313", "\u0314", "\u0345"))
 _KOINE_CONS = {
     "β": "v", "γ": "ɣ", "δ": "ð", "ζ": "z", "θ": "θ", "κ": "k", "λ": "l",
     "μ": "m", "ν": "n", "ξ": "ks", "π": "p", "ρ": "r", "σ": "s", "ς": "s",
@@ -77,33 +80,52 @@ def _word_ipa(word: str, period: Period) -> str:
 
     parts: list[str] = []
 
-    # Rough breathing → leading /h/ (Attic only; lost in Koine). It sits on the
-    # first vowel of the initial cluster (the second vowel of a diphthong).
+    # Rough breathing → leading /h/ (Attic only; lost in Koine). Skip leading
+    # punctuation (e.g. «ἡμέρα») so the breathing sits on the word's initial
+    # vowel or diphthong.
+    rough_idx: int | None = None
     for idx, (c, marks) in enumerate(groups):
+        if not c.isalpha():
+            continue
         if c in _VOWELS:
+            is_diph = (
+                idx + 1 < len(groups)
+                and groups[idx + 1][0] in _VOWELS
+                and (c + groups[idx + 1][0]) in diph
+                and not (marks & _HIATUS_FIRST_MARKS)
+                and _DIAERESIS not in groups[idx + 1][1]
+            )
             cluster_rough = _ROUGH in marks or (
-                idx + 1 < len(groups) and _ROUGH in groups[idx + 1][1]
+                is_diph and _ROUGH in groups[idx + 1][1]
             )
             if cluster_rough and period == "attic":
-                parts.append("h")
-            break
-        if c not in _VOWELS:  # a consonant precedes any vowel → no leading h
-            break
+                rough_idx = idx
+        break
 
     i = 0
     n = len(groups)
     while i < n:
+        if i == rough_idx:
+            parts.append("h")
         c, marks = groups[i]
         nxt = groups[i + 1][0] if i + 1 < n else ""
         pair = c + nxt
 
-        # A diaeresis on the second vowel (προΐστημι, πραΰς) marks hiatus:
-        # the vowels are separate nuclei, not a diphthong.
+        # A diaeresis on the second vowel (προΐστημι, πραΰς) or an accent /
+        # breathing / iota subscript on the first vowel (ὄις, ἀυτή, πάις) marks
+        # hiatus: the vowels are separate nuclei, not a diphthong.
         if (
             c in _VOWELS and nxt in _VOWELS and pair in diph
             and _DIAERESIS not in groups[i + 1][1]
+            and not (marks & _HIATUS_FIRST_MARKS)
         ):
-            parts.append(diph[pair])
+            if period == "koine" and pair in _KOINE_DIPH_VOICELESS:
+                after = groups[i + 2][0] if i + 2 < n else ""
+                parts.append(
+                    _KOINE_DIPH_VOICELESS[pair] if after in _VOICELESS_KOINE else diph[pair]
+                )
+            else:
+                parts.append(diph[pair])
             i += 2
             continue
         if c in _VOWELS:

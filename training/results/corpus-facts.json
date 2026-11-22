@@ -18,10 +18,10 @@
     "cypriot": {
       "documents": 180,
       "tokens": 628,
-      "words": 448,
+      "words": 572,
       "ig_xv1_inscriptions": 178,
       "measured_from": "bundled",
-      "measured": "2026-07-11"
+      "measured": "2026-11-22"
     },
     "cyprominoan": {
       "documents": 2,

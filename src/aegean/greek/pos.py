@@ -157,9 +157,31 @@ def pos_tags(text: str) -> list[tuple[str, str]]:
     from . import joint, tagger, treebank
 
     toks = list(tokenize(text))
-    if joint.active() is not None:  # one encoder pass tags the whole sentence in context
-        ana = joint.analyze_sentence([t.text for t in toks])
-        return [(t.text, u) for t, u in zip(toks, ana.upos)]
+    if joint.active() is not None:  # tag sentence-by-sentence in context, preserving flat order
+        if not toks:
+            return []
+        from .sentence_segmentation import segment_text
+
+        def _tag_words(words: list[str]) -> tuple[str, ...]:
+            try:
+                return joint.analyze_sentence(words).upos
+            except joint.NeuralInputTooLongError:
+                return joint.analyze_sentence(words, long_input="windowed").upos
+
+        seg = segment_text(text)
+        sent_toks = [
+            list(tokenize(text[b.start : b.end]))
+            for b in seg.boundaries
+            if b.start < b.end
+        ]
+        sent_toks = [s for s in sent_toks if s]
+        flat_seg = [t.text for s in sent_toks for t in s]
+        if flat_seg == [t.text for t in toks]:
+            tagged: list[tuple[str, str]] = []
+            for s in sent_toks:
+                tagged.extend(zip((t.text for t in s), _tag_words([t.text for t in s])))
+            return tagged
+        return [(t.text, u) for t, u in zip(toks, _tag_words([t.text for t in toks]))]
     if tagger.active() is None:
         return [
             (t.text, "PUNCT" if t.kind is TokenKind.PUNCT else pos_tag(t.text))

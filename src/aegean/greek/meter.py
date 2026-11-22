@@ -225,10 +225,16 @@ def _nucleus_category(vowels: str) -> str:
     return "common"
 
 
+_HIATUS_FIRST_MARKS = frozenset(("\u0300", "\u0301", "\u0342", "\u0313", "\u0314", "\u0345"))
+
+
 def _is_diphthong(first: str, second: str) -> bool:
     """Whether two adjacent vowels share a nucleus. A diaeresis on the second
-    vowel (ϊ, ϋ) blocks it."""
+    vowel (ϊ, ϋ), or an accent/breathing/iota-subscript on the first vowel
+    (ὄις, ἀυτή, πάις), marks hiatus and blocks diphthong formation."""
     if _DIAERESIS in unicodedata.normalize("NFD", second):
+        return False
+    if any(m in _HIATUS_FIRST_MARKS for m in unicodedata.normalize("NFD", first)):
         return False
     pair = _strip_combining(first).lower() + _strip_combining(second).lower()
     return pair in _DIPHTHONGS
@@ -253,7 +259,14 @@ def _items(line: str, *, synizesis: dict[int, str] | None = None) -> list[_Item]
         nfc = nfc.replace(ap, "")
     items: list[_Item] = []
     for word_idx, match in enumerate(_GREEK_WORD.findall(nfc)):
-        chars = list(match)
+        # Attach non-precomposed combining marks (macron+acute ᾱ́, Leiden underdots)
+        # to their base letter so they never become phantom consonant items.
+        chars: list[str] = []
+        for ch in match:
+            if unicodedata.combining(ch) and chars:
+                chars[-1] += ch
+            else:
+                chars.append(ch)
         syn = (synizesis or {}).get(word_idx, _synizesis_bigram(match))
         syn_used = False
         i = 0
@@ -283,7 +296,7 @@ def _items(line: str, *, synizesis: dict[int, str] | None = None) -> list[_Item]
                         if len(syn) == 2 and pair == syn:
                             syn_used = True
                 items.append(_Item(True, text, base, word_idx, first))
-            else:
+            elif base:
                 items.append(_Item(False, ch, base, word_idx, first))
             first = False
             i += 1
@@ -305,9 +318,12 @@ def _consonant_weight(cons: list[_Item]) -> int:
 
 
 def _is_muta_cum_liquida(cons: list[_Item]) -> bool:
-    """A two-consonant cluster of stop + liquid/nasal (position is optional)."""
+    """A two-consonant cluster of stop + liquid/nasal within the same word
+    (position is optional; a stop ending one word before a liquid starting the
+    next always closes the syllable by position)."""
     return (
         len(cons) == 2
+        and cons[0].word_idx == cons[1].word_idx
         and cons[0].base in _STOPS
         and cons[1].base in _LIQUIDS_NASALS
         and cons[0].base not in _DOUBLE

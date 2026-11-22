@@ -45,7 +45,7 @@ NUMBERS = ("sg", "pl")
 GENDERS = ("masc", "fem", "neut")
 TENSES = ("pres", "impf", "fut", "aor")
 VOICES = ("act", "mp")
-MOODS = ("ind", "inf", "part")
+MOODS = ("ind", "subj", "inf", "part")
 PERSONS = ("1", "2", "3")
 
 
@@ -233,7 +233,7 @@ _VERBAL: tuple[_VerbEnding, ...] = (
     _VerbEnding("ομεν", "impf", "act", "ind", "1", "pl", augment=True),
     _VerbEnding("ετε", "impf", "act", "ind", "2", "pl", augment=True),
     _VerbEnding("ον", "impf", "act", "ind", "1", "sg", augment=True),
-    _VerbEnding("ες", "impf", "act", "ind", "2", "sg", augment=True),
+    _VerbEnding("εσ", "impf", "act", "ind", "2", "sg", augment=True),
     _VerbEnding("εν", "impf", "act", "ind", "3", "sg", augment=True),
     # future active indicative (σ marker)
     _VerbEnding("σομεν", "fut", "act", "ind", "1", "pl"),
@@ -277,9 +277,23 @@ def _strip_augment(stem: str) -> str:
 
 def _verbal(word: str) -> list[Analysis]:
     bare = _bare(word)
-    # An iota subscript (ῳ/ῃ) marks a dative singular, never a finite verb.
-    if "ͅ" in unicodedata.normalize("NFD", word):
+    nfc = unicodedata.normalize("NFC", word)
+    # A final iota-subscript vowel (-ῳ/-ᾳ/-ῃ) marks a dative singular nominal
+    # (never a finite indicative verb like -ω). Stem subscripts (ᾄδεις) and
+    # present active subjunctive 2sg (-ῃς, e.g. λύῃς) remain valid verbs.
+    if nfc and "\u0345" in unicodedata.normalize("NFD", nfc[-1]):
         return []
+    if (
+        len(nfc) >= 3
+        and bare.endswith("ησ")
+        and "\u0345" in unicodedata.normalize("NFD", nfc[-2])
+    ):
+        return [
+            Analysis(
+                lemma=bare[:-2] + "ω", pos="VERB", tense="pres", voice="act",
+                mood="subj", person="2", number="sg", lemma_certain=False,
+            )
+        ]
     # The mediopassive participle marker is distinctive — check it first.
     for ending, gender in _MP_PARTICIPLE:
         if bare.endswith(ending) and len(bare) > len(ending):
@@ -501,6 +515,16 @@ def lemmas(word: str) -> list[str]:
         if a.lemma not in out:
             out.append(a.lemma)
     return out
+
+
+def _rule_best_pos(word: str) -> str | None:
+    """Backend-independent POS guess from the rule engine alone (cache-safe)."""
+    analyses = _rule_analyze(word)
+    if not analyses:
+        return None
+    if any(a.degree for a in analyses):
+        return "ADJ"
+    return analyses[0].pos
 
 
 def best_pos(word: str) -> str | None:
