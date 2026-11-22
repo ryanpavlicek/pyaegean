@@ -589,7 +589,7 @@ def _lossy_document(
                     _pos_string(word.upos),
                     xpos,
                     features,
-                    0 if governor is None else governor,
+                    governor,
                     relation,
                 )
             )
@@ -791,7 +791,10 @@ def make_cltk_process(
             analyze = getattr(self._aegean_pipeline, "analyze", None)
             analyze_tokens = getattr(self._aegean_pipeline, "analyze_tokens", None)
             try:
-                if callable(analyze):
+                if input_doc.words and callable(analyze_tokens):
+                    forms = [str(word.string or "") for word in input_doc.words]
+                    records = list(analyze_tokens(forms, **kwargs) or ())
+                elif callable(analyze):
                     records = list(analyze(input_doc.raw, **kwargs) or ())
                 else:
                     forms = [str(word.string or "") for word in input_doc.words]

@@ -1320,24 +1320,110 @@ def merge_review_tables(
             merged_rows.append(merged)
             contributors |= row_reviewers
 
+    def _rollback_sentence_dependencies(targets: set[tuple[str, str]]) -> None:
+        nonlocal contributors
+        for row in merged_rows:
+            if (row["doc_id"], row["dependency_sentence_id"]) in targets:
+                for name in ("head", "deprel"):
+                    row[f"decision_{name}"] = row[f"correct_{name}"] = ""
+                row_recs = json.loads(row["reviewer_records"])
+                row_recs.pop("head", None)
+                row_recs.pop("deprel", None)
+                row["reviewer_records"] = canonical(row_recs)
+                remaining_reviewers = sorted(
+                    {record["reviewer"] for entries in row_recs.values() for record in entries}
+                )
+                row["reviewer"] = ", ".join(remaining_reviewers)
+                note_pairs: list[tuple[str, str]] = []
+                ev_pairs: list[tuple[str, str]] = []
+                seen_n: set[tuple[str, str]] = set()
+                seen_e: set[tuple[str, str]] = set()
+                for entries in row_recs.values():
+                    for record in entries:
+                        rname = record["reviewer"]
+                        if record.get("note") and (rname, record["note"]) not in seen_n:
+                            seen_n.add((rname, record["note"]))
+                            note_pairs.append((rname, record["note"]))
+                        if record.get("evidence") and (rname, record["evidence"]) not in seen_e:
+                            seen_e.add((rname, record["evidence"]))
+                            ev_pairs.append((rname, record["evidence"]))
+                row["reviewer_note"] = _join_notes(note_pairs)
+                row["reviewer_evidence"] = _join_notes(ev_pairs)
+        contributors = {
+            record["reviewer"]
+            for row in merged_rows
+            for entries in json.loads(row["reviewer_records"]).values()
+            for record in entries
+        }
+
     conflicted_sentences = {
         (row["doc_id"], row["dependency_sentence_id"])
         for conflict in conflicts if conflict.field in {"head", "deprel"}
         for row in merged_rows if row["doc_id"] == conflict.doc_id and row["position"] == str(conflict.position)
     }
     if conflicted_sentences:
+        _rollback_sentence_dependencies(conflicted_sentences)
+
+    if corpus is not None:
+        merged_by_sentence: dict[tuple[str, str], list[dict[str, str]]] = {}
         for row in merged_rows:
-            if (row["doc_id"], row["dependency_sentence_id"]) in conflicted_sentences:
-                for name in ("head", "deprel"):
-                    row[f"decision_{name}"] = row[f"correct_{name}"] = ""
-                records = json.loads(row["reviewer_records"])
-                records.pop("head", None)
-                records.pop("deprel", None)
-                row["reviewer_records"] = canonical(records)
-                remaining = {record["reviewer"] for entries in records.values() for record in entries}
-                row["reviewer"] = ", ".join(sorted(remaining))
-        contributors = {record["reviewer"] for row in merged_rows
-                        for entries in json.loads(row["reviewer_records"]).values() for record in entries}
+            sid = row.get("dependency_sentence_id", "")
+            if sid:
+                merged_by_sentence.setdefault((row["doc_id"], sid), []).append(row)
+        invalid_tree_sentences: set[tuple[str, str]] = set()
+        for sent_key, srows in sorted(merged_by_sentence.items()):
+            has_dep = any(
+                _field_decision(row, col)[0]
+                for row in srows
+                for col in ("correct_head", "correct_deprel")
+            )
+            if not has_dep:
+                continue
+            sent_corr: dict[tuple[str, int], Mapping[str, str | None]] = {}
+            for row in srows:
+                idx = _row_position((row.get("position") or "").strip())
+                if idx is not None:
+                    sent_corr[(row["doc_id"], idx)] = row
+            try:
+                _dependency_preflight(sent_corr, corpus)
+            except ValueError as exc:
+                invalid_tree_sentences.add(sent_key)
+                edited_rows = [
+                    row for row in srows
+                    if any(_field_decision(row, col)[0] for col in ("correct_head", "correct_deprel"))
+                ]
+                anchor = edited_rows[0]
+                anchor_pos = _row_position((anchor.get("position") or "").strip()) or 0
+                options: list[ReviewerValue] = []
+                for erow in edited_rows:
+                    erecs = json.loads(erow["reviewer_records"])
+                    for fname in ("head", "deprel"):
+                        action, val, _exp = _field_decision(erow, f"correct_{fname}")
+                        if not action:
+                            continue
+                        for rec in erecs.get(fname, ()):
+                            options.append(
+                                ReviewerValue(
+                                    rec["reviewer"],
+                                    f"{erow['position']}:{fname}={val}",
+                                    f"combined tree invalid: {exc}" + (
+                                        f" ({rec['note']})" if rec.get("note") else ""
+                                    ),
+                                    action,
+                                    rec.get("evidence", ""),
+                                )
+                            )
+                conflicts.append(
+                    ReviewConflict(
+                        doc_id=sent_key[0],
+                        position=anchor_pos,
+                        token=anchor["token"],
+                        field="head",
+                        options=tuple(options),
+                    )
+                )
+        if invalid_tree_sentences:
+            _rollback_sentence_dependencies(invalid_tree_sentences)
 
     if on_conflict == "error" and conflicts:
         raise ValueError(_conflict_message(conflicts))

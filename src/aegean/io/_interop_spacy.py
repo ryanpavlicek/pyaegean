@@ -283,17 +283,26 @@ def _lossy_document(doc: Any) -> InteropDocument:
     bounds = [*starts, len(values)]
     sentences: list[UDSentence] = []
     for sentence_index, (start, end) in enumerate(zip(bounds, bounds[1:])):
+        sent_tokens = values[start:end]
+        unparsed = all(
+            int(token.head.i) == int(token.i) and not str(token.dep_ or "")
+            for token in sent_tokens
+        )
         rows: list[UDToken] = []
-        for local_index, token in enumerate(values[start:end], start=1):
-            head_index = int(token.head.i)
-            if head_index == int(token.i):
-                head = 0
-            elif start <= head_index < end:
-                head = head_index - start + 1
+        for local_index, token in enumerate(sent_tokens, start=1):
+            head: int | None
+            if unparsed:
+                head = None
             else:
-                raise InteropSchemaError(
-                    "spaCy dependency head crosses a sentence boundary"
-                )
+                head_index = int(token.head.i)
+                if head_index == int(token.i):
+                    head = 0
+                elif start <= head_index < end:
+                    head = head_index - start + 1
+                else:
+                    raise InteropSchemaError(
+                        "spaCy dependency head crosses a sentence boundary"
+                    )
             rows.append(
                 UDToken(
                     local_index,

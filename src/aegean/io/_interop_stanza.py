@@ -378,7 +378,7 @@ def _lossy_document(doc: Any) -> InteropDocument:
                             _field(word.upos, name="upos"),
                             _field(word.xpos, name="xpos"),
                             _field(word.feats, name="feats"),
-                            str(word.head if word.head is not None else 0),
+                            str(word.head) if word.head is not None else "_",
                             _field(word.deprel, name="deprel"),
                             _field(word.deps, name="deps"),
                             _field(word.misc, name="misc"),

@@ -468,7 +468,7 @@ _SEVERITY = {
     ReadingStatus.RESTORED: 2,
     ReadingStatus.LOST: 3,
 }
-_SKIP_TEXT = frozenset({"g", "space", "milestone", "note", "certainty", "head"})
+_SKIP_TEXT = frozenset({"g", "space", "milestone", "note", "certainty", "head", "del", "surplus"})
 _CHOICE_PREFERENCE = ("expan", "reg", "corr")
 
 

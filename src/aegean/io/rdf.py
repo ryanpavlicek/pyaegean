@@ -140,14 +140,16 @@ def _pleiades_uri(notes: tuple[str, ...]) -> str | None:
 
 
 def _coords(findspot: str) -> tuple[str, str] | None:
-    """``(lat, long)`` decimal strings when ``findspot`` is a ``"lat, long"`` pair, else None.
+    """``(lat, long)`` decimal strings when ``findspot`` is a ``"lat, long"`` or ``"lat long"`` pair, else None.
 
     Returns the original tokens (not floats) so the exact source precision is preserved and the
-    value is a syntactically valid Turtle/JSON decimal. Place-name find-spots (EDH's modern place)
-    return None and are not turned into coordinates."""
-    parts = [p.strip() for p in findspot.split(",")]
+    value is a syntactically valid Turtle/JSON decimal. Out-of-range numbers and place-name
+    find-spots (EDH's modern place) return None and are not turned into coordinates."""
+    parts = [p.strip() for p in findspot.split(",")] if "," in findspot else findspot.split()
     if len(parts) == 2 and _COORD_RE.match(parts[0]) and _COORD_RE.match(parts[1]):
-        return parts[0], parts[1]
+        lat, lon = float(parts[0]), float(parts[1])
+        if -90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0:
+            return parts[0], parts[1]
     return None
 
 

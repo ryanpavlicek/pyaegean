@@ -169,10 +169,9 @@ _FIXTURES: dict[str, dict] = {
         "ddbdp": [[("ἀγαθὸς", C), ("τύχη", C)]],
         "forbidden": ["☙"],
     },
-    # (10) app with lem+rdg and a rdg-only app. DIVERGENCE: the inscription extractor drops the
-    # whole <app>; the DDbDP walker keeps the <lem>. A <rdg> reading appears in neither.
+    # (10) app with lem+rdg and a rdg-only app: both extractors keep <lem> and drop <rdg>.
     "app_lem_rdg": {
-        "epidoc_choice": [[("μὲν", C), ("δέ", C), ("καί", C)]],
+        "epidoc_choice": [[("μὲν", C), ("οὖν", C), ("δέ", C), ("καί", C)]],
         "ddbdp": [[("μὲν", C), ("οὖν", C), ("δέ", C), ("καί", C)]],
         "forbidden": ["γάρ", "τε", "οὖνγάρ", "γάροὖν"],
     },
@@ -189,19 +188,17 @@ _FIXTURES: dict[str, dict] = {
         "ddbdp": [[("Διονύσιος", C)]],
         "forbidden": ["Text"],
     },
-    # DIVERGENCE / GAP: <expan><abbr>..</abbr><ex>..</ex></expan>. The inscription extractor drops
-    # the <abbr> letters on the stone and keeps only <ex> ("μὰς"); DDbDP keeps the whole
-    # expansion ("δραχμὰς"). See test_gap_shared_extractor_drops_abbr_inside_expan.
+    # (13) <expan><abbr>..</abbr><ex>..</ex></expan>: both extractors retain the inscribed <abbr>
+    # stem together with the <ex> expansion ("δραχμὰς").
     "expan_ex_inner": {
-        "epidoc_choice": [[("μὰς", C), ("τρεῖς", C)]],
+        "epidoc_choice": [[("δραχμὰς", C), ("τρεῖς", C)]],
         "ddbdp": [[("δραχμὰς", C), ("τρεῖς", C)]],
     },
-    # DIVERGENCE / GAP: <subst><add>..</add><del>..</del></subst>. The inscription extractor has no
-    # <subst> handling and FUSES add+del ("ταῦτατουτο"); DDbDP picks <add> ("ταῦτα"). Pinned as
-    # current behavior. See test_gap_shared_extractor_fuses_subst_add_del.
+    # (14) <subst><add>..</add><del>..</del></subst>: both extractors keep <add> and drop <del>.
     "subst_add_del": {
-        "epidoc_choice": [[("ταῦτατουτο", C), ("ἔστω", C)]],
+        "epidoc_choice": [[("ταῦτα", C), ("ἔστω", C)]],
         "ddbdp": [[("ταῦτα", C), ("ἔστω", C)]],
+        "forbidden": ["τουτο", "ταῦτατουτο", "τουτοταῦτα"],
     },
     # DIVERGENCE: EDH '#'-joined parallel forms. Only the EDH build resolves them to one reading;
     # the other builders leave the '#' literal in the token text.
@@ -326,26 +323,19 @@ def test_edh_hash_variant_resolution_yields_primary_and_alternate() -> None:
     assert "πέμπτης#πέμπτης#πέΝπτης" in shared_words
 
 
-def test_gap_shared_extractor_drops_abbr_inside_expan() -> None:
-    """GAP (reported in gaps_found): the shared inscription extractor drops the ``<abbr>`` letters
-    inside ``<expan>`` and keeps only ``<ex>``, so ``<expan><abbr>δραχ</abbr><ex>μὰς</ex></expan>``
-    reads ``μὰς`` (the letters actually on the stone are lost) while DDbDP keeps the whole
-    expansion ``δραχμὰς``. Sibling builders disagree on the SAME construct. Pinned as CURRENT
-    behavior; a fix that keeps the abbr will turn this red on purpose and force a corpus rebuild."""
+def test_shared_extractor_keeps_abbr_inside_expan_matching_ddbdp() -> None:
+    """Shared inscription extractor retains <abbr> inside <expan> (δραχμὰς), matching DDbDP."""
     edition = _edition("expan_ex_inner")
     shared_first = _epidoc.edition_tokens(edition, choice_prefer=True)[0][0][0]
     ddbdp_first = _ddbdp.edition_tokens(edition)[0][0][0]
-    assert shared_first == "μὰς"  # abbr "δραχ" dropped (the gap)
-    assert ddbdp_first == "δραχμὰς"  # DDbDP keeps the whole expansion
+    assert shared_first == "δραχμὰς"
+    assert ddbdp_first == "δραχμὰς"
 
 
-def test_gap_shared_extractor_fuses_subst_add_del() -> None:
-    """GAP (reported in gaps_found): the shared inscription extractor has no ``<subst>`` handling,
-    so ``<subst><add>ταῦτα</add><del>τουτο</del></subst>`` FUSES to ``ταῦτατουτο``, the same
-    fuse-class the 0.39.0 ``<choice>`` fix eliminated, still live for ``<subst>`` in
-    isicily/iip/iospe/igcyr/edh. DDbDP picks ``<add>`` (``ταῦτα``). Pinned as CURRENT behavior."""
+def test_shared_extractor_drops_del_in_subst_matching_ddbdp() -> None:
+    """Shared inscription extractor keeps <add> and drops <del> in <subst>, matching DDbDP."""
     edition = _edition("subst_add_del")
     shared_first = _epidoc.edition_tokens(edition, choice_prefer=True)[0][0][0]
     ddbdp_first = _ddbdp.edition_tokens(edition)[0][0][0]
-    assert shared_first == "ταῦτατουτο"  # add+del fused (the gap)
-    assert ddbdp_first == "ταῦτα"  # DDbDP picks <add>
+    assert shared_first == "ταῦτα"
+    assert ddbdp_first == "ταῦτα"

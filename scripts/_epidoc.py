@@ -25,10 +25,11 @@ _TEI = "http://www.tei-c.org/ns/1.0"
 _XML = "http://www.w3.org/XML/1998/namespace"
 
 # Elements whose textual content is NOT part of the running reading text: editorial symbols
-# (<g> palm/christogram/etc.), lost gaps, spaces/milestones, apparatus/notes, a section <head>
-# label (EDH editions open with <head>Text</head>), and abbreviations (the <ex> expansion inside
-# <expan> is kept; the raw <abbr> is dropped).
-_SKIP = {"g", "gap", "space", "milestone", "note", "certainty", "lem", "rdg", "app", "abbr", "head"}
+# (<g> palm/christogram/etc.), lost gaps, spaces/milestones, apparatus alternatives (<rdg>),
+# editorial notes/certainty, a section <head> label (EDH editions open with <head>Text</head>),
+# and deleted/surplus text (<del>, <surplus>). Keep <abbr> inside <expan> so expanded
+# abbreviations retain their inscribed stem, and traverse <lem> inside <app>.
+_SKIP = {"g", "gap", "space", "milestone", "note", "certainty", "rdg", "head", "del", "surplus"}
 
 # Editorial certainty, least to most severe. A word that spans more than one apparatus span takes
 # the most severe status any of its characters carry (a one-status-per-token round-up: EpiDoc marks
