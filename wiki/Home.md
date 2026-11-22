@@ -105,25 +105,28 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Release the completed improvements:** targeted annotation review, indexed lexical
   searches, translation source context, clause audits, contextual dictionary evidence, and
   checking-history fixes are on `main` and await the next package release.
-- [ ] **Evaluate translation fidelity:** compare grounding and checking on new passages,
-  measuring both corrections and regressions in meaning, roles, negation, qualifications,
-  speaker context, and lexical sense before changing defaults.
-- [ ] **Validate confidence and review selection:** calibrate supported tasks and domains on
-  separate development and validation material; compare errors found by targeted, existing,
-  and random review queues, including errors left unflagged.
-- [ ] **Complete durable corpus analysis:** connect SQLite snapshots to bounded-memory
-  analysis with progress, cancellation, and resumable checkpoints. Verify complete output
-  after interruption and native Windows/macOS installation, Unicode, locking, and SQLite
-  behavior alongside Linux.
-- [ ] **Broaden scholarly evidence:** publish reproducible corpus studies with explicit
-  editions, sampling, and restored-reading sensitivity. Extend source-verified coverage of
-  OCR/damaged text, long context, epic/tragedy, metrical scans, and Aegean/Cypriot readings;
-  keep undeciphered-script interpretations exploratory. For the next Greek evaluation, group
-  the newly recovered diplomatic labels by document and adjudicate passages from two full
-  tragedy treebanks. [Greek development sources](https://github.com/ryanpavlicek/pyaegean/tree/main/training/sources/greek-development-v1)
-- [ ] **Expand resources and installation options:** add license-clean dictionaries,
-  source-cited Cypriot lexical entries, verified gazetteer/Pleiades coverage, and conda-forge
-  packaging.
+- [ ] **Harden confidence, calibration, and review round-trips:** fix emitted-relation
+  confidence scoring and the development calibration collector, qualify schema-2 development
+  calibration by task, route, and domain, validate merged dependency trees before apply, and
+  pilot an editable-first review spreadsheet with a hash-bound companion snapshot.
+- [ ] **Measure native diplomatic papyri and expand tragedy gold:** establish the
+  `grc-joint-v3` baseline on the 5,317 grouped native diplomatic papyrus lemmas and 44
+  basic-UD sentences, evaluate lemma-selection candidates and calibrated review policies on
+  the existing runtime, and adjudicate passages from the two full tragedy treebanks.
+  [Greek development sources](https://github.com/ryanpavlicek/pyaegean/tree/main/training/sources/greek-development-v1)
+- [ ] **Harden public inputs, philological rules, and interchange:** render browser demo
+  errors as text, tighten download, archive, XML, cache, and AI-prompt boundaries, fix
+  EpiDoc expansion and apparatus extraction, Cypriot single-sign classification, unparsed
+  dependency heads in framework adapters, Greek case, iota-subscript, rule, and scansion
+  defects, and retired provider defaults.
+- [ ] **Evaluate translation fidelity:** fix explicit omitted-clause handling and compare
+  grounding and checking on unseen passages, measuring both corrections and regressions in
+  meaning, roles, negation, qualifications, speaker context, and lexical sense before
+  changing defaults.
+- [ ] **Scale large corpora, surfaces, and cross-platform CI:** optimize SQLite corpus reads
+  and disk-backed caches, improve CLI, TUI, and MCP responsiveness and bounded pagination,
+  complete durable resumable corpus jobs, and add native Windows and macOS CI alongside
+  Linux.
 
 ### Following those foundations
 
@@ -133,13 +136,15 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Resumable import and export:** extend durable corpus jobs to incremental CoNLL-U
   and JSONL workflows, with explicit format-loss reports and checks that resumed output
   matches an uninterrupted run.
-- [ ] **Portable research bundles:** package redistributable source snapshots or retrieval
-  references with citations, analysis settings, model identities, review decisions, and
-  checksums so another researcher can verify and rerun the same study.
+- [ ] **Portable research bundles and expanded resources:** package redistributable source
+  snapshots or retrieval references with citations, analysis settings, model identities,
+  review decisions, and checksums; add license-clean dictionaries, source-cited Cypriot
+  lexical entries, verified gazetteer/Pleiades coverage, and conda-forge packaging.
 - [ ] **Independently evaluated models and runtime variants:** evaluate a separately
-  versioned Greek-model successor only after the foundations are frozen; offer calibrated
-  `fast`, `compact`, and `balanced` variants only when candidate artifacts pass cross-domain
-  accuracy and measured size, latency, and memory requirements.
+  versioned Greek-model successor only after the data, exposure, and calibration foundations
+  are frozen; benchmark ONNX precision and runtime options and offer calibrated `fast`,
+  `compact`, and `balanced` variants only when candidate artifacts pass cross-domain accuracy
+  and measured size, latency, and memory requirements.
 
 ## For specialists
 
