@@ -73,7 +73,7 @@ machine with no API key or network. Each is registered automatically when you
 | Anthropic (default) | `anthropic` | `pyaegean[anthropic]` | `ANTHROPIC_API_KEY` | `ANTHROPIC_MODEL` | `claude-sonnet-4-6` |
 | OpenAI | `openai` | `pyaegean[openai]` | `OPENAI_API_KEY` | `OPENAI_MODEL` | `gpt-4o` |
 | xAI Grok | `grok` | `pyaegean[grok]` | `XAI_API_KEY` | `XAI_MODEL` | `grok-2-latest` |
-| Google Gemini | `gemini` | `pyaegean[gemini]` | `GEMINI_API_KEY` | `GEMINI_MODEL` | `gemini-1.5-pro` |
+| Google Gemini | `gemini` | `pyaegean[gemini]` | `GEMINI_API_KEY` | `GEMINI_MODEL` | `gemini-2.5-pro` |
 | OpenRouter | `openrouter` | `pyaegean[openrouter]` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `openai/gpt-4o-mini` |
 | Local (Ollama, …) | `local` | `pyaegean[openai]` | `PYAEGEAN_LOCAL_API_KEY` (optional) | `PYAEGEAN_LOCAL_MODEL` | none (set the model) |
 

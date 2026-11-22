@@ -260,13 +260,14 @@ def epidoc_import(xml: str) -> str:
 
     if not xml.strip():
         return json.dumps({"error": "paste an EpiDoc <TEI> document"})
-    path = os.path.join(tempfile.mkdtemp(), "in.xml")
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(xml)
-    try:
-        corpus = io.from_epidoc(path, script_id="greek")
-    except ET.ParseError as exc:
-        return json.dumps({"error": f"could not parse EpiDoc XML: {exc}"})
+    with tempfile.TemporaryDirectory() as td:
+        path = os.path.join(td, "in.xml")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(xml)
+        try:
+            corpus = io.from_epidoc(path, script_id="greek")
+        except ET.ParseError as exc:
+            return json.dumps({"error": f"could not parse EpiDoc XML: {exc}"})
     if not corpus.documents:
         return json.dumps({"error": "no <div type='edition'> or <body> tokens found"})
     doc = corpus.documents[0]

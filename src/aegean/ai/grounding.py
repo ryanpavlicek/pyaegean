@@ -398,8 +398,17 @@ def as_item(x: str | GroundingItem) -> GroundingItem:
 
 
 def wrap_untrusted(text: str, label: str = "SOURCE") -> str:
-    """Delimit untrusted source text with an explicit do-not-follow note."""
-    return f"{_UNTRUSTED_NOTE}\n<<<{label}\n{text}\n{label}>>>"
+    """Delimit untrusted source text with an explicit do-not-follow note.
+
+    When ``text`` contains a literal ``<<<{label}`` or ``{label}>>>`` marker,
+    a numeric suffix is appended so untrusted input cannot spoof the fence.
+    """
+    tag = label
+    suffix = 2
+    while f"<<<{tag}" in text or f"{tag}>>>" in text:
+        tag = f"{label}_{suffix}"
+        suffix += 1
+    return f"{_UNTRUSTED_NOTE}\n<<<{tag}\n{text}\n{tag}>>>"
 
 
 def evidence_block(evidence: Iterable[str | GroundingItem]) -> str:

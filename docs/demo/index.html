@@ -618,8 +618,16 @@ const handlers = {
   },
   scan: () => {
     const r = call("greek_scan", val("scan"), val("meter"));
-    document.getElementById("scan-out").innerHTML = r.scans
-      ? `<span class="pat">${r.pattern}</span>` : "does not scan — " + (r.error || "");
+    const el = document.getElementById("scan-out");
+    el.textContent = "";
+    if (r.scans) {
+      const span = document.createElement("span");
+      span.className = "pat";
+      span.textContent = r.pattern || "";
+      el.appendChild(span);
+    } else {
+      el.textContent = "does not scan — " + (r.error || "");
+    }
   },
   gloss: () => { const r = call("gloss_nt", val("gloss"));
     show("gloss-out", r.error ? r : `${r.word} — ${r.gloss || "(not in the Dodson NT lexicon)"}`); },

@@ -191,7 +191,7 @@ class LocalClient(_OpenAICompatibleClient):
     def __init__(self, model: str | None = None, *, api_key: str | None = None, cache=None) -> None:  # type: ignore[no-untyped-def]
         super().__init__(model, api_key=api_key, cache=cache)
         # base_url is per-instance here (it varies by server), unlike the fixed-gateway clients.
-        self.base_url = os.environ.get("PYAEGEAN_LOCAL_URL", self._DEFAULT_URL)
+        self.base_url = os.environ.get("PYAEGEAN_LOCAL_URL") or self._DEFAULT_URL
 
     def _require_key(self) -> str:
         # Local servers usually accept any key; send the configured one or a harmless placeholder.
@@ -211,7 +211,7 @@ class GeminiClient(LLMClient):
     provider = "gemini"
     env_key = "GEMINI_API_KEY"
     env_model = "GEMINI_MODEL"
-    default_model = "gemini-1.5-pro"
+    default_model = "gemini-2.5-pro"
 
     def __init__(self, model: str | None = None, *, api_key: str | None = None,
                  cache: ResponseCache | None = None) -> None:

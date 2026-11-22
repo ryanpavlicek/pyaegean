@@ -364,7 +364,7 @@ are never logged.
 | Anthropic (default) | `anthropic` | `ANTHROPIC_API_KEY` | `claude-sonnet-4-6` |
 | OpenAI | `openai` | `OPENAI_API_KEY` | `gpt-4o` |
 | xAI Grok | `grok` | `XAI_API_KEY` | `grok-2-latest` |
-| Google Gemini | `gemini` | `GEMINI_API_KEY` | `gemini-1.5-pro` |
+| Google Gemini | `gemini` | `GEMINI_API_KEY` | `gemini-2.5-pro` |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` | `openai/gpt-4o-mini` |
 
 Install one provider, or all three SDKs at once with the `[ai]` extra (Grok and

@@ -123,5 +123,6 @@ def cached_neural_model() -> Iterator[Any]:
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
-        if "test_tui_" in str(item.fspath):
+        path_text = str(item.fspath)
+        if "test_tui_" in path_text or "test_fix_r44_tui" in path_text:
             item.add_marker(pytest.mark.xdist_group("tui"))
