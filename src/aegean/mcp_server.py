@@ -221,19 +221,26 @@ def show_document(corpus: str, doc_id: str) -> dict[str, Any]:
 
 
 def search_signs(
-    corpus: str, pattern: str, limit: int = 50
+    corpus: str, pattern: str, limit: int = 50, offset: int = 0
 ) -> list[dict[str, Any]] | dict[str, Any]:
     """Words matching a wildcard sign pattern (e.g. 'KU-*-RO'), with frequencies.
 
-    ``limit`` caps the matches; limit <= 0 returns every match."""
+    ``limit`` caps the matches (limit <= 0 returns every match from ``offset``);
+    ``offset`` skips the first ``offset`` matches for pagination."""
     from .analysis import word_matches_sign_pattern
 
+    if offset < 0:
+        return {"error": f"offset must be >= 0; got {offset}"}
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
     out: list[dict[str, Any]] = []
+    seen = 0
     for word, count in c.word_frequencies():
         if word_matches_sign_pattern(word, pattern):
+            if seen < offset:
+                seen += 1
+                continue
             out.append({"word": word, "count": count})
             if limit > 0 and len(out) >= limit:
                 break
@@ -241,7 +248,12 @@ def search_signs(
 
 
 def balance_accounts(
-    corpus: str, doc_id: str | None = None, exact: bool = False, tolerance: float = 0.10,
+    corpus: str,
+    doc_id: str | None = None,
+    exact: bool = False,
+    tolerance: float = 0.10,
+    limit: int = 0,
+    offset: int = 0,
 ) -> list[dict[str, Any]] | dict[str, Any]:
     """Accounting reconciliation: each stated total (KU-RO / TO-SO) vs the summed items.
 
@@ -254,9 +266,12 @@ def balance_accounts(
     ``exact=True`` uses rational equality without an allowance. The rows also
     expose exact discrepancy and account eligibility (at least one qualifying
     total on intact text); ``tolerance`` retains the legacy absolute-one floor.
+    ``limit`` (> 0) and ``offset`` (>= 0) paginate whole-corpus results.
     Arithmetic agreement does not verify disputed readings or metrology."""
     from ._view import balance_rows
 
+    if offset < 0:
+        return {"error": f"offset must be >= 0; got {offset}"}
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
@@ -268,11 +283,19 @@ def balance_accounts(
     else:
         docs = list(c.documents)
     rows: list[dict[str, Any]] = []
+    seen = 0
     for doc in docs:
         try:
-            rows.extend(balance_rows(doc, exact=exact, tolerance=tolerance))
+            doc_rows = balance_rows(doc, exact=exact, tolerance=tolerance)
         except ValueError as exc:
             return {"error": str(exc)}
+        for row in doc_rows:
+            if seen < offset:
+                seen += 1
+                continue
+            rows.append(row)
+            if limit > 0 and len(rows) >= limit:
+                return rows
     return rows
 
 
@@ -284,6 +307,7 @@ def query_corpus(
     view: str | None = None,
     count_unit: str = "document",
     statuses: list[str] | None = None,
+    offset: int = 0,
 ) -> dict[str, Any]:
     """Run the compound query engine over a corpus and cite the exact result set.
 
@@ -295,8 +319,10 @@ def query_corpus(
     word-max-syllables, word-contains-sign, word-cooccurs-with, word-sign-pattern (word
     scope). ``output_kind`` is 'inscriptions' or 'words'; a word's count is its document
     frequency (how many distinct inscriptions carry it), not its token frequency.
-    ``limit`` caps the returned id/word lists (limit <= 0 returns all); the totals are
-    always the full counts. ``citation`` cites exactly this result set.
+    ``limit`` caps the returned id/word lists (limit <= 0 returns all from ``offset``);
+    ``offset`` paginates through results and ``truncated`` / ``next_offset`` report
+    whether more entries remain. The totals are always the full counts. ``citation``
+    cites exactly this result set.
     ``view`` selects surface/normalized/lemma keys; omitted keeps legacy predicates.
     Normalized/lemma preserve diacritics and iota subscript (NFC, lowercase,
     final-sigma fold). Missing lemmas are excluded. ``count_unit`` selects document
@@ -304,6 +330,8 @@ def query_corpus(
     ``metadata`` records normalization, population denominators, and exclusions."""
     from .analysis import FIELDS, FilterRow
 
+    if offset < 0:
+        return {"error": f"offset must be >= 0; got {offset}"}
     c, err = _load_corpus(corpus)
     if err is not None:
         return err
@@ -363,13 +391,21 @@ def query_corpus(
         )
     except ValueError as exc:
         return {"error": str(exc)}
-    cap = None if limit <= 0 else limit
+    end = None if limit <= 0 else offset + limit
+    page_ins = [d.id for d in res.inscriptions[offset:end]]
+    page_words = [{"word": w, "count": n} for w, n in res.words[offset:end]]
+    total_primary = len(res.words) if output_kind == "words" else len(res.inscriptions)
+    returned_primary = len(page_words) if output_kind == "words" else len(page_ins)
+    has_more = (offset + returned_primary) < total_primary
     return {
         "description": res.description or "all",
         "total_inscriptions": len(res.inscriptions),
         "total_words": len(res.words),
-        "inscriptions": [d.id for d in res.inscriptions[:cap]],
-        "words": [{"word": w, "count": n} for w, n in res.words[:cap]],
+        "offset": offset,
+        "truncated": has_more,
+        "next_offset": (offset + returned_primary) if has_more else None,
+        "inscriptions": page_ins,
+        "words": page_words,
         "citation": res.cite() if res.provenance else "",
         "metadata": res.metadata,
     }
@@ -673,23 +709,35 @@ def greek_catalog(
     title: str | None = None,
     source: str | None = None,
     limit: int = 40,
+    offset: int = 0,
 ) -> dict[str, Any]:
     """Search the bundled catalogue of ~1,800 loadable Greek works (Perseus
     canonical-greekLit + First1KGreek): id, author, English and Greek title.
 
     All filters are case-insensitive substrings combined with AND; ``query`` matches
     across id, author, and both titles; ``source`` limits to 'perseus' or 'first1k'.
-    ``limit`` caps the returned rows (limit <= 0 returns all; ``total`` is always the
-    full match count). Bundled metadata: offline and instant. Pass an id to
+    ``limit`` caps the returned rows (limit <= 0 returns all from ``offset``; ``total``
+    is always the full match count, and ``truncated`` / ``next_offset`` report whether
+    more rows remain). Bundled metadata: offline and instant. Pass an id to
     ``greek_work`` to load the text itself (fetched into the local data store on its
     first use)."""
     from .greek import catalog
 
+    if offset < 0:
+        return {"error": f"offset must be >= 0; got {offset}"}
     if source not in (None, "perseus", "first1k"):
         return {"error": f"unknown source {source!r}; choose 'perseus' or 'first1k'"}
     works = catalog(query, author=author, title=title, source=source)
-    cap = None if limit <= 0 else limit
-    return {"total": len(works), "works": works[:cap]}
+    end = None if limit <= 0 else offset + limit
+    page = works[offset:end]
+    has_more = (offset + len(page)) < len(works)
+    return {
+        "total": len(works),
+        "offset": offset,
+        "truncated": has_more,
+        "next_offset": (offset + len(page)) if has_more else None,
+        "works": page,
+    }
 
 
 def greek_work(work_id: str, ref: str | None = None, preview_lines: int = 10) -> dict[str, Any]:

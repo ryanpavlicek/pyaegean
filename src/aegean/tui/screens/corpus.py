@@ -97,6 +97,8 @@ class CorpusBrowserScreen(Screen[None]):
         # The id currently loaded into the table, so re-showing this screen only
         # reloads when the shared selection has actually changed.
         self._loaded_id: str | None = None
+        self._loading_id: str | None = None
+        self._load_gen: int = 0
         self._shown_doc_id: str | None = None
 
     def compose(self) -> ComposeResult:
@@ -136,13 +138,18 @@ class CorpusBrowserScreen(Screen[None]):
         selection changes). Keep the highlight on the loaded corpus/work."""
         corpus_list = self.query_one("#corpus-list", CorpusList)
         corpus_list.set_corpora(list(adapter.list_corpora()) + adapter.fetched_work_entries())
-        if self._loaded_id is not None:
-            corpus_list.highlight_id(self._loaded_id)
+        active_id = self._loaded_id or self._loading_id
+        if active_id is not None:
+            corpus_list.highlight_id(active_id)
 
     def _sync_to_state(self) -> None:
         """Load the shared-selected corpus if it differs from what is displayed."""
         selected = self.app.state.selected_corpus  # type: ignore[attr-defined]
-        if selected is not None and selected != self._loaded_id:
+        if (
+            selected is not None
+            and selected != self._loaded_id
+            and selected != self._loading_id
+        ):
             self._open_corpus(selected)
 
     # ── corpus selection ──────────────────────────────────────────────────────
@@ -154,26 +161,84 @@ class CorpusBrowserScreen(Screen[None]):
             self._open_corpus(corpus_id)
 
     def _open_corpus(self, corpus_id: str) -> None:
-        """Load ``corpus_id`` into the document table (or show a clean error).
+        """Load ``corpus_id`` into the document table off the UI thread.
 
         Resolves via :func:`~aegean.tui.data.read_corpus_spec`, so besides the
         registered corpora this also opens a fetched Greek work id (``tlg0012.tlg001``)
-        or a ``.json``/``.db`` file, the same superset the CLI accepts."""
+        or a ``.json``/``.db`` file, the same superset the CLI accepts. Loading runs
+        in an exclusive background thread worker so large or fetched corpora never
+        freeze the interface, and a newer selection supersedes any in-flight load."""
+        status = self.query_one("#corpus-status", Static)
+        self._shown_doc_id = None
+        self._load_gen += 1
+        self._loading_id = corpus_id
+        status.update(f"loading {corpus_id}…")
+        self._load_corpus_worker(corpus_id, self._load_gen)
+
+    @work(exclusive=True, thread=True, group="corpus-load")
+    def _load_corpus_worker(self, corpus_id: str, gen: int) -> None:
+        """Read ``corpus_id`` and build its document rows on a background thread."""
+        from textual.worker import get_current_worker
+
+        worker = get_current_worker()
+        if worker.is_cancelled:
+            return
+        try:
+            corpus = adapter.read_corpus_spec(corpus_id)
+            if worker.is_cancelled:
+                return
+            rows = adapter.document_rows(corpus)
+        except adapter.TuiError as exc:
+            if worker.is_cancelled:
+                return
+            self._deliver_corpus_result(corpus_id, gen, None, [], str(exc))
+            return
+        if worker.is_cancelled:
+            return
+        self._deliver_corpus_result(corpus_id, gen, corpus, rows, None)
+
+    def _deliver_corpus_result(
+        self,
+        corpus_id: str,
+        gen: int,
+        corpus: "Corpus | None",
+        rows: "list[DocRow]",
+        error: str | None,
+    ) -> None:
+        """Hop back to the UI thread unless the app has already stopped."""
+        if not self.app.is_running:
+            return
+        try:
+            self.app.call_from_thread(
+                self._apply_loaded_corpus, corpus_id, gen, corpus, rows, error
+            )
+        except RuntimeError:
+            return
+
+    def _apply_loaded_corpus(
+        self,
+        corpus_id: str,
+        gen: int,
+        corpus: "Corpus | None",
+        rows: "list[DocRow]",
+        error: str | None,
+    ) -> None:
+        """Apply a completed background corpus load on the UI thread."""
+        if gen != self._load_gen or not self.is_mounted:
+            return
+        self._loading_id = None
         status = self.query_one("#corpus-status", Static)
         detail = self.query_one("#corpus-detail", DetailPane)
-        self._shown_doc_id = None
-        status.update(f"loading {corpus_id}…")
-        try:
-            self._corpus = adapter.read_corpus_spec(corpus_id)
-            self._all_rows = adapter.document_rows(self._corpus)
-        except adapter.TuiError as exc:
+        if error is not None or corpus is None:
             self._corpus = None
             self._all_rows = []
             self._loaded_id = None
             self.query_one("#corpus-docs", DocTable).set_documents([])
-            status.update(str(exc))
+            status.update(error or f"failed to load {corpus_id}")
             detail.update(_NO_CORPUS)
             return
+        self._corpus = corpus
+        self._all_rows = rows
         self._loaded_id = corpus_id
         self.query_one("#corpus-list", CorpusList).highlight_id(corpus_id)
         self.query_one("#corpus-search", Input).value = ""

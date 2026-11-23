@@ -495,4 +495,4 @@ def load_sigla() -> Any:
 # loadable by name: aegean.load("sigla") — fetches ~1 MB to the cache on first use
 from ...core.corpus import register_loader  # noqa: E402
 
-register_loader("sigla", load_sigla)
+register_loader("sigla", load_sigla, fresh=True)

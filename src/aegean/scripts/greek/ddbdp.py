@@ -56,4 +56,4 @@ def load_ddbdp(*, progress: Callable[[int, int], None] | None = None) -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("ddbdp") — fetches + unpacks the SQLite corpus on first use
-register_loader("ddbdp", load_ddbdp)
+register_loader("ddbdp", load_ddbdp, fresh=True)

@@ -31,4 +31,4 @@ def load_iip() -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("iip") — fetches the corpus to the cache on first use
-register_loader("iip", load_iip)
+register_loader("iip", load_iip, fresh=True)

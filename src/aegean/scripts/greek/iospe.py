@@ -31,4 +31,4 @@ def load_iospe() -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("iospe") — fetches the corpus to the cache on first use
-register_loader("iospe", load_iospe)
+register_loader("iospe", load_iospe, fresh=True)

@@ -41,11 +41,23 @@ if TYPE_CHECKING:  # type-only: keep the L1 core free of an import-time dependen
 
 _LOG = get_logger("core")
 _LOADERS: dict[str, Callable[[], "Corpus"]] = {}
+_FRESH_LOADERS: set[str] = set()
 
 
-def register_loader(script_id: str, fn: Callable[[], "Corpus"]) -> None:
-    """Register a corpus loader so ``Corpus.load(script_id)`` / ``aegean.load(script_id)`` works."""
+def register_loader(
+    script_id: str, fn: Callable[[], "Corpus"], *, fresh: bool = False
+) -> None:
+    """Register a corpus loader so ``Corpus.load(script_id)`` / ``aegean.load(script_id)`` works.
+
+    Set ``fresh=True`` only when ``fn`` always constructs and returns a fresh, unshared
+    `Corpus` instance on every call (so `Corpus.load` can return it directly without
+    duplicating the entire corpus in memory). Loaders that cache a shared singleton must
+    leave ``fresh=False`` (the default) so each caller receives an isolated copy."""
     _LOADERS[script_id] = fn
+    if fresh:
+        _FRESH_LOADERS.add(script_id)
+    else:
+        _FRESH_LOADERS.discard(script_id)
 
 
 # A bare release number, in the forms a Python package version takes ("1", "0.58.0",
@@ -325,7 +337,9 @@ class Corpus:
                     lead += "; available"
                 raise KeyError(f"{lead}: {sorted(_LOADERS)}") from None
         _LOG.info("loading corpus %r", script_id)
-        corpus = fn().copy()
+        corpus = fn()
+        if script_id not in _FRESH_LOADERS:
+            corpus = corpus.copy()
         _LOG.info("loaded corpus %r (%d documents)", script_id, len(corpus))
         return corpus
 

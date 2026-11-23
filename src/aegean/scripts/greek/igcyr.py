@@ -32,4 +32,4 @@ def load_igcyr() -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("igcyr") — fetches the corpus to the cache on first use
-register_loader("igcyr", load_igcyr)
+register_loader("igcyr", load_igcyr, fresh=True)

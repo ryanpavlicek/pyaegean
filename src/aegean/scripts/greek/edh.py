@@ -34,4 +34,4 @@ def load_edh() -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("edh") — fetches the corpus to the cache on first use
-register_loader("edh", load_edh)
+register_loader("edh", load_edh, fresh=True)

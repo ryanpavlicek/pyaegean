@@ -269,6 +269,8 @@ def test_reader_selection_worker_and_translation_keep_target_and_document_contex
             await pilot.pause()
             app.open_corpus("fixture-reader")
             await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
             screen = app.screen
             assert isinstance(screen, CorpusBrowserScreen)
             for call, (doc_id, number) in enumerate((("first", 2), ("first", 4), ("other", 2)), 2):

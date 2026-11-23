@@ -36,9 +36,12 @@ def _run(coro) -> None:  # type: ignore[no-untyped-def]
         loop.close()
 
 
-def _open_lineara(app: AegeanApp) -> CorpusBrowserScreen:
-    """Open Linear A in the corpus browser (the real Home/palette entry path)."""
+async def _open_lineara(app: AegeanApp, pilot) -> CorpusBrowserScreen:  # type: ignore[no-untyped-def]
+    """Open Linear A in the corpus browser and wait for its background load worker."""
     app.open_corpus("lineara")
+    await pilot.pause()
+    await app.workers.wait_for_complete()
+    await pilot.pause()
     screen = app.screen
     assert isinstance(screen, CorpusBrowserScreen)
     return screen
@@ -49,8 +52,7 @@ def test_opening_lineara_loads_all_1721_documents() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             assert docs.row_count == 1721
             # the status line reports the count too
@@ -65,8 +67,7 @@ def test_reading_ht13_shows_its_first_line_tokens_and_structure() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             docs.focus()
             docs.move_cursor(row=docs.get_row_index("HT13"))
@@ -89,8 +90,7 @@ def test_ht13_analysis_pane_shows_the_accounting_balance() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             docs.focus()
             docs.move_cursor(row=docs.get_row_index("HT13"))
@@ -113,8 +113,7 @@ def test_undeciphered_caveat_shows_for_lineara() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             docs.focus()
             docs.move_cursor(row=docs.get_row_index("HT13"))
@@ -134,8 +133,7 @@ def test_search_box_filters_documents_by_id() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             search = screen.query_one("#corpus-search", Input)
             # a narrow id filter reduces the table but keeps the exact match
@@ -156,8 +154,7 @@ def test_search_box_surfaces_sign_pattern_word_matches() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             search = screen.query_one("#corpus-search", Input)
             # a wildcard sign pattern runs the corpus-wide word search and shows
             # the matches in the status line (KU-MA-RO is the one KU-*-RO word).
@@ -187,8 +184,7 @@ def test_sign_search_is_dispatched_to_a_worker_not_run_inline() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             # calling the decorated method dispatches a worker (returns a Worker),
             # rather than blocking to return the search result
             result = screen._sign_search("KU-*-RO", "base")
@@ -209,8 +205,7 @@ def test_sign_search_via_the_search_box_lands_after_the_worker() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             search = screen.query_one("#corpus-search", Input)
             search.value = "KU-*-RO"
             await pilot.pause()
@@ -234,8 +229,7 @@ def test_plain_id_filter_does_not_spawn_a_sign_search_worker() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             search = screen.query_one("#corpus-search", Input)
             # 'HT1' has no '-' or '*', so it is an id filter, not a sign pattern
             search.value = "HT1"
@@ -254,8 +248,7 @@ def test_focus_search_binding_focuses_the_input() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             # '/' focuses the search box (the design's search key)
             await pilot.press("slash")
             await pilot.pause()
@@ -275,6 +268,8 @@ def test_bad_corpus_shows_a_clean_message_not_a_traceback() -> None:
             assert isinstance(screen, CorpusBrowserScreen)
             screen._open_corpus("nope-not-a-corpus")
             await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
             status = str(screen.query_one("#corpus-status", Static).content)
             docs = screen.query_one("#corpus-docs", DocTable)
             assert "nope-not-a-corpus" in status
@@ -288,8 +283,7 @@ def test_selecting_a_different_corpus_in_the_list_reloads_the_table() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
-            screen = _open_lineara(app)
-            await pilot.pause()
+            screen = await _open_lineara(app, pilot)
             docs = screen.query_one("#corpus-docs", DocTable)
             assert docs.row_count == 1721
             # highlight Linear B (a small bundled corpus) in the list and pick it
@@ -299,6 +293,8 @@ def test_selecting_a_different_corpus_in_the_list_reloads_the_table() -> None:
             await pilot.pause()
             assert corpus_list.selected_id == "linearb"
             await pilot.press("enter")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             # the table now reflects the newly selected corpus, not Linear A's 1721
             assert docs.row_count == 18
@@ -313,12 +309,13 @@ def test_corpus_opened_elsewhere_loads_on_return_to_the_screen() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             # open Linear A on the browser, then leave to Home
-            _open_lineara(app)
-            await pilot.pause()
+            await _open_lineara(app, pilot)
             app.goto("home")
             await pilot.pause()
             # a different corpus is opened from Home / the palette
             app.open_corpus("cypriot")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             # returning to the browser reconciles to the new selection on resume
             screen = app.screen
@@ -336,6 +333,8 @@ def test_greek_corpus_has_no_undeciphered_caveat() -> None:
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             app.open_corpus("greek")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             screen = app.screen
             assert isinstance(screen, CorpusBrowserScreen)
@@ -370,6 +369,8 @@ def test_reader_pane_is_focusable_and_reachable_by_tab() -> None:
         async with app.run_test(size=(120, 24)) as pilot:
             await pilot.pause()
             app.open_corpus("greek")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             screen = app.screen
             reader = screen.query_one("#corpus-detail", DetailPane)
@@ -406,6 +407,8 @@ def test_fetched_works_are_permanent_items_in_the_corpus_list(monkeypatch) -> No
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             app.open_corpus("tlg0012.tlg001")  # as from the works library "open"
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             screen = app.screen
             clist = screen.query_one("#corpus-list", CorpusList)
@@ -456,6 +459,8 @@ def test_reader_line_cursor_moves_and_enter_opens_the_analysis_modal() -> None:
             await pilot.pause()
             # the small bundled cypriot corpus (has multi-line docs), not the 1,721-doc lineara
             app.open_corpus("cypriot")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             screen = app.screen
             doc = next(d for d in screen._corpus.documents if len(d.lines) >= 4)

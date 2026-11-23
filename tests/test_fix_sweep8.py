@@ -92,12 +92,16 @@ def test_tui_open_corpus_reconciles_when_already_on_the_corpus_screen():
             await pilot.pause()
             app.open_corpus("lineara")
             await pilot.pause()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
             screen = app.screen
             assert isinstance(screen, CorpusBrowserScreen)
             assert screen._loaded_id == "lineara"
             assert screen.query_one("#corpus-docs", DocTable).row_count == 1721
             # open a DIFFERENT corpus while already on the corpus screen
             app.open_corpus("cypriot")
+            await pilot.pause()
+            await app.workers.wait_for_complete()
             await pilot.pause()
             assert app.state.selected_corpus == "cypriot"
             assert screen._loaded_id == "cypriot"  # reconciled, not stuck on lineara

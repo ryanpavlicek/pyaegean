@@ -35,4 +35,4 @@ def load_isicily() -> Any:
 from ...core.corpus import register_loader  # noqa: E402
 
 # loadable by name: aegean.load("isicily") — fetches the corpus to the cache on first use
-register_loader("isicily", load_isicily)
+register_loader("isicily", load_isicily, fresh=True)

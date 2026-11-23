@@ -138,4 +138,4 @@ def load_damos() -> Any:
 # loadable by name: aegean.load("damos") — fetches the corpus to the cache on first use
 from ...core.corpus import register_loader  # noqa: E402
 
-register_loader("damos", load_damos)
+register_loader("damos", load_damos, fresh=True)

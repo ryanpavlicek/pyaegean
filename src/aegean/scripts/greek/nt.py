@@ -413,4 +413,4 @@ def _load_cached_full_nt() -> Any | None:
 # loadable by name: aegean.load("nt") — fetches the full corpus, or the bundled sample offline
 from ...core.corpus import register_loader  # noqa: E402
 
-register_loader("nt", load_nt)
+register_loader("nt", load_nt, fresh=True)
