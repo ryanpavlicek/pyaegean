@@ -8,7 +8,7 @@ instant across runs. Disabled, `@memoize` is a transparent passthrough — zero
 overhead and identical behaviour, so the cache never changes a result, only how
 fast it arrives.
 
-No new dependency: sqlite3 and pickle are stdlib, and the cache lives under the
+No new dependency: sqlite3 and json are stdlib, and the cache lives under the
 same user cache dir as the fetched data (``PYAEGEAN_CACHE`` to relocate).
 
     import aegean
@@ -17,25 +17,22 @@ same user cache dir as the fetched data (``PYAEGEAN_CACHE`` to relocate).
     aegean.cache.stats()                  # {'enabled': True, 'entries': 1, 'path': …}
     aegean.cache.clear()                  # wipe it
 
-**Security note.** Values are stored with ``pickle`` in *your own* cache
-directory (same trust boundary as pip/mypy/pytest caches); a stale or corrupt
-entry is treated as a miss and recomputed, and the cache key embeds a format +
-per-function version so a code change never deserialises against a changed class.
-Because a cached value is unpickled, **anyone who can write to the cache file can
-run code in your process** — so only point ``PYAEGEAN_ANALYSIS_CACHE`` /
-``PYAEGEAN_CACHE`` at a directory you control, never a shared/group-writable one,
-and don't reuse a cache file from someone else. As defense in depth the cache file
-is created ``0600`` (owner-only), and enabling a cache whose directory is writable
-by other users emits a warning.
+**Security note.** Values are encoded with a versioned, typed JSON codec limited
+to plain containers and an explicit static allowlist of frozen analysis-result
+dataclasses — never ``pickle``. Legacy pre-v2 pickle entries and corrupt rows
+are treated as cold cache misses without deserialization. As defense in depth,
+the cache file is created ``0600`` (owner-only), and enabling a cache whose
+directory is writable by other users emits a warning.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import functools
 import hashlib
 import json
+import math
 import os
-import pickle
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
@@ -51,7 +48,8 @@ __all__ = [
 ]
 
 # Bump if the key construction or value encoding changes (invalidates every entry).
-_CACHE_FORMAT = "1"
+_CACHE_FORMAT = "2"
+_PAYLOAD_MAGIC = b"AEGEAN-CACHE-V2\n"
 _ENV = "PYAEGEAN_ANALYSIS_CACHE"
 
 _MISS = object()  # sentinel distinct from a cached ``None``
@@ -59,15 +57,161 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 _warned_dirs: set[str] = set()
 
+# Static allowlist of frozen result dataclasses permitted in the typed disk cache.
+# Resolved lazily so importing `aegean.cache` never pulls `aegean.analysis`.
+_ALLOWED_DATACLASS_TAGS = frozenset({
+    "aegean.analysis.morphology.ClusterMember",
+    "aegean.analysis.morphology.MorphCluster",
+    "aegean.analysis.stats.Dispersion",
+    "aegean.analysis.stats.KeynessRow",
+})
+
+
+def _resolve_allowed_dataclass(tag: str) -> type[Any] | None:
+    if tag not in _ALLOWED_DATACLASS_TAGS:
+        return None
+    if tag == "aegean.analysis.morphology.ClusterMember":
+        from .analysis.morphology import ClusterMember
+
+        return ClusterMember
+    if tag == "aegean.analysis.morphology.MorphCluster":
+        from .analysis.morphology import MorphCluster
+
+        return MorphCluster
+    if tag == "aegean.analysis.stats.Dispersion":
+        from .analysis.stats import Dispersion
+
+        return Dispersion
+    if tag == "aegean.analysis.stats.KeynessRow":
+        from .analysis.stats import KeynessRow
+
+        return KeynessRow
+    return None
+
+
+def _encode_typed(obj: Any) -> Any:
+    """Convert ``obj`` to a typed JSON-serializable structure or raise ``TypeError``."""
+    if obj is None or isinstance(obj, (bool, int, str)):
+        return obj
+    if isinstance(obj, float):
+        if math.isfinite(obj):
+            return obj
+        if math.isnan(obj):
+            return {"__aegean_t__": "float", "v": "nan"}
+        return {"__aegean_t__": "float", "v": "inf" if obj > 0 else "-inf"}
+    if isinstance(obj, list):
+        return [_encode_typed(x) for x in obj]
+    if isinstance(obj, tuple):
+        return {"__aegean_t__": "tuple", "v": [_encode_typed(x) for x in obj]}
+    if isinstance(obj, set):
+        return {"__aegean_t__": "set", "v": [_encode_typed(x) for x in obj]}
+    if isinstance(obj, frozenset):
+        return {"__aegean_t__": "frozenset", "v": [_encode_typed(x) for x in obj]}
+    if isinstance(obj, dict):
+        if all(isinstance(k, str) for k in obj) and "__aegean_t__" not in obj:
+            return {k: _encode_typed(v) for k, v in obj.items()}
+        return {
+            "__aegean_t__": "dict",
+            "v": [[_encode_typed(k), _encode_typed(v)] for k, v in obj.items()],
+        }
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        tag = f"{type(obj).__module__}.{type(obj).__qualname__}"
+        if tag in _ALLOWED_DATACLASS_TAGS:
+            return {
+                "__aegean_t__": "dc",
+                "tag": tag,
+                "v": {
+                    f.name: _encode_typed(getattr(obj, f.name))
+                    for f in dataclasses.fields(obj)
+                },
+            }
+    raise TypeError(f"unsupported cache value type: {type(obj).__name__}")
+
+
+def _decode_typed(raw: Any) -> Any:
+    """Reconstruct a value produced by `_encode_typed`, raising ``ValueError`` on unknown tags."""
+    if raw is None or isinstance(raw, (bool, int, float, str)):
+        return raw
+    if isinstance(raw, list):
+        return [_decode_typed(x) for x in raw]
+    if isinstance(raw, dict):
+        kind = raw.get("__aegean_t__")
+        if kind is None:
+            return {k: _decode_typed(v) for k, v in raw.items()}
+        if kind == "float":
+            val = raw.get("v")
+            if val == "nan":
+                return float("nan")
+            if val == "inf":
+                return float("inf")
+            if val == "-inf":
+                return float("-inf")
+            raise ValueError("invalid float tag")
+        if kind == "tuple":
+            items = raw.get("v")
+            if not isinstance(items, list):
+                raise ValueError("invalid tuple tag")
+            return tuple(_decode_typed(x) for x in items)
+        if kind == "set":
+            items = raw.get("v")
+            if not isinstance(items, list):
+                raise ValueError("invalid set tag")
+            return {_decode_typed(x) for x in items}
+        if kind == "frozenset":
+            items = raw.get("v")
+            if not isinstance(items, list):
+                raise ValueError("invalid frozenset tag")
+            return frozenset(_decode_typed(x) for x in items)
+        if kind == "dict":
+            pairs = raw.get("v")
+            if not isinstance(pairs, list):
+                raise ValueError("invalid dict tag")
+            return {_decode_typed(k): _decode_typed(v) for k, v in pairs}
+        if kind == "dc":
+            tag = raw.get("tag")
+            fields = raw.get("v")
+            if not isinstance(tag, str) or not isinstance(fields, dict):
+                raise ValueError("invalid dataclass tag")
+            cls = _resolve_allowed_dataclass(tag)
+            if cls is None:
+                raise ValueError(f"disallowed dataclass tag {tag!r}")
+            expected = {f.name for f in dataclasses.fields(cls)}
+            if set(fields) != expected:
+                raise ValueError(f"field mismatch for {tag!r}")
+            return cls(**{name: _decode_typed(val) for name, val in fields.items()})
+        raise ValueError(f"unknown cache type tag {kind!r}")
+    raise ValueError("invalid JSON node")
+
+
+def _dumps_value(value: Any) -> bytes:
+    encoded = json.dumps(
+        _encode_typed(value), ensure_ascii=False, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return _PAYLOAD_MAGIC + encoded
+
+
+def _loads_value(blob: Any) -> Any:
+    if not isinstance(blob, (bytes, bytearray, memoryview)):
+        return _MISS
+    raw = bytes(blob)
+    if not raw.startswith(_PAYLOAD_MAGIC):
+        # Legacy pickle blob or corrupt bytes: treat as cold miss without deserializing.
+        return _MISS
+    try:
+        parsed = json.loads(raw[len(_PAYLOAD_MAGIC) :].decode("utf-8"))
+        return _decode_typed(parsed)
+    except Exception:
+        return _MISS
+
 
 def _warn_if_dir_writable_by_others(directory: Path) -> None:
     """Warn once if the cache directory is group/other-writable (POSIX only).
 
-    A cached value is unpickled on read, so a directory another user can write to is a
-    code-execution risk (a planted pickle runs on the next cache hit). We warn rather than
-    refuse, since a same-user shared setup can be legitimate, but the risk should be visible.
-    POSIX only: on Windows the mode bits are synthetic (access is governed by ACLs), so the
-    check would spuriously fire on ordinary directories."""
+    A shared/world-writable cache directory allows other users to tamper with cached
+    analysis outputs. We warn rather than refuse, since a same-user shared setup can be
+    legitimate, but the risk should be visible. POSIX only: on Windows the mode bits are
+    synthetic (access is governed by ACLs), so the check would spuriously fire on ordinary
+    directories."""
     import stat
 
     if os.name != "posix":
@@ -84,16 +228,33 @@ def _warn_if_dir_writable_by_others(directory: Path) -> None:
 
         _warned_dirs.add(key)
         warnings.warn(
-            f"analysis cache directory {key!r} is writable by other users; cached values are "
-            "unpickled on read, so anyone who can write there could run code in this process. "
-            "Point PYAEGEAN_ANALYSIS_CACHE at a directory only you can write.",
+            f"analysis cache directory {key!r} is writable by other users; another user could "
+            "tamper with cached analysis results. Point PYAEGEAN_ANALYSIS_CACHE at a directory "
+            "only you can write.",
             stacklevel=3,
         )
 
 
+def _ensure_private_file(path: Path) -> None:
+    """Create ``path`` with 0o600 permissions on POSIX before opening it."""
+    if os.name != "posix":
+        return
+    try:
+        fd = os.open(str(path), os.O_CREAT | os.O_RDWR, 0o600)
+        os.close(fd)
+    except OSError:
+        pass
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
 class DiskCache:
-    """A sqlite-backed key→value store. Values are pickled; unpicklable values
-    are silently not cached, and unreadable rows are treated as misses.
+    """A sqlite-backed key→value store using a versioned, typed JSON codec (no pickle).
+
+    Unsupported value types are silently not cached, and legacy pickle rows or unreadable
+    rows are treated as cold misses.
 
     Thread-safe: memoized analyses are routinely called from worker threads (a
     ThreadPoolExecutor mapping over corpora, the TUI's workers), so the single
@@ -112,18 +273,12 @@ class DiskCache:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         _warn_if_dir_writable_by_others(self.path.parent)
+        _ensure_private_file(self.path)
         self._lock = threading.Lock()
         self._sqlite3 = sqlite3  # kept so the ops can catch a concurrent-close error
         self._conn = sqlite3.connect(
             str(self.path), timeout=30.0, check_same_thread=False
         )
-        # Values are unpickled on read, so restrict the file to the owner: on a shared host
-        # this stops another user from planting a malicious pickle (code execution on the
-        # next cache hit). Best effort — a no-op where POSIX modes don't apply (Windows).
-        try:
-            os.chmod(self.path, 0o600)
-        except OSError:
-            pass
         with self._lock:
             self._conn.execute("PRAGMA busy_timeout = 30000")
             # WAL lets independent processes read while another appends.  It is a
@@ -152,15 +307,12 @@ class DiskCache:
             return _MISS
         if row is None:
             return _MISS
-        try:
-            return pickle.loads(row[0])  # noqa: S301 — user's own cache dir; miss on failure
-        except Exception:  # corrupt or class-changed → recompute
-            return _MISS
+        return _loads_value(row[0])
 
     def set(self, key: str, value: Any) -> None:
         try:
-            blob = pickle.dumps(value)
-        except Exception:  # unpicklable result → just don't cache it
+            blob = _dumps_value(value)
+        except Exception:  # unsupported value type → just don't cache it
             return
         try:
             with self._lock:

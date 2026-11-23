@@ -19,12 +19,14 @@ import os
 import pathlib
 import threading
 import uuid
+from typing import Any, Literal
 
 from .._locking import FileLock
 
 # Mirrors the ``max_tokens`` default of `LLMClient.complete`, so a caller that
 # doesn't thread the limit through still keys consistently with default calls.
 _DEFAULT_MAX_TOKENS = 1024
+_SQLITE_SUFFIXES = frozenset({".sqlite", ".sqlite3", ".db"})
 
 
 def _key(
@@ -44,21 +46,91 @@ def _key(
     return h.hexdigest()
 
 
-class ResponseCache:
-    """Get/set completions by content hash, optionally persisted to JSON."""
+def _resolve_backend(
+    path: pathlib.Path | None, backend: Literal["auto", "json", "sqlite"]
+) -> Literal["memory", "json", "sqlite"]:
+    if backend not in ("auto", "json", "sqlite"):
+        raise ValueError("backend must be 'auto', 'json', or 'sqlite'")
+    if path is None:
+        return "memory"
+    if backend == "auto":
+        return "sqlite" if path.suffix.lower() in _SQLITE_SUFFIXES else "json"
+    return backend
 
-    def __init__(self, path: str | pathlib.Path | None = None) -> None:
+
+class ResponseCache:
+    """Get/set completions by content hash, optionally persisted to JSON or SQLite.
+
+    Passing a ``.sqlite`` / ``.sqlite3`` / ``.db`` path (or ``backend="sqlite"``) uses
+    a keyed transactional SQLite backend (O(1) per-key reads/writes, WAL concurrency,
+    lazy ``sqlite3`` import). Passing a ``.json`` path keeps the atomic JSON file format
+    for full backward compatibility.
+    """
+
+    def __init__(
+        self,
+        path: str | pathlib.Path | None = None,
+        *,
+        backend: Literal["auto", "json", "sqlite"] = "auto",
+    ) -> None:
         # expanduser so a "~/..." path lands under the user's home, not a literal "./~".
         self.path = pathlib.Path(path).expanduser() if path else None
+        self.backend: Literal["memory", "json", "sqlite"] = _resolve_backend(self.path, backend)
         self._write_lock = threading.Lock()  # serialize in-process persists
-        self._store: dict[str, str] = self._load()
+        self._sqlite_conn: Any = None
+        self._sqlite3: Any = None
+        if self.backend == "sqlite":
+            self._init_sqlite()
+            self._store: dict[str, str] = {}
+        else:
+            self._store = self._load()
         # Only keys changed by THIS instance are merged over the latest disk state.
         # Writing the whole snapshot would let a stale second instance roll back keys
         # another process updated after both instances were constructed.
         self._dirty: dict[str, str] = {}
 
+    def _init_sqlite(self) -> None:
+        """Open a keyed transactional SQLite store, degrading to memory-only on corruption."""
+        assert self.path is not None
+        import sqlite3
+
+        self._sqlite3 = sqlite3
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            if os.name == "posix":
+                try:
+                    fd = os.open(str(self.path), os.O_CREAT | os.O_RDWR, 0o600)
+                    os.close(fd)
+                    os.chmod(self.path, 0o600)
+                except OSError:
+                    pass
+            conn = sqlite3.connect(str(self.path), timeout=30.0, check_same_thread=False)
+            conn.execute("PRAGMA busy_timeout = 30000")
+            try:
+                conn.execute("PRAGMA journal_mode = WAL")
+            except sqlite3.OperationalError:
+                pass
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS responses (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+            )
+            conn.commit()
+            self._sqlite_conn = conn
+        except (OSError, sqlite3.Error):
+            self._sqlite_conn = None
+
+    def close(self) -> None:
+        """Close the underlying SQLite connection, if open."""
+        with self._write_lock:
+            conn = self._sqlite_conn
+            self._sqlite_conn = None
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
     def _load(self) -> dict[str, str]:
-        """Read the persisted store, treating any unreadable/malformed file as empty.
+        """Read the persisted JSON store, treating any unreadable/malformed file as empty.
 
         A cache file can be truncated or corrupt (a process killed mid-write, a full
         disk, a stale concurrent writer). Such a file must degrade to a cold cache, not
@@ -87,6 +159,23 @@ class ResponseCache:
         max_tokens: int = _DEFAULT_MAX_TOKENS,
     ) -> str | None:
         key = _key(provider, model, system, prompt, max_tokens)
+        if self.backend == "sqlite":
+            with self._write_lock:
+                if key in self._store:
+                    return self._store[key]
+                conn = self._sqlite_conn
+                if conn is None:
+                    return None
+                try:
+                    row = conn.execute(
+                        "SELECT value FROM responses WHERE key = ?", (key,)
+                    ).fetchone()
+                except Exception:
+                    return None
+                if row is not None and isinstance(row[0], str):
+                    self._store[key] = row[0]
+                    return row[0]
+                return None
         if self.path is not None:
             # os.replace makes this lock-free read see either complete generation.
             # Refreshing here also lets two live clients share newly cached responses,
@@ -110,6 +199,24 @@ class ResponseCache:
         key = _key(provider, model, system, prompt, max_tokens)
         if self.path is None:
             self._store[key] = text
+            return
+        if self.backend == "sqlite":
+            with self._write_lock:
+                self._store[key] = text
+                conn = self._sqlite_conn
+                if conn is None:
+                    return
+                try:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO responses (key, value) VALUES (?, ?)",
+                        (key, text),
+                    )
+                    conn.commit()
+                except Exception:
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
             return
         with self._write_lock:
             self._store[key] = text
@@ -166,4 +273,13 @@ class ResponseCache:
                     del self._dirty[key]
 
     def __len__(self) -> int:
+        if self.backend == "sqlite":
+            with self._write_lock:
+                conn = self._sqlite_conn
+                if conn is not None:
+                    try:
+                        return int(conn.execute("SELECT COUNT(*) FROM responses").fetchone()[0])
+                    except Exception:
+                        pass
+                return len(self._store)
         return len(self._store)

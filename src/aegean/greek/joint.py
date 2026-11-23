@@ -552,6 +552,7 @@ class _JointModel:
                 "model.onnx output heads disagree with the bundle manifest: "
                 f"expected {list(self.manifest.output_heads)!r}, got {list(actual_outputs)!r}"
             )
+        self._output_names: tuple[str, ...] = actual_outputs
         try:
             self._tok = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
         except Exception as e:
@@ -572,6 +573,12 @@ class _JointModel:
         self.lookup_form: dict[str, str] = lookup["form"]
         self.lookup_form_upos: dict[str, str] = lookup["form_upos"]
         self.lookup_lower: dict[str, str] = lookup["form_lower"]
+
+    def _session_output_names(self) -> tuple[str, ...]:
+        cached = getattr(self, "_output_names", None)
+        if cached is not None:
+            return cast(tuple[str, ...], cached)
+        return tuple(o.name for o in self._sess.get_outputs())
 
     def _encode(self, words: list[str]) -> tuple[list[int], list[int], list[int]]:
         """Tokenize one pre-tokenized sentence → ``(subword ids, first-subword position
@@ -600,7 +607,7 @@ class _JointModel:
             "attention_mask": np.ones((1, len(ids)), dtype=np.int64),
             "word_pos": np.array([word_pos or [0]], dtype=np.int64),
         }
-        names = [o.name for o in self._sess.get_outputs()]
+        names = self._session_output_names()
         outs = dict(zip(names, self._sess.run(None, feed)))
         outs["_word_pos"] = word_pos
         outs["_kept"] = kept
@@ -634,7 +641,7 @@ class _JointModel:
             "attention_mask": attention_mask,
             "word_pos": word_pos,
         }
-        names = [o.name for o in self._sess.get_outputs()]
+        names = self._session_output_names()
         outs = dict(zip(names, self._sess.run(None, feed)))
         results: list[dict[str, Any]] = []
         for b, (_ids, wp, kept) in enumerate(encoded):
@@ -2051,6 +2058,7 @@ def analyze_sentences(
     sentences: Iterable[Iterable[str]],
     *,
     batch_size: int | None = None,
+    length_bucket: bool = False,
     with_probs: bool = False,
     long_input: LongInputMode = "strict",
     domain: str | None = None,
@@ -2064,8 +2072,51 @@ def analyze_sentences(
 
     Every argument keeps its meaning there, ``batch_size`` included: the default of one
     encoder pass per sentence is the sequential path the published numbers are measured
-    on, and a positive int trades prediction-identity for throughput.
+    on, and a positive int trades prediction-identity for throughput. Passing
+    ``length_bucket=True`` with ``batch_size > 1`` (and non-windowed ``long_input``)
+    groups similarly sized sentences into each padded batch to reduce padding waste and
+    restores the exact original input order before returning.
     """
+    if type(length_bucket) is not bool:
+        raise TypeError("length_bucket must be a bool")
+    if (
+        length_bucket
+        and type(batch_size) is int
+        and batch_size > 1
+        and long_input != "windowed"
+    ):
+        if isinstance(sentences, (str, bytes, bytearray)):
+            raise TypeError("sentences must be an iterable of token sequences, not a single string")
+        materialized = [
+            _copy_stream_sentence(sentence, sentence_index=index)
+            for index, sentence in enumerate(sentences)
+        ]
+        if not materialized:
+            return list(
+                iter_analyze_sentences(
+                    [],
+                    batch_size=batch_size,
+                    with_probs=with_probs,
+                    long_input=long_input,
+                    domain=domain,
+                    policy=policy,
+                )
+            )
+        order = sorted(range(len(materialized)), key=lambda i: len(materialized[i]))
+        bucketed = list(
+            iter_analyze_sentences(
+                (materialized[i] for i in order),
+                batch_size=batch_size,
+                with_probs=with_probs,
+                long_input=long_input,
+                domain=domain,
+                policy=policy,
+            )
+        )
+        restored: list[SentenceAnalysis] = [bucketed[0]] * len(bucketed)
+        for pos, orig_idx in enumerate(order):
+            restored[orig_idx] = bucketed[pos]
+        return restored
 
     return list(
         iter_analyze_sentences(
