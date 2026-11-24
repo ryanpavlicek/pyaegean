@@ -25,26 +25,53 @@ relations rather than the arc-eager baseline's Prague labels), and
 from __future__ import annotations
 
 import json
-import math
-import sys
-from collections.abc import Iterable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
-from contextvars import ContextVar
-from dataclasses import dataclass, replace
+from collections.abc import Iterable, Iterator
+from dataclasses import replace
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, cast
 
 from ..data import fetch, versions
+from . import _joint_windowing as _windowing
 from . import _ort
-from .lemmatize import LemmaSource, lemma_verified
-from .mst import decode_mst
 from . import neural_preprocessing as _prep
-from .neural_contract import (
-    AnalysisReceipt,
-    ModelBundleError,
-    ModelBundleManifest,
-    ReceiptMismatchError,
+from ._joint_confidence import (
+    _STREAM_CONFIDENCE_CONTEXT as _STREAM_CONFIDENCE_CONTEXT,
+    _STREAM_CONFIDENCE_UNSET as _STREAM_CONFIDENCE_UNSET,
+    _bind_stream_confidence_context as _bind_stream_confidence_context,
+    _confidence_context,
+    _confidence_result,
+    _entry_probability,
+    _model_id as _model_id,
+    _policy_decision,
+    _resolve_confidence_entry,
+    _sentence_confidence,
+    _unavailable_sentence_confidence,
 )
+from ._joint_streaming import (
+    _copy_stream_sentence as _copy_stream_sentence,
+    _stream_backend as _stream_backend,
+    analyze_sentences_impl,
+    iter_analyze_sentences_impl,
+)
+from ._joint_types import (
+    _TOP_LEMMA_EDIT_STATE,
+    LongInputMode as LongInputMode,
+    NeuralInputTooLongError,
+    NeuralPipelineNotLoadedError,
+    NeuralWindowingError,
+    SentenceAnalysis,
+    _best_non_root_relation,
+    _capture_top_lemma_edits as _capture_top_lemma_edits,
+    _extract_top_k_edits_for_word,
+    _long_input_mode,
+)
+from .confidence import (
+    AbstentionPolicy,
+    CalibrationRegistry,
+    SentenceConfidence,
+    TokenConfidence,
+)
+from .lemmatize import LemmaSource, lemma_verified
 from .model_variants import (
     NeuralRuntimeVariant,
     NeuralVariantError,
@@ -52,17 +79,14 @@ from .model_variants import (
     neural_variants,
     variant_registry_sha256,
 )
-from .udfeats import feats_from_xpos
-from .confidence import (
-    AbstentionPolicy,
-    CalibrationEntry,
-    CalibrationRegistry,
-    ConfidenceResult,
-    SentenceConfidence,
-    TokenConfidence,
-    UNAVAILABLE_CONFIDENCE,
-    UNAVAILABLE_MISSING_CALIBRATION,
+from .mst import decode_mst
+from .neural_contract import (
+    AnalysisReceipt,
+    ModelBundleError,
+    ModelBundleManifest,
+    ReceiptMismatchError,
 )
+from .udfeats import feats_from_xpos
 
 __all__ = [
     "AnalysisReceipt",
@@ -86,173 +110,6 @@ __all__ = [
 
 # Registered in aegean.data._REMOTE; fetched + extracted to the cache on first use.
 _DATASET = "grc-joint"
-LongInputMode = Literal["strict", "partial", "windowed"]
-_STREAM_CONFIDENCE_UNSET = object()
-_STREAM_CONFIDENCE_CONTEXT: ContextVar[Any] = ContextVar(
-    "pyaegean_stream_confidence_context", default=_STREAM_CONFIDENCE_UNSET
-)
-_TOP_LEMMA_EDIT_STATE: ContextVar[
-    tuple[int, list[tuple[tuple[tuple[str, float], ...], ...]]] | None
-] = ContextVar("pyaegean_top_lemma_edit_state", default=None)
-
-
-@contextmanager
-def _capture_top_lemma_edits(
-    k: int = 10,
-) -> Iterator[list[tuple[tuple[tuple[str, float], ...], ...]]]:
-    """Internal scoped capture for top-K neural lemma edit predictions.
-
-    Active only when the weighted OOV lemma reranker requests top-K neural edit
-    candidates; ordinary inference never sets this contextvar and incurs zero
-    extra work.
-    """
-    captured: list[tuple[tuple[tuple[str, float], ...], ...]] = []
-    token = _TOP_LEMMA_EDIT_STATE.set((k, captured))
-    try:
-        yield captured
-    finally:
-        _TOP_LEMMA_EDIT_STATE.reset(token)
-
-
-def _extract_top_k_edits_for_word(
-    form: str,
-    logits_row: Any,
-    trees: Sequence[Any],
-    np: Any,
-    k: int,
-) -> tuple[tuple[str, float], ...]:
-    """Return top-K ``(predicted_lemma, probability)`` edit-script candidates for one token."""
-    if k <= 0 or not trees:
-        return ()
-    row = np.asarray(logits_row, dtype=np.float64)
-    if row.ndim != 1 or row.size == 0 or not np.isfinite(row).all():
-        return ()
-    from .lemmatizer import apply_tree
-
-    shifted = row - float(row.max())
-    probs = np.exp(shifted)
-    total = float(probs.sum())
-    if total <= 0.0 or not math.isfinite(total):
-        return ()
-    probs = probs / total
-    n_avail = min(len(trees), int(row.size))
-    kk = min(k, n_avail)
-    if kk < n_avail:
-        top_idx = np.argpartition(probs[:n_avail], -kk)[-kk:]
-        top_idx = top_idx[np.argsort(-probs[top_idx], kind="mergesort")]
-    else:
-        top_idx = np.argsort(-probs[:n_avail], kind="mergesort")
-    probe = _prep._strip_editorial_apparatus(form)
-    out: list[tuple[str, float]] = []
-    for idx in top_idx:
-        ti = int(idx)
-        pred_l = apply_tree(trees[ti], probe)
-        if pred_l and pred_l != "_":
-            out.append((pred_l, float(probs[ti])))
-    return tuple(out)
-
-
-class NeuralPipelineNotLoadedError(RuntimeError):
-    """Raised when the neural pipeline is used before `use_neural_pipeline`, or when
-    the ``[neural]`` extra (onnxruntime/tokenizers/numpy) is not installed."""
-
-
-class NeuralInputTooLongError(ValueError):
-    """Raised when strict neural analysis cannot cover every input token."""
-
-    def __init__(self, *, input_tokens: int, analyzed_tokens: int, max_subwords: int) -> None:
-        self.input_tokens = input_tokens
-        self.analyzed_tokens = analyzed_tokens
-        self.max_subwords = max_subwords
-        super().__init__(
-            f"neural analysis would be incomplete: {analyzed_tokens} of {input_tokens} tokens "
-            f"fit the model's {max_subwords}-subword limit. Split the sentence, or pass "
-            "long_input='partial' and inspect SentenceAnalysis.complete/analyzed, or "
-            "long_input='windowed' for safe complete-word overlap windows."
-        )
-
-
-class NeuralWindowingError(ValueError):
-    """Raised when safe overlapping-window analysis cannot be supported.
-
-    Windowed inference is deliberately conservative: pathological inputs are refused
-    before tokenizer/dense allocation, and every window must contain complete words with
-    a useful overlap and at least one observed arc for each dependent.
-    """
-
-
-@dataclass(frozen=True, slots=True)
-class SentenceAnalysis:
-    """The joint model's full analysis, coverage status, provenance, and receipt."""
-
-    tokens: tuple[str, ...]
-    upos: tuple[str, ...]
-    xpos: tuple[str, ...]       # 9-char AGDT-convention positional tags
-    feats: tuple[str, ...]      # UD FEATS rendered from xpos
-    head: tuple[int, ...]       # 0 = root, else 1-based index into tokens
-    deprel: tuple[str, ...]     # UD relations
-    lemma: tuple[str, ...]
-    # Per-token: True when the lemma came from a real analysis (lookup or edit-script),
-    # False when it is the identity fall-through (the surface form returned unchanged).
-    # Defaulted so the empty-sentence and any positional construction stay valid.
-    lemma_resolved: tuple[bool, ...] = ()
-    # Per-token CALIBRATED confidence, populated ONLY when a call sets ``with_probs=True``
-    # AND a calibration is loaded (`aegean.greek.use_calibration`); otherwise empty ``()``,
-    # so the default path is byte-identical to a build without this feature. Each value is
-    # the temperature-scaled top-1 softmax probability of that head — an estimate of the
-    # probability the prediction is correct (see `aegean.greek.calibrate`). ``None`` for a
-    # token the model did not decode (a subword-budget truncation fallback). The project
-    # never exposes a *raw* softmax: with ``with_probs=True`` and no calibration loaded,
-    # `analyze` raises `UncalibratedConfidenceError` rather than filling these.
-    upos_prob: tuple[float | None, ...] = ()
-    lemma_script_prob: tuple[float | None, ...] = ()
-    # Per-token offline-rescue evidence class, populated ONLY by Lever B
-    # (`aegean.greek.documentary.rescue_analysis`) at the indices it rescues: the
-    # `aegean.greek.LemmaSource` value (``"seed"`` / ``"paradigm"``) of the offline source
-    # that recovered the lemma, ``""`` for a token it did not rescue. Empty ``()`` (the
-    # default) means no rescue ran, so every path that does not opt into Lever B stays
-    # byte-identical. A rescued token keeps ``lemma_resolved=False`` (an offline rescue is
-    # never credited to the neural model); this channel lets a consumer surface the true
-    # grounded source instead of the identity fall-through.
-    lemma_source_override: tuple[str, ...] = ()
-    # Exact decision provenance for each returned lemma. This separates a joint-model
-    # frequency lookup from an edit-script prediction and from the identity fallback.
-    # Empty only on legacy/custom SentenceAnalysis values that predate this field.
-    lemma_source: tuple[LemmaSource, ...] = ()
-    # Human verification is separate from model resolution or lexical attestation.
-    lemma_verified: tuple[bool, ...] = ()
-    lemma_source_path: tuple[str, ...] = ()
-    token_confidences: tuple[TokenConfidence, ...] = ()
-    sentence_confidence: SentenceConfidence | None = None
-    # Per-token coverage plus sentence-level status. In strict mode an incomplete
-    # sentence raises before a SentenceAnalysis is returned. Partial mode returns every
-    # input token, marks undecoded tokens False here, and sets complete=False/truncated=True.
-    analyzed: tuple[bool, ...] = ()
-    complete: bool = True
-    truncated: bool = False
-    warnings: tuple[str, ...] = ()
-    receipt: AnalysisReceipt | None = None
-
-    @property
-    def incomplete(self) -> bool:
-        """Whether any input token lacks a neural analysis."""
-        return not self.complete
-
-
-def _best_non_root_relation(scores: "Any", labels: "Mapping[int, str] | Sequence[str]") -> int:
-    """Index of the highest-scoring relation label that is not ``root``.
-
-    UD allows exactly one ``root`` per sentence and it is the word whose HEAD is 0. The
-    label head's argmax is unconstrained, so it could return ``root`` for a token
-    attached to another word, producing a tree that is invalid CoNLL-U and a
-    SentenceAnalysis contradicting itself (HEAD 3, DEPREL root). The head decision is
-    made by the single-root MST decoder and is authoritative; the label is remapped to
-    the best relation compatible with it."""
-    order = list(scores.argsort()[::-1])
-    for candidate in order:
-        if labels[int(candidate)] != "root":
-            return int(candidate)
-    return int(order[0])  # a label set with nothing but root: keep the argmax
 
 
 def _compose_lemma_detail(
@@ -291,225 +148,6 @@ def _compose_lemma(
 
     lemma, resolved, source, _path = _compose_lemma_detail(form, upos, script_id, model)
     return lemma, resolved, source
-
-
-def _confidence_context(
-    with_probs: bool,
-    *,
-    domain: str | None = None,
-    policy: AbstentionPolicy | None = None,
-) -> dict[str, Any] | None:
-    """Resolve confidence inputs without changing the no-confidence path."""
-    if (domain is not None or policy is not None) and not with_probs:
-        raise ValueError("confidence domain/policy requires with_probs=True")
-    if not with_probs:
-        return None
-    captured = _STREAM_CONFIDENCE_CONTEXT.get()
-    if captured is not _STREAM_CONFIDENCE_UNSET:
-        if not isinstance(captured, dict):  # pragma: no cover - private invariant
-            raise RuntimeError("invalid captured stream confidence context")
-        if captured.get("domain") != domain or captured.get("policy") != policy:
-            raise RuntimeError("captured stream confidence scope changed during analysis")
-        return cast(dict[str, Any], captured)
-    from . import calibrate
-
-    legacy, registry = calibrate._active_state()
-    if legacy is None and registry is None:
-        raise calibrate.UncalibratedConfidenceError(
-            "uncalibrated confidence is not exposed; load or fit a calibration first "
-            "(aegean.greek.use_calibration())."
-        )
-    return {"legacy": legacy, "registry": registry, "domain": domain, "policy": policy}
-
-
-@contextmanager
-def _bind_stream_confidence_context(
-    context: dict[str, Any] | None,
-) -> Iterator[None]:
-    """Bind one captured calibration only for a synchronous backend call."""
-
-    if context is None:
-        yield
-        return
-    token = _STREAM_CONFIDENCE_CONTEXT.set(context)
-    try:
-        yield
-    finally:
-        _STREAM_CONFIDENCE_CONTEXT.reset(token)
-
-
-def _model_id(model: Any) -> str:
-    manifest = getattr(model, "manifest", None)
-    value = getattr(manifest, "model_id", None)
-    return value if isinstance(value, str) and value.strip() else "legacy"
-
-
-def _resolve_confidence_entry(
-    model: Any,
-    context: dict[str, Any] | None,
-    task: str,
-    source: str | None = "neural",
-) -> tuple[CalibrationEntry | None, str | None, Any | None]:
-    if context is None:
-        return None, UNAVAILABLE_CONFIDENCE, None
-    registry = context.get("registry")
-    if not isinstance(registry, CalibrationRegistry):
-        return None, UNAVAILABLE_MISSING_CALIBRATION, None
-    resolved = registry.resolve(
-        _model_id(model), task, source, context.get("domain")
-    )
-    if resolved.entry is None:
-        return None, resolved.reason or UNAVAILABLE_MISSING_CALIBRATION, resolved
-    return resolved.entry, None, resolved
-
-
-def _confidence_result(
-    model: Any,
-    context: dict[str, Any] | None,
-    task: str,
-    value: float | None,
-    *,
-    entry: CalibrationEntry | None = None,
-    reason: str | None = None,
-    source: str | None = "neural",
-    resolution: Any | None = None,
-) -> ConfidenceResult:
-    if value is None or entry is None:
-        return ConfidenceResult(
-            task=task,
-            value=None,
-            reason=reason or UNAVAILABLE_CONFIDENCE,
-            model=_model_id(model) if context is not None else None,
-            source=source,
-            domain=(context or {}).get("domain"),
-            scope=resolution.scope if resolution is not None else None,
-        )
-    if entry.n is None or entry.n <= 0 or (entry.ece is None and entry.brier is None):
-        return ConfidenceResult(
-            task=task,
-            value=None,
-            reason="insufficient_calibration_evidence",
-            calibration_id=entry.calibration_id,
-            scope=resolution.scope if resolution is not None else None,
-            model=_model_id(model),
-            source=source,
-            domain=(context or {}).get("domain"),
-            n=entry.n,
-            ece=entry.ece,
-            brier=entry.brier,
-        )
-    return ConfidenceResult(
-        task=task,
-        value=value,
-        calibration_id=entry.calibration_id,
-        scope=(resolution.scope if resolution is not None else (
-            "global_fallback" if entry.fallback and entry.source is None and entry.domain is None else
-            "source_fallback" if entry.fallback and entry.source is None else
-            "domain_fallback" if entry.fallback else "exact"
-        )),
-        model=_model_id(model),
-        source=source,
-        domain=(context or {}).get("domain"),
-        n=entry.n,
-        ece=entry.ece,
-        brier=entry.brier,
-    )
-
-
-def _policy_decision(
-    policy: AbstentionPolicy | None, result: ConfidenceResult | None
-) -> Any:
-    return None if policy is None or result is None else policy.decide(result.task, result.value)
-
-
-def _entry_probability(
-    entry: CalibrationEntry | None,
-    logits: Any = None,
-    raw_probability: float | None = None,
-    *,
-    np: Any,
-    selected_index: int | None = None,
-) -> float | None:
-    if entry is None:
-        return None
-    from . import calibrate
-
-    if entry.calibrator == "temperature":
-        if logits is None or entry.temperature is None:
-            return None
-        if selected_index is None:
-            return float(calibrate.top1_confidence(logits, entry.temperature, np=np))
-        probabilities = calibrate.temperature_softmax(logits, entry.temperature, np=np)
-        return float(probabilities[selected_index])
-    if raw_probability is None:
-        return None
-    return float(entry.calibrate(raw_probability))
-
-
-def _sentence_confidence(
-    model: Any,
-    context: dict[str, Any] | None,
-    raw_components: list[dict[str, float]],
-) -> SentenceConfidence | None:
-    if context is None:
-        return None
-    required = ("upos", "xpos", "lemma", "head", "relation")
-    if not raw_components:
-        result = _confidence_result(model, context, "sentence", None, reason="empty_sentence")
-        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-    values: list[float] = []
-    for item in raw_components:
-        if not item or any(name not in item for name in ("upos", "xpos", "lemma", "head")):
-            result = _confidence_result(model, context, "sentence", None, reason="partial_token")
-            return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-        values.extend(item[name] for name in ("upos", "xpos", "lemma", "head"))
-        if "relation" not in item and item.get("forced_root"):
-            continue
-        if "relation" not in item:
-            result = _confidence_result(model, context, "sentence", None, reason="missing_relation")
-            return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-        values.append(item["relation"])
-    entry, reason, resolution = _resolve_confidence_entry(model, context, "sentence")
-    if entry is None:
-        result = _confidence_result(
-            model, context, "sentence", None, reason=reason or UNAVAILABLE_MISSING_CALIBRATION
-        )
-        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-    if entry.calibrator != "logit_affine":
-        result = _confidence_result(model, context, "sentence", None, reason="unsupported_calibrator")
-        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-    if any(value < 0.0 or value > 1.0 or not math.isfinite(value) for value in values):
-        result = _confidence_result(model, context, "sentence", None, reason="invalid_raw_aggregate")
-        return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-    raw = (
-        0.0
-        if any(value == 0.0 for value in values)
-        else math.exp(math.fsum(math.log(value) for value in values))
-    )
-    value = float(entry.calibrate(raw))
-    result = _confidence_result(model, context, "sentence", value, entry=entry, resolution=resolution)
-    return SentenceConfidence(result, required, _policy_decision(context.get("policy"), result))
-
-
-def _unavailable_sentence_confidence(
-    model: Any, context: dict[str, Any], reason: str
-) -> SentenceConfidence:
-    """Build an explicit sentence-level unavailable record for structural failures."""
-
-    result = _confidence_result(model, context, "sentence", None, reason=reason)
-    return SentenceConfidence(
-        result,
-        ("upos", "xpos", "lemma", "head", "relation"),
-        _policy_decision(context.get("policy"), result),
-    )
-
-
-def _long_input_mode(value: str) -> LongInputMode:
-    if value not in ("strict", "partial", "windowed"):
-        raise ValueError(
-            f"long_input must be 'strict', 'partial', or 'windowed', got {value!r}"
-        )
-    return value  # type: ignore[return-value]
 
 
 class _JointModel:
@@ -773,127 +411,16 @@ class _JointModel:
 
     def _window_body_budget(self) -> int:
         """Return the manifest subword budget available to complete input words."""
-        manifest = getattr(self, "manifest", None)
-        policy = getattr(manifest, "special_token_policy", None)
-        if manifest is not None and policy != _prep.SPECIAL_TOKEN_POLICY:
-            raise NeuralWindowingError(
-                "windowed neural analysis requires the validated two-token policy "
-                f"{_prep.SPECIAL_TOKEN_POLICY}"
-            )
-        budget = self.max_subwords - 2  # <s> and </s> are validated by the manifest.
-        if budget < 1:
-            raise NeuralWindowingError(
-                f"model subword limit {self.max_subwords} cannot hold two special tokens "
-                "and a complete input word"
-            )
-        return budget
+        return _windowing.window_body_budget(self)
 
     def _full_word_lengths(self, words: list[str]) -> list[int]:
         """Measure every word with an untruncated clone of the active tokenizer."""
-        tok = getattr(self, "_tok", None)
-        if tok is None:
-            raise NeuralWindowingError("windowed neural analysis has no tokenizer")
-        clone: Any = None
-        # Tokenizer.from_str is the tokenizers API's independent clone operation.  The
-        # fallbacks keep the test/fake backend contract small without mutating the live
-        # tokenizer, whose truncation policy is still used by ordinary inference.
-        try:
-            from tokenizers import Tokenizer
-
-            if hasattr(tok, "to_str"):
-                clone = Tokenizer.from_str(tok.to_str())
-        except Exception:
-            clone = None
-        if clone is None and hasattr(tok, "clone"):
-            try:
-                clone = tok.clone()
-            except Exception:
-                clone = None
-        if clone is None:
-            import copy
-
-            try:
-                clone = copy.deepcopy(tok)
-            except Exception as exc:  # pragma: no cover - defensive fake/runtime guard
-                raise NeuralWindowingError(
-                    "could not clone the tokenizer for untruncated window measurement"
-                ) from exc
-        try:
-            no_truncation = getattr(clone, "no_truncation")
-            no_truncation()
-        except (AttributeError, TypeError) as exc:
-            raise NeuralWindowingError(
-                "tokenizer cannot disable truncation for whole-word window measurement"
-            ) from exc
-        try:
-            enc = clone.encode(words, is_pretokenized=True)
-        except TypeError:
-            # Small deterministic fakes often omit the keyword while preserving the
-            # same pretokenized semantics.
-            enc = clone.encode(words)
-        word_ids = getattr(enc, "word_ids", None)
-        if callable(word_ids):
-            word_ids = word_ids()
-        if word_ids is None:
-            raise NeuralWindowingError("tokenizer did not expose complete word positions")
-        lengths = [0] * len(words)
-        for wid in word_ids:
-            if wid is None:
-                continue
-            if not isinstance(wid, int) or wid < 0 or wid >= len(words):
-                raise NeuralWindowingError("tokenizer returned an invalid whole-word position")
-            lengths[wid] += 1
-        if any(length < 1 for length in lengths):
-            raise NeuralWindowingError(
-                "windowed neural analysis cannot preserve a complete word boundary: "
-                "the untruncated tokenizer produced no subwords for an input token"
-            )
-        return lengths
+        return _windowing.full_word_lengths(self, words)
 
     @staticmethod
     def _pack_windows(lengths: list[int], budget: int) -> list[tuple[int, int]]:
         """Pack complete-word windows with a subword-bounded suffix overlap."""
-        if any(length > budget for length in lengths):
-            raise NeuralWindowingError(
-                "windowed neural analysis refused an individual token whose complete "
-                f"subword span exceeds the {budget}-subword body budget"
-            )
-        target = min(64, budget // 4)
-        windows: list[tuple[int, int]] = []
-        start = 0
-        n = len(lengths)
-        while start < n:
-            used = 0
-            end = start
-            while end < n and used + lengths[end] <= budget:
-                used += lengths[end]
-                end += 1
-            if end == start:  # guarded above, retained as a clean boundary error
-                raise NeuralWindowingError(
-                    "windowed neural analysis cannot place a complete token in a model window"
-                )
-            windows.append((start, end))
-            if end == n:
-                break
-
-            # Prefer the largest complete suffix not exceeding the target body-subword
-            # overlap.  If a single token is wider than that target, retain that one whole
-            # token anyway: every boundary must overlap at least one token.
-            overlap_start = end - 1
-            overlap_used = lengths[overlap_start]
-            while overlap_start > start:
-                candidate = overlap_used + lengths[overlap_start - 1]
-                if candidate > target:
-                    break
-                overlap_start -= 1
-                overlap_used = candidate
-            if overlap_start <= start or overlap_start >= end:
-                raise NeuralWindowingError(
-                    "windowed neural analysis cannot provide a whole-token overlap with "
-                    "forward progress at a window boundary"
-                )
-            start = overlap_start
-        return windows
+        return _windowing.pack_windows(lengths, budget)
 
     def _analyze_windowed(
         self,
@@ -905,331 +432,13 @@ class _JointModel:
         context: dict[str, Any] | None = None,
     ) -> SentenceAnalysis:
         """Analyze windows and reconcile owner fields plus one global dependency tree."""
-        np = self._np
-        # Assign owners before any window encoder pass.  This lets us process each window
-        # sequentially and drop its logits immediately, keeping the 4,096-token dense cap
-        # honest even for many windows.
-        n = len(forms)
-        owners: list[int | None] = [None] * n
-        owner_scores = [-1] * n
-        prefix = [0]
-        for length in lengths:
-            prefix.append(prefix[-1] + length)
-        for wi, (ws, we) in enumerate(windows):
-            for token in range(ws, we):
-                score = min(prefix[token] - prefix[ws], prefix[we] - prefix[token + 1])
-                # Windows were built left-to-right, so retaining an equal score gives the
-                # required deterministic earlier-window tie break.
-                if score > owner_scores[token]:
-                    owner_scores[token] = score
-                    owners[token] = wi
-        if any(owner is None for owner in owners):  # pragma: no cover - packer invariant
-            raise NeuralWindowingError("windowed analysis could not assign every token an owner")
-
-        upos = ["X"] * n
-        xpos = ["---------"] * n
-        lemma = list(forms)
-        resolved = [False] * n
-        lemma_source = [LemmaSource.IDENTITY] * n
-        lemma_source_path = ["identity_fallback"] * n
-        verified = [False] * n
-        upos_prob: list[float | None] = [None] * n
-        lemma_prob: list[float | None] = [None] * n
-        token_confidences: list[TokenConfidence | None] = [None] * n
-        raw_components: list[dict[str, float]] = [{} for _ in range(n)]
-        arc = np.full((n, n + 1), -np.inf, dtype=np.float32)
-        # Relation IDs are bounded by the validated manifest label map.  A compact int16
-        # candidate grid avoids an R x N² float tensor; -1 means no finite relation score.
-        relation_count = len(self.inv["deprel"])
-        if relation_count > int(np.iinfo(np.int16).max):
-            raise NeuralWindowingError(
-                "windowed neural analysis cannot compact a relation map larger than int16"
-            )
-        rel_ids = np.full((n, n + 1), -1, dtype=np.int16)
-        window_relation_entry, window_relation_reason, window_relation_resolution = (
-            _resolve_confidence_entry(self, context, "relation")
-            if context is not None
-            else (None, None, None)
-        )
-        window_relation_temperature: float | None = None
-        if (
-            window_relation_entry is not None
-            and window_relation_entry.calibrator == "temperature"
-            and window_relation_entry.temperature is not None
-        ):
-            window_relation_temperature = window_relation_entry.temperature
-        rel_raw_probs = (
-            np.full((n, n + 1), np.nan, dtype=np.float32)
-            if context is not None
-            else None
-        )
-        rel_cal_probs = (
-            np.full((n, n + 1), np.nan, dtype=np.float32)
-            if context is not None
-            and window_relation_temperature is not None
-            else None
-        )
-        edit_capture = _TOP_LEMMA_EDIT_STATE.get()
-        top_edits_per_tok: list[tuple[tuple[str, float], ...]] | None = (
-            [() for _ in range(n)] if edit_capture is not None else None
-        )
-
-        for wi, (ws, we) in enumerate(windows):
-            chunk = forms[ws:we]
-            raw = self._run(chunk)
-            if raw.get("_kept") != list(range(we - ws)):
-                raise NeuralWindowingError(
-                    "windowed tokenizer failed to return every complete word in a window"
-                )
-            local = self._decode(chunk, raw, calibration=calibration, context=context)
-            if local.analyzed != (True,) * len(chunk):
-                raise NeuralWindowingError(
-                    "windowed neural analysis produced an incomplete window decode"
-                )
-            local_arc = np.asarray(raw["arc"][0], dtype=np.float32)
-            local_rel = np.asarray(raw["rel"][0])
-            for local_i, token in enumerate(range(ws, we)):
-                if owners[token] != wi:
-                    continue
-                upos[token] = local.upos[local_i]
-                xpos[token] = local.xpos[local_i]
-                lemma[token] = local.lemma[local_i]
-                resolved[token] = local.lemma_resolved[local_i]
-                lemma_source[token] = local.lemma_source[local_i]
-                if local.lemma_source_path:
-                    lemma_source_path[token] = local.lemma_source_path[local_i]
-                verified[token] = local.lemma_verified[local_i]
-                if top_edits_per_tok is not None and edit_capture is not None:
-                    top_edits_per_tok[token] = _extract_top_k_edits_for_word(
-                        forms[token], raw["lemma"][0, local_i], self.trees, np, edit_capture[0]
-                    )
-                if local.upos_prob:
-                    upos_prob[token] = local.upos_prob[local_i]
-                if local.lemma_script_prob:
-                    lemma_prob[token] = local.lemma_script_prob[local_i]
-                if context is not None:
-                    from . import calibrate
-
-                    local_sp = raw["_word_pos"][local_i]
-                    # Window outputs retain the same local word ordering; raw task values
-                    # are stored as one scalar per owned token until global MST selection.
-                    raw_upos = float(
-                        calibrate.top1_confidence(
-                            raw["upos"][0, local_sp], 1.0, np=np
-                        )
-                    )
-                    raw_x = [
-                        float(
-                            calibrate.top1_confidence(
-                                raw[f"x{x_index}"][0, local_sp], 1.0, np=np
-                            )
-                        )
-                        for x_index in range(9)
-                    ]
-                    raw_components[token].update(
-                        {
-                            "upos": raw_upos,
-                            "xpos": float(np.prod(raw_x, dtype=np.float64)),
-                            "lemma": float(
-                                calibrate.top1_confidence(raw["lemma"][0, local_i], 1.0, np=np)
-                            ),
-                        }
-                    )
-                    token_confidences[token] = replace(
-                        local.token_confidences[local_i], index=token
-                    )
-                for local_head, score in enumerate(local_arc[local_i]):
-                    global_head = 0 if local_head == 0 else ws + local_head
-                    if global_head < 0 or global_head > n:
-                        continue
-                    arc[token, global_head] = score
-                    rel_vector = np.asarray(local_rel[:, local_i, local_head])
-                    if np.isfinite(rel_vector).any():
-                        # Only the word attached to the artificial ROOT (head 0) may be
-                        # labelled root, so the label for any other arc is chosen from
-                        # the non-root labels. See _best_non_root_relation.
-                        chosen_rel = (
-                            int(rel_vector.argmax())
-                            if global_head == 0
-                            else _best_non_root_relation(rel_vector, self.inv["deprel"])
-                        )
-                        rel_ids[token, global_head] = np.int16(chosen_rel)
-                        if context is not None and rel_raw_probs is not None:
-                            safe_rel = np.where(np.isfinite(rel_vector), rel_vector, -1.0e30)
-                            rel_raw_probs[token, global_head] = float(
-                                calibrate.temperature_softmax(safe_rel, 1.0, np=np)[chosen_rel]
-                            )
-                            if rel_cal_probs is not None and window_relation_temperature is not None:
-                                rel_cal_probs[token, global_head] = float(
-                                    calibrate.temperature_softmax(
-                                        safe_rel, window_relation_temperature, np=np
-                                    )[chosen_rel]
-                                )
-            # Explicitly release the large per-window arrays before the next encoder pass.
-            del raw, local, local_arc, local_rel
-
-        if not np.isfinite(arc).any(axis=1).all():
-            raise NeuralWindowingError(
-                "windowed neural analysis did not observe at least one finite arc for "
-                "every dependent"
-            )
-        try:
-            heads = decode_mst(arc)
-        except Exception as exc:  # pragma: no cover - defensive decoder guard
-            raise NeuralWindowingError("global windowed dependency decoding failed") from exc
-        if len(heads) != n or heads.count(0) != 1:
-            raise NeuralWindowingError(
-                "global windowed dependency decoding did not produce exactly one root"
-            )
-        for dep, head_value in enumerate(heads):
-            if head_value < 0 or head_value > n or head_value == dep + 1:
-                raise NeuralWindowingError("global windowed decoder selected an invalid arc")
-            if not np.isfinite(arc[dep, head_value]):
-                raise NeuralWindowingError(
-                    "global windowed decoder selected an unobserved or non-finite arc"
-                )
-        # The MST decoder promises an arborescence; retain a cheap explicit cycle check as
-        # a safety assertion because malformed all--inf candidate matrices must never leak.
-        for start in range(n):
-            seen: set[int] = set()
-            node = start + 1
-            while node:
-                if node in seen:
-                    raise NeuralWindowingError("global windowed dependency tree contains a cycle")
-                seen.add(node)
-                node = heads[node - 1]
-
-        deprel: list[str] = ["dep"] * n
-        for dep, head_value in enumerate(heads):
-            if head_value == 0:
-                deprel[dep] = "root"
-                continue
-            relation_id = int(rel_ids[dep, head_value])
-            if relation_id < 0:
-                raise NeuralWindowingError(
-                    "global windowed decoder selected an arc without an observed relation"
-                )
-            deprel[dep] = self.inv["deprel"][relation_id]
-        if context is not None:
-            from . import calibrate
-
-            for dep, head_value in enumerate(heads):
-                arc_row = arc[dep]
-                safe_arc = np.where(np.isfinite(arc_row), arc_row, -1.0e30)
-                raw_head = float(
-                    calibrate.temperature_softmax(safe_arc, 1.0, np=np)[head_value]
-                )
-                raw_components[dep]["head"] = raw_head
-                if head_value == 0:
-                    raw_components[dep]["forced_root"] = 1.0
-                else:
-                    if rel_raw_probs is None:
-                        raise NeuralWindowingError(
-                            "windowed confidence relation grid was not allocated"
-                        )
-                    raw_components[dep]["relation"] = float(rel_raw_probs[dep, head_value])
-                existing = token_confidences[dep]
-                if existing is None:
-                    continue
-                head_entry, head_reason, head_resolution = _resolve_confidence_entry(self, context, "head")
-                head_value_cal = _entry_probability(
-                    head_entry, safe_arc, raw_head, np=np, selected_index=head_value
-                )
-                head_result = _confidence_result(
-                    self, context, "head", head_value_cal,
-                    entry=head_entry, reason=head_reason, resolution=head_resolution,
-                )
-                if head_value == 0:
-                    relation_result = _confidence_result(
-                        self, context, "relation", None, reason="forced_root"
-                    )
-                else:
-                    relation_entry = window_relation_entry
-                    relation_reason = window_relation_reason
-                    relation_resolution = window_relation_resolution
-                    relation_value = (
-                        float(rel_cal_probs[dep, head_value])
-                        if rel_cal_probs is not None
-                        else _entry_probability(
-                            relation_entry,
-                            raw_probability=raw_components[dep]["relation"],
-                            np=np,
-                        )
-                    )
-                    relation_result = _confidence_result(
-                        self,
-                        context,
-                        "relation",
-                        relation_value,
-                        entry=relation_entry,
-                        reason=relation_reason,
-                        resolution=relation_resolution,
-                    )
-                updated_results = (
-                    existing.upos,
-                    existing.xpos,
-                    existing.feats,
-                    existing.lemma,
-                    head_result,
-                    relation_result,
-                )
-                decisions = tuple(
-                    decision
-                    for result in updated_results
-                    if (decision := _policy_decision(context.get("policy"), result)) is not None
-                )
-                token_confidences[dep] = replace(
-                    existing,
-                    index=dep,
-                    head=head_result,
-                    relation=relation_result,
-                    policy=decisions,
-                )
-            if any(item is None for item in token_confidences):
-                raise NeuralWindowingError(
-                    "windowed confidence decode did not produce every owner token"
-                )
-            token_confidences_final = tuple(
-                cast(TokenConfidence, item) for item in token_confidences
-            )
-            sentence_confidence = _sentence_confidence(self, context, raw_components)
-        else:
-            token_confidences_final = ()
-            sentence_confidence = None
-        warning = (
-            "windowed neural analysis: complete-word overlapping windows; token tags, "
-            "lemmas, and confidence use the farthest-boundary owner (earlier on ties), "
-            "and dependencies use one global observed-arc MST",
-        )
-        if edit_capture is not None and top_edits_per_tok is not None:
-            edit_capture[1].append(tuple(top_edits_per_tok))
-        return SentenceAnalysis(
-            tokens=tuple(forms),
-            upos=tuple(upos),
-            xpos=tuple(xpos),
-            feats=tuple(feats_from_xpos(x) for x in xpos),
-            head=tuple(heads),
-            deprel=tuple(deprel),
-            lemma=tuple(lemma),
-            lemma_resolved=tuple(resolved),
-            upos_prob=tuple(upos_prob) if calibration is not None or context is not None else (),
-            lemma_script_prob=tuple(lemma_prob) if calibration is not None or context is not None else (),
-            lemma_source=tuple(lemma_source),
-            lemma_source_path=tuple(lemma_source_path) if context is not None else (),
-            lemma_verified=tuple(verified),
-            analyzed=(True,) * n,
-            complete=True,
-            truncated=False,
-            warnings=warning,
-            token_confidences=token_confidences_final,
-            sentence_confidence=sentence_confidence,
-            receipt=self._receipt(
-                input_tokens=n,
-                analyzed_tokens=n,
-                truncated=False,
-                windowed=True,
-                context=context,
-            ),
+        return _windowing.analyze_windowed(
+            self,
+            forms,
+            lengths,
+            windows,
+            calibration=calibration,
+            context=context,
         )
 
     def _extract_sentence_top_edits(
@@ -1940,36 +1149,6 @@ def analyze_sentence(
     return model.analyze(words)
 
 
-def _copy_stream_sentence(sentence: Iterable[str], *, sentence_index: int) -> list[str]:
-    """Own and validate one source sentence without retaining the caller's container."""
-
-    if isinstance(sentence, (str, bytes)):
-        raise TypeError(
-            f"sentence {sentence_index} must be an iterable of token strings, not "
-            f"{type(sentence).__name__}"
-        )
-    try:
-        words = list(sentence)
-    except TypeError as exc:
-        raise TypeError(
-            f"sentence {sentence_index} must be an iterable of token strings"
-        ) from exc
-    for token_index, word in enumerate(words):
-        if not isinstance(word, str):
-            raise TypeError(
-                f"sentence {sentence_index} token {token_index} must be a string, "
-                f"not {type(word).__name__}"
-            )
-    return words
-
-
-def _stream_backend(model: Any) -> Any:
-    """Capture optional wrapper state so one stream has one analysis configuration."""
-
-    snapshot = getattr(model, "_snapshot_for_stream", None)
-    return snapshot() if callable(snapshot) else model
-
-
 def iter_analyze_sentences(
     sentences: Iterable[Iterable[str]],
     *,
@@ -2012,158 +1191,15 @@ def iter_analyze_sentences(
     This is sentence-level streaming only. Raw-text analysis, corpus annotation, and
     CoNLL-U serialization retain their collecting contracts.
     """
-    if (domain is not None or policy is not None) and not with_probs:
-        raise ValueError("confidence domain/policy requires with_probs=True")
-    _long_input_mode(long_input)
-    if batch_size is not None:
-        if not isinstance(batch_size, int) or isinstance(batch_size, bool):
-            raise TypeError(
-                f"batch_size must be a positive integer or None, got {batch_size!r}"
-            )
-        if batch_size < 1:
-            raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
-    if isinstance(sentences, (str, bytes)):
-        raise TypeError("sentences must be an iterable of token-string iterables")
-    model = active()
-    if model is None:
-        raise NeuralPipelineNotLoadedError(
-            "neural pipeline not loaded — call aegean.greek.use_neural_pipeline() first"
-        )
-    model = _stream_backend(model)
-    method_name = "analyze" if batch_size is None else "analyze_batch"
-    if not callable(getattr(model, method_name, None)):
-        raise TypeError(f"active neural backend does not provide callable {method_name}()")
-    captured_confidence: dict[str, Any] | None = None
-    preflight = getattr(model, "_validate_stream_options", None)
-    if callable(preflight):
-        captured = preflight(
-            with_probs=with_probs,
-            long_input=long_input,
-            domain=domain,
-            policy=policy,
-        )
-        if isinstance(captured, dict):
-            captured_confidence = captured
-
-    use_options = (
-        with_probs or long_input != "strict" or domain is not None or policy is not None
+    return iter_analyze_sentences_impl(
+        sentences,
+        active_fn=active,
+        batch_size=batch_size,
+        with_probs=with_probs,
+        long_input=long_input,
+        domain=domain,
+        policy=policy,
     )
-    kwargs: dict[str, Any] = {"with_probs": with_probs, "long_input": long_input}
-    if domain is not None:
-        kwargs["domain"] = domain
-    if policy is not None:
-        kwargs["policy"] = policy
-
-    def _iterator() -> Iterator[SentenceAnalysis]:
-        source = iter(sentences)
-        sentence_index = 0
-        try:
-            if batch_size is None:
-                for sentence in source:
-                    source_index = sentence_index
-                    words = _copy_stream_sentence(
-                        sentence, sentence_index=source_index
-                    )
-                    expected_tokens = tuple(_prep.normalize_tokens(words))
-                    sentence_index += 1
-                    with _bind_stream_confidence_context(captured_confidence):
-                        analysis = (
-                            model.analyze(words, **kwargs)
-                            if use_options
-                            else model.analyze(words)
-                        )
-                    if not isinstance(analysis, SentenceAnalysis):
-                        raise TypeError(
-                            "joint backend result at source index "
-                            f"{source_index} must be SentenceAnalysis, not "
-                            f"{type(analysis).__name__}"
-                        )
-                    if analysis.tokens != expected_tokens:
-                        raise RuntimeError(
-                            "joint backend did not preserve source order at index "
-                            f"{source_index}: expected tokens {expected_tokens!r}, "
-                            f"got {analysis.tokens!r}"
-                        )
-                    yield analysis
-                return
-
-            while True:
-                chunk_start = sentence_index
-                chunk: list[list[str]] = []
-                for _ in range(batch_size):
-                    try:
-                        sentence = next(source)
-                    except StopIteration:
-                        break
-                    chunk.append(
-                        _copy_stream_sentence(sentence, sentence_index=sentence_index)
-                    )
-                    sentence_index += 1
-                if not chunk:
-                    return
-                # Do not retain the producer's last sentence object in addition to the
-                # owned copies in this chunk while results are yielded.
-                del sentence
-                expected_batch = [
-                    tuple(_prep.normalize_tokens(words)) for words in chunk
-                ]
-                with _bind_stream_confidence_context(captured_confidence):
-                    analyses = (
-                        model.analyze_batch(chunk, **kwargs)
-                        if use_options
-                        else model.analyze_batch(chunk)
-                    )
-                if not isinstance(analyses, list):
-                    raise TypeError(
-                        "joint batch backend must return a list of SentenceAnalysis values"
-                    )
-                if len(analyses) != len(chunk):
-                    chunk_end = chunk_start + len(chunk) - 1
-                    raise RuntimeError(
-                        "joint batch backend returned "
-                        f"{len(analyses)} result(s) for {len(chunk)} sentence(s) "
-                        f"at source indices {chunk_start}..{chunk_end}"
-                    )
-                for offset, analysis in enumerate(analyses):
-                    if not isinstance(analysis, SentenceAnalysis):
-                        raise TypeError(
-                            "joint batch backend result at source index "
-                            f"{chunk_start + offset} must be SentenceAnalysis, not "
-                            f"{type(analysis).__name__}"
-                        )
-                    expected_tokens = expected_batch[offset]
-                    if analysis.tokens != expected_tokens:
-                        raise RuntimeError(
-                            "joint batch backend did not preserve source order at index "
-                            f"{chunk_start + offset}: expected tokens {expected_tokens!r}, "
-                            f"got {analysis.tokens!r}"
-                        )
-                chunk_size = len(chunk)
-                yield from analyses
-                # `yield from` has completed: release this entire chunk before pulling
-                # the next one, keeping live token ownership at one batch rather than two.
-                del analysis, analyses, chunk, expected_batch, expected_tokens
-                if chunk_size < batch_size:
-                    return
-        finally:
-            primary_error = sys.exc_info()[1]
-            try:
-                close = getattr(source, "close", None)
-            except BaseException:
-                if primary_error is None:
-                    raise
-                close = None
-            if callable(close):
-                try:
-                    close()
-                except BaseException:
-                    # Never replace a backend/source failure or consumer GeneratorExit
-                    # with a secondary cleanup error. On ordinary exhaustion, however,
-                    # a source's failing close remains visible to the caller.
-                    if primary_error is None:
-                        raise
-
-    return _iterator()
 
 
 def analyze_sentences(
@@ -2189,56 +1225,15 @@ def analyze_sentences(
     groups similarly sized sentences into each padded batch to reduce padding waste and
     restores the exact original input order before returning.
     """
-    if type(length_bucket) is not bool:
-        raise TypeError("length_bucket must be a bool")
-    if (
-        length_bucket
-        and type(batch_size) is int
-        and batch_size > 1
-        and long_input != "windowed"
-    ):
-        if isinstance(sentences, (str, bytes, bytearray)):
-            raise TypeError("sentences must be an iterable of token sequences, not a single string")
-        materialized = [
-            _copy_stream_sentence(sentence, sentence_index=index)
-            for index, sentence in enumerate(sentences)
-        ]
-        if not materialized:
-            return list(
-                iter_analyze_sentences(
-                    [],
-                    batch_size=batch_size,
-                    with_probs=with_probs,
-                    long_input=long_input,
-                    domain=domain,
-                    policy=policy,
-                )
-            )
-        order = sorted(range(len(materialized)), key=lambda i: len(materialized[i]))
-        bucketed = list(
-            iter_analyze_sentences(
-                (materialized[i] for i in order),
-                batch_size=batch_size,
-                with_probs=with_probs,
-                long_input=long_input,
-                domain=domain,
-                policy=policy,
-            )
-        )
-        restored: list[SentenceAnalysis] = [bucketed[0]] * len(bucketed)
-        for pos, orig_idx in enumerate(order):
-            restored[orig_idx] = bucketed[pos]
-        return restored
-
-    return list(
-        iter_analyze_sentences(
-            sentences,
-            batch_size=batch_size,
-            with_probs=with_probs,
-            long_input=long_input,
-            domain=domain,
-            policy=policy,
-        )
+    return analyze_sentences_impl(
+        sentences,
+        iter_fn=iter_analyze_sentences,
+        batch_size=batch_size,
+        length_bucket=length_bucket,
+        with_probs=with_probs,
+        long_input=long_input,
+        domain=domain,
+        policy=policy,
     )
 
 

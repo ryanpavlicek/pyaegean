@@ -34,6 +34,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from threading import RLock
@@ -459,11 +462,29 @@ class Calibration:
 _ACTIVE: Calibration | None = None
 _ACTIVE_REGISTRY: "CalibrationRegistry | None" = None
 _STATE_LOCK = RLock()
+_CALIBRATION_OVERRIDE: ContextVar[
+    tuple[Calibration | None, "CalibrationRegistry | None"] | None
+] = ContextVar("pyaegean_calibration_override", default=None)
+
+
+@contextmanager
+def _bind_calibration(
+    legacy: Calibration | None,
+    registry: "CalibrationRegistry | None",
+) -> Iterator[None]:
+    """Temporarily bind instance-scoped calibration state for one pipeline call."""
+    token = _CALIBRATION_OVERRIDE.set((legacy, registry))
+    try:
+        yield
+    finally:
+        _CALIBRATION_OVERRIDE.reset(token)
 
 
 def _active_state() -> tuple[Calibration | None, "CalibrationRegistry | None"]:
     """Return one coherent legacy/registry calibration snapshot."""
-
+    override = _CALIBRATION_OVERRIDE.get()
+    if override is not None:
+        return override
     with _STATE_LOCK:
         return _ACTIVE, _ACTIVE_REGISTRY
 
@@ -488,6 +509,24 @@ def _load_bundled() -> Calibration:
         ) from e
 
 
+def _resolve_calibration_source(
+    source: "str | Path | Calibration | dict[str, Any] | None",
+) -> tuple[Calibration, "CalibrationRegistry"]:
+    """Load a Schema-1 Calibration and its v2 registry adapter without mutating globals."""
+    if source is None:
+        cal = _load_bundled()
+    elif isinstance(source, Calibration):
+        cal = source
+    elif isinstance(source, dict):
+        cal = Calibration.from_dict(source)
+    else:
+        cal = Calibration.load(source)
+    from .confidence import CalibrationRegistry
+
+    registry = CalibrationRegistry.from_legacy(cal.to_dict())
+    return cal, registry
+
+
 def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" = None) -> Calibration:
     """Load a calibration and make it the active one, so the joint model may surface
     calibrated confidence.
@@ -497,20 +536,10 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
     no-arg form raises `UncalibratedConfidenceError` only when that file cannot be loaded
     (a missing or corrupt install), never a raw softmax. Returns the loaded `Calibration`."""
     global _ACTIVE, _ACTIVE_REGISTRY
-    if source is None:
-        cal = _load_bundled()
-    elif isinstance(source, Calibration):
-        cal = source
-    elif isinstance(source, dict):
-        cal = Calibration.from_dict(source)
-    else:
-        cal = Calibration.load(source)
     # Keep a separate v2 scope registry for callers that request typed confidence.
     # Legacy construction/JSON/active() remain unchanged; schema-1 aggregate entries
     # are explicitly marked as unscoped fallbacks by the registry adapter.
-    from .confidence import CalibrationRegistry
-
-    registry = CalibrationRegistry.from_legacy(cal.to_dict())
+    cal, registry = _resolve_calibration_source(source)
     with _STATE_LOCK:
         _ACTIVE = cal
         _ACTIVE_REGISTRY = registry
@@ -531,6 +560,21 @@ def _load_bundled_registry() -> "CalibrationRegistry":
         ) from e
 
 
+def _resolve_registry_source(
+    source: "str | Path | CalibrationRegistry | dict[str, Any] | None",
+) -> "CalibrationRegistry":
+    """Load a Schema-2 CalibrationRegistry without mutating globals."""
+    from .confidence import CalibrationRegistry
+
+    if source is None:
+        return _load_bundled_registry()
+    if isinstance(source, CalibrationRegistry):
+        return source
+    if isinstance(source, dict):
+        return CalibrationRegistry.from_dict(source)
+    return CalibrationRegistry.load(source)
+
+
 def use_calibration_registry(
     source: "str | Path | CalibrationRegistry | dict[str, Any] | None" = None,
 ) -> "CalibrationRegistry":
@@ -541,17 +585,7 @@ def use_calibration_registry(
     ``documentary_native`` domains across UPOS, XPOS, FEATS, lemma routes, head, and
     non-root dependency relations.
     """
-
-    from .confidence import CalibrationRegistry
-
-    if source is None:
-        registry = _load_bundled_registry()
-    elif isinstance(source, CalibrationRegistry):
-        registry = source
-    elif isinstance(source, dict):
-        registry = CalibrationRegistry.from_dict(source)
-    else:
-        registry = CalibrationRegistry.load(source)
+    registry = _resolve_registry_source(source)
     global _ACTIVE, _ACTIVE_REGISTRY
     with _STATE_LOCK:
         _ACTIVE = None
@@ -561,7 +595,9 @@ def use_calibration_registry(
 
 def active_registry() -> "CalibrationRegistry | None":
     """Return the active v2 registry, or ``None`` when no calibration is active."""
-
+    override = _CALIBRATION_OVERRIDE.get()
+    if override is not None:
+        return override[1]
     with _STATE_LOCK:
         return _ACTIVE_REGISTRY
 
@@ -576,6 +612,9 @@ def disable_calibration() -> None:
 
 def active() -> Calibration | None:
     """The active `Calibration`, or ``None`` (the default — no confidence is exposed)."""
+    override = _CALIBRATION_OVERRIDE.get()
+    if override is not None:
+        return override[0]
     with _STATE_LOCK:
         return _ACTIVE
 

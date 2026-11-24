@@ -995,6 +995,26 @@ def _sync() -> None:
             joint._replace_active_backend(_strip_rerank_wrapper(active))
 
 
+def _resolve_reranker_config(
+    config: LemmaRerankerConfig | str | None,
+) -> LemmaRerankerConfig | None:
+    """Resolve a reranker preset name or config object."""
+    if config is None or config == "unique":
+        return None
+    if config == "weighted":
+        return LemmaRerankerConfig.bundled()
+    if isinstance(config, LemmaRerankerConfig):
+        return config
+    if isinstance(config, str):
+        raise ValueError(
+            f"unknown OOV lemma reranker preset {config!r}; expected 'unique', 'weighted', "
+            "a LemmaRerankerConfig, or None"
+        )
+    raise TypeError(
+        "config must be a LemmaRerankerConfig, preset name ('unique'|'weighted'), or None"
+    )
+
+
 def use_oov_lemma_reranker(
     *,
     config: LemmaRerankerConfig | str | None = None,
@@ -1024,20 +1044,7 @@ def use_oov_lemma_reranker(
             "the OOV lemma reranker post-processes the neural pipeline; activate it first "
             "with aegean.greek.use_neural_pipeline()."
         )
-    resolved_config: LemmaRerankerConfig | None
-    if config is None or config == "unique":
-        resolved_config = None
-    elif config == "weighted":
-        resolved_config = LemmaRerankerConfig.bundled()
-    elif isinstance(config, LemmaRerankerConfig):
-        resolved_config = config
-    elif isinstance(config, str):
-        raise ValueError(
-            f"unknown OOV lemma reranker preset {config!r}; expected 'unique', 'weighted', "
-            "a LemmaRerankerConfig, or None"
-        )
-    else:
-        raise TypeError("config must be a LemmaRerankerConfig, preset name ('unique'|'weighted'), or None")
+    resolved_config = _resolve_reranker_config(config)
     with _STATE_LOCK:
         _ACTIVE_ENABLED = True
         _ACTIVE_CONFIG = resolved_config

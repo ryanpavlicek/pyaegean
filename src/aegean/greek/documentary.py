@@ -573,8 +573,13 @@ class _DocumentaryModel:
 
         from . import paradigms
 
+        inner_snap = (
+            self.inner._snapshot_for_stream()
+            if hasattr(self.inner, "_snapshot_for_stream")
+            else self.inner
+        )
         return _DocumentaryModel(
-            self.inner,
+            inner_snap,
             _frozen_state=self._state(),
             _frozen_paradigms=paradigms.active(),
         )

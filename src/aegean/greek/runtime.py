@@ -13,6 +13,7 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
+from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -25,8 +26,10 @@ from .model_variants import (
 
 if TYPE_CHECKING:
     from ..core.model import Token
-    from .confidence import AbstentionPolicy
+    from .calibrate import Calibration
+    from .confidence import AbstentionPolicy, CalibrationRegistry
     from .joint import LongInputMode, SentenceAnalysis, _JointModel
+    from .lemma_rerank import LemmaRerankerConfig
     from .neural_contract import AnalysisReceipt
     from .pipeline import TokenRecord
     from .sentence_segmentation import SegmenterLike
@@ -37,6 +40,7 @@ _CONFIG_SCHEMA = 2
 _VARIANT_LABELS = {"default", "fast", "compact", "balanced"}
 _V3_MODEL_ID = "grc-joint-v3"
 _V3_DATASET = "grc-joint"
+_OPT_UNSET: Any = object()
 
 
 def _config_sha256(value: str | None, field: str) -> str | None:
@@ -321,33 +325,170 @@ def _config_for_backend(backend: Any) -> GreekPipelineConfig:
     )
 
 
+def _resolve_oov_option(
+    value: "bool | str | LemmaRerankerConfig | None",
+) -> tuple[bool, Any]:
+    if value is None or value is False:
+        return False, None
+    if value is True:
+        return True, None
+    from .lemma_rerank import _resolve_reranker_config
+
+    return True, _resolve_reranker_config(value)
+
+
+def _resolve_calibration_options(
+    calibration: "bool | str | Path | Calibration | dict[str, Any] | None",
+    calibration_registry: "bool | str | Path | CalibrationRegistry | dict[str, Any] | None",
+) -> tuple[Any, Any] | None:
+    has_legacy = calibration is not None and calibration is not False
+    has_registry = calibration_registry is not None and calibration_registry is not False
+    if has_legacy and has_registry:
+        raise ValueError("pass either calibration or calibration_registry, not both")
+    if has_legacy:
+        from .calibrate import _resolve_calibration_source
+
+        cal_src = None if isinstance(calibration, bool) else calibration
+        return _resolve_calibration_source(cal_src)
+    if has_registry:
+        from .calibrate import _resolve_registry_source
+
+        reg_src = None if isinstance(calibration_registry, bool) else calibration_registry
+        return None, _resolve_registry_source(reg_src)
+    if calibration is False or calibration_registry is False:
+        return None, None
+    return None
+
+
+def _compose_backend(
+    base_backend: Any | None,
+    *,
+    oov_reranker: tuple[bool, Any],
+    documentary_reconciliation: bool,
+    documentary_reconciliation_aggressive: bool,
+    documentary_lemma_rescue: bool,
+) -> Any | None:
+    if documentary_reconciliation_aggressive and not documentary_reconciliation:
+        raise ValueError(
+            "documentary_reconciliation_aggressive=True requires "
+            "documentary_reconciliation=True"
+        )
+    wants_post = oov_reranker[0] or documentary_reconciliation or documentary_lemma_rescue
+    if base_backend is None:
+        if wants_post:
+            from .joint import NeuralPipelineNotLoadedError
+
+            raise NeuralPipelineNotLoadedError(
+                "instance post-processing options require a neural GreekPipeline "
+                "(create one with GreekPipeline.neural())."
+            )
+        return None
+    effective = base_backend
+    if oov_reranker[0]:
+        from .lemma_rerank import _OovRerankModel
+
+        effective = _OovRerankModel(effective, _frozen_state=(True, oov_reranker[1]))
+    if documentary_reconciliation or documentary_lemma_rescue:
+        from .documentary import _DocumentaryModel
+
+        effective = _DocumentaryModel(
+            effective,
+            _frozen_state=(
+                documentary_reconciliation,
+                documentary_lemma_rescue,
+                documentary_reconciliation_aggressive,
+            ),
+        )
+    return effective
+
+
 class GreekPipeline:
     """An isolated Greek analysis pipeline with explicit backend ownership.
 
     Constructing without arguments creates the zero-dependency baseline. Use
     `GreekPipeline.neural()` to load an isolated neural instance without changing
-    the module-level default selected by `use_neural_pipeline()`.
+    the module-level default selected by `use_neural_pipeline()`, and pass
+    instance-scoped post-processing or calibration options directly (or derive
+    configured views via `with_options()`) without mutating process-wide globals.
     """
 
-    __slots__ = ("_backend", "_config")
+    __slots__ = (
+        "_base_backend",
+        "_backend",
+        "_config",
+        "_oov_reranker",
+        "_documentary_reconciliation",
+        "_documentary_reconciliation_aggressive",
+        "_documentary_lemma_rescue",
+        "_calibration_override",
+    )
 
     def __init__(self) -> None:
+        self._base_backend: Any | None = None
         self._backend: Any | None = None
         self._config = _BASELINE_CONFIG
+        self._oov_reranker: tuple[bool, Any] = (False, None)
+        self._documentary_reconciliation = False
+        self._documentary_reconciliation_aggressive = False
+        self._documentary_lemma_rescue = False
+        self._calibration_override: tuple[Any, Any] | None = None
 
     @classmethod
     def _from_backend(
-        cls, backend: Any, *, config: GreekPipelineConfig | None = None
+        cls,
+        backend: Any,
+        *,
+        config: GreekPipelineConfig | None = None,
+        oov_reranker: "bool | str | LemmaRerankerConfig | None" = None,
+        documentary_reconciliation: bool = False,
+        documentary_reconciliation_aggressive: bool = False,
+        documentary_lemma_rescue: bool = False,
+        calibration: "bool | str | Path | Calibration | dict[str, Any] | None" = None,
+        calibration_registry: "bool | str | Path | CalibrationRegistry | dict[str, Any] | None" = None,
     ) -> GreekPipeline:
         if backend is None:
             if config is not None and config.backend != "baseline":
                 raise ValueError("a neural configuration requires an owned backend")
-            return cls()
+            base = cls()
+            if (
+                oov_reranker is not None
+                or documentary_reconciliation
+                or documentary_reconciliation_aggressive
+                or documentary_lemma_rescue
+                or calibration is not None
+                or calibration_registry is not None
+            ):
+                return base.with_options(
+                    oov_reranker=oov_reranker,
+                    documentary_reconciliation=documentary_reconciliation,
+                    documentary_reconciliation_aggressive=documentary_reconciliation_aggressive,
+                    documentary_lemma_rescue=documentary_lemma_rescue,
+                    calibration=calibration,
+                    calibration_registry=calibration_registry,
+                )
+            return base
         if config is not None and config.backend != "neural":
             raise ValueError("an owned backend requires a neural configuration")
+        oov_state = _resolve_oov_option(oov_reranker)
+        cal_override = _resolve_calibration_options(calibration, calibration_registry)
+        effective = _compose_backend(
+            backend,
+            oov_reranker=oov_state,
+            documentary_reconciliation=bool(documentary_reconciliation),
+            documentary_reconciliation_aggressive=bool(documentary_reconciliation_aggressive),
+            documentary_lemma_rescue=bool(documentary_lemma_rescue),
+        )
         instance = cls.__new__(cls)
-        instance._backend = backend
+        instance._base_backend = backend
+        instance._backend = effective
         instance._config = config if config is not None else _config_for_backend(backend)
+        instance._oov_reranker = oov_state
+        instance._documentary_reconciliation = bool(documentary_reconciliation)
+        instance._documentary_reconciliation_aggressive = bool(
+            documentary_reconciliation_aggressive
+        )
+        instance._documentary_lemma_rescue = bool(documentary_lemma_rescue)
+        instance._calibration_override = cal_override
         return instance
 
     @classmethod
@@ -357,17 +498,114 @@ class GreekPipeline:
         variant: str = "default",
         force: bool = False,
         expected_receipt: AnalysisReceipt | None = None,
+        oov_reranker: "bool | str | LemmaRerankerConfig | None" = None,
+        documentary_reconciliation: bool = False,
+        documentary_reconciliation_aggressive: bool = False,
+        documentary_lemma_rescue: bool = False,
+        calibration: "bool | str | Path | Calibration | dict[str, Any] | None" = None,
+        calibration_registry: "bool | str | Path | CalibrationRegistry | dict[str, Any] | None" = None,
     ) -> GreekPipeline:
-        """Load one explicit neural variant without changing the default facade."""
+        """Load one explicit neural variant without changing the default facade.
+
+        Optional instance-scoped post-processing and calibration arguments configure
+        this pipeline without mutating module-level globals:
+
+        - ``oov_reranker``: ``"unique"`` / ``True``, ``"weighted"``, a
+          `LemmaRerankerConfig`, or ``False`` / ``None`` (off).
+        - ``documentary_reconciliation`` / ``documentary_reconciliation_aggressive``:
+          Lever A closed-class coordinator reconciliation.
+        - ``documentary_lemma_rescue``: Lever B offline lemma OOV rescue.
+        - ``calibration`` / ``calibration_registry``: ``True`` for the bundled default
+          (Schema-1 or Schema-2), a loaded object / JSON path / dict, ``False`` to
+          disable calibration on this instance regardless of module globals, or
+          ``None`` to inherit module-level calibration state.
+        """
         from .joint import _load_neural_backend
 
+        # Validate option combinations before loading or fetching model weights.
+        _resolve_oov_option(oov_reranker)
+        _resolve_calibration_options(calibration, calibration_registry)
+        if documentary_reconciliation_aggressive and not documentary_reconciliation:
+            raise ValueError(
+                "documentary_reconciliation_aggressive=True requires "
+                "documentary_reconciliation=True"
+            )
         return cls._from_backend(
             _load_neural_backend(
                 variant=variant,
                 force=force,
                 expected_receipt=expected_receipt,
-            )
+            ),
+            oov_reranker=oov_reranker,
+            documentary_reconciliation=documentary_reconciliation,
+            documentary_reconciliation_aggressive=documentary_reconciliation_aggressive,
+            documentary_lemma_rescue=documentary_lemma_rescue,
+            calibration=calibration,
+            calibration_registry=calibration_registry,
         )
+
+    def with_options(
+        self,
+        *,
+        oov_reranker: Any = _OPT_UNSET,
+        documentary_reconciliation: Any = _OPT_UNSET,
+        documentary_reconciliation_aggressive: Any = _OPT_UNSET,
+        documentary_lemma_rescue: Any = _OPT_UNSET,
+        calibration: Any = _OPT_UNSET,
+        calibration_registry: Any = _OPT_UNSET,
+    ) -> GreekPipeline:
+        """Return a new isolated `GreekPipeline` sharing the same underlying backend.
+
+        Unspecified options inherit their values from ``self``. Changing post-processing
+        or calibration options never reloads ONNX weights and never mutates ``self`` or
+        module-level globals.
+        """
+        new_oov = (
+            self._oov_reranker
+            if oov_reranker is _OPT_UNSET
+            else _resolve_oov_option(oov_reranker)
+        )
+        new_rec = (
+            self._documentary_reconciliation
+            if documentary_reconciliation is _OPT_UNSET
+            else bool(documentary_reconciliation)
+        )
+        new_agg = (
+            self._documentary_reconciliation_aggressive
+            if documentary_reconciliation_aggressive is _OPT_UNSET
+            else bool(documentary_reconciliation_aggressive)
+        )
+        if documentary_reconciliation is False and documentary_reconciliation_aggressive is _OPT_UNSET:
+            new_agg = False
+        new_rescue = (
+            self._documentary_lemma_rescue
+            if documentary_lemma_rescue is _OPT_UNSET
+            else bool(documentary_lemma_rescue)
+        )
+        if calibration is _OPT_UNSET and calibration_registry is _OPT_UNSET:
+            new_cal = self._calibration_override
+        else:
+            new_cal = _resolve_calibration_options(
+                None if calibration is _OPT_UNSET else calibration,
+                None if calibration_registry is _OPT_UNSET else calibration_registry,
+            )
+        effective = _compose_backend(
+            self._base_backend,
+            oov_reranker=new_oov,
+            documentary_reconciliation=new_rec,
+            documentary_reconciliation_aggressive=new_agg,
+            documentary_lemma_rescue=new_rescue,
+        )
+        clone = type(self).__new__(type(self))
+        clone._base_backend = self._base_backend
+        clone._backend = effective
+        clone._config = self._config
+        clone._oov_reranker = new_oov
+        clone._documentary_reconciliation = new_rec
+        clone._documentary_reconciliation_aggressive = new_agg
+        clone._documentary_lemma_rescue = new_rescue
+        clone._calibration_override = new_cal
+        return clone
 
     @classmethod
     def from_config(
@@ -430,6 +668,34 @@ class GreekPipeline:
     def neural_active(self) -> bool:
         """Whether this instance owns a neural backend."""
         return self._backend is not None
+
+    @property
+    def oov_reranker_active(self) -> bool:
+        """Whether instance-scoped OOV lemma reranking is enabled on this pipeline."""
+        return self._oov_reranker[0]
+
+    @property
+    def documentary_reconciliation_active(self) -> bool:
+        """Whether instance-scoped Lever A coordinator reconciliation is enabled."""
+        return self._documentary_reconciliation
+
+    @property
+    def documentary_lemma_rescue_active(self) -> bool:
+        """Whether instance-scoped Lever B offline lemma rescue is enabled."""
+        return self._documentary_lemma_rescue
+
+    @property
+    def calibration_active(self) -> bool:
+        """Whether calibrated confidence is active for this pipeline instance."""
+        if self._calibration_override is not None:
+            return (
+                self._calibration_override[0] is not None
+                or self._calibration_override[1] is not None
+            )
+        from . import calibrate
+
+        legacy, registry = calibrate._active_state()
+        return legacy is not None or registry is not None
 
     def analyze(
         self,
@@ -638,7 +904,14 @@ _DEFAULT = GreekPipeline()
 def _bind(pipeline: GreekPipeline) -> Iterator[None]:
     token = _BOUND.set(pipeline)
     try:
-        yield
+        override = pipeline._calibration_override
+        if override is not None:
+            from .calibrate import _bind_calibration
+
+            with _bind_calibration(override[0], override[1]):
+                yield
+        else:
+            yield
     finally:
         _BOUND.reset(token)
 
