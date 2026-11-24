@@ -73,7 +73,7 @@ pip install "pyaegean[neural]"    # the measured neural Greek pipeline
 pip install "pyaegean[interop]"   # spaCy/Stanza, plus CLTK when Python is 3.13+
 pip install "pyaegean[cli,interop]" # adapters plus the interop CLI commands
 pip install "pyaegean[cli,viz]"   # combine extras with a comma
-pip install "pyaegean[all]"       # bundled runtime extras; excludes [parquet] and framework adapters
+pip install "pyaegean[all]"       # bundled runtime extras; excludes [parquet], [viz-interactive], and framework adapters
 ```
 
 The complete matrix:
@@ -90,6 +90,7 @@ The complete matrix:
 | `pyaegean[openai]` | `openai>=1.55.3` | OpenAI provider |
 | `pyaegean[grok]` | `openai>=1.55.3` | xAI Grok (OpenAI-API-compatible) |
 | `pyaegean[openrouter]` | `openai>=1.55.3` | OpenRouter (OpenAI-API-compatible gateway to many models) |
+| `pyaegean[local]` | `openai>=1.55.3` | local OpenAI-compatible server (Ollama, LM Studio, llama.cpp, vLLM); no API key |
 | `pyaegean[gemini]` | `google-genai>=0.3` | Google Gemini provider |
 | `pyaegean[ai]` | `anthropic`, `openai`, `google-genai` | the full AI layer (all providers) |
 | `pyaegean[epidoc]` | `lxml>=5.0` | the Linear B DAMOS EpiDoc reader + schema validation (writing, and the generic `io.from_epidoc` reader, use the stdlib) |
@@ -100,12 +101,13 @@ The complete matrix:
 | `pyaegean[cli]` | `typer>=0.16`, `rich>=13`, `prompt_toolkit>=3.0` | the [`aegean` command line](CLI), including `aegean repl` |
 | `pyaegean[tui]` | `textual>=8.0` + the `cli` deps (`aegean tui` is a CLI subcommand) | the [`aegean tui`](TUI) full-screen terminal UI (browse a corpus, the live Greek workbench, the data store) |
 | `pyaegean[mcp]` | `mcp>=2` | the `aegean-mcp` Model Context Protocol server (for AI agents) |
-| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet` and the separate framework adapters |
+| `pyaegean[all]` | `ai`, `epidoc`, `geo`, `data`, `cli`, `viz`, `mcp`, `tui`, `neural` | the bundled runtime stack; excludes `parquet`, `viz-interactive`, and the separate framework adapters |
 
-- **`[all]` includes `[neural]` but omits `[parquet]` and `[interop]`.** It installs ONNX Runtime,
+- **`[all]` includes `[neural]` but omits `[parquet]`, `[viz-interactive]`, and `[interop]`.** It installs ONNX Runtime,
   Tokenizers, and NumPy, but neural model bundles still download lazily on first use and
-  remain SHA-256 verified. Parquet remains separate because it adds `pyarrow`; the
-  interoperability frameworks remain separate because Stanza adds a second PyTorch runtime.
+  remain SHA-256 verified. Parquet remains separate because it adds `pyarrow`, interactive
+  plots remain separate because they add `plotly`, and the interoperability frameworks
+  remain separate because Stanza adds a second PyTorch runtime.
   See [Interoperability](Interoperability) for target-specific installs and field support.
 - **The neural pipeline uses a GPU automatically when one is available.** Replace
   the CPU wheel with a GPU build (`pip uninstall onnxruntime`, then
@@ -114,8 +116,9 @@ The complete matrix:
   wheel to your CUDA version: PyPI's current `onnxruntime-gpu` targets CUDA 13; on
   a CUDA 12 system install `onnxruntime-gpu==1.25.*`. `PYAEGEAN_ORT_PROVIDERS`
   overrides the selection; see [Greek NLP](Greek-NLP#gpu-execution-and-batching).
-- **`[grok]` and `[openai]` install the same SDK**: Grok speaks the OpenAI API,
-  so it reuses the `openai` package with a different endpoint and key.
+- **`[grok]`, `[openrouter]`, `[local]`, and `[openai]` install the same SDK**:
+  all four speak the OpenAI chat-completions API, so they reuse the `openai` package
+  with different endpoints and keys (none needed for `local`).
 - **The AI layer is exploratory and key-gated.** Installing `[ai]` only adds the
   SDKs; you still supply your own API key at runtime, unless you run a model locally
   with the `local` provider (Ollama, LM Studio, llama.cpp), which needs no key.

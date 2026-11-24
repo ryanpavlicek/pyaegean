@@ -1508,9 +1508,12 @@
           "note": "the read/analysis server does not load the neural model or assume a caller's review policy."
         },
         "notebooks": {
-          "status": "excluded",
-          "reason": "needs-neural-model",
-          "note": "empirical source/task calibration remains behind the fresh development-inference gate."
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "use_calibration_registry("
+          },
+          "note": "behind RUN_HEAVY; uses the bundled Schema-2 calibration registry across literary and documentary_native domains (also shown in getting-started.ipynb and walkthrough-epigraphist.ipynb)."
         },
         "tui": {
           "status": "excluded",
@@ -1567,9 +1570,12 @@
           "note": "the server loads no model; there is nothing to post-process."
         },
         "notebooks": {
-          "status": "excluded",
-          "reason": "needs-neural-model",
-          "note": "not shown in a walkthrough cell; needs the model and a documentary fold."
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-epigraphist.ipynb",
+            "marker": "use_documentary_reconciliation("
+          },
+          "note": "behind RUN_HEAVY; demonstrates documentary coordinator reconciliation alongside the OOV reranker."
         },
         "tui": {
           "status": "excluded",
@@ -1902,7 +1908,7 @@
       "id": "sqlite-persistence",
       "since": "0.8.1",
       "python_api": "aegean.db",
-      "summary": "SQLite persistence with full-text search, explicit lexical indexes for exact surface/normalized/lemma searches, and flat-memory streaming.",
+      "summary": "SQLite persistence with full-text search, explicit lexical indexes for exact surface/normalized/lemma searches, flat-memory streaming, and durable resumable document-by-document annotation jobs (db.annotate_sqlite_job).",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -1954,7 +1960,8 @@
           "reason": "not-applicable",
           "note": "reachable via the command console; no dedicated screen"
         }
-      }
+      },
+      "summary": "Inspect the declared CTS citation scheme (book/line/section) of a fetched Perseus or First1KGreek work."
     },
     {
       "id": "sentence-segmentation",
@@ -2090,9 +2097,12 @@
           "note": "spelling normalization helpers are Python/browser utilities; no dedicated MCP tool."
         },
         "notebooks": {
-          "status": "excluded",
-          "reason": "not-applicable",
-          "note": "folding utilities support the OOV reranker and documentary papyrus workflows."
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "documentary_phonetic_fold("
+          },
+          "note": "runs offline in the Koine/documentary orthography comparison cell."
         },
         "tui": {
           "status": "excluded",
@@ -2185,6 +2195,37 @@
           "status": "excluded",
           "reason": "not-applicable",
           "note": "reachable via the command console (aegean analyze clusters lineara); no dedicated screen."
+        }
+      }
+    },
+    {
+      "id": "oov-lemma-reranker",
+      "since": "0.62.0",
+      "python_api": "aegean.greek.use_oov_lemma_reranker",
+      "summary": "Opt-in out-of-vocabulary lemma reranker over the joint neural pipeline (including the bundled weighted top-10 preset using strict/phonetic Koine folding and preverb decomposition).",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "reranks neural pipeline edit-script candidates; the offline phonetic-folding utility is covered by the koine_fold card."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "needs-neural-model",
+          "note": "the read/analysis server intentionally loads no neural model."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "use_oov_lemma_reranker("
+          },
+          "note": "behind RUN_HEAVY; also shown in walkthrough-epigraphist.ipynb and walkthrough-nt-koine.ipynb."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the Python API and CLI command console; no dedicated TUI toggle."
         }
       }
     }

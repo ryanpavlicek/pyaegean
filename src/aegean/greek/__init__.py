@@ -1,10 +1,12 @@
 """Greek NLP pipeline — composable, individually-callable stages.
 
 The dependency-free core covers ``normalize`` (NFC/NFD + Beta Code ↔ Unicode, with
-a lenient OCR-repair mode), ``tokenize`` (word/sentence), ``syllabify``, accent
-analysis (``accentuation``), ``prosody``/``meter`` scansion, ``phonology`` (IPA),
-a seed+rule ``lemmatize``, baseline ``pos``, and a rule-based ``morphology`` analyzer
-(``analyze``). ``pipeline`` runs the whole stack over a text in one call.
+a lenient OCR-repair mode), ``tokenize`` (word/sentence) and ``segment_text``
+(source-preserving named domain policies), ``syllabify``, accent analysis
+(``accentuation``), ``prosody``/``meter`` scansion, ``phonology`` (IPA), a seed+rule
+``lemmatize``, baseline ``pos``, bundled Dodson Koine glosses (``use_dodson``), and a
+rule-based ``morphology`` analyzer (``analyze``). ``pipeline`` runs the whole stack
+over a text in one call.
 
 ``GreekPipeline`` instances isolate backend and profile configuration;
 ``pipeline_tokens`` analyzes typed corpus tokens without discarding editorial forms.
@@ -20,9 +22,18 @@ Opt-in backends layer on richer data and models:
   lemmas, with measured UD Ancient Greek (Perseus) results and comparisons in
   ``docs/benchmarks.md``. Once active, ``pos_tag``/``pos_tags``,
   ``lemmatize``, ``parse``, and ``pipeline`` all use it.
+- ``use_oov_lemma_reranker`` layers opt-in out-of-vocabulary lemma reranking
+  (including the bundled ``config="weighted"`` preset) over the joint neural pipeline
+  without changing the underlying model weights.
+- ``use_calibration_registry`` loads the bundled Schema-2 per-task/domain calibration
+  registry for calibrated confidence and calibrated-risk review triage.
+- ``use_paradigms`` loads a compact UniMorph-derived nominal paradigm table for
+  offline irregular and third-declension coverage.
+- ``use_lexicon`` / ``use_lsj`` activate fetched dictionaries from the multi-lexicon
+  registry (LSJ, Middle Liddell, Cunliffe, Autenrieth, Abbott-Smith) for
+  ``gloss``/``lookup``.
 - ``use_treebank`` (Perseus AGDT) supplies attested, correctly-accented lemmas and
   full features for known forms.
-- ``use_lsj`` (Perseus Liddell-Scott-Jones) provides glossing (``gloss``/``lookup``).
 - ``use_parser`` (``parse``; arc-eager + averaged perceptron, trained on the AGDT) is
   a projective dependency parser (~0.63 UAS / 0.53 LAS on projective text).
 - ``use_tagger`` is an averaged-perceptron POS tagger (~84% on unseen forms).
@@ -30,7 +41,7 @@ Opt-in backends layer on richer data and models:
 - ``use_neural_lemmatizer`` (the ``[neural]`` extra) is a GreTa T5 seq2seq model
   served as int8 ONNX without torch; it pairs a gold lookup with seq2seq decoding and
   reaches 76.3% on unseen forms. ``lemmatize`` cascades neural pipeline ->
-  treebank -> neural -> edit-tree -> seed table -> generalizing ending rules.
+  treebank -> neural -> edit-tree -> paradigm -> seed table -> generalizing ending rules.
 
 Every stage is a plain function so it can be used standalone::
 

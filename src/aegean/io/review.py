@@ -4,12 +4,15 @@ Automated analysis does not end the workflow. This module exports a corpus's per
 annotations to a plain CSV a scholar can open in a spreadsheet, correct, and hand back:
 `to_review_table` writes one reviewable row per word (the machine's lemma / POS / morphology,
 its evidence class and a "needs review" flag, and blank columns for field decisions,
-corrections, notes, and evidence); `from_review_table` reads them back onto the corpus,
-keeping the machine's value under a ``<field>__pred`` key and stamping who reviewed it and a
-provenance note. A lemma correction also becomes ``lemma_source=user`` and
-``lemma_verified=true`` while preserving the predicted source. The join key is
-the stable ``alignment_source_token_id`` when present, with ``doc_id`` +
-``position`` retained for pre-A4 tables.
+corrections, notes, and evidence). It supports both the full self-contained table and a
+compact spreadsheet-first ``layout="editable"`` paired with a SHA-256-bound
+``.companion.json`` snapshot, as well as risk-prioritized triage
+(``priority="calibrated_risk", budget=N``) when calibrated confidence is present.
+`from_review_table` reads decisions back onto the corpus, keeping the machine's value under a
+``<field>__pred`` key and stamping who reviewed it and a provenance note. A lemma correction
+also becomes ``lemma_source=user`` and ``lemma_verified=true`` while preserving the predicted
+source. The join key is the stable ``alignment_source_token_id`` when present, with
+``doc_id`` + ``position`` retained for pre-A4 tables.
 
 Several reviewers can correct their own copy of the SAME export and have the corrections
 combined: `merge_review_tables` merges the copies, applying every correction the reviewers

@@ -157,7 +157,7 @@ seen. Every form there is a genuine generalization test.
 
 ```python
 from aegean import greek
-greek.use_treebank(); greek.use_neural_lemmatizer()   # measure the full pipeline
+greek.use_neural_pipeline()       # score the shipped joint model (or activate legacy backends instead)
 greek.evaluate_on_proiel()        # {'lemma': …, 'pos': …, 'n': …} over the PROIEL gold
 ```
 

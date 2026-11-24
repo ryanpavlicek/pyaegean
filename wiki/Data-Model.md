@@ -352,14 +352,16 @@ estimate, so it must not be read as a zero score. The compatibility
 `upos_confidence`/`lemma_confidence` fields do not acquire this scope retroactively.
 
 `confidence_domain=` is an explicit query label, not an automatic genre or OOD detector.
-Schema-2 `CalibrationRegistry` resolution first tries an exact source/domain entry and only
-uses a broader entry when that entry is explicitly marked as a fallback. An
-`AbstentionPolicy` supplied through `confidence_policy=` applies caller-selected task
-thresholds, none of them bundled, and returns `accept`, `review`, or `unavailable`; its
-canonical `policy_sha256` travels with each decision. For the shipped canonical runtime,
-schema-4 `AnalysisReceipt` output records calibration/policy hashes, runtime-variant evidence,
-and the composed output/post-processing identity. Schemas 1 through 3 remain readable for
-current hosted evidence without fabricating fields they did not record.
+`greek.use_calibration_registry()` loads the bundled Schema-2 `CalibrationRegistry`
+covering all six tasks across both `literary` and `documentary_native` domains; resolution
+first tries an exact source/domain entry and only uses a broader entry when that entry is
+explicitly marked as a fallback. An `AbstentionPolicy` supplied through
+`confidence_policy=` applies caller-selected task thresholds, none of them bundled, and
+returns `accept`, `review`, or `unavailable`; its canonical `policy_sha256` travels with
+each decision. For the shipped canonical runtime, schema-4 `AnalysisReceipt` output records
+calibration/policy hashes, runtime-variant evidence, and the composed output/post-processing
+identity. Schemas 1 through 3 remain readable for current hosted evidence without fabricating
+fields they did not record.
 
 ### Sentence boundaries and precedence
 
@@ -479,7 +481,10 @@ Three formats, three different promises:
   `append=True` write. Schema-1 databases also lack the source and alignment
   columns; they load with absent values and migrate to schema 2 on append.
   Schema-1 and schema-2 databases have no form-state column; an append migrates
-  them to schema 3 atomically, and old rows keep `form_state=None`.
+  them to schema 3 atomically, and old rows keep `form_state=None`. For large
+  SQLite-backed corpora, `aegean.db.annotate_sqlite_job` (`aegean db annotate`)
+  runs durable, resumable document-by-document annotation with lease protection
+  and progress inspection via `aegean.db.job_status`.
 - **Schema versions gate forward-compatibility only.** `SCHEMA_VERSION`
   (stored as `_meta.schemaVersion` in JSON, `schema_version` in the SQLite
   `meta` table and on `Provenance`) is bumped only for changes an older reader

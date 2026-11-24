@@ -1,34 +1,32 @@
-"""Temperature-scaled confidence for the joint neural pipeline — the ONLY calibrated
+"""Calibrated confidence for the joint neural pipeline — the ONLY calibrated
 confidence surface, and the one place a probability may be attached to a prediction.
 
 pyaegean deliberately refuses to expose a raw softmax number: an *un*calibrated
 probability reads as a precise claim it has not earned, so it violates the
-measured-claims-only rule. This module supplies the rule-compliant alternative —
-**temperature scaling** (Guo et al., 2017) with a **measured** Expected Calibration
-Error (ECE). A single scalar temperature ``T`` per model head rescales that head's
-logits (``softmax(z / T)``); ``T`` is fitted on a held-out development fold and its
-effect is reported as ECE-before/after, so the confidence surfaced downstream is an
-honest estimate of the probability the prediction is correct — with a stated genre
-caveat (it is fitted on literary prose).
+measured-claims-only rule. This module supplies two rule-compliant, ECE-measured
+calibration layers:
 
-What is calibrated, per head:
+- **Schema-2 `CalibrationRegistry` (recommended, `use_calibration_registry()`)** —
+  a bundled per-task, per-source, per-domain logit-affine calibrator
+  (``calibration_registry_v2.json``) covering all six neural tasks (**UPOS**, **XPOS**,
+  **FEATS**, **lemma** by decision route, **head**, and **relation**) across both
+  ``literary`` and ``documentary_native`` domains. Each resolved `ConfidenceResult`
+  carries its scope, calibration hash, sample count, and measured ECE / Brier score,
+  or an explicit unavailable reason when a domain/task is uncalibrated. Pairs with
+  caller-owned `AbstentionPolicy` thresholds and calibrated-risk review queues.
+- **Legacy Schema-1 scalar temperature scaling (`use_calibration()`)** —
+  single-temperature rescaling (Guo et al., 2017; ``softmax(z / T)``) for the **UPOS**
+  and **lemma** (composed-lemma proxy) heads fitted on literary prose, retained for
+  compatibility with published Schema-1 receipts and flat confidence fields.
 
-- **UPOS** — the top-1 (max) softmax probability of the predicted part-of-speech tag,
-  against whether that tag matched gold.
-- **lemma** — the top-1 softmax probability of the joint model's *lemma edit-script*
-  head, against whether the **composed lemma** (script + train-only lookup, i.e. what
-  the user actually sees) matched gold. The script-head confidence is a calibrated
-  *proxy* for composed-lemma correctness; see ``training/calibrate_temperature.py`` for
-  the precise target and its caveats.
+Calibration only rescales confidence: monotone logit transforms never change which
+label is the argmax, so a loaded calibration cannot alter a single prediction — only
+the probability attached to it.
 
-Temperature only rescales confidence: because ``T > 0`` is a monotone transform of the
-logits, it never changes which label is the argmax, so a loaded calibration cannot
-alter a single prediction — only the number attached to it.
-
-The math (``temperature_softmax`` / ``top1_confidence`` / ``ece`` / ``fit_temperature``)
-is stdlib + numpy only (numpy imported lazily, so ``import aegean`` stays instant and
-this module is free to import). The joint model consults ``active()`` when a caller asks
-for probabilities; with no calibration loaded, that request **raises**
+The math (``temperature_softmax`` / ``top1_confidence`` / ``ece`` / ``brier_score`` /
+``fit_temperature`` / ``fit_logit_affine``) is stdlib + numpy only (numpy imported
+lazily, so ``import aegean`` stays instant and this module is free to import). When a
+caller requests probabilities with no calibration loaded, the joint model **raises**
 `UncalibratedConfidenceError` rather than returning a raw softmax.
 """
 
@@ -87,9 +85,10 @@ class UncalibratedConfidenceError(RuntimeError):
     """Raised when calibrated confidence is requested but none is loaded.
 
     pyaegean never exposes a raw (uncalibrated) softmax probability: an uncalibrated
-    number invites false confidence, which breaks the measured-claims-only rule. A
-    temperature-scaled, ECE-measured calibration must be loaded (`use_calibration`) or
-    fitted (`fit_temperature`) before any confidence is surfaced."""
+    number invites false confidence, which breaks the measured-claims-only rule. Load a
+    measured calibration registry (`use_calibration_registry`), load a legacy scalar
+    calibration (`use_calibration`), or fit one (`fit_logit_affine` / `fit_temperature`)
+    before surfacing any confidence."""
 
 
 def _numpy() -> Any:

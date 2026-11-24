@@ -75,7 +75,7 @@ machine with no API key or network. Each is registered automatically when you
 | xAI Grok | `grok` | `pyaegean[grok]` | `XAI_API_KEY` | `XAI_MODEL` | `grok-2-latest` |
 | Google Gemini | `gemini` | `pyaegean[gemini]` | `GEMINI_API_KEY` | `GEMINI_MODEL` | `gemini-2.5-pro` |
 | OpenRouter | `openrouter` | `pyaegean[openrouter]` | `OPENROUTER_API_KEY` | `OPENROUTER_MODEL` | `openai/gpt-4o-mini` |
-| Local (Ollama, …) | `local` | `pyaegean[openai]` | `PYAEGEAN_LOCAL_API_KEY` (optional) | `PYAEGEAN_LOCAL_MODEL` | none (set the model) |
+| Local (Ollama, …) | `local` | `pyaegean[local]` | `PYAEGEAN_LOCAL_API_KEY` (optional) | `PYAEGEAN_LOCAL_MODEL` | none (set the model) |
 
 > The default models are starting points. Model ids drift; the layer is built so
 > you can point each provider at the current model without touching code (see
@@ -113,8 +113,8 @@ aegean ai providers
 
 The `local` provider talks to any server that speaks the OpenAI `/v1/chat/completions`
 API, so the model runs on your own machine: no key, no network, no per-token cost. It
-uses the `openai` SDK (`pip install "pyaegean[openai]"`), and you point it at your server
-and name a model:
+uses the `openai` SDK (`pip install "pyaegean[local]"` or `pyaegean[openai]`), and you
+point it at your server and name a model:
 
 | Server | Start it | `PYAEGEAN_LOCAL_URL` |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ and name a model:
 | **vLLM / LocalAI** | per their docs | that server's base URL |
 
 ```bash
-pip install "pyaegean[openai]"          # the local provider uses the OpenAI SDK
+pip install "pyaegean[local]"           # installs the OpenAI SDK for local OpenAI-compatible servers
 export PYAEGEAN_LOCAL_MODEL=llama3.1     # a model your server has (here: pulled in Ollama)
 # PYAEGEAN_LOCAL_URL defaults to Ollama's http://localhost:11434/v1
 aegean ai translate --provider local "μῆνιν ἄειδε θεά"

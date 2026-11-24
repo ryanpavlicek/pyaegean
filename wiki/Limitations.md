@@ -41,47 +41,6 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
 | Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
 | AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
-| Persistence and review workflows | Earlier defects fixed in 0.61.0; old-version workarounds below | [Earlier workflow defects](#earlier-workflow-defects) |
-
-## Earlier workflow defects
-
-The following defects affect **0.60.0** and are **fixed in 0.61.0**; the
-workarounds below apply to 0.60.0. Release 0.61.0 also adds optional per-field
-review decisions, explicit counting populations, and source-preserving imports.
-Operational fixes do not establish scholarly accuracy.
-
-Release 0.60.0 limitations:
-
-- **Replacing a SQLite database with a live WAL connection.** If another client
-  enables WAL mode and leaves a connection open with committed, uncheckpointed
-  pages, replacing the database through `to_sqlite` can mix the old rows with the
-  new database. Close every connection before replacing an existing WAL database.
-  The default rollback-journal path does not have this reproduced failure.
-- **CoNLL-U extension comments.** Comments named `text_en` or `sent_id_orig` can
-  overwrite the parsed `text` or `sent_id` metadata. Unchanged raw passthrough
-  preserves the input bytes, but edited or canonical serialization can lose these
-  extension comments. Preserve the original file when editing such documents.
-- **Merging aligned review tables.** `merge_reviews` strips immutable leading or
-  trailing whitespace, including an alignment's ordinary space before a word.
-  Applying the merged table can then reject the unchanged source as a mismatch.
-  Direct application of the original reviewed CSV preserves this whitespace;
-  keep that original table and source available.
-- **Printed review commands.** Export/apply hints can omit backend options;
-  merge/apply hints can omit `--annotate`, and paths containing spaces are not
-  quoted. Repeat the original annotation and backend options explicitly, quote
-  paths, and check the saved annotations. A copied hint alone may regenerate
-  different predictions or omit annotation context.
-- **Provider endpoint changes with a shared AI cache.** OpenAI's
-  `OPENAI_BASE_URL` can select another endpoint without changing the cache
-  identity. With the same model and prompt, a cached response from the previous
-  endpoint can be returned. Use separate caches for different endpoints or clear
-  the cache when changing the endpoint.
-- **Unusual Greek text forms.** Aligned segmentation can reject a leading keraia
-  immediately after a sentence boundary once U+0374 has normalized to U+02B9;
-  ordinary trailing numeral marks are unaffected by the reproduced case.
-  Beta Code conversion also does not preserve an explicit medial sigma at word
-  end (`s1`): converting to Greek and back can yield the ordinary final-sigma
-  spelling. Keep the source spelling when these distinctions matter.
 
 ---
 
@@ -359,10 +318,10 @@ These are deliberate. They're listed here so you can judge them, not so they get
   | `viz-interactive` | plotly | interactive findspot/timeline/sign-network plots |
   | `mcp` | mcp | the Model Context Protocol server (e.g. for Claude Code) |
   | `tui` | textual | the `aegean tui` terminal UI |
-  | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` | one provider SDK | the AI layer |
+  | `anthropic` / `openai` / `gemini` / `grok` / `openrouter` / `local` | one provider SDK | the AI layer |
   | `ai` | all providers | the AI layer, any provider |
   | `spacy` / `stanza` / `cltk` / `interop` | target framework(s) | optional loss-aware annotation adapters; Stanza adds PyTorch and CLTK requires Python 3.13+ |
-  | `all` | `ai,epidoc,geo,data,cli,viz,mcp,tui,neural` | bundled runtime stack; excludes `parquet` and framework adapters |
+  | `all` | `ai,epidoc,geo,data,cli,viz,mcp,tui,neural` | bundled runtime stack; excludes `parquet`, `viz-interactive`, and framework adapters |
 
 - **`to_dict()` is a lossy summary** on purpose (words + metadata, for quick
   interop); the lossless, reversible path is `Corpus.to_json()` /
@@ -408,6 +367,18 @@ These are deliberate. They're listed here so you can judge them, not so they get
   [CLI](CLI) is the full no-Python path; and the
   [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) web app
   covers the visual Linear A use case.
+
+---
+
+## Earlier workflow defects
+
+Historical note for older installs: release 0.60.0 had six workflow defects
+(replacing a WAL-mode SQLite database with live connections open, CoNLL-U
+extension comments such as `text_en`/`sent_id_orig`, whitespace stripping in
+`merge_reviews`, incomplete CLI review hints, shared AI cache across changed
+`OPENAI_BASE_URL` endpoints, and leading keraia / word-final medial sigma `s1`
+edge cases). All six were fixed in 0.61.0; upgrade to the current release rather
+than working around them (see `CHANGELOG.md` for details).
 
 ---
 

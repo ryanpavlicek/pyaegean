@@ -857,7 +857,7 @@ The registered providers and the extra that activates each:
 | `gemini` | `pip install "pyaegean[gemini]"` | Gemini |
 | `grok` | `pip install "pyaegean[grok]"` | Grok |
 | `openrouter` | `pip install "pyaegean[openrouter]"` | many vendors via one key (`vendor/model` ids) |
-| `local` | `pip install "pyaegean[openai]"` | a local server (Ollama/LM Studio/llama.cpp), no key |
+| `local` | `pip install "pyaegean[local]"` | a local server (Ollama/LM Studio/llama.cpp; uses the OpenAI SDK), no key |
 
 Every generative result is a labeled hypothesis, never a reading: see
 [AI Layer](AI-Layer) and, if you can judge the answer, the
@@ -1276,7 +1276,11 @@ also open it in any SQLite client and run ordinary SQL. The same file is what
 `aegean export CORPUS -f sqlite -o …` produces. Replacement of an existing
 database uses a SQLite transaction; WAL readers keep their previous snapshot.
 A busy writer or blocking reader can cause a lock error without replacing the
-existing data: finish the blocking transaction and retry. See [CLI → db](CLI).
+existing data: finish the blocking transaction and retry. For large databases
+that you want to annotate incrementally without holding every document in memory,
+use `aegean db annotate la.sqlite --neural` (or `aegean.db.annotate_sqlite_job`),
+which saves progress document-by-document and resumes cleanly if interrupted.
+See [CLI → db](CLI).
 
 ## 20 · Look up one sign in the inventory
 

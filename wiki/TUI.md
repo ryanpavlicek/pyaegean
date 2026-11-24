@@ -208,7 +208,7 @@ line's script, and runs the first available one immediately:
     zero-dependency pipeline;
   - `neural pipeline`: measured neural tags plus morphological features and a
     dependency parse; needs the `[neural]` extra, and downloads the model
-    (~170 MB) on first run;
+    (~173 MB) on first run;
   - `IPA (reconstructed)`: the Attic transcription, word by word;
   - `translate (BYOAI, optional)`: only when a provider API key is configured.
     Without one the option is listed as

@@ -12,6 +12,9 @@ documents lazily for a large DB-backed corpus without materializing it.
 Explicit lexical searches can use materialized comparison keys built or refreshed with
 ``build_lexical_index``. Token writes invalidate these keys in the same transaction;
 ``lexical_index_status`` reports whether they can be used. Searches never build an index.
+For large SQLite-backed corpora, ``annotate_sqlite_job`` runs durable, resumable
+document-by-document annotation with lease protection and progress inspection via
+``job_status``.
 
 A corpus out of the database cites exactly like a corpus out of JSON — the provenance round-
 trips, and a database grown with ``append=True`` records every appended corpus's provenance,

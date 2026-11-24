@@ -460,7 +460,7 @@ _REMOTE: dict[str, DataSpec] = {
         sha256="9a5e4783146144fc5ac54c5dc2b372b39cc0e0ea40ca15207243f8c539f03dd8",
         license="CC BY-NC-SA 4.0 (SigLA — Salgarella & Castellan; NonCommercial, never bundled)",
         note="SigLA-derived Linear A dataset v4: 802 documents with SigLA's own word "
-             "division (1,401 words), homophone subscripts (RA₂/PU₂/TA₂), and "
+             "division (1,895 words), homophone subscripts (RA₂/PU₂/TA₂), and "
              "commodity ideograms (~1.3 MB JSON). Drawings stay at sigla.phis.me.",
         extract=False,
     ),

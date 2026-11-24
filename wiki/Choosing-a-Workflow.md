@@ -199,7 +199,7 @@ reading.*
   `evaluate_on_proiel` / `evaluate_on_nt` for the folds; `greek.bootstrap_ud`
   for a confidence interval; `aegean greek eval … --drift` for an error analysis
   instead of a single score; and `greek.evaluate_by_genre` (CLI
-  `aegean greek eval ud --by-genre`) for a genre slice.
+  `aegean greek eval ud --by-genre --neural`) for a genre slice.
 - **Reproducibility.** Pin the data with `data.versions()` (CLI
   `aegean data versions`) and record `aegean.__version__`. Every published number
   lives in the claims registry (`training/results/published-claims.json`) and is

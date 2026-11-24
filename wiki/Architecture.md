@@ -50,7 +50,7 @@ L5  translate             hybrid: lexicon/morphology grounding → LLM
 L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/sentence policies/…)
 L4  io · geo · data · db  aegean.io (text/CSV import · EpiDoc/CSV/Parquet export)
                           · aegean.geo (GeoDataFrame) · bundled registry + cache
-                          · aegean.db (SQLite)
+                          · aegean.db (SQLite + resumable `db_jobs.py`)
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure
 L2  scripts (plugins)     lineara · linearb · cypriot · cyprominoan · greek
@@ -59,12 +59,13 @@ L1  core                  Corpus · Document · Token · Sign · SignInventory �
 ```
 
 The Greek layer (L5) also hosts the **opt-in** backends: the AGDT treebank
-(`treebank.py`), LSJ glossing (`lexicon.py`), the dependency parser (`syntax.py`),
-the POS tagger (`tagger.py`), the lemmatizers (`lemmatizer.py` and the neural
-seq2seq backend `neural_lemmatizer.py`), and the neural joint pipeline (`joint.py`,
-with `mst.py` arc decoding and `udfeats.py` FEATS rendering), which fetch and build
-their artifacts through the L4 **data/cache** layer (a `greek → data` edge); the
-strict downward-only layering still holds. See [Greek NLP](Greek-NLP) for that
+(`treebank.py`), LSJ and multi-dictionary glossing (`lexicon.py`), the dependency parser
+(`syntax.py`), the POS tagger (`tagger.py`), the lemmatizers (`lemmatizer.py`,
+`paradigms.py`, and the neural seq2seq backend `neural_lemmatizer.py`), the neural joint
+pipeline (`joint.py`, with `mst.py` arc decoding, `udfeats.py` FEATS rendering,
+`lemma_rerank.py` opt-in OOV lemma reranking, and `documentary.py` post-processing), which
+fetch and build their artifacts through the L4 **data/cache** layer (a `greek → data`
+edge); the strict downward-only layering still holds. See [Greek NLP](Greek-NLP) for that
 track.
 
 Why this matters in practice: **`import aegean` is instant and pulls zero
@@ -100,12 +101,15 @@ unavailable label before model loading; different variant artifacts use differen
 ### Confidence is a separate evidence layer
 
 `aegean.greek.confidence` is a standard-library-only contract shared by the neural
-pipeline, tabular views, and the CLI. A schema-2 `CalibrationRegistry` is keyed by model,
-task, lemma source path, and optional domain; exact entries win and explicitly marked
-fallback entries are reported as fallback rather than as exact evidence.
-`TokenConfidence` and `SentenceConfidence` hold either a scoped value (with calibration
-hash, sample count, and measured ECE/Brier support) or a stable unavailable reason. The
-legacy flat confidence fields remain for compatibility and are not retrofitted with scope.
+pipeline, tabular views, and the CLI. `use_calibration_registry()` loads the bundled
+schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`), keyed by model,
+task, lemma source path, and optional domain (`literary` and `documentary_native` across
+all six tasks, fitted on held-out development data and qualified on the locked test folds);
+exact entries win and explicitly marked fallback entries are reported as fallback rather
+than as exact evidence. `TokenConfidence` and `SentenceConfidence` hold either a scoped
+value (with calibration hash, sample count, and measured ECE/Brier support) or a stable
+unavailable reason. The legacy flat confidence fields remain for compatibility and are not
+retrofitted with scope.
 
 `AbstentionPolicy` is caller-owned: thresholds are supplied by the application and its
 canonical SHA-256 is attached to `accept`/`review`/`unavailable` decisions. The runtime
@@ -113,7 +117,7 @@ ships no default threshold and does not infer an OOD warning. For the shipped ca
 runtime, schema-4 `AnalysisReceipt` output records the calibration and policy hashes, runtime
 variant and registry, and composed output/post-processing identity. Schemas 1 through 3
 remain readable for current hosted evidence without inventing those newer fields. The receipt
-records provenance but does not authorize an empirical calibration claim.
+records provenance for every calibration and post-processing choice automatically.
 
 ---
 
