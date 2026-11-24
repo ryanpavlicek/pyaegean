@@ -543,3 +543,30 @@ def test_brier_and_coverage_risk_are_deterministic_and_keep_unavailable_none():
     with pytest.raises(ValueError, match="finite"):
         brier_score([float("nan")], [1])
     assert canonical_json({"β": 1, "a": 2}) == '{"a":2,"β":1}'
+
+
+def test_bundled_schema2_registry_loads_and_resolves_exact_scopes(monkeypatch):
+    reg = calibrate.use_calibration_registry()
+    assert reg.sha256 == "b0f7be6d719856a2a3798f595086dae37dc06979e1fe73ffa5635303b97e2aa6"
+    assert calibrate.active_registry() == reg
+    assert calibrate.active() is None
+    for domain in ("literary", "documentary_native"):
+        for task in ("upos", "xpos", "feats", "head", "relation"):
+            res = reg.resolve("grc-joint-v3", task, "neural", domain)
+            assert res.available and res.scope == "exact" and res.entry is not None
+        for src in ("lookup_form_upos", "edit_script", "identity_fallback"):
+            res = reg.resolve("grc-joint-v3", "lemma", src, domain)
+            assert res.available and res.scope == "exact" and res.entry is not None
+    # Unknown domain still refuses rather than fabricating a fallback
+    unknown = reg.resolve("grc-joint-v3", "upos", "neural", "byzantine_uncalibrated")
+    assert not unknown.available and unknown.reason == "unsupported_domain"
+
+    # Missing bundled file fails loudly with UncalibratedConfidenceError
+    import aegean.data as data
+
+    calibrate.disable_calibration()
+    monkeypatch.setattr(data, "load_bundled_json", lambda *_parts: (_ for _ in ()).throw(FileNotFoundError("missing")))
+    with pytest.raises(UncalibratedConfidenceError, match="bundled Schema-2 calibration registry"):
+        calibrate.use_calibration_registry()
+    assert calibrate.active_registry() is None
+

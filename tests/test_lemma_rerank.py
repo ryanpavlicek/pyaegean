@@ -302,3 +302,139 @@ def test_rerank_analysis_and_live_pipeline_toggle_with_documentary_composition()
         greek.disable_oov_lemma_reranker()
         documentary.disable_documentary_reconciliation()
         greek.disable_neural_pipeline()
+
+
+def test_bundled_weighted_preset_and_top10_edit_capture() -> None:
+    """Bundled weighted preset loads with verified SHA-256 and consumes top-K edit candidates."""
+    np = pytest.importorskip("numpy")
+    from aegean import greek
+    from aegean.greek import joint
+    from aegean.greek.lemma_rerank import (
+        FEATURE_NAMES,
+        LemmaRerankerConfig,
+        TrainOnlyLemmaIndex,
+        rerank_analysis,
+    )
+    from aegean.greek.lemmatize import LemmaSource
+
+    bundled = LemmaRerankerConfig.bundled()
+    assert bundled.sha256 == "0381ebad51c2e0fe5b2ce535225c14529e2f50b9bcfabb8588904b9bd16cea52"
+    assert bundled.oov_only is True
+    assert bundled.feature_names == FEATURE_NAMES
+
+    from types import SimpleNamespace
+
+    # Build a minimal stub _JointModel-like backend that records top-K neural edits
+    # when _capture_top_lemma_edits is active.
+    class _TopKStubBackend:
+        manifest = SimpleNamespace(
+            model_id="grc-joint-v3",
+            dataset="grc-joint",
+            asset_sha256="a" * 64,
+            manifest_sha256="d" * 64,
+            tokenizer_revision="test-tok-v1",
+            annotation_profile="agdt-ud-v1",
+            normalization="NFC",
+            segmentation="pretokenized",
+            preprocessing_version="pyaegean-neural-preprocessing-v1",
+        )
+        runtime_variant = SimpleNamespace(
+            label="compact",
+            award_sha256="b" * 64,
+            qualification_sha256="c" * 64,
+        )
+        _sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
+        lookup_form_upos = {"λόγον|NOUN": "λόγος", "καί|CCONJ": "καί"}
+        lookup_form = {"λόγον": "λόγος"}
+        lookup_lower = {"λόγον": "λόγος"}
+        trees = [
+            ("sub", "ν", "ς"),     # dummy tree 0 -> baseline wrong edit
+            ("sub", "ον", "ος"),   # tree 1 -> right edit (rank #2)
+        ]
+
+        def __init__(self) -> None:
+            self._np = np
+
+        def analyze(self, words: list[str], **kwargs: object) -> joint.SentenceAnalysis:
+            state = joint._TOP_LEMMA_EDIT_STATE.get()
+            if state is not None:
+                k, bucket = state
+                assert k == 10
+                # Token 0 is an OOV form whose rank-#2 neural edit is "λόγος" (p=0.44)
+                bucket.append(((("λόγονς", 0.46), ("λόγος", 0.44)),))
+            return joint.SentenceAnalysis(
+                tokens=tuple(words),
+                upos=("NOUN",),
+                xpos=("n-s---ma-",),
+                feats=("Case=Acc|Number=Sing",),
+                head=(0,),
+                deprel=("root",),
+                lemma=("λόγονς",),
+                lemma_resolved=(True,),
+                lemma_source=(LemmaSource.NEURAL_EDIT,),
+                lemma_source_path=("edit_script",),
+                lemma_verified=(False,),
+            )
+
+        def analyze_batch(self, sentences: list[list[str]], **kwargs: object) -> list[joint.SentenceAnalysis]:
+            return [self.analyze(s, **kwargs) for s in sentences]
+
+    stub = _TopKStubBackend()
+    # Direct rerank_analysis with top_edit_predictions uses the rank-#2 candidate
+    raw_ana = stub.analyze(["λογον"])
+    idx = TrainOnlyLemmaIndex.from_model(stub)
+    without_topk = rerank_analysis(raw_ana, idx, config=bundled)
+    with_topk = rerank_analysis(
+        raw_ana, idx, config=bundled, top_edit_predictions=[(("λόγονς", 0.46), ("λόγος", 0.44))]
+    )
+    assert with_topk.lemma == ("λόγος",)
+    assert without_topk.lemma == ("λόγος",)  # strict fold also matches
+
+    # Now test a token where ONLY top-K neural edit + train frequency resolves the right lemma
+    # (no strict/phonetic fold match, e.g. novel form whose rank-#2 edit is a frequent lemma).
+    class _TopKOnlyBackend(_TopKStubBackend):
+        lookup_form_upos = {
+            f"{form}|NOUN": "ἄνθρωπος"
+            for form in (
+                "ἄνθρωπος", "ἀνθρώπου", "ἀνθρώπῳ", "ἄνθρωπον", "ἄνθρωπε",
+                "ἄνθρωποι", "ἀνθρώπων", "ἀνθρώποις", "ἀνθρώπους", "ἀνθρώπω",
+            )
+        }
+        lookup_form = {}
+        lookup_lower = {}
+
+        def analyze(self, words: list[str], **kwargs: object) -> joint.SentenceAnalysis:
+            state = joint._TOP_LEMMA_EDIT_STATE.get()
+            if state is not None:
+                _k, bucket = state
+                # Rank #2 and #3 equivalent edit scripts both yield "ἄνθρωπος" (sum 0.61 > 0.32)
+                bucket.append(((("ζζζς", 0.32), ("ἄνθρωπος", 0.31), ("ἄνθρωπος", 0.30)),))
+            return joint.SentenceAnalysis(
+                tokens=tuple(words),
+                upos=("NOUN",),
+                xpos=("n-s---mn-",),
+                feats=("_",),
+                head=(0,),
+                deprel=("root",),
+                lemma=("ζζζς",),
+                lemma_resolved=(True,),
+                lemma_source=(LemmaSource.NEURAL_EDIT,),
+                lemma_source_path=("edit_script",),
+                lemma_verified=(False,),
+            )
+
+    topk_only = _TopKOnlyBackend()
+    try:
+        joint._replace_active_backend(topk_only)
+        with pytest.raises(ValueError, match="unknown OOV lemma reranker preset"):
+            greek.use_oov_lemma_reranker(config="bogus")
+        greek.use_oov_lemma_reranker(config="unique")
+        assert joint.analyze_sentence(["ζζζζ"]).lemma == ("ζζζς",)
+        greek.use_oov_lemma_reranker(config="weighted")
+        assert joint.analyze_sentence(["ζζζζ"]).lemma == ("ἄνθρωπος",)
+        batched = joint.analyze_sentences([["ζζζζ"], ["ζζζζ"]], batch_size=2)
+        assert [a.lemma for a in batched] == [("ἄνθρωπος",), ("ἄνθρωπος",)]
+    finally:
+        greek.disable_oov_lemma_reranker()
+        greek.disable_neural_pipeline()
+

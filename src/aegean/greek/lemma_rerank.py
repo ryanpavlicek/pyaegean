@@ -343,6 +343,14 @@ class LemmaRerankerConfig:
             raise ValueError("reranker config missing required sha256")
         return cls(weights=weights, feature_names=names, oov_only=oov_only, sha256=sha)
 
+    @classmethod
+    def bundled(cls) -> "LemmaRerankerConfig":
+        """Load the bundled qualified weighted OOV reranker preset shipped in the wheel."""
+        from ..data import load_bundled_json
+
+        raw = load_bundled_json("greek", "oov_lemma_reranker_v1.json")
+        return cls.from_dict(raw)
+
 
 @dataclass(frozen=True, slots=True)
 class RerankDecision:
@@ -687,6 +695,7 @@ def _reranker_receipt(
     receipt: Any,
     *,
     config: LemmaRerankerConfig | None,
+    top_k_edits: int = 0,
 ) -> Any:
     """Attach an explicit PostprocessingStep for the active OOV reranker mode."""
     from .annotation_profiles import PostprocessingStep, canonical_analysis_profile
@@ -695,6 +704,8 @@ def _reranker_receipt(
         ("mode", "weighted_reranker" if config is not None else "unique_fold"),
         ("oov_only", "true" if (config is None or config.oov_only) else "false"),
     ]
+    if config is not None and top_k_edits > 0:
+        params.append(("top_k_edits", str(top_k_edits)))
     step_kwargs: dict[str, Any] = {
         "step_id": "pyaegean-oov-lemma-reranker-v1",
         "parameters": tuple(params),
@@ -719,13 +730,16 @@ def rerank_analysis(
     index: TrainOnlyLemmaIndex,
     *,
     config: LemmaRerankerConfig | None = None,
+    top_edit_predictions: Sequence[Sequence[tuple[str, float]]] | None = None,
 ) -> "SentenceAnalysis":
     """Apply OOV-gated lemma reranking to a ``SentenceAnalysis`` (pure, reversible).
 
     When ``config`` is ``None``, applies zero-parameter deterministic strict→phonetic
     unique-fold rescue (``rerank_oov_unique``). When ``config`` is supplied, scores
-    OOV candidate sets with ``rerank_candidates``. Exact ``neural_lookup`` tokens are
-    preserved unchanged whenever ``config is None`` or ``config.oov_only`` is True.
+    OOV candidate sets with ``rerank_candidates`` (optionally incorporating per-token
+    ``top_edit_predictions`` from the neural edit-script head). Exact ``neural_lookup``
+    tokens are preserved unchanged whenever ``config is None`` or ``config.oov_only``
+    is True.
     """
     n = len(ana.tokens)
     if n == 0:
@@ -748,6 +762,7 @@ def rerank_analysis(
     )
     verified = list(ana.lemma_verified) if len(ana.lemma_verified) == n else [False] * n
     changed_any = False
+    use_top_edits = top_edit_predictions is not None and len(top_edit_predictions) == n
 
     for i in range(n):
         src_val = sources[i].value
@@ -760,12 +775,14 @@ def rerank_analysis(
                 index=index,
             )
         else:
+            tok_edits = top_edit_predictions[i] if use_top_edits and top_edit_predictions is not None else ()
             cands = extract_oov_candidates(
                 form=ana.tokens[i],
                 upos=ana.upos[i],
                 baseline_lemma=lemmas[i],
                 baseline_source=src_val,
                 index=index,
+                top_edit_predictions=tok_edits,
             )
             decision = rerank_candidates(
                 candidates=cands,
@@ -783,7 +800,11 @@ def rerank_analysis(
 
     receipt = ana.receipt
     if receipt is not None:
-        receipt = _reranker_receipt(receipt, config=config)
+        receipt = _reranker_receipt(
+            receipt,
+            config=config,
+            top_k_edits=10 if (config is not None and use_top_edits) else 0,
+        )
 
     if not changed_any and receipt is ana.receipt:
         return ana
@@ -796,6 +817,9 @@ def rerank_analysis(
         lemma_verified=tuple(verified),
         receipt=receipt,
     )
+
+
+_DEFAULT_TOP_K_EDITS = 10
 
 
 class _OovRerankModel:
@@ -835,11 +859,21 @@ class _OovRerankModel:
             _index=self._get_index(),
         )
 
-    def _apply(self, ana: "SentenceAnalysis") -> "SentenceAnalysis":
+    def _apply(
+        self,
+        ana: "SentenceAnalysis",
+        *,
+        top_edit_predictions: Sequence[Sequence[tuple[str, float]]] | None = None,
+    ) -> "SentenceAnalysis":
         enabled, cfg = self._state()
         if not enabled:
             return ana
-        return rerank_analysis(ana, self._get_index(), config=cfg)
+        return rerank_analysis(
+            ana,
+            self._get_index(),
+            config=cfg,
+            top_edit_predictions=top_edit_predictions,
+        )
 
     def analyze(
         self,
@@ -850,8 +884,10 @@ class _OovRerankModel:
         domain: str | None = None,
         policy: Any = None,
     ) -> "SentenceAnalysis":
+        enabled, cfg = self._state()
+        kwargs: dict[str, Any] = {}
         if with_probs or long_input != "strict" or domain is not None or policy is not None:
-            kwargs: dict[str, Any] = {
+            kwargs = {
                 "with_probs": with_probs,
                 "long_input": long_input,
             }
@@ -859,8 +895,19 @@ class _OovRerankModel:
                 kwargs["domain"] = domain
             if policy is not None:
                 kwargs["policy"] = policy
-            return self._apply(self.inner.analyze(words, **kwargs))
-        return self._apply(self.inner.analyze(words))
+        if enabled and cfg is not None:
+            from . import joint
+
+            with joint._capture_top_lemma_edits(_DEFAULT_TOP_K_EDITS) as captured:
+                ana = self.inner.analyze(words, **kwargs) if kwargs else self.inner.analyze(words)
+            sent_edits = (
+                captured[0]
+                if len(captured) == 1 and len(captured[0]) == len(ana.tokens)
+                else None
+            )
+            return self._apply(ana, top_edit_predictions=sent_edits)
+        ana = self.inner.analyze(words, **kwargs) if kwargs else self.inner.analyze(words)
+        return self._apply(ana)
 
     def analyze_batch(
         self,
@@ -871,8 +918,10 @@ class _OovRerankModel:
         domain: str | None = None,
         policy: Any = None,
     ) -> list["SentenceAnalysis"]:
+        enabled, cfg = self._state()
+        kwargs: dict[str, Any] = {}
         if with_probs or long_input != "strict" or domain is not None or policy is not None:
-            kwargs: dict[str, Any] = {
+            kwargs = {
                 "with_probs": with_probs,
                 "long_input": long_input,
             }
@@ -880,9 +929,29 @@ class _OovRerankModel:
                 kwargs["domain"] = domain
             if policy is not None:
                 kwargs["policy"] = policy
-            analyses = self.inner.analyze_batch(sentences, **kwargs)
-        else:
-            analyses = self.inner.analyze_batch(sentences)
+        if enabled and cfg is not None:
+            from . import joint
+
+            with joint._capture_top_lemma_edits(_DEFAULT_TOP_K_EDITS) as captured:
+                analyses = (
+                    self.inner.analyze_batch(sentences, **kwargs)
+                    if kwargs
+                    else self.inner.analyze_batch(sentences)
+                )
+            if len(captured) == len(analyses):
+                return [
+                    self._apply(
+                        a,
+                        top_edit_predictions=(e if len(e) == len(a.tokens) else None),
+                    )
+                    for a, e in zip(analyses, captured)
+                ]
+            return [self._apply(a) for a in analyses]
+        analyses = (
+            self.inner.analyze_batch(sentences, **kwargs)
+            if kwargs
+            else self.inner.analyze_batch(sentences)
+        )
         return [self._apply(a) for a in analyses]
 
     def __getattr__(self, name: str) -> Any:
@@ -926,15 +995,26 @@ def _sync() -> None:
             joint._replace_active_backend(_strip_rerank_wrapper(active))
 
 
-def use_oov_lemma_reranker(*, config: LemmaRerankerConfig | None = None) -> None:
+def use_oov_lemma_reranker(
+    *,
+    config: LemmaRerankerConfig | str | None = None,
+) -> None:
     """Activate opt-in OOV-gated lemma reranking on top of the active neural pipeline.
 
     Requires the neural pipeline to be active (raises ``NeuralPipelineNotLoadedError``
-    otherwise). With ``config=None`` (default), uses zero-parameter deterministic
-    strict→phonetic unique-fold lookup derived strictly from the active model's own
-    training tables. Pass a SHA-256-verified ``LemmaRerankerConfig`` to enable the
-    weighted candidate reranker. Off by default and reversible via
-    ``disable_oov_lemma_reranker()``.
+    otherwise).
+
+    ``config`` accepts:
+
+    - ``None`` or ``"unique"`` (default) — zero-parameter deterministic strict→phonetic
+      unique-fold lookup derived strictly from the active model's own training tables.
+    - ``"weighted"`` — the bundled, locked-test-qualified weighted OOV reranker
+      (``LemmaRerankerConfig.bundled()``), automatically combining top-10 neural
+      edit-script candidates with train-only orthographic, Koine phonetic, and preverb
+      indices.
+    - a SHA-256-verified ``LemmaRerankerConfig`` — custom weighted reranker config.
+
+    Off by default and reversible via ``disable_oov_lemma_reranker()``.
     """
     global _ACTIVE_ENABLED, _ACTIVE_CONFIG
     from . import joint
@@ -944,11 +1024,23 @@ def use_oov_lemma_reranker(*, config: LemmaRerankerConfig | None = None) -> None
             "the OOV lemma reranker post-processes the neural pipeline; activate it first "
             "with aegean.greek.use_neural_pipeline()."
         )
-    if config is not None and not isinstance(config, LemmaRerankerConfig):
-        raise TypeError("config must be a LemmaRerankerConfig or None")
+    resolved_config: LemmaRerankerConfig | None
+    if config is None or config == "unique":
+        resolved_config = None
+    elif config == "weighted":
+        resolved_config = LemmaRerankerConfig.bundled()
+    elif isinstance(config, LemmaRerankerConfig):
+        resolved_config = config
+    elif isinstance(config, str):
+        raise ValueError(
+            f"unknown OOV lemma reranker preset {config!r}; expected 'unique', 'weighted', "
+            "a LemmaRerankerConfig, or None"
+        )
+    else:
+        raise TypeError("config must be a LemmaRerankerConfig, preset name ('unique'|'weighted'), or None")
     with _STATE_LOCK:
         _ACTIVE_ENABLED = True
-        _ACTIVE_CONFIG = config
+        _ACTIVE_CONFIG = resolved_config
         _sync()
 
 

@@ -528,6 +528,14 @@ class CalibrationRegistry:
             raise ValueError(f"invalid calibration registry JSON: {exc}") from exc
         return cls.from_dict(raw)
 
+    @classmethod
+    def bundled(cls) -> "CalibrationRegistry":
+        """Load the bundled qualified Schema-2 calibration registry shipped in the wheel."""
+        from ..data import load_bundled_json
+
+        raw = load_bundled_json("greek", "calibration_registry_v2.json")
+        return cls.from_dict(raw)
+
     def resolve(
         self,
         model: str,

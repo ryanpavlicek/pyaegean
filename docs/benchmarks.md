@@ -282,12 +282,61 @@ literary-prose evidence for this exact artifact; they do not establish equal cal
 other domains or an OOD detector. Reproduce with `training/calibrate_temperature.py`;
 evidence is in `training/results/calibration-2026-07-11.json`.
 
-The additive typed API (`token_confidence`, `sentence_confidence`) adds task/source/domain
-scope, explicit unavailable reasons, calibration hashes, and caller-owned
-`AbstentionPolicy` decisions. A schema-2 `CalibrationRegistry` and coverage-risk report for
-those scopes are still pending a fresh development-only inference gate. No bundled threshold
-is implied; until that evidence exists, do not turn a typed unavailable result into zero or
-claim out-of-domain calibration.
+### Domain- and route-scoped calibration (Schema-2 registry)
+
+For finer-grained confidence across all six annotation layers (part of speech, detailed
+morphology, lemma, syntactic head, and dependency relation), pyaegean ships a qualified
+Schema-2 calibration registry activated with `greek.use_calibration_registry()` (no
+arguments needed). Each calibrator is fitted strictly on held-out development folds and
+scoped to both genre (`literary` or `documentary_native`) and, for lemmas, how the lemma was
+produced (exact lookup, neural edit script, or fallback). Missing scopes still report an
+explicit unavailable reason rather than silently substituting zero or raw scores.
+
+One-shot locked-test qualification across five held-out corpora (`79,462` tokens, CPU
+sequential, zero test-set tuning; evidence:
+`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`):
+
+| Held-out test fold | Domain | Lemma ECE15 (raw → calibrated) | Lemma Brier (raw → calibrated) | Lemma errors caught in top-10% review queue (raw → calibrated) |
+|---|---|---|---|---|
+| UD Perseus test (20,959 tokens) | `literary` | 8.83% → **2.92%** | 0.0868 → **0.0403** | 44.3% → **51.6%** |
+| UD PROIEL test (13,314 tokens) | `literary` | 9.21% → **4.49%** | 0.0993 → **0.0625** | 43.2% → **48.0%** |
+| Verse tragedy, *Bacchae* (735 tokens) | `literary` | 8.01% → **2.96%** | 0.0949 → **0.0524** | 48.3% → **59.6%** |
+| PapyGreek regularized (22,227 tokens) | `documentary_native` | 7.30% → **2.90%** | 0.0856 → **0.0451** | 51.1% → **71.9%** |
+| PapyGreek diplomatic (22,227 tokens) | `documentary_native` | 7.37% → **1.74%** | 0.0985 → **0.0540** | 42.7% → **60.2%** |
+
+In practical editorial terms: reviewing only the lowest-confidence 10% of tokens in a
+calibrated-risk queue (`to_review_table(..., priority="calibrated_risk", budget=N)` or
+`aegean review export --priority calibrated-risk --budget N --with-confidence`) surfaces
+roughly half to nearly three-quarters of all lemmatization errors, while cutting calibration
+error (ECE15) by 51%–76% on every fold.
+
+### Opt-in OOV lemma reranker (weighted top-10)
+
+When a Greek word form was never seen in the neural model's training tables (common in
+documentary papyri, Koine spelling variants, compounds, and poetic forms), the opt-in
+out-of-vocabulary (OOV) lemma reranker (`greek.use_oov_lemma_reranker(config="weighted")`)
+combines the model's top-10 neural edit-script candidates with orthographic, Koine
+phonetic (itacism, vowel length, gemination, optional final `-ν`), and preverb indices built
+strictly from the model's own training lookups (no external dictionary leakage). Words
+already resolved by an exact training lookup are never overridden.
+
+Like the documentary levers below, the reranker is **opt-in and off by default**; baseline
+`grc-joint-v3` rows above remain unchanged. Measured once across all five locked test folds
+(`79,462` tokens total, CPU sequential, frozen dev-fitted weights SHA-256
+`0381ebad51c2e0fe5b2ce535225c14529e2f50b9bcfabb8588904b9bd16cea52`; evidence:
+`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`):
+
+| Held-out test fold | Tokens | `grc-joint-v3` baseline | Unique-fold (`config="unique"`) | Weighted top-10 (`config="weighted"`) | Helped / Harmed (net) |
+|---|---:|---:|---:|---:|---:|
+| UD Perseus test | 20,959 | 94.27 | 94.47 | **94.96** | +162 / -18 (+144) |
+| UD PROIEL test (Herodotus + NT) | 13,314 | 90.51 | 90.63 | **91.47** | +148 / -20 (+128) |
+| Verse tragedy (*Bacchae*) | 735 | 87.89 | 88.44 | **89.39** | +14 / -3 (+11) |
+| PapyGreek regularized | 22,227 | 89.63 | 90.42 | **91.66** | +505 / -52 (+453) |
+| PapyGreek diplomatic (`orig`) | 22,227 | 85.63 | 87.65 | **89.06** | +816 / -52 (+764) |
+
+Across all `79,462` tokens, the weighted top-10 reranker fixed `1,645` errors while
+introducing `145` new mistakes (net `+1,500`, an 11.3:1 help-to-harm ratio), with positive
+gains on all five folds.
 
 ### Koine / New Testament (Nestle 1904 own gold)
 

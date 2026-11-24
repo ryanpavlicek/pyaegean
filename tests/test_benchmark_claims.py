@@ -421,3 +421,52 @@ def test_wiki_benchmarks_page_matches_the_registry() -> None:
     assert f"{claims['neural_nt']['lemma']:.2f}" in page
     assert f"{claims['neural_nt']['upos_reconciled']:.2f}" in page
     assert f"~{round(claims['offline_nt_lemma']['lemma'])}%" in page  # "~66% on the full NT"
+
+
+def test_oov_reranker_and_schema2_calibration_match_registry_and_evidence() -> None:
+    """The opt-in OOV lemma reranker and Schema-2 calibration registry tables stay pinned
+    to their immutable evidence file and bundled SHA-256 artifacts."""
+    from aegean.greek.confidence import CalibrationRegistry
+    from aegean.greek.lemma_rerank import LemmaRerankerConfig
+
+    claims = _claims()
+    ev = json.loads(_read("training/results/stage1-oov-rerank-and-calibration-2026-11-24.json"))
+    doc = _read("docs/benchmarks.md")
+
+    rerank_reg = claims["oov_lemma_reranker_v1"]
+    assert LemmaRerankerConfig.bundled().sha256 == rerank_reg["bundled_config_sha256"]
+    assert ev["artifacts"]["bundled_reranker_sha256"] == rerank_reg["bundled_config_sha256"]
+    assert rerank_reg["aggregate_tokens"] == ev["aggregate_oov_weighted_top10"]["tokens"]
+    assert rerank_reg["aggregate_helped"] == ev["aggregate_oov_weighted_top10"]["helped"]
+    assert rerank_reg["aggregate_harmed"] == ev["aggregate_oov_weighted_top10"]["harmed"]
+    assert rerank_reg["aggregate_net"] == ev["aggregate_oov_weighted_top10"]["net"]
+    assert f"{rerank_reg['aggregate_tokens']:,}" in doc
+    assert f"{rerank_reg['aggregate_helped']:,}" in doc
+    assert f"+{rerank_reg['aggregate_net']:,}" in doc
+
+    cal_reg = claims["calibration_registry_v2"]
+    assert CalibrationRegistry.bundled().sha256 == cal_reg["bundled_registry_sha256"]
+    assert ev["artifacts"]["bundled_calibration_registry_sha256"] == cal_reg["bundled_registry_sha256"]
+
+    for fold in ("perseus_test", "proiel_test", "verse_tragedy", "papygreek_test_reg", "papygreek_test_orig"):
+        ev_fold = ev["folds"][fold]
+        rr_row = rerank_reg["folds"][fold]
+        assert rr_row["v3_baseline"] == round(ev_fold["reranking"]["v3_baseline"]["accuracy"] * 100, 2)
+        assert rr_row["unique_deterministic"] == round(
+            ev_fold["reranking"]["oov_unique_deterministic"]["accuracy"] * 100, 2
+        )
+        assert rr_row["weighted_top10"] == round(
+            ev_fold["reranking"]["oov_weighted_top10"]["accuracy"] * 100, 2
+        )
+        assert f"**{rr_row['weighted_top10']:.2f}**" in doc, fold
+
+        cal_row = cal_reg["folds"][fold]
+        assert cal_row["lemma_raw_ece15"] == round(ev_fold["calibration_tasks"]["lemma"]["raw_ece15"] * 100, 2)
+        assert cal_row["lemma_cal_ece15"] == round(ev_fold["calibration_tasks"]["lemma"]["cal_ece15"] * 100, 2)
+        assert cal_row["review_10pct_schema2_recall"] == round(
+            ev_fold["review_budgets"]["schema2_calibrated_per_route"]["budget_10pct"]["error_recall"] * 100,
+            1,
+        )
+        assert f"**{cal_row['lemma_cal_ece15']:.2f}%**" in doc, fold
+        assert f"**{cal_row['review_10pct_schema2_recall']:.1f}%**" in doc, fold
+

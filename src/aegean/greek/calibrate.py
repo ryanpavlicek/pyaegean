@@ -518,14 +518,36 @@ def use_calibration(source: "str | Path | Calibration | dict[str, Any] | None" =
     return cal
 
 
+def _load_bundled_registry() -> "CalibrationRegistry":
+    from .confidence import CalibrationRegistry
+
+    try:
+        return CalibrationRegistry.bundled()
+    except (FileNotFoundError, json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
+        raise UncalibratedConfidenceError(
+            "the bundled Schema-2 calibration registry could not be loaded "
+            f"({type(e).__name__}: {e}); reinstall pyaegean or pass a CalibrationRegistry "
+            "JSON path to use_calibration_registry(path). The project will not surface "
+            "an uncalibrated softmax."
+        ) from e
+
+
 def use_calibration_registry(
-    source: "str | Path | CalibrationRegistry | dict[str, Any]",
+    source: "str | Path | CalibrationRegistry | dict[str, Any] | None" = None,
 ) -> "CalibrationRegistry":
-    """Load and activate a version-2 task/source/domain calibration registry."""
+    """Load and activate a version-2 task/source/domain calibration registry.
+
+    With ``source=None`` (the default), loads the bundled qualified Schema-2 registry
+    shipped in the wheel (``calibration_registry_v2.json``), covering ``literary`` and
+    ``documentary_native`` domains across UPOS, XPOS, FEATS, lemma routes, head, and
+    non-root dependency relations.
+    """
 
     from .confidence import CalibrationRegistry
 
-    if isinstance(source, CalibrationRegistry):
+    if source is None:
+        registry = _load_bundled_registry()
+    elif isinstance(source, CalibrationRegistry):
         registry = source
     elif isinstance(source, dict):
         registry = CalibrationRegistry.from_dict(source)

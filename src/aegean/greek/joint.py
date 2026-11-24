@@ -91,6 +91,65 @@ _STREAM_CONFIDENCE_UNSET = object()
 _STREAM_CONFIDENCE_CONTEXT: ContextVar[Any] = ContextVar(
     "pyaegean_stream_confidence_context", default=_STREAM_CONFIDENCE_UNSET
 )
+_TOP_LEMMA_EDIT_STATE: ContextVar[
+    tuple[int, list[tuple[tuple[tuple[str, float], ...], ...]]] | None
+] = ContextVar("pyaegean_top_lemma_edit_state", default=None)
+
+
+@contextmanager
+def _capture_top_lemma_edits(
+    k: int = 10,
+) -> Iterator[list[tuple[tuple[tuple[str, float], ...], ...]]]:
+    """Internal scoped capture for top-K neural lemma edit predictions.
+
+    Active only when the weighted OOV lemma reranker requests top-K neural edit
+    candidates; ordinary inference never sets this contextvar and incurs zero
+    extra work.
+    """
+    captured: list[tuple[tuple[tuple[str, float], ...], ...]] = []
+    token = _TOP_LEMMA_EDIT_STATE.set((k, captured))
+    try:
+        yield captured
+    finally:
+        _TOP_LEMMA_EDIT_STATE.reset(token)
+
+
+def _extract_top_k_edits_for_word(
+    form: str,
+    logits_row: Any,
+    trees: Sequence[Any],
+    np: Any,
+    k: int,
+) -> tuple[tuple[str, float], ...]:
+    """Return top-K ``(predicted_lemma, probability)`` edit-script candidates for one token."""
+    if k <= 0 or not trees:
+        return ()
+    row = np.asarray(logits_row, dtype=np.float64)
+    if row.ndim != 1 or row.size == 0 or not np.isfinite(row).all():
+        return ()
+    from .lemmatizer import apply_tree
+
+    shifted = row - float(row.max())
+    probs = np.exp(shifted)
+    total = float(probs.sum())
+    if total <= 0.0 or not math.isfinite(total):
+        return ()
+    probs = probs / total
+    n_avail = min(len(trees), int(row.size))
+    kk = min(k, n_avail)
+    if kk < n_avail:
+        top_idx = np.argpartition(probs[:n_avail], -kk)[-kk:]
+        top_idx = top_idx[np.argsort(-probs[top_idx], kind="mergesort")]
+    else:
+        top_idx = np.argsort(-probs[:n_avail], kind="mergesort")
+    probe = _prep._strip_editorial_apparatus(form)
+    out: list[tuple[str, float]] = []
+    for idx in top_idx:
+        ti = int(idx)
+        pred_l = apply_tree(trees[ti], probe)
+        if pred_l and pred_l != "_":
+            out.append((pred_l, float(probs[ti])))
+    return tuple(out)
 
 
 class NeuralPipelineNotLoadedError(RuntimeError):
@@ -910,6 +969,10 @@ class _JointModel:
             and window_relation_temperature is not None
             else None
         )
+        edit_capture = _TOP_LEMMA_EDIT_STATE.get()
+        top_edits_per_tok: list[tuple[tuple[str, float], ...]] | None = (
+            [() for _ in range(n)] if edit_capture is not None else None
+        )
 
         for wi, (ws, we) in enumerate(windows):
             chunk = forms[ws:we]
@@ -936,6 +999,10 @@ class _JointModel:
                 if local.lemma_source_path:
                     lemma_source_path[token] = local.lemma_source_path[local_i]
                 verified[token] = local.lemma_verified[local_i]
+                if top_edits_per_tok is not None and edit_capture is not None:
+                    top_edits_per_tok[token] = _extract_top_k_edits_for_word(
+                        forms[token], raw["lemma"][0, local_i], self.trees, np, edit_capture[0]
+                    )
                 if local.upos_prob:
                     upos_prob[token] = local.upos_prob[local_i]
                 if local.lemma_script_prob:
@@ -1134,6 +1201,8 @@ class _JointModel:
             "lemmas, and confidence use the farthest-boundary owner (earlier on ties), "
             "and dependencies use one global observed-arc MST",
         )
+        if edit_capture is not None and top_edits_per_tok is not None:
+            edit_capture[1].append(tuple(top_edits_per_tok))
         return SentenceAnalysis(
             tokens=tuple(forms),
             upos=tuple(upos),
@@ -1163,6 +1232,26 @@ class _JointModel:
             ),
         )
 
+    def _extract_sentence_top_edits(
+        self,
+        forms: list[str],
+        raw: dict[str, Any],
+        k: int,
+    ) -> tuple[tuple[tuple[str, float], ...], ...]:
+        """Extract per-token top-K neural edit predictions for one non-windowed decode."""
+        per_tok: list[tuple[tuple[str, float], ...]] = [() for _ in forms]
+        kept: list[int] = raw.get("_kept", [])
+        lem_mat = raw.get("lemma")
+        if lem_mat is None or not kept:
+            return tuple(per_tok)
+        lem_rows = lem_mat[0]
+        for wi, orig_idx in enumerate(kept):
+            if 0 <= orig_idx < len(forms):
+                per_tok[orig_idx] = _extract_top_k_edits_for_word(
+                    forms[orig_idx], lem_rows[wi], self.trees, self._np, k
+                )
+        return tuple(per_tok)
+
     def analyze(
         self,
         words: list[str],
@@ -1188,8 +1277,11 @@ class _JointModel:
         mode = _long_input_mode(long_input)
         context = _confidence_context(with_probs, domain=domain, policy=policy)
         calibration = None if context is None else context.get("legacy")
+        edit_capture = _TOP_LEMMA_EDIT_STATE.get()
         forms = _prep.normalize_tokens(words)
         if not forms:
+            if edit_capture is not None:
+                edit_capture[1].append(())
             return SentenceAnalysis(
                 (), (), (), (), (), (), (), (), analyzed=(),
                 sentence_confidence=(
@@ -1215,7 +1307,12 @@ class _JointModel:
             lengths = self._full_word_lengths(forms)
             if sum(lengths) <= budget:
                 # Preserve ordinary in-limit output and receipt bytes exactly.
-                return self._decode(forms, self._run(forms), calibration=calibration, context=context)
+                raw = self._run(forms)
+                if edit_capture is not None:
+                    edit_capture[1].append(
+                        self._extract_sentence_top_edits(forms, raw, edit_capture[0])
+                    )
+                return self._decode(forms, raw, calibration=calibration, context=context)
             windows = self._pack_windows(lengths, budget)
             return self._analyze_windowed(forms, lengths, windows, calibration=calibration, context=context)
         raw = self._run(forms)
@@ -1226,6 +1323,10 @@ class _JointModel:
                 input_tokens=len(forms),
                 analyzed_tokens=analyzed_tokens,
                 max_subwords=self.max_subwords,
+            )
+        if edit_capture is not None:
+            edit_capture[1].append(
+                self._extract_sentence_top_edits(forms, raw, edit_capture[0])
             )
         return self._decode(forms, raw, calibration=calibration, context=context)
 
@@ -1261,6 +1362,7 @@ class _JointModel:
             ]
         context = _confidence_context(with_probs, domain=domain, policy=policy)
         calibration = None if context is None else context.get("legacy")
+        edit_capture = _TOP_LEMMA_EDIT_STATE.get()
         norm = [_prep.normalize_tokens(words) for words in sentences]
         out: list[SentenceAnalysis] = [
             SentenceAnalysis(
@@ -1276,6 +1378,9 @@ class _JointModel:
             )
             for _ in norm
         ]
+        batch_edits: list[tuple[tuple[tuple[str, float], ...], ...]] | None = (
+            [() for _ in norm] if edit_capture is not None else None
+        )
         live = [i for i, forms in enumerate(norm) if forms]
         if live:
             results = self._run_batch([norm[i] for i in live])
@@ -1292,7 +1397,13 @@ class _JointModel:
                         analyzed_tokens=analyzed_tokens,
                         max_subwords=self.max_subwords,
                     )
+                if batch_edits is not None and edit_capture is not None:
+                    batch_edits[i] = self._extract_sentence_top_edits(
+                        norm[i], res, edit_capture[0]
+                    )
                 out[i] = self._decode(norm[i], res, calibration=calibration, context=context)
+        if edit_capture is not None and batch_edits is not None:
+            edit_capture[1].extend(batch_edits)
         return out
 
     def _validate_stream_options(

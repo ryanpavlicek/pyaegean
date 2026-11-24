@@ -1,0 +1,329 @@
+{
+  "schema_version": 2,
+  "entries": [
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "feats",
+      "source": "neural",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 241,
+      "ece": 0.043501,
+      "brier": 0.073046,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/feats)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.27005,
+        "slope": 0.671625
+      },
+      "calibration_id": "65704c91555f97e16102619e145a9c6c027e5483cbea9d6c44605198739753ee"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "feats",
+      "source": "neural",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 22135,
+      "ece": 0.002811,
+      "brier": 0.022147,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/feats)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.060471,
+        "slope": 0.899378
+      },
+      "calibration_id": "81e59ad74017e57b91a0fadce3c2141ce52921f236ec28aa0b0188752bb8ebc5"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "head",
+      "source": "neural",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 241,
+      "ece": 0.052301,
+      "brier": 0.084587,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/head)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": 0.540997,
+        "slope": 0.496309
+      },
+      "calibration_id": "bb986dfeb8205745a2035214d8dde543d98819e6716a303f057d3d4743759d00"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "head",
+      "source": "neural",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 22135,
+      "ece": 0.038411,
+      "brier": 0.080696,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/head)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": 0.12477,
+        "slope": 0.406798
+      },
+      "calibration_id": "ed534839e01f286440f33fb8716fd5e1696c4e8e4187849b7fd71ddc9ad8d9cd"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "edit_script",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 919,
+      "ece": 0.068902,
+      "brier": 0.149216,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/lemma/edit_script)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.785666,
+        "slope": 0.588993
+      },
+      "calibration_id": "78a396c3dfd8ebf134746c7c42fd104372f0a488f98f25cf17b6ca598ac915a1"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "edit_script",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 905,
+      "ece": 0.052321,
+      "brier": 0.13409,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/lemma/edit_script)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.246473,
+        "slope": 0.768479
+      },
+      "calibration_id": "87795c0e0cd00d3d1e843a9fdf86cb7144f4422b053199175751c5aac0438163"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "identity_fallback",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 198,
+      "ece": 0.063667,
+      "brier": 0.199413,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/lemma/identity_fallback)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -1.35001,
+        "slope": 0.348203
+      },
+      "calibration_id": "e034a2b9b9c957c5c665096b4e282b6c6e6f8af8a17d6b74143b6540f2245877"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "identity_fallback",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 66,
+      "ece": 0.070358,
+      "brier": 0.109403,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/lemma/identity_fallback)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.00017,
+        "slope": 0.619494
+      },
+      "calibration_id": "f71555114987d7ab7b56f6e0d88deecf401b4209845e1b152ada9d70e4649e72"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "lookup_form",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 145,
+      "ece": 0.129169,
+      "brier": 0.11317,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/lemma/lookup_form)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": 2.082016,
+        "slope": 0.180824
+      },
+      "calibration_id": "95a27b4bc258661987eee91045113f30e1c489a8d74e09de8e3d3366ca0ebf17"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "lookup_form_upos",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 4055,
+      "ece": 0.030158,
+      "brier": 0.043855,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/lemma/lookup_form_upos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": 1.696149,
+        "slope": 0.447194
+      },
+      "calibration_id": "def8d8cad362d850f17ff66f2f61e56de38371cf7dd765ae51a2cd2a3ef758bb"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "lemma",
+      "source": "lookup_form_upos",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 21146,
+      "ece": 0.024631,
+      "brier": 0.024845,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/lemma/lookup_form_upos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": 1.892631,
+        "slope": 0.55362
+      },
+      "calibration_id": "8ceacbb864073eb645084f9431beb6808866d2ddd44e1f3e4f493ce51f96bf75"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "relation",
+      "source": "neural",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 197,
+      "ece": 0.057603,
+      "brier": 0.123709,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/relation)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.470969,
+        "slope": 0.42396
+      },
+      "calibration_id": "612fe73d128fa0b89b8484c84f7c1ce38fc7ed0156efdaa3ecadd5e15ff51659"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "relation",
+      "source": "neural",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 20998,
+      "ece": 0.04232,
+      "brier": 0.114736,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/relation)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.491589,
+        "slope": 0.337058
+      },
+      "calibration_id": "beeb47afa0f66e2f1372c45a56fdad78f0b6d328ee144efbbf46c2160289a9f0"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "upos",
+      "source": "neural",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 241,
+      "ece": 0.032294,
+      "brier": 0.05467,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/upos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.779455,
+        "slope": 0.616654
+      },
+      "calibration_id": "2178ccce56a938f094762796b556e808e08e94e5179479fa1c47d0ef0d7344a7"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "upos",
+      "source": "neural",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 22135,
+      "ece": 0.003771,
+      "brier": 0.01333,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/upos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.289202,
+        "slope": 0.800786
+      },
+      "calibration_id": "8e63feadbba53a27d8356a2c6dd6f553061ebd2f45fc15569f534041585c9a70"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "xpos",
+      "source": "neural",
+      "domain": "documentary_native",
+      "fallback": false,
+      "temperature": null,
+      "n": 241,
+      "ece": 0.06838,
+      "brier": 0.107161,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (documentary_native/xpos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.441843,
+        "slope": 0.598172
+      },
+      "calibration_id": "d52e0809fa35516ce616ded901e5306786ee14a9f8949c8a93831052fdeb2384"
+    },
+    {
+      "schema_version": 2,
+      "model": "grc-joint-v3",
+      "task": "xpos",
+      "source": "neural",
+      "domain": "literary",
+      "fallback": false,
+      "temperature": null,
+      "n": 22135,
+      "ece": 0.00279,
+      "brier": 0.032653,
+      "notes": "Stage 1B dev-only 5-fold grouped OOF (literary/xpos)",
+      "calibrator": "logit_affine",
+      "parameters": {
+        "intercept": -0.140273,
+        "slope": 0.852024
+      },
+      "calibration_id": "21c614ef0e242e1d19c8c2fcfd31aa9fc5f4d4ca56caa64d803c0d5725da7363"
+    }
+  ],
+  "sha256": "b0f7be6d719856a2a3798f595086dae37dc06979e1fe73ffa5635303b97e2aa6"
+}

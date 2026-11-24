@@ -220,5 +220,118 @@
   "note": "tagging only (the gold has no trees); Byzantine book epigrams, unedited scribal orthography; DBBE tagset mapped to UPOS; lemma scored against normalized Attic headwords",
   "source_evidence": "training/results/dbbe-remeasure-2026-08-11.json",
   "protocol": "greek.use_neural_pipeline(); greek.evaluate_on_dbbe(); CPU sequential; fold dbbe-lingann-fold-v2"
+ },
+ "oov_lemma_reranker_v1": {
+  "bundled_config_sha256": "0381ebad51c2e0fe5b2ce535225c14529e2f50b9bcfabb8588904b9bd16cea52",
+  "aggregate_tokens": 79462,
+  "aggregate_helped": 1645,
+  "aggregate_harmed": 145,
+  "aggregate_net": 1500,
+  "folds": {
+   "perseus_test": {
+    "tokens": 20959,
+    "v3_baseline": 94.27,
+    "unique_deterministic": 94.47,
+    "weighted_top10": 94.96,
+    "helped": 162,
+    "harmed": 18,
+    "net": 144
+   },
+   "proiel_test": {
+    "tokens": 13314,
+    "v3_baseline": 90.51,
+    "unique_deterministic": 90.63,
+    "weighted_top10": 91.47,
+    "helped": 148,
+    "harmed": 20,
+    "net": 128
+   },
+   "verse_tragedy": {
+    "tokens": 735,
+    "v3_baseline": 87.89,
+    "unique_deterministic": 88.44,
+    "weighted_top10": 89.39,
+    "helped": 14,
+    "harmed": 3,
+    "net": 11
+   },
+   "papygreek_test_reg": {
+    "tokens": 22227,
+    "v3_baseline": 89.63,
+    "unique_deterministic": 90.42,
+    "weighted_top10": 91.66,
+    "helped": 505,
+    "harmed": 52,
+    "net": 453
+   },
+   "papygreek_test_orig": {
+    "tokens": 22227,
+    "v3_baseline": 85.63,
+    "unique_deterministic": 87.65,
+    "weighted_top10": 89.06,
+    "helped": 816,
+    "harmed": 52,
+    "net": 764
+   }
+  },
+  "source_evidence": "training/results/stage1-oov-rerank-and-calibration-2026-11-24.json",
+  "protocol": "greek.use_neural_pipeline(); greek.use_oov_lemma_reranker(config='weighted'); frozen dev-fitted weights with top-10 neural edit-script candidates; OOV-gated (exact neural_lookup tokens untouched); one-shot locked test qualification, CPU sequential windowed"
+ },
+ "calibration_registry_v2": {
+  "bundled_registry_sha256": "b0f7be6d719856a2a3798f595086dae37dc06979e1fe73ffa5635303b97e2aa6",
+  "folds": {
+   "perseus_test": {
+    "domain": "literary",
+    "tokens": 20959,
+    "lemma_raw_ece15": 8.83,
+    "lemma_cal_ece15": 2.92,
+    "lemma_raw_brier": 0.0868,
+    "lemma_cal_brier": 0.0403,
+    "review_10pct_raw_recall": 44.3,
+    "review_10pct_schema2_recall": 51.6
+   },
+   "proiel_test": {
+    "domain": "literary",
+    "tokens": 13314,
+    "lemma_raw_ece15": 9.21,
+    "lemma_cal_ece15": 4.49,
+    "lemma_raw_brier": 0.0993,
+    "lemma_cal_brier": 0.0625,
+    "review_10pct_raw_recall": 43.2,
+    "review_10pct_schema2_recall": 48.0
+   },
+   "verse_tragedy": {
+    "domain": "literary",
+    "tokens": 735,
+    "lemma_raw_ece15": 8.01,
+    "lemma_cal_ece15": 2.96,
+    "lemma_raw_brier": 0.0949,
+    "lemma_cal_brier": 0.0524,
+    "review_10pct_raw_recall": 48.3,
+    "review_10pct_schema2_recall": 59.6
+   },
+   "papygreek_test_reg": {
+    "domain": "documentary_native",
+    "tokens": 22227,
+    "lemma_raw_ece15": 7.3,
+    "lemma_cal_ece15": 2.9,
+    "lemma_raw_brier": 0.0856,
+    "lemma_cal_brier": 0.0451,
+    "review_10pct_raw_recall": 51.1,
+    "review_10pct_schema2_recall": 71.9
+   },
+   "papygreek_test_orig": {
+    "domain": "documentary_native",
+    "tokens": 22227,
+    "lemma_raw_ece15": 7.37,
+    "lemma_cal_ece15": 1.74,
+    "lemma_raw_brier": 0.0985,
+    "lemma_cal_brier": 0.054,
+    "review_10pct_raw_recall": 42.7,
+    "review_10pct_schema2_recall": 60.2
+   }
+  },
+  "source_evidence": "training/results/stage1-oov-rerank-and-calibration-2026-11-24.json",
+  "protocol": "greek.use_calibration_registry(); Schema-2 logit-affine calibrators fitted on dev folds only (5-fold grouped OOF); one-shot locked test qualification across literary and documentary_native domains, CPU sequential windowed"
  }
 }

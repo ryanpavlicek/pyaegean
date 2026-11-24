@@ -158,6 +158,17 @@ def export(
     if annotate:
         _activate(tagger=tagger, lemmatizer=lemmatizer,
                   neural_lemmatizer=neural_lemmatizer, neural=neural)
+        if with_confidence:
+            from aegean.greek import calibrate
+
+            if calibrate.active() is None and calibrate.active_registry() is None:
+                try:
+                    if confidence_domain is not None:
+                        calibrate.use_calibration_registry()
+                    else:
+                        calibrate.use_calibration()
+                except calibrate.UncalibratedConfidenceError as exc:
+                    raise fail(f"could not load bundled calibration: {exc}") from None
         try:
             annotate_kwargs: dict[str, object] = {}
             if set(fields) & {"head", "deprel"}:
@@ -167,7 +178,7 @@ def export(
                 if confidence_domain is not None:
                     annotate_kwargs["confidence_domain"] = confidence_domain
             c = greek.annotate_corpus(c, **annotate_kwargs)  # type: ignore[arg-type]
-        except ValueError as exc:
+        except (ValueError, RuntimeError) as exc:
             raise fail(f"could not annotate review source: {exc}") from None
         generation = next((token.annotations["analysis_generation"] for doc in c.documents
                            for token in doc.tokens if "analysis_generation" in token.annotations), uuid4().hex)

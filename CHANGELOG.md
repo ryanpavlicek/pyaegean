@@ -24,6 +24,17 @@ All notable changes to pyaegean are documented here. The format follows
   Orders review queues by ascending calibrated confidence (lowest confidence / highest estimated risk
   first) while preserving natural token order inside dependency sentences and keeping review CSV schemas
   backward-compatible.
+- Bundled, locked-test-qualified opt-in presets for OOV lemma reranking and Schema-2 confidence calibration:
+  `aegean.greek.use_oov_lemma_reranker(config="weighted")` (plus `LemmaRerankerConfig.bundled()`) now
+  automatically captures top-10 neural edit-script candidates from the active joint model (zero overhead when
+  inactive) and combines them with train-only orthographic, Koine phonetic, and preverb indices (+0.69 pp on
+  UD Perseus, +0.96 pp on UD PROIEL/NT, +1.50 pp on tragedy, +2.03 pp on regularized papyri, +3.43 pp on
+  diplomatic papyri across 79,462 locked test tokens; 1,645 fixed vs 145 harmed).
+  `aegean.greek.use_calibration_registry()` (no arguments) and `CalibrationRegistry.bundled()` now load the
+  bundled Schema-2 logit-affine calibration registry (`literary` and `documentary_native` domains across all
+  six tasks), cutting lemma calibration error (ECE15) by 51%–76% across all five locked test folds, and
+  `aegean review export --annotate --with-confidence` auto-loads the matching bundled calibration when none
+  is active.
 
 ## 0.62.0 (2026-11-24)
 
