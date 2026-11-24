@@ -315,10 +315,12 @@ popup** for that line. What it offers depends on the script:
 
 - **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
   tagger** (lemma + POS, instant), the **neural pipeline** (measured neural tags + a
-  dependency parse; needs the `[neural]` extra, and downloads the model on first use),
+  dependency parse; needs the `[neural]` extra, and downloads the ~173 MB model on first use),
   **IPA**, and **translation**. Translation is **optional** and requires a configured
   BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says
-  so rather than pretending to translate. The neural and translation runs happen on a
+  so rather than pretending to translate. When translating a line from a document, the
+  reader automatically passes neighboring lines and available source, speaker, and editorial
+  metadata separately as `source_context`. The neural and translation runs happen on a
   background worker, so the UI never blocks. The translation includes model-reported
   uncertainty notes, or a notice when malformed output leaves those notes unavailable.
   Source text, translated wording and notes retain literal square brackets.

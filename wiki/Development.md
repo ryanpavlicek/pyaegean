@@ -137,7 +137,7 @@ stubs (pandas, numpy, the provider SDKs, onnxruntime, lxml, …) are listed as
 
 ```bash
 mypy
-# Success: no issues found in 195 source files
+# Success: no issues found in 198 source files
 ```
 
 **3. Tests (pytest).** Run the whole suite, or a single file while you iterate:

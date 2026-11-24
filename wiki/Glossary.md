@@ -267,9 +267,10 @@ The one-call convenience that runs normalize → tokenize → tag → lemmatize 
 sequence and hands you one record per token. See [Greek NLP](Greek-NLP).
 
 ### Gloss
-A short dictionary meaning for a word. pyaegean has two sources: a Koine (New
-Testament) gloss from the bundled Dodson lexicon that works **offline**, and a fuller
-LSJ gloss that fetches a prebuilt ~15 MB index on first use.
+A short dictionary meaning for a word. pyaegean ships the Koine (New Testament)
+Dodson lexicon **offline** and can fetch five additional prebuilt dictionary
+indexes on demand — LSJ, Middle Liddell, Cunliffe (Homeric), Autenrieth
+(Homeric), and Abbott-Smith (NT) — through the dictionary registry.
 
 ```bash
 aegean greek gloss-nt λόγος
@@ -379,7 +380,7 @@ See [Greek Works and Books](Greek-Works-and-Books#3-finding-any-other-work).
 | **Greek inscription corpora** | I.Sicily, IIP, IOSPE, IGCyr/GVCyr, and the EDH Greek subset: openly-licensed EpiDoc databases of Greek inscriptions (2,855 / 2,113 / 1,194 / 997 / 1,286 texts), each fetched on demand with per-token editorial reading status. | [Data & Provenance](Data-and-Provenance), [Using Critical Editions](Using-Critical-Editions) |
 | **DDbDP** | The *Duke Databank of Documentary Papyri* (papyri.info): 57,331 Greek documentary papyri, hosted as a SQLite database with full-text search; fetched on demand. | [Data & Provenance](Data-and-Provenance) |
 | **AGDT** | *Ancient Greek Dependency Treebank* (Perseus): gold grammatical annotation behind the Greek backends. | [Greek NLP](Greek-NLP) |
-| **EpiDoc** | A community standard (a flavour of TEI XML) for encoding ancient inscriptions; pyaegean can **export** a corpus to EpiDoc TEI. | [CLI](CLI), [Data & Provenance](Data-and-Provenance) |
+| **EpiDoc** | A community standard (a flavour of TEI XML) for encoding ancient inscriptions; pyaegean can both **import** and **export** EpiDoc TEI (preserving supported editorial reading status and typed forms). | [CLI](CLI), [Data & Provenance](Data-and-Provenance) |
 | **Pleiades** | The open gazetteer of ancient places; pyaegean tags located sites with their Pleiades id where one exists. | [Geography](Geography) |
 
 ```bash

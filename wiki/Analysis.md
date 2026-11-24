@@ -1076,7 +1076,7 @@ an **off-by-default** persistent cache that memoises them to a local sqlite file
 keyed on a content fingerprint of the inputs, so re-running the same analysis on
 the same corpus is served from disk. Disabled (the default), it's a transparent
 passthrough: it never changes a result, only how fast it arrives. No new
-dependency: sqlite3 and pickle are stdlib.
+dependency: `sqlite3` and a typed JSON codec (`AEGEAN-CACHE-V2`) are stdlib-only.
 
 ```python
 import aegean
@@ -1092,11 +1092,10 @@ aegean.cache.clear()                               # wipe it → entries back to
 It pays off when recompute costs much more than a pass over the corpus (the
 fingerprint): clustering, or the same sweep repeated across a session. The
 cache key embeds a format + per-function version, so a library upgrade never
-returns a stale result; a corrupt or class-changed entry is treated as a miss
-and recomputed. From the shell, `aegean cache` shows the state and
-`aegean cache --clear` wipes it (enable it per shell with
-`PYAEGEAN_ANALYSIS_CACHE=1`). Stored with pickle in your own cache dir: enable
-it only for caches you control.
+returns a stale result; a corrupt, legacy, or schema-changed entry is treated
+as a miss and recomputed without running arbitrary code. From the shell,
+`aegean cache` shows the state and `aegean cache --clear` wipes it (enable it
+per shell with `PYAEGEAN_ANALYSIS_CACHE=1`).
 
 ```bash
 aegean cache
@@ -1128,15 +1127,25 @@ again = Corpus.from_sql("corpus.db")        # round-trips: len(again) == 1721
 db.search("corpus.db", "KU-RO")             # whole-token search → [(doc_id, position, text), ...]
 # first hit: ('HT9a', 25, 'KU-RO')   — 37 hits across the corpus
 # db.search("corpus.db", "KU-RO", mode="substring") returns 39 (also matches PO-TO-KU-RO)
+db.build_lexical_index("corpus.db")         # optional index for fast exact surface/normalized/lemma search
 for doc in db.stream("corpus.db"):          # iterate without loading the whole corpus
     ...
 ```
 
+For large Greek SQLite corpora that take minutes or hours to annotate,
+`db.annotate_sqlite_job("corpus.db", "annotated.db", job_dir="./job-state")`
+processes one document at a time and checkpoints after every document in a single
+SQLite transaction, so an interrupted run can pause and resume safely
+(`db.job_status("./job-state")` inspects progress; `aegean db annotate` and
+`aegean db job-status` expose the same workflow in the terminal).
+
 `Corpus.to_sql` / `Corpus.from_sql` are the thin method wrappers; on the CLI,
-`aegean db build` / `aegean db search` (and `aegean export -f sqlite`):
+`aegean db build` / `aegean db index` / `aegean db search` / `aegean db annotate`
+(and `aegean export -f sqlite`):
 
 ```bash
 aegean db build lineara -o la.db            # wrote 1721 documents to la.db  (--no-fts to skip FTS5)
+aegean db index la.db                       # optional lexical index for exact searches
 aegean db search la.db KU-RO --limit 3
 # doc    pos  text
 # HT9a   25   KU-RO

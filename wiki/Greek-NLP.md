@@ -298,9 +298,10 @@ greek.write_conllu(document, "treebank-copy.conllu")
 ```
 
 An unchanged document writes back exactly; `canonical=True` produces deterministic
-ten-column output after an immutable value has been changed or constructed. Edited or
-canonical serialization can lose extension comments whose keys begin with `text` or
-`sent_id`; unchanged raw passthrough is unaffected. Keep the original file when editing it.
+ten-column output after an immutable value has been changed or constructed, while
+matching metadata keys exactly so extension comments (such as `# text_en = …` or
+`# sent_id_orig = …`) are preserved during canonical serialization as well. Keep
+the original file when editing it.
 The default loader remains lenient for older research folds, while `strict=True` rejects malformed
 columns, identifiers, row placement, references, and basic trees with line-aware errors.
 The CLI mirrors this as `aegean greek conllu inspect` and `conllu export`.
@@ -586,14 +587,17 @@ unavailable reason. Missing confidence is never converted to zero. Stable reason
 
 The old `upos_confidence` and `lemma_confidence` floats remain as compatibility fields;
 they do not carry the typed scope and must not be interpreted as source- or domain-specific.
-For a scoped result, load a schema-2 `CalibrationRegistry` (or activate the legacy
-`use_calibration()` aggregate as an explicitly unscoped fallback) and provide the optional
-`confidence_domain=` value. Registry resolution prefers an exact model/task/source/domain
-entry; an explicitly marked broader entry is reported as a fallback. Offline lexicon, rule,
-seed, and paradigm lemmas do not borrow neural confidence. `lemma_source_path` records the
-composition path (`lookup_form_upos`, `lookup_form`, `edit_script`,
-`lookup_lower_fallback`, or `identity_fallback`) so a calibration can describe the final
-decision rather than a hidden intermediate score.
+For a scoped result, call `greek.use_calibration_registry()` with no arguments to load the
+bundled Schema-2 `CalibrationRegistry` (`calibration_registry_v2.json`, covering `literary`
+and `documentary_native` across all six tasks and all four lemma routes), or pass a custom
+registry path (the legacy `use_calibration()` aggregate stays available as an explicitly
+unscoped fallback), and provide `confidence_domain="literary"` or `"documentary_native"`.
+Registry resolution prefers an exact model/task/source/domain entry; an explicitly marked
+broader entry is reported as a fallback. Offline lexicon, rule, seed, and paradigm lemmas do
+not borrow neural confidence. `lemma_source_path` records the composition path
+(`lookup_form_upos`, `lookup_form`, `edit_script`, `lookup_lower_fallback`, or
+`identity_fallback`) so a calibration can describe the final decision rather than a hidden
+intermediate score.
 
 Development fitting helpers are available as `fit_temperature(logits, correct)` for a
 multiclass top-1 temperature and `fit_logit_affine(probs, correct)` for a monotone
@@ -605,14 +609,32 @@ Abstention is caller policy, not a bundled model claim. Supply an immutable,
 caller-owned `AbstentionPolicy` through `confidence_policy=` with task thresholds you have
 chosen; each decision is `accept`, `review`, or `unavailable` and carries the canonical
 `policy_sha256`. The `greek pipeline` CLI command mirrors these names as
-`--confidence-domain` and `--confidence-policy PATH`. No default thresholds or
-out-of-domain warning are bundled:
-empirical source/task calibration and coverage-risk gates still require a fresh,
-development-only inference pass. For the shipped canonical runtime, schema-4
-`AnalysisReceipt` output records runtime-variant evidence, calibration/policy hashes,
-and the composed output profile. Schema 3 covers composed output without runtime-variant
-evidence. Schema 2 remains readable for legacy or custom output without a composed profile,
-and schema 1 remains readable for older confidence-free analyses.
+`--confidence-domain` and `--confidence-policy PATH`. No default abstention threshold or
+automatic out-of-domain warning is bundled; for editorial triage, you can sort a review
+spreadsheet by calibrated risk with `priority="calibrated_risk", budget=N`. For the shipped
+canonical runtime, schema-4 `AnalysisReceipt` output records runtime-variant evidence,
+calibration/policy hashes, and the composed output profile. Schema 3 covers composed output
+without runtime-variant evidence. Schema 2 remains readable for legacy or custom output
+without a composed profile, and schema 1 remains readable for older confidence-free analyses.
+
+### Opt-in weighted OOV lemma reranking
+
+If your texts include poetic, dialectal, or documentary spellings that the joint model never
+saw in training, you can layer the bundled OOV lemma reranker on top of the neural pipeline:
+
+```python
+greek.use_neural_pipeline()
+greek.use_oov_lemma_reranker(config="weighted")   # opt-in; zero overhead when inactive
+# ... analyze texts ...
+greek.disable_oov_lemma_reranker()
+```
+
+When a word is out of vocabulary, the reranker combines the joint model's top-10 edit-script
+predictions with train-only orthographic, Koine phonetic, and preverb-stripped candidates
+using frozen dev-fitted weights (no external dictionary leakage; +0.69 pp on UD Perseus,
++0.96 pp on UD PROIEL/NT, +1.50 pp on tragedy, +2.03 pp on regularized papyri, and +3.43 pp
+on diplomatic papyri across the five locked test folds — see [Benchmarks](Benchmarks)).
+Pass `config="unique"` for the conservative unique-match fallback.
 
 ### GPU execution and batching
 
@@ -651,14 +673,17 @@ sentence. `GreekPipeline.iter_analyze_sentences()` provides the same contract fo
 an isolated instance.
 
 The per-sentence receipt keeps the immutable neural inference identity. If the
-opt-in documentary reconciliation or lemma-rescue layer post-processes that result,
+opt-in documentary reconciliation, lemma-rescue, or OOV reranker layer post-processes that result,
 receipt schema 4 additionally binds the runtime label, registry/evidence digests, composed
 output profile ID and SHA-256, and ordered post-processing identity (including the configured
 lever and resource hashes). Schemas 1 through 3 remain readable for current hosted evidence.
 
-`greek.analyze_sentences(...)` still returns the historical complete list; it is a
-collector over that bounded engine. Raw-text `greek.pipeline`, corpus annotation,
-and CoNLL-U serialization/evaluation also remain collecting APIs.
+`greek.analyze_sentences(..., length_bucket=False)` still returns the historical complete
+list; it is a collector over that bounded engine, and passing `length_bucket=True` groups
+similar-length sentences inside a batch to reduce padding overhead while preserving exact
+input order. For very large corpora stored in SQLite that need crash-safe pause/resume, use
+`aegean.db.annotate_sqlite_job()` (`aegean db annotate`). Raw-text `greek.pipeline`,
+in-memory `annotate_corpus`, and CoNLL-U serialization/evaluation remain collecting APIs.
 
 Batched inference runs many sentences per model call. The evaluators accept the
 same `batch_size` (CLI: `aegean greek eval ud --batch-size 32`). Both are verified

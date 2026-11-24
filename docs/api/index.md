@@ -19,13 +19,13 @@ optional review, counting choices, and translation evidence.
     - text processing: normalize, tokenize, named sentence policies, scan, tag, lemmatize, and parse;
     - `segment_text()` / `segment_sentences()` with validated plugin results and exact boundary spans, and `pipeline_tokens()` for typed editorial forms;
     - isolated `GreekPipeline` instances with serializable configuration, bounded `iter_analyze_sentences()` neural sentence streams, and explicit long-input and runtime-variant selection;
-    - optional typed `TokenConfidence` / `SentenceConfidence` evidence through `confidence_domain` and `confidence_policy`, and immutable annotation and domain registries through `list_annotation_profiles()` / `list_domain_profiles()`;
+    - optional typed `TokenConfidence` / `SentenceConfidence` evidence with the bundled Schema-2 calibration registry (`use_calibration_registry()`), opt-in weighted top-10 OOV lemma reranking (`use_oov_lemma_reranker(config="weighted")`), and immutable annotation and domain registries (`list_annotation_profiles()` / `list_domain_profiles()`);
     - exact schema-4 `AnalysisReceipt` provenance (runtime registry and evidence, composed output, post-processing, and optional calibration and policy hashes), manifest-validated neural bundles, and lossless CoNLL-U document I/O;
     - work discovery: `catalog()` (the full 1,778-work index), `popular_works()`, and `nt_books()`.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
-- [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, review tables, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
-- [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows + FTS5 search).
+- [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, editable and risk-prioritized review spreadsheets, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
+- [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows, FTS5 and optional lexical indexes, lazy streaming, and durable resumable annotation jobs).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 
 ### `aegean.io` interoperability facade

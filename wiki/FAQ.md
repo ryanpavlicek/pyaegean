@@ -563,8 +563,13 @@ Several opt-in backends raise accuracy past that baseline. The highest-scoring s
 **neural pipeline**, `greek.use_neural_pipeline()` (the `[neural]` extra): one joint
 model for POS, morphology, UD dependency parsing, and lemmatization, measured at
 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS /
-85.7 LAS on the Perseus test fold with gold tokenization: see
-[the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). The lighter tiers:
+85.7 LAS on the Perseus test fold with gold tokenization (see
+[the neural pipeline](Greek-NLP#the-neural-pipeline-opt-in)). On top of the neural
+pipeline, two opt-in bundled presets require no extra download:
+`greek.use_oov_lemma_reranker(config="weighted")` recovers unseen poetic and documentary
+lemmas (+0.69 to +3.43 pp across the five locked test folds), and
+`greek.use_calibration_registry()` provides domain-scoped calibrated probabilities across
+literary prose and documentary papyri. The lighter tiers:
 `greek.use_treebank()` supplies attested, correctly-accented lemmas, full morphology,
 and gold POS for forms attested in the AGDT; `greek.use_tagger()` generalizes POS at
 ~84% on unseen forms; `greek.use_neural_lemmatizer()` (a GreTa seq2seq) reaches 76.3%

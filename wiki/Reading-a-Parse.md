@@ -109,10 +109,17 @@ unavailable value carries a reason such as `missing_calibration`, `unsupported_s
 establish a domain claim. A `confidence_domain` label is supplied by the caller, not inferred
 by the model, and no out-of-domain warning is implied without evidence.
 
-If a review workflow needs thresholds, pass a caller-owned `AbstentionPolicy` as
-`confidence_policy`. It records its canonical hash and returns `accept`, `review`, or
-`unavailable` without changing the parse. There are no bundled thresholds: source/task
-calibration and coverage-risk measurements remain a development-only evidence task.
+If you want calibrated probabilities (so a 0.85 score corresponds closely to an 85%
+accuracy rate on similar texts), turn on the bundled Schema-2 registry with
+`greek.use_calibration_registry()` and tell the pipeline whether you are working on
+literary prose (`confidence_domain="literary"`) or documentary papyri
+(`confidence_domain="documentary_native"`). Even calibrated confidence stays a model
+estimate rather than scholarly certainty. If a review workflow needs hard cutoffs, pass
+a caller-owned `AbstentionPolicy` as `confidence_policy` — it records its canonical hash
+and returns `accept`, `review`, or `unavailable` without altering the parse, and you can
+also sort a review spreadsheet by calibrated risk with `priority="calibrated_risk",
+budget=N` so you check the most uncertain words first. No default threshold is imposed on
+your edition.
 
 ## See also
 

@@ -1,21 +1,24 @@
 """The Python the browser demo runs under Pyodide.
 
 Stable, pure-Python core APIs only. Everything here runs entirely client-side: the Greek
-pipeline + scansion + word analysis, accent placement, sandhi resolution, syllable
-quantities, the offline lemmatizer, the bundled Koine (Dodson) lexicon, the bundled New
-Testament sample (John 1 + Philemon), the curated idiom lexicon, the offline Greek
-work catalogue, the deciphered-syllabary Greek bridge, the bundled Linear A corpus
-(sign search + accounting + statistics + compound queries + numerals), the sign
-inventories of all four Aegean scripts, the bundled Linear B / Cypriot (IG XV 1) /
-Cypro-Minoan corpora, the find-site gazetteer, citation + fingerprinting, the file importer,
-the stdlib EpiDoc reader/writer, cross-script phonetic comparison, the pipeline evidence-class
-explanation, corpus-health diagnostics, the editorial-apparatus profile, Linear B scribal
-dossiers, Linear A seriation, and catalogued sign-variant (allograph) groups. The
-neural tier is excluded (it needs onnxruntime, which doesn't run in the browser) — so is the
-neural pipeline's calibrated confidence — as are the network-only backends (load_work, the
-full-NT fetch, LSJ/treebank, the fetched paradigm table) and the generative AI layer. Each
-function returns a JSON string for easy consumption from JavaScript. This module is exercised
-by tests/test_web_demo.py, so the demo's logic can't silently rot.
+pipeline + scansion (all 10 meters, feet, caesura) + word analysis, bidirectional Beta Code,
+accent placement, sandhi resolution, syllable quantities, named sentence-segmentation policies,
+Koine/documentary phonetic folding, the offline lemmatizer, the bundled Koine (Dodson) lexicon
+with Strong's lookup, the bundled New Testament sample (verse lookup and concordance search),
+the curated idiom lexicon, offline translation grounding preview, spreadsheet-first review CSV
+preview, the offline Greek work catalogue, the deciphered-syllabary Greek bridge, the bundled
+Linear A corpus (sign search + accounting + statistics + morphological word-families + compound
+queries + numerals), the sign inventories of all four Aegean scripts, the bundled Linear B /
+Cypriot (IG XV 1) / Cypro-Minoan corpora, the find-site gazetteer, citation + fingerprinting,
+the file importer, the stdlib EpiDoc reader/writer, cross-script phonetic comparison with
+segment alignment, the pipeline evidence-class explanation, corpus-health diagnostics, the
+editorial-apparatus profile, Linear B scribal dossiers, Linear A seriation, and catalogued
+sign-variant (allograph) groups. The neural tier is excluded (it needs onnxruntime, which
+doesn't run in the browser) — so is the neural pipeline's calibrated confidence — as are the
+network-only backends (load_work, the full-NT fetch, LSJ/treebank, the fetched paradigm table)
+and the generative AI layer. Each function returns a JSON string for easy consumption from
+JavaScript. This module is exercised by tests/test_web_demo.py, so the demo's logic can't
+silently rot.
 """
 
 from __future__ import annotations
@@ -25,10 +28,15 @@ from typing import Any
 
 
 def betacode(text: str) -> str:
-    """Convert Beta Code (plain-ASCII polytonic Greek) to Unicode."""
+    """Convert Beta Code (plain-ASCII polytonic Greek) to Unicode, or Unicode Greek back to
+    Beta Code."""
     from aegean import greek
 
-    return json.dumps({"unicode": greek.betacode_to_unicode(text)}, ensure_ascii=False)
+    has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in text)
+    out: dict[str, Any] = {"unicode": greek.betacode_to_unicode(text)}
+    if has_greek and hasattr(greek, "unicode_to_betacode"):
+        out["betacode"] = greek.unicode_to_betacode(text)
+    return json.dumps(out, ensure_ascii=False)
 
 
 def greek_pipeline(text: str) -> str:
@@ -64,24 +72,55 @@ def greek_word(word: str) -> str:
 
 
 def greek_scan(text: str, meter: str = "hexameter") -> str:
-    """Scan a Greek verse line; returns the glyph pattern or a decline reason."""
+    """Scan a Greek verse line; returns the glyph pattern, feet, caesura, and ambiguity flag,
+    or a decline reason."""
     from aegean import greek
 
     try:
         sc = greek.scan_line(text, meter)
-        out: dict[str, Any] = {"scans": True, "meter": sc.meter, "pattern": sc.pattern}
+        out: dict[str, Any] = {
+            "scans": True,
+            "meter": sc.meter,
+            "pattern": sc.pattern,
+            "feet": [f.name for f in getattr(sc, "feet", ())],
+            "caesura": getattr(sc, "caesura", None) or "",
+            "ambiguous": bool(getattr(sc, "ambiguous", False)),
+        }
     except greek.ScansionError as exc:
         out = {"scans": False, "error": str(exc)}
     return json.dumps(out, ensure_ascii=False)
 
 
 def gloss_nt(word: str) -> str:
-    """Gloss a Koine (New Testament) Greek word from the bundled Dodson lexicon (offline)."""
+    """Gloss a Koine (New Testament) Greek word or Strong's number (e.g. '3056' / 'G3056')
+    from the bundled Dodson lexicon (offline)."""
     from aegean import greek
 
     greek.use_dodson()
-    word = word.strip().split()[0] if word.strip() else word
-    return json.dumps({"word": word, "gloss": greek.gloss_nt(word) or ""}, ensure_ascii=False)
+    raw = word.strip().split()[0] if word.strip() else word
+    cleaned = raw[1:] if raw[:1] in ("G", "g") and raw[1:].isdigit() else raw
+    if cleaned.isdigit() and hasattr(greek, "gloss_strongs"):
+        gloss = greek.gloss_strongs(cleaned) or ""
+        return json.dumps(
+            {"word": raw, "strongs": f"G{cleaned}", "lemma": "", "gloss": gloss, "definition": ""},
+            ensure_ascii=False,
+        )
+    entry = greek.lookup_nt(raw) if hasattr(greek, "lookup_nt") else None
+    if entry is not None:
+        return json.dumps(
+            {
+                "word": raw,
+                "lemma": entry.lemma,
+                "strongs": f"G{entry.strongs}" if entry.strongs else "",
+                "gloss": entry.gloss,
+                "definition": entry.definition,
+            },
+            ensure_ascii=False,
+        )
+    return json.dumps(
+        {"word": raw, "lemma": "", "strongs": "", "gloss": greek.gloss_nt(raw) or "", "definition": ""},
+        ensure_ascii=False,
+    )
 
 
 def catalog(query: str, limit: int = 15) -> str:
@@ -299,12 +338,24 @@ def epidoc_import(xml: str) -> str:
 
 
 def phonetic_compare(syllabic: str, greek_word: str) -> str:
-    """Phonetic closeness of a Linear B spelling to a Greek word (defective-script aware)."""
+    """Phonetic closeness of a Linear B spelling to a Greek word (defective-script aware),
+    including the romanized forms and segment-by-segment alignment."""
     from aegean.analysis import phonetic_compare as compare
 
     cmp = compare(syllabic.strip(), "linearb", greek_word.strip(), "greek")
+    alignment = [
+        {"a": cell.a or "∅", "b": cell.b or "∅", "op": cell.op}
+        for cell in getattr(cmp, "alignment", ())
+    ]
     return json.dumps(
-        {"syllabic": syllabic, "greek": greek_word, "similarity": round(cmp.similarity, 3)},
+        {
+            "syllabic": syllabic,
+            "greek": greek_word,
+            "similarity": round(cmp.similarity, 3),
+            "phonemes_a": getattr(cmp, "phonemes_a", ""),
+            "phonemes_b": getattr(cmp, "phonemes_b", ""),
+            "alignment": alignment,
+        },
         ensure_ascii=False,
     )
 
@@ -1014,6 +1065,236 @@ def allographs(script: str = "linearb") -> str:
             ],
             "composites": list(rep.composite_signs),
             "note": rep.notes,
+        },
+        ensure_ascii=False,
+    )
+
+
+def segment_greek(text: str, policy: str = "papyrus") -> str:
+    """Segment Greek text into sentences using a named domain policy (default, prose, verse,
+    inscription, or papyrus), returning exact source spans and policy provenance."""
+    from aegean import greek
+
+    policy = policy.strip() or "default"
+    try:
+        res = greek.segment_text(text, policy=policy)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    rules = getattr(greek, "POLICY_RULES", {})
+    return json.dumps(
+        {
+            "policy": policy,
+            "policy_id": res.policy_id,
+            "rule": rules.get(policy, ""),
+            "sentences": [
+                {
+                    "index": idx,
+                    "start": b.start_char,
+                    "end": b.end_char,
+                    "text": res.source[b.start_char : b.end_char],
+                }
+                for idx, b in enumerate(res.boundaries)
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def koine_fold(form_a: str, form_b: str) -> str:
+    """Compare two Greek spellings under strict orthographic folding and Koine/documentary
+    phonetic folding (itacism, vowel-length merger, lunate sigma, underdots, dropped final nu)."""
+    try:
+        from aegean.greek.lemma_rerank import documentary_phonetic_fold, strict_fold
+    except ImportError:
+        return json.dumps(
+            {"error": "Koine phonetic folding is unavailable in the installed package."},
+            ensure_ascii=False,
+        )
+
+    a = form_a.strip().split()[0] if form_a.strip() else ""
+    b = form_b.strip().split()[0] if form_b.strip() else ""
+    if not a or not b:
+        return json.dumps({"error": "enter two Greek word forms to compare"}, ensure_ascii=False)
+    sa, sb = strict_fold(a), strict_fold(b)
+    pa, pb = documentary_phonetic_fold(a), documentary_phonetic_fold(b)
+    return json.dumps(
+        {
+            "form_a": a,
+            "form_b": b,
+            "strict_a": sa,
+            "strict_b": sb,
+            "strict_match": sa == sb,
+            "phonetic_a": pa,
+            "phonetic_b": pb,
+            "phonetic_match": pa == pb,
+        },
+        ensure_ascii=False,
+    )
+
+
+def nt_concordance(query: str, limit: int = 20) -> str:
+    """Offline concordance search over the bundled Nestle 1904 New Testament sample (John 1 +
+    Philemon 1) by lemma (e.g. 'φῶς', 'λόγος'), Strong's number ('G3056'), or Robinson morph
+    tag ('V-IAI-3S')."""
+    import unicodedata
+
+    from aegean.data import load_bundled_json
+
+    def nfc(s: str) -> str:
+        return unicodedata.normalize("NFC", s)
+
+    q = nfc(query.strip())
+    if not q:
+        return json.dumps({"error": "enter a lemma, Strong's number (G3056), or morph tag (V-IAI-3S)"})
+    payload = dict(load_bundled_json("greek", "nt_sample.json"))
+    q_upper = q.upper()
+    is_strongs = (q_upper.startswith("G") and q_upper[1:].isdigit()) or q.isdigit()
+    strongs_num = q_upper[1:] if q_upper.startswith("G") else q
+    is_morph = "-" in q and q.isascii()
+
+    hits: list[dict[str, Any]] = []
+    for doc in payload["documents"]:
+        book = doc["book"]
+        chap = int(doc["chapter"])
+        toks = doc["tokens"]
+        by_verse: dict[int, list[dict[str, Any]]] = {}
+        for tok in toks:
+            by_verse.setdefault(int(tok["v"]), []).append(tok)
+        for verse, vtoks in sorted(by_verse.items()):
+            words = [nfc(t["t"]) for t in vtoks]
+            for idx, t in enumerate(vtoks):
+                lemma = nfc(t.get("lemma", ""))
+                morph = str(t.get("morph", ""))
+                strongs = str(t.get("strongs", ""))
+                matched = False
+                if is_strongs:
+                    matched = strongs == strongs_num
+                elif is_morph:
+                    matched = morph.upper() == q_upper or morph.upper().startswith(q_upper)
+                else:
+                    matched = lemma == q or nfc(t["t"]) == q
+                if matched:
+                    left = " ".join(words[max(0, idx - 3) : idx])
+                    right = " ".join(words[idx + 1 : idx + 4])
+                    hits.append(
+                        {
+                            "ref": f"{book} {chap}.{verse}",
+                            "token": words[idx],
+                            "lemma": lemma,
+                            "morph": morph,
+                            "strongs": f"G{strongs}" if strongs else "",
+                            "left": left,
+                            "right": right,
+                        }
+                    )
+    return json.dumps(
+        {
+            "query": q,
+            "total": len(hits),
+            "matches": hits[:limit],
+            "source": "Nestle 1904 (CC0); bundled offline sample: John 1 + Philemon 1",
+        },
+        ensure_ascii=False,
+    )
+
+
+def grounding_preview(text: str) -> str:
+    """Preview the local morphological, idiom, and provenance grounding pyaegean assembles for a
+    Greek passage before any language-model call (offline, zero API key)."""
+    from aegean import translate
+
+    if not text.strip():
+        return json.dumps({"error": "enter a short Greek passage"}, ensure_ascii=False)
+    items = translate.grounding_for(text, "greek")
+    return json.dumps(
+        {
+            "text": text,
+            "count": len(items),
+            "items": [
+                {
+                    "source": item.source,
+                    "ref": item.ref or "",
+                    "status": getattr(item, "status", "unclassified"),
+                    "content": item.content,
+                }
+                for item in items
+            ],
+        },
+        ensure_ascii=False,
+    )
+
+
+def review_preview(text: str) -> str:
+    """Annotate a short Greek passage with the baseline pipeline and preview the compact
+    spreadsheet-first editable review CSV (written in a temporary in-memory directory)."""
+    import os
+    import tempfile
+
+    from aegean import greek, io
+
+    if not text.strip():
+        return json.dumps({"error": "enter a short Greek passage"}, ensure_ascii=False)
+    corpus = greek.annotate_corpus(io.from_text(text, doc_id="passage"))
+    layout_used = "editable"
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = os.path.join(td, "review.csv")
+        try:
+            io.to_review_table(corpus, csv_path, layout="editable")
+        except TypeError:
+            layout_used = "full"
+            io.to_review_table(corpus, csv_path)
+        with open(csv_path, encoding="utf-8-sig") as handle:
+            lines = handle.read().splitlines()
+        companion_exists = os.path.exists(csv_path + ".companion.json")
+    return json.dumps(
+        {
+            "layout": layout_used,
+            "companion_sidecar": companion_exists,
+            "rows": max(0, len(lines) - 1),
+            "csv_preview": "\n".join(lines[:15]),
+        },
+        ensure_ascii=False,
+    )
+
+
+def lineara_clusters(stem: str = "JA-SA", limit: int = 8) -> str:
+    """Explore Linear A morphological word-families (shared stems with productive suffixes).
+    EXPLORATORY: groups transliterated sign sequences, not deciphered meanings."""
+    import aegean
+    from aegean.analysis import find_morphological_clusters
+
+    la = aegean.load("lineara")
+    clusters = find_morphological_clusters(la.word_frequencies())
+    prefix = stem.strip().upper()
+    if prefix:
+        matched = [
+            c
+            for c in clusters
+            if c.stem.startswith(prefix) or any(m.word.startswith(prefix) for m in c.members)
+        ]
+    else:
+        matched = clusters
+    return json.dumps(
+        {
+            "query": prefix,
+            "total_clusters": len(clusters),
+            "matched": len(matched),
+            "clusters": [
+                {
+                    "stem": c.stem,
+                    "total_count": c.total_count,
+                    "suffixes": list(c.suffixes),
+                    "members": [
+                        {"word": m.word, "count": m.count, "suffix": m.suffix}
+                        for m in c.members
+                    ],
+                }
+                for c in matched[:limit]
+            ],
+            "note": (
+                "EXPLORATORY: Linear A is undeciphered; these clusters group recurring "
+                "sign-sequence stems and endings as structural leads, not grammatical readings."
+            ),
         },
         ensure_ascii=False,
     )

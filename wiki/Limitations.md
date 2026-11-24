@@ -395,11 +395,13 @@ These are deliberate. They're listed here so you can judge them, not so they get
   note:
   [docs/large-corpora.md](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/large-corpora.md)).
   The neural API also streams an iterable of already tokenized sentences with
-  `greek.iter_analyze_sentences`; raw-text pipelines, corpus annotation, and
-  CoNLL-U serialization still collect their full results.
-  A `SentenceAnalysis.receipt` identifies the neural inference path; opt-in
-  documentary reconciliation/rescue is post-processing and its settings must be
-  recorded separately when used.
+  `greek.iter_analyze_sentences`, and `aegean.db.annotate_sqlite_job`
+  (`aegean db annotate`) handles durable, document-by-document resumable
+  annotation over SQLite databases; raw-text pipelines, in-memory corpus
+  annotation, and CoNLL-U serialization still collect their full results.
+  A `SentenceAnalysis.receipt` (schema 4) records the neural inference identity,
+  runtime variant, and any opt-in post-processing (documentary reconciliation/rescue
+  or weighted OOV lemma reranker) and calibration hashes automatically.
 
 - **Try it without installing anything**: the core pipeline runs client-side via
   Pyodide at [the web demo](https://pyaegean.xyz/demo/); the

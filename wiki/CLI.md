@@ -117,8 +117,8 @@ aegean --version          # pyaegean 0.62.0
 | **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `explain`, bounded neural `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
-| **`aegean db …`** | `build` `add` `search` (SQLite + FTS5) |
-| **`aegean review …`** | `export` `merge` `apply` (the human-in-the-loop annotation round-trip, including multi-reviewer agreement) |
+| **`aegean db …`** | `build` `add` `index` `search` `annotate` `job-status` (SQLite + FTS5 + resumable annotation jobs) |
+| **`aegean review …`** | `export` `merge` `apply` (the human-in-the-loop annotation round-trip, editable & risk-prioritized spreadsheets) |
 | **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
 
@@ -1259,11 +1259,10 @@ aegean cache
 
 Set `PYAEGEAN_ANALYSIS_CACHE=1` (or a directory path) and expensive analyses
 (dispersion, keyness, clustering) are reused across runs; `aegean cache --clear`
-wipes it. Cached values are stored with `pickle` and unpickled on read, so point
-it only at a directory **you** control, never a shared or group-writable one, and
-don't reuse a cache file from someone else (loading a cache is a code-execution
-trust boundary, the same as a pip or pytest cache). The file is created owner-only,
-and enabling a cache in an others-writable directory warns.
+wipes it. Cached values are stored in SQLite using a typed JSON codec
+(`AEGEAN-CACHE-V2`, never Python `pickle`), so stale or malformed entries are
+treated as a safe miss and recomputed without running arbitrary code. The file
+is created owner-only, and enabling a cache in an others-writable directory warns.
 
 ### `doctor` — the offline environment check
 
@@ -2200,6 +2199,23 @@ back to the original scan until `db index` refreshes it. Search and status check
 remain read-only, and substring searches retain their scan behavior. Indexing
 does not generate lemmas or change which tokens qualify for a query.
 
+### `db annotate` & `db job-status` — resumable SQLite annotation jobs
+
+For large Greek corpora stored in SQLite, `db annotate` annotates one document at
+a time and checkpoints progress inside the same SQLite transaction, so an
+interrupted run can resume without starting over:
+
+```bash
+aegean db annotate corpus.db -o annotated.db --job-dir ./job-state --neural --with-dependencies
+aegean db job-status ./job-state --json
+# If interrupted, run again with --resume (verifies source snapshot, options, and backend):
+aegean db annotate corpus.db -o annotated.db --job-dir ./job-state --neural --with-dependencies --resume
+```
+
+Each job freezes a WAL-safe snapshot of the source database, reads documents
+forward in bounded keyset order, holds an exclusive file lock while active, and
+publishes the finished output database atomically only when all documents complete.
+
 ### `db add` — grow an existing database
 
 `db add` upserts documents into a database you already built: a document whose id
@@ -2260,7 +2276,7 @@ record of it.
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `review export` | Write selected rows with predictions, analysis identity, inclusion reasons, and field-decision columns | `-o/--output` `--selection all\|flagged\|unverified\|sample` repeatable `--field` `--sample-size` `--seed` `--reviewer` `--annotate` `--annotated-output` | `aegean review export nt -o review.csv --selection unverified --field pos` |
+| `review export` | Write selected rows with predictions, analysis identity, inclusion reasons, and field-decision columns | `-o/--output` `--selection all\|flagged\|unverified\|sample` `--layout full\|editable` `--priority source\|calibrated-risk` `--budget N` repeatable `--field` `--sample-size` `--seed` `--reviewer` `--annotate` `--neural` `--with-confidence` `--confidence-domain` `--annotated-output` | `aegean review export nt -o review.csv --selection unverified --field pos --layout editable` |
 | `review merge` | Combine copies of one export; retain field attribution and report disagreements | `--corpus/-c` `-o/--output` `--on-conflict error\|report` `--json` | `aegean review merge alice.csv bob.csv -c analysis.json -o merged.csv --on-conflict report` |
 | `review apply` | Apply field decisions or corrections, preserving original predictions and review history | `-o/--output` (a `.json`/`.db`) `--reviewer NAME` | `aegean review apply analysis.json review.csv -o reviewed.json --reviewer "A. Scholar"` |
 
@@ -2293,6 +2309,12 @@ or unrecognized values remain included. None of these modes changes the CSV's
 `lemma`, `pos`, `morph`, `head`, or `deprel`. Inclusion reasons are recorded in the
 table. A sample of unflagged rows helps test what the existing flag misses.
 
+When you want to spend limited editorial time on the predictions most likely to need a
+human eye, combine `--neural --with-confidence --confidence-domain literary` (or
+`documentary_native` for papyri) with `--priority calibrated-risk --budget 50`: `review export`
+automatically loads the matching bundled calibration registry when none is active and orders
+the highest-risk predictions first while keeping dependency sentences intact.
+
 Fill `decision_lemma`, `decision_pos`, or `decision_morph` with a field action:
 
 | Action | Effect |
@@ -2320,7 +2342,7 @@ sentence ownership is refused. Edits must leave one root, valid head indexes,
 matching root labels, and no cycles; invalid edits produce no partial changes.
 
 ```bash
-# 1. export a reviewable table
+# 1. export a reviewable table (add --layout editable for a compact spreadsheet + .companion.json)
 aegean review export greek --annotate --annotated-output analysis.json -o review.csv
 #    wrote 27 review rows to review.csv
 #    record field decisions or corrections, then apply them to analysis.json
@@ -2332,7 +2354,11 @@ aegean review export analysis.json --selection flagged -o triage.csv
 #    wrote 7 review rows to triage.csv
 #    This filter is not a confidence threshold; omit it to review all rows.
 
-# 3. Fill decision_* and, for corrections, correct_*; add reviewer identity, note, and evidence.
+# 3. With the neural pipeline, export a compact 50-row calibrated-risk queue:
+aegean review export greek --annotate --neural --with-confidence --confidence-domain literary \
+    --layout editable --priority calibrated-risk --budget 50 -o queue.csv
+
+# 4. Fill decision_* and, for corrections, correct_*; add reviewer identity, note, and evidence.
 #    If several people review copies of the same export, merge them against its saved source:
 aegean review merge alice.csv bob.csv -c analysis.json -o merged.csv --on-conflict report
 
@@ -2348,12 +2374,14 @@ preserves source whitespace and typed-form cells and retains individual reviewer
 attribution in `reviewer_records`. See
 [When the Tool Is Wrong](When-the-Tool-Is-Wrong) for the review workflow in context.
 
-Unlike the tabular exports, a review table always carries the guarded `alignment_*` and
-`form_*` columns plus `form_state_json`; they stay empty for a token with no typed
-editorial form, so the column layout is the same whatever the corpus. Applying a
-correction refuses a row whose form state no longer matches the exported corpus. Review
-files written before these columns remain readable and use the existing identity and
-token-text checks.
+The default `--layout full` table carries all guarded `alignment_*` and `form_*` columns plus
+`form_state_json` inline (they stay empty when a token has no typed editorial form). For a
+cleaner spreadsheet view, pass `--layout editable`: it puts your decision and correction
+columns first and moves the immutable snapshot and provenance columns into a SHA-256-bound
+`<name>.companion.json` sidecar that `review merge` and `review apply` detect automatically.
+In either layout, applying a correction refuses a row whose form state no longer matches the
+exported corpus. Review files written before these columns remain readable and use the
+existing identity and token-text checks.
 
 ---
 
@@ -2419,6 +2447,9 @@ remain `--check-policy standard --lexical-evidence concise`.
 Use repeatable `--dictionary ID` options to activate hosted dictionaries for this
 command, for example `--dictionary middle-liddell --dictionary cunliffe`. Explicit
 activation may fetch the cache on first use; grounding itself does not activate it.
+Pass `--source-context TEXT` or `--source-context-file PATH` to supply surrounding lines
+separately from the target passage, and `--max-tokens N` (default `2048`) to set the
+per-call output token allowance.
 
 `--greek-backend default|baseline|neural` makes the Greek analysis owner explicit.
 With `neural`, add `--greek-variant default|fast|compact|balanced` to select its runtime

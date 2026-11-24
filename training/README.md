@@ -45,6 +45,12 @@ replicates, the export gate report, and bootstrap CIs).
   with *quantized activations* was gated on a ≤0.3-point drop and rejected: the GreBerta
   encoder's activation outliers collapse under 8-bit activations (UPOS 97→16–32). Keeping
   activations fp32 and quantizing only the weights ships the size win at no accuracy cost.
+- **Post-hoc calibration & OOV lemma reranking.** `calibrate_temperature.py` fits Scalar
+  (Schema-1) and per-task/per-route logit-affine (Schema-2) calibrations strictly on
+  development folds. The locked-test qualification record for the bundled Schema-2
+  calibration registry (`calibration_registry_v2.json`) and bundled weighted top-10 OOV
+  lemma reranker (`oov_lemma_reranker_v1.json`) is archived in
+  `results/stage1-oov-rerank-and-calibration-2026-11-24.json`.
 
 ## Data protocol
 

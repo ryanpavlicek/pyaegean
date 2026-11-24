@@ -185,7 +185,7 @@ layer.
 r.text               # translation text for a structured translation; otherwise raw output
 r.kind               # 'translate' | 'gloss' | 'decipher' | 'nlp_assist' | 'ask' | 'summarize' | 'extract'
 r.provider, r.model  # which provider/model produced it
-r.prompt_version     # the prompt template version (currently '2026.10-v4')
+r.prompt_version     # the prompt template version (currently '2026.10-v5')
 r.exploratory        # always True
 r.grounding          # tuple of GroundingItem evidence fed to the model
 r.data               # parsed extract payload, or translation audit data
@@ -267,7 +267,7 @@ KU-RO most likely marks a running total of the preceding entries.
   "text": "KU-RO most likely marks a running total of the preceding entries.",
   "provider": "anthropic",
   "model": "claude-sonnet-4-6",
-  "prompt_version": "2026.10-v4",
+  "prompt_version": "2026.10-v5",
   "exploratory": true,
   "grounding": [
     { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO", "status": "unclassified" }
@@ -616,7 +616,7 @@ r = ai.decipher_hypotheses(
     client=client,
 )
 print(r.trace())
-# EXPLORATORY decipher via anthropic/claude-… (prompt 2026.10-v4)
+# EXPLORATORY decipher via anthropic/claude-… (prompt 2026.10-v5)
 #   grounded in 2 item(s) from 1 source(s):
 #   • analysis:cooccurrence (2):
 #       - co-occurs with KU-RO: KI-RO (×5) [evidence: {"ref": "KU-RO", "source": "analysis:cooccurrence", "status": "unclassified"}]
@@ -628,7 +628,7 @@ is the weakest kind and the trace flags it:
 
 ```python
 print(ai.gloss("ἦν", client=client).trace())
-# EXPLORATORY gloss via anthropic/claude-… (prompt 2026.10-v4)
+# EXPLORATORY gloss via anthropic/claude-… (prompt 2026.10-v5)
 #   grounding: none (ungrounded generation — weigh accordingly)
 ```
 
@@ -896,14 +896,15 @@ You can score a single answer directly with `ai.score_text(text, case)`.
 
 A sha256-keyed cache over `(provider identity, model, system, prompt, max_tokens)`
 makes repeated requests reuse a response: in memory by default, or persisted to
-JSON. Every built-in provider includes a digest of its frozen endpoint in that identity. Keys are
-digests, so prompts of any size hash to a fixed-length key and raw text never
-lands in the index.
+JSON or SQLite (`backend="auto"|"json"|"sqlite"`, where SQLite gives WAL-mode
+O(1) lookups while existing `.json` caches keep working). Every built-in provider
+includes a digest of its frozen endpoint in that identity. Keys are digests, so
+prompts of any size hash to a fixed-length key and raw text never lands in the index.
 
 ```python
 from aegean import ai
 
-cache = ai.ResponseCache("~/.cache/pyaegean/ai.json")   # path → persisted; omit for in-memory
+cache = ai.ResponseCache("~/.cache/pyaegean/ai.sqlite")  # .sqlite or .json; omit for in-memory
 client = ai.get_client("anthropic", cache=cache)
 
 ai.ask("test?", client=client)   # one real completion
@@ -927,7 +928,7 @@ keeps cost down and makes notebooks reproducible.
 | Command | Purpose | Key options |
 | --- | --- | --- |
 | `aegean ai providers` | List registered providers | `--json` |
-| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--mode`, `--style`, `--verify`, `--greek-backend`, `--grounding-failure`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
+| `aegean ai translate TEXT` | Hybrid translation | `--script`, `--target`, `--mode`, `--style`, `--verify`, `--check-policy`, `--lexical-evidence`, `--dictionary`, `--source-context`, `--source-context-file`, `--max-tokens`, `--greek-backend`, `--grounding-failure`, `--glosses/--no-glosses`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai gloss TEXT` | Word-by-word gloss | `--source`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai summarize TEXT` | Grounded summary | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
 | `aegean ai hypotheses TEXT` | Decipherment hypotheses | `--corpus`, `--provider`, `--model`, `--output/-o`, `--trace`, `--json` |
@@ -953,7 +954,7 @@ aegean ai ask "What does KU-RO mark?" --corpus lineara --json
   "kind": "ask",
   "provider": "anthropic",
   "model": "claude-…",
-  "prompt_version": "2026.10-v4",
+  "prompt_version": "2026.10-v5",
   "grounding": [
     { "content": "KU-RO (×37)", "source": "corpus:lineara", "ref": "KU-RO", "status": "unclassified" }
   ],

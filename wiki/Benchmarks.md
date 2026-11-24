@@ -98,9 +98,42 @@ Full protocol is in canonical `docs/benchmarks.md`; evidence is in
 `training/results/calibration-2026-07-11.json`.
 
 The additive typed API (`token_confidence`, `sentence_confidence`) carries task/source/domain
-scope and explicit unavailable reasons. A schema-2 registry, empirical coverage-risk curves,
-and caller-owned abstention thresholds remain pending a fresh development-only inference
-gate. No bundled threshold is implied.
+scope and explicit unavailable reasons. A locked-test-qualified **Schema-2 calibration
+registry** (`calibration_registry_v2.json`, loaded via `greek.use_calibration_registry()`)
+is now bundled for `grc-joint-v3`. Its logit-affine parameters were fitted strictly on
+development folds (`literary` on UD Perseus dev and `documentary_native` on PapyGreek dev)
+across all six tasks (`upos`, `xpos`, `feats`, `lemma`, `head`, `relation`) and all four
+lemma routes, then evaluated once on the five locked test folds
+(`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`). No default
+abstention threshold is bundled; callers choose thresholds via `AbstentionPolicy` or
+rank review sheets with `priority="calibrated_risk", budget=N`.
+
+| Locked test fold (`confidence_domain`) | Lemma ECE15 (raw → calibrated) | Brier (raw → calibrated) |
+| --- | --- | --- |
+| UD Perseus test (`literary`) | 0.0566 → 0.0138 | 0.0598 → 0.0493 |
+| UD PROIEL test (`literary`) | 0.0882 → 0.0363 | 0.0955 → 0.0752 |
+| Tragedy — *Bacchae* (`literary`) | 0.1118 → 0.0545 | 0.1257 → 0.0972 |
+| PapyGreek `reg` (`documentary_native`) | 0.0819 → 0.0258 | 0.0957 → 0.0772 |
+| PapyGreek `orig` (`documentary_native`) | 0.1252 → 0.0609 | 0.1455 → 0.1149 |
+
+## Opt-in weighted OOV lemma reranker
+
+`greek.use_oov_lemma_reranker(config="weighted")` activates a bundled, opt-in post-processor
+(`oov_lemma_reranker_v1.json`) that leaves the `grc-joint-v3` weights unchanged and adds zero
+overhead when inactive. For words not seen during training, it combines the joint model's
+top-10 edit-script predictions with train-only orthographic, Koine phonetic, and
+preverb-stripped candidates using frozen dev-fitted weights (no external dictionary leakage).
+Across all 79,462 tokens of the five locked test folds it fixed 1,645 lemmas while harming 145
+(a net +1,500 tokens, >11:1 win/loss ratio; evidence in
+`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`):
+
+| Locked test fold | `grc-joint-v3` default Lemma | + weighted OOV reranker | Gain (pp) |
+| --- | --- | --- | --- |
+| UD Perseus test | 94.27 | **94.96** | +0.69 |
+| UD PROIEL test | 90.51 | **91.47** | +0.96 |
+| Tragedy (*Bacchae* 1–169) | 87.89 | **89.39** | +1.50 |
+| PapyGreek (`reg`) | 89.63 | **91.66** | +2.03 |
+| PapyGreek (`orig` diplomatic) | 85.62 | **89.06** | +3.43 |
 
 ## Out of domain: Koine / New Testament
 
@@ -196,9 +229,10 @@ The orig-layer PapyGreek fold (same sentences and gold, 1,453 FORM differences)
 measures the cost of documentary orthography directly: UPOS 90.57 / XPOS 74.64 /
 UFeats 86.15 / lemma 85.62 / UAS 84.32 / LAS 77.57 / CLAS 72.97 vs the
 regularized row's 91.53 / 77.19 / 88.73 / 89.63 / 85.51 / 79.57 / 75.41.
-Lemma composition takes the biggest hit. And the DBBE Byzantine book-epigram gold
+Lemma composition takes the biggest hit (which the opt-in weighted OOV reranker above
+recovers by +3.43 pp to 89.06). And the DBBE Byzantine book-epigram gold
 (tagging only, unedited medieval
-verse) scores UPOS 86.75 / lemma 76.69 over 9,191 tokens. Reproduce:
+verse) scores UPOS 86.75 / XPOS 79.23 / UFeats 81.91 / lemma 76.69 over 9,191 tokens. Reproduce:
 `aegean greek eval papygreek --layer orig` and `aegean greek eval dbbe`.
 
 ## Verse, out of domain: tragedy
@@ -206,7 +240,7 @@ verse) scores UPOS 86.75 / lemma 76.69 over 9,191 tokens. Reproduce:
 The verse fold (gold manual annotation from the UNESP Trees project, CC BY-SA
 4.0; Euripides *Bacchae* 1-169, leakage-checked against training) is a
 leakage-clean tragedy evaluation; no prior one is known to us. A small-sample datapoint with
-wide CIs, never a headline: tragedy UPOS 90.88 / lemma 87.89 / UAS 79.73 /
+wide CIs, never a headline: tragedy UPOS 90.88 / UFeats 88.16 / lemma 87.89 / UAS 79.73 /
 LAS 73.33 over 735 tokens (LAS 95% CI [69.75, 78.28]). Tragedy parses ~6 LAS
 points below the documentary fold: poetic word order is materially harder.
 Reproduce: `aegean greek eval verse --track tragedy`.

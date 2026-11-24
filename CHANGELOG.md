@@ -65,10 +65,10 @@ All notable changes to pyaegean are documented here. The format follows
   unflagged rows, with inclusion reasons. New snapshots bind source, predictions,
   analysis generation, and available model/configuration identity. Annotation
   exports save their exact source analysis for later merge and application.
-- Editable-first review CSV layout (`layout="editable_first"`, CLI
-  `--layout editable-first`) places reviewer decision and correction columns first
-  and stores immutable provenance in a SHA-256-bound `.meta.json` companion
-  snapshot, detected automatically on apply and merge.
+- Editable-first review CSV layout (`layout="editable"`) places reviewer
+  decision and correction columns first and stores immutable provenance in a
+  SHA-256-bound `.companion.json` sidecar snapshot, detected automatically on
+  apply and merge (CLI `--layout editable` added in Unreleased above).
 - Dependency head and relation review includes complete sentence context and
   validates head ranges, sentence ownership, root structure, and cycles before
   applying changes. Dependency annotation is explicitly selected; ordinary

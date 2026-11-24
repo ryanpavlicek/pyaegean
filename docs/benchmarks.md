@@ -284,13 +284,14 @@ evidence is in `training/results/calibration-2026-07-11.json`.
 
 ### Domain- and route-scoped calibration (Schema-2 registry)
 
-For finer-grained confidence across all six annotation layers (part of speech, detailed
-morphology, lemma, syntactic head, and dependency relation), pyaegean ships a qualified
-Schema-2 calibration registry activated with `greek.use_calibration_registry()` (no
-arguments needed). Each calibrator is fitted strictly on held-out development folds and
-scoped to both genre (`literary` or `documentary_native`) and, for lemmas, how the lemma was
-produced (exact lookup, neural edit script, or fallback). Missing scopes still report an
-explicit unavailable reason rather than silently substituting zero or raw scores.
+For finer-grained confidence across all six annotation layers (universal part of speech,
+language-specific part of speech / XPOS, detailed morphology, lemma, syntactic head, and
+dependency relation), pyaegean ships a qualified Schema-2 calibration registry activated with
+`greek.use_calibration_registry()` (no arguments needed). Each calibrator is fitted strictly
+on held-out development folds and scoped to both genre (`literary` or `documentary_native`)
+and, for lemmas, how the lemma was produced (exact lookup, neural edit script, or fallback).
+Missing scopes still report an explicit unavailable reason rather than silently substituting
+zero or raw scores.
 
 One-shot locked-test qualification across five held-out corpora (`79,462` tokens, CPU
 sequential, zero test-set tuning; evidence:
@@ -306,9 +307,9 @@ sequential, zero test-set tuning; evidence:
 
 In practical editorial terms: reviewing only the lowest-confidence 10% of tokens in a
 calibrated-risk queue (`to_review_table(..., priority="calibrated_risk", budget=N)` or
-`aegean review export --priority calibrated-risk --budget N --with-confidence`) surfaces
-roughly half to nearly three-quarters of all lemmatization errors, while cutting calibration
-error (ECE15) by 51%–76% on every fold.
+`aegean review export corpus.json -o review.csv --annotate --neural --with-confidence --confidence-domain literary --priority calibrated-risk --budget N`)
+surfaces roughly half to nearly three-quarters of all lemmatization errors, while cutting
+calibration error (ECE15) by 51%–76% on every fold.
 
 ### Opt-in OOV lemma reranker (weighted top-10)
 
@@ -332,11 +333,12 @@ Like the documentary levers below, the reranker is **opt-in and off by default**
 | UD PROIEL test (Herodotus + NT) | 13,314 | 90.51 | 90.63 | **91.47** | +148 / -20 (+128) |
 | Verse tragedy (*Bacchae*) | 735 | 87.89 | 88.44 | **89.39** | +14 / -3 (+11) |
 | PapyGreek regularized | 22,227 | 89.63 | 90.42 | **91.66** | +505 / -52 (+453) |
-| PapyGreek diplomatic (`orig`) | 22,227 | 85.63 | 87.65 | **89.06** | +816 / -52 (+764) |
+| PapyGreek diplomatic (`orig`) | 22,227 | 85.63* | 87.65 | **89.06** | +816 / -52 (+764) |
 
 Across all `79,462` tokens, the weighted top-10 reranker fixed `1,645` errors while
 introducing `145` new mistakes (net `+1,500`, an 11.3:1 help-to-harm ratio), with positive
-gains on all five folds.
+gains on all five folds. (\*Per-token NFC lemma match is `85.63` vs `85.62` CoNLL-18 F1 in
+the table below — a 1-token / 0.004 pp homograph-digit cleanup difference.)
 
 ### Koine / New Testament (Nestle 1904 own gold)
 
@@ -385,7 +387,7 @@ What is and isn't reported, and why:
 
 A fair question for any Greek parser is "how much can I trust this on Homer, on tragedy, on
 Koine prose?" `greek.evaluate_by_genre("perseus", "test")` (CLI: `aegean greek eval ud
---by-genre`) buckets a UD fold by its `sent_id` author, maps each author to a literary genre
+--by-genre --neural`) buckets a UD fold by its `sent_id` author, maps each author to a literary genre
 (epic, tragedy, comedy, prose), and scores each bucket separately with the official evaluator,
 reporting the per-bucket sentence and word counts and, optionally, bootstrap CIs.
 

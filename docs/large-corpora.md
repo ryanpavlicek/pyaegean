@@ -107,35 +107,42 @@ the batch and the largest individual sentence; it is not a fixed byte ceiling fo
 an arbitrarily large single sentence. Batched/GPU execution remains a throughput
 option; published measurements use canonical sequential CPU inference.
 
-`greek.analyze_sentences(...)` remains the compatibility collector: it uses the
-same bounded input engine but returns the complete result list. Use the `iter_`
-form for incremental output. An isolated `GreekPipeline` has the matching
-`iter_analyze_sentences(...)` method.
+`greek.analyze_sentences(..., length_bucket=True)` groups similar-length sentences
+together for faster batched throughput while returning results in exact input order;
+`iter_analyze_sentences(...)` is the incremental iterator form. An isolated
+`GreekPipeline` has the matching `iter_analyze_sentences(...)` method.
 
 From the shell, `aegean greek stream INPUT` reads those tokenized sentences as
 JSONL (one JSON string array per line; `-` means stdin) and emits one flushed
 `SentenceAnalysis` JSON object per line. It activates the neural backend itself;
 `--batch-size`, long-input, and confidence controls mirror the Python iterator.
 
-The sentence boundary does not extend to a fully streaming raw-text or
-`Corpus` pipeline. `greek.pipeline(text)`, `GreekPipeline.analyze(text)`,
-`greek.annotate_corpus(...)`, CoNLL-U parsing/serialization/evaluation, and analyses
-that require the whole vocabulary still collect. A general document-iterator
-pipeline would mean:
+## Durable, resumable SQLite corpus annotation
 
-- analyses that accept a document **iterator** rather than a `Corpus` (most of
-  the per-document statistics already could);
-- giving up O(1) random access (`get(id)`) and any analysis that needs two
-  passes or the whole vocabulary at once (dispersion, keyness, clustering) unless
-  it's restructured to spill to disk.
+For large Greek corpora stored in SQLite (including working copies of DDbDP or
+multi-work collections), **`aegean.db.annotate_sqlite_job()`** (CLI:
+**`aegean db annotate`**) bridges streaming storage and annotation without loading the
+whole corpus into memory:
 
-That's a real cost in API complexity. DDbDP (`aegean.load("ddbdp")`, 57,331
-documentary papyri, ~4.4M tokens) is answered at the storage layer: the corpus is
-hosted as a SQLite database, `aegean.db.stream(ddbdp_db())` yields its documents
-one at a time, and `aegean.db.search()` (CLI:
-`aegean db search ddbdp "..."`) gives instant full-text search without loading
-anything. `aegean.load("ddbdp")` still returns the whole in-memory `Corpus` for
-those with the RAM.
+```bash
+aegean db annotate corpus.db -o annotated.db --job-dir ./job --neural
+# If interrupted, resume safely from the last committed document:
+aegean db annotate corpus.db -o annotated.db --job-dir ./job --neural --resume
+aegean db job-status ./job --json
+```
 
-`aegean.db.stream()` plus the sentence iterator are the seams for a future
-document-stream analyzer; they do not claim that bridge already exists.
+Each job freezes a read-consistent snapshot of the source database, walks documents
+forward one by one, commits each annotated document alongside its progress checkpoint,
+verifies on resume that the source, settings, and backend have not changed, and writes
+the finished database atomically only when all documents succeed.
+
+In-memory `greek.pipeline(text)`, `GreekPipeline.analyze(text)`,
+`greek.annotate_corpus(...)`, CoNLL-U parsing/serialization/evaluation, and whole-vocabulary
+statistics (dispersion, keyness, clustering) still collect results in memory.
+
+For searching DDbDP (`aegean.load("ddbdp")`, 57,331 documentary papyri, ~4.4M tokens)
+without loading it into memory, use `aegean.db.stream(ddbdp_db())` to read one papyrus at
+a time and `aegean.db.search()` (CLI: `aegean db search ddbdp "..."`) for instant
+full-text search; on any writable local SQLite copy, `aegean.db.build_lexical_index()`
+(CLI: `aegean db index`) adds fast exact surface, normalized, and lemma lookup.
+`aegean.load("ddbdp")` still returns the whole in-memory `Corpus` if you have the RAM.

@@ -85,8 +85,13 @@ correction does not verify a lemma. A verified lemma does not certify other fiel
 Repeat `--field pos --field morph` with `--selection unverified` to target grammar,
 or use `--selection sample --sample-size 40 --seed 17` to sample unflagged rows.
 Dependency fields `head` and `deprel` bring complete sentence context and require
-a valid edited tree. These selections do not turn the existing flag into a
-calibrated error detector.
+a valid edited tree. Those selection filters do not turn `needs_review` into a
+calibrated error detector — if you want to focus limited editorial time on the
+predictions most likely to need human attention, annotate with calibrated neural
+confidence (`--annotate --neural --with-confidence --confidence-domain literary` or
+`documentary_native`), export a compact editable spreadsheet with `--layout editable`
+(decision columns first; provenance stored in a `.companion.json` sidecar), and rank
+rows with `--priority calibrated-risk --budget 50`.
 
 If export generates predictions with `--annotate`, it also saves the annotated
 corpus. Use that exact file for merge/apply. New snapshots bind available analysis

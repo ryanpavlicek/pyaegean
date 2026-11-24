@@ -1732,12 +1732,12 @@
       "id": "review-loop",
       "since": "0.28.0",
       "python_api": "aegean.io.to_review_table",
-      "summary": "Optional field-specific queues and seeded samples, analysis-bound snapshots, sentence-validated dependency decisions, and multi-reviewer merge with persistent attribution.",
+      "summary": "Optional field-specific queues and seeded samples, compact editable spreadsheets, analysis-bound snapshots, sentence-validated dependency decisions, and multi-reviewer merge with persistent attribution.",
       "surfaces": {
         "demo": {
-          "status": "excluded",
-          "reason": "file-path-ux",
-          "note": "the review loop reads and writes CSV files."
+          "status": "covered",
+          "where": "review_preview",
+          "note": "runs baseline annotation and editable CSV export in Pyodide's temporary memory filesystem to preview the spreadsheet workflow."
         },
         "mcp": {
           "status": "excluded",
@@ -1963,9 +1963,8 @@
       "summary": "Conservative, source-span-preserving Greek sentence segmentation with named domain policies and a validated plugin seam.",
       "surfaces": {
         "demo": {
-          "status": "excluded",
-          "reason": "not-applicable",
-          "note": "the browser demo keeps a compact word-token workflow and has no sentence-policy control."
+          "status": "covered",
+          "where": "segment_greek"
         },
         "mcp": {
           "status": "excluded",
@@ -2072,6 +2071,120 @@
           "status": "excluded",
           "reason": "not-applicable",
           "note": "Explicit counting controls are available in the stats/query/db command console; no dedicated selector in the corpus table."
+        }
+      }
+    },
+    {
+      "id": "koine-phonetic-folding",
+      "since": "0.62.0",
+      "python_api": "aegean.greek.lemma_rerank.documentary_phonetic_fold",
+      "summary": "Strict orthographic folding and Koine/documentary phonetic folding (itacism, vowel-length merger, lunate sigma, Leiden underdots, dropped final nu) for comparing documentary and literary spellings.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "koine_fold"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "spelling normalization helpers are Python/browser utilities; no dedicated MCP tool."
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "folding utilities support the OOV reranker and documentary papyrus workflows."
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "no dedicated spelling-fold screen in the TUI."
+        }
+      }
+    },
+    {
+      "id": "nt-concordance",
+      "since": "0.8.1",
+      "python_api": "aegean.greek.load_nt",
+      "summary": "Offline concordance and morphological search over the bundled Nestle 1904 New Testament sample (John 1 + Philemon 1) by lemma, Strong's number, or Robinson morph tag.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "nt_concordance"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "search the full NT corpus via query_corpus or show_document."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "load_nt("
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "NT search runs in the corpus browser; no separate concordance screen."
+        }
+      }
+    },
+    {
+      "id": "translation-grounding-preview",
+      "since": "0.13.0",
+      "python_api": "aegean.translate.grounding_for",
+      "summary": "Offline inspection of the local morphological, idiom, and provenance grounding assembled for a Greek passage before any language-model call.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "grounding_preview"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "grounding inspection pairs with the local translation pipeline; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "getting-started.ipynb",
+            "marker": "grounding_for("
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "the TUI translation popup uses grounding automatically without a separate preview screen."
+        }
+      }
+    },
+    {
+      "id": "lineara-clusters",
+      "since": "0.2.0",
+      "python_api": "aegean.analysis.find_morphological_clusters",
+      "summary": "Exploratory Linear A sign-group family discovery by shared stem and productive suffixes.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "lineara_clusters"
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "exploratory clustering is a Python/CLI/browser analysis tool; no MCP tool."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-aegean.ipynb",
+            "marker": "find_morphological_clusters("
+          }
+        },
+        "tui": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "reachable via the command console (aegean analyze clusters lineara); no dedicated screen."
         }
       }
     }

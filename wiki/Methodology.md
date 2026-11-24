@@ -108,9 +108,9 @@ The Greek NLP accuracy numbers are the project's **measured** claims. They are
 scored on the standard Ancient Greek benchmarks under a fixed, reproducible
 protocol. The full protocol, the cross-tool comparison tables, and their
 citations are in
-[Benchmarks](Benchmarks);
-this section summarizes it and reports **pyaegean's own numbers** (per the wiki
-convention, cross-tool comparisons stay in the benchmarks doc).
+[Benchmarks](Benchmarks) (and mirrored in canonical `docs/benchmarks.md`);
+this section summarizes the evaluation contract and focuses on **pyaegean's own
+measurements**.
 
 ### Protocol
 

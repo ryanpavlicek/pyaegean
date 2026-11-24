@@ -43,9 +43,16 @@ The no-extra baseline provides limited rule/lookup analysis. Neural output remai
 model prediction, including when a dependency tree is structurally valid. Preserve
 configuration and analysis receipts with exported results. Use explicit long-input
 policies and inspect coverage; a partial annotation is not a complete analysis.
-Confidence flags do not currently establish independently calibrated error rates
-for every genre, period, or field. Register differences matter: regularized and
-diplomatic papyrus readings can produce different analyses.
+Two opt-in neural refinements are bundled without changing the default `grc-joint-v3`
+weights: `greek.use_oov_lemma_reranker(config="weighted")` recovers unfamiliar, poetic,
+and documentary spellings using the model's top-10 edit candidates plus train-only
+indices, and `greek.use_calibration_registry()` enables domain-scoped probability
+calibration across literary prose (`literary`) and documentary papyri
+(`documentary_native`). Even calibrated probabilities remain model estimates rather
+than scholarly certainty, and register differences still matter: regularized and
+diplomatic papyrus readings can produce different analyses. For large SQLite corpora,
+`aegean.db.annotate_sqlite_job()` (`aegean db annotate`) checkpoints progress one
+document at a time so long runs can pause and resume without losing work.
 
 ## Review the evidence needed for the claim
 
@@ -60,9 +67,15 @@ deferral, and rejection. Accepting an unchanged lemma is a real recorded decisio
 it does not certify syntax or lexical sense. Reanalysis marks replaced decisions
 stale. New CSV snapshots bind the available analysis identity and generation as
 well as the source and predictions; regenerate them after replacing an analysis.
-Field-specific queues and seeded samples of unflagged results let a review focus
-on the claim being investigated. Dependency decisions require complete sentence
-context and validate the edited tree before applying it.
+Use `layout="editable"` (`--layout editable`) for a compact spreadsheet that puts
+your decision columns first and keeps full provenance in a `.companion.json`
+sidecar. When you annotate with calibrated confidence
+(`annotate_corpus(..., with_confidence=True, confidence_domain="literary")`),
+`priority="calibrated_risk", budget=N` orders the spreadsheet so you inspect the
+most uncertain predictions first within a fixed editorial budget. Field-specific
+queues and seeded samples of unflagged results let a review focus on the claim
+being investigated. Dependency decisions require complete sentence context and
+validate the edited tree before applying it.
 
 ## State the population being counted
 
@@ -103,11 +116,16 @@ Configure `OPENROUTER_API_KEY` securely. `ai.annotation_evidence(document.tokens
 can provide existing field-level decisions as supplemental `grounding`; use
 `source_annotated=True` only when those annotations actually come from the edition.
 Prediction, source annotation, current human decision, and unclassified evidence
-remain distinguishable in the prompt and trace.
+remain distinguishable in the prompt and trace. When active dictionaries are loaded,
+`lexical_evidence="contextual"` includes bounded sense excerpts with construction cues,
+and `source_context=...` passes surrounding lines separately from the passage being
+translated.
 
 Compare `mode="none"`, baseline morphology, neural morphology, and `verify=True`
 with the same model and passage. Verification asks the same provider to inspect
-its draft using the evidence; it is not independent scholarly review. Checking
+its draft using the evidence; it is not independent scholarly review. Pass
+`check_policy="clauses"` (`--check-policy clauses`) to check grammatical roles,
+negations, qualifications, and omissions clause by clause against the Greek. Checking
 stays optional. With `verify=True`, `result.draft` retains the original reading,
 notes and provenance. Structured `result.data` separates uncertainty from reported
 changes and their reasons; neither is a human acceptance decision. Use

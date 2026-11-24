@@ -17,10 +17,13 @@ retained in the corpus annotations and audit history, rather than inferred from
 the pipeline record's source-only property.
 
 `annotate_corpus()` clears prior lemma evidence and neural coverage/warnings on
-each word it re-annotates, then writes fresh evidence when enabled. Custom
-`tag_sentence` callbacks carry no evidence class, and `with_evidence=False`
-leaves these fields absent rather than retaining old verification. Historical
-review records and unrelated source annotations remain intact.
+each word it re-annotates, then writes fresh evidence when enabled; pass
+`with_dependencies=True` to store syntactic heads and relations and
+`with_confidence=True` (with optional `confidence_domain=...`) to store
+calibrated confidence for risk-prioritized review queues. Custom `tag_sentence`
+callbacks carry no evidence class, and `with_evidence=False` leaves these fields
+absent rather than retaining old verification. Historical review records and
+unrelated source annotations remain intact.
 
 ## Neural runtime variants
 
@@ -47,9 +50,11 @@ source order and each result's `AnalysisReceipt`, and applies synchronous
 backpressure. A positive `batch_size` holds at most one transactional chunk; a
 failed chunk yields nothing, while earlier yielded results remain valid.
 
-`analyze_sentences(...)` is the compatibility collector over that engine and still
-returns a complete list. `GreekPipeline.iter_analyze_sentences(...)` provides the
-same iterator against an isolated instance. These APIs do not make raw-text
+`analyze_sentences(..., length_bucket=False)` is the compatibility collector over
+that engine and still returns a complete list; pass `length_bucket=True` to group
+similar-length sentences inside a batch to reduce padding overhead while
+preserving exact input order. `GreekPipeline.iter_analyze_sentences(...)` provides
+the same iterator against an isolated instance. These APIs do not make raw-text
 `pipeline()`, corpus annotation, or CoNLL-U serialization streaming. Batching is a
 throughput option; the published benchmark protocol remains sequential CPU inference.
 
@@ -66,7 +71,26 @@ contracts:
 Use these mappings for inspection and provenance; do not modify or interpret a rule
 identity as a measured confidence value.
 
+## Opt-in OOV lemma reranking
+
+`use_oov_lemma_reranker(config="weighted")` activates the bundled,
+locked-test-qualified OOV lemma reranker (`LemmaRerankerConfig.bundled()`) on
+top of the active neural pipeline without modifying the `grc-joint-v3` weights.
+When a word was not seen during training, the reranker gathers the joint model's
+top-10 edit-script predictions together with train-only orthographic, Koine
+phonetic, and preverb-stripped candidates and scores them with frozen
+dev-fitted weights. Pass `config="unique"` for the conservative unique-match
+fallback, or disable it with `disable_oov_lemma_reranker()`. When inactive, the
+top-10 capture imposes zero overhead.
+
 ## Typed confidence and abstention
+
+Call `use_calibration_registry()` with no arguments to load the bundled Schema-2
+logit-affine calibration registry (`CalibrationRegistry.bundled()`), covering
+`literary` and `documentary_native` domains across all six tasks (`upos`, `xpos`,
+`feats`, `lemma`, `head`, `relation`) and all four lemma routes. Pass a custom
+path or `CalibrationRegistry` instance to override it, or call
+`disable_calibration()` to turn calibration off.
 
 `pipeline()`/`pipeline_tokens()` and `GreekPipeline.analyze()` accept the additive
 `confidence_domain=` and `confidence_policy=` arguments when confidence is requested.

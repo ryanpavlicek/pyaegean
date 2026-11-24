@@ -52,8 +52,9 @@ from aegean import greek
 
 This default is a deterministic baseline for a first pass. Its tables and ending
 rules can return a wrong POS or lemma even when `review_recommended` is False.
-That flag selects identity/unresolved lemma fallbacks, not every error; compare
-the output with the passage, a dictionary, or existing annotations.
+That flag selects identity/unresolved lemma fallbacks, not every error; for higher
+accuracy and calibrated risk-ranked review queues, activate the opt-in neural pipeline
+with `greek.use_calibration_registry()` (and optionally `greek.use_oov_lemma_reranker(config="weighted")`).
 
 Read an inscription's editorial apparatus: the bundled Cypriot-syllabary corpus
 (*Inscriptiones Graecae* XV 1) carries a reading status on every word:
@@ -70,11 +71,11 @@ The [getting-started notebook](https://colab.research.google.com/github/ryanpavl
 runs in Colab, and the [in-browser demo](https://pyaegean.xyz/demo/) runs
 the core pipeline client-side.
 
-The current release includes named sentence policies, isolated `GreekPipeline`
-instances, and lossless CoNLL-U structure. Optional [interoperability adapters](interoperability.md) carry complete
-analyses through spaCy, Stanza, and CLTK objects with explicit native/sidecar/loss reports. The
-[Greek API](api/greek.md) also exposes immutable annotation and domain profiles, with
-content-addressed output and post-processing identity in current analysis receipts. The
+Recent releases also add named sentence policies (`prose`, `verse`, `inscription`, `papyrus`),
+compact editable review spreadsheets (`layout="editable"`) with calibrated-risk prioritization,
+resumable SQLite corpus annotation jobs (`aegean db annotate`), contextual dictionary grounding
+and clause-by-clause checking for AI translation, lossless CoNLL-U preservation, and optional
+[interoperability adapters](interoperability.md) for spaCy, Stanza, and CLTK. The
 [Greek NLP guide](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP#one-call-pipeline)
 shows runnable examples.
 

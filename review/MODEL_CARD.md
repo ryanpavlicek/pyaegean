@@ -39,8 +39,13 @@ confidence outside the scope carried by the returned confidence record.
 Inference is ONNX-based and does not require PyTorch. Gold-token evaluation uses
 pretokenized input, sequential CPU inference, and the pinned CoNLL 2018 evaluator.
 PapyGreek uses complete-word overlap windows for long sentences; other folds follow
-their recorded long-input policy. See [Methodology](../docs/methodology.md) for the full
-runtime and evaluation account.
+their recorded long-input policy. Two locked-test-qualified opt-in presets are bundled
+on top of the unchanged `grc-joint-v3` weights — the weighted top-10 OOV lemma reranker
+(`oov_lemma_reranker_v1.json`, via `use_oov_lemma_reranker(config="weighted")`) and the
+Schema-2 calibration registry (`calibration_registry_v2.json`, via
+`use_calibration_registry()`); both remain off by default and record their provenance on
+Schema-4 receipts (`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`).
+See [Methodology](../docs/methodology.md) for the full runtime and evaluation account.
 
 ## Training and evaluation
 

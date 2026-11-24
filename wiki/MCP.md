@@ -96,9 +96,9 @@ dictionaries.
 | `list_corpora` | (none) | List the corpora loadable by name (five are bundled and load offline; the rest, `damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`, and `ddbdp`, download on first use). |
 | `corpus_info` | `corpus` | Overview of a corpus: script, document count, source, license, and a ready-to-use citation. |
 | `show_document` | `corpus`, `doc_id` | One document's metadata and text, line by line (`doc_id` is forgiving: `ht13`, `py ta 641` resolve). |
-| `search_signs` | `corpus`, `pattern`, `limit=50` | Words matching a wildcard sign pattern such as `KU-*-RO`, with frequencies. |
+| `search_signs` | `corpus`, `pattern`, `limit=50`, `offset=0` | Words matching a wildcard sign pattern such as `KU-*-RO`, with frequencies and pagination (`total`, `has_more`, `next_offset`). |
 | `balance_accounts` | `corpus`, `doc_id=None`, `exact=False`, `tolerance=0.10` | Accounting reconciliation with optional rational equality and the declared intact-account eligibility tolerance. |
-| `query_corpus` | `corpus`, `where`, `output_kind="inscriptions"`, `limit=50`, `view=None`, `count_unit="document"`, `statuses=None` | Run the compound query engine with an explicit word view/counting population, metadata, and citation. |
+| `query_corpus` | `corpus`, `where`, `output_kind="inscriptions"`, `limit=50`, `offset=0`, `view=None`, `count_unit="document"`, `statuses=None` | Run the compound query engine with an explicit word view/counting population, pagination metadata, and citation. |
 | `cite_corpus` | `corpus`, `style="plain"`, `site`, `period`, `scribe`, `support` | Cite a corpus, or with metadata filters the exact subset, as plain text, BibTeX, or APA. |
 | `geo_sites` | `corpus`, `word=None` | Find-site coordinates (WGS84), Pleiades ids, and the contested-provenance flag; with `word`, per-site attestation counts. |
 | `data_status` | (none) | The local data store: every fetchable dataset with its downloaded state, on-disk size, and license (read-only). |
@@ -127,7 +127,7 @@ same engine and fields are documented on [Analysis](Analysis).
 | --- | --- | --- |
 | `greek_pipeline` | `text` | Run the baseline offline Greek NLP pipeline: one row per token (`text`, `upos`, `lemma`, position, and the parser fields). |
 | `greek_scan` | `text`, `meter="hexameter"` | Scan a Greek verse line, reporting the glyph pattern, feet, and caesura, or `scans: false` with the reason. |
-| `greek_catalog` | `query`, `author`, `title`, `source`, `limit=40` | Search the bundled catalogue of roughly 1,800 loadable Greek works (Perseus + First1KGreek). |
+| `greek_catalog` | `query`, `author`, `title`, `source`, `limit=40`, `offset=0` | Search the bundled catalogue of 1,778 loadable Greek works (Perseus + First1KGreek) with bounded pagination (`total`, `has_more`, `next_offset`). |
 | `greek_work` | `work_id`, `ref=None`, `preview_lines=10` | Load a real Greek work by its catalogue id (e.g. `tlg0012.tlg001`, the Iliad), whole or one section, with a short preview. |
 | `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `autenrieth`, `abbott-smith`, `dodson`). |
 | `koine_gloss` | `word` | Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0). |

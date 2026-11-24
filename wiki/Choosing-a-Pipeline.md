@@ -124,8 +124,9 @@ without silently mixing them with a heuristic splitter.
 | Treebank lexicon | `greek.use_treebank()` | gold lemmas and features for attested forms | none heavy (one prebuilt index fetch, then cached) | instant after the fetch | attested forms only |
 | Pure-Python trained | `greek.use_tagger()`, then `greek.use_lemmatizer()`, `greek.use_parser()` | generalizes to unseen forms (figures in [Greek NLP](Greek-NLP)) | none heavy (small models fetched, then cached) | fast | open-class and unseen forms |
 | Neural pipeline | `greek.use_neural_pipeline(variant="default")` | the highest measured on the UD Perseus benchmark (see [Benchmarks](Benchmarks)); only `default` is currently available | the `[neural]` extra (onnxruntime, no torch) | one model fetch, then CPU inference (throughput in [Greek NLP](Greek-NLP)) | UPOS, UD FEATS, dependency trees, and lemmas from one pass |
+| + Opt-in neural refinements | `greek.use_oov_lemma_reranker(config="weighted")` and `greek.use_calibration_registry()` | improves unseen/poetic/papyrus lemmas (+0.69 to +3.43 pp on locked folds) and calibrates probabilities across `literary` and `documentary_native` | bundled with the neural pipeline (zero extra download) | zero overhead when inactive | neural pipeline outputs; default `grc-joint-v3` weights stay unchanged |
 | Dictionary registry | `greek.use_lsj()`, `greek.use_dodson()`, `greek.use_lexicon(id)` | curated scholarly dictionaries | none heavy (index fetch; Dodson is bundled, no download) | instant after the fetch | glossing, not tagging |
-| Manual review | `aegean review export` / `apply`, or `greek.annotate_corpus(...)` | as good as the reviewer | none (the `[cli]` extra for the export and apply commands) | human-paced | whatever you choose to check |
+| Manual review | `aegean review export --layout editable` / `apply`, or `greek.annotate_corpus(...)` | as good as the reviewer | none (the `[cli]` extra for the export and apply commands) | human-paced (or budgeted with `priority="calibrated_risk"`) | whatever you choose to check |
 
 The `use_*` calls select the convenient module-level default. A server, notebook host, or
 test suite that needs configurations to coexist should construct `GreekPipeline()` for an
@@ -144,9 +145,11 @@ refuses a different live configuration rather than silently substituting it.
 For a large or one-shot source that already supplies tokenized sentences, use
 `greek.iter_analyze_sentences(source)` or the isolated instance method. It yields
 incrementally in source order and, with `batch_size=N`, holds no more than one
-N-sentence chunk plus the largest sentence. `analyze_sentences()` returns a complete
-list instead. This sentence iterator does not stream raw text, a `Corpus`, or CoNLL-U;
-those interfaces keep their whole-result contracts.
+N-sentence chunk plus the largest sentence. `analyze_sentences(..., length_bucket=True)`
+returns a complete list while grouping similar-length sentences inside a batch to cut
+padding overhead. For very large corpora stored in SQLite that need crash-safe
+pause/resume, use `aegean.db.annotate_sqlite_job()` (`aegean db annotate`). Raw text,
+in-memory `Corpus`, and CoNLL-U keep their whole-result contracts.
 
 A few notes that decide most cases:
 

@@ -350,7 +350,7 @@ print(r.trace())
 ```
 
 ```
-EXPLORATORY decipher via stub/stub-1 (prompt 2026.10-v4)
+EXPLORATORY decipher via stub/stub-1 (prompt 2026.10-v5)
   grounded in 2 item(s) from 2 source(s):
   • analysis:balance (1):
       - the preceding entries sum to that numeral [evidence: {"ref": "KU-RO", "source": "analysis:balance", "status": "unclassified"}]

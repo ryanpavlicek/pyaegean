@@ -126,8 +126,10 @@ ordinary words. Prefer the neural backend when prediction accuracy matters and
 review its output. Existing annotations loaded from a corpus describe its source;
 they are not fresh predictions. `annotate_corpus()` returns a copy and overwrites
 lemma/POS and clears prior lemma evidence and neural coverage metadata before
-writing fresh evidence when enabled. Keep the source corpus separately when
-comparing gold annotations with model output.
+writing fresh evidence when enabled; opt-in `with_dependencies=True` also writes
+syntactic heads and relations, and `with_confidence=True` persists calibrated
+per-token confidence for risk-prioritized review queues. Keep the source corpus
+separately when comparing gold annotations with model output.
 
 The `grc-joint` data entry currently resolves to the published `grc-joint-v3`
 neural artifact. It uses a GreBerta encoder with task heads for part of speech
@@ -253,14 +255,15 @@ source, and domain entry takes precedence, and only an entry marked broad may
 serve as a fallback. `confidence_domain=` is a caller-supplied label, not a genre
 detector. An `AbstentionPolicy` is likewise caller-owned: its thresholds produce
 accept, review, or unavailable decisions and carry a canonical policy hash. No
-threshold is bundled, and no out-of-domain claim is implied. A development-only
-baseline now covers the available literary and documentary sources under a
-deterministic source and task manifest, and records error anatomy, frequency and
-OOV bands, long-input coverage, and official-score parity. That baseline freezes
-the population for later gates. It does not retroactively create source-specific
-calibrations or abstention thresholds; a dedicated fit and validation step is
-still required before a calibration can ship, and the legacy aggregate
-calibration is not generalized by label.
+threshold is bundled, and no out-of-domain claim is implied. A locked-test-qualified
+Schema-2 calibration registry (`calibration_registry_v2.json`, loaded via
+`greek.use_calibration_registry()`) is now bundled for `grc-joint-v3`: its
+logit-affine parameters were fitted strictly on development folds (`literary` on
+UD Perseus dev and `documentary_native` on PapyGreek dev) across all six tasks and
+all four lemma routes, then verified one-shot on the five locked test folds
+(`training/results/stage1-oov-rerank-and-calibration-2026-11-24.json`). The
+legacy Schema-1 scalar calibration (`use_calibration()`) stays available for
+backward compatibility and is never generalized across domains by label.
 
 The evaluation suite exposes its scope limits on purpose:
 
@@ -301,7 +304,10 @@ exact UD-fold scoring does neither. PapyGreek's `orig` variant changes the
 diplomatic `FORM` surface while keeping the regularized-layer gold analyses and
 its documented fallbacks.
 
-When documentary reconciliation, lemma rescue, or a paradigm resource contributes
+When documentary reconciliation, lemma rescue, the opt-in OOV lemma reranker
+(`use_oov_lemma_reranker(config="weighted")`, which combines top-10 neural
+edit-script candidates with train-only orthographic, Koine phonetic, and preverb
+indices without external lexicon leakage), or a paradigm resource contributes
 to production neural output, receipt schema 4 binds the composed output profile
 ID and SHA-256, the ordered post-processing identity, the runtime label, and the
 registry and evidence digests. Receipt schemas 1 through 3 stay readable for the
@@ -401,16 +407,20 @@ language-model provider. The default Greek grounding mode builds morphology,
 idiom, and syntactic evidence with the active Greek backend. If the neural
 pipeline is active, that evidence uses its contextual predictions and dependency
 tree; otherwise the baseline or another enabled backend is used. `mode="full"`
-adds gated dictionary evidence, and `mode="none"` requests ungrounded generation
-on purpose.
+adds gated dictionary evidence, `lexical_evidence="contextual"` selects bounded
+sense excerpts with construction cues from active dictionaries, `source_context=...`
+keeps surrounding lines separate from the target passage, and `mode="none"`
+requests ungrounded generation on purpose.
 
 Grounding does not guarantee a correct translation. It makes the local evidence
 available and auditable. The returned `ExploratoryResult` keeps the provider and
 grounding trace and is labeled exploratory. For Greek, `verify=True` first
-produces an ungrounded draft and then checks it against the local evidence, which
-reduces one source of prompt bias but can still inherit an incorrect analysis.
-For Linear A, any generated translation is necessarily a hypothesis, because the
-script is undeciphered.
+produces an ungrounded draft and then checks it against the local evidence
+(with optional `check_policy="clauses"` inspecting roles, negations,
+qualifications, and omissions clause by clause), which reduces one source of
+prompt bias but can still inherit an incorrect analysis. For Linear A, any
+generated translation is necessarily a hypothesis, because the script is
+undeciphered.
 
 ## Claims, review, and reproduction
 

@@ -12,7 +12,13 @@ Selection leaves the CSV's `needs_review` values unchanged and does not apply a
 confidence threshold. Lemma verification says nothing about POS, morphology, or
 dependencies. Use `fields=("pos", "morph")` for a grammar queue, or
 `selection="sample", sample_size=40, seed=17` for a reproducible sample of
-unflagged rows. Head/relation review (`fields=("head", "deprel")`) includes
+unflagged rows. Pass `layout="editable"` for a compact spreadsheet that puts
+decision and correction columns first and stores immutable provenance in a
+SHA-256-bound `.companion.json` sidecar (detected automatically on apply and
+merge). When a corpus carries calibrated confidence annotations, pass
+`priority="calibrated_risk"` (optionally with `budget=N`) to order the highest-risk
+predictions first while keeping natural token order inside dependency sentences.
+Head/relation review (`fields=("head", "deprel")`) includes
 complete, explicitly owned sentence context and validates edits as a whole tree.
 Explicit `accept` decisions verify
 an unchanged value; `correct`, `defer`, and `reject` record the decision for that

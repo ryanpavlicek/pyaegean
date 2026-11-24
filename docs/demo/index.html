@@ -46,19 +46,23 @@
   <h1>pyaegean <span class="status" id="status">loading…</span></h1>
   <p class="sub">The toolkit running entirely in your browser via
     <a href="https://pyodide.org/">Pyodide</a> — no install, no server. Every example below is the
-    pure-Python core running client-side: the Greek pipeline, scansion, accent and sandhi rules,
-    word analysis, the bundled Koine lexicon, New Testament sample, and idiom lexicon, the offline
+    pure-Python core running client-side: the Greek pipeline, named sentence-segmentation policies,
+    metrical scansion across all ten supported meters, bidirectional Beta Code, accent and sandhi
+    rules, Koine/documentary phonetic folding, word analysis, the bundled Koine lexicon with
+    Strong's lookup, the New Testament sample (verse lookup and concordance), curated idioms,
+    offline translation grounding preview, compact editable review spreadsheet preview, the offline
     work catalogue, the deciphered-syllabary Greek bridge, the bundled corpora of all four Aegean
-    scripts (with statistics, queries, numerals, and sign inventories), the find-site gazetteer,
-    citation and fingerprinting, the file importer, EpiDoc in both directions, cross-script
-    comparison, the pipeline's evidence-class explanation, corpus-health and editorial-apparatus
-    reports, Linear B scribal dossiers, Linear A seriation, and catalogued sign-variant groups. The
-    neural and AI layers, and the network-only backends (fetching real works, LSJ), don't run here.
-    First load fetches the package, so give it a few seconds.</p>
+    scripts (with statistics, morphological clusters, queries, numerals, and sign inventories), the
+    find-site gazetteer, citation and fingerprinting, the file importer, EpiDoc in both directions,
+    cross-script phonetic alignment, the pipeline's evidence-class explanation, corpus-health and
+    editorial-apparatus reports, Linear B scribal dossiers, Linear A seriation, and catalogued
+    sign-variant groups. The neural and AI layers, and the network-only backends (fetching real
+    works, LSJ), don't run here. First load fetches the package, so give it a few seconds.</p>
 
   <div class="card">
-    <h2>Beta Code → Unicode</h2>
-    <label for="bc">Type polytonic Greek in plain ASCII — no Greek keyboard needed</label>
+    <h2>Beta Code ↔ Unicode</h2>
+    <label for="bc">Type polytonic Greek in plain ASCII (Beta Code → Unicode), or paste Unicode
+      Greek to convert back to Beta Code</label>
     <input type="text" id="bc" value="mh=nin a)/eide qea\ Phlhi+a/dew )Axilh=os">
     <div class="row"><button data-tool="bc" disabled>Convert</button></div>
     <pre id="bc-out"></pre>
@@ -137,7 +141,8 @@
 
   <div class="card">
     <h2>Metrical scansion</h2>
-    <label for="scan">A verse line — scan it into long/short syllables (— heavy, ⏑ light, × anceps)</label>
+    <label for="scan">A verse line — scan it into long/short syllables (— heavy, ⏑ light, × anceps),
+      feet, and caesura across epic, elegiac, dramatic, and Aeolic lyric meters</label>
     <input type="text" id="scan" value="ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ">
     <div class="row">
       <select id="meter">
@@ -146,6 +151,11 @@
         <option value="trimeter">trimeter</option>
         <option value="sapphic_hendecasyllable">sapphic hendecasyllable</option>
         <option value="glyconic">glyconic</option>
+        <option value="pherecratean">pherecratean</option>
+        <option value="adonean">adonean</option>
+        <option value="alcaic_hendecasyllable">alcaic hendecasyllable</option>
+        <option value="alcaic_enneasyllable">alcaic enneasyllable</option>
+        <option value="alcaic_decasyllable">alcaic decasyllable</option>
       </select>
       <button data-tool="scan" disabled>Scan</button>
     </div>
@@ -154,7 +164,9 @@
 
   <div class="card">
     <h2>New Testament glossing (Koine)</h2>
-    <label for="gloss">A New Testament Greek word — look it up in the bundled Dodson lexicon</label>
+    <label for="gloss">A New Testament Greek word or Strong's number (try <code>λόγος</code> or
+      <code>G3056</code>) — look up its lemma, gloss, and full definition in the bundled Dodson
+      lexicon</label>
     <input type="text" id="gloss" value="ἀγάπη">
     <div class="row"><button data-tool="gloss" disabled>Gloss</button></div>
     <pre id="gloss-out"></pre>
@@ -226,9 +238,9 @@
   <div class="card">
     <h2>Cypriot inscription — read from the corpus</h2>
     <label for="cyins">An inscription id from the bundled <em>Inscriptiones Graecae</em> XV 1 corpus
-      (178 Cypriot-syllabary texts) — its find-place, transliteration, the Greek reading where the
-      text is Greek, and the source edition (try <code>IG XV 1, 95</code>, <code>IG XV 1, 1</code>,
-      or <code>IG XV 1, 2</code>)</label>
+      (178 IG XV 1 texts plus 2 sample documents = 180 bundled documents) — its find-place,
+      transliteration, the Greek reading where the text is Greek, and the source edition (try
+      <code>IG XV 1, 95</code>, <code>IG XV 1, 1</code>, or <code>IG XV 1, 2</code>)</label>
     <input type="text" id="cyins" value="IG XV 1, 95">
     <div class="row"><button data-tool="cyins" disabled>Read inscription</button></div>
     <pre id="cyins-out"></pre>
@@ -549,6 +561,79 @@
       data does not carry.</p>
   </div>
 
+  <div class="card">
+    <h2>Greek sentence segmentation policies</h2>
+    <label for="seg">Split a Greek passage into sentences with exact source spans under an explicit
+      domain rule: <em>papyrus</em> ignores periods inside editorial brackets, <em>inscription</em>
+      leaves middle dots uncommitted, and <em>verse</em> breaks on lines</label>
+    <textarea id="seg">[λόγος.] καί. ἄλλος λόγος.</textarea>
+    <div class="row">
+      <select id="segpol">
+        <option value="papyrus">papyrus</option>
+        <option value="inscription">inscription</option>
+        <option value="verse">verse</option>
+        <option value="prose">prose</option>
+        <option value="default">default</option>
+      </select>
+      <button data-tool="seg" disabled>Segment</button>
+    </div>
+    <pre id="seg-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Koine &amp; documentary phonetic folding</h2>
+    <label>Compare two Greek spellings under strict orthographic folding and Koine phonetic folding
+      (itacism, vowel-length merger, lunate sigma, underdots, dropped final ν — try
+      <code>ιρηνη</code> vs <code>εἰρήνη</code> or <code>βασιλεὺϲ</code> vs <code>βασιλεύς</code>)</label>
+    <div class="row">
+      <input type="text" id="kfa" value="γυνεκος" placeholder="first spelling">
+      <input type="text" id="kfb" value="γυναικός" placeholder="second spelling">
+      <button data-tool="kf" disabled>Compare spellings</button>
+    </div>
+    <pre id="kf-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>New Testament concordance (offline sample)</h2>
+    <label for="ntc">Search the bundled John 1 + Philemon 1 Nestle 1904 tokens by lemma
+      (<code>φῶς</code>, <code>λόγος</code>), Strong's number (<code>G3056</code>), or Robinson
+      morphology tag (<code>V-IAI-3S</code>)</label>
+    <input type="text" id="ntc" value="λόγος">
+    <div class="row"><button data-tool="ntc" disabled>Search sample NT</button></div>
+    <pre id="ntc-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Translation grounding preview (offline, no API key)</h2>
+    <label for="grd">Inspect the exact local morphological, idiom, and provenance evidence pyaegean
+      assembles for a Greek passage before any language-model call</label>
+    <textarea id="grd">τὸ δ' ἐφ' ἡμῖν ἐστι</textarea>
+    <div class="row"><button data-tool="grd" disabled>Build grounding</button></div>
+    <pre id="grd-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Editable review spreadsheet preview</h2>
+    <label for="rev">Annotate a short Greek passage with the baseline pipeline and preview the
+      compact editable review CSV (decision columns first, with a <em>.companion.json</em>
+      provenance sidecar)</label>
+    <textarea id="rev">μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος.</textarea>
+    <div class="row"><button data-tool="rev" disabled>Preview review CSV</button></div>
+    <pre id="rev-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Linear A — morphological word-families</h2>
+    <label for="lac">Filter exploratory Linear A sign-group families by stem prefix (try
+      <code>JA-SA</code>, <code>A-TA</code>, <code>I-DA</code>, or leave blank for top
+      clusters)</label>
+    <input type="text" id="lac" value="JA-SA">
+    <div class="row"><button data-tool="lac" disabled>Find families</button></div>
+    <pre id="lac-out"></pre>
+    <p class="sub" style="margin:8px 0 0">Exploratory: Linear A is undeciphered; these clusters
+      group recurring sign-sequence stems and endings as structural leads, not grammatical readings.</p>
+  </div>
+
   <footer>
     Built on <a href="https://github.com/ryanpavlicek/pyaegean">pyaegean</a>
     (<a href="https://pypi.org/project/pyaegean/">PyPI</a>) — the released version runs here.
@@ -574,6 +659,7 @@ async function init() {
     // (lazily imported in 0.8.2+) never trips `import aegean` in older wheels — harmless either way.
     await pyodide.loadPackage(["micropip", "sqlite3"]);
     await pyodide.runPythonAsync(`import micropip\nawait micropip.install("pyaegean")`);
+    const version = pyodide.runPython("import aegean; aegean.__version__");
     const code = await (await fetch("demo.py")).text();
     pyodide.runPython(code);
     for (const name of ["betacode", "greek_pipeline", "greek_word", "greek_scan", "gloss_nt",
@@ -583,10 +669,13 @@ async function init() {
                         "idioms", "lemmatize_word", "text_profile", "lineara_stats", "lineara_query",
                         "numerals", "sign_info", "linearb_tablet", "cyprominoan_doc", "geo_word",
                         "cite_bundled", "export_epidoc", "explain", "diagnose_corpus", "apparatus",
-                        "linearb_dossiers", "seriate_site", "allographs"]) {
+                        "linearb_dossiers", "seriate_site", "allographs", "segment_greek",
+                        "koine_fold", "nt_concordance", "grounding_preview", "review_preview",
+                        "lineara_clusters"]) {
       tools[name] = pyodide.globals.get(name);
     }
-    status.textContent = "ready"; status.className = "status ready";
+    status.textContent = version ? `ready (v${version})` : "ready";
+    status.className = "status ready";
     document.querySelectorAll("button[data-tool]").forEach(b => b.disabled = false);
   } catch (e) {
     status.textContent = "failed to load"; status.className = "status error";
@@ -600,7 +689,10 @@ function call(name, ...args) {
 }
 
 const handlers = {
-  bc: () => show("bc-out", call("betacode", val("bc")).unicode),
+  bc: () => {
+    const r = call("betacode", val("bc"));
+    show("bc-out", r.betacode ? `Beta Code: ${r.betacode}\nUnicode:   ${r.unicode}` : r.unicode);
+  },
   nlp: () => {
     const rows = call("greek_pipeline", val("nlp"));
     show("nlp-out", Array.isArray(rows)
@@ -625,12 +717,22 @@ const handlers = {
       span.className = "pat";
       span.textContent = r.pattern || "";
       el.appendChild(span);
+      const details = [];
+      if (r.feet && r.feet.length) details.push(`feet: ${r.feet.join(" · ")}`);
+      if (r.caesura) details.push(`caesura: ${r.caesura}`);
+      if (r.ambiguous) details.push("note: more than one valid scansion fits");
+      if (details.length) el.appendChild(document.createTextNode("\n" + details.join("\n")));
     } else {
       el.textContent = "does not scan — " + (r.error || "");
     }
   },
-  gloss: () => { const r = call("gloss_nt", val("gloss"));
-    show("gloss-out", r.error ? r : `${r.word} — ${r.gloss || "(not in the Dodson NT lexicon)"}`); },
+  gloss: () => {
+    const r = call("gloss_nt", val("gloss"));
+    if (r.error) return show("gloss-out", r);
+    if (!r.gloss && !r.definition) return show("gloss-out", `${r.word} — (not in the Dodson NT lexicon)`);
+    const head = (r.lemma || r.word) + (r.strongs ? ` (${r.strongs})` : "");
+    show("gloss-out", `${head} — ${r.gloss}` + (r.definition && r.definition !== r.gloss ? `\n${r.definition}` : ""));
+  },
   link: () => { const r = call("lexicon_link", val("link"));
     show("link-out", r.error ? r : `${r.word}  →  ${r.url}`); },
   cat: () => {
@@ -669,8 +771,15 @@ const handlers = {
         `; exact eligibility: ${flag(r.exact_eligible)}`
       : `no checkable ${"KU-RO"}/total on ${r.doc}`);
   },
-  phon: () => { const r = call("phonetic_compare", val("phsyl"), val("phgrk"));
-    show("phon-out", r.error ? r : `${r.syllabic}  ≈  ${r.greek}\nsimilarity: ${r.similarity}  (1.0 = identical)`); },
+  phon: () => {
+    const r = call("phonetic_compare", val("phsyl"), val("phgrk"));
+    if (r.error) return show("phon-out", r);
+    let out = `${r.syllabic}  ≈  ${r.greek}\nsimilarity: ${r.similarity}  (1.0 = identical)`;
+    if (r.phonemes_a || r.phonemes_b) out += `\nforms:      /${r.phonemes_a}/  vs  /${r.phonemes_b}/`;
+    if (r.alignment && r.alignment.length)
+      out += `\nalignment:  ${r.alignment.map(c => `${c.a}~${c.b}`).join("  ")}`;
+    show("phon-out", out);
+  },
   imp: () => {
     const r = call("import_text", val("imp"));
     show("imp-out", r.error ? r
@@ -895,6 +1004,55 @@ const handlers = {
         : "no base-value variant groups") +
       (r.composites.length ? `\n\ncomposite/ligature signs: ${r.composites.join(", ")}` : "") +
       `\n\n${r.note}`);
+  },
+  seg: () => {
+    const r = call("segment_greek", val("seg"), val("segpol"));
+    if (r.error) return show("seg-out", r.error);
+    show("seg-out",
+      `policy: ${r.policy_id}` + (r.rule ? `\nrule:   ${r.rule}` : "") + "\n\n" +
+      r.sentences.map(s => `  [${s.index}] [${s.start}, ${s.end})  ${s.text}`).join("\n"));
+  },
+  kf: () => {
+    const r = call("koine_fold", val("kfa"), val("kfb"));
+    if (r.error) return show("kf-out", r.error);
+    show("kf-out",
+      `strict orthographic fold:\n  ${r.form_a} → ${r.strict_a}\n  ${r.form_b} → ${r.strict_b}\n` +
+      `  match: ${r.strict_match ? "yes" : "no"}\n\n` +
+      `Koine / documentary phonetic fold:\n  ${r.form_a} → ${r.phonetic_a}\n  ${r.form_b} → ${r.phonetic_b}\n` +
+      `  match: ${r.phonetic_match ? "yes" : "no"}`);
+  },
+  ntc: () => {
+    const r = call("nt_concordance", val("ntc"));
+    if (r.error) return show("ntc-out", r.error);
+    show("ntc-out", r.matches.length
+      ? `${r.total} hit${r.total === 1 ? "" : "s"} for ${r.query}:\n\n` +
+        r.matches.map(m => `${m.ref}\t${m.left} [${m.token}] ${m.right}  (${m.lemma} · ${m.morph} · ${m.strongs})`).join("\n") +
+        `\n\n${r.source}`
+      : `no matches for ${r.query} in the bundled John 1 + Philemon 1 sample`);
+  },
+  grd: () => {
+    const r = call("grounding_preview", val("grd"));
+    if (r.error) return show("grd-out", r.error);
+    show("grd-out", `${r.count} local grounding item${r.count === 1 ? "" : "s"}:\n\n` +
+      r.items.map(i => `  [${i.source} · ${i.status}] ${i.content}`).join("\n"));
+  },
+  rev: () => {
+    const r = call("review_preview", val("rev"));
+    if (r.error) return show("rev-out", r.error);
+    show("rev-out",
+      `layout: ${r.layout}  ·  ${r.rows} review row${r.rows === 1 ? "" : "s"}  ·  ` +
+      `.companion.json sidecar: ${r.companion_sidecar ? "written" : "not used"}\n\n${r.csv_preview}`);
+  },
+  lac: () => {
+    const r = call("lineara_clusters", val("lac"));
+    if (r.error) return show("lac-out", r.error);
+    show("lac-out", r.clusters.length
+      ? `${r.matched} matching family/families (of ${r.total_clusters} corpus-wide):\n\n` +
+        r.clusters.map(c =>
+          `stem ${c.stem}  (${c.total_count}× across ${c.members.length} forms)\n` +
+          c.members.map(m => `  ${m.word}  (${m.count}×${m.suffix ? ", +" + m.suffix : ""})`).join("\n")
+        ).join("\n\n") + `\n\n${r.note}`
+      : `no Linear A clusters matching ${r.query}`);
   },
 };
 

@@ -365,18 +365,25 @@ resolution for PNG (default 150).
 
 ```bash
 aegean review export corpus.json --selection all -o review.csv
-aegean review export corpus.json --selection flagged -o flagged.csv
+aegean review export corpus.json --selection flagged --layout editable -o flagged.csv
 aegean review export corpus.json --selection unverified -o unverified.csv
 aegean review export corpus.json --selection unverified --field pos --field morph -o grammar.csv
 aegean review export corpus.json --selection sample --sample-size 40 --seed 17 -o sample.csv
+aegean review export corpus.json --annotate --neural --with-confidence --confidence-domain literary \
+    --layout editable --priority calibrated-risk --budget 50 -o queue.csv
 # Fill decision_* and, for corrections, correct_*; add reviewer identity, notes, and evidence:
 aegean review apply corpus.json review.csv -o corrected.json --reviewer "Reviewer"
 ```
 
 `all` exports all eligible word rows, `flagged` follows the narrow review flag,
 and `unverified` includes unverified requested fields (lemma by default).
-Selection changes neither the row's flag nor its confidence. Repeat `--field`
-to select lemma, POS, morphology, head, or dependency relation. Dependency
+Selection changes neither the row's flag nor its confidence. Add `--layout editable`
+for a compact spreadsheet that places decision/correction columns first and saves
+immutable provenance in a `.companion.json` sidecar (auto-detected on merge/apply).
+With `--annotate --neural --with-confidence --confidence-domain literary` (or
+`documentary_native`), `--priority calibrated-risk --budget N` orders the highest-risk
+predictions first while preserving sentence order for dependency review. Repeat
+`--field` to select lemma, POS, morphology, head, or dependency relation. Dependency
 review includes complete sentence context and validates the resulting tree.
 
 `decision_lemma`, `decision_pos`, and `decision_morph` take `accept`, `correct`,
@@ -883,7 +890,10 @@ full-text index) and search it.
 |---|---|---|---|
 | `build` | Write a corpus to a SQLite DB | `-o/--output --no-fts` | `aegean db build lineara -o lineara.db` |
 | `add` | Upsert another corpus into an existing DB | `-o/--output` | `aegean db add cypriot -o lineara.db` |
-| `search` | Search a corpus DB's tokens (whole-token by default; --substring to match within tokens; opens the DB read-only) | `--limit (0 = all) --substring -o/--output --json` | `aegean db search lineara.db KU-RO` |
+| `index` | Build/refresh or inspect an optional exact lexical index (surface/normalized/lemma) | `--status --json` | `aegean db index corpus.db` |
+| `search` | Search a corpus DB's tokens (whole-token by default; --substring to match within tokens; opens the DB read-only) | `--limit (0 = all) --view --statuses --substring -o/--output --json` | `aegean db search lineara.db KU-RO` |
+| `annotate` | Durable, resumable document-by-document SQLite annotation job | `-o/--output --job-dir --neural --with-dependencies --long-input --resume --json` | `aegean db annotate corpus.db -o annotated.db --job-dir ./job --neural --resume` |
+| `job-status` | Inspect progress and checkpoint status of a SQLite annotation job directory | `--json` | `aegean db job-status ./job --json` |
 
 ```bash
 aegean db build lineara -o lineara.db        # → "wrote 1721 documents to lineara.db"

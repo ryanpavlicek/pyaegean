@@ -44,7 +44,7 @@ print(r.trace())       # local evidence, its status, and translation audit data
 ```bash
 # the CLI translate command is the hybrid translator
 aegean ai translate "ἦν ὁ λόγος" --script greek --target English --trace
-aegean ai translate "ἦν ὁ λόγος" --greek-backend neural --trace
+aegean ai translate "ἦν ὁ λόγος" --greek-backend neural --verify --check-policy clauses --trace
 aegean ai translate "KU-RO DA-RO" --script lineara    # exploratory: Linear A is undeciphered
 echo "μῆνιν ἄειδε θεά" | aegean ai translate -          # '-' reads stdin
 ```
@@ -53,11 +53,13 @@ Two functions make up the Python surface:
 
 | Function | Returns | What it does |
 | --- | --- | --- |
-| `translate.translate(text, *, script=, target=, mode=, verify=, style=, greek_pipeline=, greek_long_input=, grounding_failure=, grounding=, client=)` | `ExploratoryResult` | Build local grounding, add supplied evidence, then translate. |
-| `translate.grounding_for(text, script, *, mode=, greek_pipeline=, greek_long_input=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call. |
+| `translate.translate(text, *, script=, target=, mode=, verify=, check_policy=, lexical_evidence=, source_context=, max_tokens=, style=, greek_pipeline=, greek_long_input=, grounding_failure=, grounding=, client=)` | `ExploratoryResult` | Build local grounding, add supplied evidence and optional surrounding `source_context`, then translate (optionally checking with `verify=True` and `check_policy="clauses"`). |
+| `translate.grounding_for(text, script, *, mode=, lexical_evidence=, greek_pipeline=, greek_long_input=, grounding_failure=)` | `list[GroundingItem]` | Just the local grounding, so you can inspect it before spending a call (set `lexical_evidence="contextual"` for bounded dictionary sense excerpts with construction cues from active lexica). |
 
 Both are re-exported from `aegean.translate`. The CLI command `aegean ai
-translate` routes through `translate.translate`.
+translate` routes through `translate.translate` (mirroring `--check-policy clauses`,
+`--lexical-evidence contextual`, repeatable `--dictionary ID`, `--source-context` /
+`--source-context-file`, and `--max-tokens`).
 
 ---
 

@@ -22,7 +22,7 @@ third-party dependencies:
 - **Linear B**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json` (Unicode UCD)
 - **Cypriot**: `signs.json`, `phonetic_map.json`, `lexicon.json`, `sample_inscriptions.json`, `ig_inscriptions.json` (the bundled 178-inscription IG XV 1 corpus, CC BY 4.0)
 - **Cypro-Minoan**: `signs.json`, `sample_inscriptions.json` (undeciphered: no phonetic map or lexicon)
-- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (two NT sample chapters: John 1 + Philemon 1), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts)
+- **Greek**: `sample_texts.json`, `lemmata.json`, `idioms.json` (the bundled idiom/MWE gloss lexicon), `benchmark_gold.json`, `nt_sample.json` (two NT sample chapters: John 1 + Philemon 1), `dodson.json` (Koine lexicon), `works_catalogue.json` (the offline `greek.catalog` discovery index: metadata only, no texts), `calibration.json` (legacy Schema-1 scalar temperature), `calibration_registry_v2.json` (bundled Schema-2 logit-affine calibration registry), `oov_lemma_reranker_v1.json` (bundled opt-in weighted OOV lemma reranker weights), `neural-runtime-variants.json` (stable runtime-variant registry)
 - **Geo**: `site_coordinates.json` (approximate find-site lat/long)
 
 Large or license-restricted assets are **never bundled**: they are fetched on
@@ -53,10 +53,14 @@ hashed straight out of the installed wheel. Sizes are bytes.
 | `cyprominoan/signs.json` | 12,580 | Unicode UCD (Cypro-Minoan block) |
 | `geo/site_coordinates.json` | 10,746 | GORILA / Younger / public gazetteers |
 | `greek/benchmark_gold.json` | 6,451 | gold benchmark fixtures |
+| `greek/calibration.json` | 694 | legacy Schema-1 dev-fitted scalar temperature (`grc-joint-v3`) |
+| `greek/calibration_registry_v2.json` | 9,846 | locked-test-qualified Schema-2 calibration registry (`grc-joint-v3`) |
 | `greek/dodson.json` | 712,301 | Dodson Greek Lexicon (CC0) |
 | `greek/idioms.json` | 6,445 | bundled idiom / MWE gloss lexicon |
 | `greek/lemmata.json` | 1,494 | bundled gold lemma seed |
+| `greek/neural-runtime-variants.json` | 1,330 | stable neural runtime-variant registry |
 | `greek/nt_sample.json` | 132,814 | Nestle 1904: two sample chapters, John 1 + Philemon 1 (CC0) |
+| `greek/oov_lemma_reranker_v1.json` | 824 | frozen dev-fitted weights for opt-in OOV lemma reranker (`grc-joint-v3`) |
 | `greek/sample_texts.json` | 1,017 | public-domain Greek snippets |
 | `greek/works_catalogue.json` | 281,097 | Perseus + First1KGreek work index (metadata only; built by `scripts/build_greek_catalogue.py`) |
 | `lineara/inscriptions.json` | 720,766 | GORILA via mwenge/lineara.xyz |
@@ -159,7 +163,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of the frozen (2021) EDH dump; **may be redistributed** (CC BY-SA), attribution + ShareAlike |
 | `ddbdp-corpus` | DDbDP documentary papyri: 57,331 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~219 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
-| `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | : | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
+| `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | — | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
 > **Why two licenses keep appearing.** "Project-hosted" derivatives (DAMOS,
 > SigLA, the LSJ index, the AGDT-derived models, the neural models) are republished

@@ -239,7 +239,7 @@ aegean data list
 
 | name | what it is | size | license |
 | --- | --- | --- | --- |
-| `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~25 MB | CC BY-SA 3.0 (from Perseus AGDT) |
+| `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | ~15 MB | CC BY-SA 3.0 (from Perseus AGDT) |
 | `lsj-index` | prebuilt LSJ lemma→entry index (`use_lsj()` prefers it over the 270 MB build) | ~15 MB | CC BY-SA 4.0 (Perseus) |
 | `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (`use_lexicon("middle-liddell")` prefers it) | ~2.3 MB | public domain (1889); Perseus/Scaife digitization |
 | `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index | ~1.3 MB | public domain (1924); Scaife data MIT |

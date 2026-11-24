@@ -102,9 +102,11 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 
 ### Current priorities
 
-- [ ] **Qualify calibrated review policies and lemma selection:** validate per-task,
-  per-route calibration and opt-in OOV lemma reranking on held-out folds before changing
-  default review or neural pipeline settings.
+- [x] **Qualify calibrated review policies and lemma selection:** bundled the
+  locked-test-qualified Schema-2 calibration registry (`use_calibration_registry()`),
+  opt-in weighted top-10 OOV lemma reranker (`use_oov_lemma_reranker(config="weighted")`),
+  and calibrated-risk budgeted review queues (`priority="calibrated_risk", budget=N`),
+  leaving default `grc-joint-v3` settings unchanged (awaiting next release).
 - [ ] **Expand adjudicated Greek gold:** adjudicate passages from the two archived full
   tragedy treebanks (*Philoctetes* and *Iphigenia in Tauris*) to broaden held-out verse
   evaluation beyond Euripides' *Bacchae*.
@@ -112,9 +114,10 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Evaluate translation fidelity:** compare grounding and clause-checking options on
   unseen passages, measuring both corrections and regressions in meaning, roles, negation,
   qualifications, speaker context, and lexical sense before changing defaults.
-- [ ] **Complete durable resumable corpus jobs:** add checkpointed, resumable long-running
-  annotation and export jobs with format-loss reports and verified equivalence to
-  uninterrupted runs.
+- [x] **Durable resumable SQLite annotation jobs:** added checkpointed, resumable SQLite
+  annotation (`db.annotate_sqlite_job`, `aegean db annotate` / `job-status`) with WAL-safe
+  snapshots, single-transaction commits, and verified equivalence to uninterrupted runs
+  (awaiting next release); format-loss export jobs remain an optional follow-on.
 
 ### Following those foundations
 

@@ -16,13 +16,32 @@ aegean review apply corpus.json review.csv -o reviewed.json
 Use `--selection all` for every eligible word or `--selection flagged` for the
 existing review flag. `unverified` checks the requested fields, with lemma as the
 default. Repeat `--field` to select lemma, POS, morphology, dependency head, or
-dependency relation. Rows record why they were included. A reproducible sample of
-unflagged material helps check what the flag misses:
+dependency relation. Rows record why they were included.
+
+For spreadsheet editing in Excel or LibreOffice, pass **`--layout editable`** (Python:
+`layout="editable"`): this writes a compact 28-column CSV with your decision and
+correction columns up front, and stores the longer provenance columns safely in a
+verified `<name>.csv.companion.json` file beside it (detected automatically by
+`review apply` and `review merge`).
+
+To focus limited review time on the words most likely to be wrong, pair neural
+annotation with calibrated confidence and **`--priority calibrated-risk`**:
 
 ```bash
+# Compact spreadsheet sorted worst-first (lowest calibrated confidence at the top), capped at 100 words:
+aegean review export corpus.json -o review.csv \
+  --annotate --neural --with-confidence --confidence-domain literary \
+  --layout editable --priority calibrated-risk --budget 100 --reviewer Alice
+
+# Target grammar fields or take a reproducible random check of unflagged words:
 aegean review export corpus.json -o grammar.csv --selection unverified --field pos --field morph
 aegean review export corpus.json -o sample.csv --selection sample --sample-size 40 --seed 17
 ```
+
+Use `--confidence-domain literary` for Classical prose, verse, or NT Greek, or
+`--confidence-domain documentary_native` for documentary papyri. On the five held-out
+qualification corpora, reviewing only the riskiest 10% of tokens surfaced roughly half to
+nearly three-quarters of all lemmatization errors (see [Benchmarks](benchmarks.md)).
 
 To generate predictions first, add `--annotate` and backend flags such as
 `--neural` to **export**. Export saves the actual annotated corpus beside the CSV

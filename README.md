@@ -82,9 +82,10 @@ we still *cannot read*: **Linear A** (Minoan) and **Cypro-Minoan**.
 full **Greek NLP pipeline**, the analytical methods of the [Linear A Research
 Workbench](https://github.com/ryanpavlicek/linearaworkbench) ported to Python, and a
 multi-provider **AI layer**. Generative results are labeled exploratory and carry their provider,
-model, prompt, and any grounding sources. Neural analyses can opt into typed, scoped
-confidence with explicit unavailable reasons; empirical source/task calibration and review
-thresholds remain evidence-gated.
+model, prompt, and any grounding sources. Neural analyses can opt into calibrated per-field
+confidence (literary and documentary Greek) to sort review queues from highest estimated error risk
+downward; caller-chosen cutoffs remain explicit, and any uncalibrated scope reports why rather than
+falling back to raw model scores.
 The core installs with **zero heavy dependencies** and imports instantly; heavier
 backends (models, treebanks, lexica) are opt-in and fetched to a local cache, never bundled.
 
@@ -99,18 +100,18 @@ prior programming.
 |---|---|
 | **All four Aegean scripts, one API** | `aegean.load("lineara")` gives the bundled **1,721-inscription** Linear A corpus over the full Unicode Linear A sign repertoire (50 signs carry conventional sound values, the rest are undeciphered); Linear B and Cypro-Minoan add Unicode-built inventories with small *illustrative* text samples (the full DAMOS Linear B corpus is available on demand); the **Cypriot syllabary** bundles a **178-inscription corpus** (*Inscriptiones Graecae* XV 1, BBAW, CC BY 4.0) plus two illustrative samples, for **180 bundled documents** total. The two *deciphered* syllabaries transliterate and bridge into Greek: `po-me → ποιμήν` (Linear B), `pa-si-le-u-se → βασιλεύς` (Cypriot). |
 | **A deep Greek NLP pipeline** | Beta Code ↔ Unicode (Beta Code is the plain-ASCII way of typing polytonic Greek), tokenize with named source-preserving sentence policies, syllabify, accent & prosody, **metrical scansion** (scans the *Odyssey*'s opening; supports curated synizesis candidates and reports ambiguity), reconstructed IPA (Attic / Koine), POS, morphology, and lemmatization. Opt-in backends add attested lemmas/POS (Perseus treebank), a **dictionary registry** (LSJ, Middle Liddell, Cunliffe, Autenrieth, Abbott-Smith) with Logeion deep-links, pure-Python generalizing taggers/lemmatizers, **inflection synthesis** (the inverse lemmatizer), **terminology-rarity** scoring, and **dialect/register** tags from LSJ. |
-| **Measured neural NLP** | The opt-in **neural pipeline** (`greek.use_neural_pipeline()`; runs without PyTorch): one jointly-trained model for tagging, full morphology, **dependency parsing** (Universal Dependencies trees), and lemmatization; in plain terms, it reads a Greek sentence and tells you each word's part of speech, grammatical form, dictionary headword, and place in the sentence's structure. Its stable `default` runtime label is the current `grc-joint-v3` artifact; `fast`, `compact`, and `balanced` are visible but unavailable until a successor earns each label from recorded size, latency, and memory evidence. Measured end-to-end through this package at **97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS** on the UD Ancient Greek (Perseus) test benchmark ([protocol, comparison rows, confidence intervals, and limitations](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)). |
+| **Measured neural NLP** | The opt-in **neural pipeline** (`greek.use_neural_pipeline()`; runs without PyTorch): one jointly-trained model for tagging, full morphology, **dependency parsing** (Universal Dependencies trees), and lemmatization; in plain terms, it reads a Greek sentence and tells you each word's part of speech, grammatical form, dictionary headword, and place in the sentence's structure. Its stable `default` runtime label is the current `grc-joint-v3` artifact; `fast`, `compact`, and `balanced` are visible but unavailable until a successor earns each label from recorded size, latency, and memory evidence. Measured end-to-end through this package at **97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS** on the UD Ancient Greek (Perseus) test benchmark ([protocol, comparison rows, confidence intervals, and limitations](https://github.com/ryanpavlicek/pyaegean/blob/main/docs/benchmarks.md)). Optional add-ons on the same model include an **OOV lemma reranker** (`greek.use_oov_lemma_reranker(config="weighted")`) that improves headword accuracy on unseen Classical, NT, verse, and papyrus forms, and **domain-scoped calibration** (`greek.use_calibration_registry()`) that ranks the riskiest words first for human review. |
 | **Real texts on demand** | `greek.load_work("tlg0012.tlg001")` fetches a complete work (the Iliad arrives as 24 books / ~127k tokens) from Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) straight into the corpus model. Don't know an id? `greek.catalog(author="Plato")` searches a bundled, offline index of **1,778** Greek works (every `-grc` edition in both repos): author, title (English or Greek), or free text, and every hit's id loads with `load_work`. |
-| **Epigraphic Greek & papyri on demand** | Six openly-licensed corpora fetch straight into the corpus model: **I.Sicily** (2,855 Greek inscriptions, CC BY), **IIP** (2,113, CC BY-NC), **IOSPE** (1,194, CC BY), **IGCyr/GVCyr** (997, archaic Doric and verse, CC BY-NC-SA), the **EDH** Greek subset (1,286, CC BY-SA), and the **DDbDP** documentary papyri (**57,331 texts / ~4.4M tokens**, CC BY) as a SQLite database with instant full-text search: `aegean db search ddbdp "…"`. |
+| **Epigraphic Greek & papyri on demand** | Six openly-licensed corpora fetch straight into the corpus model: **I.Sicily** (2,855 Greek inscriptions, CC BY), **IIP** (2,113, CC BY-NC), **IOSPE** (1,194, CC BY), **IGCyr/GVCyr** (997, archaic Doric and verse, CC BY-NC-SA), the **EDH** Greek subset (1,286, CC BY-SA), and the **DDbDP** documentary papyri (**57,331 texts / ~4.4M tokens**, CC BY) as a SQLite database with instant full-text search: `aegean db search ddbdp "…"`. For large SQLite corpora, resumable annotation jobs (`aegean db annotate` / `db.annotate_sqlite_job`) save progress document by document. |
 | **Bring your own text** | `aegean.io.from_text` / `from_text_file` / `from_text_dir` / `from_csv` turn a passage, a folder of `.txt`, or a CSV into a real `Corpus`: `aegean.io.from_text("ἐν ἀρχῇ ἦν ὁ λόγος.")` gives the full filter / query / analyse / export API over your own material, with Greek run through the Greek tokenizer. |
 | **The Greek New Testament, annotated** | `greek.load_nt("John", ref="1.1-18")` loads the Nestle 1904 NT with a gold **lemma**, **morphology**, and **Strong's number** on every token; `greek.use_dodson()` adds Koine glosses (`gloss_strongs("3056") → "a word, speech…"`). So you can lemmatize, gloss, and cite a chapter, offline. Public-domain text + CC0 annotations; a two-chapter reading sample (John 1 and Philemon 1) is bundled, and the full 27-book corpus fetches on demand. |
 | **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (37 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
-| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, a **lossless JSON round-trip** (`to_json` / `from_json`), a first-class **`query()`**, and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Typed token form states distinguish diplomatic, regularized, normalized, and model-input strings. Source alignment and lossless CoNLL-U structure preserve exact mappings, multiword ranges, empty nodes, `DEPS`, and `MISC`. EpiDoc carries the diplomatic form plus one selected editorial form and apparatus; use JSON, SQLite, or CoNLL-U when every typed form must round-trip. Every corpus carries provenance and a one-line citation. |
-| **Loss-aware NLP interoperability** | Optional `aegean.io` adapters move complete Greek annotations through spaCy, Stanza, and CLTK document objects. Target-native fields and a SHA-256-bound `aegean.interop/v1` sidecar round-trip together, while `InteropReport` states exactly what is native, sidecar-held, or lost by an explicit projection. Portable JSON bundles support review and comparison from Python or `aegean greek interop export\|import\|report`. |
+| **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, lossless JSON and SQLite storage (with optional fast lexical indexing), a first-class **`query()`**, compact **spreadsheet review workflows** (`layout="editable"`, calibrated-risk queues, multi-reviewer merges), and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Diplomatic, regularized, and normalized word forms stay distinct; CoNLL-U preserves complete treebank structure (including multiword spans and empty nodes). Every corpus carries provenance and a one-line citation. |
+| **Loss-aware NLP interoperability** | Optional `aegean.io` adapters move Greek annotations between pyaegean and spaCy, Stanza, or CLTK while keeping extra philological metadata in a verified companion sidecar; `InteropReport` states plainly which fields transferred natively, which live in the sidecar, and which a format cannot represent. Portable JSON bundles work from Python or `aegean greek interop export\|import\|report`. |
 | **A browser UI for any corpus** | `aegean.io.to_workbench(corpus, "my.json")` emits a file the [Linear A Research Workbench](https://linearaworkbench.xyz/) opens via `?corpus=`: your own inscriptions get its 50 analysis modules, maps, and imagery browser with zero setup. `from_workbench_export()` loads the workbench's corpus exports (and its static data API) back into Python. |
 | **Map the find-sites** | `aegean.geo` turns a corpus into a geopandas **GeoDataFrame**: a point per inscription or per site (EPSG:4326) from a bundled Aegean gazetteer, so you can map where a word clusters or how far a script reaches. `pip install pyaegean[geo]`. |
-| **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Greek translation can use explicit deterministic or neural local grounding before generation. All generative readings are labeled **exploratory** with their provenance; callers of the lower-level AI API may also supply their own grounding or none. |
+| **Grounded, multi-provider AI** | `aegean.ai` / `aegean.translate` front Anthropic, OpenAI, Grok, Gemini, and OpenRouter, plus a **local** option that runs a model on your own machine (Ollama, LM Studio, llama.cpp, vLLM) with no key or network. Greek translation supports local grammatical analysis, **contextual dictionary excerpts** (`--dictionary`), separate **surrounding source context**, and optional **clause-by-clause checking** (`check_policy="clauses"`). All generative readings are labeled **exploratory** with their provenance. |
 | **Measured accuracy** | Deciphered Greek uses real scholarship (attested lemmas, gold POS, measured accuracy). The *undeciphered* material (Linear A, Cypro-Minoan) is labeled **EXPLORATORY** everywhere: the tools surface *leads*, never answers. |
 
 ## Install
@@ -143,7 +144,7 @@ import aegean
 
 corpus = aegean.load("lineara")          # 1,721 inscriptions, bundled, offline
 ht = corpus.filter(site="Haghia Triada") # filter by metadata (full site name)
-df = corpus.to_dataframe(level="word")   # pandas-native, one row per word
+df = corpus.to_dataframe(level="word")   # pandas-native, one row per word (requires [data])
 
 from aegean.analysis import balance_check, word_matches_sign_pattern
 balance_check(corpus.get("HT13"))                       # KU-RO accounting reconciliation
@@ -242,9 +243,11 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 
 ### Current priorities
 
-- [ ] **Qualify calibrated review policies and lemma selection:** validate per-task,
-  per-route calibration and opt-in OOV lemma reranking on held-out folds before changing
-  default review or neural pipeline settings.
+- [x] **Qualify calibrated review policies and lemma selection:** bundled the
+  locked-test-qualified Schema-2 calibration registry (`use_calibration_registry()`),
+  opt-in weighted top-10 OOV lemma reranker (`use_oov_lemma_reranker(config="weighted")`),
+  and calibrated-risk budgeted review queues (`priority="calibrated_risk", budget=N`),
+  leaving default `grc-joint-v3` settings unchanged (awaiting next release).
 - [ ] **Expand adjudicated Greek gold:** adjudicate passages from the two archived full
   tragedy treebanks (*Philoctetes* and *Iphigenia in Tauris*) to broaden held-out verse
   evaluation beyond Euripides' *Bacchae*.
@@ -252,9 +255,10 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Evaluate translation fidelity:** compare grounding and clause-checking options on
   unseen passages, measuring both corrections and regressions in meaning, roles, negation,
   qualifications, speaker context, and lexical sense before changing defaults.
-- [ ] **Complete durable resumable corpus jobs:** add checkpointed, resumable long-running
-  annotation and export jobs with format-loss reports and verified equivalence to
-  uninterrupted runs.
+- [x] **Durable resumable SQLite annotation jobs:** added checkpointed, resumable SQLite
+  annotation (`db.annotate_sqlite_job`, `aegean db annotate` / `job-status`) with WAL-safe
+  snapshots, single-transaction commits, and verified equivalence to uninterrupted runs
+  (awaiting next release); format-loss export jobs remain an optional follow-on.
 
 ### Following those foundations
 

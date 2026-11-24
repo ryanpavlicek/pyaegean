@@ -546,11 +546,82 @@ def test_demo_works_without_sqlite3() -> None:
         "assert seriate(c.filter(site='Zakros')).order\n"
         "from aegean.analysis.allographs import variant_groups\n"
         "assert variant_groups('lineara').groups\n"
+        "assert greek.segment_text('[λόγος.] καί.', policy='papyrus').boundaries\n"
+        "from aegean.greek.lemma_rerank import documentary_phonetic_fold\n"
+        "assert documentary_phonetic_fold('γυνεκος') == documentary_phonetic_fold('γυναικός')\n"
+        "from aegean import translate\n"
+        "assert translate.grounding_for(\"τὸ δ' ἐφ' ἡμῖν ἐστι\", 'greek')\n"
+        "from aegean.analysis import find_morphological_clusters\n"
+        "assert find_morphological_clusters(c.word_frequencies())\n"
         "print('OK')\n"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert r.returncode == 0, f"demo path needs sqlite3:\n{r.stdout}\n{r.stderr}"
     assert "OK" in r.stdout
+
+
+def test_demo_upgraded_fields() -> None:
+    demo = _load_demo()
+    bc = json.loads(demo.betacode("μῆνιν"))
+    assert bc["betacode"] == "mh=nin"
+
+    sc = json.loads(demo.greek_scan("ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"))
+    assert sc["scans"] is True and sc["feet"] and sc["caesura"] == "trochaic"
+
+    gl = json.loads(demo.gloss_nt("ἀγάπη"))
+    assert gl["strongs"] == "G26" and gl["definition"]
+    st = json.loads(demo.gloss_nt("G3056"))
+    assert st["strongs"] == "G3056" and "word" in st["gloss"]
+
+    ph = json.loads(demo.phonetic_compare("qa-si-re-u", "βασιλεύς"))
+    assert ph["phonemes_a"] and ph["phonemes_b"] and ph["alignment"]
+
+
+def test_demo_segment_greek() -> None:
+    demo = _load_demo()
+    pap = json.loads(demo.segment_greek("[λόγος.] καί. ἄλλος λόγος.", "papyrus"))
+    assert pap["policy_id"] == "pyaegean-sentence-papyrus-v1"
+    assert len(pap["sentences"]) == 2
+    assert pap["sentences"][0]["text"] == "[λόγος.] καί."
+    assert "error" in json.loads(demo.segment_greek("λόγος.", "unknown"))
+
+
+def test_demo_koine_fold() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.koine_fold("γυνεκος", "γυναικός"))
+    assert r["strict_match"] is False and r["phonetic_match"] is True
+    assert "error" in json.loads(demo.koine_fold("", "λόγος"))
+
+
+def test_demo_nt_concordance() -> None:
+    demo = _load_demo()
+    by_lemma = json.loads(demo.nt_concordance("λόγος"))
+    assert by_lemma["total"] >= 3 and any(m["ref"] == "John 1.1" for m in by_lemma["matches"])
+    by_strongs = json.loads(demo.nt_concordance("G3056"))
+    assert by_strongs["total"] == by_lemma["total"]
+    by_morph = json.loads(demo.nt_concordance("V-IAI-3S"))
+    assert by_morph["total"] >= 1
+
+
+def test_demo_grounding_preview() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.grounding_preview("τὸ δ' ἐφ' ἡμῖν ἐστι"))
+    assert r["count"] >= 3 and any(i["source"] == "lexicon:idiom" for i in r["items"])
+    assert "error" in json.loads(demo.grounding_preview("   "))
+
+
+def test_demo_review_preview() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.review_preview("μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος."))
+    assert r["layout"] == "editable" and r["companion_sidecar"] is True
+    assert r["rows"] == 5 and "decision_lemma" in r["csv_preview"]
+
+
+def test_demo_lineara_clusters() -> None:
+    demo = _load_demo()
+    r = json.loads(demo.lineara_clusters("JA-SA"))
+    assert r["matched"] >= 1 and r["clusters"][0]["stem"] == "JA-SA"
+    assert "EXPLORATORY" in r["note"]
 
 
 def test_demo_html_wiring() -> None:
@@ -567,5 +638,7 @@ def test_demo_html_wiring() -> None:
                  "prosody_word", "nt_verse", "idioms", "lemmatize_word", "text_profile",
                  "lineara_stats", "lineara_query", "numerals", "sign_info", "linearb_tablet",
                  "cyprominoan_doc", "geo_word", "cite_bundled", "export_epidoc", "explain",
-                 "diagnose_corpus", "apparatus", "linearb_dossiers", "seriate_site", "allographs"):
+                 "diagnose_corpus", "apparatus", "linearb_dossiers", "seriate_site", "allographs",
+                 "segment_greek", "koine_fold", "nt_concordance", "grounding_preview",
+                 "review_preview", "lineara_clusters"):
         assert hasattr(demo, name) and f'"{name}"' in html
