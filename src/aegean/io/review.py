@@ -183,6 +183,24 @@ def _verified(annotations: Mapping[str, str], name: str) -> bool:
     return isinstance(marker, str) and marker.lower() == "true"
 
 
+def _calibrated_confidence(annotations: Mapping[str, str], fields: Sequence[str]) -> float | None:
+    """Return the lowest available calibrated confidence across requested ``fields``."""
+    import math
+
+    values: list[float] = []
+    for name in fields:
+        raw = annotations.get(f"confidence_{name}")
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        try:
+            val = float(raw)
+        except ValueError:
+            continue
+        if math.isfinite(val) and 0.0 <= val <= 1.0:
+            values.append(val)
+    return min(values) if values else None
+
+
 def to_review_table(
     corpus: "Corpus",
     path: str | Path,
@@ -194,6 +212,8 @@ def to_review_table(
     sample_size: int | None = None,
     seed: int = 0,
     layout: Literal["full", "editable"] = "full",
+    priority: Literal["document", "calibrated_risk"] = "document",
+    budget: int | None = None,
 ) -> int:
     """Export optional review with explicit field selection and content-bound snapshots.
 
@@ -206,6 +226,16 @@ def to_review_table(
     Sampling all available words when the requested size exceeds the population
     is explicit in the row's inclusion reasons. Sampling requires a size; other
     selections reject it. ``review_fields`` and ``inclusion_reasons`` are JSON.
+
+    ``priority="document"`` (default) preserves document and token order.
+    ``priority="calibrated_risk"`` ranks selected tokens by ascending calibrated
+    confidence (lowest confidence / highest estimated error risk first) across the
+    requested ``fields``, using persisted calibrated ``confidence_<field>``
+    annotations from `annotate_corpus(..., with_confidence=True)`. Optional
+    ``budget`` caps the queue to the top ``budget`` highest-risk tokens (prior to
+    dependency sentence context expansion). When dependency fields are requested,
+    sentences are ordered by their highest-risk token while preserving natural
+    token order inside each sentence.
 
     Requesting head/deprel expands selected words to their complete, explicitly
     owned sentences, including punctuation. These context rows identify their
@@ -232,6 +262,13 @@ def to_review_table(
         raise ValueError("selection must be 'all', 'flagged', 'unverified', or 'sample'")
     if layout not in ("full", "editable"):
         raise ValueError("layout must be 'full' or 'editable'")
+    if priority not in ("document", "calibrated_risk"):
+        raise ValueError("priority must be 'document' or 'calibrated_risk'")
+    if budget is not None:
+        if priority != "calibrated_risk":
+            raise ValueError("budget is only valid when priority='calibrated_risk'")
+        if type(budget) is not int or budget < 0:
+            raise ValueError("budget must be a nonnegative integer")
     if (isinstance(fields, str) or not fields or any(name not in FIELDS for name in fields)
             or len(set(fields)) != len(fields)):
         raise ValueError("fields must be a nonempty sequence of distinct lemma, pos, morph, head, deprel")
@@ -250,8 +287,12 @@ def to_review_table(
     selected: dict[tuple[str, int], list[str]] = {}
     candidates: list[tuple[str, tuple[str, int]]] = []
     seen: set[tuple[str, int]] = set()
-    for doc in corpus.documents:
+    doc_positions: dict[str, int] = {}
+    token_lookup: dict[tuple[str, int], "Token"] = {}
+    for doc_idx, doc in enumerate(corpus.documents):
+        doc_positions[doc.id] = doc_idx
         for index, token in enumerate(doc.tokens):
+            token_lookup[(doc.id, index)] = token
             if token.kind is not TokenKind.WORD or token.position is None:
                 continue
             identity = (doc.id, token.position)
@@ -278,6 +319,46 @@ def to_review_table(
         for _, key in sorted(candidates)[:sample_size]:
             selected[key] = ["sample:unflagged", f"sample_seed:{seed}",
                              f"sample_population:{len(candidates)}", f"sample_size:{sample_size}"]
+
+    risk_rank: dict[tuple[str, int], tuple[int, float, int, int]] = {}
+    if priority == "calibrated_risk" and selected:
+        scored: list[tuple[tuple[int, float, int, int], tuple[str, int], float | None]] = []
+        any_calibrated = False
+        for key in selected:
+            tok = token_lookup[key]
+            conf = _calibrated_confidence(tok.annotations, fields)
+            if conf is not None:
+                any_calibrated = True
+            sort_key = (
+                0 if conf is not None else 1,
+                conf if conf is not None else 2.0,
+                doc_positions[key[0]],
+                key[1],
+            )
+            scored.append((sort_key, key, conf))
+        if not any_calibrated:
+            raise ValueError(
+                "priority='calibrated_risk' requires calibrated confidence annotations "
+                "on at least one selected token (run annotate_corpus(..., with_confidence=True) "
+                "with an active calibration)"
+            )
+        scored.sort(key=lambda item: item[0])
+        if budget is not None:
+            scored = scored[:budget]
+        kept: dict[tuple[str, int], list[str]] = {}
+        for sort_key, key, conf in scored:
+            reasons = list(selected[key])
+            reasons.append("priority:calibrated_risk")
+            if conf is not None:
+                reasons.append(f"calibrated_confidence:{conf:.6f}")
+            else:
+                reasons.append("calibrated_confidence:unavailable")
+            if budget is not None:
+                reasons.append(f"review_budget:{budget}")
+            kept[key] = reasons
+            risk_rank[key] = sort_key
+        selected = kept
+
     sentences = dependency_sentences(corpus) if set(fields) & {"head", "deprel"} else {}
     for key in list(selected):
         if sentences:
@@ -291,7 +372,7 @@ def to_review_table(
 
     prov = corpus.provenance
     citation = (prov.citation or prov.source) if prov is not None else ""
-    rows: list[dict[str, str]] = []
+    keyed_rows: list[tuple[tuple[str, int], dict[str, str]]] = []
     for doc in corpus.documents:
         if not any(key[0] == doc.id for key in selected):
             continue
@@ -335,7 +416,34 @@ def to_review_table(
                 row.update(dependency_sentence_id=sentence.id,
                            dependency_index=str(sentence.indices.index(index) + 1),
                            dependency_sentence_context=sentence.context)
-            rows.append(row)
+            keyed_rows.append((key, row))
+
+    if priority == "calibrated_risk" and keyed_rows:
+        if sentences:
+            sent_best: dict[tuple[str, str], tuple[int, float, int, int]] = {}
+            for key, _row in keyed_rows:
+                sent = sentences[key]
+                sk = (sent.document_id, sent.id)
+                rk = risk_rank.get(key)
+                if rk is not None and (sk not in sent_best or rk < sent_best[sk]):
+                    sent_best[sk] = rk
+            keyed_rows.sort(
+                key=lambda item: (
+                    sent_best.get(
+                        (sentences[item[0]].document_id, sentences[item[0]].id),
+                        (2, 2.0, doc_positions[item[0][0]], item[0][1]),
+                    ),
+                    item[0][1],
+                )
+            )
+        else:
+            keyed_rows.sort(
+                key=lambda item: risk_rank.get(
+                    item[0], (2, 2.0, doc_positions[item[0][0]], item[0][1])
+                )
+            )
+
+    rows = [row for _key, row in keyed_rows]
     if layout == "editable":
         _write_editable_review_rows(path, rows)
     else:

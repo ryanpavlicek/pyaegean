@@ -18,6 +18,12 @@ All notable changes to pyaegean are documented here. The format follows
   transaction under an exclusive file lock, rejects altered source, snapshot,
   configuration, or backend identity on resume, and publishes the finished
   database atomically only when all documents complete.
+- Opt-in calibrated confidence persistence on `annotate_corpus(..., with_confidence=True, confidence_domain=...)`
+  and calibrated-risk review queue prioritization (`to_review_table(..., priority="calibrated_risk", budget=N)`
+  plus CLI `aegean review export --layout editable --priority calibrated-risk --budget N --with-confidence`).
+  Orders review queues by ascending calibrated confidence (lowest confidence / highest estimated risk
+  first) while preserving natural token order inside dependency sentences and keeping review CSV schemas
+  backward-compatible.
 
 ## 0.62.0 (2026-11-24)
 

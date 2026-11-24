@@ -35,6 +35,12 @@ _PREDICTION_EVIDENCE_KEYS = frozenset({
     "upos_verified",
     "neural_analyzed", "analysis_complete", "analysis_warning",
     "analysis_receipt", "analysis_generation", "analysis_kind", "analysis_configuration",
+    "confidence_lemma", "confidence_pos", "confidence_morph",
+    "confidence_head", "confidence_deprel",
+    "confidence_lemma_unavailable", "confidence_pos_unavailable",
+    "confidence_morph_unavailable", "confidence_head_unavailable",
+    "confidence_deprel_unavailable",
+    "confidence_domain", "confidence_calibration_ids",
 })
 
 
@@ -119,6 +125,8 @@ class _DocumentAnnotator:
         tag_sentence: TagSentence | None = None,
         with_evidence: bool = True,
         with_dependencies: bool = False,
+        with_confidence: bool = False,
+        confidence_domain: str | None = None,
         long_input: Literal["strict", "partial", "windowed"] = "strict",
         generation: str | None = None,
     ) -> None:
@@ -127,10 +135,16 @@ class _DocumentAnnotator:
         self.tag_sentence = tag_sentence
         self.with_evidence = with_evidence
         self.with_dependencies = with_dependencies
+        self.with_confidence = with_confidence
+        self.confidence_domain = confidence_domain
         self.long_input = long_input
         self._joint_model = None if tag_sentence is not None else joint.active()
         self.use_joint = self._joint_model is not None
 
+        if confidence_domain is not None and not with_confidence:
+            raise ValueError("confidence_domain requires with_confidence=True")
+        if with_confidence and not self.use_joint:
+            raise ValueError("with_confidence=True requires the active neural Greek pipeline")
         if with_dependencies and not self.use_joint:
             raise ValueError("with_dependencies=True requires the active neural Greek pipeline")
         if long_input != "strict" and not self.use_joint:
@@ -154,22 +168,22 @@ class _DocumentAnnotator:
             if tag_sentence is not None
             else "baseline"
         )
-        self.configuration = json.dumps(
-            {
-                "annotator": "aegean.greek.annotate_corpus",
-                "with_evidence": with_evidence,
-                "long_input": long_input,
-                "with_dependencies": with_dependencies,
-                "replaced_fields": (
-                    ["lemma", "upos", "morph", "feats", "head", "deprel", "xpos"]
-                    if with_dependencies
-                    else ["lemma", "upos"]
-                ),
-                "custom_callable_identity": "unknown" if tag_sentence is not None else None,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        )
+        config_payload: dict[str, Any] = {
+            "annotator": "aegean.greek.annotate_corpus",
+            "with_evidence": with_evidence,
+            "long_input": long_input,
+            "with_dependencies": with_dependencies,
+            "replaced_fields": (
+                ["lemma", "upos", "morph", "feats", "head", "deprel", "xpos"]
+                if with_dependencies
+                else ["lemma", "upos"]
+            ),
+            "custom_callable_identity": "unknown" if tag_sentence is not None else None,
+        }
+        if with_confidence:
+            config_payload["with_confidence"] = True
+            config_payload["confidence_domain"] = confidence_domain
+        self.configuration = json.dumps(config_payload, sort_keys=True, separators=(",", ":"))
         self.backend_identity = _capture_backend_identity(
             tag_sentence=tag_sentence,
             joint_model=self._joint_model,
@@ -233,11 +247,20 @@ class _DocumentAnnotator:
                         doc.tokens[i], annotations=ann, form_state=form_state
                     )
             elif self.use_joint:
-                analyzed = pipeline_tokens(
-                    [doc.tokens[i] for i in idxs],
-                    long_input=self.long_input,
-                    document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
-                )
+                if self.with_confidence:
+                    analyzed = pipeline_tokens(
+                        [doc.tokens[i] for i in idxs],
+                        with_confidence=True,
+                        confidence_domain=self.confidence_domain,
+                        long_input=self.long_input,
+                        document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
+                    )
+                else:
+                    analyzed = pipeline_tokens(
+                        [doc.tokens[i] for i in idxs],
+                        long_input=self.long_input,
+                        document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
+                    )
                 if len(analyzed) != len(idxs):
                     raise ValueError(
                         "typed-token analysis returned a different token count than the input"
@@ -286,6 +309,8 @@ class _DocumentAnnotator:
                         )
                         if rec.analysis_warning:
                             ann["analysis_warning"] = rec.analysis_warning
+                    if self.with_confidence:
+                        self._record_confidence(ann, rec)
                     new_tokens[i] = replace(
                         doc.tokens[i], annotations=ann, form_state=rec.form_state
                     )
@@ -306,6 +331,44 @@ class _DocumentAnnotator:
                     )
         return replace(doc, tokens=new_tokens)
 
+    def _record_confidence(self, ann: dict[str, str], rec: Any) -> None:
+        """Persist calibrated per-field confidences and explicit unavailability reasons."""
+        tc = getattr(rec, "token_confidence", None)
+        cal_ids: dict[str, str] = {}
+        if tc is not None:
+            pairs: list[tuple[str, Any]] = [
+                ("lemma", tc.lemma),
+                ("pos", tc.upos),
+            ]
+            if self.with_dependencies:
+                pairs.extend(
+                    [
+                        ("morph", tc.feats),
+                        ("head", tc.head),
+                        ("deprel", tc.relation),
+                    ]
+                )
+            for field_name, cres in pairs:
+                if cres is None:
+                    continue
+                if cres.available and cres.value is not None:
+                    ann[f"confidence_{field_name}"] = f"{float(cres.value):.6f}"
+                    if cres.calibration_id:
+                        cal_ids[field_name] = str(cres.calibration_id)
+                elif cres.reason:
+                    ann[f"confidence_{field_name}_unavailable"] = str(cres.reason)
+        else:
+            if rec.lemma_confidence is not None:
+                ann["confidence_lemma"] = f"{float(rec.lemma_confidence):.6f}"
+            if rec.upos_confidence is not None:
+                ann["confidence_pos"] = f"{float(rec.upos_confidence):.6f}"
+        if self.confidence_domain is not None:
+            ann["confidence_domain"] = self.confidence_domain
+        if cal_ids:
+            ann["confidence_calibration_ids"] = json.dumps(
+                cal_ids, sort_keys=True, separators=(",", ":")
+            )
+
 
 def annotate_corpus(
     corpus: "Corpus",
@@ -313,19 +376,21 @@ def annotate_corpus(
     tag_sentence: TagSentence | None = None,
     with_evidence: bool = True,
     with_dependencies: bool = False,
+    with_confidence: bool = False,
+    confidence_domain: str | None = None,
     long_input: Literal["strict", "partial", "windowed"] = "strict",
     progress: Callable[[int, int], None] | None = None,
 ) -> "Corpus":
     """Return a copy of ``corpus`` with each word token's ``lemma`` / ``upos`` annotations
-    filled by the pipeline (plus opt-in neural morphology/syntax and receipt identity,
-    and explicit lemma provenance/review fields when
+    filled by the pipeline (plus opt-in neural morphology/syntax, calibrated confidences,
+    receipt identity, and explicit lemma provenance/review fields when
     ``with_evidence``).
 
     ``tag_sentence`` overrides the tagger (a ``forms -> [(lemma, upos)]`` callable); it carries
     no evidence class, so ``lemma_source`` is written only by the built-in paths. The default
     is the active pipeline: the neural joint model if loaded, else the offline lemmatize + POS
     baseline. Each word's new lemma/POS replaces the prior prediction and clears its
-    lemma evidence and neural coverage fields, even when the predicted strings agree.
+    lemma evidence, confidence, and neural coverage fields, even when the predicted strings agree.
     Built-in paths record fresh evidence only when ``with_evidence=True``; custom
     ``tag_sentence`` or ``with_evidence=False`` leaves those fields absent. Unrelated
     keys, such as source morphology, and review history remain. Field-level lemma
@@ -333,6 +398,10 @@ def annotate_corpus(
     as history. Baseline/custom reviews of unchanged source morphology remain current;
     ``with_dependencies=True`` requires the active neural pipeline and replaces
     morphology/syntax for complete token groups, invalidating their decisions too.
+    ``with_confidence=True`` requires the active neural pipeline and an active calibration
+    (legacy `use_calibration` or Schema-2 `use_calibration_registry`), persisting only
+    calibrated per-field probabilities (never raw softmax) and explicit unavailability
+    reasons for calibrated review prioritization.
     Every actual invocation records a fresh analysis generation, even for identical outputs;
     no-op review export or review replay does not generate an analysis. Unknown model
     identity is explicit for baseline/custom paths. Keep the original
@@ -349,6 +418,8 @@ def annotate_corpus(
         tag_sentence=tag_sentence,
         with_evidence=with_evidence,
         with_dependencies=with_dependencies,
+        with_confidence=with_confidence,
+        confidence_domain=confidence_domain,
         long_input=long_input,
     )
     total = len(corpus.documents)

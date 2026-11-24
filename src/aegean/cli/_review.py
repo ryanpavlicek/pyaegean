@@ -90,6 +90,28 @@ def export(
     lemmatizer: bool = LEMMATIZER_OPT,
     neural_lemmatizer: bool = NEURAL_LEMM_OPT,
     neural: bool = NEURAL_OPT,
+    layout: str = typer.Option(
+        "full", "--layout",
+        help="CSV layout: full (self-contained 60-column CSV) or editable (compact spreadsheet "
+             "layout with a SHA-256-bound .companion.json snapshot).",
+    ),
+    priority: str = typer.Option(
+        "document", "--priority",
+        help="Row ordering: document (natural order) or calibrated-risk (lowest calibrated "
+             "confidence first; requires calibrated confidence annotations).",
+    ),
+    budget: int | None = typer.Option(
+        None, "--budget",
+        help="Optional max token count when --priority calibrated-risk is active.",
+    ),
+    with_confidence: bool = typer.Option(
+        False, "--with-confidence",
+        help="Persist calibrated per-field confidences when --annotate --neural is used.",
+    ),
+    confidence_domain: str | None = typer.Option(
+        None, "--confidence-domain",
+        help="Optional calibration domain (e.g. literary, documentary_native); requires --with-confidence.",
+    ),
     reviewer: str = typer.Option("", "--reviewer", help="Pre-fill reviewer identity in the CSV."),
 ) -> None:
     """Write a CSV with lemma, POS, morphology, evidence, and optional field decisions.
@@ -100,6 +122,19 @@ def export(
     ``aegean review apply``. Example: aegean review apply nt reviewed.csv -o nt-fixed.json"""
     if selection not in ("all", "flagged", "unverified", "sample"):
         raise fail("--selection must be 'all', 'flagged', 'unverified', or 'sample'")
+    if layout not in ("full", "editable"):
+        raise fail("--layout must be 'full' or 'editable'")
+    priority_norm = "calibrated_risk" if priority in ("calibrated-risk", "calibrated_risk") else priority
+    if priority_norm not in ("document", "calibrated_risk"):
+        raise fail("--priority must be 'document' or 'calibrated-risk'")
+    if budget is not None and priority_norm != "calibrated_risk":
+        raise fail("--budget requires --priority calibrated-risk")
+    if budget is not None and budget < 0:
+        raise fail("--budget must be a nonnegative integer")
+    if confidence_domain is not None and not with_confidence:
+        raise fail("--confidence-domain requires --with-confidence")
+    if with_confidence and not annotate:
+        raise fail("--with-confidence requires --annotate")
     if not fields or len(set(fields)) != len(fields) or any(
         name not in ("lemma", "pos", "morph", "head", "deprel") for name in fields
     ):
@@ -124,8 +159,14 @@ def export(
         _activate(tagger=tagger, lemmatizer=lemmatizer,
                   neural_lemmatizer=neural_lemmatizer, neural=neural)
         try:
-            c = (greek.annotate_corpus(c, with_dependencies=True)
-                 if set(fields) & {"head", "deprel"} else greek.annotate_corpus(c))
+            annotate_kwargs: dict[str, object] = {}
+            if set(fields) & {"head", "deprel"}:
+                annotate_kwargs["with_dependencies"] = True
+            if with_confidence:
+                annotate_kwargs["with_confidence"] = True
+                if confidence_domain is not None:
+                    annotate_kwargs["confidence_domain"] = confidence_domain
+            c = greek.annotate_corpus(c, **annotate_kwargs)  # type: ignore[arg-type]
         except ValueError as exc:
             raise fail(f"could not annotate review source: {exc}") from None
         generation = next((token.annotations["analysis_generation"] for doc in c.documents
@@ -138,8 +179,12 @@ def export(
     try:
         with writing(output):
             n = to_review_table(
-                c, output, selection=cast(Literal["all", "flagged", "unverified", "sample"], selection),
+                c, output,
+                selection=cast(Literal["all", "flagged", "unverified", "sample"], selection),
                 reviewer=reviewer, fields=fields, sample_size=sample_size, seed=seed,
+                layout=cast(Literal["full", "editable"], layout),
+                priority=cast(Literal["document", "calibrated_risk"], priority_norm),
+                budget=budget,
             )
     except (OSError, ValueError) as exc:
         if analysis_path is not None:
