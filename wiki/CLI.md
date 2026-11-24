@@ -115,6 +115,7 @@ aegean --version          # pyaegean 0.63.0
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `explain`, bounded neural `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`gloss-nt`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`nt`/`works`/`catalog`/`nt-books`, and `eval` |
+| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` (5 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 48 patristic commentaries) |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `index` `search` `annotate` `job-status` (SQLite + FTS5 + resumable annotation jobs) |
@@ -2095,7 +2096,7 @@ aegean data list        # downloaded again, with its real on-disk size:
 `aegean data store` shows the same thing from the disk's point of view: the
 store's location and a name/MB table of everything in it.
 
-`aegean data list` shows the full live registry (currently 28 entries), with a **downloaded** column giving
+`aegean data list` shows the full live registry (currently 31 entries), with a **downloaded** column giving
 each present dataset's actual on-disk size. The fetchable datasets (all
 downloaded on demand, never bundled):
 
@@ -2573,7 +2574,7 @@ aegean info linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 
 aegean data fetch grc-jiont
-# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 28)
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 31)
 ```
 
 The fix is in the message: take the suggestion, or list the valid names

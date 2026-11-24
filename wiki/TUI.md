@@ -3,9 +3,13 @@
 `aegean tui` is a full-screen, app-like cockpit for the pyaegean toolkit, running
 entirely inside your terminal. Where [the CLI](CLI) is one command at a time and
 `aegean repl` is those commands typed one after another, the TUI is a windowed
-reader: a scrollable corpus browser, a live Greek workbench, a searchable
-catalogue of ~1,800 Greek works you can fetch and open, the local data store, and
-a command console with full CLI parity, all switched with a single keystroke.
+reader: a scrollable corpus browser (with word cursor, live token inspector, and
+inline interlinear gloss toggle), a live Greek workbench (with Beta Code mode,
+all 10 meters, and lexicon glosses), a dedicated **Biblical Greek study screen**
+(`b`: 5 NT editions, early manuscripts, Strong's word studies, LXX & Catenae), a
+searchable catalogue of ~1,800 Greek works you can fetch and open, the local data
+store, and a command console with full CLI parity, all switched with a single
+keystroke.
 
 It is a **focused cockpit over the same library the CLI uses**, not a second
 product and not a mirror of every command. Its default reader and workbench views

@@ -32,15 +32,15 @@ _BANNER = (
 )
 
 _KEYS = (
-    "keys:  c corpus browser   g Greek workbench   w works library   d data store   "
-    ": console   t theme   Esc back   ? help   ctrl+p commands   q quit"
+    "keys:  c corpus browser   g Greek workbench   b Biblical Greek   w works library   "
+    "d data store   : console   t theme   Esc back   ? help   ctrl+p commands   q quit"
 )
 
 _INTRO = (
     "pyaegean — Ancient Greek and the Aegean syllabic scripts. Pick a corpus below "
     "(↑/↓ then Enter) to browse and read its documents. The keys open the tools: "
-    "g the Greek workbench (analyze a line of Greek), w the works library (fetch and "
-    "read real Greek works), : a console that runs any command."
+    "g the Greek workbench (analyze a line of Greek), b Biblical Greek study (NT editions, "
+    "early manuscripts, Strong's, LXX & Catenae), w the works library, : the command console."
 )
 
 _CORPORA_TITLE = "Corpora  —  ↑/↓ to choose, Enter to browse"

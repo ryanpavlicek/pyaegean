@@ -5,6 +5,7 @@
     "aegean",
     "aegean.core",
     "aegean.greek",
+    "aegean.biblical",
     "aegean.analysis",
     "aegean.scripts",
     "aegean.scripts.lineara",

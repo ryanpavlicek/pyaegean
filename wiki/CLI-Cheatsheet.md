@@ -837,7 +837,7 @@ expiry. A changed pin or `--force` causes a new fetch; `remove` deletes the chos
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |
 
-`aegean data list` is the authoritative live registry (currently 28 entries).
+`aegean data list` is the authoritative live registry (currently 31 entries).
 The table below lists the common runtime and corpus assets; the live output also
 includes evaluation folds and supporting indexes used by benchmark commands.
 

@@ -374,15 +374,78 @@ with a fetch instruction instead of reporting a sample-derived score.
 
 ---
 
+## Biblical & Koine Greek Specialist Suite (`aegean.biblical` & `aegean bible`)
+
+Beyond the single Nestle 1904 corpus, `aegean.biblical` (CLI `aegean bible …`, and key `b` in `aegean tui`) provides a dedicated Koine and Biblical Greek workbench covering five scholarly resources — all fetched on demand into your local cache so the core wheel stays lightweight:
+
+1. **Five Greek New Testament editions + word-level variant comparison** (`nt-editions`, ~1.7 MB gzip):
+   - `nestle1904` (gold lemma, Robinson morphology, Strong's, UD UPOS; CC0)
+   - `sblgnt` (SBL Greek New Testament, Holmes 2010; CC BY 4.0 / MorphGNT CC BY-SA 3.0)
+   - `srgnt` (CNTR Statistical Restoration GNT; CC BY 4.0)
+   - `byz` (Robinson–Pierpont Byzantine Majority Textform; Public Domain)
+   - `tr` (CNTR Textus Receptus / KJTR; CC BY 4.0)
+2. **Thirteen 2nd–5th century CE Greek NT manuscript witnesses** (`nt-witnesses`, ~2.0 MB gzip; CNTR Class 1, CC BY-SA 4.0):
+   - Major uncials: Sinaiticus (`01`/ℵ), Alexandrinus (`02`/A), Vaticanus (`03`/B), Ephraemi (`04`/C), Bezae (`05`/D), Washingtonianus (`032`/W).
+   - Landmark early papyri: `P45`, `P46`, `P47`, `P52` (Rylands), `P66`, `P72`, `P75`.
+   - Preserves diplomatic CNTR MES transcriptions (original vs. corrector hands, lacunae, line breaks) and expands *nomina sacra* (`=θσ` → `Θεός`, `=ιυ` → `Ἰησοῦ`, `=πνα` → `Πνεῦμα`).
+3. **Extended Strong's Greek Lexicon & etymological root trees** (`strongs-greek`, ~1.5 MB gzip; STEPBible TBESG CC BY 4.0 + OpenScriptures Strong's CC BY-SA):
+   - 11,142 entries covering NT, Septuagint (LXX), Apocrypha, and Apostolic Fathers, with recursive root chains and Hebrew equivalents. Falls back offline to the bundled Dodson lexicon (CC0).
+4. **Septuagint (LXX) & Psalm numbering**:
+   - Friendly book-name access (`Gen`, `Exod`, `Ps`, `Isa`, `Wis`, `Sir`, `1Macc`, `Dan-OG`/`Dan-Th`, …) to all **55 Swete Septuagint books** (`tlg0527.*`) in First1KGreek, plus exact LXX ↔ Masoretic Psalm numbering conversion (`psalm_mt_to_lxx(23) == (22,)`).
+5. **Greek Patristic Commentaries & Word Studies**:
+   - Friendly book-name access to all **30 Greek NT *Catenae* volumes** (`tlg4102.*`) and **18 Origen biblical commentaries** (`tlg2042.*`), plus unified word-study reports (`word_study()`) and NT concordance search (`search_bible()`).
+
+```python
+import aegean
+
+bib = aegean.biblical
+
+# Compare all 5 NT editions with word-level textual diffs
+cmp = bib.compare_editions("John", "1.18")
+for v in cmp.verses[0].variants:
+    print(v.edition, v.kind, v.base_words, "->", v.edition_words)
+
+# Inspect 2nd-5th c. CE manuscript readings (with nomina sacra expanded)
+for w in bib.compare_witnesses("John", "1.18")[0].witnesses:
+    print(f"{w.siglum} ({w.alias}, {w.century}): {w.reading.readable}")
+
+# Extended Strong's lookup, root tree, and unified word study
+bib.use_strongs()
+study = bib.word_study("G3056")        # λόγος: gloss, roots, NT distribution, morphology
+print(study.total_occurrences, study.by_morph)
+
+# Septuagint (LXX) & Patristic Catenae
+bib.psalm_mt_to_lxx(23)                # (22,)
+lxx_gen = bib.load_lxx("Gen", ref="1")
+catena_john = bib.load_commentary("John")
+```
+
+From the command line (or inside `aegean repl` and the TUI `:` console):
+
+```bash
+aegean bible read John 1.1 --interlinear
+aegean bible compare John 1.18
+aegean bible witnesses John 18.37 --sigla P52,01,03
+aegean bible strongs G3056 --roots
+aegean bible word-study ἀγάπη
+aegean bible search V-AAI --by morph --book John
+aegean bible books lxx
+aegean bible psalm 23 --from mt
+aegean bible commentary John
+```
+
+In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study screen** (Interlinear Reader, 5-Edition Comparison, Early Manuscripts, Strong's Word Study, and LXX & Catenae).
+
+---
+
 ## Notes and limitations
 
-- **Annotations are gold and fixed** (Nestle 1904 morphology), not pyaegean's own
+- **Nestle 1904 annotations are gold and fixed** (Robinson morphology), not pyaegean's own
   prediction, which is exactly what makes the corpus useful as a benchmark.
 - **One `Document` per chapter.** A whole-book load is a corpus of chapters; a `ref`
   range trims the verses within the affected chapters.
 - **A `ref` needs a book.** You cannot address a verse across all 27 books at once.
-- **Scope is the 27-book Greek NT only.** Old Testament / Septuagint books are not
-  covered here.
+- **Septuagint (LXX) and patristic commentaries** load from First1KGreek (`aegean.biblical.load_lxx()` / `load_commentary()`) rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them).
 
 ---
 
@@ -395,3 +458,4 @@ with a fetch instruction instead of reporting a sample-derived score.
 - [Data and Provenance](Data-and-Provenance): caches, pinned commits, and licences
 - [Getting Started](Getting-Started) and the [Tutorial](Tutorial): first steps
 - [Limitations](Limitations): overall scope and known gaps
+

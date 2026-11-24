@@ -59,6 +59,7 @@ _SCREEN_SPECS: tuple[tuple[str, str, str], ...] = (
     ("home", "screens.home", "HomeScreen"),
     ("corpus", "screens.corpus", "CorpusBrowserScreen"),
     ("greek", "screens.greek", "GreekWorkbenchScreen"),
+    ("bible", "screens.bible", "BiblicalScreen"),
     ("data", "screens.data", "DataStoreScreen"),
     ("works", "screens.works", "WorksScreen"),
     ("console", "screens.console", "CommandConsoleScreen"),
@@ -114,6 +115,7 @@ class CorpusCommands(Provider):
             ("Go to Home", "home"),
             ("Go to Corpus browser", "corpus"),
             ("Go to Greek workbench", "greek"),
+            ("Go to Biblical Greek study", "bible"),
             ("Go to Data store", "data"),
             ("Go to Works library", "works"),
             ("Go to Command console", "console"),
@@ -154,7 +156,7 @@ class AegeanApp(App[None]):
     COMMANDS = App.COMMANDS | {CorpusCommands}
 
     # The screen registry, resolved from ``_SCREEN_SPECS`` at class-definition
-    # time: Home always, plus each of corpus / greek / data whose
+    # time: Home always, plus each of corpus / greek / bible / data whose
     # ``screens/<name>.py`` module imports cleanly. A screen is added by creating
     # its module named in ``_SCREEN_SPECS``; nothing else in this file changes.
     # (Textual rejects placeholder values, so absent screens are simply omitted
@@ -166,6 +168,7 @@ class AegeanApp(App[None]):
         Binding("h", "switch('home')", "Home"),
         Binding("c", "switch('corpus')", "Corpus"),
         Binding("g", "switch('greek')", "Greek"),
+        Binding("b", "switch('bible')", "Bible"),
         Binding("d", "switch('data')", "Data"),
         Binding("w", "switch('works')", "Works"),
         Binding("colon", "console", "Console"),

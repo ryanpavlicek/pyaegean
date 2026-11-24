@@ -301,6 +301,40 @@ Dodson Greek Lexicon (bundled: src/aegean/data/bundled/greek/dodson.json)
   by aegean.greek.use_dodson() / gloss_nt() / gloss_strongs() (built by
   scripts/build_dodson_lexicon.py).
 
+Extended Strong's Greek Lexicon — strongs-greek (fetched on demand, NOT bundled)
+  Combined derived lexicon (11,142 entries covering NT, LXX, Apocrypha, and Apostolic Fathers)
+  hosted as the `strongs-greek` release asset (built by scripts/build_strongs_greek.py) and
+  fetched to cache on demand by aegean.biblical.use_strongs(). Combines:
+  - STEPBible TBESG (Translators Brief Lexicon of Extended Strongs for Greek), STEPBible.org /
+    Tyndale House, Cambridge (https://github.com/STEPBible/STEPBible-Data), licensed CC BY 4.0;
+  - OpenScriptures Strong's Greek Dictionary (https://github.com/openscriptures/strongs),
+    James Strong (1890), XML by Ulrik Petersen, JSON by Open Scriptures, licensed CC BY-SA.
+  The combined derived asset is licensed CC BY-SA 4.0 and is never bundled in the Apache-2.0 wheel.
+
+Multi-edition Greek New Testament — nt-editions (fetched on demand, NOT bundled)
+  Four additional Greek New Testament editions hosted as the `nt-editions` release asset
+  (built by scripts/build_nt_editions.py) and fetched to cache on demand by
+  aegean.biblical.load_nt(..., edition=...) / compare_editions():
+  - SBL Greek New Testament (Michael W. Holmes, SBL/Logos, CC BY 4.0) via MorphGNT
+    (https://github.com/morphgnt/sblgnt, CC BY-SA 3.0);
+  - Statistical Restoration Greek New Testament (Alan Bunning / Center for New Testament
+    Restoration, https://github.com/Center-for-New-Testament-Restoration/SR, CC BY 4.0);
+  - Textus Receptus / KJTR (Alan Bunning / Center for New Testament Restoration,
+    https://github.com/Center-for-New-Testament-Restoration/KJTR, CC BY 4.0);
+  - Robinson-Pierpont Byzantine Majority Textform (Maurice A. Robinson & William G. Pierpont,
+    https://github.com/byztxt/byzantine-majority-text, Public Domain).
+  Fetched on demand; never bundled in the Apache-2.0 wheel.
+
+Early Greek New Testament Manuscript Witnesses — nt-witnesses (fetched on demand, NOT bundled)
+  Thirteen 2nd-5th century CE Greek New Testament manuscript transcriptions (Sinaiticus 01,
+  Alexandrinus 02, Vaticanus 03, Ephraemi 04, Bezae 05, Washingtonianus 032, and papyri
+  P45, P46, P47, P52, P66, P72, P75) from the Center for New Testament Restoration
+  (Alan Bunning, https://github.com/Center-for-New-Testament-Restoration/transcriptions,
+  CC BY-SA 4.0), hosted as the `nt-witnesses` release asset (built by
+  scripts/build_nt_witnesses.py) and fetched on demand by aegean.biblical.load_witness() /
+  compare_witnesses(). Never bundled in the Apache-2.0 wheel. Attribute CNTR / Alan Bunning
+  in academic work.
+
 Greek development source archives (repository-only under training/sources/greek-development-v1/; NOT bundled in wheels or sdists)
   Digital Hill treebank sample (tragedy-diagnostic/):
     Euripides, Suppliants 447-449, annotated by Marcel Mernitz, from DigitalHill/treebank-data

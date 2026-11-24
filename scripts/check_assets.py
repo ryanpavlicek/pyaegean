@@ -46,6 +46,13 @@ _UPSTREAM_REPOS: dict[str, str] = {
     "UD Ancient Greek-Perseus": "https://github.com/UniversalDependencies/UD_Ancient_Greek-Perseus",
     "UD Ancient Greek-PROIEL": "https://github.com/UniversalDependencies/UD_Ancient_Greek-PROIEL",
     "nestle1904 NT source": "https://github.com/biblicalhumanities/Nestle1904",
+    "STEPBible Extended Strong's (TBESG)": "https://github.com/STEPBible/STEPBible-Data",
+    "OpenScriptures Strong's Greek": "https://github.com/openscriptures/strongs",
+    "SBLGNT / MorphGNT": "https://github.com/morphgnt/sblgnt",
+    "CNTR Statistical Restoration GNT": "https://github.com/Center-for-New-Testament-Restoration/SR",
+    "CNTR Textus Receptus (KJTR)": "https://github.com/Center-for-New-Testament-Restoration/KJTR",
+    "CNTR early NT manuscript transcriptions": "https://github.com/Center-for-New-Testament-Restoration/transcriptions",
+    "Robinson-Pierpont Byzantine Majority Text": "https://github.com/byztxt/byzantine-majority-text",
     "lineara.xyz source": "https://github.com/mwenge/lineara.xyz",
 }
 

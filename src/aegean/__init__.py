@@ -71,9 +71,9 @@ from .core.diagnose import DiagnoseReport, diagnose  # noqa: E402 — corpus hea
 
 
 def __getattr__(name: str) -> object:
-    """Load the analysis/visualization facades on first use."""
+    """Load the analysis/biblical/visualization facades on first use."""
 
-    if name in {"analysis", "viz"}:
+    if name in {"analysis", "biblical", "viz"}:
         from importlib import import_module
 
         return import_module(f".{name}", __name__)
@@ -83,7 +83,7 @@ def __getattr__(name: str) -> object:
 def __dir__() -> list[str]:
     """Include lazily exported namespaces in module discovery."""
 
-    return sorted({*globals(), "analysis", "viz"})
+    return sorted({*globals(), "analysis", "biblical", "viz"})
 
 
 def combine(corpora: "Iterable[Corpus]", *, dedupe: str = "error") -> Corpus:
@@ -122,6 +122,7 @@ __all__ = [
     "registered_scripts",
     "set_verbosity",
     "analysis",
+    "biblical",
     "cache",
     "geo",
     "greek",

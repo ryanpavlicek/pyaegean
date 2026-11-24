@@ -87,6 +87,7 @@ def _build_app() -> Any:
     from . import _corpus, _doctor, _quickstart, _repl, _tui, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
+    from ._bible import bible_app
     from ._data import data_app
     from ._db import db_app
     from ._greek import greek_app
@@ -95,12 +96,12 @@ def _build_app() -> Any:
     app = typer.Typer(
         pretty_exceptions_show_locals=False,
         help=(
-            "pyaegean from the shell: corpora, Greek NLP, analysis, data, and the "
-            "(exploratory) AI layer. Every data-producing command takes --json."
+            "pyaegean from the shell: corpora, Greek NLP, Biblical/Koine Greek, analysis, "
+            "data, and the (exploratory) AI layer. Every data-producing command takes --json."
         ),
         epilog=(
             "Start with: aegean quickstart · aegean info lineara · aegean greek works "
-            "· aegean repl — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
+            "· aegean bible read John 1.1-5 · aegean repl — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
         no_args_is_help=True,
         context_settings={"help_option_names": ["-h", "--help"]},
@@ -127,6 +128,7 @@ def _build_app() -> Any:
     _viz.register(app)
     _workbench.register(app)
     app.add_typer(greek_app, name="greek")
+    app.add_typer(bible_app, name="bible")
     app.add_typer(analyze_app, name="analyze")
     app.add_typer(data_app, name="data")
     app.add_typer(db_app, name="db")

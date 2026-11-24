@@ -617,6 +617,59 @@ _REMOTE: dict[str, DataSpec] = {
              "aegean.load('nt') / greek.load_nt(book, ref=...).",
         extract=False,
     ),
+    # Extended Strong's Greek Lexicon (STEPBible TBESG CC BY 4.0 + OpenScriptures
+    # Strong's CC BY-SA), built reproducibly by scripts/build_strongs_greek.py.
+    # Covers NT + LXX + Apocrypha + Apostolic Fathers (11,142 entries, 4,635 with
+    # etymological root chains). CC BY-SA derived asset — fetched on demand, never bundled.
+    "strongs-greek": DataSpec(
+        name="strongs-greek",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "strongs-greek-v1/strongs-greek.json.gz"
+        ),
+        sha256="96345c5d25ae972b548bb7ed16557e3c58dc53663f6093bae7b02f093b52e507",
+        license="CC-BY-SA-4.0 (STEPBible TBESG CC BY 4.0 + OpenScriptures Strong's CC BY-SA); fetched, never bundled",
+        note="Extended Strong's Greek Lexicon (11,142 entries: NT + LXX + Apocrypha + Apostolic "
+             "Fathers, etymological root trees, Hebrew cross-references; ~1.5 MB gzip). Used by "
+             "aegean.biblical.use_strongs() / strongs_entry() / strongs_roots().",
+        extract=False,
+        on_disk=("strongs-greek.json.gz",),
+    ),
+    # Multi-edition Greek New Testament bundle (SBLGNT, SRGNT, Byzantine Majority Text,
+    # and Textus Receptus), built reproducibly by scripts/build_nt_editions.py.
+    # Fetched on demand, never bundled.
+    "nt-editions": DataSpec(
+        name="nt-editions",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "nt-editions-v1/nt-editions.json.gz"
+        ),
+        sha256="c538c2f5561da2e2a51d8c173e5db0b56b5d06cb75e6bd6f786709c0168a810d",
+        license="CC-BY-SA-3.0 / CC-BY-4.0 / Public Domain (SBLGNT/MorphGNT, CNTR SR & KJTR, Robinson-Pierpont BYZ)",
+        note="Multi-edition Greek New Testament (~1.7 MB gzip): SBLGNT, Statistical Restoration "
+             "GNT, Robinson-Pierpont Byzantine Majority Text, and Textus Receptus. Used by "
+             "aegean.biblical.load_nt(..., edition=...) and compare_editions().",
+        extract=False,
+        on_disk=("nt-editions.json.gz",),
+    ),
+    # Early Greek New Testament Manuscript Witnesses (CNTR Class 1, CC BY-SA 4.0), built
+    # reproducibly by scripts/build_nt_witnesses.py: 6 major uncials (01/Sinaiticus,
+    # 02/Alexandrinus, 03/Vaticanus, 04/Ephraemi, 05/Bezae, 032/Washingtonianus) and
+    # 7 landmark early papyri (P45, P46, P47, P52, P66, P72, P75).
+    "nt-witnesses": DataSpec(
+        name="nt-witnesses",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "nt-witnesses-v1/nt-witnesses.json.gz"
+        ),
+        sha256="2436abd052e92a10d7fd13a3f80b89f08f73cd3c244a0a3a3f5a00c5a4d2b478",
+        license="CC-BY-SA-4.0 (Center for New Testament Restoration / Alan Bunning); fetched, never bundled",
+        note="Early Greek NT manuscript witnesses (~2.0 MB gzip): 13 landmark 2nd-5th c. CE "
+             "uncials and papyri (01, 02, 03, 04, 05, 032, P45, P46, P47, P52, P66, P72, P75) "
+             "with CNTR MES diplomatic markup and nomina sacra. Used by aegean.biblical.load_witness() / compare_witnesses().",
+        extract=False,
+        on_disk=("nt-witnesses.json.gz",),
+    ),
     # The prebuilt Linear A Research Workbench static web app (the browser UI), hosted as a
     # release asset on the workbench repo and served locally by `aegean workbench`. The app
     # build is Apache-2.0; the Linear A corpus data baked into it is GORILA-derived (via

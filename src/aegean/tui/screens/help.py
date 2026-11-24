@@ -18,22 +18,26 @@ __all__ = ["HelpScreen"]
 _HELP = """[b]aegean — keys[/b]
 
   h   Home                 w   Works library
-  c   Corpus browser       :   Command console (any CLI command)
-  g   Greek workbench      t   Theme picker (live preview)
-  d   Data store           ?   This help
-  Esc Back / exit input    q   Quit
+  c   Corpus browser       b   Biblical Greek study (NT, MSS, Strong's, LXX)
+  g   Greek workbench      :   Command console (any CLI command)
+  d   Data store           t   Theme picker (live preview)
+  Esc Back / exit input    ?   This help   ·   q   Quit
   ctrl+p   Command palette (open a corpus, fetch, jump, theme…)
 
 [b]In the corpus browser[/b]  /  focus search · Tab cycle panes · type a sign
   pattern (KU-*) to search · ctrl+p 'Open …' opens a corpus or a downloaded work
-  In the reader: ↑/↓ move the line cursor · Enter / a analyze the line
-  (parse/tag, neural, IPA, translate for Greek; signs + Greek reading for syllabic)
+  In the reader: ↑/↓ move the line cursor · ←/→ move the word cursor · i inline
+  interlinear gloss · Enter / a analyze the line (parse/tag, neural + OOV, IPA,
+  glosses, scansion, translate for Greek; signs + Greek reading for syllabic)
+
+[b]Biblical Greek study (b)[/b]  interlinear NT · 5-edition comparison · 2nd–5th c.
+  manuscript witnesses · Strong's word study · LXX (55 books) & NT Catenae
 
 [b]Works library (w)[/b]  search by author/title · f fetch · a fetch whole author
   · Enter open a fetched work · x remove a downloaded work
 
 [b]Command console (:)[/b]  type any command without the 'aegean' prefix
-  (e.g. stats lineara --top 5) · a completion list opens as you type:
+  (e.g. bible compare John 1.18) · a completion list opens as you type:
   ↑/↓ pick · Tab/Enter complete · Esc close · ↑/↓ history when closed
   · use CORPUS sets a session corpus
 
