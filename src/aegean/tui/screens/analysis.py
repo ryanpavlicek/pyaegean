@@ -32,7 +32,7 @@ __all__ = ["LineAnalysisScreen"]
 
 # The analyses that need to run off the UI thread (a model load / inference, a network
 # translation call). Everything else is instant and renders inline.
-_SLOW = frozenset({"neural", "translate"})
+_SLOW = frozenset({"neural", "neural_oov", "translate"})
 
 
 def format_result(result: adapter.AnalysisResult) -> str:

@@ -141,10 +141,13 @@ class DetailPane(Static):
     BINDINGS = [
         Binding("up", "cursor_up", "Up", show=False),
         Binding("down", "cursor_down", "Down", show=False),
+        Binding("left", "token_prev", "Prev word", show=False),
+        Binding("right", "token_next", "Next word", show=False),
         Binding("pageup", "cursor_page_up", "Page up", show=False),
         Binding("pagedown", "cursor_page_down", "Page down", show=False),
         Binding("home", "cursor_first", "First line", show=False),
         Binding("end", "cursor_last", "Last line", show=False),
+        Binding("i", "toggle_interlinear", "Interlinear"),
         Binding("enter", "choose_line", "Analyze line"),
         Binding("a", "choose_line", "Analyze line"),
     ]
@@ -164,22 +167,50 @@ class DetailPane(Static):
             self.token_texts = token_texts
             super().__init__()
 
+    class TokenHighlighted(Message):
+        """Posted when the active reader line or word token changes (↑/↓/←/→)."""
+
+        def __init__(self, line_number: int, token: "TokenCell") -> None:
+            self.line_number = line_number
+            self.token = token
+            super().__init__()
+
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)  # type: ignore[arg-type]
         self._detail: DocDetail | None = None
         self._balances: list[BalanceRow] = []
         self._cursor = 0
+        self._token_cursor = 0
+        self._show_interlinear = False
         self._header_rows = 0
 
     def show_document(
         self, detail: "DocDetail", balances: "list[BalanceRow] | None" = None
     ) -> None:
         """Render one document's detail (and its balance table, if any), with the line
-        cursor reset to the first line."""
+        and word cursors reset to the first line."""
         self._detail = detail
         self._balances = balances or []
         self._cursor = 0
+        self._token_cursor = 0
         self._rebuild()
+        self._emit_token_highlighted()
+
+    @staticmethod
+    def _interlinear_gloss_row(tokens: "tuple[TokenCell, ...]") -> str:
+        """Build a compact interlinear gloss line when tokens carry annotations."""
+        bits: list[str] = []
+        for tok in tokens:
+            ann = tok.annotations
+            piece = ann.get("gloss") or ann.get("lemma") or ""
+            morph = ann.get("morph") or ann.get("upos") or ""
+            if piece and morph:
+                bits.append(f"{piece} [{morph}]")
+            elif piece:
+                bits.append(piece)
+            elif morph:
+                bits.append(f"[{morph}]")
+        return " · ".join(bits)
 
     def _rebuild(self) -> None:
         # Built as a console-markup string (Static renders markup): the current line is
@@ -204,11 +235,22 @@ class DetailPane(Static):
         out = [escape(row) for row in header]
         self._header_rows = len(header)
         for i, line in enumerate(detail.lines):
-            cells = []
-            for tok in line.tokens:
-                cells.append(_reader_token_text(tok))
-            row_text = escape(f"{line.number:>3}  " + " ".join(cells))
-            out.append(f"[reverse]{row_text}[/reverse]" if i == self._cursor else row_text)
+            cells = [_reader_token_text(tok) for tok in line.tokens]
+            if i == self._cursor and cells:
+                t_idx = max(0, min(len(cells) - 1, self._token_cursor))
+                rendered_cells = [
+                    f"[bold underline]{escape(c)}[/bold underline]" if j == t_idx else escape(c)
+                    for j, c in enumerate(cells)
+                ]
+                prefix = escape(f"{line.number:>3}  ")
+                out.append(f"[reverse]{prefix}{' '.join(rendered_cells)}[/reverse]")
+            else:
+                row_text = escape(f"{line.number:>3}  " + " ".join(cells))
+                out.append(row_text)
+            if self._show_interlinear:
+                gloss_row = self._interlinear_gloss_row(line.tokens)
+                if gloss_row:
+                    out.append(f"[dim]     {escape(gloss_row)}[/dim]")
         if self._balances:
             out.append("")
             out.append("accounting balance")
@@ -224,7 +266,17 @@ class DetailPane(Static):
                 )
         self.update("\n".join(out))
 
-    # ── line cursor ───────────────────────────────────────────────────────────
+    def _emit_token_highlighted(self) -> None:
+        if self._detail is None or not self._detail.lines:
+            return
+        line = self._detail.lines[self._cursor]
+        if not line.tokens:
+            return
+        idx = max(0, min(len(line.tokens) - 1, self._token_cursor))
+        self._token_cursor = idx
+        self.post_message(self.TokenHighlighted(line.number, line.tokens[idx]))
+
+    # ── line & token cursor ───────────────────────────────────────────────────
     def _line_count(self) -> int:
         return len(self._detail.lines) if self._detail else 0
 
@@ -236,8 +288,23 @@ class DetailPane(Static):
         if new == self._cursor:
             return
         self._cursor = new
+        self._token_cursor = 0
         self._rebuild()
         self._scroll_to_cursor()
+        self._emit_token_highlighted()
+
+    def _move_token_cursor(self, delta: int) -> None:
+        if self._detail is None or not self._detail.lines:
+            return
+        tokens = self._detail.lines[self._cursor].tokens
+        if not tokens:
+            return
+        new = max(0, min(len(tokens) - 1, self._token_cursor + delta))
+        if new == self._token_cursor:
+            return
+        self._token_cursor = new
+        self._rebuild()
+        self._emit_token_highlighted()
 
     def _scroll_to_cursor(self) -> None:
         """Keep the cursor line within the enclosing scroll container's viewport."""
@@ -263,6 +330,16 @@ class DetailPane(Static):
     def action_cursor_down(self) -> None:
         self._move_cursor(1)
 
+    def action_token_prev(self) -> None:
+        self._move_token_cursor(-1)
+
+    def action_token_next(self) -> None:
+        self._move_token_cursor(1)
+
+    def action_toggle_interlinear(self) -> None:
+        self._show_interlinear = not self._show_interlinear
+        self._rebuild()
+
     def action_cursor_page_up(self) -> None:
         self._move_cursor(-10)
 
@@ -286,3 +363,13 @@ class DetailPane(Static):
     def cursor_line(self) -> int:
         """The current line's 0-based index (for tests / callers)."""
         return self._cursor
+
+    @property
+    def cursor_token(self) -> int:
+        """The current word's 0-based index on the active line."""
+        return self._token_cursor
+
+    @property
+    def show_interlinear(self) -> bool:
+        """Whether inline interlinear gloss rows are displayed."""
+        return self._show_interlinear

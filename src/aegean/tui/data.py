@@ -64,9 +64,12 @@ __all__ = [
     "balance_rows",
     "confidence_available",
     "greek_pipeline",
+    "greek_betacode",
+    "greek_gloss",
     "greek_scan",
     "greek_syllables",
     "greek_ipa",
+    "format_token_inspector",
     "doctor_report",
     "fetch_dataset",
     "read_corpus_spec",
@@ -565,9 +568,125 @@ def greek_ipa(text: str, period: str = "attic") -> GreekResult:
     return GreekResult(ok=True, rows=rows, summary=ipa)
 
 
+def greek_betacode(text: str) -> str:
+    """Convert ASCII Beta Code to Unicode Greek (never raises; passes through on error)."""
+    from ..greek import betacode_to_unicode
+
+    if not text:
+        return ""
+    try:
+        return betacode_to_unicode(text)
+    except Exception:  # pragma: no cover - betacode_to_unicode is total
+        return text
+
+
+_TUI_DODSON: Any = None
+
+
+def _tui_dodson() -> Any:
+    """Lazy offline Dodson lexicon instance private to the TUI adapter."""
+    global _TUI_DODSON
+    if _TUI_DODSON is None:
+        from ..greek.koine import DodsonLexicon
+
+        _TUI_DODSON = DodsonLexicon.load()
+    return _TUI_DODSON
+
+
+def greek_gloss(text: str) -> GreekResult:
+    """Gloss every Greek word in ``text`` using active registry lexica plus bundled Dodson.
+
+    Never fetches over the network and never raises. Returns one row per word token
+    with ``word``, ``lemma``, ``strongs``, ``gloss``, and ``source``."""
+    from ..greek import lemmatize, tokenize
+    from ..greek.lexicons import active_lexica, entry as registry_lookup
+
+    text = text.strip()
+    if not text:
+        return GreekResult(ok=True, rows=[])
+    try:
+        words = [t.text for t in tokenize(text) if any(ch.isalpha() for ch in t.text)]
+        dodson = _tui_dodson()
+        active_names = active_lexica()
+        rows: list[dict[str, Any]] = []
+        for word in words:
+            lemma = lemmatize(word) or word
+            entry = dodson.lookup(word) or (dodson.lookup(lemma) if lemma != word else None)
+            strongs = f"G{entry.strongs}" if entry is not None else ""
+            gloss_text = entry.gloss if entry is not None else ""
+            source = "dodson" if entry is not None else ""
+            if active_names:
+                reg_entry = registry_lookup(lemma) or registry_lookup(word)
+                if reg_entry is not None and reg_entry.gloss:
+                    gloss_text = reg_entry.gloss
+                    source = reg_entry.lexicon
+            rows.append({
+                "word": word,
+                "lemma": entry.lemma if entry is not None else lemma,
+                "strongs": strongs,
+                "gloss": gloss_text,
+                "source": source,
+            })
+    except Exception as exc:  # pragma: no cover - offline helpers are total
+        return GreekResult(ok=False, error=f"{type(exc).__name__}: {exc}")
+    glossed = sum(1 for r in rows if r["gloss"])
+    return GreekResult(ok=True, rows=rows, summary=f"{glossed}/{len(rows)} glossed")
+
+
+def format_token_inspector(token: TokenCell, *, script_id: str = "greek") -> str:
+    """One-line scholarly inspection summary for the highlighted reader token."""
+    parts: list[str] = [token.text]
+    if token.status and token.status != "certain":
+        parts.append(f"[{token.status}]")
+    ann = token.annotations
+    lemma = ann.get("lemma", "")
+    morph = ann.get("morph") or ann.get("feats") or ann.get("xpos") or ""
+    upos = ann.get("upos", "")
+    strongs = ann.get("strongs", "")
+    gloss = ann.get("gloss", "")
+    if not gloss and script_id == "greek" and any(ch.isalpha() for ch in token.text):
+        try:
+            dodson = _tui_dodson()
+            hit = (
+                dodson.by_strongs(strongs)
+                if strongs
+                else (dodson.lookup(lemma) if lemma else dodson.lookup(token.text))
+            )
+            if hit is not None:
+                gloss = hit.gloss
+                if not lemma:
+                    lemma = hit.lemma
+                if not strongs:
+                    strongs = hit.strongs
+        except Exception:
+            pass
+    if lemma:
+        parts.append(f"lemma: {lemma}")
+    if upos and morph:
+        parts.append(f"{upos} ({morph})")
+    elif morph:
+        parts.append(morph)
+    elif upos:
+        parts.append(upos)
+    if strongs:
+        s_code = strongs if strongs.upper().startswith("G") else f"G{strongs}"
+        parts.append(f"Strong's {s_code}")
+    if gloss:
+        parts.append(f"'{gloss}'")
+    if token.alt:
+        parts.append(f"alt: {', '.join(token.alt)}")
+    if token.form_state is not None:
+        dipl = token.form_state.get("diplomatic")
+        reg = token.form_state.get("regularized")
+        if dipl and reg and dipl != reg:
+            parts.append(f"dipl. {dipl} -> reg. {reg}")
+    return "  ·  ".join(parts)
+
+
 # ── in-reader line analysis ─────────────────────────────────────────────────────
 # One line of a document, analysed on demand: Greek lines get the offline parser/
-# tagger, the neural pipeline, IPA, and (BYOAI, optional) translation; syllabic
+# tagger, the neural pipeline (plus optional weighted OOV reranking), dictionary
+# glossing, verse scansion, IPA, and (BYOAI, optional) translation; syllabic
 # lines get sign values, the Greek bridge + gloss (Linear B / Cypriot), or an
 # honest exploratory transliteration (undeciphered Linear A / Cypro-Minoan).
 
@@ -609,16 +728,21 @@ _GREEK_SCRIPTS: frozenset[str] = frozenset({"greek"})
 def line_analyses(script_id: str) -> list[AnalysisOption]:
     """The analyses offered for a line of ``script_id``, each flagged available or not.
 
-    Greek: offline parser/tagger, neural pipeline (needs ``[neural]`` + the model),
-    IPA, and translation (only when a BYOAI provider is configured). Linear B / Cypriot:
-    the Greek reading + gloss, and sign values. Linear A / Cypro-Minoan (undeciphered):
-    signs and, for Linear A, an exploratory transliteration, both plainly caveated."""
+    Greek: offline parser/tagger, neural pipeline, neural + weighted OOV reranker
+    (both need ``[neural]`` + the model), dictionary glossing (Dodson + active
+    lexica), verse scansion, IPA, and translation (only when a BYOAI provider is
+    configured). Linear B / Cypriot: the Greek reading + gloss, and sign values.
+    Linear A / Cypro-Minoan (undeciphered): signs and, for Linear A, an exploratory
+    transliteration, both plainly caveated."""
     if script_id in _GREEK_SCRIPTS:
         neural_ok, neural_why = greek_neural_available()
         tr_ok, tr_why = translation_available()
         return [
             AnalysisOption("offline", "offline parser / tagger", True),
             AnalysisOption("neural", "neural pipeline", neural_ok, neural_why),
+            AnalysisOption("neural_oov", "neural + OOV reranker (weighted)", neural_ok, neural_why),
+            AnalysisOption("gloss", "lexicon glosses (Dodson + active lexica)", True),
+            AnalysisOption("scan", "metrical scansion (auto-detect meter)", True),
             AnalysisOption("ipa", "IPA (reconstructed)", True),
             AnalysisOption("translate", "translate (BYOAI, optional)", tr_ok, tr_why),
         ]
@@ -653,7 +777,13 @@ def run_line_analysis(
         if key == "offline":
             return _greek_offline(text)
         if key == "neural":
-            return _greek_neural(text)
+            return _greek_neural(text, use_oov=False)
+        if key == "neural_oov":
+            return _greek_neural(text, use_oov=True)
+        if key == "gloss":
+            return _greek_gloss_result(text)
+        if key == "scan":
+            return _greek_scan_result(text)
         if key == "ipa":
             return _greek_ipa_result(text)
         if key == "translate":
@@ -718,25 +848,60 @@ def greek_neural_available() -> tuple[bool, str]:
     fetched = (
         root is not None and "grc-joint" in _REMOTE and is_downloaded(_REMOTE["grc-joint"], root)
     )
-    return True, "" if fetched else "downloads the model (~170 MB) on first run"
+    return True, "" if fetched else "downloads the model (~173 MB) on first run"
 
 
-def _greek_neural(text: str) -> AnalysisResult:
+def _greek_neural(text: str, *, use_oov: bool = False) -> AnalysisResult:
+    title = "neural + OOV reranker (weighted)" if use_oov else "neural pipeline"
     text = text.strip()
     if not text:
-        return AnalysisResult(ok=True, title="neural pipeline")
-    from ..greek import pipeline, use_neural_pipeline
+        return AnalysisResult(ok=True, title=title)
+    from ..greek import (
+        disable_oov_lemma_reranker,
+        oov_lemma_reranker_active,
+        pipeline,
+        use_calibration_registry,
+        use_neural_pipeline,
+        use_oov_lemma_reranker,
+    )
+    from ..greek import calibrate as _cal
 
     try:
         use_neural_pipeline()
     except Exception as exc:
         return AnalysisResult(ok=False, error=f"neural pipeline unavailable: {exc}")
+
+    # Load bundled Schema-2 calibration if none is active so scholars see calibrated
+    # confidence alongside predictions (raw softmax is never exposed).
+    if _cal.active_registry() is None and _cal.active() is None:
+        try:
+            use_calibration_registry()
+        except Exception:
+            pass
+
+    was_oov = oov_lemma_reranker_active()
     try:
-        recs = pipeline(text, parse=True)
+        if use_oov and not was_oov:
+            use_oov_lemma_reranker(config="weighted")
+        has_conf = _cal.active_registry() is not None or _cal.active() is not None
+        recs = pipeline(text, parse=True, with_confidence=has_conf)
     except Exception as exc:
         return AnalysisResult(ok=False, error=f"{type(exc).__name__}: {exc}")
-    rows = tuple(
-        (
+    finally:
+        if use_oov and not was_oov:
+            try:
+                disable_oov_lemma_reranker()
+            except Exception:
+                pass
+
+    from .._view import format_confidence
+
+    any_conf = any(
+        r.upos_confidence is not None or r.lemma_confidence is not None for r in recs
+    )
+    rows: list[tuple[str, ...]] = []
+    for r in recs:
+        base = (
             str(r.index), r.text, r.upos,
             # an unresolved/identity lemma is flagged with its evidence class so a model
             # guess never displays like a grounded analysis
@@ -744,12 +909,61 @@ def _greek_neural(text: str) -> AnalysisResult:
             r.feats or "",
             f"{r.relation}→{r.head}" if r.relation and r.head is not None else "",
         )
-        for r in recs
+        if any_conf:
+            rows.append(base + (format_confidence(r.upos_confidence, r.lemma_confidence),))
+        else:
+            rows.append(base)
+    columns: tuple[str, ...] = (
+        ("#", "token", "POS", "lemma", "features", "dep", "conf")
+        if any_conf
+        else ("#", "token", "POS", "lemma", "features", "dep")
+    )
+    note = "grc-joint neural model + bundled weighted top-10 OOV lemma reranker" if use_oov else "grc-joint neural model"
+    if any_conf:
+        note += " · calibrated confidence"
+    return AnalysisResult(
+        ok=True, title=title, columns=columns, rows=tuple(rows), note=note,
+    )
+
+
+def _greek_gloss_result(text: str) -> AnalysisResult:
+    r = greek_gloss(text)
+    if not r.ok:
+        return AnalysisResult(ok=False, error=r.error)
+    rows = tuple(
+        (row["word"], row["lemma"], row["strongs"] or "-", row["gloss"] or "-", row["source"] or "-")
+        for row in r.rows
     )
     return AnalysisResult(
-        ok=True, title="neural pipeline",
-        columns=("#", "token", "POS", "lemma", "features", "dep"), rows=rows,
-        note="grc-joint neural model",
+        ok=True,
+        title="lexicon glosses",
+        columns=("word", "lemma", "Strong's", "gloss", "source"),
+        rows=rows,
+        note=r.summary,
+    )
+
+
+def _greek_scan_result(text: str) -> AnalysisResult:
+    from ..greek.meter import AEOLIC_LINES
+
+    text = text.strip()
+    if not text:
+        return AnalysisResult(ok=True, title="metrical scansion")
+    meters = ("hexameter", "pentameter", "trimeter", *sorted(AEOLIC_LINES))
+    for meter in meters:
+        res = greek_scan(text, meter)
+        if res.ok and res.rows:
+            rows = tuple((r["pattern"], r["foot"]) for r in res.rows)
+            return AnalysisResult(
+                ok=True,
+                title=f"metrical scansion ({meter})",
+                columns=("pattern", "foot"),
+                rows=rows,
+                note=res.summary,
+            )
+    return AnalysisResult(
+        ok=False,
+        error="line does not fit hexameter, pentameter, trimeter, or Aeolic lyric templates",
     )
 
 

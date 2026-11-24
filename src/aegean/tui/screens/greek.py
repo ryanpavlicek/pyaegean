@@ -46,14 +46,20 @@ if TYPE_CHECKING:
 
 __all__ = ["GreekWorkbenchScreen"]
 
-_PLACEHOLDER = "type Greek, e.g. μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"
+_PLACEHOLDER = "type Greek (or press b for Beta Code, e.g. mh=nin a)/eide qea/)"
 
-# The meters the scansion tab offers, in the selector. Values are the meter
-# names the adapter's greek_scan understands.
+# All 10 supported meters (epic, elegiac, dramatic, and Aeolic lyric).
 _METERS: tuple[tuple[str, str], ...] = (
     ("hexameter", "hexameter"),
     ("pentameter", "pentameter"),
     ("trimeter", "trimeter"),
+    ("glyconic", "glyconic"),
+    ("pherecratean", "pherecratean"),
+    ("sapphic hendecasyllable", "sapphic_hendecasyllable"),
+    ("adonean", "adonean"),
+    ("alcaic hendecasyllable", "alcaic_hendecasyllable"),
+    ("alcaic enneasyllable", "alcaic_enneasyllable"),
+    ("alcaic decasyllable", "alcaic_decasyllable"),
 )
 
 # The reconstruction periods the IPA tab offers (Attic 5th c. vs Koine).
@@ -67,19 +73,35 @@ _EMPTY_HINT = "type a line above"
 
 
 class GreekWorkbenchScreen(Screen[None]):
-    """The Greek workbench screen: an input over live pipeline / scansion /
-    syllables / IPA tabs, each re-rendered live as the line changes."""
+    """The Greek workbench screen: an input (Unicode or live Beta Code) over live
+    pipeline / lexicon / scansion / syllables / IPA tabs."""
+
+    DEFAULT_CSS = """
+    GreekWorkbenchScreen #greek-betacode-bar {
+        height: auto;
+        color: $text-muted;
+        padding: 0 1;
+    }
+    """
 
     BINDINGS = [
         ("slash", "focus_input", "Search"),
+        ("b", "toggle_betacode", "Beta Code"),
     ]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._betacode_mode = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Input(placeholder=_PLACEHOLDER, id="greek-input")
+        yield Static("", id="greek-betacode-bar", markup=False)
         with TabbedContent(id="greek-tabs"):
             with TabPane("pipeline", id="tab-pipeline"):
                 yield Static(_EMPTY_HINT, id="greek-pipeline")
+            with TabPane("lexicon", id="tab-lexicon"):
+                yield Static(_EMPTY_HINT, id="greek-lexicon")
             with TabPane("scansion", id="tab-scansion"):
                 with Horizontal(id="greek-meter-row"):
                     yield Static("meter:", id="greek-meter-label")
@@ -108,7 +130,7 @@ class GreekWorkbenchScreen(Screen[None]):
         """Focus the input so the user can type immediately."""
         self.query_one("#greek-input", Input).focus()
 
-    # ── the selected meter ──────────────────────────────────────────────────
+    # ── the selected meter / period / resolved Greek text ───────────────────
     @property
     def _meter(self) -> str:
         """The meter currently chosen in the scansion selector."""
@@ -122,9 +144,19 @@ class GreekWorkbenchScreen(Screen[None]):
         return str(value) if value is not Select.BLANK else "attic"
 
     @property
+    def betacode_mode(self) -> bool:
+        """Whether ASCII Beta Code conversion is enabled for input."""
+        return self._betacode_mode
+
+    def _resolve_text(self, raw: str) -> str:
+        if self._betacode_mode and raw.strip():
+            return adapter.greek_betacode(raw)
+        return raw
+
+    @property
     def _text(self) -> str:
-        """The current input text."""
-        return self.query_one("#greek-input", Input).value
+        """The current resolved Greek input text."""
+        return self._resolve_text(self.query_one("#greek-input", Input).value)
 
     # ── live updates ────────────────────────────────────────────────────────
     _debounce: "Timer | None" = None
@@ -133,9 +165,15 @@ class GreekWorkbenchScreen(Screen[None]):
         """Focus the text input (the ``/`` binding)."""
         self.query_one("#greek-input", Input).focus()
 
+    def action_toggle_betacode(self) -> None:
+        """Toggle live ASCII Beta Code -> Unicode conversion (the ``b`` binding)."""
+        self._betacode_mode = not self._betacode_mode
+        raw = self.query_one("#greek-input", Input).value
+        self._refresh_all(raw)
+
     def on_input_changed(self, event: Input.Changed) -> None:
         """Re-render every tab as the line changes, coalescing keystrokes with a short
-        debounce so a fast typist doesn't re-run all four backends per character."""
+        debounce so a fast typist doesn't re-run all backends per character."""
         text = event.value
         if self._debounce is not None:
             self._debounce.stop()
@@ -148,8 +186,15 @@ class GreekWorkbenchScreen(Screen[None]):
         elif event.select.id == "greek-period":
             self._render_ipa(self._text)
 
-    def _refresh_all(self, text: str) -> None:
+    def _refresh_all(self, raw_text: str) -> None:
+        text = self._resolve_text(raw_text)
+        bar = self.query_one("#greek-betacode-bar", Static)
+        if self._betacode_mode:
+            bar.update(f"Beta Code ON → {text}" if text.strip() else "Beta Code ON (type ASCII, e.g. mh=nin)")
+        else:
+            bar.update("")
         self._render_pipeline(text)
+        self._render_lexicon(text)
         self._render_scansion(text)
         self._render_syllables(text)
         self._render_ipa(text)
@@ -168,12 +213,6 @@ class GreekWorkbenchScreen(Screen[None]):
             return
         from aegean._view import format_confidence
 
-        # Prefix each token with sentence:index so multi-sentence input is
-        # unambiguous (the pipeline restarts the index at each new sentence).
-        # An unresolved/identity lemma is marked with its evidence class (the CLI
-        # src-column convention); a blank marker does not certify correctness.
-        # A calibrated confidence is appended only when the rows carry one (neural +
-        # calibration active), the same condition as the CLI's 'conf' column.
         lines = [
             f"{r['sentence']}:{r['index']:<3}  {r['text']}  {r['upos']}  {r['lemma']}"
             + (f"  [{r.get('lemma_source', '?')}]" if r.get("review_recommended", False) else "")
@@ -185,6 +224,23 @@ class GreekWorkbenchScreen(Screen[None]):
             for r in result.rows
         ]
         target.update("\n".join(lines) if lines else "no tokens")
+
+    def _render_lexicon(self, text: str) -> None:
+        target = self.query_one("#greek-lexicon", Static)
+        if not text.strip():
+            target.update(_EMPTY_HINT)
+            return
+        result = adapter.greek_gloss(text)
+        if not result.ok:
+            target.update(result.error)
+            return
+        lines = [
+            f"{r['word']}  →  {r['lemma']}"
+            + (f"  ({r['strongs']})" if r["strongs"] else "")
+            + (f"  —  {r['gloss']}  [{r['source']}]" if r["gloss"] else "  —  (no gloss)")
+            for r in result.rows
+        ]
+        target.update("\n".join(lines) if lines else "no words")
 
     def _render_scansion(self, text: str) -> None:
         target = self.query_one("#greek-scansion", Static)

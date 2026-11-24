@@ -62,13 +62,22 @@ class CorpusBrowserScreen(Screen[None]):
     CorpusBrowserScreen #corpus-middle {
         width: 1fr;
     }
-    CorpusBrowserScreen #corpus-right {
+    CorpusBrowserScreen #corpus-right-wrap {
         width: 1fr;
+    }
+    CorpusBrowserScreen #corpus-right {
+        height: 1fr;
         border: round $primary-darken-2;
     }
     CorpusBrowserScreen #corpus-right:focus-within {
         border: round $accent;
         background: $boost;
+    }
+    CorpusBrowserScreen #corpus-inspector {
+        height: auto;
+        padding: 0 1;
+        color: $text-muted;
+        border-top: solid $primary-darken-2;
     }
     CorpusBrowserScreen #corpus-list:focus {
         border-right: solid $accent;
@@ -110,9 +119,11 @@ class CorpusBrowserScreen(Screen[None]):
             yield DocTable(id="corpus-docs")
         # A scroll container, not a plain Vertical, so a long document (a whole Iliad
         # book) scrolls: Tab focuses it, then arrows / PageUp / PageDown / mouse wheel
-        # move through the text.
-        with VerticalScroll(id="corpus-right"):
-            yield DetailPane(_NO_CORPUS, id="corpus-detail")
+        # move through the text. Below it sits a one-line live token inspector bar.
+        with Vertical(id="corpus-right-wrap"):
+            with VerticalScroll(id="corpus-right"):
+                yield DetailPane(_NO_CORPUS, id="corpus-detail")
+            yield Static("", id="corpus-inspector", markup=False)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -366,8 +377,14 @@ class CorpusBrowserScreen(Screen[None]):
         # start a freshly-opened document at the top; hint the reader's line cursor + analysis
         self.query_one("#corpus-right", VerticalScroll).scroll_home(animate=False)
         self.query_one("#corpus-status", Static).update(
-            f"{doc_id} — Tab to the reader, then ↑/↓ to pick a line and Enter (or a) to analyze it"
+            f"{doc_id} — Tab to reader: ↑/↓ line · ←/→ word · i interlinear · Enter/a analyze"
         )
+
+    def on_detail_pane_token_highlighted(self, event: DetailPane.TokenHighlighted) -> None:
+        """Update the one-line token inspector bar beneath the reader."""
+        script_id = self._corpus.script_id if self._corpus is not None else "greek"
+        summary = adapter.format_token_inspector(event.token, script_id=script_id)
+        self.query_one("#corpus-inspector", Static).update(f"L{event.line_number}: {summary}")
 
     def on_detail_pane_line_chosen(self, event: DetailPane.LineChosen) -> None:
         """Open the analysis modal for the reader line the user chose (Enter / ``a``)."""
