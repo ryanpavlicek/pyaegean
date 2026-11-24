@@ -113,7 +113,7 @@ def test_summary_lineara_pins_real_counts():
 def test_summary_cypriot_pins_real_counts():
     s = apparatus_summary(aegean.load("cypriot"))
     assert (s.n_documents, s.n_tokens) == (180, 628)
-    assert s.status_counts == {"certain": 370, "unclear": 188, "restored": 51, "lost": 19}
+    assert s.status_counts == {"certain": 368, "unclear": 188, "restored": 51, "lost": 21}
     assert s.documents_with_apparatus == 130
     # all four apparatus statuses occur, so all three legend lines are present
     joined = " ".join(s.marker_notes)

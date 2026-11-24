@@ -161,11 +161,11 @@ def test_cypriot_illegible_and_direction_marks_take_different_routes():
 # ── corpus-wide ──────────────────────────────────────────────────────────────
 
 def test_cypriot_corpus_sign_stream_holds_no_apparatus():
-    """The bundled Cypriot corpus counts 1,774 signs, none of them a direction arrow,
+    """The bundled Cypriot corpus counts 1,746 signs, none of them a direction arrow,
     with its pinned document/token/word facts unmoved."""
     c = aegean.load("cypriot")
     items = [s for d in c for s in _items_of(d, "signs")]
-    assert len(items) == 1774
+    assert len(items) == 1746
     assert "↓" not in items and "↓?" not in items
     facts = _FACTS["cypriot"]
     ntok = sum(len(d.tokens) for d in c)

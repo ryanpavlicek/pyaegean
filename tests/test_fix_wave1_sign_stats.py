@@ -272,7 +272,7 @@ def test_bundled_lineara_words_ranking_is_unchanged():
 def test_bundled_cypriot_illegible_marks_are_gone():
     cy = aegean.load("cypriot")
     items = [s for d in cy.documents for s in stats._items_of(d, "signs")]
-    assert len(items) == 1774
+    assert len(items) == 1746
     # The Leiden illegible-sign apparatus of IG XV 1: dots, queries, and the
     # empty labels their hyphen-joined runs used to produce.
     for mark in ("", "..", ".", "?", "‒?‒", "↓", "↓?"):

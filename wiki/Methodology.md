@@ -224,7 +224,7 @@ New Testament's own gold (`greek.evaluate_on_nt()`): lemma 87.96, UPOS
 
 The zero-dependency stack (`use_treebank() + use_tagger() + use_lemmatizer() +
 use_parser()`) is the offline, no-heavy-deps path and reads like a baseline
-(Perseus test UPOS 86.73, PROIEL test UPOS 78.83). Its tagger, lemmatizer, and
+(Perseus test UPOS 86.73, PROIEL test UPOS 78.84). Its tagger, lemmatizer, and
 parser are built from the *full* AGDT, which contains the UD-Perseus test
 sentences, so its Perseus-fold scores are an **in-training upper bound** reported
 for orientation; the PROIEL fold is its honest number. The neural pipeline, not

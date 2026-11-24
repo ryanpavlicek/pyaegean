@@ -4,31 +4,16 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
-
-### Fixed
-
-- Edited translation results no longer display clause alignment or exact-comparison
-  claims calculated for previous wording as current. Original reports remain available
-  in saved results and traces.
-- Rechecking a saved translation carries earlier draft notes into the next check
-  and retains their uncertainty in the displayed history.
-- Corpus-reader translations display model-reported uncertainty and malformed-response
-  notices. Source text and analysis output preserve literal square brackets.
-- SQLite lexical searches retain their partial-index query path on SQLite 3.45,
-  including status-filtered legacy searches, without a storage schema change.
-- Greek dictionary lookup resolves unambiguous headwords whose source keys carry
-  editorial numbers or a leading dagger. Accent and breathing distinctions,
-  exact source keys, and original entries are preserved. Genuine homonym
-  ambiguity stays unresolved, while marked inflected forms still lemmatize.
+## 0.62.0 (2026-11-24)
 
 ### Added
 
 - Optional clause checking records source and translation quotations, role,
-  negation, qualification and speech-act findings. Local validation reports
-  exact span alignment, missing mappings and literal coverage gaps while
-  retaining invalid reports; it does not certify semantic correctness. Select
-  `check_policy="clauses"` (CLI `--check-policy clauses`) with Greek checking.
+  negation, qualification, omission, and speech-act findings. Local validation reports
+  exact span alignment, missing mappings, explicit clause omissions, and literal
+  coverage gaps while retaining invalid reports; it does not certify semantic
+  correctness. Select `check_policy="clauses"` (CLI `--check-policy clauses`)
+  with Greek checking.
 - Translation grounding can select bounded contextual dictionary excerpts with
   alternative senses, construction cues and exact source provenance. Coverage
   reports expose unavailable evidence and budget omissions. The option uses
@@ -48,6 +33,10 @@ All notable changes to pyaegean are documented here. The format follows
   unflagged rows, with inclusion reasons. New snapshots bind source, predictions,
   analysis generation, and available model/configuration identity. Annotation
   exports save their exact source analysis for later merge and application.
+- Editable-first review CSV layout (`layout="editable_first"`, CLI
+  `--layout editable-first`) places reviewer decision and correction columns first
+  and stores immutable provenance in a SHA-256-bound `.meta.json` companion
+  snapshot, detected automatically on apply and merge.
 - Dependency head and relation review includes complete sentence context and
   validates head ranges, sentence ownership, root structure, and cycles before
   applying changes. Dependency annotation is explicitly selected; ordinary
@@ -57,6 +46,66 @@ All notable changes to pyaegean are documented here. The format follows
   `db.build_lexical_index` and `aegean db index` build or refresh them explicitly;
   status inspection and searches remain read-only. Token edits invalidate the
   index, and searches fall back to scanning until it is refreshed.
+- Opt-in OOV-gated Greek lemma candidate generation and reranking
+  (`aegean.greek.use_oov_lemma_reranker()`, `disable_oov_lemma_reranker()`,
+  `oov_lemma_reranker_active()`, `rerank_analysis()`, `LemmaRerankerConfig`, and
+  `TrainOnlyLemmaIndex`) integrates with the neural pipeline and records
+  post-processing provenance on analysis receipts; the default `grc-joint-v3`
+  runtime behavior is unchanged.
+- Opt-in length-bucketed batching (`length_bucket=True`) on
+  `analyze_sentences()` reduces padding overhead on mixed-length batches while
+  preserving exact input order.
+- SQLite-backed AI `ResponseCache` (`backend="auto"|"json"|"sqlite"`) provides
+  WAL-mode O(1) per-key lookups while remaining compatible with existing `.json`
+  caches.
+- MCP list tools support bounded pagination (`limit`, `offset`, `total`,
+  `has_more`, and `next_offset`).
+- Greek development evaluation sources archive 5,317 grouped native diplomatic
+  papyrus lemmas, 44 basic-UD sentences, and audited tragedy source records.
+
+### Changed
+
+- `DiskCache` replaces pickle serialization with a typed JSON codec
+  (`AEGEAN-CACHE-V2`) restricted to allowlisted types, sets owner-only (`0o600`)
+  file permissions, and cleanly invalidates legacy pickle entries.
+- Fresh corpus loads (`Corpus.load()` / `aegean.load()`) avoid redundant
+  deep-copy overhead, and SQLite corpus reads load documents in a single scan
+  with read-only and hardlink fallback support.
+- The terminal UI (`aegean tui`) loads corpora asynchronously without blocking
+  the interface and synchronizes shared state explicitly.
+- Framework interop adapters index sentence token lengths in linear time,
+  `aegean.greek.__dir__()` surfaces lazy exports cleanly, source distributions
+  exclude non-runtime development files, and `NOTICE` includes complete
+  third-party attributions.
+
+### Fixed
+
+- Edited translation results no longer display clause alignment or exact-comparison
+  claims calculated for previous wording as current. Original reports remain available
+  in saved results and traces.
+- Rechecking a saved translation carries earlier draft notes into the next check
+  and retains their uncertainty in the displayed history.
+- Corpus-reader translations display model-reported uncertainty and malformed-response
+  notices. Source text and analysis output preserve literal square brackets.
+- SQLite lexical searches retain their partial-index query path on SQLite 3.45,
+  including status-filtered legacy searches, without a storage schema change.
+- Greek dictionary lookup resolves unambiguous headwords whose source keys carry
+  editorial numbers or a leading dagger. Accent and breathing distinctions,
+  exact source keys, and original entries are preserved. Genuine homonym
+  ambiguity stays unresolved, while marked inflected forms still lemmatize.
+- Non-root dependency relation confidence scores the emitted relation from the
+  selected head rather than the pre-decoding maximum, and development temperature
+  calibration collects probabilities on the matching path.
+- Browser demo errors render as plain text; AI prompt boundaries and provider
+  defaults drop retired models; and Perseus work-ID validation and tar extraction
+  reject unsafe paths and archive members.
+- EpiDoc import/export fixes expansion and apparatus extraction; Linear B EpiDoc
+  import preserves document structure; Cypriot single-sign tokens and *IG* XV 1
+  Latin apparatus markers classify accurately; framework adapters preserve
+  unparsed dependency heads; RDF export handles site coordinates cleanly; and
+  review merges validate dependency trees before apply.
+- Greek text and philology fixes across case folding, iota-subscript handling,
+  rule morphology, and metrical scansion.
 
 ## 0.61.0 (2026-10-11)
 

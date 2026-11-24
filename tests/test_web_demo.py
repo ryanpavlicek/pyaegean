@@ -436,8 +436,8 @@ def test_demo_diagnose_corpus() -> None:
 def test_demo_apparatus() -> None:
     demo = _load_demo()
     r = json.loads(demo.apparatus("cypriot"))
-    assert r["status_counts"] == {"certain": 370, "unclear": 188, "restored": 51, "lost": 19}
-    assert r["non_certain"] == 258
+    assert r["status_counts"] == {"certain": 368, "unclear": 188, "restored": 51, "lost": 21}
+    assert r["non_certain"] == 260
     assert r["documents_with_apparatus"] == 130
     assert r["alt_reading_tokens"] == 0  # bundled cypriot carries no <app>/<rdg> variants
     # only the apparatus that actually occurs is legended

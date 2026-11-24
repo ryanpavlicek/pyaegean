@@ -220,7 +220,7 @@ one:
 | Fold | UPOS | Lemma | UAS |
 | --- | --- | --- | --- |
 | Perseus test ⚠ | 86.73 | 97.65 ⚠ | 37.43 |
-| PROIEL test | 78.83 | 85.63 (90.38 with the neural lemmatizer) | 35.41 |
+| PROIEL test | 78.84 | 85.63 (90.38 with the neural lemmatizer) | 35.44 |
 
 The ⚠ cells are an **in-training upper bound**: the baseline's tagger, edit-tree
 lemmatizer, arc-eager parser, and treebank lookup are built from the *full* AGDT,

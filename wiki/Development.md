@@ -49,7 +49,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.61.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.62.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -183,7 +183,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.61.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.62.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail
@@ -207,17 +207,19 @@ that import **lazy** (see the next section).
 
 ### What CI runs
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) has eight job definitions:
+CI (GitHub Actions, `.github/workflows/ci.yml`) has ten job definitions:
 
 | Job | What it does |
 | --- | --- |
 | **test** | `ruff` → `mypy` (enforcing) → `pytest` with coverage, across **Python 3.10–3.14** |
+| **cross-platform** | runs core, CLI, SQLite, and review tests natively on **Windows** and **macOS** |
 | **geo** | installs the `[dev,geo,parquet]` extras on one Python and runs the suite with `-rs`, so the geopandas/pyarrow tests execute instead of skipping |
+| **extras-ai-viz** | installs the `[dev,ai,viz]` extras and exercises AI and visualization tests without skips |
 | **interop** | exercises the real spaCy, Stanza, and CLTK adapters |
 | **neural-integration** | requires the pinned model's CPU inference tests to pass without skips |
 | **demo-released-wheel** | tests the browser demo against the published wheel |
 | **notebooks** | executes the example notebooks under `notebooks/` with `nbmake` |
-| **build** | `python -m build`, `twine check`, and the **wheel** footprint check |
+| **build** | `python -m build`, `twine check`, and the **wheel** and **sdist** footprint checks |
 | **footprint** | installs the **core only** (no extras), then the import-clean + import-fast guard |
 
 CI declares least-privilege permissions (`contents: read`); publishing lives in

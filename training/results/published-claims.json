@@ -42,12 +42,12 @@
    "uas": 37.43
   },
   "proiel_test": {
-   "upos": 78.83,
+   "upos": 78.84,
    "lemma": 85.63,
-   "uas": 35.41
+   "uas": 35.44
   },
   "proiel_lemma_with_neural_lemmatizer": 90.38,
-  "measured": "2026-07-03",
+  "measured": "2026-11-24",
   "protocol": "use_treebank()+use_tagger()+use_lemmatizer()+use_parser(); greek.evaluate_on_ud(fold,'test'); deterministic",
   "note": "the offline stack changes with the code, so these are re-measured by scripts/check_benchmarks.py --measure (weekly CI + the pre-cut gate); the Perseus cells are an in-training upper bound by design"
  },

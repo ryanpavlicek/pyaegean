@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.61.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.62.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -242,48 +242,33 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 
 ### Current priorities
 
-- [ ] **Release the completed improvements:** targeted annotation review, indexed lexical
-  searches, translation source context, clause audits, contextual dictionary evidence, and
-  checking-history fixes are on `main` and await the next package release.
-- [ ] **Harden confidence, calibration, and review round-trips:** fix emitted-relation
-  confidence scoring and the development calibration collector, qualify schema-2 development
-  calibration by task, route, and domain, validate merged dependency trees before apply, and
-  pilot an editable-first review spreadsheet with a hash-bound companion snapshot.
-- [ ] **Measure native diplomatic papyri and expand tragedy gold:** establish the
-  `grc-joint-v3` baseline on the 5,317 grouped native diplomatic papyrus lemmas and 44
-  basic-UD sentences, evaluate lemma-selection candidates and calibrated review policies on
-  the existing runtime, and adjudicate passages from the two full tragedy treebanks.
+- [ ] **Qualify calibrated review policies and lemma selection:** validate per-task,
+  per-route calibration and opt-in OOV lemma reranking on held-out folds before changing
+  default review or neural pipeline settings.
+- [ ] **Expand adjudicated Greek gold:** adjudicate passages from the two archived full
+  tragedy treebanks (*Philoctetes* and *Iphigenia in Tauris*) to broaden held-out verse
+  evaluation beyond Euripides' *Bacchae*.
   [Greek development sources](https://github.com/ryanpavlicek/pyaegean/tree/main/training/sources/greek-development-v1)
-- [ ] **Harden public inputs, philological rules, and interchange:** render browser demo
-  errors as text, tighten download, archive, XML, cache, and AI-prompt boundaries, fix
-  EpiDoc expansion and apparatus extraction, Cypriot single-sign classification, unparsed
-  dependency heads in framework adapters, Greek case, iota-subscript, rule, and scansion
-  defects, and retired provider defaults.
-- [ ] **Evaluate translation fidelity:** fix explicit omitted-clause handling and compare
-  grounding and checking on unseen passages, measuring both corrections and regressions in
-  meaning, roles, negation, qualifications, speaker context, and lexical sense before
-  changing defaults.
-- [ ] **Scale large corpora, surfaces, and cross-platform CI:** optimize SQLite corpus reads
-  and disk-backed caches, improve CLI, TUI, and MCP responsiveness and bounded pagination,
-  complete durable resumable corpus jobs, and add native Windows and macOS CI alongside
-  Linux.
+- [ ] **Evaluate translation fidelity:** compare grounding and clause-checking options on
+  unseen passages, measuring both corrections and regressions in meaning, roles, negation,
+  qualifications, speaker context, and lexical sense before changing defaults.
+- [ ] **Complete durable resumable corpus jobs:** add checkpointed, resumable long-running
+  annotation and export jobs with format-loss reports and verified equivalence to
+  uninterrupted runs.
 
 ### Following those foundations
 
 - [ ] **Interactive annotation review:** bring field-level decisions, sentence context,
   supporting evidence, and reviewer disagreements into the corpus reader, reusing the
   existing review history and validated selection policies.
-- [ ] **Resumable import and export:** extend durable corpus jobs to incremental CoNLL-U
-  and JSONL workflows, with explicit format-loss reports and checks that resumed output
-  matches an uninterrupted run.
 - [ ] **Portable research bundles and expanded resources:** package redistributable source
   snapshots or retrieval references with citations, analysis settings, model identities,
   review decisions, and checksums; add license-clean dictionaries, source-cited Cypriot
   lexical entries, verified gazetteer/Pleiades coverage, and conda-forge packaging.
 - [ ] **Independently evaluated models and runtime variants:** evaluate a separately
-  versioned Greek-model successor only after the data, exposure, and calibration foundations
-  are frozen; benchmark ONNX precision and runtime options and offer calibrated `fast`,
-  `compact`, and `balanced` variants only when candidate artifacts pass cross-domain accuracy
+  versioned Greek-model successor when a new supervised dataset or stronger backbone
+  passes predeclared cross-domain development gates; offer calibrated `fast`, `compact`,
+  and `balanced` ONNX variants only when candidate artifacts pass cross-domain accuracy
   and measured size, latency, and memory requirements.
 
 ## About the author
@@ -320,7 +305,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.61.0},
+  version = {0.62.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```
