@@ -29,13 +29,17 @@ class FileLock:
         stale_after: float = 3600.0,
         poll_every: float = 0.5,
         heartbeat_every: float = 30.0,
+        timeout: float | None = None,
     ) -> None:
         if stale_after <= 0 or poll_every <= 0 or heartbeat_every <= 0:
             raise ValueError("lock timing values must be positive")
         if heartbeat_every >= stale_after:
             raise ValueError("heartbeat_every must be smaller than stale_after")
+        if timeout is not None and timeout < 0:
+            raise ValueError("timeout must be non-negative or None")
         self.path = pathlib.Path(path)
         self.poll_every = poll_every
+        self.timeout = timeout
         self._fd: int | None = None
 
     @staticmethod
@@ -97,8 +101,16 @@ class FileLock:
         if self._fd is not None:
             raise RuntimeError("FileLock instance is already held")
         fd = self._open()
+        deadline = None if self.timeout is None else time.monotonic() + self.timeout
         while not self._try_lock(fd):
-            time.sleep(self.poll_every)
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    os.close(fd)
+                    raise TimeoutError(f"lock is already held: {self.path}")
+                time.sleep(min(self.poll_every, remaining))
+            else:
+                time.sleep(self.poll_every)
         self._fd = fd
         return self
 

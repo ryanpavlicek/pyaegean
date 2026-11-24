@@ -45,7 +45,17 @@ from .core.provenance import SCHEMA_VERSION, Provenance
 from .core.word_views import WordView
 
 __all__ = [
-    "to_sqlite", "from_sqlite", "search", "stream", "build_lexical_index", "lexical_index_status",
+    "to_sqlite",
+    "from_sqlite",
+    "search",
+    "stream",
+    "build_lexical_index",
+    "lexical_index_status",
+    "JobCancelledError",
+    "JobConflictError",
+    "JobStatus",
+    "annotate_sqlite_job",
+    "job_status",
 ]
 
 _LOG = get_logger("db")
@@ -1237,3 +1247,12 @@ def stream(path: str | Path) -> Iterator[Document]:
     finally:
         if conn is not None:
             conn.close()
+
+
+from .db_jobs import (  # noqa: E402
+    JobCancelledError,
+    JobConflictError,
+    JobStatus,
+    annotate_sqlite_job,
+    job_status,
+)

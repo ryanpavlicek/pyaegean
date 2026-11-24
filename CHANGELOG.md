@@ -4,6 +4,21 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- Durable, resumable SQLite corpus annotation jobs
+  (`aegean.db.annotate_sqlite_job`, `aegean.db.job_status`, `JobStatus`,
+  `JobConflictError`, `JobCancelledError`, and CLI `aegean db annotate` /
+  `aegean db job-status`). Each job freezes a WAL-safe source snapshot, reads
+  documents forward by keyset pagination without loading an ID list, shares the
+  same per-document annotation engine and logical `analysis_generation` across
+  resumes, commits each document and its checkpoint in a single SQLite
+  transaction under an exclusive file lock, rejects altered source, snapshot,
+  configuration, or backend identity on resume, and publishes the finished
+  database atomically only when all documents complete.
+
 ## 0.62.0 (2026-11-24)
 
 ### Added

@@ -223,3 +223,106 @@ def search(
         ["doc", "pos", "text"],
         [[d, str(p) if p is not None else "-", t] for d, p, t in hits],
     )
+
+
+@db_app.command()
+def annotate(
+    source: Path = typer.Argument(
+        ..., help="Source SQLite corpus DB (or DB-backed corpus id like ddbdp)."
+    ),
+    output: Path = typer.Option(..., "--output", "-o", help="Destination annotated .db file."),
+    job_dir: Path = typer.Option(
+        ..., "--job-dir", help="Directory holding snapshot, checkpoint, and lock state."
+    ),
+    resume: bool = typer.Option(
+        False, "--resume", help="Resume an interrupted or cancelled job in --job-dir."
+    ),
+    neural: bool = typer.Option(
+        False, "--neural", help="Activate the neural Greek pipeline for this job."
+    ),
+    with_dependencies: bool = typer.Option(
+        False, "--with-dependencies", help="Persist neural morphology and dependency parses."
+    ),
+    long_input: str = typer.Option(
+        "strict",
+        "--long-input",
+        help="Neural long-input policy: strict, partial, or windowed.",
+    ),
+    no_evidence: bool = typer.Option(
+        False, "--no-evidence", help="Omit lemma provenance/review recommendation annotations."
+    ),
+    no_fts: bool = typer.Option(False, "--no-fts", help="Skip FTS5 index build on output."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Run or resume a durable, checkpointed Greek annotation job over a SQLite corpus."""
+    import sqlite3
+    from typing import Literal, cast
+
+    from aegean.db import JobCancelledError, JobConflictError, annotate_sqlite_job
+
+    if long_input not in ("strict", "partial", "windowed"):
+        raise fail(f"invalid --long-input {long_input!r}; expected strict, partial, or windowed")
+
+    resolved_source = _resolve_db(source)
+    if not resolved_source.exists():
+        raise fail(f"no source database at {resolved_source}")
+
+    if neural:
+        from aegean import greek
+
+        try:
+            greek.use_neural_pipeline()
+        except Exception as exc:
+            raise fail(f"could not activate neural Greek pipeline: {exc}") from None
+
+    try:
+        status = annotate_sqlite_job(
+            resolved_source,
+            output,
+            job_dir=job_dir,
+            resume=resume,
+            fts=not no_fts,
+            with_evidence=not no_evidence,
+            with_dependencies=with_dependencies,
+            long_input=cast(Literal["strict", "partial", "windowed"], long_input),
+            progress=live_progress("annotating"),
+        )
+    except (
+        FileNotFoundError,
+        ValueError,
+        JobConflictError,
+        JobCancelledError,
+        OSError,
+        sqlite3.Error,
+    ) as exc:
+        raise fail(str(exc)) from None
+
+    if emit_result(status.to_dict(), json_output=json_out, output=None):
+        return
+    verb = "resumed and completed" if status.resumed else "completed"
+    print(
+        f"{verb} job {status.job_id}: {status.completed_documents:,}/{status.total_documents:,} "
+        f"documents -> {status.output_path}",
+        file=sys.stderr,
+    )
+
+
+@db_app.command(name="job-status")
+def db_job_status(
+    job_dir: Path = typer.Argument(..., help="Existing annotation job directory."),
+    json_out: bool = JSON_OPT,
+) -> None:
+    """Inspect a durable SQLite annotation job directory read-only."""
+    from aegean.db import JobConflictError, job_status
+
+    try:
+        status = job_status(job_dir)
+    except (FileNotFoundError, JobConflictError, OSError) as exc:
+        raise fail(str(exc)) from None
+    if emit_result(status.to_dict(), json_output=json_out, output=None):
+        return
+    print(
+        f"job {status.job_id}: {status.state} "
+        f"({status.completed_documents:,}/{status.total_documents:,} documents, "
+        f"published={status.published})"
+    )

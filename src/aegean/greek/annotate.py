@@ -20,12 +20,13 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from uuid import uuid4
-from typing import TYPE_CHECKING, Callable, Literal
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from .heldout import TagSentence
 
 if TYPE_CHECKING:
     from ..core.corpus import Corpus
+    from ..core.model import Document
 
 __all__ = ["annotate_corpus"]
 
@@ -57,6 +58,253 @@ def _prediction_annotations(
             ann[decision_key] = "stale"
     ann.update(lemma=lemma, upos=upos)
     return ann
+
+
+def _capture_backend_identity(
+    *,
+    tag_sentence: TagSentence | None,
+    joint_model: Any,
+) -> dict[str, Any]:
+    """Return a JSON-serializable snapshot of the active annotation backend."""
+    if tag_sentence is not None:
+        return {
+            "kind": "custom",
+            "callable_module": getattr(tag_sentence, "__module__", None),
+            "callable_qualname": getattr(
+                tag_sentence, "__qualname__", type(tag_sentence).__qualname__
+            ),
+        }
+    if joint_model is not None:
+        manifest = getattr(joint_model, "manifest", None)
+        variant = getattr(joint_model, "runtime_variant", None)
+        from . import lemma_rerank
+
+        oov_cfg = getattr(joint_model, "_oov_config", None)
+        if oov_cfg is None and lemma_rerank.oov_lemma_reranker_active():
+            oov_cfg = "active"
+        elif oov_cfg is not None:
+            oov_cfg = getattr(oov_cfg, "to_dict", lambda: repr(oov_cfg))()
+        doc_cfg = getattr(joint_model, "_documentary_config", None)
+        if doc_cfg is not None:
+            doc_cfg = getattr(doc_cfg, "to_dict", lambda: repr(doc_cfg))()
+        return {
+            "kind": "neural",
+            "model_id": getattr(manifest, "model_id", None)
+            if manifest is not None
+            else type(joint_model).__qualname__,
+            "dataset": getattr(manifest, "dataset", None),
+            "manifest_sha256": getattr(manifest, "manifest_sha256", None),
+            "asset_sha256": getattr(manifest, "asset_sha256", None),
+            "runtime_variant": getattr(variant, "label", None),
+            "documentary": doc_cfg,
+            "oov_reranker": oov_cfg,
+        }
+    from . import lemmatizer, paradigms, tagger, treebank
+
+    return {
+        "kind": "baseline",
+        "treebank_active": treebank.active() is not None,
+        "tagger_active": tagger.active() is not None,
+        "lemmatizer_active": lemmatizer.active() is not None,
+        "paradigms_active": paradigms.active() is not None,
+    }
+
+
+class _DocumentAnnotator:
+    """Shared per-document annotation engine for collected and resumable jobs."""
+
+    def __init__(
+        self,
+        *,
+        tag_sentence: TagSentence | None = None,
+        with_evidence: bool = True,
+        with_dependencies: bool = False,
+        long_input: Literal["strict", "partial", "windowed"] = "strict",
+        generation: str | None = None,
+    ) -> None:
+        from . import joint
+
+        self.tag_sentence = tag_sentence
+        self.with_evidence = with_evidence
+        self.with_dependencies = with_dependencies
+        self.long_input = long_input
+        self._joint_model = None if tag_sentence is not None else joint.active()
+        self.use_joint = self._joint_model is not None
+
+        if with_dependencies and not self.use_joint:
+            raise ValueError("with_dependencies=True requires the active neural Greek pipeline")
+        if long_input != "strict" and not self.use_joint:
+            raise ValueError(
+                f"long_input={long_input!r} requires the active neural Greek pipeline"
+            )
+
+        if generation is not None:
+            if not isinstance(generation, str) or not generation.strip():
+                raise ValueError("generation must be a non-empty string")
+            self.generation = generation
+        else:
+            # Generation describes an actual invocation, not just a content hash. Re-running
+            # the same model with identical outputs still requires a fresh review snapshot.
+            self.generation = uuid4().hex
+
+        self.kind = (
+            "neural"
+            if self.use_joint
+            else "custom"
+            if tag_sentence is not None
+            else "baseline"
+        )
+        self.configuration = json.dumps(
+            {
+                "annotator": "aegean.greek.annotate_corpus",
+                "with_evidence": with_evidence,
+                "long_input": long_input,
+                "with_dependencies": with_dependencies,
+                "replaced_fields": (
+                    ["lemma", "upos", "morph", "feats", "head", "deprel", "xpos"]
+                    if with_dependencies
+                    else ["lemma", "upos"]
+                ),
+                "custom_callable_identity": "unknown" if tag_sentence is not None else None,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        self.backend_identity = _capture_backend_identity(
+            tag_sentence=tag_sentence,
+            joint_model=self._joint_model,
+        )
+
+    def _identity(self, ann: dict[str, str], receipt: str = "unknown") -> None:
+        ann.update(
+            analysis_generation=self.generation,
+            analysis_kind=self.kind,
+            analysis_configuration=self.configuration,
+            analysis_receipt=receipt,
+        )
+
+    def _evidence(self, ann: dict[str, str], source: Any) -> None:
+        from .lemmatize import lemma_resolved, lemma_verified, needs_review
+
+        if self.with_evidence:
+            ann["lemma_source"] = source.value
+            ann["lemma_resolved"] = "true" if lemma_resolved(source) else "false"
+            ann["lemma_verified"] = "true" if lemma_verified(source) else "false"
+            ann["review_recommended"] = "true" if needs_review(source) else "false"
+            # Existing deprecated field; new code uses the explicit evidence fields above.
+            ann["lemma_known"] = "false" if needs_review(source) else "true"
+
+    def annotate_document(self, doc: "Document") -> "Document":
+        """Return a new `Document` with updated word-token annotations."""
+        from ..core.model import TokenKind
+        from .lemmatize import lemmatize_sourced
+        from .pipeline import _select_token_form, pipeline_tokens
+        from .pos import pos_tag
+
+        new_tokens = list(doc.tokens)
+        groups: dict[int, list[int]] = {}
+        if (
+            self.use_joint
+            and self.with_dependencies
+            and any(tok.kind is TokenKind.WORD for tok in doc.tokens)
+        ):
+            # Keep the complete parse domain, including punctuation and source
+            # sentences spanning physical lines. The pipeline owns segmentation.
+            groups[0] = list(range(len(doc.tokens)))
+        else:
+            for i, tok in enumerate(doc.tokens):
+                if tok.kind is TokenKind.WORD:
+                    groups.setdefault(tok.line_no if tok.line_no is not None else 0, []).append(i)
+        for idxs in groups.values():
+            selected = [_select_token_form(doc.tokens[i]) for i in idxs]
+            forms = [form for form, _ in selected]
+            if self.tag_sentence is not None:
+                tagged = list(self.tag_sentence(forms))
+                if len(tagged) != len(idxs):
+                    raise ValueError(
+                        "tag_sentence returned a different token count than the input"
+                    )
+                for i, (lemma, upos), (_, form_state) in zip(idxs, tagged, selected):
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations, lemma=lemma, upos=upos,
+                    )
+                    self._identity(ann)
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=form_state
+                    )
+            elif self.use_joint:
+                analyzed = pipeline_tokens(
+                    [doc.tokens[i] for i in idxs],
+                    long_input=self.long_input,
+                    document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
+                )
+                if len(analyzed) != len(idxs):
+                    raise ValueError(
+                        "typed-token analysis returned a different token count than the input"
+                    )
+                for rec, i in zip(analyzed, idxs):
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations,
+                        lemma=rec.lemma,
+                        upos=rec.upos,
+                        replaced=(
+                            ("lemma", "upos", "morph", "feats", "head", "deprel", "xpos")
+                            if self.with_dependencies
+                            else ("lemma", "upos")
+                        ),
+                    )
+                    if self.with_dependencies:
+                        # Complete-token syntax owns these outputs; ordinary lemma/POS
+                        # annotation continues to preserve source morphology and parses.
+                        for key in ("morph", "feats", "head", "deprel", "xpos"):
+                            ann.pop(key, None)
+                        for key, value in (
+                            ("feats", rec.feats),
+                            ("head", rec.head),
+                            ("deprel", rec.relation),
+                            ("xpos", rec.xpos),
+                        ):
+                            if value is not None:
+                                ann[key] = str(value)
+                        ann["dependency_sentence_id"] = (
+                            f"{doc.id}:analysis-sentence:{rec.sentence}"
+                        )
+                        ann["dependency_index"] = str(rec.index)
+                    self._identity(
+                        ann,
+                        rec.analysis_receipt.to_json()
+                        if rec.analysis_receipt is not None
+                        else "unknown",
+                    )
+                    self._evidence(ann, rec.lemma_source)
+                    if self.with_evidence and self.use_joint:
+                        ann["neural_analyzed"] = (
+                            "true" if rec.neural_analyzed is not False else "false"
+                        )
+                        ann["analysis_complete"] = (
+                            "true" if rec.analysis_complete else "false"
+                        )
+                        if rec.analysis_warning:
+                            ann["analysis_warning"] = rec.analysis_warning
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=rec.form_state
+                    )
+            else:
+                # Preserve the established rule-based annotation contract: the
+                # pre-A6 path tagged each word independently.  The typed form is
+                # additive input selection, not permission to switch the default
+                # annotator to the contextual ``pos_tags`` path.
+                for i, (form, form_state) in zip(idxs, selected, strict=True):
+                    lemma, source = lemmatize_sourced(form)
+                    ann = _prediction_annotations(
+                        doc.tokens[i].annotations, lemma=lemma, upos=pos_tag(form),
+                    )
+                    self._evidence(ann, source)
+                    self._identity(ann)
+                    new_tokens[i] = replace(
+                        doc.tokens[i], annotations=ann, form_state=form_state
+                    )
+        return replace(doc, tokens=new_tokens)
 
 
 def annotate_corpus(
@@ -96,136 +344,17 @@ def annotate_corpus(
     ``progress`` is called as ``progress(done, total)`` once per document (a large corpus under
     the neural pipeline is a long run)."""
     from ..core.corpus import Corpus
-    from ..core.model import TokenKind
-    from . import joint
-    from .lemmatize import (
-        LemmaSource,
-        lemma_resolved,
-        lemma_verified,
-        lemmatize_sourced,
-        needs_review,
+
+    annotator = _DocumentAnnotator(
+        tag_sentence=tag_sentence,
+        with_evidence=with_evidence,
+        with_dependencies=with_dependencies,
+        long_input=long_input,
     )
-    from .pipeline import _select_token_form, pipeline_tokens
-    from .pos import pos_tag
-
-    use_joint = tag_sentence is None and joint.active() is not None
-    # Generation describes an actual invocation, not just a content hash. Re-running
-    # the same model with identical outputs still requires a fresh review snapshot.
-    generation = uuid4().hex
-    kind = "neural" if use_joint else "custom" if tag_sentence is not None else "baseline"
-    configuration = json.dumps({
-        "annotator": "aegean.greek.annotate_corpus", "with_evidence": with_evidence,
-        "long_input": long_input, "with_dependencies": with_dependencies,
-        "replaced_fields": ["lemma", "upos", "morph", "feats", "head", "deprel", "xpos"]
-        if with_dependencies else ["lemma", "upos"], "custom_callable_identity": "unknown" if tag_sentence is not None else None,
-    }, sort_keys=True, separators=(",", ":"))
-
-    def _identity(ann: dict[str, str], receipt: str = "unknown") -> None:
-        ann.update(analysis_generation=generation, analysis_kind=kind,
-                   analysis_configuration=configuration, analysis_receipt=receipt)
-    if with_dependencies and not use_joint:
-        raise ValueError("with_dependencies=True requires the active neural Greek pipeline")
-    if long_input != "strict" and not use_joint:
-        raise ValueError(
-            f"long_input={long_input!r} requires the active neural Greek pipeline"
-        )
-
-    def _evidence(ann: dict[str, str], source: LemmaSource) -> None:
-        if with_evidence:
-            ann["lemma_source"] = source.value
-            ann["lemma_resolved"] = "true" if lemma_resolved(source) else "false"
-            ann["lemma_verified"] = "true" if lemma_verified(source) else "false"
-            ann["review_recommended"] = "true" if needs_review(source) else "false"
-            # Existing deprecated field; new code uses the explicit evidence fields above.
-            ann["lemma_known"] = "false" if needs_review(source) else "true"
-
     total = len(corpus.documents)
     new_docs = []
     for done, doc in enumerate(corpus.documents, start=1):
-        new_tokens = list(doc.tokens)
-        groups: dict[int, list[int]] = {}
-        if use_joint and with_dependencies and any(tok.kind is TokenKind.WORD for tok in doc.tokens):
-            # Keep the complete parse domain, including punctuation and source
-            # sentences spanning physical lines. The pipeline owns segmentation.
-            groups[0] = list(range(len(doc.tokens)))
-        else:
-            for i, tok in enumerate(doc.tokens):
-                if tok.kind is TokenKind.WORD:
-                    groups.setdefault(tok.line_no if tok.line_no is not None else 0, []).append(i)
-        for idxs in groups.values():
-            selected = [_select_token_form(doc.tokens[i]) for i in idxs]
-            forms = [form for form, _ in selected]
-            if tag_sentence is not None:
-                tagged = list(tag_sentence(forms))
-                if len(tagged) != len(idxs):
-                    raise ValueError(
-                        "tag_sentence returned a different token count than the input"
-                    )
-                for i, (lemma, upos), (_, form_state) in zip(idxs, tagged, selected):
-                    ann = _prediction_annotations(
-                        doc.tokens[i].annotations, lemma=lemma, upos=upos,
-                    )
-                    _identity(ann)
-                    new_tokens[i] = replace(
-                        doc.tokens[i], annotations=ann, form_state=form_state
-                    )
-            elif use_joint:
-                analyzed = pipeline_tokens(
-                    [doc.tokens[i] for i in idxs],
-                    long_input=long_input,
-                    document_id=f"{doc.id}:line-{idxs[0] if idxs else 0}",
-                )
-                if len(analyzed) != len(idxs):
-                    raise ValueError(
-                        "typed-token analysis returned a different token count than the input"
-                    )
-                for rec, i in zip(analyzed, idxs):
-                    ann = _prediction_annotations(
-                        doc.tokens[i].annotations, lemma=rec.lemma, upos=rec.upos,
-                        replaced=("lemma", "upos", "morph", "feats", "head", "deprel", "xpos")
-                        if with_dependencies else ("lemma", "upos"),
-                    )
-                    if with_dependencies:
-                        # Complete-token syntax owns these outputs; ordinary lemma/POS
-                        # annotation continues to preserve source morphology and parses.
-                        for key in ("morph", "feats", "head", "deprel", "xpos"):
-                            ann.pop(key, None)
-                        for key, value in (("feats", rec.feats), ("head", rec.head),
-                                           ("deprel", rec.relation), ("xpos", rec.xpos)):
-                            if value is not None:
-                                ann[key] = str(value)
-                        ann["dependency_sentence_id"] = f"{doc.id}:analysis-sentence:{rec.sentence}"
-                        ann["dependency_index"] = str(rec.index)
-                    _identity(ann, rec.analysis_receipt.to_json() if rec.analysis_receipt is not None else "unknown")
-                    _evidence(ann, rec.lemma_source)
-                    if with_evidence and use_joint:
-                        ann["neural_analyzed"] = (
-                            "true" if rec.neural_analyzed is not False else "false"
-                        )
-                        ann["analysis_complete"] = (
-                            "true" if rec.analysis_complete else "false"
-                        )
-                        if rec.analysis_warning:
-                            ann["analysis_warning"] = rec.analysis_warning
-                    new_tokens[i] = replace(
-                        doc.tokens[i], annotations=ann, form_state=rec.form_state
-                    )
-            else:
-                # Preserve the established rule-based annotation contract: the
-                # pre-A6 path tagged each word independently.  The typed form is
-                # additive input selection, not permission to switch the default
-                # annotator to the contextual ``pos_tags`` path.
-                for i, (form, form_state) in zip(idxs, selected, strict=True):
-                    lemma, source = lemmatize_sourced(form)
-                    ann = _prediction_annotations(
-                        doc.tokens[i].annotations, lemma=lemma, upos=pos_tag(form),
-                    )
-                    _evidence(ann, source)
-                    _identity(ann)
-                    new_tokens[i] = replace(
-                        doc.tokens[i], annotations=ann, form_state=form_state
-                    )
-        new_docs.append(replace(doc, tokens=new_tokens))
+        new_docs.append(annotator.annotate_document(doc))
         if progress is not None:
             progress(done, total)
     return Corpus(new_docs, corpus.sign_inventory, corpus.provenance, corpus.script_id)

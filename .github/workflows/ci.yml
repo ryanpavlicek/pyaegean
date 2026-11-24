@@ -73,6 +73,7 @@ jobs:
         run: >-
           pytest -rs
           tests/test_db.py
+          tests/test_db_resumable_jobs.py
           tests/test_scholarly_storage_integrity.py
           tests/test_checkpoint_s14_scale_sqlite.py
           tests/test_review_roundtrip.py
