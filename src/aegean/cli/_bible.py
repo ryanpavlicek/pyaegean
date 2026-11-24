@@ -238,7 +238,7 @@ def strongs_cmd(
     roots: bool = typer.Option(False, "--roots", "-r", help="Show recursive etymological root tree."),
     search: bool = typer.Option(False, "--search", "-s", help="Search entries by Greek/transliteration/English gloss."),
     fetch: bool = typer.Option(False, "--fetch", help="Fetch the full 11,142-entry Extended Strong's asset if not cached."),
-    limit: int = typer.Option(15, "--limit", "-n", help="Maximum hits when searching."),
+    limit: int = typer.Option(15, "--limit", "--top", "-n", help="Maximum hits when searching (0 = all)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Look up or search Strong's & Extended Strong's Greek Lexicon entries."""
@@ -301,7 +301,7 @@ def strongs_cmd(
 def word_study_cmd(
     query: str = typer.Argument(..., help="Strong's ID (G3056, 26) or Greek lemma (λόγος, ἀγάπη)."),
     book: str | None = typer.Option(None, "--book", "-b", help="Restrict concordance to one NT book."),
-    limit: int = typer.Option(15, "--limit", "-n", help="Maximum concordance verses to display."),
+    limit: int = typer.Option(15, "--limit", "--top", "-n", help="Maximum concordance verses to display (0 = all)."),
     offline: bool = typer.Option(False, "--offline", help="Use local cache / bundled sample without network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
@@ -349,7 +349,7 @@ def search_cmd(
     by: str = typer.Option("lemma", "--by", help="Match field: lemma, text, strongs, morph, or gloss."),
     book: str | None = typer.Option(None, "--book", "-b", help="Restrict to one NT book."),
     edition: str = typer.Option("nestle1904", "--edition", "-e", help="NT edition."),
-    limit: int = typer.Option(25, "--limit", "-n", help="Maximum hits to return."),
+    limit: int = typer.Option(25, "--limit", "--top", "-n", help="Maximum hits to return (0 = all)."),
     offline: bool = typer.Option(False, "--offline", help="Use local cache / bundled sample without network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:

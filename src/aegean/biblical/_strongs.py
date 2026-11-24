@@ -158,7 +158,8 @@ class _ExtendedStrongsIndex:
             elif q_low in gl or q_low in entry.definition.lower() or q_low in entry.kjv_def.lower():
                 gloss_hits.append(entry)
                 seen.add(sid_k)
-        return (exact_hits + prefix_hits + gloss_hits)[:limit]
+        all_hits = exact_hits + prefix_hits + gloss_hits
+        return all_hits if limit <= 0 else all_hits[:limit]
 
 
 _EXTENDED: _ExtendedStrongsIndex | None = None
@@ -356,4 +357,5 @@ def search_strongs(
             exact.append(item)
         elif q_fold in lf or q_low in gl or q_low in raw.definition.lower():
             partial.append(item)
-    return (exact + partial)[:limit]
+    all_hits = exact + partial
+    return all_hits if limit <= 0 else all_hits[:limit]

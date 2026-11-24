@@ -205,7 +205,7 @@ def search_bible(
                         verse_text=verse_cache[tok.line_no],
                     )
                 )
-                if len(hits) >= limit:
+                if limit > 0 and len(hits) >= limit:
                     return hits
     return hits
 
@@ -283,7 +283,7 @@ def word_study(
             if m:
                 morph_counts[m] += 1
             surface_counts[tok.text] += 1
-            if len(hits) < limit:
+            if limit <= 0 or len(hits) < limit:
                 if tok.line_no not in verse_cache:
                     verse_cache[tok.line_no] = _verse_text_for_line(doc, tok.line_no)
                 pretty_ref = f"{bname} {rest.replace('.', ':')}" if rest else vref

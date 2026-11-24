@@ -49,7 +49,7 @@ Confirm it imported:
 
 ```bash
 python -c "import aegean; print(aegean.__version__, aegean.registered_scripts())"
-# 0.63.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.64.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 ### The `[dev]` extra — what it installs
@@ -183,7 +183,7 @@ license expression) is valid for PyPI:
 
 ```bash
 python -m twine check dist/*
-# Checking dist/pyaegean-0.63.0-py3-none-any.whl: PASSED
+# Checking dist/pyaegean-0.64.0-py3-none-any.whl: PASSED
 ```
 
 ### The footprint guard in detail

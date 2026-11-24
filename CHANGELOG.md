@@ -4,6 +4,57 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.64.0 (2026-11-24)
+
+### Added
+
+- **Biblical & Koine Greek specialist suite** across Python, CLI, and TUI:
+  - Lazily exported `aegean.biblical` package for multi-edition Greek New Testament reading and
+    word-level variant collation (`load_nt`, `compare_editions` across SBLGNT, CNTR Statistical
+    Restoration GNT, Robinson–Pierpont Byzantine Majority Text, Textus Receptus, and Nestle 1904),
+    2nd–5th century CE manuscript witness comparison (`load_witness`, `compare_witnesses`,
+    `expand_nomina_sacra` over CNTR Class 1 transcriptions including Sinaiticus `01`, Vaticanus
+    `03`, Alexandrinus `02`, Bezae `05`, and P45/P46/P66/P72/P75), Strong's & Extended Strong's
+    Greek Lexicon lookup and recursive etymological root tracing (`strongs_entry`, `search_strongs`,
+    `strongs_roots`), unified word studies and NT concordance search (`word_study`, `search_bible`,
+    `study_verse`), Septuagint (LXX) catalog & Masoretic↔LXX Psalm number conversion
+    (`convert_psalm`), and patristic Catenae / Origen commentary catalogs.
+  - Three SHA-256-pinned GitHub Release assets registered in `aegean.data` (`strongs-greek`,
+    `nt-editions`, `nt-witnesses`; 31 remote datasets total) with deterministic build scripts
+    (`scripts/build_strongs_greek.py`, `scripts/build_nt_editions.py`,
+    `scripts/build_nt_witnesses.py`), keeping the core wheel under 6 MiB and zero-dependency.
+  - Dedicated `aegean bible` CLI command group with 9 subcommands (`read`, `compare`, `witnesses`,
+    `strongs`, `word-study`, `search`, `commentary`, `books`, `psalm`), supporting both `--limit`
+    and `--top` (with `0 = all`) plus `--json` and `--offline`.
+  - Dedicated **Biblical Greek** TUI screen (`src/aegean/tui/screens/bible.py`) with interactive
+    tabs for Passage & Edition Collation, Early Manuscript Witnesses, Strong's & Root Tree,
+    Word Study & Concordance, and Patristic Commentaries & LXX Psalms.
+- **Scholarly TUI upgrades**:
+  - Corpus Reader word-level cursor (`←`/`→`), live token inspector bar (`#corpus-inspector`),
+    and inline interlinear gloss toggle (`i`).
+  - Line Analysis modal upgrades with lexicon glossing, automatic scansion, weighted OOV lemma
+    reranking, and calibrated confidence display.
+  - Greek Workbench live Beta Code toggle (`b`), all 10 classical meters, and a Lexicon lookup tab.
+- **Instance-scoped post-processing and calibration options on `GreekPipeline`**:
+  - `GreekPipeline.neural(...)` and the new chainable `GreekPipeline.with_options(...)` accept
+    `oov_reranker`, `documentary_reconciliation`, `documentary_reconciliation_aggressive`,
+    `documentary_lemma_rescue`, `calibration`, and `calibration_registry` directly on a pipeline
+    instance without mutating process-wide module globals or reloading ONNX weights.
+  - Added read-only introspection properties (`oov_reranker_active`,
+    `documentary_reconciliation_active`, `documentary_lemma_rescue_active`, `calibration_active`)
+    and ContextVar-scoped calibration binding so concurrent pipelines remain completely isolated.
+- **Python 3.15 core support**: added Python 3.15 to the core CI matrix and package classifiers
+  (`3.10–3.15` for core and optional extras; `[neural]`/`[all]` remain `3.10–3.14` pending upstream
+  `onnxruntime` Python 3.15 wheels).
+
+### Changed
+
+- Modularized `src/aegean/greek/joint.py` into focused internal submodules (`_joint_types.py`,
+  `_joint_confidence.py`, `_joint_windowing.py`, `_joint_streaming.py`) while preserving 100% of
+  public and internal exports on `aegean.greek.joint`.
+- Fixed `_DocumentaryModel._snapshot_for_stream()` to recursively snapshot nested backend wrappers
+  (such as `_OovRerankModel`) during lazy `iter_analyze_sentences` streaming.
+
 ## 0.63.0 (2026-11-24)
 
 ### Added
