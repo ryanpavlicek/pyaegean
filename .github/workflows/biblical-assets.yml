@@ -1,0 +1,69 @@
+name: Build Biblical Greek assets
+
+# Reproducibly builds and publishes the opt-in Biblical & Koine Greek release
+# assets (strongs-greek-v1, nt-editions-v1, nt-witnesses-v1) from commit-pinned
+# open-licensed upstream repositories. Manual dispatch only; uses non-`v` asset
+# tags so release.yml never triggers a PyPI publication.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_suffix:
+        description: "Asset release version suffix (e.g. v1)"
+        type: string
+        default: "v1"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build deterministic Biblical Greek assets
+        run: |
+          mkdir -p dist-assets
+          python scripts/build_strongs_greek.py --out dist-assets/strongs-greek.json.gz
+          python scripts/build_nt_editions.py --out dist-assets/nt-editions.json.gz
+          python scripts/build_nt_witnesses.py --out dist-assets/nt-witnesses.json.gz
+          sha256sum dist-assets/*.json.gz | tee dist-assets/SHA256SUMS.txt
+      - name: Publish asset-hosting GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUFFIX: ${{ inputs.tag_suffix }}
+        run: |
+          publish_asset() {
+            local tag="$1"
+            local file="$2"
+            local title="$3"
+            local notes="$4"
+            local sha
+            sha="$(sha256sum "$file" | awk '{print $1}')"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "$file" --clobber
+            else
+              gh release create "$tag" "$file" --title "$title" --notes "${notes} (SHA-256: ${sha})"
+            fi
+          }
+
+          publish_asset \
+            "strongs-greek-${SUFFIX}" \
+            "dist-assets/strongs-greek.json.gz" \
+            "Extended Strong's Greek Lexicon ${SUFFIX}" \
+            "Asset-hosting release for pyaegean (strongs-greek.json.gz: 11,142 entries, 4,635 with etymological root links; NT + LXX + Apocrypha + Apostolic Fathers). Built reproducibly by scripts/build_strongs_greek.py from STEPBible TBESG (CC BY 4.0) and OpenScriptures Strong's Greek Dictionary (CC BY-SA). License: CC BY-SA 4.0."
+
+          publish_asset \
+            "nt-editions-${SUFFIX}" \
+            "dist-assets/nt-editions.json.gz" \
+            "Multi-Edition Greek New Testament ${SUFFIX}" \
+            "Asset-hosting release for pyaegean (nt-editions.json.gz: SBLGNT, Statistical Restoration GNT, Robinson-Pierpont Byzantine Majority Text, and KJTR Textus Receptus). Built reproducibly by scripts/build_nt_editions.py. Licenses: CC BY 4.0 / CC BY-SA 3.0 / Public Domain."
+
+          publish_asset \
+            "nt-witnesses-${SUFFIX}" \
+            "dist-assets/nt-witnesses.json.gz" \
+            "Early Greek NT Manuscript Witnesses ${SUFFIX}" \
+            "Asset-hosting release for pyaegean (nt-witnesses.json.gz: 13 landmark 2nd-5th c. CE Greek NT manuscripts — 01/Sinaiticus, 02/Alexandrinus, 03/Vaticanus, 04/Ephraemi, 05/Bezae, 032/Washingtonianus, P45, P46, P47, P52, P66, P72, P75). Built reproducibly by scripts/build_nt_witnesses.py from CNTR Class 1 transcriptions. License: CC BY-SA 4.0."
