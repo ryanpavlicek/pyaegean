@@ -4,7 +4,7 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.63.0 (2026-11-24)
 
 ### Added
 
@@ -35,6 +35,14 @@ All notable changes to pyaegean are documented here. The format follows
   six tasks), cutting lemma calibration error (ECE15) by 51%–76% across all five locked test folds, and
   `aegean review export --annotate --with-confidence` auto-loads the matching bundled calibration when none
   is active.
+
+### Changed
+
+- Expanded the client-side Pyodide browser demo with six new interactive cards (editable review CSV preview,
+  Koine/documentary phonetic folding, Greek sentence segmentation, offline NT concordance search, translation
+  grounding preview, and Linear A morphological clusters) and upgraded six existing cards with richer outputs.
+- Updated all four Colab/Jupyter notebooks, documentation, wiki pages, module docstrings, and `sigla-corpus`
+  metadata to cover the current release features and verified dataset counts.
 
 ## 0.62.0 (2026-11-24)
 
@@ -68,7 +76,7 @@ All notable changes to pyaegean are documented here. The format follows
 - Editable-first review CSV layout (`layout="editable"`) places reviewer
   decision and correction columns first and stores immutable provenance in a
   SHA-256-bound `.companion.json` sidecar snapshot, detected automatically on
-  apply and merge (CLI `--layout editable` added in Unreleased above).
+  apply and merge (CLI `--layout editable` added in 0.63.0).
 - Dependency head and relation review includes complete sentence context and
   validates head ranges, sentence ownership, root structure, and cycles before
   applying changes. Dependency annotation is explicitly selected; ordinary

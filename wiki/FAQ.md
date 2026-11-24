@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.62.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.63.0`.
 - **Cached datasets survive installation.** They live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
   and are reused while their hashes match the selected pins. If a release changes

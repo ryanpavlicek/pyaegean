@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.62.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.63.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -243,11 +243,6 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 
 ### Current priorities
 
-- [x] **Qualify calibrated review policies and lemma selection:** bundled the
-  locked-test-qualified Schema-2 calibration registry (`use_calibration_registry()`),
-  opt-in weighted top-10 OOV lemma reranker (`use_oov_lemma_reranker(config="weighted")`),
-  and calibrated-risk budgeted review queues (`priority="calibrated_risk", budget=N`),
-  leaving default `grc-joint-v3` settings unchanged (awaiting next release).
 - [ ] **Expand adjudicated Greek gold:** adjudicate passages from the two archived full
   tragedy treebanks (*Philoctetes* and *Iphigenia in Tauris*) to broaden held-out verse
   evaluation beyond Euripides' *Bacchae*.
@@ -255,10 +250,6 @@ from proposed follow-ons; their order reflects dependencies rather than release 
 - [ ] **Evaluate translation fidelity:** compare grounding and clause-checking options on
   unseen passages, measuring both corrections and regressions in meaning, roles, negation,
   qualifications, speaker context, and lexical sense before changing defaults.
-- [x] **Durable resumable SQLite annotation jobs:** added checkpointed, resumable SQLite
-  annotation (`db.annotate_sqlite_job`, `aegean db annotate` / `job-status`) with WAL-safe
-  snapshots, single-transaction commits, and verified equivalence to uninterrupted runs
-  (awaiting next release); format-loss export jobs remain an optional follow-on.
 
 ### Following those foundations
 
@@ -309,7 +300,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.62.0},
+  version = {0.63.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```
