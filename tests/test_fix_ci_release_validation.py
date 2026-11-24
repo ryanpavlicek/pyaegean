@@ -141,7 +141,7 @@ def test_ci_call_reuses_every_authoritative_job_and_same_commit() -> None:
     assert ref_input["required"] == "true" and ref_input["type"] == "string"
     assert set(ci["jobs"]) == set(CI_JOBS)
     assert ci["jobs"]["test"]["strategy"]["matrix"]["python-version"] == [
-        "3.10", "3.11", "3.12", "3.13", "3.14",
+        "3.10", "3.11", "3.12", "3.13", "3.14", "3.15",
     ]
     for job in ci["jobs"].values():
         assert "if" not in job, "Required validation must run for release calls too"

@@ -211,7 +211,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) has ten job definitions:
 
 | Job | What it does |
 | --- | --- |
-| **test** | `ruff` → `mypy` (enforcing) → `pytest` with coverage, across **Python 3.10–3.14** |
+| **test** | `ruff` → `mypy` (enforcing) → `pytest` with coverage, across **Python 3.10–3.15** |
 | **cross-platform** | runs core, CLI, SQLite, and review tests natively on **Windows** and **macOS** |
 | **geo** | installs the `[dev,geo,parquet]` extras on one Python and runs the suite with `-rs`, so the geopandas/pyarrow tests execute instead of skipping |
 | **extras-ai-viz** | installs the `[dev,ai,viz]` extras and exercises AI and visualization tests without skips |

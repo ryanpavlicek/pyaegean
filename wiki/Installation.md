@@ -20,9 +20,11 @@ your back.
 
 ## Requirements
 
-- **Python 3.10 or newer.** pyaegean is tested on 3.10, 3.11, 3.12, 3.13, and
-  3.14. Check yours with `python --version` (you may need `python3` on
-  macOS/Linux).
+- **Python 3.10 or newer.** Core `pyaegean` and all pure-Python / data / interop
+  extras are tested on Python 3.10, 3.11, 3.12, 3.13, 3.14, and 3.15. The
+  `[neural]` and `[all]` extras currently require **Python 3.10–3.14** until
+  upstream `onnxruntime` publishes Python 3.15 wheels on PyPI. Check your
+  version with `python --version` (you may need `python3` on macOS/Linux).
 - An internet connection **only** for `pip install` and for the opt-in datasets
   the first time you turn them on. After that, everything you've fetched stays
   on disk and works offline.

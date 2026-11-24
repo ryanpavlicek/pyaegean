@@ -115,7 +115,7 @@ cd pyaegean
 python scripts/reproduce_review.py
 ```
 
-The command runs on CPython 3.10 through 3.14. It uses the standard library and
+The command runs on CPython 3.10 through 3.15. It uses the standard library and
 the checked-out zero-dependency source. It verifies a canonical SHA-256 manifest
 whose records each choose byte-exact or cross-platform canonical-LF hashing, runs
 the project-authored offline regression fixture and one baseline Greek sentence,

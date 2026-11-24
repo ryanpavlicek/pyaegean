@@ -9,7 +9,7 @@ cd pyaegean
 python scripts/reproduce_review.py
 ```
 
-It runs on CPython 3.10 through 3.14 with the standard library and the checked-out
+It runs on CPython 3.10 through 3.15 with the standard library and the checked-out
 zero-dependency package source. The command verifies the SHA-256 of every record in
 the canonical review manifest using its declared byte-exact or canonical-LF mode,
 runs the project-authored offline benchmark fixture
