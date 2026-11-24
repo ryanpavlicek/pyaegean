@@ -21,15 +21,20 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 import math
 import re
-from typing import Any
+from threading import RLock
+from typing import TYPE_CHECKING, Any
 import unicodedata
 
+from .lemmatize import LemmaSource
 from .neural_preprocessing import _strip_editorial_apparatus
+
+if TYPE_CHECKING:
+    from .joint import SentenceAnalysis
 
 __all__ = [
     "FEATURE_NAMES",
@@ -37,14 +42,18 @@ __all__ = [
     "LemmaRerankerConfig",
     "RerankDecision",
     "TrainOnlyLemmaIndex",
+    "disable_oov_lemma_reranker",
     "documentary_phonetic_fold",
     "extract_oov_candidates",
     "fit_oov_reranker",
+    "oov_lemma_reranker_active",
     "preverb_candidates",
+    "rerank_analysis",
     "rerank_candidates",
     "rerank_oov_unique",
     "score_candidates",
     "strict_fold",
+    "use_oov_lemma_reranker",
 ]
 
 FEATURE_NAMES: tuple[str, ...] = (
@@ -664,3 +673,295 @@ def fit_oov_reranker(
             break
 
     return LemmaRerankerConfig(weights=tuple(float(v) for v in w), oov_only=oov_only)
+
+
+# ── SentenceAnalysis post-processing & opt-in neural pipeline toggle ───────────
+
+
+_STATE_LOCK = RLock()
+_ACTIVE_ENABLED: bool = False
+_ACTIVE_CONFIG: LemmaRerankerConfig | None = None
+
+
+def _reranker_receipt(
+    receipt: Any,
+    *,
+    config: LemmaRerankerConfig | None,
+) -> Any:
+    """Attach an explicit PostprocessingStep for the active OOV reranker mode."""
+    from .annotation_profiles import PostprocessingStep, canonical_analysis_profile
+
+    params: list[tuple[str, str]] = [
+        ("mode", "weighted_reranker" if config is not None else "unique_fold"),
+        ("oov_only", "true" if (config is None or config.oov_only) else "false"),
+    ]
+    step_kwargs: dict[str, Any] = {
+        "step_id": "pyaegean-oov-lemma-reranker-v1",
+        "parameters": tuple(params),
+    }
+    if config is not None:
+        step_kwargs["resource_id"] = "pyaegean-oov-lemma-reranker-config-v1"
+        step_kwargs["resource_sha256"] = config.sha256
+    step = PostprocessingStep(**step_kwargs)
+
+    existing_profile = getattr(receipt, "analysis_profile", None)
+    base = existing_profile if existing_profile is not None else canonical_analysis_profile()
+    existing_steps = tuple(getattr(base, "postprocessing", ()))
+    profile = replace(
+        base,
+        postprocessing=(*existing_steps, step),
+    )
+    return receipt.with_analysis_profile(profile)
+
+
+def rerank_analysis(
+    ana: "SentenceAnalysis",
+    index: TrainOnlyLemmaIndex,
+    *,
+    config: LemmaRerankerConfig | None = None,
+) -> "SentenceAnalysis":
+    """Apply OOV-gated lemma reranking to a ``SentenceAnalysis`` (pure, reversible).
+
+    When ``config`` is ``None``, applies zero-parameter deterministic strict→phonetic
+    unique-fold rescue (``rerank_oov_unique``). When ``config`` is supplied, scores
+    OOV candidate sets with ``rerank_candidates``. Exact ``neural_lookup`` tokens are
+    preserved unchanged whenever ``config is None`` or ``config.oov_only`` is True.
+    """
+    n = len(ana.tokens)
+    if n == 0:
+        return ana
+
+    lemmas = list(ana.lemma)
+    resolved = list(ana.lemma_resolved) if len(ana.lemma_resolved) == n else [True] * n
+    sources = (
+        list(ana.lemma_source)
+        if len(ana.lemma_source) == n
+        else [
+            LemmaSource.NEURAL_LOOKUP if r else LemmaSource.IDENTITY
+            for r in resolved
+        ]
+    )
+    paths = (
+        list(ana.lemma_source_path)
+        if len(ana.lemma_source_path) == n
+        else [s.value for s in sources]
+    )
+    verified = list(ana.lemma_verified) if len(ana.lemma_verified) == n else [False] * n
+    changed_any = False
+
+    for i in range(n):
+        src_val = sources[i].value
+        if config is None:
+            decision = rerank_oov_unique(
+                form=ana.tokens[i],
+                upos=ana.upos[i],
+                baseline_lemma=lemmas[i],
+                baseline_source=src_val,
+                index=index,
+            )
+        else:
+            cands = extract_oov_candidates(
+                form=ana.tokens[i],
+                upos=ana.upos[i],
+                baseline_lemma=lemmas[i],
+                baseline_source=src_val,
+                index=index,
+            )
+            decision = rerank_candidates(
+                candidates=cands,
+                baseline_lemma=lemmas[i],
+                baseline_source=src_val,
+                config=config,
+            )
+        if decision.changed:
+            lemmas[i] = decision.lemma
+            resolved[i] = True
+            sources[i] = LemmaSource.NEURAL_LOOKUP
+            paths[i] = f"oov_rerank:{decision.route}"
+            verified[i] = False
+            changed_any = True
+
+    receipt = ana.receipt
+    if receipt is not None:
+        receipt = _reranker_receipt(receipt, config=config)
+
+    if not changed_any and receipt is ana.receipt:
+        return ana
+    return replace(
+        ana,
+        lemma=tuple(lemmas),
+        lemma_resolved=tuple(resolved),
+        lemma_source=tuple(sources),
+        lemma_source_path=tuple(paths),
+        lemma_verified=tuple(verified),
+        receipt=receipt,
+    )
+
+
+class _OovRerankModel:
+    """Wraps an active joint model, applying opt-in OOV-gated lemma reranking."""
+
+    def __init__(
+        self,
+        inner: Any,
+        *,
+        _frozen_state: tuple[bool, LemmaRerankerConfig | None] | None = None,
+        _index: TrainOnlyLemmaIndex | None = None,
+    ) -> None:
+        self.inner = inner
+        self._frozen_state = _frozen_state
+        self._index = _index
+
+    def _state(self) -> tuple[bool, LemmaRerankerConfig | None]:
+        with _STATE_LOCK:
+            if self._frozen_state is not None:
+                return self._frozen_state
+            return _ACTIVE_ENABLED, _ACTIVE_CONFIG
+
+    def _get_index(self) -> TrainOnlyLemmaIndex:
+        if self._index is None:
+            self._index = TrainOnlyLemmaIndex.from_model(self.inner)
+        return self._index
+
+    def _snapshot_for_stream(self) -> "_OovRerankModel":
+        inner_snap = (
+            self.inner._snapshot_for_stream()
+            if hasattr(self.inner, "_snapshot_for_stream")
+            else self.inner
+        )
+        return _OovRerankModel(
+            inner_snap,
+            _frozen_state=self._state(),
+            _index=self._get_index(),
+        )
+
+    def _apply(self, ana: "SentenceAnalysis") -> "SentenceAnalysis":
+        enabled, cfg = self._state()
+        if not enabled:
+            return ana
+        return rerank_analysis(ana, self._get_index(), config=cfg)
+
+    def analyze(
+        self,
+        words: list[str],
+        *,
+        with_probs: bool = False,
+        long_input: str = "strict",
+        domain: str | None = None,
+        policy: Any = None,
+    ) -> "SentenceAnalysis":
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs: dict[str, Any] = {
+                "with_probs": with_probs,
+                "long_input": long_input,
+            }
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            return self._apply(self.inner.analyze(words, **kwargs))
+        return self._apply(self.inner.analyze(words))
+
+    def analyze_batch(
+        self,
+        sentences: list[list[str]],
+        *,
+        with_probs: bool = False,
+        long_input: str = "strict",
+        domain: str | None = None,
+        policy: Any = None,
+    ) -> list["SentenceAnalysis"]:
+        if with_probs or long_input != "strict" or domain is not None or policy is not None:
+            kwargs: dict[str, Any] = {
+                "with_probs": with_probs,
+                "long_input": long_input,
+            }
+            if domain is not None:
+                kwargs["domain"] = domain
+            if policy is not None:
+                kwargs["policy"] = policy
+            analyses = self.inner.analyze_batch(sentences, **kwargs)
+        else:
+            analyses = self.inner.analyze_batch(sentences)
+        return [self._apply(a) for a in analyses]
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)
+
+
+def _has_rerank_wrapper(backend: Any) -> bool:
+    cur = backend
+    seen: set[int] = set()
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        if isinstance(cur, _OovRerankModel):
+            return True
+        cur = getattr(cur, "inner", None)
+    return False
+
+
+def _strip_rerank_wrapper(backend: Any) -> Any:
+    """Remove any ``_OovRerankModel`` layer anywhere in a wrapper chain."""
+    if isinstance(backend, _OovRerankModel):
+        return _strip_rerank_wrapper(backend.inner)
+    inner = getattr(backend, "inner", None)
+    if inner is not None and _has_rerank_wrapper(inner):
+        cleaned = _strip_rerank_wrapper(inner)
+        backend.inner = cleaned
+    return backend
+
+
+def _sync() -> None:
+    """Install or remove ``_OovRerankModel`` so ``joint.active()`` matches the toggle."""
+    from . import joint
+
+    with _STATE_LOCK:
+        active: Any = joint.active()
+        if active is None:
+            return
+        wrapped = _has_rerank_wrapper(active)
+        if _ACTIVE_ENABLED and not wrapped:
+            joint._replace_active_backend(_OovRerankModel(active))
+        elif not _ACTIVE_ENABLED and wrapped:
+            joint._replace_active_backend(_strip_rerank_wrapper(active))
+
+
+def use_oov_lemma_reranker(*, config: LemmaRerankerConfig | None = None) -> None:
+    """Activate opt-in OOV-gated lemma reranking on top of the active neural pipeline.
+
+    Requires the neural pipeline to be active (raises ``NeuralPipelineNotLoadedError``
+    otherwise). With ``config=None`` (default), uses zero-parameter deterministic
+    strict→phonetic unique-fold lookup derived strictly from the active model's own
+    training tables. Pass a SHA-256-verified ``LemmaRerankerConfig`` to enable the
+    weighted candidate reranker. Off by default and reversible via
+    ``disable_oov_lemma_reranker()``.
+    """
+    global _ACTIVE_ENABLED, _ACTIVE_CONFIG
+    from . import joint
+
+    if joint.active() is None:
+        raise joint.NeuralPipelineNotLoadedError(
+            "the OOV lemma reranker post-processes the neural pipeline; activate it first "
+            "with aegean.greek.use_neural_pipeline()."
+        )
+    if config is not None and not isinstance(config, LemmaRerankerConfig):
+        raise TypeError("config must be a LemmaRerankerConfig or None")
+    with _STATE_LOCK:
+        _ACTIVE_ENABLED = True
+        _ACTIVE_CONFIG = config
+        _sync()
+
+
+def disable_oov_lemma_reranker() -> None:
+    """Deactivate opt-in OOV-gated lemma reranking and restore plain pipeline behavior."""
+    global _ACTIVE_ENABLED, _ACTIVE_CONFIG
+    with _STATE_LOCK:
+        _ACTIVE_ENABLED = False
+        _ACTIVE_CONFIG = None
+        _sync()
+
+
+def oov_lemma_reranker_active() -> bool:
+    """Whether opt-in OOV-gated lemma reranking is currently active."""
+    with _STATE_LOCK:
+        return _ACTIVE_ENABLED

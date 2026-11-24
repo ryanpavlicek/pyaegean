@@ -179,3 +179,126 @@ def test_fit_oov_reranker_config_roundtrip_and_oov_gating() -> None:
     assert protected.lemma == "χέρις"
     assert protected.changed is False
     assert protected.route == "exact_lookup"
+
+
+def test_rerank_analysis_and_live_pipeline_toggle_with_documentary_composition() -> None:
+    from types import SimpleNamespace
+
+    from aegean import greek
+    from aegean.greek import documentary, joint
+    from aegean.greek.joint import SentenceAnalysis
+    from aegean.greek.lemmatize import LemmaSource
+
+    class _FakeJointBackend:
+        manifest = SimpleNamespace(
+            model_id="grc-joint-test",
+            dataset="grc-joint",
+            manifest_sha256="a" * 64,
+            tokenizer_revision="test-tok",
+            annotation_profile="pyaegean-canonical-v1",
+            normalization="NFC",
+            segmentation="pretokenized",
+            preprocessing_version="pyaegean-neural-preprocessing-v1",
+        )
+        runtime_variant = SimpleNamespace(
+            label="compact",
+            award_sha256="b" * 64,
+            qualification_sha256="c" * 64,
+        )
+        _sess = SimpleNamespace(get_providers=lambda: ["CPUExecutionProvider"])
+        lookup_form_upos = {
+            "χαίρειν|VERB": "χαίρω",
+            "λόγον|NOUN": "λόγος",
+            "καί|CCONJ": "καί",
+        }
+        lookup_form = {"χαίρειν": "χαίρω", "λόγον": "λόγος"}
+        lookup_lower = {"χαίρειν": "χαίρω", "λόγον": "λόγος"}
+
+        def analyze(self, words: list[str], **_kwargs: object) -> SentenceAnalysis:
+            upos = tuple("CCONJ" if w == "καί" else ("VERB" if w == "χέριν" else "NOUN") for w in words)
+            xpos = tuple("b--------" if w == "καί" else "v--------" for w in words)
+            feats = tuple("_" for _ in words)
+            head = tuple(0 if i == 0 else 1 for i in range(len(words)))
+            deprel = tuple("root" if i == 0 else "dep" for i in range(len(words)))
+            lemma = tuple("καί" if w == "καί" else ("χέρις" if w == "χέριν" else "λόγος") for w in words)
+            sources = tuple(
+                LemmaSource.NEURAL_EDIT if w == "χέριν" else LemmaSource.NEURAL_LOOKUP
+                for w in words
+            )
+            resolved = tuple(True for _ in words)
+            return SentenceAnalysis(
+                tokens=tuple(words),
+                upos=upos,
+                xpos=xpos,
+                feats=feats,
+                head=head,
+                deprel=deprel,
+                lemma=lemma,
+                lemma_resolved=resolved,
+                lemma_source=sources,
+                lemma_source_path=tuple(s.value for s in sources),
+                lemma_verified=tuple(False for _ in words),
+            )
+
+        def analyze_batch(self, sentences: list[list[str]], **kwargs: object) -> list[SentenceAnalysis]:
+            return [self.analyze(s, **kwargs) for s in sentences]
+
+    # Standalone rerank_analysis preserves exact lookups and rescues OOV Koine spelling.
+    fake = _FakeJointBackend()
+    idx = greek.TrainOnlyLemmaIndex.from_model(fake)
+    raw_ana = fake.analyze(["καί", "χέριν", "λόγον"])
+    reranked = greek.rerank_analysis(raw_ana, idx)
+    assert reranked.lemma == ("καί", "χαίρω", "λόγος")
+    assert reranked.lemma_source_path[1] == "oov_rerank:phonetic_fold_unique_upos"
+    assert reranked.lemma_verified == (False, False, False)
+    assert raw_ana.lemma == ("καί", "χέρις", "λόγος")  # original immutable
+
+    # Activating with no neural backend raises NeuralPipelineNotLoadedError.
+    greek.disable_oov_lemma_reranker()
+    greek.disable_documentary_reconciliation()
+    greek.disable_neural_pipeline()
+    with pytest.raises(joint.NeuralPipelineNotLoadedError):
+        greek.use_oov_lemma_reranker()
+
+    try:
+        joint._replace_active_backend(fake)
+        assert greek.oov_lemma_reranker_active() is False
+        assert joint.analyze_sentence(["καί", "χέριν"]).lemma == ("καί", "χέρις")
+
+        # Enable opt-in OOV reranker
+        greek.use_oov_lemma_reranker()
+        assert greek.oov_lemma_reranker_active() is True
+        assert joint.analyze_sentence(["καί", "χέριν"]).lemma == ("καί", "χαίρω")
+
+        # Works cleanly with length_bucket=True batching
+        batched = joint.analyze_sentences(
+            [["χέριν"], ["καί", "χέριν", "λόγον"]],
+            batch_size=2,
+            length_bucket=True,
+        )
+        assert [a.lemma for a in batched] == [("χαίρω",), ("καί", "χαίρω", "λόγος")]
+
+        # Stream snapshot freezes the active reranker even if disabled mid-stream
+        stream = joint.iter_analyze_sentences([["χέριν"], ["χέριν"]])
+        first = next(stream)
+        assert first.lemma == ("χαίρω",)
+        greek.disable_oov_lemma_reranker()
+        second = next(stream)
+        assert second.lemma == ("χαίρω",)
+        assert joint.analyze_sentence(["χέριν"]).lemma == ("χέρις",)
+
+        # Composes cleanly with documentary reconciliation in either disable order
+        greek.use_oov_lemma_reranker()
+        documentary.use_documentary_reconciliation()
+        assert greek.oov_lemma_reranker_active() is True
+        assert documentary.documentary_reconciliation_active() is True
+        greek.disable_oov_lemma_reranker()
+        assert greek.oov_lemma_reranker_active() is False
+        assert documentary.documentary_reconciliation_active() is True
+        assert joint.analyze_sentence(["χέριν"]).lemma == ("χέρις",)
+        documentary.disable_documentary_reconciliation()
+        assert joint.active() is fake
+    finally:
+        greek.disable_oov_lemma_reranker()
+        documentary.disable_documentary_reconciliation()
+        greek.disable_neural_pipeline()

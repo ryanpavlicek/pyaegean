@@ -1754,9 +1754,10 @@ def use_neural_pipeline(
     # Documentary levers are process-level opt-ins. Disabling the neural
     # backend temporarily must not leave their introspection flags true while
     # silently dropping their post-processing when a new backend is selected.
-    from . import documentary
+    from . import documentary, lemma_rerank
 
     documentary._sync()
+    lemma_rerank._sync()
 
 
 def disable_neural_pipeline() -> None:

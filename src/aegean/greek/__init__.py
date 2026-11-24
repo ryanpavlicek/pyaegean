@@ -100,6 +100,14 @@ from .documentary import (
     use_documentary_lemma_rescue,
     use_documentary_reconciliation,
 )
+from .lemma_rerank import (
+    LemmaRerankerConfig,
+    TrainOnlyLemmaIndex,
+    disable_oov_lemma_reranker,
+    oov_lemma_reranker_active,
+    rerank_analysis,
+    use_oov_lemma_reranker,
+)
 from .lexicon import LSJEntry, LSJLexicon, LexiconNotLoadedError, disable_lsj, lookup, use_lsj
 from .usage import UsageInfo, usage
 from .syntax import (
@@ -447,6 +455,12 @@ __all__ = [
     "documentary_lemma_rescue_active",
     "rescue_lemma",
     "COORDINATORS",
+    "use_oov_lemma_reranker",
+    "disable_oov_lemma_reranker",
+    "oov_lemma_reranker_active",
+    "rerank_analysis",
+    "LemmaRerankerConfig",
+    "TrainOnlyLemmaIndex",
     "use_inflector",
     "disable_inflector",
     "inflect",
