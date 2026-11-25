@@ -81,7 +81,7 @@ nav:
       - aegean: api/aegean.md
       - aegean.core: api/core.md
       - aegean.greek: api/greek.md
-      - aegean.biblical: api/biblical.md
+      - aegean.greek.bible: api/greek_bible.md
       - aegean.analysis: api/analysis.md
       - Built-in script plugins:
           - aegean.scripts: api/scripts.md

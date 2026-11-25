@@ -152,25 +152,25 @@ def _nt_book_choices() -> list[tuple[str, str]]:
 
 
 def _lxx_book_choices() -> list[tuple[str, str]]:
-    from aegean.biblical._catalogs import lxx_books
+    from aegean.greek.bible._catalogs import lxx_books
 
     return [(b["name"], f"{b['title']} ({b['section']})") for b in lxx_books()]
 
 
 def _nt_edition_choices() -> list[tuple[str, str]]:
-    from aegean.biblical._editions import nt_editions
+    from aegean.greek.bible._editions import nt_editions
 
     return [(e["id"], e["name"]) for e in nt_editions()]
 
 
 def _witness_choices() -> list[tuple[str, str]]:
-    from aegean.biblical._witnesses import witnesses
+    from aegean.greek.bible._witnesses import witnesses
 
     return [(w["siglum"], f"{w['alias']} · {w['name']} ({w['century']})") for w in witnesses()]
 
 
 def _commentary_book_choices() -> list[tuple[str, str]]:
-    from aegean.biblical._catalogs import patristic_commentaries
+    from aegean.greek.bible._catalogs import patristic_commentaries
 
     seen: dict[str, int] = {}
     for row in patristic_commentaries():
@@ -180,7 +180,7 @@ def _commentary_book_choices() -> list[tuple[str, str]]:
 
 
 def _lxx_section_choices() -> list[tuple[str, str]]:
-    from aegean.biblical._catalogs import lxx_books
+    from aegean.greek.bible._catalogs import lxx_books
 
     secs = sorted({b["section"] for b in lxx_books()})
     return [(s, "Septuagint section") for s in secs]
@@ -325,12 +325,26 @@ def _option_value_choices(
     return [], False
 
 
+def _commentary_work_choices(book_filter: str | None = None) -> list[tuple[str, str]]:
+    from aegean.greek.bible._catalogs import patristic_commentaries
+
+    try:
+        rows = patristic_commentaries(book_filter)
+    except ValueError:
+        rows = patristic_commentaries()
+    return [
+        (r["work_id"], f"{r['book']} · {r['author']} — {r['title'][:42]}")
+        for r in rows
+    ]
+
+
 def _positional_choices(
     cmd_path: tuple[str, ...],
     pos_index: int,
     prior_tokens: Sequence[str],
 ) -> list[tuple[str, str]]:
     """Return offline domain choices for positional argument ``pos_index`` of ``cmd_path``."""
+    pos_tokens = [t for t in prior_tokens if not t.startswith("-")]
     if pos_index == 0:
         if cmd_path in _CORPUS_FIRST_PATHS:
             return _corpus_choices()
@@ -338,8 +352,6 @@ def _positional_choices(
             return _dataset_choices()
         if cmd_path == ("bridge",):
             return [("linearb", "Mycenaean Linear B"), ("cypriot", "Cypriot syllabary")]
-        if cmd_path == ("greek", "nt"):
-            return _nt_book_choices()
         if cmd_path == ("bible", "read"):
             if "--lxx" in prior_tokens:
                 return _lxx_book_choices()
@@ -356,11 +368,25 @@ def _positional_choices(
                 ("lxx", "55 Swete Septuagint books"),
                 ("editions", "5 Greek NT editions"),
                 ("witnesses", "13 early 2nd–5th c. CE manuscript witnesses"),
+                ("all", "summary of all biblical catalogs"),
             ]
         if cmd_path == ("bible", "commentary"):
-            return _commentary_book_choices()
+            verbs = [
+                ("read", "read commentary sections by book or work ID"),
+                ("search", "search commentary text for a Greek term"),
+                ("list", "list available volumes"),
+            ]
+            return verbs + _commentary_book_choices() + _commentary_work_choices()
         if cmd_path == ("db", "search"):
             return [("ddbdp", "DDbDP documentary papyri SQLite FTS")]
+    if cmd_path == ("bible", "commentary") and pos_tokens:
+        verb = pos_tokens[0].lower()
+        if pos_index == 1 and verb in ("read", "search"):
+            return _commentary_book_choices() + _commentary_work_choices()
+        if pos_index == 1 and verb == "list":
+            return _commentary_book_choices()
+        if pos_index == 2 and verb == "read":
+            return _commentary_work_choices(pos_tokens[1])
     return []
 
 
@@ -449,6 +475,25 @@ def _count_positionals(cmd: Any, tail_tokens: Sequence[str]) -> int:
     return count
 
 
+_FLAG_PRIORITY: dict[str, int] = {
+    "--interlinear": 1,
+    "--edition": 2,
+    "--editions": 2,
+    "--sigla": 2,
+    "--book": 3,
+    "--by": 3,
+    "--roots": 3,
+    "--lxx": 4,
+    "--neural": 4,
+    "--limit": 5,
+    "--top": 6,
+    "--output": 7,
+    "--offline": 8,
+    "--json": 9,
+    "--help": 99,
+}
+
+
 def _flag_completions(cmd: Any, word: str, prefix: str, used_tokens: Sequence[str]) -> list[CompletionItem]:
     used = {t.partition("=")[0] for t in used_tokens if t.startswith("-")}
     seen: set[str] = set()
@@ -475,6 +520,7 @@ def _flag_completions(cmd: Any, word: str, prefix: str, used_tokens: Sequence[st
                         replace_len=len(word),
                     )
                 )
+    items.sort(key=lambda it: (not it.insert.startswith("--"), _FLAG_PRIORITY.get(it.insert, 50), it.insert))
     return items
 
 

@@ -30,7 +30,7 @@ def _parse_passage_spec(spec: str) -> tuple[str, str | None]:
 
 def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool = True) -> str:
     """Render an interlinear + verse view of a Greek NT or Septuagint (LXX) passage. Never raises."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     book, ref = _parse_passage_spec(passage)
     try:
@@ -73,7 +73,7 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
 
 def bible_compare_text(passage: str, *, offline: bool = True) -> str:
     """Render side-by-side Greek NT edition comparison with word-level diffs. Never raises."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     book, ref = _parse_passage_spec(passage)
     if not ref:
@@ -101,7 +101,7 @@ def bible_compare_text(passage: str, *, offline: bool = True) -> str:
 
 def bible_witnesses_text(passage: str, *, hand: str = "original", offline: bool = True) -> str:
     """Render extant 2nd–5th c. CE manuscript witness comparison. Never raises."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     book, ref = _parse_passage_spec(passage)
     if not ref:
@@ -130,7 +130,7 @@ def bible_witnesses_text(passage: str, *, hand: str = "original", offline: bool 
 
 def bible_word_study_text(query: str, *, offline: bool = True) -> str:
     """Render a Strong's + NT word study report. Never raises."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     q = query.strip()
     if not q:
@@ -177,7 +177,7 @@ def bible_word_study_text(query: str, *, offline: bool = True) -> str:
 
 def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
     """Render searchable LXX + Patristic Catenae catalogue, LXX passage/search, and Psalm hint. Never raises."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     q = filter_text.strip()
     out: list[str] = []

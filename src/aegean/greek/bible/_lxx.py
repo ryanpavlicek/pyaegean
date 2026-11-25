@@ -124,7 +124,7 @@ def lxx_loaded() -> bool:
     """Return ``True`` if the full 55-book ``lxx-corpus`` bundle is cached locally."""
     if _LXX_CACHE is not None:
         return True
-    from ..data import _REMOTE, cache_dir, present_paths
+    from ...data import _REMOTE, cache_dir, present_paths
 
     spec = _REMOTE.get("lxx-corpus")
     return bool(spec and present_paths(spec, cache_dir()))
@@ -134,7 +134,7 @@ def _load_lxx_bundle(*, allow_fetch: bool = True, force: bool = False) -> dict[s
     global _LXX_CACHE
     if _LXX_CACHE is not None and not force:
         return _LXX_CACHE
-    from ..data import _REMOTE, cache_dir, fetch, load_gzip_json, present_paths
+    from ...data import _REMOTE, cache_dir, fetch, load_gzip_json, present_paths
 
     spec = _REMOTE["lxx-corpus"]
     paths = [] if force else present_paths(spec, cache_dir())
@@ -212,11 +212,11 @@ def load_lxx(
     bundle = _load_lxx_bundle(allow_fetch=not offline, force=force)
     using_sample = bundle is None
 
-    from ..core.corpus import Corpus
-    from ..core.model import Document, DocumentMeta, Token, TokenKind
-    from ..core.provenance import Provenance
-    from ..data import DataNotAvailableError
-    from ..greek.tokenize import tokenize
+    from ...core.corpus import Corpus
+    from ...core.model import Document, DocumentMeta, Token, TokenKind
+    from ...core.provenance import Provenance
+    from ...data import DataNotAvailableError
+    from ..tokenize import tokenize
 
     book_specs = [resolve_lxx_book(book)] if book is not None else list(_LXX_BOOKS)
 
@@ -373,7 +373,7 @@ def search_lxx(
         book_specs = [b for b in book_specs if b.name in _OFFLINE_LXX_SAMPLE]
 
     hits: list[LxxHit] = []
-    from ..greek.tokenize import tokenize
+    from ..tokenize import tokenize
 
     for bspec in book_specs:
         vmap = (
@@ -441,7 +441,7 @@ def commentary_excerpt(
             )
         meta = candidates[0]
 
-    from ..scripts.greek.perseus import load_work
+    from ...scripts.greek.perseus import load_work
 
     corp = load_work(meta["work_id"], ref=ref, source="first1k", force=force)
     q_fold = _fold(query.strip()) if query and query.strip() else ""

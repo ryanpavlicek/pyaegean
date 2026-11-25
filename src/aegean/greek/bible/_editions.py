@@ -20,7 +20,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ..scripts.greek.nt import _parse_ref, _resolve_book
+from ...scripts.greek.nt import _parse_ref, _resolve_book
 from ._catalogs import NT_EDITIONS, resolve_edition
 
 _EDITIONS_CACHE: dict[str, Any] | None = None
@@ -96,7 +96,7 @@ def _load_editions_bundle(*, allow_fetch: bool = True) -> dict[str, Any]:
     global _EDITIONS_CACHE
     if _EDITIONS_CACHE is not None:
         return _EDITIONS_CACHE
-    from ..data import _REMOTE, DataNotAvailableError, cache_dir, fetch, load_gzip_json, present_paths
+    from ...data import _REMOTE, DataNotAvailableError, cache_dir, fetch, load_gzip_json, present_paths
 
     paths = present_paths(_REMOTE["nt-editions"], cache_dir())
     if not paths:
@@ -149,6 +149,7 @@ def load_nt(
     *,
     edition: str = "nestle1904",
     offline: bool = False,
+    force: bool = False,
 ) -> Any:
     """Load the Greek New Testament in any of the 5 supported editions.
 
@@ -159,19 +160,21 @@ def load_nt(
     """
     ed = resolve_edition(edition)
     if ed == "nestle1904":
-        from ..data import _REMOTE, cache_dir, is_downloaded
-        from ..scripts.greek.nt import (
+        from ...data import _REMOTE, cache_dir, is_downloaded
+        from ...scripts.greek.nt import (
             _bundled_payload,
             _provenance,
             _select,
             _selection_scope,
+        )
+        from ...scripts.greek.nt import (
             load_nt as _load_nestle,
         )
 
         if not offline or is_downloaded(_REMOTE["nt-corpus"], cache_dir()):
-            return _load_nestle(book, ref=ref)
-        from ..core.corpus import Corpus
-        from ..scripts.greek.inventory import greek_inventory
+            return _load_nestle(book, ref=ref, force=force)
+        from ...core.corpus import Corpus
+        from ...scripts.greek.inventory import greek_inventory
 
         payload = _bundled_payload()
         docs = _select(payload["documents"], book, ref)
@@ -193,10 +196,10 @@ def load_nt(
     else:
         selected_books = list(books_map.items())
 
-    from ..core.corpus import Corpus
-    from ..core.model import Document, DocumentMeta, Token, TokenKind
-    from ..core.provenance import Provenance
-    from ..greek.tokenize import tokenize
+    from ...core.corpus import Corpus
+    from ...core.model import Document, DocumentMeta, Token, TokenKind
+    from ...core.provenance import Provenance
+    from ..tokenize import tokenize
 
     ed_docs: list[Document] = []
     for osis, vmap in selected_books:
@@ -247,7 +250,7 @@ def load_nt(
         source=info.get("name", ed),
         license=info.get("license", bundle.get("_meta", {}).get("license", "")),
         url=info.get("source", ""),
-        notes=(f"Greek New Testament edition: {ed}. Loaded via aegean.biblical.load_nt.",),
+        notes=(f"Greek New Testament edition: {ed}. Loaded via aegean.greek.bible.load_nt.",),
     )
     return Corpus(ed_docs, script_id="greek", provenance=prov)
 

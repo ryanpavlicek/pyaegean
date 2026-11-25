@@ -1,4 +1,4 @@
-"""Tests for the Biblical & Koine Greek specialist pillar (aegean.biblical, CLI, TUI)."""
+"""Tests for the Biblical & Koine Greek specialist pillar (aegean.greek.bible, CLI, TUI)."""
 
 from __future__ import annotations
 
@@ -8,18 +8,22 @@ import sys
 
 import pytest
 
-import aegean.biblical as bib
+import aegean.greek.bible as bib
 
 
 def test_biblical_is_lazily_exported_from_top_level():
-    """Importing aegean must not eagerly load aegean.biblical."""
+    """Importing aegean and aegean.greek must not eagerly load aegean.greek.bible."""
     code = (
         "import sys, aegean\n"
-        "assert 'aegean.biblical' not in sys.modules\n"
-        "assert 'biblical' in dir(aegean)\n"
-        "mod = aegean.biblical\n"
-        "assert 'aegean.biblical' in sys.modules\n"
+        "assert 'aegean.greek.bible' not in sys.modules\n"
+        "assert not hasattr(aegean, 'biblical')\n"
+        "import aegean.greek\n"
+        "assert 'aegean.greek.bible' not in sys.modules\n"
+        "assert 'bible' in dir(aegean.greek)\n"
+        "mod = aegean.greek.bible\n"
+        "assert 'aegean.greek.bible' in sys.modules\n"
         "assert hasattr(mod, 'compare_editions')\n"
+        "assert aegean.greek.load_nt is mod.load_nt\n"
     )
     res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=False)
     assert res.returncode == 0, res.stderr
@@ -121,7 +125,7 @@ def test_mes_parser_nomina_sacra_and_scribal_hands():
 
 
 def test_strongs_offline_dodson_and_extended_fixture(monkeypatch):
-    import aegean.biblical._strongs as mod
+    import aegean.greek.bible._strongs as mod
 
     # Force offline Dodson fallback
     monkeypatch.setattr(mod, "_load_extended_if_cached", lambda: None)
@@ -171,8 +175,8 @@ def test_strongs_offline_dodson_and_extended_fixture(monkeypatch):
 
 
 def test_compare_editions_and_witnesses_with_fixtures(monkeypatch):
-    import aegean.biblical._editions as ed_mod
-    import aegean.biblical._witnesses as wit_mod
+    import aegean.greek.bible._editions as ed_mod
+    import aegean.greek.bible._witnesses as wit_mod
 
     fake_ed_bundle = {
         "_meta": {"license": "test"},
@@ -280,7 +284,7 @@ def test_cli_bible_commands_json():
 
 
 def test_lxx_offline_subverses_psalm_and_nomina_sacra(monkeypatch):
-    from aegean.biblical import _lxx as lxx_mod
+    from aegean.greek.bible import _lxx as lxx_mod
     from aegean.data import DataNotAvailableError
     from aegean.tui import data as tui_data
 
@@ -417,3 +421,66 @@ def test_tui_biblical_screen_smoke():
         loop.run_until_complete(_run())
     finally:
         loop.close()
+
+
+def test_bible_cli_lxx_autodetect_and_colon_refs():
+    from typer.testing import CliRunner
+
+    from aegean.cli import _build_app
+
+    runner = CliRunner()
+    app = _build_app()
+
+    # LXX book auto-detects without --lxx and accepts colon syntax
+    r_gen = runner.invoke(app, ["bible", "read", "Gen", "1:1-2", "--offline", "--json"])
+    assert r_gen.exit_code == 0, r_gen.output
+    data = json.loads(r_gen.stdout)
+    assert data["source"] == "lxx" and len(data["verses"]) == 2
+
+    # bible books all returns all 4 catalog summaries
+    r_all = runner.invoke(app, ["bible", "books", "all", "--json"])
+    assert r_all.exit_code == 0, r_all.output
+    payload = json.loads(r_all.stdout)
+    assert len(payload["nt"]) == 27 and len(payload["lxx"]) == 55
+
+
+def test_bible_commentary_natural_read_search_and_work_id(monkeypatch):
+    from typer.testing import CliRunner
+
+    from aegean.cli import _build_app
+
+    calls: list[dict[str, object]] = []
+
+    def fake_excerpt(book: str, *, work_id=None, kind=None, ref=None, query=None, limit=5):
+        calls.append({"book": book, "work_id": work_id, "query": query, "limit": limit})
+        return [
+            bib.CommentaryExcerpt(
+                book="Matt",
+                work_id=work_id or "tlg4102.tlg001",
+                author="Catena",
+                title="Catena in Matthaeum",
+                kind="catena",
+                section_id="1.1",
+                text="Εὐαγγέλιον κατὰ Ματθαῖον",
+                matched_words=("Εὐαγγέλιον",) if query else (),
+            )
+        ]
+
+    monkeypatch.setattr(bib, "commentary_excerpt", fake_excerpt)
+    runner = CliRunner()
+    app = _build_app()
+
+    for argv, expected_wid, expected_query in [
+        (["bible", "commentary", "tlg4102.tlg001"], "tlg4102.tlg001", None),
+        (["bible", "commentary", "read", "Matt"], None, None),
+        (["bible", "commentary", "read", "tlg4102.tlg001"], "tlg4102.tlg001", None),
+        (["bible", "commentary", "read", "Matt", "tlg4102.tlg001"], "tlg4102.tlg001", None),
+        (["bible", "commentary", "search", "Matt", "λόγος"], None, "λόγος"),
+    ]:
+        calls.clear()
+        res = runner.invoke(app, argv)
+        assert res.exit_code == 0, f"{argv}: {res.output}"
+        assert len(calls) == 1
+        assert calls[0]["work_id"] == expected_wid
+        assert calls[0]["query"] == expected_query
+

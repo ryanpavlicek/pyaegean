@@ -120,7 +120,7 @@ class _ExtendedStrongsIndex:
         hit = self._by_fold.get(_fold(word))
         if hit is not None:
             return hit
-        from ..greek.lemmatize import lemmatize
+        from ..lemmatize import lemmatize
 
         lemma = lemmatize(word)
         if lemma and lemma != word:
@@ -181,7 +181,7 @@ def _load_extended_if_cached() -> _ExtendedStrongsIndex | None:
     global _EXTENDED
     if _EXTENDED is not None:
         return _EXTENDED
-    from ..data import _REMOTE, cache_dir, load_gzip_json, present_paths
+    from ...data import _REMOTE, cache_dir, load_gzip_json, present_paths
 
     paths = present_paths(_REMOTE["strongs-greek"], cache_dir())
     if not paths:
@@ -228,7 +228,7 @@ def use_strongs(*, fetch: bool = True, force: bool = False) -> int:
             "strongs-greek is not cached — run `aegean data fetch strongs-greek` "
             "or call use_strongs(fetch=True)"
         )
-    from ..data import fetch as data_fetch
+    from ...data import fetch as data_fetch
 
     data_fetch("strongs-greek")
     idx = _load_extended_if_cached()
@@ -263,7 +263,7 @@ _DODSON_CACHE: Any = None
 def _dodson_cached() -> Any:
     global _DODSON_CACHE
     if _DODSON_CACHE is None:
-        from ..greek.koine import DodsonLexicon
+        from ..koine import DodsonLexicon
 
         _DODSON_CACHE = DodsonLexicon.load()
     return _DODSON_CACHE

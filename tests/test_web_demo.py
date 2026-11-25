@@ -553,7 +553,7 @@ def test_demo_works_without_sqlite3() -> None:
         "assert translate.grounding_for(\"τὸ δ' ἐφ' ἡμῖν ἐστι\", 'greek')\n"
         "from aegean.analysis import find_morphological_clusters\n"
         "assert find_morphological_clusters(c.word_frequencies())\n"
-        "from aegean import biblical as bib\n"
+        "from aegean.greek import bible as bib\n"
         "assert bib.convert_psalm(23)['lxx'] == [22]\n"
         "assert bib.expand_nomina_sacra('θς')[1]\n"
         "assert bib.search_lxx('φῶς', offline=True)\n"

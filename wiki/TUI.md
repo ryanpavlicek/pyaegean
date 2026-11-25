@@ -374,7 +374,7 @@ For the full account of what each of these does, see [Greek NLP](Greek-NLP) and
 
 ### Biblical Greek (`b`)
 
-A dedicated five-tab specialist workspace over [`aegean.biblical`](New-Testament),
+A dedicated five-tab specialist workspace over [`aegean.greek.bible`](New-Testament),
 driven by a shared passage bar at the top (`/` focuses the passage box, `r` reloads)
 with an edition selector (`Nestle 1904`, `SBLGNT`, `SRGNT`, `Byzantine Majority`,
 `Textus Receptus`):

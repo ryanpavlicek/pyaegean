@@ -1,4 +1,4 @@
-"""Biblical & Koine Greek specialist toolkit (`aegean.biblical`).
+"""Biblical & Koine Greek specialist toolkit (`aegean.greek.bible`).
 
 Provides an integrated, scholarly workflow for Koine and Biblical Greek across
 five pillars — zero extra dependencies, lazy-loaded so ``import aegean`` pays
@@ -34,7 +34,7 @@ fetch-on-demand release assets:
 
 from __future__ import annotations
 
-from ..scripts.greek.nt import nt_books
+from ...scripts.greek.nt import nt_books
 from ._catalogs import (
     CommentaryWork,
     LxxBook,

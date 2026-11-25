@@ -10,7 +10,6 @@ import typer
 from ._common import (
     JSON_OPT,
     RESULT_OPT,
-    console,
     emit_json,
     emit_result,
     fail,
@@ -246,83 +245,6 @@ def work(
         print(f"cite it:  {c.provenance.citation}")
 
 
-def nt(
-    book: str | None = typer.Argument(
-        None, help="NT book name, e.g. John (omit to load all 27 books)."
-    ),
-    passage: str | None = typer.Argument(
-        None, help="Chapter or range to read: '1', '1-3', or '1.1-1.18' (verses)."
-    ),
-    ref: str | None = typer.Option(
-        None, "--ref", help="Alias for the passage argument ('1', '1-3', '1.1-1.18')."
-    ),
-    output: Path | None = typer.Option(
-        None, "--output", "-o",
-        help="Save the corpus to a .json or .db/.sqlite file (by extension).",
-    ),
-    json_out: bool = JSON_OPT,
-) -> None:
-    """Read the Greek New Testament (Nestle 1904): gold lemma / morph / Strong's + Koine gloss.
-
-    Name a BOOK, and optionally a chapter or range, to read it:
-    `aegean greek nt John 1`, `aegean greek nt Matt 1-3`. With no BOOK, loads all 27 books
-    (a summary). Tokens carry per-word annotations — `aegean export <file> -f csv --level token`
-    spreads them into columns. `aegean greek nt-books` lists the book names."""
-    from aegean.data import DataNotAvailableError
-    from aegean.greek import load_nt
-
-    if passage is not None and ref is not None:
-        raise fail("give the passage as a positional OR --ref, not both")
-    selection = passage or ref
-    try:
-        c = load_nt(book, ref=selection)
-    except (DataNotAvailableError, ValueError, KeyError, LookupError) as exc:
-        # the library speaks Python (greek.nt_books()); the CLI speaks CLI
-        msg = str(exc).replace(
-            "greek.nt_books() lists all 27", "`aegean greek nt-books` lists all 27"
-        )
-        raise fail(msg) from None
-    if output is not None:
-        write_corpus(c, output)
-        print(f"wrote {len(c)} documents to {output}", file=sys.stderr)
-        return
-    summary = {
-        "scope": book or "whole NT",
-        "ref": selection or "",
-        "documents": len(c),
-        "tokens": sum(len(d.tokens) for d in c),
-        "first": c.documents[0].id if len(c) else "",
-        "source": c.provenance.source if c.provenance else "",
-        "data_version": c.provenance.data_version if c.provenance else "",
-    }
-    if json_out:
-        emit_json(summary)
-        return
-    # No book -> a summary (rendering all 27 books is not useful). A named book -> read the text.
-    if book is None:
-        table("Greek NT", ["field", "value"], [[k, str(v)] for k, v in summary.items()])
-        if len(c):
-            print("read a book:  aegean greek nt John 1   (a chapter or range, e.g. Matt 1-3)")
-        return
-    if not len(c):
-        raise fail("that selection has no text")
-    header = f"{summary['scope']} {selection or ''}".strip()
-    console().print(
-        f"{header}  ({summary['documents']} chapter"
-        f"{'' if summary['documents'] == 1 else 's'}, {summary['tokens']} tokens)",
-        style="bold", markup=False,
-    )
-    for doc in c:
-        console().print(doc.meta.name or doc.id, style="bold cyan", markup=False)
-        for line in doc.lines:
-            if not line:
-                continue
-            verse = doc.tokens[line[0]].line_no
-            label = str(verse) if verse is not None else "-"
-            text = " ".join(doc.tokens[i].text for i in line)
-            console().print(f"  {label}: {text}", markup=False)
-
-
 def works(
     downloaded: bool = typer.Option(
         False, "--downloaded", "--local",
@@ -451,22 +373,8 @@ def catalog(
     print("Load one with, e.g.:  aegean greek work tlg0012.tlg001 --ref 1.1-1.10")
 
 
-def nt_books_cmd(json_out: bool = JSON_OPT) -> None:
-    """List the 27 books of the Greek New Testament and the names `gloss-nt`/load_nt accept."""
-    from aegean.greek import nt_books
-
-    books = nt_books()
-    if json_out:
-        emit_json(books)
-        return
-    table("New Testament books (Nestle 1904)", ["book", "accepted names"],
-          [[b["name"], ", ".join(b["aliases"])] for b in books])
-    print("\nLoad one:  aegean greek nt John --ref 1.1-1.18")
-
 def register(greek_app: typer.Typer) -> None:
-    """Attach the literary-work and NT catalog commands to ``greek_app``."""
+    """Attach the literary-work and catalog commands to ``greek_app``."""
     greek_app.command("work")(work)
-    greek_app.command("nt")(nt)
     greek_app.command("works")(works)
     greek_app.command("catalog")(catalog)
-    greek_app.command("nt-books")(nt_books_cmd)

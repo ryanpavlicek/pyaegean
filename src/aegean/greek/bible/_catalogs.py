@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..scripts.greek.nt import _resolve_book as _resolve_nt_book
+from ...scripts.greek.nt import _resolve_book as _resolve_nt_book
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,7 +153,7 @@ def resolve_lxx_book(book: str) -> LxxBook:
     hit = _LXX_ALIAS.get(key)
     if hit is not None:
         return hit
-    from ..core.resolve import suggest
+    from ...core.resolve import suggest
 
     choices = [b.name for b in _LXX_BOOKS] + [a for b in _LXX_BOOKS for a in b.aliases]
     close = suggest(book, choices, n=1)
@@ -162,11 +162,11 @@ def resolve_lxx_book(book: str) -> LxxBook:
         hint = canonical.name if canonical else close[0]
         raise ValueError(
             f"unknown LXX book {book!r} — did you mean {hint!r}? "
-            "(aegean.biblical.lxx_books() lists all 55)"
+            "(aegean.greek.bible.lxx_books() lists all 55)"
         )
     raise ValueError(
         f"unknown LXX book {book!r}; try 'Gen', 'Exod', 'Ps', 'Isa', 'Wis', 'Sir', '1Macc', 'Dan' "
-        "(aegean.biblical.lxx_books() lists all 55)"
+        "(aegean.greek.bible.lxx_books() lists all 55)"
     )
 
 
@@ -328,7 +328,7 @@ def _normalize_commentary_book(book: str) -> str:
     raise ValueError(
         f"unknown biblical book {book!r} for patristic commentaries; "
         "try 'John', 'Matt', 'Rom', 'Gen', 'Ps', 'Jer' "
-        "(aegean.biblical.patristic_commentaries() lists all 48)"
+        "(aegean.greek.bible.patristic_commentaries() lists all 48)"
     )
 
 

@@ -5,8 +5,8 @@ Backend flags mirror the `use_*` activation functions: ``--treebank``,
 ``--tagger``, ``--lemmatizer``, ``--neural-lemmatizer``, ``--neural`` (the joint
 pipeline), ``--lsj``. Each activation may download its data/model to the cache on
 first use (a note goes to stderr); afterwards everything is offline. The lexicon
-commands (`gloss`, `gloss-nt`, `lexica`, `lexicon-link`) reach the dictionary
-registry; `gloss --dict <id>` picks which dictionary to use. `stream` consumes
+commands (`gloss`, `lexica`, `lexicon-link`) reach the dictionary registry;
+`gloss --dict <id>` picks which dictionary to use. `stream` consumes
 pre-tokenized JSONL sentences and emits neural `SentenceAnalysis` values incrementally.
 """
 
@@ -71,12 +71,6 @@ from ._greek_works import (
     catalog as catalog,
 )
 from ._greek_works import (
-    nt as nt,
-)
-from ._greek_works import (
-    nt_books_cmd as nt_books_cmd,
-)
-from ._greek_works import (
     work as work,
 )
 from ._greek_works import (
@@ -85,8 +79,8 @@ from ._greek_works import (
 
 greek_app = typer.Typer(
     pretty_exceptions_show_locals=False,
-    help="Greek NLP (normalize → … → parse), dictionaries, real works (Perseus/NT), "
-    "and the eval reproductions.",
+    help="Greek NLP (normalize → … → parse), dictionaries, literary works (Perseus/First1KGreek), "
+    "and eval reproductions.",
     no_args_is_help=True,
 )
 
@@ -843,40 +837,6 @@ def gloss(
         console().print(f"{e.headword}: {e.body}", markup=False)
     else:
         print(f"{e.headword}: {e.gloss}")
-
-
-@greek_app.command("gloss-nt")
-def gloss_nt(
-    word: str = typer.Argument(..., help="A Greek word, or a Strong's number with --strongs."),
-    strongs: bool = typer.Option(False, "--strongs", help="Treat the argument as a Strong's number."),
-    full: bool = typer.Option(False, "--full", help="Show the full Dodson entry (lemma + definition)."),
-    json_out: bool = JSON_OPT,
-) -> None:
-    """Koine (New Testament) gloss from the bundled Dodson lexicon — no download (CC0)."""
-    from aegean import greek
-
-    greek.use_dodson()
-    if strongs:
-        g = greek.gloss_strongs(word)
-        if g is None:
-            raise fail(f"no Dodson entry for Strong's {word!r}")
-        if json_out:
-            emit_json({"strongs": word, "gloss": g})
-        else:
-            print(g)
-        return
-    entry = greek.lookup_nt(word)
-    if entry is None:
-        raise fail(f"no Dodson entry for {word!r}")
-    if json_out:
-        emit_json({
-            "word": word, "lemma": entry.lemma, "strongs": entry.strongs,
-            "gloss": entry.gloss, "definition": entry.definition,
-        })
-    elif full:
-        console().print(f"{entry.lemma} (G{entry.strongs}): {entry.definition}", markup=False)
-    else:
-        print(entry.gloss)
 
 
 @greek_app.command()

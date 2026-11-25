@@ -374,9 +374,9 @@ with a fetch instruction instead of reporting a sample-derived score.
 
 ---
 
-## Biblical & Koine Greek Specialist Suite (`aegean.biblical` & `aegean bible`)
+## Biblical & Koine Greek Specialist Suite (`aegean.greek.bible` & `aegean bible`)
 
-Beyond the single Nestle 1904 corpus, `aegean.biblical` (CLI `aegean bible …`, and key `b` in `aegean tui`) provides a dedicated Koine and Biblical Greek workbench covering five scholarly resources — all fetched on demand into your local cache so the core wheel stays lightweight:
+Beyond the single Nestle 1904 corpus, `aegean.greek.bible` (CLI `aegean bible …`, and key `b` in `aegean tui`) provides a dedicated Koine and Biblical Greek workbench covering five scholarly resources — all fetched on demand into your local cache so the core wheel stays lightweight:
 
 1. **Five Greek New Testament editions + word-level variant comparison** (`nt-editions`, ~1.7 MB gzip):
    - `nestle1904` (gold lemma, Robinson morphology, Strong's, UD UPOS; CC0)
@@ -398,7 +398,7 @@ Beyond the single Nestle 1904 corpus, `aegean.biblical` (CLI `aegean bible …`,
 ```python
 import aegean
 
-bib = aegean.biblical
+bib = aegean.greek.bible
 
 # Compare all 5 NT editions with word-level textual diffs
 cmp = bib.compare_editions("John", "1.18")
@@ -451,7 +451,7 @@ In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study scre
 - **One `Document` per chapter.** A whole-book load is a corpus of chapters; a `ref`
   range trims the verses within the affected chapters.
 - **A `ref` needs a book.** You cannot address a verse across all 27 books at once.
-- **Septuagint (LXX) and patristic commentaries** load from the `lxx-corpus` Swete Septuagint bundle (`aegean.biblical.load_lxx()`) and First1KGreek (`load_commentary()` / `commentary_excerpt()`) rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them).
+- **Septuagint (LXX) and patristic commentaries** load from the `lxx-corpus` Swete Septuagint bundle (`aegean.greek.bible.load_lxx()`) and First1KGreek (`load_commentary()` / `commentary_excerpt()`) rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them).
 
 ---
 

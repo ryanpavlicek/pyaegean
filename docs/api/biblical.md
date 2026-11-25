@@ -1,3 +1,0 @@
-# aegean.biblical
-
-::: aegean.biblical

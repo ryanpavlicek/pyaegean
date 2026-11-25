@@ -889,7 +889,7 @@ def biblical_strongs(
 ) -> dict[str, Any]:
     """Look up or search Strong's & Extended Strong's Greek Lexicon entries (offline Dodson
     or locally cached 11,142-entry Extended Strong's; never fetches over the network)."""
-    from . import biblical as bib
+    from .greek import bible as bib
 
     q = query.strip()
     if not q:
@@ -924,7 +924,7 @@ def biblical_word_study(
 ) -> dict[str, Any]:
     """Unified Koine Greek word study (Strong's entry, roots, NT distribution, morphology,
     and verse concordance) over the cached full NT or bundled offline Nestle 1904 sample."""
-    from . import biblical as bib
+    from .greek import bible as bib
 
     q = query.strip()
     if not q:
@@ -939,7 +939,7 @@ def biblical_word_study(
 def biblical_psalm(psalm: int, system: str = "mt") -> dict[str, Any]:
     """Convert a Psalm number between Masoretic (Hebrew/English, 'mt') and Septuagint ('lxx')
     numbering, including the First1KGreek Swete LXX work ID (tlg0527.tlg027)."""
-    from . import biblical as bib
+    from .greek import bible as bib
 
     try:
         return bib.convert_psalm(psalm, system=system)
@@ -950,7 +950,7 @@ def biblical_psalm(psalm: int, system: str = "mt") -> dict[str, Any]:
 def biblical_nomina_sacra(text: str) -> dict[str, Any]:
     """Expand early Greek NT manuscript nomina sacra contractions (e.g. θς → θεός, ις → ἰησοῦς,
     χς → χριστός, πνα → πνεῦμα) with an explicit list of expanded tokens."""
-    from . import biblical as bib
+    from .greek import bible as bib
 
     if not text.strip():
         return {"error": "text must be non-empty Greek manuscript text (e.g. 'εν αρχη ην ο λογος προς τον θν')"}
@@ -971,7 +971,7 @@ def biblical_catalog(
     """Offline catalogue of Biblical & Koine Greek resources: 'editions' (5 Greek NT editions),
     'witnesses' (13 2nd–5th c. CE manuscripts), 'lxx' (55 Septuagint books), or
     'commentaries' (48 Greek patristic Catenae & Origen volumes)."""
-    from . import biblical as bib
+    from .greek import bible as bib
 
     k = kind.strip().lower()
     valid = ("editions", "witnesses", "lxx", "commentaries")
@@ -1002,7 +1002,7 @@ def biblical_lxx(
 ) -> dict[str, Any]:
     """Read or search the Greek Septuagint (Swete LXX) offline (uses cached 55-book
     lxx-corpus when present, or the bundled Genesis 1 + Psalm 22 LXX sample)."""
-    from . import biblical as bib
+    from .greek import bible as bib
     from .data import DataNotAvailableError
 
     try:

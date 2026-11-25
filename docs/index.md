@@ -99,7 +99,7 @@ statuses, and each corpus's edition-fidelity flag.
 
 **I study Biblical & Koine Greek (NT, Septuagint, early manuscripts).**
 [Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament) and the
-[`aegean.biblical`](api/biblical.md) reference cover the `aegean bible` CLI, the `b` screen in
+[`aegean.greek.bible`](api/greek_bible.md) reference cover the `aegean bible` CLI, the `b` screen in
 `aegean tui`, 5 collated Greek NT editions (`nestle1904`, `sblgnt`, `srgnt`, `byz`, `tr`),
 13 early 2nd–5th c. CE manuscript witnesses with *nomina sacra* expansion, 11,142-entry Extended
 Strong's with root tracing, the 55-book Swete Septuagint (`lxx-corpus`), and 48 Greek patristic

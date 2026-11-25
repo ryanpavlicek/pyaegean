@@ -57,6 +57,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from . import bible
+    from .bible._editions import load_nt
     from .annotation_profiles import (
         AmbiguityDisclosure,
         AnalysisProfile,
@@ -295,7 +297,7 @@ from ..scripts.greek.perseus import (
     popular_works,
     remove_fetched_works,
 )
-from ..scripts.greek.nt import load_nt, nt_books
+from ..scripts.greek.nt import nt_books
 from .prosody import scan, syllable_quantities
 from .meter import (
     AEOLIC_LINES,
@@ -370,6 +372,17 @@ def __getattr__(name: str) -> Any:
         value = getattr(annotation_profiles, name)
         globals()[name] = value
         return value
+    if name == "bible":
+        from importlib import import_module
+
+        mod = import_module(".bible", __name__)
+        globals()["bible"] = mod
+        return mod
+    if name == "load_nt":
+        from .bible._editions import load_nt as fn
+
+        globals()["load_nt"] = fn
+        return fn
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -637,6 +650,7 @@ __all__ = [
     "LemmatizerNotLoadedError",
     "NeuralLemmatizerNotLoadedError",
     "LexiconNotLoadedError",
+    "bible",
 ]
 
 

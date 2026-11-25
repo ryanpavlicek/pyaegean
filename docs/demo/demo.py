@@ -1307,7 +1307,7 @@ def biblical_word_study(query: str) -> str:
     if not q:
         return json.dumps({"error": "enter a Strong's ID (e.g. G3056) or Greek word"}, ensure_ascii=False)
     try:
-        from aegean import biblical as bib
+        from aegean.greek import bible as bib
     except ImportError:
         from collections import Counter
 
@@ -1368,7 +1368,7 @@ def biblical_psalm(psalm: str, system: str = "mt") -> str:
     except ValueError:
         return json.dumps({"error": f"expected an integer Psalm number (1–151), got {psalm!r}"}, ensure_ascii=False)
     try:
-        from aegean import biblical as bib
+        from aegean.greek import bible as bib
     except ImportError:
         bib = None  # type: ignore[assignment]
     if bib is not None and hasattr(bib, "convert_psalm"):
@@ -1423,7 +1423,7 @@ def biblical_nomina_sacra(text: str) -> str:
     if not text.strip():
         return json.dumps({"error": "enter Greek manuscript text (e.g. 'εν αρχη ην ο λογος προς τον θν')"}, ensure_ascii=False)
     try:
-        from aegean import biblical as bib
+        from aegean.greek import bible as bib
     except ImportError:
         bib = None  # type: ignore[assignment]
     if bib is not None and hasattr(bib, "expand_nomina_sacra"):
@@ -1499,7 +1499,7 @@ def biblical_lxx(query: str = "Gen 1.1-3") -> str:
         return json.dumps({"error": "enter an LXX passage (Gen 1.1-5, Ps 22) or Greek word (φῶς, Κύριος)"}, ensure_ascii=False)
     has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
     try:
-        from aegean import biblical as bib
+        from aegean.greek import bible as bib
     except ImportError:
         bib = None  # type: ignore[assignment]
 

@@ -13,7 +13,7 @@ Includes 13 landmark early Greek New Testament manuscripts (2nd–5th century CE
 Preserves CNTR's Manuscript Encoding Specification (MES) diplomatic text (including
 *nomina sacra* ``=ιυ``/``=χυ``/``=θσ``, original vs. corrector hands ``x{...}``/``{...}``,
 line breaks ``/``, damaged/reconstructed characters ``%``/``^``, and lacunae ``~``),
-which ``aegean.biblical`` renders in both diplomatic and readable/expanded forms.
+which ``aegean.greek.bible`` renders in both diplomatic and readable/expanded forms.
 
 Usage:
     python scripts/build_nt_witnesses.py --out nt-witnesses.json.gz

@@ -17,18 +17,18 @@ def _run(*args: str) -> object:
     return runner.invoke(_build_app(), list(args))
 
 
-def test_gloss_nt_word() -> None:
-    r = _run("greek", "gloss-nt", "λόγος")
+def test_bible_strongs_word() -> None:
+    r = _run("bible", "strongs", "λόγος", "--offline")
     assert r.exit_code == 0 and "word" in r.output.lower()
 
 
-def test_gloss_nt_strongs() -> None:
-    r = _run("greek", "gloss-nt", "3056", "--strongs")
+def test_bible_strongs_number() -> None:
+    r = _run("bible", "strongs", "G3056", "--offline")
     assert r.exit_code == 0 and "word" in r.output.lower()
 
 
-def test_gloss_nt_unknown_exits_1() -> None:
-    assert _run("greek", "gloss-nt", "zzznotgreek").exit_code == 1
+def test_bible_strongs_unknown_exits_1() -> None:
+    assert _run("bible", "strongs", "zzznotgreek", "--offline").exit_code == 1
 
 
 def test_export_sqlite(tmp_path: Path) -> None:

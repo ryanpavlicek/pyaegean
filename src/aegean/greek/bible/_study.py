@@ -246,7 +246,7 @@ def word_study(
     lex_entries: dict[str, str] = {}
     if lemma:
         try:
-            from ..greek.lexicons import active_lexica, entry as registry_entry
+            from ..lexicons import active_lexica, entry as registry_entry
 
             for lex_name in active_lexica():
                 found = registry_entry(lemma, dictionary=lex_name)
@@ -342,6 +342,6 @@ def load_commentary(
                 + (f", kind={kind!r}" if kind else "")
             )
         wid = candidates[0]["work_id"]
-    from ..scripts.greek.perseus import load_work
+    from ...scripts.greek.perseus import load_work
 
     return load_work(wid, ref=ref, source="first1k", force=force)

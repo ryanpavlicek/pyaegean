@@ -2232,7 +2232,7 @@
     {
       "id": "biblical-strongs",
       "since": "0.64.0",
-      "python_api": "aegean.biblical.strongs_entry",
+      "python_api": "aegean.greek.bible.strongs_entry",
       "summary": "Strong's and Extended Strong's Greek Lexicon lookup, search, and recursive etymological root tracing (offline Dodson fallback + 11,142-entry strongs-greek bundle).",
       "surfaces": {
         "demo": {
@@ -2260,7 +2260,7 @@
     {
       "id": "biblical-word-study",
       "since": "0.64.0",
-      "python_api": "aegean.biblical.word_study",
+      "python_api": "aegean.greek.bible.word_study",
       "summary": "Unified Koine Greek word study combining Strong's lexicon, root family, NT book and Robinson morphology distribution, and verse concordance.",
       "surfaces": {
         "demo": {
@@ -2287,7 +2287,7 @@
     {
       "id": "biblical-psalm-numbering",
       "since": "0.65.0",
-      "python_api": "aegean.biblical.convert_psalm",
+      "python_api": "aegean.greek.bible.convert_psalm",
       "summary": "Bidirectional Masoretic (Hebrew/English) and Septuagint (LXX) Psalm number conversion (1–150 MT ↔ 1–151 LXX).",
       "surfaces": {
         "demo": {
@@ -2314,7 +2314,7 @@
     {
       "id": "biblical-nomina-sacra",
       "since": "0.65.0",
-      "python_api": "aegean.biblical.expand_nomina_sacra",
+      "python_api": "aegean.greek.bible.expand_nomina_sacra",
       "summary": "Expansion of early Greek New Testament manuscript nomina sacra contractions (θς, ις, χς, κυ, πνα, etc.) and CNTR diplomatic MES markup.",
       "surfaces": {
         "demo": {
@@ -2341,7 +2341,7 @@
     {
       "id": "biblical-catalog",
       "since": "0.64.0",
-      "python_api": "aegean.biblical.patristic_commentaries",
+      "python_api": "aegean.greek.bible.patristic_commentaries",
       "summary": "Offline scholarly catalogues of 5 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 55 Swete Septuagint books, and 48 Greek patristic Catenae and Origen commentary volumes.",
       "surfaces": {
         "demo": {
@@ -2369,7 +2369,7 @@
     {
       "id": "biblical-septuagint",
       "since": "0.64.0",
-      "python_api": "aegean.biblical.load_lxx",
+      "python_api": "aegean.greek.bible.load_lxx",
       "summary": "Swete Septuagint (LXX) passage reader and Greek concordance search across all 55 books (fetched lxx-corpus asset + bundled offline Genesis 1 and Psalm 22 LXX sample).",
       "surfaces": {
         "demo": {

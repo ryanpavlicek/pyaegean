@@ -46,7 +46,7 @@ def test_cli_nt_books_json() -> None:
 
     from aegean.cli import _build_app
 
-    r = CliRunner().invoke(_build_app(), ["greek", "nt-books", "--json"])
+    r = CliRunner().invoke(_build_app(), ["bible", "books", "nt", "--json"])
     assert r.exit_code == 0, r.output
     data = json.loads(r.stdout)
     assert len(data) == 27 and any(b["name"] == "John" for b in data)

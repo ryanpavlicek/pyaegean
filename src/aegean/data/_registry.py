@@ -505,7 +505,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="CC-BY-SA-4.0 (STEPBible TBESG CC BY 4.0 + OpenScriptures Strong's CC BY-SA); fetched, never bundled",
         note="Extended Strong's Greek Lexicon (11,142 entries: NT + LXX + Apocrypha + Apostolic "
              "Fathers, etymological root trees, Hebrew cross-references; ~1.5 MB gzip). Used by "
-             "aegean.biblical.use_strongs() / strongs_entry() / strongs_roots().",
+             "aegean.greek.bible.use_strongs() / strongs_entry() / strongs_roots().",
         extract=False,
         on_disk=("strongs-greek.json.gz",),
     ),
@@ -522,7 +522,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="CC-BY-SA-3.0 / CC-BY-4.0 / Public Domain (SBLGNT/MorphGNT, CNTR SR & KJTR, Robinson-Pierpont BYZ)",
         note="Multi-edition Greek New Testament (~1.7 MB gzip): SBLGNT, Statistical Restoration "
              "GNT, Robinson-Pierpont Byzantine Majority Text, and Textus Receptus. Used by "
-             "aegean.biblical.load_nt(..., edition=...) and compare_editions().",
+             "aegean.greek.bible.load_nt(..., edition=...) and compare_editions().",
         extract=False,
         on_disk=("nt-editions.json.gz",),
     ),
@@ -540,7 +540,7 @@ _REMOTE: dict[str, DataSpec] = {
         license="CC-BY-SA-4.0 (Center for New Testament Restoration / Alan Bunning); fetched, never bundled",
         note="Early Greek NT manuscript witnesses (~2.0 MB gzip): 13 landmark 2nd-5th c. CE "
              "uncials and papyri (01, 02, 03, 04, 05, 032, P45, P46, P47, P52, P66, P72, P75) "
-             "with CNTR MES diplomatic markup and nomina sacra. Used by aegean.biblical.load_witness() / compare_witnesses().",
+             "with CNTR MES diplomatic markup and nomina sacra. Used by aegean.greek.bible.load_witness() / compare_witnesses().",
         extract=False,
         on_disk=("nt-witnesses.json.gz",),
     ),
@@ -557,7 +557,7 @@ _REMOTE: dict[str, DataSpec] = {
         ),
         note=(
             "Swete Septuagint (LXX) corpus (~1.65 MB gzip): all 55 Greek Septuagint books "
-            "(29,248 verses, NFC-normalized). Used by aegean.biblical.load_lxx() / search_lxx()."
+            "(29,248 verses, NFC-normalized). Used by aegean.greek.bible.load_lxx() / search_lxx()."
         ),
         extract=False,
         on_disk=("lxx-corpus.json.gz",),

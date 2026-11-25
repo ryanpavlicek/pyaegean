@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ..scripts.greek.nt import _parse_ref, _resolve_book
+from ...scripts.greek.nt import _parse_ref, _resolve_book
 from ._catalogs import WITNESS_CATALOG, resolve_witness
 from ._mes import WitnessReading, parse_mes
 
@@ -75,7 +75,7 @@ def _load_witnesses_bundle(*, allow_fetch: bool = True) -> dict[str, Any]:
     global _WITNESSES_CACHE
     if _WITNESSES_CACHE is not None:
         return _WITNESSES_CACHE
-    from ..data import _REMOTE, DataNotAvailableError, cache_dir, fetch, load_gzip_json, present_paths
+    from ...data import _REMOTE, DataNotAvailableError, cache_dir, fetch, load_gzip_json, present_paths
 
     paths = present_paths(_REMOTE["nt-witnesses"], cache_dir())
     if not paths:
@@ -156,9 +156,9 @@ def load_witness(
     else:
         selected_books = list(books_map.items())
 
-    from ..core.corpus import Corpus
-    from ..core.model import Document, DocumentMeta, Token, TokenKind
-    from ..core.provenance import Provenance
+    from ...core.corpus import Corpus
+    from ...core.model import Document, DocumentMeta, Token, TokenKind
+    from ...core.provenance import Provenance
 
     docs: list[Document] = []
     for osis, vmap in selected_books:

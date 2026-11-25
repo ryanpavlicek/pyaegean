@@ -12,11 +12,14 @@ console, and every command supports ``--json`` for machine-readable output.
 
 from __future__ import annotations
 
+import re
+import sys
+from pathlib import Path
 from typing import Any
 
 import typer
 
-from ._common import console, emit_json, fail
+from ._common import console, emit_json, fail, write_corpus
 from ._complete import (
     shell_complete_bible_book,
     shell_complete_bible_collection,
@@ -24,6 +27,21 @@ from ._complete import (
     shell_complete_nt_book,
     shell_complete_witness,
 )
+
+_TLG_WORK_RE = re.compile(r"^tlg\d+\.tlg\d+$", re.IGNORECASE)
+
+
+def _normalize_ref(ref: str | None) -> str | None:
+    if ref is None:
+        return None
+    cleaned = ref.strip().replace(":", ".")
+    return cleaned or None
+
+
+def _cli_nt_error(exc: Exception) -> str:
+    return str(exc).replace(
+        "greek.nt_books() lists all 27", "`aegean bible books nt` lists all 27"
+    )
 
 bible_app = typer.Typer(
     help=(
@@ -59,10 +77,15 @@ def _format_root_lines(node: dict[str, Any], prefix: str = "") -> list[str]:
 def read_cmd(
     book: str = typer.Argument(
         ...,
-        help="Book name or abbreviation (e.g. John, Rom, Gen, Ps, Wis).",
+        help="NT or Septuagint (LXX) book name (e.g. John, Rom, Gen, Ps, Wis); LXX books auto-detect.",
         autocompletion=shell_complete_bible_book,
     ),
-    ref: str | None = typer.Argument(None, help="Chapter or verse range (e.g. 1, 1.1-18, 3.16)."),
+    passage: str | None = typer.Argument(None, help="Chapter or verse range (e.g. 1, 1.1-18, 3:16)."),
+    ref: str | None = typer.Option(
+        None,
+        "--ref",
+        help="Alias for the positional passage range (e.g. 1.1-18 or 3:16).",
+    ),
     edition: str = typer.Option(
         "nestle1904",
         "--edition",
@@ -70,27 +93,55 @@ def read_cmd(
         help="Greek NT edition: nestle1904, sblgnt, srgnt, byz, or tr.",
         autocompletion=shell_complete_edition,
     ),
-    lxx: bool = typer.Option(False, "--lxx", help="Read from the Septuagint (LXX) instead of the NT."),
+    lxx: bool = typer.Option(False, "--lxx", help="Force reading from the Septuagint (LXX)."),
     interlinear: bool = typer.Option(
         False,
         "--interlinear",
         "-i",
         help="Print word-by-word interlinear table (surface, lemma, morph, Strong's, gloss).",
     ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Save the loaded corpus to a .json or .db/.sqlite file (by extension).",
+    ),
     offline: bool = typer.Option(False, "--offline", help="Never fetch over the network (use local cache/bundled sample)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Read a Greek New Testament or Septuagint (LXX) passage."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
+
+    if passage is not None and ref is not None:
+        raise fail("give the passage as a positional OR --ref, not both")
+    selection = _normalize_ref(passage or ref)
+
+    use_lxx = lxx
+    if not use_lxx:
+        try:
+            from aegean.scripts.greek.nt import _resolve_book as _resolve_nt
+
+            _resolve_nt(book)
+        except ValueError:
+            try:
+                bib.resolve_lxx_book(book)
+                use_lxx = True
+            except ValueError:
+                pass
 
     try:
         corp = (
-            bib.load_lxx(book, ref=ref, offline=offline)
-            if lxx
-            else bib.load_nt(book, ref=ref, edition=edition, offline=offline)
+            bib.load_lxx(book, ref=selection, offline=offline)
+            if use_lxx
+            else bib.load_nt(book, ref=selection, edition=edition, offline=offline)
         )
     except Exception as exc:
-        raise fail(str(exc)) from None
+        raise fail(_cli_nt_error(exc)) from None
+
+    if output is not None:
+        write_corpus(corp, output)
+        print(f"wrote {len(corp)} documents to {output}", file=sys.stderr)
+        return
 
     if json_out:
         verses: list[dict[str, Any]] = []
@@ -116,8 +167,8 @@ def read_cmd(
         emit_json(
             {
                 "book": book,
-                "ref": ref,
-                "source": "lxx" if lxx else edition,
+                "ref": selection,
+                "source": "lxx" if use_lxx else edition,
                 "citation": getattr(corp.provenance, "citation", ""),
                 "verses": verses,
             }
@@ -127,7 +178,7 @@ def read_cmd(
     c = console()
     from rich.table import Table
 
-    title = getattr(corp.provenance, "citation", "") or f"{book} {ref or ''}".strip()
+    title = getattr(corp.provenance, "citation", "") or f"{book} {selection or ''}".strip()
     c.print(f"[bold cyan]{title}[/bold cyan]")
     for doc in corp:
         if interlinear:
@@ -168,7 +219,7 @@ def compare_cmd(
         help="NT book name (e.g. John, Matt, Rom).",
         autocompletion=shell_complete_nt_book,
     ),
-    ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 1.1-5)."),
+    ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 1:1-5)."),
     editions: str | None = typer.Option(
         None,
         "--editions",
@@ -180,13 +231,14 @@ def compare_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Compare a Greek NT passage across editions with word-level variant diffs."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     ed_list = [e.strip() for e in editions.split(",") if e.strip()] if editions else None
+    norm_ref = _normalize_ref(ref) or ref
     try:
-        cmp = bib.compare_editions(book, ref, editions=ed_list, offline=offline)
+        cmp = bib.compare_editions(book, norm_ref, editions=ed_list, offline=offline)
     except Exception as exc:
-        raise fail(str(exc)) from None
+        raise fail(_cli_nt_error(exc)) from None
 
     if json_out:
         emit_json(cmp.to_dict())
@@ -215,7 +267,7 @@ def witnesses_cmd(
         help="NT book name (e.g. John, Rom, 1Pet).",
         autocompletion=shell_complete_nt_book,
     ),
-    ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 18.37-38)."),
+    ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 18:37-38)."),
     sigla: str | None = typer.Option(
         None,
         "--sigla",
@@ -230,20 +282,21 @@ def witnesses_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Compare extant 2nd–5th century CE Greek NT manuscripts for a passage."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     sig_list = [s.strip() for s in sigla.split(",") if s.strip()] if sigla else None
+    norm_ref = _normalize_ref(ref) or ref
     try:
         rows = bib.compare_witnesses(
             book,
-            ref,
+            norm_ref,
             sigla=sig_list,
             hand=hand,
             expand_nomina_sacra=not no_expand,
             offline=offline,
         )
     except Exception as exc:
-        raise fail(str(exc)) from None
+        raise fail(_cli_nt_error(exc)) from None
 
     if json_out:
         emit_json([r.to_dict() for r in rows])
@@ -269,15 +322,17 @@ def strongs_cmd(
     roots: bool = typer.Option(False, "--roots", "-r", help="Show recursive etymological root tree."),
     search: bool = typer.Option(False, "--search", "-s", help="Search entries by Greek/transliteration/English gloss."),
     fetch: bool = typer.Option(False, "--fetch", help="Fetch the full 11,142-entry Extended Strong's asset if not cached."),
+    offline: bool = typer.Option(False, "--offline", help="Never fetch over the network (default unless --fetch is set)."),
     limit: int = typer.Option(15, "--limit", "--top", "-n", help="Maximum hits when searching (0 = all)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Look up or search Strong's & Extended Strong's Greek Lexicon entries."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
+    allow_fetch = fetch and not offline
     try:
         if search:
-            hits = bib.search_strongs(query, limit=limit, allow_fetch=fetch)
+            hits = bib.search_strongs(query, limit=limit, allow_fetch=allow_fetch)
             if json_out:
                 emit_json([h.to_dict() for h in hits])
                 return
@@ -294,7 +349,7 @@ def strongs_cmd(
             c.print(table)
             return
 
-        entry = bib.strongs_entry(query, allow_fetch=fetch)
+        entry = bib.strongs_entry(query, allow_fetch=allow_fetch)
         if entry is None:
             raise fail(f"no Strong's Greek entry matched {query!r}")
         tree = bib.strongs_roots(entry.strongs, allow_fetch=False) if roots else None
@@ -337,7 +392,7 @@ def word_study_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Run a unified Koine Greek word study (lexicon, roots, NT distribution, morphology, concordance)."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     try:
         ws = bib.word_study(query, book=book, limit=limit, offline=offline)
@@ -387,9 +442,22 @@ def search_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Search the Greek New Testament or Septuagint (LXX) concordance."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
-    if lxx:
+    use_lxx = lxx or (section is not None)
+    if not use_lxx and book is not None:
+        try:
+            from aegean.scripts.greek.nt import _resolve_book as _resolve_nt
+
+            _resolve_nt(book)
+        except ValueError:
+            try:
+                bib.resolve_lxx_book(book)
+                use_lxx = True
+            except ValueError:
+                pass
+
+    if use_lxx:
         try:
             lxx_hits = bib.search_lxx(
                 query, book=book, section=section, limit=limit, offline=offline
@@ -414,7 +482,7 @@ def search_cmd(
     try:
         hits = bib.search_bible(query, by=by, book=book, edition=edition, limit=limit, offline=offline)
     except Exception as exc:
-        raise fail(str(exc)) from None
+        raise fail(_cli_nt_error(exc)) from None
 
     if json_out:
         emit_json([h.to_dict() for h in hits])
@@ -436,7 +504,14 @@ def search_cmd(
 
 @bible_app.command("commentary")
 def commentary_cmd(
-    book: str | None = typer.Argument(None, help="Biblical book name (e.g. John, Matt, Rom, Gen, Ps)."),
+    args: list[str] | None = typer.Argument(
+        None,
+        metavar="[BOOK | WORK_ID | read TARGET | search TARGET TERM]",
+        help=(
+            "List commentaries (`Matt`), read one directly (`tlg4102.tlg001`, `read Matt`, "
+            "`read tlg4102.tlg001`), or search one (`search Matt λόγος`)."
+        ),
+    ),
     kind: str | None = typer.Option(None, "--kind", "-k", help="Filter by 'catena' or 'origen'."),
     read: bool = typer.Option(False, "--read", help="Fetch and print sections of the commentary text."),
     search: str | None = typer.Option(None, "--search", "-s", help="Search commentary text for a Greek term (e.g. λόγος)."),
@@ -445,19 +520,88 @@ def commentary_cmd(
     limit: int = typer.Option(5, "--limit", "--top", "-n", help="Maximum excerpts/sections when reading or searching (0 = all)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """List, read, or search Greek patristic biblical commentaries (NT Catenae & Origen)."""
-    import aegean.biblical as bib
+    """List, read, or search Greek patristic biblical commentaries (NT Catenae & Origen).
+
+    Examples:
+      aegean bible commentary                      # list all 48 volumes
+      aegean bible commentary Matt                 # list commentaries on Matthew
+      aegean bible commentary read Matt            # read the Matthew catena
+      aegean bible commentary tlg4102.tlg001       # read a specific TLG volume
+      aegean bible commentary search John λόγος    # search John commentary for λόγος
+    """
+    import aegean.greek.bible as bib
+
+    pos = list(args or [])
+    book: str | None = None
+    do_read = read
+    search_term = search
+    wid = work_id
+
+    if pos:
+        head = pos[0].strip().lower()
+        if head == "read":
+            do_read = True
+            rest = pos[1:]
+            if not rest and wid is None:
+                raise fail(
+                    "specify a book or TLG work ID to read, e.g. "
+                    "`aegean bible commentary read Matt` or `aegean bible commentary read tlg4102.tlg001`"
+                )
+            for tok in rest:
+                if _TLG_WORK_RE.match(tok):
+                    wid = tok.lower()
+                elif book is None:
+                    book = tok
+                else:
+                    raise fail(f"unexpected extra argument {tok!r} for `bible commentary read`")
+        elif head == "search":
+            rest = pos[1:]
+            if len(rest) < 2 and not (len(rest) == 1 and (wid or search_term)):
+                raise fail(
+                    "usage: `aegean bible commentary search <book|work_id> <greek-term>` "
+                    "(e.g. `aegean bible commentary search John λόγος`)"
+                )
+            if len(rest) >= 2:
+                target = rest[0]
+                if _TLG_WORK_RE.match(target):
+                    wid = target.lower()
+                else:
+                    book = target
+                search_term = " ".join(rest[1:])
+            elif len(rest) == 1:
+                if search_term is None:
+                    search_term = rest[0]
+                elif _TLG_WORK_RE.match(rest[0]):
+                    wid = rest[0].lower()
+                else:
+                    book = rest[0]
+        elif head == "list":
+            if len(pos) > 2:
+                raise fail("usage: `aegean bible commentary list [BOOK]`")
+            if len(pos) == 2:
+                book = pos[1]
+        else:
+            for tok in pos:
+                if _TLG_WORK_RE.match(tok):
+                    wid = tok.lower()
+                    do_read = True
+                elif book is None:
+                    book = tok
+                elif search_term is None and not do_read:
+                    search_term = tok
+                else:
+                    raise fail(f"unexpected argument {tok!r}; try `aegean bible commentary --help`")
 
     try:
-        if read or search:
-            if book is None and work_id is None:
-                raise fail("--read / --search requires a BOOK name or --work-id")
+        if do_read or search_term:
+            if book is None and wid is None:
+                raise fail("--read / --search requires a BOOK name or TLG work ID")
             excerpts = bib.commentary_excerpt(
                 book or "John",
-                work_id=work_id,
+                work_id=wid,
                 kind=kind,
                 ref=ref,
-                query=search,
+                query=search_term,
                 limit=limit,
             )
             if json_out:
@@ -467,8 +611,8 @@ def commentary_cmd(
             if not excerpts:
                 c.print("[dim]No matching commentary sections found.[/dim]")
                 return
-            head = excerpts[0]
-            c.print(f"[bold cyan]{head.author} — {head.title}[/bold cyan]  [dim]({head.work_id})[/dim]")
+            first = excerpts[0]
+            c.print(f"[bold cyan]{first.author} — {first.title}[/bold cyan]  [dim]({first.work_id})[/dim]")
             for ex in excerpts:
                 tag = f"  [green](matched: {', '.join(ex.matched_words)})[/green]" if ex.matched_words else ""
                 c.print(f"\n[bold]§ {ex.section_id}[/bold]{tag}\n  {ex.text}")
@@ -495,22 +639,52 @@ def commentary_cmd(
     for r in rows:
         table.add_row(r["book"], r["work_id"], r["author"], r["title"])
     c.print(table)
+    if rows:
+        sample = rows[0]["work_id"]
+        c.print(
+            f"[dim]Read:  aegean bible commentary read {rows[0]['book']}   "
+            f"or   aegean bible commentary {sample}[/dim]"
+        )
 
 
 @bible_app.command("books")
 def books_cmd(
     collection: str = typer.Argument(
         "nt",
-        help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (5), or 'witnesses' (13).",
+        help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (5), 'witnesses' (13), or 'all'.",
         autocompletion=shell_complete_bible_collection,
     ),
     section: str | None = typer.Option(None, "--section", help="Optional LXX section filter (Pentateuch, Wisdom, ...)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """List available NT books, Septuagint (LXX) books, NT editions, or early manuscript witnesses."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     col = collection.strip().lower()
+    if col == "all":
+        payload = {
+            "nt": bib.nt_books(),
+            "lxx": bib.lxx_books(section=section),
+            "editions": bib.nt_editions(),
+            "witnesses": bib.witnesses(),
+        }
+        if json_out:
+            emit_json(payload)
+            return
+        c = console()
+        from rich.table import Table
+
+        summary = Table(title="Biblical & Koine Greek Catalogs")
+        summary.add_column("Collection", style="cyan")
+        summary.add_column("Count", justify="right", style="bold")
+        summary.add_column("List command", style="dim")
+        summary.add_row("nt", str(len(payload["nt"])), "aegean bible books nt")
+        summary.add_row("lxx", str(len(payload["lxx"])), "aegean bible books lxx")
+        summary.add_row("editions", str(len(payload["editions"])), "aegean bible books editions")
+        summary.add_row("witnesses", str(len(payload["witnesses"])), "aegean bible books witnesses")
+        c.print(summary)
+        return
+
     if col == "nt":
         rows = bib.nt_books()
     elif col == "lxx":
@@ -520,7 +694,7 @@ def books_cmd(
     elif col == "witnesses":
         rows = bib.witnesses()
     else:
-        raise fail(f"unknown collection {collection!r}; expected 'nt', 'lxx', 'editions', or 'witnesses'")
+        raise fail(f"unknown collection {collection!r}; expected 'nt', 'lxx', 'editions', 'witnesses', or 'all'")
 
     if json_out:
         emit_json(rows)
@@ -535,6 +709,8 @@ def books_cmd(
         table.add_column("Aliases")
         for r in rows:
             table.add_row(r["name"], ", ".join(r["aliases"]))
+        c.print(table)
+        c.print("[dim]Read one:  aegean bible read John 1.1-18[/dim]")
     elif col == "lxx":
         table = Table(title=f"Septuagint (LXX) Books ({len(rows)})")
         table.add_column("Name", style="cyan")
@@ -543,6 +719,8 @@ def books_cmd(
         table.add_column("Work ID", style="dim")
         for r in rows:
             table.add_row(r["name"], r["title"], r["section"], r["work_id"])
+        c.print(table)
+        c.print("[dim]Read one:  aegean bible read Gen 1.1-5[/dim]")
     elif col == "editions":
         table = Table(title="Greek New Testament Editions (5)")
         table.add_column("ID", style="cyan")
@@ -550,6 +728,7 @@ def books_cmd(
         table.add_column("License", style="dim")
         for r in rows:
             table.add_row(r["id"], r["name"], r["license"])
+        c.print(table)
     else:
         table = Table(title="Early Greek NT Manuscript Witnesses (13)")
         table.add_column("Siglum", style="cyan")
@@ -559,7 +738,7 @@ def books_cmd(
         table.add_column("Text Type", style="dim")
         for r in rows:
             table.add_row(r["siglum"], r["alias"], r["name"], r["century"], r["text_type"])
-    c.print(table)
+        c.print(table)
 
 
 @bible_app.command("psalm")
@@ -569,7 +748,7 @@ def psalm_cmd(
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
     """Convert Psalm numbers between Masoretic (Hebrew/English) and Septuagint (LXX) numbering."""
-    import aegean.biblical as bib
+    import aegean.greek.bible as bib
 
     src = from_system.strip().lower()
     try:

@@ -2,7 +2,7 @@
 
 Verifies:
 1. Cold ``import aegean`` stays lazy (does not eagerly pull ``aegean.greek``,
-   ``aegean.ai``, ``aegean.io``, ``aegean.biblical``, or ``aegean.scripts.greek.perseus``),
+   ``aegean.ai``, ``aegean.io``, ``aegean.greek.bible``, or ``aegean.scripts.greek.perseus``),
    while first attribute access still resolves every public facade identically;
 2. Pre-folded Septuagint (LXX) and Strong's search indexes remain isolated across bundle
    reloads/monkeypatches and return identical results on repeated queries;
@@ -19,22 +19,22 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
-from aegean import biblical as bib
+from aegean.greek import bible as bib
 from aegean.cli._common import load_corpus, session_corpus_cache
 
 
 def test_import_aegean_keeps_heavy_subpackages_lazy() -> None:
     code = (
         "import sys, aegean\n"
-        "for mod in ('aegean.greek', 'aegean.ai', 'aegean.io', 'aegean.biblical', "
+        "for mod in ('aegean.greek', 'aegean.ai', 'aegean.io', 'aegean.greek.bible', "
         "'aegean.translate', 'aegean.scripts.greek.perseus'):\n"
         "    assert mod not in sys.modules, f'eagerly imported {mod}'\n"
         "# Accessing each lazy attribute resolves and caches it cleanly\n"
         "assert hasattr(aegean.greek, 'pipeline')\n"
-        "assert hasattr(aegean.biblical, 'load_lxx')\n"
+        "assert hasattr(aegean.greek.bible, 'load_lxx')\n"
         "assert callable(aegean.read_corpus)\n"
         "assert callable(aegean.diagnose)\n"
-        "assert 'greek' in dir(aegean) and 'biblical' in dir(aegean)\n"
+        "assert 'greek' in dir(aegean) and 'bible' in dir(aegean.greek)\n"
         "print('LAZY_OK')\n"
     )
     res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
@@ -43,7 +43,7 @@ def test_import_aegean_keeps_heavy_subpackages_lazy() -> None:
 
 
 def test_lxx_and_strongs_prefolded_indexes_repeat_identically(monkeypatch) -> None:
-    from aegean.biblical import _lxx as lxx_mod
+    from aegean.greek.bible import _lxx as lxx_mod
 
     monkeypatch.setattr(lxx_mod, "_load_lxx_bundle", lambda *, allow_fetch=True, force=False: None)
     first = bib.search_lxx("φῶς", offline=True)

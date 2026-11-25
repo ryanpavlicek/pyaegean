@@ -116,7 +116,7 @@ def test_complete_line_bible_commands_flags_and_domain_values(group) -> None:  #
     assert "--lxx" not in flags_used and "--offline" in flags_used
 
     # Other bible option values & collections
-    assert set(inserts("bible books ")) == {"nt", "lxx", "editions", "witnesses"}
+    assert set(inserts("bible books ")) == {"nt", "lxx", "editions", "witnesses", "all"}
     assert "morph" in inserts("bible search V-AAI --by m")
     assert "catena" in inserts("bible commentary John --kind c")
     assert set(inserts("bible psalm 23 --from ")) == {"mt", "lxx"}
@@ -167,3 +167,18 @@ def test_native_shell_complete_callbacks() -> None:
     assert "Gen" in lxx_hits
     wit_hits = [v for v, _ in shell_complete_witness("P52,P6")]
     assert "P52,P66" in wit_hits
+
+
+def test_commentary_and_prioritized_flag_predictions(group) -> None:  # type: ignore[no-untyped-def]
+    def inserts(line: str) -> list[str]:
+        return [c.insert for c in complete_line(group, line)]
+
+    comm_top = inserts("bible commentary ")
+    assert comm_top[:2] == ["read", "search"]
+    assert "tlg4102.tlg001" in comm_top
+    assert "tlg4102.tlg001" in inserts("bible commentary read Matt ")
+
+    flags = inserts("bible read John 1.1 --")
+    assert flags[0] == "--interlinear"
+    assert flags.index("--interlinear") < flags.index("--json") < flags.index("--ref")
+

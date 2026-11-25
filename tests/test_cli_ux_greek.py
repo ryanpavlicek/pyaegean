@@ -283,9 +283,9 @@ def test_nt_unknown_book_suggests_the_canonical_name():
 
     from aegean.cli import _build_app
 
-    res = CliRunner().invoke(_build_app(), ["greek", "nt", "Jhon"])
+    res = CliRunner().invoke(_build_app(), ["bible", "read", "Jhon", "--offline"])
     assert res.exit_code == 1
-    assert "aegean greek nt-books" in res.output
+    assert "aegean bible books nt" in res.output
     with pytest.raises(ValueError) as exc:
         _resolve_book("Habakkuk")  # nothing close: static examples + the pointer
     msg = str(exc.value)
@@ -296,24 +296,23 @@ def test_nt_unknown_book_suggests_the_canonical_name():
 
 def test_cli_nt_bad_ref_is_human(app):
     # Philemon is the bundled offline book, so this never needs the network
-    msg = err(app, "greek", "nt", "Philemon", "--ref", "abc")
+    msg = err(app, "bible", "read", "Philemon", "--ref", "abc", "--offline")
     assert "malformed NT ref 'abc'" in msg
     assert "invalid literal" not in msg and "Traceback" not in msg
 
 
 def test_cli_nt_unknown_book_did_you_mean(app):
-    msg = err(app, "greek", "nt", "Jhon")
+    msg = err(app, "bible", "read", "Jhon", "--offline")
     assert "did you mean 'John'?" in msg
-    assert "nt-books" in msg
+    assert "bible books nt" in msg
 
 
 def test_cli_nt_named_book_renders_the_passage_text(app):
-    # A named book now reads the text (verse-numbered), not just a summary.
-    out = ok(app, "greek", "nt", "Philemon")
+    # A named book reads the text (verse-numbered) and accepts a positional or --ref range.
+    out = ok(app, "bible", "read", "Philemon", "--offline")
     assert "Παῦλος" in out  # Philemon opens with Παῦλος
-    assert "1:" in out       # verse-numbered lines
-    # and a chapter range is accepted as a positional
-    ranged = ok(app, "greek", "nt", "Philemon", "1")
+    assert "1" in out       # verse-numbered lines
+    ranged = ok(app, "bible", "read", "Philemon", "1", "--offline")
     assert "Παῦλος" in ranged
 
 
@@ -321,18 +320,18 @@ def test_cli_nt_output_dispatches_by_extension(app, tmp_path):
     import aegean
 
     out_db = tmp_path / "phlm.db"
-    out = ok(app, "greek", "nt", "Philemon", "-o", str(out_db))
+    out = ok(app, "bible", "read", "Philemon", "--offline", "-o", str(out_db))
     assert f"wrote 1 documents to {out_db}" in out
     assert out_db.read_bytes()[:15] == b"SQLite format 3"
     back = aegean.Corpus.from_sql(out_db)
     assert back.documents[0].id == "Phlm 1"
-    msg = err(app, "greek", "nt", "Philemon", "-o", str(tmp_path / "phlm.xyz"))
+    msg = err(app, "bible", "read", "Philemon", "--offline", "-o", str(tmp_path / "phlm.xyz"))
     assert "use a .json or .db/.sqlite extension" in msg
 
 
 def test_nt_books_footer_is_a_cli_command(app):
-    out = ok(app, "greek", "nt-books")
-    assert "aegean greek nt John --ref 1.1-1.18" in out
+    out = ok(app, "bible", "books", "nt")
+    assert "aegean bible read John 1.1-18" in out
     assert "load_nt(" not in out  # no Python in the shell's next step
 
 
