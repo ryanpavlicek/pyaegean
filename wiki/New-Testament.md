@@ -422,7 +422,9 @@ lxx_hits = bib.search_lxx("φῶς", offline=True)
 catena_excerpts = bib.commentary_excerpt("John", query="λόγος", limit=3)
 ```
 
-From the command line (or inside `aegean repl` and the TUI `:` console):
+From the command line — or inside the bare `aegean` / `aegean repl` shell and
+the TUI `:` console (with live inline prediction and dropdown completion for NT/LXX
+books, editions, and early manuscript sigla):
 
 ```bash
 aegean bible read John 1.1 --interlinear

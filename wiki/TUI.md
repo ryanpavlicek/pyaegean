@@ -439,14 +439,19 @@ There is no remove action in the TUI by design (a deletion here is a footgun);
 ### Command console (`:`)
 
 A REPL inside the TUI with **full CLI parity**. Type any command **without** the
-`aegean` prefix (for example `stats lineara --top 5`) and its output renders in a
-scrolling log. It runs through the same dispatcher `aegean repl` uses, so `use
-CORPUS` sets a session corpus, `:examples` works, and every command behaves
-identically to the command line. As you type, a floating completion list offers
-the matching command paths with a one-line description each (`↑`/`↓` to pick,
-`Tab`/`Enter` to complete, `Esc` to close); the inline ghost-text still previews
-the best match. Long or networked commands run on a worker so the console stays
-responsive.
+`aegean` prefix (for example `stats lineara --top 5` or `bible read John 1.1-5`)
+and its output renders in a scrolling log. It runs through the same dispatcher
+and session corpus cache as bare `aegean` / `aegean repl`, so `use CORPUS` sets
+a session corpus, `:examples` works, and every command behaves identically to
+the command line. As you type, a floating completion list offers context-aware
+predictions across every command (1-, 2-, and 3-level nested subcommands,
+including `bible` and `greek interop`/`conllu`/`annotation-profiles`),
+deduplicated `--flag` options, and offline domain values (corpora, fetchable
+datasets, NT/LXX books, NT editions, manuscript sigla, meters, dictionaries, and
+output formats) with a one-line description each (`↑`/`↓` to pick, `Tab`/`Enter`
+to accept, `Tab` on a blank argument to reopen, `Esc` to close); inline ghost
+text previews the top history or live prediction (`Right`/`End` to accept). Long
+or networked commands run on a worker so the console stays responsive.
 
 The console needs the `[cli]` extra (typer + rich). If it is missing, the input is
 disabled with a one-line message pointing you at `pip install 'pyaegean[cli]'`.

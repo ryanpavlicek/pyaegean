@@ -136,7 +136,7 @@ ready to type:
 ```bash
 pip install "pyaegean[cli]"
 aegean --version
-# pyaegean 0.65.0
+# pyaegean 0.66.0
 ```
 
 The MCP server currently exposes these tools to a connected agent: `list_corpora`,
@@ -153,7 +153,7 @@ touches the network: it all runs on the bundled, offline data:
 
 ```python
 import aegean
-print(aegean.__version__)                 # 0.65.0
+print(aegean.__version__)                 # 0.66.0
 print(aegean.registered_scripts())        # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 print(len(aegean.load("lineara")))        # 1721
 print(len(aegean.load("greek")))          # 5  (bundled offline sample; real works
@@ -170,7 +170,7 @@ If you installed `[cli]`, the same checks from the shell:
 
 ```bash
 aegean --version
-# pyaegean 0.65.0
+# pyaegean 0.66.0
 
 aegean info lineara
 #                             aegean corpus: lineara
@@ -208,7 +208,7 @@ aegean doctor
 │    │ check    │ value                     │
 ├────┼──────────┼───────────────────────────┤
 │ OK │ python   │ 3.14.4                    │
-│ OK │ pyaegean │ 0.65.0                    │
+│ OK │ pyaegean │ 0.66.0                    │
 │ OK │ platform │ Windows-11-10.0.26200-SP0 │
 └────┴──────────┴───────────────────────────┘
 …four more tables: optional extras, data store, neural model bundles, analysis cache…
@@ -363,17 +363,19 @@ downloadable from the [Digital Classicist Greek-fonts list](https://wiki.digital
 
 `aegean --install-completion` installs Tab-completion for the shell you run it
 from (detected automatically); open a new shell afterward and
-`aegean gre<Tab>`, `aegean greek syl<Tab>` complete. `aegean --show-completion`
-prints the completion script instead, to inspect or wire in yourself. One line
-per supported shell family:
+`aegean gre<Tab>`, `aegean greek syl<Tab>`, and `aegean bible read J<Tab>`
+complete (including NT/LXX books, editions, and manuscript sigla).
+`aegean --show-completion` prints the completion script instead, to inspect or
+wire in yourself. One line per supported shell family:
 
 - **bash**: writes `~/.bash_completions/aegean.sh` and sources it from `~/.bashrc`
 - **zsh**: writes `~/.zfunc/_aegean` and wires it into `~/.zshrc`
 - **fish**: writes `~/.config/fish/completions/aegean.fish`
 - **PowerShell / pwsh**: appends the completer to your PowerShell `$PROFILE`
 
-(Inside `aegean repl` you get Tab-completion of commands and options with no
-setup at all: it's built into the shell.)
+(Running bare `aegean` in an interactive terminal opens the interactive shell
+directly with live inline ghost-text suggestions and dropdown completion across
+every command, `--flag`, and domain value — no shell setup required.)
 
 ## Windows: seeing Greek correctly (UTF-8)
 

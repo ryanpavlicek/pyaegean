@@ -9,7 +9,7 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.65.0 (beta).** Usable and tested, but the API may still shift
+> **Latest PyPI release: v0.66.0 (beta).** Usable and tested, but the API may still shift
 > before 1.0. This README follows the current release.
 > Analytical and generative output on the
 > *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
@@ -188,7 +188,7 @@ with `--json` on every data-producing command and stdin piping:
 ```bash
 aegean quickstart                              # the guided first five minutes, offline
 aegean doctor                                  # check the environment (extras, data store, models)
-aegean repl                                    # interactive shell: run commands without the `aegean` prefix
+aegean                                         # interactive shell (on a TTY): live inline ghost-text + dropdown prediction (`aegean repl` for scripts)
 aegean tui                                     # full-screen terminal UI: browse a corpus, the Greek workbench, Biblical Greek (`b`), the data store (`[tui]` extra)
 aegean show lineara HT13                       # one tablet, line by line
 aegean balance lineara --strict                # reconcile every stated total
@@ -305,7 +305,7 @@ If pyaegean helped with work you publish, please cite it. In the scholarly spiri
   author  = {Pavlicek, Ryan},
   title   = {{pyaegean: a Python toolkit for Ancient Greek and the Aegean syllabic scripts}},
   year    = {2026},
-  version = {0.65.0},
+  version = {0.66.0},
   url     = {https://github.com/ryanpavlicek/pyaegean}
 }
 ```

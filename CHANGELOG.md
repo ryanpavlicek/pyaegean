@@ -4,6 +4,46 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.66.0 (2026-11-25)
+
+### Added
+
+- **Default interactive REPL (`aegean`) and unified predictive completion across CLI, REPL, and TUI**:
+  - Running bare `aegean` in an interactive terminal now launches the interactive shell directly
+    (`aegean --help` or non-TTY/piped invocations continue to print the command map, and
+    `aegean repl` remains available for explicit or scripted sessions).
+  - Added a unified context-aware completion and inline-prediction engine (`aegean.cli._complete`)
+    powering the interactive shell (`aegean` / `aegean repl`), the TUI command console (`:`), and
+    native Click/Typer shell completion (`aegean --install-completion`), covering all 1-, 2-, and
+    3-level nested commands (including `aegean bible` and `aegean greek interop`/`conllu`/
+    `annotation-profiles`), deduplicated `--flag` options, and offline domain values (corpora,
+    fetchable datasets, 27 NT books, 55 Septuagint books, 5 NT editions, comma-separated
+    manuscript sigla and editions, 10 Greek meters, 6 dictionaries, output formats, review
+    layouts, and AI providers).
+  - Added fish-style dim inline ghost-text suggestions (`Right`/`End` to accept) backed by
+    persistent history plus live context-aware predictions in the interactive shell and TUI
+    command console, and added offline `bible` starter lines to `:examples`.
+
+### Changed
+
+- **Faster startup and runtime caching**:
+  - Made top-level `aegean` subpackages (`ai`, `cache`, `geo`, `greek`, `io`, `translate`) and
+    `aegean.scripts.greek.load_work` lazy via PEP 562 `__getattr__`, and deferred the Greek
+    tokenizer import inside `aegean.scripts.greek.loader`, cutting cold `import aegean` time by
+    more than 3× while preserving 100% public-API and static-typing parity.
+  - Added pre-folded search indexes for Septuagint (`search_lxx`) and Strong's/Dodson
+    (`search_strongs`) queries, and added a bounded, mtime-validated per-session read-only corpus
+    cache in the interactive shell and TUI console so repeated commands avoid re-parsing the same
+    corpus.
+- **Internal modularization and documentation**:
+  - Modularized the remote dataset registry (`aegean.data._registry`), Greek CLI command groups
+    (`_greek_interop`, `_greek_works`, `_greek_eval`), and TUI biblical screen adapters
+    (`aegean.tui._bible_data`) with full re-export compatibility.
+  - Documented the Biblical & Koine Greek specialist suite and interactive shell / predictive
+    completion across `README.md`, `docs/index.md`, `docs/api/index.md`, and the full wiki
+    (`Home`, `_Sidebar`, `CLI`, `CLI-Cheatsheet`, `TUI`, `Installation`, `New-Testament`, and
+    `Development`).
+
 ## 0.65.0 (2026-11-24)
 
 ### Added
