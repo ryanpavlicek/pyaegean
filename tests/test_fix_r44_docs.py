@@ -19,7 +19,7 @@ _NOTICE = _REPO / "NOTICE"
 _MANIFEST = _REPO / "scripts" / "surface-manifest.json"
 _DATA_PROV = _REPO / "wiki" / "Data-and-Provenance.md"
 _WORKS = _REPO / "wiki" / "Greek-Works-and-Books.md"
-_CLI = _REPO / "wiki" / "CLI.md"
+_CLI_GREEK = _REPO / "wiki" / "CLI-Greek.md"
 _CHEAT = _REPO / "wiki" / "CLI-Cheatsheet.md"
 _BENCH = _REPO / "wiki" / "Benchmarks.md"
 
@@ -141,7 +141,7 @@ def test_bekker_semantics_stated_on_every_surface() -> None:
 
     wiki_pages = {
         "Greek-Works-and-Books.md": _WORKS.read_text(encoding="utf-8"),
-        "CLI.md": _CLI.read_text(encoding="utf-8"),
+        "CLI-Greek.md": _CLI_GREEK.read_text(encoding="utf-8"),
         "CLI-Cheatsheet.md": _CHEAT.read_text(encoding="utf-8"),
     }
     for name, text in wiki_pages.items():

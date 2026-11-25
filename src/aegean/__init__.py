@@ -44,13 +44,13 @@ from .core import (
 )
 
 if TYPE_CHECKING:
-    from . import ai, analysis, cache, geo, greek, io, translate, viz
+    from . import ai, analysis, cache, geo, greek, io, library, translate, viz
     from .core.diagnose import DiagnoseReport, diagnose
     from .core.resolve import read_corpus
 
 
 _LAZY_SUBMODULES: frozenset[str] = frozenset(
-    {"ai", "analysis", "cache", "geo", "greek", "io", "translate", "viz"}
+    {"ai", "analysis", "cache", "geo", "greek", "io", "library", "translate", "viz"}
 )
 _LAZY_ATTRS: dict[str, tuple[str, str]] = {
     "read_corpus": (".core.resolve", "read_corpus"),
@@ -142,6 +142,7 @@ __all__ = [
     "greek",
     "ai",
     "io",
+    "library",
     "translate",
     "viz",
     "__version__",

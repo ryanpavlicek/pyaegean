@@ -42,7 +42,8 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
         except Exception:
             return (
                 f"Could not load {passage!r} ({edition}): {nt_exc}\n"
-                "Tip: run `aegean data fetch nt-corpus`, `nt-editions`, or `lxx-corpus` in Data Store (d)."
+                "Press f (or click Download above) to install the missing text right here, "
+                "or press l to open the Library Manager."
             )
 
     lines: list[str] = []
@@ -83,7 +84,8 @@ def bible_compare_text(passage: str, *, offline: bool = True) -> str:
     except Exception as exc:
         return (
             f"Multi-edition comparison unavailable for {book} {ref}: {exc}\n"
-            "Tip: fetch `nt-editions` (~1.7 MB) from Data Store (d) to compare SBLGNT, SRGNT, Byzantine, and TR."
+            "Press f (or click Download above) to install `nt-editions` (~1.7 MB) for "
+            "SBLGNT, SRGNT, Byzantine Majority, and Textus Receptus."
         )
     out = [f"{cmp.book} {cmp.ref} — {len(cmp.verses)} verse(s), {cmp.variant_verse_count} with variants", ""]
     for v in cmp.verses:
@@ -111,7 +113,8 @@ def bible_witnesses_text(passage: str, *, hand: str = "original", offline: bool 
     except Exception as exc:
         return (
             f"Early manuscript witnesses unavailable for {book} {ref}: {exc}\n"
-            "Tip: fetch `nt-witnesses` (~2.0 MB) from Data Store (d) for Sinaiticus, Vaticanus, Alexandrinus, Bezae, and P45–P75."
+            "Press f (or click Download above) to install `nt-witnesses` (~2.0 MB) for "
+            "Sinaiticus, Vaticanus, Alexandrinus, Bezae, and P45–P75."
         )
     out: list[str] = []
     for vc in rows:

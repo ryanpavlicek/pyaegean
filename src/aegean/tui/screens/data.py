@@ -68,6 +68,7 @@ class DataStoreScreen(Screen[None]):
 
     BINDINGS = [
         ("f", "fetch", "Fetch"),
+        ("x", "remove_selected", "Remove"),
         ("r", "refresh_store", "Refresh"),
     ]
 
@@ -84,6 +85,7 @@ class DataStoreScreen(Screen[None]):
             yield DataTable(id="data-datasets")
             with Horizontal(id="data-actions"):
                 yield Button("Fetch selected", id="data-fetch", variant="primary")
+                yield Button("Remove selected", id="data-remove", variant="error")
                 yield ProgressBar(id="data-progress", show_eta=False)
             yield Static("", id="data-status")
         yield Footer()
@@ -203,10 +205,31 @@ class DataStoreScreen(Screen[None]):
     def _is_downloaded(self, name: str) -> bool:
         return any(r.name == name and r.downloaded for r in adapter.dataset_rows())
 
-    # ── fetch action ──────────────────────────────────────────────────────────
+    # ── fetch / remove actions ────────────────────────────────────────────────
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "data-fetch":
             self.action_fetch()
+        elif event.button.id == "data-remove":
+            self.action_remove_selected()
+
+    def action_remove_selected(self) -> None:
+        """Delete the highlighted downloaded dataset from the local store."""
+        name = self._selected_dataset()
+        if name is None:
+            self._set_status("select a dataset to remove")
+            return
+        if not self._is_downloaded(name):
+            self._set_status(f"{name} is not downloaded")
+            return
+        try:
+            reclaimed = adapter.remove_dataset(name)
+        except adapter.TuiError as exc:
+            self._set_status(str(exc))
+            self.app.notify(str(exc), severity="error")
+            return
+        self._refresh_dataset_row(name)
+        self._render_report()
+        self._set_status(f"removed {name} ({_human_size(reclaimed)} reclaimed)")
 
     def action_refresh_store(self) -> None:
         """Re-read the environment report and dataset table from disk."""

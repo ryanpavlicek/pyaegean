@@ -30,9 +30,10 @@ from typing import TYPE_CHECKING
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Input, Static
+from textual.widgets import Button, Footer, Header, Input, Static
+from textual.worker import get_current_worker
 
 from .. import data as adapter
 from ..widgets import CorpusList, DetailPane, DocTable
@@ -87,6 +88,21 @@ class CorpusBrowserScreen(Screen[None]):
         height: auto;
         padding: 0 1;
     }
+    CorpusBrowserScreen #corpus-download-bar {
+        height: auto;
+        padding: 0 1;
+        margin: 0 1;
+        border: round $accent;
+        background: $panel;
+        align-vertical: middle;
+    }
+    CorpusBrowserScreen #corpus-download-bar.hidden {
+        display: none;
+    }
+    CorpusBrowserScreen #corpus-download-msg {
+        width: 1fr;
+        padding: 0 1;
+    }
     CorpusBrowserScreen #corpus-docs {
         height: 1fr;
     }
@@ -94,6 +110,7 @@ class CorpusBrowserScreen(Screen[None]):
 
     BINDINGS = [
         Binding("slash", "focus_search", "Search", show=True),
+        Binding("f", "download_missing", "Download", show=True),
         Binding("tab", "cycle_focus", "Cycle panes", show=False),
     ]
 
@@ -109,6 +126,9 @@ class CorpusBrowserScreen(Screen[None]):
         self._loading_id: str | None = None
         self._load_gen: int = 0
         self._shown_doc_id: str | None = None
+        self._pending_download_corpus: str | None = None
+        self._pending_download_asset: str | None = None
+        self._downloading: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -116,6 +136,9 @@ class CorpusBrowserScreen(Screen[None]):
         with Vertical(id="corpus-middle"):
             yield Input(placeholder=_SEARCH_PLACEHOLDER, id="corpus-search")
             yield Static("", id="corpus-status")
+            with Horizontal(id="corpus-download-bar", classes="hidden"):
+                yield Static("", id="corpus-download-msg", markup=False)
+                yield Button("Download", id="corpus-download-btn", variant="primary")
             yield DocTable(id="corpus-docs")
         # A scroll container, not a plain Vertical, so a long document (a whole Iliad
         # book) scrolls: Tab focuses it, then arrows / PageUp / PageDown / mouse wheel
@@ -163,6 +186,12 @@ class CorpusBrowserScreen(Screen[None]):
         ):
             self._open_corpus(selected)
 
+    def _hide_download_bar(self) -> None:
+        self._pending_download_corpus = None
+        self._pending_download_asset = None
+        if self.is_mounted:
+            self.query_one("#corpus-download-bar", Horizontal).add_class("hidden")
+
     # ── corpus selection ──────────────────────────────────────────────────────
     def on_list_view_selected(self, event: CorpusList.Selected) -> None:
         """Choosing a corpus on the left loads it and sets the shared selection."""
@@ -174,23 +203,119 @@ class CorpusBrowserScreen(Screen[None]):
     def _open_corpus(self, corpus_id: str) -> None:
         """Load ``corpus_id`` into the document table off the UI thread.
 
-        Resolves via :func:`~aegean.tui.data.read_corpus_spec`, so besides the
-        registered corpora this also opens a fetched Greek work id (``tlg0012.tlg001``)
-        or a ``.json``/``.db`` file, the same superset the CLI accepts. Loading runs
-        in an exclusive background thread worker so large or fetched corpora never
-        freeze the interface, and a newer selection supersedes any in-flight load."""
+        If ``corpus_id`` is a fetchable corpus that has not yet been downloaded,
+        shows an inline Download bar so the user can fetch it with one click (or
+        key ``f``) and automatically open it once stored."""
         status = self.query_one("#corpus-status", Static)
+        missing = adapter.missing_corpus_item(corpus_id)
+        if missing is not None:
+            self._load_gen += 1
+            self._loading_id = None
+            self._corpus = None
+            self._all_rows = []
+            self._loaded_id = None
+            self._shown_doc_id = None
+            self._pending_download_corpus = corpus_id
+            self._pending_download_asset = missing.id
+            self.query_one("#corpus-docs", DocTable).set_documents([])
+            self.query_one("#corpus-list", CorpusList).highlight_id(corpus_id)
+            status.update(f"{corpus_id} is not downloaded yet ({missing.size_hint}).")
+            bar = self.query_one("#corpus-download-bar", Horizontal)
+            bar.remove_class("hidden")
+            self.query_one("#corpus-download-msg", Static).update(
+                f"{missing.title} ({missing.size_hint}) is not downloaded yet."
+            )
+            btn = self.query_one("#corpus-download-btn", Button)
+            btn.label = f"Download {corpus_id}"
+            btn.disabled = self._downloading
+            self.query_one("#corpus-detail", DetailPane).update(
+                f"{missing.title}\n\n"
+                f"Press f (or click Download above) to install {missing.id} ({missing.size_hint}), "
+                "or press l to open the Library Manager."
+            )
+            return
+
+        self._hide_download_bar()
         self._shown_doc_id = None
         self._load_gen += 1
         self._loading_id = corpus_id
         status.update(f"loading {corpus_id}…")
         self._load_corpus_worker(corpus_id, self._load_gen)
 
+    def action_download_missing(self) -> None:
+        """Download the currently selected uninstalled corpus (key ``f``)."""
+        if self._downloading or not self._pending_download_asset or not self._pending_download_corpus:
+            return
+        self._downloading = True
+        corpus_id = self._pending_download_corpus
+        asset_id = self._pending_download_asset
+        self.query_one("#corpus-download-btn", Button).disabled = True
+        self.query_one("#corpus-download-msg", Static).update(f"Downloading {asset_id}…")
+        self._download_corpus_worker(corpus_id, asset_id)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "corpus-download-btn":
+            self.action_download_missing()
+
+    @work(exclusive=True, thread=True, group="corpus-download")
+    def _download_corpus_worker(self, corpus_id: str, asset_id: str) -> None:
+        worker = get_current_worker()
+
+        def on_progress(msg: str) -> None:
+            if self.app.is_running:
+                try:
+                    self.app.call_from_thread(self._set_download_msg, msg)
+                except RuntimeError:
+                    pass
+
+        try:
+            adapter.library_install(
+                [asset_id],
+                on_progress=on_progress,
+                abort=lambda: worker.is_cancelled,
+            )
+        except adapter.FetchCanceled as exc:
+            self._deliver_download_done(corpus_id, asset_id, str(exc), canceled=True)
+            return
+        except adapter.TuiError as exc:
+            self._deliver_download_done(corpus_id, asset_id, str(exc), canceled=False)
+            return
+        self._deliver_download_done(corpus_id, asset_id, None, canceled=False)
+
+    def _set_download_msg(self, msg: str) -> None:
+        if self.is_mounted:
+            self.query_one("#corpus-download-msg", Static).update(msg)
+
+    def _deliver_download_done(
+        self, corpus_id: str, asset_id: str, error: str | None, *, canceled: bool
+    ) -> None:
+        if not self.app.is_running:
+            return
+        try:
+            self.app.call_from_thread(
+                self._apply_download_done, corpus_id, asset_id, error, canceled
+            )
+        except RuntimeError:
+            return
+
+    def _apply_download_done(
+        self, corpus_id: str, asset_id: str, error: str | None, canceled: bool
+    ) -> None:
+        self._downloading = False
+        if not self.is_mounted:
+            return
+        self.query_one("#corpus-download-btn", Button).disabled = False
+        if error is not None:
+            self.notify(error, severity="warning" if canceled else "error")
+            self.query_one("#corpus-download-msg", Static).update(error)
+            return
+        self.notify(f"Installed {asset_id}", severity="information")
+        self._refresh_corpus_list()
+        self._open_corpus(corpus_id)
+
     @work(exclusive=True, thread=True, group="corpus-load")
     def _load_corpus_worker(self, corpus_id: str, gen: int) -> None:
         """Read ``corpus_id`` and build its document rows on a background thread."""
-        from textual.worker import get_current_worker
-
         worker = get_current_worker()
         if worker.is_cancelled:
             return

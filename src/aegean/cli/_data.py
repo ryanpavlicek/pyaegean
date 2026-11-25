@@ -39,72 +39,10 @@ def _human_size(n: int) -> str:
 
 
 def _entry_paths(root: Path, name: str, *, version: str | None = None) -> list[Path]:
-    """Everything in the store belonging to one dataset: the real artifact(s) plus
-    any leftover partial-download or extraction files.
+    """Every path in the store belonging to one dataset (delegates to ``aegean.data``)."""
+    from aegean.data import dataset_entry_paths
 
-    Uses the same on_disk-aware paths as ``data list`` / ``doctor`` (via
-    ``on_disk_paths``), so a dataset a backend writes under a different filename
-    (a prebuilt lexicon index -> ``lsj-perseus-index.json.gz``, an ``agdt-derived``
-    member) is actually found and removed, not just the empty ``root/name`` probe
-    (which left ``list`` reporting it downloaded while ``remove`` refused it). Kept
-    versioned entries (``<name>@<version>`` from ``fetch(name, version=...)``) are
-    folded in too, so ``data remove NAME`` reclaims them instead of orphaning
-    unreclaimable disk. ``.lock`` files are excluded from removal targets (a held
-    lock signals an in-progress fetch; the caller guards on it).
-
-    ``version`` restricts the result to one kept release's entries
-    (``<name>@<version>`` and its siblings), for surgical removal that leaves the
-    current copy and the other versions in place."""
-    from aegean.data import _REMOTE, on_disk_paths, versioned_entry_paths
-
-    if version is not None:
-        # Surgical, single-version removal: only that kept release's entries.
-        return [p for p in versioned_entry_paths(name, root, version=version)
-                if not p.name.endswith(".lock")]
-
-    spec = _REMOTE.get(name)
-    paths = list(on_disk_paths(spec, root)) if spec is not None else [root / name]
-    paths += [
-        # the raw dataset-named copy an older fetch may have left (before fetch()
-        # normalized single-file datasets to their on_disk name) plus the
-        # partial-download / extraction leftovers, all in the dataset's namespace
-        root / name,
-        root / (name + ".part"),
-        root / (name + ".part.info"),
-        root / (name + ".extract"),
-        root / (name + ".old"),     # a superseded extraction awaiting cleanup (re-pin swap)
-        root / (name + ".sha256"),  # the extract-dataset stamp (sha of the unpacked archive)
-    ]
-    # Every kept-version entry (``<name>@<version>`` plus its download/extraction
-    # siblings), so a full remove reclaims the versioned footprint; the ``.lock`` of
-    # an in-progress versioned fetch is left for the caller's in-progress guard.
-    paths += [p for p in versioned_entry_paths(name, root) if not p.name.endswith(".lock")]
-    seen: set[Path] = set()
-    out: list[Path] = []
-    for p in paths:  # de-dup: on_disk defaults to [root/name], which may repeat
-        if p not in seen:
-            seen.add(p)
-            out.append(p)
-    return out
-
-
-def _prune_empty_parents(root: Path, paths: list[Path]) -> None:
-    """Delete now-empty subdirectories left after removing a dataset's files.
-
-    The fold assets materialize into a shared subdir (``papygreek-grc/``); removing one
-    dataset's files there can leave the subdir empty. Walk each removed path's parents up
-    to (never including) ``root`` and rmdir any that are now empty, so a remove leaves no
-    stray empty directory. ``rmdir`` refuses a non-empty dir, so a subdir another dataset
-    still occupies is untouched; ``root`` itself is never removed."""
-    root = root.resolve()
-    for p in paths:
-        parent = p.parent
-        while parent != root and root in parent.parents:
-            try:
-                parent.rmdir()  # fails on a non-empty dir — the intended guard
-            except OSError:
-                break
-            parent = parent.parent
+    return dataset_entry_paths(name, root, version=version)
 
 
 def _resolve_name(name: str) -> str:
@@ -399,9 +337,7 @@ def remove(
     on its own); `aegean data fetch NAME` downloads a removed dataset again.
     Removing a dataset also reclaims any kept ``--version`` entries it holds;
     `--version v1` removes only that one pinned release."""
-    import shutil
-
-    from aegean.data import _REMOTE, cache_dir, versioned_entry_paths
+    from aegean.data import _REMOTE, DataNotAvailableError, cache_dir, remove_dataset
 
     if version is not None and remove_all:
         raise fail("--version deletes one dataset's kept release; it cannot combine with --all")
@@ -418,48 +354,12 @@ def remove(
     names = sorted(_REMOTE) if remove_all else [name or ""]
     removed: list[dict[str, Any]] = []
     for n in names:
-        # A held lock means a fetch is in progress; removing under it would corrupt the
-        # transfer or be silently undone. The current-pin fetch holds ``<n>.lock``; a
-        # versioned fetch holds ``<n>@<version>.lock``. Check the locks in scope.
-        locked = []
-        from aegean._locking import FileLock
-
-        if version is None and FileLock.is_locked(root / (n + ".lock")):
-            locked.append(n)
-        locked += [
-            p.name for p in versioned_entry_paths(n, root, version=version)
-            if p.name.endswith(".lock") and FileLock.is_locked(p)
-        ]
-        if locked:
-            scope = f"{n}@{version}" if version is not None else n
-            raise fail(
-                f"a fetch of {scope!r} appears to be in progress — let it finish "
-                f"(or delete {locked[0]} in the store if it is stale) and retry"
-            )
-        # Gate on the full target set, not the main entry: an interrupted
-        # first fetch leaves only .part/.part.info orphans, and those must be
-        # removable too.
-        targets = [p for p in _entry_paths(root, n, version=version) if p.exists()]
-        if not targets:
-            continue
-        entry = targets[0]  # the real artifact removed (root/name for most; the index file otherwise)
-        size = sum(_on_disk_bytes(p) for p in targets)
         try:
-            for p in targets:
-                if p.is_dir():
-                    shutil.rmtree(p)
-                else:
-                    p.unlink()
-        except OSError as exc:
-            # a file held open by another process (a concurrent fetch, an open reader):
-            # one clean line, not a traceback, and no false "removed" claim
-            raise fail(
-                f"could not remove {n!r}: a file is in use ({exc}); "
-                "if a fetch is running, retry after it finishes"
-            ) from None
-        _prune_empty_parents(root, targets)  # a now-empty materialization subdir leaves nothing behind
-        label = f"{n}@{version}" if version is not None else n
-        removed.append({"name": label, "path": str(entry), "bytes": size})
+            res = remove_dataset(n, version=version, root=root)
+        except DataNotAvailableError as exc:
+            raise fail(str(exc)) from None
+        if res is not None:
+            removed.append(res)
 
     if not remove_all and not removed:
         if version is not None:

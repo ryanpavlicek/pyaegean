@@ -79,6 +79,14 @@ __all__ = [
     "fetch_work",
     "fetch_author_works",
     "remove_work",
+    "remove_dataset",
+    "library_summary",
+    "library_packs",
+    "library_items",
+    "library_install",
+    "library_remove",
+    "missing_corpus_item",
+    "missing_bible_items",
     "config_path",
     "load_tui_config",
     "save_tui_config",
@@ -1484,6 +1492,118 @@ def save_tui_config(data: dict[str, Any]) -> None:
         path.write_text(json.dumps(data), encoding="utf-8")
     except OSError:
         pass
+
+
+# ── Unified library manager adapter helpers ──────────────────────────────
+
+
+def library_summary() -> dict[str, Any]:
+    """Unified local library status across all categories and packs (offline)."""
+    from .. import library
+
+    return library.summary()
+
+
+def library_packs() -> list[Any]:
+    """Installation status for every named pack (offline)."""
+    from .. import library
+
+    return library.list_packs()
+
+
+def library_items(
+    *,
+    category: str | None = None,
+    status: str | None = None,
+    query: str | None = None,
+    include_works: bool = False,
+    limit: int | None = None,
+) -> list[Any]:
+    """List unified library items with optional filters (offline)."""
+    from .. import library
+
+    return library.list_items(
+        category=category,
+        status=status,
+        query=query,
+        include_works=include_works,
+        limit=limit,
+    )
+
+
+def library_install(
+    targets: str | list[str],
+    *,
+    force: bool = False,
+    on_progress: Callable[[str], None] | None = None,
+    abort: Callable[[], bool] | None = None,
+) -> list[Any]:
+    """Install one or more library targets (packs, datasets, works), translating errors to TuiError."""
+    from .. import library
+    from ..data import FetchAborted
+
+    try:
+        results = library.install(targets, force=force, progress=on_progress, abort=abort)
+    except FetchAborted:
+        raise FetchCanceled("download canceled (partial download kept)") from None
+    except LookupError as exc:
+        raise TuiError(str(exc)) from None
+    except Exception as exc:
+        raise TuiError(f"download failed: {exc}") from None
+    failed = [r for r in results if r.status == "failed"]
+    if failed and len(failed) == len(results):
+        raise TuiError(f"could not install {failed[0].id}: {failed[0].error}")
+    return results
+
+
+def library_remove(targets: str | list[str]) -> list[Any]:
+    """Remove one or more downloaded datasets, works, or packs from disk."""
+    from .. import library
+
+    try:
+        results = library.remove(targets)
+    except (LookupError, ValueError) as exc:
+        raise TuiError(str(exc)) from None
+    except Exception as exc:
+        raise TuiError(f"removal failed: {exc}") from None
+    failed = [r for r in results if r.status == "failed"]
+    if failed and len(failed) == len(results):
+        raise TuiError(f"could not remove {failed[0].id}: {failed[0].error}")
+    return results
+
+
+def remove_dataset(name: str) -> int:
+    """Remove one downloaded dataset from disk; returns reclaimed bytes or raises TuiError."""
+    from ..data import DataNotAvailableError
+    from ..data import remove_dataset as _remove_dataset
+
+    try:
+        res = _remove_dataset(name)
+    except DataNotAvailableError as exc:
+        raise TuiError(str(exc)) from None
+    if res is None:
+        return 0
+    return int(res["bytes"])
+
+
+def missing_corpus_item(corpus_id: str) -> Any | None:
+    """Return the missing LibraryItem for ``corpus_id`` if not yet downloaded, else None."""
+    from .. import library
+
+    return library.missing_for_corpus(corpus_id)
+
+
+def missing_bible_items(
+    *,
+    tab: str = "interlinear",
+    edition: str = "nestle1904",
+    passage: str = "John 1.1-5",
+) -> list[Any]:
+    """Return missing LibraryItem(s) needed by the active BiblicalScreen view."""
+    from .. import library
+
+    book, ref = _parse_passage_spec(passage)
+    return library.missing_for_bible(tab=tab, edition=edition, book=book, ref=ref)
 
 
 # ── Biblical & Koine Greek study screen adapters (re-exported) ────────────

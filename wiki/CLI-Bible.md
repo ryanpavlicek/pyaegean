@@ -27,10 +27,30 @@ Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [Biblical & K
 | `bible commentary` | List, read, or search 48 Greek patristic commentaries (NT Catenae & Origen) | `aegean bible commentary read Matt` |
 | `bible books` | List NT books (27), LXX books (55), NT editions (5), witnesses (13), or all | `aegean bible books lxx` |
 | `bible psalm` | Convert Masoretic (Hebrew/English) ↔ Septuagint Psalm numbers | `aegean bible psalm 23 --from mt` |
+| `bible status` | Show which Biblical bundles and patristic commentaries are installed on disk | `aegean bible status` |
+| `bible install` | Download all 5 Biblical bundles (or specific items like `editions`, `lxx`, `witnesses`) | `aegean bible install` |
 
 Passage references accept both dot and colon notation (`1.1-5`, `1:1-5`, `3.16`, `3:16`,
 `1-3`). Septuagint books (`Gen`, `Exod`, `Ps`, `Isa`, `Wis`, …) auto-detect in
 `bible read` and `bible search`.
+
+### Downloading Biblical texts
+
+Bundled offline samples cover `John 1`, `Phlm 1`, `Gen 1:1-5`, and `LXX Ps 22:1-6`. To
+install the full 27-book NT, all 5 editions (Nestle 1904, SBLGNT, SRGNT, Byzantine
+Majority, TR), 13 early manuscripts, 11,142 Extended Strong's entries, and all 55 Swete
+Septuagint books (~25 MB total):
+
+```bash
+aegean bible status                         # see what is already installed
+aegean bible install                        # download all 5 Biblical bundles at once
+aegean bible install editions lxx           # or pick individual bundles by friendly name
+aegean bible install commentary:John        # download patristic commentaries on John
+```
+
+In the TUI (`aegean tui`, press `b`), any tab or edition requiring an uninstalled bundle
+displays an inline **Download** bar right inside the screen (`f` downloads it and reloads
+automatically). See also `aegean library` in [CLI: Corpora, Analysis & Data](CLI-Corpora).
 
 ---
 

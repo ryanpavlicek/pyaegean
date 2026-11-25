@@ -49,8 +49,9 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **`library`** | `status` `packs` `list` `search` `info` `install` `remove` (unified manager for packs, corpora, Biblical bundles, works, commentaries, lexica, models) |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `works` `catalog` `eval` |
-| **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` |
+| **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -73,8 +74,9 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
-| `repl` | Interactive shell (also launched by bare `aegean` on a TTY): run commands without the `aegean` prefix, with live inline ghost-text + dropdown prediction across every command, flag, and domain value (corpora, datasets, NT/LXX books, editions, manuscripts, meters, dictionaries), persistent history, and session corpus caching. Directives: `use CORPUS` (`use off` clears) · `:examples` · `:help` · `:exit` | — | `aegean` (or `aegean repl`) |
-| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): a corpus browser, the Greek workbench, the data store, a **works library** (`w`, fetch + read Greek works), and a **command console** (`:`, any command); keys `h`/`c`/`g`/`d`/`w`, `:` console, `t` theme, `?` help, `Esc` back, `ctrl+p` palette. See the [TUI](TUI) page | — | `aegean tui` |
+| `repl` | Interactive shell (also launched by bare `aegean` on a TTY): run commands without the `aegean` prefix, with live inline ghost-text + dropdown prediction across every command, flag, and domain value (corpora, packs, datasets, NT/LXX books, editions, manuscripts, meters, dictionaries), persistent history, and session corpus caching. Directives: `use CORPUS` (`use off` clears) · `:examples` · `:help` · `:exit` | — | `aegean` (or `aegean repl`) |
+| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): corpus browser (`c`, with inline downloads), Greek workbench (`g`), Biblical Greek (`b`, with inline downloads), **Library Manager** (`l`), works library (`w`), data store (`d`), and command console (`:`); keys `h`/`c`/`g`/`b`/`l`/`w`/`d`, `:` console, `t` theme, `?` help, `Esc` back, `ctrl+p` palette. See the [TUI](TUI) page | — | `aegean tui` |
+| `library` | Unified manager for all corpora, Biblical bundles, ~1,778 Greek works, 48 commentaries, lexica, models, and named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install biblical` |
 | `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |

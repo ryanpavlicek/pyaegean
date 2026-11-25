@@ -37,32 +37,32 @@ TUI with `PYTHONUTF8=1` so Greek and Linear A display correctly.
 A key-by-key tour from a cold start to reading and analyzing a real document. Every
 step names the key you press and what the screen does in response.
 
-1. Run `aegean tui`. The app opens on **Home**: the undeciphered-script banner
-   across the top, the corpus list below it with the first entry (`lineara`)
-   already highlighted and focused, and the key legend at the bottom.
+1. Run `aegean tui`. The app opens on **Home** with the corpus list focused on
+   `lineara` and the key legend at the bottom.
 2. Press `c`. The **corpus browser** opens: the corpus list on the left (focused),
    an empty document table in the middle, and the reader on the right saying
    "Select a corpus on the left to browse its documents."
-3. Press `↓`. The highlight lands on `lineara`, the first entry; `↑`/`↓` move it
-   through the list (an entry whose data is not yet on disk carries a `· fetch` tag).
-4. Press `Enter`. The corpus loads: the status line reads `lineara: 1721 documents`
-   and the middle table fills with one row per document (id, site, period, words,
-   structure). The reader now says "Select a document to read it."
+3. Press `↓`. The highlight moves through the list (an entry whose data is not yet
+   on disk carries a `· fetch` tag; selecting it shows an inline **Download** bar
+   where `f` downloads and opens it without leaving the browser).
+4. Press `Enter` on `lineara`. The corpus loads: the status line reads
+   `lineara: 1721 documents` and the middle table fills with one row per document
+   (id, site, period, words, structure). The reader now says "Select a document to
+   read it."
 5. Press `Tab`. Focus moves to the search box above the table (typing there filters
    by id). Press `Tab` again: focus moves into the document table, with the first
    row under the cursor; `↑`/`↓` move the row highlight.
 6. Press `Enter`. The reader shows the highlighted document. For the first Linear A
    tablet that is: the id (`HT1`), a metadata line (`Haghia Triada · LMIB · Tablet ·
-   HT Scribe 21`), the counts and structure line, the undeciphered caveat, then the
-   numbered token lines with line 1 highlighted. The status line spells out the next
-   move: `HT1 — Tab to the reader, then ↑/↓ to pick a line and Enter (or a) to analyze it`.
+   HT Scribe 21`), the counts and structure line, and the numbered token lines with
+   line 1 highlighted. The status line shows the reader keys:
+   `HT1 — Tab to reader: ↑/↓ line · ←/→ word · i interlinear · Enter/a analyze`.
 7. Press `Tab`. The reader gains focus: its border and its "reading" title turn
    accent-colored. `↑`/`↓` now move the highlighted **line cursor** through the
    text (PgUp/PgDn jump ten lines at a time, Home/End go to the first and last line).
 8. Press `Enter` (or `a`). The **line-analysis popup** opens over the reader: the
    chosen line at the top, a short list of the analyses that fit its script, and the
-   first one already run below (for a Linear A line, the exploratory transliteration
-   table with its caveat). `↑`/`↓` and `Enter` in that list run a different analysis.
+   first one already run below. `↑`/`↓` and `Enter` in that list run a different analysis.
 9. Press `Esc`. The popup closes and you are back in the reader, with the line
    cursor where you left it.
 10. Press `?`. The help overlay lists every global key and what the command palette
@@ -74,28 +74,44 @@ navigates back, so when in doubt press `Esc` and look at where the focus went.
 
 ---
 
+## Managing texts, packs, and inline downloads
+
+You never have to leave a screen or remember internal asset IDs to download missing data:
+
+- **Inline downloads in Biblical Greek (`b`)**: selecting an edition (such as Byzantine
+  Majority or SBLGNT), manuscript witnesses, full 27-book NT, Extended Strong's, or the
+  55-book Septuagint when its bundle is not yet cached reveals a contextual **Download**
+  bar right below the passage bar. Click **Download** (or press `f`) to download the exact
+  bundle needed, or click **Biblical Pack** to install all 5 Biblical bundles at once; the
+  active view reloads automatically when the download finishes.
+- **Inline downloads in the Corpus Browser (`c`)**: selecting an uninstalled corpus
+  (`damos`, `sigla`, `nt`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`) reveals an inline
+  **Download** bar (`f` downloads it in the background and opens it automatically).
+- **Unified Library Manager (`l`)**: one tabbed manager across the entire toolkit:
+  - **Packs**: one-click install (`f`) or remove (`x`) for `biblical`, `aegean`,
+    `epigraphy`, `lexica`, and `neural`.
+  - **Installed**: every bundled and downloaded resource currently on disk, with sizes,
+    **Open (`o`)**, and **Remove (`x`)**.
+  - **Corpora & Biblical**, **Works & Commentaries**, and **Lexica & Models**: filter with
+    `/`, download with `f`, open with `o`, or remove with `x`.
+
+---
+
 ## Three everyday tasks
 
 The same key-by-key style, for the three things a new user most often wants.
 
 ### Fetch DAMOS and browse it
 
-DAMOS is the full Linear B corpus (~5,900 tablets), fetch-on-demand rather than
-bundled. The data store is where it enters the local store.
+DAMOS is the full Linear B corpus (~5,900 tablets), downloaded on demand.
 
-1. Press `d`. The **data store** opens: the environment report tables first (versions,
-   extras, store location, models, cache), then the dataset table listing the
-   fetchable datasets with their state, on-disk size, and license.
-2. Press `Tab` until the dataset table holds the focus (the report tables come first
-   in the Tab order), then `↓` to the `damos-corpus` row.
-3. Press `f`. The download runs on a background worker: the status line below the
-   table reports `fetching damos-corpus…` and then `stored damos-corpus`, and the
-   row flips to `downloaded` with its real size. A second `f` while a fetch is in
-   flight is refused rather than starting a duplicate download.
-4. Press `c`, move the highlight to `damos` in the corpus list, and press `Enter`.
-   The whole corpus loads (allow a moment); the status line reads
-   `damos: 5932 documents`.
-5. Press `/` and type `KN`. The table narrows to the Knossos tablets and the status
+1. Press `c` to open the **corpus browser**, move the highlight to `damos`, and press
+   `Enter`. An inline **Download** bar appears (`DAMOS Linear B Corpus (~3.0 MB)`).
+2. Click **Download damos** (or press `f`). The download runs on a background worker and
+   automatically opens DAMOS in the document table (`damos: 5932 documents`) when done.
+   (Alternatively, press `l` to install the whole `aegean` pack — DAMOS + SigLA — in one
+   click from the Library Manager.)
+3. Press `/` and type `KN`. The table narrows to the Knossos tablets and the status
    line reads `4228 of 5932 documents match id 'KN'`. Press `Tab` to move into the
    filtered table and `Enter` on a row to read that tablet.
 

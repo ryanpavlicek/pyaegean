@@ -418,9 +418,9 @@ def test_greek_eval_has_bootstrap_flag(app):
     assert "target must be" in err(app, "greek", "eval", "nope", "--bootstrap")
 
 
-def test_greek_nt_loads(app):
-    data = json.loads(ok(app, "greek", "nt", "John", "--ref", "1.1-1.5", "--json"))
-    assert data["scope"] == "John" and data["documents"] >= 1 and data["tokens"] > 0
+def test_bible_read_loads(app):
+    data = json.loads(ok(app, "bible", "read", "John", "1.1-5", "--offline", "--json"))
+    assert data["book"] == "John" and len(data["verses"]) == 5 and data["verses"][0]["tokens"]
 
 
 def test_greek_pipeline_with_stubbed_joint(app, monkeypatch):

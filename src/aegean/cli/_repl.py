@@ -76,6 +76,7 @@ _EXAMPLES: tuple[tuple[str, str], ...] = (
     ("bible psalm 23 --from mt", "Biblical Greek: Masoretic ↔ Septuagint Psalm numbering"),
     ("bible search φῶς --lxx --offline", "Biblical Greek: Septuagint concordance (offline sample)"),
     ("analyze compare po-me ποιμήν", "cross-script phonetic comparison"),
+    ("library status", "unified overview of installed corpora, packs, works, and models"),
     ("data list", "the fetchable datasets and what is local"),
     ("use lineara", "set a session corpus for corpus-first commands"),
     ("show HT13", "…which can then drop the corpus argument"),

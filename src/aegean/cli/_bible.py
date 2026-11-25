@@ -23,6 +23,7 @@ from ._common import console, emit_json, fail, write_corpus
 from ._complete import (
     shell_complete_bible_book,
     shell_complete_bible_collection,
+    shell_complete_bible_install,
     shell_complete_edition,
     shell_complete_nt_book,
     shell_complete_witness,
@@ -39,9 +40,15 @@ def _normalize_ref(ref: str | None) -> str | None:
 
 
 def _cli_nt_error(exc: Exception) -> str:
-    return str(exc).replace(
+    msg = str(exc).replace(
         "greek.nt_books() lists all 27", "`aegean bible books nt` lists all 27"
     )
+    if "not cached" in msg or "allow_fetch=True" in msg or "data fetch" in msg:
+        msg += (
+            "\nInstall missing Biblical texts with `aegean bible install` "
+            "(or `aegean library install biblical`)."
+        )
+    return msg
 
 bible_app = typer.Typer(
     help=(
@@ -773,3 +780,101 @@ def psalm_cmd(
     else:
         rhs = ", ".join(str(n) for n in mapped)
         c.print(f"[cyan]{src.upper()} Psalm {number}[/cyan] ↔ [bold green]{target.upper()} Psalm {rhs}[/bold green]")
+
+
+@bible_app.command("status")
+def status_cmd(
+    json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
+) -> None:
+    """Show which Biblical & Koine Greek texts, editions, witnesses, and commentaries are installed."""
+    from aegean.library import format_size, list_items, list_packs
+
+    pack = next(p for p in list_packs() if p.pack.id == "biblical")
+    bundles = list_items(category="bible")
+    bundle_rows = [it for it in bundles if it.kind == "dataset" and it.id in pack.pack.items]
+    comms_installed = list_items(category="commentary", status="downloaded")
+
+    if json_out:
+        emit_json(
+            {
+                "pack": pack.to_dict(),
+                "bundles": [it.to_dict() for it in bundle_rows],
+                "installed_commentaries": [it.to_dict() for it in comms_installed],
+            }
+        )
+        return
+
+    c = console()
+    from rich.table import Table
+
+    tbl = Table(title=f"Biblical & Koine Greek Texts ({pack.installed_count}/{pack.total_count} bundles installed)")
+    tbl.add_column("ID", style="cyan")
+    tbl.add_column("Status")
+    tbl.add_column("Size", style="dim")
+    tbl.add_column("Contents")
+    for it in bundle_rows:
+        st = "[green]installed[/green]" if it.installed else "[yellow]not installed[/yellow]"
+        sz = format_size(it.bytes) if it.installed and it.bytes else it.size_hint
+        tbl.add_row(it.id, st, sz, it.title)
+    c.print(tbl)
+    c.print(f"[dim]Patristic commentaries downloaded: {len(comms_installed)} of 48[/dim]")
+    if pack.missing_ids:
+        c.print(
+            "[bold]Install all missing bundles:[/bold] `aegean bible install` "
+            "(or e.g. `aegean bible install editions lxx`)"
+        )
+
+
+@bible_app.command("install")
+def install_cmd(
+    targets: list[str] | None = typer.Argument(
+        None,
+        help=(
+            "What to install (default: all 5 Biblical bundles). Accepts: biblical, nt, editions, "
+            "witnesses, strongs, lxx, commentary:<book>, or a TLG work ID."
+        ),
+        autocompletion=shell_complete_bible_install,
+    ),
+    force: bool = typer.Option(False, "--force", help="Re-download even if already installed."),
+    json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
+) -> None:
+    """Download Biblical & Koine Greek texts, editions, witnesses, Strong's, LXX, or commentaries."""
+    from aegean.data import FetchAborted
+    from aegean.library import format_size, install
+
+    wanted = list(targets) if targets else ["biblical"]
+    # Accept bare "all" as an alias for the biblical pack
+    wanted = ["biblical" if t.strip().lower() == "all" else t for t in wanted]
+
+    def _on_progress(msg: str) -> None:
+        if not json_out:
+            print(msg, file=sys.stderr, flush=True)
+
+    try:
+        results = install(wanted, force=force, progress=_on_progress)
+    except (LookupError, FetchAborted) as exc:
+        raise fail(str(exc)) from None
+
+    if json_out:
+        emit_json([r.to_dict() for r in results])
+        if any(r.status == "failed" for r in results):
+            raise typer.Exit(1)
+        return
+
+    c = console()
+    failed = 0
+    for r in results:
+        if r.status == "installed":
+            sz = f" ({format_size(r.bytes)})" if r.bytes else ""
+            c.print(f"[green]installed[/green] {r.id}{sz} — {r.title}")
+        elif r.status == "already_installed":
+            sz = f" ({format_size(r.bytes)})" if r.bytes else ""
+            c.print(f"[dim]already installed[/dim] {r.id}{sz}")
+        elif r.status == "bundled":
+            c.print(f"[dim]bundled[/dim] {r.id}")
+        else:
+            failed += 1
+            c.print(f"[red]failed[/red] {r.id}: {r.error}")
+    if failed:
+        raise typer.Exit(1)
+

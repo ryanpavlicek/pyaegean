@@ -60,6 +60,7 @@ _SCREEN_SPECS: tuple[tuple[str, str, str], ...] = (
     ("corpus", "screens.corpus", "CorpusBrowserScreen"),
     ("greek", "screens.greek", "GreekWorkbenchScreen"),
     ("bible", "screens.bible", "BiblicalScreen"),
+    ("library", "screens.library", "LibraryScreen"),
     ("data", "screens.data", "DataStoreScreen"),
     ("works", "screens.works", "WorksScreen"),
     ("console", "screens.console", "CommandConsoleScreen"),
@@ -116,6 +117,7 @@ class CorpusCommands(Provider):
             ("Go to Corpus browser", "corpus"),
             ("Go to Greek workbench", "greek"),
             ("Go to Biblical Greek study", "bible"),
+            ("Go to Library manager", "library"),
             ("Go to Data store", "data"),
             ("Go to Works library", "works"),
             ("Go to Command console", "console"),
@@ -134,8 +136,8 @@ class CorpusCommands(Provider):
                 commands.append(
                     (
                         f"Fetch dataset {row.name}",
-                        partial(app.goto, "data"),
-                        "Open the data store to fetch it",
+                        partial(app.goto, "library"),
+                        "Open the library manager to download it",
                     )
                 )
 
@@ -146,8 +148,8 @@ class CorpusCommands(Provider):
 
 
 class AegeanApp(App[None]):
-    """The pyaegean terminal UI: browse corpora, the Greek workbench, and the
-    data store, all offline."""
+    """The pyaegean terminal UI: browse corpora, the Greek workbench, Biblical
+    Greek study, and the unified library manager."""
 
     TITLE = "aegean"
     SUB_TITLE = "Ancient Greek + Aegean scripts"
@@ -156,11 +158,8 @@ class AegeanApp(App[None]):
     COMMANDS = App.COMMANDS | {CorpusCommands}
 
     # The screen registry, resolved from ``_SCREEN_SPECS`` at class-definition
-    # time: Home always, plus each of corpus / greek / bible / data whose
-    # ``screens/<name>.py`` module imports cleanly. A screen is added by creating
-    # its module named in ``_SCREEN_SPECS``; nothing else in this file changes.
-    # (Textual rejects placeholder values, so absent screens are simply omitted
-    # rather than declared as None.)
+    # time: Home always, plus each of corpus / greek / bible / library / data
+    # whose ``screens/<name>.py`` module imports cleanly.
     SCREENS = _load_screens()  # type: ignore[assignment]
 
     BINDINGS = [
@@ -169,8 +168,9 @@ class AegeanApp(App[None]):
         Binding("c", "switch('corpus')", "Corpus"),
         Binding("g", "switch('greek')", "Greek"),
         Binding("b", "switch('bible')", "Bible"),
-        Binding("d", "switch('data')", "Data"),
+        Binding("l", "switch('library')", "Library"),
         Binding("w", "switch('works')", "Works"),
+        Binding("d", "switch('data')", "Data"),
         Binding("colon", "console", "Console"),
         Binding("t", "theme", "Theme"),
         Binding("escape", "go_back", "Back"),

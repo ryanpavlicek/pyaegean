@@ -46,7 +46,14 @@ On the command line:
 
 ```bash
 aegean bible read John 1
+aegean bible status         # check which Biblical bundles are cached locally
+aegean bible install        # download all 5 Biblical bundles (~25 MB) at once
 ```
+
+In Python, `aegean.library.install("biblical")` installs the same 5 bundles (`nt-corpus`,
+`nt-editions`, `nt-witnesses`, `strongs-greek`, `lxx-corpus`). In the TUI (`aegean tui`,
+press `b`), missing bundles offer an inline one-click **Download** bar directly inside the
+screen (`f` downloads and reloads automatically).
 
 ---
 

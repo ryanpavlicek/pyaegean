@@ -322,7 +322,56 @@ def _option_value_choices(
             ("openrouter", "OpenRouter"),
             ("local", "local OpenAI-compatible server (Ollama/vLLM)"),
         ], False
+    if opt in ("-c", "--category") and cmd_path[:1] == ("library",):
+        return _library_category_choices(), False
     return [], False
+
+
+def _library_category_choices() -> list[tuple[str, str]]:
+    return [
+        ("corpus", "14 Aegean & Greek corpora"),
+        ("bible", "5 Biblical & Koine Greek bundles"),
+        ("work", "~1,778 Perseus / First1KGreek literary works"),
+        ("commentary", "48 Greek patristic commentaries (Catenae & Origen)"),
+        ("lexicon", "5 hosted Greek dictionaries"),
+        ("model", "4 NLP & neural models"),
+        ("other", "benchmarks, images, and web app"),
+    ]
+
+
+def _library_install_choices() -> list[tuple[str, str]]:
+    from aegean.library import PACKS
+    from aegean.scripts.greek.perseus import POPULAR_WORKS
+
+    out: list[tuple[str, str]] = [
+        (p.id, f"pack · {p.title} ({p.size_hint})") for p in PACKS
+    ]
+    out.extend(_dataset_choices())
+    for w in POPULAR_WORKS:
+        out.append((w["id"], f"{w['author']} — {w['title']}"))
+    return out
+
+
+def _library_remove_choices() -> list[tuple[str, str]]:
+    from aegean.library import PACKS, list_items
+
+    out: list[tuple[str, str]] = []
+    for it in list_items(status="downloaded", include_works=True):
+        out.append((it.id, f"installed · {it.title[:48]}"))
+    for p in PACKS:
+        out.append((p.id, f"pack · {p.title}"))
+    return out
+
+
+def _bible_install_choices() -> list[tuple[str, str]]:
+    return [
+        ("biblical", "all 5 Biblical & Koine Greek bundles (~25 MB)"),
+        ("nt", "27-book Greek NT Nestle 1904 (~18 MB)"),
+        ("editions", "SBLGNT, SRGNT, Byzantine Majority, TR (~1.7 MB)"),
+        ("witnesses", "13 early 2nd–5th c. CE manuscripts (~2.0 MB)"),
+        ("strongs", "11,142 Extended Strong's entries (~1.5 MB)"),
+        ("lxx", "55-book Swete Septuagint (~1.7 MB)"),
+    ]
 
 
 def _commentary_work_choices(book_filter: str | None = None) -> list[tuple[str, str]]:
@@ -345,11 +394,21 @@ def _positional_choices(
 ) -> list[tuple[str, str]]:
     """Return offline domain choices for positional argument ``pos_index`` of ``cmd_path``."""
     pos_tokens = [t for t in prior_tokens if not t.startswith("-")]
+    if cmd_path == ("library", "install"):
+        return _library_install_choices()
+    if cmd_path == ("library", "remove"):
+        return _library_remove_choices()
+    if cmd_path == ("bible", "install"):
+        return _bible_install_choices()
     if pos_index == 0:
         if cmd_path in _CORPUS_FIRST_PATHS:
             return _corpus_choices()
         if cmd_path in (("data", "fetch"), ("data", "remove")):
             return _dataset_choices()
+        if cmd_path == ("library", "list"):
+            return _library_category_choices()
+        if cmd_path == ("library", "info"):
+            return _library_install_choices()
         if cmd_path == ("bridge",):
             return [("linearb", "Mycenaean Linear B"), ("cypriot", "Cypriot syllabary")]
         if cmd_path == ("bible", "read"):
@@ -739,3 +798,20 @@ def shell_complete_dataset(incomplete: str) -> list[tuple[str, str]]:
 
 def shell_complete_corpus(incomplete: str) -> list[tuple[str, str]]:
     return _click_complete(_corpus_choices(), incomplete)
+
+
+def shell_complete_library_category(incomplete: str) -> list[tuple[str, str]]:
+    return _click_complete(_library_category_choices(), incomplete)
+
+
+def shell_complete_library_install_target(incomplete: str) -> list[tuple[str, str]]:
+    return _click_complete(_library_install_choices(), incomplete)
+
+
+def shell_complete_library_remove_target(incomplete: str) -> list[tuple[str, str]]:
+    return _click_complete(_library_remove_choices(), incomplete)
+
+
+def shell_complete_bible_install(incomplete: str) -> list[tuple[str, str]]:
+    return _click_complete(_bible_install_choices(), incomplete)
+

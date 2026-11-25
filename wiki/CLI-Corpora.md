@@ -1,11 +1,47 @@
-# CLI: Corpora, Analysis & Data
+# CLI: Corpora, Library, Analysis & Data
 
-Reference for top-level corpus commands (`info`, `load`, `show`, `search`, `query`, `stats`,
-`dispersion`, `keyness`, `balance`, `cite`, `export`, `combine`, `import`, `geo`, `sign`,
-`bridge`, `plot`, `workbench`), statistical analysis (`aegean analyze`), the local data store
-(`aegean data`), and SQLite full-text databases (`aegean db`).
+Reference for the unified library manager (`aegean library`), top-level corpus commands
+(`info`, `load`, `show`, `search`, `query`, `stats`, `dispersion`, `keyness`, `balance`,
+`cite`, `export`, `combine`, `import`, `geo`, `sign`, `bridge`, `plot`, `workbench`),
+statistical analysis (`aegean analyze`), the low-level data store (`aegean data`), and
+SQLite full-text databases (`aegean db`).
 
 Back to [CLI Overview](CLI) · [CLI Cheatsheet](CLI-Cheatsheet) · [CLI: Greek NLP & Review](CLI-Greek) · [CLI: Biblical & Koine Greek](CLI-Bible) · [CLI: AI & MCP](CLI-AI)
+
+---
+
+## Unified library manager (`aegean library …`)
+
+`aegean library` manages every resource pyaegean supports in one place: bundled corpora,
+downloadable Aegean and Greek epigraphy corpora, Biblical & Koine Greek bundles, ~1,778
+Perseus and First1KGreek literary works, 48 Greek patristic commentaries, hosted
+dictionaries, and neural NLP models.
+
+```bash
+aegean library                              # status overview: installed counts, disk usage, packs
+aegean library packs                        # named packs: biblical, aegean, epigraphy, lexica, neural
+aegean library list --installed             # everything currently available offline on disk
+aegean library list bible                   # filter by category (corpus, bible, work, commentary, lexicon, model, other)
+aegean library search Plato                 # search across all corpora, works, commentaries, lexica, models
+aegean library info nt-editions             # metadata, license, aliases, status, open/install commands
+aegean library install biblical             # download all 5 Biblical & Koine Greek bundles (~25 MB)
+aegean library install damos Iliad          # install by friendly alias, title, TLG ID, or author:<name>
+aegean library install author:Homer         # download every catalogued work by Homer
+aegean library remove damos                 # delete downloaded files and report reclaimed space
+aegean library remove biblical              # remove all datasets in a pack (bundled corpora are never removed)
+```
+
+| Pack | Aliases | Contents | Size |
+|---|---|---|---|
+| `biblical` | `bible`, `koine`, `nt-all` | `nt-corpus`, `nt-editions`, `nt-witnesses`, `strongs-greek`, `lxx-corpus` | ~25 MB |
+| `aegean` | `scripts`, `linear` | `damos-corpus`, `sigla-corpus` | ~4.3 MB |
+| `epigraphy` | `inscriptions` | `isicily-corpus`, `iip-corpus`, `iospe-corpus`, `igcyr-corpus`, `edh-corpus` | ~8.0 MB |
+| `lexica` | `dictionaries`, `lexicons` | `lsj-index`, `middle-liddell-index`, `cunliffe-index`, `autenrieth-index`, `abbott-smith-index` | ~19.3 MB |
+| `neural` | `models`, `nlp` | `grc-joint`, `grc-paradigms` | ~173 MB |
+
+In Python, `aegean.library` exposes the same operations (`summary()`, `list_packs()`,
+`list_items()`, `search()`, `install()`, `remove()`). In the TUI (`aegean tui`), press `l`
+to open the interactive Library Manager.
 
 ---
 

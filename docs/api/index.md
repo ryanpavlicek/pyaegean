@@ -26,6 +26,7 @@ optional review, counting choices, and translation evidence.
 - [`aegean.analysis`](analysis.md): accounting reconciliation, sign-pattern search, statistics, comparison.
 - [`aegean.scripts`](scripts.md): the built-in writing-system plugins and their public facades for [Linear A](scripts-lineara.md), [Linear B](scripts-linearb.md), [Cypriot](scripts-cypriot.md), [Cypro-Minoan](scripts-cyprominoan.md), and [alphabetic Greek](scripts-greek.md).
 - [`aegean.io`](io.md): import your own text or token-carrier EpiDoc; export to EpiDoc, CSV, Parquet, RDF Turtle/JSON-LD, editable and risk-prioritized review spreadsheets, and the intentionally lossy Linear A Research Workbench format. It also exposes complete CoNLL-U envelopes, loss-aware spaCy/Stanza/CLTK adapters, and portable SHA-256-bound interoperability bundles. JSON and SQLite remain the full-fidelity corpus archives.
+- [`aegean.library`](library.md): unified resource manager across all bundled/downloadable corpora, Biblical & Koine Greek bundles, ~1,778 Perseus/First1KGreek literary works, 48 patristic commentaries, lexica, models, and named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`).
 - [`aegean.db`](db.md): SQLite round-trip persistence for a `Corpus` (stdlib-only, queryable rows, FTS5 and optional lexical indexes, lazy streaming, and durable resumable annotation jobs).
 - [`aegean.mcp_server`](mcp.md): the `aegean-mcp` Model Context Protocol server (the `[mcp]` extra).
 

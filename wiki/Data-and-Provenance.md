@@ -1,15 +1,18 @@
 # Data & Provenance
 
-This page is the honest accounting of **where every byte comes from**: what
-ships inside the wheel, what gets fetched on demand, the license and size of
-each dataset, how the cache works, and how to pin an exact data snapshot so a
-paper is reproducible. If you ever need to answer "what edition is this, and may
-I redistribute it?", the answer is here.
+This page documents where every dataset comes from: what ships inside the wheel,
+what downloads on demand, the license and size of each asset, how the local store
+works, and how to pin an exact data snapshot for reproducible papers.
 
-The short version: **code and tiny text JSON are bundled and work offline; large
-or license-restricted assets are never bundled: they download into a local
-cache on first use, sha256-verified.** Nothing is re-hosted that the license
-forbids re-hosting.
+Code and compact text JSON are bundled and work offline; large or license-restricted
+assets download on demand into a permanent local store (`PYAEGEAN_CACHE`), sha256-verified.
+
+> **Managing downloads:** Use the unified Library Manager across all surfaces —
+> `aegean library` on the command line (e.g. `aegean library status`,
+> `aegean library install biblical`, `aegean library search Plato`,
+> `aegean library remove damos`), `aegean.library` in Python, or press `l` inside
+> `aegean tui`. Missing Biblical texts and uninstalled corpora also offer inline
+> one-click downloads directly inside the TUI screens (`b` and `c`).
 
 ---
 

@@ -114,13 +114,14 @@ aegean --version          # pyaegean 0.66.0
 | Group | What's in it |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **`aegean library …`** | `status` `packs` `list` `search` `info` `install` `remove` (unified manager for all corpora, Biblical bundles, ~1,778 Greek works, 48 commentaries, lexica, models, and named packs) |
 | **`aegean greek …`** | normalize → `betacode` → `strip` → tokenize → syllabify → accent → `accentuate` → `sandhi` → `quantities` → scan → `ipa` → `profile` → tag → lemmatize → morph → `inflect` → parse, plus `pipeline`, `explain`, bounded neural `stream`, `annotation-profiles list`/`show`, `interop export`/`import`/`report`, `gloss`/`usage`/`lexica`/`lexicon-link`, `rarity`, `missing-forms`, `conllu inspect`/`export`, `work`/`works`/`catalog`, and `eval` |
-| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` (5 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 48 patristic commentaries) |
+| **`aegean bible …`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` (5 Greek NT editions, 13 early 2nd–5th c. CE manuscripts, Extended Strong's + roots, 55 LXX books, 48 patristic commentaries) |
 | **`aegean analyze …`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`aegean data …`** | `list` `fetch` `remove` `versions` `store` |
 | **`aegean db …`** | `build` `add` `index` `search` `annotate` `job-status` (SQLite + FTS5 + resumable annotation jobs) |
 | **`aegean review …`** | `export` `merge` `apply` (the human-in-the-loop annotation round-trip, editable & risk-prioritized spreadsheets) |
-| **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (exploratory, key-gated) |
+| **`aegean ai …`** | `providers` `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` (key-gated) |
 | **`aegean-mcp`** | a separate console script: serve the tools to AI agents over MCP |
 
 ---
@@ -483,16 +484,17 @@ the command console can run the regular CLI commands.
 
 ### What's on screen
 
-Seven screens, switched with a single key from anywhere:
+Eight screens, switched with a single key from anywhere:
 
 | Screen | Key | What it shows |
 |---|---|---|
 | **Home** | `h` | Corpus overview (13 corpora with on-disk status) and global key legend. |
-| **Corpus browser** | `c` | Corpus list, filterable document table, and apparatus-aware reader with word cursor, live token inspector, inline interlinear toggle (`i`), `KU-RO` / `to-so` balance check, and line-analysis popup (`Enter`/`a`). |
+| **Corpus browser** | `c` | Corpus list, inline one-click download (`f`) for uninstalled corpora, filterable document table, and apparatus-aware reader with word cursor, live token inspector, inline interlinear toggle (`i`), `KU-RO` / `to-so` balance check, and line-analysis popup (`Enter`/`a`). |
 | **Greek workbench** | `g` | Live text box (with Beta Code toggle `b`) over Pipeline, Scansion (10 meters), Syllables, IPA, and Lexicon tabs. |
-| **Biblical Greek** | `b` | Interlinear NT & LXX reader, 5-edition collation, 13 early manuscript witnesses, Strong's + root trees, word study, and LXX search/Psalm converter. |
+| **Biblical Greek** | `b` | Interlinear NT & LXX reader, 5-edition collation, 13 early manuscript witnesses, Strong's + root trees, word study, LXX search/Psalm converter, and inline one-click downloads (`f`) for missing bundles or the full Biblical Pack. |
+| **Library manager** | `l` | Unified manager for named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`), installed items, corpora, ~1,778 literary works, 48 commentaries, lexica, and models (`f` download, `o` open, `x` remove). |
 | **Works library** | `w` | Search the 1,778-work Greek catalogue, fetch works or whole authors, open or remove cached texts. |
-| **Data store** | `d` | Environment report and fetchable datasets table with background download progress. |
+| **Data store** | `d` | Environment report (`doctor`) and fetchable datasets table with download (`f`) and remove (`x`). |
 | **Command console** | `:` | Full-parity `aegean>` console with live context-aware dropdown, inline ghost-text suggestions, and persistent session cache. |
 
 Global keys on every screen: `q` quit, `?` help, `t` theme picker, `Esc` back, `ctrl+p` command palette. See [TUI](TUI) for full documentation.
@@ -506,7 +508,7 @@ Each major command group has its own dedicated page under **Command Line (CLI)**
 | Page | Covers |
 |---|---|
 | [CLI Cheatsheet](CLI-Cheatsheet) | Dense one-page index of every command and flag |
-| [CLI: Corpora, Analysis & Data](CLI-Corpora) | Top-level corpus commands (`info`, `load`, `show`, `search`, `query`, `stats`, `balance`, `export`, `import`, `geo`, `plot`, `workbench`), `aegean analyze`, `aegean data`, and `aegean db` |
+| [CLI: Corpora, Analysis & Data](CLI-Corpora) | Unified library manager (`aegean library`), top-level corpus commands (`info`, `load`, `show`, `search`, `query`, `stats`, `balance`, `export`, `import`, `geo`, `plot`, `workbench`), `aegean analyze`, `aegean data`, and `aegean db` |
 | [CLI: Greek NLP & Review](CLI-Greek) | `aegean greek` (normalization, scansion, tagging, lemmatization, parsing, dictionaries, Perseus/First1KGreek works, CoNLL-U, interop, eval) and `aegean review` |
-| [CLI: Biblical & Koine Greek](CLI-Bible) | `aegean bible` (`read`, `compare`, `witnesses`, `strongs`, `word-study`, `search`, `commentary`, `books`, `psalm`) |
+| [CLI: Biblical & Koine Greek](CLI-Bible) | `aegean bible` (`read`, `compare`, `witnesses`, `strongs`, `word-study`, `search`, `commentary`, `books`, `psalm`, `status`, `install`) |
 | [CLI: AI & MCP](CLI-AI) | `aegean ai`, `aegean-mcp`, troubleshooting, and recipes |

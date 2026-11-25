@@ -17,32 +17,30 @@ __all__ = ["HelpScreen"]
 
 _HELP = """[b]aegean — keys[/b]
 
-  h   Home                 w   Works library
+  h   Home                 l   Library manager (download/remove everything)
   c   Corpus browser       b   Biblical Greek study (NT, MSS, Strong's, LXX)
-  g   Greek workbench      :   Command console (any CLI command)
-  d   Data store           t   Theme picker (live preview)
-  Esc Back / exit input    ?   This help   ·   q   Quit
+  g   Greek workbench      w   Works library (~1,778 Greek literary works)
+  d   Data & environment   :   Command console (any CLI command)
+  t   Theme picker         Esc Back / exit input   ·   ? Help   ·   q Quit
   ctrl+p   Command palette (open a corpus, fetch, jump, theme…)
 
-[b]In the corpus browser[/b]  /  focus search · Tab cycle panes · type a sign
-  pattern (KU-*) to search · ctrl+p 'Open …' opens a corpus or a downloaded work
-  In the reader: ↑/↓ move the line cursor · ←/→ move the word cursor · i inline
-  interlinear gloss · Enter / a analyze the line (parse/tag, neural + OOV, IPA,
-  glosses, scansion, translate for Greek; signs + Greek reading for syllabic)
+[b]In the corpus browser (c)[/b]  /  focus search · Tab cycle panes · f download
+  selected uninstalled corpus · type a sign pattern (KU-*) to search ·
+  In the reader: ↑/↓ line · ←/→ word · i inline gloss · Enter / a analyze line
 
 [b]Biblical Greek study (b)[/b]  interlinear NT · 5-edition comparison · 2nd–5th c.
-  manuscript witnesses · Strong's word study · LXX (55 books) & NT Catenae
+  manuscript witnesses · Strong's word study · LXX (55 books) & NT Catenae ·
+  f downloads any missing text for the active tab/edition directly inline
 
-[b]Works library (w)[/b]  search by author/title · f fetch · a fetch whole author
-  · Enter open a fetched work · x remove a downloaded work
+[b]Library manager (l)[/b]  unified view of packs (biblical, aegean, epigraphy,
+  lexica, neural), installed texts, corpora, works, commentaries, and models ·
+  / filter · f download · o open · x remove
 
 [b]Command console (:)[/b]  type any command without the 'aegean' prefix
-  (e.g. bible compare John 1.18) · a completion list opens as you type:
-  ↑/↓ pick · Tab/Enter complete · Esc close · ↑/↓ history when closed
-  · use CORPUS sets a session corpus
+  (e.g. library install biblical, bible compare John 1.18) ·
+  ↑/↓ pick · Tab/Enter complete · Esc close · use CORPUS sets session corpus
 
-[dim]Undeciphered scripts (Linear A, Cypro-Minoan) show exploratory analysis,
-never a reading.  Esc or q to close.[/dim]
+[dim]Press Esc or q to close.[/dim]
 """
 
 

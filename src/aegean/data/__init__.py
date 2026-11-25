@@ -56,6 +56,7 @@ __all__ = [
     "available_versions",
     "bundled_data_version",
     "cache_dir",
+    "dataset_entry_paths",
     "download_file",
     "downloaded_bytes",
     "fetch",
@@ -68,6 +69,7 @@ __all__ = [
     "load_gzip_json",
     "on_disk_paths",
     "present_paths",
+    "remove_dataset",
     "sha256_file",
     "versioned_bytes",
     "versioned_entry_paths",
@@ -1407,3 +1409,115 @@ def load_corpus_version(
     db_files = sorted(pathlib.Path(path).glob("*.sqlite"))
     db_path = db_files[0] if db_files else pathlib.Path(path) / "ddbdp.sqlite"
     return from_sqlite(db_path, progress=progress)
+
+
+def dataset_entry_paths(
+    name: str,
+    root: pathlib.Path | None = None,
+    *,
+    version: str | None = None,
+) -> list[pathlib.Path]:
+    """Every path in the local store belonging to dataset ``name``.
+
+    Includes ``on_disk_paths``, partial-download / extraction siblings, and kept
+    ``<name>@<version>`` entries, excluding ``.lock`` files. When ``version`` is
+    given, restricts results to that pinned release only.
+    """
+    store_root = cache_dir() if root is None else root
+    if version is not None:
+        return [
+            p
+            for p in versioned_entry_paths(name, store_root, version=version)
+            if not p.name.endswith(".lock")
+        ]
+
+    spec = _REMOTE.get(name)
+    paths = list(on_disk_paths(spec, store_root)) if spec is not None else [store_root / name]
+    paths += [
+        store_root / name,
+        store_root / (name + ".part"),
+        store_root / (name + ".part.info"),
+        store_root / (name + ".extract"),
+        store_root / (name + ".old"),
+        store_root / (name + ".sha256"),
+    ]
+    paths += [
+        p for p in versioned_entry_paths(name, store_root) if not p.name.endswith(".lock")
+    ]
+    seen: set[pathlib.Path] = set()
+    out: list[pathlib.Path] = []
+    for p in paths:
+        if p not in seen:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
+def _prune_empty_parents(root: pathlib.Path, paths: list[pathlib.Path]) -> None:
+    """Remove empty parent subdirectories beneath ``root`` left after dataset removal."""
+    resolved_root = root.resolve()
+    for p in paths:
+        parent = p.parent
+        while parent != resolved_root and resolved_root in parent.parents:
+            try:
+                parent.rmdir()
+            except OSError:
+                break
+            parent = parent.parent
+
+
+def remove_dataset(
+    name: str,
+    *,
+    version: str | None = None,
+    root: pathlib.Path | None = None,
+) -> dict[str, Any] | None:
+    """Safely remove downloaded files for dataset ``name`` from the local store.
+
+    Checks active fetch locks before deleting and prunes empty subdirectories.
+    Returns ``{"name", "path", "bytes"}`` when files were removed, or ``None``
+    when nothing was on disk. Raises `DataNotAvailableError` if ``name`` is
+    unknown or if a fetch is actively holding a lock or file handle.
+    """
+    import shutil
+
+    if name not in _REMOTE:
+        raise DataNotAvailableError(f"unknown dataset {name!r}; known: {sorted(_REMOTE)}")
+
+    store_root = cache_dir() if root is None else root
+    locked: list[str] = []
+    if version is None and FileLock.is_locked(store_root / (name + ".lock")):
+        locked.append(name + ".lock")
+    locked += [
+        p.name
+        for p in versioned_entry_paths(name, store_root, version=version)
+        if p.name.endswith(".lock") and FileLock.is_locked(p)
+    ]
+    if locked:
+        scope = f"{name}@{version}" if version is not None else name
+        raise DataNotAvailableError(
+            f"a fetch of {scope!r} appears to be in progress — let it finish "
+            f"(or delete {locked[0]} in the store if it is stale) and retry"
+        )
+
+    targets = [p for p in dataset_entry_paths(name, store_root, version=version) if p.exists()]
+    if not targets:
+        return None
+
+    entry = targets[0]
+    size = sum(_dir_bytes(p) for p in targets)
+    try:
+        for p in targets:
+            if p.is_dir():
+                shutil.rmtree(p)
+            else:
+                p.unlink()
+    except OSError as exc:
+        raise DataNotAvailableError(
+            f"could not remove {name!r}: a file is in use ({exc}); "
+            "if a fetch is running, retry after it finishes"
+        ) from None
+    _prune_empty_parents(store_root, targets)
+    label = f"{name}@{version}" if version is not None else name
+    return {"name": label, "path": str(entry), "bytes": size}
+
