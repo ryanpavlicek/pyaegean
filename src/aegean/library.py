@@ -794,7 +794,7 @@ def list_items(
         scored.sort(key=lambda pair: (-pair[0], pair[1].category, pair[1].id))
         items = [it for _, it in scored]
 
-    if limit is not None and limit >= 0:
+    if limit is not None and limit > 0:
         return items[:limit]
     return items
 

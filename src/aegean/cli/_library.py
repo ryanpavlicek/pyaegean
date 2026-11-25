@@ -155,7 +155,7 @@ def list_cmd(
     available: bool = typer.Option(False, "--available", "-a", help="Show not-yet-downloaded items only."),
     show_all: bool = typer.Option(False, "--all", help="Include all ~1,778 Greek literary works."),
     query: str | None = typer.Option(None, "--query", "-q", help="Filter by id, title, author, or alias."),
-    limit: int | None = typer.Option(None, "--limit", "-n", help="Cap the number of rows displayed."),
+    limit: int | None = typer.Option(None, "--limit", "--top", "-n", help="Cap the number of rows displayed (0 = all)."),
     json_out: bool = JSON_OPT,
 ) -> None:
     """List corpora, Biblical texts, Greek works, commentaries, lexica, and models."""
@@ -166,13 +166,14 @@ def list_cmd(
         raise fail("use only one of --installed, --downloaded, or --available")
     status_filter = flags[0] if flags else None
 
+    eff_limit = None if (limit is None or limit <= 0) else limit
     try:
         items = list_items(
             category=category,
             status=status_filter,
             query=query,
             include_works=show_all,
-            limit=limit,
+            limit=eff_limit,
         )
     except ValueError as exc:
         raise fail(str(exc)) from None
@@ -185,7 +186,12 @@ def list_cmd(
         console().print("No matching library items.")
         return
 
-    cap = limit if limit is not None else (60 if category in ("work", "commentary") or show_all else len(items))
+    if limit == 0:
+        cap = len(items)
+    elif limit is not None:
+        cap = limit
+    else:
+        cap = 60 if category in ("work", "commentary") or show_all else len(items)
     shown = items[:cap]
     rows = [
         [
@@ -202,7 +208,7 @@ def list_cmd(
     table(title, ["id", "category", "status", "title"], rows)
     if len(items) > len(shown):
         console().print(
-            f"[dim]Showing {len(shown)} of {len(items)} — pass --limit N or `aegean library search <query>` to narrow.[/dim]"
+            f"[dim]Showing {len(shown)} of {len(items)} — pass --limit 0 or `aegean library search <query>` to narrow.[/dim]"
         )
 
 
@@ -217,7 +223,7 @@ def search_cmd(
         autocompletion=shell_complete_library_category,
     ),
     installed: bool = typer.Option(False, "--installed", "-i", help="Only search installed items."),
-    limit: int = typer.Option(30, "--limit", "-n", help="Maximum matches to show."),
+    limit: int = typer.Option(30, "--limit", "--top", "-n", help="Maximum matches to show (0 = all)."),
     json_out: bool = JSON_OPT,
 ) -> None:
     """Search across all corpora, Biblical bundles, 1,778 Greek works, commentaries, lexica, and models."""

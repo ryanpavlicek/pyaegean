@@ -11,12 +11,15 @@ The command tree mirrors the public API:
   ``tui`` (the interactive terminal UI, the ``[tui]`` extra),
   ``workbench`` (serve the Linear A Workbench locally), and ``repl`` (the
   interactive shell);
+- ``aegean library …``: unified corpus, Biblical bundle, Greek literary work,
+  commentary, lexicon, model, and pack manager (``status``, ``packs``, ``list``,
+  ``search``, ``info``, ``install``, ``remove``);
 - ``aegean greek …``: the full Greek NLP pipeline (normalize → … → parse,
   plus ``pipeline`` and the ``eval`` reproductions), with ``--neural`` /
   ``--treebank`` / … flags standing in for the ``use_*()`` activations;
 - ``aegean bible …``: Biblical & Koine Greek specialist tools (``read``,
   ``compare``, ``witnesses``, ``strongs``, ``word-study``, ``search``,
-  ``commentary``, ``books``, ``psalm``);
+  ``commentary``, ``books``, ``psalm``, ``status``, ``install``);
 - ``aegean analyze …``: distance, alignment, cross-script comparison,
   association statistics, morphological clusters, structure census;
 - ``aegean data …``: the fetch-to-store data layer (``fetch``, ``list``,
@@ -113,8 +116,8 @@ def _build_app() -> Any:
             "interactive shell; every data-producing command takes --json."
         ),
         epilog=(
-            "Start with: aegean · aegean library · aegean info lineara "
-            "· aegean bible read John 1.1-5 — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
+            "Start with: aegean (or aegean repl) · aegean quickstart · aegean library · "
+            "aegean info lineara · aegean bible read John 1.1-5 — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
         context_settings={"help_option_names": ["-h", "--help"]},
     )
