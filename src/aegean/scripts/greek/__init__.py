@@ -20,6 +20,8 @@ from . import igcyr  # noqa: F401 — registers the IGCyr/GVCyr corpus loader on
 from . import edh  # noqa: F401 — registers the EDH corpus loader on import
 from . import ddbdp  # noqa: F401 — registers the DDbDP corpus loader on import
 from .inventory import greek_inventory
+from typing import TYPE_CHECKING
+
 from .ddbdp import ddbdp_db, load_ddbdp
 from .edh import load_edh
 from .igcyr import load_igcyr
@@ -27,12 +29,23 @@ from .iip import load_iip
 from .iospe import load_iospe
 from .isicily import load_isicily
 from .nt import load_nt
-from .perseus import load_work
+
+if TYPE_CHECKING:
+    from .perseus import load_work
 
 __all__ = [
     "Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe", "load_igcyr",
     "load_edh", "load_ddbdp", "ddbdp_db",
 ]
+
+
+def __getattr__(name: str) -> object:
+    if name == "load_work":
+        from .perseus import load_work as _load_work
+
+        globals()["load_work"] = _load_work
+        return _load_work
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class Greek(Script):

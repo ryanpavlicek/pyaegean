@@ -16,11 +16,12 @@ from ...core.model import Document, DocumentMeta
 from ...core.provenance import Provenance
 from ...data import bundled_data_version
 from ...data import load_bundled_json
-from ...greek.tokenize import tokenize
 from .inventory import greek_inventory
 
 
 def _build_document(rec: dict[str, Any]) -> Document:
+    from ...greek.tokenize import tokenize
+
     text = rec.get("text", "")
     tokens = tokenize(text)
     meta = DocumentMeta(

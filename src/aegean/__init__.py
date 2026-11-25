@@ -15,18 +15,13 @@ fetched to cache.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 # Keep top-level import independent of importlib.metadata's comparatively large
 # discovery stack. The release gate pins this value to pyproject.toml.
 __version__ = "0.65.0"
 
-from . import ai  # noqa: F401 — multi-provider AI layer (SDKs lazy/optional)
-from . import cache  # noqa: F401 — opt-in persistent cache for expensive analyses (off by default)
-from . import geo  # noqa: F401 — geographic analysis (geopandas/shapely lazy/optional)
-from . import greek  # noqa: F401 — Greek NLP pipeline
-from . import io  # noqa: F401 — corpus interchange, review, and persistence adapters
 from . import scripts  # noqa: F401 — registers built-in scripts (Linear A, Greek)
-from . import translate  # noqa: F401 — hybrid lexicon+LLM translation
 from ._log import set_verbosity  # opt-in library logging (off by default; stdlib logging)
 from .core import (
     Corpus,
@@ -48,6 +43,22 @@ from .core import (
     registered_scripts,
 )
 
+if TYPE_CHECKING:
+    from . import ai, analysis, biblical, cache, geo, greek, io, translate, viz
+    from .core.diagnose import DiagnoseReport, diagnose
+    from .core.resolve import read_corpus
+
+
+_LAZY_SUBMODULES: frozenset[str] = frozenset(
+    {"ai", "analysis", "biblical", "cache", "geo", "greek", "io", "translate", "viz"}
+)
+_LAZY_ATTRS: dict[str, tuple[str, str]] = {
+    "read_corpus": (".core.resolve", "read_corpus"),
+    "diagnose": (".core.diagnose", "diagnose"),
+    "DiagnoseReport": (".core.diagnose", "DiagnoseReport"),
+}
+
+
 def load(script_id: str, *, version: str | None = None) -> Corpus:
     """Load a registered corpus by id, e.g. ``aegean.load("lineara")``.
 
@@ -66,24 +77,28 @@ def load(script_id: str, *, version: str | None = None) -> Corpus:
     return Corpus.load(script_id, version=version)
 
 
-from .core.resolve import read_corpus  # noqa: E402 — flexible loader (id/work/file/stdin)
-from .core.diagnose import DiagnoseReport, diagnose  # noqa: E402 — corpus health report
-
-
 def __getattr__(name: str) -> object:
-    """Load the analysis/biblical/visualization facades on first use."""
-
-    if name in {"analysis", "biblical", "viz"}:
+    """Load top-level subpackages and diagnostic helpers lazily on first access."""
+    if name in _LAZY_SUBMODULES:
         from importlib import import_module
 
-        return import_module(f".{name}", __name__)
+        mod = import_module(f".{name}", __name__)
+        globals()[name] = mod
+        return mod
+    target = _LAZY_ATTRS.get(name)
+    if target is not None:
+        from importlib import import_module
+
+        mod_path, attr = target
+        val = getattr(import_module(mod_path, __name__), attr)
+        globals()[name] = val
+        return val
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__() -> list[str]:
-    """Include lazily exported namespaces in module discovery."""
-
-    return sorted({*globals(), "analysis", "biblical", "viz"})
+    """Include lazily exported namespaces and helpers in module discovery."""
+    return sorted({*globals(), *_LAZY_SUBMODULES, *_LAZY_ATTRS})
 
 
 def combine(corpora: "Iterable[Corpus]", *, dedupe: str = "error") -> Corpus:

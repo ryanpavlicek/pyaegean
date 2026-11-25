@@ -92,6 +92,7 @@ class _ExtendedStrongsIndex:
         self.meta = meta
         self._by_exact: dict[str, StrongsEntry] = {}
         self._by_fold: dict[str, StrongsEntry] = {}
+        self._search_rows: list[tuple[str, str, str, str, str, StrongsEntry]] | None = None
         for entry in entries.values():
             if not entry.lemma:
                 continue
@@ -128,6 +129,27 @@ class _ExtendedStrongsIndex:
                 return hit
         return None
 
+    def _get_search_rows(self) -> list[tuple[str, str, str, str, str, StrongsEntry]]:
+        if self._search_rows is not None:
+            return self._search_rows
+        built: list[tuple[str, str, str, str, str, StrongsEntry]] = []
+        for sid_k, entry in self.entries.items():
+            # Skip lettered variant duplicates when their base entry is present unless needed
+            if not sid_k[-1].isdigit() and sid_k[:-1] in self.entries:
+                continue
+            built.append(
+                (
+                    _fold(entry.lemma),
+                    entry.translit.lower(),
+                    entry.gloss.lower(),
+                    entry.definition.lower(),
+                    entry.kjv_def.lower(),
+                    entry,
+                )
+            )
+        self._search_rows = built
+        return built
+
     def search(self, query: str, *, limit: int = 20) -> list[StrongsEntry]:
         q = query.strip()
         if not q:
@@ -141,23 +163,13 @@ class _ExtendedStrongsIndex:
         exact_hits: list[StrongsEntry] = []
         prefix_hits: list[StrongsEntry] = []
         gloss_hits: list[StrongsEntry] = []
-        seen: set[str] = set()
-        for sid_k, entry in self.entries.items():
-            # Skip lettered variant duplicates when their base entry is present unless needed
-            if not sid_k[-1].isdigit() and sid_k[:-1] in self.entries:
-                continue
-            lf = _fold(entry.lemma)
-            tf = entry.translit.lower()
-            gl = entry.gloss.lower()
+        for lf, tf, gl, df, kf, entry in self._get_search_rows():
             if lf == q_fold or tf == q_low or gl == q_low:
                 exact_hits.append(entry)
-                seen.add(sid_k)
             elif lf.startswith(q_fold) or tf.startswith(q_low):
                 prefix_hits.append(entry)
-                seen.add(sid_k)
-            elif q_low in gl or q_low in entry.definition.lower() or q_low in entry.kjv_def.lower():
+            elif q_low in gl or q_low in df or q_low in kf:
                 gloss_hits.append(entry)
-                seen.add(sid_k)
         all_hits = exact_hits + prefix_hits + gloss_hits
         return all_hits if limit <= 0 else all_hits[:limit]
 
@@ -317,6 +329,28 @@ def strongs_roots(
     return _walk(entry, 0, frozenset({entry.strongs}))
 
 
+_DODSON_SEARCH_ROWS: list[tuple[str, str, str, StrongsEntry]] | None = None
+
+
+def _dodson_search_rows() -> list[tuple[str, str, str, StrongsEntry]]:
+    global _DODSON_SEARCH_ROWS
+    if _DODSON_SEARCH_ROWS is not None:
+        return _DODSON_SEARCH_ROWS
+    lex = _dodson_cached()
+    rows: list[tuple[str, str, str, StrongsEntry]] = []
+    for raw in lex._by_strongs.values():
+        item = StrongsEntry(
+            strongs=normalize_strongs_id(raw.strongs) or f"G{raw.strongs}",
+            lemma=raw.lemma,
+            gloss=raw.gloss,
+            definition=raw.definition,
+            source="dodson (offline)",
+        )
+        rows.append((_fold(raw.lemma), raw.gloss.lower(), raw.definition.lower(), item))
+    _DODSON_SEARCH_ROWS = rows
+    return rows
+
+
 def search_strongs(
     query: str,
     *,
@@ -330,7 +364,7 @@ def search_strongs(
         idx = _load_extended_if_cached()
     if idx is not None:
         return idx.search(query, limit=limit)
-    # Offline fallback over bundled Dodson
+    # Offline fallback over bundled Dodson (pre-folded cached rows)
     q = query.strip()
     if not q:
         return []
@@ -338,24 +372,14 @@ def search_strongs(
     if sid is not None:
         hit = _dodson_entry(sid)
         return [hit] if hit is not None else []
-    lex = _dodson_cached()
     q_fold = _fold(q)
     q_low = q.lower()
     exact: list[StrongsEntry] = []
     partial: list[StrongsEntry] = []
-    for raw in lex._by_strongs.values():
-        lf = _fold(raw.lemma)
-        gl = raw.gloss.lower()
-        item = StrongsEntry(
-            strongs=normalize_strongs_id(raw.strongs) or f"G{raw.strongs}",
-            lemma=raw.lemma,
-            gloss=raw.gloss,
-            definition=raw.definition,
-            source="dodson (offline)",
-        )
+    for lf, gl, df, item in _dodson_search_rows():
         if lf == q_fold or gl == q_low:
             exact.append(item)
-        elif q_fold in lf or q_low in gl or q_low in raw.definition.lower():
+        elif q_fold in lf or q_low in gl or q_low in df:
             partial.append(item)
     all_hits = exact + partial
     return all_hits if limit <= 0 else all_hits[:limit]

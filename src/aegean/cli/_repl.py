@@ -88,9 +88,16 @@ def register(app: typer.Typer) -> None:
 
 @dataclasses.dataclass
 class _Session:
-    """Mutable per-shell state: the corpus stored by the ``use`` directive."""
+    """Mutable per-shell state: the ``use`` corpus and bounded in-session corpus cache."""
 
     corpus: str | None = None
+    corpus_cache: Any = dataclasses.field(default_factory=lambda: _new_session_cache())
+
+
+def _new_session_cache() -> Any:
+    from collections import OrderedDict
+
+    return OrderedDict()
 
 
 def _is_group(cmd: object) -> bool:
@@ -155,10 +162,13 @@ def _run_line(group: click.Group, line: str, session: _Session) -> bool:
         print("aegean: already in the interactive shell.", file=sys.stderr)
         return True
     args = _with_session_corpus(args, session.corpus)
+    from ._common import session_corpus_cache
+
     try:
         # Re-enter the CLI as if freshly invoked; non-standalone so Click raises
         # instead of exiting the process, keeping the shell alive line to line.
-        group.main(args=args, prog_name="aegean", standalone_mode=False)
+        with session_corpus_cache(session.corpus_cache):
+            group.main(args=args, prog_name="aegean", standalone_mode=False)
     except SystemExit:
         pass  # e.g. --help calls ctx.exit(); not a reason to leave the shell
     except Exception as exc:  # any command error must not end the session

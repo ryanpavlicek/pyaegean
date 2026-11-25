@@ -18,8 +18,10 @@ import dataclasses
 import enum
 import json
 import sys
+from collections import OrderedDict
 from collections.abc import Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -28,6 +30,24 @@ import typer
 
 # One console for human output; created lazily so --json paths never import rich.
 _console: Any = None
+
+# Optional bounded per-REPL-session read-only corpus cache (never active in one-shot CLI).
+_SESSION_CORPUS_CACHE: ContextVar[OrderedDict[str, tuple[float | None, Any]] | None] = ContextVar(
+    "aegean_cli_session_corpus_cache", default=None
+)
+_SESSION_CACHE_MAX = 8
+
+
+@contextmanager
+def session_corpus_cache(
+    cache: OrderedDict[str, tuple[float | None, Any]],
+) -> Iterator[None]:
+    """Bind an interactive REPL session's corpus cache for the duration of one command."""
+    token = _SESSION_CORPUS_CACHE.set(cache)
+    try:
+        yield
+    finally:
+        _SESSION_CORPUS_CACHE.reset(token)
 
 
 def console() -> Any:
@@ -73,18 +93,47 @@ def read_text(text: str) -> str:
     return text
 
 
+def _file_mtime(spec: str) -> float | None:
+    p = Path(spec)
+    if p.suffix.lower() in (".json", ".db", ".sqlite", ".sqlite3"):
+        try:
+            return p.stat().st_mtime
+        except OSError:
+            return None
+    return None
+
+
 def load_corpus(name: str) -> Any:
     """Resolve a corpus from a registered id, a Greek work id, a .json/.db file, or '-'.
 
-    Delegates to :func:`aegean.read_corpus`; failures become a clean one-line CLI error."""
-    from aegean.core.resolve import CorpusNotFound, read_corpus
+    Delegates to :func:`aegean.read_corpus`; failures become a clean one-line CLI error.
+    Inside an interactive REPL session, caches read-only corpus loads (checking file mtime
+    for file-backed corpora) so repeated commands over the same corpus skip re-parsing."""
+    from aegean.core.resolve import CorpusNotFound, opens_json, read_corpus
+
+    cache = _SESSION_CORPUS_CACHE.get()
+    cacheable = cache is not None and name != "-" and not opens_json(name)
+    mtime: float | None = None
+    if cacheable and cache is not None:
+        mtime = _file_mtime(name)
+        hit = cache.get(name)
+        if hit is not None and hit[0] == mtime:
+            cache.move_to_end(name)
+            return hit[1]
 
     try:
-        return read_corpus(name)
+        corp = read_corpus(name)
     except CorpusNotFound as exc:
         raise fail(str(exc)) from None
     except Exception as exc:  # network/parse/etc. — surface a clean message, not a traceback
         raise fail(f"could not load corpus {name!r}: {exc}") from None
+
+    if cacheable and cache is not None:
+        cache[name] = (mtime, corp)
+        cache.move_to_end(name)
+        while len(cache) > _SESSION_CACHE_MAX:
+            cache.popitem(last=False)
+    return corp
 
 
 @contextmanager

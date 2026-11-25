@@ -309,6 +309,32 @@ def load_lxx(
     return Corpus(docs, script_id="greek", provenance=prov)
 
 
+# Per-bundle pre-folded search index: keyed by id(source_map) so force-reloads and
+# monkeypatched test bundles stay automatically isolated with zero stale hits.
+_LXX_FOLD_INDEX: tuple[int, dict[str, tuple[tuple[str, str, str], ...]]] | None = None
+
+
+def _folded_book_verses(
+    source_key: int,
+    book_name: str,
+    vmap: dict[str, str],
+) -> tuple[tuple[str, str, str], ...]:
+    """Return ordered ``(cv, raw_text, folded_text)`` tuples for ``book_name``, cached per bundle."""
+    global _LXX_FOLD_INDEX
+    if _LXX_FOLD_INDEX is None or _LXX_FOLD_INDEX[0] != source_key:
+        _LXX_FOLD_INDEX = (source_key, {})
+    by_book = _LXX_FOLD_INDEX[1]
+    cached = by_book.get(book_name)
+    if cached is not None:
+        return cached
+    rows = tuple(
+        (cv, text, _fold(text))
+        for cv, text in sorted(vmap.items(), key=lambda kv: _verse_sort_key(kv[0]))
+    )
+    by_book[book_name] = rows
+    return rows
+
+
 def search_lxx(
     query: str,
     *,
@@ -333,6 +359,7 @@ def search_lxx(
 
     bundle = _load_lxx_bundle(allow_fetch=not offline)
     using_sample = bundle is None
+    source_key = id(_OFFLINE_LXX_SAMPLE) if using_sample else id(bundle)
 
     if book is not None:
         book_specs = [resolve_lxx_book(book)]
@@ -354,8 +381,8 @@ def search_lxx(
             if using_sample
             else bundle["books"][bspec.name]["verses"]  # type: ignore[index]
         )
-        for cv, text in sorted(vmap.items(), key=lambda kv: _verse_sort_key(kv[0])):
-            if q_fold not in _fold(text):
+        for cv, text, folded_text in _folded_book_verses(source_key, bspec.name, vmap):
+            if q_fold not in folded_text:
                 continue
             words = [t.text for t in tokenize(text) if any(ch.isalpha() for ch in t.text)]
             matched = tuple(
