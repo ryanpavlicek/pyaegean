@@ -97,6 +97,14 @@ covers the six fetchable epigraphic and papyrological corpora (I.Sicily, IIP, IO
 IGCyr/GVCyr, the EDH Greek subset, and the DDbDP documentary papyri), per-token reading
 statuses, and each corpus's edition-fidelity flag.
 
+**I study Biblical & Koine Greek (NT, Septuagint, early manuscripts).**
+[Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament) and the
+[`aegean.biblical`](api/biblical.md) reference cover the `aegean bible` CLI, the `b` screen in
+`aegean tui`, 5 collated Greek NT editions (`nestle1904`, `sblgnt`, `srgnt`, `byz`, `tr`),
+13 early 2nd–5th c. CE manuscript witnesses with *nomina sacra* expansion, 11,142-entry Extended
+Strong's with root tracing, the 55-book Swete Septuagint (`lxx-corpus`), and 48 Greek patristic
+commentaries (*Catenae* and Origen).
+
 **I study the Aegean scripts.**
 [Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A) is the per-script
 handbook (Linear B, Cypriot, and Cypro-Minoan have siblings), and

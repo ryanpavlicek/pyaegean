@@ -21,7 +21,7 @@
 - [Choosing a Pipeline](Choosing-a-Pipeline)
 - [Reading a Parse](Reading-a-Parse)
 - [Greek Works & Books](Greek-Works-and-Books)
-- [New Testament](New-Testament)
+- [Biblical & Koine Greek](New-Testament)
 - [Meters](Meters)
 
 **Capabilities**

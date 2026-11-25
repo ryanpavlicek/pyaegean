@@ -50,6 +50,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `nt` `works` `catalog` `nt-books` `eval` |
+| **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
 | **`db`** | `build` `add` `search` |
@@ -747,6 +748,26 @@ aegean greek eval proiel --drift                            # where the PROIEL g
 
 The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 [Limitations](Limitations).
+
+---
+
+## Biblical & Koine Greek — `aegean bible …`
+
+Multi-edition Greek NT collation, early 2nd–5th c. CE manuscript witnesses, Extended
+Strong's + roots, 55-book Swete Septuagint (LXX), and 48 Greek patristic commentaries.
+Full reference: [Biblical & Koine Greek](New-Testament).
+
+| Command | What it does | Key flags | One-line example |
+|---|---|---|---|
+| `read` | Read NT or LXX passage (plain or word-by-word interlinear) | `-e/--edition --lxx -i/--interlinear --offline --json` | `aegean bible read John 1.1-5 --interlinear` |
+| `compare` | Word-level variant diff across 5 NT editions | `-e/--editions --offline --json` | `aegean bible compare John 1.18` |
+| `witnesses` | Compare 13 early NT manuscripts (with *nomina sacra* expanded) | `-s/--sigla --hand --offline --json` | `aegean bible witnesses John 18.37 --sigla P52,01,03` |
+| `strongs` | Strong's / Extended Strong's lookup, search, or root tree | `-r/--roots -s/--search -n/--limit/--top --offline --json` | `aegean bible strongs G3056 --roots` |
+| `word-study` | Unified Strong's + root + morphology + NT concordance report | `-b/--book -n/--limit/--top --offline --json` | `aegean bible word-study ἀγάπη` |
+| `search` | NT concordance (`--by lemma\|text\|strongs\|morph\|gloss`) or LXX (`--lxx`) | `--by -b/--book --section -e/--edition --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --lxx --offline` |
+| `commentary` | List, read (`--read`), or search (`--search`) NT *Catenae* & Origen | `-k/--kind --read -s/--search --work-id --ref -n/--limit/--top --json` | `aegean bible commentary John --search λόγος` |
+| `books` | Offline catalogues: `nt`, `lxx`, `editions`, `witnesses` | `--section --json` | `aegean bible books lxx` |
+| `psalm` | Masoretic (`mt`) ↔ Septuagint (`lxx`) Psalm numbering | `--from --json` | `aegean bible psalm 23 --from mt` |
 
 ---
 

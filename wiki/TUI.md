@@ -255,6 +255,7 @@ The same global keys work from every screen:
 | `h` | Home |
 | `c` | Corpus browser |
 | `g` | Greek workbench |
+| `b` | Biblical Greek study screen |
 | `w` | Works library |
 | `d` | Data store |
 | `:` | Command console (run any `aegean` command) |
@@ -274,8 +275,9 @@ every key and everything the command palette can do; it dismisses on `Esc`, `q`,
 
 ## Screens
 
-Six screens, each a pure view over the shared library adapter, so their numbers
-(structure, accounting balances, pipeline output) match the CLI by construction.
+Seven screens, each a pure view over the shared library adapter, so their numbers
+(structure, accounting balances, pipeline output, and Biblical collations) match the
+CLI by construction.
 
 ### Home (`h`)
 
@@ -307,27 +309,30 @@ Three panes, left to right:
    keystroke never blocks the UI and a fresh keystroke supersedes the previous
    still-running search.
 3. **The document detail (the reader)**: the token lines with their editorial status
-   marked (unclear / restored / lost from the Leiden apparatus), the heuristic structure
-   classification, and an accounting-balance analysis (the `KU-RO` / `to-so`
-   reconciliation) whenever the document states a total. `Tab` cycles the panes; `Enter`
-   on a document row opens its detail. The reader carries a "reading" border title that
-   lights up when it holds focus, so it is obvious which pane is active.
+   marked (unclear / restored / lost from the Leiden apparatus), a word-level cursor
+   (`←`/`→`) with a live token inspector bar, an inline interlinear gloss toggle (`i`),
+   the heuristic structure classification, and an accounting-balance analysis (the
+   `KU-RO` / `to-so` reconciliation) whenever the document states a total. `Tab` cycles
+   the panes; `Enter` on a document row opens its detail. The reader carries a "reading"
+   border title that lights up when it holds focus, so it is obvious which pane is active.
 
 **Analyze a line while you read.** With the reader focused, `↑`/`↓` (and PgUp/PgDn,
 Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **analysis
 popup** for that line. What it offers depends on the script:
 
 - **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
-  tagger** (lemma + POS, instant), the **neural pipeline** (measured neural tags + a
-  dependency parse; needs the `[neural]` extra, and downloads the ~173 MB model on first use),
-  **IPA**, and **translation**. Translation is **optional** and requires a configured
-  BYOAI provider (an API key such as `OPENAI_API_KEY`); when none is set the popup says
-  so rather than pretending to translate. When translating a line from a document, the
-  reader automatically passes neighboring lines and available source, speaker, and editorial
-  metadata separately as `source_context`. The neural and translation runs happen on a
-  background worker, so the UI never blocks. The translation includes model-reported
-  uncertainty notes, or a notice when malformed output leaves those notes unavailable.
-  Source text, translated wording and notes retain literal square brackets.
+  tagger** (lemma + POS, instant), **lexicon glossing**, **automatic scansion**, the
+  **neural pipeline** (measured neural tags + weighted OOV lemma reranker + calibrated
+  confidence + dependency parse; needs the `[neural]` extra, and downloads the ~173 MB
+  model on first use), **IPA**, and **translation**. Translation is **optional** and
+  requires a configured BYOAI provider (an API key such as `OPENAI_API_KEY`); when none
+  is set the popup says so rather than pretending to translate. When translating a line
+  from a document, the reader automatically passes neighboring lines and available
+  source, speaker, and editorial metadata separately as `source_context`. The neural
+  and translation runs happen on a background worker, so the UI never blocks. The
+  translation includes model-reported uncertainty notes, or a notice when malformed
+  output leaves those notes unavailable. Source text, translated wording and notes
+  retain literal square brackets.
 - **Linear B / Cypriot** (deciphered): the **Greek reading + gloss** of each word and
   the **sign values** (glyph + phonetic value).
 - **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
@@ -345,24 +350,53 @@ deciphered corpora (Greek, Linear B, Cypriot) carry no such caveat.
 
 ### Greek workbench (`g`)
 
-A single text box at the top drives four tabs that re-render as you type (a short
-debounce coalesces fast keystrokes; every backend is zero-dependency, offline, and
-instant):
+A single text box at the top (with a live **Beta Code** input toggle `b`) drives five
+tabs that re-render as you type (a short debounce coalesces fast keystrokes; every
+backend is zero-dependency, offline, and instant):
 
 - **pipeline** — per-token analysis, each row `sentence:index  text  UPOS  lemma`,
   the sentence number kept so a multi-sentence line stays unambiguous.
-- **scansion** — the metrical scan against a meter chosen in a small selector
-  (**hexameter / pentameter / trimeter**): the foot glyphs and caesura, or a
-  friendly "does not scan" message when the line does not fit the chosen meter.
+- **scansion** — the metrical scan against a meter chosen in a selector covering all
+  **10 classical meters** (hexameter, pentameter, trimeter, and the Aeolic lyric
+  templates): the foot glyphs and caesura, or a friendly "does not scan" message when
+  the line does not fit the chosen meter.
 - **syllables** — the syllabification of the first word, hyphenated.
 - **IPA** — the reconstructed transcription word by word, with an **Attic / Koine**
   period selector so you can compare the two reconstructions.
+- **lexicon** — live offline lexicon glosses (Dodson Koine plus any cached registry
+  lexica) for each word in the line.
 
 A bad meter or an unscannable line arrives as a friendly message shown inside the
 tab, never as a traceback. `/` focuses the input.
 
 For the full account of what each of these does, see [Greek NLP](Greek-NLP) and
 [Meters](Meters).
+
+### Biblical Greek (`b`)
+
+A dedicated five-tab specialist workspace over [`aegean.biblical`](New-Testament),
+driven by a shared passage bar at the top (`/` focuses the passage box, `r` reloads)
+with an edition selector (`Nestle 1904`, `SBLGNT`, `SRGNT`, `Byzantine Majority`,
+`Textus Receptus`):
+
+- **Interlinear** — reads any Greek NT passage (or Septuagint passage such as
+  `Gen 1.1-5` / `Ps 22.1-6`) with word-by-word surface, lemma, Robinson morphology,
+  Strong's number, and Koine gloss (works offline on John 1, Philemon 1, Gen 1:1–5,
+  and LXX Ps 22:1–6; full books unlock once cached in the Data store).
+- **Editions** — side-by-side comparison of the 5 Greek NT editions with word-level
+  textual variant diffs (`nt-editions` asset).
+- **Manuscripts** — extant 2nd–5th c. CE uncials and papyri (Sinaiticus `01`,
+  Vaticanus `03`, Alexandrinus `02`, Ephraemi `04`, Bezae `05`, `032`, `P45`–`P75`)
+  with original/corrected hand selector, diplomatic text, and *nomina sacra* expansions
+  (`nt-witnesses` asset).
+- **Word Study** — type any Strong's ID (`G3056`) or Greek lemma (`ἀγάπη`, `λόγος`)
+  for Strong's / Extended Strong's gloss, etymological root tree, NT book & morphology
+  distribution, and concordance verses.
+- **LXX & Catenae** — filterable catalogue of all 55 Swete Septuagint books and 48
+  Greek patristic commentaries (NT *Catenae* + Origen); typing a Psalm number (e.g.
+  `23`) converts MT ↔ LXX inline, typing an LXX passage (e.g. `Gen 1.1-5` or
+  `Ps 22.1-6`) renders the Greek verses inline, and typing a Greek word (e.g. `φῶς`)
+  runs a live Septuagint concordance search.
 
 ### Works library (`w`)
 

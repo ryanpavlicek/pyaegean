@@ -1967,6 +1967,51 @@ results and their protocol live in `docs/benchmarks.md` and on
 
 ---
 
+## Biblical & Koine Greek — `aegean bible …`
+
+Dedicated specialist commands over five Greek New Testament editions, thirteen 2nd–5th
+century CE manuscript witnesses, the Extended Strong's Greek Lexicon, all 55 Swete
+Septuagint (LXX) books, and 48 Greek patristic commentaries (*Catenae* and Origen).
+Offline samples work immediately (`John 1`, `Philemon 1`, `Gen 1:1–5`, LXX `Ps 22:1–6`,
+Dodson lexicon); the four hosted bundles (`strongs-greek`, `nt-editions`, `nt-witnesses`,
+`lxx-corpus`) download once into the local cache on first use (~1.5–1.7 MB each,
+SHA-256-verified). Full Python API and scholarly notes: [Biblical & Koine Greek](New-Testament).
+
+| Subcommand | What it does | Key flags |
+|---|---|---|
+| `read BOOK [REF]` | Read a Greek NT or Septuagint passage (or word-by-word interlinear) | `--edition/-e` `--lxx` `--interlinear/-i` `--offline` `--json` |
+| `compare BOOK REF` | Word-level textual variant collation across 5 NT editions (`nestle1904`, `sblgnt`, `srgnt`, `byz`, `tr`) | `--editions/-e` `--offline` `--json` |
+| `witnesses BOOK REF` | Compare 2nd–5th c. CE manuscript readings (`01`–`05`, `032`, `P45`–`P75`) with *nomina sacra* expansion | `--sigla/-s` `--hand` `--offline` `--json` |
+| `strongs QUERY` | Strong's & Extended Strong's lookup, search, and recursive etymological root tree | `--roots/-r` `--search/-s` `--limit/--top/-n` `--offline` `--json` |
+| `word-study QUERY` | Unified word study: Strong's entry, roots, NT book & morphology distribution, concordance | `--book/-b` `--limit/--top/-n` `--offline` `--json` |
+| `search QUERY` | Concordance search over NT (by `lemma`, `text`, `strongs`, `morph`, `gloss`) or Septuagint (`--lxx`) | `--by` `--book/-b` `--section` `--edition/-e` `--lxx` `--limit/--top/-n` `--offline` `--json` |
+| `commentary [BOOK]` | List, read (`--read`), or search (`--search`) Greek patristic NT *Catenae* & Origen commentaries | `--kind/-k` `--read` `--search/-s` `--work-id` `--ref` `--limit/--top/-n` `--json` |
+| `books [COLLECTION]` | Offline catalogues of `nt` (27), `lxx` (55), `editions` (5), or `witnesses` (13) | `--section` `--json` |
+| `psalm NUMBER` | Convert Psalm numbers between Masoretic/English (`mt`, 1–150) and Septuagint (`lxx`, 1–151) | `--from` `--json` |
+
+```bash
+# Interlinear Greek NT (offline on John 1 & Philemon 1) & Septuagint (offline on Gen 1, Ps 22)
+aegean bible read John 1.1-5 --interlinear
+aegean bible read Gen 1.1-5 --lxx --offline
+
+# Word-level collation across 5 NT editions & 2nd–5th c. CE manuscript witnesses
+aegean bible compare John 1.18
+aegean bible witnesses John 18.37 --sigla P52,01,03
+
+# Extended Strong's lookup + root tree, unified word study & concordances
+aegean bible strongs G3056 --roots
+aegean bible word-study ἀγάπη
+aegean bible search V-AAI --by morph --book John
+aegean bible search φῶς --lxx --offline
+
+# Septuagint books, Psalm numbering, and Greek patristic Catenae
+aegean bible books lxx --section Wisdom
+aegean bible psalm 23 --from mt
+aegean bible commentary John --search λόγος --limit 3
+```
+
+---
+
 ## Analysis — `aegean analyze …`
 
 Exploratory **surface** analyses over the (largely undeciphered) Aegean material:

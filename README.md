@@ -104,7 +104,7 @@ prior programming.
 | **Real texts on demand** | `greek.load_work("tlg0012.tlg001")` fetches a complete work (the Iliad arrives as 24 books / ~127k tokens) from Perseus canonical-greekLit / First1KGreek (CC BY-SA, commit-pinned, cached) straight into the corpus model. Don't know an id? `greek.catalog(author="Plato")` searches a bundled, offline index of **1,778** Greek works (every `-grc` edition in both repos): author, title (English or Greek), or free text, and every hit's id loads with `load_work`. |
 | **Epigraphic Greek & papyri on demand** | Six openly-licensed corpora fetch straight into the corpus model: **I.Sicily** (2,855 Greek inscriptions, CC BY), **IIP** (2,113, CC BY-NC), **IOSPE** (1,194, CC BY), **IGCyr/GVCyr** (997, archaic Doric and verse, CC BY-NC-SA), the **EDH** Greek subset (1,286, CC BY-SA), and the **DDbDP** documentary papyri (**57,331 texts / ~4.4M tokens**, CC BY) as a SQLite database with instant full-text search: `aegean db search ddbdp "…"`. For large SQLite corpora, resumable annotation jobs (`aegean db annotate` / `db.annotate_sqlite_job`) save progress document by document. |
 | **Bring your own text** | `aegean.io.from_text` / `from_text_file` / `from_text_dir` / `from_csv` turn a passage, a folder of `.txt`, or a CSV into a real `Corpus`: `aegean.io.from_text("ἐν ἀρχῇ ἦν ὁ λόγος.")` gives the full filter / query / analyse / export API over your own material, with Greek run through the Greek tokenizer. |
-| **The Greek New Testament, annotated** | `greek.load_nt("John", ref="1.1-18")` loads the Nestle 1904 NT with a gold **lemma**, **morphology**, and **Strong's number** on every token; `greek.use_dodson()` adds Koine glosses (`gloss_strongs("3056") → "a word, speech…"`). So you can lemmatize, gloss, and cite a chapter, offline. Public-domain text + CC0 annotations; a two-chapter reading sample (John 1 and Philemon 1) is bundled, and the full 27-book corpus fetches on demand. |
+| **Biblical & Koine Greek (`aegean.biblical` & `aegean bible`)** | Dedicated specialist suite across Python, CLI (`aegean bible`), TUI (`b`), MCP, and browser demo: **5 Greek NT editions** (`nestle1904` with gold lemma/morphology/Strong's, `sblgnt`, `srgnt`, `byz`, `tr`) with word-level variant collation (`compare_editions`); **13 early 2nd–5th c. CE manuscripts** (Sinaiticus `01`, Vaticanus `03`, Alexandrinus `02`, Ephraemi `04`, Bezae `05`, `032`, `P45`–`P75`) with diplomatic transcriptions and *nomina sacra* expansion; **Extended Strong's** (11,142 entries + etymological root trees, with offline Dodson fallback); the **55-book Swete Septuagint (LXX)** (`load_lxx`, `search_lxx`, MT↔LXX Psalm conversion); and **48 Greek patristic commentaries** (*Catenae* & Origen). Offline samples bundled (John 1, Philemon 1, Gen 1:1–5, LXX Ps 22:1–6); full assets fetch on demand. |
 | **Accounting reconciliation** | Parses Aegean decimal numerals and metrological fractions, sums each tablet's line items, and checks them against the stated **KU-RO** (Linear A) / **to-so** (Linear B) total, flagging which balance and which don't. (37 of the 1,721 Linear A tablets carry a checkable total; most are too fragmentary due to preservation.) |
 | **An analyst's toolkit** | Ported from the Linear A Workbench: wildcard **sign-pattern search** (`KU-*-RO`), weighted **phonetic distance + alignment**, **morphological clustering**, **collocation statistics** (PMI, log-likelihood, Fisher's exact), and a compound **query engine** with AND / OR / NOT. |
 | **A clean, citable data layer** | `Corpus` / `Document` / `Token` / `Sign` value objects, a pandas `to_dataframe()`, lossless JSON and SQLite storage (with optional fast lexical indexing), a first-class **`query()`**, compact **spreadsheet review workflows** (`layout="editable"`, calibrated-risk queues, multi-reviewer merges), and export to schema-valid EpiDoc plus CSV, Parquet, CoNLL-U, Turtle, and JSON-LD via `aegean.io`. Diplomatic, regularized, and normalized word forms stay distinct; CoNLL-U preserves complete treebank structure (including multiword spans and empty nodes). Every corpus carries provenance and a one-line citation. |
@@ -189,7 +189,7 @@ with `--json` on every data-producing command and stdin piping:
 aegean quickstart                              # the guided first five minutes, offline
 aegean doctor                                  # check the environment (extras, data store, models)
 aegean repl                                    # interactive shell: run commands without the `aegean` prefix
-aegean tui                                     # full-screen terminal UI: browse a corpus, the Greek workbench, the data store (`[tui]` extra)
+aegean tui                                     # full-screen terminal UI: browse a corpus, the Greek workbench, Biblical Greek (`b`), the data store (`[tui]` extra)
 aegean show lineara HT13                       # one tablet, line by line
 aegean balance lineara --strict                # reconcile every stated total
 aegean greek scan "ἄνδρα μοι ἔννεπε, Μοῦσα, πολύτροπον, ὃς μάλα πολλὰ"
@@ -197,6 +197,10 @@ aegean greek pipeline "ἐν ἀρχῇ ἦν ὁ λόγος." --neural --json
 printf '%s\n' '["μῆνιν","ἄειδε"]' | aegean greek stream -   # bounded neural JSONL
 aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json
 aegean greek catalog --author plato            # search 1,778 loadable works (offline)
+aegean bible read John 1.1-5 --interlinear     # interlinear Greek NT (or `--lxx` for Septuagint)
+aegean bible compare John 1.18                 # word-level diff across 5 NT editions
+aegean bible witnesses John 18.37 --sigla P52,01,03  # 2nd–5th c. CE manuscript readings
+aegean bible word-study G3056                  # Extended Strong's, roots, morphology & concordance
 aegean import myplato.txt -o myplato.json      # your own text → a corpus, then `aegean stats myplato.json`
 ```
 
@@ -206,7 +210,8 @@ network access. Large assets are fetched to a local cache only when you opt in (
 inside the wheel): the full Linear B corpus
 (`aegean.load("damos")`), the SigLA Linear A dataset (`aegean.load("sigla")`), the Greek
 epigraphy and papyrus corpora (`aegean.load("isicily")`, `"iip"`, `"iospe"`, `"igcyr"`, `"edh"`,
-and the 57k-papyrus `"ddbdp"`), the full New Testament (`aegean.load("nt")`), the Linear A
+and the 57k-papyrus `"ddbdp"`), the full New Testament (`aegean.load("nt")`), the Biblical &
+Septuagint bundles (`strongs-greek`, `nt-editions`, `nt-witnesses`, `lxx-corpus`), the Linear A
 facsimile mirror (`aegean.data.fetch("lineara-images")`), the AGDT-derived lexicon and models
 (`greek.use_treebank()` and friends: small prebuilt artifacts, with build-from-source as the
 fallback), the LSJ index (`greek.use_lsj()`), and the neural models
@@ -221,7 +226,7 @@ Full documentation lives in the **[project wiki](https://github.com/ryanpavlicek
 - **[Tutorial](https://github.com/ryanpavlicek/pyaegean/wiki/Tutorial)**: two guided, end-to-end research walkthroughs
 - **[Linear A](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-A)** · **[Linear B](https://github.com/ryanpavlicek/pyaegean/wiki/Linear-B)** · **[Cypriot](https://github.com/ryanpavlicek/pyaegean/wiki/Cypriot)** · **[Cypro-Minoan](https://github.com/ryanpavlicek/pyaegean/wiki/Cypro-Minoan)**: per-script guides
 - **[Recipes](https://github.com/ryanpavlicek/pyaegean/wiki/Recipes)**: end-to-end scholarly workflows, each ending in a citation
-- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
+- **[Greek NLP](https://github.com/ryanpavlicek/pyaegean/wiki/Greek-NLP)** · **[Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament)** · **[CLI](https://github.com/ryanpavlicek/pyaegean/wiki/CLI)** · **[TUI](https://github.com/ryanpavlicek/pyaegean/wiki/TUI)** · **[Analysis](https://github.com/ryanpavlicek/pyaegean/wiki/Analysis)** · **[AI Layer](https://github.com/ryanpavlicek/pyaegean/wiki/AI-Layer)** · **[Data & Provenance](https://github.com/ryanpavlicek/pyaegean/wiki/Data-and-Provenance)**: reference
 - **[Interoperability](https://github.com/ryanpavlicek/pyaegean/wiki/Interoperability)**: CoNLL-U, spaCy, Stanza, and CLTK projections, sidecars, reports, and serializer boundaries
 - **[Independent review](https://github.com/ryanpavlicek/pyaegean/wiki/Independent-Review)**: one-command evidence verification, model and data cards, limitations, and discrepancy reporting
 - **[API reference](https://pyaegean.xyz/api/)**: the supported facade modules, with public classes and functions generated from the source
