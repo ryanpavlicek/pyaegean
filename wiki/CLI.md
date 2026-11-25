@@ -11,7 +11,7 @@ and run.
 > of every command and flag. This page is the guided tour: it explains each group
 > and shows a worked example with real output.
 
-> **Available in v0.66.0.** The annotation-profile and interoperability commands, the
+> **Available in v0.67.0.** The annotation-profile and interoperability commands, the
 > CoNLL-U, long-input, source-alignment, and analysis-receipt commands and fields, and the
 > runtime-variant selectors described below are all part of the current release.
 
@@ -108,7 +108,7 @@ unchanged.
 ## The command map
 
 ```bash
-aegean --version          # pyaegean 0.66.0
+aegean --version          # pyaegean 0.67.0
 ```
 
 | Group | What's in it |

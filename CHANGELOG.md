@@ -4,6 +4,50 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.67.0 (2026-11-25)
+
+### Added
+
+- **Unified Corpus & Text Library Manager across Python, CLI, REPL, and TUI**:
+  - Added [`aegean.library`](https://pyaegean.xyz/api/library/) (lazily exported on `aegean`) and
+    `aegean library` (`status`, `packs`, `list`, `search`, `info`, `install`, `remove`) as one
+    interface for every bundled corpus, downloadable Aegean/Greek epigraphy corpus, Biblical &
+    Koine Greek bundle, ~1,778 Perseus/First1KGreek literary works, 48 patristic commentaries,
+    hosted dictionaries, and neural models.
+  - Added 5 named resource packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`) and
+    friendly target resolution by pack name, alias (`editions`, `byz`, `lxx`, `strongs`,
+    `witnesses`, `damos`, `lsj`), work title (`Iliad`, `Republic`), CTS TLG ID, `author:<name>`,
+    and `commentary:<book>`.
+  - Added `aegean bible status` and `aegean bible install` (defaults to all 5 Biblical bundles, or
+    accepts friendly targets like `editions`, `lxx`, `witnesses`, `strongs`, `nt`, or
+    `commentary:<book>`), wired into predictive completion and shell tab-completion.
+  - Added the unified TUI **Library Manager** screen (`l` in `aegean tui`) with Packs, Installed,
+    Corpora & Biblical, Works & Commentaries, and Lexica & Models tabs (`f` download, `o` open,
+    `x` remove), plus safe `remove_dataset()` in `aegean.data` and a **Remove (`x`)** action in
+    `DataStoreScreen` (`d`).
+  - Added contextual inline one-click **Download** bars directly inside `BiblicalScreen` (`b`) and
+    `CorpusBrowserScreen` (`c`): selecting an uninstalled edition, manuscript set, LXX book, or
+    corpus lets you download the exact missing bundle (or the full Biblical Pack) in the background
+    and automatically reloads the view upon completion.
+
+### Changed
+
+- **Unified Biblical & Koine Greek namespace (`aegean.greek.bible`) and CLI ergonomics**:
+  - Moved `aegean.biblical` cleanly to `aegean.greek.bible` and unified `aegean.greek.load_nt`
+    onto `aegean.greek.bible.load_nt` (supporting all 5 NT editions). Removed the overlapping
+    `aegean greek nt`, `aegean greek nt-books`, and `aegean greek gloss-nt` subcommands in favor of
+    `aegean bible`.
+  - Simplified `aegean bible`: `bible commentary` now accepts `read`/`search`/`list` verbs, book
+    names, and direct TLG work IDs (`tlg4102.tlg001`); `bible read` and `bible search` auto-detect
+    Septuagint (LXX) books and accept colon notation (`1:1-5`); `bible read` supports `-o/--output`
+    to `.json`/`.db`; `bible books all` summarizes all four catalogues; and predictive completion
+    prioritizes `read`/`search`/`list` verbs and books.
+- **TUI and documentation**:
+  - Removed the TUI `#home-banner` and `DetailPane` disclaimer banners and tightened repetitive
+    hedging prose across `README.md`, `docs/`, and the wiki while preserving factual accuracy.
+  - Split the CLI wiki documentation into a dedicated top-level **Command Line (CLI)** sidebar
+    category (`CLI`, `CLI-Cheatsheet`, `CLI-Corpora`, `CLI-Greek`, `CLI-Bible`, `CLI-AI`).
+
 ## 0.66.0 (2026-11-25)
 
 ### Added
