@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.64.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> **Available in v0.65.0.** Isolated pipeline instances, explicit long-input and runtime-variant
 > selection, analysis receipts, source alignment, typed editorial form states, and lossless
 > CoNLL-U representation are part of the current release.
 

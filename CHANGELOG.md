@@ -4,6 +4,34 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.65.0 (2026-11-24)
+
+### Added
+
+- **Hosted Septuagint (LXX) corpus, concordance search, and patristic commentary reader**:
+  - Registered the SHA-256-pinned `lxx-corpus` release asset in `aegean.data` (32 remote datasets
+    total; built deterministically by `scripts/build_lxx_corpus.py`), packaging all 55 Greek
+    Septuagint books (29,248 verses, ~1.7 MB gzipped) from Henry Barclay Swete's *The Old Testament
+    in Greek according to the Septuagint* (1887–1894, Public Domain Greek base text; First1KGreek
+    TEI digitization CC BY-SA 4.0), including LXX-plus sub-verses and prologues.
+  - Added verse-indexed `aegean.biblical.load_lxx(..., offline=...)` (with a bundled Swete 1887
+    offline sample for Genesis 1:1–5 and LXX Psalm 22:1–6 [MT Psalm 23]), `lxx_loaded()`,
+    accent/case-insensitive Greek Septuagint concordance search `search_lxx()` (`LxxHit`),
+    patristic *Catenae* and Origen section reading/search `commentary_excerpt()`
+    (`CommentaryExcerpt`), structured `convert_psalm()`, and sentence-level `expand_nomina_sacra()`.
+  - Extended `aegean bible` CLI with `aegean bible read ... --lxx --offline`,
+    `aegean bible search ... --lxx [--section ...]`, and
+    `aegean bible commentary BOOK --read / --search TERM`; enhanced the TUI Biblical Greek screen
+    with seamless LXX passage reading and inline Septuagint Greek concordance search.
+- **Biblical & Koine Greek across MCP, browser demo, and notebooks**:
+  - Added 6 offline-safe read/analysis tools to `aegean-mcp` (`biblical_strongs`,
+    `biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, and
+    `biblical_lxx`; 23 MCP tools total).
+  - Added 4 interactive Koine & Biblical Greek cards to the Pyodide browser demo
+    (`biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_lxx`), added an
+    offline `aegean.biblical` walkthrough section to `notebooks/walkthrough-nt-koine.ipynb`, and
+    recorded all 6 capabilities in `scripts/surface-manifest.json`.
+
 ## 0.64.0 (2026-11-24)
 
 ### Added
@@ -13,12 +41,12 @@ All notable changes to pyaegean are documented here. The format follows
     word-level variant collation (`load_nt`, `compare_editions` across SBLGNT, CNTR Statistical
     Restoration GNT, Robinson–Pierpont Byzantine Majority Text, Textus Receptus, and Nestle 1904),
     2nd–5th century CE manuscript witness comparison (`load_witness`, `compare_witnesses`,
-    `expand_nomina_sacra` over CNTR Class 1 transcriptions including Sinaiticus `01`, Vaticanus
+    `expand_nomen_sacrum` over CNTR Class 1 transcriptions including Sinaiticus `01`, Vaticanus
     `03`, Alexandrinus `02`, Bezae `05`, and P45/P46/P66/P72/P75), Strong's & Extended Strong's
     Greek Lexicon lookup and recursive etymological root tracing (`strongs_entry`, `search_strongs`,
     `strongs_roots`), unified word studies and NT concordance search (`word_study`, `search_bible`,
     `study_verse`), Septuagint (LXX) catalog & Masoretic↔LXX Psalm number conversion
-    (`convert_psalm`), and patristic Catenae / Origen commentary catalogs.
+    (`psalm_mt_to_lxx`, `psalm_lxx_to_mt`), and patristic Catenae / Origen commentary catalogs.
   - Three SHA-256-pinned GitHub Release assets registered in `aegean.data` (`strongs-greek`,
     `nt-editions`, `nt-witnesses`; 31 remote datasets total) with deterministic build scripts
     (`scripts/build_strongs_greek.py`, `scripts/build_nt_editions.py`,
