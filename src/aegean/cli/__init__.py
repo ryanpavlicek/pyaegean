@@ -14,6 +14,9 @@ The command tree mirrors the public API:
 - ``aegean greek …``: the full Greek NLP pipeline (normalize → … → parse,
   plus ``pipeline`` and the ``eval`` reproductions), with ``--neural`` /
   ``--treebank`` / … flags standing in for the ``use_*()`` activations;
+- ``aegean bible …``: Biblical & Koine Greek specialist tools (``read``,
+  ``compare``, ``witnesses``, ``strongs``, ``word-study``, ``search``,
+  ``commentary``, ``books``, ``psalm``);
 - ``aegean analyze …``: distance, alignment, cross-script comparison,
   association statistics, morphological clusters, structure census;
 - ``aegean data …``: the fetch-to-store data layer (``fetch``, ``list``,
