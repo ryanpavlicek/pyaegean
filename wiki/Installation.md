@@ -143,7 +143,8 @@ The MCP server currently exposes these tools to a connected agent: `list_corpora
 `corpus_info`, `show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
 `cite_corpus`, `geo_sites`, `data_status`, `greek_pipeline`, `greek_scan`,
 `greek_catalog`, `greek_work`, `greek_gloss`, `greek_explain`, `corpus_diagnose`,
-and `koine_gloss`.
+`koine_gloss`, `biblical_strongs`, `biblical_word_study`, `biblical_psalm`,
+`biblical_nomina_sacra`, `biblical_catalog`, and `biblical_lxx`.
 
 ## Verify
 
