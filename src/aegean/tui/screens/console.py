@@ -86,49 +86,23 @@ _DIRECTIVES: tuple[tuple[str, str], ...] = (
 
 
 def _short_help(cmd: Any) -> str:
-    """A command's one-line description for the dropdown, collapsed to a single line.
+    """A command's one-line description for the dropdown, collapsed to a single line."""
+    from aegean.cli._complete import short_help
 
-    Prefers Click's own ``get_short_help_str`` (what ``--help`` shows in the command
-    list), falling back to the first line of ``help`` / ``short_help``."""
-    getter = getattr(cmd, "get_short_help_str", None)
-    if callable(getter):
-        try:
-            text = getter(limit=60)
-        except TypeError:
-            text = getter()
-        except Exception:
-            text = ""
-        if text:
-            return " ".join(str(text).split())
-    doc = (getattr(cmd, "help", "") or getattr(cmd, "short_help", "") or "").strip()
-    first = doc.splitlines()[0] if doc else ""
-    return " ".join(first.split())
+    return short_help(cmd)
 
 
 def _command_completions(group: Any) -> list[tuple[str, str]]:
-    """``(command-path, description)`` pairs for the console's completion dropdown: every
-    top-level command and every ``group sub`` pair, each with its short help, plus the
-    shell-only directives.
+    """``(command-path, description)`` pairs for the console's completion catalog: every
+    top-level command and every nested subcommand path at arbitrary depth (including
+    3-level paths such as ``greek interop export`` and ``bible read``), plus shell directives."""
+    from aegean.cli._complete import walk_command_paths
 
-    Sub-groups are detected with the REPL's duck-typed ``_is_group`` (typer's ``TyperGroup``
-    is not a ``click.Group`` for ``isinstance``, so the old check silently offered no
-    subcommands — ``greek scan``, ``data fetch`` and the rest never completed)."""
-    from aegean.cli._repl import _is_group
-
-    out: list[tuple[str, str]] = []
-    for name, cmd in sorted(group.commands.items()):
-        out.append((name, _short_help(cmd)))
-        if _is_group(cmd):
-            subs = getattr(cmd, "commands", {})
-            for sub in sorted(subs):
-                out.append((f"{name} {sub}", _short_help(subs[sub])))
-    out += list(_DIRECTIVES)
-    return out
+    return walk_command_paths(group, include_directives=True)
 
 
 def _command_candidates(group: Any) -> list[str]:
-    """The command-path strings alone (for the inline ghost-text suggester); the dropdown
-    uses :func:`_command_completions`, which pairs each with a description."""
+    """The command-path strings alone (for tests and callers inspecting the command catalog)."""
     return [cand for cand, _ in _command_completions(group)]
 
 
@@ -242,7 +216,7 @@ class CommandConsoleScreen(Screen[None]):
             log.write("the command console needs the [cli] extra — pip install 'pyaegean[cli]'")
             self.query_one("#console-input", Input).disabled = True
             return
-        from textual.suggester import SuggestFromList
+        from textual.suggester import Suggester
 
         # The log must never take focus away from the prompt: if it did, a bare letter would
         # fall through to a global binding (q quits the app) instead of being typed. It still
@@ -250,11 +224,21 @@ class CommandConsoleScreen(Screen[None]):
         log.can_focus = False
         inp = self.query_one("#console-input", Input)
         self._completions = _command_completions(self._group)
-        # The inline ghost-text complements the dropdown: it previews the single best match
-        # (accepted with →); the dropdown offers the full filtered list with descriptions.
-        inp.suggester = SuggestFromList(
-            [c for c, _ in self._completions], case_sensitive=False
-        )
+        group = self._group
+        history_ref = self._history
+
+        class _ConsoleSuggester(Suggester):
+            def __init__(self) -> None:
+                super().__init__(use_cache=False, case_sensitive=False)
+
+            async def get_suggestion(self, value: str) -> str | None:
+                from aegean.cli._complete import suggest_inline
+
+                return suggest_inline(group, value, history=history_ref, directives=True)
+
+        # Inline ghost-text combines session history + live command/flag/value prediction
+        # (accepted with →); the dropdown offers the full ranked list with descriptions.
+        inp.suggester = _ConsoleSuggester()
         log.write(
             "aegean command console — type any command without the 'aegean' prefix. "
             "A completion list opens as you type: ↑/↓ pick · Tab/Enter complete · Esc close. "
@@ -282,22 +266,24 @@ class CommandConsoleScreen(Screen[None]):
         return bool(self._dropdown().display)
 
     def _refilter(self, value: str) -> None:
-        """Rebuild the dropdown from the completions whose command path starts with the
-        typed text (case-insensitively), and show it — or hide it when the input is empty
-        or nothing matches. Prefix matching mirrors the inline ghost-text and the REPL."""
+        """Rebuild the dropdown from live context-aware completions (commands at any nesting
+        depth, leaf option flags, and offline domain values) for the typed line ``value``."""
         if self._group is None:
             return
         dd = self._dropdown()
         if not value.strip():
             self._close_dropdown()
             return
-        low = value.casefold()
-        matches = [(c, d) for c, d in self._completions if c.casefold().startswith(low)]
-        if not matches:
+        from aegean.cli._complete import complete_line
+
+        items = complete_line(self._group, value, directives=True)
+        if not items:
             self._close_dropdown()
             return
         dd.clear_options()
-        dd.add_options([CompletionDropdown.option_for(c, d) for c, d in matches])
+        dd.add_options(
+            [CompletionDropdown.option_for(item.full_line, item.description) for item in items[:25]]
+        )
         dd.highlighted = 0
         dd.display = True
 

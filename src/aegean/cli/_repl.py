@@ -72,6 +72,9 @@ _EXAMPLES: tuple[tuple[str, str], ...] = (
     ("bridge linearb po-me", "read a deciphered syllabic word as Greek"),
     ("greek syllabify Ποσειδῶνι", "Greek NLP: syllabification"),
     ('greek pipeline "μῆνιν ἄειδε θεά"', "per-token analysis in one call"),
+    ("bible read John 1.1-3 --offline", "Biblical Greek: read Greek NT (bundled sample)"),
+    ("bible psalm 23 --from mt", "Biblical Greek: Masoretic ↔ Septuagint Psalm numbering"),
+    ("bible search φῶς --lxx --offline", "Biblical Greek: Septuagint concordance (offline sample)"),
     ("analyze compare po-me ποιμήν", "cross-script phonetic comparison"),
     ("data list", "the fetchable datasets and what is local"),
     ("use lineara", "set a session corpus for corpus-first commands"),
@@ -97,16 +100,8 @@ def _is_group(cmd: object) -> bool:
     return hasattr(cmd, "get_command") and hasattr(cmd, "list_commands")
 
 
-def repl(ctx: typer.Context) -> None:
-    """Start an interactive shell — run commands without the ``aegean`` prefix.
-
-    Type subcommands directly (``stats lineara --top 5``, ``greek catalog plato``)
-    with Tab-completion and a history that persists across sessions. Shell-only
-    directives: ``use CORPUS`` sets a session corpus (corpus-first commands such as
-    ``show`` or ``stats`` then default to it; ``use off`` clears), ``:examples``
-    prints copyable starter lines, ``:help`` shows the command list; ``:exit``,
-    ``quit``, or Ctrl-D leaves the shell.
-    """
+def run_repl(ctx: typer.Context) -> None:
+    """Launch the interactive (or piped) REPL over the root command group of ``ctx``."""
     group = cast("click.Group", ctx.find_root().command)  # the top-level aegean group
     session = _Session()
     if sys.stdin.isatty():
@@ -115,6 +110,19 @@ def repl(ctx: typer.Context) -> None:
         for raw in sys.stdin:  # scriptable / testable path: one command per line
             if not _run_line(group, raw, session):
                 break
+
+
+def repl(ctx: typer.Context) -> None:
+    """Start an interactive shell — run commands without the ``aegean`` prefix.
+
+    Type subcommands directly (``stats lineara --top 5``, ``greek catalog plato``,
+    ``bible read John 1.1 --interlinear``) with live predictive inline suggestions,
+    Tab-completion, and persistent history. Shell-only directives: ``use CORPUS`` sets
+    a session corpus (corpus-first commands such as ``show`` or ``stats`` then default
+    to it; ``use off`` clears), ``:examples`` prints copyable starter lines, ``:help``
+    shows the command list; ``:exit``, ``quit``, or Ctrl-D leaves the shell.
+    """
+    run_repl(ctx)
 
 
 def _run_line(group: click.Group, line: str, session: _Session) -> bool:
@@ -353,8 +361,12 @@ def _interactive_loop(group: click.Group, session: _Session) -> None:  # pragma:
         )
         raise SystemExit(1) from None
 
+    history = _history()
     prompt_session: Any = PromptSession(
-        history=_history(), completer=_make_completer(cast(Any, group))
+        history=history,
+        completer=_make_completer(cast(Any, group)),
+        auto_suggest=_make_auto_suggest(cast(Any, group)),
+        complete_while_typing=True,
     )
     print(_BANNER, file=sys.stderr)
     _print_menu(group)  # show the command map on entry, like bare `aegean`
@@ -369,47 +381,51 @@ def _interactive_loop(group: click.Group, session: _Session) -> None:  # pragma:
             break
 
 
-def _make_completer(group: Any) -> Any:  # pragma: no cover - needs a TTY
-    """A prompt_toolkit completer that walks the command tree: it completes command
-    names at the current level, descends into sub-groups, and offers a command's
-    option flags once the word starts with ``-``."""
+def _make_completer(group: Any) -> Any:
+    """A prompt_toolkit completer backed by :mod:`aegean.cli._complete`: completes
+    arbitrary-depth subcommands, leaf options with help text, shell directives, and
+    offline domain values (corpora, datasets, NT/LXX books, editions, manuscripts, etc.)."""
     from prompt_toolkit.completion import Completer, Completion
+
+    from ._complete import complete_line
 
     class _AegeanCompleter(Completer):  # type: ignore[misc]
         def get_completions(self, document: Any, complete_event: Any) -> Any:
             text = document.text_before_cursor
-            try:
-                tokens = shlex.split(text)
-            except ValueError:
-                return
-            word = "" if text[-1:].isspace() else (tokens.pop() if tokens else "")
-
-            cmd: Any = group
-            ctx = typer.Context(group, info_name="aegean")
-            for tok in tokens:  # descend through sub-groups; stop at the first leaf/arg
-                if not _is_group(cmd):
-                    break  # a leaf command — the remaining tokens are its args/options
-                sub = cmd.get_command(ctx, tok)
-                if sub is None:
-                    break  # not a known subcommand here (a positional arg or a typo)
-                cmd = sub
-
-            if word.startswith("-"):
-                seen = set()
-                for param in getattr(cmd, "params", []):
-                    for opt in getattr(param, "opts", []):
-                        if opt.startswith("-") and opt.startswith(word) and opt not in seen:
-                            seen.add(opt)
-                            yield Completion(opt, start_position=-len(word))
-            elif _is_group(cmd):
-                for name in cmd.list_commands(ctx):
-                    if name.startswith(word):
-                        sub = cmd.get_command(ctx, name)
-                        meta = (getattr(sub, "help", "") or "").strip().splitlines()
-                        yield Completion(
-                            name,
-                            start_position=-len(word),
-                            display_meta=meta[0] if meta else "",
-                        )
+            for item in complete_line(group, text, directives=True):
+                yield Completion(
+                    item.insert,
+                    start_position=-item.replace_len,
+                    display_meta=item.description,
+                )
 
     return _AegeanCompleter()
+
+
+def _make_auto_suggest(group: Any) -> Any:
+    """Fish-style dim inline ghost-text suggester (accept with → / Ctrl-E).
+
+    Combines recent prompt_toolkit history with live predictive completion over the
+    entire command tree, flags, and offline domain values."""
+    from prompt_toolkit.auto_suggest import AutoSuggest, Suggestion
+
+    from ._complete import suggest_inline
+
+    class _AegeanAutoSuggest(AutoSuggest):  # type: ignore[misc]
+        def get_suggestion(self, buffer: Any, document: Any) -> Any:
+            text = document.text
+            if not text or document.cursor_position != len(text):
+                return None
+            hist: list[str] = []
+            buf_hist = getattr(buffer, "history", None)
+            if buf_hist is not None:
+                try:
+                    hist = list(buf_hist.get_strings())
+                except Exception:
+                    hist = []
+            full = suggest_inline(group, text, history=hist, directives=True)
+            if full is None or len(full) <= len(text):
+                return None
+            return Suggestion(full[len(text) :])
+
+    return _AegeanAutoSuggest()

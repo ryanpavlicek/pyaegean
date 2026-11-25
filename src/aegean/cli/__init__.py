@@ -82,6 +82,14 @@ def _exit_on_broken_pipe() -> None:
     raise SystemExit(0) from None
 
 
+def _is_interactive_tty() -> bool:
+    """Whether stdin and stdout are attached to an interactive terminal."""
+    try:
+        return bool(sys.stdin.isatty() and sys.stdout.isatty())
+    except Exception:
+        return False
+
+
 def _build_app() -> Any:
     import typer
 
@@ -100,13 +108,13 @@ def _build_app() -> Any:
         pretty_exceptions_show_locals=False,
         help=(
             "pyaegean from the shell: corpora, Greek NLP, Biblical/Koine Greek, analysis, "
-            "data, and the (exploratory) AI layer. Every data-producing command takes --json."
+            "data, and the (exploratory) AI layer. Run bare `aegean` in a terminal for the "
+            "interactive shell; every data-producing command takes --json."
         ),
         epilog=(
-            "Start with: aegean quickstart · aegean info lineara · aegean greek works "
-            "· aegean bible read John 1.1-5 · aegean repl — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
+            "Start with: aegean (or aegean repl) · aegean quickstart · aegean info lineara "
+            "· aegean greek works · aegean bible read John 1.1-5 — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
-        no_args_is_help=True,
         context_settings={"help_option_names": ["-h", "--help"]},
     )
 
@@ -115,13 +123,22 @@ def _build_app() -> Any:
             print(f"pyaegean {aegean.__version__}")
             raise typer.Exit()
 
-    @app.callback()
     def _root(
+        ctx: Any,
         version: bool = typer.Option(
             False, "--version", callback=_version, is_eager=True, help="Print the version and exit."
         ),
     ) -> None:
         """pyaegean — Ancient Greek + Aegean scripts, from the command line."""
+        if ctx.invoked_subcommand is None:
+            if _is_interactive_tty():
+                _repl.run_repl(ctx)
+            else:
+                typer.echo(ctx.get_help())
+                raise typer.Exit(0)
+
+    _root.__annotations__["ctx"] = typer.Context
+    app.callback(invoke_without_command=True)(_root)
 
     _corpus.register(app)
     _doctor.register(app)

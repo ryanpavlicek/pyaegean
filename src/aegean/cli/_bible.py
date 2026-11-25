@@ -17,6 +17,13 @@ from typing import Any
 import typer
 
 from ._common import console, emit_json, fail
+from ._complete import (
+    shell_complete_bible_book,
+    shell_complete_bible_collection,
+    shell_complete_edition,
+    shell_complete_nt_book,
+    shell_complete_witness,
+)
 
 bible_app = typer.Typer(
     help=(
@@ -50,13 +57,18 @@ def _format_root_lines(node: dict[str, Any], prefix: str = "") -> list[str]:
 
 @bible_app.command("read")
 def read_cmd(
-    book: str = typer.Argument(..., help="Book name or abbreviation (e.g. John, Rom, Gen, Ps, Wis)."),
+    book: str = typer.Argument(
+        ...,
+        help="Book name or abbreviation (e.g. John, Rom, Gen, Ps, Wis).",
+        autocompletion=shell_complete_bible_book,
+    ),
     ref: str | None = typer.Argument(None, help="Chapter or verse range (e.g. 1, 1.1-18, 3.16)."),
     edition: str = typer.Option(
         "nestle1904",
         "--edition",
         "-e",
         help="Greek NT edition: nestle1904, sblgnt, srgnt, byz, or tr.",
+        autocompletion=shell_complete_edition,
     ),
     lxx: bool = typer.Option(False, "--lxx", help="Read from the Septuagint (LXX) instead of the NT."),
     interlinear: bool = typer.Option(
@@ -151,13 +163,18 @@ def read_cmd(
 
 @bible_app.command("compare")
 def compare_cmd(
-    book: str = typer.Argument(..., help="NT book name (e.g. John, Matt, Rom)."),
+    book: str = typer.Argument(
+        ...,
+        help="NT book name (e.g. John, Matt, Rom).",
+        autocompletion=shell_complete_nt_book,
+    ),
     ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 1.1-5)."),
     editions: str | None = typer.Option(
         None,
         "--editions",
         "-e",
         help="Comma-separated editions (default: nestle1904,sblgnt,srgnt,byz,tr).",
+        autocompletion=shell_complete_edition,
     ),
     offline: bool = typer.Option(False, "--offline", help="Do not fetch missing assets over the network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
@@ -193,13 +210,18 @@ def compare_cmd(
 
 @bible_app.command("witnesses")
 def witnesses_cmd(
-    book: str = typer.Argument(..., help="NT book name (e.g. John, Rom, 1Pet)."),
+    book: str = typer.Argument(
+        ...,
+        help="NT book name (e.g. John, Rom, 1Pet).",
+        autocompletion=shell_complete_nt_book,
+    ),
     ref: str = typer.Argument(..., help="Verse or range (e.g. 1.18, 18.37-38)."),
     sigla: str | None = typer.Option(
         None,
         "--sigla",
         "-s",
         help="Comma-separated sigla/names (e.g. P66,P75,01,03,A,D).",
+        autocompletion=shell_complete_witness,
     ),
     hand: str = typer.Option("original", "--hand", help="Scribal hand: original or corrected."),
     diplomatic: bool = typer.Option(False, "--diplomatic", "-d", help="Show raw CNTR MES diplomatic transcription."),
@@ -480,6 +502,7 @@ def books_cmd(
     collection: str = typer.Argument(
         "nt",
         help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (5), or 'witnesses' (13).",
+        autocompletion=shell_complete_bible_collection,
     ),
     section: str | None = typer.Option(None, "--section", help="Optional LXX section filter (Pentateuch, Wisdom, ...)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
