@@ -1,13 +1,17 @@
 """Multi-edition Greek New Testament loading and word-level variant comparison.
 
-Supports five Greek New Testament editions:
+Supports nine Greek New Testament editions:
 
 - ``nestle1904`` — Nestle 1904 with gold lemma, Robinson morph, Strong's, and
   UD UPOS (bundled offline sample: John 1 & Philemon 1; full 27 books in
   ``nt-corpus``, CC0).
 - ``sblgnt`` — SBL Greek New Testament (Holmes 2010; CC BY 4.0 / MorphGNT CC BY-SA 3.0).
 - ``srgnt`` — Statistical Restoration GNT (CNTR; CC BY 4.0).
+- ``bhp`` — Bunning Heuristic Prototype GNT (CNTR; CC BY 4.0).
+- ``tisch`` — Tischendorf 8th *Editio Octava Critica Maior* (1869–1872; Public Domain).
+- ``wh`` — Westcott–Hort (1881; Public Domain, unaccented Unicode).
 - ``byz`` — Robinson–Pierpont Byzantine Majority Textform (Public Domain).
+- ``antoniades`` — Antoniades 1904 Patriarchal Edition (Public Domain, unaccented Unicode).
 - ``tr`` — Textus Receptus (KJTR; CC BY 4.0).
 """
 
@@ -92,11 +96,18 @@ def nt_editions() -> list[dict[str, Any]]:
     return [dict(e) for e in NT_EDITIONS]
 
 
-def _load_editions_bundle(*, allow_fetch: bool = True) -> dict[str, Any]:
+def _load_editions_bundle(
+    *,
+    allow_fetch: bool = True,
+    required_edition: str | None = None,
+) -> dict[str, Any]:
     global _EDITIONS_CACHE
-    if _EDITIONS_CACHE is not None:
-        return _EDITIONS_CACHE
     from ...data import _REMOTE, DataNotAvailableError, cache_dir, fetch, load_gzip_json, present_paths
+
+    if _EDITIONS_CACHE is not None and (
+        required_edition is None or required_edition in _EDITIONS_CACHE.get("editions", {})
+    ):
+        return _EDITIONS_CACHE
 
     paths = present_paths(_REMOTE["nt-editions"], cache_dir())
     if not paths:
@@ -106,9 +117,19 @@ def _load_editions_bundle(*, allow_fetch: bool = True) -> dict[str, Any]:
                 "or pass allow_fetch=True"
             )
         path = fetch("nt-editions")
-    else:
-        path = paths[0]
-    _EDITIONS_CACHE = load_gzip_json(path)
+        _EDITIONS_CACHE = load_gzip_json(path)
+        return _EDITIONS_CACHE
+
+    bundle = load_gzip_json(paths[0])
+    if required_edition is not None and required_edition not in bundle.get("editions", {}):
+        if not allow_fetch:
+            raise DataNotAvailableError(
+                f"cached nt-editions bundle does not include {required_edition!r} (pre-v2 cache) — "
+                "run `aegean data fetch nt-editions --force` to upgrade to v2 (8 editions)"
+            )
+        path = fetch("nt-editions", force=True)
+        bundle = load_gzip_json(path)
+    _EDITIONS_CACHE = bundle
     return _EDITIONS_CACHE
 
 
@@ -185,7 +206,7 @@ def load_nt(
     if ref is not None and book is None:
         raise ValueError("ref requires a book, e.g. load_nt('John', ref='1.1-18', edition='sblgnt')")
 
-    bundle = _load_editions_bundle(allow_fetch=not offline)
+    bundle = _load_editions_bundle(allow_fetch=not offline, required_edition=ed)
     ed_data = bundle["editions"][ed]
     info = ed_data.get("_info", {})
     books_map: dict[str, dict[str, str]] = ed_data["books"]
@@ -290,7 +311,7 @@ def _verse_text_map(
                     _, _, cv = vref.partition(".")
                     verses.setdefault(cv, []).append(tok.text)
         return {cv: " ".join(ws) for cv, ws in verses.items()}
-    bundle = _load_editions_bundle(allow_fetch=not offline)
+    bundle = _load_editions_bundle(allow_fetch=not offline, required_edition=edition)
     vmap = bundle["editions"][edition]["books"].get(osis, {})
     kept = _select_verses(vmap, osis, ref)
     return {f"{c}.{v}": txt for c, v, txt in kept}

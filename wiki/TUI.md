@@ -254,6 +254,7 @@ The same global keys work from every screen:
 | `c` | Corpus browser |
 | `g` | Greek workbench |
 | `b` | Biblical Greek study screen |
+| `l` | Library manager (packs, installed items, search, download/remove) |
 | `w` | Works library |
 | `d` | Data store |
 | `:` | Command console (run any `aegean` command) |
@@ -271,19 +272,22 @@ key reference (`Esc`, `q`, or `Enter` dismisses).
 
 ## Screens
 
-Seven screens over the shared library adapter, matching CLI outputs.
+Eight screens over the shared library adapter, matching CLI outputs.
 
 ### Home (`h`)
 
 The landing view holds:
 
-1. **The thirteen-corpus overview.** Each registered corpus with a one-line summary
+1. **The nineteen-corpus overview.** Each browsable corpus with a one-line summary
    and on-disk status (read without loading corpus files): `lineara`, `linearb`,
-   `cypriot`, `cyprominoan`, `greek`, `nt`, `damos`, `sigla`, `isicily`, `iip`,
-   `iospe`, `igcyr`, and `edh`. Selecting a row opens it directly in the corpus
-   browser. `ddbdp` (57,000 documentary papyri) is omitted from the in-memory list
-   due to size; search it with `aegean db search ddbdp` from the shell or command
-   console.
+   `cypriot`, `cyprominoan`, `greek`, `nt`, `apostolic-fathers`, `pseudepigrapha`,
+   `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `aphrodisias`, `crete`,
+   `edh`, `byzantine`, and `homer-scholia`. Selecting a row opens it directly in
+   the corpus browser (with an inline download bar if its asset is not yet cached).
+   `ddbdp` (57,331 documentary papyri) and `patrologia` (33 *Patrologia Graeca*
+   volumes, 6.79M words) are omitted from the in-memory browser due to size;
+   search `ddbdp` via `aegean db search ddbdp` and browse/read `patrologia`
+   commentaries via `aegean bible commentary` or `aegean.load("patrologia")`.
 2. **The global-key legend**, listing the single-key shortcuts for every screen.
 
 ### Corpus browser (`c`)
@@ -389,9 +393,27 @@ catalogue and the addressing scheme are documented in
 Testament** (the `nt` corpus, Nestle 1904 with gold lemma, morphology, Strong's
 numbers, and glosses).
 
+### Library manager (`l`)
+
+Unified manager for every bundled corpus, downloadable corpus, Biblical/Patristic
+bundle, Greek literary work, commentary, lexicon, and model:
+
+1. **Packs tab** — one-key installation of named bundles (`biblical`, `patristic`,
+   `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) with live installed/missing
+   counts and sizes.
+2. **Installed tab** — everything currently available offline on disk, with byte
+   footprint and `x` to remove any downloaded item (bundled corpora are protected).
+3. **Catalog tab** — filter across all ~1,900 managed items by category or search
+   string (`/`), press `i` / `Enter` to install on a background worker, or `x` to
+   remove a cached asset.
+
+Both the **Corpus browser (`c`)** and **Biblical Greek (`b`)** screens also surface
+an inline one-click download bar whenever you select a corpus, NT edition,
+manuscript witness, or Septuagint passage whose asset is not yet cached.
+
 ### Data store (`d`)
 
-Two read-only reports plus one action:
+Two read-only reports plus fetch/remove actions:
 
 1. **The environment report**, verbatim from `aegean doctor`: the Python and
    pyaegean versions, which optional extras are importable, the local data store's
@@ -401,10 +423,8 @@ Two read-only reports plus one action:
    every fetchable dataset, its download state, on-disk size, and license.
 3. **`f` — fetch the highlighted dataset**, on a worker with a progress line that
    refreshes the row on completion and surfaces any failure as a one-line
-   notification (never a crash). `r` refreshes the report and table from disk.
-
-There is no remove action in the TUI by design (a deletion here is a footgun);
-`aegean data remove` on the command line handles that.
+   notification. **`x` — remove the highlighted cached dataset** and reclaim its
+   disk space. **`r`** refreshes the report and table from disk.
 
 ### Command console (`:`)
 
@@ -415,7 +435,7 @@ and session corpus cache as bare `aegean` / `aegean repl`, so `use CORPUS` sets
 a session corpus, `:examples` works, and every command behaves identically to
 the command line. As you type, a floating completion list offers context-aware
 predictions across every command (1-, 2-, and 3-level nested subcommands,
-including `bible` and `greek interop`/`conllu`/`annotation-profiles`),
+including `bible`, `library`, and `greek interop`/`conllu`/`annotation-profiles`),
 deduplicated `--flag` options, and offline domain values (corpora, fetchable
 datasets, NT/LXX books, NT editions, manuscript sigla, meters, dictionaries, and
 output formats) with a one-line description each (`↑`/`↓` to pick, `Tab`/`Enter`
@@ -425,10 +445,9 @@ or networked commands run on a worker so the console stays responsive.
 
 The console needs the `[cli]` extra (typer + rich). If it is missing, the input is
 disabled with a one-line message pointing you at `pip install 'pyaegean[cli]'`.
-Press `i` or `/` to focus the input. This is the escape hatch that keeps the whole
-command surface reachable from inside the TUI: the full query engine,
-keyness/dispersion, plots, export/import, geo maps, `db build`, and the evaluation
-reproductions all stay on the command line, and the console runs them in place.
+Press `i` or `/` to focus the input. Every command-line feature — queries,
+keyness/dispersion, plots, export/import, geo maps, `db build`, and evaluation
+reproductions — runs directly inside the TUI through this console.
 
 ---
 

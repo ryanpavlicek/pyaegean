@@ -323,13 +323,15 @@ def load_commentary(
     ref: str | None = None,
     force: bool = False,
 ) -> Any:
-    """Load a Greek patristic biblical commentary (NT *Catenae* or Origen) by book name.
+    """Load a Greek patristic biblical commentary (Catenae, Origen, First1KGreek Fathers,
+    or *Patrologia Graeca*) by book name or explicit ``work_id``.
 
     For example, ``load_commentary('John')`` loads the *Catena Integra* in
-    Joannem (``tlg4102.tlg005``), while ``load_commentary('John', kind='origen')``
-    loads Origen's *Commentarii in Evangelium Joannis* (``tlg2042.tlg005``).
-    Pass ``work_id`` explicitly to pick a specific volume from
-    :func:`patristic_commentaries`.
+    Joannem (``tlg4102.tlg005``), ``load_commentary('John', kind='origen')``
+    loads Origen's *Commentarii in Evangelium Joannis* (``tlg2042.tlg005``), and
+    ``load_commentary('John', kind='patrologia')`` loads Cyril of Alexandria's
+    *Commentary on John* (``PG073`` from ``patrologia-graeca-corpus``).
+    Pass ``work_id`` explicitly to pick any volume from :func:`patristic_commentaries`.
     """
     if work_id is not None:
         wid = work_id
@@ -342,6 +344,10 @@ def load_commentary(
                 + (f", kind={kind!r}" if kind else "")
             )
         wid = candidates[0]["work_id"]
+    if wid.upper().startswith("PG"):
+        from ...scripts.greek.patrologia import load_patrologia
+
+        return load_patrologia(wid)
     from ...scripts.greek.perseus import load_work
 
     return load_work(wid, ref=ref, source="first1k", force=force)

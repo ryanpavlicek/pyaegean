@@ -1,7 +1,7 @@
 # Greek NLP benchmarks — protocol and numbers
 
 How pyaegean is scored on the standard Ancient Greek benchmarks: the protocol, the
-leakage controls that keep the comparison honest, the field's published numbers, and
+leakage controls that prevent train/test overlap, the field's published numbers, and
 pyaegean's own measured results. The README carries pyaegean's own numbers;
 cited cross-tool tables appear here and on the wiki's Benchmarks page.
 
@@ -90,8 +90,8 @@ narrow interval means the number is stable, not a lucky fold.
 ## Leakage controls
 
 UD Perseus is converted from the AGDT: the treebank pyaegean's Greek backends are built
-from, so a naïve evaluation would leak the test set into training. Two controls keep the
-neural pipeline's numbers honest:
+from, so a naïve evaluation would leak the test set into training. Two controls enforce
+clean separation for the neural pipeline:
 
 - **The UD-Perseus exclusion manifest.** `greek.agdt_ud_overlap()` resolves every
   UD-Perseus dev+test sentence to its AGDT source and verifies the reference by NFC
@@ -108,7 +108,7 @@ One caveat applies to the **pure-Python baseline** below, not the neural pipelin
 tagger, edit-tree lemmatizer, arc-eager parser, and treebank lookup are built from the
 *full* AGDT, which contains the UD-Perseus test sentences. Their Perseus-fold scores are
 therefore an in-training upper bound, reported for orientation; the PROIEL fold is their
-honest number.
+held-out score.
 
 ## The field's published numbers
 
@@ -139,8 +139,8 @@ in **bold**.
 | UDPipe (proiel) | 95.97 | 88.62 | 93.17 | 72.40 | 67.48 |
 
 (The same paper shows substantial cross-treebank degradation: for example,
-Stanza-perseus scores 59.00 UAS on PROIEL, which is why pyaegean keeps
-out-of-domain and unseen-form measurement first-class.)
+Stanza-perseus scores 59.00 UAS on PROIEL, which is why pyaegean reports
+out-of-domain and unseen-form metrics alongside in-domain scores.)
 
 Riemenschneider & Frank's 2023 paper,
 *“Exploring Large Language Models for Classical Philology”* (ACL,
@@ -211,7 +211,7 @@ bootstrap evidence; the margin column is the arithmetic difference:
 (CIs are percentile bootstrap over the fold's sentences, 999 resamples: `greek.bootstrap_ud`'s
 default, so the reproduction command matches; the 2-decimal bounds are stable across resample counts.)
 
-Three things keep these honest:
+Three qualifications apply to these figures:
 
 - **Confidence intervals and historical replication.** The current decoder-v2 within-fold
   lower bounds (84.94 LAS / 89.62 UAS) exceed the cited 83.98 / 88.20 rows. The archived
@@ -248,7 +248,7 @@ optimizes download size and disk, not speed; throughput-sensitive work can fetch
 in `training/results/v3-quantize-report.json` (the rejected full-int8 recipe in
 `gate-report.json`). The recipe is **weight-only int8 + fp16, activations kept fp32**:
 onnxruntime MatMulNBits (block 128, symmetric) on the MatMul weights, fp16 on everything
-else (crucially the 160 MB word-embedding table). Activations stay fp32 by design.
+else (crucially the 160 MB word-embedding table). Activations remain fp32.
 
 **Full int8 (quantized activations) is excluded because it collapses the GreBerta
 encoder.** Its activation outliers do not survive 8-bit quantization: the recorded

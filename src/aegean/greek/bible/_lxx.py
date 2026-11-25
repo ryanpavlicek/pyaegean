@@ -416,20 +416,26 @@ def commentary_excerpt(
     limit: int = 5,
     force: bool = False,
 ) -> list[CommentaryExcerpt]:
-    """Read or search Greek patristic commentary sections (*Catenae* or Origen) for a book.
+    """Read or search Greek patristic commentary sections (Catenae, Origen, First1KGreek
+    Fathers, or *Patrologia Graeca*) for a book.
 
-    Loads the selected commentary volume via :func:`aegean.greek.load_work` (cached
-    after first fetch) and returns structured :class:`CommentaryExcerpt` records,
-    optionally filtered by Greek ``query`` (accent/case-insensitive).
+    Loads First1KGreek volumes via :func:`aegean.greek.load_work` and *Patrologia Graeca*
+    volumes (``PG*``) via :func:`aegean.scripts.greek.load_patrologia`, returning structured
+    :class:`CommentaryExcerpt` records optionally filtered by Greek ``query``
+    (accent/case-insensitive).
     """
     if work_id is not None:
-        matches = [c for c in patristic_commentaries() if c["work_id"] == work_id]
+        wid_up = work_id.strip().upper()
+        matches = [
+            c for c in patristic_commentaries()
+            if c["work_id"].upper() == wid_up
+        ]
         meta = matches[0] if matches else {
             "work_id": work_id,
             "book": book,
             "author": "Patristic",
             "title": work_id,
-            "kind": kind or "catena",
+            "kind": "patrologia" if wid_up.startswith("PG") else (kind or "catena"),
         }
     else:
         canon = _normalize_commentary_book(book)
@@ -441,14 +447,34 @@ def commentary_excerpt(
             )
         meta = candidates[0]
 
-    from ...scripts.greek.perseus import load_work
-
-    corp = load_work(meta["work_id"], ref=ref, source="first1k", force=force)
+    wid = str(meta["work_id"])
     q_fold = _fold(query.strip()) if query and query.strip() else ""
 
+    # Build (section_id, words) chunks: page-by-page for PG volumes, doc-by-doc for First1K.
+    chunks: list[tuple[str, list[str]]] = []
+    if wid.upper().startswith("PG"):
+        from ...scripts.greek.patrologia import load_patrologia
+
+        corp = load_patrologia(wid)
+        for doc in corp:
+            by_page: dict[str, list[str]] = {}
+            for tok in doc.tokens:
+                pg = str(tok.annotations.get("page", "1"))
+                if ref and pg != ref.strip():
+                    continue
+                by_page.setdefault(pg, []).append(tok.text)
+            for pg, words in by_page.items():
+                chunks.append((f"{doc.id} p.{pg}", words))
+    else:
+        from ...scripts.greek.perseus import load_work
+
+        corp = load_work(wid, ref=ref, source="first1k", force=force)
+        for doc in corp:
+            sec = doc.id.partition(":")[2] or doc.id
+            chunks.append((sec, [t.text for t in doc.tokens]))
+
     excerpts: list[CommentaryExcerpt] = []
-    for doc in corp:
-        words = [t.text for t in doc.tokens]
+    for sec, words in chunks:
         full_text = " ".join(words)
         if not full_text.strip():
             continue
@@ -475,7 +501,6 @@ def commentary_excerpt(
         else:
             snippet = " ".join(words[:140]) + (" …" if len(words) > 140 else "")
 
-        sec = doc.id.partition(":")[2] or doc.id
         excerpts.append(
             CommentaryExcerpt(
                 work_id=meta["work_id"],

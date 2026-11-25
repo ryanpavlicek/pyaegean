@@ -509,20 +509,26 @@ _REMOTE: dict[str, DataSpec] = {
         extract=False,
         on_disk=("strongs-greek.json.gz",),
     ),
-    # Multi-edition Greek New Testament bundle (SBLGNT, SRGNT, Byzantine Majority Text,
-    # and Textus Receptus), built reproducibly by scripts/build_nt_editions.py.
-    # Fetched on demand, never bundled.
+    # Multi-edition Greek New Testament bundle (8 editions: SBLGNT, SRGNT, BHP,
+    # Tischendorf 8th, Westcott-Hort 1881, Robinson-Pierpont Byzantine Majority Text,
+    # Antoniades 1904 Patriarchal Edition, Textus Receptus), built reproducibly by
+    # scripts/build_nt_editions.py. Fetched on demand, never bundled.
     "nt-editions": DataSpec(
         name="nt-editions",
         url=(
             "https://github.com/ryanpavlicek/pyaegean/releases/download/"
-            "nt-editions-v1/nt-editions.json.gz"
+            "nt-editions-v2/nt-editions.json.gz"
         ),
-        sha256="c538c2f5561da2e2a51d8c173e5db0b56b5d06cb75e6bd6f786709c0168a810d",
-        license="CC-BY-SA-3.0 / CC-BY-4.0 / Public Domain (SBLGNT/MorphGNT, CNTR SR & KJTR, Robinson-Pierpont BYZ)",
-        note="Multi-edition Greek New Testament (~1.7 MB gzip): SBLGNT, Statistical Restoration "
-             "GNT, Robinson-Pierpont Byzantine Majority Text, and Textus Receptus. Used by "
-             "aegean.greek.bible.load_nt(..., edition=...) and compare_editions().",
+        sha256="4bbe7fddf90627d3affa87ba977744c5f2f2b54a24741135e0b6df49386a19a8",
+        license=(
+            "CC-BY-SA-3.0 / CC-BY-4.0 / Public Domain (SBLGNT/MorphGNT; CNTR SR, BHP & KJTR; "
+            "Tischendorf 8th, Westcott-Hort 1881, Robinson-Pierpont BYZ, Antoniades 1904)"
+        ),
+        note=(
+            "Multi-edition Greek New Testament (~3.3 MB gzip): 8 editions (SBLGNT, SRGNT, BHP, "
+            "Tischendorf 8th, Westcott-Hort 1881, Byzantine Majority, Antoniades 1904 Patriarchal, "
+            "Textus Receptus). Used by aegean.greek.bible.load_nt(..., edition=...) and compare_editions()."
+        ),
         extract=False,
         on_disk=("nt-editions.json.gz",),
     ),
@@ -561,6 +567,137 @@ _REMOTE: dict[str, DataSpec] = {
         ),
         extract=False,
         on_disk=("lxx-corpus.json.gz",),
+    ),
+    # Calfa-GREgORI Patrologia Graeca (CGPG, LREC 2026, CC BY 4.0): 33 digitized Migne PG
+    # volumes (~6.79M Greek words, automated OCR of 19th-century prints), including 9 major
+    # biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius, Oecumenius,
+    # Theophylact of Bulgaria). Fetched on demand, never bundled.
+    "patrologia-graeca-corpus": DataSpec(
+        name="patrologia-graeca-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "patrologia-graeca-corpus-v1/patrologia-graeca-corpus.json.gz"
+        ),
+        sha256="3026b578589d5b40eb4a9df14a3bcc8a901727b27eb87571a9d0db6231a6ed5b",
+        license="CC BY 4.0 (CGPG — UCLouvain GREgORI & Calfa, Vidal-Gorène & Kindt, LREC 2026); fetched, never bundled",
+        note=(
+            "Patrologia Graeca corpus (~23.5 MB gzip): 33 Migne PG volumes (6.79M Greek words, OCR), "
+            "including 9 biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius, "
+            "Oecumenius, Theophylact of Bulgaria). Load via aegean.load('patrologia') or bible commentaries."
+        ),
+        extract=False,
+        on_disk=("patrologia-graeca-corpus.json.gz",),
+    ),
+    # Open Apostolic Fathers (Tauber & Macdonald, CC BY-SA 4.0): 15 twice-hand-corrected
+    # Greek Apostolic Fathers works (1-2 Clement, Ignatius 7 epistles, Polycarp, Didache,
+    # Barnabas, Shepherd of Hermas, Martyrdom of Polycarp, Diognetus).
+    "apostolic-fathers-corpus": DataSpec(
+        name="apostolic-fathers-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "apostolic-fathers-corpus-v1/apostolic-fathers-corpus.json.gz"
+        ),
+        sha256="579a20efed447535fe04a8e515ea8a3be7e9f18f9b281b2f9ecec226cee26bf6",
+        license="CC BY-SA 4.0 (Open Apostolic Fathers — James Tauber & Seumas Macdonald, Zenodo 10.5281/zenodo.2555673); fetched, never bundled",
+        note=(
+            "Open Apostolic Fathers Greek corpus (~1.0 MB gzip): all 15 hand-corrected works "
+            "(64,944 tokens: 1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Diognetus). "
+            "Load via aegean.load('apostolic-fathers')."
+        ),
+        extract=False,
+        on_disk=("apostolic-fathers-corpus.json.gz",),
+    ),
+    # Online Critical Pseudepigrapha (OCP, CC BY 4.0): 44 Greek Second Temple & Old Testament
+    # Pseudepigrapha texts (1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs,
+    # Testament of Job, Testament of Solomon, Letter of Aristeas, Sibylline Oracles, etc.).
+    "pseudepigrapha-corpus": DataSpec(
+        name="pseudepigrapha-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "pseudepigrapha-corpus-v1/pseudepigrapha-corpus.json.gz"
+        ),
+        sha256="2138ba25146a145aebdcf5719d08e1b87a895ed42774e2e849ecd066a34513e3",
+        license="CC BY 4.0 (Online Critical Pseudepigrapha — Ken M. Penner et al., pseudepigrapha.org); fetched, never bundled",
+        note=(
+            "Greek Old Testament Pseudepigrapha & Second Temple corpus (~2.7 MB gzip): 44 works "
+            "(171,306 tokens: 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, "
+            "Testament of Job/Solomon/Abraham, Aristeas, Joseph & Aseneth, Sibylline Oracles, etc.). "
+            "Load via aegean.load('pseudepigrapha')."
+        ),
+        extract=False,
+        on_disk=("pseudepigrapha-corpus.json.gz",),
+    ),
+    # Inscriptions of Aphrodisias 2007 (IAph2007, King's College London, CC BY 2.5):
+    # 1,471 Greek EpiDoc inscriptions from Aphrodisias in Caria (Western Asia Minor).
+    "aphrodisias-corpus": DataSpec(
+        name="aphrodisias-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "aphrodisias-corpus-v1/aphrodisias-corpus.json.gz"
+        ),
+        sha256="c092b29ebce79f77697b5d7b9d2506f35bfced2ef0d93ebeea25a85f5c15ff19",
+        license="CC BY 2.5 (Inscriptions of Aphrodisias 2007 — Reynolds, Roueché & Bodard, KCL, http://insaph.kcl.ac.uk/); fetched, never bundled",
+        note=(
+            "Inscriptions of Aphrodisias Greek corpus (~0.5 MB gzip): 1,471 EpiDoc inscriptions "
+            "(38,556 tokens) from Aphrodisias in Caria with editorial ReadingStatus. "
+            "Load via aegean.load('aphrodisias')."
+        ),
+        extract=False,
+        on_disk=("aphrodisias-corpus.json.gz",),
+    ),
+    # Cretan Institutional Inscriptions (Irene Vagionakis, Univ. Ca' Foscari, CC BY-NC-SA 4.0):
+    # 600 Archaic-Hellenistic Greek EpiDoc inscriptions from Crete (7th-1st c. BCE).
+    "crete-corpus": DataSpec(
+        name="crete-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "crete-corpus-v1/crete-corpus.json.gz"
+        ),
+        sha256="4cb73c822f389b2d96d64bf3e70c2f79107d448e160a09f171767e99375204c3",
+        license="CC BY-NC-SA 4.0 (Cretan Institutional Inscriptions — Irene Vagionakis, Univ. Ca' Foscari; NonCommercial, never bundled)",
+        note=(
+            "Cretan Institutional Inscriptions Greek corpus (~0.6 MB gzip): 600 Archaic–Hellenistic "
+            "Cretan EpiDoc inscriptions (50,995 tokens, 7th–1st c. BCE). Load via aegean.load('crete')."
+        ),
+        extract=False,
+        on_disk=("crete-corpus.json.gz",),
+    ),
+    # Byzantine & Early Modern Vernacular Greek Corpus (Public Domain / CC BY-SA 3.0):
+    # 12 medieval & early modern vernacular Greek literary texts (12th-17th c.).
+    "byzantine-corpus": DataSpec(
+        name="byzantine-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "byzantine-corpus-v1/byzantine-corpus.json.gz"
+        ),
+        sha256="b640d24d14916045f26299b23368becfaa60cfb7336f623cebfc5a6d28b3b09f",
+        license="Public Domain / CC BY-SA 3.0 (Wikisource & Kalonaros 1940; open-greek/byzantine-early-modern-corpus); fetched, never bundled",
+        note=(
+            "Byzantine & Early Modern Vernacular Greek corpus (~2.5 MB gzip): 12 texts (189,375 tokens, "
+            "12th–17th c.: Digenes Akritas, Chronicle of Moreas, Ptochoprodromika, Poulologos, "
+            "Apokopos, Erotokritos). Load via aegean.load('byzantine')."
+        ),
+        extract=False,
+        on_disk=("byzantine-corpus.json.gz",),
+    ),
+    # Homer Multitext Project (hmt-2026a, CC BY-NC 4.0): normalized Venetus A Iliad (24 books)
+    # and Homeric scholia (Venetus A main/interlinear/intermarginal/interior/exterior, Venetus B,
+    # Escorial Upsilon 1.1). NonCommercial passes to the user; never bundled.
+    "homer-scholia-corpus": DataSpec(
+        name="homer-scholia-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "homer-scholia-corpus-v1/homer-scholia-corpus.json.gz"
+        ),
+        sha256="3d77c7dd44e11bd8e5c4865b2f091ba2a5f4459cdad06487aeb9a43ececa8502",
+        license="CC BY-NC 4.0 (Homer Multitext Project, Center for Hellenic Studies; NonCommercial, never bundled)",
+        note=(
+            "Homer Multitext Venetus A Iliad & Scholia (~5.5 MB gzip): 54 documents (331,365 tokens; "
+            "24 books Venetus A Iliad + Venetus A, Venetus B & Escorial Homeric scholia). "
+            "Load via aegean.load('homer-scholia')."
+        ),
+        extract=False,
+        on_disk=("homer-scholia-corpus.json.gz",),
     ),
     # The prebuilt Linear A Research Workbench static web app (the browser UI), hosted as a
     # release asset on the workbench repo and served locally by `aegean workbench`. The app
@@ -929,6 +1066,17 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
             sha256="7ae265384543cabc7554e543c3f3a1cccbfa1e3ca531b4cbd8755124f58845e2",
             superseded="v2",
             extract=True,
+        ),
+    ],
+    "nt-editions": [
+        HistoricalPin(
+            version="v1",
+            url=(
+                "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+                "nt-editions-v1/nt-editions.json.gz"
+            ),
+            sha256="c538c2f5561da2e2a51d8c173e5db0b56b5d06cb75e6bd6f786709c0168a810d",
+            superseded="v2",
         ),
     ],
 }

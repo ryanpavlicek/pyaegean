@@ -165,21 +165,11 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers twenty-three read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
-`show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
-(accounting reconciliation), `query_corpus` (the compound query engine),
-`cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
-coordinates and per-site word attestations), and `data_status` (the local data
-store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
-`greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
-work's text by catalogue id; the first use fetches it into the local data store,
-cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
-evidence class in plain language), `corpus_diagnose` (the corpus health report),
-and `koine_gloss` (the bundled Dodson NT lexicon). Biblical & Koine: `biblical_strongs`,
-`biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`,
-and `biblical_lxx`. Corpora and works are addressed
-by registry name or catalogue work id only (never a filesystem path), and a
-domain miss returns a structured error with a did-you-mean hint.
+It exposes **23 read/analysis tools** across corpora, Greek NLP, and Biblical &
+Koine Greek (see [MCP server](MCP) for the full tool reference). Corpora and
+works are addressed by registry name or catalogue work id only (never a
+filesystem path), and a domain miss returns a structured error with a
+did-you-mean hint.
 
 ---
 
@@ -194,10 +184,10 @@ query fields all answer a typo with the nearest real name:
 
 ```bash
 aegean info linera
-# aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
+# aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (…), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 
 aegean data fetch grc-jiont
-# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 32)
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 39)
 ```
 
 The fix is in the message: take the suggestion, or list the valid names

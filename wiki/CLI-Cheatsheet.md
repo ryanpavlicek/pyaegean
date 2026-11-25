@@ -54,12 +54,10 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
-| **`db`** | `build` `add` `search` |
+| **`db`** | `build` `add` `search` `index` `annotate` `job-status` |
 | **`review`** | `export` `apply` `merge` (annotation review round-trip, multi-reviewer merge) |
-| **`geo`** | (top-level command: coordinates / GeoJSON) |
 | **`ai`** | `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` `providers` |
-| **`workbench`** | (top-level command: serve the web UI) |
-| **`aegean-mcp`** | separate console script: serve the tools to AI agents over MCP |
+| **`aegean-mcp`** | separate console script: serve the 23 tools to AI agents over MCP |
 
 ---
 
@@ -75,8 +73,8 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 |---|---|---|---|
 | `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
 | `repl` | Interactive shell (also launched by bare `aegean` on a TTY): run commands without the `aegean` prefix, with live inline ghost-text + dropdown prediction across every command, flag, and domain value (corpora, packs, datasets, NT/LXX books, editions, manuscripts, meters, dictionaries), persistent history, and session corpus caching. Directives: `use CORPUS` (`use off` clears) · `:examples` · `:help` · `:exit` | — | `aegean` (or `aegean repl`) |
-| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): corpus browser (`c`, with inline downloads), Greek workbench (`g`), Biblical Greek (`b`, with inline downloads), **Library Manager** (`l`), works library (`w`), data store (`d`), and command console (`:`); keys `h`/`c`/`g`/`b`/`l`/`w`/`d`, `:` console, `t` theme, `?` help, `Esc` back, `ctrl+p` palette. See the [TUI](TUI) page | — | `aegean tui` |
-| `library` | Unified manager for all corpora, Biblical bundles, ~1,778 Greek works, 48 commentaries, lexica, models, and named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install biblical` |
+| `tui` | Full-screen terminal UI (`[tui]` extra, Textual): 8 screens — Home (`h`), Corpus browser (`c`), Greek workbench (`g`), Biblical Greek (`b`), Library Manager (`l`), Works (`w`), Data store (`d`), Command console (`:`). See [TUI](TUI) | — | `aegean tui` |
+| `library` | Unified manager for all 39 hosted datasets, 5 bundled corpora, ~1,778 Greek works, 86 patristic commentaries, lexica, models, and 7 named packs (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`) | `status` `packs` `list` `search` `info` `install` `remove` `--installed` `--available` `--all` `--json` | `aegean library install biblical` |
 | `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
@@ -752,20 +750,24 @@ The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 ## Biblical & Koine Greek — `aegean bible …`
 
 Multi-edition Greek NT collation, early 2nd–5th c. CE manuscript witnesses, Extended
-Strong's + roots, 55-book Swete Septuagint (LXX), and 48 Greek patristic commentaries.
+Strong's + roots, 55-book Swete Septuagint (LXX), and 86 Greek patristic commentaries across
+10 Church Fathers and traditions (NT *Catenae*, Origen, Cyril of Alexandria, Methodius,
+Eusebius, Clement of Alexandria, Procopius of Gaza, Photius, Oecumenius, Theophylact of Bulgaria).
 Full reference: [CLI: Biblical & Koine Greek](CLI-Bible).
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `read` | Read NT or LXX passage (LXX auto-detected; plain, interlinear, or `-o` export) | `--ref -e/--edition --lxx -i/--interlinear -o/--output --offline --json` | `aegean bible read John 1:1-5 -i` · `aegean bible read Gen 1:1-5` |
-| `compare` | Word-level variant diff across 5 NT editions | `-e/--editions --offline --json` | `aegean bible compare John 1:18` |
+| `compare` | Word-level variant diff across 9 NT editions (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) | `-e/--editions --offline --json` | `aegean bible compare John 1:18` |
 | `witnesses` | Compare 13 early NT manuscripts (*nomina sacra* expanded by default) | `-s/--sigla --hand -d/--diplomatic --no-expand --offline --json` | `aegean bible witnesses John 18:37 -s P52,01,03` |
 | `strongs` | Strong's / Extended Strong's lookup, search, or root tree | `-r/--roots -s/--search --fetch --offline -n/--limit/--top --json` | `aegean bible strongs G3056 --roots` |
 | `word-study` | Unified Strong's + root + morphology + NT concordance report | `-b/--book -n/--limit/--top --offline --json` | `aegean bible word-study ἀγάπη` |
 | `search` | NT concordance (`--by lemma\|text\|strongs\|morph\|gloss`) or LXX (auto-detected / `--lxx`) | `--by -b/--book --section -e/--edition --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --lxx --offline` |
-| `commentary` | List, read (`read TARGET` or TLG ID), or search (`search TARGET TERM`) NT *Catenae* & Origen | `-k/--kind --ref -n/--limit/--top --json` | `aegean bible commentary read Matt` · `aegean bible commentary search John λόγος` |
-| `books` | Offline catalogues: `nt`, `lxx`, `editions`, `witnesses`, `all` | `--section --json` | `aegean bible books lxx` |
+| `commentary` | List, read (`read TARGET` or TLG/`PG*` ID), or search (`search TARGET TERM`) 86 patristic commentaries | `-k/--kind --ref -n/--limit/--top --json` | `aegean bible commentary read Matt` · `aegean bible commentary search PG073 λόγος` |
+| `books` | Offline catalogues: `nt`, `lxx`, `editions` (9), `witnesses` (13), `all` | `--section --json` | `aegean bible books editions` |
 | `psalm` | Masoretic (`mt`) ↔ Septuagint (`lxx`) Psalm numbering | `--from --json` | `aegean bible psalm 23 --from mt` |
+| `status` | Show which Biblical & Koine bundles are installed vs available | `--json` | `aegean bible status` |
+| `install` | Download one or more Biblical assets (`all` installs the full `biblical` pack) | `--force --json` | `aegean bible install all` |
 
 ---
 
@@ -785,59 +787,9 @@ Surface analyses over syllabic and alphabetic corpora. Method notes: [Analysis](
 | `structure` | Heuristic doc categories (accounting/libation/…) | `--site --period --scribe --support -o/--output --json` | `aegean analyze structure lineara` |
 | `hands` | Scribal-hand profiles / keyness (e.g. DAMOS) | `--hand --top --min-docs --signs --site --period --scribe --support -o/--output --json` | `aegean analyze hands damos` |
 
-### Verified examples
-
-```bash
-aegean analyze distance KU-RO KI-RO
-# KU-RO ↔ KI-RO: 0.200
-
-aegean analyze align KU-RO KI-RO
-# K K match · U I sub-far · - - match · R R match · O O match
-
-aegean analyze compare po-me ποιμήν
-# po-me [linearb] → pome    ποιμήν [greek] → poimēn
-# similarity 0.62  (distance 0.383)   [+ a per-position alignment table]
-
-aegean analyze nearest qa-si-re-u greek --top 3 --json
-# [{"candidate":"Ἡροδότου","distance":0.612},{"candidate":"καὶ","distance":0.625},
-#  {"candidate":"ἄειδε","distance":0.625}]
-
-aegean analyze assoc lineara KU-RO KI-RO
-# joint/w1/w2/docs 5/34/12/1721 · chi_squared 78.75 · log_likelihood 23.94 · fisher_p 1.6e-06
-
-aegean analyze cooccur lineara KU-RO --top 5
-# KI-RO 5 · *306-TU 4 · KU-PA₃-NU 4 · SA-RA₂ 4 · *324-DI-RA 3
-
-aegean analyze structure lineara
-# accounting 134 · libation 18 · list 6 · text 1 · other 1562   (heuristic census)
-
-aegean analyze cooccur lineara KU-RO --top 5 -o cooccur.csv   # save the ranking
-```
-
-`assoc`, `cooccur`, `clusters`, `structure`, `hands`, and `nearest` take the same
-`-o FILE` (`.json` / `.csv` / `.txt`) as the top-level analysis commands, printing
-the same `wrote <path>` confirmation and combining with `--json`. `structure` and
-`hands` also take the shared metadata filters (`--site --period --scribe
---support`), and `--top 0` lifts the cap on the ranked tables.
-
-`compare` / `nearest` script options (`--script-a` / `--script-b`): `greek`,
-`lineara`, `linearb`, `cypriot`. `--fold-aspiration` maps θ/φ/χ → t/p/k, which is
-fairer against defective syllabic spelling. These numbers are exploratory: read
-the **alignment and the ranking**, not the absolute distance. The Python
-equivalent of `distance`:
-
-```python
-from aegean import analysis
-analysis.phonetic_distance("KU-RO", "KI-RO")    # 0.2
-```
-
-`hands` needs a corpus that records a scribe per document (DAMOS does; the bundled
-`lineara` records HT scribes too):
-
-```bash
-aegean analyze hands damos                       # profile every hand
-aegean analyze hands damos --hand 103            # one hand's characteristic words (keyness)
-```
+`assoc`, `cooccur`, `clusters`, `structure`, `hands`, and `nearest` accept
+`-o FILE` (`.json` / `.csv` / `.txt`) and `--top 0` to lift caps. Full examples:
+[CLI: Corpora, Analysis & Data](CLI-Corpora).
 
 ---
 
@@ -855,37 +807,11 @@ expiry. A changed pin or `--force` causes a new fetch; `remove` deletes the chos
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |
 
-`aegean data list` is the authoritative live registry (currently 32 entries).
-The table below lists the common runtime and corpus assets; the live output also
-includes evaluation folds and supporting indexes used by benchmark commands.
-
-| name | what | license |
-|---|---|---|
-| `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | CC BY-SA 3.0 (Perseus AGDT) |
-| `grc-joint` | joint tagger-parser-lemmatizer, ~173 MB (the `[neural]` extra) | CC BY-SA 4.0 |
-| `grc-lemma-neural` | GreTa seq2seq lemmatizer, ~232 MB (the `[neural]` extra) | CC BY-SA 4.0 |
-| `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
-| `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
-| `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
-| `autenrieth-index` | prebuilt Autenrieth (Homeric) lemma→entry index | public domain (1891) |
-| `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
-| `grc-paradigms` | Ancient Greek inflection paradigms used by `greek.inflect` | CC BY-SA 4.0 (derived) |
-| `damos-corpus` | DAMOS Linear B corpus, ~5,900 tablets: `load('damos')` | CC BY-NC-SA 4.0 |
-| `sigla-corpus` | SigLA Linear A dataset, 802 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
-| `nt-corpus` | Greek NT (Nestle 1904), 260 chapters / ~137,800 tokens: `load('nt')` | CC0-1.0 |
-| `strongs-greek` | Extended Strong's Greek Lexicon (11,142 entries + roots): `biblical.use_strongs()` | CC BY-SA 4.0 |
-| `nt-editions` | Four Greek NT editions (`sblgnt`, `srgnt`, `byz`, `tr`): `biblical.compare_editions()` | CC BY 4.0 / PD |
-| `nt-witnesses` | Thirteen 2nd–5th c. CE Greek NT manuscripts: `biblical.compare_witnesses()` | CC BY-SA 4.0 |
-| `lxx-corpus` | Swete Septuagint (LXX; 55 books / 29,248 verses): `biblical.load_lxx()` | CC BY-SA 4.0 |
-| `isicily-corpus` | I.Sicily Greek inscriptions of Sicily, 2,855 texts: `load('isicily')` | CC BY 4.0 |
-| `iip-corpus` | IIP Greek inscriptions of Israel/Palestine, 2,113 texts: `load('iip')` | CC BY-NC 4.0 |
-| `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea, 1,194 texts: `load('iospe')` | CC BY 4.0 |
-| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica, 997 texts: `load('igcyr')` | CC BY-NC-SA 4.0 |
-| `edh-corpus` | EDH Greek inscriptions (frozen 2021 dump), 1,286 texts: `load('edh')` | CC BY-SA 4.0 |
-| `ddbdp-corpus` | DDbDP documentary papyri, 57,331 texts as SQLite + FTS (~219 MB download): `aegean db search ddbdp` | CC BY 3.0 |
-| `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
-| `linearb-corpus` | bring-your-own Linear B export (no default source) | per your source |
-| `workbench-app` | prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |
+`aegean data list` is the authoritative live registry (currently 39 entries).
+Use `aegean library packs` to install related groups at once (`biblical`,
+`patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`), and see
+[Data & Provenance](Data-and-Provenance) for the full 39-entry table of sizes,
+SHA-256 hosting policy, and licenses.
 
 ```bash
 aegean data fetch grc-joint                       # pre-fetch before going offline
@@ -896,10 +822,8 @@ aegean data store                                 # store path + contents (overr
 
 There are **two** caches: this **data** download store (`aegean data store`,
 permanent until `aegean data remove`, override with `PYAEGEAN_CACHE`; `aegean data
-cache` is an older deprecated alias) and the opt-in **analysis**
-memoization cache
-(`aegean cache`, enabled with `PYAEGEAN_ANALYSIS_CACHE=1`). Licensing details are
-on [Data & Provenance](Data-and-Provenance).
+cache` is an older deprecated alias) and the opt-in **analysis** memoization cache
+(`aegean cache`, enabled with `PYAEGEAN_ANALYSIS_CACHE=1`).
 
 ---
 
@@ -1056,21 +980,9 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers twenty-three read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
-`show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
-(accounting reconciliation), `query_corpus` (the compound query engine),
-`cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
-coordinates and per-site word attestations), and `data_status` (the local data
-store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
-`greek_catalog` (the ~1,800-work discovery catalogue), `greek_work` (load a
-work's text by catalogue id; the first use fetches it into the local data store,
-cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
-evidence class in plain language), `corpus_diagnose` (the corpus health report),
-and `koine_gloss` (the bundled Dodson NT lexicon). Biblical & Koine: `biblical_strongs`,
-`biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`,
-and `biblical_lxx`. Corpora and works are addressed
-by registry name or catalogue work id only (never a filesystem path), and a
-domain miss returns a structured error with a did-you-mean hint.
+It exposes **23 read/analysis tools** over stdio (corpora, Greek NLP, and Biblical
+& Koine Greek). Corpora and works are addressed by registry name or catalogue work
+id only. See [MCP server](MCP) for the full tool table and client setup.
 
 ---
 

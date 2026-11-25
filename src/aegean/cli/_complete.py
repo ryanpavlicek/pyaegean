@@ -245,7 +245,9 @@ def _option_value_choices(
         if opt in ("-k", "--kind"):
             return [
                 ("catena", "Greek NT Catenae (30 volumes)"),
-                ("origen", "Origen biblical commentaries (18 volumes)"),
+                ("origen", "Origen biblical commentaries (41 volumes)"),
+                ("patristic", "First1KGreek Fathers (Cyril, Methodius, Eusebius, Clement)"),
+                ("patrologia", "Patrologia Graeca commentaries (Cyril, Theophylact, Oecumenius, Photius, Procopius)"),
             ], False
         if opt == "--from":
             return [

@@ -5,7 +5,7 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, research tools, translation grounding,
 and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.67.0 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.68.0 (beta).** The API may still shift before 1.0.
 > This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
@@ -67,15 +67,15 @@ greek.accentuation("λόγος").classification    # 'paroxytone'
 | [Cypro-Minoan](Cypro-Minoan) | Undeciphered Bronze Age Cyprus: 99-sign Unicode inventory + sign-sequence tokenization (no phonetics or bridge: the script is undeciphered) |
 | [Analysis](Analysis) | Accounting checks, sign-pattern and phonetic search, cross-script comparison, clustering, collocation and corpus statistics, structure detection, and a query engine |
 | [Greek NLP](Greek-NLP) | Core text utilities, named source-preserving sentence policies, metre, IPA, tagging, morphology, lemmatization, parsing, dictionaries, and 1,778 discoverable works; optional treebank, pure-Python, and neural backends, with the neural pipeline measured at 97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS on the UD Perseus test fold |
-| [Biblical & Koine Greek](New-Testament) | `aegean.greek.bible`, `aegean bible`, `aegean tui` (`b`), and 6 MCP tools: **5 Greek NT editions** (`nestle1904`, `sblgnt`, `srgnt`, `byz`, `tr`) with word-level collation, **13 early 2nd–5th c. CE manuscripts** (`01`–`05`, `032`, `P45`–`P75`) with *nomina sacra* expansion, **Extended Strong's** (11,142 entries + root trees), the **55-book Swete Septuagint (LXX)** (`load_lxx`, `search_lxx`, Psalm conversion), and **48 Greek patristic commentaries** (*Catenae* & Origen) |
-| Greek corpora ([Data & Provenance](Data-and-Provenance)) | Beyond the bundled sample: the gold-annotated **Greek New Testament** (`aegean.load("nt")`, Nestle 1904: lemma, morphology, Strong's) and six fetch-on-demand epigraphic/papyrological corpora: **I.Sicily** (2,855), **IIP** (2,113), **IOSPE** (1,194), **IGCyr/GVCyr** (997), **EDH** (1,286), and the **DDbDP documentary papyri** (57,331 texts / ~4.4M tokens as SQLite + full-text search: `aegean db search ddbdp`) |
+| [Biblical & Koine Greek](New-Testament) | `aegean.greek.bible`, `aegean bible`, `aegean tui` (`b`), and 6 MCP tools: **9 Greek NT editions** (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`) with word-level collation, **13 early 2nd–5th c. CE manuscripts** (`01`–`05`, `032`, `P45`–`P75`) with *nomina sacra* expansion, **Extended Strong's** (11,142 entries + root trees), the **55-book Swete Septuagint (LXX)** (`load_lxx`, `search_lxx`, Psalm conversion), and **86 Greek patristic commentaries** across 10 Church Fathers/traditions (First1KGreek + *Patrologia Graeca*) |
+| Greek corpora ([Data & Provenance](Data-and-Provenance)) | Beyond the bundled sample: the gold-annotated **Greek New Testament** (`aegean.load("nt")`), **Patrologia Graeca** (33 volumes, 6.79M words), **Open Apostolic Fathers** (15 works), **Greek OT Pseudepigrapha** (44 works), seven epigraphic corpora (**I.Sicily**, **IIP**, **IOSPE**, **IGCyr/GVCyr**, **Aphrodisias**, **Crete**, **EDH**), **DDbDP documentary papyri** (57,331 texts / ~4.4M tokens, SQLite FTS), **Byzantine Vernacular Greek** (12 works), and **Homer Multitext Venetus A *Iliad* & *Scholia*** (54 docs) |
 | [`aegean.io`](Architecture) | Import **and** export: bring your own text in (`from_text` / `from_text_file` / `from_text_dir` / `from_csv`, and `aegean import` from the shell) → a real `Corpus`; export to EpiDoc (TEI), CSV, Parquet, CoNLL-U, Turtle, and JSON-LD, with typed editorial forms; [loss-aware adapters](Interoperability) carry complete analyses through spaCy, Stanza, and CLTK objects |
 | [CLI](CLI) | The toolkit from a terminal: bare `aegean` interactive shell with predictive completion, guided quickstart, full-screen TUI (`aegean tui`), unified library manager (`aegean library`), corpus/Greek/Biblical commands, diagnostics, JSON output, and stdin piping |
-| [`aegean.library`](Data-and-Provenance) | Unified resource manager across Python, CLI (`aegean library`), and TUI (`l`): inspect bundled vs downloaded items, search ~1,860+ corpora, Biblical bundles, literary works, commentaries, lexica, and models, install named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`), and remove cached files |
+| [`aegean.library`](Data-and-Provenance) | Unified resource manager across Python, CLI (`aegean library`), and TUI (`l`): inspect bundled vs downloaded items, search ~1,900 corpora, Biblical/Patristic bundles, literary works, commentaries, lexica, and models, install **7 named packs** (`biblical`, `patristic`, `aegean`, `epigraphy`, `literary`, `lexica`, `neural`), and remove cached files |
 | [Geography](Geography) | `aegean.geo`: corpus → geopandas GeoDataFrame (per-inscription or per-site points) from a bundled, Pleiades-aligned Aegean gazetteer, for mapping/spatial analysis |
 | `aegean.viz` ([Analysis](Analysis)) | One-line plots (the `[viz]` extra): frequency bars, dispersion/keyness charts, co-occurrence networks, accounting diagonals, scansion grids, and `aegean plot` from the shell |
 | [AI Layer](AI-Layer) | Multi-provider clients (Anthropic/OpenAI/Grok/Gemini/OpenRouter, plus a local Ollama/LM Studio/llama.cpp option), grounding, caching, exploratory-labeled capabilities, hybrid translation |
-| [Data & Provenance](Data-and-Provenance) | Bundled data, download-to-cache, citation/licensing |
+| [Data & Provenance](Data-and-Provenance) | Bundled data, 39 SHA-256-pinned remote assets, citation/licensing |
 
 The **[API reference](https://pyaegean.xyz/api/)** documents the supported facade modules,
 with public classes and functions generated from docstrings and type hints.
@@ -87,7 +87,7 @@ pip install pyaegean            # core + Linear A + Greek
 pip install "pyaegean[cli]"     # + the `aegean` command line
 pip install "pyaegean[ai]"      # + Anthropic / OpenAI / Grok / Gemini / OpenRouter clients (the openai SDK also drives the local Ollama option)
 pip install "pyaegean[interop]" # + Python adapters; combine with [cli] for the interop commands
-pip install "pyaegean[all]"     # bundled runtime extras, including neural (not Parquet/framework adapters)
+pip install "pyaegean[all]"     # bundled runtime extras, including neural (excludes Parquet, viz-interactive, and framework adapters)
 ```
 
 See [Installation](Installation) for the full extras matrix, and

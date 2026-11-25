@@ -1002,45 +1002,20 @@ aegean data list        # downloaded again, with its real on-disk size:
 `aegean data store` shows the same thing from the disk's point of view: the
 store's location and a name/MB table of everything in it.
 
-`aegean data list` shows the full live registry (currently 32 entries), with a **downloaded** column giving
-each present dataset's actual on-disk size. The fetchable datasets (all
-downloaded on demand, never bundled):
+`aegean data list` shows the full live registry (currently 39 entries), with a **downloaded** column giving
+each present dataset's actual on-disk size. Every dataset downloads on demand and is never bundled in the Apache-2.0 wheel.
 
-The table below lists the common runtime and corpus assets. The live command is
-authoritative and also shows evaluation folds and supporting indexes used by the
-benchmark commands.
+For one-command installation by research area, use the [unified library manager](CLI#library-manager-aegean-library-):
 
-| name | what | license |
-|---|---|---|
-| `agdt-derived` | prebuilt AGDT lexicon + tagger/lemmatizer/parser models | CC BY-SA 3.0 (Perseus AGDT) |
-| `grc-joint` | the joint tagger-parser-lemmatizer model (~173 MB; the `[neural]` extra) | CC BY-SA 4.0 |
-| `grc-lemma-neural` | the GreTa seq2seq lemmatizer (~232 MB; the `[neural]` extra) | CC BY-SA 4.0 |
-| `lsj-index` | prebuilt LSJ lemma→entry index (~15 MB) | CC BY-SA 4.0 (Perseus) |
-| `middle-liddell-index` | prebuilt Middle Liddell lemma→entry index (~2.3 MB) | public domain (1889) |
-| `cunliffe-index` | prebuilt Cunliffe (Homeric) lemma→entry index (~1.3 MB) | public domain (1924) |
-| `autenrieth-index` | prebuilt Autenrieth (Homeric) lemma→entry index | public domain (1891) |
-| `abbott-smith-index` | prebuilt Abbott-Smith (NT) lemma→entry index (~130 KB) | public domain (1922) |
-| `grc-paradigms` | Ancient Greek inflection paradigms used by `greek.inflect` | CC BY-SA 4.0 (derived) |
-| `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
-| `sigla-corpus` | SigLA Linear A dataset (802 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
-| `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
-| `strongs-greek` | Extended Strong's Greek Lexicon (11,142 entries + roots): `biblical.use_strongs()` | CC BY-SA 4.0 |
-| `nt-editions` | Four Greek NT editions (`sblgnt`, `srgnt`, `byz`, `tr`): `biblical.compare_editions()` | CC BY 4.0 / PD |
-| `nt-witnesses` | Thirteen 2nd–5th c. CE Greek NT manuscripts: `biblical.compare_witnesses()` | CC BY-SA 4.0 |
-| `lxx-corpus` | Swete Septuagint (LXX; 55 books / 29,248 verses): `biblical.load_lxx()` | CC BY-SA 4.0 |
-| `isicily-corpus` | I.Sicily Greek inscriptions (2,855 texts): `aegean.load('isicily')` | CC BY 4.0 |
-| `iip-corpus` | IIP Greek inscriptions of Israel/Palestine (2,113 texts): `aegean.load('iip')` | CC BY-NC 4.0 |
-| `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts): `aegean.load('iospe')` | CC BY 4.0 |
-| `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts): `aegean.load('igcyr')` | CC BY-NC-SA 4.0 |
-| `edh-corpus` | EDH Greek inscriptions (1,286 texts, frozen 2021 dump): `aegean.load('edh')` | CC BY-SA 4.0 |
-| `ddbdp-corpus` | DDbDP documentary papyri as SQLite + FTS (57,331 texts, ~219 MB): `aegean db search ddbdp` | CC BY 3.0 |
-| `lineara-images` | 3,368 facsimile/photo files (~116 MB) | academic reference only |
-| `linearb-corpus` | a bring-your-own Linear B export (no default source) | per your source |
-| `workbench-app` | the prebuilt workbench web app (~3 MB): served by `aegean workbench` | Apache-2.0 |
+```bash
+aegean library packs                  # biblical, patristic, aegean, epigraphy, literary, lexica, neural
+aegean library install epigraphy      # all 7 Greek inscription corpora (I.Sicily, IIP, IOSPE, IGCyr, Aphrodisias, Crete, EDH)
+aegean library install patristic      # Apostolic Fathers, Old Testament Pseudepigrapha, Patrologia Graeca
+```
 
 `aegean data versions --json` is the reproducibility manifest: every bundled and
 fetched dataset with its sha256. See [Data & Provenance](Data-and-Provenance) for
-the licensing details and why nothing non-redistributable is bundled.
+the full 39-dataset table of sizes, build scripts, and licenses.
 
 ---
 

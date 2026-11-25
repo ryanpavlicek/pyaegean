@@ -379,8 +379,8 @@ tokenizes its own text and is scored with spaCy evaluation scripts. Best per met
 | UDPipe (proiel) | 95.97 | 88.62 | 93.17 | 72.40 | 67.48 |
 
 The same paper shows substantial cross-treebank degradation (for example,
-Stanza-perseus scores 59.00 UAS on PROIEL), which is why pyaegean keeps
-out-of-domain and unseen-form measurement first-class.
+Stanza-perseus scores 59.00 UAS on PROIEL), which is why pyaegean reports
+out-of-domain and unseen-form metrics alongside in-domain scores.
 
 Riemenschneider & Frank's 2023 paper,
 *"Exploring Large Language Models for Classical Philology"*
@@ -429,7 +429,7 @@ uncompressed). In the recorded decoder-v1 quantization comparison, UD Perseus te
 scores were unchanged within ±0.02 (UPOS 97.0 / UFeats 96.0 / lemma 94.3 / UAS
 90.2 / LAS 85.7). The recipe
 is weight-only int8 (onnxruntime MatMulNBits, block 128, symmetric) plus fp16 on
-everything else, keeping activations at fp32 by design. Full int8 (quantized
+everything else, keeping activations at fp32. Full int8 (quantized
 activations) collapses the GreBerta encoder (its activation outliers do not survive
 8-bit quantization, dropping UPOS from 97 to 16–32 and LAS from 86 to 1–13), so the
 weight-only recipe is the one that ships the size win at no accuracy cost. It requires

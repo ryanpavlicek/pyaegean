@@ -379,7 +379,7 @@ pip install "pyaegean[ai]"           # all providers at once
 pip install "pyaegean[cli]"          # the `aegean` command-line tool
 ```
 
-The model is configurable and current by design (an explicit `model=`, then the
+The model is configurable at runtime (an explicit `model=`, then the
 `<PROVIDER>_MODEL` env var, then the built-in default). Pass a pre-built client
 to `translate.translate(..., client=...)`; the default is a fresh Anthropic
 client. See the AI Layer's [Providers & clients](AI-Layer#providers--clients) and

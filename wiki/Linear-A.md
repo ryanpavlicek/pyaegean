@@ -9,13 +9,10 @@ they look like they're for. You'd reach for this page to answer questions like
 up?", or "what does sign **KU** look like?", all without writing much Python,
 and with a matching command line for every method.
 
-> **Read this first: it's exploratory material.** Linear A is undeciphered. The
-> phonetic transcription here uses **Linear B sound values** as a working
-> convention (the two scripts share many signs), and every method on this page
-> surfaces *evidence to weigh*, never readings or translations. Numbers, totals,
-> and structure labels are heuristics on a damaged, contested corpus. See the
-> **[Limitations](Limitations)** page for the honest, full picture, and
-> [Analysis](Analysis) for the methods in depth.
+> **Note on transcription conventions.** Linear A transliterations use
+> **Linear B sound values** as a working convention (the two scripts share many signs).
+> Numbers, totals, and structure labels are heuristics over a damaged corpus. See
+> **[Limitations](Limitations)** for scope and [Analysis](Analysis) for the methods.
 
 Everything below runs on the **dependency-free core** unless a step is explicitly
 marked as needing the `[data]` extra (pandas) or a one-time fetch (SigLA).
@@ -615,7 +612,7 @@ aegean cite lineara --site "Haghia Triada"  # cite the exact filtered subset
 
 ---
 
-## Honest limitations
+## Limitations
 
 - **Undeciphered.** Sound values are a Linear B *convention*; transliterations,
   "totals," structure labels, and commodity glosses are evidence to weigh, never

@@ -36,7 +36,7 @@ VERB) on both sides, so what remains is closer to genuine disagreement.
 The numbers you get depend on the material: the model is strongest on text close to its
 training distribution (Classical literary Greek) and weaker on Koine, inscriptions, papyri,
 poetry, and dialect. [Benchmarks](Benchmarks) reports the measured accuracy by text type where
-gold data exists, and is honest about where it does not.
+gold data exists, and marks where no gold set is available.
 
 ## Common traps for a reader
 

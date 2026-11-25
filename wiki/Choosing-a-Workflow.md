@@ -24,7 +24,7 @@ match freely across the four shapes below.
 | --- | --- | --- |
 | **Teaching and demonstration** | Bundled samples, the offline baseline first so the uncertainty is visible, then a stronger tier for contrast; keep parses readable. | [§ Teaching](#teaching-and-demonstration) |
 | **Research toward a citable result** | The edition your question needs, the highest tier you can run, full per-token records, review the flagged tokens, cite the exact subset. | [§ Research](#research-toward-a-citable-result) |
-| **Exploratory decipherment** | The undeciphered scripts, structure tools tested against null models, every result kept under its exploratory label, never a reading. | [§ Exploratory](#exploratory-decipherment) |
+| **Exploratory decipherment** | The undeciphered scripts, structure tools tested against null models, every result kept under its exploratory label as a hypothesis rather than a reading. | [§ Exploratory](#exploratory-decipherment) |
 | **Reproducible benchmarking** | The evaluation folds, a fixed protocol, pinned data, evaluation receipts, the claims registry. | [§ Benchmarking](#reproducible-benchmarking) |
 
 ## Three things every workflow settles
@@ -173,7 +173,7 @@ reading.*
 - **Verbosity and labeling.** Exploratory output carries an `[EXPLORATORY …]`
   label and an auditable `trace()`; keep the label with the result. Any AI-layer
   hypothesis is grounded and inspectable before a provider key is involved, and
-  is a labeled hypothesis, never a reading.
+  remains a labeled hypothesis rather than a reading.
 - **Cite.** Present exploratory output as hypotheses generated with
   computational assistance, carrying the label, and let the `trace()` travel so
   others can confirm or refute it. See

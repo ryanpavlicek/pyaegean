@@ -4,6 +4,31 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.68.0 (2026-11-25)
+
+### Added
+
+- **Major open-licensed Greek, Biblical, Patristic, Epigraphic, Byzantine & Homeric corpus expansion** (all hosted as SHA-256-pinned on-demand release assets, keeping the Apache-2.0 core wheel lightweight):
+  - **Expanded Greek New Testament editions (`nt-editions-v2`, 5 → 9 editions)**: Added Biblical Humanities Open GNT (`bhp`, CC BY 4.0), Tischendorf 8th Critical Edition (`tisch`, Public Domain), Westcott–Hort 1881 (`wh`, Public Domain), and the 1904 Patriarchal Text of Constantinople (`antoniades`, Public Domain) alongside `nestle1904`, `sblgnt`, `srgnt`, `byz`, and `tr`. `nt-editions-v1` is preserved in `_REMOTE_HISTORY`.
+  - **Expanded Greek Patristic biblical commentaries (48 → 86 indexed works across 10 Church Fathers / traditions)**: Added 23 additional Origen works (`tlg2042.*`), 6 First1KGreek Fathers (Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum*/Hesychius), and 9 *Patrologia Graeca* commentary volumes (`PG071`, `PG073` Cyril of Alexandria on John; `PG087_1` Procopius of Gaza; `PG101` Photius; `PG118` Oecumenius; `PG123`–`PG126` Theophylact of Bulgaria) accessible via `aegean.greek.bible.commentary_excerpt()`, `load_commentary()`, and `aegean bible commentary <BOOK|PG073>`.
+  - **7 new downloadable Greek corpora** (`_REMOTE` registry expanded from 32 → 39 datasets):
+    - `patrologia` (`patrologia-graeca-corpus-v1`, CC BY 4.0): 33 Migne *Patrologia Graeca* volumes (6,787,292 words, automated OCR via CGPG, `edition_fidelity="ocr"`), with volume-scoped `load_patrologia(volume="PG073")` and `patrologia_volumes()`.
+    - `apostolic-fathers` (`apostolic-fathers-corpus-v1`, CC BY-SA 4.0): 15 Apostolic Fathers works (64,944 tokens; 1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Martyrdom of Polycarp, Diognetus).
+    - `pseudepigrapha` (`pseudepigrapha-corpus-v1`, CC BY 4.0): 44 Greek Second Temple / OT Pseudepigrapha works (171,306 tokens; 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Aristeas, Sibylline Oracles, 3–4 Baruch, 3–4 Maccabees, etc.).
+    - `aphrodisias` (`aphrodisias-corpus-v1`, CC BY 2.5): 1,471 Greek EpiDoc inscriptions from *Inscriptions of Aphrodisias 2007* (38,556 tokens, apparatus-preserved).
+    - `crete` (`crete-corpus-v1`, CC BY-NC-SA 4.0): 600 Archaic–Hellenistic Greek EpiDoc inscriptions of Crete (50,995 tokens, apparatus-preserved).
+    - `byzantine` (`byzantine-corpus-v1`, Public Domain / CC BY-SA 3.0): 12 medieval/early-modern vernacular Greek works (189,375 tokens; *Digenes Akritas*, *Chronicle of Moreas*, *Ptochoprodromika*, *Erotokritos*, etc.).
+    - `homer-scholia` (`homer-scholia-corpus-v1`, CC BY-NC 4.0): 54 Homer Multitext Archive documents (331,365 tokens; 24 books normalized Venetus A *Iliad* + 24 books Main Scholia + interlinear, intermarginal, interior, exterior, Venetus B, and Escorial Upsilon 1.1 scholia).
+  - **Library packs & TUI integration**: Expanded `aegean.library.PACKS` from 5 → 7 packs (adding `patristic` and `literary`, expanding `epigraphy` to 7 corpora), expanded TUI `CorpusBrowserScreen` from 13 → 19 browsable corpora, and added deterministic release-asset builder workflow `.github/workflows/greek-corpora-assets.yml`.
+- **Transparent gzip support in `Corpus.from_json()`**: `.json.gz` corpus bundles load seamlessly without manual decompression.
+- **Automatic `nt-editions` v1 → v2 cache upgrade**: Requesting a v2-only NT edition (`bhp`, `tisch`, `wh`, `antoniades`) when an older `nt-editions-v1` cache is present re-fetches `v2` automatically when online or raises an actionable `DataNotAvailableError` offline.
+
+### Changed
+
+- **Documentation staleness sweep & wiki reorganization**:
+  - Updated `README.md`, `docs/`, `NOTICE`, `training/results/corpus-facts.json`, and all wiki pages for the 39 hosted datasets, 9 NT editions, 86 patristic commentaries, 7 library packs, 8 TUI screens, and 19 browsable TUI corpora.
+  - Reorganized `wiki/_Sidebar.md` into 6 categories (combining CLI, TUI, MCP, and AI Layer under **Command Line & Interfaces**), eliminated duplicated dataset/extras/MCP tables across `Installation`, `FAQ`, `CLI-Corpora`, `CLI-AI`, and `CLI-Cheatsheet`, fixed broken wiki anchors and `[all]` extras notes (`viz-interactive`, Python `3.10–3.14` for `[neural]`/`[all]`), and removed repetitive hedging prose across `docs/` and `wiki/`.
+
 ## 0.67.0 (2026-11-25)
 
 ### Added

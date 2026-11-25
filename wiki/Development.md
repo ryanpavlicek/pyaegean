@@ -286,7 +286,7 @@ fetchable assets.
 - **Faithful, parity-tested ports.** Behavior ported from the Linear A Workbench
   asserts against shared golden values in `tests/fixtures/golden/`, so the
   Python port can't silently diverge from the TypeScript original.
-- **Provenance & attribution are first-class.** Cite the underlying editions;
+- **Provenance & attribution.** Cite the underlying editions;
   keep `NOTICE` accurate as data sources are added.
 - **Measured claims only.** Accuracy numbers in docs must come from a
   reproducible evaluation (`docs/benchmarks.md` has the protocol); tool-to-tool

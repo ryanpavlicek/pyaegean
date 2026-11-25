@@ -412,8 +412,8 @@ aegean export lineara --format epidoc --output lineara_tei/   # one file per doc
 ### Exploratory
 A label this project uses for anything generative or speculative, most of all the
 [AI Layer](AI-Layer). An exploratory result is **evidence for a human expert to
-weigh, never a reading or a translation presented as fact**. Every AI command is
-marked exploratory for exactly this reason:
+weigh, distinct from an attested reading or established translation**. Every AI command is
+marked exploratory for this reason:
 
 ```bash
 aegean ai --help

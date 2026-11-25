@@ -68,8 +68,8 @@ text, and returns the selected value in the `TokenRecord` state.
 
 The generic reader recognizes these states when they occur on token carriers such
 as `<w>`, `<num>`, `<g>`, `<pc>`, or `<seg>`, including `<choice>` and apparatus markup.
-It does not turn arbitrary free-text TEI into a structured token state. The six
-currently hosted epigraphy and papyri assets retain their legacy aggregate
+It does not turn arbitrary free-text TEI into a structured token state. The eight
+currently hosted epigraphy and papyri assets retain their aggregate
 `ReadingStatus` values and do not yet carry `TokenFormState`.
 
 ### Working with status
@@ -114,20 +114,21 @@ aegean.load("igcyr").provenance.edition_fidelity
 
 The comma-separated vocabulary:
 
-- **`apparatus-preserved`** — the editorial apparatus is carried through as `ReadingStatus` (all six
+- **`apparatus-preserved`** — the editorial apparatus is carried through as `ReadingStatus` (all eight
   epigraphy and papyri corpora).
 - **`normalized`** — the Greek is standard polytonic orthography, as the edition prints it.
 - **`epichoric`** — the text keeps local, pre-standard letterforms rather than normalizing them. Only
   IGCyr/GVCyr is `epichoric`: it preserves the archaic Cyrenaean forms (for example a single letter
-  for long *o*/*e*), so its tokens are deliberately not standard Koine spelling. Do not feed epichoric
+  for long *o*/*e*), so its tokens are not standard Koine spelling. Do not feed epichoric
   text to the normalized-Greek pipeline expecting standard results.
+- **`ocr`** — automated OCR transcription (*Patrologia Graeca* CGPG volumes via `aegean.load("patrologia")`), where optical character errors occur.
 
 The flag is optional and additive: corpora without it (the bundled sample, the literary works, the
 New Testament) report an empty string.
 
 ## Which corpora carry an apparatus
 
-All six fetch-on-demand epigraphy and papyri corpora:
+All eight fetch-on-demand epigraphy and papyri corpora:
 
 | Corpus | `edition_fidelity` | Notes |
 | --- | --- | --- |
@@ -136,6 +137,8 @@ All six fetch-on-demand epigraphy and papyri corpora:
 | `iospe` | `apparatus-preserved,normalized` | Northern Black Sea |
 | `igcyr` | `apparatus-preserved,epichoric` | Cyrenaica: archaic Doric and verse |
 | `edh` | `apparatus-preserved,normalized` | Epigraphic Database Heidelberg (Greek subset) |
+| `aphrodisias` | `apparatus-preserved,normalized` | Inscriptions of Aphrodisias (IAph2007, Caria) |
+| `crete` | `apparatus-preserved,normalized` | Cretan Institutional Inscriptions (Archaic–Hellenistic Crete) |
 | `ddbdp` | `apparatus-preserved,normalized` | Duke Databank documentary papyri |
 
 The literary corpora (`greek`, the fetched Perseus/First1KGreek works, `nt`) are transmitted texts,

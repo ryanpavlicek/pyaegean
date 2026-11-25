@@ -158,8 +158,8 @@ model and data cards, limitations, and discrepancy path.
 
 ## How to submit a finding or a correction
 
-External review is welcome and is treated as first-class: a contributed fact
-keeps its source, and a refutation is as valuable as a confirmation. There are
+External review is tracked directly in the evidence record: a contributed fact
+keeps its source, and a refutation carries the same weight as a confirmation. There are
 four lightweight paths, each a GitHub issue form (New issue, then pick a
 template):
 

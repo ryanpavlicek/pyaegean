@@ -4,7 +4,7 @@ pyaegean is a free Python toolkit for Ancient Greek and the Aegean scripts
 (Linear A, Linear B, Cypriot, Cypro-Minoan): you give it Greek text or an
 inscription, and it gives back syllables, accents, metre, morphology, statistics,
 corpus queries, and more. Use it to explore a corpus, scan verse, tag and
-lemmatise Greek, or run honest, citeable analysis over undeciphered scripts.
+lemmatise Greek, or run reproducible quantitative analysis over undeciphered scripts.
 
 This is a big Q&A for the snags that come up: install, Greek text, finding works
 to load, the web demo, offline use, the AI layer, and citing your results. If your
@@ -89,7 +89,7 @@ to uninstall first). A few tips:
   python -c "import aegean; print(aegean.__version__)"
   ```
 
-- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.67.0`.
+- **Pin a specific version** if you need reproducibility: `pip install pyaegean==0.68.0`.
 - **Cached datasets survive installation.** They live in a separate cache (see
   [Where are downloaded/fetched files stored?](#where-are-downloadedfetched-files-stored)),
   and are reused while their hashes match the selected pins. If a release changes
@@ -99,41 +99,19 @@ to uninstall first). A few tips:
 ### How do I install the optional features (the "extras")?
 
 Everything past the offline core is opt-in, grouped into extras you add in brackets.
-Install one (or several) with, e.g., `pip install "pyaegean[cli]"` or
-`pip install "pyaegean[neural,viz]"`.
+Install one or several with `pip install "pyaegean[cli]"`, `pip install "pyaegean[neural,viz]"`,
+or `pip install "pyaegean[all]"`. `[all]` installs the core runtime stack including `neural`,
+`cli`, `tui`, `mcp`, `ai`, `data`, `epidoc`, `geo`, and `viz`; it excludes `parquet`,
+`viz-interactive`, `interop` (PyTorch/spaCy/Stanza/CLTK), and contributor toolchains (`dev`/`docs`).
 
-| Extra | What it adds |
-|---|---|
-| `data` | pandas, for DataFrame output (`to_dataframe`) |
-| `parquet` | Parquet export (`pyarrow`) |
-| `epidoc` | the Linear B DAMOS EpiDoc reader (`lxml`); generic EpiDoc import and export run on the stdlib, no extra needed |
-| `geo` | GeoJSON / geographic output |
-| `viz` | plotting (`matplotlib`): figures and the scansion grid |
-| `viz-interactive` | interactive plots (`plotly`): findspots, timelines, sign networks |
-| `neural` | the measured neural pipeline + neural lemmatizer |
-| `cli` | the `aegean` command-line interface |
-| `tui` | the `aegean tui` full-screen terminal UI (`textual`) |
-| `mcp` | the MCP server, to drive pyaegean from an MCP client (e.g. Claude Code) |
-| `anthropic` | the [AI Layer](AI-Layer) via Anthropic |
-| `openai` | the AI Layer via OpenAI |
-| `gemini` | the AI Layer via Google Gemini |
-| `grok` | the AI Layer via xAI Grok (OpenAI-API-compatible) |
-| `openrouter` | the AI Layer via OpenRouter (OpenAI-API-compatible gateway) |
-| `local` | the AI Layer via a running OpenAI-compatible local server; uses the OpenAI SDK, no provider key |
-| `ai` | the AI Layer with all three provider SDKs (anthropic, openai, google-genai) |
-| `dev` | the test/lint/type toolchain (contributors) |
-| `docs` | the documentation toolchain (contributors) |
-| `interop` | spaCy/Stanza document adapters plus CLTK on Python 3.13+; separate because Stanza installs PyTorch |
-| `all` | the bundled runtime stack, including `neural`; excludes `parquet` and the separate framework adapters (`dev`/`docs` are contributor toolchains) |
-
-See [Installation](Installation) for the full breakdown. `aegean doctor` reports
+See [Installation](Installation) for the complete extras matrix. `aegean doctor` reports
 which of the runtime extras are importable in your environment, with the install
-line for each one that isn't (`grok`, `openrouter`, and `local` ride the `openai`
-row, since they share its SDK).
+line for each one that isn't.
 
 ### Which Python versions are supported?
 
-**Python 3.10 or newer.** Check with `python --version`.
+**Python 3.10 or newer** for the core library and pure-Python extras (`python --version`).
+The `[neural]` and `[all]` extras require **Python 3.10–3.14** (where `onnxruntime` wheels are published).
 
 ---
 
@@ -141,37 +119,26 @@ row, since they share its SDK).
 
 ### How do I see which corpora ship in the box?
 
-`aegean.load("…")` opens a built-in corpus by id. The ids:
+`aegean.load("…")` opens a built-in or hosted corpus by id:
 
-| id | What it is | Offline? |
-|---|---|---|
-| `lineara` | the full Linear A corpus (1,721 documents) | yes, bundled |
-| `linearb` | the bundled Linear B sample | yes, bundled |
-| `greek` | a 5-passage Ancient Greek sample | yes, bundled |
-| `cypriot` | the Cypriot Syllabary corpus | yes, bundled |
-| `cyprominoan` | the Cypro-Minoan corpus | yes, bundled |
-| `damos` | the full DAMOS Linear B corpus (~5,900 tablets, ~3 MB) | fetched on first use |
-| `sigla` | the SigLA Linear A dataset (802 documents, ~1.3 MB) | fetched on first use |
-| `isicily` | I.Sicily Greek inscriptions of ancient Sicily (2,855 texts, ~7 MB) | fetched on first use |
-| `iip` | IIP Greek inscriptions of Israel/Palestine (2,113 texts, ~4 MB) | fetched on first use |
-| `iospe` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts, ~4 MB) | fetched on first use |
-| `igcyr` | IGCyr/GVCyr Greek inscriptions of Cyrenaica (997 texts, ~3 MB) | fetched on first use |
-| `edh` | EDH Greek inscriptions, the pure-Greek subset (1,286 texts, ~6 MB) | fetched on first use |
-| `ddbdp` | the DDbDP documentary papyri (57,331 texts as a SQLite database with full-text search, ~219 MB; loading it whole is heavy, prefer `aegean db search ddbdp`) | fetched on first use |
-| `nt` | the Greek New Testament (Nestle 1904); two sample chapters bundled offline (John 1 + Philemon 1), the rest fetched | mostly fetched |
+- **Bundled offline:** `lineara` (1,721 documents), `linearb` (sample), `greek` (5 passages), `cypriot`, `cyprominoan`, plus bundled NT (`John 1`, `Phlm 1`) and Swete LXX (`Gen 1:1–5`, `Ps 22:1–6`) samples.
+- **On-demand hosted corpora (SHA-256-pinned):** Aegean (`damos`, `sigla`), Greek epigraphy & papyri (`isicily`, `iip`, `iospe`, `igcyr`, `edh`, `aphrodisias`, `crete`, `ddbdp`), Biblical & Patristic (`nt`, `apostolic-fathers`, `pseudepigrapha`, `patrologia`, plus `aegean.greek.bible` for 9 NT editions, 13 manuscripts, 55 LXX books, and 86 commentaries), and literary/scholia (`byzantine`, `homer-scholia`).
+
+Inspect availability and install themed packs from the shell or Python:
+
+```bash
+aegean library list       # status of all 39 hosted datasets + bundled corpora
+aegean library packs      # 7 themed packs: biblical, patristic, aegean, epigraphy, literary, lexica, neural
+```
 
 ```python
 corpus = aegean.load("lineara")
 len(corpus)        # 1721
-```
-
-`registered_scripts()` lists the writing systems the package understands (each can
-have its own corpus loader):
-
-```python
 aegean.registered_scripts()
 # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
+
+See [Data & Provenance](Data-and-Provenance) for the full 39-dataset table with sizes and licences.
 
 ### How do I find which Greek works/books I can load?
 
@@ -204,10 +171,9 @@ hits[0]
 #  'greek_title': 'Εὐθύφρων', 'source': 'perseus'}
 ```
 
-Each entry's `id` goes straight to `load_work`. The catalogue is honest about coverage:
-it lists exactly what the open repos hold at the pinned commit, so some authors that
-aren't online upstream (Sappho, for instance) genuinely aren't in it; that's correct, not
-a gap in pyaegean.
+Each entry's `id` goes straight to `load_work`. The catalogue reflects exact upstream
+coverage: it lists what the open repos hold at the pinned commit, so authors not openly
+digitized upstream (Sappho, for instance) are absent.
 
 Same lists from the CLI (`pip install "pyaegean[cli]"`):
 

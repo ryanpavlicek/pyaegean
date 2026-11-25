@@ -14,7 +14,7 @@ import pytest
 from aegean import mcp_server as m
 
 _WIKI = Path(__file__).resolve().parents[1] / "wiki"
-_PAGES = ("CLI-AI.md", "CLI-Cheatsheet.md", "Data-and-Provenance.md", "Installation.md")
+_PAGES = ("MCP.md", "Data-and-Provenance.md")
 
 
 def test_every_mcp_tool_is_named_on_every_mcp_page() -> None:

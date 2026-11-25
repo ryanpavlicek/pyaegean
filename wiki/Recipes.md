@@ -534,7 +534,7 @@ aegean ai translate "ὁ δὲ θεὸς ἐγείρει τοὺς νεκρού�
 # text exports include the audit trace; JSON retains the data and checking draft.
 ```
 
-Every answer is a labeled hypothesis, never a reading; `result.trace()` separates
+Every answer is a labeled hypothesis rather than an attested reading; `result.trace()` separates
 the provisional evidence the model received from the backend configuration it did
 not receive. Mode, backend, failure-policy choice, and what grounding can and cannot
 fix are covered in recipe 26.
@@ -859,7 +859,7 @@ The registered providers and the extra that activates each:
 | `openrouter` | `pip install "pyaegean[openrouter]"` | many vendors via one key (`vendor/model` ids) |
 | `local` | `pip install "pyaegean[local]"` | a local server (Ollama/LM Studio/llama.cpp; uses the OpenAI SDK), no key |
 
-Every generative result is a labeled hypothesis, never a reading: see
+Every generative result is a labeled hypothesis rather than an attested reading: see
 [AI Layer](AI-Layer) and, if you can judge the answer, the
 [validation issue form](https://github.com/ryanpavlicek/pyaegean/issues/new/choose).
 

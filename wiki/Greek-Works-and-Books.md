@@ -6,13 +6,17 @@ You'd come here when you want to stop typing Greek by hand and instead pull a wh
 work (or a single book, chapter, or line-range) straight into a `Corpus` you can
 tokenize, scan, tag, and count.
 
-Two doors lead in:
+Three doors lead in:
 
 - **`greek.load_work("tlg0012.tlg001")`**: any work in the Perseus
-  canonical-greekLit / First1KGreek collections, addressed by a **CTS id** (the
+  canonical-greekLit / First1KGreek collections (1,778 Greek works), addressed by a **CTS id** (the
   `tlgAAAA.tlgBBB` scheme explained below).
-- **`greek.load_nt("John")`**: the Greek New Testament (Nestle 1904), with a gold
-  lemma, morphology, and Strong's number attached to each word, plus a gloss where available.
+- **`greek.load_nt("John")`** (and `aegean.greek.bible`): 9 Greek New Testament editions, 55 Swete
+  Septuagint books, 13 early manuscript witnesses, and 86 patristic commentaries.
+- **`aegean.load(...)`** for dedicated hosted Greek collections: `apostolic-fathers` (15 works),
+  `pseudepigrapha` (44 Second Temple Greek works), `patrologia` (33 *Patrologia Graeca* volumes,
+  6.79M words), `byzantine` (12 medieval/early-modern vernacular texts), and `homer-scholia`
+  (Venetus A *Iliad* + 54 HMT scholia documents). Install them in groups with `aegean library install patristic` or `literary`.
 
 Both fetch their text once to a local cache and then work offline, and both return
 the same standard `Corpus` object you get everywhere else in pyaegean. Once a work
@@ -210,10 +214,10 @@ aegean greek catalog sappho
 (`sappho` returns nothing because Sappho's Greek text isn't openly digitized in
 either collection: see the coverage note below.)
 
-> **The catalogue is honest about coverage.** It lists exactly what these open
-> repositories actually hold at the pinned commit, not the entire theoretical
-> canon. Some authors whose Greek text isn't openly digitized there (e.g. Sappho)
-> simply won't appear; that's the same set `load_work` can reach, no surprises.
+> **Scope of the catalogue.** It lists exactly what these open
+> repositories hold at the pinned commit, not the entire classical
+> canon. Authors whose Greek text is not openly digitized there (e.g. Sappho)
+> do not appear; the catalogue matches the exact set `load_work` can fetch.
 
 ### The Scaife Viewer (the web browser for these collections)
 

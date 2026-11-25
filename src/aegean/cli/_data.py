@@ -115,6 +115,13 @@ _FETCH_HINTS = {
     "linearb-corpus": "load it:  aegean info linearb",
     "sigla-corpus": "load it:  aegean info sigla",
     "nt-corpus": "load it:  aegean info nt",
+    "aphrodisias-corpus": "load it:  aegean info aphrodisias",
+    "crete-corpus": "load it:  aegean info crete",
+    "apostolic-fathers-corpus": "load it:  aegean info apostolic-fathers",
+    "pseudepigrapha-corpus": "load it:  aegean info pseudepigrapha",
+    "byzantine-corpus": "load it:  aegean info byzantine",
+    "homer-scholia-corpus": "load it:  aegean info homer-scholia",
+    "patrologia-graeca-corpus": "read a volume:  aegean bible commentary PG073",
     "lineara-images": "serve it:  aegean workbench",
 }
 

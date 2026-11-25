@@ -431,7 +431,7 @@ results, see [Citing Computational Assistance](Citing-Computational-Assistance).
 finding or fix back into the project, use one of the four paths below.
 
 Four lightweight paths, each a GitHub issue form (New issue → pick a template).
-Attribution is **first-class**: contributed facts keep their source.
+Contributed facts keep their source attribution.
 
 | Path | When | What to include | Where it lands |
 |---|---|---|---|
@@ -515,7 +515,7 @@ step, without the `from_records` boilerplate. See [Tutorial](Tutorial) and
 
 ---
 
-## Honest limitations
+## Limitations
 
 - **Linear A is undeciphered.** Nothing in the toolkit reads it; the AI layer
   offers *hypotheses* with traces, never translations. The accounting/structure

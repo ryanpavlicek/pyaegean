@@ -499,7 +499,7 @@ def test_every_provider_reaches_the_cli_help_and_doctor_extras():
 # data surfaces (a fetch-on-demand corpus needs a fetch hint reachable through the
 # stem resolver). ddbdp is the one documented exclusion from the TUI browser (its
 # materialisation is too heavy). Adding corpus 15 without these fails here.
-_TUI_EXCLUDED_CORPORA = {"ddbdp"}  # documented: too heavy for the TUI corpus browser
+_TUI_EXCLUDED_CORPORA = {"ddbdp", "patrologia"}  # documented: too heavy for full-load TUI browser
 
 
 def test_registered_corpora_match_the_tui_browser_ids_and_blurbs():

@@ -97,11 +97,10 @@ class TuiError(Exception):
     """A clean, user-facing error a screen can display in place of a traceback."""
 
 
-# The browsable corpora (every registered corpus except ddbdp, whose materialisation
-# is too heavy for the TUI browser), in a stable presentation order (bundled first,
-# then the fetch-on-demand ones). Kept as a constant so a screen can render the
-# overview without loading anything; validated against the live loader registry
-# by the adapter tests.
+# The browsable corpora (every registered corpus except ddbdp and patrologia, whose
+# full-corpus materialisation is too heavy for the interactive TUI browser; patrologia
+# volumes are browsed/searched through the Library and Biblical Greek commentary tools),
+# in a stable presentation order (bundled first, then fetch-on-demand).
 CORPUS_IDS: tuple[str, ...] = (
     "lineara",
     "linearb",
@@ -109,20 +108,23 @@ CORPUS_IDS: tuple[str, ...] = (
     "cyprominoan",
     "greek",
     "nt",
+    "apostolic-fathers",
+    "pseudepigrapha",
     "damos",
     "sigla",
     "isicily",
     "iip",
     "iospe",
     "igcyr",
+    "aphrodisias",
+    "crete",
     "edh",
+    "byzantine",
+    "homer-scholia",
 )
 
-# The undeciphered corpora: any structural analysis of these is exploratory,
-# never a reading. The same honesty rule the CLI and docstrings carry, enforced
-# here at the adapter so every screen inherits it. Both ``lineara`` and ``sigla``
-# are Linear A (SigLA is the Salgarella & Castellan Linear A dataset), which is
-# undeciphered; ``cyprominoan`` is the undeciphered Cypro-Minoan sign corpus.
+# Undeciphered corpora: Linear A (lineara and sigla) and Cypro-Minoan use conventional
+# sign-value labels rather than Greek readings.
 UNDECIPHERED: frozenset[str] = frozenset({"lineara", "sigla", "cyprominoan"})
 
 # One-line descriptions for the corpus overview (offline, no load needed).
@@ -133,30 +135,39 @@ _CORPUS_BLURB: dict[str, str] = {
     "cyprominoan": "Cypro-Minoan signs (undeciphered)",
     "greek": "alphabetic Greek sample texts",
     "nt": "Greek New Testament (Nestle 1904)",
+    "apostolic-fathers": "Open Apostolic Fathers (15 early Christian texts)",
+    "pseudepigrapha": "Greek Old Testament Pseudepigrapha (44 OCP works)",
     "damos": "DAMOS full Linear B corpus",
     "sigla": "SigLA Linear A corpus",
     "isicily": "I.Sicily Greek inscriptions (Sicily)",
     "iip": "IIP Greek inscriptions (Israel/Palestine)",
     "iospe": "IOSPE Greek inscriptions (Black Sea)",
     "igcyr": "IGCyr/GVCyr Greek inscriptions (Cyrenaica)",
+    "aphrodisias": "IAph2007 Greek inscriptions (Aphrodisias, Asia Minor)",
+    "crete": "Cretan Institutional Inscriptions (Archaic–Hellenistic Crete)",
     "edh": "EDH Greek inscriptions (Heidelberg)",
+    "byzantine": "Byzantine & Early Modern Vernacular Greek (12th–17th c.)",
+    "homer-scholia": "Homer Multitext Venetus A Iliad & Homeric Scholia",
 }
 
 # corpus id -> the release-asset name that must be in the store before the
 # corpus loads (the same signal `aegean data list` reports). Corpora not listed
-# here are bundled in the wheel and always available. The Greek-epigraphy corpora
-# (I.Sicily, IIP, IOSPE, IGCyr, EDH) are fetch-on-demand release assets, not bundled. ddbdp is
-# deliberately absent from this map: it is not listed in the TUI corpus browser (see CORPUS_IDS),
-# so the browser never needs its download status.
+# here are bundled in the wheel and always available.
 _CORPUS_ASSET: dict[str, str] = {
     "nt": "nt-corpus",
+    "apostolic-fathers": "apostolic-fathers-corpus",
+    "pseudepigrapha": "pseudepigrapha-corpus",
     "damos": "damos-corpus",
     "sigla": "sigla-corpus",
     "isicily": "isicily-corpus",
     "iip": "iip-corpus",
     "iospe": "iospe-corpus",
     "igcyr": "igcyr-corpus",
+    "aphrodisias": "aphrodisias-corpus",
+    "crete": "crete-corpus",
     "edh": "edh-corpus",
+    "byzantine": "byzantine-corpus",
+    "homer-scholia": "homer-scholia-corpus",
 }
 
 

@@ -160,24 +160,31 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `damos-corpus` | DAMOS Linear B corpus v2: ~5,900 tablets, transliterations + metadata | ~3 MB JSON | CC BY-NC-SA 4.0 (DAMOS: F. Aurora) | Decoded from the DAMOS public API; no imagery |
 | `nt-corpus` | Greek NT (Nestle 1904): 260 chapters / ~137,800 tokens, gold lemma + Robinson morph + Strong's + UD UPOS | ~16 MB JSON | CC0-1.0 (morphology/lemmas/Strong's); base text public domain | From biblicalhumanities/Nestle1904; **may be redistributed** (CC0) |
 | `strongs-greek` | Extended Strong's Greek Lexicon: 11,142 Strong's & STEPBible extended entries with definitions, derivations, Hebrew equivalents, KJV usage, and root links | ~1.5 MB JSON.gz | CC BY 4.0 (STEPBible TBESG) + Public Domain (OpenScriptures Strong's) | Project-hosted derivative; rebuild: `scripts/build_strongs_greek.py` |
-| `nt-editions` | Four Greek New Testament critical & traditional editions (`sblgnt`, `srgnt`, `byz`, `tr`; 27 books each) for word-level variant collation | ~1.7 MB JSON.gz | CC BY 4.0 (SBLGNT / CNTR SR & KJTR) + Public Domain (Robinson–Pierpont Byzantine) | Project-hosted derivative; rebuild: `scripts/build_nt_editions.py` |
+| `nt-editions` | Eight Greek New Testament critical & traditional editions (`sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`; 27 books each) for word-level variant collation | ~3.3 MB JSON.gz | CC BY-SA 3.0 / CC BY 4.0 / Public Domain (SBLGNT/MorphGNT; CNTR SR, BHP & KJTR; Tischendorf 8th, Westcott–Hort, Robinson–Pierpont BYZ, Antoniades 1904) | Project-hosted derivative; rebuild: `scripts/build_nt_editions.py` |
 | `nt-witnesses` | Thirteen 2nd–5th century CE Greek NT manuscript transcriptions (`01`/ℵ, `02`/A, `03`/B, `04`/C, `05`/D, `032`/W, `P45`–`P75`) with original/corrector hands | ~1.5 MB JSON.gz | CC BY-SA 4.0 (Center for New Testament Restoration Class 1 transcriptions) | Project-hosted derivative; rebuild: `scripts/build_nt_witnesses.py` |
 | `lxx-corpus` | Swete Septuagint (LXX): all 55 Greek Old Testament & Deuterocanonical books (`tlg0527.*`, 29,248 verses) for fast offline-cached reading and concordance search | ~1.7 MB JSON.gz | CC BY-SA 4.0 (OpenGreekAndLatin / First1KGreek; Swete 1887–1894 Public Domain base text) | Project-hosted derivative; rebuild: `scripts/build_lxx_corpus.py` |
+| `patrologia-graeca-corpus` | Calfa–GREgORI Patrologia Graeca: 33 digitized Migne PG volumes (6.79M Greek words, OCR of 19th-century prints), including 9 biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius, Oecumenius, Theophylact of Bulgaria) | ~23.5 MB JSON.gz | CC BY 4.0 (CGPG — UCLouvain GREgORI & Calfa, Vidal-Gorène & Kindt, LREC 2026) | Project-hosted derivative; `aegean.load("patrologia")` or `aegean.greek.bible.load_commentary()`; rebuild: `scripts/build_patrologia_graeca_corpus.py` |
+| `apostolic-fathers-corpus` | Open Apostolic Fathers: all 15 twice-hand-corrected Greek works (64,944 tokens: 1–2 Clement, Ignatius's 7 epistles, Polycarp, Didache, Barnabas, Hermas, Martyrdom of Polycarp, Diognetus) | ~1.0 MB JSON.gz | CC BY-SA 4.0 (Open Apostolic Fathers — James Tauber & Seumas Macdonald, Zenodo 10.5281/zenodo.2555673) | Project-hosted derivative; `aegean.load("apostolic-fathers")`; rebuild: `scripts/build_apostolic_fathers_corpus.py` |
+| `pseudepigrapha-corpus` | Online Critical Pseudepigrapha (Greek): 44 Second Temple & Old Testament Pseudepigrapha works (171,306 tokens: 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Testament of Job/Solomon/Abraham, Aristeas, Joseph & Aseneth, Sibylline Oracles, etc.) | ~2.7 MB JSON.gz | CC BY 4.0 (Online Critical Pseudepigrapha — Ken M. Penner et al., pseudepigrapha.org) | Project-hosted derivative; `aegean.load("pseudepigrapha")`; rebuild: `scripts/build_pseudepigrapha_corpus.py` |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
 | `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with find-place, coordinates | ~4 MB JSON | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) | From Brown-University-Library/iip-texts; **may be redistributed** (CC BY-NC), attribution + NonCommercial |
 | `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From kingsdigitallab/iospe; **may be redistributed** (CC BY), attribution required |
 | `igcyr-corpus` | IGCyr/GVCyr Greek inscriptions of Cyrenaica: 997 texts (archaic Doric + verse) with title, find-place, date | ~3 MB JSON | CC BY-NC-SA 4.0 (IGCyr2/GVCyr2, Dobias-Lalou et al., Bologna) | From AMS Acta 7796; **may be redistributed** (CC BY-NC-SA), attribution + NonCommercial + ShareAlike; epichoric (non-normalized) Greek |
+| `aphrodisias-corpus` | Inscriptions of Aphrodisias (IAph2007): 1,471 Greek EpiDoc inscriptions (38,556 tokens) from Aphrodisias in Caria (Western Asia Minor, 2nd c. BCE–Byzantine) | ~0.5 MB JSON.gz | CC BY 2.5 (Reynolds, Roueché & Bodard, King's College London, http://insaph.kcl.ac.uk/) | Project-hosted EpiDoc extraction; `aegean.load("aphrodisias")`; rebuild: `scripts/build_aphrodisias_corpus.py` |
+| `crete-corpus` | Cretan Institutional Inscriptions: 600 Archaic–Hellenistic Greek EpiDoc inscriptions from Crete (50,995 tokens, 7th–1st c. BCE) | ~0.6 MB JSON.gz | CC BY-NC-SA 4.0 (Irene Vagionakis, Università Ca' Foscari Venezia, 2016–2019) | Project-hosted EpiDoc extraction; `aegean.load("crete")`; NonCommercial + ShareAlike pass to user; rebuild: `scripts/build_crete_corpus.py` |
 | `edh-corpus` | EDH Greek inscriptions: 1,286 pure-Greek texts (Imperial Koine, largely onomastic) with ancient place, date, find-place, Trismegistos id | ~6 MB JSON | CC BY-SA 4.0 (EDH, Heidelberg Academy of Sciences and Humanities) | Pure-`grc` subset of the frozen (2021) EDH dump; **may be redistributed** (CC BY-SA), attribution + ShareAlike |
 | `ddbdp-corpus` | DDbDP documentary papyri: 57,331 Greek texts / ~4.4M tokens as a **SQLite database + FTS** (citation, date, place, TM/HGV ids) | ~219 MB tar.gz, ~757 MB unpacked | CC BY 3.0 (DDbDP / papyri.info) | From papyri/idp.data; **may be redistributed** (CC BY), attribution. `aegean.load("ddbdp")` materialises it (heavy, ~GB RAM); `aegean db search ddbdp` / `aegean.db.stream(ddbdp_db())` are the memory-friendly path |
+| `byzantine-corpus` | Byzantine & Early Modern Vernacular Greek: 12 literary texts (189,375 tokens, 12th–17th c.: *Digenes Akritas*, *Chronicle of Moreas*, *Ptochoprodromika*, *Poulologos*, *Apokopos*, *Erotokritos*) | ~2.5 MB JSON.gz | Public Domain / CC BY-SA 3.0 (Wikisource & Kalonaros 1940; open-greek/byzantine-early-modern-corpus) | Project-hosted derivative; `aegean.load("byzantine")`; rebuild: `scripts/build_byzantine_corpus.py` |
+| `homer-scholia-corpus` | Homer Multitext Project (`hmt-2026a`): normalized Venetus A *Iliad* (24 books) and Homeric *scholia* (Venetus A, Venetus B, Escorial Upsilon 1.1; 54 documents, 331,365 tokens) | ~5.5 MB JSON.gz | CC BY-NC 4.0 (Homer Multitext Project, Center for Hellenic Studies) | Project-hosted CEX extraction; `aegean.load("homer-scholia")`; NonCommercial passes to user; rebuild: `scripts/build_homer_scholia_corpus.py` |
 | `workbench-app` | Prebuilt Linear A Research Workbench static web app (archive) | ~3 MB tar.gz | Apache-2.0 (build); embedded Linear A data is GORILA-derived | Served locally by `aegean workbench` |
 | `linearb-corpus` | Slot for your OWN licensed Linear B export (no default source) | — | bring-your-own; for a ready corpus fetch DAMOS, LiBER is browse-only | For a ready corpus: `aegean data fetch damos`. LiBER (liber.cnr.it) has no public download/API — browse-only. Import your own: `aegean import x.xml --epidoc --script linearb`, or set `PYAEGEAN_LINEARB_CORPUS_URL` |
 
-> **Why two licenses keep appearing.** "Project-hosted" derivatives (DAMOS,
-> SigLA, the LSJ index, the AGDT-derived models, the neural models) are republished
-> under the **same ShareAlike terms** as their source, clearly labeled, and kept
-> out of the Apache-2.0 wheel. NonCommercial obligations (DAMOS, SigLA, PROIEL, IIP, IGCyr/GVCyr)
-> **pass through to you**. CC0 assets (the NT corpus, the Dodson lexicon) carry no
-> such obligation, which is exactly why two NT sample chapters can be bundled.
+> **License propagation.** Project-hosted derivatives are republished under the
+> same ShareAlike terms as their source and kept out of the Apache-2.0 wheel.
+> NonCommercial obligations (DAMOS, SigLA, PROIEL, IIP, IGCyr/GVCyr, Crete,
+> Homer Multitext) pass through to the user. CC0 assets (the NT corpus, the
+> Dodson lexicon) carry no attribution or ShareAlike obligation, which allows
+> two NT sample chapters to ship inside the wheel.
 
 ### Per-dataset notes
 
@@ -500,8 +507,8 @@ aegean greek catalog --author homer --source perseus --limit 2 --json
 match count is always in `matched`.)
 
 Coverage is exactly what the open repos hold at the pinned commit, so some
-authors are genuinely absent upstream (e.g. Sappho, `tlg0009`) and thus absent
-here: that is honest, not a gap in pyaegean. The curated `greek.popular_works()`
+authors are absent upstream (e.g. Sappho, `tlg0009`) and therefore absent
+here. The curated `greek.popular_works()`
 (25 well-known works) is the small hand-picked counterpart. See
 [Greek Works & Books](Greek-Works-and-Books).
 
@@ -764,7 +771,7 @@ io.from_csv("rows.csv", text_col="line", id_col="id", meta_cols=["period"])
 
 > `read_corpus` / the `CORPUS` argument deliberately load only pyaegean's own `.json`/`.db`
 > formats. A `.txt`/`.csv` is *imported* into that format first (the error message says so);
-> after `aegean import … -o corpus.json`, `corpus.json` is a first-class corpus everywhere.
+> after `aegean import … -o corpus.json`, `corpus.json` works anywhere a corpus is accepted.
 
 ### From structured records (`Corpus.from_records`)
 
@@ -857,7 +864,7 @@ See the repository `NOTICE` and `CITATION.cff` for full attribution.
 
 ---
 
-## Limitations & honest notes
+## Limitations
 
 - **The full Linear A apparatus is not bundled.** Restorations and dotted
   readings were dropped upstream; only `LOST`/`UNCLEAR` survive. For edition-grade

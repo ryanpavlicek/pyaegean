@@ -29,7 +29,7 @@ from ._complete import (
     shell_complete_witness,
 )
 
-_TLG_WORK_RE = re.compile(r"^tlg\d+\.tlg\d+$", re.IGNORECASE)
+_TLG_WORK_RE = re.compile(r"^(?:tlg\d+\.tlg\d+|pg\d+(?:_\d+)?)$", re.IGNORECASE)
 
 
 def _normalize_ref(ref: str | None) -> str | None:
@@ -519,7 +519,12 @@ def commentary_cmd(
             "`read tlg4102.tlg001`), or search one (`search Matt λόγος`)."
         ),
     ),
-    kind: str | None = typer.Option(None, "--kind", "-k", help="Filter by 'catena' or 'origen'."),
+    kind: str | None = typer.Option(
+        None,
+        "--kind",
+        "-k",
+        help="Filter by 'catena', 'origen', 'patristic', or 'patrologia'.",
+    ),
     read: bool = typer.Option(False, "--read", help="Fetch and print sections of the commentary text."),
     search: str | None = typer.Option(None, "--search", "-s", help="Search commentary text for a Greek term (e.g. λόγος)."),
     work_id: str | None = typer.Option(None, "--work-id", help="Explicit TLG work ID (e.g. tlg4102.tlg005)."),
@@ -658,7 +663,7 @@ def commentary_cmd(
 def books_cmd(
     collection: str = typer.Argument(
         "nt",
-        help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (5), 'witnesses' (13), or 'all'.",
+        help="What to list: 'nt' (27 books), 'lxx' (55 books), 'editions' (9), 'witnesses' (13), or 'all'.",
         autocompletion=shell_complete_bible_collection,
     ),
     section: str | None = typer.Option(None, "--section", help="Optional LXX section filter (Pentateuch, Wisdom, ...)."),

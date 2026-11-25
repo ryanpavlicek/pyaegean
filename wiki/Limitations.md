@@ -39,8 +39,8 @@ Related pages: [Greek NLP](Greek-NLP) · [Meters](Meters) · [Linear A](Linear-A
 | Offline morphology | Misses irregular/3rd-decl./contract paradigms | [Engineering](#engineering-status-and-remaining-limits) |
 | Neural model size | ~173 MB quantized download | [Engineering](#engineering-status-and-remaining-limits) |
 | Out-of-domain NLP | Accuracy drops on held-out treebanks | [Accuracy](#measured-accuracy-boundaries) |
-| Zero-dep baselines | Honest floors, not the accuracy story | [Accuracy](#measured-accuracy-boundaries) |
-| AI layer | Exploratory by construction: never a reading | [By design](#by-design-documented-trade-offs-not-on-the-roadmap) |
+| Zero-dep baselines | Unadjusted baseline floors, not the neural accuracy tier | [Accuracy](#measured-accuracy-boundaries) |
+| AI layer | Exploratory output: labeled hypotheses, not attested readings | [Trade-offs](#documented-trade-offs-not-on-the-roadmap) |
 
 ---
 
@@ -57,7 +57,7 @@ release.
   its **99 catalogued signs, none** carries a settled sound value, so pyaegean
   offers no transliteration or lexicon for it. Every analytical or generative
   result over this material is labeled **exploratory**: evidence for a human
-  expert to weigh, never a reading or a translation.
+  expert to weigh, not an attested reading or translation.
 
   ```python
   import aegean
@@ -223,11 +223,11 @@ deliberately bounded. Open items are tracked on the [roadmap](Home#roadmap).
 
 | Limitation today | Plan |
 | --- | --- |
-| The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 802 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining by design: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
+| The bundled Linear A corpus is a *normalized* transcription: the full Leiden apparatus (restorations, dotted readings) was dropped upstream. *What survived is now interpreted* (erased marks → `LOST`, bracketed readings → `UNCLEAR`), and **SigLA is loadable** (`aegean.load("sigla")`: 802 documents with typology, dimensions, periods, SigLA's own word division, and commodity ideograms) | **Largely done.** Remaining scope limit: SigLA carries no cardinal-numeral *values* (it is a palaeographic sign database): use GORILA for accounting |
 | Linear B bundles an 18-tablet illustrative sample and a 149-entry Greek-bridge lexicon: every entry source-attested (curated core + Wiktionary-stated equations). 149 is close to the natural ceiling of *stated* Ancient Greek equations; many Mycenaean words have no alphabetic descendant to bridge to | The full ~5,900-tablet corpus is one call away via `aegean.load("damos")`; lexicon growth is contribution-driven and per-entry verified |
 | The Cypriot lexicon is small (17 entries, Idalion-centred) | Grows by verified contribution from published ICS facts |
-| Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining by design: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
-| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **By design**: the treebank and neural tiers cover these forms; the fetched UniMorph paradigm backend (`greek.use_paradigms()`, CC BY-SA) covers the irregular and third-declension nominals (measured: NT lemma 66.98% → 71.21%, with ambiguous and capitalized forms deliberately falling through as honest misses); verbs remain rule-based offline |
+| Scansion covers dactylic hexameter, elegiac pentameter, **iambic trimeter** (with resolution), and the **aeolic lyric** lines (glyconic, pherecratean, sapphic, alcaic). Synizesis is applied only for words in a curated, test-enforced lexicon: a line needing it on an un-listed word declines rather than guesses | **Done.** Remaining scope limit: **non-aeolic lyric** (dactylo-epitrite, free astrophic): a research project. See [Meters](Meters) |
+| The offline rule morphology misses irregular, third-declension, and contract paradigms, and doesn't restore accents on reconstructed lemmas | **Scoped to higher tiers**: the treebank and neural tiers cover these forms; the fetched UniMorph paradigm backend (`greek.use_paradigms()`, CC BY-SA) covers the irregular and third-declension nominals (measured: NT lemma 66.98% → 71.21%, leaving ambiguous and capitalized forms unguessed); verbs remain rule-based offline |
 | 78 of 94 gazetteer find-sites carry Pleiades ids; the rest are mostly minor findspots, peak sanctuaries, or non-settlement / modern place-names not in Pleiades | The alignment was extended (each coordinate-verified, and re-checked weekly by `scripts/check_gazetteer.py`); the remaining sites are listed as upstream-contribution candidates (`docs/pleiades-candidates.md`) |
 | The syllabification exception lexicon lists dictionary forms; inflected compounds fall back to the phonotactic rules | Grows by contribution: adding an entry is a one-line, test-enforced change ([CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md)) |
 
@@ -296,7 +296,7 @@ treat a `cc` on a noun as probable apposition.
 
 ---
 
-## By design (documented trade-offs, not on the roadmap)
+## Documented trade-offs (not on the roadmap)
 
 These are deliberate. They're listed here so you can judge them, not so they get
 "fixed."

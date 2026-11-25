@@ -11,7 +11,7 @@ pyaegean keeps three kinds of result apart:
 | --- | --- | --- |
 | **Established** | Readings and facts from editions, lexica, catalogues, Unicode, and other named sources | A sourced claim. Correct it when the source or transcription is wrong. |
 | **Measured** | Accuracy, calibration, coverage, and other quantities from a declared protocol | A reproducible observation with a population, a metric, a model or rule set, and an evaluation procedure. |
-| **Exploratory** | Statistical leads over undeciphered material, and generative AI output | A hypothesis for review, never a reading or ground truth. |
+| **Exploratory** | Statistical leads over undeciphered material, and generative AI output | A hypothesis for review, distinct from attested readings or ground truth. |
 
 The registers do different work. A Linear A pattern can be measured correctly
 while its linguistic interpretation stays exploratory. A neural parse is a model

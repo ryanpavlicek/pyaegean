@@ -75,7 +75,7 @@ backends layer in extra accuracy without changing the call you make.
 
 ## One call: `pipeline()`
 
-> **Available in v0.67.0.** Isolated pipeline instances, explicit long-input and runtime-variant
+> **Available in v0.68.0.** Isolated pipeline instances, explicit long-input and runtime-variant
 > selection, analysis receipts, source alignment, typed editorial form states, and lossless
 > CoNLL-U representation are part of the current release.
 
@@ -990,7 +990,7 @@ aegean greek accentuate λογος --persistent --lemma λόγος
 ```
 
 This is a rule engine over the accentuation laws, not a corpus lookup: it predicts
-the regular placement and is honest about the cases the spelling leaves
+the regular placement and flags cases the spelling leaves
 undetermined.
 
 ## Resolving crasis, elision, and movable nu
@@ -1025,13 +1025,13 @@ aegean greek sandhi κἀγώ
 # καί ἐγώ	crasis
 ```
 
-**Conservative by design.** Crasis is expanded only from a small curated,
-contribution-friendly lexicon (a one-line addition; see `CONTRIBUTING.md`); a
+**Scope and conservatism.** Crasis is expanded only from a curated
+lexicon (see `CONTRIBUTING.md`); a
 coronis form not in it is flagged `uncertain` and left intact. Elision is restored
 only where the elided vowel is unambiguous (a listed proclitic/particle or a clear
 inflectional ending); otherwise the clipped stem is kept and flagged. The
 movable-ν and οὐκ/οὐχ/οὐ rules are purely contextual and need no lexicon. The
-resolver never over-expands: an ambiguous form comes back unchanged with
+resolver does not over-expand: an ambiguous form comes back unchanged with
 `uncertain=True` and a note.
 
 ## Prosody (syllable quantity)

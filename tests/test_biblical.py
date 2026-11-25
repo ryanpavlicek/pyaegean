@@ -77,21 +77,40 @@ def test_psalm_lxx_mt_numbering_roundtrip():
 
 
 def test_patristic_commentaries_match_bundled_works_catalogue():
-    """All 48 patristic commentaries (30 Catenae + 18 Origen) must exist in works_catalogue.json."""
+    """All 77 First1KGreek commentaries exist in works_catalogue.json and all 9 PG volumes exist in PG_VOLUMES."""
     from aegean.data import load_bundled_json
+    from aegean.scripts.greek.patrologia import PG_VOLUMES
 
     cat = load_bundled_json("greek", "works_catalogue.json")
-    valid_ids = {w["id"] for w in cat["works"]}
+    valid_tlg_ids = {w["id"] for w in cat["works"]}
+    valid_pg_ids = {v["id"] for v in PG_VOLUMES}
     comms = bib.patristic_commentaries()
-    assert len(comms) == 48
+    assert len(comms) == 86
     assert len(bib.patristic_commentaries(kind="catena")) == 30
-    assert len(bib.patristic_commentaries(kind="origen")) == 18
+    assert len(bib.patristic_commentaries(kind="origen")) == 41
+    assert len(bib.patristic_commentaries(kind="patristic")) == 6
+    assert len(bib.patristic_commentaries(kind="patrologia")) == 9
     for c in comms:
-        assert c["work_id"] in valid_ids, c
+        if c["kind"] == "patrologia":
+            assert c["work_id"] in valid_pg_ids, c
+        else:
+            assert c["work_id"] in valid_tlg_ids, c
 
     john = bib.patristic_commentaries("John")
     assert any(c["work_id"] == "tlg4102.tlg005" for c in john)
     assert any(c["work_id"] == "tlg2042.tlg005" for c in john)
+    assert any(c["work_id"] == "PG073" for c in john)  # Cyril of Alexandria on John
+    assert any(c["work_id"] == "PG123" for c in john)  # Theophylact of Bulgaria
+
+    # All 9 Greek NT editions + aliases resolve cleanly offline.
+    eds = bib.nt_editions()
+    assert [e["id"] for e in eds] == [
+        "nestle1904", "sblgnt", "srgnt", "bhp", "tisch", "wh", "byz", "antoniades", "tr",
+    ]
+    assert bib.resolve_edition("tischendorf") == "tisch"
+    assert bib.resolve_edition("westcotthort") == "wh"
+    assert bib.resolve_edition("patriarchal") == "antoniades"
+    assert bib.resolve_edition("bunning") == "bhp"
 
 
 def test_mes_parser_nomina_sacra_and_scribal_hands():
@@ -191,7 +210,9 @@ def test_compare_editions_and_witnesses_with_fixtures(monkeypatch):
             },
         },
     }
-    monkeypatch.setattr(ed_mod, "_load_editions_bundle", lambda allow_fetch=True: fake_ed_bundle)
+    monkeypatch.setattr(
+        ed_mod, "_load_editions_bundle", lambda allow_fetch=True, **_kw: fake_ed_bundle
+    )
 
     cmp = bib.compare_editions("John", "1.18", editions=["sblgnt", "byz"], offline=True)
     assert cmp.variant_verse_count == 1
@@ -475,6 +496,7 @@ def test_bible_commentary_natural_read_search_and_work_id(monkeypatch):
         (["bible", "commentary", "read", "Matt"], None, None),
         (["bible", "commentary", "read", "tlg4102.tlg001"], "tlg4102.tlg001", None),
         (["bible", "commentary", "read", "Matt", "tlg4102.tlg001"], "tlg4102.tlg001", None),
+        (["bible", "commentary", "read", "PG073"], "pg073", None),
         (["bible", "commentary", "search", "Matt", "λόγος"], None, "λόγος"),
     ]:
         calls.clear()
@@ -483,4 +505,83 @@ def test_bible_commentary_natural_read_search_and_work_id(monkeypatch):
         assert len(calls) == 1
         assert calls[0]["work_id"] == expected_wid
         assert calls[0]["query"] == expected_query
+
+
+def test_corpus_from_json_supports_gzip(tmp_path):
+    import gzip
+
+    from aegean.core.corpus import Corpus
+
+    c = Corpus.load("greek")
+    gz_path = tmp_path / "greek.json.gz"
+    with gzip.open(gz_path, "wb") as f:
+        f.write(c.to_json().encode("utf-8"))
+    reloaded = Corpus.from_json(gz_path)
+    assert len(reloaded.documents) == len(c.documents)
+    assert reloaded.documents[0].id == c.documents[0].id
+
+
+def test_patrologia_commentary_excerpt_and_pg_resolution(monkeypatch, tmp_path):
+    import gzip
+
+    from aegean.scripts.greek import patrologia as pg_mod
+
+    assert pg_mod.resolve_pg_volume("73") == "PG073"
+    assert pg_mod.resolve_pg_volume("pg087_1") == "PG087_1"
+    assert len(pg_mod.patrologia_volumes()) == 33
+
+    fake_bundle = {
+        "_meta": {"name": "Test PG", "license": "CC BY 4.0", "source": "test", "attribution": "test"},
+        "volumes": {
+            "PG073": {
+                "_info": {
+                    "vol_id": "PG073",
+                    "pg": "73",
+                    "period": "5th c.",
+                    "author": "Cyril of Alexandria",
+                    "title": "Commentary on the Gospel of John",
+                    "biblical_books": ["John"],
+                },
+                "pages": [
+                    {"page": "10", "text": "Ἐν ἀρχῇ ἦν ὁ λόγος καὶ ὁ λόγος ἦν πρὸς τὸν Θεόν."},
+                    {"page": "11", "text": "Περὶ τοῦ φωτὸς τῶν ἀνθρώπων."},
+                ],
+            }
+        },
+    }
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    store = tmp_path / "pyaegean"
+    store.mkdir(parents=True, exist_ok=True)
+    gz_path = store / "patrologia-graeca-corpus.json.gz"
+    with gzip.open(gz_path, "wb") as f:
+        f.write(json.dumps(fake_bundle, ensure_ascii=False).encode("utf-8"))
+    monkeypatch.setattr(pg_mod, "_PG_BUNDLE_CACHE", None)
+
+    ex = bib.commentary_excerpt("John", work_id="PG073", query="λόγος", limit=3)
+    assert len(ex) == 1
+    assert ex[0].section_id == "PG073 p.10"
+    assert ex[0].author == "Cyril of Alexandria"
+    assert "λόγος" in ex[0].matched_words
+
+
+def test_nt_editions_stale_v1_cache_reports_clear_offline_upgrade(monkeypatch, tmp_path):
+    import gzip
+
+    from aegean.data import DataNotAvailableError
+    from aegean.greek.bible import _editions as ed_mod
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    store = tmp_path / "pyaegean"
+    store.mkdir(parents=True, exist_ok=True)
+    v1_payload = {
+        "_meta": {"version": 1},
+        "editions": {"sblgnt": {"_info": {"name": "SBLGNT"}, "books": {"John": {"1.1": "Ἐν ἀρχῇ"}}}},
+    }
+    with gzip.open(store / "nt-editions.json.gz", "wb") as f:
+        f.write(json.dumps(v1_payload, ensure_ascii=False).encode("utf-8"))
+    monkeypatch.setattr(ed_mod, "_EDITIONS_CACHE", None)
+
+    with pytest.raises(DataNotAvailableError, match="pre-v2 cache"):
+        bib.load_nt("John", "1.1", edition="tisch", offline=True)
+
 

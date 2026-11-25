@@ -223,9 +223,9 @@ aegean greek catalog --author plato --limit 5
 ```
 
 Pass any `id` you find straight to `greek.load_work("tlg0059.tlg002", ref="1")`, which
-fetches the text (network on first use only, then cached). The catalogue is honest about
-coverage: it lists exactly what the open repos hold, so a few authors that aren't online
-upstream (Sappho, for one) simply aren't in it. See
+fetches the text (network on first use only, then cached). The catalogue reflects exact
+upstream coverage: it lists what the open repos hold, so authors not digitized
+upstream (Sappho, for one) are absent. See
 [Greek Works and Books](Greek-Works-and-Books) for the full guide to loading works.
 
 ## Step 8 — Bring your own text

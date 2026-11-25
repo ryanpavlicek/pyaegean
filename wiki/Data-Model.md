@@ -34,8 +34,8 @@ Three things to internalize:
   `document.tokens`; `document.line_tokens` resolves them for you. This is what
   lets a token belong to the physical layout without being stored twice.
 - **`Token` and `Sign` are frozen dataclasses** (edit one with
-  `dataclasses.replace`), each with a single mutable escape hatch: the
-  per-token `annotations` dict and the per-sign `attrs` dict. `Document` is
+  `dataclasses.replace`), each carrying a mutable metadata dict:
+  `Token.annotations` and `Sign.attrs`. `Document` is
   mutable.
 - **Source alignment is typed, not an annotation convention.** An aligned token
   carries an immutable `SourceAlignment`; its document retains the exact
@@ -560,7 +560,7 @@ list order preserved: True
 
 ### 7.1 Build a corpus from your own records
 
-`Corpus.from_records` turns plain dicts into first-class corpus data: each
+`Corpus.from_records` converts plain dicts into a standard `Corpus`: each
 record needs an `"id"` and its text as `"lines"` (list of lines, each a list
 of tokens), `"words"` (one flat line), or `"text"` (whitespace-tokenized). A
 token is a string or a dict `{"text": …, "kind": …, "status": …, "alt": …}`;

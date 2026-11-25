@@ -11,7 +11,7 @@ in one small, dependency-light library.
 [Benchmarks](benchmarks.md){ .md-button }
 [PyPI](https://pypi.org/project/pyaegean/){ .md-button }
 
-**Latest PyPI release: v0.67.0 (beta).** See the
+**Latest PyPI release: v0.68.0 (beta).** See the
 [scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
 counting choices, and translation evidence.
 
@@ -91,18 +91,21 @@ for the pipeline (scansion, accentuation, IPA, tagging, lemmatization, parsing).
 
 **I work with inscriptions or papyri.**
 [Using Critical Editions](https://github.com/ryanpavlicek/pyaegean/wiki/Using-Critical-Editions)
-covers the six fetchable epigraphic and papyrological corpora (I.Sicily, IIP, IOSPE,
-IGCyr/GVCyr, the EDH Greek subset, and the DDbDP documentary papyri), per-token reading
-statuses, and each corpus's edition-fidelity flag.
+covers the eight fetchable epigraphic and papyrological corpora (I.Sicily, IIP, IOSPE,
+IGCyr/GVCyr, Aphrodisias IAph2007, Cretan Institutional Inscriptions, the EDH Greek subset,
+and the DDbDP documentary papyri), per-token reading statuses, and each corpus's
+edition-fidelity flag.
 
-**I study Biblical & Koine Greek (NT, Septuagint, early manuscripts).**
+**I study Biblical, Second Temple & Patristic Greek.**
 [Biblical & Koine Greek](https://github.com/ryanpavlicek/pyaegean/wiki/New-Testament) and the
 [`aegean.greek.bible`](api/greek_bible.md) reference cover the `aegean bible` CLI, the `b` screen in
-`aegean tui` (with inline downloads for missing bundles), 5 collated Greek NT editions (`nestle1904`,
-`sblgnt`, `srgnt`, `byz`, `tr`), 13 early 2nd–5th c. CE manuscript witnesses with *nomina sacra*
-expansion, 11,142-entry Extended Strong's with root tracing, the 55-book Swete Septuagint
-(`lxx-corpus`), and 48 Greek patristic commentaries (*Catenae* and Origen). Install all 5 Biblical
-bundles at once with `aegean bible install` or `aegean library install biblical` (see
+`aegean tui` (with inline downloads for missing bundles), **9 collated Greek NT editions**
+(`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`), **13 early
+2nd–5th c. CE manuscript witnesses** with *nomina sacra* expansion, 11,142-entry Extended Strong's
+with root tracing, the **55-book Swete Septuagint** (`lxx-corpus`), and **86 Greek patristic
+commentaries** across 10 Church Fathers/traditions (First1KGreek + *Patrologia Graeca*). Install
+packs at once with `aegean bible install` or `aegean library install patristic` (adding Open
+Apostolic Fathers, 44 Greek OT Pseudepigrapha, and 33 *Patrologia Graeca* volumes; see
 [`aegean.library`](api/library.md)).
 
 **I study the Aegean scripts.**
@@ -141,7 +144,7 @@ The core is zero-dependency; everything heavier is an opt-in extra:
 | `pip install "pyaegean[interop]"` | spaCy/Stanza adapters plus CLTK on Python 3.13+; Stanza installs PyTorch |
 | `pip install "pyaegean[ai]"` | Anthropic / OpenAI / Grok / Gemini / OpenRouter clients, plus a local no-key option |
 | `pip install "pyaegean[mcp]"` | The `aegean-mcp` Model Context Protocol server (for agents) |
-| `pip install "pyaegean[all]"` | The bundled runtime stack, including neural; excludes Parquet and the separate framework adapters |
+| `pip install "pyaegean[all]"` | The bundled runtime stack, including neural; excludes Parquet, `viz-interactive`, and the separate framework adapters |
 
 Large assets (corpora, models, lexica) are never bundled: they fetch to a local cache,
 sha256-pinned, only when you opt in.

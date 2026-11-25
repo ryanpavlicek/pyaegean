@@ -45,9 +45,9 @@ def test_corpusload_typo_suggests_close_matches() -> None:
 
 def test_corpusload_single_suggestion() -> None:
     with pytest.raises(KeyError) as exc:
-        aegean.load("greeek")
+        aegean.load("damoss")
     msg = exc.value.args[0]
-    assert msg.startswith("no registered corpus 'greeek' — did you mean 'greek'?")
+    assert msg.startswith("no registered corpus 'damoss' — did you mean 'damos'?")
     assert "available: [" in msg
 
 

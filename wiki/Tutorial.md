@@ -660,8 +660,7 @@ will not catch this kind of mistake. A resolved lemma can also be wrong in conte
 
 ## Notes & limitations
 
-These tutorials are honest about where the tools are firm and where they are
-exploratory:
+Each tutorial marks which outputs are established and which are exploratory:
 
 - **Linear A is undeciphered.** Tutorial 1's balance checks, structure buckets,
   and pattern searches are tools for *finding* lines worth a human's attention,

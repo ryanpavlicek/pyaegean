@@ -25,10 +25,10 @@ def test_library_lazy_export_and_summary(monkeypatch: pytest.MonkeyPatch, tmp_pa
     assert snap["downloaded_count"] == 0
     assert snap["installed_bytes"] == 0
     assert snap["categories"]["corpus"]["bundled"] == 5
-    assert snap["categories"]["bible"]["total"] == 5
-    assert snap["categories"]["commentary"]["total"] == 48
+    assert snap["categories"]["bible"]["total"] >= 7
+    assert snap["categories"]["commentary"]["total"] >= 77
     assert snap["categories"]["work"]["total"] > 1500
-    assert len(snap["packs"]) == 5
+    assert len(snap["packs"]) == 7
 
 
 def test_list_items_categories_and_statuses(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -40,14 +40,33 @@ def test_list_items_categories_and_statuses(monkeypatch: pytest.MonkeyPatch, tmp
 
     bible_items = library.list_items(category="bible")
     bible_ids = {it.id for it in bible_items}
-    assert {"nt-corpus", "nt-editions", "nt-witnesses", "strongs-greek", "lxx-corpus"} <= bible_ids
+    assert {
+        "nt-corpus",
+        "nt-editions",
+        "nt-witnesses",
+        "strongs-greek",
+        "lxx-corpus",
+        "apostolic-fathers-corpus",
+        "pseudepigrapha-corpus",
+    } <= bible_ids
 
     corpora = library.list_items(category="corpus")
     corpus_ids = {it.id for it in corpora}
-    assert {"lineara", "damos-corpus", "sigla-corpus", "nt-corpus", "isicily-corpus"} <= corpus_ids
+    assert {
+        "lineara",
+        "damos-corpus",
+        "sigla-corpus",
+        "nt-corpus",
+        "isicily-corpus",
+        "aphrodisias-corpus",
+        "crete-corpus",
+        "byzantine-corpus",
+        "homer-scholia-corpus",
+        "patrologia-graeca-corpus",
+    } <= corpus_ids
 
     comms = library.list_items(category="commentary")
-    assert len(comms) == 48
+    assert len(comms) >= 77
 
     lexica = library.list_items(category="lexicon")
     assert {"lsj-index", "middle-liddell-index", "abbott-smith-index"} <= {it.id for it in lexica}
@@ -180,12 +199,20 @@ def test_cli_library_and_bible_status(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert r_status.exit_code == 0, r_status.output
     data = json.loads(r_status.output)
     assert data["bundled_count"] == 5
-    assert len(data["packs"]) == 5
+    assert len(data["packs"]) == 7
 
     r_packs = runner.invoke(app, ["library", "packs", "--json"])
     assert r_packs.exit_code == 0, r_packs.output
     packs = json.loads(r_packs.output)
-    assert {p["id"] for p in packs} == {"biblical", "aegean", "epigraphy", "lexica", "neural"}
+    assert {p["id"] for p in packs} == {
+        "biblical",
+        "patristic",
+        "aegean",
+        "epigraphy",
+        "literary",
+        "lexica",
+        "neural",
+    }
 
     r_search = runner.invoke(app, ["library", "search", "Iliad", "--json"])
     assert r_search.exit_code == 0, r_search.output
@@ -328,14 +355,18 @@ def test_tui_library_screen_mounts_and_filters(
             assert isinstance(app.screen, LibraryScreen)
 
             packs_tbl = app.screen.query_one("#lib-packs-table", DataTable)
-            assert packs_tbl.row_count == 5
+            assert packs_tbl.row_count == 7
 
             installed_tbl = app.screen.query_one("#lib-installed-table", DataTable)
             assert installed_tbl.row_count == 5  # the 5 bundled corpora
 
-            # Filter narrows packs table to matching pack
+            # Filter narrows packs table to matching packs
             search_box = app.screen.query_one("#lib-search", Input)
             search_box.value = "biblical"
+            await pilot.pause()
+            assert packs_tbl.row_count == 2  # biblical + patristic (mentions biblical commentaries)
+
+            search_box.value = "aegean"
             await pilot.pause()
             assert packs_tbl.row_count == 1
 

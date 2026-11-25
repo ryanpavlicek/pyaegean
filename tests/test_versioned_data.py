@@ -73,6 +73,7 @@ _KEPT_HISTORY = set(_RECOVERED_V1) | {
     "papygreek-dev-tagging",
     "papygreek-dev-parse",
     "dbbe-lingann-fold",
+    "nt-editions",
 }
 
 

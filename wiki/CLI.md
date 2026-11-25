@@ -450,7 +450,7 @@ aegean: session corpus cleared.
 aegean> :examples
   info lineara                      corpus overview: size, provenance, license
   show lineara HT13                 one document, metadata and line-by-line tokens
-  …  (thirteen starter lines in all)
+  …  (fifteen starter lines in all)
 aegean> :exit
 ```
 
@@ -462,42 +462,16 @@ argument, while `greek syllabify` (not a corpus command) was untouched by it.
 
 ## The terminal UI (`aegean tui`)
 
-> Full reference: the [TUI](TUI) page. This section is a quick tour.
-
-Where `repl` is the same commands typed one after another, **`aegean tui`** is a
-full-screen, app-like cockpit for the highest-value offline reads: a scrollable
-corpus browser, a live Greek workbench, and the local data store, all inside your
-terminal. It is built on [Textual](https://textual.textualize.io/) and ships as
-the `[tui]` extra:
-
 ```bash
 pip install "pyaegean[tui]"
 aegean tui
 ```
 
-If the extra isn't installed, `aegean tui` exits with one line telling you exactly
-that (`the TUI needs the [tui] extra — install it with: pip install
-'pyaegean[tui]'`), the same way `aegean plot` guards `[viz]`. The default corpus
-views and baseline Greek workbench run offline without API keys. Fetch actions,
-optional neural analysis, and key-gated translation can access the network;
-the command console can run the regular CLI commands.
-
-### What's on screen
-
-Eight screens, switched with a single key from anywhere:
-
-| Screen | Key | What it shows |
-|---|---|---|
-| **Home** | `h` | Corpus overview (13 corpora with on-disk status) and global key legend. |
-| **Corpus browser** | `c` | Corpus list, inline one-click download (`f`) for uninstalled corpora, filterable document table, and apparatus-aware reader with word cursor, live token inspector, inline interlinear toggle (`i`), `KU-RO` / `to-so` balance check, and line-analysis popup (`Enter`/`a`). |
-| **Greek workbench** | `g` | Live text box (with Beta Code toggle `b`) over Pipeline, Scansion (10 meters), Syllables, IPA, and Lexicon tabs. |
-| **Biblical Greek** | `b` | Interlinear NT & LXX reader, 5-edition collation, 13 early manuscript witnesses, Strong's + root trees, word study, LXX search/Psalm converter, and inline one-click downloads (`f`) for missing bundles or the full Biblical Pack. |
-| **Library manager** | `l` | Unified manager for named packs (`biblical`, `aegean`, `epigraphy`, `lexica`, `neural`), installed items, corpora, ~1,778 literary works, 48 commentaries, lexica, and models (`f` download, `o` open, `x` remove). |
-| **Works library** | `w` | Search the 1,778-work Greek catalogue, fetch works or whole authors, open or remove cached texts. |
-| **Data store** | `d` | Environment report (`doctor`) and fetchable datasets table with download (`f`) and remove (`x`). |
-| **Command console** | `:` | Full-parity `aegean>` console with live context-aware dropdown, inline ghost-text suggestions, and persistent session cache. |
-
-Global keys on every screen: `q` quit, `?` help, `t` theme picker, `Esc` back, `ctrl+p` command palette. See [TUI](TUI) for full documentation.
+Full-screen Textual interface with eight screens (`h` Home over 19 browsable
+corpora, `c` Corpus browser with inline downloads, `g` Greek workbench, `b`
+Biblical Greek, `l` Library manager with 7 packs and `x` removal, `w` Works
+library, `d` Data store, and `:` Command console with live predictions). See
+[TUI](TUI) for keybindings, screen walkthroughs, and theme persistence.
 
 ---
 

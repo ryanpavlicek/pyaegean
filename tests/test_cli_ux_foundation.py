@@ -77,8 +77,8 @@ def test_read_corpus_unknown_id_suggests_close_match() -> None:
 
 
 def test_read_corpus_single_suggestion() -> None:
-    with pytest.raises(CorpusNotFound, match="did you mean 'greek'\\?"):
-        read_corpus("greeek")
+    with pytest.raises(CorpusNotFound, match="did you mean 'damos'\\?"):
+        read_corpus("damoss")
 
 
 def test_read_corpus_no_close_match_keeps_the_old_message() -> None:

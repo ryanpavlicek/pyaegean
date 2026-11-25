@@ -19,23 +19,39 @@ from . import iospe  # noqa: F401 — registers the IOSPE corpus loader on impor
 from . import igcyr  # noqa: F401 — registers the IGCyr/GVCyr corpus loader on import
 from . import edh  # noqa: F401 — registers the EDH corpus loader on import
 from . import ddbdp  # noqa: F401 — registers the DDbDP corpus loader on import
+from . import aphrodisias  # noqa: F401 — registers the IAph2007 corpus loader on import
+from . import crete  # noqa: F401 — registers the Cretan Institutional Inscriptions loader
+from . import apostolic_fathers  # noqa: F401 — registers the Open Apostolic Fathers loader
+from . import pseudepigrapha  # noqa: F401 — registers the OCP Pseudepigrapha loader
+from . import byzantine  # noqa: F401 — registers the Byzantine Vernacular Greek loader
+from . import homer_scholia  # noqa: F401 — registers the Homer Multitext Scholia loader
+from . import patrologia  # noqa: F401 — registers the Patrologia Graeca loader
 from .inventory import greek_inventory
 from typing import TYPE_CHECKING
 
+from .aphrodisias import load_aphrodisias
+from .apostolic_fathers import load_apostolic_fathers
+from .byzantine import load_byzantine
+from .crete import load_crete
 from .ddbdp import ddbdp_db, load_ddbdp
 from .edh import load_edh
+from .homer_scholia import load_homer_scholia
 from .igcyr import load_igcyr
 from .iip import load_iip
 from .iospe import load_iospe
 from .isicily import load_isicily
 from .nt import load_nt
+from .patrologia import load_patrologia, patrologia_volumes
+from .pseudepigrapha import load_pseudepigrapha
 
 if TYPE_CHECKING:
     from .perseus import load_work
 
 __all__ = [
     "Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe", "load_igcyr",
-    "load_edh", "load_ddbdp", "ddbdp_db",
+    "load_edh", "load_ddbdp", "ddbdp_db", "load_aphrodisias", "load_crete",
+    "load_apostolic_fathers", "load_pseudepigrapha", "load_byzantine",
+    "load_homer_scholia", "load_patrologia", "patrologia_volumes",
 ]
 
 

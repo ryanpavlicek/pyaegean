@@ -304,7 +304,7 @@ Dodson Greek Lexicon (bundled: src/aegean/data/bundled/greek/dodson.json)
 Extended Strong's Greek Lexicon — strongs-greek (fetched on demand, NOT bundled)
   Combined derived lexicon (11,142 entries covering NT, LXX, Apocrypha, and Apostolic Fathers)
   hosted as the `strongs-greek` release asset (built by scripts/build_strongs_greek.py) and
-  fetched to cache on demand by aegean.biblical.use_strongs(). Combines:
+  fetched to cache on demand by aegean.greek.bible.use_strongs(). Combines:
   - STEPBible TBESG (Translators Brief Lexicon of Extended Strongs for Greek), STEPBible.org /
     Tyndale House, Cambridge (https://github.com/STEPBible/STEPBible-Data), licensed CC BY 4.0;
   - OpenScriptures Strong's Greek Dictionary (https://github.com/openscriptures/strongs),
@@ -312,17 +312,27 @@ Extended Strong's Greek Lexicon — strongs-greek (fetched on demand, NOT bundle
   The combined derived asset is licensed CC BY-SA 4.0 and is never bundled in the Apache-2.0 wheel.
 
 Multi-edition Greek New Testament — nt-editions (fetched on demand, NOT bundled)
-  Four additional Greek New Testament editions hosted as the `nt-editions` release asset
+  Eight additional Greek New Testament editions hosted as the `nt-editions` release asset
   (built by scripts/build_nt_editions.py) and fetched to cache on demand by
-  aegean.biblical.load_nt(..., edition=...) / compare_editions():
+  aegean.greek.bible.load_nt(..., edition=...) / compare_editions():
   - SBL Greek New Testament (Michael W. Holmes, SBL/Logos, CC BY 4.0) via MorphGNT
     (https://github.com/morphgnt/sblgnt, CC BY-SA 3.0);
   - Statistical Restoration Greek New Testament (Alan Bunning / Center for New Testament
     Restoration, https://github.com/Center-for-New-Testament-Restoration/SR, CC BY 4.0);
-  - Textus Receptus / KJTR (Alan Bunning / Center for New Testament Restoration,
-    https://github.com/Center-for-New-Testament-Restoration/KJTR, CC BY 4.0);
+  - Bunning Heuristic Prototype Greek New Testament (Alan Bunning / Center for New Testament
+    Restoration, https://github.com/Center-for-New-Testament-Restoration/BHP, CC BY 4.0);
+  - Tischendorf 8th Editio Octava Critica Maior (Constantin von Tischendorf; digital text by
+    G. Clint Yale & Ulrik Sandborg-Petersen, https://github.com/morphgnt/tischendorf-data,
+    Public Domain);
+  - Westcott-Hort 1881 Greek New Testament (Brooke Foss Westcott & Fenton John Anthony Hort;
+    digital text by Maurice A. Robinson, https://github.com/byztxt/greektext-westcott-hort,
+    Public Domain);
   - Robinson-Pierpont Byzantine Majority Textform (Maurice A. Robinson & William G. Pierpont,
-    https://github.com/byztxt/byzantine-majority-text, Public Domain).
+    https://github.com/byztxt/byzantine-majority-text, Public Domain);
+  - Antoniades 1904/1912 Patriarchal Edition (Ecumenical Patriarchate; digital text by
+    Maurice A. Robinson et al., https://github.com/byztxt/greektext-antoniades, Public Domain);
+  - Textus Receptus / KJTR (Alan Bunning / Center for New Testament Restoration,
+    https://github.com/Center-for-New-Testament-Restoration/KJTR, CC BY 4.0).
   Fetched on demand; never bundled in the Apache-2.0 wheel.
 
 Early Greek New Testament Manuscript Witnesses — nt-witnesses (fetched on demand, NOT bundled)
@@ -331,7 +341,7 @@ Early Greek New Testament Manuscript Witnesses — nt-witnesses (fetched on dema
   P45, P46, P47, P52, P66, P72, P75) from the Center for New Testament Restoration
   (Alan Bunning, https://github.com/Center-for-New-Testament-Restoration/transcriptions,
   CC BY-SA 4.0), hosted as the `nt-witnesses` release asset (built by
-  scripts/build_nt_witnesses.py) and fetched on demand by aegean.biblical.load_witness() /
+  scripts/build_nt_witnesses.py) and fetched on demand by aegean.greek.bible.load_witness() /
   compare_witnesses(). Never bundled in the Apache-2.0 wheel. Attribute CNTR / Alan Bunning
   in academic work.
 
@@ -341,10 +351,74 @@ Septuagint (LXX) — Swete Greek Old Testament (Genesis 1:1-5 and LXX Psalm 22:1
   TEI XML digitization from the Open Greek and Latin / First1KGreek Project
   (https://github.com/OpenGreekAndLatin/First1KGreek, CC BY-SA 4.0) is hosted as the
   `lxx-corpus` release asset (built by scripts/build_lxx_corpus.py), redistributed under the
-  same CC BY-SA 4.0 ShareAlike terms, and fetched on demand via aegean.biblical.load_lxx() /
+  same CC BY-SA 4.0 ShareAlike terms, and fetched on demand via aegean.greek.bible.load_lxx() /
   search_lxx(); it is never bundled in the Apache-2.0 wheel. The eleven-verse offline sample
-  (Genesis 1:1-5 and LXX Psalm 22:1-6) in src/aegean/biblical/_lxx.py is public-domain text
+  (Genesis 1:1-5 and LXX Psalm 22:1-6) in src/aegean/greek/bible/_lxx.py is public-domain text
   from Swete (1887-1894). Attribute OpenGreekAndLatin / First1KGreek when using `lxx-corpus`.
+
+Patrologia Graeca — CGPG Corpus (project-hosted, fetched on demand, NOT bundled)
+  Calfa-GREgORI Patrologia Graeca (CGPG) project (Jean-Marie Auwers, Chahan Vidal-Gorène &
+  Bastien Kindt, UCLouvain GREgORI & Calfa; https://github.com/calfa-co/Patrologia-Graeca,
+  Zenodo 19915273), licensed CC BY 4.0. pyaegean's `patrologia-graeca-corpus` release asset
+  packages all 33 digitized Migne Patrologia Graeca volumes (6.79M Greek words, automated OCR
+  of 19th-century prints; built by scripts/build_patrologia_graeca_corpus.py), including 9
+  major biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius,
+  Oecumenius, and Theophylact of Bulgaria). Fetched on demand via aegean.load("patrologia")
+  or aegean.greek.bible.load_commentary(); never bundled in the Apache-2.0 wheel. Cite:
+  Vidal-Gorène, C., & Kindt, B. (2026), "The Patrologia Graeca Corpus: OCR, Annotation, and
+  Open Release of Noisy Nineteenth-Century Polytonic Greek Editions", LREC 2026.
+
+Open Apostolic Fathers — apostolic-fathers-corpus (project-hosted, fetched on demand, NOT bundled)
+  Open Apostolic Fathers (edited by James Tauber & Seumas Macdonald;
+  https://github.com/jtauber/apostolic-fathers, Zenodo https://doi.org/10.5281/zenodo.2555673),
+  licensed CC BY-SA 4.0. pyaegean's `apostolic-fathers-corpus` release asset packages all 15
+  twice-hand-corrected Greek Apostolic Fathers texts (64,944 tokens; built by
+  scripts/build_apostolic_fathers_corpus.py), redistributed under CC BY-SA 4.0 and fetched on
+  demand via aegean.load("apostolic-fathers"); never bundled in the Apache-2.0 wheel. Cite
+  Tauber & Macdonald (2019), Open Apostolic Fathers (v1.0).
+
+Online Critical Pseudepigrapha — pseudepigrapha-corpus (project-hosted, fetched on demand, NOT bundled)
+  Online Critical Pseudepigrapha (Ken M. Penner et al., https://pseudepigrapha.org,
+  https://github.com/OnlineCriticalPseudepigrapha/Online-Critical-Pseudepigrapha), text editions
+  in static/docs/ licensed CC BY 4.0. pyaegean's `pseudepigrapha-corpus` release asset extracts
+  44 Greek Second Temple and Old Testament Pseudepigrapha works (171,306 tokens; built by
+  scripts/build_pseudepigrapha_corpus.py), fetched on demand via aegean.load("pseudepigrapha");
+  never bundled in the Apache-2.0 wheel. Cite Online Critical Pseudepigrapha (pseudepigrapha.org).
+
+Inscriptions of Aphrodisias (IAph2007) — aphrodisias-corpus (project-hosted, fetched on demand, NOT bundled)
+  Inscriptions of Aphrodisias 2007 (eds. Joyce Reynolds, Charlotte Roueche & Gabriel Bodard,
+  King's College London; http://insaph.kcl.ac.uk/, KCL Figshare 51848354), licensed CC BY 2.5
+  (http://creativecommons.org/licenses/by/2.5/). pyaegean's `aphrodisias-corpus` release asset
+  extracts 1,471 Greek EpiDoc inscriptions (38,556 tokens; built by
+  scripts/build_aphrodisias_corpus.py), fetched on demand via aegean.load("aphrodisias"); never
+  bundled in the Apache-2.0 wheel. Reuse must preserve a link to http://insaph.kcl.ac.uk/ and
+  cite Reynolds, Roueche & Bodard (2007).
+
+Cretan Institutional Inscriptions — crete-corpus (project-hosted, fetched on demand, NOT bundled)
+  Cretan Institutional Inscriptions (Irene Vagionakis, Universita Ca' Foscari Venezia, 2016-2019;
+  https://github.com/IreneVagionakis/CretanInscriptions), inscription XML data licensed
+  CC BY-NC-SA 4.0 (Data-LICENSE). pyaegean's `crete-corpus` release asset extracts all 600
+  Archaic-Hellenistic Greek inscriptions from Crete (50,995 tokens; built by
+  scripts/build_crete_corpus.py), fetched on demand via aegean.load("crete"); NonCommercial and
+  ShareAlike obligations pass to the user, and the data is never bundled in the Apache-2.0 wheel.
+  Cite Irene Vagionakis, Cretan Institutional Inscriptions (Universita Ca' Foscari Venezia).
+
+Byzantine and Early Modern Vernacular Greek Corpus — byzantine-corpus (project-hosted, fetched on demand, NOT bundled)
+  Byzantine and Early Modern Greek Corpus (compiled by Francisco Riordan;
+  https://github.com/open-greek/byzantine-early-modern-corpus). Source texts are Public Domain
+  (medieval/early-modern works and Kalonaros 1940 edition) and/or CC BY-SA 3.0 via Greek
+  Wikisource; compilation metadata is MIT. pyaegean's `byzantine-corpus` release asset packages
+  all 12 texts (189,375 tokens; built by scripts/build_byzantine_corpus.py), fetched on demand
+  via aegean.load("byzantine"); never bundled in the Apache-2.0 wheel.
+
+Homer Multitext Project (Venetus A Iliad & Scholia) — homer-scholia-corpus (project-hosted, fetched on demand, NOT bundled)
+  Homer Multitext Project (Center for Hellenic Studies, Harvard University;
+  https://github.com/homermultitext/hmt-archive, release hmt-2026a.cex), licensed CC BY-NC 4.0.
+  pyaegean's `homer-scholia-corpus` release asset extracts the normalized Venetus A Iliad
+  (24 books) and Homeric scholia (Venetus A, Venetus B, Escorial Upsilon 1.1; 54 documents,
+  331,365 tokens; built by scripts/build_homer_scholia_corpus.py), fetched on demand via
+  aegean.load("homer-scholia"). NonCommercial obligations pass to the user; never bundled in
+  the Apache-2.0 wheel. Cite the Homer Multitext Project (Center for Hellenic Studies).
 
 Greek development source archives (repository-only under training/sources/greek-development-v1/; NOT bundled in wheels or sdists)
   Digital Hill treebank sample (tragedy-diagnostic/):

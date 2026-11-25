@@ -17,8 +17,8 @@ get both.
 > lossless CoNLL-U structure, and schema-3 JSON/SQLite persistence are part of
 > the current release.
 
-The CLI is a first-class way in: **every `aegean` corpus argument
-accepts any source**: a registered id, a Greek work id, a path to a saved
+Every `aegean` CLI corpus argument
+accepts any source: a registered id, a Greek work id, a path to a saved
 `.json` or `.db` corpus, or `-` for JSON on stdin, and you can **combine**,
 **slice**, and **save** corpora and results without writing a line of Python.
 The universal resolver is [`aegean.read_corpus`](#aegeanread_corpus--one-resolver-for-any-source);
@@ -41,16 +41,17 @@ combines the Greek analysis and AI layers; this diagram is not a strict import
 ordering. The script-agnostic core never imports a script.
 
 ```
-L7  interfaces            cli (the aegean CLI and REPL) · tui (aegean tui)
-                          · mcp_server (aegean-mcp); all three render the
-                          balance/pipeline views through the shared
-                          aegean._view, so those surfaces cannot drift
+L7  interfaces            cli (aegean CLI & REPL) · tui (aegean tui)
+                          · mcp_server (aegean-mcp) · library (aegean.library
+                          unified pack/corpus/work/model manager); shared views
+                          through aegean._view keep all surfaces aligned
 L6  ai (aegean.ai)        provider-agnostic LLM clients + grounded capabilities
 L5  translate             hybrid: lexicon/morphology grounding → LLM
-L5  greek (aegean.greek)  Greek NLP pipeline (normalize/tokenize/sentence policies/…)
-L4  io · geo · data · db  aegean.io (text/CSV import · EpiDoc/CSV/Parquet export)
-                          · aegean.geo (GeoDataFrame) · bundled registry + cache
-                          · aegean.db (SQLite + resumable `db_jobs.py`)
+L5  greek (aegean.greek)  Greek NLP pipeline + aegean.greek.bible (9 NT editions,
+                          13 early witnesses, Strong's, 55 LXX books, 86 commentaries)
+L4  io · geo · viz · data aegean.io (text/CSV/EpiDoc/CoNLL-U/interop) · aegean.geo
+    · cache · db          · aegean.viz · aegean.data (39 pinned remote assets)
+                          · aegean.cache · aegean.db (SQLite + resumable jobs)
 L3  analysis              distance · align · morphology · collocation · patterns
                           · query · accounting · structure
 L2  scripts (plugins)     lineara · linearb · cypriot · cyprominoan · greek
@@ -1079,7 +1080,7 @@ aegean ai gloss     "ἐν ἀρχῇ" -o gloss.txt       # labeled text
 
 ### `ExploratoryResult` — the serialized AI result
 
-Under the hood every AI capability returns an `ExploratoryResult` (in
+Every AI capability returns an `ExploratoryResult` (in
 `aegean.ai`): the generated `text`, the `provider` / `model` / `prompt_version`
 that produced it, the structured `grounding` it was given (each a `GroundingItem`
 with a `source`, `ref`, evidence `status`, and optional supporting `provenance`),
@@ -1295,6 +1296,6 @@ it surfaces. See [Analysis](Analysis) for the full accounting walkthrough.
   and unknown tokens are outside its lexical word population; script-specific
   sign-pattern predicates retain their own matching rules.
 - Parquet needs a parquet engine; CSV/Parquet need pandas (`[data]`).
-- See [Limitations](Limitations) for the honest, project-wide list of what
+- See [Limitations](Limitations) for the project-wide list of what
   pyaegean does and doesn't claim, and [Greek NLP](Greek-NLP) /
   [Meters](Meters) for the layers above the core.

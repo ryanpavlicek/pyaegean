@@ -394,8 +394,8 @@ corpus comes from the BBAW's online edition of *Inscriptiones Graecae* XV 1. See
   documents in all); the larger ICS/Masson corpus is not openly redistributable. The sign
   inventory and the Greek-reading bridge are the durable parts.
 - **The lexicon is small and curated** (17 entries). A word outside it returns `None`
-  (`greek_reading`) or fails the `bridge` command; that is by design, not a bug. It seeds your
-  own work; it is not a Cypriot dictionary.
+  (`greek_reading`) or fails the `bridge` command; it seeds your
+  own work rather than serving as a full Cypriot dictionary.
 - **Spelling conventions are real.** The dummy final vowel (`…-SE` for final ς) and split clusters
   mean a romanized form like `pasileuse` is not literally the Greek word; that gap is exactly what
   the Greek bridge closes.

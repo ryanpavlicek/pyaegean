@@ -74,7 +74,7 @@ machine with no API key or network. Each is registered automatically when you
 > The default models are starting points. Model ids drift; the layer is built so
 > you can point each provider at the current model without touching code (see
 > [Model selection](#model-selection) below). Grok, OpenRouter, and Local talk through
-> OpenAI-compatible endpoints under the hood, so they use the `openai` SDK; OpenRouter
+> OpenAI-compatible endpoints, so they use the `openai` SDK; OpenRouter
 > reaches many vendors from one key, with `vendor/model` ids (e.g.
 > `anthropic/claude-3.5-sonnet`) set via `OPENROUTER_MODEL`.
 
@@ -150,7 +150,7 @@ other, and grounding it on the corpus (the default) matters more, not less.
 
 ### Model selection
 
-The model is **configurable and current by design**. Each provider resolves its
+The model is **configurable at runtime**. Each provider resolves its
 model in this order:
 
 1. an explicit `model=` argument to `get_client` (or `--model` on the CLI),
@@ -423,9 +423,8 @@ print(r.trace())
 aegean ai hypotheses "KU-RO" --corpus lineara --trace
 ```
 
-This is the sharpest edge of the exploratory caveat: **a hypothesis is not a
-reading.** See [Linear A](Linear-A) for the deterministic, evidence-based analysis
-that should anchor any such guess, and [Limitations](Limitations) for the boundary.
+**A hypothesis is not an attested reading.** See [Linear A](Linear-A) for the deterministic, evidence-based analysis
+that should anchor any such proposal, and [Limitations](Limitations) for the boundary.
 
 ### NLP assist (API)
 
@@ -822,8 +821,8 @@ accuracy, and never raises on a missing backend (it returns the signals it can c
 
 ## Grounded-generation eval
 
-The generative layer is exploratory by design, so its worth rests on **grounding
-fidelity**, not authority. `aegean.ai`'s eval harness measures that the way the
+The generative layer is exploratory, so its evaluation focuses on **grounding
+fidelity** rather than authority. `aegean.ai`'s eval harness measures that the way the
 [lemmatizer](Greek-NLP) is measured: fixed cases with known evidence, each scored
 for two things:
 

@@ -99,6 +99,55 @@
       "words": 4373912,
       "measured_from": "cached-asset",
       "measured": "2026-07-11"
+    },
+    "aphrodisias": {
+      "documents": 1471,
+      "tokens": 38556,
+      "words": 38556,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "crete": {
+      "documents": 600,
+      "tokens": 50995,
+      "words": 50995,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "apostolic-fathers": {
+      "documents": 15,
+      "tokens": 64944,
+      "words": 64944,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "pseudepigrapha": {
+      "documents": 44,
+      "tokens": 171306,
+      "words": 171306,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "byzantine": {
+      "documents": 12,
+      "tokens": 189375,
+      "words": 189375,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "homer-scholia": {
+      "documents": 54,
+      "tokens": 331365,
+      "words": 331365,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
+    },
+    "patrologia": {
+      "documents": 33,
+      "tokens": 6787292,
+      "words": 6787292,
+      "measured_from": "cached-asset",
+      "measured": "2026-11-25"
     }
   },
   "sign_inventories": {
@@ -162,7 +211,7 @@
     {
       "fact": "corpora.lineara.documents",
       "file": "wiki/FAQ.md",
-      "pattern": "full Linear A corpus \\((\\d[\\d,]*) documents\\)"
+      "pattern": "`lineara` \\((\\d[\\d,]*) documents\\)"
     },
     {
       "fact": "corpora.lineara.documents",
@@ -327,7 +376,7 @@
     {
       "fact": "corpora.edh.documents",
       "file": "README.md",
-      "pattern": "EDH\\*\\* Greek subset \\((\\d[\\d,]*),"
+      "pattern": "EDH\\*\\* \\((\\d[\\d,]*),"
     },
     {
       "fact": "corpora.ddbdp.documents",
@@ -345,9 +394,39 @@
       "pattern": "(\\d[\\d,]*) Greek documentary papyri / ~4\\.4M tokens"
     },
     {
-      "fact": "corpora.ddbdp.documents",
-      "file": "wiki/FAQ.md",
-      "pattern": "\\((\\d[\\d,]*) texts as a SQLite"
+      "fact": "corpora.aphrodisias.documents",
+      "file": "README.md",
+      "pattern": "Aphrodisias / IAph2007\\*\\* \\((\\d[\\d,]*),"
+    },
+    {
+      "fact": "corpora.crete.documents",
+      "file": "README.md",
+      "pattern": "Cretan Institutional Inscriptions\\*\\* \\((\\d[\\d,]*) Archaic"
+    },
+    {
+      "fact": "corpora.apostolic-fathers.documents",
+      "file": "README.md",
+      "pattern": "Open Apostolic Fathers\\*\\* \\((\\d[\\d,]*) works,"
+    },
+    {
+      "fact": "corpora.pseudepigrapha.documents",
+      "file": "README.md",
+      "pattern": "Online Critical Pseudepigrapha\\*\\* \\((\\d[\\d,]*) Second Temple"
+    },
+    {
+      "fact": "corpora.byzantine.documents",
+      "file": "README.md",
+      "pattern": "Byzantine & Early Modern Vernacular Greek\\*\\* \\((\\d[\\d,]*) texts,"
+    },
+    {
+      "fact": "corpora.homer-scholia.documents",
+      "file": "README.md",
+      "pattern": "Homer Multitext Venetus A \\*Iliad\\* & \\*Scholia\\*\\*\\* \\((\\d[\\d,]*) docs,"
+    },
+    {
+      "fact": "corpora.patrologia.documents",
+      "file": "README.md",
+      "pattern": "Patrologia Graeca\\*\\* \\((\\d[\\d,]*) CGPG volumes"
     },
     {
       "fact": "sign_inventories.lineara.signs",

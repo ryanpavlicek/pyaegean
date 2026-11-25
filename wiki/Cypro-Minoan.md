@@ -341,7 +341,7 @@ exploratory. For the scripts where a Greek reading **is** possible, see [Linear 
 
 ---
 
-## Limitations & honest notes
+## Limitations
 
 - **No phonetics, ever.** Every sign's `phonetic` is `None`. Do not read the sign numbers as sounds.
 - **The bundled corpus is illustrative, not evidentiary.** Two short documents exist to exercise the

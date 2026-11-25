@@ -620,7 +620,7 @@ rep.top1, rep.median_rank, rep.chance_median                 # 0.0, 26.0, 37.0  
 ```
 
 **Exploratory, and read the calibration first.** An alignment score is a geometry
-statistic (a similar distributional position in two tiny corpora), never a reading of a
+statistic (similar distributional position in two tiny corpora), not a phonetic reading of a
 sign. The ranked hypotheses (`align_scripts(...).hypotheses()`) exist only so the same
 calibration can be re-run on new data; on the bundled corpora the answer is the null above,
 and no hypothesis it emits is a decipherment lead.
@@ -1169,7 +1169,7 @@ aegean db search la.db KU-RO --limit 3
   undeciphered tablets, so a non-balancing total may be damage or
   mis-segmentation rather than an ancient error.
 
-The honest, consolidated account of what pyaegean can and cannot claim is on the
+The consolidated account of scope and boundaries is on the
 **[Limitations](Limitations)** page. Related: [Greek NLP](Greek-NLP),
 [Meters](Meters), [Linear A](Linear-A), [CLI](CLI),
 [Getting Started](Getting-Started).

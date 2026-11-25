@@ -4,10 +4,10 @@
 
 **Start here**
 - [Getting Started](Getting-Started)
+- [Installation](Installation)
+- [Choosing a Workflow](Choosing-a-Workflow)
 - [Tutorial](Tutorial)
 - [Recipes](Recipes)
-- [Choosing a Workflow](Choosing-a-Workflow)
-- [Installation](Installation)
 
 **Aegean scripts**
 - [Linear A](Linear-A)
@@ -15,43 +15,41 @@
 - [Cypriot](Cypriot)
 - [Cypro-Minoan](Cypro-Minoan)
 - [Analysis](Analysis)
+- [Geography](Geography)
 
-**Greek**
+**Greek & Biblical**
 - [Greek NLP](Greek-NLP)
 - [Choosing a Pipeline](Choosing-a-Pipeline)
 - [Reading a Parse](Reading-a-Parse)
 - [Greek Works & Books](Greek-Works-and-Books)
 - [Biblical & Koine Greek](New-Testament)
 - [Meters](Meters)
+- [Translation](Translation)
 
-**Command Line (CLI)**
+**Command Line & Interfaces**
 - [CLI Overview](CLI)
 - [CLI Cheatsheet](CLI-Cheatsheet)
 - [CLI: Corpora, Analysis & Data](CLI-Corpora)
 - [CLI: Greek NLP & Review](CLI-Greek)
 - [CLI: Biblical & Koine Greek](CLI-Bible)
 - [CLI: AI & MCP](CLI-AI)
-
-**Capabilities**
 - [TUI](TUI)
 - [MCP server](MCP)
 - [AI Layer](AI-Layer)
-- [Translation](Translation)
-- [Geography](Geography)
 
-**Evaluation & methodology**
+**Evaluation & Quality**
 - [Benchmarks](Benchmarks)
 - [Methodology](Methodology)
 - [Evaluation](Evaluation)
-- [When the Tool Is Wrong](When-the-Tool-Is-Wrong)
 - [Validation & Review](Validation-and-Review)
+- [When the Tool Is Wrong](When-the-Tool-Is-Wrong)
 - [Independent Review](Independent-Review)
 
 **Reference**
-- [Architecture](Architecture)
-- [Data Model](Data-Model)
-- [Interoperability](Interoperability)
 - [Data & Provenance](Data-and-Provenance)
+- [Data Model](Data-Model)
+- [Architecture](Architecture)
+- [Interoperability](Interoperability)
 - [Using Critical Editions](Using-Critical-Editions)
 - [Citing Computational Assistance](Citing-Computational-Assistance)
 - [Glossary](Glossary)

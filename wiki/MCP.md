@@ -191,12 +191,21 @@ downloading or deleting anything.
 ## What downloads, and when
 
 Five corpora (`lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`) are
-bundled and run offline from install. The exceptions are the larger datasets,
-which fetch into the local data store on first use and are offline afterward:
+bundled and run offline from install. Larger datasets fetch into the local data
+store on first use and are offline afterward:
 
 - **Corpora** `damos`, `nt`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, `edh`,
-  and `ddbdp` download the first time a tool loads them by name (`ddbdp` is a
-  57,331-document corpus: loading it whole is a heavy call).
+  `aphrodisias`, `crete`, `apostolic-fathers`, `pseudepigrapha`, `byzantine`,
+  `homer-scholia`, `patrologia`, and `ddbdp` download the first time a tool loads
+  them by name (`ddbdp` and `patrologia` are multi-million-word archives; prefer
+  `aegean db search ddbdp` or volume-scoped `load_patrologia("PG073")` over full
+  in-memory loads).
+- **Biblical & Koine tools** (`biblical_strongs`, `biblical_word_study`,
+  `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`)
+  run offline against the bundled Dodson lexicon, John 1 / Philemon 1 NT sample,
+  and Swete LXX sample (`Gen 1:1–5`, `Ps 22:1–6`), and use the full cached
+  `nt-corpus`, `nt-editions`, `nt-witnesses`, `strongs-greek`, and `lxx-corpus`
+  bundles automatically when installed.
 - **`greek_work`** downloads a work's TEI source the first time that work is
   requested (a one-time, commit-pinned fetch).
 - **`greek_gloss`** downloads a dictionary index the first time that dictionary is
@@ -208,9 +217,9 @@ which fetch into the local data store on first use and are offline afterward:
   and `koine_gloss` uses the bundled Dodson lexicon, so it never downloads at all.
 
 Each fetch is sha256-verified. `data_status` shows what is already stored and
-where. To pre-fetch a dataset from the shell instead of on first call, use
-`aegean data fetch NAME` (see [Data & Provenance](Data-and-Provenance) and the
-data commands on [CLI](CLI)).
+where. To pre-fetch datasets or themed packs from the shell instead of on first
+call, use `aegean library install PACK` or `aegean data fetch NAME` (see
+[Data & Provenance](Data-and-Provenance) and [CLI: Data Store, Library & Databases](CLI-Corpora)).
 
 ## See also
 

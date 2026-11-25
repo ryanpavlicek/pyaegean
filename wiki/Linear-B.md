@@ -523,11 +523,11 @@ file itself). `corpus` accepts `linearb` (the sample) or
 | `aegean export CORPUS …` | Export to JSON / CSV / Parquet / EpiDoc / SQLite / RDF Turtle / JSON-LD |
 | `aegean data list` / `fetch` / `versions` | The fetchable datasets and the cache manifest |
 
-## Limitations and honest notes
+## Limitations
 
-- **The bridge is a curated lexicon, not a parser.** 149 well-attested equations: it will not read
-  an arbitrary unattested word. Words outside the lexicon return `None`. That's by design: every
-  reading is source-attested.
+- **The bridge is a curated lexicon, not a parser.** 149 attested equations: it does not read
+  arbitrary unattested words. Words outside the lexicon return `None`, keeping every reading
+  source-attested.
 - **Accounting is heuristic.** Section boundaries are inferred and Aegean metrology is contested; a
   balance is evidence, not proof. Marker matching folds case (since 0.15.0), so it fires over the
   lowercase DAMOS corpus (130 tablets carry a stated total, 52 balance exactly).

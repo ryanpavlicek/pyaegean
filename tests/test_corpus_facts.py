@@ -149,9 +149,9 @@ def test_registry_covers_every_loadable_corpus_and_bundled_inventory() -> None:
     from aegean.core.corpus import _LOADERS
     from aegean.tui.data import CORPUS_IDS
 
-    # the browsable corpora plus ddbdp (excluded from the TUI list only) are the 14 loadable
-    # ones; every one must carry a fact row, and there must be no phantom rows.
-    expected = set(CORPUS_IDS) | {"ddbdp"}
+    # the browsable corpora plus ddbdp and patrologia (excluded from the TUI list only)
+    # are the 21 loadable ones; every one must carry a fact row, and there must be no phantom rows.
+    expected = set(CORPUS_IDS) | {"ddbdp", "patrologia"}
     assert set(reg["corpora"]) == expected, (
         "corpus-facts.json corpora do not match the loadable set; a new corpus needs a fact row"
     )

@@ -45,22 +45,33 @@ class LxxBook:
 
 @dataclass(frozen=True, slots=True)
 class CommentaryWork:
-    """Metadata for one Greek patristic biblical commentary in First1KGreek."""
+    """Metadata for one Greek patristic biblical commentary (First1KGreek or Patrologia Graeca)."""
 
     work_id: str
     book: str
     author: str
     title: str
-    kind: str  # "catena" or "origen"
+    kind: str  # "catena" | "origen" | "patristic" | "patrologia"
+    books: tuple[str, ...] = ()
+    source: str = "first1k"  # "first1k" | "patrologia-graeca-corpus"
+
+    def covers_book(self, canon_book: str) -> bool:
+        if self.book == canon_book:
+            return True
+        return canon_book in self.books
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "work_id": self.work_id,
             "book": self.book,
             "author": self.author,
             "title": self.title,
             "kind": self.kind,
+            "source": self.source,
         }
+        if self.books:
+            d["books"] = list(self.books)
+        return d
 
 
 # All 55 Swete Septuagint works in First1KGreek (works_catalogue.json), in LXX order.
@@ -260,7 +271,13 @@ def convert_psalm(psalm: int, *, system: str = "mt") -> dict[str, Any]:
     }
 
 
-# All 30 Greek NT Catenae volumes (tlg4102.*) + key Origen biblical commentaries (tlg2042.*).
+# 85 Greek patristic biblical commentaries across 10 Church Fathers / traditions:
+# - 30 Greek NT Catenae (Cramer, First1KGreek)
+# - 40 Origen biblical commentaries, homilies, scholia, selecta & adnotationes (First1KGreek)
+# - 6 additional First1KGreek patristic exegetical works (Cyril of Alexandria, Methodius,
+#   Eusebius of Caesarea, Clement of Alexandria, Vitae Prophetarum / Hesychius)
+# - 9 Patrologia Graeca commentary volumes (patrologia-graeca-corpus, CC BY 4.0:
+#   Cyril of Alexandria, Procopius of Gaza, Photius, Oecumenius, Theophylact of Bulgaria)
 _COMMENTARIES: tuple[CommentaryWork, ...] = (
     # NT Catenae (Cramer edition via First1KGreek)
     CommentaryWork("tlg4102.tlg001", "Matt", "Catenae (NT)", "Catena in Matthaeum (Catena Integra)", "catena"),
@@ -293,26 +310,133 @@ _COMMENTARIES: tuple[CommentaryWork, ...] = (
     CommentaryWork("tlg4102.tlg044", "2John", "Catenae (NT)", "Catena in 2 Joannis (Catena Andreae)", "catena"),
     CommentaryWork("tlg4102.tlg045", "3John", "Catenae (NT)", "Catena in 3 Joannis (Catena Andreae)", "catena"),
     CommentaryWork("tlg4102.tlg046", "Jude", "Catenae (NT)", "Catena in Epistulam Judae (Catena Andreae)", "catena"),
-    # Origen's Greek Biblical Commentaries & Homilies (First1KGreek)
+    # Origen's Greek Biblical Commentaries, Homilies, Selecta, Adnotationes & Scholia (First1KGreek)
     CommentaryWork("tlg2042.tlg029", "Matt", "Origen", "Commentarium in Evangelium Matthaei (Books 10–11)", "origen"),
     CommentaryWork("tlg2042.tlg030", "Matt", "Origen", "Commentarium in Evangelium Matthaei (Books 12–17)", "origen"),
     CommentaryWork("tlg2042.tlg077", "Matt", "Origen", "Scholia in Matthaeum", "origen"),
     CommentaryWork("tlg2042.tlg016", "Luke", "Origen", "Homiliae in Lucam", "origen"),
     CommentaryWork("tlg2042.tlg017", "Luke", "Origen", "Fragmenta in Lucam (in Catenis)", "origen"),
-    CommentaryWork("tlg2042.tlg078", "Luke", "Origen", "Scholia in Lucam", "origen"),
+    CommentaryWork("tlg2042.tlg078", "Luke", "Origen", "Scholia in Lucam (e cod. Venet. 28)", "origen"),
     CommentaryWork("tlg2042.tlg005", "John", "Origen", "Commentarii in Evangelium Joannis (Books 1–13)", "origen"),
     CommentaryWork("tlg2042.tlg079", "John", "Origen", "Commentarii in Evangelium Joannis (Books 19, 20, 28, 32)", "origen"),
     CommentaryWork("tlg2042.tlg006", "John", "Origen", "Fragmenta in Evangelium Joannis (in Catenis)", "origen"),
     CommentaryWork("tlg2042.tlg048", "Gen", "Origen", "Selecta in Genesim", "origen"),
+    CommentaryWork("tlg2042.tlg066", "Gen", "Origen", "Adnotationes in Genesim", "origen"),
     CommentaryWork("tlg2042.tlg050", "Exod", "Origen", "Selecta in Exodum", "origen"),
+    CommentaryWork("tlg2042.tlg067", "Exod", "Origen", "Adnotationes in Exodum", "origen"),
     CommentaryWork("tlg2042.tlg051", "Lev", "Origen", "Selecta in Leviticum", "origen"),
+    CommentaryWork("tlg2042.tlg068", "Lev", "Origen", "Adnotationes in Leviticum (fragmenta e catenis)", "origen"),
     CommentaryWork("tlg2042.tlg052", "Num", "Origen", "Selecta in Numeros", "origen"),
+    CommentaryWork("tlg2042.tlg069", "Num", "Origen", "Adnotationes in Numeros", "origen"),
     CommentaryWork("tlg2042.tlg053", "Deut", "Origen", "Selecta in Deuteronomium", "origen"),
+    CommentaryWork("tlg2042.tlg070", "Deut", "Origen", "Adnotationes in Deuteronomium (fragmenta e catenis)", "origen"),
+    CommentaryWork("tlg2042.tlg054", "Josh", "Origen", "Selecta in Jesum Nave", "origen"),
+    CommentaryWork("tlg2042.tlg071", "Josh", "Origen", "Adnotationes in Jesu filium Nave (fragmenta e catenis)", "origen"),
+    CommentaryWork("tlg2042.tlg055", "Judg", "Origen", "Selecta in Judices", "origen"),
+    CommentaryWork("tlg2042.tlg072", "Judg", "Origen", "Adnotationes in Judices", "origen"),
+    CommentaryWork("tlg2042.tlg013", "1Kgdms", "Origen", "De Engastrimytho (Homilia in 1 Sam 28:3–25)", "origen"),
+    CommentaryWork("tlg2042.tlg014", "1Kgdms", "Origen", "Fragmenta in Librum Primum Regnorum (in Catenis)", "origen"),
+    CommentaryWork("tlg2042.tlg015", "1Kgdms", "Origen", "Fragmentum in Librum Primum Regnorum", "origen"),
+    CommentaryWork("tlg2042.tlg057", "Job", "Origen", "Selecta in Job", "origen"),
+    CommentaryWork("tlg2042.tlg073", "Job", "Origen", "Homiliae in Job (fragmenta in catenis, typus II)", "origen"),
+    CommentaryWork("tlg2042.tlg086", "Job", "Origen", "Homiliae in Job (fragmenta in catenis, typus I+II)", "origen"),
     CommentaryWork("tlg2042.tlg044", "Ps", "Origen", "Fragmenta in Psalmos 1–150 [Dub.]", "origen"),
+    CommentaryWork("tlg2042.tlg058", "Ps", "Origen", "Selecta in Psalmos [Dub.]", "origen"),
+    CommentaryWork("tlg2042.tlg074", "Ps", "Origen", "Excerpta in Psalmos [Dub.]", "origen"),
+    CommentaryWork("tlg2042.tlg075", "Prov", "Origen", "Expositio in Proverbia (fragmenta e catenis)", "origen"),
+    CommentaryWork("tlg2042.tlg076", "Song", "Origen", "Scholia in Canticum Canticorum", "origen"),
     CommentaryWork("tlg2042.tlg009", "Jer", "Origen", "Homiliae in Jeremiam (1–11)", "origen"),
     CommentaryWork("tlg2042.tlg021", "Jer", "Origen", "Homiliae in Jeremiam (12–20)", "origen"),
+    CommentaryWork("tlg2042.tlg010", "Jer", "Origen", "Fragmenta in Jeremiam (in Catenis)", "origen"),
+    CommentaryWork("tlg2042.tlg084", "Jer", "Origen", "Fragmenta in Jeremiam (e Philocalia)", "origen"),
+    CommentaryWork("tlg2042.tlg011", "Lam", "Origen", "Fragmenta in Lamentationes (in Catenis de Prophetis)", "origen"),
+    CommentaryWork("tlg2042.tlg012", "Lam", "Origen", "Fragmentum in Lamentationes (in Catenis de Octateucho)", "origen"),
     CommentaryWork("tlg2042.tlg061", "Ezek", "Origen", "Fragmenta ex commentariis in Ezechielem", "origen"),
+    # Additional First1KGreek Patristic Exegetical Works
+    CommentaryWork(
+        "tlg4090.tlg001", "Hos", "Cyril of Alexandria",
+        "Commentarius in XII Prophetas Minores (Hosea–Malachi)", "patristic",
+        books=("Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph", "Hag", "Zech", "Mal"),
+    ),
+    CommentaryWork("tlg2959.tlg007", "Job", "Methodius of Olympus", "Fragmenta in Job (in Catenis)", "patristic"),
+    CommentaryWork(
+        "tlg2018.tlg011", "Gen", "Eusebius of Caesarea",
+        "Onomasticon (Biblical Place-Names Gazetteer)", "patristic",
+        books=("Gen", "Exod", "Num", "Deut", "Josh", "Judg", "1Kgdms", "2Kgdms", "3Kgdms", "4Kgdms"),
+    ),
+    CommentaryWork(
+        "tlg2018.tlg023", "Isa", "Eusebius of Caesarea",
+        "Eclogae Propheticae (Generalis Elementaria Introductio)", "patristic",
+        books=("Ps", "Isa", "Jer", "Ezek", "Dan-Th", "Hos", "Mic", "Zech"),
+    ),
+    CommentaryWork(
+        "tlg0555.tlg005", "Ps", "Clement of Alexandria",
+        "Eclogae Propheticae", "patristic",
+        books=("Gen", "Ps", "Isa", "Matt", "Luke"),
+    ),
+    CommentaryWork(
+        "tlg1750.tlg003", "Isa", "Vitae Prophetarum (Hesychius Scholia)",
+        "De Prophetarum Vita et Obitu (with Scholia of Hesychius)", "patristic",
+        books=("Isa", "Jer", "Ezek", "Dan-Th", "Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph", "Hag", "Zech", "Mal"),
+    ),
+    # Calfa-GREgORI Patrologia Graeca Biblical Commentary Volumes (patrologia-graeca-corpus, CC BY 4.0)
+    CommentaryWork(
+        "PG071", "Hos", "Cyril of Alexandria",
+        "PG 71: Commentaries on the Twelve Minor Prophets (CGPG OCR)", "patrologia",
+        books=("Hos", "Joel", "Amos", "Obad", "Jonah", "Mic", "Nah", "Hab", "Zeph", "Hag", "Zech", "Mal"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG073", "John", "Cyril of Alexandria",
+        "PG 73: Commentary on the Gospel of John (CGPG OCR)", "patrologia",
+        books=("John",),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG087_1", "Gen", "Procopius of Gaza",
+        "PG 87.1: Old Testament Commentaries & Octateuch Catenae (CGPG OCR)", "patrologia",
+        books=("Gen", "Exod", "Lev", "Num", "Deut", "Josh", "Judg", "Ruth"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG101", "Rom", "Photius of Constantinople",
+        "PG 101: Quaestiones Amphilochianae & Commentary on the NT (CGPG OCR)", "patrologia",
+        books=("Matt", "Mark", "Luke", "John", "Acts", "Rom", "1Cor", "2Cor", "Gal", "Eph", "Phil", "Col", "Heb"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG118", "Acts", "Oecumenius (Pseudo-Oecumenius)",
+        "PG 118: Commentaries on Acts, Pauline Epistles & Catholic Epistles (CGPG OCR)", "patrologia",
+        books=("Acts", "Rom", "1Cor", "2Cor", "Gal", "Eph", "Phil", "Col", "1Thess", "2Thess", "1Tim", "2Tim", "Titus", "Phlm", "Heb", "Jas", "1Pet", "2Pet", "1John", "2John", "3John", "Jude"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG123", "Matt", "Theophylact of Bulgaria",
+        "PG 123: Enarratio in Evangelia Matthaei, Marci, Lucae & Joannis (CGPG OCR)", "patrologia",
+        books=("Matt", "Mark", "Luke", "John"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG124", "John", "Theophylact of Bulgaria",
+        "PG 124: Commentarius in Joannem (cont.) & Pauline Epistles (CGPG OCR)", "patrologia",
+        books=("John", "Rom", "1Cor", "2Cor", "Gal", "Eph", "Phil", "Col"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG125", "1Thess", "Theophylact of Bulgaria",
+        "PG 125: Commentaries on Pauline Epistles (cont.) & 1–2 Peter (CGPG OCR)", "patrologia",
+        books=("1Thess", "2Thess", "1Tim", "2Tim", "Titus", "Phlm", "Heb", "1Pet", "2Pet"),
+        source="patrologia-graeca-corpus",
+    ),
+    CommentaryWork(
+        "PG126", "Jas", "Theophylact of Bulgaria",
+        "PG 126: Commentaries on NT & Minor Prophets (CGPG OCR)", "patrologia",
+        books=("Acts", "Jas", "1John", "2John", "3John", "Jude", "Hos", "Hab", "Jonah", "Nah", "Mic"),
+        source="patrologia-graeca-corpus",
+    ),
 )
+
+_COMMENTARY_KINDS = ("catena", "origen", "patristic", "patrologia")
 
 
 def _normalize_commentary_book(book: str) -> str:
@@ -327,8 +451,8 @@ def _normalize_commentary_book(book: str) -> str:
         pass
     raise ValueError(
         f"unknown biblical book {book!r} for patristic commentaries; "
-        "try 'John', 'Matt', 'Rom', 'Gen', 'Ps', 'Jer' "
-        "(aegean.greek.bible.patristic_commentaries() lists all 48)"
+        "try 'John', 'Matt', 'Rom', 'Gen', 'Ps', 'Jer', 'Hos' "
+        f"(aegean.greek.bible.patristic_commentaries() lists all {len(_COMMENTARIES)})"
     )
 
 
@@ -337,26 +461,30 @@ def patristic_commentaries(
     *,
     kind: str | None = None,
 ) -> list[dict[str, Any]]:
-    """List Greek patristic biblical commentaries available in First1KGreek.
+    """List Greek patristic biblical commentaries across First1KGreek and Patrologia Graeca.
 
-    Includes all 30 Greek New Testament *Catenae* volumes (``tlg4102.*``,
-    covering Matthew–Jude) and 18 major Origen biblical commentaries, homilies,
-    and scholia (``tlg2042.*``). Filter by ``book`` (e.g. ``'John'``, ``'Rom'``,
-    ``'Gen'``) and/or ``kind`` (``'catena'`` or ``'origen'``). Pure metadata —
-    works offline."""
+    Covers 86 commentary volumes across 10 Church Fathers and traditions: all 30 Greek
+    NT *Catenae* volumes (``tlg4102.*``), 41 Origen biblical commentaries, homilies,
+    scholia, selecta, and adnotationes (``tlg2042.*``), 6 additional First1KGreek Fathers
+    (Cyril of Alexandria, Methodius, Eusebius, Clement of Alexandria, *Vitae Prophetarum*),
+    and 9 *Patrologia Graeca* commentary volumes (Cyril of Alexandria, Procopius of Gaza,
+    Photius, Oecumenius, and Theophylact of Bulgaria). Filter by ``book`` (e.g. ``'John'``,
+    ``'Rom'``, ``'Gen'``, ``'Hos'``) and/or ``kind`` (``'catena'``, ``'origen'``,
+    ``'patristic'``, or ``'patrologia'``). Pure metadata — works offline."""
     rows = _COMMENTARIES
     if book is not None:
         canon = _normalize_commentary_book(book)
-        rows = tuple(c for c in rows if c.book == canon)
+        rows = tuple(c for c in rows if c.covers_book(canon))
     if kind is not None:
         want = kind.strip().lower()
-        if want not in ("catena", "origen"):
-            raise ValueError(f"unknown commentary kind {kind!r}; expected 'catena' or 'origen'")
+        if want not in _COMMENTARY_KINDS:
+            valid = ", ".join(repr(k) for k in _COMMENTARY_KINDS)
+            raise ValueError(f"unknown commentary kind {kind!r}; expected one of {valid}")
         rows = tuple(c for c in rows if c.kind == want)
     return [c.to_dict() for c in rows]
 
 
-# Metadata for the 5 supported Greek New Testament editions.
+# Metadata for the 9 supported Greek New Testament editions.
 NT_EDITIONS: tuple[dict[str, Any], ...] = (
     {
         "id": "nestle1904",
@@ -386,9 +514,45 @@ NT_EDITIONS: tuple[dict[str, Any], ...] = (
         "offline_sample": None,
     },
     {
+        "id": "bhp",
+        "name": "Bunning Heuristic Prototype Greek New Testament",
+        "editor": "Alan Bunning (Center for New Testament Restoration)",
+        "license": "CC BY 4.0",
+        "asset": "nt-editions",
+        "annotated": False,
+        "offline_sample": None,
+    },
+    {
+        "id": "tisch",
+        "name": "Tischendorf 8th Edition (Editio Octava Critica Maior, 1869–1872)",
+        "editor": "Constantin von Tischendorf (digital text G. Clint Yale & Ulrik Sandborg-Petersen)",
+        "license": "Public Domain",
+        "asset": "nt-editions",
+        "annotated": False,
+        "offline_sample": None,
+    },
+    {
+        "id": "wh",
+        "name": "Westcott–Hort Greek New Testament (1881, unaccented Unicode)",
+        "editor": "Brooke Foss Westcott & Fenton John Anthony Hort (digital text Maurice A. Robinson)",
+        "license": "Public Domain",
+        "asset": "nt-editions",
+        "annotated": False,
+        "offline_sample": None,
+    },
+    {
         "id": "byz",
         "name": "Robinson–Pierpont Byzantine Majority Textform",
         "editor": "Maurice A. Robinson & William G. Pierpont",
+        "license": "Public Domain",
+        "asset": "nt-editions",
+        "annotated": False,
+        "offline_sample": None,
+    },
+    {
+        "id": "antoniades",
+        "name": "Antoniades 1904 Patriarchal Edition (Ecumenical Patriarchate, unaccented Unicode)",
+        "editor": "Basileios Antoniades (digital text Maurice A. Robinson et al.)",
         "license": "Public Domain",
         "asset": "nt-editions",
         "annotated": False,
@@ -413,10 +577,21 @@ _EDITION_ALIASES: dict[str, str] = {
     "sblgnt": "sblgnt",
     "sr": "srgnt",
     "srgnt": "srgnt",
+    "bhp": "bhp",
+    "bunning": "bhp",
+    "tisch": "tisch",
+    "tischendorf": "tisch",
+    "tisch8": "tisch",
+    "wh": "wh",
+    "westcotthort": "wh",
     "byz": "byz",
     "byzantine": "byz",
     "rp": "byz",
     "majority": "byz",
+    "antoniades": "antoniades",
+    "ant": "antoniades",
+    "patr": "antoniades",
+    "patriarchal": "antoniades",
     "tr": "tr",
     "kjtr": "tr",
     "textusreceptus": "tr",

@@ -257,12 +257,12 @@ _DATASET_META: dict[str, tuple[str, str, tuple[str, ...], tuple[str, ...], str |
         "~18 MB",
     ),
     "nt-editions": (
-        "Greek NT Multi-Edition Bundle (SBLGNT, SRGNT, BYZ, TR)",
+        "Greek NT Multi-Edition Bundle (8 editions: SBLGNT, SRGNT, BHP, Tisch, WH, BYZ, Antoniades, TR)",
         "bible",
         ("bible",),
-        ("editions", "sblgnt", "srgnt", "byz", "byzantine", "tr", "textus-receptus"),
+        ("editions", "sblgnt", "srgnt", "bhp", "tisch", "tischendorf", "wh", "byz", "antoniades", "tr"),
         None,
-        "~1.7 MB",
+        "~3.3 MB",
     ),
     "nt-witnesses": (
         "Early Greek NT Manuscripts (13 uncials & papyri)",
@@ -288,7 +288,31 @@ _DATASET_META: dict[str, tuple[str, str, tuple[str, ...], tuple[str, ...], str |
         None,
         "~1.7 MB",
     ),
-    # Aegean & Epigraphy / Papyri corpora
+    "apostolic-fathers-corpus": (
+        "Open Apostolic Fathers (15 hand-corrected Greek works)",
+        "bible",
+        ("bible", "corpus", "commentary"),
+        ("apostolic-fathers", "af", "didache", "clement", "ignatius"),
+        "apostolic-fathers",
+        "~1.0 MB",
+    ),
+    "pseudepigrapha-corpus": (
+        "Greek Old Testament Pseudepigrapha (44 OCP Second Temple works)",
+        "bible",
+        ("bible", "corpus"),
+        ("pseudepigrapha", "ocp", "enoch", "sibylline"),
+        "pseudepigrapha",
+        "~2.7 MB",
+    ),
+    "patrologia-graeca-corpus": (
+        "Patrologia Graeca (33 CGPG volumes, 6.79M words; 9 commentary vols)",
+        "commentary",
+        ("commentary", "bible", "corpus"),
+        ("patrologia", "pg", "church-fathers", "cyril", "theophylact"),
+        "patrologia",
+        "~23.5 MB",
+    ),
+    # Aegean & Epigraphy / Papyri / Literary corpora
     "damos-corpus": (
         "DAMOS Linear B Corpus (~5,900 tablets)",
         "corpus",
@@ -337,6 +361,22 @@ _DATASET_META: dict[str, tuple[str, str, tuple[str, ...], tuple[str, ...], str |
         "igcyr",
         "~1.5 MB",
     ),
+    "aphrodisias-corpus": (
+        "Inscriptions of Aphrodisias (IAph2007, 1,471 texts)",
+        "corpus",
+        ("corpus",),
+        ("aphrodisias", "iaph", "iaph2007"),
+        "aphrodisias",
+        "~0.5 MB",
+    ),
+    "crete-corpus": (
+        "Cretan Institutional Inscriptions (600 Archaic–Hellenistic texts)",
+        "corpus",
+        ("corpus",),
+        ("crete", "cretan"),
+        "crete",
+        "~0.6 MB",
+    ),
     "edh-corpus": (
         "EDH Greek Inscriptions (1,286 texts)",
         "corpus",
@@ -352,6 +392,22 @@ _DATASET_META: dict[str, tuple[str, str, tuple[str, ...], tuple[str, ...], str |
         ("ddbdp", "papyri-db"),
         "ddbdp",
         "~219 MB",
+    ),
+    "byzantine-corpus": (
+        "Byzantine & Early Modern Vernacular Greek (12 works, 189K tokens)",
+        "corpus",
+        ("corpus",),
+        ("byzantine", "byz-vernacular", "digenes", "erotokritos"),
+        "byzantine",
+        "~2.5 MB",
+    ),
+    "homer-scholia-corpus": (
+        "Homer Multitext Venetus A Iliad & Scholia (54 docs, 331K tokens)",
+        "corpus",
+        ("corpus", "commentary"),
+        ("homer-scholia", "hmt", "venetus-a", "scholia"),
+        "homer-scholia",
+        "~5.5 MB",
     ),
     # Lexica
     "lsj-index": (
@@ -467,13 +523,28 @@ PACKS: tuple[LibraryPack, ...] = (
         id="biblical",
         title="Biblical & Koine Greek Pack",
         description=(
-            "Full 27-book Greek NT (Nestle 1904), 4 additional editions (SBLGNT, SRGNT, "
-            "Byzantine Majority, TR), 13 early manuscripts, Extended Strong's (11,142 entries), "
-            "and all 55 Swete Septuagint (LXX) books."
+            "Full 27-book Greek NT (Nestle 1904), 8 additional editions (SBLGNT, SRGNT, BHP, "
+            "Tischendorf 8th, Westcott-Hort, Byzantine Majority, Antoniades 1904, TR), 13 early "
+            "manuscripts, Extended Strong's (11,142 entries), and all 55 Swete Septuagint books."
         ),
         items=("nt-corpus", "nt-editions", "nt-witnesses", "strongs-greek", "lxx-corpus"),
-        size_hint="~25 MB",
+        size_hint="~27 MB",
         aliases=("bible", "koine", "nt-all"),
+    ),
+    LibraryPack(
+        id="patristic",
+        title="Patristic & Second Temple Pack",
+        description=(
+            "Open Apostolic Fathers (15 works), Greek Old Testament Pseudepigrapha (44 works), "
+            "and Patrologia Graeca (33 volumes, 6.79M words, incl. 9 biblical commentary vols)."
+        ),
+        items=(
+            "apostolic-fathers-corpus",
+            "pseudepigrapha-corpus",
+            "patrologia-graeca-corpus",
+        ),
+        size_hint="~27.2 MB",
+        aliases=("fathers", "church-fathers", "second-temple"),
     ),
     LibraryPack(
         id="aegean",
@@ -486,10 +557,32 @@ PACKS: tuple[LibraryPack, ...] = (
     LibraryPack(
         id="epigraphy",
         title="Greek Epigraphy Pack",
-        description="All 5 Greek inscription corpora: I.Sicily, IIP, IOSPE, IGCyr/GVCyr, and EDH.",
-        items=("isicily-corpus", "iip-corpus", "iospe-corpus", "igcyr-corpus", "edh-corpus"),
-        size_hint="~8.0 MB",
+        description=(
+            "All 7 Greek inscription corpora: I.Sicily, IIP, IOSPE, IGCyr/GVCyr, "
+            "Aphrodisias (IAph2007), Crete (Cretan Institutional Inscriptions), and EDH."
+        ),
+        items=(
+            "isicily-corpus",
+            "iip-corpus",
+            "iospe-corpus",
+            "igcyr-corpus",
+            "aphrodisias-corpus",
+            "crete-corpus",
+            "edh-corpus",
+        ),
+        size_hint="~9.1 MB",
         aliases=("inscriptions",),
+    ),
+    LibraryPack(
+        id="literary",
+        title="Greek Literary & Scholia Pack",
+        description=(
+            "Homer Multitext Venetus A Iliad & Homeric Scholia (54 docs, 331K tokens) and "
+            "Byzantine & Early Modern Vernacular Greek (12 works, 189K tokens)."
+        ),
+        items=("homer-scholia-corpus", "byzantine-corpus"),
+        size_hint="~8.0 MB",
+        aliases=("epic", "scholia", "byzantine-lit"),
     ),
     LibraryPack(
         id="lexica",
