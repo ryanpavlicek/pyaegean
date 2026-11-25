@@ -265,6 +265,28 @@ class CommandConsoleScreen(Screen[None]):
     def _dropdown_open(self) -> bool:
         return bool(self._dropdown().display)
 
+    def _is_group_path(self, line: str) -> bool:
+        """True when ``line`` names a Click/Typer command group (not a leaf command)."""
+        if self._group is None:
+            return False
+        import typer
+
+        from aegean.cli._complete import is_group
+
+        parts = line.strip().split()
+        if not parts:
+            return False
+        ctx = typer.Context(self._group, info_name="aegean")
+        cmd: Any = self._group
+        for tok in parts:
+            if not is_group(cmd):
+                return False
+            sub = cmd.get_command(ctx, tok)
+            if sub is None:
+                return False
+            cmd = sub
+        return is_group(cmd)
+
     def _refilter(self, value: str) -> None:
         """Rebuild the dropdown from live context-aware completions (commands at any nesting
         depth, leaf option flags, and offline domain values) for the typed line ``value``."""
@@ -277,13 +299,23 @@ class CommandConsoleScreen(Screen[None]):
         from aegean.cli._complete import complete_line
 
         items = complete_line(self._group, value, directives=True)
-        if not items:
+        entries: list[tuple[str, str]] = [(item.full_line, item.description) for item in items]
+        seen = {full for full, _ in entries}
+
+        # When typing a command/group prefix without a trailing space (e.g. "greek" or "bible"),
+        # also surface matching subcommand paths so Up/Down can jump straight into a subcommand.
+        if not value.endswith(" "):
+            low = value.lstrip().casefold()
+            for cmd_path, desc in self._completions:
+                if cmd_path.casefold().startswith(low) and cmd_path not in seen:
+                    seen.add(cmd_path)
+                    entries.append((cmd_path, desc))
+
+        if not entries:
             self._close_dropdown()
             return
         dd.clear_options()
-        dd.add_options(
-            [CompletionDropdown.option_for(item.full_line, item.description) for item in items[:25]]
-        )
+        dd.add_options([CompletionDropdown.option_for(full, desc) for full, desc in entries[:25]])
         dd.highlighted = 0
         dd.display = True
 
@@ -310,12 +342,20 @@ class CommandConsoleScreen(Screen[None]):
 
     def _accept_candidate(self, candidate: str) -> None:
         """Fill the prompt with the highlighted completion (a trailing space so the cursor
-        is ready for the next word), then re-filter — a group keeps showing its
-        subcommands, a leaf command closes the list ready for arguments."""
+        is ready for the next word). A command group keeps the dropdown open showing its
+        subcommands; a leaf command or argument closes the list until the user types or
+        presses Tab again."""
         inp = self.query_one("#console-input", Input)
-        inp.value = candidate if candidate.endswith(" ") else candidate.rstrip() + " "
+        filled = candidate if candidate.endswith(" ") else candidate.rstrip() + " "
+        is_grp = self._is_group_path(candidate)
+        if not is_grp:
+            self._suppress_filter = True
+        inp.value = filled
         inp.cursor_position = len(inp.value)
-        self._refilter(inp.value)
+        if is_grp:
+            self._refilter(inp.value)
+        else:
+            self._close_dropdown()
         inp.focus()
 
     def on_input_changed(self, event: Input.Changed) -> None:
@@ -330,16 +370,21 @@ class CommandConsoleScreen(Screen[None]):
     def on_input_submitted(self, event: Input.Submitted) -> None:
         if event.input.id != "console-input":
             return
-        # Enter with the dropdown open ACCEPTS the highlighted completion (unless it already
-        # equals the typed line, in which case there is nothing to complete and the line
-        # runs). With the dropdown closed, Enter submits — the ordinary case.
+        # Enter with the dropdown open ACCEPTS the highlighted completion when it extends
+        # what the user typed (not an exact match, and never a stale option for another line).
+        # With the dropdown closed (or on an exact match), Enter submits — the ordinary case.
+        typed = event.value.strip()
         if self._dropdown_open():
             cand = self._highlighted_candidate()
-            if cand is not None and cand.rstrip() != event.value.strip():
+            if (
+                cand is not None
+                and cand.rstrip() != typed
+                and cand.casefold().startswith(typed.casefold())
+            ):
                 self._accept_candidate(cand)
                 return
             self._close_dropdown()
-        line = event.value.strip()
+        line = typed
         event.input.value = ""
         if not line:
             return
@@ -376,7 +421,8 @@ class CommandConsoleScreen(Screen[None]):
         focused it consumes printable keys itself before this runs, so here only the navigation
         keys are handled:
 
-        - Tab accepts the highlighted completion (and never moves focus off the prompt);
+        - Tab accepts the highlighted completion when open, or opens live completions on demand
+          when closed (and never moves focus off the prompt);
         - Esc closes the dropdown first, and only bubbles to the app's back-navigation when
           the dropdown is already closed;
         - Up/Down move the dropdown highlight while it is open, and recall history when it is
@@ -401,6 +447,8 @@ class CommandConsoleScreen(Screen[None]):
                 cand = self._highlighted_candidate()
                 if cand is not None:
                     self._accept_candidate(cand)
+            else:
+                self._refilter(inp.value)
             event.stop()  # never let Tab move focus off the prompt
             return
         if key not in ("up", "down"):

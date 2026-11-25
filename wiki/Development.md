@@ -444,7 +444,7 @@ The Cypriot loader (`src/aegean/scripts/cypriot/loader.py`) is the model:
 
 ### C. Host a large / restricted corpus as a fetchable asset
 
-Add a `DataSpec` to `_REMOTE` in `src/aegean/data/__init__.py` with a pinned
+Add a `DataSpec` to `_REMOTE` in `src/aegean/data/_registry.py` with a pinned
 `url`, `sha256`, `license`, and `note`; the loader calls `aegean.data.fetch(id)`
 to download-and-verify into the cache the first time it's used. This is how
 `aegean.load("damos")`, `"sigla"`, and `"nt"` work. Every fetchable asset's URL

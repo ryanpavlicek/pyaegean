@@ -318,20 +318,29 @@ what your install does.
 
 ---
 
-## Interactive shell (`aegean repl`)
+## Interactive shell (`aegean` / `aegean repl`)
 
-If you're running several commands in a row, `aegean repl` opens an interactive
-shell so you don't retype `aegean` each time. Inside it you type the subcommand
-directly, with **Tab-completion** of commands and options and a **history that
-persists across sessions**:
+Running bare **`aegean`** in an interactive terminal opens the interactive shell
+directly so you don't retype `aegean` for every command (`aegean repl` stays
+available explicitly and also handles piped scripts; `aegean --help` or a
+non-TTY/piped `aegean` still prints the command map). Inside the shell you get
+**live predictive completion** (fish-style inline ghost text — press **Right**
+or **End** to accept — plus a live dropdown on **Tab** or while typing) across
+every command, subcommand, `--flag`, and domain value (corpora, fetchable
+datasets, NT/LXX books, editions, manuscript sigla, meters, dictionaries, and
+output formats), together with a **history that persists across sessions** and a
+read-only per-session corpus cache so repeated `show`/`stats`/`search` runs skip
+re-parsing the same corpus:
 
 ```text
-$ aegean repl
+$ aegean
 aegean interactive shell — commands without the 'aegean' prefix.
-Tab completes, history persists, :help lists commands, :exit or Ctrl-D quits.
+Type for live suggestions (Right/End accepts, Tab completes), history persists, :help lists commands, :exit or Ctrl-D quits.
 :examples shows starter lines; 'aegean --install-completion' (outside the shell) adds completion to your regular shell.
 aegean> info lineara
 …the same table aegean info lineara prints…
+aegean> bible read John 1.1-5
+…interlinear Greek NT with morphology, Strong's numbers, and glosses…
 aegean> greek syllabify Ποσειδῶνι
 Ποσειδῶνι → Πο-σει-δῶ-νι
 aegean> use lineara
@@ -344,7 +353,9 @@ aegean> :exit
 Every line is dispatched through the same command tree, so a command behaves
 exactly as it does on the regular command line: `--json`, `-o`, corpus files and
 work ids, all of it. A mistyped command just prints its error and leaves the shell
-open. The shell needs the `[cli]` extra (it ships `prompt_toolkit`).
+open. The shell needs the `[cli]` extra (it ships `prompt_toolkit`). The same
+completion and inline-prediction engine powers the TUI command console (`:`) and
+native shell tab completion (`aegean --install-completion`).
 
 ### Shell-only directives
 
@@ -370,8 +381,9 @@ dispatched as commands):
   explicit corpus (`stats --top 5 linearb`) fail with a clean usage error rather
   than silently reading the wrong corpus. Put the corpus first, as usual.
 - **`:examples`** (or `examples`) prints copyable starter lines spanning the
-  command groups: thirteen real commands, each with a one-line description,
-  ending with a `use lineara` / `show HT13` pair that demonstrates the directive.
+  command groups (including `bible` and `greek`), each with a one-line
+  description, ending with a `use lineara` / `show HT13` pair that demonstrates
+  the directive.
 - **`:help`** (or `help`) prints a one-line reminder of these directives and then
   the full command list; `:exit`, `quit`, or **Ctrl-D** leaves.
 
@@ -386,7 +398,7 @@ needed. The file lives on the config side, deliberately **not** in the
 if the location isn't writable the shell falls back to a session-only history
 rather than failing to start. Piped (scripted) sessions are not recorded.
 
-When standard input isn't a terminal, the shell reads one command per line instead
+When standard input isn't a terminal, `aegean repl` reads one command per line instead
 of prompting, so you can script it (the `use` directive works there too):
 
 ```bash
@@ -399,9 +411,9 @@ A short, realistic sitting: set a session corpus, read a tablet, run two
 analyses on it, ask a Greek question, and leave. The outputs below are from a
 real scripted run (the shell reads one command per line when its input is
 piped); the `aegean>` prompt lines are added for readability, since a piped
-session does not echo them. In an interactive terminal the shell first greets
-you with a banner and the full command map (the same map bare `aegean`
-prints), not shown here.
+session does not echo them. In an interactive terminal bare `aegean` (or
+`aegean repl`) greets you with a banner and the full command map (`aegean --help`),
+not shown here.
 
 ```text
 $ aegean repl

@@ -246,7 +246,7 @@
     },
     {
       "fact": "corpora.nt.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) chapters"
     },
     {
@@ -266,7 +266,7 @@
     },
     {
       "fact": "corpora.sigla.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) documents with SigLA"
     },
     {
@@ -276,7 +276,7 @@
     },
     {
       "fact": "corpora.isicily.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) primary-Greek texts from ancient Sicily"
     },
     {
@@ -291,7 +291,7 @@
     },
     {
       "fact": "corpora.iip.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) primary-Greek texts from Israel"
     },
     {
@@ -301,7 +301,7 @@
     },
     {
       "fact": "corpora.iospe.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) Greek texts of the Northern Black Sea"
     },
     {
@@ -311,7 +311,7 @@
     },
     {
       "fact": "corpora.igcyr.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) texts \\(Doric"
     },
     {
@@ -321,7 +321,7 @@
     },
     {
       "fact": "corpora.edh.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) pure-Greek texts"
     },
     {
@@ -331,7 +331,7 @@
     },
     {
       "fact": "corpora.ddbdp.documents",
-      "file": "src/aegean/data/__init__.py",
+      "file": "src/aegean/data/_registry.py",
       "pattern": "(\\d[\\d,]*) texts / ~4\\.4M tokens"
     },
     {

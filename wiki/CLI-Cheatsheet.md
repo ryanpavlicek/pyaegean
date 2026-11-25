@@ -73,7 +73,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
 | `quickstart` | The guided first five minutes: 8 steps run live on bundled data, all offline | `--no-run` (print the script, execute nothing) | `aegean quickstart` |
-| `repl` | Interactive shell: run commands without the `aegean` prefix (Tab-completion + a history that persists across sessions). Shell-only directives: `use CORPUS` sets a session corpus for corpus-first commands (`use off` clears) · `:examples` prints starter lines · `:help` · `:exit` |— | `aegean repl` |
+| `repl` | Interactive shell (also launched by bare `aegean` on a TTY): run commands without the `aegean` prefix, with live inline ghost-text + dropdown prediction across every command, flag, and domain value (corpora, datasets, NT/LXX books, editions, manuscripts, meters, dictionaries), persistent history, and session corpus caching. Directives: `use CORPUS` (`use off` clears) · `:examples` · `:help` · `:exit` | — | `aegean` (or `aegean repl`) |
 | `tui` | Full-screen terminal UI (`[tui]` extra, Textual): a corpus browser, the Greek workbench, the data store, a **works library** (`w`, fetch + read Greek works), and a **command console** (`:`, any command); keys `h`/`c`/`g`/`d`/`w`, `:` console, `t` theme, `?` help, `Esc` back, `ctrl+p` palette. See the [TUI](TUI) page | — | `aegean tui` |
 | `doctor` | Offline environment check: versions, extras, data store, model bundles, analysis cache; issues print their fix; exit `1` when any is found | `--json -o/--output` | `aegean doctor` |
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
