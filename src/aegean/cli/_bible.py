@@ -72,24 +72,31 @@ def read_cmd(
     import aegean.biblical as bib
 
     try:
-        corp = bib.load_lxx(book, ref=ref) if lxx else bib.load_nt(book, ref=ref, edition=edition, offline=offline)
+        corp = (
+            bib.load_lxx(book, ref=ref, offline=offline)
+            if lxx
+            else bib.load_nt(book, ref=ref, edition=edition, offline=offline)
+        )
     except Exception as exc:
         raise fail(str(exc)) from None
 
     if json_out:
         verses: list[dict[str, Any]] = []
         for doc in corp:
-            by_line: dict[int, list[dict[str, Any]]] = {}
+            by_ref: dict[str, list[dict[str, Any]]] = {}
             for tok in doc.tokens:
-                ln = int(tok.line_no or 0)
-                by_line.setdefault(ln, []).append(
+                vkey = str(tok.annotations.get("ref") or tok.line_no or "")
+                by_ref.setdefault(vkey, []).append(
                     {"text": tok.text, **{k: v for k, v in tok.annotations.items()}}
                 )
-            for ln, toks in sorted(by_line.items()):
+            for vkey, toks in by_ref.items():
+                vlabel = vkey.rpartition(".")[2] if "." in vkey else vkey
+                vnum: int | str = int(vlabel) if vlabel.isdigit() else vlabel
                 verses.append(
                     {
                         "document": doc.id,
-                        "verse": ln,
+                        "verse": vnum,
+                        "ref": vkey,
                         "text": " ".join(t["text"] for t in toks),
                         "tokens": toks,
                     }
@@ -132,11 +139,13 @@ def read_cmd(
             c.print(table)
         else:
             c.print(f"\n[bold]{doc.meta.name or doc.id}[/bold]")
-            by_line_txt: dict[int, list[str]] = {}
+            by_ref_txt: dict[str, list[str]] = {}
             for tok in doc.tokens:
-                by_line_txt.setdefault(int(tok.line_no or 0), []).append(tok.text)
-            for ln, words in sorted(by_line_txt.items()):
-                prefix = f"[dim]{ln}[/dim] " if ln else ""
+                vkey = str(tok.annotations.get("ref") or tok.line_no or "")
+                vlabel = vkey.rpartition(".")[2] if "." in vkey else vkey
+                by_ref_txt.setdefault(vlabel, []).append(tok.text)
+            for vlabel, words in by_ref_txt.items():
+                prefix = f"[dim]{vlabel}[/dim] " if vlabel else ""
                 c.print(f"  {prefix}{' '.join(words)}")
 
 
@@ -347,14 +356,38 @@ def word_study_cmd(
 def search_cmd(
     query: str = typer.Argument(..., help="Search query (lemma, surface text, Strong's ID, Robinson morph, or gloss)."),
     by: str = typer.Option("lemma", "--by", help="Match field: lemma, text, strongs, morph, or gloss."),
-    book: str | None = typer.Option(None, "--book", "-b", help="Restrict to one NT book."),
+    book: str | None = typer.Option(None, "--book", "-b", help="Restrict to one NT or LXX book."),
+    section: str | None = typer.Option(None, "--section", help="Restrict LXX search to one section (Pentateuch, Wisdom, ...)."),
     edition: str = typer.Option("nestle1904", "--edition", "-e", help="NT edition."),
+    lxx: bool = typer.Option(False, "--lxx", help="Search the Septuagint (LXX) instead of the New Testament."),
     limit: int = typer.Option(25, "--limit", "--top", "-n", help="Maximum hits to return (0 = all)."),
     offline: bool = typer.Option(False, "--offline", help="Use local cache / bundled sample without network."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """Search the Greek New Testament concordance by lemma, text, Strong's, morphology, or gloss."""
+    """Search the Greek New Testament or Septuagint (LXX) concordance."""
     import aegean.biblical as bib
+
+    if lxx:
+        try:
+            lxx_hits = bib.search_lxx(
+                query, book=book, section=section, limit=limit, offline=offline
+            )
+        except Exception as exc:
+            raise fail(str(exc)) from None
+        if json_out:
+            emit_json([h.to_dict() for h in lxx_hits])
+            return
+        c = console()
+        from rich.table import Table
+
+        table = Table(title=f"Septuagint (LXX) Concordance: {query!r} ({len(lxx_hits)} hit(s))")
+        table.add_column("Ref", style="cyan")
+        table.add_column("Matched", style="bold green")
+        table.add_column("Verse")
+        for lh in lxx_hits:
+            table.add_row(lh.ref, ", ".join(lh.matched_words[:3]), lh.verse_text[:110])
+        c.print(table)
+        return
 
     try:
         hits = bib.search_bible(query, by=by, book=book, edition=edition, limit=limit, offline=offline)
@@ -383,35 +416,40 @@ def search_cmd(
 def commentary_cmd(
     book: str | None = typer.Argument(None, help="Biblical book name (e.g. John, Matt, Rom, Gen, Ps)."),
     kind: str | None = typer.Option(None, "--kind", "-k", help="Filter by 'catena' or 'origen'."),
-    read: bool = typer.Option(False, "--read", help="Fetch and print the first section of the commentary text."),
+    read: bool = typer.Option(False, "--read", help="Fetch and print sections of the commentary text."),
+    search: str | None = typer.Option(None, "--search", "-s", help="Search commentary text for a Greek term (e.g. λόγος)."),
     work_id: str | None = typer.Option(None, "--work-id", help="Explicit TLG work ID (e.g. tlg4102.tlg005)."),
     ref: str | None = typer.Option(None, "--ref", help="Optional section reference when reading."),
+    limit: int = typer.Option(5, "--limit", "--top", "-n", help="Maximum excerpts/sections when reading or searching (0 = all)."),
     json_out: bool = typer.Option(False, "--json", help="Emit JSON output."),
 ) -> None:
-    """List or read Greek patristic biblical commentaries (NT Catenae & Origen)."""
+    """List, read, or search Greek patristic biblical commentaries (NT Catenae & Origen)."""
     import aegean.biblical as bib
 
     try:
-        if read:
+        if read or search:
             if book is None and work_id is None:
-                raise fail("--read requires a BOOK name or --work-id")
-            corp = bib.load_commentary(book or "John", work_id=work_id, kind=kind, ref=ref)
+                raise fail("--read / --search requires a BOOK name or --work-id")
+            excerpts = bib.commentary_excerpt(
+                book or "John",
+                work_id=work_id,
+                kind=kind,
+                ref=ref,
+                query=search,
+                limit=limit,
+            )
             if json_out:
-                emit_json(
-                    {
-                        "citation": getattr(corp.provenance, "citation", ""),
-                        "documents": [
-                            {"id": d.id, "text": " ".join(t.text for t in d.tokens[:200])}
-                            for d in list(corp)[:5]
-                        ],
-                    }
-                )
+                emit_json([e.to_dict() for e in excerpts])
                 return
             c = console()
-            c.print(f"[bold cyan]{getattr(corp.provenance, 'citation', '')}[/bold cyan]")
-            for doc in list(corp)[:3]:
-                preview = " ".join(t.text for t in doc.tokens[:120])
-                c.print(f"\n[bold]{doc.id}[/bold]\n  {preview}")
+            if not excerpts:
+                c.print("[dim]No matching commentary sections found.[/dim]")
+                return
+            head = excerpts[0]
+            c.print(f"[bold cyan]{head.author} — {head.title}[/bold cyan]  [dim]({head.work_id})[/dim]")
+            for ex in excerpts:
+                tag = f"  [green](matched: {', '.join(ex.matched_words)})[/green]" if ex.matched_words else ""
+                c.print(f"\n[bold]§ {ex.section_id}[/bold]{tag}\n  {ex.text}")
             return
 
         rows = bib.patristic_commentaries(book, kind=kind)

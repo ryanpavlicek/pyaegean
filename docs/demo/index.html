@@ -634,6 +634,51 @@
       group recurring sign-sequence stems and endings as structural leads, not grammatical readings.</p>
   </div>
 
+  <div class="card">
+    <h2>Biblical Greek — word study (offline sample)</h2>
+    <label for="bws">Run a unified Koine Greek word study by Strong's number (<code>G3056</code>,
+      <code>G26</code>) or Greek lemma (<code>λόγος</code>, <code>φῶς</code>): lexicon gloss,
+      morphology breakdown, and sample NT concordance</label>
+    <input type="text" id="bws" value="G3056">
+    <div class="row"><button data-tool="bws" disabled>Run word study</button></div>
+    <pre id="bws-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Septuagint ↔ Masoretic Psalm converter</h2>
+    <label for="bps">Convert Psalm numbers between Masoretic (Hebrew/English) and Septuagint (LXX)
+      numbering (try MT <code>23</code> → LXX <code>22</code>, MT <code>10</code> → LXX <code>9</code>,
+      or LXX <code>151</code>)</label>
+    <div class="row">
+      <input type="text" id="bps" value="23" placeholder="Psalm number (1–151)">
+      <select id="bpssys">
+        <option value="mt">Masoretic (MT) → LXX</option>
+        <option value="lxx">Septuagint (LXX) → MT</option>
+      </select>
+      <button data-tool="bps" disabled>Convert</button>
+    </div>
+    <pre id="bps-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Early NT manuscript nomina sacra expander</h2>
+    <label for="bns">Expand early Greek manuscript scribal contractions (<em>nomina sacra</em>
+      such as <code>θς</code>, <code>θν</code>, <code>ις</code>, <code>χς</code>, <code>κυ</code>,
+      <code>πνα</code>) to full Greek words</label>
+    <input type="text" id="bns" value="εν αρχη ην ο λογος και ο λογος ην προς τον θν και θς ην ο λογος">
+    <div class="row"><button data-tool="bns" disabled>Expand nomina sacra</button></div>
+    <pre id="bns-out"></pre>
+  </div>
+
+  <div class="card">
+    <h2>Septuagint (LXX) — passage &amp; concordance (offline sample)</h2>
+    <label for="blx">Read or search the bundled Swete Septuagint sample (try <code>Gen 1:1-5</code>,
+      <code>Ps 22</code>, <code>φῶς</code>, or <code>Κύριος</code>)</label>
+    <input type="text" id="blx" value="Ps 22">
+    <div class="row"><button data-tool="blx" disabled>Read / search LXX</button></div>
+    <pre id="blx-out"></pre>
+  </div>
+
   <footer>
     Built on <a href="https://github.com/ryanpavlicek/pyaegean">pyaegean</a>
     (<a href="https://pypi.org/project/pyaegean/">PyPI</a>) — the released version runs here.
@@ -671,7 +716,8 @@ async function init() {
                         "cite_bundled", "export_epidoc", "explain", "diagnose_corpus", "apparatus",
                         "linearb_dossiers", "seriate_site", "allographs", "segment_greek",
                         "koine_fold", "nt_concordance", "grounding_preview", "review_preview",
-                        "lineara_clusters"]) {
+                        "lineara_clusters", "biblical_word_study", "biblical_psalm",
+                        "biblical_nomina_sacra", "biblical_lxx"]) {
       tools[name] = pyodide.globals.get(name);
     }
     status.textContent = version ? `ready (v${version})` : "ready";
@@ -1053,6 +1099,47 @@ const handlers = {
           c.members.map(m => `  ${m.word}  (${m.count}×${m.suffix ? ", +" + m.suffix : ""})`).join("\n")
         ).join("\n\n") + `\n\n${r.note}`
       : `no Linear A clusters matching ${r.query}`);
+  },
+  bws: () => {
+    const r = call("biblical_word_study", val("bws"));
+    if (r.error) return show("bws-out", r.error);
+    const lines = [`${r.lemma || r.query}  (${r.strongs || "no Strong's"} · ${r.scope})`];
+    if (r.entry && r.entry.gloss) lines.push(`gloss: ${r.entry.gloss}`);
+    lines.push(`occurrences: ${r.total_occurrences}`);
+    if (r.by_morph && Object.keys(r.by_morph).length) {
+      lines.push("morphology: " + Object.entries(r.by_morph).slice(0, 6).map(([k, v]) => `${k} (${v})`).join(", "));
+    }
+    if (r.occurrences && r.occurrences.length) {
+      lines.push("", "sample concordance:");
+      for (const h of r.occurrences) lines.push(`  ${h.ref}\t[${h.morph}] ${h.verse_text}`);
+    }
+    show("bws-out", lines.join("\n"));
+  },
+  bps: () => {
+    const r = call("biblical_psalm", val("bps"), val("bpssys"));
+    if (r.error) return show("bps-out", r.error);
+    const mt = (r.mt || []).join(", ") || "(LXX-only)";
+    const lxx = (r.lxx || []).join(", ") || "(none)";
+    show("bps-out",
+      `Masoretic (MT / English): Psalm ${mt}\nSeptuagint (LXX):         Psalm ${lxx}\n` +
+      (r.note ? `note: ${r.note}\n` : "") + `LXX work ID: ${r.lxx_work_id}`);
+  },
+  bns: () => {
+    const r = call("biblical_nomina_sacra", val("bns"));
+    if (r.error) return show("bns-out", r.error);
+    const lines = [`expanded: ${r.expanded}`];
+    if (r.expansions && r.expansions.length) {
+      lines.push("", `expansions (${r.count}): ` + r.expansions.join(", "));
+    }
+    show("bns-out", lines.join("\n"));
+  },
+  blx: () => {
+    const r = call("biblical_lxx", val("blx"));
+    if (r.error) return show("blx-out", r.error);
+    const verses = r.verses || [];
+    show("blx-out", verses.length
+      ? verses.map(v => `${v.ref}\t${v.text}`).join("\n")
+      : `no Septuagint sample verses matched ${r.query}`);
   },
 };
 

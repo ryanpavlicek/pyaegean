@@ -268,7 +268,125 @@ def test_cli_bible_commands_json():
     assert r5.exit_code == 0, r5.output
     assert len(json.loads(r5.output)) >= 5
 
+    r6 = runner.invoke(app, ["bible", "read", "Gen", "1.1-3", "--lxx", "--offline", "--json"])
+    assert r6.exit_code == 0, r6.output
+    lxx_data = json.loads(r6.output)
+    assert lxx_data["source"] == "lxx" and len(lxx_data["verses"]) == 3
+    assert "θεὸς" in lxx_data["verses"][0]["text"]
 
+    r7 = runner.invoke(app, ["bible", "search", "φῶς", "--lxx", "--offline", "--json"])
+    assert r7.exit_code == 0, r7.output
+    assert len(json.loads(r7.output)) >= 3
+
+
+def test_lxx_offline_subverses_psalm_and_nomina_sacra(monkeypatch):
+    from aegean.biblical import _lxx as lxx_mod
+    from aegean.data import DataNotAvailableError
+    from aegean.tui import data as tui_data
+
+    # 1. Offline Swete LXX sample (Gen 1:1-5 & Ps 22:1-6) when full bundle is absent
+    monkeypatch.setattr(lxx_mod, "_load_lxx_bundle", lambda *, allow_fetch=True, force=False: None)
+    gen = bib.load_lxx("Gen", ref="1.1-5", offline=True)
+    assert len(gen) == 1
+    assert gen.documents[0].id == "Gen 1"
+    assert len(gen.documents[0].lines) == 5
+
+    ps = bib.load_lxx("Ps", ref="22.1-6", offline=True)
+    assert ps.documents[0].id == "Ps 22"
+    assert any(t.text == "ποιμαίνει" for t in ps.documents[0].tokens)
+
+    with pytest.raises(DataNotAvailableError):
+        bib.load_lxx("Isa", ref="53.1", offline=True)
+
+    hits = bib.search_lxx("φῶς", offline=True)
+    assert len(hits) == 3
+    assert hits[0].ref == "Gen 1:3"
+    with pytest.raises(ValueError):
+        bib.search_lxx("   ", offline=True)
+
+    # 2. LXX-plus sub-verses (e.g. Josh 15.59 vs 15.59a, Esth prologue) stay distinct & ordered
+    fake_lxx = {
+        "_meta": {"license": "CC BY-SA 4.0", "source_commit": "4c9c843"},
+        "books": {
+            "Josh": {
+                "verses": {
+                    "15.59a": "Θεκὼ καὶ Ἐφραθά, αὕτη ἐστὶν Βαιθλέεμ.",
+                    "15.59": "καὶ Μααρὼθ καὶ Βαιθανάμ.",
+                    "15.60": "Καριαθβαάλ, αὕτη Καριαθιαρείμ.",
+                }
+            },
+            "Esth": {
+                "verses": {
+                    "prologue.1": "Ἔτους δευτέρου βασιλεύοντος Ἀρταξέρξου.",
+                    "1.1": "Καὶ ἐγένετο μετὰ τοὺς λόγους τούτους.",
+                }
+            },
+        },
+    }
+    monkeypatch.setattr(lxx_mod, "_load_lxx_bundle", lambda *, allow_fetch=True, force=False: fake_lxx)
+    josh = bib.load_lxx("Josh", ref="15.59-60", offline=True)
+    refs_in_order = list(dict.fromkeys(t.annotations["ref"] for t in josh.documents[0].tokens))
+    assert refs_in_order == ["Josh.15.59", "Josh.15.59a", "Josh.15.60"]
+
+    esth = bib.load_lxx("Esth", ref="prologue", offline=True)
+    assert esth.documents[0].id == "Esth prologue"
+    assert esth.documents[0].tokens[0].annotations["ref"] == "Esth.prologue.1"
+
+    # 3. convert_psalm & expand_nomina_sacra
+    c23 = bib.convert_psalm(23, system="mt")
+    assert c23 == {
+        "system": "mt",
+        "input": 23,
+        "mt": [23],
+        "lxx": [22],
+        "lxx_work_id": "tlg0527.tlg027",
+        "note": "",
+    }
+    assert bib.convert_psalm(151, system="lxx")["mt"] == []
+    with pytest.raises(ValueError):
+        bib.convert_psalm(0)
+
+    expanded, notes = bib.expand_nomina_sacra("θς ην ο λογος, και πνα αγιον.")
+    assert expanded == "Θεός ην ο λογος, και Πνεῦμα αγιον."
+    assert len(notes) == 2
+
+    # 4. TUI helpers (LXX fallback in bible_read_text + inline search/passage in bible_lxx_and_catenae_text)
+    monkeypatch.setattr(lxx_mod, "_load_lxx_bundle", lambda *, allow_fetch=True, force=False: None)
+    assert "ἐποίησεν" in tui_data.bible_read_text("Gen 1.1-2", offline=True)
+    assert "Gen 1:3" in tui_data.bible_lxx_and_catenae_text("φῶς")
+    assert "ποιμαίνει" in tui_data.bible_lxx_and_catenae_text("Ps 22.1-2")
+
+
+def test_commentary_excerpt_search(monkeypatch):
+    from aegean.core.corpus import Corpus
+    from aegean.core.model import Document, DocumentMeta, Token, TokenKind
+    from aegean.scripts.greek import perseus
+
+    toks_hit = [
+        Token(text="Ἐν", kind=TokenKind.WORD, glyphs="Ἐν", line_no=1, position=0),
+        Token(text="ἀρχῇ", kind=TokenKind.WORD, glyphs="ἀρχῇ", line_no=1, position=1),
+        Token(text="Λόγος", kind=TokenKind.WORD, glyphs="Λόγος", line_no=1, position=2),
+    ]
+    toks_false_substr = [
+        Token(text="πυρὸς", kind=TokenKind.WORD, glyphs="πυρὸς", line_no=1, position=0),
+        Token(text="φλογὸς", kind=TokenKind.WORD, glyphs="φλογὸς", line_no=1, position=1),
+    ]
+    fake_corp = Corpus(
+        [
+            Document(id="1.0", script_id="greek", tokens=toks_false_substr, lines=[[0, 1]], meta=DocumentMeta(name="1.0")),
+            Document(id="1.1", script_id="greek", tokens=toks_hit, lines=[[0, 1, 2]], meta=DocumentMeta(name="1.1")),
+        ],
+        script_id="greek",
+    )
+    monkeypatch.setattr(perseus, "load_work", lambda wid, ref=None, source=None, force=False: fake_corp)
+    excerpts = bib.commentary_excerpt("John", query="λογος", limit=3)
+    assert len(excerpts) == 1
+    assert excerpts[0].section_id == "1.1"
+    assert excerpts[0].work_id == "tlg4102.tlg005"
+    assert excerpts[0].matched_words == ("Λόγος",)
+
+
+@pytest.mark.xdist_group("tui")
 def test_tui_biblical_screen_smoke():
     import asyncio
 
@@ -294,4 +412,8 @@ def test_tui_biblical_screen_smoke():
             lxx_txt = str(app.screen.query_one("#bible-lxx", Static).render())
             assert "LXX Psalm 22" in lxx_txt
 
-    asyncio.run(_run())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_run())
+    finally:
+        loop.close()

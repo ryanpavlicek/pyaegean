@@ -464,6 +464,47 @@ def test_koine_gloss() -> None:
     assert "greek_gloss" in miss["error"]  # the next-tool hint
 
 
+def test_biblical_mcp_tools_offline() -> None:
+    st = m.biblical_strongs("G3056", roots=True)
+    assert st["strongs"] == "G3056" and st["lemma"] == "λόγος"
+    assert "root_tree" in st
+    srch = m.biblical_strongs("love", search=True, limit=5)
+    assert srch["count"] >= 1 and any(x["lemma"] == "ἀγάπη" for x in srch["matches"])
+    assert "error" in m.biblical_strongs("   ")
+    assert "error" in m.biblical_strongs("G999999")
+
+    ws = m.biblical_word_study("G3056", book="John", limit=5)
+    assert ws["lemma"] == "λόγος" and ws["total_occurrences"] >= 4
+    assert "error" in m.biblical_word_study("")
+
+    ps = m.biblical_psalm(23, system="mt")
+    assert ps["mt"] == [23] and ps["lxx"] == [22] and ps["lxx_work_id"] == "tlg0527.tlg027"
+    ps151 = m.biblical_psalm(151, system="lxx")
+    assert ps151["lxx"] == [151] and ps151["mt"] == []
+    assert "error" in m.biblical_psalm(999, system="mt")
+    assert "error" in m.biblical_psalm(23, system="vulgate")
+
+    ns = m.biblical_nomina_sacra("εν αρχη ην ο λογος προς τον θν, και θς ην ο λογος.")
+    assert "Θεόν," in ns["expanded"] and "Θεός" in ns["expanded"] and ns["count"] == 2
+    assert "error" in m.biblical_nomina_sacra("   ")
+
+    cat_lxx = m.biblical_catalog("lxx")
+    assert cat_lxx["count"] == 55
+    cat_wit = m.biblical_catalog("witnesses")
+    assert cat_wit["count"] == 13
+    cat_comm = m.biblical_catalog("commentaries", book="John")
+    assert cat_comm["count"] >= 5
+    bad_cat = m.biblical_catalog("edtion")
+    assert "error" in bad_cat and "'editions'" in bad_cat["error"]
+
+    lxx_read = m.biblical_lxx("Gen", ref="1.1-3")
+    assert lxx_read["mode"] == "read" and len(lxx_read["verses"]) == 3
+    assert "θεὸς" in lxx_read["verses"][0]["text"]
+    lxx_srch = m.biblical_lxx("Gen", query="φῶς")
+    assert lxx_srch["mode"] == "search" and lxx_srch["count"] >= 3
+    assert "error" in m.biblical_lxx("NotABook", ref="1.1")
+
+
 # ── the MCPServer layer ([mcp] extra) ────────────────────────────────────────
 
 
@@ -473,7 +514,7 @@ def test_build_server_registers_tools() -> None:
 
     server = m.build_server()
     assert server is not None
-    assert len(m.TOOLS) == 17  # the registered tool surface
+    assert len(m.TOOLS) == 23  # the registered tool surface
     tools = asyncio.run(server.list_tools())
     assert {t.name for t in tools} == {fn.__name__ for fn in m.TOOLS}
     # The SDK derives each description from the function docstring; an agent chooses a

@@ -1298,3 +1298,268 @@ def lineara_clusters(stem: str = "JA-SA", limit: int = 8) -> str:
         },
         ensure_ascii=False,
     )
+
+
+def biblical_word_study(query: str) -> str:
+    """Unified offline Koine Greek word study (Strong's entry, morphology, and sample NT
+    concordance over the bundled John 1 + Philemon 1 Nestle 1904 sample)."""
+    q = query.strip()
+    if not q:
+        return json.dumps({"error": "enter a Strong's ID (e.g. G3056) or Greek word"}, ensure_ascii=False)
+    try:
+        from aegean import biblical as bib
+    except ImportError:
+        from collections import Counter
+
+        import aegean
+        from aegean import greek
+
+        greek.use_dodson()
+        sid = q[1:] if q[:1] in ("G", "g") and q[1:].isdigit() else (q if q.isdigit() else "")
+        nt = aegean.load("nt")
+        morph_counts: Counter[str] = Counter()
+        occs = []
+        lemma = q
+        for doc in nt:
+            for tok in doc.tokens:
+                ann = tok.annotations or {}
+                ts = str(ann.get("strongs", "")).lstrip("Gg0")
+                tl = str(ann.get("lemma", ""))
+                if (sid and ts == sid.lstrip("0")) or (not sid and tl == q):
+                    lemma = tl or lemma
+                    m = str(ann.get("morph", ""))
+                    if m:
+                        morph_counts[m] += 1
+                    if len(occs) < 10:
+                        vtoks = [t.text for t in doc.tokens if t.line_no == tok.line_no]
+                        occs.append(
+                            {
+                                "ref": str(ann.get("ref", doc.id)).replace(".", " ", 1).replace(".", ":"),
+                                "morph": m,
+                                "verse_text": " ".join(vtoks),
+                            }
+                        )
+        ent = greek.lookup_nt(lemma) if hasattr(greek, "lookup_nt") else None
+        return json.dumps(
+            {
+                "query": q,
+                "lemma": ent.lemma if ent else lemma,
+                "strongs": f"G{sid.zfill(4)}" if sid else (f"G{ent.strongs}" if ent and ent.strongs else ""),
+                "scope": "bundled offline sample (John 1, Philemon 1)",
+                "entry": {"gloss": ent.gloss if ent else (greek.gloss_strongs(sid) or "") if sid else ""},
+                "total_occurrences": sum(morph_counts.values()),
+                "by_morph": dict(morph_counts.most_common()),
+                "occurrences": occs,
+            },
+            ensure_ascii=False,
+        )
+    try:
+        ws = bib.word_study(q, limit=10, offline=True)
+        return json.dumps(ws.to_dict(), ensure_ascii=False)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+
+def biblical_psalm(psalm: str, system: str = "mt") -> str:
+    """Convert a Psalm number between Masoretic (Hebrew/English) and Septuagint (LXX)
+    numbering."""
+    try:
+        num = int(str(psalm).strip())
+    except ValueError:
+        return json.dumps({"error": f"expected an integer Psalm number (1–151), got {psalm!r}"}, ensure_ascii=False)
+    try:
+        from aegean import biblical as bib
+    except ImportError:
+        bib = None  # type: ignore[assignment]
+    if bib is not None and hasattr(bib, "convert_psalm"):
+        try:
+            return json.dumps(bib.convert_psalm(num, system=system), ensure_ascii=False)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    if bib is not None:
+        try:
+            src = system.strip().lower()
+            if src == "mt":
+                return json.dumps(
+                    {"mt": [num], "lxx": list(bib.psalm_mt_to_lxx(num)), "lxx_work_id": "tlg0527.tlg027"},
+                    ensure_ascii=False,
+                )
+            if src == "lxx":
+                return json.dumps(
+                    {"mt": list(bib.psalm_lxx_to_mt(num)), "lxx": [num], "lxx_work_id": "tlg0527.tlg027"},
+                    ensure_ascii=False,
+                )
+            return json.dumps({"error": f"system must be 'mt' or 'lxx', got {system!r}"}, ensure_ascii=False)
+        except ValueError as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+    s = system.strip().lower()
+    if s == "mt":
+        if not 1 <= num <= 150:
+            return json.dumps({"error": f"MT Psalm must be 1–150, got {num}"}, ensure_ascii=False)
+        lxx = (
+            [num] if num <= 8 or num >= 148 else
+            [9] if num in (9, 10) else
+            [num - 1] if 11 <= num <= 113 or 117 <= num <= 146 else
+            [113] if num in (114, 115) else
+            [114, 115] if num == 116 else [146, 147]
+        )
+        return json.dumps({"mt": [num], "lxx": lxx, "lxx_work_id": "tlg0527.tlg027"}, ensure_ascii=False)
+    if not 1 <= num <= 151:
+        return json.dumps({"error": f"LXX Psalm must be 1–151, got {num}"}, ensure_ascii=False)
+    mt = (
+        [num] if num <= 8 or 148 <= num <= 150 else
+        [9, 10] if num == 9 else
+        [num + 1] if 10 <= num <= 112 or 116 <= num <= 145 else
+        [114, 115] if num == 113 else
+        [116] if num in (114, 115) else
+        [147] if num in (146, 147) else []
+    )
+    return json.dumps({"mt": mt, "lxx": [num], "lxx_work_id": "tlg0527.tlg027"}, ensure_ascii=False)
+
+
+def biblical_nomina_sacra(text: str) -> str:
+    """Expand early Greek NT manuscript nomina sacra contractions (e.g. θς → θεός,
+    ις → ἰησοῦς, χς → χριστός, πνα → πνεῦμα)."""
+    if not text.strip():
+        return json.dumps({"error": "enter Greek manuscript text (e.g. 'εν αρχη ην ο λογος προς τον θν')"}, ensure_ascii=False)
+    try:
+        from aegean import biblical as bib
+    except ImportError:
+        bib = None  # type: ignore[assignment]
+    if bib is not None and hasattr(bib, "expand_nomina_sacra"):
+        expanded, notes = bib.expand_nomina_sacra(text)
+        return json.dumps(
+            {"input": text, "expanded": expanded, "expansions": notes, "count": len(notes)},
+            ensure_ascii=False,
+        )
+    if bib is not None and hasattr(bib, "expand_nomen_sacrum"):
+        out_words, notes = [], []
+        for w in text.split():
+            core = w.rstrip(".,;·:")
+            punct = w[len(core):]
+            rep = bib.expand_nomen_sacrum(core)
+            if rep is not None:
+                out_words.append(rep + punct)
+                notes.append(f"{core} → {rep}")
+            else:
+                out_words.append(w)
+        return json.dumps(
+            {"input": text, "expanded": " ".join(out_words), "expansions": notes, "count": len(notes)},
+            ensure_ascii=False,
+        )
+    table = {
+        "θς": "Θεός", "θυ": "Θεοῦ", "θω": "Θεῷ", "θν": "Θεόν",
+        "ις": "Ἰησοῦς", "ιυ": "Ἰησοῦ", "ιν": "Ἰησοῦν",
+        "χς": "Χριστός", "χυ": "Χριστοῦ", "χω": "Χριστῷ", "χν": "Χριστόν",
+        "κς": "Κύριος", "κυ": "Κυρίου", "κω": "Κυρίῳ", "κν": "Κύριον",
+        "πνα": "Πνεῦμα", "πνς": "Πνεύματος",
+    }
+    words = text.split()
+    out, notes = [], []
+    for w in words:
+        core = w.rstrip(".,;·:")
+        punct = w[len(core):]
+        rep = table.get(core.lower())
+        if rep:
+            out.append(rep + punct)
+            notes.append(f"{core} → {rep}")
+        else:
+            out.append(w)
+    return json.dumps(
+        {"input": text, "expanded": " ".join(out), "expansions": notes, "count": len(notes)},
+        ensure_ascii=False,
+    )
+
+
+_DEMO_LXX_FALLBACK: dict[str, dict[str, str]] = {
+    "Gen": {
+        "1.1": "ΕΝ ΑΡΧΗ ἐποίησεν ὁ θεὸς τὸν οὐρανὸν καὶ τὴν γῆν.",
+        "1.2": "ἡ δὲ γῆ ἦν ἀόρατος καὶ ἀκατασκεύαστος, καὶ σκότος ἐπάνω τῆς ἀβύσσου· καὶ πνεῦμα θεοῦ ἐπεφέρετο ἐπάνω τοῦ ὕδατος.",
+        "1.3": "καὶ εἶπεν ὁ θεός Γενηθήτω φῶς· καὶ ἐγένετο φῶς.",
+        "1.4": "καὶ ἴδεν ὁ θεὸς τὸ φῶς ὅτι καλόν· καὶ διεχώρισεν ὁ θεὸς ἀνὰ μέσον τοῦ φωτὸς καὶ ἀνὰ μέσον τοῦ σκότους.",
+        "1.5": "καὶ ἐκάλεσεν ὁ θεὸς τὸ φῶς ἡμέραν, καὶ τὸ σκότος ἐκάλεσεν νύκτα. καὶ ἐγένετο ἑσπέρα καὶ ἐγένετο πρωί, ἡμέρα μία.",
+    },
+    "Ps": {
+        "22.1": "Κύριος ποιμαίνει με, καὶ οὐδέν με ὑστερήσει.",
+        "22.2": "εἰς τόπον χλόης, ἐκεῖ με κατεσκήνωσεν· ἐπὶ ὕδατος ἀναπαύσεως ἐξέθρεψέν με·",
+        "22.3": "τὴν ψυχήν μου ἐπέστρεψεν. ὡδήγησέν με ἐπὶ τρίβους δικαιοσύνης ἕνεκεν τοῦ ὀνόματος αὐτοῦ.",
+        "22.4": "ἐάν γὰρ καὶ πορευθῶ ἐν μέσῳ σκιᾶς θανάτου, οὐ φοβηθήσομαι κακά, ὅτι σὺ μετʼ ἐμοῦ εἶ· ἡ ῥάβδος σου καὶ ἡ βακτηρία σου, αὐταί με παρεκάλεσαν.",
+        "22.5": "ἡτοίμασας ἐνώπιόν μου τράπεζαν ἐξ ἐναντίας τῶν θλιβόντων με· ἐλίπανας ἐν ἐλαίῳ τὴν κεφαλήν μου,",
+        "22.6": "καὶ τὸ ἔλεός σου καταδιώξεταί με πάσας τὰς ἡμέρας τῆς ζωῆς καὶ τὸ κατοικεῖν με ἐν οἴκῳ Κυρίου εἰς μακρότητα ἡμερῶν.",
+    },
+}
+
+
+def biblical_lxx(query: str = "Gen 1.1-3") -> str:
+    """Read or search the bundled Swete Septuagint (LXX) sample (Genesis 1:1–5 & LXX Psalm 22:1–6)."""
+    import unicodedata
+
+    q = query.strip()
+    if not q:
+        return json.dumps({"error": "enter an LXX passage (Gen 1.1-5, Ps 22) or Greek word (φῶς, Κύριος)"}, ensure_ascii=False)
+    has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
+    try:
+        from aegean import biblical as bib
+    except ImportError:
+        bib = None  # type: ignore[assignment]
+
+    if bib is not None and hasattr(bib, "search_lxx"):
+        try:
+            if has_greek:
+                hits = bib.search_lxx(q, limit=10, offline=True)
+                return json.dumps(
+                    {"mode": "search", "query": q, "verses": [{"ref": h.ref, "text": h.verse_text} for h in hits]},
+                    ensure_ascii=False,
+                )
+            parts = q.split(None, 1)
+            book = parts[0]
+            ref = parts[1] if len(parts) > 1 else None
+            corp = bib.load_lxx(book, ref=ref, offline=True)
+            verses = []
+            for doc in corp:
+                by_ref: dict[str, list[str]] = {}
+                for tok in doc.tokens:
+                    rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
+                    by_ref.setdefault(rkey, []).append(tok.text)
+                for rkey, words in by_ref.items():
+                    verses.append({"ref": rkey.replace(".", " ", 1).replace(".", ":"), "text": " ".join(words)})
+            return json.dumps({"mode": "read", "query": q, "verses": verses}, ensure_ascii=False)
+        except Exception as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+    def _fold_grc(s: str) -> str:
+        nfd = unicodedata.normalize("NFD", s)
+        return "".join(c for c in nfd if unicodedata.category(c) != "Mn").lower().replace("ς", "σ")
+
+    if has_greek:
+        qf = _fold_grc(q)
+        verses = [
+            {"ref": f"{bk} {cv.replace('.', ':')}", "text": txt}
+            for bk, vmap in _DEMO_LXX_FALLBACK.items()
+            for cv, txt in vmap.items()
+            if qf in _fold_grc(txt)
+        ]
+        return json.dumps({"mode": "search", "query": q, "verses": verses}, ensure_ascii=False)
+
+    parts = q.split(None, 1)
+    braw = parts[0].lower().rstrip(".")
+    bk = "Gen" if braw in ("gen", "genesis") else ("Ps" if braw in ("ps", "psalm", "psalms") else "")
+    if not bk:
+        return json.dumps({"error": f"offline LXX sample covers Gen 1:1–5 and Ps 22:1–6 (got {q!r})"}, ensure_ascii=False)
+    vmap = _DEMO_LXX_FALLBACK[bk]
+    ref_s = parts[1].strip().replace(":", ".") if len(parts) > 1 else ""
+    out_v = []
+    for cv, txt in vmap.items():
+        c, _, v = cv.partition(".")
+        if not ref_s or ref_s == c or ref_s == cv:
+            out_v.append({"ref": f"{bk} {c}:{v}", "text": txt})
+        elif "." in ref_s and "-" in ref_s:
+            rc, _, rv = ref_s.partition(".")
+            a, _, b = rv.partition("-")
+            if c == rc and a.isdigit() and b.isdigit() and int(a) <= int(v) <= int(b):
+                out_v.append({"ref": f"{bk} {c}:{v}", "text": txt})
+    if not out_v:
+        return json.dumps({"error": f"no offline LXX sample verses matched {q!r}"}, ensure_ascii=False)
+    return json.dumps({"mode": "read", "query": q, "verses": out_v}, ensure_ascii=False)
+
+

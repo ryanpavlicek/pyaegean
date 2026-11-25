@@ -159,6 +159,7 @@ wheel. Each URL and sha256 is pinned in the code; an env override
 | `strongs-greek` | Extended Strong's Greek Lexicon: 11,142 Strong's & STEPBible extended entries with definitions, derivations, Hebrew equivalents, KJV usage, and root links | ~1.5 MB JSON.gz | CC BY 4.0 (STEPBible TBESG) + Public Domain (OpenScriptures Strong's) | Project-hosted derivative; rebuild: `scripts/build_strongs_greek.py` |
 | `nt-editions` | Four Greek New Testament critical & traditional editions (`sblgnt`, `srgnt`, `byz`, `tr`; 27 books each) for word-level variant collation | ~1.7 MB JSON.gz | CC BY 4.0 (SBLGNT / CNTR SR & KJTR) + Public Domain (Robinson–Pierpont Byzantine) | Project-hosted derivative; rebuild: `scripts/build_nt_editions.py` |
 | `nt-witnesses` | Thirteen 2nd–5th century CE Greek NT manuscript transcriptions (`01`/ℵ, `02`/A, `03`/B, `04`/C, `05`/D, `032`/W, `P45`–`P75`) with original/corrector hands | ~1.5 MB JSON.gz | CC BY-SA 4.0 (Center for New Testament Restoration Class 1 transcriptions) | Project-hosted derivative; rebuild: `scripts/build_nt_witnesses.py` |
+| `lxx-corpus` | Swete Septuagint (LXX): all 55 Greek Old Testament & Deuterocanonical books (`tlg0527.*`, 29,248 verses) for fast offline-cached reading and concordance search | ~1.7 MB JSON.gz | CC BY-SA 4.0 (OpenGreekAndLatin / First1KGreek; Swete 1887–1894 Public Domain base text) | Project-hosted derivative; rebuild: `scripts/build_lxx_corpus.py` |
 | `isicily-corpus` | I.Sicily Greek inscriptions: 2,855 primary-Greek texts from ancient Sicily with find-place, date, coordinates | ~7 MB JSON | CC BY 4.0 (I.Sicily: J. Prag et al., Oxford) | From the ISicily/ISicily EpiDoc corpus; **may be redistributed** (CC BY), attribution required |
 | `iip-corpus` | IIP Greek inscriptions: 2,113 primary-Greek texts from Israel/Palestine with find-place, coordinates | ~4 MB JSON | CC BY-NC 4.0 (IIP: M. L. Satlow, Brown) | From Brown-University-Library/iip-texts; **may be redistributed** (CC BY-NC), attribution + NonCommercial |
 | `iospe-corpus` | IOSPE Greek inscriptions: 1,194 Greek texts of the Northern Black Sea (Tyras, Olbia, Chersonesos, Byzantine) with find-place, date | ~4 MB JSON | CC BY (IOSPE, King's College London; repo code MIT) | From kingsdigitallab/iospe; **may be redistributed** (CC BY), attribution required |
@@ -560,11 +561,12 @@ aegean data remove --all               # clear every downloaded dataset
 ```
 
 The same store is visible to AI agents over MCP (`aegean-mcp`, the `[mcp]`
-extra), which exposes seventeen read/analysis tools: `list_corpora`, `corpus_info`,
+extra), which exposes twenty-three read/analysis tools: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
 `cite_corpus`, `geo_sites`, `data_status`, `corpus_diagnose`, `greek_pipeline`,
 `greek_scan`, `greek_catalog`, `greek_work`, `greek_gloss`, `greek_explain`,
-and `koine_gloss`. Three of them
+`koine_gloss`, `biblical_strongs`, `biblical_word_study`, `biblical_psalm`,
+`biblical_nomina_sacra`, `biblical_catalog`, and `biblical_lxx`. Three of them
 touch the story this page tells: `data_status` exposes this listing read-only
 (downloaded state, on-disk size, license note), so an agent can see what a
 corpus load would fetch before triggering it; `cite_corpus` / `query_corpus`

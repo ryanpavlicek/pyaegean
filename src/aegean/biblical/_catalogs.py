@@ -225,6 +225,41 @@ def psalm_mt_to_lxx(psalm: int) -> tuple[int, ...]:
     return (146, 147)  # MT 147
 
 
+def convert_psalm(psalm: int, *, system: str = "mt") -> dict[str, Any]:
+    """Convert a Psalm number between Masoretic (``'mt'``) and Septuagint (``'lxx'``) numbering.
+
+    Returns a dictionary containing ``mt``, ``lxx``, ``note``, and ``lxx_work_id``.
+    """
+    src = system.strip().lower()
+    if src == "mt":
+        lxx = list(psalm_mt_to_lxx(psalm))
+        mt = [psalm]
+    elif src == "lxx":
+        mt = list(psalm_lxx_to_mt(psalm))
+        lxx = [psalm]
+    else:
+        raise ValueError(f"system must be 'mt' or 'lxx', got {system!r}")
+    note = ""
+    if lxx == [151]:
+        note = "Psalm 151 is extra-canonical in the Masoretic Text (preserved in LXX and 11QPsᵃ)."
+    elif lxx == [9] or mt == [9, 10]:
+        note = "LXX Psalm 9 combines Masoretic Psalms 9 and 10."
+    elif lxx == [113] or mt == [114, 115]:
+        note = "LXX Psalm 113 combines Masoretic Psalms 114 and 115."
+    elif lxx == [114, 115] or mt == [116]:
+        note = "LXX splits Masoretic Psalm 116 into Psalms 114 and 115."
+    elif lxx == [146, 147] or mt == [147]:
+        note = "LXX splits Masoretic Psalm 147 into Psalms 146 and 147."
+    return {
+        "system": src,
+        "input": psalm,
+        "mt": mt,
+        "lxx": lxx,
+        "note": note,
+        "lxx_work_id": "tlg0527.tlg027",
+    }
+
+
 # All 30 Greek NT Catenae volumes (tlg4102.*) + key Origen biblical commentaries (tlg2042.*).
 _COMMENTARIES: tuple[CommentaryWork, ...] = (
     # NT Catenae (Cramer edition via First1KGreek)

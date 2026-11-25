@@ -575,7 +575,7 @@ client at the `aegean-mcp` command):
 ```python
 from aegean.mcp_server import TOOLS
 print(len(TOOLS), "tools:", ", ".join(t.__name__ for t in TOOLS[:6]), "…")
-# 17 tools: list_corpora, corpus_info, show_document, search_signs, balance_accounts, query_corpus …
+# 23 tools: list_corpora, corpus_info, show_document, search_signs, balance_accounts, query_corpus …
 ```
 
 The tools address corpora by registry name only (never by filesystem path) and

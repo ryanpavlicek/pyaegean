@@ -1513,14 +1513,21 @@ def _parse_passage_spec(spec: str) -> tuple[str, str | None]:
 
 
 def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool = True) -> str:
-    """Render an interlinear + verse view of a Greek NT passage. Never raises."""
+    """Render an interlinear + verse view of a Greek NT or Septuagint (LXX) passage. Never raises."""
     import aegean.biblical as bib
 
     book, ref = _parse_passage_spec(passage)
     try:
         corp = bib.load_nt(book, ref=ref, edition=edition, offline=offline)
-    except Exception as exc:
-        return f"Could not load {passage!r} ({edition}): {exc}\nTip: run `aegean data fetch nt-corpus` or `nt-editions` in Data Store (d)."
+    except Exception as nt_exc:
+        try:
+            bib.resolve_lxx_book(book)
+            corp = bib.load_lxx(book, ref=ref, offline=offline)
+        except Exception:
+            return (
+                f"Could not load {passage!r} ({edition}): {nt_exc}\n"
+                "Tip: run `aegean data fetch nt-corpus`, `nt-editions`, or `lxx-corpus` in Data Store (d)."
+            )
 
     lines: list[str] = []
     cit = getattr(getattr(corp, "provenance", None), "citation", "")
@@ -1528,11 +1535,13 @@ def bible_read_text(passage: str, *, edition: str = "nestle1904", offline: bool 
         lines.append(cit)
         lines.append("")
     for doc in corp:
-        by_v: dict[int, list[Any]] = {}
+        by_v: dict[str, list[Any]] = {}
         for tok in doc.tokens:
-            by_v.setdefault(int(tok.line_no or 0), []).append(tok)
-        for vno, toks in sorted(by_v.items()):
-            lines.append(f"[{doc.id}:{vno}]  {' '.join(t.text for t in toks)}")
+            vkey = str(tok.annotations.get("ref") or f"{doc.id}.{tok.line_no or 0}")
+            by_v.setdefault(vkey, []).append(tok)
+        for vkey, toks in by_v.items():
+            vlabel = vkey.rpartition(".")[2] if "." in vkey else vkey
+            lines.append(f"[{doc.id}:{vlabel}]  {' '.join(t.text for t in toks)}")
             for t in toks:
                 ann = t.annotations
                 lem = ann.get("lemma", "")
@@ -1651,12 +1660,12 @@ def bible_word_study_text(query: str, *, offline: bool = True) -> str:
 
 
 def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
-    """Render searchable LXX + Patristic Catenae catalogue + Psalm numbering hint. Never raises."""
+    """Render searchable LXX + Patristic Catenae catalogue, LXX passage/search, and Psalm hint. Never raises."""
     import aegean.biblical as bib
 
     q = filter_text.strip()
     out: list[str] = []
-    # If the user typed a Psalm number like "23" or "ps 23", convert LXX <-> MT inline!
+    # 1. If the user typed a Psalm number like "23" or "ps 23", convert LXX <-> MT inline.
     digits = q.lower().removeprefix("psalm").removeprefix("ps").strip()
     if digits.isdigit():
         num = int(digits)
@@ -1670,20 +1679,55 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
         if out:
             out.append("")
 
+    # 2. If the user typed Greek characters (e.g. κύριος, φῶς), search the Septuagint inline.
+    has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
+    if has_greek:
+        try:
+            hits = bib.search_lxx(q, limit=12, offline=True)
+            scope_note = "all 55 books" if bib.lxx_loaded() else "offline sample (Gen 1, Ps 22; fetch `lxx-corpus` for all 55 books)"
+            out.append(f"── Septuagint (LXX) Concordance: {q!r} ({len(hits)} hit(s) in {scope_note}) ──")
+            for h in hits:
+                out.append(f"  {h.ref:<11} {h.verse_text}")
+            if not hits:
+                out.append("  No Septuagint matches in current scope.")
+            out.append("")
+        except Exception as exc:
+            out.append(f"Septuagint search error: {exc}\n")
+
+    # 3. If the user typed an LXX passage reference (e.g. "Gen 1.1-5" or "Ps 22.1-6"), read it inline.
+    if not has_greek and " " in q:
+        bk_cand, ref_cand = _parse_passage_spec(q)
+        if ref_cand:
+            try:
+                corp = bib.load_lxx(bk_cand, ref=ref_cand, offline=True)
+                out.append(f"── Septuagint Passage: {bk_cand} {ref_cand} (Swete LXX) ──")
+                for doc in corp:
+                    by_ref: dict[str, list[str]] = {}
+                    for tok in doc.tokens:
+                        rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
+                        by_ref.setdefault(rkey, []).append(tok.text)
+                    for rkey, words in by_ref.items():
+                        rlabel = rkey.replace(".", " ", 1).replace(".", ":")
+                        out.append(f"  {rlabel:<11} {' '.join(words)}")
+                out.append("")
+            except Exception:
+                pass
+
     ql = q.lower()
     lxx = [
         b for b in bib.lxx_books()
-        if not ql or ql in b["name"].lower() or ql in b["title"].lower() or ql in b["section"].lower()
+        if not ql or has_greek or ql in b["name"].lower() or ql in b["title"].lower() or ql in b["section"].lower()
     ]
     comms = [
         c for c in bib.patristic_commentaries()
-        if not ql or ql in c["book"].lower() or ql in c["title"].lower() or ql in c["author"].lower()
+        if not ql or has_greek or ql in c["book"].lower() or ql in c["title"].lower() or ql in c["author"].lower()
     ]
-    out.append(f"── Septuagint (LXX) — {len(lxx)} matching book(s) (Swete / First1KGreek) ──")
+    lxx_status = "cached" if bib.lxx_loaded() else "offline sample Gen 1 & Ps 22; fetch `lxx-corpus` (~1.7 MB) in Data Store (d) for all 55 books"
+    out.append(f"── Septuagint (LXX) — {len(lxx)} matching book(s) ({lxx_status}) ──")
     for b in lxx[:28]:
         out.append(f"  {b['name']:<8} {b['title']:<36} [{b['section']}]  {b['work_id']}")
     if len(lxx) > 28:
-        out.append(f"  … and {len(lxx) - 28} more (filter above, or run `aegean bible read <Book> --lxx`)")
+        out.append(f"  … and {len(lxx) - 28} more (try typing `Gen 1.1-5`, `Ps 22.1-6`, or a Greek word like `φῶς`)")
     out.append("")
     out.append(f"── Greek Patristic Commentaries — {len(comms)} matching volume(s) (NT Catenae & Origen) ──")
     for c in comms[:24]:

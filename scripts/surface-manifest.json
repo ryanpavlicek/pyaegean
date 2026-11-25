@@ -2228,6 +2228,170 @@
           "note": "reachable via the Python API and CLI command console; no dedicated TUI toggle."
         }
       }
+    },
+    {
+      "id": "biblical-strongs",
+      "since": "0.64.0",
+      "python_api": "aegean.biblical.strongs_entry",
+      "summary": "Strong's and Extended Strong's Greek Lexicon lookup, search, and recursive etymological root tracing (offline Dodson fallback + 11,142-entry strongs-greek bundle).",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "full 11,142-entry Extended Strong's bundle is fetched on demand; offline Strong's/Dodson lookup is covered by gloss_nt and biblical_word_study."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_strongs"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "strongs_entry("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-word-study",
+      "since": "0.64.0",
+      "python_api": "aegean.biblical.word_study",
+      "summary": "Unified Koine Greek word study combining Strong's lexicon, root family, NT book and Robinson morphology distribution, and verse concordance.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "biblical_word_study"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_word_study"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "word_study("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-psalm-numbering",
+      "since": "0.65.0",
+      "python_api": "aegean.biblical.convert_psalm",
+      "summary": "Bidirectional Masoretic (Hebrew/English) and Septuagint (LXX) Psalm number conversion (1–150 MT ↔ 1–151 LXX).",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "biblical_psalm"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_psalm"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "convert_psalm("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-nomina-sacra",
+      "since": "0.65.0",
+      "python_api": "aegean.biblical.expand_nomina_sacra",
+      "summary": "Expansion of early Greek New Testament manuscript nomina sacra contractions (θς, ις, χς, κυ, πνα, etc.) and CNTR diplomatic MES markup.",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "biblical_nomina_sacra"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_nomina_sacra"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "expand_nomina_sacra("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-catalog",
+      "since": "0.64.0",
+      "python_api": "aegean.biblical.patristic_commentaries",
+      "summary": "Offline scholarly catalogues of 5 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 55 Swete Septuagint books, and 48 Greek patristic Catenae and Origen commentary volumes.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "First1KGreek catalogue search (including LXX and patristic works) is covered by the catalog card."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_catalog"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "lxx_books("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-septuagint",
+      "since": "0.64.0",
+      "python_api": "aegean.biblical.load_lxx",
+      "summary": "Swete Septuagint (LXX) passage reader and Greek concordance search across all 55 books (fetched lxx-corpus asset + bundled offline Genesis 1 and Psalm 22 LXX sample).",
+      "surfaces": {
+        "demo": {
+          "status": "covered",
+          "where": "biblical_lxx"
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_lxx"
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "walkthrough-nt-koine.ipynb",
+            "marker": "load_lxx("
+          }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
     }
   ]
 }

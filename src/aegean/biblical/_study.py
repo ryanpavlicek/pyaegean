@@ -10,7 +10,6 @@ from typing import Any
 from ._catalogs import (
     _normalize_commentary_book,
     patristic_commentaries,
-    resolve_lxx_book,
 )
 from ._editions import load_nt
 from ._strongs import (
@@ -314,23 +313,6 @@ def word_study(
         by_surface=dict(surface_counts.most_common()),
         occurrences=tuple(hits),
     )
-
-
-def load_lxx(
-    book: str,
-    ref: str | None = None,
-    *,
-    force: bool = False,
-) -> Any:
-    """Load a Septuagint (LXX) book by friendly name (e.g. ``'Gen'``, ``'Ps'``, ``'Isa'``, ``'Wis'``).
-
-    Resolves the book against all 55 Swete Septuagint texts (``tlg0527.*``) in
-    the First1KGreek work catalogue and loads it via :func:`aegean.greek.load_work`.
-    """
-    spec = resolve_lxx_book(book)
-    from ..scripts.greek.perseus import load_work
-
-    return load_work(spec.work_id, ref=ref, source="first1k", force=force)
 
 
 def load_commentary(

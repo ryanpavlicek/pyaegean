@@ -553,6 +553,10 @@ def test_demo_works_without_sqlite3() -> None:
         "assert translate.grounding_for(\"τὸ δ' ἐφ' ἡμῖν ἐστι\", 'greek')\n"
         "from aegean.analysis import find_morphological_clusters\n"
         "assert find_morphological_clusters(c.word_frequencies())\n"
+        "from aegean import biblical as bib\n"
+        "assert bib.convert_psalm(23)['lxx'] == [22]\n"
+        "assert bib.expand_nomina_sacra('θς')[1]\n"
+        "assert bib.search_lxx('φῶς', offline=True)\n"
         "print('OK')\n"
     )
     r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
@@ -624,6 +628,27 @@ def test_demo_lineara_clusters() -> None:
     assert "EXPLORATORY" in r["note"]
 
 
+def test_demo_biblical_cards() -> None:
+    demo = _load_demo()
+    ws = json.loads(demo.biblical_word_study("G3056"))
+    assert ws["lemma"] == "λόγος" and ws["total_occurrences"] >= 4
+    assert "error" in json.loads(demo.biblical_word_study("   "))
+
+    ps = json.loads(demo.biblical_psalm("23", "mt"))
+    assert ps["mt"] == [23] and ps["lxx"] == [22]
+    assert "error" in json.loads(demo.biblical_psalm("abc", "mt"))
+
+    ns = json.loads(demo.biblical_nomina_sacra("εν αρχη ην ο λογος προς τον θν"))
+    assert "Θεόν" in ns["expanded"] and ns["count"] == 1
+    assert "error" in json.loads(demo.biblical_nomina_sacra(""))
+
+    lxx_r = json.loads(demo.biblical_lxx("Gen 1.1-3"))
+    assert lxx_r["mode"] == "read" and len(lxx_r["verses"]) == 3
+    lxx_s = json.loads(demo.biblical_lxx("φῶς"))
+    assert lxx_s["mode"] == "search" and len(lxx_s["verses"]) >= 3
+    assert "error" in json.loads(demo.biblical_lxx(""))
+
+
 def test_demo_html_wiring() -> None:
     html = (_DEMO_DIR / "index.html").read_text(encoding="utf-8")
     assert 'fetch("demo.py")' in html                 # loads the tested Python module
@@ -640,5 +665,6 @@ def test_demo_html_wiring() -> None:
                  "cyprominoan_doc", "geo_word", "cite_bundled", "export_epidoc", "explain",
                  "diagnose_corpus", "apparatus", "linearb_dossiers", "seriate_site", "allographs",
                  "segment_greek", "koine_fold", "nt_concordance", "grounding_preview",
-                 "review_preview", "lineara_clusters"):
+                 "review_preview", "lineara_clusters",
+                 "biblical_word_study", "biblical_psalm", "biblical_nomina_sacra", "biblical_lxx"):
         assert hasattr(demo, name) and f'"{name}"' in html

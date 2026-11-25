@@ -335,6 +335,17 @@ Early Greek New Testament Manuscript Witnesses — nt-witnesses (fetched on dema
   compare_witnesses(). Never bundled in the Apache-2.0 wheel. Attribute CNTR / Alan Bunning
   in academic work.
 
+Septuagint (LXX) — Swete Greek Old Testament (Genesis 1:1-5 and LXX Psalm 22:1-6 sample in code; full 55-book lxx-corpus fetched on demand, NOT bundled)
+  Henry Barclay Swete, The Old Testament in Greek according to the Septuagint (Cambridge
+  University Press, 1887-1894; Greek base text Public Domain). The full 55-book, 29,248-verse
+  TEI XML digitization from the Open Greek and Latin / First1KGreek Project
+  (https://github.com/OpenGreekAndLatin/First1KGreek, CC BY-SA 4.0) is hosted as the
+  `lxx-corpus` release asset (built by scripts/build_lxx_corpus.py), redistributed under the
+  same CC BY-SA 4.0 ShareAlike terms, and fetched on demand via aegean.biblical.load_lxx() /
+  search_lxx(); it is never bundled in the Apache-2.0 wheel. The eleven-verse offline sample
+  (Genesis 1:1-5 and LXX Psalm 22:1-6) in src/aegean/biblical/_lxx.py is public-domain text
+  from Swete (1887-1894). Attribute OpenGreekAndLatin / First1KGreek when using `lxx-corpus`.
+
 Greek development source archives (repository-only under training/sources/greek-development-v1/; NOT bundled in wheels or sdists)
   Digital Hill treebank sample (tragedy-diagnostic/):
     Euripides, Suppliants 447-449, annotated by Marcel Mernitz, from DigitalHill/treebank-data

@@ -2096,7 +2096,7 @@ aegean data list        # downloaded again, with its real on-disk size:
 `aegean data store` shows the same thing from the disk's point of view: the
 store's location and a name/MB table of everything in it.
 
-`aegean data list` shows the full live registry (currently 31 entries), with a **downloaded** column giving
+`aegean data list` shows the full live registry (currently 32 entries), with a **downloaded** column giving
 each present dataset's actual on-disk size. The fetchable datasets (all
 downloaded on demand, never bundled):
 
@@ -2118,6 +2118,10 @@ benchmark commands.
 | `damos-corpus` | DAMOS Linear B corpus (~5,900 tablets): `aegean.load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset (802 docs): `aegean.load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek New Testament (Nestle 1904; ~137,800 tokens): `aegean.load('nt')` | CC0-1.0 |
+| `strongs-greek` | Extended Strong's Greek Lexicon (11,142 entries + roots): `biblical.use_strongs()` | CC BY-SA 4.0 |
+| `nt-editions` | Four Greek NT editions (`sblgnt`, `srgnt`, `byz`, `tr`): `biblical.compare_editions()` | CC BY 4.0 / PD |
+| `nt-witnesses` | Thirteen 2nd–5th c. CE Greek NT manuscripts: `biblical.compare_witnesses()` | CC BY-SA 4.0 |
+| `lxx-corpus` | Swete Septuagint (LXX; 55 books / 29,248 verses): `biblical.load_lxx()` | CC BY-SA 4.0 |
 | `isicily-corpus` | I.Sicily Greek inscriptions (2,855 texts): `aegean.load('isicily')` | CC BY 4.0 |
 | `iip-corpus` | IIP Greek inscriptions of Israel/Palestine (2,113 texts): `aegean.load('iip')` | CC BY-NC 4.0 |
 | `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea (1,194 texts): `aegean.load('iospe')` | CC BY 4.0 |
@@ -2544,7 +2548,7 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers seventeen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+It offers twenty-three read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
 (accounting reconciliation), `query_corpus` (the compound query engine),
 `cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
@@ -2554,7 +2558,9 @@ store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
 work's text by catalogue id; the first use fetches it into the local data store,
 cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
 evidence class in plain language), `corpus_diagnose` (the corpus health report),
-and `koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+and `koine_gloss` (the bundled Dodson NT lexicon). Biblical & Koine: `biblical_strongs`,
+`biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`,
+and `biblical_lxx`. Corpora and works are addressed
 by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 
@@ -2574,7 +2580,7 @@ aegean info linera
 # aegean: unknown corpus 'linera' — did you mean 'lineara' or 'linearb'? expected a registered id (cypriot, cyprominoan, damos, ddbdp, edh, greek, igcyr, iip, iospe, isicily, lineara, linearb, nt, sigla), a Greek work id like tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin
 
 aegean data fetch grc-jiont
-# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 31)
+# aegean: unknown dataset 'grc-jiont' — did you mean 'grc-joint'? (`aegean data list` shows all 32)
 ```
 
 The fix is in the message: take the suggestion, or list the valid names

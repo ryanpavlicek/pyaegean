@@ -160,6 +160,30 @@ def expand_nomen_sacrum(token: str) -> str | None:
     return NOMINA_SACRA.get(clean)
 
 
+_TRAIL_PUNCT_RE = re.compile(r"^([^.,;·:]+)([.,;·:]*)$")
+
+
+def expand_nomina_sacra(text: str) -> tuple[str, list[str]]:
+    """Expand *nomina sacra* contractions across a Greek manuscript phrase or verse.
+
+    Handles both CNTR ``=``-prefixed tokens (``=θσ``) and plain unaccented/lunate
+    contractions (``θς``, ``θν``, ``ις``, ``χς``, ``κυ``, ``πνα``). Returns
+    ``(expanded_text, notes)`` where each note records ``"<abbrev> → <expanded>"``.
+    """
+    words: list[str] = []
+    notes: list[str] = []
+    for raw_tok in text.split():
+        m = _TRAIL_PUNCT_RE.match(raw_tok)
+        core, punct = (m.group(1), m.group(2)) if m else (raw_tok, "")
+        rep = expand_nomen_sacrum(core)
+        if rep is not None:
+            words.append(rep + punct)
+            notes.append(f"{core} → {rep}")
+        else:
+            words.append(raw_tok)
+    return unicodedata.normalize("NFC", " ".join(words)), notes
+
+
 def _clean_fragment(frag: str) -> str:
     frag = _PAGE_BREAK_RE.sub("", frag)
     frag = frag.replace("|", "").replace("/", "").replace("_", " ")

@@ -390,10 +390,10 @@ Beyond the single Nestle 1904 corpus, `aegean.biblical` (CLI `aegean bible …`,
    - Preserves diplomatic CNTR MES transcriptions (original vs. corrector hands, lacunae, line breaks) and expands *nomina sacra* (`=θσ` → `Θεός`, `=ιυ` → `Ἰησοῦ`, `=πνα` → `Πνεῦμα`).
 3. **Extended Strong's Greek Lexicon & etymological root trees** (`strongs-greek`, ~1.5 MB gzip; STEPBible TBESG CC BY 4.0 + OpenScriptures Strong's CC BY-SA):
    - 11,142 entries covering NT, Septuagint (LXX), Apocrypha, and Apostolic Fathers, with recursive root chains and Hebrew equivalents. Falls back offline to the bundled Dodson lexicon (CC0).
-4. **Septuagint (LXX) & Psalm numbering**:
-   - Friendly book-name access (`Gen`, `Exod`, `Ps`, `Isa`, `Wis`, `Sir`, `1Macc`, `Dan-OG`/`Dan-Th`, …) to all **55 Swete Septuagint books** (`tlg0527.*`) in First1KGreek, plus exact LXX ↔ Masoretic Psalm numbering conversion (`psalm_mt_to_lxx(23) == (22,)`).
-5. **Greek Patristic Commentaries & Word Studies**:
-   - Friendly book-name access to all **30 Greek NT *Catenae* volumes** (`tlg4102.*`) and **18 Origen biblical commentaries** (`tlg2042.*`), plus unified word-study reports (`word_study()`) and NT concordance search (`search_bible()`).
+4. **Septuagint (LXX) corpus, concordance & Psalm numbering** (`lxx-corpus`, ~1.7 MB gzip; Swete 1887–1894 Public Domain base text via First1KGreek CC BY-SA 4.0):
+   - Fast verse-indexed access (`load_lxx()`) and Greek concordance search (`search_lxx()`) across all **55 Swete Septuagint books** (29,248 verses, including LXX-plus sub-verses and prologues), with an always-offline Swete sample (`Gen 1:1–5` and LXX `Ps 22:1–6` [MT Psalm 23]), plus bidirectional LXX ↔ Masoretic Psalm conversion (`convert_psalm(23)` / `psalm_mt_to_lxx(23) == (22,)`).
+5. **Greek Patristic Commentaries, *Nomina Sacra* & Word Studies**:
+   - Friendly book-name reading and Greek search (`commentary_excerpt()`, `load_commentary()`) over all **30 Greek NT *Catenae* volumes** (`tlg4102.*`) and **18 Origen biblical commentaries** (`tlg2042.*`), sentence-level *nomina sacra* expansion (`expand_nomina_sacra()`), unified word-study reports (`word_study()`), and NT concordance search (`search_bible()`).
 
 ```python
 import aegean
@@ -405,36 +405,40 @@ cmp = bib.compare_editions("John", "1.18")
 for v in cmp.verses[0].variants:
     print(v.edition, v.kind, v.base_words, "->", v.edition_words)
 
-# Inspect 2nd-5th c. CE manuscript readings (with nomina sacra expanded)
+# Inspect 2nd-5th c. CE manuscript readings & expand nomina sacra
 for w in bib.compare_witnesses("John", "1.18")[0].witnesses:
     print(f"{w.siglum} ({w.alias}, {w.century}): {w.reading.readable}")
+print(bib.expand_nomina_sacra("εν αρχη ην ο λογος προς τον θν")[0])
 
 # Extended Strong's lookup, root tree, and unified word study
 bib.use_strongs()
 study = bib.word_study("G3056")        # λόγος: gloss, roots, NT distribution, morphology
 print(study.total_occurrences, study.by_morph)
 
-# Septuagint (LXX) & Patristic Catenae
-bib.psalm_mt_to_lxx(23)                # (22,)
-lxx_gen = bib.load_lxx("Gen", ref="1")
-catena_john = bib.load_commentary("John")
+# Septuagint (LXX) reading, concordance search, Psalm conversion & Patristic Catenae
+bib.convert_psalm(23)                  # {'system': 'mt', 'input': 23, 'mt': [23], 'lxx': [22], ...}
+lxx_gen = bib.load_lxx("Gen", ref="1.1-5", offline=True)
+lxx_hits = bib.search_lxx("φῶς", offline=True)
+catena_excerpts = bib.commentary_excerpt("John", query="λόγος", limit=3)
 ```
 
 From the command line (or inside `aegean repl` and the TUI `:` console):
 
 ```bash
 aegean bible read John 1.1 --interlinear
+aegean bible read Gen 1.1-5 --lxx --offline
 aegean bible compare John 1.18
 aegean bible witnesses John 18.37 --sigla P52,01,03
 aegean bible strongs G3056 --roots
 aegean bible word-study ἀγάπη
 aegean bible search V-AAI --by morph --book John
+aegean bible search φῶς --lxx --offline
 aegean bible books lxx
 aegean bible psalm 23 --from mt
-aegean bible commentary John
+aegean bible commentary John --search λόγος --limit 3
 ```
 
-In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study screen** (Interlinear Reader, 5-Edition Comparison, Early Manuscripts, Strong's Word Study, and LXX & Catenae).
+In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study screen** (Interlinear Reader, 5-Edition Comparison, Early Manuscripts, Strong's Word Study, and inline LXX reader/search & Catenae). The same offline Koine & Septuagint tools are exposed on the [MCP server](MCP) (`biblical_strongs`, `biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`) and in the browser demo.
 
 ---
 
@@ -445,7 +449,7 @@ In `aegean tui`, press **`b`** to open the dedicated **Biblical Greek study scre
 - **One `Document` per chapter.** A whole-book load is a corpus of chapters; a `ref`
   range trims the verses within the affected chapters.
 - **A `ref` needs a book.** You cannot address a verse across all 27 books at once.
-- **Septuagint (LXX) and patristic commentaries** load from First1KGreek (`aegean.biblical.load_lxx()` / `load_commentary()`) rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them).
+- **Septuagint (LXX) and patristic commentaries** load from the `lxx-corpus` Swete Septuagint bundle (`aegean.biblical.load_lxx()`) and First1KGreek (`load_commentary()` / `commentary_excerpt()`) rather than the Nestle 1904 NT asset, so they do not carry Nestle 1904 gold Robinson tags (use `aegean.greek.pipeline()` or `annotate_corpus()` to analyze them).
 
 ---
 

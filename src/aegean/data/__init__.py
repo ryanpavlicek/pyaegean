@@ -670,6 +670,24 @@ _REMOTE: dict[str, DataSpec] = {
         extract=False,
         on_disk=("nt-witnesses.json.gz",),
     ),
+    "lxx-corpus": DataSpec(
+        name="lxx-corpus",
+        url=(
+            "https://github.com/ryanpavlicek/pyaegean/releases/download/"
+            "lxx-corpus-v1/lxx-corpus.json.gz"
+        ),
+        sha256="23d9398e70c56bd0fa660cfb2591e09bb29dfcaf5274f271649c0c39902470ee",
+        license=(
+            "CC BY-SA 4.0 (Open Greek and Latin / First1KGreek TEI digitization; "
+            "Henry Barclay Swete 1887–1894 Public Domain Greek base text); fetched, never bundled"
+        ),
+        note=(
+            "Swete Septuagint (LXX) corpus (~1.65 MB gzip): all 55 Greek Septuagint books "
+            "(29,248 verses, NFC-normalized). Used by aegean.biblical.load_lxx() / search_lxx()."
+        ),
+        extract=False,
+        on_disk=("lxx-corpus.json.gz",),
+    ),
     # The prebuilt Linear A Research Workbench static web app (the browser UI), hosted as a
     # release asset on the workbench repo and served locally by `aegean workbench`. The app
     # build is Apache-2.0; the Linear A corpus data baked into it is GORILA-derived (via

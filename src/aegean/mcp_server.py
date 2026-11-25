@@ -57,6 +57,11 @@ __all__ = [
     "greek_gloss",
     "koine_gloss",
     "corpus_diagnose",
+    "biblical_strongs",
+    "biblical_word_study",
+    "biblical_psalm",
+    "biblical_nomina_sacra",
+    "biblical_catalog",
 ]
 
 
@@ -876,6 +881,160 @@ def koine_gloss(word: str) -> dict[str, Any]:
     }
 
 
+def biblical_strongs(
+    query: str,
+    roots: bool = False,
+    search: bool = False,
+    limit: int = 15,
+) -> dict[str, Any]:
+    """Look up or search Strong's & Extended Strong's Greek Lexicon entries (offline Dodson
+    or locally cached 11,142-entry Extended Strong's; never fetches over the network)."""
+    from . import biblical as bib
+
+    q = query.strip()
+    if not q:
+        return {"error": "query must be a non-empty Strong's ID (e.g. 'G3056'), Greek lemma, or gloss"}
+    try:
+        if search:
+            hits = bib.search_strongs(q, limit=limit, allow_fetch=False)
+            return {
+                "query": q,
+                "count": len(hits),
+                "extended_loaded": bib.strongs_loaded(),
+                "matches": [h.to_dict() for h in hits],
+            }
+        entry = bib.strongs_entry(q, allow_fetch=False)
+        if entry is None:
+            return {
+                "error": f"no Strong's Greek entry matched {q!r}; "
+                "try search=True or a canonical Strong's ID such as 'G3056'"
+            }
+        out = entry.to_dict()
+        if roots:
+            out["root_tree"] = bib.strongs_roots(entry.strongs, allow_fetch=False)
+        return out
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+def biblical_word_study(
+    query: str,
+    book: str | None = None,
+    limit: int = 15,
+) -> dict[str, Any]:
+    """Unified Koine Greek word study (Strong's entry, roots, NT distribution, morphology,
+    and verse concordance) over the cached full NT or bundled offline Nestle 1904 sample."""
+    from . import biblical as bib
+
+    q = query.strip()
+    if not q:
+        return {"error": "query must be a non-empty Strong's ID (e.g. 'G3056') or Greek lemma"}
+    try:
+        ws = bib.word_study(q, book=book, limit=limit, offline=True)
+        return ws.to_dict()
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+def biblical_psalm(psalm: int, system: str = "mt") -> dict[str, Any]:
+    """Convert a Psalm number between Masoretic (Hebrew/English, 'mt') and Septuagint ('lxx')
+    numbering, including the First1KGreek Swete LXX work ID (tlg0527.tlg027)."""
+    from . import biblical as bib
+
+    try:
+        return bib.convert_psalm(psalm, system=system)
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+def biblical_nomina_sacra(text: str) -> dict[str, Any]:
+    """Expand early Greek NT manuscript nomina sacra contractions (e.g. θς → θεός, ις → ἰησοῦς,
+    χς → χριστός, πνα → πνεῦμα) with an explicit list of expanded tokens."""
+    from . import biblical as bib
+
+    if not text.strip():
+        return {"error": "text must be non-empty Greek manuscript text (e.g. 'εν αρχη ην ο λογος προς τον θν')"}
+    expanded, notes = bib.expand_nomina_sacra(text)
+    return {
+        "input": text,
+        "expanded": expanded,
+        "expansions": notes,
+        "count": len(notes),
+    }
+
+
+def biblical_catalog(
+    kind: str = "editions",
+    book: str | None = None,
+    section: str | None = None,
+) -> dict[str, Any]:
+    """Offline catalogue of Biblical & Koine Greek resources: 'editions' (5 Greek NT editions),
+    'witnesses' (13 2nd–5th c. CE manuscripts), 'lxx' (55 Septuagint books), or
+    'commentaries' (48 Greek patristic Catenae & Origen volumes)."""
+    from . import biblical as bib
+
+    k = kind.strip().lower()
+    valid = ("editions", "witnesses", "lxx", "commentaries")
+    if k not in valid:
+        return {
+            "error": f"unknown biblical catalog kind {kind!r}{_did_you_mean(k, valid)}; "
+            f"choose from {', '.join(valid)}"
+        }
+    try:
+        if k == "editions":
+            rows = bib.nt_editions()
+        elif k == "witnesses":
+            rows = bib.witnesses()
+        elif k == "lxx":
+            rows = bib.lxx_books(section=section)
+        else:
+            rows = bib.patristic_commentaries(book=book)
+        return {"kind": k, "count": len(rows), "items": rows}
+    except ValueError as exc:
+        return {"error": str(exc)}
+
+
+def biblical_lxx(
+    book: str = "Gen",
+    ref: str | None = "1.1-5",
+    query: str | None = None,
+    limit: int = 15,
+) -> dict[str, Any]:
+    """Read or search the Greek Septuagint (Swete LXX) offline (uses cached 55-book
+    lxx-corpus when present, or the bundled Genesis 1 + Psalm 22 LXX sample)."""
+    from . import biblical as bib
+    from .data import DataNotAvailableError
+
+    try:
+        if query is not None and query.strip():
+            hits = bib.search_lxx(query.strip(), book=book or None, limit=limit, offline=True)
+            return {
+                "mode": "search",
+                "query": query.strip(),
+                "full_corpus_cached": bib.lxx_loaded(),
+                "count": len(hits),
+                "matches": [h.to_dict() for h in hits],
+            }
+        corp = bib.load_lxx(book, ref=ref, offline=True)
+        verses: list[dict[str, Any]] = []
+        for doc in corp:
+            by_ref: dict[str, list[str]] = {}
+            for tok in doc.tokens:
+                rkey = str(tok.annotations.get("ref", f"{doc.id}.{tok.line_no or 0}"))
+                by_ref.setdefault(rkey, []).append(tok.text)
+            for rkey, words in by_ref.items():
+                verses.append({"ref": rkey, "text": " ".join(words)})
+        return {
+            "mode": "read",
+            "book": book,
+            "ref": ref,
+            "full_corpus_cached": bib.lxx_loaded(),
+            "verses": verses,
+        }
+    except (ValueError, DataNotAvailableError) as exc:
+        return {"error": str(exc)}
+
+
 # The tools registered with the server — also the unit-test surface.
 TOOLS = (
     list_corpora,
@@ -895,6 +1054,12 @@ TOOLS = (
     greek_gloss,
     koine_gloss,
     corpus_diagnose,
+    biblical_strongs,
+    biblical_word_study,
+    biblical_psalm,
+    biblical_nomina_sacra,
+    biblical_catalog,
+    biblical_lxx,
 )
 
 

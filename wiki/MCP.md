@@ -7,7 +7,7 @@ or any other MCP client) can browse the corpora, run the compound query engine,
 reconcile Linear A accounts, scan Greek verse, gloss words, and load real Greek
 works, all **without writing a line of Python**.
 
-The server is deliberately narrow. It offers seventeen read-only tools over the
+The server is deliberately narrow. It offers twenty-three read-only tools over the
 same code paths the [CLI](CLI) and the terminal UI use, so the three surfaces
 cannot disagree. It never accepts a filesystem path and never mutates a corpus,
 and every miss comes back as a structured error rather than a raw traceback.
@@ -79,15 +79,15 @@ from the command line instead:
 claude mcp add pyaegean -- aegean-mcp
 ```
 
-Once connected, the client lists the seventeen tools below and can call them by
+Once connected, the client lists the twenty-three tools below and can call them by
 name.
 
 ## The tools
 
-Every tool returns JSON. The two groups mirror the toolkit: corpus and
+Every tool returns JSON. The three groups mirror the toolkit: corpus and
 accounting tools that work across all four Aegean scripts and the Greek corpora,
-and Greek-language tools for the pipeline, scansion, catalogue, works, and
-dictionaries.
+Greek-language tools for the pipeline, scansion, catalogue, works, and
+dictionaries, and Biblical & Koine Greek specialist tools.
 
 ### Corpora, query, and provenance
 
@@ -132,6 +132,17 @@ same engine and fields are documented on [Analysis](Analysis).
 | `greek_gloss` | `word`, `dictionary="lsj"`, `full=False` | Gloss a Greek word from a registry dictionary (`lsj`, `middle-liddell`, `cunliffe`, `autenrieth`, `abbott-smith`, `dodson`). |
 | `koine_gloss` | `word` | Koine (NT) gloss for a Greek word via the bundled Dodson lexicon (offline, CC0). |
 | `greek_explain` | `text` | Each token's lemma evidence class rendered in plain language (the same pipeline records `greek_pipeline` maps, rendered instead of tabulated; deliberately class-based, no confidence numbers). |
+
+### Biblical & Koine Greek
+
+| Tool | Arguments | Purpose |
+| --- | --- | --- |
+| `biblical_strongs` | `query`, `roots=False`, `search=False`, `limit=15` | Look up or search Strong's & Extended Strong's Greek Lexicon entries (offline Dodson fallback or cached 11,142-entry `strongs-greek`, with optional recursive etymological root tree). |
+| `biblical_word_study` | `query`, `book=None`, `limit=15` | Unified Koine Greek word study (Strong's entry, roots, NT distribution, Robinson morphology, and verse concordance over cached `nt-corpus` or bundled sample). |
+| `biblical_psalm` | `psalm`, `system="mt"` | Convert Psalm numbers between Masoretic (Hebrew/English, `mt`, 1–150) and Septuagint (`lxx`, 1–151) numbering. |
+| `biblical_nomina_sacra` | `text` | Expand early Greek NT manuscript *nomina sacra* contractions (`θς` → `Θεός`, `ις` → `Ἰησοῦς`, `χς` → `Χριστός`, `πνα` → `Πνεῦμα`) with explicit expansion notes. |
+| `biblical_catalog` | `kind="editions"`, `book=None`, `section=None` | Offline catalogues of `editions` (5 Greek NT editions), `witnesses` (13 2nd–5th c. CE manuscripts), `lxx` (55 Septuagint books), and `commentaries` (48 patristic *Catenae* & Origen volumes). |
+| `biblical_lxx` | `book="Gen"`, `ref="1.1-5"`, `query=None`, `limit=15` | Read or search the Swete Greek Septuagint offline (uses cached 55-book `lxx-corpus` when present, or the bundled Genesis 1 + LXX Psalm 22 sample). |
 
 `greek_pipeline` and `balance_accounts` return the shared row mappings from
 `aegean._view`, the same rows the `aegean greek pipeline` and `aegean balance`

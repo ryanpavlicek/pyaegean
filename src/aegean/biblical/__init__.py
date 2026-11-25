@@ -38,6 +38,7 @@ from ..scripts.greek.nt import nt_books
 from ._catalogs import (
     CommentaryWork,
     LxxBook,
+    convert_psalm,
     lxx_books,
     patristic_commentaries,
     psalm_lxx_to_mt,
@@ -54,10 +55,19 @@ from ._editions import (
     load_nt,
     nt_editions,
 )
+from ._lxx import (
+    CommentaryExcerpt,
+    LxxHit,
+    commentary_excerpt,
+    load_lxx,
+    lxx_loaded,
+    search_lxx,
+)
 from ._mes import (
     NOMINA_SACRA,
     WitnessReading,
     expand_nomen_sacrum,
+    expand_nomina_sacra,
     parse_mes,
 )
 from ._strongs import (
@@ -73,7 +83,6 @@ from ._study import (
     ConcordanceHit,
     WordStudy,
     load_commentary,
-    load_lxx,
     search_bible,
     word_study,
 )
@@ -95,6 +104,7 @@ __all__ = [
     "patristic_commentaries",
     "psalm_lxx_to_mt",
     "psalm_mt_to_lxx",
+    "convert_psalm",
     "resolve_edition",
     "resolve_lxx_book",
     "resolve_witness",
@@ -114,6 +124,7 @@ __all__ = [
     "compare_witnesses",
     "parse_mes",
     "expand_nomen_sacrum",
+    "expand_nomina_sacra",
     # Strong's & Extended Strong's lexicon
     "StrongsEntry",
     "normalize_strongs_id",
@@ -125,8 +136,13 @@ __all__ = [
     # Word study, concordance, LXX, & commentaries
     "ConcordanceHit",
     "WordStudy",
+    "LxxHit",
+    "CommentaryExcerpt",
     "word_study",
     "search_bible",
     "load_lxx",
+    "lxx_loaded",
+    "search_lxx",
     "load_commentary",
+    "commentary_excerpt",
 ]

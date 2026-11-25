@@ -837,7 +837,7 @@ expiry. A changed pin or `--force` causes a new fetch; `remove` deletes the chos
 | `versions` | Reproducibility manifest: version + sha256 | `--json` | `aegean data versions --json > data-versions.json` |
 | `store` | Store location + current contents | `--json` | `aegean data store` |
 
-`aegean data list` is the authoritative live registry (currently 31 entries).
+`aegean data list` is the authoritative live registry (currently 32 entries).
 The table below lists the common runtime and corpus assets; the live output also
 includes evaluation folds and supporting indexes used by benchmark commands.
 
@@ -855,6 +855,10 @@ includes evaluation folds and supporting indexes used by benchmark commands.
 | `damos-corpus` | DAMOS Linear B corpus, ~5,900 tablets: `load('damos')` | CC BY-NC-SA 4.0 |
 | `sigla-corpus` | SigLA Linear A dataset, 802 docs: `load('sigla')` | CC BY-NC-SA 4.0 |
 | `nt-corpus` | Greek NT (Nestle 1904), 260 chapters / ~137,800 tokens: `load('nt')` | CC0-1.0 |
+| `strongs-greek` | Extended Strong's Greek Lexicon (11,142 entries + roots): `biblical.use_strongs()` | CC BY-SA 4.0 |
+| `nt-editions` | Four Greek NT editions (`sblgnt`, `srgnt`, `byz`, `tr`): `biblical.compare_editions()` | CC BY 4.0 / PD |
+| `nt-witnesses` | Thirteen 2nd–5th c. CE Greek NT manuscripts: `biblical.compare_witnesses()` | CC BY-SA 4.0 |
+| `lxx-corpus` | Swete Septuagint (LXX; 55 books / 29,248 verses): `biblical.load_lxx()` | CC BY-SA 4.0 |
 | `isicily-corpus` | I.Sicily Greek inscriptions of Sicily, 2,855 texts: `load('isicily')` | CC BY 4.0 |
 | `iip-corpus` | IIP Greek inscriptions of Israel/Palestine, 2,113 texts: `load('iip')` | CC BY-NC 4.0 |
 | `iospe-corpus` | IOSPE Greek inscriptions of the Northern Black Sea, 1,194 texts: `load('iospe')` | CC BY 4.0 |
@@ -1034,7 +1038,7 @@ pip install "pyaegean[mcp]"
 aegean-mcp                # serve the read/analysis tools over stdio
 ```
 
-It offers seventeen read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
+It offers twenty-three read/analysis tools. Corpora: `list_corpora`, `corpus_info`,
 `show_document`, `search_signs` (wildcard sign patterns), `balance_accounts`
 (accounting reconciliation), `query_corpus` (the compound query engine),
 `cite_corpus` (plain/BibTeX/APA, exact subsets included), `geo_sites` (find-site
@@ -1044,7 +1048,9 @@ store, read-only). Greek: `greek_pipeline`, `greek_scan` (verse scansion),
 work's text by catalogue id; the first use fetches it into the local data store,
 cached and offline after), `greek_gloss` (the registry dictionaries), `greek_explain` (each token's lemma
 evidence class in plain language), `corpus_diagnose` (the corpus health report),
-and `koine_gloss` (the bundled Dodson NT lexicon). Corpora and works are addressed
+and `koine_gloss` (the bundled Dodson NT lexicon). Biblical & Koine: `biblical_strongs`,
+`biblical_word_study`, `biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`,
+and `biblical_lxx`. Corpora and works are addressed
 by registry name or catalogue work id only (never a filesystem path), and a
 domain miss returns a structured error with a did-you-mean hint.
 
