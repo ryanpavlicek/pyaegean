@@ -5,16 +5,7 @@ Screen {
     background: $surface;
 }
 
-/* Home: the landing view (banner, corpus overview, key legend). */
-#home-banner {
-    dock: top;
-    width: 100%;
-    padding: 1 2;
-    background: $warning-darken-2;
-    color: $text;
-    text-style: bold;
-}
-
+/* Home: corpus overview and key legend. */
 #home-body {
     padding: 1 2;
 }

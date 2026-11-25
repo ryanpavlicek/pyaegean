@@ -10,11 +10,8 @@ and an optional multi-provider AI layer.
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.
 
-Analytical and generative output on undeciphered Linear A and Cypro-Minoan is
-**exploratory**: it can suggest leads for expert review, never ground truth. The
-[Limitations](Limitations), [Benchmarks](Benchmarks), and
-[Data & Provenance](Data-and-Provenance) pages state what is measured, what is
-not known, and where every dataset comes from.
+See [Benchmarks](Benchmarks), [Data & Provenance](Data-and-Provenance), and
+[Limitations](Limitations) for evaluation figures, dataset sources, and scope.
 
 ## Choose where to start
 

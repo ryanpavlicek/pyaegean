@@ -273,7 +273,7 @@ indexes on demand — LSJ, Middle Liddell, Cunliffe (Homeric), Autenrieth
 (Homeric), and Abbott-Smith (NT) — through the dictionary registry.
 
 ```bash
-aegean greek gloss-nt λόγος
+aegean bible strongs λόγος
 # a word, speech, divine utterance, analogy
 ```
 

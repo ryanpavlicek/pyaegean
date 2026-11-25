@@ -1202,7 +1202,7 @@ print(len(john.documents[0].tokens), "tokens")     # 61
 
 `--level token` works for `csv` and `parquet`; other formats are `json` (lossless),
 `epidoc` (TEI), and `sqlite`. The NT text is **CC0** (Nestle 1904 base + CC0
-morphology/lemmas/Strong's). `aegean greek nt-books` lists all 27 books and the
+morphology/lemmas/Strong's). `aegean bible books nt` lists all 27 books and the
 names `load_nt` accepts (e.g. `matthew`/`matt`/`mt`). See [Greek NLP](Greek-NLP).
 
 ## 18 · Gloss Koine vocabulary offline
@@ -1219,7 +1219,7 @@ print(greek.gloss_nt("ἀρχή"))    # ruler, beginning
 ```
 
 ```bash
-aegean greek gloss-nt λόγος       # a word, speech, divine utterance, analogy
+aegean bible strongs λόγος        # Strong’s / Dodson Koine gloss
 ```
 
 **More dictionaries.** Dodson and LSJ are two backends in a **lexicon registry**.

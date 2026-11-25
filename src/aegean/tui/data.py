@@ -20,8 +20,7 @@ Design rules this file obeys:
   surfaces cannot drift.
 
 Undeciphered-script honesty: Linear A (both the bundled ``lineara`` corpus and
-the SigLA dataset) and Cypro-Minoan are undeciphered, so any structural analysis
-the adapter returns for them is exploratory, not a reading. :func:`is_undeciphered`
+the SigLA dataset) and Cypro-Minoan are undeciphered. :func:`is_undeciphered`
 flags the corpora a screen must caption that way.
 """
 
@@ -156,7 +155,7 @@ _CORPUS_ASSET: dict[str, str] = {
 def is_undeciphered(corpus_id: str) -> bool:
     """Whether ``corpus_id`` is an undeciphered corpus (Linear A, as both
     ``lineara`` and the SigLA dataset, or Cypro-Minoan), so a screen must caption
-    its analysis as exploratory, not a reading."""
+    uses conventional sign-value labels rather than Greek readings."""
     return corpus_id in UNDECIPHERED
 
 
@@ -752,14 +751,13 @@ def line_analyses(script_id: str) -> list[AnalysisOption]:
             AnalysisOption("signs", "signs (glyph + value)", True),
         ]
     if script_id in {"lineara", "sigla"}:
-        caveat = "Linear A is undeciphered — exploratory, not a reading"
         return [
-            AnalysisOption("exploratory", "transliteration (exploratory)", True, caveat),
-            AnalysisOption("signs", "signs (glyph + value)", True, caveat),
+            AnalysisOption("exploratory", "conventional values (Linear B-shared)", True),
+            AnalysisOption("signs", "signs (glyph + value)", True),
         ]
     if script_id == "cyprominoan":
         return [
-            AnalysisOption("signs", "signs (glyph only)", True, "Cypro-Minoan is undeciphered"),
+            AnalysisOption("signs", "signs (glyph only)", True),
         ]
     return [AnalysisOption("signs", "signs", True)]
 
@@ -1166,7 +1164,7 @@ def _aegean_signs(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResul
             value = (sign.phonetic if sign and sign.phonetic else "—")
             rows.append((sign.label if sign else label, glyph, value))
     note = (
-        "undeciphered — sign values are conventional, not a reading"
+        "Conventional Linear B-derived phonetic values."
         if script_id in UNDECIPHERED
         else ""
     )
@@ -1177,7 +1175,7 @@ def _aegean_signs(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResul
 
 
 def _aegean_bridge(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResult:
-    """The Greek reading + gloss for each word (Linear B / Cypriot, deciphered)."""
+    """Greek reading and gloss for each word (Linear B / Cypriot)."""
     import importlib
 
     mod = importlib.import_module(f"..scripts.{script_id}", __package__)
@@ -1197,16 +1195,14 @@ def _aegean_bridge(script_id: str, token_texts: tuple[str, ...]) -> AnalysisResu
 
 
 def _lineara_exploratory(token_texts: tuple[str, ...]) -> AnalysisResult:
-    """A hypothetical (Linear-B-shared) transliteration for each Linear A word, plainly
-    labelled exploratory: Linear A is undeciphered, so this is not a reading."""
+    """Linear B-shared conventional phonetic values for Linear A words."""
     from ..scripts.lineara import word_to_phonetic
 
     rows = tuple((word, word_to_phonetic(word)) for word in token_texts)
     return AnalysisResult(
-        ok=True, title="transliteration (exploratory)",
+        ok=True, title="conventional values (Linear B-shared)",
         columns=("word", "conventional value"), rows=rows,
-        note="Linear A is undeciphered — these are hypothetical, shared-with-Linear-B "
-        "values, not an established reading",
+        note="Conventional Linear B-shared phonetic values.",
     )
 
 

@@ -15,13 +15,11 @@ in one small, dependency-light library.
 [scholarly workflow](scholarly-workflow.md) for source preservation, optional review,
 counting choices, and translation evidence.
 
-The core installs with zero heavy dependencies and runs offline. Claims are measured, not
-asserted: the opt-in neural pipeline is measured end-to-end on the UD Ancient Greek (Perseus)
-benchmark through the shipped package at
-**97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS** on the test fold
-([protocol and tables](benchmarks.md)). Analytical output on the *undeciphered* material
-(Linear A, Cypro-Minoan) is always labeled **exploratory**: leads for a human expert, never
-ground truth.
+The core installs with zero third-party dependencies and runs offline. The opt-in neural
+pipeline scores **97.0 UPOS / 96.0 UFeats / 94.3 lemma / 90.2 UAS / 85.7 LAS** end-to-end on
+the UD Ancient Greek (Perseus) test fold ([protocol and tables](benchmarks.md)). Structural
+and generative outputs on undeciphered scripts (Linear A, Cypro-Minoan) carry an `exploratory`
+flag.
 
 ## Quick start (60 seconds)
 

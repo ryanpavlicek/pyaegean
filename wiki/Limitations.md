@@ -242,17 +242,16 @@ print(len(greek.nt_books()))        # 27
 
 ```bash
 aegean greek works        # curated catalog with CTS ids
-aegean greek nt-books     # the 27 NT books load_nt accepts
+aegean bible books nt     # the 27 NT books load_nt accepts
 ```
 
 ---
 
 ## Measured accuracy boundaries
 
-Every accuracy claim is measured and the protocol published: which means the
-*weak* numbers are public too. Two boundaries matter most.
+Two boundaries matter most:
 
-**The zero-dependency baselines are honest floors, not the accuracy story.** They
+**The zero-dependency baselines are fast floors, not peak accuracy.** They
 exist for the zero-install path; the opt-in tiers, ending in the neural pipeline,
 are where the accuracy lives.
 

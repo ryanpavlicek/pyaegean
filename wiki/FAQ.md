@@ -290,7 +290,7 @@ books[3]
 ```
 
 ```bash
-aegean greek nt-books
+aegean bible books nt
 #      New Testament books (Nestle 1904)
 # ┌────────┬─────────────────────────────────┐
 # │ book   │ accepted names                  │
@@ -300,7 +300,7 @@ aegean greek nt-books
 # │ Rev    │ revelation, rev, rv, apocalypse │
 # │ …      │ …                               │
 # └────────┴─────────────────────────────────┘
-# Load one:  aegean greek nt John --ref 1.1-1.18
+# Read one:  aegean bible read John 1.1-18
 ```
 
 Any name or alias works as the `book` argument; `ref` mirrors `load_work`
@@ -345,7 +345,7 @@ greek.gloss_nt("λόγος")     # 'a word, speech, divine utterance, analogy'
 ```
 
 ```bash
-aegean greek gloss-nt "λόγος"
+aegean bible strongs "λόγος"
 # a word, speech, divine utterance, analogy
 ```
 
@@ -537,20 +537,17 @@ writable, and any leftover partial download from an interrupted fetch (with the
 
 ## Trust & scholarship
 
-### Is the Linear A "translation" real? Can I trust the analysis?
+### How should Linear A phonetic values be interpreted?
 
-**No, and the library is built to keep you honest about this.** Linear A is
-**undeciphered**. The phonetic values come from Linear B as a working convention,
-and every analytical or AI method is labeled **exploratory**: evidence to weigh,
-never a translation. Treat results as leads for a human expert, not answers. See
-[Limitations](Limitations).
+Linear A phonetic values are conventional values borrowed from homomorphic Linear B
+signs. Statistical, distributional, and AI outputs on Linear A are marked
+`exploratory` in their return objects. See [Limitations](Limitations).
 
-### How accurate is the AI translation/glossing?
+### How accurate is AI translation and glossing?
 
-It's a hypothesis from a language model, returned as an `ExploratoryResult` with
-provenance and an unmistakable exploratory label. Useful for ideas; never citable
-as fact. Always verify against primary scholarship. See [AI Layer](AI-Layer) and
-[Limitations](Limitations).
+LLM outputs are returned in `ExploratoryResult` with provider metadata and grounding
+provenance; verify against primary editions and lexica before citing. See
+[AI Layer](AI-Layer).
 
 ### How accurate is the Greek morphology / POS tagging?
 

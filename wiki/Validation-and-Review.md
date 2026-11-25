@@ -51,14 +51,12 @@ this rule caught the class.
 
 ### The benchmark protocol and leakage controls
 
-The Greek NLP accuracy figures are measured, not asserted. The UD-Perseus and
-UD-PROIEL test folds are scored with the official CoNLL 2018 evaluator (fetched
-sha256-pinned), over each fold's gold tokenization, with bootstrap confidence
-intervals. The Nestle 1904 New Testament is a separate out-of-domain check, scored
-against its own gold lemmas and a reconciled part of speech as plain accuracy (it
-carries no dependency trees, so no UAS/LAS and no bootstrap there). Out-of-domain
-results are always reported next to in-family ones, so the generalization gap is
-visible rather than hidden.
+The UD-Perseus and UD-PROIEL test folds are scored with the official CoNLL 2018
+evaluator (sha256-pinned), over each fold's gold tokenization, with bootstrap
+confidence intervals. The Nestle 1904 New Testament is a separate out-of-domain
+check, scored against its gold lemmas and reconciled POS as plain accuracy (it
+carries no dependency trees, so no UAS/LAS or bootstrap). Out-of-domain results are
+reported alongside in-family figures.
 
 The numbers are kept honest against leakage two ways: an exclusion manifest
 (`greek.agdt_ud_overlap()`) resolves every evaluation sentence to its training

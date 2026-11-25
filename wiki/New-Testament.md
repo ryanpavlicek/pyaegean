@@ -16,11 +16,11 @@ evidence when enabled. Other keys, such as source morphology and historical revi
 records, remain. Keep the source-annotated corpus separately when comparing
 predictions with it.
 
-This page is the reference for that corpus and the `aegean greek nt` command family.
-For the wider "load real Greek texts" story (the classical literary works, the
-`load_work` / CTS-id path) see [Greek Works and Books](Greek-Works-and-Books); for
-everything you can then run on the loaded text (syllabify, scan, tag, parse) see
-[Greek NLP](Greek-NLP).
+This page covers the Python API (`aegean.greek.bible` and `greek.load_nt`) and the
+`aegean bible` command suite (see [CLI: Biblical & Koine Greek](CLI-Bible) for the
+complete CLI reference). For classical literary works (`load_work` / CTS IDs) see
+[Greek Works and Books](Greek-Works-and-Books); for general Greek NLP (scansion,
+tagging, parsing) see [Greek NLP](Greek-NLP).
 
 ---
 
@@ -28,8 +28,9 @@ everything you can then run on the loaded text (syllabify, scan, tag, parse) see
 
 ```python
 from aegean import greek
+from aegean.greek import bible
 
-corpus = greek.load_nt("John", ref="1.1-1.3")   # John 1:1–3, offline (bundled)
+corpus = greek.load_nt("John", ref="1.1-1.3")   # John 1:1–3, offline (bundled Nestle 1904)
 doc = corpus.documents[0]
 doc.id                                # 'John 1'
 doc.meta.name                         # 'John 1'
@@ -41,118 +42,54 @@ t.annotations
 #  'upos': 'ADP', 'ref': 'John.1.1', 'gloss': 'in, on, among'}
 ```
 
-On the command line, the same read:
+On the command line:
 
 ```bash
-aegean greek nt John 1
-```
-
-```
-John 1  (1 chapter, 828 tokens)
-John 1
-  1: Ἐν ἀρχῇ ἦν ὁ Λόγος, καὶ ὁ Λόγος ἦν πρὸς τὸν Θεόν, καὶ Θεὸς ἦν ὁ Λόγος.
-  2: Οὗτος ἦν ἐν ἀρχῇ πρὸς τὸν Θεόν.
-  3: πάντα δι’ αὐτοῦ ἐγένετο, καὶ χωρὶς αὐτοῦ ἐγένετο οὐδὲ ἕν ὃ γέγονεν.
-  …
+aegean bible read John 1
 ```
 
 ---
 
-## `load_nt(book=None, *, ref=None, force=False)`
+## `load_nt(book=None, ref=None, *, edition="nestle1904", offline=False, force=False)`
 
-The Koine counterpart to `load_work`. It returns a `Corpus` with **one `Document`
-per chapter**; each token's annotations live in `Token.annotations`, so
-`to_dataframe(level="token")` surfaces them as columns.
+Available on both `aegean.greek.load_nt` and `aegean.greek.bible.load_nt` (the same
+function). Returns a `Corpus` with **one `Document` per chapter**; token annotations
+live in `Token.annotations`, so `to_dataframe(level="token")` surfaces them as
+columns.
 
 | argument | meaning |
 |----------|---------|
-| `book` | a book name or abbreviation (`"John"`, `"Jn"`, `"1Cor"`, `"Rev"`). Omit it (or pass `None`) to load the whole 27-book NT. |
-| `ref` | a chapter, verse, or range within the book (see below). A `ref` **requires** a `book`; you cannot address a verse across all 27 books. |
-| `force` | re-fetch the full corpus asset even if it is already cached. |
+| `book` | Book name or abbreviation (`"John"`, `"Jn"`, `"1Cor"`, `"Rev"`). Omit or pass `None` for all 27 books. |
+| `ref` | Chapter, verse, or range within the book (e.g. `"1"`, `"1.1-18"`, `"8.28"`). Requires `book`. |
+| `edition` | `"nestle1904"` (default, gold lemma/morph/Strong's), `"sblgnt"`, `"srgnt"`, `"byz"`, or `"tr"`. |
+| `offline` | Use local cache / bundled offline sample without network access. |
+| `force` | Re-fetch the corpus asset even if already cached. |
 
 ```python
-greek.load_nt("John")                  # the whole Gospel of John
-greek.load_nt("John", ref="1.1-18")    # John 1:1–18
-greek.load_nt("Rom", ref="8")          # Romans chapter 8
-greek.load_nt("Rom", ref="8.28")       # a single verse, Romans 8:28
-greek.load_nt()                        # the whole 27-book NT
+greek.load_nt("John")                          # Gospel of John (Nestle 1904)
+greek.load_nt("John", ref="1.1-18")            # John 1:1–18
+greek.load_nt("John", ref="1.18", edition="sblgnt")
+greek.load_nt("Rom", ref="8.28")               # Romans 8:28
+greek.load_nt()                                # all 27 books
 ```
 
-Token text, lemmas, and normalized forms are NFC-normalized at load time (the source
-edition mixes precomposed oxia and tonos codepoints, and the rest of the library
-emits NFC), so the gold strings compare byte-for-byte with pyaegean's own output.
+Token text, lemmas, and normalized forms are NFC-normalized at load time so gold
+strings compare directly with the rest of `aegean.greek`.
 
 ---
 
-## The CLI: `aegean greek nt BOOK [PASSAGE]`
+## The CLI: `aegean bible …`
 
-```
-aegean greek nt [BOOK] [PASSAGE] [--ref REF] [-o FILE] [--json]
-```
-
-`PASSAGE` is a **positional** chapter or range, so the common reads are short:
+All Biblical & Koine Greek CLI commands live under `aegean bible` (full command-by-command
+guide: [CLI: Biblical & Koine Greek](CLI-Bible)):
 
 ```bash
-aegean greek nt John 1        # a whole chapter
-aegean greek nt Matt 1-3      # a chapter range
-aegean greek nt John 1.1-1.18 # a verse range
-aegean greek nt Rom 8.28      # a single verse
-```
-
-Naming a **book** renders the text (chapter headers, verse-numbered lines):
-
-```bash
-aegean greek nt Matt 1-3
-```
-
-```
-Matt 1-3  (3 chapters, 1220 tokens)
-Matthew 1
-  1: Βίβλος γενέσεως Ἰησοῦ Χριστοῦ υἱοῦ Δαυεὶδ υἱοῦ Ἀβραάμ.
-  2: Ἀβραὰμ ἐγέννησεν τὸν Ἰσαάκ, Ἰσαὰκ δὲ ἐγέννησεν τὸν Ἰακώβ, …
-  …
-```
-
-`--ref` is an alias for the positional `PASSAGE` (`aegean greek nt John --ref 1.1-1.18`
-does the same as `aegean greek nt John 1.1-1.18`). Give the passage one way or the
-other, not both.
-
-**With no `BOOK`** the command prints a summary of the whole NT rather than dumping
-137,779 tokens to your terminal:
-
-```bash
-aegean greek nt
-```
-
-```
-                                   Greek NT
-┌──────────────┬──────────────────────────────────────────────────────┐
-│ field        │ value                                                  │
-├──────────────┼──────────────────────────────────────────────────────┤
-│ scope        │ whole NT                                                │
-│ ref          │                                                        │
-│ documents    │ 260                                                    │
-│ tokens       │ 137779                                                 │
-│ first        │ Matt 1                                                 │
-│ source       │ Nestle 1904 Greek NT — morphology/lemmas …            │
-│ data_version │ nt-corpus-v1@713f28a3b7d4d66132f5aa809fa223fe79762e5d │
-└──────────────┴──────────────────────────────────────────────────────┘
-read a book:  aegean greek nt John 1   (a chapter or range, e.g. Matt 1-3)
-```
-
-Two more flags:
-
-| flag | meaning |
-|------|---------|
-| `-o` / `--output` | save the selected corpus to a `.json` or `.db`/`.sqlite` file (chosen by extension) instead of printing. |
-| `--json` | print a machine-readable summary (`scope`, `ref`, `documents`, `tokens`, `first`, `source`, `data_version`). |
-
-Because the per-token annotations ride in each token, exporting at token level spreads
-them into columns:
-
-```bash
-aegean greek nt John 1 -o john1.json
-aegean export john1.json -f csv --level token -o john1.csv   # lemma, morph, strongs, upos, … as columns
+aegean bible read John 1                    # whole chapter (Nestle 1904)
+aegean bible read John 1:1-5 --interlinear  # word-by-word interlinear table
+aegean bible read John 1.1-18 -e sblgnt     # read SBLGNT (or srgnt, byz, tr)
+aegean bible read Gen 1:1-5                 # Septuagint (LXX books auto-detect)
+aegean bible read John 1 -o john1.json      # save as a Corpus (.json or .db)
+aegean export john1.json -f csv --level token -o john1.csv
 ```
 
 ---
@@ -196,8 +133,9 @@ books[3]           # {'name': 'John', 'aliases': ['john', 'jn', 'jhn']}
 From the shell:
 
 ```bash
-aegean greek nt-books          # a table of the 27 books and the names load_nt accepts
-aegean greek nt-books --json   # the same data as JSON
+aegean bible books nt          # 27 NT books and accepted aliases
+aegean bible books lxx         # 55 Swete Septuagint books
+aegean bible books nt --json   # JSON output
 ```
 
 | book | accepted names |
@@ -230,16 +168,7 @@ aegean greek nt-books --json   # the same data as JSON
 | Jude | jude, jud |
 | Rev | revelation, rev, rv, apocalypse |
 
-An unrecognised name gives a helpful suggestion:
-
-```bash
-aegean greek nt Genesis
-# aegean: unknown NT book 'Genesis' — did you mean 'Eph'?
-# (`aegean greek nt-books` lists all 27)
-```
-
-(Genesis is in the Hebrew Bible, not the Greek NT: `load_nt` covers the 27 NT books
-only.)
+An unrecognized book name prints a suggestion (`aegean bible books nt` lists all 27; Septuagint books like `Gen` or `Ps` are auto-detected by `aegean bible read`).
 
 ---
 
@@ -343,28 +272,24 @@ provenance that it is the offline fallback.
 
 ## Glossing without loading a book
 
-To look up a single Koine word's gloss without loading any chapter, use the bundled
-Dodson lexicon (CC0, no download): `greek.gloss_nt(...)` / `greek.lookup_nt(...)` /
-`greek.gloss_strongs(...)`, or the CLI `aegean greek gloss-nt`. This is the same
-lexicon the corpus self-glosses from, so a token's `gloss` annotation and a
-`gloss-nt` lookup agree. Full details are on [Greek NLP](Greek-NLP).
+To look up a Koine word or Strong's number without loading a book, use the bundled
+Dodson lexicon (`greek.gloss_nt(...)` / `greek.lookup_nt(...)` /
+`greek.gloss_strongs(...)` or `greek.bible.strongs_entry(...)`), or from the CLI:
 
 ```bash
-aegean greek gloss-nt "ἀγάπη"            # love
-aegean greek gloss-nt --strongs "3056"   # a word, speech, divine utterance, analogy
+aegean bible strongs "ἀγάπη"             # love
+aegean bible strongs G3056 --roots       # Strong's entry + recursive root tree
 ```
 
 ---
 
 ## Measuring a tagger on the NT
 
-Because the annotations are gold and independent of pyaegean's own predictions, the
-NT doubles as an out-of-domain benchmark. `greek.evaluate_on_nt()` (CLI
-`aegean greek eval nt`) scores the neural pipeline against the Nestle 1904 gold
-(lemma and reconciled UPOS), a Nestle-own-gold complement to the PROIEL check. Both
-are genuinely out-of-domain: the shipped models train on AGDT, Gorman, and Pedalion,
-never on the NT. The measured numbers and the honesty notes (lemma-convention
-differences, why finer features are not cross-comparable) are in
+Because the Nestle 1904 annotations are gold and independent of pyaegean's own
+predictions, the NT doubles as an out-of-domain benchmark. `greek.evaluate_on_nt()`
+(CLI `aegean greek eval nt`) scores the neural pipeline against Nestle 1904 gold
+lemmas and reconciled UPOS. The shipped models train on AGDT, Gorman, and Pedalion,
+not on the NT. Measured figures and lemma-convention details are in
 [Benchmarks](Benchmarks).
 
 Evaluation requires the fetched, pinned **full 27-book corpus**. The bundled John 1

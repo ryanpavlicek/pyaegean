@@ -24,9 +24,15 @@
 - [Biblical & Koine Greek](New-Testament)
 - [Meters](Meters)
 
-**Capabilities**
-- [CLI](CLI)
+**Command Line (CLI)**
+- [CLI Overview](CLI)
 - [CLI Cheatsheet](CLI-Cheatsheet)
+- [CLI: Corpora, Analysis & Data](CLI-Corpora)
+- [CLI: Greek NLP & Review](CLI-Greek)
+- [CLI: Biblical & Koine Greek](CLI-Bible)
+- [CLI: AI & MCP](CLI-AI)
+
+**Capabilities**
 - [TUI](TUI)
 - [MCP server](MCP)
 - [AI Layer](AI-Layer)

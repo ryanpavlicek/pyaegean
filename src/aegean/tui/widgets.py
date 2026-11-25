@@ -152,12 +152,6 @@ class DetailPane(Static):
         Binding("a", "choose_line", "Analyze line"),
     ]
 
-    #: The caveat shown for undeciphered corpora, matching the CLI/docstring copy.
-    UNDECIPHERED_CAVEAT = (
-        "Linear A and Cypro-Minoan are undeciphered; structural analysis is "
-        "exploratory, not a reading."
-    )
-
     class LineChosen(Message):
         """Posted when the user picks the current reader line (Enter / ``a``)."""
 
@@ -229,8 +223,6 @@ class DetailPane(Static):
         header.append(
             f"{detail.n_words} words · {detail.n_tokens} tokens · structure: {detail.structure}"
         )
-        if detail.undeciphered:
-            header.append(self.UNDECIPHERED_CAVEAT)
         header.append("")
         out = [escape(row) for row in header]
         self._header_rows = len(header)

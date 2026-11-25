@@ -36,17 +36,15 @@ def _run(coro) -> None:  # type: ignore[no-untyped-def]
         loop.close()
 
 
-def test_app_mounts_home_with_the_undeciphered_banner_and_the_corpora() -> None:
+def test_app_mounts_home_with_the_corpora_and_no_disclaimer_banner() -> None:
     async def body() -> None:
         app = AegeanApp()
         async with app.run_test(size=(100, 40)) as pilot:
             await pilot.pause()
             assert isinstance(app.screen, HomeScreen)
-            # the permanent undeciphered-honesty banner
-            banner = app.screen.query_one("#home-banner", Static)
-            text = str(banner.content)
-            assert "Linear A" in text and "Cypro-Minoan" in text
-            assert "exploratory" in text and "not a reading" in text
+            assert not app.screen.query("#home-banner")
+            intro = app.screen.query_one("#home-intro", Static)
+            assert "pyaegean" in str(intro.content)
             # the corpus overview lists every registered corpus
             corpus_list = app.screen.query_one("#home-corpora", CorpusList)
             from aegean.tui import data as adapter

@@ -190,59 +190,41 @@ not presented as a new editorial reading. The six currently hosted epigraphy and
 papyri assets expose aggregate status only, so their reader lines do not gain this
 typed state until their source assets are rebuilt.
 
-### The undeciphered-corpus caveat
-
-For the undeciphered corpora (`lineara`, `sigla`, `cyprominoan`) the reader header
-carries, on every document:
-
-> Linear A and Cypro-Minoan are undeciphered; structural analysis is exploratory,
-> not a reading.
-
-The Home banner states the same thing the moment the app opens. The deciphered
-corpora (Greek, Linear B, Cypriot) carry no caveat.
-
 ### The line-analysis popup, script by script
 
-The popup (`Enter` or `a` on a reader line) offers only the analyses that fit the
-line's script, and runs the first available one immediately:
+The popup (`Enter` or `a` on a reader line) offers the analyses supported for the
+line's script and runs the first available one immediately:
 
-- **Greek** (the `greek` sample corpus, the NT, the inscription corpora, and
-  fetched Greek works all read as script `greek`):
-  - `offline parser / tagger`: an instant table of token, POS, and lemma from the
-    zero-dependency pipeline;
-  - `neural pipeline`: measured neural tags plus morphological features and a
-    dependency parse; needs the `[neural]` extra, and downloads the model
-    (~173 MB) on first run;
-  - `IPA (reconstructed)`: the Attic transcription, word by word;
-  - `translate (BYOAI, optional)`: only when a provider API key is configured.
-    Without one the option is listed as
-    `translate (BYOAI, optional)  ·  unavailable: set a provider API key (BYOAI) to enable — e.g. OPENAI_API_KEY`,
-    and choosing it explains that instead of failing.
-- **Linear B / Cypriot** (deciphered): `Greek reading + gloss` (each word, its
-  sound value, the Greek word it writes, and a gloss) and `signs (glyph + value)`
-  (each sign's glyph and phonetic value).
-- **Linear A** (the bundled corpus and SigLA): `transliteration (exploratory)` and
-  `signs (glyph + value)`, both carrying the caveat that Linear A is undeciphered.
-  The values shown are the conventional, Linear-B-shared ones, and the output says
-  so. The transliteration of a line of HT2, exactly as the popup renders it:
+- **Greek** (`greek` sample, NT, inscription corpora, and fetched Greek works):
+  - `offline parser / tagger`: token, POS, and lemma from the zero-dependency pipeline;
+  - `neural pipeline`: UPOS, UD FEATS, lemma, and dependency parse (`[neural]` extra;
+    downloads ~173 MB model on first run);
+  - `neural + OOV reranker (weighted)`: neural pipeline with bundled OOV lemma reranking;
+  - `lexicon glosses`: Dodson plus any active fetched dictionaries;
+  - `metrical scansion`: automatic meter detection and scansion;
+  - `IPA (reconstructed)`: Classical Attic transcription;
+  - `translate (BYOAI, optional)`: active when a provider API key is configured.
+- **Linear B / Cypriot**: `Greek reading + gloss` (phonetic value, Greek reading,
+  and gloss) and `signs (glyph + value)`.
+- **Linear A** (`lineara`, `sigla`): `conventional values (Linear B-shared)` and
+  `signs (glyph + value)`. Example for a line of HT2:
 
   ```text
-  transliteration (exploratory)
+  conventional values (Linear B-shared)
 
   word   conventional value
   -----  ------------------
   OLE+A  ole+a
   17     17
 
-  Linear A is undeciphered — these are hypothetical, shared-with-Linear-B values, not an established reading
+  Conventional Linear B-shared phonetic values.
   ```
 
-- **Cypro-Minoan**: `signs (glyph only)`, with the note that Cypro-Minoan is
-  undeciphered (no sound values are pretended).
+- **Cypro-Minoan**: `signs (glyph only)`.
 
-The slow analyses (neural, translate) run on a background worker behind an
-"analyzing…" line; everything else renders instantly. `Esc` (or `q`) closes the
-popup.
+Slow analyses (neural, translation) run on a background worker behind an
+"analyzing…" status line; everything else renders immediately. `Esc` (or `q`) closes
+the popup.
 
 ---
 
@@ -266,87 +248,59 @@ The same global keys work from every screen:
 | `q` | Quit |
 
 `Esc` is two-stage: when a text input is focused it blurs the input and stays on
-the screen, and a second `Esc` (nothing focused) walks back through the screens you
-visited. At Home with no history it is a safe no-op. `?` opens a modal reference of
-every key and everything the command palette can do; it dismisses on `Esc`, `q`, or
-`Enter`.
+the screen, and a second `Esc` walks back through screen history. `?` opens a modal
+key reference (`Esc`, `q`, or `Enter` dismisses).
 
 ---
 
 ## Screens
 
-Seven screens, each a pure view over the shared library adapter, so their numbers
-(structure, accounting balances, pipeline output, and Biblical collations) match the
-CLI by construction.
+Seven screens over the shared library adapter, matching CLI outputs.
 
 ### Home (`h`)
 
-The landing view holds three things permanently:
+The landing view holds:
 
-1. **The undeciphered-script honesty banner.** Linear A and Cypro-Minoan are
-   undeciphered, so any structural analysis of them is exploratory, not a reading.
-   The banner states this the moment the app opens.
-2. **The thirteen-corpus overview.** Each of the thirteen registered corpora with a
-   one-line blurb and whether its data is already on disk, read without loading
-   anything: `lineara`, `linearb`, `cypriot`, `cyprominoan`, `greek`, `nt`,
-   `damos`, `sigla`, `isicily`, `iip`, `iospe`, `igcyr`, and `edh`. Selecting a
-   corpus here jumps straight into the corpus browser with it open. The
-   fourteenth loadable corpus, `ddbdp` (57,000 documentary papyri), is
-   deliberately not listed: loading it whole is far too heavy for an interactive
-   browser. Search it with `aegean db search ddbdp` from the command line or the
-   command console instead.
-3. **The global-key legend**, so navigation is discoverable without the palette.
+1. **The thirteen-corpus overview.** Each registered corpus with a one-line summary
+   and on-disk status (read without loading corpus files): `lineara`, `linearb`,
+   `cypriot`, `cyprominoan`, `greek`, `nt`, `damos`, `sigla`, `isicily`, `iip`,
+   `iospe`, `igcyr`, and `edh`. Selecting a row opens it directly in the corpus
+   browser. `ddbdp` (57,000 documentary papyri) is omitted from the in-memory list
+   due to size; search it with `aegean db search ddbdp` from the shell or command
+   console.
+2. **The global-key legend**, listing the single-key shortcuts for every screen.
 
 ### Corpus browser (`c`)
 
 Three panes, left to right:
 
-1. **The corpus list**, each corpus marked when its data is not yet on disk.
-2. **The document table**, above a search box. Press `/` to focus the box. Typing
-   filters the table by document id (case-insensitive); typing a sign pattern such
-   as `KU-*-RO` also runs a corpus-wide word search and surfaces the matching words
-   in the status line. That corpus-wide search runs on a background worker, so a
-   keystroke never blocks the UI and a fresh keystroke supersedes the previous
-   still-running search.
-3. **The document detail (the reader)**: the token lines with their editorial status
-   marked (unclear / restored / lost from the Leiden apparatus), a word-level cursor
-   (`←`/`→`) with a live token inspector bar, an inline interlinear gloss toggle (`i`),
-   the heuristic structure classification, and an accounting-balance analysis (the
-   `KU-RO` / `to-so` reconciliation) whenever the document states a total. `Tab` cycles
-   the panes; `Enter` on a document row opens its detail. The reader carries a "reading"
-   border title that lights up when it holds focus, so it is obvious which pane is active.
+1. **The corpus list**, marking datasets not yet cached on disk.
+2. **The document table**, above a search box (`/` focuses). Typing filters by
+   document ID (case-insensitive); a sign pattern such as `KU-*-RO` runs a
+   corpus-wide search on a background worker and displays matching words in the
+   status line.
+3. **The document detail (the reader)**: token lines with editorial status markers
+   (unclear / restored / lost), word-level cursor (`←`/`→`) with live token
+   inspector bar, inline interlinear gloss toggle (`i`), structural classification,
+   and `KU-RO` / `to-so` balance checks when a document states a total. `Tab` cycles
+   panes; `Enter` on a document row opens its detail.
 
 **Analyze a line while you read.** With the reader focused, `↑`/`↓` (and PgUp/PgDn,
-Home/End) move a highlighted **line cursor**, and `Enter` or `a` opens an **analysis
-popup** for that line. What it offers depends on the script:
+Home/End) move the line cursor, and `Enter` or `a` opens the analysis popup for that
+line:
 
-- **Greek** (alphabetic Greek, the NT, fetched Greek works): the **offline parser /
-  tagger** (lemma + POS, instant), **lexicon glossing**, **automatic scansion**, the
-  **neural pipeline** (measured neural tags + weighted OOV lemma reranker + calibrated
-  confidence + dependency parse; needs the `[neural]` extra, and downloads the ~173 MB
-  model on first use), **IPA**, and **translation**. Translation is **optional** and
-  requires a configured BYOAI provider (an API key such as `OPENAI_API_KEY`); when none
-  is set the popup says so rather than pretending to translate. When translating a line
-  from a document, the reader automatically passes neighboring lines and available
-  source, speaker, and editorial metadata separately as `source_context`. The neural
-  and translation runs happen on a background worker, so the UI never blocks. The
-  translation includes model-reported uncertainty notes, or a notice when malformed
-  output leaves those notes unavailable. Source text, translated wording and notes
-  retain literal square brackets.
-- **Linear B / Cypriot** (deciphered): the **Greek reading + gloss** of each word and
-  the **sign values** (glyph + phonetic value).
-- **Linear A / Cypro-Minoan** (undeciphered): the **sign glyphs** and, for Linear A, an
-  **exploratory transliteration** — both plainly labelled as not a reading.
+- **Greek** (`greek`, NT, epigraphy corpora, fetched Greek works): offline parser /
+  tagger, lexicon glossing, automatic scansion, neural pipeline (with optional
+  weighted OOV reranker and calibrated confidence), IPA, and optional BYOAI
+  translation (passing neighboring lines and document metadata separately as
+  `source_context`). Neural and translation calls run on a background worker.
+- **Linear B / Cypriot**: Greek reading + gloss and sign values (glyph + phonetic
+  value).
+- **Linear A / Cypro-Minoan**: sign glyphs and, for Linear A, Linear B-shared
+  conventional phonetic values.
 
-The corpus browser is not limited to the thirteen registered corpora. It resolves any
-corpus spec the CLI accepts, so it also opens a **fetched Greek work** by its CTS
-id (for example `tlg0012.tlg001`) or a saved `.json` / `.db` corpus **file**. This
-is how a work fetched in the Works library (below) comes up for reading.
-
-**Undeciphered-script honesty, at point of use.** For an undeciphered corpus
-(`lineara`, `sigla`, `cyprominoan`) the detail pane shows the exploratory caveat
-right where the analysis is read, matching the CLI and the docstrings. The
-deciphered corpora (Greek, Linear B, Cypriot) carry no such caveat.
+The corpus browser accepts any corpus spec the CLI accepts, including fetched Greek
+works by CTS ID (`tlg0012.tlg001`) and saved `.json` / `.db` corpus files.
 
 ### Greek workbench (`g`)
 
@@ -515,13 +469,10 @@ ignored on the next launch, so the app always starts on a valid one.
 
 ## Scope
 
-The TUI deliberately covers the highest-value offline reads, browsing and analyzing
-a document, the Greek workbench, fetching and reading works, and the data store,
-with the command console as a full-parity escape hatch for everything else. It is a
-research cockpit, not a replacement for the command line: [the CLI](CLI) (and
-`aegean repl`) remain the complete surface. Optional neural analysis and key-gated
-translation are also available in the reader popup; the console exposes the CLI's
-remaining operations.
+The TUI covers interactive browsing and reading, the Greek workbench, the Biblical
+Greek study screen, the works library, and the data store, with the `:` command
+console running the rest of the CLI in place. For scripting and full-pipeline flags,
+see [CLI Overview](CLI).
 
 ## See also
 

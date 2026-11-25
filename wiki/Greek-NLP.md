@@ -65,11 +65,11 @@ backends layer in extra accuracy without changing the call you make.
 | LSJ gloss | `gloss` / `lookup` | `aegean greek gloss` | yes (first use) |
 | Dialect / register | `usage` | `aegean greek usage` | yes (LSJ) |
 | Terminology rarity | `terminology_rarity` | `aegean greek rarity` | reference corpus |
-| Koine (NT) gloss | `gloss_nt` / `gloss_strongs` / `lookup_nt` | `aegean greek gloss-nt` | no (bundled) |
+| Koine (NT) gloss | `gloss_nt` / `bible.strongs_entry` | `aegean bible strongs` | no (bundled) |
 | One-call pipeline | `pipeline` | `aegean greek pipeline` | opt-in backends |
 | Load a real work | `load_work` | `aegean greek work` | yes (first use) |
-| Load the Greek NT | `load_nt` | `aegean greek nt` | no for the bundled sample; yes for the rest |
-| Discover works / books | `popular_works` / `catalog` / `nt_books` | `aegean greek works` / `catalog` / `nt-books` | no |
+| Load the Greek NT | `load_nt` / `bible.load_nt` | `aegean bible read` | no for the bundled sample; yes for the rest |
+| Discover works / books | `popular_works` / `catalog` / `nt_books` | `aegean greek works` / `catalog` / `aegean bible books` | no |
 | Import your own text | `io.from_text` / `from_text_file` / `from_csv` / … | `aegean import` | no |
 | Reproduce the numbers | `evaluate_on_ud` / `evaluate_on_proiel` / … | `aegean greek eval` | yes (gold data) |
 
@@ -576,9 +576,9 @@ leakage controls, and the comparison tables are documented in
 
 ### Confidence, scope, and abstention (opt-in)
 
-Confidence is optional model evidence, not a reading or a guarantee. Pass
-`with_confidence=True` to `greek.pipeline()` (or `GreekPipeline.analyze()`), then inspect
-the additive `token_confidence` and `sentence_confidence` values. Each typed
+Pass `with_confidence=True` to `greek.pipeline()` (or `GreekPipeline.analyze()`)
+to attach calibrated per-token `token_confidence` and `sentence_confidence` values.
+Each typed
 `ConfidenceResult` names its task, model, source path, optional domain, calibration hash,
 sample count, measured ECE/Brier value, and either a value in `[0, 1]` or an explicit
 unavailable reason. Missing confidence is never converted to zero. Stable reasons include
@@ -1796,12 +1796,12 @@ entry.strongs, entry.lemma, entry.gloss
 ```
 
 A `DodsonEntry` has four fields: `strongs`, `lemma`, `gloss` (the one-liner), and
-`definition` (the fuller text). The CLI `gloss-nt` activates Dodson for you:
+`definition` (the fuller text). From the CLI, use `aegean bible strongs`:
 
 ```bash
-aegean greek gloss-nt "ἀγάπη"                 # love
-aegean greek gloss-nt --strongs "3056"        # a word, speech, divine utterance, analogy
-aegean greek gloss-nt --full "λόγος"          # λόγος (G3056): a word, speech, divine utterance, analogy.
+aegean bible strongs "ἀγάπη"                  # love
+aegean bible strongs G3056                    # a word, speech, divine utterance, analogy
+aegean bible strongs G3056 --roots            # entry + recursive etymological root tree
 ```
 
 The NT corpus self-glosses from the same lexicon, so each token already carries a
@@ -1902,7 +1902,7 @@ greek.nt_books()        # list of {'name','aliases'} — all 27 NT books
 ```bash
 aegean greek works              # a table of the 25 works + how to load one (--json for the list)
 aegean greek catalog --author plato   # search the full 1778-work index (--json for the list)
-aegean greek nt-books           # a table of the 27 books and the names load_nt accepts
+aegean bible books nt           # 27 NT books and accepted names
 ```
 
 `works` is a curated starting point; `catalog` is the full 1,778-work discovery

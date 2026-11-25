@@ -686,7 +686,7 @@ robinson_to_upos("A-NUI")     # 'NUM'    (indeclinable numeral)
 ## 7. The 27 books and the names you can use
 
 `nt_books()` lists every book in canonical order together with the abbreviations
-`load_nt` (and `gloss-nt`) will accept for it. It's **pure metadata: no download**.
+`load_nt` and `aegean bible read` accept for it. Pure metadata, no download.
 
 ```python
 from aegean import greek
@@ -702,8 +702,8 @@ and dots are ignored: `"1 Cor"`, `"1cor"`, `"1Cor."` all resolve to `1Cor`). The
 On the command line:
 
 ```bash
-aegean greek nt-books          # the table below
-aegean greek nt-books --json   # same data as JSON
+aegean bible books nt          # the table below
+aegean bible books nt --json   # same data as JSON
 ```
 
 ### The full book table
@@ -749,15 +749,15 @@ greek.load_nt("Genesis")
 (Genesis is in the Hebrew Bible, not the Greek NT: `load_nt` covers the 27 NT
 books only.)
 
-> Looking up a single word's Koine gloss without loading a book? That's
-> `aegean greek gloss-nt` / `greek.lookup_nt(...)`, documented on
-> [Greek NLP](Greek-NLP): it uses the bundled Dodson lexicon and needs no download.
+> Looking up a single Koine word or Strong's number without loading a book:
+> `aegean bible strongs ἀγάπη` / `greek.bible.strongs_entry(...)`, documented on
+> [CLI: Biblical & Koine Greek](CLI-Bible) and [Biblical & Koine Greek](New-Testament).
 
 ---
 
 ## 8. What you can do once a work is loaded
 
-Both loaders return a standard `Corpus`, so the rest of the toolkit just works:
+Both loaders return a standard `Corpus`, so the rest of the toolkit applies directly:
 
 ```python
 from aegean import greek
@@ -809,11 +809,11 @@ asset; John 1 and Philemon are also bundled for offline use. Full details are on
 
 ---
 
-## 10. Limitations and honest notes
+## 10. Limitations and notes
 
 - **First use of a non-cached work needs the network.** After that it's read from
-  the local cache and works offline. The one exception that's offline from the
-  start is the bundled NT sample (John 1 and Philemon).
+  the local cache and works offline. The bundled NT sample (John 1 and Philemon) and
+  LXX sample (Genesis 1 and LXX Psalm 22) work offline immediately.
 - **TEI structures vary.** `ref` follows each work's own `<div>` nesting and `<l>`
   line numbering. A `ref` that doesn't match the work's structure raises a clear
   `ValueError` rather than guessing.
@@ -826,14 +826,14 @@ asset; John 1 and Philemon are also bundled for offline use. Full details are on
 - **NT annotations are gold and fixed** (Nestle 1904 morphology), independent of
   pyaegean's own taggers: useful as a benchmark as well as a corpus.
 
-For the broader picture of what is and isn't in scope, see [Limitations](Limitations).
+For broader scope details, see [Limitations](Limitations).
 
 ---
 
 ## See also
 
 - [Greek NLP](Greek-NLP): everything you can run on a loaded work
-- [CLI](CLI): the `aegean greek work` / `works` / `nt-books` commands
+- [CLI: Greek NLP & Review](CLI-Greek) and [CLI: Biblical & Koine Greek](CLI-Bible)
 - [Tutorial](Tutorial): a guided, end-to-end load of the Iliad
 - [Data & Provenance](Data-and-Provenance): caches, licences, pinned commits
 - [Limitations](Limitations): scope and known gaps

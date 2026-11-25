@@ -49,7 +49,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | Group | Commands |
 |---|---|
 | **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
-| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `gloss-nt` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `nt` `works` `catalog` `nt-books` `eval` |
+| **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `works` `catalog` `eval` |
 | **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` |
 | **`analyze`** | `distance` `align` `compare` `nearest` `assoc` `cooccur` `clusters` `structure` `hands` `hand` `dossiers` `syllabary` `bridge` |
 | **`data`** | `list` `fetch` `remove` `versions` `store` |
@@ -449,7 +449,6 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `inflect` | Inflection synthesis (inverse lemmatizer): attested form(s) of a lemma | `--case --number --gender --tense --voice --mood --person --pos --paradigm --json` | `aegean greek inflect λόγος --case gen --number sg` |
 | `parse` | Dependency-parse a sentence | `--neural --neural-variant --parser --json` | `aegean greek parse "…" --neural` |
 | `gloss` | Gloss from a registry dictionary (LSJ by default) | `--dict/-d --full --json` | `aegean greek gloss μῆνις --dict cunliffe` |
-| `gloss-nt` | Koine gloss from bundled Dodson lexicon (no download) | `--strongs --full --json` | `aegean greek gloss-nt λόγος --full` |
 | `lexica` | List the available dictionaries (hosted + deep-link) | `--json` | `aegean greek lexica` |
 | `lexicon-link` | A Logeion / Perseus deep-link for a word | `--service --no-lemmatize --json` | `aegean greek lexicon-link μήνιδος` |
 | `usage` | Dialect + register tags for a word, mined from its LSJ entry (LSJ fetch on first use) | `--json` | `aegean greek usage μῆνις` |
@@ -461,10 +460,8 @@ converted text). Full prose lives on [Greek NLP](Greek-NLP).
 | `interop export` / `import` / `report` | CoNLL-U to and from a portable JSON bundle carrying the target projection, its SHA-256-bound sidecar, and the loss report; no model inference | `--target {conllu\|spacy\|stanza\|cltk}` `-o/--output` (`export`); `-o/--output` (`import`); `--json` (all three) | `aegean greek interop export treebank.conllu --target spacy -o treebank.spacy.json` |
 | `conllu inspect` / `export` | Inspect complete CoNLL-U structure or copy it losslessly; no model inference | `--strict --json -o/--output` (`inspect`); `--strict -o/--output` (`export`) | `aegean greek conllu inspect treebank.conllu --json` |
 | `work` | Fetch a real Greek work (Perseus / First1KGreek); `all AUTHOR` bulk-fetches a whole author | `--ref --source --edition --limit --dry-run --yes -o --json` | `aegean greek work tlg0012.tlg001 --ref 1.1-1.50` · `aegean greek work all homer` |
-| `nt` | Read the Greek NT (Nestle 1904): a book, and a chapter or range, rendered as text | `--ref -o --json` | `aegean greek nt John 1` · `aegean greek nt Matt 1-3` |
 | `works` | List the curated catalog of 25 well-known works; `--downloaded` lists what is in the cache; `--remove`/`--remove-author`/`--remove-all` delete downloaded works | `--downloaded --remove --remove-author --remove-all --json` | `aegean greek works --remove tlg0012.tlg001` |
 | `catalog` | Search the full ~1,800-work discovery index (offline metadata); `--limit` caps `--json`/`-o` too, with the total kept in `matched` | `--author/-a --title/-t --source --limit/-n -o/--output --json` | `aegean greek catalog --author plato` |
-| `nt-books` | List the 27 NT books + names the loaders accept | `--json` | `aegean greek nt-books` |
 | `eval` | Reproduce the published numbers (heavy); targets `ud` `proiel` `nt` `papygreek` `verse` `dbbe` `tagger` `lemmatizer` `parser` | `--fold --split --track --layer --bootstrap --drift --by-genre --batch-size --neural --tagger --lemmatizer --neural-lemmatizer -o/--output --json` | `aegean greek eval papygreek` |
 
 `greek profile TEXT` remains the observable text-feature report. The
@@ -569,12 +566,11 @@ A lemma the lexicon doesn't know is still returned, marked `(fallback)` (and
 ### Glossing
 
 ```bash
-aegean greek gloss-nt λόγος               # a word, speech, divine utterance, analogy
-aegean greek gloss-nt λόγος --full        # λόγος (G3056): a word, speech, divine utterance, analogy.
-aegean greek gloss-nt 3056 --strongs      # look up by Strong's number → same gloss
+aegean bible strongs λόγος                # a word, speech, divine utterance, analogy
+aegean bible strongs G3056 --roots        # Strong's entry + recursive root tree
 ```
 
-`gloss-nt` uses the **bundled** CC0 Dodson lexicon (no download). The classical
+`bible strongs` uses the **bundled** CC0 Dodson lexicon offline (and Extended Strong's with `--fetch`). The classical
 `gloss` command first tries the prebuilt LSJ index (~15 MB). If that asset is
 unavailable, it can fall back to building the index from the larger upstream TEI.
 
@@ -624,7 +620,7 @@ aegean greek catalog --author plato               # search the full ~1,800-work 
 aegean greek work tlg0012.tlg001                  # heavy: the Iliad, one doc per book
 aegean greek work tlg0012.tlg001 --ref 1.1-1.50   # just book 1, lines 1–50
 aegean greek work tlg0012.tlg001 -o iliad.json    # save as a corpus file
-aegean greek nt John --ref 1.1-1.18               # the Greek NT (bundled): gold lemma/morph/gloss
+aegean bible read John 1:1-18                     # the Greek NT (bundled): gold lemma/morph/gloss
 ```
 
 The curated catalog (`aegean greek works`):
@@ -695,7 +691,7 @@ In Python: `greek.catalog(query=None, *, author=None, title=None, source=None)` 
 `{id, author, title, greek_title, source}` dicts; `greek.popular_works()` stays the
 curated 25.
 
-The 27 NT books (`aegean greek nt-books`) and the names `gloss-nt` / `load_nt`
+The 27 NT books (`aegean bible books nt`) and the names `aegean bible read` / `load_nt`
 accept:
 
 | book | accepted names | book | accepted names |
@@ -755,26 +751,25 @@ The exact figures and how they were measured are on [Greek NLP](Greek-NLP) and
 
 Multi-edition Greek NT collation, early 2nd–5th c. CE manuscript witnesses, Extended
 Strong's + roots, 55-book Swete Septuagint (LXX), and 48 Greek patristic commentaries.
-Full reference: [Biblical & Koine Greek](New-Testament).
+Full reference: [CLI: Biblical & Koine Greek](CLI-Bible).
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|
-| `read` | Read NT or LXX passage (plain or word-by-word interlinear) | `-e/--edition --lxx -i/--interlinear --offline --json` | `aegean bible read John 1.1-5 --interlinear` |
-| `compare` | Word-level variant diff across 5 NT editions | `-e/--editions --offline --json` | `aegean bible compare John 1.18` |
-| `witnesses` | Compare 13 early NT manuscripts (with *nomina sacra* expanded) | `-s/--sigla --hand --offline --json` | `aegean bible witnesses John 18.37 --sigla P52,01,03` |
-| `strongs` | Strong's / Extended Strong's lookup, search, or root tree | `-r/--roots -s/--search -n/--limit/--top --offline --json` | `aegean bible strongs G3056 --roots` |
+| `read` | Read NT or LXX passage (LXX auto-detected; plain, interlinear, or `-o` export) | `--ref -e/--edition --lxx -i/--interlinear -o/--output --offline --json` | `aegean bible read John 1:1-5 -i` · `aegean bible read Gen 1:1-5` |
+| `compare` | Word-level variant diff across 5 NT editions | `-e/--editions --offline --json` | `aegean bible compare John 1:18` |
+| `witnesses` | Compare 13 early NT manuscripts (*nomina sacra* expanded by default) | `-s/--sigla --hand -d/--diplomatic --no-expand --offline --json` | `aegean bible witnesses John 18:37 -s P52,01,03` |
+| `strongs` | Strong's / Extended Strong's lookup, search, or root tree | `-r/--roots -s/--search --fetch --offline -n/--limit/--top --json` | `aegean bible strongs G3056 --roots` |
 | `word-study` | Unified Strong's + root + morphology + NT concordance report | `-b/--book -n/--limit/--top --offline --json` | `aegean bible word-study ἀγάπη` |
-| `search` | NT concordance (`--by lemma\|text\|strongs\|morph\|gloss`) or LXX (`--lxx`) | `--by -b/--book --section -e/--edition --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --lxx --offline` |
-| `commentary` | List, read (`--read`), or search (`--search`) NT *Catenae* & Origen | `-k/--kind --read -s/--search --work-id --ref -n/--limit/--top --json` | `aegean bible commentary John --search λόγος` |
-| `books` | Offline catalogues: `nt`, `lxx`, `editions`, `witnesses` | `--section --json` | `aegean bible books lxx` |
+| `search` | NT concordance (`--by lemma\|text\|strongs\|morph\|gloss`) or LXX (auto-detected / `--lxx`) | `--by -b/--book --section -e/--edition --lxx -n/--limit/--top --offline --json` | `aegean bible search φῶς --lxx --offline` |
+| `commentary` | List, read (`read TARGET` or TLG ID), or search (`search TARGET TERM`) NT *Catenae* & Origen | `-k/--kind --ref -n/--limit/--top --json` | `aegean bible commentary read Matt` · `aegean bible commentary search John λόγος` |
+| `books` | Offline catalogues: `nt`, `lxx`, `editions`, `witnesses`, `all` | `--section --json` | `aegean bible books lxx` |
 | `psalm` | Masoretic (`mt`) ↔ Septuagint (`lxx`) Psalm numbering | `--from --json` | `aegean bible psalm 23 --from mt` |
 
 ---
 
 ## Analysis — `aegean analyze …`
 
-Exploratory **surface** analyses over the (largely undeciphered) Aegean material:
-evidence to weigh, not conclusions. Method notes are on [Analysis](Analysis).
+Surface analyses over syllabic and alphabetic corpora. Method notes: [Analysis](Analysis).
 
 | Command | What it does | Key flags | One-line example |
 |---|---|---|---|

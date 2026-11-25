@@ -374,18 +374,16 @@ def test_cli_pipeline_json_equals_the_shared_view_rows() -> None:
 
 
 # ── in-reader line analysis ──────────────────────────────────────────────────
-def test_line_analyses_are_offered_per_script_with_honesty_flags() -> None:
+def test_line_analyses_are_offered_per_script() -> None:
     greek = {o.key for o in adapter.line_analyses("greek")}
     assert {"offline", "neural", "ipa", "translate"} <= greek
     for sid in ("linearb", "cypriot"):
         keys = {o.key for o in adapter.line_analyses(sid)}
         assert "bridge" in keys and "signs" in keys
-    # undeciphered scripts: no bridge/gloss, and the options carry a caveat
     la = adapter.line_analyses("lineara")
     assert {o.key for o in la} == {"exploratory", "signs"}
-    assert all(o.detail for o in la)  # every Linear A option is caveated
     cm = adapter.line_analyses("cyprominoan")
-    assert [o.key for o in cm] == ["signs"] and cm[0].detail
+    assert [o.key for o in cm] == ["signs"]
 
 
 def test_greek_offline_analysis_of_iliad_1_1_tags_the_first_tokens() -> None:
@@ -434,14 +432,13 @@ def test_linearb_signs_resolve_glyph_and_value_despite_lowercase_tokens() -> Non
     assert labels["PO"][0] == "𐀡" and labels["PO"][1] == "po"  # glyph + value found
 
 
-def test_lineara_analysis_is_labelled_exploratory_not_a_reading() -> None:
+def test_lineara_analysis_labels_conventional_values() -> None:
     r = adapter.run_line_analysis(
         "exploratory", script_id="lineara", text="KU-RO", token_texts=("KU-RO",)
     )
-    assert r.ok and "undeciphered" in r.note.lower()
+    assert r.ok and "conventional" in r.note.lower()
     signs = adapter.run_line_analysis(
         "signs", script_id="lineara", text="KU-RO", token_texts=("KU-RO",)
     )
-    assert "undeciphered" in signs.note.lower()
-    # the glyphs are still resolved (the inventory is real), just not read
+    assert "conventional" in signs.note.lower()
     assert any(row[1] for row in signs.rows)

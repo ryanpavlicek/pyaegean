@@ -1,18 +1,4 @@
-"""The Home screen: the landing view.
-
-Three things live here permanently:
-
-1. the undeciphered-script honesty banner (Linear A and Cypro-Minoan are
-   undeciphered; analysis is exploratory, not a reading) — the honesty rule the
-   CLI and docstrings carry, made visible the moment the app opens;
-2. the corpus overview (each corpus, its blurb, and whether its data is on
-   disk), read from :func:`aegean.tui.data.list_corpora` — offline, nothing is
-   loaded;
-3. the global-key legend, so navigation is discoverable without the command
-   palette.
-
-Home is pure view: it calls the adapter, never the library.
-"""
+"""The Home screen: corpus overview and global key legend."""
 
 from __future__ import annotations
 
@@ -26,32 +12,25 @@ from ..widgets import CorpusList
 
 __all__ = ["HomeScreen"]
 
-_BANNER = (
-    "Linear A and Cypro-Minoan are undeciphered. Any structural analysis of them "
-    "is exploratory, not a reading."
-)
-
 _KEYS = (
     "keys:  c corpus browser   g Greek workbench   b Biblical Greek   w works library   "
     "d data store   : console   t theme   Esc back   ? help   ctrl+p commands   q quit"
 )
 
 _INTRO = (
-    "pyaegean — Ancient Greek and the Aegean syllabic scripts. Pick a corpus below "
-    "(↑/↓ then Enter) to browse and read its documents. The keys open the tools: "
-    "g the Greek workbench (analyze a line of Greek), b Biblical Greek study (NT editions, "
-    "early manuscripts, Strong's, LXX & Catenae), w the works library, : the command console."
+    "pyaegean — Ancient Greek and the Aegean syllabic scripts. Select a corpus below "
+    "(↑/↓ then Enter) to browse documents, or press g (Greek workbench), b (Biblical Greek), "
+    "w (works library), d (data store), or : (command console)."
 )
 
 _CORPORA_TITLE = "Corpora  —  ↑/↓ to choose, Enter to browse"
 
 
 class HomeScreen(Screen[None]):
-    """The landing screen: honesty banner, corpus overview, and key legend."""
+    """The landing screen: corpus overview and global key legend."""
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static(_BANNER, id="home-banner")
         with VerticalScroll(id="home-body"):
             yield Static(_INTRO, id="home-intro")
             yield Static(_CORPORA_TITLE, id="home-corpora-title")

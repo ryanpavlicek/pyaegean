@@ -1,32 +1,26 @@
 # AI Layer
 
-`aegean.ai` is an **optional** generative layer: you bring an API key for one of
-five hosted providers (or run a model locally with no key), feed the model **real local evidence** from the corpus
-and lexicon, and ask it to translate, gloss, summarize, propose decipherment
-hypotheses, answer questions, or pull structured data out of a tablet. You'd reach for it when
-the rule-based tools have done all they can and you want a *labeled, traceable
-hypothesis* to think against: drafting a translation, sanity-checking a gloss,
-brainstorming readings of an undeciphered sign group.
+`aegean.ai` is an optional generative layer over five hosted providers (Anthropic,
+OpenAI, xAI Grok, Google Gemini, OpenRouter) plus local OpenAI-compatible servers.
+It attaches local corpus statistics, dictionary entries, and morphological analyses
+as structured grounding for translation, glossing, summarization, hypothesis
+generation, Q&A, and structured extraction.
 
-> **Exploratory material: read this first.** Every generative output here is a
-> labeled, provenanced **hypothesis**: never ground truth, and on the
-> undeciphered scripts never a reading. The layer marks each result `EXPLORATORY`,
-> records the supplied evidence and its status, and can print a full provenance trace.
-> What pyaegean can and cannot claim is on the **[Limitations](Limitations)** page.
+Every call returns an `ExploratoryResult` carrying provider metadata, grounding
+evidence status, and a printable provenance trace. See [Limitations](Limitations)
+for scope.
 
-A few things hold across the whole layer:
+Key properties:
 
-- **Optional and lazy.** Each provider's SDK is an extra, imported only when you
-  actually call it. `import aegean` never requires any of them, and nothing here
-  runs (or costs anything) until you build a client (with a hosted provider's key,
-  or a no-key local server via the `local` provider).
-- **Keys come from the environment** and are never logged; the `local` provider needs none.
-- **Grounded by design.** You can pass local evidence (corpus frequencies,
-  co-occurrences, dictionary glosses, or annotations) and the model is told to reason
-  over it. Untrusted source text is wrapped as data, with instructions to ignore
-  embedded directives.
-- **Everything returns an `ExploratoryResult`** carrying provenance, the grounding
-  it rested on, and an unmistakable label.
+- **Optional and lazy.** Provider SDKs are optional extras imported only on call.
+  `import aegean` does not require them, and no request runs until a client is
+  constructed.
+- **Environment credentials.** API keys are read from environment variables and
+  never logged; the `local` provider requires no key.
+- **Structured grounding.** Local evidence (frequencies, co-occurrences, glosses,
+  annotations) is passed alongside the prompt, and untrusted source text is wrapped
+  as data.
+- **Provenance.** Every result records the model, parameters, and grounding inputs.
 
 If you're new to Python or the terminal, start with
 [Getting Started](Getting-Started); for the wider command surface see [CLI](CLI).

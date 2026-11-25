@@ -9,12 +9,9 @@ dependency-light library.
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](https://github.com/ryanpavlicek/pyaegean/blob/main/LICENSE)
 [![CI](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml/badge.svg)](https://github.com/ryanpavlicek/pyaegean/actions/workflows/ci.yml)
 
-> **Latest PyPI release: v0.66.0 (beta).** Usable and tested, but the API may still shift
-> before 1.0. This README follows the current release.
-> Analytical and generative output on the
-> *undeciphered* material (Linear A, Cypro-Minoan) is **exploratory**: leads for a human expert,
-> never ground truth. The bundled Linear A corpus is a *normalized* transcription (no full
-> epigraphic apparatus); for edition-grade readings consult GORILA / SigLA.
+> **Latest PyPI release: v0.66.0 (beta).** The API may still shift before 1.0.
+> The bundled Linear A corpus is a normalized transcription without full epigraphic
+> apparatus; for edition-grade readings consult GORILA or SigLA.
 
 ---
 

@@ -108,7 +108,7 @@ def test_ht13_analysis_pane_shows_the_accounting_balance() -> None:
     _run(body())
 
 
-def test_undeciphered_caveat_shows_for_lineara() -> None:
+def test_lineara_detail_renders_clean_header_without_disclaimer() -> None:
     async def body() -> None:
         app = AegeanApp()
         async with app.run_test(size=(120, 40)) as pilot:
@@ -121,9 +121,8 @@ def test_undeciphered_caveat_shows_for_lineara() -> None:
             await pilot.press("enter")
             await pilot.pause()
             detail = str(screen.query_one("#corpus-detail", DetailPane).content)
-            # the exact honesty copy, at the point the analysis is read
-            assert DetailPane.UNDECIPHERED_CAVEAT in detail
-            assert "undeciphered" in detail and "exploratory" in detail
+            assert "HT13" in detail
+            assert "not a reading" not in detail
 
     _run(body())
 

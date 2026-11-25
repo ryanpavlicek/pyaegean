@@ -71,12 +71,13 @@ def test_geography_counts_follow_the_live_gazetteer() -> None:
 
 def test_registry_and_mcp_counts_are_not_stale() -> None:
     dataset_count = len(data._REMOTE)
-    cli = _read("wiki/CLI.md")
+    cli_corpora = _read("wiki/CLI-Corpora.md")
+    cli_ai = _read("wiki/CLI-AI.md")
     cheatsheet = _read("wiki/CLI-Cheatsheet.md")
     recipes = _read("wiki/Recipes.md")
 
-    assert f"shows all {dataset_count})" in cli
-    assert f"currently {dataset_count} entries" in cli
+    assert f"shows all {dataset_count})" in cli_ai
+    assert f"currently {dataset_count} entries" in cli_corpora
     assert f"currently {dataset_count} entries" in cheatsheet
     assert f"# {len(TOOLS)} tools:" in recipes
 
