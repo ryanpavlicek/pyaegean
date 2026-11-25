@@ -224,8 +224,14 @@ def resolve_inline_variants(word: str) -> tuple[str, tuple[str, ...]]:
 
 
 def primary_edition(root: ET.Element) -> ET.Element | None:
-    """The primary edition div (``subtype="primary"`` if present, else the first edition)."""
+    """The primary edition div (``subtype="primary"`` if present, else the first edition).
+
+    Supports both TEI P5 (namespaced ``{http://www.tei-c.org/ns/1.0}div``) and
+    TEI P4 (unnamespaced ``div``, as used by *Inscriptions of Aphrodisias* 2007).
+    """
     editions = [d for d in root.iter(f"{{{_TEI}}}div") if d.get("type") == "edition"]
+    if not editions:
+        editions = [d for d in root.iter("div") if d.get("type") == "edition"]
     for d in editions:
         if d.get("subtype") == "primary":
             return d
@@ -329,5 +335,14 @@ def build_greek_corpus(
 
     prov = Provenance(source=source, license=license, url=url, edition_fidelity=edition_fidelity)
     corpus = Corpus(docs, provenance=prov, script_id=script_id)
-    Path(out).write_text(corpus.to_json(), encoding="utf-8")
+    out_path = Path(out)
+    payload = corpus.to_json()
+    if out_path.suffix == ".gz":
+        import gzip
+
+        with out_path.open("wb") as raw_f:
+            with gzip.GzipFile(filename="", mode="wb", fileobj=raw_f, compresslevel=9, mtime=0) as gz:
+                gz.write(payload.encode("utf-8"))
+    else:
+        out_path.write_text(payload, encoding="utf-8")
     return greek, len(docs)

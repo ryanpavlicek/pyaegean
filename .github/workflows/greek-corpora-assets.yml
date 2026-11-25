@@ -1,0 +1,117 @@
+name: Build Greek & Patristic corpus assets
+
+# Reproducibly builds and publishes the opt-in open-licensed Greek, Patristic,
+# Biblical, Epigraphic, Byzantine, and Homeric Scholia release assets from
+# commit-pinned upstream sources. Manual dispatch only; uses non-`v` asset tags
+# so release.yml never triggers a PyPI publication.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Fetch pinned upstream archives
+        run: |
+          mkdir -p /tmp/src-archives dist-assets
+          curl -sSL "https://ndownloader.figshare.com/files/51848354" -o /tmp/src-archives/iaph2007.zip
+          mkdir -p /tmp/src-archives/iaph2007
+          unzip -q /tmp/src-archives/iaph2007.zip -d /tmp/src-archives/iaph2007
+
+          curl -sSL "https://github.com/IreneVagionakis/CretanInscriptions/archive/70fc617724034433870910fe3637331d9cbf2014.tar.gz" -o /tmp/src-archives/crete.tar.gz
+          mkdir -p /tmp/src-archives/crete
+          tar -xzf /tmp/src-archives/crete.tar.gz -C /tmp/src-archives/crete --strip-components=1
+
+          curl -sSL "https://github.com/OnlineCriticalPseudepigrapha/Online-Critical-Pseudepigrapha/archive/954a1f057c2426ad2f049b135600712812516242.tar.gz" -o /tmp/src-archives/ocp.tar.gz
+          mkdir -p /tmp/src-archives/ocp
+          tar -xzf /tmp/src-archives/ocp.tar.gz -C /tmp/src-archives/ocp --strip-components=1
+
+          curl -sSL "https://github.com/calfa-co/Patrologia-Graeca/archive/5895ab908dd4cac5ee06cfc0e36f2ef77723e143.tar.gz" -o /tmp/src-archives/pg.tar.gz
+          mkdir -p /tmp/src-archives/pg
+          tar -xzf /tmp/src-archives/pg.tar.gz -C /tmp/src-archives/pg --strip-components=1
+
+          curl -sSL "https://raw.githubusercontent.com/homermultitext/hmt-archive/cd09f8bcf8a88854557b02dc25f14a711ef16617/releases-cex/hmt-2026a.cex" -o /tmp/src-archives/hmt-2026a.cex
+      - name: Build deterministic release assets
+        run: |
+          python scripts/build_nt_editions.py --out dist-assets/nt-editions.json.gz
+          python scripts/build_aphrodisias_corpus.py /tmp/src-archives/iaph2007 -o dist-assets/aphrodisias-corpus.json.gz
+          python scripts/build_crete_corpus.py /tmp/src-archives/crete/webapps/ROOT/content/xml/epidoc -o dist-assets/crete-corpus.json.gz
+          python scripts/build_apostolic_fathers_corpus.py -o dist-assets/apostolic-fathers-corpus.json.gz
+          python scripts/build_pseudepigrapha_corpus.py /tmp/src-archives/ocp/static/docs -o dist-assets/pseudepigrapha-corpus.json.gz
+          python scripts/build_byzantine_corpus.py -o dist-assets/byzantine-corpus.json.gz
+          python scripts/build_patrologia_graeca_corpus.py /tmp/src-archives/pg -o dist-assets/patrologia-graeca-corpus.json.gz
+          python scripts/build_homer_scholia_corpus.py /tmp/src-archives/hmt-2026a.cex -o dist-assets/homer-scholia-corpus.json.gz
+          sha256sum dist-assets/*.json.gz | tee dist-assets/SHA256SUMS.txt
+      - name: Publish asset-hosting GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          publish_asset() {
+            local tag="$1"
+            local file="$2"
+            local title="$3"
+            local notes="$4"
+            local sha
+            sha="$(sha256sum "$file" | awk '{print $1}')"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "$file" --clobber
+            else
+              gh release create "$tag" "$file" --latest=false --title "$title" --notes "${notes} (SHA-256: ${sha})"
+            fi
+          }
+
+          publish_asset \
+            "nt-editions-v2" \
+            "dist-assets/nt-editions.json.gz" \
+            "Multi-Edition Greek New Testament v2" \
+            "Eight open-licensed Greek New Testament editions (SBLGNT, SRGNT, BHP, Tischendorf 8th, Westcott-Hort 1881, Robinson-Pierpont Byzantine Majority, Antoniades 1904 Patriarchal, King James Textus Receptus). Built reproducibly by scripts/build_nt_editions.py. Licenses: CC BY-SA 3.0 / CC BY 4.0 / Public Domain."
+
+          publish_asset \
+            "patrologia-graeca-corpus-v1" \
+            "dist-assets/patrologia-graeca-corpus.json.gz" \
+            "Calfa-GREgORI Patrologia Graeca Corpus v1" \
+            "33 digitized Migne Patrologia Graeca volumes (6.79M Greek words, OCR of 19th-century prints) from calfa-co/Patrologia-Graeca (UCLouvain GREgORI & Calfa, Vidal-Gorene & Kindt, LREC 2026). Includes 9 major biblical commentary volumes (Cyril of Alexandria, Procopius of Gaza, Photius, Oecumenius, Theophylact of Bulgaria). License: CC BY 4.0."
+
+          publish_asset \
+            "apostolic-fathers-corpus-v1" \
+            "dist-assets/apostolic-fathers-corpus.json.gz" \
+            "Open Apostolic Fathers Greek Corpus v1" \
+            "All 15 twice-hand-corrected Greek Apostolic Fathers texts (64,944 tokens: 1-2 Clement, Ignatius 7 epistles, Polycarp, Didache, Barnabas, Shepherd of Hermas, Martyrdom of Polycarp, Diognetus) from jtauber/apostolic-fathers (Tauber & Macdonald, Zenodo 10.5281/zenodo.2555673). License: CC BY-SA 4.0."
+
+          publish_asset \
+            "pseudepigrapha-corpus-v1" \
+            "dist-assets/pseudepigrapha-corpus.json.gz" \
+            "Online Critical Pseudepigrapha Greek Corpus v1" \
+            "44 Greek Second Temple and Old Testament Pseudepigrapha works (171,306 tokens: 1 Enoch, Psalms of Solomon, Testaments of the 12 Patriarchs, Testament of Job, Testament of Solomon, Testament of Abraham A & B, Letter of Aristeas, Joseph and Aseneth, Sibylline Oracles, 3-4 Baruch, 3-4 Maccabees, Life of Adam and Eve, Lives of the Prophets, Ezekiel the Tragedian, etc.) from OnlineCriticalPseudepigrapha (Ken M. Penner et al., pseudepigrapha.org). License: CC BY 4.0."
+
+          publish_asset \
+            "aphrodisias-corpus-v1" \
+            "dist-assets/aphrodisias-corpus.json.gz" \
+            "Inscriptions of Aphrodisias (IAph2007) Greek Corpus v1" \
+            "1,471 Greek EpiDoc inscriptions from Aphrodisias in Caria (38,556 tokens, 2nd c. BCE to Byzantine period) from Inscriptions of Aphrodisias 2007 (Joyce Reynolds, Charlotte Roueche & Gabriel Bodard, King's College London, http://insaph.kcl.ac.uk/). License: CC BY 2.5."
+
+          publish_asset \
+            "crete-corpus-v1" \
+            "dist-assets/crete-corpus.json.gz" \
+            "Cretan Institutional Inscriptions Greek Corpus v1" \
+            "600 Archaic-Hellenistic Greek EpiDoc inscriptions from Crete (50,995 tokens, 7th-1st c. BCE) from IreneVagionakis/CretanInscriptions (Irene Vagionakis, Universita Ca' Foscari Venezia, 2016-2019). License: CC BY-NC-SA 4.0 (NonCommercial + ShareAlike pass to the user)."
+
+          publish_asset \
+            "byzantine-corpus-v1" \
+            "dist-assets/byzantine-corpus.json.gz" \
+            "Byzantine and Early Modern Vernacular Greek Corpus v1" \
+            "12 medieval and early modern vernacular Greek literary texts (189,375 tokens, 12th-17th c.: Digenes Akritas, Ptochoprodromika, Chronicle of Moreas, Poulologos, Paidiophrastos, Porikologos, Apokopos, Erotokritos) from open-greek/byzantine-early-modern-corpus. License: Public Domain / CC BY-SA 3.0."
+
+          publish_asset \
+            "homer-scholia-corpus-v1" \
+            "dist-assets/homer-scholia-corpus.json.gz" \
+            "Homer Multitext Venetus A Iliad & Homeric Scholia v1" \
+            "Normalized Venetus A (10th c. Marcianus Graecus Z. 454) Iliad (24 books) and Homeric scholia (Venetus A main, interlinear, intermarginal, interior, exterior, Venetus B, Escorial Upsilon 1.1; 54 documents, 331,365 tokens) from homermultitext/hmt-archive release hmt-2026a.cex. License: CC BY-NC 4.0 (NonCommercial passes to the user)."

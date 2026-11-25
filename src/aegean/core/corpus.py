@@ -1101,11 +1101,15 @@ def _enum_value(enum_cls: type[_EnumT], value: Any, what: str) -> _EnumT:
 
 
 def _read_json_text(path: Path) -> str:
-    """Read a JSON file as ``utf-8-sig`` (a leading UTF-8 BOM is stripped, BOM-less UTF-8
-    reads identically). A path the OS cannot even name — a JSON string that reached this
-    branch, or one longer than the filesystem allows — is reported as such."""
+    """Read a JSON file (plain or gzip-compressed) as ``utf-8-sig``.
+
+    A leading UTF-8 BOM is stripped so BOM-less UTF-8 reads identically. Gzip-compressed
+    corpus files (magic bytes ``\\x1f\\x8b``) are decompressed transparently, so
+    ``Corpus.from_json`` accepts both ``.json`` and ``.json.gz`` assets. A path the OS
+    cannot even name — a JSON string that reached this branch, or one longer than the
+    filesystem allows — is reported as such."""
     try:
-        return path.read_text(encoding="utf-8-sig")
+        raw = path.read_bytes()
     except FileNotFoundError:
         raise
     except OSError as exc:
@@ -1113,6 +1117,11 @@ def _read_json_text(path: Path) -> str:
             f"cannot read a corpus from {_shown(str(path))}: {exc.strerror or exc}. Pass a path to a "
             "JSON corpus file, a JSON string starting with '{', or a dict to Corpus.from_dict"
         ) from None
+    if raw[:2] == b"\x1f\x8b":
+        import gzip
+
+        raw = gzip.decompress(raw)
+    return raw.decode("utf-8-sig")
 
 
 def _schema_version(meta: dict[str, Any]) -> int | None:
