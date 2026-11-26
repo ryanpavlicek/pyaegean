@@ -70,7 +70,7 @@ upgrade accuracy behind the same function calls.
 
 ## One call: `pipeline()`
 
-> **Available in v0.73.1.** Isolated pipeline instances, explicit long-input and
+> **Available in v0.74.0.** Isolated pipeline instances, explicit long-input and
 > runtime-variant selection, analysis receipts, source alignment, typed editorial
 > form states, and lossless CoNLL-U representation are part of the current
 > release.

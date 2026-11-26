@@ -15,7 +15,7 @@ project-wide boundaries.
 import aegean
 from aegean.core.script import get_script
 
-aegean.__version__                                # '0.73.1'
+aegean.__version__                                # '0.74.0'
 aegean.registered_scripts()                       # ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 len(get_script("cyprominoan").sign_inventory)     # 99
 ```

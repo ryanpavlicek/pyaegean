@@ -4,6 +4,41 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.74.0 (2026-11-26)
+
+### Added
+
+- **Local Greek Visual Corpus Browser (`aegean.browser`, `aegean browse`, TUI `v`)**:
+  - Zero-dependency stdlib loopback web server (`aegean.browser.serve()`, `create_server()`, `BrowserServer`) strictly bound to `127.0.0.1` / `localhost` / `::1` with same-origin CSRF guards on state-changing `POST` endpoints, lazy-loaded via `aegean.__getattr__`.
+  - Three-pane scholarly reader opening any bundled or cached Greek corpus, all 27 NT books across 9 editions, 56 Swete Septuagint (LXX) books (with Masoretic/LXX Psalm mapping), all 3,844 categorized open-licensed Greek library works, *Patrologia Graeca* (`PG*`), custom Greek / Beta Code input, or local UTF-8 files.
+  - Interactive reading tools: toggleable interlinear glosses, curated public-domain and custom parallel translations, hover token + syntactic head/dependent highlighting, parallel Grammar / Lexicon / Context / Stats inspector, Strong's and clickable etymological root trees, multi-lexicon entries (LSJ, Middle Liddell, Cunliffe, Autenrieth, Abbott-Smith, Dodson) with on-demand NT & LXX concordance loading, NT edition collation and early manuscript witnesses, linked Greek patristic commentaries with inline excerpts, metrical scansion across all 10 metres, cross-corpus FTS5 search, live NLP engine toggles, and CoNLL-U / CSV / JSON export.
+  - Full visual **Library Manager** tab displaying disk usage, store path, **Datasets** vs. **Packs (10)** segmented views, status and category filters, one-click Download / Install Pack / Open / Activate Lexicon, and two-step Remove (`POST /api/library/remove`, `library_remove_payload`).
+  - Wired across CLI (`aegean browse`), TUI (`v` global key and Command Palette entry with clean server shutdown on exit), API docs (`docs/api/browser.md`), and wiki (`wiki/Greek-Browser.md`).
+- **Live-verified Pleiades gazetteer expansion & spatial provenance (`aegean.geo`)**:
+  - Expanded bundled `site_coordinates.json` from 94 → **144 sites** (78 → **128 Pleiades-aligned** across 9 regions, verified against live `pleiades.stoa.org` JSON records and pinned in `scripts/gazetteer_pins.json`), covering Aphrodisias (`1,437/1,471` docs), Cypriot *IG* XV 1 (`179/180`), Crete, DAMOS Linear B, SigLA, I.Sicily, IGCyr, and EDH.
+  - Added backward-compatible `precision` (`"monument"|"site"|"region"`) and `location_role` fields on `SiteCoord`, plus zero-dependency `aegean.geo.unmapped_sites()`.
+- **Source-cited Cypriot syllabary lexicon expansion (`aegean.scripts.cypriot`)**:
+  - Expanded bundled `cypriot/lexicon.json` from 17 → **52 source-cited entries** verified against bundled Kurion/Marion *IG* XV 1 (CC BY 4.0) inscriptions and Masson's *ICS*, raising `bridge_coverage("cypriot")` from 33/572 (5.8%) → **100/572 (17.5%, 45 distinct forms)** while maintaining **0/193** false positives on Eteocypriot Amathus texts.
+  - Added frozen `CypriotLexEntry`, `lexicon_entry()`, `lexicon_entries()`, and trailing sentence-period stripping in Cypriot lookup normalization.
+- **Quantitative metrical scansion scoring & offline hard-input coverage ledger**:
+  - Added non-raising `aegean.greek.score_scansion()` and `ScansionScore` reporting structural fit, caesura, dactyl ratio, spondaic fifth, resolution count, and lexical-override provenance (`synizesis_used`, `long_by_nature_used`).
+  - Added deterministic offline `scripts/build_hard_input_ledger.py` and checked-in `training/results/hard-input-coverage-ledger-v1.json` covering OCR/lenient repair, Leiden/EpiDoc apparatus, crasis/iota-subscript safety, long periodic prose & sentence policies, 5 dialects/genres, and 8-line metrical scansion with explicit unevaluated gaps.
+- **Packaging & onboarding**:
+  - Added `conda-forge` v1 (`rattler-build`) recipe in `packaging/conda-forge/recipe.yaml` and submission guide in `packaging/conda-forge/README.md`.
+  - Added 5-minute 100% offline quickstart notebook `notebooks/quickstart-offline.ipynb`.
+
+### Changed
+
+- **Context-sensitive lexical evidence selection (`aegean.translate._lexical_context`)**:
+  - Added `VerbForm=Part`, `Mood=Sub`, and `Mood=Opt` cues, ranked co-occurring morphological construction clusters within a 180-character window, and snapped dictionary excerpts to sense-heading boundaries while preserving exact half-open code-point offsets and `contextual_sense_verified=False`.
+
+### Fixed
+
+- **GPU ONNX Runtime multi-threaded inference race (`aegean.greek.joint`, `neural_lemmatizer`)**:
+  - Serialized per-session `InferenceSession.run()` and tokenizer calls with per-instance `RLock` guards (`_JointModel._session_lock`, `_NeuralModel._session_lock`), preventing multi-threaded `CUDAExecutionProvider` stream/arena corruption (`NaN`/`+Inf` arc logits) while preserving full GPU parity (`1,481/1,481` tokens exact vs. CPU).
+- **Fresh-cache Septuagint interlinear POS (`aegean.greek.bible._lxx`)**:
+  - Threaded `allow_fetch` into `enrich_lxx_interlinear()` so online calls pre-warm Extended Strong's on a fresh cache, and added a local closed-class Koine improper-preposition set (`ἐπάνω`, etc.) for strictly empty-cache offline calls without altering `aegean.greek.pos`.
+
 ## 0.73.1 (2026-11-26)
 
 ### Added

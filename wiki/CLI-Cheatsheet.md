@@ -4,14 +4,14 @@ One-page index of every `aegean` command and its key flags with runnable
 examples. For guided explanations and worked outputs, see [CLI](CLI). If you are
 new to the terminal, start with [Getting Started](Getting-Started).
 
-> **Available in v0.73.1.** All commands, Greek library collections, Septuagint
+> **Available in v0.74.0.** All commands, Greek library collections, Septuagint
 > parity flags, research bundles, multi-script workbench flags, TUI review
 > options, and Greek pipeline controls below match the current release.
 
 ```bash
 pip install "pyaegean[cli]"     # adds typer + rich; core library stays zero-dependency
 aegean --help                   # command map
-aegean --version                # pyaegean 0.73.1
+aegean --version                # pyaegean 0.74.0
 ```
 
 The core package installs the `aegean` entry point; executing commands requires

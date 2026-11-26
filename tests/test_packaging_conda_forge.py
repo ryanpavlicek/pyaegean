@@ -19,13 +19,20 @@ def _pyproject_field(text: str, key: str) -> str:
     return match.group(1)
 
 
+def _semver(ver: str) -> tuple[int, int, int]:
+    parts = ver.split(".")
+    assert len(parts) == 3 and all(p.isdigit() for p in parts), f"invalid semver: {ver!r}"
+    return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+
 def test_conda_forge_recipe_matches_pyproject() -> None:
     recipe = yaml.safe_load(_RECIPE.read_text(encoding="utf-8"))
     pyproject_text = _PYPROJECT.read_text(encoding="utf-8")
 
     assert recipe["schema_version"] == 1
     assert recipe["context"]["name"] == _pyproject_field(pyproject_text, "name")
-    assert recipe["context"]["version"] == _pyproject_field(pyproject_text, "version")
+    # Recipe pins a published PyPI sdist + real SHA-256, so it tracks <= current source version.
+    assert _semver(recipe["context"]["version"]) <= _semver(_pyproject_field(pyproject_text, "version"))
     assert recipe["context"]["python_min"] == "3.10"
 
     assert recipe["build"]["noarch"] == "python"

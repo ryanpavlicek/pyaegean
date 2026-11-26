@@ -10,7 +10,7 @@ a terminal, then return here.
 > flag on one page. This page walks through each command group with worked
 > examples.
 
-> **Available in v0.73.1.** All commands, flags, Greek library collections,
+> **Available in v0.74.0.** All commands, flags, Greek library collections,
 > Septuagint parity options, research bundle workflows, multi-script workbench
 > controls, and TUI review options on this page match the current release.
 
@@ -99,7 +99,7 @@ single quotes work too; on PowerShell, prefer double quotes.
 ## Command map
 
 ```bash
-aegean --version          # pyaegean 0.73.1
+aegean --version          # pyaegean 0.74.0
 ```
 
 | Group | Commands |

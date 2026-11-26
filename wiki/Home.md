@@ -5,7 +5,7 @@ alphabetic Greek, Linear A, Linear B, Cypriot, and Cypro-Minoan. It combines a
 script-agnostic corpus layer, Greek NLP, quantitative analysis tools, grounded
 translation, and an optional multi-provider AI layer.
 
-> **Latest PyPI release: v0.73.1 (beta).** The API may still shift before 1.0.
+> **Latest PyPI release: v0.74.0 (beta).** The API may still shift before 1.0.
 > This wiki documents the current release. See the
 > [changelog](https://github.com/ryanpavlicek/pyaegean/blob/main/CHANGELOG.md)
 > for release history.

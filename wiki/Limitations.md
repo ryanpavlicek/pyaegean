@@ -125,7 +125,7 @@ Summary of the four Aegean syllabic scripts:
 | --- | --- | --- | --- | --- | --- |
 | Linear A | `lineara` | 342 | 50 (working convention) | — | Undeciphered |
 | Linear B | `linearb` | 211 | 74 syllabograms (full grid) | 149 entries | Deciphered |
-| Cypriot syllabary | `cypriot` | 55 | 55 (full grid) | 17 entries | Deciphered |
+| Cypriot syllabary | `cypriot` | 55 | 55 (full grid) | 52 entries | Deciphered |
 | Cypro-Minoan | `cyprominoan` | 99 | 0 | — | Undeciphered |
 
 ---
@@ -208,10 +208,10 @@ Open work is tracked on the [roadmap](Home#roadmap).
 | --- | --- |
 | Bundled Linear A is a normalized transcription whose full Leiden apparatus was dropped upstream. Surviving erased marks load as `LOST` and bracketed readings as `UNCLEAR`; SigLA (`aegean.load("sigla")`) adds 802 palaeographic documents with typology, dimensions, periods, word division, and ideograms. | SigLA integration complete. Remaining limit: SigLA omits cardinal-numeral values; use bundled GORILA for accounting. |
 | Bundled Linear B has 18 sample tablets and 149 source-attested Greek bridge entries (curated core plus Wiktionary equations). Many Mycenaean forms lack a clear alphabetic Greek descendant. | Full 5,932-tablet corpus available via `aegean.load("damos")`; bridge entries expand via verified contributions. |
-| Bundled Cypriot lexicon has 17 entries (centered on Idalion). | Expands via verified contributions from published ICS/IG XV 1 readings. |
+| Bundled Cypriot lexicon has 52 source-cited entries (Idalion, Kurion, and Marion; Eteocypriot Amathus stays at 0/193 false positives). | Expands via verified contributions from published ICS/IG XV 1 readings. |
 | Scansion covers dactylic hexameter, elegiac pentameter, iambic trimeter (with resolution), and aeolic lyric (glyconic, pherecratean, sapphic, alcaic). Synizesis fires only on words in a curated lexicon; unlisted lines decline instead of guessing. | Remaining limit: non-aeolic lyric (dactylo-epitrite, free astrophic). See [Meters](Meters). |
 | Offline rule morphology misses irregular, third-declension, and contract paradigms and does not restore accents on reconstructed lemmas. | Covered by treebank and neural tiers; opt-in UniMorph paradigms (`greek.use_paradigms()`, CC BY-SA) cover irregular and third-declension nominals (NT lemma 66.98% → 71.21%, leaving ambiguous and capitalized forms unguessed); offline verbs remain rule-based. |
-| 78 of 94 gazetteer find-sites carry Pleiades IDs; the remaining 16 are mostly minor findspots, peak sanctuaries, or modern place-names absent from Pleiades. | Coordinates checked weekly by `scripts/check_gazetteer.py`; unaligned sites listed in `docs/pleiades-candidates.md`. |
+| 128 of 144 gazetteer find-sites carry Pleiades IDs; the remaining 16 are mostly minor findspots, peak sanctuaries, or modern place-names absent from Pleiades. | Coordinates checked weekly by `scripts/check_gazetteer.py`; unaligned sites listed in `docs/pleiades-candidates.md`. |
 | Syllabification exceptions list dictionary headwords; inflected compounds fall back to phonotactic rules. | One-line, test-enforced additions via [CONTRIBUTING](https://github.com/ryanpavlicek/pyaegean/blob/main/CONTRIBUTING.md). |
 
 Offline catalog helpers list curated literary works and NT books without network
@@ -335,10 +335,14 @@ These choices are intentional architectural boundaries:
   reconciliation/rescue or weighted OOV lemma reranker), and calibration hashes.
 
 - **Browser and no-Python options.** Core functionality runs client-side in
-  Pyodide at [the web demo](https://pyaegean.xyz/demo/). The [CLI](CLI) covers
-  shell workflows without writing Python, and
-  [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench) provides
-  a visual browser interface for Linear A.
+  Pyodide at [the web demo](https://pyaegean.xyz/demo/). Locally,
+  [`aegean browse`](Greek-Browser) (`aegean.browser`) serves a zero-dependency
+  visual corpus browser for Greek texts (interlinear, translations, morphology,
+  lexica, commentaries, and Library Manager),
+  [linearaworkbench](https://github.com/ryanpavlicek/linearaworkbench)
+  (`aegean workbench`) provides the visual workbench for the Aegean syllabic
+  scripts, and the [CLI](CLI) and [TUI](TUI) cover terminal workflows without
+  writing Python.
 
 ---
 

@@ -387,7 +387,7 @@ from the Fq series. Record the version, corpus fingerprint, and citation:
 import aegean
 
 damos = aegean.load("damos")
-print(aegean.__version__)          # 0.73.1
+print(aegean.__version__)          # 0.74.0
 print(damos.fingerprint()[:16])    # ca93e51fd26a8f6c
 print(damos.cite())
 # Aurora, F. (2015). DAMOS (Database of Mycenaean at Oslo). Annotating a fragmentarily
@@ -1272,7 +1272,7 @@ aegean data remove damos-corpus   # delete one dataset (--all clears all)
 ```python
 import aegean
 print(aegean.__version__, aegean.registered_scripts())
-# 0.73.1 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
+# 0.74.0 ['cypriot', 'cyprominoan', 'greek', 'lineara', 'linearb']
 ```
 
 Include `aegean --version` and the relevant rows from `aegean data versions` (or

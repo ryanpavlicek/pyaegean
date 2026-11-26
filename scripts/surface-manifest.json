@@ -2602,6 +2602,36 @@
           "where": "LibraryScreen & BiblicalScreen (Patristics tab)"
         }
       }
+    },
+    {
+      "id": "greek-visual-browser",
+      "since": "0.74.0",
+      "python_api": "aegean.browser.serve",
+      "summary": "Zero-dependency local loopback Greek visual corpus browser (aegean.browser / aegean browse / TUI v) with interlinear glosses, parallel translations, hover dependency highlighting, grammar/Strong's/LSJ/commentary inspectors, metrical scansion, FTS5 search, live NLP engine toggles, and visual Library Manager.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Local loopback web server serving full local corpora and Library Manager; the Pyodide demo covers standalone single-call cards."
+        },
+        "mcp": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Interactive browser UI; the underlying read, search, biblical, and library tools are exposed directly on aegean-mcp."
+        },
+        "notebooks": {
+          "status": "covered",
+          "where": {
+            "notebook": "quickstart-offline.ipynb",
+            "marker": "browser.serve"
+          },
+          "note": "Documented alongside the offline quickstart tour; server launch stays commented so headless CI execution remains non-blocking."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "Global key v & Command Palette ('Open Greek visual browser (Web)')"
+        }
+      }
     }
   ]
 }
