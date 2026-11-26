@@ -106,6 +106,110 @@ def test_fts5_search_on_json_gz_and_cache_invalidation(
     assert reclaimed > 0
 
 
+def test_fts_sidecar_hosted_asset_schemas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify FTS5 sidecar indexing against real hosted JSON schemas (PG dict, LXX nested, DAMOS, SigLA)."""
+    from aegean import search as srch
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+
+    # 1. fts_index_path accepts plain str paths as well as Path objects
+    str_idx = srch.fts_index_path(str(tmp_path / "sample.json"))
+    assert str_idx == srch.fts_index_path(tmp_path / "sample.json")
+
+    # 2. Hosted Patrologia Graeca schema: volumes is a dict keyed by vol_id with _info + pages
+    pg_dict = {
+        "_meta": {"version": 1},
+        "volumes": {
+            "PG073": {
+                "_info": {
+                    "vol_id": "PG073",
+                    "author": "Cyril of Alexandria",
+                    "title": "Commentary on the Gospel of John (vol. 6)",
+                },
+                "pages": [
+                    {"page": "10", "text": "Ἐν ἀρχῇ ἦν ὁ Λόγος καὶ Θεὸς ἦν ὁ Λόγος."},
+                ],
+            }
+        },
+    }
+    pg_gz = tmp_path / "patrologia-dict.json.gz"
+    pg_gz.write_bytes(gzip.compress(json.dumps(pg_dict, ensure_ascii=False).encode("utf-8")))
+    pg_hits = srch.search_text("λόγος", str(pg_gz), book="PG073")
+    assert len(pg_hits) == 1
+    assert pg_hits[0].doc_id == "PG073"
+    assert pg_hits[0].ref == "PG073 p.10"
+    assert pg_hits[0].meta["author"] == "Cyril of Alexandria"
+
+    # 3. Hosted Swete LXX schema: books[code] has {"_info": ..., "verses": {vref: text}}
+    lxx_nested = {
+        "_meta": {"books": 1},
+        "books": {
+            "Ps": {
+                "_info": {"title": "Psalms", "section": "Poetic"},
+                "verses": {
+                    "22.1": "Κύριος ποιμαίνει με, καὶ οὐδέν με ὑστερήσει.",
+                    "22.2": "εἰς τόπον χλόης, ἐκεῖ με κατεσκήνωσεν.",
+                },
+            }
+        },
+    }
+    lxx_gz = tmp_path / "lxx-nested.json.gz"
+    lxx_gz.write_bytes(gzip.compress(json.dumps(lxx_nested, ensure_ascii=False).encode("utf-8")))
+    lxx_hits = srch.search_text("ποιμαίνει", str(lxx_gz))
+    assert len(lxx_hits) == 1
+    assert lxx_hits[0].ref == "Ps 22.1"
+    assert "{" not in lxx_hits[0].text
+    assert lxx_hits[0].meta["title"] == "Psalms"
+
+    # 4. Hosted DAMOS Linear B schema: documents carry raw tablet "content" + heading_short
+    damos_json = {
+        "_meta": {"name": "DAMOS", "version": 2},
+        "documents": [
+            {
+                "id": "42",
+                "heading": "PY Ta 711 (2)",
+                "heading_short": "PY Ta 711",
+                "site": "Pylos",
+                "scribe": "2",
+                "chronology": "LH IIIB",
+                "content": ".1 o-wi-de pu2-ke-qi-ri wa-na-ka te-ke au-ke-wa da-mo-ko-ro",
+            }
+        ],
+    }
+    damos_p = tmp_path / "damos.json"
+    damos_p.write_text(json.dumps(damos_json, ensure_ascii=False), encoding="utf-8")
+    damos_hits = srch.search_text("wa-na-ka", str(damos_p))
+    assert len(damos_hits) == 1
+    assert damos_hits[0].ref == "PY Ta 711"
+    assert damos_hits[0].meta["site"] == "Pylos"
+
+    # 5. Hosted SigLA Linear A schema: documents carry sign-by-sign "attestations"
+    sigla_json = {
+        "_meta": {"title": "SigLA", "version": 2},
+        "documents": [
+            {
+                "id": "HT 13",
+                "site": "Haghia Triada",
+                "period": "LM IB",
+                "typology": "Tablet",
+                "attestations": [
+                    {"sign": "KU", "kind": "syllable", "word": 0},
+                    {"sign": "RO", "kind": "syllable", "word": 0},
+                    {"sign": "VIN", "kind": "logogram", "word": None},
+                ],
+            }
+        ],
+    }
+    sigla_p = tmp_path / "sigla.json"
+    sigla_p.write_text(json.dumps(sigla_json, ensure_ascii=False), encoding="utf-8")
+    sigla_hits = srch.search_text("KU-RO", str(sigla_p))
+    assert len(sigla_hits) == 1
+    assert sigla_hits[0].doc_id == "HT 13"
+    assert "KU-RO" in sigla_hits[0].text
+    assert "VIN" in sigla_hits[0].text
+
+
+
 def test_open_corpus_and_fluent_methods(tmp_path: Path) -> None:
     # 1. Registered corpus
     c = aegean.open("greek")

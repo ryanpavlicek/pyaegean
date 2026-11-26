@@ -181,13 +181,17 @@ def test_lxx_registered_loader_inline_refs_mt_psalms_and_interlinear(
     assert open_gen.documents[0].id == "Gen 1"
 
     # 4. Automatic offline interlinear enrichment (tagged annotation_source="auto-lexicon")
-    il = bib.load_lxx("Gen 1:1", interlinear=True, offline=True)
+    il = bib.load_lxx("Gen 1:1-2", interlinear=True, offline=True)
     toks = il.documents[0].tokens
     assert all(t.annotations.get("annotation_source") == "auto-lexicon" for t in toks)
     theos = next(t for t in toks if "θε" in t.text.lower())
     assert theos.annotations["lemma"] == "θεός"
     assert theos.annotations["strongs"] == "G2316"
     assert "God" in theos.annotations["gloss"]
+    # Unaccented ALL-CAPS opening "ΕΝ" must resolve to ADP (not fallback NOUN)
+    en_tok = next(t for t in toks if t.text == "ΕΝ")
+    assert en_tok.annotations["lemma"] == "ἐν"
+    assert en_tok.annotations["morph"] == "ADP"
 
     # 5. search_bible() auto-detects LXX books and supports corpus="both"
     lxx_hits = bib.search_bible("φῶς", book="Gen", offline=True)

@@ -48,7 +48,7 @@ __all__ = [
     "search_text",
 ]
 
-_SCHEMA_VERSION = "2"
+_SCHEMA_VERSION = "3"
 _PG_RE = re.compile(r"^PG\d+(?:_\d+)?$", re.IGNORECASE)
 _TLG_RE = re.compile(r"^(?:tlg|stoa)\d+\.(?:tlg|stoa)\d+$", re.IGNORECASE)
 _OGC_RE = re.compile(r"^ogc\d{4,}$", re.IGNORECASE)
@@ -122,11 +122,12 @@ def _fts_dir() -> Path:
     return d
 
 
-def fts_index_path(source_path: Path, *, tag: str = "") -> Path:
+def fts_index_path(source_path: Path | str, *, tag: str = "") -> Path:
     """Return the sidecar SQLite FTS5 path for an on-disk corpus file."""
-    key_src = f"{source_path.resolve()}::{tag}::v{_SCHEMA_VERSION}"
+    path = Path(source_path)
+    key_src = f"{path.resolve()}::{tag}::v{_SCHEMA_VERSION}"
     digest = hashlib.sha256(key_src.encode("utf-8")).hexdigest()[:16]
-    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", source_path.name)[:48]
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", path.name)[:48]
     return _fts_dir() / f"{stem}.{digest}.fts.db"
 
 
@@ -150,6 +151,42 @@ def _read_json_any(path: Path) -> Any:
     return json.loads(raw.decode("utf-8-sig"))
 
 
+def _sigla_attestation_text(attestations: list[Any]) -> str:
+    """Reconstruct hyphen-joined words and standalone signs from SigLA v1/v2 attestations."""
+    words: list[str] = []
+    pending: list[str] = []
+    pending_word: int | None = None
+
+    def flush() -> None:
+        nonlocal pending, pending_word
+        if pending:
+            words.append("-".join(pending))
+            pending = []
+            pending_word = None
+
+    for att in attestations:
+        if not isinstance(att, dict):
+            continue
+        sign = str(att.get("sign") or "").strip()
+        kind = att.get("kind")
+        word = att.get("word")
+        if kind is None:
+            if sign:
+                words.append(sign)
+            continue
+        if word is not None and kind in ("syllable", "blank"):
+            if pending_word is not None and word != pending_word:
+                flush()
+            pending_word = word
+            pending.append(sign or "*?")
+            continue
+        flush()
+        if kind == "logogram" and sign:
+            words.append(sign)
+    flush()
+    return " ".join(words).strip()
+
+
 def _iter_json_rows(
     source_path: Path,
     *,
@@ -159,14 +196,26 @@ def _iter_json_rows(
     """Yield ``(doc_id, ref, scope, raw_text, meta_json)`` rows from any pyaegean JSON asset."""
     data = _read_json_any(source_path)
 
-    # 1. Patrologia Graeca archive: {"volumes": [{"id", "author", "title", "pages": [{"page", "text"}]}]}
-    if isinstance(data, dict) and isinstance(data.get("volumes"), list):
-        for vol in data["volumes"]:
-            vid = str(vol.get("id", ""))
-            author = str(vol.get("author", ""))
-            title = str(vol.get("title", ""))
+    # 1. Patrologia Graeca archive:
+    #    - Hosted v1 schema: {"volumes": {"PG073": {"_info": {"vol_id", "author", "title"}, "pages": [{"page", "text"}]}}}
+    #    - Legacy list schema: {"volumes": [{"id", "author", "title", "pages": [{"page", "text"}]}]}
+    if isinstance(data, dict) and isinstance(data.get("volumes"), (dict, list)):
+        vols = data["volumes"]
+        vol_iter: Iterable[tuple[str, dict[str, Any]]]
+        if isinstance(vols, dict):
+            vol_iter = ((str(k), v) for k, v in vols.items() if isinstance(v, dict))
+        else:
+            vol_iter = ((str(v.get("id", "")), v) for v in vols if isinstance(v, dict))
+        for default_vid, vol in vol_iter:
+            raw_info = vol.get("_info")
+            info: dict[str, Any] = raw_info if isinstance(raw_info, dict) else vol
+            vid = str(info.get("vol_id") or info.get("id") or default_vid)
+            author = str(info.get("author", ""))
+            title = str(info.get("title", ""))
             meta_base = json.dumps({"author": author, "title": title, "volume": vid}, ensure_ascii=False)
             for pg in vol.get("pages", ()):
+                if not isinstance(pg, dict):
+                    continue
                 pnum = pg.get("page", "")
                 text = str(pg.get("text", "")).strip()
                 if text:
@@ -207,14 +256,30 @@ def _iter_json_rows(
                     yield (wid, ref, scope, text, meta_base)
         return
 
-    # 2. Swete Septuagint bundle: {"books": {book_code: {verse_ref: text}}}
+    # 2. Swete Septuagint bundle:
+    #    - Hosted v1/v2 schema: {"books": {book_code: {"_info": {...}, "verses": {verse_ref: text}}}}
+    #    - Flat schema: {"books": {book_code: {verse_ref: text}}}
     if isinstance(data, dict) and isinstance(data.get("books"), dict) and "editions" not in data:
-        for book, verses in data["books"].items():
-            if not isinstance(verses, dict):
+        for book, book_obj in data["books"].items():
+            if not isinstance(book_obj, dict):
                 continue
-            meta_j = json.dumps({"book": book}, ensure_ascii=False)
+            if isinstance(book_obj.get("verses"), dict):
+                raw_book_info = book_obj.get("_info")
+                book_info: dict[str, Any] = raw_book_info if isinstance(raw_book_info, dict) else {}
+                verses = book_obj["verses"]
+                meta_info: dict[str, Any] = {"book": book}
+                if book_info.get("title"):
+                    meta_info["title"] = str(book_info["title"])
+                if book_info.get("section"):
+                    meta_info["section"] = str(book_info["section"])
+                meta_j = json.dumps(meta_info, ensure_ascii=False)
+            else:
+                verses = book_obj
+                meta_j = json.dumps({"book": book}, ensure_ascii=False)
             for vref, text in verses.items():
-                t = str(text).strip()
+                if not isinstance(text, str):
+                    continue
+                t = text.strip()
                 if t:
                     yield (book, f"{book} {vref}", book.lower(), t, meta_j)
         return
@@ -237,51 +302,97 @@ def _iter_json_rows(
                         yield (f"{ed}:{book}", f"{book} {vref} ({ed})", f"{ed.lower()}:{book.lower()}", t, meta_j)
         return
 
-    # 4. Standard pyaegean Corpus JSON OR compact NT corpus JSON:
-    #    {"documents": [{"id", "tokens", "meta", ...}]}
+    # 4. Standard pyaegean Corpus JSON, compact NT corpus JSON, DAMOS, and SigLA:
+    #    {"documents": [{"id", "tokens" | "content" | "attestations", ...}]}
     if isinstance(data, dict) and isinstance(data.get("documents"), list):
         for doc in data["documents"]:
+            if not isinstance(doc, dict):
+                continue
             did = str(doc.get("id", ""))
-            meta = doc.get("meta") or {}
+            raw_meta = doc.get("meta")
+            meta: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
             doc_book = str(doc.get("book") or (did.split()[0] if did else ""))
             doc_chapter = doc.get("chapter")
             tokens = doc.get("tokens") or []
-            # If tokens carry verse refs (either standard annotations["ref"] or compact
-            # nt-corpus {"t": ..., "v": ...}), group per verse for crisp verse-level hits.
-            grouped: dict[str, list[str]] = {}
-            has_refs = False
-            for tok in tokens:
-                if isinstance(tok, dict):
-                    ann = tok.get("annotations")
-                    txt = str(tok.get("text") if "text" in tok else tok.get("t", ""))
-                    vref = ann.get("ref") if isinstance(ann, dict) else None
-                    if not vref and "v" in tok and doc_book and doc_chapter is not None:
-                        vref = f"{doc_book}.{doc_chapter}.{tok['v']}"
+            if tokens:
+                # If tokens carry verse refs (either standard annotations["ref"] or compact
+                # nt-corpus {"t": ..., "v": ...}), group per verse for crisp verse-level hits.
+                grouped: dict[str, list[str]] = {}
+                has_refs = False
+                for tok in tokens:
+                    if isinstance(tok, dict):
+                        ann = tok.get("annotations")
+                        txt = str(tok.get("text") if "text" in tok else tok.get("t", ""))
+                        vref = ann.get("ref") if isinstance(ann, dict) else None
+                        if not vref and "v" in tok and doc_book and doc_chapter is not None:
+                            vref = f"{doc_book}.{doc_chapter}.{tok['v']}"
+                    else:
+                        txt = str(tok)
+                        vref = None
+                    if vref:
+                        has_refs = True
+                        grouped.setdefault(str(vref), []).append(txt)
+                if has_refs:
+                    meta_j = json.dumps({"book": doc_book, "doc_id": did}, ensure_ascii=False)
+                    for vref, words in grouped.items():
+                        yield (did, vref, doc_book.lower(), " ".join(w for w in words if w), meta_j)
                 else:
-                    txt = str(tok)
-                    vref = None
-                if vref:
-                    has_refs = True
-                    grouped.setdefault(str(vref), []).append(txt)
-            if has_refs:
-                meta_j = json.dumps({"book": doc_book, "doc_id": did}, ensure_ascii=False)
-                for vref, words in grouped.items():
-                    yield (did, vref, doc_book.lower(), " ".join(w for w in words if w), meta_j)
-            else:
-                words = [
-                    str(tok.get("text") if "text" in tok else tok.get("t", ""))
-                    if isinstance(tok, dict)
-                    else str(tok)
-                    for tok in tokens
-                ]
-                raw_text = " ".join(w for w in words if w).strip()
+                    words = [
+                        str(tok.get("text") if "text" in tok else tok.get("t", ""))
+                        if isinstance(tok, dict)
+                        else str(tok)
+                        for tok in tokens
+                    ]
+                    raw_text = " ".join(w for w in words if w).strip()
+                    if raw_text:
+                        meta_info = {
+                            k: v
+                            for k, v in (
+                                ("site", meta.get("site")),
+                                ("period", meta.get("period")),
+                                ("name", meta.get("name")),
+                            )
+                            if v
+                        }
+                        yield (
+                            did,
+                            did,
+                            did.lower(),
+                            raw_text,
+                            json.dumps(meta_info, ensure_ascii=False),
+                        )
+            elif isinstance(doc.get("content"), str):
+                # DAMOS Linear B corpus: {"id", "heading_short", "site", "scribe", "content"}
+                raw_text = doc["content"].strip()
+                if raw_text:
+                    ref = str(doc.get("heading_short") or doc.get("heading") or did)
+                    meta_info = {
+                        k: v
+                        for k, v in (
+                            ("site", doc.get("site")),
+                            ("scribe", doc.get("scribe")),
+                            ("period", doc.get("chronology")),
+                            ("heading", doc.get("heading")),
+                        )
+                        if v
+                    }
+                    yield (
+                        did,
+                        ref,
+                        did.lower(),
+                        raw_text,
+                        json.dumps(meta_info, ensure_ascii=False),
+                    )
+            elif isinstance(doc.get("attestations"), list):
+                # SigLA Linear A corpus: {"id", "site", "period", "typology", "attestations": [...]}
+                raw_text = _sigla_attestation_text(doc["attestations"])
                 if raw_text:
                     meta_info = {
                         k: v
                         for k, v in (
-                            ("site", meta.get("site")),
-                            ("period", meta.get("period")),
-                            ("name", meta.get("name")),
+                            ("site", doc.get("site")),
+                            ("period", doc.get("period")),
+                            ("support", doc.get("typology")),
                         )
                         if v
                     }

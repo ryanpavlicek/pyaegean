@@ -286,6 +286,41 @@ def _select_lxx_verses(
     return out
 
 
+_STRONGS_POS_MAP: dict[str, str] = {
+    "N": "NOUN",
+    "V": "VERB",
+    "A": "ADJ",
+    "ADV": "ADV",
+    "PREP": "ADP",
+    "CONJ": "CCONJ",
+    "COND": "SCONJ",
+    "T": "DET",
+    "P": "PRON",
+    "D": "PRON",
+    "R": "PRON",
+    "I": "PRON",
+    "X": "PRON",
+    "F": "PRON",
+    "C": "PRON",
+    "K": "PRON",
+    "Q": "PRON",
+    "S": "PRON",
+    "PRT": "PART",
+    "INJ": "INTJ",
+}
+
+
+def _strongs_morph_to_upos(morph: str) -> str | None:
+    """Map a STEPBible/Strong's morphology tag (e.g. ``G:PREP``, ``G:V``, ``G:A``) to coarse UPOS."""
+    if not morph:
+        return None
+    head = morph.split("/")[0].split("+")[0].strip()
+    if head.startswith(("G:", "H:")):
+        head = head[2:]
+    head = head.split("-")[0].split("=")[0].split(":")[0].strip().upper()
+    return _STRONGS_POS_MAP.get(head)
+
+
 def enrich_lxx_interlinear(corpus: Any) -> Any:
     """Attach automatic offline lemma, POS, Strong's ID, and gloss to LXX tokens in place.
 
@@ -305,7 +340,6 @@ def enrich_lxx_interlinear(corpus: Any) -> Any:
                 continue
             surface = tok.text
             lem = ann.get("lemma") or lemmatize(surface)
-            pos = ann.get("morph") or ann.get("pos") or pos_tag(surface)
             key = _fold(lem)
             if key not in entry_cache:
                 ent = strongs_entry(lem, allow_fetch=False)
@@ -313,7 +347,21 @@ def enrich_lxx_interlinear(corpus: Any) -> Any:
                     ent = strongs_entry(surface, allow_fetch=False)
                 entry_cache[key] = ent
             ent = entry_cache[key]
-            ann["lemma"] = ent.lemma if ent is not None else lem
+            resolved_lemma = ent.lemma if ent is not None else lem
+            pos = ann.get("morph") or ann.get("pos")
+            if not pos:
+                # Prefer Strong's curated lexicon POS when available (avoids suffix-heuristic
+                # traps like ἐπάνω 'above' ending in -ω -> VERB, or unaccented ΕΝ -> NOUN).
+                strongs_pos = _strongs_morph_to_upos(ent.morph) if ent is not None else None
+                if strongs_pos:
+                    pos = strongs_pos
+                else:
+                    pos = pos_tag(surface)
+                    if pos == "NOUN" and resolved_lemma != surface:
+                        lem_pos = pos_tag(resolved_lemma)
+                        if lem_pos != "NOUN":
+                            pos = lem_pos
+            ann["lemma"] = resolved_lemma
             if pos:
                 ann.setdefault("morph", pos)
             if ent is not None:
