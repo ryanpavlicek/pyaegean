@@ -213,9 +213,20 @@ def test_loopback_http_server_routes_and_security_guards() -> None:
 
         # POST routes (valid loopback)
         st_an, raw_an = _post(f"{srv.url}api/analyze-text", {"text": "Ἐν ἀρχῇ ἦν ὁ λόγος."})
-        assert st_an == 200 and len(json.loads(raw_an)["blocks"][0]["tokens"]) == 5
+        analyzed = json.loads(raw_an)
+        assert st_an == 200 and len(analyzed["blocks"][0]["tokens"]) == 5
         st_sc, raw_sc = _post(f"{srv.url}api/scan", {"lines": ["μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος"], "meter": "hexameter"})
         assert st_sc == 200 and json.loads(raw_sc)["results"][0]["caesura"] == "penthemimeral"
+        st_ex, raw_ex = _post(
+            f"{srv.url}api/export",
+            {
+                "format": "conllu",
+                "title": analyzed["title"],
+                "blocks": analyzed["blocks"],
+                "sentences": analyzed["sentences"],
+            },
+        )
+        assert st_ex == 200 and b"# sent_id = s1" in raw_ex and b"Strongs=G3056" in raw_ex
 
         # CSRF cross-origin POST guard -> 403
         with pytest.raises(urllib.error.HTTPError) as exc_info:
@@ -230,6 +241,8 @@ def test_loopback_http_server_routes_and_security_guards() -> None:
 
 def test_cli_browse_and_tui_browser_integration() -> None:
     """`aegean browse --help`, lazy `aegean.browser`, and TUI web launch hook all resolve cleanly."""
+    import re
+
     assert "browser" in dir(aegean)
     assert callable(aegean.browser.serve)
 
@@ -239,11 +252,16 @@ def test_cli_browse_and_tui_browser_integration() -> None:
     from aegean.cli import _build_app
 
     runner = CliRunner()
-    res = runner.invoke(_build_app(), ["browse", "--help"])
-    assert res.exit_code == 0, res.output
-    assert "--port" in res.output
-    assert "--neural" in res.output
-    assert "--offline" in res.output
+    res = runner.invoke(
+        _build_app(),
+        ["browse", "--help"],
+        env={"NO_COLOR": "1", "TERM": "dumb", "COLUMNS": "200"},
+    )
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", res.output)
+    assert res.exit_code == 0, plain
+    assert "--port" in plain
+    assert "--neural" in plain
+    assert "--offline" in plain
 
     pytest.importorskip("textual")
     from aegean.tui.app import AegeanApp
