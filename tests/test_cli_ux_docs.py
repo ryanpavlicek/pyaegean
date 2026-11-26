@@ -109,13 +109,15 @@ def test_group_one_liners_in_root_help_name_every_group(app, root) -> None:  # t
 #   plain text transforms (stdout is the datum) ....... greek normalize,
 #                                                       greek betacode,
 #                                                       greek strip, greek ipa
-#   interactive / guided / long-running ............... repl, quickstart, workbench
+#   interactive / guided / long-running ............... repl, quickstart,
+#                                                       tui, browse, workbench
 _NON_DATA_PRODUCING = {
     ("export",),
     ("plot",),
     ("repl",),
     ("quickstart",),
     ("tui",),
+    ("browse",),
     ("workbench",),
     ("db", "build"),
     ("db", "add"),

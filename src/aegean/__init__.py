@@ -44,7 +44,20 @@ from .core import (
 )
 
 if TYPE_CHECKING:
-    from . import ai, analysis, bundle, cache, geo, greek, io, library, search, translate, viz
+    from . import (
+        ai,
+        analysis,
+        browser,
+        bundle,
+        cache,
+        geo,
+        greek,
+        io,
+        library,
+        search,
+        translate,
+        viz,
+    )
     from .core.diagnose import DiagnoseReport, diagnose
     from .core.resolve import open_corpus as open
     from .core.resolve import read_corpus
@@ -54,6 +67,7 @@ _LAZY_SUBMODULES: frozenset[str] = frozenset(
     {
         "ai",
         "analysis",
+        "browser",
         "bundle",
         "cache",
         "geo",
@@ -152,6 +166,7 @@ __all__ = [
     "registered_scripts",
     "set_verbosity",
     "analysis",
+    "browser",
     "bundle",
     "cache",
     "geo",

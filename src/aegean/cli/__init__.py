@@ -9,6 +9,7 @@ The command tree mirrors the public API:
   plus ``cache`` (the opt-in analysis cache), ``doctor`` (the offline
   environment check), ``quickstart`` (the guided first five minutes),
   ``tui`` (the interactive terminal UI, the ``[tui]`` extra),
+  ``browse`` (serve the local Greek visual corpus browser),
   ``workbench`` (serve the Linear A Workbench locally), and ``repl`` (the
   interactive shell);
 - ``aegean library …``: unified corpus, Biblical bundle, Greek literary work,
@@ -100,7 +101,7 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _doctor, _quickstart, _repl, _search, _tui, _viz, _workbench
+    from . import _browse, _corpus, _doctor, _quickstart, _repl, _search, _tui, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._bible import bible_app
@@ -147,6 +148,7 @@ def _build_app() -> Any:
     _root.__annotations__["ctx"] = typer.Context
     app.callback(invoke_without_command=True)(_root)
 
+    _browse.register(app)
     _corpus.register(app)
     _search.register(app)
     _doctor.register(app)

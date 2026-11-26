@@ -99,6 +99,7 @@ nav:
       - aegean.search: api/search.md
       - aegean.viz: api/viz.md
       - aegean.bundle: api/bundle.md
+      - aegean.browser: api/browser.md
       - aegean.cache: api/cache.md
       - aegean.db: api/db.md
       - aegean.mcp_server: api/mcp.md

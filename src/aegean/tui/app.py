@@ -128,6 +128,13 @@ class CorpusCommands(Provider):
             commands.append(
                 (name, partial(app.goto, screen), f"Switch to the {screen} screen")
             )
+        commands.append(
+            (
+                "Open Greek visual browser (Web)",
+                app.action_open_browser,
+                "Launch the local interactive Greek corpus web browser",
+            )
+        )
         commands.append(("Theme…", app.action_theme, "Preview and set the color theme"))
         commands.append(("Help / keys", app.action_help, "Show the key and command reference"))
         for wid in adapter.fetched_work_ids():
@@ -175,6 +182,7 @@ class AegeanApp(App[None]):
         Binding("r", "switch('review')", "Review"),
         Binding("w", "switch('works')", "Works"),
         Binding("d", "switch('data')", "Data"),
+        Binding("v", "open_browser", "Web"),
         Binding("colon", "console", "Console"),
         Binding("t", "theme", "Theme"),
         Binding("escape", "go_back", "Back"),
@@ -196,6 +204,7 @@ class AegeanApp(App[None]):
         # a history of switched-to main screens, so Esc can walk back (modals use
         # the real screen_stack; the flat main screens need this app-owned list).
         self._screen_history: list[str] = []
+        self._browser_server: Any = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -275,6 +284,53 @@ class AegeanApp(App[None]):
     def action_console(self) -> None:
         """Switch to the command console (full CLI parity)."""
         self.goto("console")
+
+    def action_open_browser(self, *, open_browser: bool = True) -> None:
+        """Launch (or reuse) the local Greek visual corpus web browser in the background."""
+        try:
+            from ..browser import create_server
+            from ..core.catalog import CORPUS_BY_ID
+        except Exception as exc:
+            self.notify(f"Greek visual browser unavailable: {exc}", severity="error")
+            return
+
+        if self._browser_server is not None:
+            url = str(self._browser_server.url)
+            if open_browser:
+                import webbrowser
+
+                try:
+                    webbrowser.open(url)
+                except Exception:
+                    pass
+            self.notify(f"Greek visual browser running at {url}")
+            return
+
+        target = "John 1:1-18"
+        sel = self.state.selected_corpus
+        if sel:
+            spec = CORPUS_BY_ID.get(sel)
+            if spec is None or spec.script_id == "greek":
+                target = "John 1:1-18" if sel == "nt" else ("Gen 1:1-5" if sel == "lxx" else sel)
+
+        try:
+            srv = create_server(target, open_browser=open_browser, auto_port=True)
+        except Exception as exc:
+            self.notify(f"could not start Greek visual browser: {exc}", severity="error")
+            return
+
+        self._browser_server = srv
+        self.notify(f"Greek visual browser running at {srv.url}")
+
+    def on_unmount(self) -> None:
+        """Shut down any background Greek visual browser started from this TUI session."""
+        srv = self._browser_server
+        self._browser_server = None
+        if srv is not None:
+            try:
+                srv.stop()
+            except Exception:
+                pass
 
     def open_corpus(self, corpus_id: str) -> None:
         """Select ``corpus_id`` and switch to the corpus browser."""

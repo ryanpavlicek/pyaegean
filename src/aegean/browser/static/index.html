@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyAegean — Greek Visual Corpus Browser</title>
+  <meta name="description" content="Local interactive Ancient, Classical, Biblical, and Byzantine Greek visual corpus browser powered by PyAegean." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gentium+Plus:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Top Editorial Header -->
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <button id="btn-toggle-sidebar" class="icon-btn" type="button" title="Toggle corpus navigator" aria-label="Toggle corpus navigator">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg>
+      </button>
+      <div class="brand">
+        <span class="brand-glyph" aria-hidden="true">Α</span>
+        <div class="brand-copy">
+          <h1 class="brand-title">PyAegean Greek Browser</h1>
+          <span id="version-badge" class="brand-version">local</span>
+        </div>
+      </div>
+    </div>
+
+    <form id="quick-jump-form" class="quick-jump" role="search" aria-label="Open any Greek text or reference">
+      <input
+        id="quick-jump-input"
+        type="text"
+        placeholder="Open any text: John 1:1-18, Gen 1:1-5, MT Ps 23, greek, ogc002058, PG073…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="submit" class="btn-primary">Open</button>
+    </form>
+
+    <div class="topbar-right">
+      <button id="btn-sandbox" class="btn-subtle" type="button" title="Analyze custom Greek or Beta Code passage">Scratchpad</button>
+      <button id="btn-engine" class="btn-engine" type="button" title="Configure NLP backend, reranker, and calibration">
+        <span id="engine-dot" class="status-dot"></span>
+        <span id="engine-label">Baseline</span>
+      </button>
+      <div class="dropdown-wrap">
+        <button id="btn-export" class="btn-subtle" type="button" title="Export annotated passage">Export ▾</button>
+        <div id="export-menu" class="popover-menu hidden" role="menu">
+          <button type="button" class="menu-item" data-export="conllu">CoNLL-U Treebank (.conllu)</button>
+          <button type="button" class="menu-item" data-export="csv">Annotated Table (.csv)</button>
+          <button type="button" class="menu-item" data-export="json">Structured JSON (.json)</button>
+        </div>
+      </div>
+      <button id="btn-theme" class="icon-btn" type="button" title="Toggle light/dark theme (d)" aria-label="Toggle color theme">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5a5.5 5.5 0 0 1 0 11Z" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button id="btn-toggle-inspector" class="icon-btn" type="button" title="Toggle parallel inspector panel" aria-label="Toggle inspector panel">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M10 2.5v11"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Floating Engine Configuration Popover -->
+  <section id="engine-popover" class="floating-panel hidden" aria-label="PyAegean NLP engine settings">
+    <div class="panel-header">
+      <h2>Greek NLP Engine</h2>
+      <button id="btn-close-engine" class="icon-btn-sm" type="button" aria-label="Close">✕</button>
+    </div>
+    <div id="engine-body" class="panel-body"></div>
+  </section>
+
+  <!-- Main 3-Pane Scholarly Workspace -->
+  <div class="workspace" id="workspace">
+    <!-- Left Navigator Sidebar -->
+    <aside id="sidebar" class="sidebar" aria-label="Corpus and tool navigator">
+      <nav class="nav-tabs" role="tablist">
+        <button class="nav-tab active" data-nav="browse" role="tab" aria-selected="true">Texts</button>
+        <button class="nav-tab" data-nav="bible" role="tab" aria-selected="false">Bible</button>
+        <button class="nav-tab" data-nav="works" role="tab" aria-selected="false">3,844 Works</button>
+        <button class="nav-tab" data-nav="search" role="tab" aria-selected="false">Search</button>
+        <button class="nav-tab" data-nav="library" role="tab" aria-selected="false">Library</button>
+      </nav>
+
+      <!-- Tab 1: Browse Corpora & Featured Texts -->
+      <div id="nav-pane-browse" class="nav-pane active">
+        <div class="pane-section">
+          <h3 class="section-label">Ready Offline</h3>
+          <div id="featured-list" class="item-list"></div>
+        </div>
+        <div class="pane-section">
+          <div class="section-row">
+            <h3 class="section-label">Greek Corpora</h3>
+            <span id="corpora-count" class="muted-meta"></span>
+          </div>
+          <input id="corpora-filter" class="sidebar-input" type="search" placeholder="Filter corpora…" />
+          <div id="corpora-list" class="item-list"></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Biblical Greek (27 NT Books / 9 Editions + 56 LXX Books) -->
+      <div id="nav-pane-bible" class="nav-pane">
+        <div class="pane-section">
+          <h3 class="section-label">Greek New Testament</h3>
+          <div class="form-grid">
+            <select id="nt-book-select" class="sidebar-select" aria-label="NT Book"></select>
+            <input id="nt-ref-input" class="sidebar-input" type="text" value="1:1-18" placeholder="e.g. 1:1-18" />
+          </div>
+          <div class="form-grid">
+            <select id="nt-edition-select" class="sidebar-select" aria-label="NT Edition"></select>
+            <button id="btn-open-nt" type="button" class="btn-primary btn-sm">Read NT</button>
+          </div>
+        </div>
+
+        <div class="pane-section">
+          <h3 class="section-label">Septuagint (LXX · 56 Books)</h3>
+          <div class="form-grid">
+            <select id="lxx-book-select" class="sidebar-select" aria-label="LXX Book"></select>
+            <input id="lxx-ref-input" class="sidebar-input" type="text" value="1:1-5" placeholder="e.g. 1:1-5" />
+          </div>
+          <div class="form-grid">
+            <select id="lxx-num-select" class="sidebar-select" aria-label="Psalm numbering">
+              <option value="lxx">LXX Numbering</option>
+              <option value="mt">Masoretic (MT) Psalms</option>
+            </select>
+            <button id="btn-open-lxx" type="button" class="btn-primary btn-sm">Read LXX</button>
+          </div>
+        </div>
+
+        <div class="pane-section">
+          <h3 class="section-label">Psalm Numbering Converter</h3>
+          <div class="form-grid">
+            <input id="psalm-num-input" class="sidebar-input" type="number" min="1" max="151" value="23" />
+            <select id="psalm-dir-select" class="sidebar-select">
+              <option value="mt_to_lxx">MT → LXX</option>
+              <option value="lxx_to_mt">LXX → MT</option>
+            </select>
+          </div>
+          <div id="psalm-result" class="inline-callout">MT Psalm 23 → LXX Psalm 22</div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Open Greek Collections (3,844 Works) -->
+      <div id="nav-pane-works" class="nav-pane">
+        <div class="pane-section">
+          <h3 class="section-label">Open Greek Library (3,844 Works)</h3>
+          <select id="works-collection-select" class="sidebar-select" aria-label="Collection">
+            <option value="">All 8 Collections (3,844 works)</option>
+          </select>
+          <input id="works-search-input" class="sidebar-input" type="search" placeholder="Author, title, or TLG (e.g. Chrysostom, Plato)…" />
+          <div id="works-meta" class="muted-meta"></div>
+          <div id="works-list" class="item-list"></div>
+          <div class="pager-row">
+            <button id="btn-works-prev" type="button" class="btn-subtle btn-sm">← Prev</button>
+            <button id="btn-works-next" type="button" class="btn-subtle btn-sm">Next →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Cross-Corpus Search & Word Study -->
+      <div id="nav-pane-search" class="nav-pane">
+        <div class="pane-section">
+          <h3 class="section-label">Cross-Corpus Greek Search (FTS5)</h3>
+          <form id="search-form" class="stack-form">
+            <input id="search-query-input" class="sidebar-input" type="search" placeholder="Greek word or phrase (e.g. λόγος, φῶς)…" />
+            <div class="form-grid">
+              <select id="search-target-select" class="sidebar-select">
+                <option value="bible">Bible (NT + LXX)</option>
+                <option value="nt">New Testament</option>
+                <option value="lxx">Septuagint (LXX)</option>
+                <option value="greek">Greek Samples</option>
+                <option value="PG073">Patrologia Graeca PG073</option>
+                <option value="apostolic-fathers">Apostolic Fathers</option>
+                <option value="chrysostom">John Chrysostom</option>
+                <option value="isicily">I.Sicily Epigraphy</option>
+              </select>
+              <button type="submit" class="btn-primary btn-sm">Find</button>
+            </div>
+          </form>
+          <div id="search-meta" class="muted-meta"></div>
+          <div id="search-results" class="item-list"></div>
+        </div>
+      </div>
+
+      <!-- Tab 5: Library Manager -->
+      <div id="nav-pane-library" class="nav-pane">
+        <div class="pane-section">
+          <div class="section-row">
+            <h3 class="section-label">Local Data Store</h3>
+            <button id="btn-refresh-library" type="button" class="btn-subtle btn-sm">Refresh</button>
+          </div>
+          <div id="library-summary" class="muted-meta"></div>
+          <input id="library-filter" class="sidebar-input" type="search" placeholder="Filter datasets…" />
+          <div id="library-list" class="item-list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Editorial Reading Canvas -->
+    <main class="reader-stage" role="main">
+      <!-- Document Header & Controls -->
+      <div class="doc-toolbar">
+        <div class="doc-heading-row">
+          <div class="doc-title-group">
+            <h2 id="doc-title" class="doc-title">Loading…</h2>
+            <p id="doc-subtitle" class="doc-subtitle"></p>
+          </div>
+          <div class="doc-nav-controls">
+            <select id="doc-switcher" class="toolbar-select hidden" aria-label="Select document in corpus"></select>
+            <select id="edition-switcher" class="toolbar-select hidden" aria-label="Switch NT edition"></select>
+            <div id="token-pager" class="pager-inline hidden">
+              <button id="btn-page-prev" type="button" class="btn-subtle btn-sm">← Prev</button>
+              <span id="page-indicator" class="muted-meta"></span>
+              <button id="btn-page-next" type="button" class="btn-subtle btn-sm">Next →</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="reading-controls" role="toolbar" aria-label="Reading display options">
+          <button id="toggle-interlinear" class="pill-toggle active" type="button" title="Toggle word-by-word interlinear glosses (i)">Interlinear</button>
+          <button id="toggle-translation" class="pill-toggle active" type="button" title="Toggle known parallel English translation (t)">Translation</button>
+          <button id="toggle-pos-colors" class="pill-toggle" type="button" title="Color-code words by part of speech">POS Colors</button>
+          <button id="toggle-syntax" class="pill-toggle" type="button" title="Show interactive SVG dependency tree for the active sentence">Syntax Arcs</button>
+          <button id="toggle-scansion" class="pill-toggle" type="button" title="Run metrical scansion on displayed lines">Scansion</button>
+          <button id="btn-custom-trans" class="pill-toggle" type="button" title="Attach or edit a custom parallel translation">+ Custom Translation</button>
+          <div class="toolbar-spacer"></div>
+          <div id="lemma-filter-pill" class="active-filter hidden">
+            <span id="lemma-filter-text"></span>
+            <button id="btn-clear-lemma-filter" type="button" aria-label="Clear lemma highlight">✕</button>
+          </div>
+          <div class="font-controls" aria-label="Greek font size">
+            <button id="btn-font-dec" type="button" class="icon-btn-sm" title="Smaller Greek text">A−</button>
+            <button id="btn-font-inc" type="button" class="icon-btn-sm" title="Larger Greek text">A+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional POS Legend Strip -->
+      <div id="pos-legend" class="pos-legend hidden" aria-label="Part-of-speech color key">
+        <span class="pos-chip pos-VERB">Verb</span>
+        <span class="pos-chip pos-NOUN">Noun</span>
+        <span class="pos-chip pos-ADJ">Adjective</span>
+        <span class="pos-chip pos-PRON">Pronoun</span>
+        <span class="pos-chip pos-ADP">Preposition</span>
+        <span class="pos-chip pos-DET">Article / Det</span>
+        <span class="pos-chip pos-CCONJ">Conjunction</span>
+        <span class="pos-chip pos-PART">Particle / Adv</span>
+      </div>
+
+      <!-- Optional Inline SVG Sentence Dependency Diagram -->
+      <section id="syntax-drawer" class="feature-drawer hidden" aria-label="Sentence dependency tree">
+        <div class="drawer-header">
+          <span id="syntax-sentence-label" class="drawer-title">Sentence Dependency Structure</span>
+          <span class="muted-meta">Hover or click any token in the tree or text</span>
+        </div>
+        <div id="syntax-svg-wrap" class="syntax-svg-wrap"></div>
+      </section>
+
+      <!-- Optional Metrical Scansion Strip -->
+      <section id="scansion-drawer" class="feature-drawer hidden" aria-label="Metrical scansion">
+        <div class="drawer-header">
+          <span class="drawer-title">Metrical Scansion</span>
+          <div class="drawer-actions">
+            <select id="scansion-meter-select" class="toolbar-select">
+              <option value="hexameter">Dactylic Hexameter</option>
+              <option value="pentameter">Elegiac Pentameter</option>
+              <option value="trimeter">Iambic Trimeter</option>
+              <option value="aeolic">Aeolic / Sapphic</option>
+            </select>
+            <button id="btn-rescan" type="button" class="btn-subtle btn-sm">Rescan</button>
+          </div>
+        </div>
+        <div id="scansion-results" class="scansion-results"></div>
+      </section>
+
+      <!-- Scrollable Reading Sheet -->
+      <article id="reading-sheet" class="reading-sheet" aria-live="polite">
+        <div id="translation-banner" class="translation-banner hidden"></div>
+        <div id="text-canvas" class="text-canvas"></div>
+        <footer id="provenance-footer" class="provenance-footer"></footer>
+      </article>
+    </main>
+
+    <!-- Right Parallel Word & Context Inspector -->
+    <aside id="inspector" class="inspector" aria-label="Parallel grammatical, lexical, and commentary inspector">
+      <nav class="inspector-tabs" role="tablist">
+        <button class="insp-tab active" data-insp="grammar" role="tab" aria-selected="true">Grammar</button>
+        <button class="insp-tab" data-insp="lexicon" role="tab" aria-selected="false">Lexicon</button>
+        <button class="insp-tab" data-insp="context" role="tab" aria-selected="false">Context</button>
+        <button class="insp-tab" data-insp="stats" role="tab" aria-selected="false">Stats</button>
+      </nav>
+
+      <div id="insp-pane-grammar" class="insp-pane active">
+        <div class="empty-state">
+          <p class="empty-glyph">λόγος</p>
+          <p>Click any Greek word in the text to inspect its grammatical tagging, morphology, dependency role, syllables, accentuation, and pronunciation.</p>
+          <p class="muted-meta">Tip: hover any word to highlight its syntactic head and dependents; use ← / → to step word by word.</p>
+        </div>
+      </div>
+
+      <div id="insp-pane-lexicon" class="insp-pane">
+        <div class="empty-state">
+          <p>Click a word to open Strong's, etymological root trees, hosted dictionaries (LSJ, Cunliffe, Abbott-Smith, Dodson), and NT/LXX concordances.</p>
+        </div>
+      </div>
+
+      <div id="insp-pane-context" class="insp-pane">
+        <div id="context-body" class="insp-stack"></div>
+      </div>
+
+      <div id="insp-pane-stats" class="insp-pane">
+        <div id="stats-body" class="insp-stack"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Hover Micro-Tooltip -->
+  <div id="word-tooltip" class="word-tooltip hidden" role="tooltip"></div>
+
+  <!-- Toast Status Notification -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <!-- Custom Greek / Beta Code Scratchpad Modal -->
+  <div id="sandbox-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="sandbox-title">
+    <div class="modal-card">
+      <div class="panel-header">
+        <h2 id="sandbox-title">Analyze Custom Greek Passage</h2>
+        <button id="btn-close-sandbox" class="icon-btn-sm" type="button" aria-label="Close">✕</button>
+      </div>
+      <form id="sandbox-form" class="modal-body">
+        <label class="field-label" for="sandbox-text">Greek text (Unicode or Beta Code)</label>
+        <textarea id="sandbox-text" rows="5" placeholder="μῆνιν ἄειδε θεὰ Πηληϊάδεω Ἀχιλῆος…"></textarea>
+        <label class="checkbox-row">
+          <input id="sandbox-betacode" type="checkbox" />
+          <span>Convert input from Beta Code (e.g. <code>mh=nin a)/eide qea\</code>)</span>
+        </label>
+        <label class="field-label" for="sandbox-translation">Optional parallel English translation</label>
+        <textarea id="sandbox-translation" rows="3" placeholder="Sing, goddess, the wrath of Achilles, son of Peleus…"></textarea>
+        <div class="modal-footer">
+          <button id="btn-sandbox-sample" type="button" class="btn-subtle">Load Homer Sample</button>
+          <button type="submit" class="btn-primary">Analyze in Reader</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Parallel Translation Modal -->
+  <div id="trans-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="trans-modal-title">
+    <div class="modal-card">
+      <div class="panel-header">
+        <h2 id="trans-modal-title">Attach Custom Parallel Translation</h2>
+        <button id="btn-close-trans" class="icon-btn-sm" type="button" aria-label="Close">✕</button>
+      </div>
+      <form id="trans-form" class="modal-body">
+        <p class="muted-meta">Paste an English translation below. One paragraph per verse/line aligns automatically, or a single passage appears as a parallel block.</p>
+        <textarea id="custom-trans-input" rows="6" placeholder="Paste translation lines here…"></textarea>
+        <div class="modal-footer">
+          <button id="btn-clear-custom-trans" type="button" class="btn-subtle">Clear Custom</button>
+          <button type="submit" class="btn-primary">Apply Translation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

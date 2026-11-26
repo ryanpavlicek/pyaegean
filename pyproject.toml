@@ -85,7 +85,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-aegean = ["py.typed", "data/bundled/**/*.json", "tui/**/*.tcss"]
+aegean = ["py.typed", "data/bundled/**/*.json", "tui/**/*.tcss", "browser/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "training/tests"]

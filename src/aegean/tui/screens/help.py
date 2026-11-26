@@ -21,8 +21,8 @@ _HELP = """[b]aegean — keys[/b]
   c   Corpus browser       b   Biblical Greek study (NT, MSS, Strong's, LXX)
   g   Greek workbench      r   Annotation & conflict review (CSVs & risk queues)
   w   Works library        d   Data & environment   ·   : Command console
-  t   Theme picker         Esc Back / exit input   ·   ? Help   ·   q Quit
-  ctrl+p   Command palette (open a corpus, fetch, jump, theme…)
+  v   Greek web browser    t   Theme picker   ·   Esc Back   ·   ? Help   ·   q Quit
+  ctrl+p   Command palette (open a corpus, web browser, fetch, jump, theme…)
 
 [b]In the corpus browser (c)[/b]  /  focus search · Tab cycle panes · f download
   selected uninstalled corpus · type a sign pattern (KU-*) to search ·
