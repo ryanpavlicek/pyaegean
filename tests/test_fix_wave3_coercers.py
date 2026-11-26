@@ -67,9 +67,10 @@ def test_document_type_profile_over_query_results_matches_the_matched_documents(
 def test_account_dossiers_over_query_results_match_the_matched_documents() -> None:
     corpus, results, docs = _lineara_khania()
     assert account_dossiers(results) == account_dossiers(docs)
-    # Khania yields 21 account-head candidates; the whole corpus yields 427.
-    assert len(account_dossiers(results)) == 21
-    assert len(account_dossiers(corpus)) == 427
+    # Khania yields 22 account-head candidates; the whole corpus yields 448
+    # (including NI-bearing lexical words recovered by the syllabogram fix).
+    assert len(account_dossiers(results)) == 22
+    assert len(account_dossiers(corpus)) == 448
     heads = {d.word for d in account_dossiers(results)}
     assert "A-DU" in heads
 

@@ -74,6 +74,7 @@ _KEPT_HISTORY = set(_RECOVERED_V1) | {
     "papygreek-dev-parse",
     "dbbe-lingann-fold",
     "nt-editions",
+    "workbench-app",
 }
 
 
