@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import replace
 from typing import Any, cast
 
@@ -53,27 +54,29 @@ def full_word_lengths(model: Any, words: list[str]) -> list[int]:
     # Tokenizer.from_str is the tokenizers API's independent clone operation.  The
     # fallbacks keep the test/fake backend contract small without mutating the live
     # tokenizer, whose truncation policy is still used by ordinary inference.
-    try:
-        from tokenizers import Tokenizer
-
-        if hasattr(tok, "to_str"):
-            clone = Tokenizer.from_str(tok.to_str())
-    except Exception:
-        clone = None
-    if clone is None and hasattr(tok, "clone"):
+    guard = getattr(model, "_session_lock", None) or nullcontext()
+    with guard:
         try:
-            clone = tok.clone()
+            from tokenizers import Tokenizer
+
+            if hasattr(tok, "to_str"):
+                clone = Tokenizer.from_str(tok.to_str())
         except Exception:
             clone = None
-    if clone is None:
-        import copy
+        if clone is None and hasattr(tok, "clone"):
+            try:
+                clone = tok.clone()
+            except Exception:
+                clone = None
+        if clone is None:
+            import copy
 
-        try:
-            clone = copy.deepcopy(tok)
-        except Exception as exc:  # pragma: no cover - defensive fake/runtime guard
-            raise NeuralWindowingError(
-                "could not clone the tokenizer for untruncated window measurement"
-            ) from exc
+            try:
+                clone = copy.deepcopy(tok)
+            except Exception as exc:  # pragma: no cover - defensive fake/runtime guard
+                raise NeuralWindowingError(
+                    "could not clone the tokenizer for untruncated window measurement"
+                ) from exc
     try:
         no_truncation = getattr(clone, "no_truncation")
         no_truncation()

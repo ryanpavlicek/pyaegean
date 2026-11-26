@@ -25,7 +25,9 @@ relations rather than the arc-eager baseline's Prague labels), and
 from __future__ import annotations
 
 import json
+import threading
 from collections.abc import Iterable, Iterator
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
@@ -270,6 +272,20 @@ class _JointModel:
         self.lookup_form: dict[str, str] = lookup["form"]
         self.lookup_form_upos: dict[str, str] = lookup["form_upos"]
         self.lookup_lower: dict[str, str] = lookup["form_lower"]
+        self._session_lock = threading.RLock()
+
+    def _inference_guard(self) -> Any:
+        """Serialize ONNX Runtime session and tokenizer access per model instance.
+
+        Concurrent ``InferenceSession.run()`` calls on a shared GPU session
+        (e.g. ``CUDAExecutionProvider`` with ``MatMulNBits``) share the default
+        CUDA stream and memory arena and can corrupt output logits across
+        threads. Serializing at the model boundary preserves thread safety with
+        negligible single-thread overhead and no change to sequential or batched
+        outputs. Test fakes built via ``object.__new__`` fall back to a no-op.
+        """
+        lock = getattr(self, "_session_lock", None)
+        return lock if lock is not None else nullcontext()
 
     def _session_output_names(self) -> tuple[str, ...]:
         cached = getattr(self, "_output_names", None)
@@ -298,14 +314,15 @@ class _JointModel:
     def _run(self, words: list[str]) -> dict[str, Any]:
         """One encoder pass over a pre-tokenized sentence → raw arrays + word bookkeeping."""
         np = self._np
-        ids, word_pos, kept = self._encode(words)
-        feed = {
-            "input_ids": np.array([ids], dtype=np.int64),
-            "attention_mask": np.ones((1, len(ids)), dtype=np.int64),
-            "word_pos": np.array([word_pos or [0]], dtype=np.int64),
-        }
-        names = self._session_output_names()
-        outs = dict(zip(names, self._sess.run(None, feed)))
+        with self._inference_guard():
+            ids, word_pos, kept = self._encode(words)
+            feed = {
+                "input_ids": np.array([ids], dtype=np.int64),
+                "attention_mask": np.ones((1, len(ids)), dtype=np.int64),
+                "word_pos": np.array([word_pos or [0]], dtype=np.int64),
+            }
+            names = self._session_output_names()
+            outs = dict(zip(names, self._sess.run(None, feed)))
         outs["_word_pos"] = word_pos
         outs["_kept"] = kept
         return outs
@@ -321,25 +338,26 @@ class _JointModel:
         batched matmuls, so batched logits can differ from the single pass at machine
         precision — batching is a throughput convenience, never the recorded protocol."""
         np = self._np
-        encoded = [self._encode(words) for words in batch]
-        max_len = max(len(ids) for ids, _, _ in encoded)
-        max_words = max(max((len(wp) for _, wp, _ in encoded), default=0), 1)
-        n = len(batch)
-        input_ids = np.zeros((n, max_len), dtype=np.int64)
-        attention_mask = np.zeros((n, max_len), dtype=np.int64)
-        word_pos = np.zeros((n, max_words), dtype=np.int64)
-        for b, (ids, wp, _kept) in enumerate(encoded):
-            input_ids[b, : len(ids)] = ids
-            attention_mask[b, : len(ids)] = 1
-            row = wp or [0]  # mirror _run's empty-word_pos feed fallback
-            word_pos[b, : len(row)] = row
-        feed = {
-            "input_ids": input_ids,
-            "attention_mask": attention_mask,
-            "word_pos": word_pos,
-        }
-        names = self._session_output_names()
-        outs = dict(zip(names, self._sess.run(None, feed)))
+        with self._inference_guard():
+            encoded = [self._encode(words) for words in batch]
+            max_len = max(len(ids) for ids, _, _ in encoded)
+            max_words = max(max((len(wp) for _, wp, _ in encoded), default=0), 1)
+            n = len(batch)
+            input_ids = np.zeros((n, max_len), dtype=np.int64)
+            attention_mask = np.zeros((n, max_len), dtype=np.int64)
+            word_pos = np.zeros((n, max_words), dtype=np.int64)
+            for b, (ids, wp, _kept) in enumerate(encoded):
+                input_ids[b, : len(ids)] = ids
+                attention_mask[b, : len(ids)] = 1
+                row = wp or [0]  # mirror _run's empty-word_pos feed fallback
+                word_pos[b, : len(row)] = row
+            feed = {
+                "input_ids": input_ids,
+                "attention_mask": attention_mask,
+                "word_pos": word_pos,
+            }
+            names = self._session_output_names()
+            outs = dict(zip(names, self._sess.run(None, feed)))
         results: list[dict[str, Any]] = []
         for b, (_ids, wp, kept) in enumerate(encoded):
             one: dict[str, Any] = {name: arr[b : b + 1] for name, arr in outs.items()}

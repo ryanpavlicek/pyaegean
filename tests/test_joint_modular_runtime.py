@@ -319,3 +319,179 @@ def test_option_validation_errors() -> None:
         neural.with_options(documentary_reconciliation_aggressive=True)
     with pytest.raises(ValueError, match="unknown OOV lemma reranker preset"):
         neural.with_options(oov_reranker="bogus")
+
+
+def test_joint_model_serializes_concurrent_session_runs() -> None:
+    """_JointModel._run and _run_batch must serialize ONNX session calls across threads.
+
+    Guards against CUDAExecutionProvider stream/arena races that corrupt logits when
+    multiple threads share one InferenceSession.
+    """
+    import threading
+    import time
+
+    from aegean.greek.joint import _JointModel
+
+    class _MiniNP:
+        int64 = int
+
+        @staticmethod
+        def array(data: object, dtype: object = None) -> object:
+            return data
+
+        @staticmethod
+        def ones(shape: tuple[int, int], dtype: object = None) -> list[list[int]]:
+            return [[1] * shape[1] for _ in range(shape[0])]
+
+        @staticmethod
+        def zeros(shape: tuple[int, int], dtype: object = None) -> _MiniMatrix:
+            return _MiniMatrix(shape[0], shape[1])
+
+    class _MiniMatrix:
+        def __init__(self, rows: int, cols: int) -> None:
+            self.data = [[0] * cols for _ in range(rows)]
+
+        def __setitem__(self, key: tuple[int, slice], value: list[int] | int) -> None:
+            r, sl = key
+            if isinstance(value, int):
+                count = len(range(*sl.indices(len(self.data[r]))))
+                self.data[r][sl] = [value] * count
+            else:
+                self.data[r][sl] = value
+
+        def __getitem__(self, sl: slice) -> list[list[int]]:
+            return self.data[sl]
+
+    class _NonReentrantSession:
+        def __init__(self) -> None:
+            self._probe = threading.Lock()
+            self.in_flight = 0
+            self.max_in_flight = 0
+            self.calls = 0
+
+        def run(self, _outputs: object, feed: dict[str, object]) -> list[list[int]]:
+            with self._probe:
+                self.in_flight += 1
+                self.calls += 1
+                if self.in_flight > self.max_in_flight:
+                    self.max_in_flight = self.in_flight
+                overlap = self.in_flight > 1
+            try:
+                assert not overlap, "concurrent InferenceSession.run() overlap detected"
+                time.sleep(0.01)
+                n_rows = len(feed["input_ids"].data) if isinstance(feed["input_ids"], _MiniMatrix) else 1
+                return [[0] * n_rows]
+            finally:
+                with self._probe:
+                    self.in_flight -= 1
+
+    model = object.__new__(_JointModel)
+    model._np = _MiniNP
+    model._sess = _NonReentrantSession()
+    model._output_names = ("upos",)
+    model._session_lock = threading.RLock()
+    model._encode = lambda words: ([1, 2, 3], [1], [0])  # type: ignore[method-assign]
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        f_single = [pool.submit(model._run, ["λόγος"]) for _ in range(8)]
+        f_batch = [pool.submit(model._run_batch, [["λόγος"], ["θεός"]]) for _ in range(4)]
+        for fut in f_single + f_batch:
+            fut.result()
+
+    assert model._sess.calls == 12
+    assert model._sess.max_in_flight == 1
+
+    # Test fakes built via object.__new__ without _session_lock still work cleanly.
+    del model._session_lock
+    res = model._run(["λόγος"])
+    assert res["_kept"] == [0]
+
+
+def test_neural_lemmatizer_serializes_concurrent_generate() -> None:
+    """_NeuralModel._generate must serialize ONNX encoder/decoder calls across threads."""
+    import threading
+    import time
+
+    from aegean.greek.neural_lemmatizer import _EOS_ID, _NeuralModel
+
+    class _MiniArray:
+        def __init__(self, rows: list[list[int]]) -> None:
+            self.rows = rows
+
+        def __getitem__(self, key: object) -> object:
+            if isinstance(key, tuple) and len(key) == 2:
+                r, c = key
+                if isinstance(c, slice):
+                    return self.rows[r][c]
+                return _ArgMax(self.rows[r][c])
+            return self.rows[key]  # type: ignore[index]
+
+    class _ArgMax:
+        def __init__(self, val: int) -> None:
+            self._v = val
+
+        def argmax(self) -> int:
+            return self._v
+
+    class _MiniNP:
+        int64 = int
+
+        @staticmethod
+        def array(data: list[list[int]], dtype: object = None) -> _MiniArray:
+            return _MiniArray(data)
+
+        @staticmethod
+        def ones_like(arr: _MiniArray) -> _MiniArray:
+            return _MiniArray([[1] * len(r) for r in arr.rows])
+
+        @staticmethod
+        def concatenate(items: list[object], axis: int = 1) -> _MiniArray:
+            a, b = items
+            assert isinstance(a, _MiniArray) and isinstance(b, list)
+            return _MiniArray([a.rows[0] + b[0]])
+
+    class _MiniTok:
+        def encode(self, _form: str) -> object:
+            return type("_Enc", (), {"ids": [5, 6]})()
+
+        def decode(self, ids: list[int], skip_special_tokens: bool = True) -> str:
+            return "λόγος"
+
+    probe = threading.Lock()
+    state = {"in_flight": 0, "max_in_flight": 0}
+
+    class _NonReentrantSubSession:
+        def __init__(self, *, is_dec: bool) -> None:
+            self._is_dec = is_dec
+
+        def run(self, _outputs: object, _feed: dict[str, object]) -> list[object]:
+            with probe:
+                state["in_flight"] += 1
+                if state["in_flight"] > state["max_in_flight"]:
+                    state["max_in_flight"] = state["in_flight"]
+                overlap = state["in_flight"] > 1
+            try:
+                assert not overlap, "concurrent GreTa ONNX session overlap detected"
+                time.sleep(0.01)
+                if self._is_dec:
+                    return [_MiniArray([[_EOS_ID]])]
+                return [[[0.0]]]
+            finally:
+                with probe:
+                    state["in_flight"] -= 1
+
+    model = object.__new__(_NeuralModel)
+    model._np = _MiniNP
+    model._tok = _MiniTok()
+    model._enc = _NonReentrantSubSession(is_dec=False)
+    model._dec = _NonReentrantSubSession(is_dec=True)
+    model._dec_in = {"input_ids", "encoder_hidden_states", "encoder_attention_mask"}
+    model._lookup = {}
+    model._session_lock = threading.RLock()
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(model._generate, ["λόγοι"] * 8))
+
+    assert results == ["λόγος"] * 8
+    assert state["max_in_flight"] == 1
+

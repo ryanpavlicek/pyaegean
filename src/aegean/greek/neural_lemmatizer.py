@@ -21,7 +21,9 @@ model is fetched, not bundled.
 from __future__ import annotations
 
 import re
+import threading
 import unicodedata
+from contextlib import nullcontext
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -103,23 +105,26 @@ class _NeuralModel:
                 "tokenizers package: pip install 'tokenizers>=0.20'"
             ) from e
         self._lookup: Mapping[str, str] = load_gzip_json(model_dir / "lookup.json.gz")
+        self._session_lock = threading.RLock()
 
     def _generate(self, form: str) -> str:
         """Greedy-decode the lemma for one form (torch-free)."""
         np = self._np
-        ids = np.array([self._tok.encode(form).ids[:_MAX_LEN]], dtype=np.int64)
-        mask = np.ones_like(ids)
-        hidden = self._enc.run(None, {"input_ids": ids, "attention_mask": mask})[0]
-        dec = np.array([[_PAD_ID]], dtype=np.int64)  # T5 decoder_start_token_id
-        for _ in range(_MAX_LEN):
-            feed = {"input_ids": dec, "encoder_hidden_states": hidden,
-                    "encoder_attention_mask": mask}
-            logits = self._dec.run(None, {k: v for k, v in feed.items() if k in self._dec_in})[0]
-            nxt = int(logits[0, -1].argmax())
-            if nxt == _EOS_ID:
-                break
-            dec = np.concatenate([dec, [[nxt]]], axis=1)
-        return str(self._tok.decode([int(t) for t in dec[0, 1:]], skip_special_tokens=True))
+        guard = getattr(self, "_session_lock", None) or nullcontext()
+        with guard:
+            ids = np.array([self._tok.encode(form).ids[:_MAX_LEN]], dtype=np.int64)
+            mask = np.ones_like(ids)
+            hidden = self._enc.run(None, {"input_ids": ids, "attention_mask": mask})[0]
+            dec = np.array([[_PAD_ID]], dtype=np.int64)  # T5 decoder_start_token_id
+            for _ in range(_MAX_LEN):
+                feed = {"input_ids": dec, "encoder_hidden_states": hidden,
+                        "encoder_attention_mask": mask}
+                logits = self._dec.run(None, {k: v for k, v in feed.items() if k in self._dec_in})[0]
+                nxt = int(logits[0, -1].argmax())
+                if nxt == _EOS_ID:
+                    break
+                dec = np.concatenate([dec, [[nxt]]], axis=1)
+            return str(self._tok.decode([int(t) for t in dec[0, 1:]], skip_special_tokens=True))
 
     def predict(self, form: str) -> str:
         """Lemma of ``form``: the gold lookup if the form is attested (seen), else generate."""

@@ -321,16 +321,52 @@ def _strongs_morph_to_upos(morph: str) -> str | None:
     return _STRONGS_POS_MAP.get(head)
 
 
-def enrich_lxx_interlinear(corpus: Any) -> Any:
-    """Attach automatic offline lemma, POS, Strong's ID, and gloss to LXX tokens in place.
+# Closed-class Koine/LXX improper prepositions (especially -ω forms like ἐπάνω
+# that would otherwise trip the offline suffix heuristic -> VERB when Extended
+# Strong's is not cached). Kept local to LXX enrichment so offline_baseline_ud
+# POS benchmarks in aegean.greek.pos remain untouched.
+_LXX_IMPROPER_PREPS: frozenset[str] = frozenset(
+    _fold(w)
+    for w in (
+        "ἐπάνω",
+        "ὑποκάτω",
+        "κάτω",
+        "ἄνω",
+        "ἔξω",
+        "ἔσω",
+        "ὀπίσω",
+        "πόρρω",
+        "ἐνώπιον",
+        "ἔμπροσθεν",
+        "μεταξύ",
+        "πέραν",
+        "χωρίς",
+        "ἕως",
+        "ἄχρι",
+        "μέχρι",
+    )
+)
+
+
+def enrich_lxx_interlinear(corpus: Any, *, allow_fetch: bool = False) -> Any:
+    """Attach automatic lemma, POS, Strong's ID, and gloss to LXX tokens in place.
 
     Clearly tags each enriched token with ``annotation_source="auto-lexicon"`` so
-    automatic offline lookup is always distinguished from gold treebank/Nestle 1904
-    annotations. Uses the offline lemmatizer + Dodson / Extended Strong's (when cached).
+    automatic lexicon lookup is always distinguished from gold treebank/Nestle 1904
+    annotations. Uses Extended Strong's (fetched once when ``allow_fetch=True`` and
+    not yet cached, providing curated STEPBible morphology across 11,142 Greek
+    entries) and falls back cleanly to the bundled offline Dodson lexicon +
+    offline lemmatizer/POS rules when offline.
     """
     from ..lemmatize import lemmatize
     from ..pos import pos_tag
-    from ._strongs import strongs_entry
+    from ._strongs import strongs_entry, use_strongs
+
+    if allow_fetch:
+        try:
+            use_strongs(fetch=True)
+        except Exception:
+            pass
 
     entry_cache: dict[str, Any] = {}
     for doc in corpus:
@@ -355,6 +391,8 @@ def enrich_lxx_interlinear(corpus: Any) -> Any:
                 strongs_pos = _strongs_morph_to_upos(ent.morph) if ent is not None else None
                 if strongs_pos:
                     pos = strongs_pos
+                elif _fold(resolved_lemma) in _LXX_IMPROPER_PREPS or _fold(surface) in _LXX_IMPROPER_PREPS:
+                    pos = "ADP"
                 else:
                     pos = pos_tag(surface)
                     if pos == "NOUN" and resolved_lemma != surface:
@@ -514,7 +552,7 @@ def load_lxx(
         )
     corpus = Corpus(docs, script_id="greek", provenance=prov)
     if interlinear:
-        enrich_lxx_interlinear(corpus)
+        enrich_lxx_interlinear(corpus, allow_fetch=not offline)
     return corpus
 
 

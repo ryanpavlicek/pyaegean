@@ -315,3 +315,91 @@ def test_tui_biblical_screen_has_dedicated_lxx_and_patristics_tabs(
             assert "John Chrysostom" in pat_txt
 
     asyncio.run(body())
+
+
+def test_lxx_interlinear_fresh_cache_offline_and_online_strongs_fetch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Empty-cache offline LXX interlinear avoids -ω VERB traps (ἐπάνω -> ADP) with zero network;
+    online load_lxx(..., interlinear=True) pre-warms Extended Strong's once for curated morph tags."""
+    from aegean.greek import bible as bib
+    from aegean.greek.bible import _lxx as lxx_mod
+    from aegean.greek.bible import _strongs as strongs_mod
+
+    monkeypatch.setenv("PYAEGEAN_CACHE", str(tmp_path))
+    monkeypatch.setattr(strongs_mod, "_EXTENDED", None)
+    monkeypatch.setattr(strongs_mod, "_load_extended_if_cached", lambda: None)
+
+    fetch_calls: list[bool] = []
+
+    def _forbid_fetch(*, fetch: bool = True, force: bool = False) -> int:
+        fetch_calls.append(fetch)
+        raise AssertionError("offline=True must never attempt to fetch strongs-greek")
+
+    monkeypatch.setattr(strongs_mod, "use_strongs", _forbid_fetch)
+
+    # 1. Strictly offline with empty cache: zero network calls; ΕΝ and ἐπάνω still get ADP (never VERB/NOUN)
+    il_off = bib.load_lxx("Gen 1:1-2", interlinear=True, offline=True)
+    by_off = {t.text: t.annotations for d in il_off.documents for t in d.tokens}
+    assert fetch_calls == []
+    assert by_off["ΕΝ"]["morph"] == "ADP"
+    assert by_off["ἐπάνω"]["morph"] == "ADP"
+
+    # 2. Online load_lxx(..., interlinear=True) pre-warms Extended Strong's once so curated morph applies
+    monkeypatch.setattr(lxx_mod, "_load_lxx_bundle", lambda *, allow_fetch=True, force=False: None)
+    fake_entries = {
+        "G0517": strongs_mod.StrongsEntry(
+            strongs="G0517",
+            lemma="ἀόρατος",
+            gloss="invisible",
+            definition="unseen, invisible",
+            morph="G:A",
+            source="strongs-greek",
+        ),
+        "G1883": strongs_mod.StrongsEntry(
+            strongs="G1883",
+            lemma="ἐπάνω",
+            gloss="above",
+            definition="over, above",
+            morph="G:PREP",
+            source="strongs-greek",
+        ),
+        "G1722": strongs_mod.StrongsEntry(
+            strongs="G1722",
+            lemma="ἐν",
+            gloss="in/on/among",
+            definition="in, on, among",
+            morph="G:PREP",
+            source="strongs-greek",
+        ),
+    }
+    fake_idx = strongs_mod._ExtendedStrongsIndex(fake_entries, {})
+    loaded_holder: list[strongs_mod._ExtendedStrongsIndex | None] = [None]
+
+    def _mock_use_strongs(*, fetch: bool = True, force: bool = False) -> int:
+        fetch_calls.append(fetch)
+        loaded_holder[0] = fake_idx
+        return len(fake_entries)
+
+    monkeypatch.setattr(strongs_mod, "use_strongs", _mock_use_strongs)
+    monkeypatch.setattr(strongs_mod, "_load_extended_if_cached", lambda: loaded_holder[0])
+
+    il_on = bib.load_lxx("Gen 1:1-2", interlinear=True, offline=False)
+    by_on = {t.text: t.annotations for d in il_on.documents for t in d.tokens}
+    assert fetch_calls == [True]  # fetched exactly once, not per token
+    assert by_on["ΕΝ"]["morph"] == "ADP"
+    assert by_on["ἀόρατος"]["morph"] == "ADJ"
+    assert by_on["ἐπάνω"]["morph"] == "ADP"
+
+    # 3. Network failure during Strong's pre-warm degrades gracefully instead of crashing
+    loaded_holder[0] = None
+
+    def _failing_use_strongs(*, fetch: bool = True, force: bool = False) -> int:
+        raise OSError("simulated offline failure")
+
+    monkeypatch.setattr(strongs_mod, "use_strongs", _failing_use_strongs)
+    il_deg = bib.load_lxx("Gen 1:1-2", interlinear=True, offline=False)
+    by_deg = {t.text: t.annotations for d in il_deg.documents for t in d.tokens}
+    assert by_deg["ΕΝ"]["morph"] == "ADP"
+    assert by_deg["ἐπάνω"]["morph"] == "ADP"
+
