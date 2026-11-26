@@ -7,16 +7,18 @@ terminal workspace with inline one-click downloads when an optional dataset
 
 - **Interlinear**: read any Greek NT or Septuagint passage with word-by-word
   lemma, Robinson morphology, Strong's number, and Koine gloss;
-- **Editions**: compare Nestle 1904, SBLGNT, Statistical Restoration GNT,
-  Byzantine Majority Text, and Textus Receptus with word-level textual diffs;
+- **Editions**: compare all 9 Greek NT editions (Nestle 1904, SBLGNT, SRGNT,
+  BHP, Tischendorf, Westcott–Hort, Byzantine Majority, Antoniades 1904, and
+  Textus Receptus) with word-level textual diffs;
 - **Manuscripts**: compare extant 2nd–5th c. CE uncials and papyri
   (Sinaiticus, Vaticanus, Alexandrinus, Ephraemi, Bezae, Washingtonianus,
   P45–P75) with *nomina sacra* expansions and scribal corrections;
 - **Word Study**: Strong's / Extended Strong's lookup, etymological root tree,
   NT book and morphology distribution, and concordance verses;
-- **LXX & Catenae**: filterable catalogue of all 55 Swete Septuagint books and
-  48 Greek patristic commentaries (NT *Catenae* + Origen), inline LXX reading
-  and search, plus LXX ↔ Masoretic Psalm numbering conversion.
+- **LXX & Patristics**: filterable catalogue of all 55 Swete Septuagint books
+  and 86 Greek patristic commentaries (10 Church Fathers / traditions including
+  *Patrologia Graeca* volumes ``PG071``–``PG126``), inline LXX/PG reading and
+  FTS5 search, plus LXX ↔ Masoretic Psalm numbering conversion.
 """
 
 from __future__ import annotations
@@ -46,7 +48,11 @@ _EDITIONS: tuple[tuple[str, str], ...] = (
     ("Nestle 1904 (annotated)", "nestle1904"),
     ("SBLGNT (2010)", "sblgnt"),
     ("SRGNT (CNTR)", "srgnt"),
+    ("BHP Open GNT", "bhp"),
+    ("Tischendorf 8th (1869)", "tisch"),
+    ("Westcott–Hort (1881)", "wh"),
     ("Byzantine Majority", "byz"),
+    ("Antoniades (1904)", "antoniades"),
     ("Textus Receptus", "tr"),
 )
 
@@ -160,11 +166,11 @@ class BiblicalScreen(Screen[None]):
                     )
                 with VerticalScroll(classes="bible-scroll"):
                     yield Static("", id="bible-study", markup=False)
-            with TabPane("LXX & Catenae", id="tab-bible-lxx"):
+            with TabPane("LXX & Patristics", id="tab-bible-lxx"):
                 with Horizontal(classes="bible-subbar"):
                     yield Input(
                         value="",
-                        placeholder="Filter LXX/Catenae, read (Gen 1.1-5), search (φῶς), or Psalm (23)",
+                        placeholder="Filter LXX/Patristics, read (Gen 1.1-5 / PG073), search (φῶς / PG073 λόγος), or Psalm (23)",
                         id="bible-lxx-filter",
                     )
                 with VerticalScroll(classes="bible-scroll"):

@@ -102,28 +102,11 @@ def _unknown_dataset(name: str) -> str:
     return f"unknown dataset {name!r}; `aegean data list` shows the registered names"
 
 
+from aegean.core.catalog import cli_fetch_hints as _cli_fetch_hints  # noqa: E402
+
 # The natural next command after a fetch, per asset (stdout keeps the bare path
 # for scripting; the hint goes to stderr, the 0.14.3 geo-hint pattern).
-_FETCH_HINTS = {
-    "damos-corpus": "load it:  aegean info damos",
-    "isicily-corpus": "load it:  aegean info isicily",
-    "iip-corpus": "load it:  aegean info iip",
-    "iospe-corpus": "load it:  aegean info iospe",
-    "igcyr-corpus": "load it:  aegean info igcyr",
-    "edh-corpus": "load it:  aegean info edh",
-    "ddbdp-corpus": "search it (memory-friendly):  aegean db search ddbdp \"βασιλέως\"",
-    "linearb-corpus": "load it:  aegean info linearb",
-    "sigla-corpus": "load it:  aegean info sigla",
-    "nt-corpus": "load it:  aegean info nt",
-    "aphrodisias-corpus": "load it:  aegean info aphrodisias",
-    "crete-corpus": "load it:  aegean info crete",
-    "apostolic-fathers-corpus": "load it:  aegean info apostolic-fathers",
-    "pseudepigrapha-corpus": "load it:  aegean info pseudepigrapha",
-    "byzantine-corpus": "load it:  aegean info byzantine",
-    "homer-scholia-corpus": "load it:  aegean info homer-scholia",
-    "patrologia-graeca-corpus": "read a volume:  aegean bible commentary PG073",
-    "lineara-images": "serve it:  aegean workbench",
-}
+_FETCH_HINTS: dict[str, str] = _cli_fetch_hints()
 
 
 @data_app.command("list")

@@ -19,6 +19,7 @@
     "aegean.translate",
     "aegean.data",
     "aegean.library",
+    "aegean.search",
     "aegean.viz",
     "aegean.cache",
     "aegean.db",

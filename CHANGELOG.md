@@ -4,6 +4,30 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.70.0 (2026-11-25)
+
+### Added
+
+- **Declarative corpus catalog (`aegean.core.catalog`)**: Single zero-dependency source of truth (`CORPORA`, `CorpusSpec`, `make_json_corpus_loader()`) driving all 21 registered corpus loaders, `aegean.library` metadata, `aegean.tui.data` browser IDs/blurbs/assets, and `aegean.cli._data` fetch hints — eliminating 11 copy-pasted Greek corpus loader modules and preventing cross-surface drift.
+- **Unified diacritic-insensitive full-text search with lazy SQLite FTS5 sidecars (`aegean.search` & `aegean find`)**:
+  - Added [`aegean.search`](https://pyaegean.xyz/api/search/) (`search_text()`, `search_corpus()`, `SearchHit`, `fold_greek()`, `fts_index_path()`, `clear_fts_cache()`) building automatic, mtime/size-validated SQLite FTS5 sidecar indexes under `PYAEGEAN_CACHE/fts/` for instant (<50 ms) Greek diacritic-insensitive search across all 33 *Patrologia Graeca* volumes (`patrologia` / `PG073`), the 55-book Swete Septuagint (`lxx`), all 9 Greek NT editions (`nt` / `nt-editions`), epigraphic/literary corpora, DDbDP SQLite papyri, Perseus/First1KGreek works, and local `.json`/`.json.gz`/`.db` files.
+  - Added `aegean find QUERY [TARGET]` CLI command (`--book`, `--edition`, `--limit`, `--exact`, `--offline`, `--json`) wired into the REPL/TUI predictive completion engine (`aegean.cli._complete`).
+- **Unified Python front door & fluent `Corpus` API**:
+  - Added `aegean.open(spec, *, ref=None, edition=None, offline=False)` (`aegean.core.resolve.open_corpus`) resolving registered corpora, *Patrologia Graeca* volumes (`PG073`), Perseus/First1KGreek CTS work IDs (`tlg0012.tlg001`), Greek NT books (`John`), Swete LXX books (`Gen`), and local `.json`/`.json.gz`/`.db`/`.xml` (EpiDoc) files in one call. Upgraded `read_corpus()` to accept `PG*` volume IDs and `.json.gz` files directly.
+  - Added fluent `Corpus.search()`, `Corpus.annotate()`, and `Corpus.export()` (auto-detecting `.json`, `.csv`, `.parquet`, `.db`, `.xml`/`.epidoc`, `.ttl`, `.jsonld`).
+- **Full MCP parity (23 → 29 tools) & modular MCP package (`aegean.mcp`)**:
+  - Split the 1,103-line `aegean.mcp_server` monolith into domain modules (`aegean.mcp.{_common,_corpora,_greek,_bible,_library}`) behind a slim facade.
+  - Added 6 new parity tools: `search_text` (strictly path-safe, offline FTS5 search), `library_status`, `library_search`, `biblical_compare_editions`, `biblical_witnesses`, and `biblical_commentary`; exported `biblical_lxx` in `__all__`.
+
+### Changed
+
+- **TUI Biblical & Patristic upgrade (`aegean tui` key `b`)**:
+  - Expanded `BiblicalScreen` edition selector from 5 → all **9 Greek NT editions** (`nestle1904`, `sblgnt`, `srgnt`, `bhp`, `tisch`, `wh`, `byz`, `antoniades`, `tr`).
+  - Upgraded the fifth tab to **LXX & Patristics**, adding inline *Patrologia Graeca* reading (`PG073`) and FTS5 search (`PG073 λόγος`) alongside all 55 Swete Septuagint books and 86 Greek patristic commentaries across 10 Church Fathers/traditions.
+- **Non-neural monolith decomposition (zero changes to frozen neural/benchmark modules)**:
+  - Extracted `aegean.core._codec` from `aegean.core.corpus`, `aegean._library_meta` from `aegean.library`, `aegean.tui._library_data` from `aegean.tui.data`, and `aegean._db_lexical` from `aegean.db` with full backward-compatible facade re-exports.
+  - Neural inference, calibration, OOV reranking, and evaluation modules remain completely unchanged; benchmark measurements are bit-for-bit identical.
+
 ## 0.68.0 (2026-11-25)
 
 ### Added

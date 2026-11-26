@@ -1,57 +1,86 @@
 """Greek script plugin.
 
-Registers Greek as a `Script` and its bundled sample
-corpus loader. The script's ``nlp`` capability exposes the `aegean.greek`
-pipeline.
+Registers Greek as a `Script`, its bundled sample corpus loader, its specialized
+loaders (``nt``, ``ddbdp``, ``patrologia``), and every hosted JSON Greek corpus
+declared in :mod:`aegean.core.catalog`. The script's ``nlp`` capability exposes
+the `aegean.greek` pipeline.
 """
 
 from __future__ import annotations
 
 from types import ModuleType
+from typing import TYPE_CHECKING, Any
 
+from ...core.catalog import CORPORA as _CORPORA
+from ...core.catalog import make_json_corpus_loader as _make_json_corpus_loader
+from ...core.corpus import register_loader as _register_loader
 from ...core.model import SignInventory, Token
 from ...core.script import Script, register
-from . import loader  # noqa: F401 — registers the Corpus loader on import
-from . import nt  # noqa: F401 — registers the New Testament corpus loader on import
-from . import isicily  # noqa: F401 — registers the I.Sicily corpus loader on import
-from . import iip  # noqa: F401 — registers the IIP corpus loader on import
-from . import iospe  # noqa: F401 — registers the IOSPE corpus loader on import
-from . import igcyr  # noqa: F401 — registers the IGCyr/GVCyr corpus loader on import
-from . import edh  # noqa: F401 — registers the EDH corpus loader on import
 from . import ddbdp  # noqa: F401 — registers the DDbDP corpus loader on import
-from . import aphrodisias  # noqa: F401 — registers the IAph2007 corpus loader on import
-from . import crete  # noqa: F401 — registers the Cretan Institutional Inscriptions loader
-from . import apostolic_fathers  # noqa: F401 — registers the Open Apostolic Fathers loader
-from . import pseudepigrapha  # noqa: F401 — registers the OCP Pseudepigrapha loader
-from . import byzantine  # noqa: F401 — registers the Byzantine Vernacular Greek loader
-from . import homer_scholia  # noqa: F401 — registers the Homer Multitext Scholia loader
+from . import loader  # noqa: F401 — registers the bundled Greek sample loader
+from . import nt  # noqa: F401 — registers the New Testament corpus loader
 from . import patrologia  # noqa: F401 — registers the Patrologia Graeca loader
-from .inventory import greek_inventory
-from typing import TYPE_CHECKING
-
-from .aphrodisias import load_aphrodisias
-from .apostolic_fathers import load_apostolic_fathers
-from .byzantine import load_byzantine
-from .crete import load_crete
 from .ddbdp import ddbdp_db, load_ddbdp
-from .edh import load_edh
-from .homer_scholia import load_homer_scholia
-from .igcyr import load_igcyr
-from .iip import load_iip
-from .iospe import load_iospe
-from .isicily import load_isicily
+from .inventory import greek_inventory
 from .nt import load_nt
 from .patrologia import load_patrologia, patrologia_volumes
-from .pseudepigrapha import load_pseudepigrapha
 
 if TYPE_CHECKING:
     from .perseus import load_work
 
+# Specialized Greek corpora with custom loaders (bundled sample, NT, SQLite DDbDP,
+# volume-scoped Patrologia Graeca). Every other hosted Greek corpus in
+# aegean.core.catalog is a standard JSON/JSON.gz release asset registered below.
+_CUSTOM_GREEK_CORPORA = frozenset({"greek", "nt", "ddbdp", "patrologia"})
+
+_DYNAMIC_LOADERS: dict[str, Any] = {}
+for _spec in _CORPORA:
+    if (
+        _spec.script_id == "greek"
+        and not _spec.bundled
+        and _spec.asset_name
+        and _spec.id not in _CUSTOM_GREEK_CORPORA
+    ):
+        _fn_name = f"load_{_spec.id.replace('-', '_')}"
+        _fn = _make_json_corpus_loader(
+            _spec.asset_name,
+            name=_fn_name,
+            doc=f"Load {_spec.title} as a `Corpus` (opt-in, fetched).",
+        )
+        _register_loader(_spec.id, _fn, fresh=True)
+        _DYNAMIC_LOADERS[_fn_name] = _fn
+
+load_aphrodisias = _DYNAMIC_LOADERS["load_aphrodisias"]
+load_apostolic_fathers = _DYNAMIC_LOADERS["load_apostolic_fathers"]
+load_byzantine = _DYNAMIC_LOADERS["load_byzantine"]
+load_crete = _DYNAMIC_LOADERS["load_crete"]
+load_edh = _DYNAMIC_LOADERS["load_edh"]
+load_homer_scholia = _DYNAMIC_LOADERS["load_homer_scholia"]
+load_igcyr = _DYNAMIC_LOADERS["load_igcyr"]
+load_iip = _DYNAMIC_LOADERS["load_iip"]
+load_iospe = _DYNAMIC_LOADERS["load_iospe"]
+load_isicily = _DYNAMIC_LOADERS["load_isicily"]
+load_pseudepigrapha = _DYNAMIC_LOADERS["load_pseudepigrapha"]
+
 __all__ = [
-    "Greek", "load_work", "load_nt", "load_isicily", "load_iip", "load_iospe", "load_igcyr",
-    "load_edh", "load_ddbdp", "ddbdp_db", "load_aphrodisias", "load_crete",
-    "load_apostolic_fathers", "load_pseudepigrapha", "load_byzantine",
-    "load_homer_scholia", "load_patrologia", "patrologia_volumes",
+    "Greek",
+    "load_work",
+    "load_nt",
+    "load_isicily",
+    "load_iip",
+    "load_iospe",
+    "load_igcyr",
+    "load_edh",
+    "load_ddbdp",
+    "ddbdp_db",
+    "load_aphrodisias",
+    "load_crete",
+    "load_apostolic_fathers",
+    "load_pseudepigrapha",
+    "load_byzantine",
+    "load_homer_scholia",
+    "load_patrologia",
+    "patrologia_volumes",
 ]
 
 
@@ -61,6 +90,8 @@ def __getattr__(name: str) -> object:
 
         globals()["load_work"] = _load_work
         return _load_work
+    if name in _DYNAMIC_LOADERS:
+        return _DYNAMIC_LOADERS[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

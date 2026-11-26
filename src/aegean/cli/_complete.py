@@ -7,7 +7,7 @@ Shared by three surfaces so they can never drift:
 3. Native shell tab-completion (``aegean --install-completion`` via Typer/Click callbacks).
 
 All value providers are strictly offline and read only bundled/static metadata (registered
-corpus IDs, 32 remote dataset names, 27 NT books, 55 Swete LXX books, 5 NT editions, 13
+corpus IDs, 39 remote dataset names, 27 NT books, 55 Swete LXX books, 9 NT editions, 13
 early manuscript witnesses, 10 Greek meters, 6 dictionaries, etc.) so keystroke prediction
 stays instantaneous and never triggers a network fetch.
 """
@@ -255,6 +255,13 @@ def _option_value_choices(
                 ("lxx", "Septuagint numbering (1–151)"),
             ], False
 
+    # Unified full-text search options (`aegean find`)
+    if cmd_path == ("find",):
+        if opt in ("-e", "--edition"):
+            return _nt_edition_choices(), False
+        if opt in ("-b", "--book"):
+            return _nt_book_choices() + _lxx_book_choices(), False
+
     # Greek NLP options
     if cmd_path and cmd_path[0] == "greek":
         if opt in ("-m", "--meter"):
@@ -331,10 +338,10 @@ def _option_value_choices(
 
 def _library_category_choices() -> list[tuple[str, str]]:
     return [
-        ("corpus", "14 Aegean & Greek corpora"),
-        ("bible", "5 Biblical & Koine Greek bundles"),
+        ("corpus", "21 Aegean & Greek corpora"),
+        ("bible", "8 Biblical, Second Temple & Koine bundles"),
         ("work", "~1,778 Perseus / First1KGreek literary works"),
-        ("commentary", "48 Greek patristic commentaries (Catenae & Origen)"),
+        ("commentary", "86 Greek patristic commentaries (10 Fathers/traditions)"),
         ("lexicon", "5 hosted Greek dictionaries"),
         ("model", "4 NLP & neural models"),
         ("other", "benchmarks, images, and web app"),
@@ -367,9 +374,10 @@ def _library_remove_choices() -> list[tuple[str, str]]:
 
 def _bible_install_choices() -> list[tuple[str, str]]:
     return [
-        ("biblical", "all 5 Biblical & Koine Greek bundles (~25 MB)"),
+        ("biblical", "all 5 core Biblical & Koine Greek bundles (~27 MB)"),
+        ("patristic", "Apostolic Fathers, Pseudepigrapha & 33 Patrologia Graeca vols (~27 MB)"),
         ("nt", "27-book Greek NT Nestle 1904 (~18 MB)"),
-        ("editions", "SBLGNT, SRGNT, Byzantine Majority, TR (~1.7 MB)"),
+        ("editions", "8 Greek NT editions: SBLGNT, SRGNT, BHP, Tisch, WH, BYZ, Antoniades, TR (~3.3 MB)"),
         ("witnesses", "13 early 2nd–5th c. CE manuscripts (~2.0 MB)"),
         ("strongs", "11,142 Extended Strong's entries (~1.5 MB)"),
         ("lxx", "55-book Swete Septuagint (~1.7 MB)"),
@@ -389,6 +397,16 @@ def _commentary_work_choices(book_filter: str | None = None) -> list[tuple[str, 
     ]
 
 
+def _find_target_choices() -> list[tuple[str, str]]:
+    extra = [
+        ("lxx", "Swete Septuagint (55 Greek OT books)"),
+        ("nt-editions", "9 Greek NT editions bundle"),
+        ("PG073", "Patrologia Graeca Vol. 73 — Cyril of Alexandria on John"),
+        ("PG123", "Patrologia Graeca Vol. 123 — Theophylact on Gospels"),
+    ]
+    return _corpus_choices() + extra + _nt_book_choices() + _lxx_book_choices()
+
+
 def _positional_choices(
     cmd_path: tuple[str, ...],
     pos_index: int,
@@ -402,6 +420,8 @@ def _positional_choices(
         return _library_remove_choices()
     if cmd_path == ("bible", "install"):
         return _bible_install_choices()
+    if cmd_path == ("find",) and pos_index == 1:
+        return _find_target_choices()
     if pos_index == 0:
         if cmd_path in _CORPUS_FIRST_PATHS:
             return _corpus_choices()
@@ -427,7 +447,7 @@ def _positional_choices(
             return [
                 ("nt", "27 Greek New Testament books"),
                 ("lxx", "55 Swete Septuagint books"),
-                ("editions", "5 Greek NT editions"),
+                ("editions", "9 Greek NT editions"),
                 ("witnesses", "13 early 2nd–5th c. CE manuscript witnesses"),
                 ("all", "summary of all biblical catalogs"),
             ]

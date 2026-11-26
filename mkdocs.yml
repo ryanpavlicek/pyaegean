@@ -96,6 +96,7 @@ nav:
       - aegean.translate: api/translate.md
       - aegean.data: api/data.md
       - aegean.library: api/library.md
+      - aegean.search: api/search.md
       - aegean.viz: api/viz.md
       - aegean.cache: api/cache.md
       - aegean.db: api/db.md

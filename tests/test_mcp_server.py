@@ -514,7 +514,7 @@ def test_build_server_registers_tools() -> None:
 
     server = m.build_server()
     assert server is not None
-    assert len(m.TOOLS) == 23  # the registered tool surface
+    assert len(m.TOOLS) == 29  # the registered tool surface
     tools = asyncio.run(server.list_tools())
     assert {t.name for t in tools} == {fn.__name__ for fn in m.TOOLS}
     # The SDK derives each description from the function docstring; an agent chooses a

@@ -13,8 +13,9 @@ optional review, counting choices, and translation evidence.
 
 ## Where to start
 
-- [`aegean`](aegean.md): the top-level namespace: `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
-- [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `TokenFormState`, `FormSegment`, `SourceMarkupRef`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`.
+- [`aegean`](aegean.md): the top-level namespace: `open()`, `load()`, `read_corpus()`, `combine()`, the core value types, and the subpackages.
+- [`aegean.core`](core.md): the script-agnostic model (`Corpus`, `Document`, `Token`, `TokenFormState`, `FormSegment`, `SourceMarkupRef`, `Sign`, …); build your own with `Corpus.from_records`, slice with `subset`, merge with `merge`, search with `search`, export with `export`.
+- [`aegean.search`](search.md): unified diacritic-insensitive full-text search with lazy SQLite FTS5 sidecar indexes (`search_text`, `search_corpus`, `fold_greek`, `fts_index_path`, `clear_fts_cache`).
 - [`aegean.greek`](greek.md): the Greek NLP pipeline. It covers:
     - text processing: normalize, tokenize, named sentence policies, scan, tag, lemmatize, and parse;
     - `segment_text()` / `segment_sentences()` with validated plugin results and exact boundary spans, and `pipeline_tokens()` for typed editorial forms;

@@ -84,8 +84,8 @@ def bible_compare_text(passage: str, *, offline: bool = True) -> str:
     except Exception as exc:
         return (
             f"Multi-edition comparison unavailable for {book} {ref}: {exc}\n"
-            "Press f (or click Download above) to install `nt-editions` (~1.7 MB) for "
-            "SBLGNT, SRGNT, Byzantine Majority, and Textus Receptus."
+            "Press f (or click Download above) to install `nt-editions` (~3.3 MB) for "
+            "SBLGNT, SRGNT, BHP, Tischendorf, Westcott–Hort, Byzantine Majority, Antoniades, and TR."
         )
     out = [f"{cmp.book} {cmp.ref} — {len(cmp.verses)} verse(s), {cmp.variant_verse_count} with variants", ""]
     for v in cmp.verses:
@@ -179,11 +179,45 @@ def bible_word_study_text(query: str, *, offline: bool = True) -> str:
 
 
 def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
-    """Render searchable LXX + Patristic Catenae catalogue, LXX passage/search, and Psalm hint. Never raises."""
+    """Render searchable LXX + 86 Patristic Commentaries catalogue, LXX/PG passage/search, and Psalm hint. Never raises."""
+    import re
+
     import aegean.greek.bible as bib
 
     q = filter_text.strip()
     out: list[str] = []
+
+    # 0. If the user typed a Patrologia Graeca volume ID (e.g. "PG073" or "PG073 λόγος"),
+    #    search or excerpt it inline from the cached Patrologia Graeca archive.
+    pg_match = re.match(r"^(PG\d+(?:_\d+)?)(?:\s+(.+))?$", q, re.IGNORECASE)
+    if pg_match:
+        vol_id = pg_match.group(1).upper()
+        term = (pg_match.group(2) or "").strip()
+        try:
+            if term:
+                from aegean.search import search_text
+
+                pg_hits = search_text(term, vol_id, limit=8, offline=True)
+                out.append(f"── Patrologia Graeca {vol_id} Search: {term!r} ({len(pg_hits)} hit(s)) ──")
+                for h in pg_hits:
+                    out.append(f"  [{h.ref}]  {h.snippet}")
+                if not pg_hits:
+                    out.append(f"  No matches for {term!r} in {vol_id}.")
+            else:
+                from aegean.scripts.greek.patrologia import load_patrologia
+
+                corp = load_patrologia(vol_id)
+                out.append(f"── Patrologia Graeca {vol_id} ({len(corp)} page(s), OCR) ──")
+                for doc in list(corp)[:5]:
+                    preview = " ".join(t.text for t in doc.tokens[:40])
+                    out.append(f"  [{doc.id}]  {preview}")
+            out.append("")
+        except Exception as exc:
+            out.append(
+                f"Patrologia Graeca {vol_id} unavailable locally: {exc}\n"
+                "Install the `patristic` pack (or `patrologia-graeca-corpus`, ~23.5 MB) in Library Manager (l).\n"
+            )
+
     # 1. If the user typed a Psalm number like "23" or "ps 23", convert LXX <-> MT inline.
     digits = q.lower().removeprefix("psalm").removeprefix("ps").strip()
     if digits.isdigit():
@@ -199,14 +233,14 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
             out.append("")
 
     # 2. If the user typed Greek characters (e.g. κύριος, φῶς), search the Septuagint inline.
-    has_greek = any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
+    has_greek = (not pg_match) and any("\u0370" <= ch <= "\u03ff" or "\u1f00" <= ch <= "\u1fff" for ch in q)
     if has_greek:
         try:
             hits = bib.search_lxx(q, limit=12, offline=True)
             scope_note = "all 55 books" if bib.lxx_loaded() else "offline sample (Gen 1, Ps 22; fetch `lxx-corpus` for all 55 books)"
             out.append(f"── Septuagint (LXX) Concordance: {q!r} ({len(hits)} hit(s) in {scope_note}) ──")
-            for h in hits:
-                out.append(f"  {h.ref:<11} {h.verse_text}")
+            for lxx_hit in hits:
+                out.append(f"  {lxx_hit.ref:<11} {lxx_hit.verse_text}")
             if not hits:
                 out.append("  No Septuagint matches in current scope.")
             out.append("")
@@ -214,7 +248,7 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
             out.append(f"Septuagint search error: {exc}\n")
 
     # 3. If the user typed an LXX passage reference (e.g. "Gen 1.1-5" or "Ps 22.1-6"), read it inline.
-    if not has_greek and " " in q:
+    if not has_greek and not pg_match and " " in q:
         bk_cand, ref_cand = _parse_passage_spec(q)
         if ref_cand:
             try:
@@ -239,19 +273,28 @@ def bible_lxx_and_catenae_text(filter_text: str = "") -> str:
     ]
     comms = [
         c for c in bib.patristic_commentaries()
-        if not ql or has_greek or ql in c["book"].lower() or ql in c["title"].lower() or ql in c["author"].lower()
+        if not ql
+        or has_greek
+        or ql in c["book"].lower()
+        or ql in c["work_id"].lower()
+        or ql in c["title"].lower()
+        or ql in c["author"].lower()
+        or ql in c.get("kind", "").lower()
     ]
-    lxx_status = "cached" if bib.lxx_loaded() else "offline sample Gen 1 & Ps 22; fetch `lxx-corpus` (~1.7 MB) in Data Store (d) for all 55 books"
+    lxx_status = "cached" if bib.lxx_loaded() else "offline sample Gen 1 & Ps 22; fetch `lxx-corpus` (~1.7 MB) in Library (l) for all 55 books"
     out.append(f"── Septuagint (LXX) — {len(lxx)} matching book(s) ({lxx_status}) ──")
-    for b in lxx[:28]:
+    for b in lxx[:24]:
         out.append(f"  {b['name']:<8} {b['title']:<36} [{b['section']}]  {b['work_id']}")
-    if len(lxx) > 28:
-        out.append(f"  … and {len(lxx) - 28} more (try typing `Gen 1.1-5`, `Ps 22.1-6`, or a Greek word like `φῶς`)")
+    if len(lxx) > 24:
+        out.append(f"  … and {len(lxx) - 24} more (try `Gen 1.1-5`, `Ps 22.1-6`, or a Greek word like `φῶς`)")
     out.append("")
-    out.append(f"── Greek Patristic Commentaries — {len(comms)} matching volume(s) (NT Catenae & Origen) ──")
-    for c in comms[:24]:
-        out.append(f"  {c['book']:<7} {c['work_id']:<15} {c['author']:<13} {c['title']}")
-    if len(comms) > 24:
-        out.append(f"  … and {len(comms) - 24} more")
+    out.append(
+        f"── Greek Patristic Commentaries — {len(comms)} matching volume(s) "
+        "(10 Fathers / traditions: Catenae, Origen, Cyril, Theophylact, PG071–PG126) ──"
+    )
+    for c in comms[:28]:
+        out.append(f"  {c['book']:<7} {c['work_id']:<15} {c['author']:<20} {c['title']}")
+    if len(comms) > 28:
+        out.append(f"  … and {len(comms) - 28} more (try `PG073`, `PG073 λόγος`, `Cyril`, `Theophylact`, or `John`)")
     return "\n".join(out)
 

@@ -1,0 +1,370 @@
+"""Declarative corpus catalog — single source of truth for registered corpora.
+
+Every built-in and fetch-on-demand corpus registered with ``aegean.load()`` is
+described once here. The TUI corpus browser (``aegean.tui.data``), the unified
+Library Manager (``aegean.library``), the CLI fetch-hint table
+(``aegean.cli._data``), and the JSON corpus loaders (``aegean.scripts.greek``)
+all derive their metadata from this module so adding a new corpus never drifts
+across surfaces.
+
+Zero non-stdlib dependencies; safe to import during package startup.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
+
+__all__ = [
+    "CORPORA",
+    "CORPUS_BY_ASSET",
+    "CORPUS_BY_ID",
+    "CorpusSpec",
+    "UNDECIPHERED_IDS",
+    "cli_fetch_hints",
+    "make_json_corpus_loader",
+    "tui_asset_map",
+    "tui_blurbs",
+    "tui_browsable_ids",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class CorpusSpec:
+    """Declarative metadata for one registered ``aegean.load(id)`` corpus."""
+
+    id: str
+    script_id: str
+    title: str
+    blurb: str
+    description: str
+    bundled: bool
+    asset_name: str | None = None
+    category: str = "corpus"
+    tags: tuple[str, ...] = ("corpus",)
+    aliases: tuple[str, ...] = ()
+    size_hint: str = ""
+    license: str = ""
+    tui_browsable: bool = True
+    undeciphered: bool = False
+    fetch_hint: str | None = None
+
+
+# Canonical presentation order: bundled corpora first, then Biblical/Patristic,
+# Aegean, Epigraphy/Papyri, and Literary/Scholia corpora.
+CORPORA: tuple[CorpusSpec, ...] = (
+    # ── Bundled offline corpora (5) ──────────────────────────────────────────
+    CorpusSpec(
+        id="lineara",
+        script_id="lineara",
+        title="Linear A Corpus (GORILA)",
+        blurb="Linear A inscriptions (undeciphered)",
+        description="1,721 Linear A inscriptions (bundled offline).",
+        bundled=True,
+        license="Apache-2.0 / public academic transcriptions",
+        aliases=("linear-a", "la"),
+        undeciphered=True,
+    ),
+    CorpusSpec(
+        id="linearb",
+        script_id="linearb",
+        title="Linear B Sample Tablets",
+        blurb="Linear B sample tablets (Mycenaean Greek)",
+        description="18 Mycenaean Greek Linear B sample tablets (bundled offline).",
+        bundled=True,
+        license="Apache-2.0 / public academic transcriptions",
+        aliases=("linear-b", "lb"),
+    ),
+    CorpusSpec(
+        id="cypriot",
+        script_id="cypriot",
+        title="Cypriot Syllabary Corpus",
+        blurb="Cypriot syllabary texts (Greek)",
+        description="149 Classical Cypriot Greek syllabic inscriptions (bundled offline).",
+        bundled=True,
+        license="Apache-2.0 / public academic transcriptions",
+        aliases=("cypriot-syllabary",),
+    ),
+    CorpusSpec(
+        id="cyprominoan",
+        script_id="cyprominoan",
+        title="Cypro-Minoan Corpus",
+        blurb="Cypro-Minoan signs (undeciphered)",
+        description="2 Cypro-Minoan sample inscriptions (bundled offline).",
+        bundled=True,
+        license="Apache-2.0 / public academic transcriptions",
+        aliases=("cypro-minoan", "cm"),
+        undeciphered=True,
+    ),
+    CorpusSpec(
+        id="greek",
+        script_id="greek",
+        title="Ancient Greek Sample Texts",
+        blurb="alphabetic Greek sample texts",
+        description="5 Ancient Greek sample passages (bundled offline).",
+        bundled=True,
+        license="Apache-2.0 / public domain texts",
+        aliases=("greek-sample",),
+    ),
+    # ── Fetch-on-demand Biblical & Patristic corpora ─────────────────────────
+    CorpusSpec(
+        id="nt",
+        script_id="greek",
+        title="Greek New Testament (Nestle 1904, 27 books)",
+        blurb="Greek New Testament (Nestle 1904)",
+        description="Full 27-book Nestle 1904 Greek NT with gold lemma, Robinson morphology, and Strong's.",
+        bundled=False,
+        asset_name="nt-corpus",
+        category="bible",
+        tags=("bible", "corpus"),
+        aliases=("nt", "nestle1904", "gnt", "new-testament"),
+        size_hint="~18 MB",
+        fetch_hint="load it:  aegean info nt",
+    ),
+    CorpusSpec(
+        id="apostolic-fathers",
+        script_id="greek",
+        title="Open Apostolic Fathers (15 hand-corrected Greek works)",
+        blurb="Open Apostolic Fathers (15 early Christian texts)",
+        description="15 early Christian Greek works (1–2 Clement, Ignatius, Polycarp, Didache, Barnabas, Hermas, Diognetus).",
+        bundled=False,
+        asset_name="apostolic-fathers-corpus",
+        category="bible",
+        tags=("bible", "corpus", "commentary"),
+        aliases=("apostolic-fathers", "af", "didache", "clement", "ignatius"),
+        size_hint="~1.0 MB",
+        fetch_hint="load it:  aegean info apostolic-fathers",
+    ),
+    CorpusSpec(
+        id="pseudepigrapha",
+        script_id="greek",
+        title="Greek Old Testament Pseudepigrapha (44 OCP Second Temple works)",
+        blurb="Greek Old Testament Pseudepigrapha (44 OCP works)",
+        description="44 Greek Second Temple / OT Pseudepigrapha works (1 Enoch, Psalms of Solomon, Testaments, Sibylline Oracles, 3–4 Baruch, 3–4 Maccabees).",
+        bundled=False,
+        asset_name="pseudepigrapha-corpus",
+        category="bible",
+        tags=("bible", "corpus"),
+        aliases=("pseudepigrapha", "ocp", "enoch", "sibylline"),
+        size_hint="~2.7 MB",
+        fetch_hint="load it:  aegean info pseudepigrapha",
+    ),
+    CorpusSpec(
+        id="patrologia",
+        script_id="greek",
+        title="Patrologia Graeca (33 CGPG volumes, 6.79M words; 9 commentary vols)",
+        blurb="Patrologia Graeca (33 Migne PG volumes, OCR)",
+        description="33 Migne Patrologia Graeca volumes (6,787,292 words, CGPG automated OCR), including 9 biblical commentary volumes.",
+        bundled=False,
+        asset_name="patrologia-graeca-corpus",
+        category="commentary",
+        tags=("commentary", "bible", "corpus"),
+        aliases=("patrologia", "pg", "church-fathers", "cyril", "theophylact"),
+        size_hint="~23.5 MB",
+        tui_browsable=False,
+        fetch_hint="read a volume:  aegean bible commentary PG073",
+    ),
+    # ── Fetch-on-demand Aegean corpora ───────────────────────────────────────
+    CorpusSpec(
+        id="damos",
+        script_id="linearb",
+        title="DAMOS Linear B Corpus (~5,900 tablets)",
+        blurb="DAMOS full Linear B corpus",
+        description="Full DAMOS Mycenaean Greek Linear B tablet corpus.",
+        bundled=False,
+        asset_name="damos-corpus",
+        aliases=("damos",),
+        size_hint="~3.0 MB",
+        fetch_hint="load it:  aegean info damos",
+    ),
+    CorpusSpec(
+        id="sigla",
+        script_id="lineara",
+        title="SigLA Linear A Corpus (802 documents)",
+        blurb="SigLA Linear A corpus",
+        description="SigLA palaeographic Linear A dataset (802 documents).",
+        bundled=False,
+        asset_name="sigla-corpus",
+        aliases=("sigla",),
+        size_hint="~1.3 MB",
+        undeciphered=True,
+        fetch_hint="load it:  aegean info sigla",
+    ),
+    # ── Fetch-on-demand Greek Epigraphy & Papyri corpora ─────────────────────
+    CorpusSpec(
+        id="isicily",
+        script_id="greek",
+        title="I.Sicily Greek Inscriptions (2,855 texts)",
+        blurb="I.Sicily Greek inscriptions (Sicily)",
+        description="2,855 primary-Greek EpiDoc inscriptions of ancient Sicily.",
+        bundled=False,
+        asset_name="isicily-corpus",
+        aliases=("isicily", "sicily"),
+        size_hint="~2.5 MB",
+        fetch_hint="load it:  aegean info isicily",
+    ),
+    CorpusSpec(
+        id="iip",
+        script_id="greek",
+        title="IIP Greek Inscriptions of Israel/Palestine (2,113 texts)",
+        blurb="IIP Greek inscriptions (Israel/Palestine)",
+        description="2,113 Greek EpiDoc inscriptions from Israel/Palestine.",
+        bundled=False,
+        asset_name="iip-corpus",
+        aliases=("iip",),
+        size_hint="~1.5 MB",
+        fetch_hint="load it:  aegean info iip",
+    ),
+    CorpusSpec(
+        id="iospe",
+        script_id="greek",
+        title="IOSPE Northern Black Sea Inscriptions (1,194 texts)",
+        blurb="IOSPE Greek inscriptions (Black Sea)",
+        description="1,194 Greek inscriptions of the Northern Black Sea.",
+        bundled=False,
+        asset_name="iospe-corpus",
+        aliases=("iospe",),
+        size_hint="~1.5 MB",
+        fetch_hint="load it:  aegean info iospe",
+    ),
+    CorpusSpec(
+        id="igcyr",
+        script_id="greek",
+        title="IGCyr/GVCyr Inscriptions of Cyrenaica (997 texts)",
+        blurb="IGCyr/GVCyr Greek inscriptions (Cyrenaica)",
+        description="997 archaic Doric and verse inscriptions of Cyrenaica.",
+        bundled=False,
+        asset_name="igcyr-corpus",
+        aliases=("igcyr", "cyrenaica"),
+        size_hint="~1.5 MB",
+        fetch_hint="load it:  aegean info igcyr",
+    ),
+    CorpusSpec(
+        id="aphrodisias",
+        script_id="greek",
+        title="Inscriptions of Aphrodisias (IAph2007, 1,471 texts)",
+        blurb="IAph2007 Greek inscriptions (Aphrodisias, Asia Minor)",
+        description="1,471 Greek EpiDoc inscriptions from Aphrodisias in Caria (IAph2007).",
+        bundled=False,
+        asset_name="aphrodisias-corpus",
+        aliases=("aphrodisias", "iaph", "iaph2007"),
+        size_hint="~0.5 MB",
+        fetch_hint="load it:  aegean info aphrodisias",
+    ),
+    CorpusSpec(
+        id="crete",
+        script_id="greek",
+        title="Cretan Institutional Inscriptions (600 Archaic–Hellenistic texts)",
+        blurb="Cretan Institutional Inscriptions (Archaic–Hellenistic Crete)",
+        description="600 Archaic–Hellenistic Greek EpiDoc inscriptions of Crete.",
+        bundled=False,
+        asset_name="crete-corpus",
+        aliases=("crete", "cretan"),
+        size_hint="~0.6 MB",
+        fetch_hint="load it:  aegean info crete",
+    ),
+    CorpusSpec(
+        id="edh",
+        script_id="greek",
+        title="EDH Greek Inscriptions (1,286 texts)",
+        blurb="EDH Greek inscriptions (Heidelberg)",
+        description="1,286 pure-Greek inscriptions from Epigraphic Database Heidelberg.",
+        bundled=False,
+        asset_name="edh-corpus",
+        aliases=("edh",),
+        size_hint="~1.0 MB",
+        fetch_hint="load it:  aegean info edh",
+    ),
+    CorpusSpec(
+        id="ddbdp",
+        script_id="greek",
+        title="DDbDP Greek Documentary Papyri (57,331 texts, SQLite)",
+        blurb="DDbDP Greek documentary papyri (57,331 texts, SQLite)",
+        description="57,331 Greek documentary papyri from Duke Databank (~4.4M tokens, SQLite FTS).",
+        bundled=False,
+        asset_name="ddbdp-corpus",
+        aliases=("ddbdp", "papyri-db"),
+        size_hint="~219 MB",
+        tui_browsable=False,
+        fetch_hint='search it (memory-friendly):  aegean db search ddbdp "βασιλέως"',
+    ),
+    # ── Fetch-on-demand Literary, Byzantine & Scholia corpora ────────────────
+    CorpusSpec(
+        id="byzantine",
+        script_id="greek",
+        title="Byzantine & Early Modern Vernacular Greek (12 works, 189K tokens)",
+        blurb="Byzantine & Early Modern Vernacular Greek (12th–17th c.)",
+        description="12 medieval and early-modern vernacular Greek literary works (Digenes Akritas, Chronicle of Moreas, Ptochoprodromika, Erotokritos, etc.).",
+        bundled=False,
+        asset_name="byzantine-corpus",
+        aliases=("byzantine", "byz-vernacular", "digenes", "erotokritos"),
+        size_hint="~2.5 MB",
+        fetch_hint="load it:  aegean info byzantine",
+    ),
+    CorpusSpec(
+        id="homer-scholia",
+        script_id="greek",
+        title="Homer Multitext Venetus A Iliad & Scholia (54 docs, 331K tokens)",
+        blurb="Homer Multitext Venetus A Iliad & Homeric Scholia",
+        description="24 books normalized Venetus A Iliad plus 30 Homeric scholia documents (Main, interlinear, Venetus B, Escorial Upsilon 1.1).",
+        bundled=False,
+        asset_name="homer-scholia-corpus",
+        tags=("corpus", "commentary"),
+        aliases=("homer-scholia", "hmt", "venetus-a", "scholia"),
+        size_hint="~5.5 MB",
+        fetch_hint="load it:  aegean info homer-scholia",
+    ),
+)
+
+CORPUS_BY_ID: dict[str, CorpusSpec] = {c.id: c for c in CORPORA}
+CORPUS_BY_ASSET: dict[str, CorpusSpec] = {c.asset_name: c for c in CORPORA if c.asset_name}
+UNDECIPHERED_IDS: frozenset[str] = frozenset(c.id for c in CORPORA if c.undeciphered)
+
+
+def tui_browsable_ids() -> tuple[str, ...]:
+    """Return browsable corpus IDs in canonical presentation order."""
+    return tuple(c.id for c in CORPORA if c.tui_browsable)
+
+
+def tui_blurbs() -> dict[str, str]:
+    """Return ``{corpus_id: one_line_blurb}`` for every TUI-browsable corpus."""
+    return {c.id: c.blurb for c in CORPORA if c.tui_browsable}
+
+
+def tui_asset_map() -> dict[str, str]:
+    """Return ``{corpus_id: remote_asset_name}`` for fetch-on-demand corpora."""
+    return {c.id: c.asset_name for c in CORPORA if c.asset_name}
+
+
+def cli_fetch_hints() -> dict[str, str]:
+    """Return ``{asset_name: next_step_hint}`` for ``aegean data fetch``."""
+    hints: dict[str, str] = {
+        c.asset_name: c.fetch_hint
+        for c in CORPORA
+        if c.asset_name and c.fetch_hint
+    }
+    hints["linearb-corpus"] = "load it:  aegean info linearb"
+    hints["lineara-images"] = "serve it:  aegean workbench"
+    return hints
+
+
+def make_json_corpus_loader(
+    asset_name: str,
+    *,
+    name: str | None = None,
+    doc: str = "",
+) -> Callable[[], Any]:
+    """Build a standard fetch-and-load callable for a hosted JSON/JSON.gz corpus."""
+
+    def _loader() -> Any:
+        from ..data import fetch
+        from .corpus import Corpus
+
+        return Corpus.from_json(fetch(asset_name))
+
+    if name:
+        _loader.__name__ = name
+    if doc:
+        _loader.__doc__ = doc
+    return _loader

@@ -24,7 +24,8 @@ if TYPE_CHECKING:  # type-only: keep this module import-clean
 
 # A CTS-style Greek work id, e.g. tlg0012.tlg001 (the Iliad). Cannot collide with a
 # registered id (none contain a dot) and is matched before falling through to file paths.
-_WORK_ID_RE = re.compile(r"^tlg\d+\.tlg\d+$", re.IGNORECASE)
+_WORK_ID_RE = re.compile(r"^(?:tlg|stoa)\d+\.(?:tlg|stoa)\d+$", re.IGNORECASE)
+_PG_ID_RE = re.compile(r"^PG\d+(?:_\d+)?$", re.IGNORECASE)
 
 _DB_SUFFIXES = (".db", ".sqlite", ".sqlite3")
 
@@ -178,16 +179,22 @@ def read_corpus(spec: str) -> "Corpus":
     if spec in _LOADERS:
         return Corpus.load(spec)
 
-    # 3. Greek work id
+    # 3. Greek work id or Patrologia Graeca volume id
     if _WORK_ID_RE.match(spec):
         from ..greek import load_work
 
         return load_work(spec)
+    if _PG_ID_RE.match(spec):
+        from ..scripts.greek.patrologia import load_patrologia
 
-    # 4. file by extension
+        result: Corpus = load_patrologia(spec)
+        return result
+
+    # 4. file by extension (.json, .json.gz, .db/.sqlite/.sqlite3)
     p = Path(spec)
     suffix = p.suffix.lower()
-    if suffix == ".json":
+    suffixes = "".join(p.suffixes).lower()
+    if suffix == ".json" or suffixes.endswith(".json.gz"):
         if not p.exists():
             raise CorpusNotFound(f"no such corpus file: {p}")
         return Corpus.from_json(p)
@@ -217,3 +224,89 @@ def read_corpus(spec: str) -> "Corpus":
         lead + f"expected a registered id ({ids}), a Greek work id like "
         f"tlg0012.tlg001, a path to a .json or .db corpus, or '-' for JSON on stdin" + hint
     )
+
+
+def open_corpus(
+    spec: str | Path,
+    *,
+    ref: str | None = None,
+    edition: str | None = None,
+    offline: bool = False,
+) -> "Corpus":
+    """Universal front-door loader for any pyaegean text source.
+
+    Resolves in order:
+
+    1. Registered corpus IDs (``"lineara"``, ``"isicily"``, ``"nt"``, ``"patrologia"``, ...).
+    2. *Patrologia Graeca* volume IDs (``"PG073"``, ``"PG123"``, ...).
+    3. Perseus / First1KGreek CTS work IDs (``"tlg0012.tlg001"``), passing ``ref`` and ``edition``.
+    4. Greek New Testament book names (``"John"``, ``"Rom"``, ``"1Cor"``) via
+       :func:`aegean.greek.bible.load_nt`, passing ``ref``, ``edition``, and ``offline``.
+    5. Swete Septuagint (LXX) book names (``"Gen"``, ``"Ps"``, ``"Isa"``) via
+       :func:`aegean.greek.bible.load_lxx`, passing ``ref`` and ``offline``.
+    6. Local files: ``.json`` / ``.json.gz``, ``.db`` / ``.sqlite`` / ``.sqlite3``,
+       or EpiDoc ``.xml``, plus ``"-"`` for inline JSON on stdin.
+    """
+    raw = str(spec).strip()
+    if not raw:
+        raise CorpusNotFound("corpus spec must be non-empty")
+
+    # Local EpiDoc XML convenience
+    p = Path(raw)
+    if p.suffix.lower() == ".xml" and p.exists():
+        from ..io.epidoc import from_epidoc
+
+        return from_epidoc(p)
+
+    # CTS work id with optional ref/edition
+    if _WORK_ID_RE.match(raw):
+        from ..greek import load_work
+
+        kwargs: dict[str, object] = {}
+        if ref is not None:
+            kwargs["ref"] = ref
+        if edition is not None:
+            kwargs["edition"] = edition
+        return load_work(raw, **kwargs)  # type: ignore[arg-type]
+
+    # Patrologia Graeca volume id
+    if _PG_ID_RE.match(raw):
+        from ..scripts.greek.patrologia import load_patrologia
+
+        pg_corp: Corpus = load_patrologia(raw)
+        return pg_corp
+
+    # Registered corpus id, stdin, inline JSON, or .json/.json.gz/.db file
+    try:
+        return read_corpus(raw)
+    except CorpusNotFound:
+        pass
+
+    # Greek NT book name (e.g. "John", "Rom", "1Cor")
+    try:
+        from ..greek.bible import load_nt
+        from ..scripts.greek.nt import _resolve_book
+
+        osis = _resolve_book(raw)
+        nt_corp: Corpus = load_nt(
+            osis,
+            ref=ref,
+            edition=edition or "nestle1904",
+            offline=offline,
+        )
+        return nt_corp
+    except ValueError:
+        pass
+
+    # Septuagint (LXX) book name (e.g. "Gen", "Ps", "Isa")
+    try:
+        from ..greek.bible import load_lxx, resolve_lxx_book
+
+        lxx_book = resolve_lxx_book(raw)
+        lxx_corp: Corpus = load_lxx(lxx_book.name, ref=ref, offline=offline)
+        return lxx_corp
+    except ValueError:
+        pass
+
+    # Fall back to read_corpus's detailed error + suggestions
+    return read_corpus(raw)

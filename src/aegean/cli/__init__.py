@@ -4,7 +4,7 @@ Installed by the ``[cli]`` extra (``pip install "pyaegean[cli]"``; typer + rich)
 The command tree mirrors the public API:
 
 - corpus commands at the top level: ``info``, ``load``, ``show``, ``search``,
-  ``query``, ``stats``, ``dispersion``, ``keyness``, ``balance``, ``cite``,
+  ``find``, ``query``, ``stats``, ``dispersion``, ``keyness``, ``balance``, ``cite``,
   ``export``, ``combine``, ``import``, ``geo``, ``sign``, ``bridge``, ``plot``,
   plus ``cache`` (the opt-in analysis cache), ``doctor`` (the offline
   environment check), ``quickstart`` (the guided first five minutes),
@@ -98,7 +98,7 @@ def _build_app() -> Any:
 
     import aegean
 
-    from . import _corpus, _doctor, _quickstart, _repl, _tui, _viz, _workbench
+    from . import _corpus, _doctor, _quickstart, _repl, _search, _tui, _viz, _workbench
     from ._ai import ai_app
     from ._analyze import analyze_app
     from ._bible import bible_app
@@ -116,8 +116,8 @@ def _build_app() -> Any:
             "interactive shell; every data-producing command takes --json."
         ),
         epilog=(
-            "Start with: aegean (or aegean repl) · aegean quickstart · aegean library · "
-            "aegean info lineara · aegean bible read John 1.1-5 — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
+            "Start with: aegean (or aegean repl) · aegean quickstart · aegean info lineara · "
+            "aegean library · aegean find λόγος nt — docs: https://github.com/ryanpavlicek/pyaegean/wiki"
         ),
         context_settings={"help_option_names": ["-h", "--help"]},
     )
@@ -145,6 +145,7 @@ def _build_app() -> Any:
     app.callback(invoke_without_command=True)(_root)
 
     _corpus.register(app)
+    _search.register(app)
     _doctor.register(app)
     _quickstart.register(app)
     _repl.register(app)

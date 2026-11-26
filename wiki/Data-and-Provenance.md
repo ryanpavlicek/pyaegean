@@ -571,13 +571,14 @@ aegean data remove --all               # clear every downloaded dataset
 ```
 
 The same store is visible to AI agents over MCP (`aegean-mcp`, the `[mcp]`
-extra), which exposes twenty-three read/analysis tools: `list_corpora`, `corpus_info`,
-`show_document`, `search_signs`, `balance_accounts`, `query_corpus`,
-`cite_corpus`, `geo_sites`, `data_status`, `corpus_diagnose`, `greek_pipeline`,
-`greek_scan`, `greek_catalog`, `greek_work`, `greek_gloss`, `greek_explain`,
-`koine_gloss`, `biblical_strongs`, `biblical_word_study`, `biblical_psalm`,
-`biblical_nomina_sacra`, `biblical_catalog`, and `biblical_lxx`. Three of them
-touch the story this page tells: `data_status` exposes this listing read-only
+extra), which exposes twenty-nine read/analysis tools: `list_corpora`, `corpus_info`,
+`show_document`, `search_signs`, `search_text`, `balance_accounts`, `query_corpus`,
+`cite_corpus`, `geo_sites`, `data_status`, `library_status`, `library_search`,
+`corpus_diagnose`, `greek_pipeline`, `greek_scan`, `greek_catalog`, `greek_work`,
+`greek_gloss`, `greek_explain`, `koine_gloss`, `biblical_strongs`, `biblical_word_study`,
+`biblical_psalm`, `biblical_nomina_sacra`, `biblical_catalog`, `biblical_lxx`,
+`biblical_compare_editions`, `biblical_witnesses`, and `biblical_commentary`. Three of them
+touch the story this page tells: `data_status` / `library_status` expose this listing read-only
 (downloaded state, on-disk size, license note), so an agent can see what a
 corpus load would fetch before triggering it; `cite_corpus` / `query_corpus`
 carry the exact-subset citation (below) over MCP; and the tools that may fetch

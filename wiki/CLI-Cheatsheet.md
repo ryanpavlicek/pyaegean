@@ -48,7 +48,7 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 
 | Group | Commands |
 |---|---|
-| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
+| **(top level)** | `quickstart` `repl` `tui` `info` `load` `show` `find` `search` `query` `stats` `dispersion` `keyness` `cache` `doctor` `balance` `cite` `export` `combine` `import` `geo` `sign` `bridge` `plot` `workbench` |
 | **`library`** | `status` `packs` `list` `search` `info` `install` `remove` (unified manager for packs, corpora, Biblical bundles, works, commentaries, lexica, models) |
 | **`greek`** | `normalize` `betacode` `strip` `tokenize` `syllabify` `accent` `accentuate` `sandhi` `quantities` `scan` `ipa` `profile` `tag` `lemmatize` `morph` `inflect` `parse` `gloss` `usage` `lexica` `lexicon-link` `rarity` `missing-forms` `pipeline` `stream` `explain` `annotation-profiles list` `annotation-profiles show` `interop export` `interop import` `interop report` `conllu inspect` `conllu export` `work` `works` `catalog` `eval` |
 | **`bible`** | `read` `compare` `witnesses` `strongs` `word-study` `search` `commentary` `books` `psalm` `status` `install` |
@@ -57,14 +57,14 @@ documentary papyri), is a large SQLite corpus: full-text-search it with `aegean 
 | **`db`** | `build` `add` `search` `index` `annotate` `job-status` |
 | **`review`** | `export` `apply` `merge` (annotation review round-trip, multi-reviewer merge) |
 | **`ai`** | `translate` `gloss` `summarize` `hypotheses` `ask` `extract` `eval` `providers` |
-| **`aegean-mcp`** | separate console script: serve the 23 tools to AI agents over MCP |
+| **`aegean-mcp`** | separate console script: serve the 29 tools to AI agents over MCP |
 
 ---
 
 ## Corpus & analysis (top level)
 
 Every corpus command takes a **corpus** as its first argument (an id, a Greek work id,
-a `.json`/`.db` file, or `-`) and accepts `--json`. The analysis commands (`stats`,
+a *Patrologia Graeca* volume like `PG073`, a `.json`/`.json.gz`/`.db` file, or `-`) and accepts `--json`. The analysis commands (`stats`,
 `dispersion`, `keyness`, `search`, `balance`) also take **`-o/--output`** to write the
 result to a file: `.json` / `.csv` (stdlib, no pandas) / `.txt` by extension, with a
 one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
@@ -79,6 +79,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | `info` | Corpus overview: size, provenance, license, citation | `--json` | `aegean info lineara` |
 | `load` | Filter by metadata; list matches or export them | `--site --period --scribe --support -o/--output --limit` | `aegean load lineara --site "Haghia Triada"` |
 | `show` | One document: metadata + line-by-line tokens | `--json` | `aegean show lineara HT13` |
+| `find` | Fast diacritic-insensitive full-text search (SQLite FTS5 sidecar) across any corpus, `lxx`, `nt-editions`, `patrologia` / `PG073`, TLG work, or local `.json`/`.db` | `-b/--book -e/--edition -n/--limit --exact --offline --json` | `aegean find λόγος patrologia` |
 | `search` | Words matching a wildcard sign pattern (`*` = one sign) | `-o/--output --json` | `aegean search lineara "KU-*-RO"` |
 | `query` | Compound-query engine (AND/OR/NOT predicates) with explicit word views and count units | `--where --output-kind --view --count-unit --statuses --fields -o/--output --limit` | `aegean query lineara --where "site-is=Zakros"` |
 | `stats` | Frequency table of words (or `--signs`) | `--view --count-unit --statuses --details --signs --top -o/--output` | `aegean stats lineara --signs --top 5` |

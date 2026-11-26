@@ -2342,7 +2342,7 @@
       "id": "biblical-catalog",
       "since": "0.64.0",
       "python_api": "aegean.greek.bible.patristic_commentaries",
-      "summary": "Offline scholarly catalogues of 5 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 55 Swete Septuagint books, and 48 Greek patristic Catenae and Origen commentary volumes.",
+      "summary": "Offline scholarly catalogues of 9 Greek NT editions, 13 2nd–5th c. CE manuscript witnesses, 55 Swete Septuagint books, and 86 Greek patristic commentary volumes across 10 Church Fathers and traditions.",
       "surfaces": {
         "demo": {
           "status": "excluded",
@@ -2386,6 +2386,162 @@
             "notebook": "walkthrough-nt-koine.ipynb",
             "marker": "load_lxx("
           }
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "unified-fulltext-search",
+      "since": "0.70.0",
+      "python_api": "aegean.search.search_text",
+      "summary": "Diacritic-insensitive SQLite FTS5 sidecar full-text search across registered corpora, Septuagint, NT editions, Patrologia Graeca volumes, and Greek works.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-sqlite3",
+          "note": "SQLite FTS5 sidecar indexes live in the local filesystem cache."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "search_text"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Documented in CLI and API reference; interactive FTS5 sidecars target local cached corpora."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "library-status",
+      "since": "0.67.0",
+      "python_api": "aegean.library.summary",
+      "summary": "Read-only summary of installed vs available corpora, 7 themed packs, cached works, and local disk footprint.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Local cache inventory applies to installed local environments."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "library_status"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Local library management is covered via CLI `aegean library` and TUI LibraryScreen."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "LibraryScreen"
+        }
+      }
+    },
+    {
+      "id": "library-search",
+      "since": "0.67.0",
+      "python_api": "aegean.library.search",
+      "summary": "Unified offline discovery across all 39 hosted datasets, 5 bundled corpora, 1,778 Greek works, 86 patristic commentaries, 5 lexica, and neural models.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Unified local library catalog applies to installed CLI/TUI/MCP environments."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "library_search"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "not-applicable",
+          "note": "Covered by CLI `aegean library search` and TUI LibraryScreen."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "LibraryScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-compare-editions",
+      "since": "0.64.0",
+      "python_api": "aegean.greek.bible.compare_editions",
+      "summary": "Word-level textual collation across up to 9 Greek New Testament critical editions.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Requires the 3.3 MB nt-editions-v2 release asset in the local cache."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_compare_editions"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Offline CI notebooks run without fetching the 3.3 MB nt-editions-v2 release asset."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-witnesses",
+      "since": "0.64.0",
+      "python_api": "aegean.greek.bible.compare_witnesses",
+      "summary": "Diplomatic comparison of 13 early 2nd–5th c. CE Greek NT manuscript witnesses with nomina sacra expansion and corrector hands.",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Requires the 2.0 MB nt-witnesses-v1 release asset in the local cache."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_witnesses"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Offline CI notebooks run without fetching the 2.0 MB nt-witnesses-v1 release asset."
+        },
+        "tui": {
+          "status": "covered",
+          "where": "BiblicalScreen"
+        }
+      }
+    },
+    {
+      "id": "biblical-commentary",
+      "since": "0.65.0",
+      "python_api": "aegean.greek.bible.commentary_excerpt",
+      "summary": "Reading and Greek search across 86 indexed Greek patristic biblical commentaries (Catenae, Origen, First1KGreek Fathers, and Patrologia Graeca PG071–PG126).",
+      "surfaces": {
+        "demo": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Fetches First1KGreek TEI commentary works or the 23.5 MB Patrologia Graeca archive on demand."
+        },
+        "mcp": {
+          "status": "covered",
+          "where": "biblical_commentary"
+        },
+        "notebooks": {
+          "status": "excluded",
+          "reason": "needs-fetch",
+          "note": "Offline CI notebooks run without fetching remote First1KGreek or Patrologia Graeca commentary volumes."
         },
         "tui": {
           "status": "covered",
