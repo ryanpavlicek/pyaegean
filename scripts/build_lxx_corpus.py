@@ -1,10 +1,13 @@
-"""Build the complete Septuagint (LXX) release asset (``lxx-corpus.json.gz``).
+"""Build the complete 56-book Septuagint (LXX) release asset (``lxx-corpus.json.gz``).
 
-Extracts all 55 Greek Septuagint books from Henry Barclay Swete's *The Old
+Extracts 55 Greek Septuagint books from Henry Barclay Swete's *The Old
 Testament in Greek according to the Septuagint* (Cambridge University Press,
 1887–1894, Public Domain base text) as digitized in EpiDoc TEI XML by the Open
 Greek and Latin Project (``OpenGreekAndLatin/First1KGreek``, CC BY-SA 4.0) at a
-pinned commit.
+pinned commit, plus **Ecclesiastes** (``tlg0527.tlg030``, absent from
+First1KGreek's XML tree) from Greek Wikisource via the pinned
+``open-greek/open-greek-corpus`` release (PD ancient LXX text; Wikisource
+transcription CC BY-SA 4.0) so all 56 Septuagint books are present.
 
 Marginal manuscript sigla (``<note type="marginal">``), section headings
 (``<head>``), and deleted text (``<del>``, ``<surplus>``) are stripped cleanly
@@ -42,15 +45,20 @@ from typing import Any
 
 FIRST1K_REPO = "OpenGreekAndLatin/First1KGreek"
 FIRST1K_COMMIT = "4c9c843d80ee94b4371f52add5f7d68bbfe7ba4c"
+OGC_REPO = "open-greek/open-greek-corpus"
+OGC_COMMIT = "ea39ee6024e1a68b4dfd285f06c5863523fcb686"
+ECCL_JSONL = "data/corpus/septuaginta.ecclesiastes.jsonl"
 
 LICENSE = (
-    "CC BY-SA 4.0 (Open Greek and Latin / First1KGreek EpiDoc TEI digitization; "
-    "base Greek text Henry Barclay Swete, Cambridge University Press, 1887–1894, Public Domain)"
+    "CC BY-SA 4.0 (Open Greek and Latin / First1KGreek EpiDoc TEI digitization & "
+    "Greek Wikisource Ecclesiastes via Open Greek Corpus; base Greek text Henry "
+    "Barclay Swete, Cambridge University Press, 1887–1894, Public Domain)"
 )
 ATTRIBUTION = (
     "The Old Testament in Greek according to the Septuagint, ed. Henry Barclay Swete "
     "(Cambridge University Press, 1887–1894); digital TEI XML edition by the Open Greek "
-    "and Latin Project (First1KGreek, CC BY-SA 4.0)."
+    "and Latin Project (First1KGreek, CC BY-SA 4.0); Ecclesiastes from Greek Wikisource "
+    "via Open Greek Corpus (CC BY-SA 4.0 / Public Domain)."
 )
 
 _TEI = "{http://www.tei-c.org/ns/1.0}"
@@ -67,7 +75,7 @@ _SKIP_TAGS = frozenset(
 )
 _WS_RE = re.compile(r"\s+")
 
-# All 55 Swete Septuagint books in First1KGreek with exact XML filenames.
+# All 55 Swete Septuagint books in First1KGreek + Ecclesiastes (56 total).
 _LXX_FILES: tuple[tuple[str, str, str, str, str], ...] = (
     ("Gen", "Genesis", "tlg0527.tlg001", "Pentateuch", "tlg0527.tlg001.1st1K-grc1.xml"),
     ("Exod", "Exodus", "tlg0527.tlg002", "Pentateuch", "tlg0527.tlg002.1st1K-grc1.xml"),
@@ -95,6 +103,7 @@ _LXX_FILES: tuple[tuple[str, str, str, str, str], ...] = (
     ("Ps", "Psalms", "tlg0527.tlg027", "Wisdom", "tlg0527.tlg027.1st1K-grc1.xml"),
     ("Odes", "Odes", "tlg0527.tlg028", "Wisdom", "tlg0527.tlg028.1st1K-grc1.xml"),
     ("Prov", "Proverbs", "tlg0527.tlg029", "Wisdom", "tlg0527.tlg029.1st1K-grc1.xml"),
+    ("Eccl", "Ecclesiastes (Qoheleth)", "tlg0527.tlg030", "Wisdom", "__OGC_ECCL__"),
     ("Song", "Song of Songs (Canticum)", "tlg0527.tlg031", "Wisdom", "tlg0527.tlg031.1st1K-grc1.xml"),
     ("Job", "Job", "tlg0527.tlg032", "Wisdom", "tlg0527.tlg032.1st1K-grc1.xml"),
     ("Wis", "Wisdom of Solomon", "tlg0527.tlg033", "Deuterocanonical", "tlg0527.tlg033.1st1K-grc1.xml"),
@@ -187,14 +196,43 @@ def _parse_lxx_xml(xml_text: str) -> dict[str, str]:
     return verses
 
 
-def build(out_path: Path) -> None:
-    print(f"Building Septuagint (LXX) corpus from {FIRST1K_REPO}@{FIRST1K_COMMIT[:12]} ...")
+def _fetch_ecclesiastes(ogc_eccl_path: Path | None = None) -> dict[str, str]:
+    if ogc_eccl_path is not None and ogc_eccl_path.is_file():
+        raw = ogc_eccl_path.read_text(encoding="utf-8")
+    else:
+        url = f"https://raw.githubusercontent.com/{OGC_REPO}/{OGC_COMMIT}/{ECCL_JSONL}"
+        req = urllib.request.Request(url, headers={"User-Agent": "pyaegean-build"})
+        with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
+            raw = resp.read().decode("utf-8-sig")
+    verses: dict[str, str] = {}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        rec = json.loads(line)
+        locus = str(rec.get("locus", "")).strip()
+        txt = _WS_RE.sub(" ", unicodedata.normalize("NFC", str(rec.get("text", "")))).strip()
+        # Strip trailing Wikisource subscription colophon on Eccl 12.14.
+        if locus == "12.14" and txt.endswith(" Εκκλησιαστης"):
+            txt = txt[: -len(" Εκκλησιαστης")].rstrip()
+        if locus and txt:
+            verses[locus] = f"{verses[locus]} {txt}" if locus in verses else txt
+    return verses
+
+
+def build(out_path: Path, *, ogc_eccl_path: Path | None = None) -> None:
+    print(f"Building 56-book Septuagint (LXX) corpus from {FIRST1K_REPO}@{FIRST1K_COMMIT[:12]} ...")
     books: dict[str, Any] = {}
     total_verses = 0
     for name, title, work_id, section, filename in _LXX_FILES:
-        subid = work_id.split(".")[1]
-        xml_text = _fetch_xml(subid, filename)
-        verses = _parse_lxx_xml(xml_text)
+        if filename == "__OGC_ECCL__":
+            verses = _fetch_ecclesiastes(ogc_eccl_path)
+            src_name = ECCL_JSONL
+        else:
+            subid = work_id.split(".")[1]
+            xml_text = _fetch_xml(subid, filename)
+            verses = _parse_lxx_xml(xml_text)
+            src_name = filename
         total_verses += len(verses)
         books[name] = {
             "_info": {
@@ -202,7 +240,7 @@ def build(out_path: Path) -> None:
                 "title": title,
                 "work_id": work_id,
                 "section": section,
-                "filename": filename,
+                "filename": src_name,
             },
             "verses": verses,
         }
@@ -211,10 +249,11 @@ def build(out_path: Path) -> None:
     payload = {
         "_meta": {
             "name": "lxx-corpus",
-            "version": "1",
-            "edition": "Swete Septuagint (1887–1894)",
+            "version": "2",
+            "edition": "Swete Septuagint (1887–1894) + Wikisource Ecclesiastes",
             "source_repo": f"https://github.com/{FIRST1K_REPO}",
             "source_commit": FIRST1K_COMMIT,
+            "ecclesiastes_source": f"https://github.com/{OGC_REPO}@{OGC_COMMIT}",
             "license": LICENSE,
             "attribution": ATTRIBUTION,
             "books": len(books),
@@ -240,8 +279,9 @@ def build(out_path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=Path("lxx-corpus.json.gz"))
+    parser.add_argument("--ogc-eccl", type=Path, default=None)
     args = parser.parse_args()
-    build(args.out)
+    build(args.out, ogc_eccl_path=args.ogc_eccl)
 
 
 if __name__ == "__main__":

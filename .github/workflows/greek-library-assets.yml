@@ -1,0 +1,71 @@
+name: Build Ancient, Classical, Patristic & Byzantine Greek Library assets
+
+# Reproducibly builds and publishes the 8 categorized open-licensed Greek
+# library corpus bundles (from commit-pinned open-greek/open-greek-corpus)
+# plus the 56-book Swete + Ecclesiastes Septuagint bundle (lxx-corpus-v2).
+# Manual dispatch only; uses non-`v` asset tags with `--latest=false` so
+# release.yml never triggers a PyPI publication or displaces the latest badge.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Fetch pinned open-greek-corpus snapshot
+        run: |
+          mkdir -p /tmp/ogc-src dist-library
+          curl -sSL "https://github.com/open-greek/open-greek-corpus/archive/ea39ee6024e1a68b4dfd285f06c5863523fcb686.tar.gz" -o /tmp/ogc-src/ogc.tar.gz
+          tar -xzf /tmp/ogc-src/ogc.tar.gz -C /tmp/ogc-src --strip-components=1 --wildcards \
+            "*/data/corpus/*.jsonl" \
+            "*/data/corpus_catalog.tsv" \
+            "*/data/author_authority.json" \
+            "*/data/author_bios.json" \
+            "*/data/oga_dating.json" \
+            "*/data/coverage.json" \
+            "*/data/corpus_release.json"
+          rm -f /tmp/ogc-src/ogc.tar.gz
+      - name: Build deterministic Greek library & 56-book LXX assets
+        run: |
+          python scripts/build_greek_collections.py /tmp/ogc-src --out-dir dist-library
+          python scripts/build_lxx_corpus.py --out dist-library/lxx-corpus.json.gz \
+            --ogc-eccl /tmp/ogc-src/data/corpus/septuaginta.ecclesiastes.jsonl
+          sha256sum dist-library/*.json.gz | tee dist-library/SHA256SUMS.txt
+      - name: Publish asset-hosting GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          publish_asset() {
+            local tag="$1"
+            local file="$2"
+            local title="$3"
+            local notes="$4"
+            local sha
+            sha="$(sha256sum "$file" | awk '{print $1}')"
+            if gh release view "$tag" >/dev/null 2>&1; then
+              gh release upload "$tag" "$file" --clobber
+            else
+              gh release create "$tag" "$file" --latest=false --title "$title" --notes "${notes} (SHA-256: ${sha})"
+            fi
+          }
+
+          publish_asset \
+            "lxx-corpus-v2" \
+            "dist-library/lxx-corpus.json.gz" \
+            "Swete Septuagint (LXX) Complete 56-Book Corpus v2" \
+            "All 56 Greek Septuagint books: 55 Swete (1887-1894) books from OpenGreekAndLatin/First1KGreek plus Ecclesiastes (tlg0527.tlg030) from Greek Wikisource via Open Greek Corpus. Built reproducibly by scripts/build_lxx_corpus.py. License: CC BY-SA 4.0 / Public Domain."
+
+          for col in chrysostom church-fathers-early church-fathers-late classical-greek hellenistic-greek imperial-greek late-antique-greek byzantine-lit; do
+            file="dist-library/${col}-corpus.json.gz"
+            title="$(python3 -c "import json; m=json.load(open('dist-library/greek-collections-manifest.json'))['${col}']; print(m['title'] + ' v1')")"
+            notes="$(python3 -c "import json; m=json.load(open('dist-library/greek-collections-manifest.json'))['${col}']; print(f\"{m['works']:,} Greek works across {m['authors']:,} authors ({m['tokens']:,} tokens) built reproducibly from commit-pinned open-greek/open-greek-corpus (corpus-2026-11-26) by scripts/build_greek_collections.py. License: CC BY-SA 4.0 / CC BY 4.0 / Public Domain (per-work provenance embedded; zero NonCommercial texts).\")")"
+            publish_asset "${col}-corpus-v1" "$file" "$title" "$notes"
+          done
