@@ -188,6 +188,18 @@ class DivergenceRow:
     log_ratio: float
 
 
+# Bridge the phonetic-value spelling used in Linear A's phonetic_map (kwa/kwe,
+# dza/dze/dzo) to DAMOS's conventional Linear B transliteration (qa/qe,
+# za/ze/zo), matching linearaworkbench's src/lib/linearB.ts.
+_LA_VALUE_TO_LB_TRANSLIT: dict[str, str] = {
+    "kwa": "qa",
+    "kwe": "qe",
+    "dza": "za",
+    "dze": "ze",
+    "dzo": "zo",
+}
+
+
 def build_lb_divergence(la: LaValueCounts, lb: LbFrequencies) -> list[DivergenceRow]:
     """Join the two sign-value frequency tables on their shared attested values,
     most divergent (largest |log ratio|) first.
@@ -200,7 +212,8 @@ def build_lb_divergence(la: LaValueCounts, lb: LbFrequencies) -> list[Divergence
     if la.total_signs == 0 or lb.total_signs == 0:
         return rows
     for value, rec in la.by_value.items():
-        lb_count = lb.counts.get(value, 0)
+        lb_key = _LA_VALUE_TO_LB_TRANSLIT.get(value, value)
+        lb_count = lb.counts.get(lb_key, 0)
         if lb_count == 0:
             continue
         la_rate = rec.count / la.total_signs

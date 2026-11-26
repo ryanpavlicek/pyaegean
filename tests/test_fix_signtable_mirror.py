@@ -188,20 +188,26 @@ def test_inventory_covers_the_assigned_block_exactly_once():
 
 
 # ---------------------------------------------------------------------------
-# the workbench-app 1.6.1 pin
+# the workbench-app 2.0.0 pin (v1.6.1 preserved in _REMOTE_HISTORY)
 # ---------------------------------------------------------------------------
 
 
-def test_workbench_app_pin_is_the_1_6_1_build():
-    """1.6.1 rebuilds the served app on the 97-sign table (ZE/ZO added); it
-    carries the workbench's stored-XSS fixes and the sign table this bundled
-    mirror now matches."""
+def test_workbench_app_pin_is_the_2_0_0_build():
+    """2.0.0 ships security hardening, epigraphic/stat accuracy fixes, UX
+    consolidation, offline lazy-chunk precaching, and the loopback state/DAMOS
+    bridge; v1.6.1 remains pinned in _REMOTE_HISTORY."""
     spec = data._REMOTE["workbench-app"]
     m = re.search(r"workbench-app-v(\d+)\.(\d+)\.(\d+)/", spec.url)
     assert m is not None
-    assert tuple(int(g) for g in m.groups()) == (1, 6, 1)
+    assert tuple(int(g) for g in m.groups()) == (2, 0, 0)
     assert spec.sha256 == (
-        "19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870"
+        "3ade03b24812a45b8e4ca2ec64a710380cbcd6afc5c842f2719886db41259e00"
+    )
+    hist = data._REMOTE_HISTORY["workbench-app"]
+    assert any(
+        p.version == "v1.6.1"
+        and p.sha256 == "19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870"
+        for p in hist
     )
 
 

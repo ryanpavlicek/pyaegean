@@ -1008,33 +1008,36 @@ over plain JSON; neither tool needs the other installed.
 
 ```python
 import aegean
-from aegean.io import to_workbench, from_workbench_export
+from aegean.io import (
+    to_workbench,
+    from_workbench_export,
+    load_workbench_backup,
+    save_workbench_backup,
+)
 
 c = aegean.load("lineara").filter(site="Haghia Triada")
 
 # emit workbench-shaped inscription records (optionally write a JSON file)
 recs = to_workbench(c, "ht.workbench.json")
-sorted(recs[0].keys())
-# ['context', 'facsimileImages', 'findspot', 'glyphs', 'id', 'imageRights',
-#  'imageRightsURL', 'images', 'lines', 'name', 'scribe', 'site', 'support',
-#  'transcription', 'translations', 'words']
 
 # load what the workbench produces (its Data Export, or a plain records array)
 c2 = from_workbench_export("ht.workbench.json")
-print(len(c2), "|", c2.provenance.source)
-# 1110 | linearaworkbench corpus export
+
+# load & query saved workbench research state (annotations, notes, saved queries)
+ws = load_workbench_backup("workspace.json")
+hits = c.query(ws.to_filter_rows(0))
 ```
 
-Point the app's `?corpus=<url>` (or its *Data Export → Bring your own corpus*
-picker) at a `to_workbench` file and every analysis module runs against your
-data. `from_workbench_export` accepts the schema-v1 full-corpus export object
-(records under `"inscriptions"`, provenance under `"_meta"`, per-record
-`"derived"` analyses: ignored) or a plain array of records; image *files* are
-never embedded, only references. Workbench records carry token text and surface
-metadata, not `ReadingStatus`, annotations, or `TokenFormState`; importing one
-therefore returns CERTAIN, unannotated tokens. The `aegean workbench` CLI command fetches the
-app's static build to your cache and serves it locally so you can run the whole
-UI offline; see the [CLI](CLI) page.
+Point the app's `?corpus=<url>` (or run `aegean workbench --corpus <id-or-path>`) at a
+`to_workbench` file and every analysis module runs against your data. `from_workbench_export`
+accepts the schema-v1 full-corpus export object or a plain array of records; for
+`script_id="lineara"`, tokens are classified via `aegean.scripts.lineara.loader.classify`
+(restoring inline apparatus such as erased `𐝫`, bracketed uncertainty `[?]`, logograms,
+separators, and fractions) and `linear_a_inventory()` is attached. Out-of-band
+`ReadingStatus` overrides on plain tokens and `Token.annotations` are not represented in
+the workbench format. Use `load_workbench_backup` / `save_workbench_backup` (or
+`aegean workbench --state workspace.json`) to round-trip annotations, notes, collections,
+findings, saved hypotheses, and saved queries between Python and the browser.
 
 ---
 

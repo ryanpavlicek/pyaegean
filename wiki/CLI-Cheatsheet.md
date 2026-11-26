@@ -95,7 +95,7 @@ one-line `wrote <path>` confirmation on stderr; `-o` combines with `--json`.
 | `bridge` | Read a deciphered syllabic word as Greek | `--json` | `aegean bridge linearb po-me` |
 | `cache` | Inspect (or `--clear`) the opt-in **analysis** cache | `--clear --json` | `aegean cache` |
 | `plot` | Draw one figure to a file (`[viz]` extra); kinds include `findspots`, `timeline`, and the `signnet` co-occurrence network | `-o/--output --signs --top --word --meter --scope --bin-width --min-count --dpi …` | `aegean plot findspots lineara -o sites.png` |
-| `workbench` | Serve the Linear A Research Workbench locally | `-p/--port --no-browser --force --fetch-images` | `aegean workbench` |
+| `workbench` | Serve the Linear A Research Workbench v2 locally | `-p/--port --no-browser --force --fetch-images --corpus --site --period --scribe --support -m/--module --doc --damos --state --dir` | `aegean workbench --site "Haghia Triada" --state workspace.json` |
 
 ### Verified examples
 

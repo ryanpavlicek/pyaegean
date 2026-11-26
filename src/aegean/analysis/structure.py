@@ -12,23 +12,17 @@ not genre attributions — a researcher is expected to override individual calls
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
 from ..core.model import Document
+from ..core.numerals import parse_value
 
-# Known libation-formula words (the "Libation" signal). Matched against exact
-# token text, so every entry must be spelled as the corpus writes it
-# (subscripts included). The a-di-ki-te family is listed as the corpus
-# actually attests it: the earlier entry "A-DI-KI-TE-TE-DU" matched zero
-# bundled tokens (it is a fragment of Younger's restored reading of the
-# damaged word on PK Za 11, A-DI-KI-TE-TE-DU-PU-RE, not a word any
-# inscription carries). Attested forms, per Younger's readings: A-DI-KI-TE
-# (PK Za 12), A-DI-KI-TE-TE (PK Za 11), and the ja-prefixed
-# JA-DI-KI-TE-TE-DU-PU₂-RE (PK Za 15) / JA-DI-KI-TE-TE-*307-PU₂-RE (PK Za 8).
-# Whether these are variants of one word (often connected to Mt. Dikte) is
-# contested; treat the grouping as exploratory.
+# Known libation-formula words (the "Libation" signal), synced with
+# linearaworkbench's shared src/data/libation.ts (14 attested forms).
+# Matched against exact token text, so every entry must be spelled as the
+# corpus writes it (subscripts included). The a-di-ki-te family is listed as
+# the corpus actually attests it (PK Za 8/11/12/15).
 LIBATION_WORDS = frozenset(
     {
         "A-TA-I-*301-WA-JA",
@@ -37,8 +31,18 @@ LIBATION_WORDS = frozenset(
         "A-DI-KI-TE-TE",
         "JA-DI-KI-TE-TE-DU-PU₂-RE",
         "JA-DI-KI-TE-TE-*307-PU₂-RE",
+        "TA-NA-TE",
+        "I-DA-MA-TE",
+        "SI-RU-TE",
+        "DI-KI-SE",
+        "A-SA-SA-RA-ME",
+        "PI-TE-RI",
+        "U-NA-KA-NA-SI",
+        "I-PI-NA-MA",
     }
 )
+
+_TOTAL_MARKERS = frozenset({"KU-RO", "KU-RA", "PO-TO-KU-RO"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,24 +67,24 @@ CATEGORIES: tuple[StructureCategory, ...] = (
 )
 
 _SEPARATOR = "\U00010101"  # 𐄁
-_LEADING_DIGIT = re.compile(r"^[0-9]")
 
 
 def classify_structure(document: Document) -> str:
     """The heuristic category key for one inscription, from its content shape.
 
-    Mirrors the workbench precedence exactly: a KU-RO total marker (or numerals
-    with several multi-sign words) ⇒ accounting; otherwise a libation formula ⇒
-    libation; otherwise many separators and no numerals ⇒ list; otherwise an
-    extended hyphenated text with no numerals ⇒ text; else other.
+    Mirrors the workbench precedence (`heuristicCategory` in `corpusExport.ts`)
+    exactly: a total marker (`KU-RO`, `KU-RA`, `PO-TO-KU-RO`) or numerals/fractions
+    with more than two multi-sign words ⇒ accounting; otherwise a libation formula ⇒
+    libation; otherwise more than three separators and no numerals ⇒ list; otherwise
+    more than four multi-sign words with no numerals ⇒ text; else other.
     """
     words = [t.text for t in document.tokens]
-    has_nums = any(_LEADING_DIGIT.match(w) for w in words)
-    has_kuro = "KU-RO" in words
+    has_nums = any(parse_value(w) is not None for w in words)
+    has_total = any(w in _TOTAL_MARKERS for w in words)
     has_lib = any(w in LIBATION_WORDS for w in words)
     multi = sum(1 for w in words if "-" in w)
     sep = sum(1 for w in words if w == _SEPARATOR)
-    if has_kuro or (has_nums and multi > 2):
+    if has_total or (has_nums and multi > 2):
         return "accounting"
     if has_lib:
         return "libation"

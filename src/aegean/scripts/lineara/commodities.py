@@ -110,7 +110,10 @@ def is_lexical_word(word: str) -> bool:
     parts = word.split("-")
     starred = 0
     for p in parts:
-        if commodity_head(p):
+        # NI (AB 30) is a dual-use sign: standalone NI is the figs logogram,
+        # but inside a hyphenated word (e.g. MA-NI, KU-NI-SU, NI-KA-RA) it is
+        # the syllabogram `ni`.
+        if p != "NI" and commodity_head(p):
             return False
         m = _STAR_NUM_RE.match(p)
         if m:

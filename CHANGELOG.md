@@ -4,6 +4,24 @@ All notable changes to pyaegean are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project follows
 [Semantic Versioning](https://semver.org/).
 
+## 0.71.0 (2026-11-26)
+
+### Added
+
+- **Bidirectional `linearaworkbench v2.0.0` bridge (`aegean workbench` & `aegean.io`)**:
+  - Pinned `workbench-app` to **`workbench-app-v2.0.0`** (`sha256: 3ade03b2...`; `v1.6.1` preserved in `_REMOTE_HISTORY`).
+  - Upgraded `aegean workbench` with `--corpus <id-or-path>` (serves any pyaegean corpus or local JSON export at `/api/local/corpus.json`), `--site` / `--period` / `--scribe` / `--support` (pre-scoped launch), `--module <id>` / `--doc <id>` (direct deep-link), `--damos` (auto-mounts cached DAMOS Linear B frequencies at `/api/local/damos-corpus.json`), `--state <workspace.json>` (loopback-only `/api/local/backup` `GET`/`PUT` with origin guard and atomic writes), `--dir <path>` (serve a local workbench build), and `--port 0` (OS-assigned ephemeral port).
+  - Added `WorkbenchBackup`, `load_workbench_backup()`, and `save_workbench_backup()` (plus `BACKUP_KIND`, `BACKUP_VERSION`, and `WorkbenchBackup.to_filter_rows()`) to `aegean.io` for lossless round-tripping of workbench workspace backups (`linear-a-workbench-backup` v1: annotations, collections, findings, notes, saved hypotheses, saved queries, tablet categories, custom wordlists, and pins).
+
+### Fixed
+
+- **Linear A cross-repo parity with `linearaworkbench v2.0.0`**:
+  - `aegean.scripts.lineara.commodities.is_lexical_word()` now treats `NI` inside hyphenated words as the syllabogram `ni` rather than the figs logogram, recovering 45 clean Linear A lexical words (57 tokens) and fixing `NI = 0` in `build_lb_divergence()`.
+  - `aegean.analysis.lb_divergence.build_lb_divergence()` bridges Linear A phonetic values `kwa`/`kwe`/`dza`/`dze`/`dzo` to DAMOS Linear B transliterations `qa`/`qe`/`za`/`ze`/`zo`.
+  - `aegean.analysis.structure.classify_structure()` now syncs all 14 attested `LIBATION_WORDS`, uses fraction-aware `parse_value()` for numerals (built-up, vulgar, ASCII, and `≈` readings), and recognizes `KU-RA` and `PO-TO-KU-RO` alongside `KU-RO`.
+  - Added `"WE": "we"` and `"WO": "wo"` to bundled `lineara/phonetic_map.json` (50 → 52 entries) and reconciled 4 Cretan site coordinates (`Arkhalkhori`, `Kardamoutsa`, `Psykhro`, `Syme`) in `geo/site_coordinates.json`.
+  - `aegean.io.from_workbench_export()` now classifies `script_id="lineara"` tokens through `aegean.scripts.lineara.loader.classify()` (preserving inline erased `𐝫` `ReadingStatus.LOST`, bracketed `UNCLEAR`, logograms, separators, and fractions), attaches `linear_a_inventory()`, and preserves `imageRights` / `imageRightsURL` across round-trips.
+
 ## 0.70.0 (2026-11-25)
 
 ### Added

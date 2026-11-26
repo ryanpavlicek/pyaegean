@@ -707,11 +707,11 @@ _REMOTE: dict[str, DataSpec] = {
         name="workbench-app",
         url=(
             "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
-            "workbench-app-v1.6.1/workbench-app.tar.gz"
+            "workbench-app-v2.0.0/workbench-app.tar.gz"
         ),
-        sha256="19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870",
+        sha256="3ade03b24812a45b8e4ca2ec64a710380cbcd6afc5c842f2719886db41259e00",
         license="Apache-2.0 (Linear A Research Workbench build); embedded Linear A data is GORILA-derived",
-        note="prebuilt linearaworkbench static web app (~3 MB tar.gz); served locally by `aegean workbench`.",
+        note="prebuilt linearaworkbench v2.0.0 static web app (~3.1 MB tar.gz); served locally by `aegean workbench`.",
         extract=True,
     ),
     # A slot for your OWN licensed Linear B export (a LiBER selection, a DAMOS EpiDoc download),
@@ -1077,6 +1077,18 @@ _REMOTE_HISTORY: dict[str, list[HistoricalPin]] = {
             ),
             sha256="c538c2f5561da2e2a51d8c173e5db0b56b5d06cb75e6bd6f786709c0168a810d",
             superseded="v2",
+        ),
+    ],
+    "workbench-app": [
+        HistoricalPin(
+            version="v1.6.1",
+            url=(
+                "https://github.com/ryanpavlicek/linearaworkbench/releases/download/"
+                "workbench-app-v1.6.1/workbench-app.tar.gz"
+            ),
+            sha256="19a27feb47a9b49a4095c571e7f1e01c68f011a119691712438273d289c19870",
+            superseded="v2.0.0",
+            extract=True,
         ),
     ],
 }

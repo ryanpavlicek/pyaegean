@@ -61,7 +61,15 @@ from .review import (
 )
 from .tabular import to_csv, to_parquet
 from .text import from_csv, from_text, from_text_dir, from_text_file
-from .workbench import from_workbench_export, to_workbench
+from .workbench import (
+    BACKUP_KIND,
+    BACKUP_VERSION,
+    WorkbenchBackup,
+    from_workbench_export,
+    load_workbench_backup,
+    save_workbench_backup,
+    to_workbench,
+)
 
 # The corpus export formats `aegean export` accepts, in the order they are advertised.
 # The single source of truth: cli._corpus.export() validates against it and derives its
@@ -72,6 +80,8 @@ EXPORT_FORMATS: tuple[str, ...] = (
 )
 
 __all__ = [
+    "BACKUP_KIND",
+    "BACKUP_VERSION",
     "BUNDLE_SCHEMA",
     "EXPORT_FORMATS",
     "SIDECAR_COMMENT_PREFIX",
@@ -89,6 +99,7 @@ __all__ = [
     "MergedReview",
     "ReviewConflict",
     "ReviewerValue",
+    "WorkbenchBackup",
     "apply_merged",
     "bundle_from_document",
     "bundle_from_result",
@@ -108,12 +119,14 @@ __all__ = [
     "from_workbench_export",
     "from_token_records",
     "from_ud_document",
+    "load_workbench_backup",
     "loads_interop_bundle",
     "make_cltk_process",
     "merge_review_tables",
     "needs_review_flag",
     "read_epidoc",
     "read_interop_bundle",
+    "save_workbench_backup",
     "to_cltk",
     "to_conllu",
     "to_csv",

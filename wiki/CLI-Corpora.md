@@ -858,17 +858,17 @@ every other kind it's a corpus name.
 ### `workbench` — serve the Linear A Research Workbench locally
 
 ```bash
-aegean workbench                 # fetch the build (~3 MB, first use) and open it in your browser
-aegean workbench --fetch-images  # also download the facsimile imagery (~116 MB) so pictures show
-aegean workbench --port 9000     # choose a port (1-65535, default 8000); --no-browser to not open one
+aegean workbench                                         # fetch v2.0.0 build (~3.1 MB) & open in browser
+aegean workbench --fetch-images                          # also download facsimile imagery (~116 MB)
+aegean workbench --site "Haghia Triada" --module arith   # open pre-scoped to a site and module
+aegean workbench --doc HT13                              # jump straight to an inscription detail view
+aegean workbench --corpus damos                          # inspect any pyaegean corpus or local JSON export
+aegean workbench --damos                                 # auto-mount DAMOS Linear B frequencies for Sign Inventory
+aegean workbench --state workspace.json                  # auto-load & save annotations/notes/collections locally
+aegean workbench --dir ../linearaworkbench/dist --port 0 # serve a local build on an auto-picked free port
 ```
 
-Fetches the sha256-pinned static build to the cache, then serves the browser UI (
-the corpus, maps, and analysis modules) at `http://localhost:8000/` until you
-press Ctrl+C. The facsimile imagery is a separate ~116 MB asset: pass
-`--fetch-images` (or run `aegean data fetch lineara-images`) to download it, after
-which the picture browser works. Without it the app runs fine, but image views
-show no picture (and the command says so at startup).
+Fetches the sha256-pinned `workbench-app-v2.0.0` static build to the cache, then serves the browser UI (corpus, maps, commentary, and all 34 workspaces / 59 views) on loopback (`127.0.0.1`) until you press Ctrl+C. Pass `--fetch-images` (or `aegean data fetch lineara-images`) to mount the ~116 MB facsimile archive at `/upstream/images/`. Pass `--state workspace.json` to enable bidirectional loopback persistence at `/api/local/backup` (readable in Python via `aegean.io.load_workbench_backup()`).
 
 ---
 
